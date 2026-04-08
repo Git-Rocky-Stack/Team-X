@@ -17,7 +17,8 @@
     "@team-x/provider-router": "workspace:*",
     "@team-x/telemetry-core": "workspace:*",
     "better-sqlite3": "^11.3.0",
-    "drizzle-orm": "^0.33.0"
+    "drizzle-orm": "^0.33.0",
+    "nanoid": "^5.0.0"
   },
   "devDependencies": {
     "electron": "^31.0.0",
@@ -32,6 +33,8 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/better-sqlite3": "^7.6.0",
-    "drizzle-kit": "^0.24.0"
+    "@types/sql.js": "^1.4.0",
+    "drizzle-kit": "^0.24.0",
+    "sql.js": "^1.11.0"
   }
 }
