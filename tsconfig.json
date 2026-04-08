@@ -8,6 +8,7 @@
     { "path": "./packages/shared-types" },
     { "path": "./packages/role-schema" },
     { "path": "./packages/provider-router" },
-    { "path": "./packages/telemetry-core" }
+    { "path": "./packages/telemetry-core" },
+    { "path": "./apps/desktop" }
   ]
 }

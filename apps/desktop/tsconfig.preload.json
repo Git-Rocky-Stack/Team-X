@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "rootDir": "./src/preload",
+    "outDir": "./out/preload",
+    "tsBuildInfoFile": "./out/tsconfig.preload.tsbuildinfo",
+    "noEmit": false,
+    "types": ["node"]
+  },
+  "include": ["src/preload/**/*"],
+  "references": [{ "path": "../../packages/shared-types" }]
+}
