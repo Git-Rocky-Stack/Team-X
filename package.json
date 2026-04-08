@@ -1,0 +1,26 @@
+{
+  "name": "team-x",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Run an AI company. Not a prompt.",
+  "license": "MIT",
+  "author": "Rocky Elsalaymeh",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "build": "pnpm -r build",
+    "dev": "pnpm -F @team-x/desktop dev",
+    "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules"
+  },
+  "devDependencies": {}
+}
