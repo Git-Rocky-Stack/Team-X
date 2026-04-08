@@ -49,9 +49,33 @@ describe('parseRoleMarkdown', () => {
     expect(() => parseRoleMarkdown(bad, '/fake/bad.md')).toThrow(/level/i);
   });
 
-  it('produces a stable sha256 for identical input', () => {
+  it('hashes raw source only — sourcePath does not affect the hash, content does', () => {
+    // Same content, different paths → same hash (sourcePath excluded from hash input)
     const a = parseRoleMarkdown(SAMPLE, '/x/a.md');
-    const b = parseRoleMarkdown(SAMPLE, '/x/b.md');
+    const b = parseRoleMarkdown(SAMPLE, '/y/b.md');
     expect(a.sha256).toBe(b.sha256);
+
+    // Different content (extra trailing whitespace), same path → different hash
+    const c = parseRoleMarkdown(`${SAMPLE}  `, '/x/a.md');
+    expect(c.sha256).not.toBe(a.sha256);
+  });
+
+  it('throws when temperature is out of [0, 2] range', () => {
+    const tooHigh = SAMPLE.replace('temperature: 0.4', 'temperature: 2.5');
+    expect(() => parseRoleMarkdown(tooHigh, '/fake/hot.md')).toThrow(/temperature/i);
+
+    const negative = SAMPLE.replace('temperature: 0.4', 'temperature: -0.1');
+    expect(() => parseRoleMarkdown(negative, '/fake/cold.md')).toThrow(/temperature/i);
+  });
+
+  it('parses cleanly when optional fields are absent', () => {
+    // Remove output_format (optional). cadences is already absent in SAMPLE.
+    const minimal = SAMPLE.replace('output_format: exec_brief\n', '');
+    const spec = parseRoleMarkdown(minimal, '/fake/min.md');
+    expect(spec.frontmatter.output_format).toBeUndefined();
+    expect(spec.frontmatter.cadences).toBeUndefined();
+    // Required fields still resolve
+    expect(spec.frontmatter.id).toBe('chief-executive-officer');
+    expect(spec.frontmatter.temperature).toBe(0.4);
   });
 });
