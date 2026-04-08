@@ -4,5 +4,9 @@
     "noEmit": true
   },
   "files": [],
-  "references": [{ "path": "./packages/shared-types" }, { "path": "./packages/role-schema" }]
+  "references": [
+    { "path": "./packages/shared-types" },
+    { "path": "./packages/role-schema" },
+    { "path": "./packages/provider-router" }
+  ]
 }
