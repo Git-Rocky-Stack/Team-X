@@ -37,11 +37,12 @@ release/
 *.node
 prebuilds/
 
-# sqlite working files
+# sqlite databases + working files
+*.sqlite
+*.sqlite3
 *.sqlite-journal
 *.sqlite-shm
 *.sqlite-wal
 
 # local runtime
 .team-x/
-dev.sqlite
