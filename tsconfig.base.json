@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "moduleDetection": "force",
@@ -21,11 +21,9 @@
     "exactOptionalPropertyTypes": false,
     "useDefineForClassFields": true,
     "verbatimModuleSyntax": false,
-    "jsx": "react-jsx",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "incremental": true,
-    "types": ["node"]
+    "incremental": true
   }
 }
