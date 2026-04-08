@@ -7,6 +7,6 @@
     "noEmit": false,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*.ts", "src/**/*.json"],
   "references": [{ "path": "../shared-types" }]
 }

@@ -8,17 +8,20 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
     "@team-x/shared-types": "workspace:*",
     "@team-x/role-schema": "workspace:*",
     "@team-x/provider-router": "workspace:*",
-    "@team-x/telemetry-core": "workspace:*"
+    "@team-x/telemetry-core": "workspace:*",
+    "better-sqlite3": "^11.3.0"
   },
   "devDependencies": {
     "electron": "^31.0.0",
     "electron-vite": "^2.3.0",
+    "@electron/rebuild": "^3.6.0",
     "vite": "^5.4.0",
     "@vitejs/plugin-react": "^4.3.0",
     "typescript": "5.5.4",
@@ -26,6 +29,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "@types/react-dom": "^19.0.0",
+    "@types/better-sqlite3": "^7.6.0"
   }
 }
