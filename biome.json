@@ -22,12 +22,14 @@
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noConsoleLog": "off"
+        "noConsoleLog": "off",
+        "noConsole": "off"
       },
       "style": {
         "useConst": "error",
         "useTemplate": "error",
-        "noNonNullAssertion": "warn"
+        "noNonNullAssertion": "warn",
+        "useImportType": "error"
       }
     }
   },
