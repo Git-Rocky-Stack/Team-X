@@ -33,6 +33,10 @@ release/
 *.AppImage
 *.deb
 
+# native modules (better-sqlite3, keytar, etc.)
+*.node
+prebuilds/
+
 # sqlite working files
 *.sqlite-journal
 *.sqlite-shm

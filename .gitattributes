@@ -4,3 +4,15 @@
 *.png  binary
 *.jpg  binary
 *.ico  binary
+*.gif    binary
+*.webp   binary
+*.svg    text eol=lf
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.mp4    binary
+*.mov    binary
+*.zip    binary
+*.gz     binary
+*.pdf    binary
