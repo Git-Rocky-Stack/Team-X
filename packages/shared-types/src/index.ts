@@ -1,1 +1,7 @@
 export const SHARED_TYPES_VERSION = '0.0.1';
+
+export * from './roles.js';
+export * from './providers.js';
+export * from './entities.js';
+export * from './events.js';
+export * from './ipc.js';
