@@ -22,5 +22,7 @@
     "dev": "pnpm -F @team-x/desktop dev",
     "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "rimraf": "^6.1.3"
+  }
 }
