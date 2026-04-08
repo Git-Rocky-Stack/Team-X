@@ -4,5 +4,5 @@
     "noEmit": true
   },
   "files": [],
-  "references": []
+  "references": [{ "path": "./packages/shared-types" }]
 }
