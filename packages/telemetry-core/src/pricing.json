@@ -1,0 +1,11 @@
+{
+  "version": "2026-04-07",
+  "currency": "USD",
+  "unit": "per_1k_tokens",
+  "models": {
+    "claude-opus-4-6": { "in": 0.015, "out": 0.075 },
+    "claude-sonnet-4-6": { "in": 0.003, "out": 0.015 },
+    "claude-haiku-4-5-20251001": { "in": 0.0008, "out": 0.004 },
+    "ollama/*": { "in": 0, "out": 0 }
+  }
+}

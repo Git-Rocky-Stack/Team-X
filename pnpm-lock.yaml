@@ -74,6 +74,19 @@ importers:
         specifier: 5.5.4
         version: 5.5.4
 
+  packages/telemetry-core:
+    dependencies:
+      '@team-x/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+    devDependencies:
+      typescript:
+        specifier: 5.5.4
+        version: 5.5.4
+      vitest:
+        specifier: ^2
+        version: 2.1.9(@types/node@20.19.39)
+
 packages:
 
   '@ai-sdk/anthropic@0.0.50':
