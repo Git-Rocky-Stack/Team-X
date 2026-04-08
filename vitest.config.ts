@@ -14,6 +14,8 @@ export default defineConfig({
   test: {
     globals: false,
     environment: 'node',
+    // Vitest 2 exits non-zero on empty test suites by default; remove this flag
+    // once test files exist in every workspace package.
     passWithNoTests: true,
     include: ['**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist', 'out', '.idea', '.git', '.cache'],
@@ -23,6 +25,7 @@ export default defineConfig({
       exclude: [
         '**/node_modules/**',
         '**/dist/**',
+        '**/out/**',
         '**/*.d.ts',
         '**/*.config.*',
         '**/test-utils/**',
