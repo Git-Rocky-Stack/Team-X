@@ -15,7 +15,11 @@ async function createWindow(): Promise<void> {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      // Chromium OS-level sandbox is ON. The preload uses only contextBridge
+      // and does not require Node APIs, so sandbox=true is safe. If a future
+      // task ever needs native modules inside the preload itself, re-evaluate
+      // this flag with an explicit security trade-off note.
+      sandbox: true,
       webSecurity: true,
     },
   });
