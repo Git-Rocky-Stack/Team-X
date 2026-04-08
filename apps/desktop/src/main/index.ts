@@ -1,7 +1,28 @@
 import { join } from 'node:path';
 import { BrowserWindow, app } from 'electron';
 
+import { closeDb, getDb, initDb } from './db/client.js';
+import { runMigrations } from './db/migrate.js';
+import { dbPath } from './db/paths.js';
+
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+
+/**
+ * Resolve the absolute path to the drizzle migrations directory.
+ *
+ * - In dev, electron-vite runs the compiled main bundle at out/main/index.js
+ *   and the migrations source lives at src/main/db/migrations — two levels
+ *   up then down.
+ * - In packaged production builds, migrations will ship via electron-builder
+ *   `extraResources` at `process.resourcesPath/migrations` (wiring lands in
+ *   Task 49). The isPackaged branch is in place so dev and prod code paths
+ *   are symmetric from day one.
+ */
+function resolveMigrationsFolder(): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, 'migrations')
+    : join(__dirname, '../../src/main/db/migrations');
+}
 
 async function createWindow(): Promise<void> {
   const win = new BrowserWindow({
@@ -34,6 +55,10 @@ async function createWindow(): Promise<void> {
 }
 
 app.whenReady().then(() => {
+  initDb(dbPath());
+  runMigrations(getDb(), resolveMigrationsFolder());
+  console.log('[db] migrations applied');
+
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -42,4 +67,8 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('will-quit', () => {
+  closeDb();
 });
