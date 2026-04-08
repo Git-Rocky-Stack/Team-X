@@ -23,6 +23,8 @@
     "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules"
   },
   "devDependencies": {
-    "rimraf": "^6.1.3"
+    "@types/node": "^20.19.39",
+    "rimraf": "^6.1.3",
+    "typescript": "~5.5.4"
   }
 }
