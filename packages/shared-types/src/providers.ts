@@ -1,3 +1,5 @@
+import type { ModelTier } from './roles.js';
+
 export type PrivacyTier = 'local' | 'open-source-cloud' | 'proprietary-cloud';
 
 export type ProviderKind =
@@ -23,7 +25,7 @@ export interface ProviderConfig {
 export interface ModelDescriptor {
   id: string;
   providerId: string;
-  tier: 'high' | 'mid' | 'low';
+  tier: ModelTier;
   contextWindow: number;
   supportsTools: boolean;
   costPer1kIn?: number;

@@ -1,5 +1,4 @@
 import type { ChatMessage, Employee } from './entities.js';
-import type { DashboardEvent } from './events.js';
 
 export interface ListEmployeesRequest {
   companyId: string;
@@ -32,4 +31,3 @@ export interface IpcContract {
 
 export type IpcChannel = keyof IpcContract;
 export type EventChannel = 'events.dashboard';
-export type DashboardEventEnvelope = DashboardEvent;

@@ -1,3 +1,5 @@
+import type { AuthorKind } from './entities.js';
+
 export type EventType =
   | 'work.queued'
   | 'work.started'
@@ -12,7 +14,7 @@ export interface DashboardEvent<T = unknown> {
   type: EventType;
   companyId: string;
   actorId: string;
-  actorKind: 'employee' | 'human' | 'system';
+  actorKind: AuthorKind;
   payload: T;
   createdAt: number;
 }
