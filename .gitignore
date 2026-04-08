@@ -1,0 +1,43 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+out/
+build/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# test / coverage
+coverage/
+.nyc_output/
+
+# electron
+release/
+*.app/
+*.dmg
+*.exe
+*.msi
+*.AppImage
+*.deb
+
+# sqlite working files
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+
+# local runtime
+.team-x/
+dev.sqlite
