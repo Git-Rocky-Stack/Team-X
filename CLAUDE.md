@@ -18,7 +18,9 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 ## Status
 
-**Phase 1 (Skeleton) — not yet started.** The repository currently contains only the design doc and this file. Implementation begins after the writing-plans skill produces a detailed Phase 1 plan.
+**Phase 1 (Skeleton) — in progress.** Milestones 1 (repo foundations) and 2 (shared packages) are complete. Milestone 3 (main process + DB + secrets) is substantially complete: Electron boots with context isolation on, SQLite + Drizzle migrate on first run, the seed creates the hardcoded Strategia-X company with CEO + Senior Fullstack Engineer, the keytar-backed `SecretsStore` is wired up, the providers service seeds `ollama-local` + `anthropic` rows on first boot, and the dev `.env` → keychain bootstrap runs inside `app.whenReady()`. Next up: Checkpoint 3, then Milestone 4 (agent runtime).
+
+The detailed Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md) — 52 tasks across 6 milestones.
 
 ## Stack (locked)
 
@@ -68,22 +70,48 @@ Team-X/
 3. **Phase 3 — The Live Cockpit** — All 5 dashboard subviews, meeting primitive, goals + projects, telemetry, runtime modes, privacy tier filter. Demo: *"One-click all-hands → minutes → action items → tickets."*
 4. **Phase 4 — Ship-readiness** — File vault, backup/restore, audit log UI, installers, landing site, public release.
 
-## Build commands (will be populated as Phase 1 lands)
+## Build commands
 
-Once `package.json` exists:
+**Install and run:**
 
 ```bash
-pnpm install
-pnpm dev              # electron-vite dev (main + renderer HMR)
-pnpm build            # production build
-pnpm dist             # cross-platform installers via electron-builder
-pnpm test             # vitest
-pnpm test:e2e         # playwright
-pnpm lint             # biome check
-pnpm typecheck        # tsc --noEmit across all workspaces
+pnpm install                    # install workspace deps (runs electron-rebuild postinstall)
+pnpm dev                        # electron-vite dev server (main + renderer HMR)
+pnpm -F @team-x/desktop dev     # same, scoped to the desktop app
+pnpm build                      # production build of all workspaces
 ```
 
-Until Phase 1 lands, this section is a placeholder.
+Packaged installer generation via electron-builder (`pnpm dist`) and Playwright E2E tests (`pnpm test:e2e`) land in later tasks (T49+). Neither command exists yet.
+
+**Test, typecheck, lint:**
+
+```bash
+pnpm test                       # vitest run across all workspaces
+pnpm test:watch                 # vitest in watch mode
+pnpm test:coverage              # vitest with coverage report
+pnpm typecheck                  # tsc --noEmit across all workspaces
+pnpm lint                       # biome check
+pnpm lint:fix                   # biome check --write
+pnpm format                     # biome format --write
+```
+
+**Typecheck caveat — important.** Always run `pnpm typecheck` at the repo root (which expands to `pnpm -r typecheck`). The workspace-scoped `pnpm -F @team-x/desktop typecheck` does NOT traverse project references and silently misses per-package composite-mode regressions in the shared workspace packages. This cost real debugging time in Task 18 — do not shortcut it.
+
+**Database migrations (Drizzle):**
+
+```bash
+pnpm -F @team-x/desktop exec drizzle-kit generate --name <snake_case_name>
+```
+
+Emits a new migration to `apps/desktop/src/main/db/migrations/`. Commit the resulting `.sql` file along with the updated `meta/_journal.json` and `meta/*_snapshot.json` that drizzle-kit writes alongside it.
+
+**Native module rebuilds:**
+
+```bash
+pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar
+```
+
+Rebuilds both native modules against Electron's ABI. **Use the comma-separated form** for multi-module rebuilds — `@electron/rebuild@3.7.2`'s CLI crashes with `argv.w.split is not a function` on repeated `-w` flags (it calls `.split(',')` on the value internally). When adding a new native module, extend the comma list, not a second `-w` flag. The `@team-x/desktop` postinstall script already uses this form; mirror it if you script a rebuild elsewhere.
 
 ## Architectural invariants
 
