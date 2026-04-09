@@ -18,7 +18,7 @@ describe('events repo', () => {
 
   describe('append', () => {
     it('returns a non-empty id and persists the row', () => {
-      const id = events.append({
+      const { id } = events.append({
         companyId: 'co-1',
         actorId: 'orchestrator',
         actorKind: 'orchestrator',
@@ -32,8 +32,24 @@ describe('events repo', () => {
       expect(all[0]?.id).toBe(id);
     });
 
+    it('returns the exact createdAt that was persisted to the row', () => {
+      // The event bus depends on the returned createdAt matching the DB row
+      // byte-for-byte — otherwise live fan-out and replaySince cursors can
+      // drift by a ms and either duplicate-fire or drop events. Codify the
+      // invariant here so the repo can never silently regress.
+      const { id, createdAt } = events.append({
+        companyId: 'co-1',
+        actorId: 'orchestrator',
+        actorKind: 'orchestrator',
+        eventType: 'work.queued',
+        payload: {},
+      });
+      const row = events.since(0).find((e) => e.id === id);
+      expect(row?.createdAt).toBe(createdAt);
+    });
+
     it('serializes the payload to JSON text', () => {
-      const id = events.append({
+      const { id } = events.append({
         companyId: 'co-1',
         actorId: 'emp-1',
         actorKind: 'employee',
@@ -46,7 +62,7 @@ describe('events repo', () => {
     });
 
     it('stores every required scalar verbatim', () => {
-      const id = events.append({
+      const { id } = events.append({
         companyId: 'co-xyz',
         actorId: 'user-alice',
         actorKind: 'user',
@@ -62,7 +78,7 @@ describe('events repo', () => {
 
     it('stores createdAt as a positive integer in ms', () => {
       const before = Date.now();
-      const id = events.append({
+      const { id } = events.append({
         companyId: 'co-1',
         actorId: 'x',
         actorKind: 'system',
@@ -121,7 +137,7 @@ describe('events repo', () => {
     });
 
     it('since(cursor) returns only events with createdAt > cursor', async () => {
-      const first = events.append({
+      const { id: first } = events.append({
         companyId: 'c',
         actorId: 'a',
         actorKind: 'system',
@@ -131,14 +147,14 @@ describe('events repo', () => {
       await new Promise((r) => setTimeout(r, 5));
       const midCursor = Date.now();
       await new Promise((r) => setTimeout(r, 5));
-      const second = events.append({
+      const { id: second } = events.append({
         companyId: 'c',
         actorId: 'a',
         actorKind: 'system',
         eventType: 't',
         payload: { n: 2 },
       });
-      const third = events.append({
+      const { id: third } = events.append({
         companyId: 'c',
         actorId: 'a',
         actorKind: 'system',
@@ -164,7 +180,7 @@ describe('events repo', () => {
     });
 
     it('returns events ordered oldest-first by createdAt', async () => {
-      const a = events.append({
+      const { id: a } = events.append({
         companyId: 'c',
         actorId: 'a',
         actorKind: 'system',
@@ -172,7 +188,7 @@ describe('events repo', () => {
         payload: {},
       });
       await new Promise((r) => setTimeout(r, 3));
-      const b = events.append({
+      const { id: b } = events.append({
         companyId: 'c',
         actorId: 'a',
         actorKind: 'system',
@@ -180,7 +196,7 @@ describe('events repo', () => {
         payload: {},
       });
       await new Promise((r) => setTimeout(r, 3));
-      const c = events.append({
+      const { id: c } = events.append({
         companyId: 'c',
         actorId: 'a',
         actorKind: 'system',

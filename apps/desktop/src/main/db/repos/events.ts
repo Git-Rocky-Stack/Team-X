@@ -56,16 +56,38 @@ export interface AppendEventInput {
   payload: unknown;
 }
 
+/**
+ * Result of a successful `append`. Carries both the generated id AND
+ * the exact `createdAt` that was persisted to the row.
+ *
+ * Why both? The event bus (see `main/orchestrator/event-bus.ts`)
+ * persists, then fans the same event out to in-memory subscribers.
+ * Subscribers must receive the authoritative timestamp, not a
+ * recomputed one — otherwise a late `replaySince(cursor)` could
+ * duplicate-fire or silently drop events when the bus-captured
+ * time differed from the DB-captured time by even a single ms.
+ */
+export interface AppendEventResult {
+  id: string;
+  createdAt: number;
+}
+
 type EventsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export function createEventsRepo<TRunResult>(db: EventsDb<TRunResult>) {
   return {
     /**
-     * Append a new event to the log. Returns the generated id. There
-     * is no `update` or `delete` — this table is append-only by design.
+     * Append a new event to the log. Returns the generated id AND the
+     * `createdAt` actually persisted — callers that need to stream the
+     * same event to in-memory subscribers (e.g. the event bus) must
+     * use this returned timestamp, NOT call `Date.now()` again.
+     *
+     * There is no `update` or `delete` — this table is append-only
+     * by design (invariant #6).
      */
-    append(input: AppendEventInput): string {
+    append(input: AppendEventInput): AppendEventResult {
       const id = nanoid();
+      const createdAt = Date.now();
       db.insert(events)
         .values({
           id,
@@ -74,10 +96,10 @@ export function createEventsRepo<TRunResult>(db: EventsDb<TRunResult>) {
           actorKind: input.actorKind,
           eventType: input.eventType,
           payloadJson: JSON.stringify(input.payload),
-          createdAt: Date.now(),
+          createdAt,
         })
         .run();
-      return id;
+      return { id, createdAt };
     },
 
     /**
