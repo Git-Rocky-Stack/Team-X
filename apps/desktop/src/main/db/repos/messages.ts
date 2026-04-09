@@ -23,6 +23,7 @@
  * Cross-driver generic typing — same pattern as companies/employees/threads.
  */
 
+import type { AuthorKind } from '@team-x/shared-types';
 import { asc, eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
@@ -32,10 +33,17 @@ import { messages } from '../schema.js';
 
 export type MessageRow = typeof messages.$inferSelect;
 
+/**
+ * Re-export the canonical `AuthorKind` from shared-types so intra-repo
+ * callers can import it from this module. Consumers outside `db/repos/`
+ * should prefer the direct `@team-x/shared-types` import.
+ */
+export type { AuthorKind };
+
 export interface AppendMessageInput {
   threadId: string;
   authorId: string;
-  authorKind: 'user' | 'employee' | 'system';
+  authorKind: AuthorKind;
   content: string;
   /** Optional tool-call log. Serialized to JSON on insert. */
   toolCalls?: unknown;

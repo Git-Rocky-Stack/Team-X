@@ -1,4 +1,19 @@
-export type AuthorKind = 'employee' | 'human' | 'system';
+/**
+ * Who authored a chat message. Narrow by design — messages are authored
+ * by one of these three concrete agents. Event emission uses the wider
+ * `ActorKind` (below) because the orchestrator and provider adapters
+ * emit dashboard events but never author messages.
+ */
+export type AuthorKind = 'employee' | 'user' | 'system';
+
+/**
+ * Who emitted a dashboard event. Superset of `AuthorKind` — adds
+ * `orchestrator` (scheduler lifecycle events) and `provider` (LLM
+ * provider streaming events). Kept separate from `AuthorKind` so
+ * `ChatMessage.authorKind` cannot accidentally be typed as
+ * `'orchestrator'` or `'provider'`.
+ */
+export type ActorKind = AuthorKind | 'orchestrator' | 'provider';
 
 export type EmployeeStatus = 'idle' | 'thinking' | 'blocked' | 'error';
 

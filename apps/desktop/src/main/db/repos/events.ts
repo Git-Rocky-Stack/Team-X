@@ -30,6 +30,7 @@
  * Cross-driver generic typing — same pattern as the other repos.
  */
 
+import type { ActorKind } from '@team-x/shared-types';
 import { and, asc, gt } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
@@ -39,12 +40,18 @@ import { events } from '../schema.js';
 
 export type EventRow = typeof events.$inferSelect;
 
-export type EventActorKind = 'user' | 'employee' | 'system' | 'orchestrator' | 'provider';
+/**
+ * Re-export the canonical `ActorKind` from shared-types so callers can
+ * import everything from this repo module without reaching across the
+ * workspace boundary. Consumers outside `db/repos/` should prefer the
+ * direct `@team-x/shared-types` import.
+ */
+export type { ActorKind };
 
 export interface AppendEventInput {
   companyId: string;
   actorId: string;
-  actorKind: EventActorKind;
+  actorKind: ActorKind;
   eventType: string;
   payload: unknown;
 }
