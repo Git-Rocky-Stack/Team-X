@@ -78,4 +78,40 @@ describe('parseRoleMarkdown', () => {
     expect(spec.frontmatter.id).toBe('chief-executive-officer');
     expect(spec.frontmatter.temperature).toBe(0.4);
   });
+
+  // --- Frontmatter splitter edge cases (added when gray-matter was
+  // retired in favor of a hand-rolled splitter + the `yaml` package). These
+  // exercise the splitter contract directly, independently of the zod
+  // schema validation.
+
+  it('throws the zod schema error (not the splitter error) when frontmatter is entirely absent', () => {
+    // A file with no `---` delimiters at all should flow through the splitter
+    // with data={} and then fail the zod validation with a meaningful
+    // per-field error message — NOT an "unterminated frontmatter" message,
+    // because there was no opening delimiter to mismatch in the first place.
+    const bodyOnly = '# Just a markdown body with no frontmatter\n';
+    expect(() => parseRoleMarkdown(bodyOnly, '/fake/bare.md')).toThrow(/Invalid role frontmatter/);
+  });
+
+  it('throws a descriptive error when the opening `---` is unterminated', () => {
+    // Opening delimiter present but no closing one — this is a corrupted
+    // file we want to surface loudly, not silently reinterpret as "no
+    // frontmatter" and let zod produce a confusing downstream error.
+    const broken =
+      '---\nid: orphan\nname: Orphan\n# Body begins here without a closing delimiter\n';
+    expect(() => parseRoleMarkdown(broken, '/fake/broken.md')).toThrow(
+      /Unterminated YAML frontmatter/,
+    );
+  });
+
+  it('parses role.md files with CRLF line endings (Windows checkout scenario)', () => {
+    // Git on Windows may materialize role.md files with \r\n endings
+    // depending on core.autocrlf settings. The splitter regexes use
+    // \r?\n so both line-ending styles parse identically.
+    const crlf = SAMPLE.replace(/\n/g, '\r\n');
+    const spec = parseRoleMarkdown(crlf, '/fake/win.md');
+    expect(spec.frontmatter.id).toBe('chief-executive-officer');
+    expect(spec.frontmatter.level).toBe('officer');
+    expect(spec.body).toContain('# Identity');
+  });
 });
