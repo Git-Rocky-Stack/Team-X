@@ -4,6 +4,7 @@ import { BrowserWindow, app } from 'electron';
 import { closeDb, getDb, initDb } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath } from './db/paths.js';
+import { seed } from './db/seed.js';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
@@ -58,6 +59,7 @@ app.whenReady().then(() => {
   initDb(dbPath());
   runMigrations(getDb(), resolveMigrationsFolder());
   console.log('[db] migrations applied');
+  seed();
 
   createWindow();
   app.on('activate', () => {
