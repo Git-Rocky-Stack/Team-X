@@ -17,6 +17,7 @@
     "@team-x/provider-router": "workspace:*",
     "@team-x/telemetry-core": "workspace:*",
     "better-sqlite3": "^11.3.0",
+    "dotenv": "^16.4.5",
     "drizzle-orm": "^0.33.0",
     "keytar": "^7.9.0",
     "nanoid": "^5.0.0"

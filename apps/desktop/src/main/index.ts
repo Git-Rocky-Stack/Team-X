@@ -5,6 +5,7 @@ import { closeDb, getDb, initDb } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath } from './db/paths.js';
 import { seed } from './db/seed.js';
+import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { seedDefaultProviders } from './services/providers.js';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -56,12 +57,17 @@ async function createWindow(): Promise<void> {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   initDb(dbPath());
   runMigrations(getDb(), resolveMigrationsFolder());
   console.log('[db] migrations applied');
   seed();
   seedDefaultProviders();
+  // Dev-only: import ANTHROPIC_API_KEY from apps/desktop/.env into the OS
+  // keychain if the keychain has no anthropic key yet. No-op in packaged
+  // builds and whenever the .env file is absent. See env-key-bootstrap.ts
+  // for the full list of security invariants this function enforces.
+  await bootstrapEnvKeys();
 
   createWindow();
   app.on('activate', () => {
