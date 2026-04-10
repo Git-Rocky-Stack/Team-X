@@ -5,6 +5,7 @@ import { useEmployees } from '@/hooks/use-employees.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { AppLayout } from './app/layout.js';
+import { ChatDrawer } from './features/chat/chat-drawer.js';
 import { CardsView } from './features/dashboard/cards-view.js';
 
 /**
@@ -60,6 +61,8 @@ export default function App() {
       ) : (
         <CardsView employees={employees} />
       )}
+
+      <ChatDrawer employees={employees} />
     </AppLayout>
   );
 }

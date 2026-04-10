@@ -48,7 +48,8 @@ export const useAppStore = create<AppState>((set) => ({
   companyId: null,
   employeeLive: {},
 
-  setSelectedEmployee: (id) => set({ selectedEmployeeId: id, chatOpen: id !== null }),
+  setSelectedEmployee: (id) =>
+    set({ selectedEmployeeId: id, chatOpen: id !== null, activeThreadId: null }),
 
   setChatOpen: (open) =>
     set((state) => ({
