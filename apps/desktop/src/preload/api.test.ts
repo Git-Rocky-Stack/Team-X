@@ -1,0 +1,242 @@
+import type { DashboardEvent } from '@team-x/shared-types';
+
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { type IpcRendererLike, PRELOAD_CHANNELS, buildTeamXApi } from './api.js';
+
+/**
+ * Tests for the preload `buildTeamXApi` factory.
+ *
+ * The factory is pure TypeScript — it captures an `IpcRendererLike`
+ * in a closure and routes each `TeamXApi` method through it. These
+ * tests exercise the factory with a hand-rolled fake that records
+ * every invoke / on / removeListener call so we can assert:
+ *
+ *   1. Channel names pin exactly to the `PRELOAD_CHANNELS` table
+ *      (so a typo here would match the channel constant check but
+ *      diverge from the main-process register layer's string, and
+ *      that would be caught by the Playwright smoke test in T49).
+ *
+ *   2. Argument shapes pin exactly (positional companyId becomes
+ *      `{ companyId }`, raw threadId becomes `{ threadId }`,
+ *      chat.send request is forwarded verbatim).
+ *
+ *   3. Return values from `ipc.invoke` pass through untouched — we
+ *      do not double-wrap promises, we do not map properties.
+ *
+ *   4. `events.onDashboard` attaches a listener, strips the ipc
+ *      event argument from the callback invocation, and returns an
+ *      unsubscribe function that removes THE SAME wrapper the
+ *      subscribe call attached.
+ *
+ * The fake IPC transport intentionally stores listeners in a
+ * `Map<channel, Set<listener>>` so tests can emit synthetic events
+ * by reaching into the map and calling every listener directly — the
+ * same pattern the real `ipcRenderer.on` uses internally.
+ */
+
+interface InvokeCall {
+  channel: string;
+  args: unknown[];
+}
+
+interface ListenerRef {
+  channel: string;
+  fn: (event: unknown, ...args: unknown[]) => void;
+}
+
+/**
+ * Build a fake `IpcRendererLike` for tests. Records every call and
+ * exposes an `emit` helper so tests can simulate main-process events.
+ */
+function makeFakeIpc() {
+  const invokeCalls: InvokeCall[] = [];
+  const listeners = new Map<string, Set<(event: unknown, ...args: unknown[]) => void>>();
+  const removed: ListenerRef[] = [];
+
+  let nextInvokeResult: unknown = undefined;
+
+  const ipc: IpcRendererLike = {
+    invoke: async (channel: string, ...args: unknown[]) => {
+      invokeCalls.push({ channel, args });
+      return nextInvokeResult;
+    },
+    on: (channel, listener) => {
+      const set = listeners.get(channel) ?? new Set();
+      set.add(listener);
+      listeners.set(channel, set);
+      return undefined;
+    },
+    removeListener: (channel, listener) => {
+      const set = listeners.get(channel);
+      set?.delete(listener);
+      removed.push({ channel, fn: listener });
+      return undefined;
+    },
+  };
+
+  return {
+    ipc,
+    invokeCalls,
+    listeners,
+    removed,
+    setNextInvokeResult(value: unknown) {
+      nextInvokeResult = value;
+    },
+    /** Synthetic event emit — mimics the real ipcRenderer handing a payload to every attached listener. */
+    emit(channel: string, ...payloads: unknown[]) {
+      const set = listeners.get(channel);
+      if (!set) return;
+      for (const l of set) l({ senderId: 1 }, ...payloads);
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Suite
+// ---------------------------------------------------------------------------
+
+describe('buildTeamXApi', () => {
+  let fake: ReturnType<typeof makeFakeIpc>;
+  let api: ReturnType<typeof buildTeamXApi>;
+
+  beforeEach(() => {
+    fake = makeFakeIpc();
+    api = buildTeamXApi(fake.ipc);
+  });
+
+  describe('employees.list', () => {
+    it('invokes employees.list with a { companyId } object', async () => {
+      fake.setNextInvokeResult([]);
+      await api.employees.list('co-1');
+      expect(fake.invokeCalls).toEqual([
+        { channel: PRELOAD_CHANNELS.employeesList, args: [{ companyId: 'co-1' }] },
+      ]);
+    });
+
+    it('passes through the resolved array of employees from invoke', async () => {
+      const stub = [{ id: 'e1' }, { id: 'e2' }];
+      fake.setNextInvokeResult(stub);
+      const result = await api.employees.list('co-1');
+      expect(result).toBe(stub);
+    });
+  });
+
+  describe('chat.send', () => {
+    it('invokes chat.send with the request object verbatim', async () => {
+      fake.setNextInvokeResult({ threadId: 't-1', messageId: 'm-1' });
+      const req = { threadId: 'auto', employeeId: 'e-1', content: 'hi' } as const;
+      await api.chat.send(req);
+      expect(fake.invokeCalls).toEqual([{ channel: PRELOAD_CHANNELS.chatSend, args: [req] }]);
+    });
+
+    it('passes through the SendChatResponse from invoke', async () => {
+      const stub = { threadId: 't-resolved', messageId: 'm-99' };
+      fake.setNextInvokeResult(stub);
+      const result = await api.chat.send({
+        threadId: 'auto',
+        employeeId: 'e-1',
+        content: 'hi',
+      });
+      expect(result).toBe(stub);
+    });
+  });
+
+  describe('chat.list', () => {
+    it('invokes chat.list with a { threadId } object', async () => {
+      fake.setNextInvokeResult([]);
+      await api.chat.list('thread-7');
+      expect(fake.invokeCalls).toEqual([
+        { channel: PRELOAD_CHANNELS.chatList, args: [{ threadId: 'thread-7' }] },
+      ]);
+    });
+
+    it('passes through the resolved array of messages from invoke', async () => {
+      const stub = [{ id: 'm1' }, { id: 'm2' }];
+      fake.setNextInvokeResult(stub);
+      const result = await api.chat.list('thread-7');
+      expect(result).toBe(stub);
+    });
+  });
+
+  describe('events.onDashboard', () => {
+    it('attaches a listener to events.dashboard', () => {
+      const cb = vi.fn();
+      api.events.onDashboard(cb);
+      expect(fake.listeners.get(PRELOAD_CHANNELS.eventsDashboard)?.size).toBe(1);
+    });
+
+    it('forwards event payloads without the ipc event argument', () => {
+      const cb = vi.fn();
+      api.events.onDashboard(cb);
+      const fakeEvent = { id: 'evt-1', type: 'token.delta' } as unknown as DashboardEvent;
+      fake.emit(PRELOAD_CHANNELS.eventsDashboard, fakeEvent);
+      expect(cb).toHaveBeenCalledTimes(1);
+      // The callback should receive ONLY the payload — no leading
+      // IpcRendererEvent-like first arg.
+      expect(cb).toHaveBeenCalledWith(fakeEvent);
+    });
+
+    it('calls the listener once per emitted event', () => {
+      const cb = vi.fn();
+      api.events.onDashboard(cb);
+      fake.emit(PRELOAD_CHANNELS.eventsDashboard, { id: 'a' });
+      fake.emit(PRELOAD_CHANNELS.eventsDashboard, { id: 'b' });
+      fake.emit(PRELOAD_CHANNELS.eventsDashboard, { id: 'c' });
+      expect(cb).toHaveBeenCalledTimes(3);
+    });
+
+    it('returns an unsubscribe that stops future events from reaching the listener', () => {
+      const cb = vi.fn();
+      const unsubscribe = api.events.onDashboard(cb);
+      fake.emit(PRELOAD_CHANNELS.eventsDashboard, { id: 'before' });
+      unsubscribe();
+      fake.emit(PRELOAD_CHANNELS.eventsDashboard, { id: 'after' });
+      expect(cb).toHaveBeenCalledTimes(1);
+      expect(cb).toHaveBeenCalledWith({ id: 'before' });
+    });
+
+    it('unsubscribe removes the exact same wrapped listener that was attached', () => {
+      const cb = vi.fn();
+      const unsubscribe = api.events.onDashboard(cb);
+      // Snapshot the attached listener — there should be exactly one.
+      const attached = fake.listeners.get(PRELOAD_CHANNELS.eventsDashboard);
+      expect(attached?.size).toBe(1);
+      const listenerFn = [...(attached ?? [])][0];
+      unsubscribe();
+      expect(fake.removed).toHaveLength(1);
+      expect(fake.removed[0]?.channel).toBe(PRELOAD_CHANNELS.eventsDashboard);
+      expect(fake.removed[0]?.fn).toBe(listenerFn);
+    });
+
+    it('supports multiple concurrent subscribers with independent unsubscribes', () => {
+      const a = vi.fn();
+      const b = vi.fn();
+      const c = vi.fn();
+      const unsubA = api.events.onDashboard(a);
+      api.events.onDashboard(b);
+      api.events.onDashboard(c);
+
+      fake.emit(PRELOAD_CHANNELS.eventsDashboard, { id: '1' });
+      expect(a).toHaveBeenCalledTimes(1);
+      expect(b).toHaveBeenCalledTimes(1);
+      expect(c).toHaveBeenCalledTimes(1);
+
+      unsubA();
+
+      fake.emit(PRELOAD_CHANNELS.eventsDashboard, { id: '2' });
+      expect(a).toHaveBeenCalledTimes(1); // no more events for a
+      expect(b).toHaveBeenCalledTimes(2);
+      expect(c).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('channel constants', () => {
+    it('PRELOAD_CHANNELS matches the shared-types IpcContract channel names', () => {
+      expect(PRELOAD_CHANNELS.employeesList).toBe('employees.list');
+      expect(PRELOAD_CHANNELS.chatSend).toBe('chat.send');
+      expect(PRELOAD_CHANNELS.chatList).toBe('chat.list');
+      expect(PRELOAD_CHANNELS.eventsDashboard).toBe('events.dashboard');
+    });
+  });
+});

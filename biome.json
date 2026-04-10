@@ -8,7 +8,8 @@
       "node_modules",
       "coverage",
       "*.tsbuildinfo",
-      "apps/desktop/src/main/db/migrations"
+      "apps/desktop/src/main/db/migrations",
+      "**/*.d.ts"
     ]
   },
   "formatter": {

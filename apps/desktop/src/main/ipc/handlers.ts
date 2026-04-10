@@ -37,7 +37,13 @@
  *   replaces this with a proper users table when multi-user lands.
  */
 
-import type { ChatMessage, Employee } from '@team-x/shared-types';
+import type {
+  ChatMessage,
+  Employee,
+  SendChatRequest,
+  SendChatResponse,
+} from '@team-x/shared-types';
+import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
@@ -56,8 +62,15 @@ import type {
  */
 export const HUMAN_USER_ID = 'rocky';
 
-/** Sentinel value the renderer passes to `chat.send` for "find or create the DM with this employee". */
-export const AUTO_THREAD_ID = 'auto';
+/**
+ * Re-export shared-types symbols that handler consumers (tests, the
+ * register layer) have historically imported from this module. Keeping
+ * the re-export preserves the existing call sites while making
+ * shared-types the single source of truth for the string sentinel and
+ * the request/response shapes.
+ */
+export { AUTO_THREAD_ID };
+export type { SendChatRequest, SendChatResponse };
 
 // ---------------------------------------------------------------------------
 // Repo shapes (narrow structural interfaces)
@@ -108,20 +121,6 @@ export interface IpcHandlerDeps {
   threadsRepo: IpcThreadsRepo;
   messagesRepo: IpcMessagesRepo;
   orchestrator: IpcOrchestrator;
-}
-
-export interface SendChatRequest {
-  /** Either a real thread id, or `AUTO_THREAD_ID` to look up / create the user↔employee DM. */
-  threadId: string;
-  employeeId: string;
-  content: string;
-}
-
-export interface SendChatResponse {
-  /** The id of the resolved (or just-created) thread the message landed in. */
-  threadId: string;
-  /** The id of the user's message row that was just appended. */
-  messageId: string;
 }
 
 export interface IpcHandlers {
