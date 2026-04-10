@@ -39,12 +39,15 @@
 
 import type {
   ChatMessage,
+  Company,
+  CompanySettings,
   Employee,
   SendChatRequest,
   SendChatResponse,
 } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
+import type { CompanyRow } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type {
@@ -80,6 +83,10 @@ export type { SendChatRequest, SendChatResponse };
 // the handlers actually use so tests can hand-roll fakes without depending
 // on drizzle's BetterSQLite3Database<Schema> generic. The real
 // `createXRepo(db)` return values structurally satisfy these.
+
+export interface IpcCompaniesRepo {
+  list(): CompanyRow[];
+}
 
 export interface IpcEmployeesRepo {
   listByCompany(companyId: string): EmployeeRow[];
@@ -117,6 +124,7 @@ export interface IpcOrchestrator {
 // ---------------------------------------------------------------------------
 
 export interface IpcHandlerDeps {
+  companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
   threadsRepo: IpcThreadsRepo;
   messagesRepo: IpcMessagesRepo;
@@ -124,6 +132,9 @@ export interface IpcHandlerDeps {
 }
 
 export interface IpcHandlers {
+  /** `companies.list` — return every company. Phase 1 always returns exactly one. */
+  companiesList(): Promise<Company[]>;
+
   /**
    * `employees.list` — return every employee in a given company,
    * mapped from the raw DB row to the public `Employee` shape from
@@ -173,6 +184,23 @@ export interface IpcHandlers {
 
 import type { AuthorKind, EmployeeStatus } from '@team-x/shared-types';
 
+function rowToCompany(row: CompanyRow): Company {
+  let settings: CompanySettings = {};
+  try {
+    const parsed = JSON.parse(row.settingsJson);
+    if (parsed && typeof parsed === 'object') settings = parsed as CompanySettings;
+  } catch {
+    // Corrupted JSON — fall back to empty settings.
+  }
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    createdAt: row.createdAt,
+    settings,
+  };
+}
+
 function rowToEmployee(row: EmployeeRow): Employee {
   // Strip the rolePackId, toolsAllowed/Denied JSON columns — they are
   // internal to the agent runtime and not part of the renderer
@@ -213,9 +241,13 @@ function rowToChatMessage(row: MessageRow): ChatMessage {
 // ---------------------------------------------------------------------------
 
 export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
-  const { employeesRepo, threadsRepo, messagesRepo, orchestrator } = deps;
+  const { companiesRepo, employeesRepo, threadsRepo, messagesRepo, orchestrator } = deps;
 
   return {
+    async companiesList() {
+      return companiesRepo.list().map(rowToCompany);
+    },
+
     async employeesList({ companyId }) {
       if (typeof companyId !== 'string' || companyId.length === 0) {
         throw new Error('[ipc] employees.list: companyId is required');

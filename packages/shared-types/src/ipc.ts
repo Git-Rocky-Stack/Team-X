@@ -30,7 +30,7 @@
  *     time.
  */
 
-import type { ChatMessage, Employee } from './entities.js';
+import type { ChatMessage, Company, Employee } from './entities.js';
 import type { DashboardEvent } from './events.js';
 
 // ---------------------------------------------------------------------------
@@ -76,6 +76,10 @@ export interface ListChatRequest {
 // ---------------------------------------------------------------------------
 
 export interface IpcContract {
+  'companies.list': {
+    request: Record<string, never>;
+    response: Company[];
+  };
   'employees.list': {
     request: ListEmployeesRequest;
     response: Employee[];
@@ -123,6 +127,10 @@ export type UnsubscribeFn = () => void;
  * without forcing the caller to remember positional order.
  */
 export interface TeamXApi {
+  companies: {
+    /** Return every company. Phase 1 always returns exactly one. */
+    list(): Promise<Company[]>;
+  };
   employees: {
     /** Return every employee in the given company, mapped to the public Employee shape. */
     list(companyId: string): Promise<Employee[]>;

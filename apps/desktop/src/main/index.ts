@@ -246,6 +246,7 @@ app.whenReady().then(async () => {
   });
 
   const ipcHandlers = createIpcHandlers({
+    companiesRepo,
     employeesRepo,
     threadsRepo,
     messagesRepo,

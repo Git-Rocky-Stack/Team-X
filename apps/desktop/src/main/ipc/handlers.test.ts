@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { CompanyRow } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type {
@@ -12,6 +13,7 @@ import type {
 import {
   AUTO_THREAD_ID,
   HUMAN_USER_ID,
+  type IpcCompaniesRepo,
   type IpcEmployeesRepo,
   type IpcMessagesRepo,
   type IpcOrchestrator,
@@ -49,6 +51,18 @@ import {
 // ---------------------------------------------------------------------------
 // Fakes
 // ---------------------------------------------------------------------------
+
+class FakeCompaniesRepo implements IpcCompaniesRepo {
+  private rows: CompanyRow[] = [];
+
+  put(row: CompanyRow): void {
+    this.rows.push(row);
+  }
+
+  list(): CompanyRow[] {
+    return this.rows;
+  }
+}
 
 class FakeEmployeesRepo implements IpcEmployeesRepo {
   private byId = new Map<string, EmployeeRow>();
@@ -240,6 +254,7 @@ function makeThreadRow(overrides: Partial<ThreadRow> = {}): ThreadRow {
 }
 
 interface Fixture {
+  companies: FakeCompaniesRepo;
   employees: FakeEmployeesRepo;
   threads: FakeThreadsRepo;
   messages: FakeMessagesRepo;
@@ -248,17 +263,19 @@ interface Fixture {
 }
 
 function buildFixture(): Fixture {
+  const companies = new FakeCompaniesRepo();
   const employees = new FakeEmployeesRepo();
   const threads = new FakeThreadsRepo();
   const messages = new FakeMessagesRepo();
   const orchestrator = new FakeOrchestrator();
   const handlers = createIpcHandlers({
+    companiesRepo: companies,
     employeesRepo: employees,
     threadsRepo: threads,
     messagesRepo: messages,
     orchestrator,
   });
-  return { employees, threads, messages, orchestrator, handlers };
+  return { companies, employees, threads, messages, orchestrator, handlers };
 }
 
 // ---------------------------------------------------------------------------

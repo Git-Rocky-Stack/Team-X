@@ -72,6 +72,7 @@ export interface IpcRendererLike {
  * `IpcContract` in `@team-x/shared-types/ipc.ts`.
  */
 const CHANNELS = {
+  companiesList: 'companies.list',
   employeesList: 'employees.list',
   chatSend: 'chat.send',
   chatList: 'chat.list',
@@ -85,6 +86,9 @@ const CHANNELS = {
  */
 export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
   return {
+    companies: {
+      list: () => ipc.invoke(CHANNELS.companiesList) as ReturnType<TeamXApi['companies']['list']>,
+    },
     employees: {
       list: (companyId: string) =>
         ipc.invoke(CHANNELS.employeesList, { companyId }) as ReturnType<
