@@ -17,6 +17,7 @@
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@tanstack/react-query": "^5.97.0",
     "@team-x/provider-router": "workspace:*",
     "@team-x/role-schema": "workspace:*",
     "@team-x/shared-types": "workspace:*",
@@ -29,7 +30,8 @@
     "keytar": "^7.9.0",
     "lucide-react": "^1.8.0",
     "nanoid": "^5.0.0",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.6.0",
