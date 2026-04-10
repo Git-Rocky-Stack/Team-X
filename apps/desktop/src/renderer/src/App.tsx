@@ -43,14 +43,14 @@ export default function App() {
     });
   }, [companyId, setCompanyId]);
 
-  const { data: employees = [], isLoading } = useEmployees(companyId);
+  const { data: employees = [], isLoading, isError, refetch } = useEmployees(companyId);
 
   return (
     <AppLayout employees={employees} onHireClick={() => setHireOpen(true)}>
       {isLoading ? (
-        <div className="p-6">
-          <p className="text-sm text-muted-foreground">Loading team...</p>
-        </div>
+        <CardsView employees={[]} isLoading />
+      ) : isError ? (
+        <CardsView employees={[]} isError onRetry={() => refetch()} />
       ) : employees.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="text-lg font-medium text-muted-foreground">No employees yet</p>
