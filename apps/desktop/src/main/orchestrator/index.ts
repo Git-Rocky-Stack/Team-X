@@ -1,0 +1,330 @@
+/**
+ * Orchestrator facade — the single public surface the IPC layer talks to.
+ *
+ * Composes the three Phase 1 primitives:
+ *
+ *   - the event bus (T28) for dashboard fan-out,
+ *   - the work queue (T29) for concurrency-capped FIFO dispatch,
+ *   - `runAgent` (T30) for the actual LLM turn.
+ *
+ * Everything above this file (IPC handlers in T33, preload bridge in T34,
+ * the renderer) consumes only the `Orchestrator` interface below. Nothing
+ * above reaches into the event bus or work queue directly — the facade is
+ * the invariant boundary.
+ *
+ * Design decisions worth pinning:
+ *
+ * 1. All per-turn lookups happen INSIDE the queued task, not at
+ *    `enqueueChat` call time. That keeps the pause/drain semantics of
+ *    the work queue clean: a paused orchestrator genuinely does nothing,
+ *    including no disk reads and no provider picks. It also means
+ *    enqueueChat returns immediately and never waits on disk I/O.
+ *
+ * 2. `resolveSystemPrompt` and `resolveProvider` are injected async
+ *    callbacks, not inlined logic. The real implementations land in T32
+ *    (parse role.md, render template vars, consult provider-router
+ *    registry + keytar). Keeping them as injection points means this
+ *    module and its tests stay deterministic and have zero dependency
+ *    on the filesystem or the keychain.
+ *
+ * 3. Repos are narrowed to structural interfaces rather than importing
+ *    the full `createXRepo` return types. Same rationale as
+ *    `EventsRepoLike` on the event bus: avoids leaking
+ *    `BaseSQLiteDatabase` generics into the orchestrator layer, and
+ *    lets tests hand-roll fakes when needed.
+ *
+ * 4. `shutdown` is a latch. Once called, `enqueueChat` rejects
+ *    synchronously on subsequent calls — no silent drop, no half-state.
+ *    The latch flips BEFORE draining so any work enqueued during the
+ *    drain window is rejected cleanly.
+ *
+ * 5. Phase 1 history mapping assumes DM threads (one user + one
+ *    employee). `author_kind === 'employee'` maps to `assistant` role
+ *    in the provider stream. Phase 2 multi-employee meetings will
+ *    need richer mapping (e.g. name-prefixed assistant turns); that's
+ *    a meeting-primitive concern, not a Phase 1 one.
+ */
+
+import type { ProviderStreamFn, StreamMessage } from '@team-x/provider-router';
+import type { AuthorKind } from '@team-x/shared-types';
+
+import type { CompanyRow } from '../db/repos/companies.js';
+import type { EmployeeRow } from '../db/repos/employees.js';
+import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
+import type { FinishRunInput, StartRunInput } from '../db/repos/runs.js';
+import type { ThreadRow } from '../db/repos/threads.js';
+import type { EventBus } from './event-bus.js';
+import { type WorkQueue, createWorkQueue } from './queue.js';
+import { type CostCalculator, runAgent } from './run-agent.js';
+
+// ---------------------------------------------------------------------------
+// Repo shapes
+// ---------------------------------------------------------------------------
+
+/**
+ * Narrowed repo interfaces. Each one declares exactly the methods the
+ * orchestrator actually uses. The real `createXRepo(db)` return values
+ * satisfy these via structural typing with no casts required.
+ */
+export interface OrchestratorMessagesRepo {
+  append(input: AppendMessageInput): string;
+  updateContent(id: string, content: string): void;
+  listByThread(threadId: string): MessageRow[];
+}
+
+export interface OrchestratorRunsRepo {
+  start(input: StartRunInput): string;
+  finish(id: string, input: FinishRunInput): void;
+}
+
+export interface OrchestratorEmployeesRepo {
+  getById(id: string): EmployeeRow | null;
+}
+
+export interface OrchestratorCompaniesRepo {
+  getById(id: string): CompanyRow | null;
+}
+
+export interface OrchestratorThreadsRepo {
+  getById(id: string): ThreadRow | null;
+}
+
+// ---------------------------------------------------------------------------
+// Injection contracts
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolver that turns an employee + company pair into a rendered system
+ * prompt. The real implementation (T32) will:
+ *
+ *   1. Look up `role.md` on disk via `employee.rolePackId` + `employee.roleId`,
+ *   2. Parse it with `parseRoleMarkdown`,
+ *   3. Substitute template vars via `renderRoleBody` using the company's
+ *      parsed settings JSON.
+ *
+ * Returning a pre-rendered string keeps `runAgent` free of disk and
+ * role-pack concerns.
+ */
+export type ResolveSystemPrompt = (args: {
+  employee: EmployeeRow;
+  company: CompanyRow;
+}) => Promise<string>;
+
+/**
+ * Resolver that picks a provider + model for a given employee. The real
+ * implementation (T32) will consult the provider-router registry, apply
+ * the user's privacy-tier filter, and load API keys from keytar. Phase 1
+ * tests inject a fake that returns a stub async generator.
+ */
+export type ResolveProvider = (employee: EmployeeRow) => Promise<{
+  providerName: string;
+  model: string;
+  stream: ProviderStreamFn;
+}>;
+
+// ---------------------------------------------------------------------------
+// Public Orchestrator interface
+// ---------------------------------------------------------------------------
+
+export interface EnqueueChatArgs {
+  threadId: string;
+  employeeId: string;
+  /**
+   * The id of the user message that just triggered this turn. The
+   * orchestrator does NOT re-insert it — the IPC handler already did
+   * that before calling enqueueChat (see T33). This field exists so
+   * downstream consumers (work.failed payloads, future retry logic)
+   * can correlate a failed turn back to the triggering user message.
+   */
+  userMessageId: string;
+}
+
+export interface Orchestrator {
+  /**
+   * Queue a chat turn for the given employee. Returns a Promise that
+   * resolves when the turn has fully completed (assistant message
+   * persisted, runs row closed, `work.completed` emitted), or rejects
+   * if the provider errors out, a lookup fails, or the orchestrator is
+   * in shutdown.
+   */
+  enqueueChat(args: EnqueueChatArgs): Promise<void>;
+
+  /** Stop dispatching new work. In-flight turns continue to completion. */
+  pause(): void;
+
+  /** Resume dispatching. */
+  resume(): void;
+
+  /**
+   * Gracefully stop: pause the queue, await every in-flight turn, then
+   * reject any subsequent `enqueueChat` calls. Safe to call multiple
+   * times — second and later calls return the same drain promise.
+   */
+  shutdown(): Promise<void>;
+
+  /**
+   * Escape hatch for T36 / main process wiring that wants to subscribe
+   * to the bus (for forwarding events to the renderer). Tests use this
+   * directly too.
+   */
+  readonly bus: EventBus;
+}
+
+// ---------------------------------------------------------------------------
+// Builder
+// ---------------------------------------------------------------------------
+
+export interface BuildOrchestratorOptions {
+  bus: EventBus;
+  messagesRepo: OrchestratorMessagesRepo;
+  runsRepo: OrchestratorRunsRepo;
+  employeesRepo: OrchestratorEmployeesRepo;
+  companiesRepo: OrchestratorCompaniesRepo;
+  threadsRepo: OrchestratorThreadsRepo;
+  calcCost: CostCalculator;
+  resolveSystemPrompt: ResolveSystemPrompt;
+  resolveProvider: ResolveProvider;
+  /**
+   * Concurrent dispatch cap. Phase 1 default is intentionally low (2)
+   * so local ollama never gets stampeded; T36 reads the real number
+   * from the provider settings service.
+   */
+  slots: number;
+  /** Optional clock injection for tests. Passed through to runAgent. */
+  now?: () => number;
+}
+
+/** Map a DB message's author kind to the provider-facing stream role. */
+function authorKindToStreamRole(kind: AuthorKind): StreamMessage['role'] {
+  switch (kind) {
+    case 'user':
+      return 'user';
+    case 'employee':
+      return 'assistant';
+    case 'system':
+      return 'system';
+  }
+}
+
+function mapHistory(rows: MessageRow[]): StreamMessage[] {
+  return rows.map((row) => ({
+    role: authorKindToStreamRole(row.authorKind as AuthorKind),
+    content: row.content,
+  }));
+}
+
+export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator {
+  const {
+    bus,
+    messagesRepo,
+    runsRepo,
+    employeesRepo,
+    companiesRepo,
+    threadsRepo,
+    calcCost,
+    resolveSystemPrompt,
+    resolveProvider,
+    slots,
+    now,
+  } = opts;
+
+  const queue: WorkQueue = createWorkQueue({ slots });
+
+  let shuttingDown = false;
+  let shutdownPromise: Promise<void> | null = null;
+
+  async function runTurn(args: EnqueueChatArgs): Promise<void> {
+    // All lookups happen inside the queued task. If the orchestrator
+    // was paused between enqueue and dispatch, these don't fire.
+    const thread = threadsRepo.getById(args.threadId);
+    if (!thread) {
+      throw new Error(`orchestrator: thread not found: ${args.threadId}`);
+    }
+
+    const employee = employeesRepo.getById(args.employeeId);
+    if (!employee) {
+      throw new Error(`orchestrator: employee not found: ${args.employeeId}`);
+    }
+
+    // Defensive check: the employee must belong to the thread's company.
+    // The IPC layer should never present a mismatched pair, but the
+    // orchestrator is the last line of defense before a turn runs on
+    // the wrong data.
+    if (employee.companyId !== thread.companyId) {
+      throw new Error(
+        `orchestrator: employee ${args.employeeId} does not belong to ` +
+          `thread ${args.threadId}'s company`,
+      );
+    }
+
+    const company = companiesRepo.getById(thread.companyId);
+    if (!company) {
+      throw new Error(`orchestrator: company not found: ${thread.companyId}`);
+    }
+
+    const [system, provider] = await Promise.all([
+      resolveSystemPrompt({ employee, company }),
+      resolveProvider(employee),
+    ]);
+
+    const history = mapHistory(messagesRepo.listByThread(args.threadId));
+
+    await runAgent(
+      {
+        bus,
+        messages: messagesRepo,
+        runs: runsRepo,
+        calcCost,
+        now,
+      },
+      {
+        companyId: company.id,
+        threadId: args.threadId,
+        employeeId: args.employeeId,
+        system,
+        messages: history,
+        provider: provider.stream,
+        providerName: provider.providerName,
+        model: provider.model,
+      },
+    );
+  }
+
+  return {
+    enqueueChat(args: EnqueueChatArgs): Promise<void> {
+      if (shuttingDown) {
+        return Promise.reject(
+          new Error('orchestrator: cannot enqueue — orchestrator is shutting down'),
+        );
+      }
+      return queue.enqueue(() => runTurn(args));
+    },
+
+    pause(): void {
+      queue.pause();
+    },
+
+    resume(): void {
+      // Resume is a no-op once shutdown has been initiated — the
+      // paused-then-draining state is terminal.
+      if (shuttingDown) return;
+      queue.resume();
+    },
+
+    shutdown(): Promise<void> {
+      if (shutdownPromise) return shutdownPromise;
+      shuttingDown = true;
+      queue.pause();
+      // Drain resolves once `inFlight` hits zero. With the queue paused
+      // and the shuttingDown latch rejecting new enqueues, the in-flight
+      // set is monotonically non-increasing from here, so drain is
+      // guaranteed to resolve (no starvation).
+      shutdownPromise = queue.drain();
+      return shutdownPromise;
+    },
+
+    get bus() {
+      return bus;
+    },
+  };
+}
