@@ -11,6 +11,7 @@
     "types": ["node", "electron-vite/node"]
   },
   "include": ["src/main/**/*"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"],
   "references": [
     { "path": "../../packages/shared-types" },
     { "path": "../../packages/role-schema" },
