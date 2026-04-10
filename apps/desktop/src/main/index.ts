@@ -59,10 +59,18 @@ import { seed } from './db/seed.js';
 import { createIpcHandlers } from './ipc/handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
 import { createEventBus } from './orchestrator/event-bus.js';
-import { type Orchestrator, buildOrchestrator } from './orchestrator/index.js';
+import {
+  type Orchestrator,
+  type ResolveProvider,
+  buildOrchestrator,
+} from './orchestrator/index.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
-import { createProviderFactory } from './services/provider-factory.js';
+import {
+  createProviderFactory,
+  createTestModeResolveProvider,
+  isTestMode,
+} from './services/provider-factory.js';
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRoleLoader } from './services/role-loader.js';
 import { SecretsStore } from './services/secrets.js';
@@ -186,12 +194,28 @@ app.whenReady().then(async () => {
 
   const bus = createEventBus({ repo: eventsRepo });
 
-  // Provider routing: providers service + secrets store + adapter factory.
-  // The factory's `resolveForEmployee` IS the orchestrator's
-  // `resolveProvider` slot — same shape, no adapter needed.
-  const secretsStore = new SecretsStore();
-  const providersService = getProvidersService();
-  const providerFactory = createProviderFactory({ providersService, secretsStore });
+  // Provider routing — two modes:
+  //
+  //   - Normal: providers service + secrets store + adapter factory.
+  //     The factory's `resolveForEmployee` IS the orchestrator's
+  //     `resolveProvider` slot — same shape, no adapter needed.
+  //
+  //   - Test mode (NODE_ENV=test): a canned instant-reply stream
+  //     that needs no LLM server, no keytar, and no network. Used by
+  //     the Playwright E2E smoke test (T49) which boots a real Electron
+  //     instance but must not depend on external infrastructure.
+  const testMode = isTestMode();
+  let resolveProvider: ResolveProvider;
+
+  if (testMode) {
+    resolveProvider = createTestModeResolveProvider();
+    console.log('[main] test-mode provider active — canned responses, no LLM calls');
+  } else {
+    const secretsStore = new SecretsStore();
+    const providersService = getProvidersService();
+    const providerFactory = createProviderFactory({ providersService, secretsStore });
+    resolveProvider = (employee) => providerFactory.resolveForEmployee(employee);
+  }
 
   // Role loader: turns (employee, company) into a rendered system prompt.
   // Preloaded eagerly so the cost of the role-pack scan is paid during
@@ -217,7 +241,7 @@ app.whenReady().then(async () => {
     threadsRepo,
     calcCost,
     resolveSystemPrompt: (args) => roleLoader.resolveSystemPrompt(args),
-    resolveProvider: (employee) => providerFactory.resolveForEmployee(employee),
+    resolveProvider,
     slots: PHASE_1_ORCHESTRATOR_SLOTS,
   });
 

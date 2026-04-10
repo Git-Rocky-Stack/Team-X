@@ -298,3 +298,72 @@ export function getProviderFactory(): ProviderFactory {
 export function __resetProviderFactoryForTests(): void {
   _factory = null;
 }
+
+// -----------------------------------------------------------------------------
+// Test-mode provider — canned responses, no network, no keytar.
+// -----------------------------------------------------------------------------
+
+/**
+ * Canned response the test-mode provider streams when
+ * `NODE_ENV === 'test'`. Short, deterministic, recognizable in
+ * Playwright assertions and console output. The content is written
+ * to sound like a plausible CEO reply so visual QA against the
+ * dashboard doesn't look obviously fake.
+ */
+const TEST_MODE_REPLY = 'Our top priority this week is shipping the Phase 1 demo.';
+const TEST_MODE_PROVIDER_NAME = 'test-mode';
+const TEST_MODE_MODEL = 'test-canned-v1';
+
+/**
+ * Build a `ProviderStreamFn` that yields a canned reply in a handful
+ * of delta chunks + a synthetic usage record, with zero latency and
+ * zero network calls. Used by `main/index.ts` when
+ * `process.env.NODE_ENV === 'test'` so the Playwright E2E smoke test
+ * (T49) can boot a real Electron instance, render the dashboard, send
+ * a chat message, and verify the streaming + persistence pipeline
+ * end-to-end — all without a running LLM server.
+ *
+ * The chunking mimics real provider behaviour (multiple small deltas
+ * rather than one big blob) so the dashboard's token-stream preview
+ * and the event bus's `token.delta` fan-out get a realistic exercise.
+ */
+function testModeStream(): ProviderStreamFn {
+  return async function* testMode() {
+    const words = TEST_MODE_REPLY.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      yield { delta: (i > 0 ? ' ' : '') + words[i] };
+    }
+    yield {
+      done: true,
+      usage: {
+        promptTokens: 42,
+        completionTokens: words.length,
+      },
+    };
+  };
+}
+
+/**
+ * Return `true` if the process is running in test mode. Centralised
+ * so `main/index.ts` and the Playwright boot harness share one check.
+ */
+export function isTestMode(): boolean {
+  return process.env.NODE_ENV === 'test';
+}
+
+/**
+ * Build a `ResolveProvider` function that always returns the canned
+ * test-mode stream regardless of the employee's preferences. Matches
+ * the `ResolveProvider` signature from `orchestrator/index.ts` so
+ * `main/index.ts` can swap it in with a single ternary.
+ */
+export function createTestModeResolveProvider(): (
+  employee: EmployeeRow,
+) => Promise<ResolvedProvider> {
+  const stream = testModeStream();
+  return async (_employee: EmployeeRow): Promise<ResolvedProvider> => ({
+    providerName: TEST_MODE_PROVIDER_NAME,
+    model: TEST_MODE_MODEL,
+    stream,
+  });
+}

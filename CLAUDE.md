@@ -18,7 +18,12 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 ## Status
 
-**Phase 1 (Skeleton) — in progress.** Milestones 1 (repo foundations) and 2 (shared packages) are complete. Milestone 3 (main process + DB + secrets) is substantially complete: Electron boots with context isolation on, SQLite + Drizzle migrate on first run, the seed creates the hardcoded Strategia-X company with CEO + Senior Fullstack Engineer, the keytar-backed `SecretsStore` is wired up, the providers service seeds `ollama-local` + `anthropic` rows on first boot, and the dev `.env` → keychain bootstrap runs inside `app.whenReady()`. Next up: Checkpoint 3, then Milestone 4 (agent runtime).
+**Phase 1 (Skeleton) — in progress.** Milestones 1-4 complete. Milestone 5 (renderer) is next.
+
+- **M1 (repo foundations):** pnpm workspace, TypeScript strict, Biome, Vitest, CI.
+- **M2 (shared packages):** `shared-types`, `role-schema` (parser + template renderer), `provider-router` (registry + streaming adapters for Anthropic + Ollama), `telemetry-core` (cost math).
+- **M3 (main process + DB):** Electron boots with context isolation, SQLite + Drizzle migrate on first run, seed creates the Strategia-X company with CEO + Senior Fullstack Engineer, keytar-backed `SecretsStore`, providers service seeds `ollama-local` + `anthropic`, dev `.env` → keychain bootstrap.
+- **M4 (agent runtime):** Append-only event bus, slot-semaphore work queue, `runAgent` with live streaming + persistence, orchestrator facade, real Anthropic + Ollama adapters via Vercel AI SDK, `provider-factory` (resolves employee → provider + model with keytar + privacy-tier fallback), `role-loader` (directory scan → role.md index → template rendering), IPC handlers (`employees.list`, `chat.send`, `chat.list`) with typed preload bridge (`window.teamx: TeamXApi`), full main/index.ts wiring (orchestrator + IPC + event forwarding + graceful shutdown), test-mode provider for Playwright E2E, smoke-chat.ts script for manual Ollama verification. 313 tests passing.
 
 The detailed Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md) — 52 tasks across 6 milestones.
 
