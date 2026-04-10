@@ -42,13 +42,17 @@ import type {
   Company,
   CompanySettings,
   Employee,
+  HireEmployeeRequest,
+  HireEmployeeResponse,
   SendChatRequest,
   SendChatResponse,
 } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
+import type { RoleSpec } from '@team-x/shared-types';
+
 import type { CompanyRow } from '../db/repos/companies.js';
-import type { EmployeeRow } from '../db/repos/employees.js';
+import type { CreateEmployeeInput, EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type {
   AddThreadMemberInput,
@@ -73,7 +77,7 @@ export const HUMAN_USER_ID = 'rocky';
  * the request/response shapes.
  */
 export { AUTO_THREAD_ID };
-export type { SendChatRequest, SendChatResponse };
+export type { HireEmployeeRequest, HireEmployeeResponse, SendChatRequest, SendChatResponse };
 
 // ---------------------------------------------------------------------------
 // Repo shapes (narrow structural interfaces)
@@ -91,6 +95,7 @@ export interface IpcCompaniesRepo {
 export interface IpcEmployeesRepo {
   listByCompany(companyId: string): EmployeeRow[];
   getById(id: string): EmployeeRow | null;
+  create(input: CreateEmployeeInput): string;
 }
 
 export interface IpcThreadsRepo {
@@ -119,6 +124,14 @@ export interface IpcOrchestrator {
   }): Promise<void>;
 }
 
+/**
+ * Narrow slice of the role-loader the IPC layer needs for hire flow.
+ * Decouples the handler from the full `RoleLoader` interface.
+ */
+export interface IpcRoleLookup {
+  getSpec(roleId: string): RoleSpec | null;
+}
+
 // ---------------------------------------------------------------------------
 // Public surface
 // ---------------------------------------------------------------------------
@@ -129,6 +142,7 @@ export interface IpcHandlerDeps {
   threadsRepo: IpcThreadsRepo;
   messagesRepo: IpcMessagesRepo;
   orchestrator: IpcOrchestrator;
+  roleLookup: IpcRoleLookup;
 }
 
 export interface IpcHandlers {
@@ -142,6 +156,13 @@ export interface IpcHandlers {
    * + the chat drawer's recipient list.
    */
   employeesList(req: { companyId: string }): Promise<Employee[]>;
+
+  /**
+   * `employees.create` — hire a new employee from a role-pack role.
+   * Looks up the role spec from the role-loader, fills in the DB row
+   * fields (level, title, sha, tools), and returns the new employee id.
+   */
+  employeesCreate(req: HireEmployeeRequest): Promise<HireEmployeeResponse>;
 
   /**
    * `chat.send` — append the user's message and enqueue an
@@ -241,7 +262,8 @@ function rowToChatMessage(row: MessageRow): ChatMessage {
 // ---------------------------------------------------------------------------
 
 export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
-  const { companiesRepo, employeesRepo, threadsRepo, messagesRepo, orchestrator } = deps;
+  const { companiesRepo, employeesRepo, threadsRepo, messagesRepo, orchestrator, roleLookup } =
+    deps;
 
   return {
     async companiesList() {
@@ -254,6 +276,37 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       const rows = employeesRepo.listByCompany(companyId);
       return rows.map(rowToEmployee);
+    },
+
+    async employeesCreate({ companyId, roleId, name }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] employees.create: companyId is required');
+      }
+      if (typeof roleId !== 'string' || roleId.length === 0) {
+        throw new Error('[ipc] employees.create: roleId is required');
+      }
+      if (typeof name !== 'string' || name.trim().length === 0) {
+        throw new Error('[ipc] employees.create: name is required');
+      }
+
+      const spec = roleLookup.getSpec(roleId);
+      if (!spec) {
+        throw new Error(`[ipc] employees.create: role not found: ${roleId}`);
+      }
+
+      const employeeId = employeesRepo.create({
+        companyId,
+        rolePackId: 'strategia-official',
+        roleId: spec.frontmatter.id,
+        roleMdSha: spec.sha256,
+        level: spec.frontmatter.level,
+        name: name.trim(),
+        title: spec.frontmatter.name,
+        toolsAllowed: spec.frontmatter.tools_allowed ?? [],
+        toolsDenied: spec.frontmatter.tools_denied ?? [],
+      });
+
+      return { employeeId };
     },
 
     async chatSend({ threadId, employeeId, content }) {

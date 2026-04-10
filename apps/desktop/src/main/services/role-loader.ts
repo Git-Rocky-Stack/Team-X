@@ -116,6 +116,17 @@ export interface RoleLoader {
    * before the first scan. Test affordance + diagnostic surface.
    */
   size(): number;
+
+  /**
+   * Look up a parsed `RoleSpec` by its frontmatter `id`. Returns
+   * `null` if the role is not in the index. Triggers the lazy
+   * directory scan on first call, same as `resolveSystemPrompt`.
+   *
+   * Used by the IPC hire handler (T43) to fill in `roleMdSha`,
+   * `level`, `title`, and `tools_allowed/denied` when creating a
+   * new employee — the renderer only sends `roleId` + `name`.
+   */
+  getSpec(roleId: string): RoleSpec | null;
 }
 
 interface CompanySettings {
@@ -231,6 +242,11 @@ export function createRoleLoader(deps: RoleLoaderDeps): RoleLoader {
 
     size(): number {
       return index.size;
+    },
+
+    getSpec(roleId: string): RoleSpec | null {
+      ensureScanned();
+      return index.get(roleId) ?? null;
     },
 
     async resolveSystemPrompt({ employee, company }): Promise<string> {

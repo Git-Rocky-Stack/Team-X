@@ -67,6 +67,16 @@ export interface SendChatResponse {
   messageId: string;
 }
 
+export interface HireEmployeeRequest {
+  companyId: string;
+  roleId: string;
+  name: string;
+}
+
+export interface HireEmployeeResponse {
+  employeeId: string;
+}
+
 export interface ListChatRequest {
   threadId: string;
 }
@@ -83,6 +93,10 @@ export interface IpcContract {
   'employees.list': {
     request: ListEmployeesRequest;
     response: Employee[];
+  };
+  'employees.create': {
+    request: HireEmployeeRequest;
+    response: HireEmployeeResponse;
   };
   'chat.send': {
     request: SendChatRequest;
@@ -134,6 +148,13 @@ export interface TeamXApi {
   employees: {
     /** Return every employee in the given company, mapped to the public Employee shape. */
     list(companyId: string): Promise<Employee[]>;
+
+    /**
+     * Create a new employee for the given company from a role-pack role.
+     * The main process resolves the role spec from the role-loader,
+     * fills in level/title/sha/tools, and inserts the row.
+     */
+    create(req: HireEmployeeRequest): Promise<HireEmployeeResponse>;
   };
   chat: {
     /**

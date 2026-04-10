@@ -251,6 +251,7 @@ app.whenReady().then(async () => {
     threadsRepo,
     messagesRepo,
     orchestrator,
+    roleLookup: roleLoader,
   });
   unregisterIpc = registerIpcHandlers(ipcHandlers, bus);
 

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { RoleSpec } from '@team-x/shared-types';
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
@@ -10,6 +11,8 @@ import type {
   ThreadMemberRow,
   ThreadRow,
 } from '../db/repos/threads.js';
+
+import type { CreateEmployeeInput } from '../db/repos/employees.js';
 import {
   AUTO_THREAD_ID,
   HUMAN_USER_ID,
@@ -17,6 +20,7 @@ import {
   type IpcEmployeesRepo,
   type IpcMessagesRepo,
   type IpcOrchestrator,
+  type IpcRoleLookup,
   type IpcThreadsRepo,
   createIpcHandlers,
 } from './handlers.js';
@@ -67,6 +71,8 @@ class FakeCompaniesRepo implements IpcCompaniesRepo {
 class FakeEmployeesRepo implements IpcEmployeesRepo {
   private byId = new Map<string, EmployeeRow>();
   private byCompany = new Map<string, EmployeeRow[]>();
+  createCalls: CreateEmployeeInput[] = [];
+  private nextIdCounter = 1;
 
   put(row: EmployeeRow): void {
     this.byId.set(row.id, row);
@@ -81,6 +87,23 @@ class FakeEmployeesRepo implements IpcEmployeesRepo {
 
   getById(id: string): EmployeeRow | null {
     return this.byId.get(id) ?? null;
+  }
+
+  create(input: CreateEmployeeInput): string {
+    this.createCalls.push(input);
+    const id = `emp-new-${this.nextIdCounter++}`;
+    const row = makeEmployeeRow({
+      id,
+      companyId: input.companyId,
+      rolePackId: input.rolePackId,
+      roleId: input.roleId,
+      roleMdSha: input.roleMdSha,
+      level: input.level,
+      name: input.name,
+      title: input.title,
+    });
+    this.put(row);
+    return id;
   }
 }
 
@@ -202,6 +225,18 @@ class FakeOrchestrator implements IpcOrchestrator {
   }
 }
 
+class FakeRoleLookup implements IpcRoleLookup {
+  private specs = new Map<string, RoleSpec>();
+
+  putSpec(spec: RoleSpec): void {
+    this.specs.set(spec.frontmatter.id, spec);
+  }
+
+  getSpec(roleId: string): RoleSpec | null {
+    return this.specs.get(roleId) ?? null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Fixture builders
 // ---------------------------------------------------------------------------
@@ -259,7 +294,37 @@ interface Fixture {
   threads: FakeThreadsRepo;
   messages: FakeMessagesRepo;
   orchestrator: FakeOrchestrator;
+  roleLookup: FakeRoleLookup;
   handlers: ReturnType<typeof createIpcHandlers>;
+}
+
+function makeRoleSpec(overrides: Partial<RoleSpec['frontmatter']> = {}): RoleSpec {
+  return {
+    frontmatter: {
+      id: 'chief-executive-officer',
+      name: 'Chief Executive Officer',
+      level: 'officer',
+      reports_to: [],
+      manages: [],
+      preferred_model_tier: 'frontier',
+      preferred_providers: ['anthropic'],
+      fallback_providers: ['openai'],
+      tools_allowed: ['browse', 'context7'],
+      tools_denied: ['shell'],
+      decision_authority: { autonomous: [], escalate: [] },
+      escalates_to: [],
+      kpis: [],
+      output_format: 'markdown',
+      temperature: 0.7,
+      license: 'MIT',
+      author: 'Rocky Stack',
+      version: '1.0.0',
+      ...overrides,
+    },
+    body: '# Identity\nYou are the CEO.',
+    sourcePath: '/roles/officer/ceo.md',
+    sha256: 'b'.repeat(64),
+  } as RoleSpec;
 }
 
 function buildFixture(): Fixture {
@@ -268,14 +333,16 @@ function buildFixture(): Fixture {
   const threads = new FakeThreadsRepo();
   const messages = new FakeMessagesRepo();
   const orchestrator = new FakeOrchestrator();
+  const roleLookup = new FakeRoleLookup();
   const handlers = createIpcHandlers({
     companiesRepo: companies,
     employeesRepo: employees,
     threadsRepo: threads,
     messagesRepo: messages,
     orchestrator,
+    roleLookup,
   });
-  return { companies, employees, threads, messages, orchestrator, handlers };
+  return { companies, employees, threads, messages, orchestrator, roleLookup, handlers };
 }
 
 // ---------------------------------------------------------------------------
@@ -355,6 +422,79 @@ describe('IPC: employees.list', () => {
   it('rejects when companyId is missing or empty', async () => {
     const fx = buildFixture();
     await expect(fx.handlers.employeesList({ companyId: '' })).rejects.toThrow(/companyId/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// employees.create
+// ---------------------------------------------------------------------------
+
+describe('IPC: employees.create', () => {
+  it('creates an employee from a role spec and returns the new id', async () => {
+    const fx = buildFixture();
+    fx.roleLookup.putSpec(makeRoleSpec());
+
+    const result = await fx.handlers.employeesCreate({
+      companyId: 'co-1',
+      roleId: 'chief-executive-officer',
+      name: 'Iris Kovač',
+    });
+
+    expect(result.employeeId).toBe('emp-new-1');
+    expect(fx.employees.createCalls).toHaveLength(1);
+    expect(fx.employees.createCalls[0]).toMatchObject({
+      companyId: 'co-1',
+      rolePackId: 'strategia-official',
+      roleId: 'chief-executive-officer',
+      level: 'officer',
+      name: 'Iris Kovač',
+      title: 'Chief Executive Officer',
+      toolsAllowed: ['browse', 'context7'],
+      toolsDenied: ['shell'],
+    });
+  });
+
+  it('trims whitespace from the name', async () => {
+    const fx = buildFixture();
+    fx.roleLookup.putSpec(makeRoleSpec());
+
+    await fx.handlers.employeesCreate({
+      companyId: 'co-1',
+      roleId: 'chief-executive-officer',
+      name: '  Iris Kovač  ',
+    });
+
+    expect(fx.employees.createCalls[0]?.name).toBe('Iris Kovač');
+  });
+
+  it('rejects when the role is not found', async () => {
+    const fx = buildFixture();
+    await expect(
+      fx.handlers.employeesCreate({
+        companyId: 'co-1',
+        roleId: 'nonexistent-role',
+        name: 'Test',
+      }),
+    ).rejects.toThrow(/role not found/);
+  });
+
+  it('rejects when companyId is empty', async () => {
+    const fx = buildFixture();
+    await expect(
+      fx.handlers.employeesCreate({ companyId: '', roleId: 'ceo', name: 'Test' }),
+    ).rejects.toThrow(/companyId/);
+  });
+
+  it('rejects when name is empty or whitespace', async () => {
+    const fx = buildFixture();
+    fx.roleLookup.putSpec(makeRoleSpec());
+    await expect(
+      fx.handlers.employeesCreate({
+        companyId: 'co-1',
+        roleId: 'chief-executive-officer',
+        name: '  ',
+      }),
+    ).rejects.toThrow(/name is required/);
   });
 });
 

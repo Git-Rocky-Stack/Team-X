@@ -37,6 +37,8 @@
 import type {
   DashboardEvent,
   DashboardEventListener,
+  HireEmployeeRequest,
+  HireEmployeeResponse,
   SendChatRequest,
   SendChatResponse,
   TeamXApi,
@@ -74,6 +76,7 @@ export interface IpcRendererLike {
 const CHANNELS = {
   companiesList: 'companies.list',
   employeesList: 'employees.list',
+  employeesCreate: 'employees.create',
   chatSend: 'chat.send',
   chatList: 'chat.list',
   eventsDashboard: 'events.dashboard',
@@ -94,6 +97,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.employeesList, { companyId }) as ReturnType<
           TeamXApi['employees']['list']
         >,
+      create: (req: HireEmployeeRequest) =>
+        ipc.invoke(CHANNELS.employeesCreate, req) as Promise<HireEmployeeResponse>,
     },
     chat: {
       send: (req: SendChatRequest) =>

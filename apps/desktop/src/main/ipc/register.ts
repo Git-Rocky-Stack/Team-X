@@ -57,7 +57,13 @@ import type { IpcHandlers } from './handlers.js';
  * the typed preload bridge in T34 hands the renderer a wrapper that
  * uses these exact strings.
  */
-const REQUEST_CHANNELS = ['companies.list', 'employees.list', 'chat.send', 'chat.list'] as const;
+const REQUEST_CHANNELS = [
+  'companies.list',
+  'employees.list',
+  'employees.create',
+  'chat.send',
+  'chat.list',
+] as const;
 
 /** Channel name for the one-way bus → renderer fan-out. */
 const EVENT_CHANNEL = 'events.dashboard';
@@ -76,6 +82,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('employees.list', async (_event, request: { companyId: string }) => {
     return handlers.employeesList(request);
   });
+
+  ipcMain.handle(
+    'employees.create',
+    async (_event, request: { companyId: string; roleId: string; name: string }) => {
+      return handlers.employeesCreate(request);
+    },
+  );
 
   ipcMain.handle(
     'chat.send',

@@ -7,6 +7,7 @@ import { useAppStore } from '@/store/app-store.js';
 import { AppLayout } from './app/layout.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
 import { CardsView } from './features/dashboard/cards-view.js';
+import { HireDialog } from './features/hire/hire-dialog.js';
 
 /**
  * Root application component. Wires:
@@ -27,8 +28,7 @@ export default function App() {
 
   const companyId = useAppStore((s) => s.companyId);
   const setCompanyId = useAppStore((s) => s.setCompanyId);
-  // T43 will consume hireOpen to control the hire dialog visibility.
-  const [_hireOpen, setHireOpen] = useState(false);
+  const [hireOpen, setHireOpen] = useState(false);
 
   // Phase 1 bootstrap: discover the company id by asking the main
   // process for the list of companies. The seed always creates exactly
@@ -63,6 +63,7 @@ export default function App() {
       )}
 
       <ChatDrawer employees={employees} />
+      <HireDialog open={hireOpen} onOpenChange={setHireOpen} companyId={companyId} />
     </AppLayout>
   );
 }
