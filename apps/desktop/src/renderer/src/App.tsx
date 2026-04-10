@@ -5,6 +5,7 @@ import { useEmployees } from '@/hooks/use-employees.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { AppLayout } from './app/layout.js';
+import { CardsView } from './features/dashboard/cards-view.js';
 
 /**
  * Root application component. Wires:
@@ -45,22 +46,20 @@ export default function App() {
 
   return (
     <AppLayout employees={employees} onHireClick={() => setHireOpen(true)}>
-      <div className="p-6">
-        {isLoading ? (
+      {isLoading ? (
+        <div className="p-6">
           <p className="text-sm text-muted-foreground">Loading team...</p>
-        ) : employees.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-lg font-medium text-muted-foreground">No employees yet</p>
-            <p className="mt-1 text-sm text-muted-foreground/70">
-              Click + Hire in the sidebar to get started.
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Dashboard cards coming in T41. {employees.length} employee(s) loaded.
+        </div>
+      ) : employees.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-lg font-medium text-muted-foreground">No employees yet</p>
+          <p className="mt-1 text-sm text-muted-foreground/70">
+            Click + Hire in the sidebar to get started.
           </p>
-        )}
-      </div>
+        </div>
+      ) : (
+        <CardsView employees={employees} />
+      )}
     </AppLayout>
   );
 }
