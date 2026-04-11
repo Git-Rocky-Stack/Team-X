@@ -69,7 +69,14 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  code,
+  pre,
+  .font-mono {
+    font-family: "JetBrains Mono Variable", ui-monospace, monospace;
   }
 }
 

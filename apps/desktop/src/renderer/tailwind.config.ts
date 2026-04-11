@@ -29,8 +29,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['Inter Variable', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono Variable', 'monospace'],
       },
       spacing: {
         18: '4.5rem',

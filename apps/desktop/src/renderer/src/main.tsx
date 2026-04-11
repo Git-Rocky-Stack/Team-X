@@ -2,6 +2,9 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+
 import App from './App.js';
 import { queryClient } from './lib/query-client.js';
 import './styles/globals.css';
