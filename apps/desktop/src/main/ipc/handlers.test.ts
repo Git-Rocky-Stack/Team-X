@@ -723,3 +723,56 @@ describe('IPC: chat.list', () => {
     await expect(fx.handlers.chatList({ threadId: '' })).rejects.toThrow(/threadId/);
   });
 });
+
+describe('IPC: chat.resolveThread', () => {
+  it('resolves the user↔employee DM thread via getOrCreateDmThread', async () => {
+    const fx = buildFixture();
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris', companyId: 'co-1' }));
+    fx.threads.nextDmThreadId = 'dm-iris-rocky';
+    fx.threads.nextDmCreates = true;
+
+    const result = await fx.handlers.chatResolveThread({ employeeId: 'emp-iris' });
+
+    expect(result).toEqual({ threadId: 'dm-iris-rocky' });
+    expect(fx.threads.getOrCreateCalls).toEqual([
+      { companyId: 'co-1', employeeId: 'emp-iris', userId: HUMAN_USER_ID },
+    ]);
+    // Must NOT touch messages or orchestrator — resolveThread is a
+    // read-ish lookup that exists to let the drawer find an existing
+    // conversation, not to start one.
+    expect(fx.messages.appended).toHaveLength(0);
+    expect(fx.orchestrator.enqueueCalls).toHaveLength(0);
+  });
+
+  it('returns the existing DM thread on a second call for the same employee', async () => {
+    const fx = buildFixture();
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris', companyId: 'co-1' }));
+    fx.threads.nextDmThreadId = 'dm-iris-rocky';
+    fx.threads.nextDmCreates = true;
+
+    const first = await fx.handlers.chatResolveThread({ employeeId: 'emp-iris' });
+    // Flip the fixture to "does not create" so the second call would
+    // trip the test's creation guard if the handler didn't delegate
+    // to getOrCreateDmThread (which is itself idempotent).
+    fx.threads.nextDmCreates = false;
+    const second = await fx.handlers.chatResolveThread({ employeeId: 'emp-iris' });
+
+    expect(first.threadId).toBe('dm-iris-rocky');
+    expect(second.threadId).toBe('dm-iris-rocky');
+    expect(fx.threads.getOrCreateCalls).toHaveLength(2);
+  });
+
+  it('rejects when employeeId is missing', async () => {
+    const fx = buildFixture();
+    await expect(fx.handlers.chatResolveThread({ employeeId: '' })).rejects.toThrow(/employeeId/);
+  });
+
+  it('rejects when the employee does not exist', async () => {
+    const fx = buildFixture();
+    await expect(
+      fx.handlers.chatResolveThread({ employeeId: 'emp-ghost' }),
+    ).rejects.toThrow(/employee not found/);
+    // Must fail closed — no thread creation attempt for a missing employee.
+    expect(fx.threads.getOrCreateCalls).toHaveLength(0);
+  });
+});

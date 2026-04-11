@@ -81,6 +81,27 @@ export interface ListChatRequest {
   threadId: string;
 }
 
+/**
+ * Request to resolve (or lazily create) the user↔employee DM thread
+ * for a given employee.  The renderer's chat drawer calls this on
+ * open so it can render the existing conversation history BEFORE the
+ * user has sent a new message — the previous design only resolved the
+ * thread id inside `chat.send`, which left a post-reload drawer with
+ * no way to know which thread to fetch.
+ */
+export interface ResolveThreadRequest {
+  employeeId: string;
+}
+
+/**
+ * Response from `chat.resolveThread`.  Always returns a valid
+ * `threadId`: the existing DM thread if one already exists for the
+ * (user, employee) pair, otherwise a freshly created empty one.
+ */
+export interface ResolveThreadResponse {
+  threadId: string;
+}
+
 // ---------------------------------------------------------------------------
 // Low-level channel map (used by ipcMain.handle and its generic helpers)
 // ---------------------------------------------------------------------------
@@ -105,6 +126,10 @@ export interface IpcContract {
   'chat.list': {
     request: ListChatRequest;
     response: ChatMessage[];
+  };
+  'chat.resolveThread': {
+    request: ResolveThreadRequest;
+    response: ResolveThreadResponse;
   };
 }
 
@@ -171,6 +196,15 @@ export interface TeamXApi {
 
     /** Return every message in a thread, oldest-first, mapped to ChatMessage shape. */
     list(threadId: string): Promise<ChatMessage[]>;
+
+    /**
+     * Resolve (or lazily create) the user↔employee DM thread for the
+     * given employee.  The drawer calls this on open so it can fetch
+     * the existing chat history before the user sends anything — a
+     * post-reload drawer has no cached thread id, and without this
+     * call the only way to rehydrate was to send a new message.
+     */
+    resolveThread(req: ResolveThreadRequest): Promise<ResolveThreadResponse>;
   };
   events: {
     /**

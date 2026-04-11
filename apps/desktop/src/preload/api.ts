@@ -39,6 +39,8 @@ import type {
   DashboardEventListener,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  ResolveThreadRequest,
+  ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
   TeamXApi,
@@ -79,6 +81,7 @@ const CHANNELS = {
   employeesCreate: 'employees.create',
   chatSend: 'chat.send',
   chatList: 'chat.list',
+  chatResolveThread: 'chat.resolveThread',
   eventsDashboard: 'events.dashboard',
 } as const;
 
@@ -105,6 +108,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.chatSend, req) as Promise<SendChatResponse>,
       list: (threadId: string) =>
         ipc.invoke(CHANNELS.chatList, { threadId }) as ReturnType<TeamXApi['chat']['list']>,
+      resolveThread: (req: ResolveThreadRequest) =>
+        ipc.invoke(CHANNELS.chatResolveThread, req) as Promise<ResolveThreadResponse>,
     },
     events: {
       onDashboard: (listener: DashboardEventListener): UnsubscribeFn => {

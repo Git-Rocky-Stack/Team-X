@@ -44,6 +44,8 @@ import type {
   Employee,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  ResolveThreadRequest,
+  ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
 } from '@team-x/shared-types';
@@ -77,7 +79,14 @@ export const HUMAN_USER_ID = 'rocky';
  * the request/response shapes.
  */
 export { AUTO_THREAD_ID };
-export type { HireEmployeeRequest, HireEmployeeResponse, SendChatRequest, SendChatResponse };
+export type {
+  HireEmployeeRequest,
+  HireEmployeeResponse,
+  ResolveThreadRequest,
+  ResolveThreadResponse,
+  SendChatRequest,
+  SendChatResponse,
+};
 
 // ---------------------------------------------------------------------------
 // Repo shapes (narrow structural interfaces)
@@ -190,6 +199,24 @@ export interface IpcHandlers {
    * than re-polling this endpoint.
    */
   chatList(req: { threadId: string }): Promise<ChatMessage[]>;
+
+  /**
+   * `chat.resolveThread` — resolve (or lazily create) the user↔employee
+   * DM thread for the given employee, returning only its id. Read-ish:
+   * does NOT append a message, does NOT kick the orchestrator. The
+   * drawer calls this on open so it can fetch the previous chat
+   * history before the user sends anything. Without it a post-reload
+   * drawer has no way to know which thread to fetch — the only thread
+   * resolver was `chat.send`, which required sending a real message
+   * first.
+   *
+   * Throws if the employee does not exist. On first open for an
+   * employee, creates a fresh `kind='dm'` thread between `rocky` and
+   * the employee via `getOrCreateDmThread` (same path `chat.send` uses
+   * for the `AUTO_THREAD_ID` sentinel), so both entry points share
+   * one source of truth for DM resolution.
+   */
+  chatResolveThread(req: ResolveThreadRequest): Promise<ResolveThreadResponse>;
 }
 
 // ---------------------------------------------------------------------------
@@ -402,6 +429,22 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       const rows = messagesRepo.listByThread(threadId);
       return rows.map(rowToChatMessage);
+    },
+
+    async chatResolveThread({ employeeId }) {
+      if (typeof employeeId !== 'string' || employeeId.length === 0) {
+        throw new Error('[ipc] chat.resolveThread: employeeId is required');
+      }
+      const employee = employeesRepo.getById(employeeId);
+      if (!employee) {
+        throw new Error(`[ipc] chat.resolveThread: employee not found: ${employeeId}`);
+      }
+      const threadId = threadsRepo.getOrCreateDmThread({
+        companyId: employee.companyId,
+        employeeId,
+        userId: HUMAN_USER_ID,
+      });
+      return { threadId };
     },
   };
 }

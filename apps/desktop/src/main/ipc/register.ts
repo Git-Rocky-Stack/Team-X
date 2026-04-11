@@ -63,6 +63,7 @@ const REQUEST_CHANNELS = [
   'employees.create',
   'chat.send',
   'chat.list',
+  'chat.resolveThread',
 ] as const;
 
 /** Channel name for the one-way bus → renderer fan-out. */
@@ -99,6 +100,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('chat.list', async (_event, request: { threadId: string }) => {
     return handlers.chatList(request);
+  });
+
+  ipcMain.handle('chat.resolveThread', async (_event, request: { employeeId: string }) => {
+    return handlers.chatResolveThread(request);
   });
 
   // Bus → renderer forwarder. The bus is synchronous fan-out, so the

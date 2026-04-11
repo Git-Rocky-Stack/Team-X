@@ -1,8 +1,12 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
+
 import type { Employee } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet.js';
 import { useChatMessages, useSendMessage } from '@/hooks/use-chat.js';
+import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -39,6 +43,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const chatOpen = useAppStore((s) => s.chatOpen);
   const setChatOpen = useAppStore((s) => s.setChatOpen);
   const activeThreadId = useAppStore((s) => s.activeThreadId);
+  const setActiveThreadId = useAppStore((s) => s.setActiveThreadId);
   const employeeLive = useAppStore((s) => s.employeeLive);
 
   const employee = employees.find((e) => e.id === selectedId) ?? null;
@@ -52,6 +57,55 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
 
   const { data: messages = [] } = useChatMessages(effectiveThreadId);
   const sendMutation = useSendMessage();
+  const qc = useQueryClient();
+
+  // When the drawer opens on a fresh render cycle — after a Ctrl+R
+  // reload, after switching to a different employee, or on first
+  // mount — the Zustand store has no cached thread id, so
+  // `effectiveThreadId` is null and `useChatMessages` stays disabled.
+  // Ask main to resolve (or lazily create) the user↔employee DM
+  // thread and push its id into the store; the messages query then
+  // fires automatically and pulls the full history from SQLite.
+  //
+  // Gated on `chatOpen` so a background store change does not trigger
+  // a resolve while the drawer is closed, and on `effectiveThreadId`
+  // being null so we do not re-resolve every time the store updates
+  // a stable thread.
+  useEffect(() => {
+    if (!chatOpen || !selectedId || effectiveThreadId !== null) return;
+    let cancelled = false;
+    ipc.chat
+      .resolveThread({ employeeId: selectedId })
+      .then((res) => {
+        if (!cancelled) setActiveThreadId(res.threadId);
+      })
+      .catch((err: unknown) => {
+        console.error('[chat-drawer] resolveThread failed:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [chatOpen, selectedId, effectiveThreadId, setActiveThreadId]);
+
+  // When the employee transitions from `thinking` → `idle`, the
+  // orchestrator has finished the turn and persisted the assistant
+  // reply to the DB, but the `useChatMessages` query will NOT refetch
+  // on its own (refetchInterval is off and the only invalidation in
+  // `useSendMessage` fires on send, not on completion). Without this
+  // effect the StreamingBubble vanishes the moment `isStreaming` flips
+  // false and the user sees nothing where the reply should be.
+  //
+  // The ref tracks the previous status so the invalidation only fires
+  // on the actual transition edge — not on every render, and not when
+  // the employee was already idle when the drawer opened.
+  const prevStatusRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = displayStatus;
+    if (prev === 'thinking' && displayStatus === 'idle' && effectiveThreadId) {
+      void qc.invalidateQueries({ queryKey: ['chat', effectiveThreadId] });
+    }
+  }, [displayStatus, effectiveThreadId, qc]);
 
   function handleSend(content: string) {
     if (!selectedId) return;

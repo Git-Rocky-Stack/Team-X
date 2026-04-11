@@ -159,6 +159,23 @@ describe('buildTeamXApi', () => {
     });
   });
 
+  describe('chat.resolveThread', () => {
+    it('invokes chat.resolveThread with the request object verbatim', async () => {
+      fake.setNextInvokeResult({ threadId: 'dm-1' });
+      await api.chat.resolveThread({ employeeId: 'emp-iris' });
+      expect(fake.invokeCalls).toEqual([
+        { channel: PRELOAD_CHANNELS.chatResolveThread, args: [{ employeeId: 'emp-iris' }] },
+      ]);
+    });
+
+    it('passes through the ResolveThreadResponse from invoke', async () => {
+      const stub = { threadId: 'dm-resolved' };
+      fake.setNextInvokeResult(stub);
+      const result = await api.chat.resolveThread({ employeeId: 'emp-iris' });
+      expect(result).toBe(stub);
+    });
+  });
+
   describe('events.onDashboard', () => {
     it('attaches a listener to events.dashboard', () => {
       const cb = vi.fn();
@@ -236,6 +253,7 @@ describe('buildTeamXApi', () => {
       expect(PRELOAD_CHANNELS.employeesList).toBe('employees.list');
       expect(PRELOAD_CHANNELS.chatSend).toBe('chat.send');
       expect(PRELOAD_CHANNELS.chatList).toBe('chat.list');
+      expect(PRELOAD_CHANNELS.chatResolveThread).toBe('chat.resolveThread');
       expect(PRELOAD_CHANNELS.eventsDashboard).toBe('events.dashboard');
     });
   });
