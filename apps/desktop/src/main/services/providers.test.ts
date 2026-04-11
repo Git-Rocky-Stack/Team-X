@@ -86,7 +86,11 @@ describe('createProvidersService', () => {
       expect(ollama).not.toBeNull();
       expect(ollama?.kind).toBe('ollama');
       expect(ollama?.privacyTier).toBe('local');
-      expect(ollama?.baseUrl).toBe('http://localhost:11434');
+      // MUST end in /api — the ollama-ai-provider SDK appends
+      // /chat, /embed, etc. directly to this base URL.  See the
+      // comment in services/providers.ts seedIfEmpty for the full
+      // rationale.
+      expect(ollama?.baseUrl).toBe('http://localhost:11434/api');
       expect(ollama?.enabled).toBe(true);
       expect(ollama?.name).toBe('Ollama (Local)');
     });

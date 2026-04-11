@@ -94,7 +94,13 @@ import { SecretsStore } from './secrets.js';
  */
 const DEFAULT_MODEL_BY_KIND: Partial<Record<ProviderKind, string>> = {
   anthropic: 'claude-haiku-4-5',
-  ollama: 'qwen2.5:3b',
+  // Phase 1 default is llama3.1:8b because it's the smallest general-
+  // purpose model most dev machines already have cached from other
+  // projects, so the local-first demo path does not block on a multi-
+  // gigabyte pull. Phase 2's model_registry table will replace this
+  // hardcode with a tier-aware lookup driven by role.md
+  // preferred_model_tier.
+  ollama: 'llama3.1:8b',
 };
 
 /**

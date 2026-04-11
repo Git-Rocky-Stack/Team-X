@@ -149,7 +149,12 @@ export function createProvidersService<TRunResult>(
             id: DEFAULT_OLLAMA_LOCAL_ID,
             name: 'Ollama (Local)',
             kind: 'ollama',
-            configJson: JSON.stringify({ baseUrl: 'http://localhost:11434' }),
+            // MUST include the `/api` suffix — the ollama-ai-provider SDK
+            // appends `/chat`, `/embed`, etc. directly to this baseURL
+            // without prepending `/api` of its own.  The SDK default is
+            // `http://127.0.0.1:11434/api`; overriding here without the
+            // `/api` segment lands on 404s like POST /chat.
+            configJson: JSON.stringify({ baseUrl: 'http://localhost:11434/api' }),
             privacyTier: 'local',
             enabled: true,
           },
