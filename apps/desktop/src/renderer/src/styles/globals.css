@@ -105,3 +105,11 @@
     background-color: hsl(var(--muted-foreground));
   }
 }
+
+/* Respect reduced-motion preferences — disable pulse/streaming animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-slow,
+  .animate-pulse {
+    animation: none;
+  }
+}

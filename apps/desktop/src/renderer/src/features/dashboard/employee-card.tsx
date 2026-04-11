@@ -72,6 +72,7 @@ export function EmployeeCard({ employee, live }: EmployeeCardProps) {
     <button
       type="button"
       onClick={() => setSelected(isSelected ? null : employee.id)}
+      aria-label={`${employee.name}, ${employee.title} — ${statusLabel(displayStatus)}. Click to ${isSelected ? 'close' : 'open'} chat.`}
       className={cn(
         'group relative flex w-full flex-col items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200',
         isSelected

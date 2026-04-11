@@ -102,7 +102,11 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
 
       <Separator />
 
-      <div className="flex items-center gap-3 px-4 py-2 text-[11px] text-muted-foreground">
+      <output
+        className="flex items-center gap-3 px-4 py-2 text-[11px] text-muted-foreground"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         <span>
           {thinkingCount > 0 && (
             <>
@@ -112,7 +116,7 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
           )}
           {idleCount} idle
         </span>
-      </div>
+      </output>
     </aside>
   );
 }
