@@ -138,7 +138,7 @@ async function createWindow(): Promise<void> {
     backgroundColor: '#0a0a0a',
     show: false,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       // Chromium OS-level sandbox is ON. The preload uses only contextBridge
@@ -150,7 +150,14 @@ async function createWindow(): Promise<void> {
     },
   });
 
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    win.show();
+    // Auto-open DevTools in dev so renderer errors surface immediately.
+    // Gated on isDev so packaged builds never ship with DevTools primed.
+    if (isDev) {
+      win.webContents.openDevTools({ mode: 'detach' });
+    }
+  });
 
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
     await win.loadURL(process.env.ELECTRON_RENDERER_URL);

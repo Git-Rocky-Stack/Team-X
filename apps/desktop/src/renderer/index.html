@@ -2,9 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      CSP: dev needs 'unsafe-eval' + 'unsafe-inline' + ws:/http: localhost
+      for Vite HMR.  Packaged builds (T49) will replace this meta tag
+      with a strict prod-only CSP via electron-builder's afterPack hook.
+      Until then, the renderer still only talks to main via IPC — no
+      external network — so the dev-relaxed CSP does not weaken the
+      privacy-first posture.
+    -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:;"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self' ws://localhost:* http://localhost:*;"
     />
     <title>Team-X</title>
   </head>

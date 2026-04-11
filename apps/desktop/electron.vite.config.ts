@@ -16,6 +16,18 @@ const workspaceDeps = [
   '@team-x/telemetry-core',
 ];
 
+// Both package.json files set "type": "module", so Electron loads
+// out/main/index.js as ESM where __dirname / __filename are undefined.
+// Inject a banner that polyfills them from import.meta.url before any
+// bundled module code executes.  import.meta.dirname would be cleaner
+// but requires Node 21.2+ (Electron 31 ships Node 20.x).
+const esmDirnameShim = [
+  'import { fileURLToPath as __estfp } from "node:url";',
+  'import { dirname as __estdn } from "node:path";',
+  'const __filename = __estfp(import.meta.url);',
+  'const __dirname = __estdn(__filename);',
+].join('\n');
+
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin({ exclude: workspaceDeps })],
@@ -23,6 +35,7 @@ export default defineConfig({
       outDir: 'out/main',
       rollupOptions: {
         input: { index: resolve(__dirname, 'src/main/index.ts') },
+        output: { banner: esmDirnameShim },
       },
     },
   },
@@ -32,6 +45,16 @@ export default defineConfig({
       outDir: 'out/preload',
       rollupOptions: {
         input: { index: resolve(__dirname, 'src/preload/index.ts') },
+        output: {
+          // Electron's sandboxed preload loader only supports CommonJS.
+          // With "type": "module" in package.json, a .js extension would
+          // be parsed as ESM and fail with "Cannot use import statement
+          // outside a module". Force CJS + .cjs extension so the file
+          // is unambiguously a CommonJS module regardless of package
+          // type resolution.
+          format: 'cjs',
+          entryFileNames: '[name].cjs',
+        },
       },
     },
   },
