@@ -348,6 +348,7 @@ app.whenReady().then(async () => {
     threadsRepo,
     messagesRepo,
     ticketsRepo,
+    eventsRepo,
     orchestrator,
     roleLookup: roleLoader,
     mcpHost,

@@ -47,10 +47,13 @@ import type {
   CompanySettings,
   CreateTicketRequest,
   CreateTicketResponse,
+  DashboardEvent,
   Employee,
   GetTicketRequest,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  ListEventsRequest,
+  ListEventsResponse,
   ListTicketsRequest,
   McpServerSummary,
   ReopenTicketRequest,
@@ -176,8 +179,13 @@ export interface IpcRoleLookup {
 // Public surface
 // ---------------------------------------------------------------------------
 
+import type { EventRow } from '../db/repos/events.js';
 import type { McpServersRepo } from '../db/repos/mcp-servers.js';
 import type { McpHost } from '../services/mcp-host.js';
+
+export interface IpcEventsRepo {
+  listByCompany(companyId: string, cursor: number | undefined, limit: number): EventRow[];
+}
 
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
@@ -185,6 +193,7 @@ export interface IpcHandlerDeps {
   threadsRepo: IpcThreadsRepo;
   messagesRepo: IpcMessagesRepo;
   ticketsRepo: IpcTicketsRepo;
+  eventsRepo: IpcEventsRepo;
   orchestrator: IpcOrchestrator;
   roleLookup: IpcRoleLookup;
   mcpHost: McpHost;
@@ -263,6 +272,13 @@ export interface IpcHandlers {
   chatListThreads(req: { companyId: string }): Promise<Thread[]>;
 
   // -----------------------------------------------------------------------
+  // Events / timeline handler (Phase 3 — M14)
+  // -----------------------------------------------------------------------
+
+  /** `events.list` — paginated newest-first event list for the timeline view. */
+  eventsList(req: ListEventsRequest): Promise<ListEventsResponse>;
+
+  // -----------------------------------------------------------------------
   // MCP management handlers (Phase 2 — M10)
   // -----------------------------------------------------------------------
 
@@ -338,8 +354,10 @@ export interface IpcHandlers {
 // re-validate.
 
 import type {
+  ActorKind,
   AuthorKind,
   EmployeeStatus,
+  EventType,
   TicketPriority,
   TicketStatus,
 } from '@team-x/shared-types';
@@ -417,6 +435,24 @@ function rowToChatMessage(row: MessageRow): ChatMessage {
   return msg;
 }
 
+function rowToEvent(row: EventRow): DashboardEvent {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(row.payloadJson);
+  } catch {
+    payload = {};
+  }
+  return {
+    id: row.id,
+    type: row.eventType as EventType,
+    companyId: row.companyId,
+    actorId: row.actorId,
+    actorKind: row.actorKind as ActorKind,
+    payload,
+    createdAt: row.createdAt,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
@@ -428,6 +464,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     threadsRepo,
     messagesRepo,
     ticketsRepo,
+    eventsRepo,
     orchestrator,
     roleLookup,
     mcpHost,
@@ -610,6 +647,28 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           })),
         }),
       );
+    },
+
+    // -----------------------------------------------------------------------
+    // Events / timeline handler (Phase 3 — M14)
+    // -----------------------------------------------------------------------
+
+    async eventsList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] events.list: companyId is required');
+      }
+      const limit = req.limit ?? 50;
+      const rows = eventsRepo.listByCompany(req.companyId, req.cursor, limit + 1);
+
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+      const lastEvent = page[page.length - 1];
+      const nextCursor = hasMore && lastEvent ? lastEvent.createdAt : null;
+
+      return {
+        events: page.map(rowToEvent),
+        nextCursor,
+      };
     },
 
     // -----------------------------------------------------------------------

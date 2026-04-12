@@ -107,6 +107,33 @@ export interface ListThreadsRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Events / timeline shapes (Phase 3 — M14)
+// ---------------------------------------------------------------------------
+
+/**
+ * Cursor-based pagination request for the timeline activity feed.
+ * `cursor` is the `createdAt` timestamp of the last event in the
+ * previous page — pass `undefined` for the first page. Results are
+ * returned newest-first.
+ */
+export interface ListEventsRequest {
+  companyId: string;
+  /** createdAt of the last event from the previous page, or undefined for the first page. */
+  cursor?: number;
+  /** Maximum events to return. Defaults to 50 in the handler. */
+  limit?: number;
+}
+
+/**
+ * Paginated event list for the timeline view.
+ * `nextCursor` is `null` when there are no more pages.
+ */
+export interface ListEventsResponse {
+  events: DashboardEvent[];
+  nextCursor: number | null;
+}
+
+// ---------------------------------------------------------------------------
 // Ticket-related shapes
 // ---------------------------------------------------------------------------
 
@@ -250,6 +277,11 @@ export interface IpcContract {
     request: ListThreadsRequest;
     response: Thread[];
   };
+  // Events / timeline (Phase 3 — M14)
+  'events.list': {
+    request: ListEventsRequest;
+    response: ListEventsResponse;
+  };
   // MCP management channels
   'mcp.list': {
     request: ListMcpServersRequest;
@@ -392,6 +424,13 @@ export interface TeamXApi {
      * `useEffect` cleanup) so dead listeners don't accumulate.
      */
     onDashboard(listener: DashboardEventListener): UnsubscribeFn;
+
+    /**
+     * Fetch a paginated page of persisted events for the timeline view.
+     * Returns newest-first. Pass the `nextCursor` from the previous
+     * response to fetch the next page; `null` means no more pages.
+     */
+    list(req: ListEventsRequest): Promise<ListEventsResponse>;
   };
   mcp: {
     /** List all MCP servers available to a company (global + company-specific). */

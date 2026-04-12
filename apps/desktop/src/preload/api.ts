@@ -44,6 +44,8 @@ import type {
   DashboardEventListener,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  ListEventsRequest,
+  ListEventsResponse,
   McpServerSummary,
   ResolveThreadRequest,
   ResolveThreadResponse,
@@ -96,6 +98,7 @@ const CHANNELS = {
   chatResolveThread: 'chat.resolveThread',
   chatListThreads: 'chat.listThreads',
   eventsDashboard: 'events.dashboard',
+  eventsList: 'events.list',
   // MCP management (Phase 2 — M10)
   mcpList: 'mcp.list',
   mcpToggle: 'mcp.toggle',
@@ -157,6 +160,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
           ipc.removeListener(CHANNELS.eventsDashboard, ipcListener);
         };
       },
+      list: (req: ListEventsRequest) =>
+        ipc.invoke(CHANNELS.eventsList, req) as Promise<ListEventsResponse>,
     },
     mcp: {
       list: (companyId: string) =>

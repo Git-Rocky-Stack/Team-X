@@ -31,7 +31,7 @@
  */
 
 import type { ActorKind } from '@team-x/shared-types';
-import { and, asc, gt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, lt } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
@@ -113,6 +113,29 @@ export function createEventsRepo<TRunResult>(db: EventsDb<TRunResult>) {
         .from(events)
         .where(and(gt(events.createdAt, cursor)))
         .orderBy(asc(events.createdAt), asc(events.id))
+        .all();
+    },
+
+    /**
+     * Paginated newest-first event list for the timeline subview.
+     * Returns up to `limit` events for the given company, ordered by
+     * `createdAt DESC`. Pass `cursor` (a createdAt timestamp) to fetch
+     * events older than the last page's final entry.
+     *
+     * Excludes `token.delta` events since they are high-frequency
+     * streaming noise that clutters the timeline.
+     */
+    listByCompany(companyId: string, cursor: number | undefined, limit: number): EventRow[] {
+      const conditions = [eq(events.companyId, companyId)];
+      if (cursor !== undefined) {
+        conditions.push(lt(events.createdAt, cursor));
+      }
+      return db
+        .select()
+        .from(events)
+        .where(and(...conditions))
+        .orderBy(desc(events.createdAt), desc(events.id))
+        .limit(limit)
         .all();
     },
   };

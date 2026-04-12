@@ -207,4 +207,116 @@ describe('events repo', () => {
       expect(ordered).toEqual([a, b, c]);
     });
   });
+
+  describe('listByCompany', () => {
+    it('returns empty array when no events exist', () => {
+      expect(events.listByCompany('co-1', undefined, 50)).toEqual([]);
+    });
+
+    it('filters events by companyId', () => {
+      events.append({
+        companyId: 'co-1',
+        actorId: 'a',
+        actorKind: 'system',
+        eventType: 'work.started',
+        payload: {},
+      });
+      events.append({
+        companyId: 'co-2',
+        actorId: 'a',
+        actorKind: 'system',
+        eventType: 'work.started',
+        payload: {},
+      });
+      events.append({
+        companyId: 'co-1',
+        actorId: 'a',
+        actorKind: 'system',
+        eventType: 'work.completed',
+        payload: {},
+      });
+      const result = events.listByCompany('co-1', undefined, 50);
+      expect(result).toHaveLength(2);
+      expect(result.every((e) => e.companyId === 'co-1')).toBe(true);
+    });
+
+    it('returns events newest-first', async () => {
+      const { id: a } = events.append({
+        companyId: 'co-1',
+        actorId: 'a',
+        actorKind: 'system',
+        eventType: 't',
+        payload: {},
+      });
+      await new Promise((r) => setTimeout(r, 3));
+      const { id: b } = events.append({
+        companyId: 'co-1',
+        actorId: 'a',
+        actorKind: 'system',
+        eventType: 't',
+        payload: {},
+      });
+      await new Promise((r) => setTimeout(r, 3));
+      const { id: c } = events.append({
+        companyId: 'co-1',
+        actorId: 'a',
+        actorKind: 'system',
+        eventType: 't',
+        payload: {},
+      });
+      const result = events.listByCompany('co-1', undefined, 50);
+      const ids = result.map((e) => e.id);
+      expect(ids).toEqual([c, b, a]);
+    });
+
+    it('respects the limit parameter', () => {
+      for (let i = 0; i < 10; i++) {
+        events.append({
+          companyId: 'co-1',
+          actorId: 'a',
+          actorKind: 'system',
+          eventType: 't',
+          payload: { n: i },
+        });
+      }
+      const result = events.listByCompany('co-1', undefined, 3);
+      expect(result).toHaveLength(3);
+    });
+
+    it('supports cursor-based pagination', async () => {
+      const ids: string[] = [];
+      for (let i = 0; i < 5; i++) {
+        await new Promise((r) => setTimeout(r, 2));
+        const { id } = events.append({
+          companyId: 'co-1',
+          actorId: 'a',
+          actorKind: 'system',
+          eventType: 't',
+          payload: { n: i },
+        });
+        ids.push(id);
+      }
+
+      // First page: 2 newest
+      const page1 = events.listByCompany('co-1', undefined, 2);
+      expect(page1).toHaveLength(2);
+      expect(page1[0]?.id).toBe(ids[4]);
+      expect(page1[1]?.id).toBe(ids[3]);
+
+      // Second page: use last event's createdAt as cursor
+      const cursor = page1[1]?.createdAt;
+      expect(cursor).toBeDefined();
+      const page2 = events.listByCompany('co-1', cursor, 2);
+      expect(page2).toHaveLength(2);
+      expect(page2[0]?.id).toBe(ids[2]);
+      expect(page2[1]?.id).toBe(ids[1]);
+
+      // Third page: last event
+      const cursor2 = page2[1]?.createdAt;
+      expect(cursor2).toBeDefined();
+      const page3 = events.listByCompany('co-1', cursor2, 2);
+      expect(page3).toHaveLength(1);
+      expect(page3[0]?.id).toBe(ids[0]);
+    });
+  });
 });

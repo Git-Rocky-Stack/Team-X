@@ -65,6 +65,8 @@ const REQUEST_CHANNELS = [
   'chat.list',
   'chat.resolveThread',
   'chat.listThreads',
+  // Events / timeline (Phase 3 — M14)
+  'events.list',
   // MCP management (Phase 2 — M10)
   'mcp.list',
   'mcp.toggle',
@@ -125,6 +127,14 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('chat.listThreads', async (_event, request: { companyId: string }) => {
     return handlers.chatListThreads(request);
   });
+
+  // Events / timeline handler (Phase 3 — M14)
+  ipcMain.handle(
+    'events.list',
+    async (_event, request: { companyId: string; cursor?: number; limit?: number }) => {
+      return handlers.eventsList(request);
+    },
+  );
 
   // MCP management handlers (Phase 2 — M10)
   ipcMain.handle('mcp.list', async (_event, request: { companyId: string }) => {

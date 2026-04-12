@@ -25,12 +25,25 @@ export interface EmployeeLiveState {
   lastMessageId: string | null;
 }
 
-/** Top-level view tab in the cockpit. */
-export type ActiveView = 'dashboard' | 'tickets';
+/** Top-level view tab in the cockpit. Phase 3 enables all tabs. */
+export type ActiveView =
+  | 'dashboard'
+  | 'org'
+  | 'projects'
+  | 'tickets'
+  | 'meetings'
+  | 'chat'
+  | 'telemetry'
+  | 'settings';
+
+/** Dashboard inner subview tabs. */
+export type DashboardSubview = 'cards' | 'timeline' | 'stream' | 'floor';
 
 export interface AppState {
   /** Which top-level view is active. */
   activeView: ActiveView;
+  /** Which dashboard subview is showing (Cards/Timeline/Stream/Floor). */
+  dashboardSubview: DashboardSubview;
   /** The employee whose chat drawer is open, or null when closed. */
   selectedEmployeeId: string | null;
   /** Whether the chat drawer is visible. */
@@ -51,6 +64,7 @@ export interface AppState {
   activeTicketId: string | null;
 
   setActiveView: (view: ActiveView) => void;
+  setDashboardSubview: (subview: DashboardSubview) => void;
   setSelectedEmployee: (id: string | null) => void;
   setChatOpen: (open: boolean) => void;
   setActiveThreadId: (threadId: string | null) => void;
@@ -68,6 +82,7 @@ function defaultLive(): EmployeeLiveState {
 
 export const useAppStore = create<AppState>((set) => ({
   activeView: 'dashboard',
+  dashboardSubview: 'cards',
   selectedEmployeeId: null,
   chatOpen: false,
   activeThreadId: null,
@@ -79,6 +94,8 @@ export const useAppStore = create<AppState>((set) => ({
   activeTicketId: null,
 
   setActiveView: (view) => set({ activeView: view, activeTicketId: null }),
+
+  setDashboardSubview: (subview) => set({ dashboardSubview: subview }),
 
   setSelectedEmployee: (id) =>
     set({

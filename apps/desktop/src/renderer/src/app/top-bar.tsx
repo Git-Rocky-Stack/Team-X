@@ -1,4 +1,15 @@
-import { Building2 } from 'lucide-react';
+import type { ComponentType } from 'react';
+
+import {
+  Building2,
+  Gauge,
+  GitBranch,
+  KanbanSquare,
+  LayoutDashboard,
+  MessageSquare,
+  Settings,
+  Users2,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Separator } from '@/components/ui/separator.js';
@@ -6,16 +17,20 @@ import { type ActiveView, useAppStore } from '@/store/app-store.js';
 
 interface TabDef {
   label: string;
-  view?: ActiveView;
+  icon: ComponentType<{ className?: string }>;
+  view: ActiveView;
   disabled?: boolean;
 }
 
 const TABS: TabDef[] = [
-  { label: 'Dashboard', view: 'dashboard' },
-  { label: 'Projects', disabled: true },
-  { label: 'Tickets', view: 'tickets' },
-  { label: 'Meetings', disabled: true },
-  { label: 'Telemetry', disabled: true },
+  { label: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
+  { label: 'Org', icon: GitBranch, view: 'org', disabled: true },
+  { label: 'Projects', icon: KanbanSquare, view: 'projects', disabled: true },
+  { label: 'Tickets', icon: KanbanSquare, view: 'tickets' },
+  { label: 'Meetings', icon: Users2, view: 'meetings', disabled: true },
+  { label: 'Chat', icon: MessageSquare, view: 'chat', disabled: true },
+  { label: 'Telemetry', icon: Gauge, view: 'telemetry', disabled: true },
+  { label: 'Settings', icon: Settings, view: 'settings', disabled: true },
 ];
 
 export function TopBar() {
@@ -28,7 +43,7 @@ export function TopBar() {
         <Building2 className="h-5 w-5 text-brand" />
         <span className="text-sm font-semibold">Strategia-X</span>
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
-          Phase 2
+          Phase 3
         </Badge>
       </div>
 
@@ -37,14 +52,15 @@ export function TopBar() {
       <nav className="flex items-center gap-1">
         {TABS.map((tab) => {
           const isActive = tab.view === activeView;
+          const Icon = tab.icon;
           return (
             <button
               type="button"
               key={tab.label}
               disabled={tab.disabled}
-              onClick={tab.view ? () => setActiveView(tab.view!) : undefined}
+              onClick={() => setActiveView(tab.view)}
               className={`
-                rounded-md px-3 py-1.5 text-xs font-medium transition-colors
+                flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors
                 ${
                   isActive
                     ? 'bg-brand/10 text-brand'
@@ -53,8 +69,9 @@ export function TopBar() {
                       : 'text-muted-foreground hover:text-foreground hover:bg-surface-100'
                 }
               `}
-              title={tab.disabled ? 'Coming in Phase 3+' : undefined}
+              title={tab.disabled ? 'Coming soon' : undefined}
             >
+              <Icon className="h-3.5 w-3.5" />
               {tab.label}
             </button>
           );
