@@ -18,7 +18,9 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 ## Status
 
-**Phase 2 (The Org) — complete.** All 13 milestones shipped. 379 unit tests + 2 E2E specs passing.
+**Phase 2 (The Org) — complete.** All 13 milestones shipped.
+
+**Phase 3 (The Live Cockpit) — in progress.** M14-M15 shipped. 412 unit tests + 2 E2E specs passing.
 
 ### Phase 1 (Skeleton) — complete
 
@@ -39,8 +41,14 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 - **M12 (tickets + kanban):** Ticket CRUD (`tickets` table, 8 IPC channels), 4-column kanban board (open/in-progress/blocked/done) with drag-to-move, ticket detail panel with discussion thread, create-with-assign triggers orchestrator run, `CreateTicketDialog` with priority + assignee selection.
 - **M13 (demo + hardening):** Playwright E2E ticket-flow spec (full create-assign-agent-reply round-trip, 1.8s), production build fix (`inlineDynamicImports` for `__filename`/`__dirname` collision), smoke test updated for Phase 2 badge, lint cleanup. 379 unit tests + 2 E2E passing.
 
+### Phase 3 (The Live Cockpit) — in progress
+
+- **M14 (dashboard subviews):** 4 new subviews (Timeline, Stream, Floor, Org embed) + subtab nav in Dashboard, top bar expanded to all 8 tabs with disabled placeholders, `events.list` IPC with cursor-based pagination. 384 tests passing.
+- **M15 (goals & projects):** `goals`, `projects`, `project_tickets` tables + migration. Goals repo (CRUD + recalcProgress), Projects repo (CRUD + ticket linking). 12 new IPC channels (5 goals.*, 7 projects.*). Projects kanban board (4-column drag-drop), project cards + detail panel, create project dialog. Goals subtab with progress bars, goal rows + detail panel, create goal dialog. Projects tab enabled. 412 tests passing.
+
 The Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md).
 The Phase 2 plan lives at [`docs/plans/2026-04-11-team-x-phase-2-the-org.md`](docs/plans/2026-04-11-team-x-phase-2-the-org.md).
+The Phase 3 plan lives at [`docs/plans/2026-04-12-team-x-phase-3-live-cockpit.md`](docs/plans/2026-04-12-team-x-phase-3-live-cockpit.md).
 
 ## Stack (locked)
 
@@ -217,7 +225,7 @@ The curated F10 role library is the crown jewel. When creating or editing `role.
 - **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow. Phase 2 ships two specs: smoke (chat round-trip) and ticket-flow (create-assign-agent-reply lifecycle), both against the canned test-mode provider.
 - Every Phase-X demo must have green tests before the phase is marked shippable.
 
-## IPC channels (Phase 2)
+## IPC channels (Phase 2 + Phase 3)
 
 All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and exposed through the preload bridge.
 
@@ -236,11 +244,24 @@ All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and 
 | | `chat.list` | List messages in thread |
 | | `chat.resolveThread` | Get or create DM thread |
 | | `chat.listThreads` | List all threads for company |
+| events | `events.list` | Paginated event list for timeline (M14) |
 | mcp | `mcp.list` | List MCP servers for company |
 | | `mcp.add` | Register new MCP server |
 | | `mcp.remove` | Remove MCP server |
 | | `mcp.toggle` | Enable/disable MCP server |
 | | `mcp.health` | Check MCP server health |
+| goals | `goals.create` | Create company goal (M15) |
+| | `goals.update` | Update goal fields |
+| | `goals.list` | List all goals for company |
+| | `goals.get` | Goal detail with linked projects |
+| | `goals.delete` | Delete a goal |
+| projects | `projects.create` | Create project (M15) |
+| | `projects.update` | Update project fields |
+| | `projects.list` | List all projects for company |
+| | `projects.get` | Project detail with tickets + lead |
+| | `projects.delete` | Delete project + ticket links |
+| | `projects.linkTicket` | Link ticket to project |
+| | `projects.unlinkTicket` | Unlink ticket from project |
 | tickets | `tickets.create` | File ticket (optional immediate assign) |
 | | `tickets.update` | Update mutable fields |
 | | `tickets.assign` | Assign + create thread + enqueue agent |
