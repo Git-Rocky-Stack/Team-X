@@ -35,3 +35,59 @@ jobs:
         run: pnpm typecheck
       - name: Test
         run: pnpm test
+
+  e2e:
+    name: E2E smoke (Electron)
+    runs-on: ubuntu-latest
+    needs: check
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      # Electron needs a GTK/X11 stack plus libxkb + libasound at runtime
+      # even in headless mode; xvfb provides the display. ubuntu-latest
+      # ships most of these, but libasound2t64 + libgbm1 are sometimes
+      # missing on minimal runners — install explicitly to keep the
+      # job deterministic.
+      - name: Install Electron runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libasound2t64 \
+            libgtk-3-0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build desktop (main + preload + renderer)
+        run: pnpm -F @team-x/desktop build
+      # `xvfb-run` wraps the Playwright invocation so Electron has a
+      # virtual display. `--auto-servernum` picks a free :N so parallel
+      # jobs on the same runner never collide on :99.
+      - name: Run Playwright E2E smoke
+        run: xvfb-run --auto-servernum pnpm -F @team-x/desktop test:e2e:run
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/desktop/playwright-report
+          retention-days: 7

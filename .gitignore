@@ -24,6 +24,12 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+# playwright
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # electron
 release/
 *.app/

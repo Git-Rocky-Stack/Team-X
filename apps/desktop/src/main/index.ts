@@ -154,7 +154,14 @@ async function createWindow(): Promise<void> {
     win.show();
     // Auto-open DevTools in dev so renderer errors surface immediately.
     // Gated on isDev so packaged builds never ship with DevTools primed.
-    if (isDev) {
+    // Also gated off in test mode: DevTools attaches to the Chrome
+    // DevTools Protocol, which Playwright's `_electron` driver also
+    // uses — the two compete on the same channel and Playwright
+    // actions hang until the 90s test timeout. The Playwright E2E
+    // smoke test runs with NODE_ENV=test, so this check keeps the
+    // real dev workflow (pnpm dev) fully instrumented while giving
+    // the E2E harness an uncontended CDP channel.
+    if (isDev && process.env.NODE_ENV !== 'test') {
       win.webContents.openDevTools({ mode: 'detach' });
     }
   });
@@ -295,11 +302,17 @@ app.on('will-quit', (event) => {
     closeDb();
     return;
   }
-  // Defer the actual quit until shutdown completes. We do NOT
-  // call event.preventDefault() forever — we let the original
-  // will-quit complete after our async chain finishes by allowing
-  // it to fall through. The pattern below mirrors Electron's docs
-  // for "wait for async work, then quit again".
+  // Defer the actual quit until shutdown completes. The original
+  // implementation called `app.quit()` after the async chain, which
+  // re-fires `will-quit` recursively — the second pass took the
+  // null-state branch above and let Electron continue, but the cycle
+  // turned out to be racy under Playwright's `app.close()` driver
+  // and the process never exited. Switching to `app.exit(0)` short-
+  // circuits the event loop entirely after our shutdown chain is
+  // complete, which is exactly what we want here: shutdown is done,
+  // there is nothing left to clean up, just terminate. Production
+  // users see the same behaviour — the renderer windows are already
+  // closed by the time will-quit fires, so there is no UI to lose.
   event.preventDefault();
   void (async () => {
     try {
@@ -323,6 +336,7 @@ app.on('will-quit', (event) => {
     } catch (err) {
       console.error('[main] closeDb failed:', err);
     }
-    app.quit();
+    console.log('[main] shutdown complete, exiting');
+    app.exit(0);
   })();
 });

@@ -769,9 +769,9 @@ describe('IPC: chat.resolveThread', () => {
 
   it('rejects when the employee does not exist', async () => {
     const fx = buildFixture();
-    await expect(
-      fx.handlers.chatResolveThread({ employeeId: 'emp-ghost' }),
-    ).rejects.toThrow(/employee not found/);
+    await expect(fx.handlers.chatResolveThread({ employeeId: 'emp-ghost' })).rejects.toThrow(
+      /employee not found/,
+    );
     // Must fail closed — no thread creation attempt for a missing employee.
     expect(fx.threads.getOrCreateCalls).toHaveLength(0);
   });

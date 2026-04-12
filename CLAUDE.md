@@ -18,12 +18,14 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 ## Status
 
-**Phase 1 (Skeleton) — in progress.** Milestones 1-4 complete. Milestone 5 (renderer) is next.
+**Phase 1 (Skeleton) — in progress.** Milestones 1-5 complete. Milestone 6 (demo + hardening) in progress.
 
 - **M1 (repo foundations):** pnpm workspace, TypeScript strict, Biome, Vitest, CI.
 - **M2 (shared packages):** `shared-types`, `role-schema` (parser + template renderer), `provider-router` (registry + streaming adapters for Anthropic + Ollama), `telemetry-core` (cost math).
 - **M3 (main process + DB):** Electron boots with context isolation, SQLite + Drizzle migrate on first run, seed creates the Strategia-X company with CEO + Senior Fullstack Engineer, keytar-backed `SecretsStore`, providers service seeds `ollama-local` + `anthropic`, dev `.env` → keychain bootstrap.
-- **M4 (agent runtime):** Append-only event bus, slot-semaphore work queue, `runAgent` with live streaming + persistence, orchestrator facade, real Anthropic + Ollama adapters via Vercel AI SDK, `provider-factory` (resolves employee → provider + model with keytar + privacy-tier fallback), `role-loader` (directory scan → role.md index → template rendering), IPC handlers (`employees.list`, `chat.send`, `chat.list`) with typed preload bridge (`window.teamx: TeamXApi`), full main/index.ts wiring (orchestrator + IPC + event forwarding + graceful shutdown), test-mode provider for Playwright E2E, smoke-chat.ts script for manual Ollama verification. 313 tests passing.
+- **M4 (agent runtime):** Append-only event bus, slot-semaphore work queue, `runAgent` with live streaming + persistence, orchestrator facade, real Anthropic + Ollama adapters via Vercel AI SDK, `provider-factory` (resolves employee → provider + model with keytar + privacy-tier fallback), `role-loader` (directory scan → role.md index → template rendering), IPC handlers (`employees.list`, `chat.send`, `chat.list`) with typed preload bridge (`window.teamx: TeamXApi`), full main/index.ts wiring (orchestrator + IPC + event forwarding + graceful shutdown), test-mode provider for Playwright E2E, smoke-chat.ts script for manual Ollama verification.
+- **M5 (renderer):** Tailwind + shadcn/ui dark theme, Zustand + React Query, IPC client hooks, app shell (top bar + sidenav + content area), dashboard cards view with live token stream preview, chat drawer with streaming replies + composer, hire dialog, empty/loading/error states, Inter + JetBrains Mono typography, live status counts, WCAG 2.1 AA accessibility pass. CP5 passed 2026-04-11.
+- **M6 (demo + hardening):** Playwright E2E smoke test (full chat round-trip against canned test-mode provider, 1.1s), CI e2e job (ubuntu + xvfb), CLAUDE.md testing + troubleshooting docs, DevTools + will-quit shutdown fixes. 324 unit tests + 1 E2E passing.
 
 The detailed Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md) — 52 tasks across 6 milestones.
 
@@ -86,12 +88,12 @@ pnpm -F @team-x/desktop dev     # same, scoped to the desktop app
 pnpm build                      # production build of all workspaces
 ```
 
-Packaged installer generation via electron-builder (`pnpm dist`) and Playwright E2E tests (`pnpm test:e2e`) land in later tasks (T49+). Neither command exists yet.
+Packaged installer generation via electron-builder (`pnpm dist`) lands in Phase 4 — no command yet. Playwright E2E tests are wired (T49) and run via `pnpm -F @team-x/desktop test:e2e`.
 
 **Test, typecheck, lint:**
 
 ```bash
-pnpm test                       # vitest run across all workspaces
+pnpm test                       # vitest run across all workspaces (324 tests)
 pnpm test:watch                 # vitest in watch mode
 pnpm test:coverage              # vitest with coverage report
 pnpm typecheck                  # tsc --noEmit across all workspaces
@@ -99,6 +101,38 @@ pnpm lint                       # biome check
 pnpm lint:fix                   # biome check --write
 pnpm format                     # biome format --write
 ```
+
+**End-to-end smoke test (Playwright + real Electron):**
+
+```bash
+# Full build + run — what CI does and what you should run before /ship.
+pnpm -F @team-x/desktop test:e2e
+
+# Skip the build (faster iteration when out/main is already current).
+pnpm -F @team-x/desktop test:e2e:run
+```
+
+The E2E spec lives at `apps/desktop/e2e/smoke.spec.ts`. It launches a real
+Electron instance against `out/main/index.js` with `NODE_ENV=test`, which
+flips `provider-factory.isTestMode()` to `true` and swaps the resolver
+for the canned-reply `createTestModeResolveProvider`. No Ollama, no
+Anthropic key, no network — the full chat round-trip is exercised
+through the orchestrator and event bus end-to-end.
+
+Each run gets its own throwaway `--user-data-dir=<tmp>` so the test
+SQLite database never collides with Rocky's real dev DB at
+`%APPDATA%/Team-X/team-x/team-x.sqlite`.
+
+**Manual smoke against a real local LLM (Ollama):**
+
+```bash
+pnpm -F @team-x/desktop exec tsx scripts/smoke-chat.ts
+```
+
+Requires `ollama serve` running locally with `llama3.1:8b` (or whatever
+you set as `modelPref`) pulled. Streams a real response to stdout —
+the fastest way to verify the orchestrator + provider router pipeline
+end-to-end without booting Electron.
 
 **Typecheck caveat — important.** Always run `pnpm typecheck` at the repo root (which expands to `pnpm -r typecheck`). The workspace-scoped `pnpm -F @team-x/desktop typecheck` does NOT traverse project references and silently misses per-package composite-mode regressions in the shared workspace packages. This cost real debugging time in Task 18 — do not shortcut it.
 
@@ -163,8 +197,49 @@ The curated F10 role library is the crown jewel. When creating or editing `role.
 
 - **Unit tests (Vitest)** for: role.md parser, provider router logic, orchestrator scheduler math, telemetry calculations, backup/restore round-trip.
 - **Integration tests (Vitest)** for: MCP host + one real MCP, Drizzle migrations, worker lifecycle, meeting pause/resume.
-- **E2E tests (Playwright)** via the `/browse` skill for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow.
+- **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow. Phase 1 ships one full-boot smoke that drives the chat round-trip end-to-end against a canned test-mode provider.
 - Every Phase-X demo must have green tests before the phase is marked shippable.
+
+## Troubleshooting
+
+**`Cannot find module '...better_sqlite3.node'` or any native-module ABI mismatch.** Electron rebuilds against its own Node ABI; pnpm installs against the system Node. Run the rebuild after every dep change that touches native modules:
+
+```bash
+pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar
+```
+
+The `@team-x/desktop` postinstall script does this automatically on `pnpm install`. If you're seeing the error after a dep upgrade, it usually means the postinstall hook was skipped — re-run install with `--force`.
+
+**Ollama smoke chat fails with `ECONNREFUSED 127.0.0.1:11434`.** Ollama isn't running. Start it (`ollama serve` on Linux/macOS, or open the Ollama desktop app on Windows) and re-run. Confirm the model is pulled:
+
+```bash
+ollama list
+ollama pull llama3.1:8b   # or whatever the test references
+```
+
+If Ollama is bound to a non-default host, set `OLLAMA_BASE_URL` in `apps/desktop/.env` — see `bootstrapEnvKeys` for the full env-key import contract.
+
+**Drizzle migrations are out of sync — "table already exists" or "missing column" on dev boot.** The dev DB lives at `%APPDATA%/Team-X/team-x/team-x.sqlite` on Windows. Nuke it and let the next boot reseed:
+
+```bash
+# Windows (PowerShell)
+Remove-Item -Force "$env:APPDATA\Team-X\team-x\team-x.sqlite*"
+
+# macOS / Linux equivalent
+rm -f ~/Library/Application\ Support/Team-X/team-x/team-x.sqlite*
+```
+
+The `*` glob also removes the `-shm` and `-wal` WAL companion files. On the next `pnpm dev`, migrations re-run from scratch and `seedIfEmpty()` reseeds the Strategia-X company + CEO + SWE.
+
+**Playwright E2E hangs at the 90s test timeout.** The smoke test is supposed to finish in ~1-2 seconds. A hang means one of the assertions is waiting on an element that never appears. Things to check, in order:
+
+1. The renderer crashed silently — read the `[renderer pageerror]` and `[renderer error]` lines forwarded by `e2e/smoke.spec.ts`.
+2. A locator regex doesn't match the entire accessible name — Playwright's `getByRole({ name: regex })` is anchored, so use attribute-starts-with selectors (`button[aria-label^="..."]`) for robust matches.
+3. `app.close()` itself is hanging — the will-quit handler in `main/index.ts` calls `app.exit(0)` after the orchestrator drains; if that ever stops working, the afterEach will force-kill after 5s and the test will surface the real assertion that failed before the hang.
+
+**`pnpm typecheck` passes but unit tests fail with "test is not defined".** Vitest is picking up an `e2e/*.spec.ts` Playwright file. Confirm `apps/desktop/vitest.config.ts` excludes `e2e/**` — the per-workspace exclude is required because `vitest.workspace.ts` resolves projects independently and the root `vitest.config.ts` exclude does not propagate down.
+
+**DevTools auto-opens during the Playwright run and the test hangs.** Should not happen — `main/index.ts` gates `openDevTools` on `process.env.NODE_ENV !== 'test'`. If the gate ever regresses, DevTools and Playwright fight over the same Chrome DevTools Protocol channel and every `expect().toBeVisible()` hangs indefinitely.
 
 ## Things to NOT do
 
