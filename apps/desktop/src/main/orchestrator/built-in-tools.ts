@@ -160,16 +160,18 @@ export function buildSendMessageTool(
 
       // 6. Enqueue a work item for the recipient.
       // Fire-and-forget — don't await; the sender's turn continues.
-      deps.enqueueAgentReply({
-        threadId,
-        employeeId: args.recipientEmployeeId,
-        triggerMessageId: messageId,
-      }).catch((err: unknown) => {
-        console.error(
-          `[built-in-tools] failed to enqueue agent reply for ${args.recipientEmployeeId}:`,
-          err,
-        );
-      });
+      deps
+        .enqueueAgentReply({
+          threadId,
+          employeeId: args.recipientEmployeeId,
+          triggerMessageId: messageId,
+        })
+        .catch((err: unknown) => {
+          console.error(
+            `[built-in-tools] failed to enqueue agent reply for ${args.recipientEmployeeId}:`,
+            err,
+          );
+        });
 
       return {
         success: true,
@@ -193,7 +195,7 @@ export function buildListColleaguesTool(
   return {
     name: 'list_colleagues',
     description:
-      'List all employees in your company. Returns each colleague\'s id, name, title, ' +
+      "List all employees in your company. Returns each colleague's id, name, title, " +
       'and level. Use this to discover who you can message with send_message_to_colleague.',
     inputSchema: {
       type: 'object',

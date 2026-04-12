@@ -1,10 +1,10 @@
 /**
- * Team-X Phase 1 SQLite schema.
+ * Team-X SQLite schema (Phase 1 + Phase 2).
  *
- * This is the minimum set of tables needed to boot a single company with one
- * hardcoded CEO + one Senior Fullstack Engineer, stream an LLM response, and
- * render the live cockpit events feed. Later phases extend with tables for
- * goals / projects / tickets / MCP tool registry / file vault / backups.
+ * Phase 1 tables: companies, employees, threads, threadMembers, messages,
+ * events, runs, providers, settings.
+ * Phase 2 additions: mcpServers, toolCalls (M10), tickets (M12),
+ * threads.ticketId FK (M12).
  *
  * Design notes:
  * - Primary keys are text-typed to hold nanoid values (see packages/shared-types).
@@ -77,6 +77,8 @@ export const threads = sqliteTable('threads', {
   createdAt: integer('created_at').notNull(),
   /** Updated on every message append — drives thread-list sort order. */
   lastMessageAt: integer('last_message_at'),
+  /** Nullable FK to the ticket this thread discusses (kind='ticket' threads only). */
+  ticketId: text('ticket_id'),
 });
 
 /** Membership edge: which users / employees belong to each thread. */
@@ -206,4 +208,43 @@ export const toolCalls = sqliteTable('tool_calls', {
   status: text('status').notNull().default('success'),
   error: text('error'),
   createdAt: integer('created_at').notNull(),
+});
+
+/**
+ * Tickets — the primary work primitive. Filed by users or agents,
+ * assigned to employees, tracked on the kanban board.
+ *
+ * Each ticket optionally gets a discussion thread (kind='ticket') created
+ * on first assignment. The orchestrator enqueues a WorkItem when an
+ * assignee is set, and the agent can request close via structured output.
+ */
+export const tickets = sqliteTable('tickets', {
+  id: text('id').primaryKey(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  /** open | in-progress | blocked | done. */
+  status: text('status').notNull().default('open'),
+  /** low | medium | high | critical. */
+  priority: text('priority').notNull().default('medium'),
+  /** Assigned employee FK. Null = unassigned (sits in Open column). */
+  assigneeId: text('assignee_id').references(() => employees.id),
+  /** Human user or employee who filed the ticket. */
+  reporterId: text('reporter_id').notNull(),
+  /** user | employee | system. */
+  reporterKind: text('reporter_kind').notNull().default('user'),
+  /** JSON-encoded string[] of label tags. */
+  labelsJson: text('labels_json').notNull().default('[]'),
+  /** JSON-encoded string[] of blocking ticket ids. */
+  dependenciesJson: text('dependencies_json').notNull().default('[]'),
+  /** Target hours to resolution. Null = no SLA. */
+  slaHours: integer('sla_hours'),
+  dueAt: integer('due_at'),
+  /** FK to the discussion thread (created on first assignment). */
+  threadId: text('thread_id').references(() => threads.id),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  closedAt: integer('closed_at'),
 });

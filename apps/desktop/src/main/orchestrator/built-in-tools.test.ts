@@ -10,7 +10,11 @@ import type {
   BuiltInToolThreadsRepo,
   EnqueueAgentReplyFn,
 } from './built-in-tools.js';
-import { buildBuiltInTools, buildListColleaguesTool, buildSendMessageTool } from './built-in-tools.js';
+import {
+  buildBuiltInTools,
+  buildListColleaguesTool,
+  buildSendMessageTool,
+} from './built-in-tools.js';
 import type { EventBus } from './event-bus.js';
 
 // ---------------------------------------------------------------------------
@@ -47,13 +51,23 @@ function makeDeps(): {
   bus: EventBus;
 } {
   const employeeMap = new Map<string, EmployeeRow>();
-  employeeMap.set('emp-ceo', fakeEmployee({ id: 'emp-ceo', name: 'Alex Rivera', title: 'CEO', level: 'Officer' }));
-  employeeMap.set('emp-swe', fakeEmployee({ id: 'emp-swe', name: 'Iris Chen', title: 'Senior SWE', level: 'IC' }));
-  employeeMap.set('emp-other', fakeEmployee({ id: 'emp-other', companyId: 'company-2', name: 'Other', title: 'PM' }));
+  employeeMap.set(
+    'emp-ceo',
+    fakeEmployee({ id: 'emp-ceo', name: 'Alex Rivera', title: 'CEO', level: 'Officer' }),
+  );
+  employeeMap.set(
+    'emp-swe',
+    fakeEmployee({ id: 'emp-swe', name: 'Iris Chen', title: 'Senior SWE', level: 'IC' }),
+  );
+  employeeMap.set(
+    'emp-other',
+    fakeEmployee({ id: 'emp-other', companyId: 'company-2', name: 'Other', title: 'PM' }),
+  );
 
   const employees: BuiltInToolEmployeesRepo = {
     getById: (id) => employeeMap.get(id) ?? null,
-    listByCompany: (companyId) => [...employeeMap.values()].filter((e) => e.companyId === companyId),
+    listByCompany: (companyId) =>
+      [...employeeMap.values()].filter((e) => e.companyId === companyId),
   };
 
   const messages: BuiltInToolMessagesRepo = {
@@ -68,7 +82,15 @@ function makeDeps(): {
   const enqueueAgentReply: EnqueueAgentReplyFn = vi.fn().mockResolvedValue(undefined);
 
   const bus = {
-    emit: vi.fn().mockReturnValue({ id: 'evt-1', type: 'message.agent_to_agent', companyId: 'company-1', actorId: 'emp-ceo', actorKind: 'employee', payload: {}, createdAt: Date.now() }),
+    emit: vi.fn().mockReturnValue({
+      id: 'evt-1',
+      type: 'message.agent_to_agent',
+      companyId: 'company-1',
+      actorId: 'emp-ceo',
+      actorKind: 'employee',
+      payload: {},
+      createdAt: Date.now(),
+    }),
     subscribe: vi.fn().mockReturnValue(() => {}),
     replaySince: vi.fn().mockReturnValue([]),
   } as unknown as EventBus;
@@ -97,8 +119,16 @@ describe('buildSendMessageTool', () => {
 
   it('sends a message and returns success', async () => {
     const tool = buildSendMessageTool(deps.deps, 'emp-ceo', 'company-1');
-    const result = await tool.execute({ recipientEmployeeId: 'emp-swe', message: 'Hello Iris' } as never);
-    const r = result as { success: boolean; threadId: string; messageId: string; recipientName: string };
+    const result = await tool.execute({
+      recipientEmployeeId: 'emp-swe',
+      message: 'Hello Iris',
+    } as never);
+    const r = result as {
+      success: boolean;
+      threadId: string;
+      messageId: string;
+      recipientName: string;
+    };
 
     expect(r.success).toBe(true);
     expect(r.threadId).toBe('thread-1');
@@ -168,7 +198,10 @@ describe('buildSendMessageTool', () => {
 
   it('rejects messaging yourself', async () => {
     const tool = buildSendMessageTool(deps.deps, 'emp-ceo', 'company-1');
-    const result = await tool.execute({ recipientEmployeeId: 'emp-ceo', message: 'hi me' } as never);
+    const result = await tool.execute({
+      recipientEmployeeId: 'emp-ceo',
+      message: 'hi me',
+    } as never);
     const r = result as { success: boolean; error: string };
     expect(r.success).toBe(false);
     expect(r.error).toContain('cannot message yourself');
@@ -206,6 +239,9 @@ describe('buildBuiltInTools', () => {
     const { deps } = makeDeps();
     const tools = buildBuiltInTools(deps, 'emp-ceo', 'company-1');
     expect(tools).toHaveLength(2);
-    expect(tools.map((t) => t.name).sort()).toEqual(['list_colleagues', 'send_message_to_colleague']);
+    expect(tools.map((t) => t.name).sort()).toEqual([
+      'list_colleagues',
+      'send_message_to_colleague',
+    ]);
   });
 });

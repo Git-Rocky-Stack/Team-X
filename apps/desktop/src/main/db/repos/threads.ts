@@ -305,10 +305,7 @@ export function createThreadsRepo<TRunResult>(db: ThreadsDb<TRunResult>) {
      * every message append so the thread list can sort by recency.
      */
     updateLastMessageAt(threadId: string, timestamp: number): void {
-      db.update(threads)
-        .set({ lastMessageAt: timestamp })
-        .where(eq(threads.id, threadId))
-        .run();
+      db.update(threads).set({ lastMessageAt: timestamp }).where(eq(threads.id, threadId)).run();
     },
 
     /**
@@ -326,11 +323,7 @@ export function createThreadsRepo<TRunResult>(db: ThreadsDb<TRunResult>) {
 
       return rows.map((row) => ({
         ...row,
-        members: db
-          .select()
-          .from(threadMembers)
-          .where(eq(threadMembers.threadId, row.id))
-          .all(),
+        members: db.select().from(threadMembers).where(eq(threadMembers.threadId, row.id)).all(),
       }));
     },
   };

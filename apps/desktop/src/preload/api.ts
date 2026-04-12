@@ -36,6 +36,10 @@
 
 import type {
   AddMcpServerRequest,
+  AddTicketCommentRequest,
+  AddTicketCommentResponse,
+  CreateTicketRequest,
+  CreateTicketResponse,
   DashboardEvent,
   DashboardEventListener,
   HireEmployeeRequest,
@@ -49,7 +53,10 @@ import type {
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
   Thread,
+  Ticket,
+  TicketDetail,
   UnsubscribeFn,
+  UpdateTicketRequest,
 } from '@team-x/shared-types';
 
 /**
@@ -95,6 +102,15 @@ const CHANNELS = {
   mcpAddServer: 'mcp.addServer',
   mcpRemoveServer: 'mcp.removeServer',
   mcpTestConnection: 'mcp.testConnection',
+  // Ticket management (Phase 2 — M12)
+  ticketsCreate: 'tickets.create',
+  ticketsUpdate: 'tickets.update',
+  ticketsAssign: 'tickets.assign',
+  ticketsClose: 'tickets.close',
+  ticketsReopen: 'tickets.reopen',
+  ticketsAddComment: 'tickets.addComment',
+  ticketsList: 'tickets.list',
+  ticketsGet: 'tickets.get',
 } as const;
 
 /**
@@ -153,6 +169,23 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.mcpRemoveServer, { serverId }) as Promise<void>,
       testConnection: (req: TestMcpConnectionRequest) =>
         ipc.invoke(CHANNELS.mcpTestConnection, req) as Promise<TestMcpConnectionResponse>,
+    },
+    tickets: {
+      create: (req: CreateTicketRequest) =>
+        ipc.invoke(CHANNELS.ticketsCreate, req) as Promise<CreateTicketResponse>,
+      update: (req: UpdateTicketRequest) =>
+        ipc.invoke(CHANNELS.ticketsUpdate, req) as Promise<void>,
+      assign: (req: { ticketId: string; assigneeId: string }) =>
+        ipc.invoke(CHANNELS.ticketsAssign, req) as Promise<void>,
+      close: (ticketId: string) => ipc.invoke(CHANNELS.ticketsClose, { ticketId }) as Promise<void>,
+      reopen: (ticketId: string) =>
+        ipc.invoke(CHANNELS.ticketsReopen, { ticketId }) as Promise<void>,
+      addComment: (req: AddTicketCommentRequest) =>
+        ipc.invoke(CHANNELS.ticketsAddComment, req) as Promise<AddTicketCommentResponse>,
+      list: (companyId: string) =>
+        ipc.invoke(CHANNELS.ticketsList, { companyId }) as Promise<Ticket[]>,
+      get: (ticketId: string) =>
+        ipc.invoke(CHANNELS.ticketsGet, { ticketId }) as Promise<TicketDetail>,
     },
   };
 }

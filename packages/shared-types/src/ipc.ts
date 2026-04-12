@@ -30,7 +30,7 @@
  *     time.
  */
 
-import type { ChatMessage, Company, Employee, Thread } from './entities.js';
+import type { ChatMessage, Company, Employee, Thread, Ticket } from './entities.js';
 import type { DashboardEvent } from './events.js';
 
 // ---------------------------------------------------------------------------
@@ -104,6 +104,76 @@ export interface ResolveThreadResponse {
 
 export interface ListThreadsRequest {
   companyId: string;
+}
+
+// ---------------------------------------------------------------------------
+// Ticket-related shapes
+// ---------------------------------------------------------------------------
+
+export interface CreateTicketRequest {
+  companyId: string;
+  title: string;
+  description?: string;
+  /** Defaults to 'medium'. Accepts TicketPriority values. */
+  priority?: string;
+  /** Optional: assign immediately on creation. */
+  assigneeId?: string;
+  labelsJson?: string;
+  slaHours?: number;
+  dueAt?: number;
+}
+
+export interface CreateTicketResponse {
+  ticketId: string;
+}
+
+export interface UpdateTicketRequest {
+  ticketId: string;
+  title?: string;
+  description?: string;
+  /** Use TicketPriority union or raw string — the handler validates. */
+  priority?: string;
+  /** Use TicketStatus union or raw string — the handler validates. */
+  status?: string;
+  labelsJson?: string;
+  slaHours?: number | null;
+  dueAt?: number | null;
+}
+
+export interface AssignTicketRequest {
+  ticketId: string;
+  assigneeId: string;
+}
+
+export interface CloseTicketRequest {
+  ticketId: string;
+}
+
+export interface ReopenTicketRequest {
+  ticketId: string;
+}
+
+export interface AddTicketCommentRequest {
+  ticketId: string;
+  content: string;
+}
+
+export interface AddTicketCommentResponse {
+  messageId: string;
+}
+
+export interface ListTicketsRequest {
+  companyId: string;
+}
+
+export interface GetTicketRequest {
+  ticketId: string;
+}
+
+/** Full ticket with its associated thread messages for the detail panel. */
+export interface TicketDetail extends Ticket {
+  messages: ChatMessage[];
+  assignee: Employee | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,6 +270,39 @@ export interface IpcContract {
   'mcp.testConnection': {
     request: TestMcpConnectionRequest;
     response: TestMcpConnectionResponse;
+  };
+  // Ticket management channels
+  'tickets.create': {
+    request: CreateTicketRequest;
+    response: CreateTicketResponse;
+  };
+  'tickets.update': {
+    request: UpdateTicketRequest;
+    response: undefined;
+  };
+  'tickets.assign': {
+    request: AssignTicketRequest;
+    response: undefined;
+  };
+  'tickets.close': {
+    request: CloseTicketRequest;
+    response: undefined;
+  };
+  'tickets.reopen': {
+    request: ReopenTicketRequest;
+    response: undefined;
+  };
+  'tickets.addComment': {
+    request: AddTicketCommentRequest;
+    response: AddTicketCommentResponse;
+  };
+  'tickets.list': {
+    request: ListTicketsRequest;
+    response: Ticket[];
+  };
+  'tickets.get': {
+    request: GetTicketRequest;
+    response: TicketDetail;
   };
 }
 
@@ -301,6 +404,24 @@ export interface TeamXApi {
     removeServer(serverId: string): Promise<void>;
     /** Test an MCP connection without persisting. */
     testConnection(req: TestMcpConnectionRequest): Promise<TestMcpConnectionResponse>;
+  };
+  tickets: {
+    /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */
+    create(req: CreateTicketRequest): Promise<CreateTicketResponse>;
+    /** Update ticket fields (title, description, priority, status, labels, SLA, due). */
+    update(req: UpdateTicketRequest): Promise<void>;
+    /** Assign a ticket to an employee. Creates ticket thread and enqueues WorkItem. */
+    assign(req: AssignTicketRequest): Promise<void>;
+    /** Close a ticket (sets status to 'done' and records closedAt). */
+    close(ticketId: string): Promise<void>;
+    /** Reopen a previously closed ticket. */
+    reopen(ticketId: string): Promise<void>;
+    /** Add a comment to a ticket's discussion thread. */
+    addComment(req: AddTicketCommentRequest): Promise<AddTicketCommentResponse>;
+    /** List all tickets for a company. */
+    list(companyId: string): Promise<Ticket[]>;
+    /** Get full ticket detail with thread messages and assignee. */
+    get(ticketId: string): Promise<TicketDetail>;
   };
 }
 

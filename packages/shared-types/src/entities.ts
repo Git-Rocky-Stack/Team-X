@@ -17,6 +17,39 @@ export type ActorKind = AuthorKind | 'orchestrator' | 'provider';
 
 export type EmployeeStatus = 'idle' | 'thinking' | 'blocked' | 'error';
 
+// ---------------------------------------------------------------------------
+// Tickets
+// ---------------------------------------------------------------------------
+
+export type TicketStatus = 'open' | 'in-progress' | 'blocked' | 'done';
+export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export interface Ticket {
+  id: string;
+  companyId: string;
+  title: string;
+  description: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  /** Employee FK — null when unassigned. */
+  assigneeId: string | null;
+  /** Human or employee who filed the ticket. */
+  reporterId: string;
+  reporterKind: AuthorKind;
+  /** JSON-encoded string[] of label tags. */
+  labelsJson: string;
+  /** JSON-encoded string[] of ticket-id dependencies. */
+  dependenciesJson: string;
+  /** Target hours to resolution. Null = no SLA. */
+  slaHours: number | null;
+  dueAt: number | null;
+  /** Associated discussion thread (kind: 'ticket'). Created on first assignment. */
+  threadId: string | null;
+  createdAt: number;
+  updatedAt: number;
+  closedAt: number | null;
+}
+
 export interface Company {
   id: string;
   name: string;

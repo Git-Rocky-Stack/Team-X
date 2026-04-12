@@ -25,7 +25,12 @@ export interface EmployeeLiveState {
   lastMessageId: string | null;
 }
 
+/** Top-level view tab in the cockpit. */
+export type ActiveView = 'dashboard' | 'tickets';
+
 export interface AppState {
+  /** Which top-level view is active. */
+  activeView: ActiveView;
   /** The employee whose chat drawer is open, or null when closed. */
   selectedEmployeeId: string | null;
   /** Whether the chat drawer is visible. */
@@ -42,7 +47,10 @@ export interface AppState {
   viewingAgentThread: boolean;
   /** Bumped on each `message.agent_to_agent` event — triggers thread list refetch. */
   lastAgentMessageAt: number;
+  /** Currently selected ticket id for detail panel. */
+  activeTicketId: string | null;
 
+  setActiveView: (view: ActiveView) => void;
   setSelectedEmployee: (id: string | null) => void;
   setChatOpen: (open: boolean) => void;
   setActiveThreadId: (threadId: string | null) => void;
@@ -50,6 +58,7 @@ export interface AppState {
   openThreadList: () => void;
   openThread: (opts: OpenThreadOpts) => void;
   setThreadListView: (open: boolean) => void;
+  setActiveTicketId: (ticketId: string | null) => void;
   handleDashboardEvent: (event: DashboardEvent) => void;
 }
 
@@ -58,6 +67,7 @@ function defaultLive(): EmployeeLiveState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  activeView: 'dashboard',
   selectedEmployeeId: null,
   chatOpen: false,
   activeThreadId: null,
@@ -66,6 +76,9 @@ export const useAppStore = create<AppState>((set) => ({
   threadListView: false,
   viewingAgentThread: false,
   lastAgentMessageAt: 0,
+  activeTicketId: null,
+
+  setActiveView: (view) => set({ activeView: view, activeTicketId: null }),
 
   setSelectedEmployee: (id) =>
     set({
@@ -108,6 +121,8 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   setThreadListView: (open) => set({ threadListView: open }),
+
+  setActiveTicketId: (ticketId) => set({ activeTicketId: ticketId }),
 
   handleDashboardEvent: (event) =>
     set((state) => {

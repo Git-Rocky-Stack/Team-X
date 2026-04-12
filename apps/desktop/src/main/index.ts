@@ -61,6 +61,7 @@ import {
 import { createMessagesRepo } from './db/repos/messages.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createThreadsRepo } from './db/repos/threads.js';
+import { createTicketsRepo } from './db/repos/tickets.js';
 import { seed } from './db/seed.js';
 import { createIpcHandlers } from './ipc/handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
@@ -216,6 +217,7 @@ app.whenReady().then(async () => {
   const eventsRepo = createEventsRepo(db);
   const mcpServersRepo = createMcpServersRepo(db);
   const toolCallsRepo = createToolCallsRepo(db);
+  const ticketsRepo = createTicketsRepo(db);
 
   // Seed well-known MCP servers on first boot (disabled by default).
   const mcpSeeded = seedDefaultMcpServers(db);
@@ -345,6 +347,7 @@ app.whenReady().then(async () => {
     employeesRepo,
     threadsRepo,
     messagesRepo,
+    ticketsRepo,
     orchestrator,
     roleLookup: roleLoader,
     mcpHost,

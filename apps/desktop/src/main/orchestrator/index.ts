@@ -53,7 +53,7 @@ import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { FinishRunInput, StartRunInput } from '../db/repos/runs.js';
 import type { GetOrCreateEmployeeDmThreadInput, ThreadRow } from '../db/repos/threads.js';
-import { buildBuiltInTools, type EnqueueAgentReplyFn } from './built-in-tools.js';
+import { type EnqueueAgentReplyFn, buildBuiltInTools } from './built-in-tools.js';
 import type { EventBus } from './event-bus.js';
 import { type WorkQueue, createWorkQueue } from './queue.js';
 import { type CostCalculator, runAgent } from './run-agent.js';
@@ -431,10 +431,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
 
     // Role-relative history: this employee's messages → assistant,
     // all others → user.
-    const history = mapAgentHistory(
-      messagesRepo.listByThread(args.threadId),
-      args.employeeId,
-    );
+    const history = mapAgentHistory(messagesRepo.listByThread(args.threadId), args.employeeId);
 
     // Built-in tools for the recipient too.
     const builtInSpecs = buildBuiltInTools(

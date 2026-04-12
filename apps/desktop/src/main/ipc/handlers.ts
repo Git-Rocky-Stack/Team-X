@@ -38,13 +38,22 @@
  */
 
 import type {
+  AddTicketCommentRequest,
+  AddTicketCommentResponse,
+  AssignTicketRequest,
   ChatMessage,
+  CloseTicketRequest,
   Company,
   CompanySettings,
+  CreateTicketRequest,
+  CreateTicketResponse,
   Employee,
+  GetTicketRequest,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  ListTicketsRequest,
   McpServerSummary,
+  ReopenTicketRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
   SendChatRequest,
@@ -52,6 +61,9 @@ import type {
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
   Thread,
+  Ticket,
+  TicketDetail,
+  UpdateTicketRequest,
 } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
@@ -68,6 +80,7 @@ import type {
   ThreadRow,
   ThreadWithMembers,
 } from '../db/repos/threads.js';
+import type { CreateTicketInput, TicketRow, UpdateTicketInput } from '../db/repos/tickets.js';
 
 /**
  * Hardcoded id of the (single) human user in Phase 1. Replaced by a
@@ -126,6 +139,18 @@ export interface IpcMessagesRepo {
   listByThread(threadId: string): MessageRow[];
 }
 
+export interface IpcTicketsRepo {
+  create(input: CreateTicketInput): string;
+  getById(id: string): TicketRow | null;
+  listByCompany(companyId: string): TicketRow[];
+  listByAssignee(assigneeId: string): TicketRow[];
+  update(id: string, input: UpdateTicketInput): void;
+  assign(id: string, assigneeId: string): void;
+  setThreadId(id: string, threadId: string): void;
+  close(id: string): void;
+  reopen(id: string): void;
+}
+
 /**
  * The narrow slice of the orchestrator the IPC layer needs. Decouples
  * the handlers from the full `Orchestrator` interface so tests can pass
@@ -159,6 +184,7 @@ export interface IpcHandlerDeps {
   employeesRepo: IpcEmployeesRepo;
   threadsRepo: IpcThreadsRepo;
   messagesRepo: IpcMessagesRepo;
+  ticketsRepo: IpcTicketsRepo;
   orchestrator: IpcOrchestrator;
   roleLookup: IpcRoleLookup;
   mcpHost: McpHost;
@@ -270,6 +296,34 @@ export interface IpcHandlers {
    * `mcp.testConnection` — test an MCP connection without persisting.
    */
   mcpTestConnection(req: TestMcpConnectionRequest): Promise<TestMcpConnectionResponse>;
+
+  // -----------------------------------------------------------------------
+  // Ticket management handlers (Phase 2 — M12)
+  // -----------------------------------------------------------------------
+
+  /** `tickets.create` — file a new ticket. Optionally assigns immediately. */
+  ticketsCreate(req: CreateTicketRequest): Promise<CreateTicketResponse>;
+
+  /** `tickets.update` — update mutable ticket fields. */
+  ticketsUpdate(req: UpdateTicketRequest): Promise<void>;
+
+  /** `tickets.assign` — assign a ticket to an employee, creating thread + WorkItem. */
+  ticketsAssign(req: AssignTicketRequest): Promise<void>;
+
+  /** `tickets.close` — close a ticket (status → done). */
+  ticketsClose(req: CloseTicketRequest): Promise<void>;
+
+  /** `tickets.reopen` — reopen a closed ticket. */
+  ticketsReopen(req: ReopenTicketRequest): Promise<void>;
+
+  /** `tickets.addComment` — add a comment to the ticket's discussion thread. */
+  ticketsAddComment(req: AddTicketCommentRequest): Promise<AddTicketCommentResponse>;
+
+  /** `tickets.list` — list all tickets for a company. */
+  ticketsList(req: ListTicketsRequest): Promise<Ticket[]>;
+
+  /** `tickets.get` — get full ticket detail with thread messages and assignee. */
+  ticketsGet(req: GetTicketRequest): Promise<TicketDetail>;
 }
 
 // ---------------------------------------------------------------------------
@@ -283,7 +337,34 @@ export interface IpcHandlers {
 // nullables so the renderer never sees a half-shape it has to
 // re-validate.
 
-import type { AuthorKind, EmployeeStatus } from '@team-x/shared-types';
+import type {
+  AuthorKind,
+  EmployeeStatus,
+  TicketPriority,
+  TicketStatus,
+} from '@team-x/shared-types';
+
+function rowToTicket(row: TicketRow): Ticket {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    title: row.title,
+    description: row.description,
+    status: row.status as TicketStatus,
+    priority: row.priority as TicketPriority,
+    assigneeId: row.assigneeId,
+    reporterId: row.reporterId,
+    reporterKind: row.reporterKind as AuthorKind,
+    labelsJson: row.labelsJson,
+    dependenciesJson: row.dependenciesJson,
+    slaHours: row.slaHours,
+    dueAt: row.dueAt,
+    threadId: row.threadId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    closedAt: row.closedAt,
+  };
+}
 
 function rowToCompany(row: CompanyRow): Company {
   let settings: CompanySettings = {};
@@ -346,6 +427,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     employeesRepo,
     threadsRepo,
     messagesRepo,
+    ticketsRepo,
     orchestrator,
     roleLookup,
     mcpHost,
@@ -641,6 +723,320 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           error: message,
         };
       }
+    },
+
+    // -----------------------------------------------------------------------
+    // Ticket management handlers (Phase 2 — M12)
+    // -----------------------------------------------------------------------
+
+    async ticketsCreate(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] tickets.create: companyId is required');
+      }
+      if (typeof req.title !== 'string' || req.title.trim().length === 0) {
+        throw new Error('[ipc] tickets.create: title is required');
+      }
+
+      const ticketId = ticketsRepo.create({
+        companyId: req.companyId,
+        title: req.title.trim(),
+        description: req.description ?? '',
+        priority: req.priority ?? 'medium',
+        assigneeId: req.assigneeId ?? null,
+        reporterId: HUMAN_USER_ID,
+        reporterKind: 'user',
+        labelsJson: req.labelsJson ?? '[]',
+        slaHours: req.slaHours ?? null,
+        dueAt: req.dueAt ?? null,
+      });
+
+      // If assigneeId was provided, trigger immediate assignment flow
+      if (req.assigneeId) {
+        const employee = employeesRepo.getById(req.assigneeId);
+        if (employee) {
+          const ticket = ticketsRepo.getById(ticketId);
+          if (ticket) {
+            // Create the ticket discussion thread
+            const threadId = threadsRepo.create({
+              companyId: req.companyId,
+              kind: 'ticket',
+              subject: req.title.trim(),
+              createdBy: HUMAN_USER_ID,
+            });
+            threadsRepo.addMember({
+              threadId,
+              memberId: HUMAN_USER_ID,
+              memberKind: 'user',
+            });
+            threadsRepo.addMember({
+              threadId,
+              memberId: req.assigneeId,
+              memberKind: 'employee',
+            });
+            ticketsRepo.setThreadId(ticketId, threadId);
+            ticketsRepo.assign(ticketId, req.assigneeId);
+
+            // Post the ticket description as the first message
+            const msgContent = `**Ticket: ${req.title.trim()}**\n\n${req.description ?? '(no description)'}`;
+            const messageId = messagesRepo.append({
+              threadId,
+              authorId: HUMAN_USER_ID,
+              authorKind: 'user',
+              content: msgContent,
+            });
+
+            // Enqueue agent work (fire-and-forget)
+            orchestrator
+              .enqueueChat({
+                threadId,
+                employeeId: req.assigneeId,
+                userMessageId: messageId,
+              })
+              .catch((err: unknown) => {
+                console.error(
+                  `[ipc] tickets.create: orchestrator turn failed for ticket=${ticketId}:`,
+                  err,
+                );
+              });
+          }
+        }
+      }
+
+      return { ticketId };
+    },
+
+    async ticketsUpdate(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.update: ticketId is required');
+      }
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.update: ticket not found: ${req.ticketId}`);
+      }
+      ticketsRepo.update(req.ticketId, {
+        title: req.title,
+        description: req.description,
+        priority: req.priority,
+        status: req.status,
+        labelsJson: req.labelsJson,
+        slaHours: req.slaHours,
+        dueAt: req.dueAt,
+      });
+    },
+
+    async ticketsAssign(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.assign: ticketId is required');
+      }
+      if (typeof req.assigneeId !== 'string' || req.assigneeId.length === 0) {
+        throw new Error('[ipc] tickets.assign: assigneeId is required');
+      }
+
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.assign: ticket not found: ${req.ticketId}`);
+      }
+      const employee = employeesRepo.getById(req.assigneeId);
+      if (!employee) {
+        throw new Error(`[ipc] tickets.assign: employee not found: ${req.assigneeId}`);
+      }
+
+      ticketsRepo.assign(req.ticketId, req.assigneeId);
+
+      // Create discussion thread if one doesn't exist yet
+      let threadId = ticket.threadId;
+      if (!threadId) {
+        threadId = threadsRepo.create({
+          companyId: ticket.companyId,
+          kind: 'ticket',
+          subject: ticket.title,
+          createdBy: HUMAN_USER_ID,
+        });
+        threadsRepo.addMember({
+          threadId,
+          memberId: HUMAN_USER_ID,
+          memberKind: 'user',
+        });
+        threadsRepo.addMember({
+          threadId,
+          memberId: req.assigneeId,
+          memberKind: 'employee',
+        });
+        ticketsRepo.setThreadId(req.ticketId, threadId);
+
+        // Post the ticket description as the first message
+        const msgContent = `**Ticket: ${ticket.title}**\n\n${ticket.description || '(no description)'}`;
+        const messageId = messagesRepo.append({
+          threadId,
+          authorId: HUMAN_USER_ID,
+          authorKind: 'user',
+          content: msgContent,
+        });
+
+        // Enqueue agent work
+        orchestrator
+          .enqueueChat({
+            threadId,
+            employeeId: req.assigneeId,
+            userMessageId: messageId,
+          })
+          .catch((err: unknown) => {
+            console.error(
+              `[ipc] tickets.assign: orchestrator turn failed for ticket=${req.ticketId}:`,
+              err,
+            );
+          });
+      } else {
+        // Thread exists — post a reassignment notice and enqueue
+        const msgContent = `Ticket reassigned to ${employee.name} (${employee.title}).`;
+        const messageId = messagesRepo.append({
+          threadId,
+          authorId: HUMAN_USER_ID,
+          authorKind: 'system',
+          content: msgContent,
+        });
+
+        // Ensure new assignee is a thread member
+        const members = threadsRepo.listMembers(threadId);
+        const alreadyMember = members.some(
+          (m) => m.memberId === req.assigneeId && m.memberKind === 'employee',
+        );
+        if (!alreadyMember) {
+          threadsRepo.addMember({
+            threadId,
+            memberId: req.assigneeId,
+            memberKind: 'employee',
+          });
+        }
+
+        orchestrator
+          .enqueueChat({
+            threadId,
+            employeeId: req.assigneeId,
+            userMessageId: messageId,
+          })
+          .catch((err: unknown) => {
+            console.error(
+              `[ipc] tickets.assign: orchestrator turn failed for ticket=${req.ticketId}:`,
+              err,
+            );
+          });
+      }
+    },
+
+    async ticketsClose(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.close: ticketId is required');
+      }
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.close: ticket not found: ${req.ticketId}`);
+      }
+      ticketsRepo.close(req.ticketId);
+    },
+
+    async ticketsReopen(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.reopen: ticketId is required');
+      }
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.reopen: ticket not found: ${req.ticketId}`);
+      }
+      ticketsRepo.reopen(req.ticketId);
+    },
+
+    async ticketsAddComment(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.addComment: ticketId is required');
+      }
+      if (typeof req.content !== 'string' || req.content.trim().length === 0) {
+        throw new Error('[ipc] tickets.addComment: content is required');
+      }
+
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.addComment: ticket not found: ${req.ticketId}`);
+      }
+
+      // Ensure ticket has a thread
+      let threadId = ticket.threadId;
+      if (!threadId) {
+        threadId = threadsRepo.create({
+          companyId: ticket.companyId,
+          kind: 'ticket',
+          subject: ticket.title,
+          createdBy: HUMAN_USER_ID,
+        });
+        threadsRepo.addMember({
+          threadId,
+          memberId: HUMAN_USER_ID,
+          memberKind: 'user',
+        });
+        ticketsRepo.setThreadId(req.ticketId, threadId);
+      }
+
+      const messageId = messagesRepo.append({
+        threadId,
+        authorId: HUMAN_USER_ID,
+        authorKind: 'user',
+        content: req.content.trim(),
+      });
+
+      // If the ticket is assigned, enqueue a response from the agent
+      if (ticket.assigneeId) {
+        orchestrator
+          .enqueueChat({
+            threadId,
+            employeeId: ticket.assigneeId,
+            userMessageId: messageId,
+          })
+          .catch((err: unknown) => {
+            console.error(
+              `[ipc] tickets.addComment: orchestrator turn failed for ticket=${req.ticketId}:`,
+              err,
+            );
+          });
+      }
+
+      return { messageId };
+    },
+
+    async ticketsList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] tickets.list: companyId is required');
+      }
+      return ticketsRepo.listByCompany(req.companyId).map(rowToTicket);
+    },
+
+    async ticketsGet(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.get: ticketId is required');
+      }
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.get: ticket not found: ${req.ticketId}`);
+      }
+
+      // Fetch thread messages if the ticket has a discussion thread
+      let messages: ChatMessage[] = [];
+      if (ticket.threadId) {
+        const rows = messagesRepo.listByThread(ticket.threadId);
+        messages = rows.map(rowToChatMessage);
+      }
+
+      // Fetch assignee
+      let assignee: Employee | null = null;
+      if (ticket.assigneeId) {
+        const empRow = employeesRepo.getById(ticket.assigneeId);
+        if (empRow) assignee = rowToEmployee(empRow);
+      }
+
+      return {
+        ...rowToTicket(ticket),
+        messages,
+        assignee,
+      };
     },
   };
 }

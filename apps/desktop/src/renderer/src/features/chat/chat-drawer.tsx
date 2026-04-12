@@ -34,7 +34,7 @@ import { ArrowLeft, Bot, Eye, List } from 'lucide-react';
 
 import { Composer } from './composer.js';
 import { MessageList } from './message-list.js';
-import { isAgentThread as checkAgentThread, ThreadList } from './thread-list.js';
+import { ThreadList, isAgentThread as checkAgentThread } from './thread-list.js';
 
 function statusColor(status: string): string {
   switch (status) {
@@ -141,7 +141,14 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     return () => {
       cancelled = true;
     };
-  }, [chatOpen, selectedId, effectiveThreadId, setActiveThreadId, threadListView, viewingAgentThread]);
+  }, [
+    chatOpen,
+    selectedId,
+    effectiveThreadId,
+    setActiveThreadId,
+    threadListView,
+    viewingAgentThread,
+  ]);
 
   // Invalidate messages when an employee transitions thinking → idle
   // (employee DM view).

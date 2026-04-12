@@ -71,6 +71,15 @@ const REQUEST_CHANNELS = [
   'mcp.addServer',
   'mcp.removeServer',
   'mcp.testConnection',
+  // Ticket management (Phase 2 — M12)
+  'tickets.create',
+  'tickets.update',
+  'tickets.assign',
+  'tickets.close',
+  'tickets.reopen',
+  'tickets.addComment',
+  'tickets.list',
+  'tickets.get',
 ] as const;
 
 /** Channel name for the one-way bus → renderer fan-out. */
@@ -151,6 +160,75 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
       return handlers.mcpTestConnection(request);
     },
   );
+
+  // Ticket management handlers (Phase 2 — M12)
+  ipcMain.handle(
+    'tickets.create',
+    async (
+      _event,
+      request: {
+        companyId: string;
+        title: string;
+        description?: string;
+        priority?: string;
+        assigneeId?: string;
+        labelsJson?: string;
+        slaHours?: number;
+        dueAt?: number;
+      },
+    ) => {
+      return handlers.ticketsCreate(request);
+    },
+  );
+
+  ipcMain.handle(
+    'tickets.update',
+    async (
+      _event,
+      request: {
+        ticketId: string;
+        title?: string;
+        description?: string;
+        priority?: string;
+        status?: string;
+        labelsJson?: string;
+        slaHours?: number | null;
+        dueAt?: number | null;
+      },
+    ) => {
+      return handlers.ticketsUpdate(request);
+    },
+  );
+
+  ipcMain.handle(
+    'tickets.assign',
+    async (_event, request: { ticketId: string; assigneeId: string }) => {
+      return handlers.ticketsAssign(request);
+    },
+  );
+
+  ipcMain.handle('tickets.close', async (_event, request: { ticketId: string }) => {
+    return handlers.ticketsClose(request);
+  });
+
+  ipcMain.handle('tickets.reopen', async (_event, request: { ticketId: string }) => {
+    return handlers.ticketsReopen(request);
+  });
+
+  ipcMain.handle(
+    'tickets.addComment',
+    async (_event, request: { ticketId: string; content: string }) => {
+      return handlers.ticketsAddComment(request);
+    },
+  );
+
+  ipcMain.handle('tickets.list', async (_event, request: { companyId: string }) => {
+    return handlers.ticketsList(request);
+  });
+
+  ipcMain.handle('tickets.get', async (_event, request: { ticketId: string }) => {
+    return handlers.ticketsGet(request);
+  });
 
   // Bus → renderer forwarder. The bus is synchronous fan-out, so the
   // listener runs on the same tick as the orchestrator's `emit` call —

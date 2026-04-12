@@ -8,6 +8,7 @@ import { AppLayout } from './app/layout.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
 import { CardsView } from './features/dashboard/cards-view.js';
 import { HireDialog } from './features/hire/hire-dialog.js';
+import { TicketsView } from './features/tickets/tickets-view.js';
 
 /**
  * Root application component. Wires:
@@ -28,6 +29,7 @@ export default function App() {
 
   const companyId = useAppStore((s) => s.companyId);
   const setCompanyId = useAppStore((s) => s.setCompanyId);
+  const activeView = useAppStore((s) => s.activeView);
   const [hireOpen, setHireOpen] = useState(false);
 
   // Phase 1 bootstrap: discover the company id by asking the main
@@ -47,7 +49,9 @@ export default function App() {
 
   return (
     <AppLayout employees={employees} onHireClick={() => setHireOpen(true)}>
-      {isLoading ? (
+      {activeView === 'tickets' ? (
+        <TicketsView companyId={companyId} employees={employees} />
+      ) : isLoading ? (
         <CardsView employees={[]} isLoading />
       ) : isError ? (
         <CardsView employees={[]} isError onRetry={() => refetch()} />
