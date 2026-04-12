@@ -40,7 +40,7 @@ Phase 2 deliberately **excludes**:
 | # | Milestone | Deliverable |
 |---|-----------|-------------|
 | M7 | Multi-company + workspace | Company CRUD, top-bar switcher, per-company settings (MCP configs, provider prefs) |
-| M8 | Role pack system + 20 roles | Full loader (directory scan, watch, version tracking, overrides), role browser UI, ~20 F10 roles |
+| M8 | Role pack system + 55 roles | Full loader (directory scan, watch, version tracking, overrides), role browser UI, 55 F10 roles across 6 levels |
 | M9 | Org chart + hire/fire/promote | `org_edges` table, tree visualization, hire-from-role flow, fire/promote, basic drag-rearrange |
 | M10 | MCP host + tool calling | Singleton MCP pool, full Rocky stack, per-company enable/disable, tools_allowed/denied enforcement |
 | M11 | Employee-to-employee messaging | Agent-to-agent threads via orchestrator, serialization, UI |
@@ -96,7 +96,7 @@ Review checkpoints after every milestone. Do not blast through checkpoints.
 
 ---
 
-# Milestone 8 — Role pack system + 20 roles
+# Milestone 8 — Role pack system + 55 roles
 
 ## What exists (Phase 1)
 

@@ -316,7 +316,7 @@ role-packs/
          └─ executive-assistant.md
 ```
 
-**Target: ~55 curated F10 roles in the default pack.** Each one hand-written to the quality bar of `CLAUDE.md`.
+**Target: 55 curated F10 roles in the default pack.** Each one hand-written to the quality bar of `CLAUDE.md`.
 
 ### role.md schema
 
@@ -712,7 +712,7 @@ Four phases. Each phase ends with a shippable demo.
 ### Phase 2 — The Org
 
 **Deliverables:**
-- Full role pack loader + ~55 hand-written F10 roles
+- Full role pack loader + 55 hand-written F10 roles
 - Multi-company workspace switcher
 - Org chart editor + hire/fire/promote
 - Employee-to-employee messaging via orchestrator
@@ -776,7 +776,7 @@ Captured from the brainstorming session on 2026-04-07. Every decision below is l
 | D3 | **Agent brain: Vercel AI SDK + custom orchestrator.** | Provider-agnostic, streaming + tool calling built-in, zero lock-in. Org hierarchy is differentiated custom code. |
 | D4 | **Runtime model: adaptive, user-configurable.** Auto mode default; Hybrid / Always-On / Lean strategies; per-provider caps; per-agent overrides; privacy tier tagging. | Honors hardware constraints for local-only users AND scales up for cloud-heavy users. Model registry is versioned JSON so new model generations don't require app releases. |
 | D5 | **Scoping: multi-company per install, each with its own org/goals/projects/tickets/MCP config/telemetry.** Workspace switcher swaps context. | Perfect for Rocky running Strategia-X + ClipForge + Dynasty-X + Lumina + STX-1 + WealthWise from one cockpit. |
-| D6 | **Role templates: curated F10 library, editable, versioned.** ~55 hand-written roles across 6 hierarchy levels. Role packs are semver-versioned directories. User edits saved as local overrides. | The "wow" of opening the app and finding 55 F10 roles is the core value prop. |
+| D6 | **Role templates: curated F10 library, editable, versioned.** 55 hand-written roles across 6 hierarchy levels. Role packs are semver-versioned directories. User edits saved as local overrides. | The "wow" of opening the app and finding 55 F10 roles is the core value prop. |
 | D7 | **Meeting primitive: pause work + group thread + auto-minutes + action items → tickets.** Round-robin / chair-directed / freeform modes. Rocky can interject live. | Faithful to Rocky's "one-click pause and hold a meeting" request; turns into real deliverables. |
 | D8 | **Dashboard: multi-view cockpit with live token streams.** Cards (default) + Org + Timeline + Stream + Floor. | Card grid with live streams is the "watch them think" Paperclip magic. Other views are toggle-instant. |
 | D9 | **Tickets: homegrown + optional bidirectional sync to Linear/GitHub/Jira/Notion.** | Privacy-first by default; zero lock-in; sync is opt-in per company. |
