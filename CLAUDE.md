@@ -46,6 +46,7 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 - **M14 (dashboard subviews):** 4 new subviews (Timeline, Stream, Floor, Org embed) + subtab nav in Dashboard, top bar expanded to all 8 tabs with disabled placeholders, `events.list` IPC with cursor-based pagination. 384 tests passing.
 - **M15 (goals & projects):** `goals`, `projects`, `project_tickets` tables + migration. Goals repo (CRUD + recalcProgress), Projects repo (CRUD + ticket linking). 12 new IPC channels (5 goals.*, 7 projects.*). Projects kanban board (4-column drag-drop), project cards + detail panel, create project dialog. Goals subtab with progress bars, goal rows + detail panel, create goal dialog. Projects tab enabled. 412 tests passing.
 - **M16 (meeting primitive):** `meetings` table + `companies.status` column + migration. Meetings repo (CRUD + lifecycle). Per-company orchestrator pause/drain (`pauseCompany`/`resumeCompany`/`isCompanyPaused`). Meeting service (callMeeting/nextTurn/interject/endMeeting with minutes generation + action item extraction). 5 new IPC channels (meetings.*). MeetingsView with list panel, detail panel, call dialog, composer. Meetings tab enabled. 441 tests passing.
+- **M17 (telemetry dashboard):** 4 aggregate query methods on runs repo (companyStats, dailyUsage, employeeStats, costBreakdown). 4 telemetry IPC channels + handlers + preload bridge. Recharts integration. TelemetryView with 3 subviews: Company (summary cards + 30-day AreaCharts for tokens/cost), Employees (sortable per-employee table), Cost (PieChart by provider + BarChart by model + date range filter). Telemetry tab enabled. 456 tests passing.
 
 The Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md).
 The Phase 2 plan lives at [`docs/plans/2026-04-11-team-x-phase-2-the-org.md`](docs/plans/2026-04-11-team-x-phase-2-the-org.md).
@@ -115,7 +116,7 @@ Packaged installer generation via electron-builder (`pnpm dist`) lands in Phase 
 **Test, typecheck, lint:**
 
 ```bash
-pnpm test                       # vitest run across all workspaces (379 tests)
+pnpm test                       # vitest run across all workspaces (456 tests)
 pnpm test:watch                 # vitest in watch mode
 pnpm test:coverage              # vitest with coverage report
 pnpm typecheck                  # tsc --noEmit across all workspaces
@@ -268,6 +269,10 @@ All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and 
 | | `meetings.interject` | Rocky sends a message mid-meeting |
 | | `meetings.list` | List past meetings for company |
 | | `meetings.get` | Get meeting detail with thread + minutes |
+| telemetry | `telemetry.companyStats` | Aggregate company-level stats (M17) |
+| | `telemetry.dailyUsage` | Daily time-series of tokens + cost |
+| | `telemetry.employeeStats` | Per-employee breakdown |
+| | `telemetry.costBreakdown` | Cost by provider/model with date range |
 | tickets | `tickets.create` | File ticket (optional immediate assign) |
 | | `tickets.update` | Update mutable fields |
 | | `tickets.assign` | Assign + create thread + enqueue agent |

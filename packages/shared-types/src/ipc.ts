@@ -361,6 +361,69 @@ export interface MeetingDetail extends Meeting {
 }
 
 // ---------------------------------------------------------------------------
+// Telemetry shapes (Phase 3 — M17)
+// ---------------------------------------------------------------------------
+
+export interface TelemetryCompanyStatsRequest {
+  companyId: string;
+}
+
+/** Aggregate company-level telemetry summary. */
+export interface TelemetryCompanyStatsResponse {
+  totalRuns: number;
+  totalTokens: number;
+  totalCostUsd: string;
+  avgLatencyMs: number;
+  totalToolCalls: number;
+}
+
+export interface TelemetryDailyUsageRequest {
+  companyId: string;
+  /** Epoch millis — start of the date range (inclusive). */
+  fromMs: number;
+  /** Epoch millis — end of the date range (inclusive). */
+  toMs: number;
+}
+
+export interface TelemetryDailyUsageRow {
+  day: string;
+  totalRuns: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  costUsd: string;
+}
+
+export interface TelemetryEmployeeStatsRequest {
+  companyId: string;
+}
+
+export interface TelemetryEmployeeStatsRow {
+  employeeId: string;
+  totalRuns: number;
+  totalTokens: number;
+  avgLatencyMs: number;
+  costUsd: string;
+  totalToolCalls: number;
+}
+
+export interface TelemetryCostBreakdownRequest {
+  companyId: string;
+  /** Optional epoch millis — start of range. */
+  fromMs?: number;
+  /** Optional epoch millis — end of range. */
+  toMs?: number;
+}
+
+export interface TelemetryCostBreakdownRow {
+  provider: string;
+  model: string;
+  totalRuns: number;
+  totalTokens: number;
+  costUsd: string;
+}
+
+// ---------------------------------------------------------------------------
 // MCP-related shapes
 // ---------------------------------------------------------------------------
 
@@ -530,6 +593,23 @@ export interface IpcContract {
   'meetings.get': {
     request: GetMeetingRequest;
     response: MeetingDetail;
+  };
+  // Telemetry channels (Phase 3 — M17)
+  'telemetry.companyStats': {
+    request: TelemetryCompanyStatsRequest;
+    response: TelemetryCompanyStatsResponse;
+  };
+  'telemetry.dailyUsage': {
+    request: TelemetryDailyUsageRequest;
+    response: TelemetryDailyUsageRow[];
+  };
+  'telemetry.employeeStats': {
+    request: TelemetryEmployeeStatsRequest;
+    response: TelemetryEmployeeStatsRow[];
+  };
+  'telemetry.costBreakdown': {
+    request: TelemetryCostBreakdownRequest;
+    response: TelemetryCostBreakdownRow[];
   };
   // Ticket management channels
   'tickets.create': {
@@ -711,6 +791,16 @@ export interface TeamXApi {
     list(companyId: string): Promise<Meeting[]>;
     /** Get full meeting detail with thread messages and chair. */
     get(meetingId: string): Promise<MeetingDetail>;
+  };
+  telemetry: {
+    /** Company-level aggregate stats (total runs, tokens, cost, latency). */
+    companyStats(companyId: string): Promise<TelemetryCompanyStatsResponse>;
+    /** Daily time-series of token usage and cost within a date range. */
+    dailyUsage(req: TelemetryDailyUsageRequest): Promise<TelemetryDailyUsageRow[]>;
+    /** Per-employee breakdown of runs, tokens, latency, and cost. */
+    employeeStats(companyId: string): Promise<TelemetryEmployeeStatsRow[]>;
+    /** Cost breakdown by provider and model, with optional date range filter. */
+    costBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

@@ -42,6 +42,9 @@ export type DashboardSubview = 'cards' | 'timeline' | 'stream' | 'floor';
 /** Projects inner subview tabs. */
 export type ProjectsSubview = 'kanban' | 'goals';
 
+/** Telemetry inner subview tabs. */
+export type TelemetrySubview = 'company' | 'employees' | 'cost';
+
 export interface AppState {
   /** Which top-level view is active. */
   activeView: ActiveView;
@@ -73,10 +76,13 @@ export interface AppState {
   projectsSubview: ProjectsSubview;
   /** Currently selected meeting id for detail panel. */
   activeMeetingId: string | null;
+  /** Which telemetry subview is showing (Company / Employees / Cost). */
+  telemetrySubview: TelemetrySubview;
 
   setActiveView: (view: ActiveView) => void;
   setDashboardSubview: (subview: DashboardSubview) => void;
   setProjectsSubview: (subview: ProjectsSubview) => void;
+  setTelemetrySubview: (subview: TelemetrySubview) => void;
   setActiveProjectId: (projectId: string | null) => void;
   setActiveGoalId: (goalId: string | null) => void;
   setSelectedEmployee: (id: string | null) => void;
@@ -111,6 +117,7 @@ export const useAppStore = create<AppState>((set) => ({
   activeGoalId: null,
   projectsSubview: 'kanban',
   activeMeetingId: null,
+  telemetrySubview: 'company',
 
   setActiveView: (view) =>
     set({
@@ -122,6 +129,7 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   setDashboardSubview: (subview) => set({ dashboardSubview: subview }),
+  setTelemetrySubview: (subview) => set({ telemetrySubview: subview }),
 
   setSelectedEmployee: (id) =>
     set({

@@ -39,20 +39,21 @@ describe('goals repo', () => {
 
       const goal = goals.getById(id);
       expect(goal).not.toBeNull();
-      expect(goal!.title).toBe('Ship Phase 3');
-      expect(goal!.description).toBe('Complete the live cockpit.');
-      expect(goal!.status).toBe('active');
-      expect(goal!.progressPct).toBe(0);
-      expect(goal!.companyId).toBe(companyId);
+      expect(goal?.title).toBe('Ship Phase 3');
+      expect(goal?.description).toBe('Complete the live cockpit.');
+      expect(goal?.status).toBe('active');
+      expect(goal?.progressPct).toBe(0);
+      expect(goal?.companyId).toBe(companyId);
     });
 
     it('applies defaults when optional fields are omitted', () => {
       const id = goals.create({ companyId, title: 'Minimal Goal' });
-      const goal = goals.getById(id)!;
-      expect(goal.description).toBe('');
-      expect(goal.status).toBe('active');
-      expect(goal.progressPct).toBe(0);
-      expect(goal.targetDate).toBeNull();
+      const goal = goals.getById(id);
+      expect(goal).not.toBeNull();
+      expect(goal?.description).toBe('');
+      expect(goal?.status).toBe('active');
+      expect(goal?.progressPct).toBe(0);
+      expect(goal?.targetDate).toBeNull();
     });
   });
 
@@ -82,15 +83,17 @@ describe('goals repo', () => {
   describe('update', () => {
     it('updates specific fields and bumps updatedAt', () => {
       const id = goals.create({ companyId, title: 'Original' });
-      const before = goals.getById(id)!;
+      const before = goals.getById(id);
+      expect(before).not.toBeNull();
 
       goals.update(id, { title: 'Updated', status: 'achieved' });
 
-      const after = goals.getById(id)!;
-      expect(after.title).toBe('Updated');
-      expect(after.status).toBe('achieved');
-      expect(after.description).toBe(before.description);
-      expect(after.updatedAt).toBeGreaterThanOrEqual(before.updatedAt);
+      const after = goals.getById(id);
+      expect(after).not.toBeNull();
+      expect(after?.title).toBe('Updated');
+      expect(after?.status).toBe('achieved');
+      expect(after?.description).toBe(before?.description);
+      expect(after?.updatedAt).toBeGreaterThanOrEqual(before?.updatedAt ?? 0);
     });
 
     it('does not touch fields not in the input', () => {
@@ -100,10 +103,11 @@ describe('goals repo', () => {
         description: 'Original desc',
       });
       goals.update(id, { status: 'abandoned' });
-      const goal = goals.getById(id)!;
-      expect(goal.title).toBe('Keep Me');
-      expect(goal.description).toBe('Original desc');
-      expect(goal.status).toBe('abandoned');
+      const goal = goals.getById(id);
+      expect(goal).not.toBeNull();
+      expect(goal?.title).toBe('Keep Me');
+      expect(goal?.description).toBe('Original desc');
+      expect(goal?.status).toBe('abandoned');
     });
   });
 
@@ -124,7 +128,7 @@ describe('goals repo', () => {
     it('returns 0 when no projects are linked', () => {
       const id = goals.create({ companyId, title: 'Empty Goal' });
       goals.recalcProgress(id);
-      expect(goals.getById(id)!.progressPct).toBe(0);
+      expect(goals.getById(id)?.progressPct).toBe(0);
     });
 
     it('computes percentage from project statuses', () => {
@@ -139,7 +143,7 @@ describe('goals repo', () => {
 
       // 2 out of 4 = 50%
       goals.recalcProgress(goalId);
-      expect(goals.getById(goalId)!.progressPct).toBe(50);
+      expect(goals.getById(goalId)?.progressPct).toBe(50);
     });
 
     it('returns 100 when all projects are completed', () => {
@@ -151,7 +155,7 @@ describe('goals repo', () => {
       projectsRepo.update(p2, { status: 'completed' });
 
       goals.recalcProgress(goalId);
-      expect(goals.getById(goalId)!.progressPct).toBe(100);
+      expect(goals.getById(goalId)?.progressPct).toBe(100);
     });
 
     it('rounds to nearest integer', () => {
@@ -164,7 +168,7 @@ describe('goals repo', () => {
 
       // 1 out of 3 = 33.33... -> rounds to 33
       goals.recalcProgress(goalId);
-      expect(goals.getById(goalId)!.progressPct).toBe(33);
+      expect(goals.getById(goalId)?.progressPct).toBe(33);
     });
   });
 });

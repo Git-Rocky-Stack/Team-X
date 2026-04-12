@@ -67,6 +67,12 @@ import type {
   SendChatRequest,
   SendChatResponse,
   TeamXApi,
+  TelemetryCompanyStatsResponse,
+  TelemetryCostBreakdownRequest,
+  TelemetryCostBreakdownRow,
+  TelemetryDailyUsageRequest,
+  TelemetryDailyUsageRow,
+  TelemetryEmployeeStatsRow,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
   Thread,
@@ -142,6 +148,11 @@ const CHANNELS = {
   meetingsInterject: 'meetings.interject',
   meetingsList: 'meetings.list',
   meetingsGet: 'meetings.get',
+  // Telemetry (Phase 3 — M17)
+  telemetryCompanyStats: 'telemetry.companyStats',
+  telemetryDailyUsage: 'telemetry.dailyUsage',
+  telemetryEmployeeStats: 'telemetry.employeeStats',
+  telemetryCostBreakdown: 'telemetry.costBreakdown',
   // Ticket management (Phase 2 — M12)
   ticketsCreate: 'tickets.create',
   ticketsUpdate: 'tickets.update',
@@ -247,6 +258,20 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.meetingsList, { companyId }) as Promise<Meeting[]>,
       get: (meetingId: string) =>
         ipc.invoke(CHANNELS.meetingsGet, { meetingId }) as Promise<MeetingDetail>,
+    },
+    telemetry: {
+      companyStats: (companyId: string) =>
+        ipc.invoke(CHANNELS.telemetryCompanyStats, {
+          companyId,
+        }) as Promise<TelemetryCompanyStatsResponse>,
+      dailyUsage: (req: TelemetryDailyUsageRequest) =>
+        ipc.invoke(CHANNELS.telemetryDailyUsage, req) as Promise<TelemetryDailyUsageRow[]>,
+      employeeStats: (companyId: string) =>
+        ipc.invoke(CHANNELS.telemetryEmployeeStats, {
+          companyId,
+        }) as Promise<TelemetryEmployeeStatsRow[]>,
+      costBreakdown: (req: TelemetryCostBreakdownRequest) =>
+        ipc.invoke(CHANNELS.telemetryCostBreakdown, req) as Promise<TelemetryCostBreakdownRow[]>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

@@ -95,6 +95,11 @@ const REQUEST_CHANNELS = [
   'meetings.interject',
   'meetings.list',
   'meetings.get',
+  // Telemetry (Phase 3 — M17)
+  'telemetry.companyStats',
+  'telemetry.dailyUsage',
+  'telemetry.employeeStats',
+  'telemetry.costBreakdown',
   // Ticket management (Phase 2 — M12)
   'tickets.create',
   'tickets.update',
@@ -338,6 +343,29 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('meetings.get', async (_event, request: { meetingId: string }) => {
     return handlers.meetingsGet(request);
   });
+
+  // Telemetry handlers (Phase 3 — M17)
+  ipcMain.handle('telemetry.companyStats', async (_event, request: { companyId: string }) => {
+    return handlers.telemetryCompanyStats(request);
+  });
+
+  ipcMain.handle(
+    'telemetry.dailyUsage',
+    async (_event, request: { companyId: string; fromMs: number; toMs: number }) => {
+      return handlers.telemetryDailyUsage(request);
+    },
+  );
+
+  ipcMain.handle('telemetry.employeeStats', async (_event, request: { companyId: string }) => {
+    return handlers.telemetryEmployeeStats(request);
+  });
+
+  ipcMain.handle(
+    'telemetry.costBreakdown',
+    async (_event, request: { companyId: string; fromMs?: number; toMs?: number }) => {
+      return handlers.telemetryCostBreakdown(request);
+    },
+  );
 
   // Ticket management handlers (Phase 2 — M12)
   ipcMain.handle(

@@ -61,8 +61,14 @@ export function CallMeetingDialog({
 
         {/* Agenda */}
         <div className="mt-4">
-          <label className="block text-xs font-medium text-muted-foreground">Agenda</label>
+          <label
+            htmlFor="meeting-agenda"
+            className="block text-xs font-medium text-muted-foreground"
+          >
+            Agenda
+          </label>
           <textarea
+            id="meeting-agenda"
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-brand"
             rows={3}
             placeholder="What should be discussed?"
@@ -73,8 +79,14 @@ export function CallMeetingDialog({
 
         {/* Chair selection */}
         <div className="mt-3">
-          <label className="block text-xs font-medium text-muted-foreground">Chair</label>
+          <label
+            htmlFor="meeting-chair"
+            className="block text-xs font-medium text-muted-foreground"
+          >
+            Chair
+          </label>
           <select
+            id="meeting-chair"
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             value={chairId}
             onChange={(e) => setChairId(e.target.value)}
@@ -88,8 +100,8 @@ export function CallMeetingDialog({
         </div>
 
         {/* Attendee checkboxes */}
-        <div className="mt-3">
-          <label className="block text-xs font-medium text-muted-foreground">Attendees</label>
+        <fieldset className="mt-3 border-none p-0 m-0">
+          <legend className="block text-xs font-medium text-muted-foreground">Attendees</legend>
           <div className="mt-1 max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-background p-2">
             {employees.map((emp) => (
               <label
@@ -107,7 +119,7 @@ export function CallMeetingDialog({
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
 
         {/* Actions */}
         <div className="mt-5 flex justify-end gap-2">

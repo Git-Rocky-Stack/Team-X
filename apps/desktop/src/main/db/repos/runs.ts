@@ -25,7 +25,7 @@
  * Cross-driver generic typing — same pattern as the other repos.
  */
 
-import { eq } from 'drizzle-orm';
+import { and, eq, gte, lte, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
@@ -110,5 +110,214 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
     listByEmployee(employeeId: string): RunRow[] {
       return db.select().from(runs).where(eq(runs.employeeId, employeeId)).all();
     },
+
+    // ------------------------------------------------------------------
+    // Telemetry aggregates (Phase 3 — M17)
+    // ------------------------------------------------------------------
+
+    /**
+     * Company-level summary stats. Only counts completed runs (success/error).
+     * Returns zero-value record when no runs exist.
+     */
+    companyStats(companyId: string): CompanyStats {
+      const rows = db
+        .select({
+          totalRuns: sql<number>`count(*)`.as('total_runs'),
+          totalPromptTokens: sql<number>`coalesce(sum(${runs.promptTokens}), 0)`.as(
+            'total_prompt_tokens',
+          ),
+          totalCompletionTokens: sql<number>`coalesce(sum(${runs.completionTokens}), 0)`.as(
+            'total_completion_tokens',
+          ),
+          totalCostUsd: sql<string>`coalesce(sum(cast(${runs.costUsd} as real)), 0)`.as(
+            'total_cost_usd',
+          ),
+          avgLatencyMs: sql<number>`coalesce(avg(${runs.latencyMs}), 0)`.as('avg_latency_ms'),
+          totalToolCalls: sql<number>`coalesce(sum(${runs.toolCallsCount}), 0)`.as(
+            'total_tool_calls',
+          ),
+        })
+        .from(runs)
+        .where(
+          and(
+            sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
+            sql`${runs.status} IN ('success', 'error')`,
+          ),
+        )
+        .all();
+
+      const row = rows[0];
+      if (!row) {
+        return {
+          totalRuns: 0,
+          totalTokens: 0,
+          totalCostUsd: '0',
+          avgLatencyMs: 0,
+          totalToolCalls: 0,
+        };
+      }
+      return {
+        totalRuns: Number(row.totalRuns),
+        totalTokens: Number(row.totalPromptTokens) + Number(row.totalCompletionTokens),
+        totalCostUsd: String(row.totalCostUsd),
+        avgLatencyMs: Math.round(Number(row.avgLatencyMs)),
+        totalToolCalls: Number(row.totalToolCalls),
+      };
+    },
+
+    /**
+     * Daily time-series aggregation for a company. Returns one row per
+     * calendar day within the date range, ordered oldest-first.
+     * `fromMs` and `toMs` are epoch millis.
+     */
+    dailyUsage(companyId: string, fromMs: number, toMs: number): DailyUsageRow[] {
+      const rows = db
+        .select({
+          day: sql<string>`date(${runs.startedAt} / 1000, 'unixepoch')`.as('day'),
+          totalRuns: sql<number>`count(*)`.as('total_runs'),
+          promptTokens: sql<number>`coalesce(sum(${runs.promptTokens}), 0)`.as('prompt_tokens'),
+          completionTokens: sql<number>`coalesce(sum(${runs.completionTokens}), 0)`.as(
+            'completion_tokens',
+          ),
+          costUsd: sql<string>`coalesce(sum(cast(${runs.costUsd} as real)), 0)`.as('cost_usd'),
+        })
+        .from(runs)
+        .where(
+          and(
+            sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
+            sql`${runs.status} IN ('success', 'error')`,
+            gte(runs.startedAt, fromMs),
+            lte(runs.startedAt, toMs),
+          ),
+        )
+        .groupBy(sql`day`)
+        .orderBy(sql`day`)
+        .all();
+
+      return rows.map((r) => ({
+        day: r.day,
+        totalRuns: Number(r.totalRuns),
+        promptTokens: Number(r.promptTokens),
+        completionTokens: Number(r.completionTokens),
+        totalTokens: Number(r.promptTokens) + Number(r.completionTokens),
+        costUsd: String(r.costUsd),
+      }));
+    },
+
+    /**
+     * Per-employee breakdown for a company. Returns one row per employee
+     * who has at least one completed run.
+     */
+    employeeStats(companyId: string): EmployeeStatsRow[] {
+      const rows = db
+        .select({
+          employeeId: runs.employeeId,
+          totalRuns: sql<number>`count(*)`.as('total_runs'),
+          promptTokens: sql<number>`coalesce(sum(${runs.promptTokens}), 0)`.as('prompt_tokens'),
+          completionTokens: sql<number>`coalesce(sum(${runs.completionTokens}), 0)`.as(
+            'completion_tokens',
+          ),
+          avgLatencyMs: sql<number>`coalesce(avg(${runs.latencyMs}), 0)`.as('avg_latency_ms'),
+          costUsd: sql<string>`coalesce(sum(cast(${runs.costUsd} as real)), 0)`.as('cost_usd'),
+          totalToolCalls: sql<number>`coalesce(sum(${runs.toolCallsCount}), 0)`.as(
+            'total_tool_calls',
+          ),
+        })
+        .from(runs)
+        .where(
+          and(
+            sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
+            sql`${runs.status} IN ('success', 'error')`,
+          ),
+        )
+        .groupBy(runs.employeeId)
+        .orderBy(sql`total_runs DESC`)
+        .all();
+
+      return rows.map((r) => ({
+        employeeId: r.employeeId,
+        totalRuns: Number(r.totalRuns),
+        totalTokens: Number(r.promptTokens) + Number(r.completionTokens),
+        avgLatencyMs: Math.round(Number(r.avgLatencyMs)),
+        costUsd: String(r.costUsd),
+        totalToolCalls: Number(r.totalToolCalls),
+      }));
+    },
+
+    /**
+     * Cost breakdown by provider and model for a company. Supports optional
+     * date range filter. Returns rows ordered by cost descending.
+     */
+    costBreakdown(companyId: string, fromMs?: number, toMs?: number): CostBreakdownRow[] {
+      const conditions = [
+        sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
+        sql`${runs.status} IN ('success', 'error')`,
+      ];
+      if (fromMs !== undefined) conditions.push(gte(runs.startedAt, fromMs));
+      if (toMs !== undefined) conditions.push(lte(runs.startedAt, toMs));
+
+      const rows = db
+        .select({
+          provider: runs.provider,
+          model: runs.model,
+          totalRuns: sql<number>`count(*)`.as('total_runs'),
+          promptTokens: sql<number>`coalesce(sum(${runs.promptTokens}), 0)`.as('prompt_tokens'),
+          completionTokens: sql<number>`coalesce(sum(${runs.completionTokens}), 0)`.as(
+            'completion_tokens',
+          ),
+          costUsd: sql<string>`coalesce(sum(cast(${runs.costUsd} as real)), 0)`.as('cost_usd'),
+        })
+        .from(runs)
+        .where(and(...conditions))
+        .groupBy(runs.provider, runs.model)
+        .orderBy(sql`cost_usd DESC`)
+        .all();
+
+      return rows.map((r) => ({
+        provider: r.provider,
+        model: r.model,
+        totalRuns: Number(r.totalRuns),
+        totalTokens: Number(r.promptTokens) + Number(r.completionTokens),
+        costUsd: String(r.costUsd),
+      }));
+    },
   };
+}
+
+// ------------------------------------------------------------------
+// Telemetry aggregate result types
+// ------------------------------------------------------------------
+
+export interface CompanyStats {
+  totalRuns: number;
+  totalTokens: number;
+  totalCostUsd: string;
+  avgLatencyMs: number;
+  totalToolCalls: number;
+}
+
+export interface DailyUsageRow {
+  day: string;
+  totalRuns: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  costUsd: string;
+}
+
+export interface EmployeeStatsRow {
+  employeeId: string;
+  totalRuns: number;
+  totalTokens: number;
+  avgLatencyMs: number;
+  costUsd: string;
+  totalToolCalls: number;
+}
+
+export interface CostBreakdownRow {
+  provider: string;
+  model: string;
+  totalRuns: number;
+  totalTokens: number;
+  costUsd: string;
 }

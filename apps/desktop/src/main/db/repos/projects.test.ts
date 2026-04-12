@@ -55,28 +55,29 @@ describe('projects repo', () => {
 
       const project = projectsRepo.getById(id);
       expect(project).not.toBeNull();
-      expect(project!.title).toBe('Dashboard Redesign');
-      expect(project!.description).toBe('Redesign the cockpit dashboard.');
-      expect(project!.status).toBe('planning');
-      expect(project!.priority).toBe('medium');
-      expect(project!.goalId).toBeNull();
-      expect(project!.leadId).toBeNull();
+      expect(project?.title).toBe('Dashboard Redesign');
+      expect(project?.description).toBe('Redesign the cockpit dashboard.');
+      expect(project?.status).toBe('planning');
+      expect(project?.priority).toBe('medium');
+      expect(project?.goalId).toBeNull();
+      expect(project?.leadId).toBeNull();
     });
 
     it('applies defaults when optional fields are omitted', () => {
       const id = projectsRepo.create({ companyId, title: 'Minimal' });
-      const project = projectsRepo.getById(id)!;
-      expect(project.description).toBe('');
-      expect(project.status).toBe('planning');
-      expect(project.priority).toBe('medium');
-      expect(project.goalId).toBeNull();
-      expect(project.leadId).toBeNull();
+      const project = projectsRepo.getById(id);
+      expect(project).not.toBeNull();
+      expect(project?.description).toBe('');
+      expect(project?.status).toBe('planning');
+      expect(project?.priority).toBe('medium');
+      expect(project?.goalId).toBeNull();
+      expect(project?.leadId).toBeNull();
     });
 
     it('creates a project linked to a goal', () => {
       const goalId = goalsRepo.create({ companyId, title: 'Goal' });
       const id = projectsRepo.create({ companyId, goalId, title: 'Linked' });
-      expect(projectsRepo.getById(id)!.goalId).toBe(goalId);
+      expect(projectsRepo.getById(id)?.goalId).toBe(goalId);
     });
 
     it('creates a project with a lead', () => {
@@ -85,7 +86,7 @@ describe('projects repo', () => {
         title: 'Led Project',
         leadId: employeeId,
       });
-      expect(projectsRepo.getById(id)!.leadId).toBe(employeeId);
+      expect(projectsRepo.getById(id)?.leadId).toBe(employeeId);
     });
   });
 
@@ -133,15 +134,17 @@ describe('projects repo', () => {
   describe('update', () => {
     it('updates specific fields and bumps updatedAt', () => {
       const id = projectsRepo.create({ companyId, title: 'Original' });
-      const before = projectsRepo.getById(id)!;
+      const before = projectsRepo.getById(id);
+      expect(before).not.toBeNull();
 
       projectsRepo.update(id, { title: 'Updated', status: 'active' });
 
-      const after = projectsRepo.getById(id)!;
-      expect(after.title).toBe('Updated');
-      expect(after.status).toBe('active');
-      expect(after.description).toBe(before.description);
-      expect(after.updatedAt).toBeGreaterThanOrEqual(before.updatedAt);
+      const after = projectsRepo.getById(id);
+      expect(after).not.toBeNull();
+      expect(after?.title).toBe('Updated');
+      expect(after?.status).toBe('active');
+      expect(after?.description).toBe(before?.description);
+      expect(after?.updatedAt).toBeGreaterThanOrEqual(before?.updatedAt ?? 0);
     });
 
     it('can update goalId to link/unlink from a goal', () => {
@@ -150,11 +153,11 @@ describe('projects repo', () => {
 
       // Link to goal
       projectsRepo.update(id, { goalId });
-      expect(projectsRepo.getById(id)!.goalId).toBe(goalId);
+      expect(projectsRepo.getById(id)?.goalId).toBe(goalId);
 
       // Unlink from goal
       projectsRepo.update(id, { goalId: null });
-      expect(projectsRepo.getById(id)!.goalId).toBeNull();
+      expect(projectsRepo.getById(id)?.goalId).toBeNull();
     });
   });
 

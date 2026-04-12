@@ -88,6 +88,14 @@ import type {
   ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
+  TelemetryCompanyStatsRequest,
+  TelemetryCompanyStatsResponse,
+  TelemetryCostBreakdownRequest,
+  TelemetryCostBreakdownRow,
+  TelemetryDailyUsageRequest,
+  TelemetryDailyUsageRow,
+  TelemetryEmployeeStatsRequest,
+  TelemetryEmployeeStatsRow,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
   Thread,
@@ -108,6 +116,12 @@ import type { CreateGoalInput, GoalRow, UpdateGoalInput } from '../db/repos/goal
 import type { MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { CreateProjectInput, ProjectRow, UpdateProjectInput } from '../db/repos/projects.js';
+import type {
+  CompanyStats,
+  CostBreakdownRow,
+  DailyUsageRow,
+  EmployeeStatsRow,
+} from '../db/repos/runs.js';
 import type {
   AddThreadMemberInput,
   CreateThreadInput,
@@ -243,6 +257,13 @@ export interface IpcEventsRepo {
   listByCompany(companyId: string, cursor: number | undefined, limit: number): EventRow[];
 }
 
+export interface IpcRunsRepo {
+  companyStats(companyId: string): CompanyStats;
+  dailyUsage(companyId: string, fromMs: number, toMs: number): DailyUsageRow[];
+  employeeStats(companyId: string): EmployeeStatsRow[];
+  costBreakdown(companyId: string, fromMs?: number, toMs?: number): CostBreakdownRow[];
+}
+
 export interface IpcMeetingsRepo {
   getById(id: string): MeetingRow | null;
   listByCompany(companyId: string): MeetingRow[];
@@ -259,6 +280,7 @@ export interface IpcHandlerDeps {
   goalsRepo: IpcGoalsRepo;
   projectsRepo: IpcProjectsRepo;
   meetingsRepo: IpcMeetingsRepo;
+  runsRepo: IpcRunsRepo;
   eventsRepo: IpcEventsRepo;
   orchestrator: IpcOrchestrator;
   meetingService: IpcMeetingService;
@@ -428,6 +450,19 @@ export interface IpcHandlers {
   meetingsList(req: ListMeetingsRequest): Promise<Meeting[]>;
   /** `meetings.get` — get full meeting detail with thread messages and chair. */
   meetingsGet(req: GetMeetingRequest): Promise<MeetingDetail>;
+
+  // -----------------------------------------------------------------------
+  // Telemetry handlers (Phase 3 — M17)
+  // -----------------------------------------------------------------------
+
+  /** `telemetry.companyStats` — aggregate company-level telemetry. */
+  telemetryCompanyStats(req: TelemetryCompanyStatsRequest): Promise<TelemetryCompanyStatsResponse>;
+  /** `telemetry.dailyUsage` — daily time-series of token usage and cost. */
+  telemetryDailyUsage(req: TelemetryDailyUsageRequest): Promise<TelemetryDailyUsageRow[]>;
+  /** `telemetry.employeeStats` — per-employee breakdown. */
+  telemetryEmployeeStats(req: TelemetryEmployeeStatsRequest): Promise<TelemetryEmployeeStatsRow[]>;
+  /** `telemetry.costBreakdown` — cost by provider/model with optional date range. */
+  telemetryCostBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
 
   // -----------------------------------------------------------------------
   // Ticket management handlers (Phase 2 — M12)
@@ -644,6 +679,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     goalsRepo,
     projectsRepo,
     meetingsRepo,
+    runsRepo,
     eventsRepo,
     orchestrator,
     meetingService,
@@ -1225,6 +1261,41 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         messages,
         chair,
       };
+    },
+
+    // -----------------------------------------------------------------------
+    // Telemetry handlers (Phase 3 — M17)
+    // -----------------------------------------------------------------------
+
+    async telemetryCompanyStats(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] telemetry.companyStats: companyId is required');
+      }
+      return runsRepo.companyStats(req.companyId);
+    },
+
+    async telemetryDailyUsage(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] telemetry.dailyUsage: companyId is required');
+      }
+      if (typeof req.fromMs !== 'number' || typeof req.toMs !== 'number') {
+        throw new Error('[ipc] telemetry.dailyUsage: fromMs and toMs are required');
+      }
+      return runsRepo.dailyUsage(req.companyId, req.fromMs, req.toMs);
+    },
+
+    async telemetryEmployeeStats(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] telemetry.employeeStats: companyId is required');
+      }
+      return runsRepo.employeeStats(req.companyId);
+    },
+
+    async telemetryCostBreakdown(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] telemetry.costBreakdown: companyId is required');
+      }
+      return runsRepo.costBreakdown(req.companyId, req.fromMs, req.toMs);
     },
 
     // -----------------------------------------------------------------------

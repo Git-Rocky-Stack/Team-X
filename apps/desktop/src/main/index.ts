@@ -368,6 +368,7 @@ app.whenReady().then(async () => {
     goalsRepo,
     projectsRepo,
     meetingsRepo,
+    runsRepo,
     eventsRepo,
     orchestrator,
     meetingService,

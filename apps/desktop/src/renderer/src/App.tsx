@@ -14,6 +14,7 @@ import { TimelineView } from './features/dashboard/timeline-view.js';
 import { HireDialog } from './features/hire/hire-dialog.js';
 import { MeetingsView } from './features/meetings/meetings-view.js';
 import { ProjectsView } from './features/projects/projects-view.js';
+import { TelemetryView } from './features/telemetry/telemetry-view.js';
 import { TicketsView } from './features/tickets/tickets-view.js';
 
 /**
@@ -98,7 +99,7 @@ export default function App() {
       case 'chat':
         return <ComingSoon label="Chat" />;
       case 'telemetry':
-        return <ComingSoon label="Telemetry" />;
+        return <TelemetryView />;
       case 'settings':
         return <ComingSoon label="Settings" />;
       default:
