@@ -24,6 +24,43 @@ export type EmployeeStatus = 'idle' | 'thinking' | 'blocked' | 'error';
 export type TicketStatus = 'open' | 'in-progress' | 'blocked' | 'done';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 
+// ---------------------------------------------------------------------------
+// Goals & Projects (Phase 3 — M15)
+// ---------------------------------------------------------------------------
+
+export type GoalStatus = 'active' | 'achieved' | 'abandoned';
+export type ProjectStatus = 'planning' | 'active' | 'completed' | 'archived';
+export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export interface Goal {
+  id: string;
+  companyId: string;
+  title: string;
+  description: string;
+  status: GoalStatus;
+  /** 0-100 — auto-calculated from linked project completion. */
+  progressPct: number;
+  /** Optional deadline as UNIX ms timestamp. */
+  targetDate: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Project {
+  id: string;
+  companyId: string;
+  /** Null = standalone project not linked to a goal. */
+  goalId: string | null;
+  title: string;
+  description: string;
+  status: ProjectStatus;
+  /** Project lead — null if unassigned. */
+  leadId: string | null;
+  priority: ProjectPriority;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface Ticket {
   id: string;
   companyId: string;

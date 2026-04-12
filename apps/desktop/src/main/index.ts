@@ -53,12 +53,14 @@ import { dbPath } from './db/paths.js';
 import { createCompaniesRepo } from './db/repos/companies.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
 import { createEventsRepo } from './db/repos/events.js';
+import { createGoalsRepo } from './db/repos/goals.js';
 import {
   createMcpServersRepo,
   createToolCallsRepo,
   seedDefaultMcpServers,
 } from './db/repos/mcp-servers.js';
 import { createMessagesRepo } from './db/repos/messages.js';
+import { createProjectsRepo } from './db/repos/projects.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createThreadsRepo } from './db/repos/threads.js';
 import { createTicketsRepo } from './db/repos/tickets.js';
@@ -218,6 +220,8 @@ app.whenReady().then(async () => {
   const mcpServersRepo = createMcpServersRepo(db);
   const toolCallsRepo = createToolCallsRepo(db);
   const ticketsRepo = createTicketsRepo(db);
+  const goalsRepo = createGoalsRepo(db);
+  const projectsRepo = createProjectsRepo(db);
 
   // Seed well-known MCP servers on first boot (disabled by default).
   const mcpSeeded = seedDefaultMcpServers(db);
@@ -348,6 +352,8 @@ app.whenReady().then(async () => {
     threadsRepo,
     messagesRepo,
     ticketsRepo,
+    goalsRepo,
+    projectsRepo,
     eventsRepo,
     orchestrator,
     roleLookup: roleLoader,

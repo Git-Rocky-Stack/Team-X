@@ -73,6 +73,20 @@ const REQUEST_CHANNELS = [
   'mcp.addServer',
   'mcp.removeServer',
   'mcp.testConnection',
+  // Goals management (Phase 3 — M15)
+  'goals.create',
+  'goals.update',
+  'goals.list',
+  'goals.get',
+  'goals.delete',
+  // Projects management (Phase 3 — M15)
+  'projects.create',
+  'projects.update',
+  'projects.list',
+  'projects.get',
+  'projects.delete',
+  'projects.linkTicket',
+  'projects.unlinkTicket',
   // Ticket management (Phase 2 — M12)
   'tickets.create',
   'tickets.update',
@@ -168,6 +182,113 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'mcp.testConnection',
     async (_event, request: { transport: 'stdio' | 'sse'; configJson: string }) => {
       return handlers.mcpTestConnection(request);
+    },
+  );
+
+  // Goals management handlers (Phase 3 — M15)
+  ipcMain.handle(
+    'goals.create',
+    async (
+      _event,
+      request: {
+        companyId: string;
+        title: string;
+        description?: string;
+        targetDate?: number | null;
+      },
+    ) => {
+      return handlers.goalsCreate(request);
+    },
+  );
+
+  ipcMain.handle(
+    'goals.update',
+    async (
+      _event,
+      request: {
+        goalId: string;
+        title?: string;
+        description?: string;
+        status?: string;
+        progressPct?: number;
+        targetDate?: number | null;
+      },
+    ) => {
+      return handlers.goalsUpdate(request);
+    },
+  );
+
+  ipcMain.handle('goals.list', async (_event, request: { companyId: string }) => {
+    return handlers.goalsList(request);
+  });
+
+  ipcMain.handle('goals.get', async (_event, request: { goalId: string }) => {
+    return handlers.goalsGet(request);
+  });
+
+  ipcMain.handle('goals.delete', async (_event, request: { goalId: string }) => {
+    return handlers.goalsDelete(request);
+  });
+
+  // Projects management handlers (Phase 3 — M15)
+  ipcMain.handle(
+    'projects.create',
+    async (
+      _event,
+      request: {
+        companyId: string;
+        goalId?: string | null;
+        title: string;
+        description?: string;
+        leadId?: string | null;
+        priority?: string;
+      },
+    ) => {
+      return handlers.projectsCreate(request);
+    },
+  );
+
+  ipcMain.handle(
+    'projects.update',
+    async (
+      _event,
+      request: {
+        projectId: string;
+        title?: string;
+        description?: string;
+        status?: string;
+        goalId?: string | null;
+        leadId?: string | null;
+        priority?: string;
+      },
+    ) => {
+      return handlers.projectsUpdate(request);
+    },
+  );
+
+  ipcMain.handle('projects.list', async (_event, request: { companyId: string }) => {
+    return handlers.projectsList(request);
+  });
+
+  ipcMain.handle('projects.get', async (_event, request: { projectId: string }) => {
+    return handlers.projectsGet(request);
+  });
+
+  ipcMain.handle('projects.delete', async (_event, request: { projectId: string }) => {
+    return handlers.projectsDelete(request);
+  });
+
+  ipcMain.handle(
+    'projects.linkTicket',
+    async (_event, request: { projectId: string; ticketId: string }) => {
+      return handlers.projectsLinkTicket(request);
+    },
+  );
+
+  ipcMain.handle(
+    'projects.unlinkTicket',
+    async (_event, request: { projectId: string; ticketId: string }) => {
+      return handlers.projectsUnlinkTicket(request);
     },
   );
 

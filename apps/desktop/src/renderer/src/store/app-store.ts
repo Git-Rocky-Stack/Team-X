@@ -39,6 +39,9 @@ export type ActiveView =
 /** Dashboard inner subview tabs. */
 export type DashboardSubview = 'cards' | 'timeline' | 'stream' | 'floor';
 
+/** Projects inner subview tabs. */
+export type ProjectsSubview = 'kanban' | 'goals';
+
 export interface AppState {
   /** Which top-level view is active. */
   activeView: ActiveView;
@@ -62,9 +65,18 @@ export interface AppState {
   lastAgentMessageAt: number;
   /** Currently selected ticket id for detail panel. */
   activeTicketId: string | null;
+  /** Currently selected project id for detail panel. */
+  activeProjectId: string | null;
+  /** Currently selected goal id for detail panel. */
+  activeGoalId: string | null;
+  /** Which projects subview is showing (Kanban / Goals). */
+  projectsSubview: ProjectsSubview;
 
   setActiveView: (view: ActiveView) => void;
   setDashboardSubview: (subview: DashboardSubview) => void;
+  setProjectsSubview: (subview: ProjectsSubview) => void;
+  setActiveProjectId: (projectId: string | null) => void;
+  setActiveGoalId: (goalId: string | null) => void;
   setSelectedEmployee: (id: string | null) => void;
   setChatOpen: (open: boolean) => void;
   setActiveThreadId: (threadId: string | null) => void;
@@ -92,8 +104,12 @@ export const useAppStore = create<AppState>((set) => ({
   viewingAgentThread: false,
   lastAgentMessageAt: 0,
   activeTicketId: null,
+  activeProjectId: null,
+  activeGoalId: null,
+  projectsSubview: 'kanban',
 
-  setActiveView: (view) => set({ activeView: view, activeTicketId: null }),
+  setActiveView: (view) =>
+    set({ activeView: view, activeTicketId: null, activeProjectId: null, activeGoalId: null }),
 
   setDashboardSubview: (subview) => set({ dashboardSubview: subview }),
 
@@ -140,6 +156,10 @@ export const useAppStore = create<AppState>((set) => ({
   setThreadListView: (open) => set({ threadListView: open }),
 
   setActiveTicketId: (ticketId) => set({ activeTicketId: ticketId }),
+
+  setProjectsSubview: (subview) => set({ projectsSubview: subview }),
+  setActiveProjectId: (projectId) => set({ activeProjectId: projectId }),
+  setActiveGoalId: (goalId) => set({ activeGoalId: goalId }),
 
   handleDashboardEvent: (event) =>
     set((state) => {

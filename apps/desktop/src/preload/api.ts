@@ -38,15 +38,23 @@ import type {
   AddMcpServerRequest,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
+  CreateGoalRequest,
+  CreateGoalResponse,
+  CreateProjectRequest,
+  CreateProjectResponse,
   CreateTicketRequest,
   CreateTicketResponse,
   DashboardEvent,
   DashboardEventListener,
+  Goal,
+  GoalDetail,
   HireEmployeeRequest,
   HireEmployeeResponse,
   ListEventsRequest,
   ListEventsResponse,
   McpServerSummary,
+  Project,
+  ProjectDetail,
   ResolveThreadRequest,
   ResolveThreadResponse,
   SendChatRequest,
@@ -58,6 +66,8 @@ import type {
   Ticket,
   TicketDetail,
   UnsubscribeFn,
+  UpdateGoalRequest,
+  UpdateProjectRequest,
   UpdateTicketRequest,
 } from '@team-x/shared-types';
 
@@ -105,6 +115,20 @@ const CHANNELS = {
   mcpAddServer: 'mcp.addServer',
   mcpRemoveServer: 'mcp.removeServer',
   mcpTestConnection: 'mcp.testConnection',
+  // Goals management (Phase 3 — M15)
+  goalsCreate: 'goals.create',
+  goalsUpdate: 'goals.update',
+  goalsList: 'goals.list',
+  goalsGet: 'goals.get',
+  goalsDelete: 'goals.delete',
+  // Projects management (Phase 3 — M15)
+  projectsCreate: 'projects.create',
+  projectsUpdate: 'projects.update',
+  projectsList: 'projects.list',
+  projectsGet: 'projects.get',
+  projectsDelete: 'projects.delete',
+  projectsLinkTicket: 'projects.linkTicket',
+  projectsUnlinkTicket: 'projects.unlinkTicket',
   // Ticket management (Phase 2 — M12)
   ticketsCreate: 'tickets.create',
   ticketsUpdate: 'tickets.update',
@@ -174,6 +198,30 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.mcpRemoveServer, { serverId }) as Promise<void>,
       testConnection: (req: TestMcpConnectionRequest) =>
         ipc.invoke(CHANNELS.mcpTestConnection, req) as Promise<TestMcpConnectionResponse>,
+    },
+    goals: {
+      create: (req: CreateGoalRequest) =>
+        ipc.invoke(CHANNELS.goalsCreate, req) as Promise<CreateGoalResponse>,
+      update: (req: UpdateGoalRequest) => ipc.invoke(CHANNELS.goalsUpdate, req) as Promise<void>,
+      list: (companyId: string) => ipc.invoke(CHANNELS.goalsList, { companyId }) as Promise<Goal[]>,
+      get: (goalId: string) => ipc.invoke(CHANNELS.goalsGet, { goalId }) as Promise<GoalDetail>,
+      delete: (goalId: string) => ipc.invoke(CHANNELS.goalsDelete, { goalId }) as Promise<void>,
+    },
+    projects: {
+      create: (req: CreateProjectRequest) =>
+        ipc.invoke(CHANNELS.projectsCreate, req) as Promise<CreateProjectResponse>,
+      update: (req: UpdateProjectRequest) =>
+        ipc.invoke(CHANNELS.projectsUpdate, req) as Promise<void>,
+      list: (companyId: string) =>
+        ipc.invoke(CHANNELS.projectsList, { companyId }) as Promise<Project[]>,
+      get: (projectId: string) =>
+        ipc.invoke(CHANNELS.projectsGet, { projectId }) as Promise<ProjectDetail>,
+      delete: (projectId: string) =>
+        ipc.invoke(CHANNELS.projectsDelete, { projectId }) as Promise<void>,
+      linkTicket: (projectId: string, ticketId: string) =>
+        ipc.invoke(CHANNELS.projectsLinkTicket, { projectId, ticketId }) as Promise<void>,
+      unlinkTicket: (projectId: string, ticketId: string) =>
+        ipc.invoke(CHANNELS.projectsUnlinkTicket, { projectId, ticketId }) as Promise<void>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

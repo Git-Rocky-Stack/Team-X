@@ -45,17 +45,32 @@ import type {
   CloseTicketRequest,
   Company,
   CompanySettings,
+  CreateGoalRequest,
+  CreateGoalResponse,
+  CreateProjectRequest,
+  CreateProjectResponse,
   CreateTicketRequest,
   CreateTicketResponse,
   DashboardEvent,
+  DeleteGoalRequest,
+  DeleteProjectRequest,
   Employee,
+  GetGoalRequest,
+  GetProjectRequest,
   GetTicketRequest,
+  Goal,
+  GoalDetail,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  LinkTicketToProjectRequest,
   ListEventsRequest,
   ListEventsResponse,
+  ListGoalsRequest,
+  ListProjectsRequest,
   ListTicketsRequest,
   McpServerSummary,
+  Project,
+  ProjectDetail,
   ReopenTicketRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
@@ -66,6 +81,9 @@ import type {
   Thread,
   Ticket,
   TicketDetail,
+  UnlinkTicketFromProjectRequest,
+  UpdateGoalRequest,
+  UpdateProjectRequest,
   UpdateTicketRequest,
 } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
@@ -74,7 +92,9 @@ import type { RoleSpec } from '@team-x/shared-types';
 
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { CreateEmployeeInput, EmployeeRow } from '../db/repos/employees.js';
+import type { CreateGoalInput, GoalRow, UpdateGoalInput } from '../db/repos/goals.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
+import type { CreateProjectInput, ProjectRow, UpdateProjectInput } from '../db/repos/projects.js';
 import type {
   AddThreadMemberInput,
   CreateThreadInput,
@@ -154,6 +174,28 @@ export interface IpcTicketsRepo {
   reopen(id: string): void;
 }
 
+export interface IpcGoalsRepo {
+  create(input: CreateGoalInput): string;
+  getById(id: string): GoalRow | null;
+  listByCompany(companyId: string): GoalRow[];
+  update(id: string, input: UpdateGoalInput): void;
+  delete(id: string): void;
+  recalcProgress(id: string): void;
+}
+
+export interface IpcProjectsRepo {
+  create(input: CreateProjectInput): string;
+  getById(id: string): ProjectRow | null;
+  listByCompany(companyId: string): ProjectRow[];
+  listByGoal(goalId: string): ProjectRow[];
+  update(id: string, input: UpdateProjectInput): void;
+  delete(id: string): void;
+  linkTicket(projectId: string, ticketId: string): void;
+  unlinkTicket(projectId: string, ticketId: string): void;
+  listTickets(projectId: string): string[];
+  countTicketsByStatus(projectId: string): { total: number; done: number };
+}
+
 /**
  * The narrow slice of the orchestrator the IPC layer needs. Decouples
  * the handlers from the full `Orchestrator` interface so tests can pass
@@ -193,6 +235,8 @@ export interface IpcHandlerDeps {
   threadsRepo: IpcThreadsRepo;
   messagesRepo: IpcMessagesRepo;
   ticketsRepo: IpcTicketsRepo;
+  goalsRepo: IpcGoalsRepo;
+  projectsRepo: IpcProjectsRepo;
   eventsRepo: IpcEventsRepo;
   orchestrator: IpcOrchestrator;
   roleLookup: IpcRoleLookup;
@@ -314,6 +358,40 @@ export interface IpcHandlers {
   mcpTestConnection(req: TestMcpConnectionRequest): Promise<TestMcpConnectionResponse>;
 
   // -----------------------------------------------------------------------
+  // Goals management handlers (Phase 3 — M15)
+  // -----------------------------------------------------------------------
+
+  /** `goals.create` — create a new company goal. */
+  goalsCreate(req: CreateGoalRequest): Promise<CreateGoalResponse>;
+  /** `goals.update` — update goal fields. */
+  goalsUpdate(req: UpdateGoalRequest): Promise<void>;
+  /** `goals.list` — list all goals for a company. */
+  goalsList(req: ListGoalsRequest): Promise<Goal[]>;
+  /** `goals.get` — get full goal detail with linked projects. */
+  goalsGet(req: GetGoalRequest): Promise<GoalDetail>;
+  /** `goals.delete` — delete a goal. */
+  goalsDelete(req: DeleteGoalRequest): Promise<void>;
+
+  // -----------------------------------------------------------------------
+  // Projects management handlers (Phase 3 — M15)
+  // -----------------------------------------------------------------------
+
+  /** `projects.create` — create a new project. */
+  projectsCreate(req: CreateProjectRequest): Promise<CreateProjectResponse>;
+  /** `projects.update` — update project fields. */
+  projectsUpdate(req: UpdateProjectRequest): Promise<void>;
+  /** `projects.list` — list all projects for a company. */
+  projectsList(req: ListProjectsRequest): Promise<Project[]>;
+  /** `projects.get` — get full project detail with tickets and lead. */
+  projectsGet(req: GetProjectRequest): Promise<ProjectDetail>;
+  /** `projects.delete` — delete a project and its ticket links. */
+  projectsDelete(req: DeleteProjectRequest): Promise<void>;
+  /** `projects.linkTicket` — link a ticket to a project. */
+  projectsLinkTicket(req: LinkTicketToProjectRequest): Promise<void>;
+  /** `projects.unlinkTicket` — unlink a ticket from a project. */
+  projectsUnlinkTicket(req: UnlinkTicketFromProjectRequest): Promise<void>;
+
+  // -----------------------------------------------------------------------
   // Ticket management handlers (Phase 2 — M12)
   // -----------------------------------------------------------------------
 
@@ -358,6 +436,9 @@ import type {
   AuthorKind,
   EmployeeStatus,
   EventType,
+  GoalStatus,
+  ProjectPriority,
+  ProjectStatus,
   TicketPriority,
   TicketStatus,
 } from '@team-x/shared-types';
@@ -453,6 +534,35 @@ function rowToEvent(row: EventRow): DashboardEvent {
   };
 }
 
+function rowToGoal(row: GoalRow): Goal {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    title: row.title,
+    description: row.description,
+    status: row.status as GoalStatus,
+    progressPct: row.progressPct,
+    targetDate: row.targetDate,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function rowToProject(row: ProjectRow): Project {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    goalId: row.goalId,
+    title: row.title,
+    description: row.description,
+    status: row.status as ProjectStatus,
+    leadId: row.leadId,
+    priority: row.priority as ProjectPriority,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
@@ -464,6 +574,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     threadsRepo,
     messagesRepo,
     ticketsRepo,
+    goalsRepo,
+    projectsRepo,
     eventsRepo,
     orchestrator,
     roleLookup,
@@ -782,6 +894,193 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           error: message,
         };
       }
+    },
+
+    // -----------------------------------------------------------------------
+    // Goals management handlers (Phase 3 — M15)
+    // -----------------------------------------------------------------------
+
+    async goalsCreate(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] goals.create: companyId is required');
+      }
+      if (typeof req.title !== 'string' || req.title.trim().length === 0) {
+        throw new Error('[ipc] goals.create: title is required');
+      }
+      const goalId = goalsRepo.create({
+        companyId: req.companyId,
+        title: req.title.trim(),
+        description: req.description ?? '',
+        targetDate: req.targetDate ?? null,
+      });
+      return { goalId };
+    },
+
+    async goalsUpdate(req) {
+      if (typeof req.goalId !== 'string' || req.goalId.length === 0) {
+        throw new Error('[ipc] goals.update: goalId is required');
+      }
+      const goal = goalsRepo.getById(req.goalId);
+      if (!goal) {
+        throw new Error(`[ipc] goals.update: goal not found: ${req.goalId}`);
+      }
+      goalsRepo.update(req.goalId, {
+        title: req.title,
+        description: req.description,
+        status: req.status,
+        progressPct: req.progressPct,
+        targetDate: req.targetDate,
+      });
+    },
+
+    async goalsList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] goals.list: companyId is required');
+      }
+      return goalsRepo.listByCompany(req.companyId).map(rowToGoal);
+    },
+
+    async goalsGet(req) {
+      if (typeof req.goalId !== 'string' || req.goalId.length === 0) {
+        throw new Error('[ipc] goals.get: goalId is required');
+      }
+      const goal = goalsRepo.getById(req.goalId);
+      if (!goal) {
+        throw new Error(`[ipc] goals.get: goal not found: ${req.goalId}`);
+      }
+      const linkedProjects = projectsRepo.listByGoal(req.goalId).map(rowToProject);
+      return { ...rowToGoal(goal), projects: linkedProjects };
+    },
+
+    async goalsDelete(req) {
+      if (typeof req.goalId !== 'string' || req.goalId.length === 0) {
+        throw new Error('[ipc] goals.delete: goalId is required');
+      }
+      const goal = goalsRepo.getById(req.goalId);
+      if (!goal) {
+        throw new Error(`[ipc] goals.delete: goal not found: ${req.goalId}`);
+      }
+      goalsRepo.delete(req.goalId);
+    },
+
+    // -----------------------------------------------------------------------
+    // Projects management handlers (Phase 3 — M15)
+    // -----------------------------------------------------------------------
+
+    async projectsCreate(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] projects.create: companyId is required');
+      }
+      if (typeof req.title !== 'string' || req.title.trim().length === 0) {
+        throw new Error('[ipc] projects.create: title is required');
+      }
+      const projectId = projectsRepo.create({
+        companyId: req.companyId,
+        goalId: req.goalId ?? null,
+        title: req.title.trim(),
+        description: req.description ?? '',
+        leadId: req.leadId ?? null,
+        priority: req.priority ?? 'medium',
+      });
+      return { projectId };
+    },
+
+    async projectsUpdate(req) {
+      if (typeof req.projectId !== 'string' || req.projectId.length === 0) {
+        throw new Error('[ipc] projects.update: projectId is required');
+      }
+      const project = projectsRepo.getById(req.projectId);
+      if (!project) {
+        throw new Error(`[ipc] projects.update: project not found: ${req.projectId}`);
+      }
+      projectsRepo.update(req.projectId, {
+        title: req.title,
+        description: req.description,
+        status: req.status,
+        goalId: req.goalId,
+        leadId: req.leadId,
+        priority: req.priority,
+      });
+      // If status changed to completed/archived, recalc parent goal progress
+      if ((req.status === 'completed' || req.status === 'archived') && project.goalId) {
+        goalsRepo.recalcProgress(project.goalId);
+      }
+      // Also recalc if status changed FROM completed/archived back to something else
+      if (
+        req.status &&
+        req.status !== 'completed' &&
+        req.status !== 'archived' &&
+        (project.status === 'completed' || project.status === 'archived') &&
+        project.goalId
+      ) {
+        goalsRepo.recalcProgress(project.goalId);
+      }
+    },
+
+    async projectsList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] projects.list: companyId is required');
+      }
+      return projectsRepo.listByCompany(req.companyId).map(rowToProject);
+    },
+
+    async projectsGet(req) {
+      if (typeof req.projectId !== 'string' || req.projectId.length === 0) {
+        throw new Error('[ipc] projects.get: projectId is required');
+      }
+      const project = projectsRepo.getById(req.projectId);
+      if (!project) {
+        throw new Error(`[ipc] projects.get: project not found: ${req.projectId}`);
+      }
+      const ticketIds = projectsRepo.listTickets(req.projectId);
+      const ticketCounts = projectsRepo.countTicketsByStatus(req.projectId);
+      let lead: Employee | null = null;
+      if (project.leadId) {
+        const empRow = employeesRepo.getById(project.leadId);
+        if (empRow) lead = rowToEmployee(empRow);
+      }
+      return {
+        ...rowToProject(project),
+        ticketIds,
+        lead,
+        ticketCounts,
+      };
+    },
+
+    async projectsDelete(req) {
+      if (typeof req.projectId !== 'string' || req.projectId.length === 0) {
+        throw new Error('[ipc] projects.delete: projectId is required');
+      }
+      const project = projectsRepo.getById(req.projectId);
+      if (!project) {
+        throw new Error(`[ipc] projects.delete: project not found: ${req.projectId}`);
+      }
+      const goalId = project.goalId;
+      projectsRepo.delete(req.projectId);
+      // Recalc parent goal progress after deleting
+      if (goalId) {
+        goalsRepo.recalcProgress(goalId);
+      }
+    },
+
+    async projectsLinkTicket(req) {
+      if (typeof req.projectId !== 'string' || req.projectId.length === 0) {
+        throw new Error('[ipc] projects.linkTicket: projectId is required');
+      }
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] projects.linkTicket: ticketId is required');
+      }
+      projectsRepo.linkTicket(req.projectId, req.ticketId);
+    },
+
+    async projectsUnlinkTicket(req) {
+      if (typeof req.projectId !== 'string' || req.projectId.length === 0) {
+        throw new Error('[ipc] projects.unlinkTicket: projectId is required');
+      }
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] projects.unlinkTicket: ticketId is required');
+      }
+      projectsRepo.unlinkTicket(req.projectId, req.ticketId);
     },
 
     // -----------------------------------------------------------------------

@@ -30,7 +30,7 @@
  *     time.
  */
 
-import type { ChatMessage, Company, Employee, Thread, Ticket } from './entities.js';
+import type { ChatMessage, Company, Employee, Goal, Project, Thread, Ticket } from './entities.js';
 import type { DashboardEvent } from './events.js';
 
 // ---------------------------------------------------------------------------
@@ -204,6 +204,99 @@ export interface TicketDetail extends Ticket {
 }
 
 // ---------------------------------------------------------------------------
+// Goals & Projects shapes (Phase 3 — M15)
+// ---------------------------------------------------------------------------
+
+export interface CreateGoalRequest {
+  companyId: string;
+  title: string;
+  description?: string;
+  targetDate?: number | null;
+}
+
+export interface CreateGoalResponse {
+  goalId: string;
+}
+
+export interface UpdateGoalRequest {
+  goalId: string;
+  title?: string;
+  description?: string;
+  status?: string;
+  progressPct?: number;
+  targetDate?: number | null;
+}
+
+export interface ListGoalsRequest {
+  companyId: string;
+}
+
+export interface GetGoalRequest {
+  goalId: string;
+}
+
+export interface DeleteGoalRequest {
+  goalId: string;
+}
+
+/** Full goal with its linked projects for the detail view. */
+export interface GoalDetail extends Goal {
+  projects: Project[];
+}
+
+export interface CreateProjectRequest {
+  companyId: string;
+  goalId?: string | null;
+  title: string;
+  description?: string;
+  leadId?: string | null;
+  priority?: string;
+}
+
+export interface CreateProjectResponse {
+  projectId: string;
+}
+
+export interface UpdateProjectRequest {
+  projectId: string;
+  title?: string;
+  description?: string;
+  status?: string;
+  goalId?: string | null;
+  leadId?: string | null;
+  priority?: string;
+}
+
+export interface ListProjectsRequest {
+  companyId: string;
+}
+
+export interface GetProjectRequest {
+  projectId: string;
+}
+
+export interface DeleteProjectRequest {
+  projectId: string;
+}
+
+export interface LinkTicketToProjectRequest {
+  projectId: string;
+  ticketId: string;
+}
+
+export interface UnlinkTicketFromProjectRequest {
+  projectId: string;
+  ticketId: string;
+}
+
+/** Full project with linked ticket ids and lead employee for the detail view. */
+export interface ProjectDetail extends Project {
+  ticketIds: string[];
+  lead: Employee | null;
+  ticketCounts: { total: number; done: number };
+}
+
+// ---------------------------------------------------------------------------
 // MCP-related shapes
 // ---------------------------------------------------------------------------
 
@@ -302,6 +395,56 @@ export interface IpcContract {
   'mcp.testConnection': {
     request: TestMcpConnectionRequest;
     response: TestMcpConnectionResponse;
+  };
+  // Goals management channels (Phase 3 — M15)
+  'goals.create': {
+    request: CreateGoalRequest;
+    response: CreateGoalResponse;
+  };
+  'goals.update': {
+    request: UpdateGoalRequest;
+    response: undefined;
+  };
+  'goals.list': {
+    request: ListGoalsRequest;
+    response: Goal[];
+  };
+  'goals.get': {
+    request: GetGoalRequest;
+    response: GoalDetail;
+  };
+  'goals.delete': {
+    request: DeleteGoalRequest;
+    response: undefined;
+  };
+  // Projects management channels (Phase 3 — M15)
+  'projects.create': {
+    request: CreateProjectRequest;
+    response: CreateProjectResponse;
+  };
+  'projects.update': {
+    request: UpdateProjectRequest;
+    response: undefined;
+  };
+  'projects.list': {
+    request: ListProjectsRequest;
+    response: Project[];
+  };
+  'projects.get': {
+    request: GetProjectRequest;
+    response: ProjectDetail;
+  };
+  'projects.delete': {
+    request: DeleteProjectRequest;
+    response: undefined;
+  };
+  'projects.linkTicket': {
+    request: LinkTicketToProjectRequest;
+    response: undefined;
+  };
+  'projects.unlinkTicket': {
+    request: UnlinkTicketFromProjectRequest;
+    response: undefined;
   };
   // Ticket management channels
   'tickets.create': {
@@ -443,6 +586,34 @@ export interface TeamXApi {
     removeServer(serverId: string): Promise<void>;
     /** Test an MCP connection without persisting. */
     testConnection(req: TestMcpConnectionRequest): Promise<TestMcpConnectionResponse>;
+  };
+  goals: {
+    /** Create a new goal. */
+    create(req: CreateGoalRequest): Promise<CreateGoalResponse>;
+    /** Update goal fields (title, description, status, progressPct, targetDate). */
+    update(req: UpdateGoalRequest): Promise<void>;
+    /** List all goals for a company. */
+    list(companyId: string): Promise<Goal[]>;
+    /** Get full goal detail with linked projects. */
+    get(goalId: string): Promise<GoalDetail>;
+    /** Delete a goal. */
+    delete(goalId: string): Promise<void>;
+  };
+  projects: {
+    /** Create a new project. */
+    create(req: CreateProjectRequest): Promise<CreateProjectResponse>;
+    /** Update project fields. */
+    update(req: UpdateProjectRequest): Promise<void>;
+    /** List all projects for a company. */
+    list(companyId: string): Promise<Project[]>;
+    /** Get full project detail with linked ticket ids and lead. */
+    get(projectId: string): Promise<ProjectDetail>;
+    /** Delete a project and its ticket links. */
+    delete(projectId: string): Promise<void>;
+    /** Link a ticket to a project. */
+    linkTicket(projectId: string, ticketId: string): Promise<void>;
+    /** Unlink a ticket from a project. */
+    unlinkTicket(projectId: string, ticketId: string): Promise<void>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

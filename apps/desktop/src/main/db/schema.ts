@@ -1,10 +1,11 @@
 /**
- * Team-X SQLite schema (Phase 1 + Phase 2).
+ * Team-X SQLite schema (Phase 1 + Phase 2 + Phase 3).
  *
  * Phase 1 tables: companies, employees, threads, threadMembers, messages,
  * events, runs, providers, settings.
  * Phase 2 additions: mcpServers, toolCalls (M10), tickets (M12),
  * threads.ticketId FK (M12).
+ * Phase 3 additions: goals, projects, projectTickets (M15).
  *
  * Design notes:
  * - Primary keys are text-typed to hold nanoid values (see packages/shared-types).
@@ -247,4 +248,66 @@ export const tickets = sqliteTable('tickets', {
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
   closedAt: integer('closed_at'),
+});
+
+// ---------------------------------------------------------------------------
+// Phase 3 — M15: Goals & Projects
+// ---------------------------------------------------------------------------
+
+/**
+ * Company-level goals. Goals decompose into projects; progress is
+ * calculated as the weighted average of linked project completion.
+ */
+export const goals = sqliteTable('goals', {
+  id: text('id').primaryKey(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  /** active | achieved | abandoned. */
+  status: text('status').notNull().default('active'),
+  /** 0-100 — auto-calculated from linked project completion. */
+  progressPct: integer('progress_pct').notNull().default(0),
+  /** Optional deadline as UNIX ms timestamp. */
+  targetDate: integer('target_date'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/**
+ * Projects sit between goals and tickets. A project optionally belongs
+ * to a goal (goalId nullable = standalone project) and links to tickets
+ * via the project_tickets junction table.
+ */
+export const projects = sqliteTable('projects', {
+  id: text('id').primaryKey(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id),
+  /** Nullable FK — null means standalone project not linked to a goal. */
+  goalId: text('goal_id').references(() => goals.id),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  /** planning | active | completed | archived. */
+  status: text('status').notNull().default('planning'),
+  /** Project lead — nullable FK to employees. */
+  leadId: text('lead_id').references(() => employees.id),
+  /** low | medium | high | critical. */
+  priority: text('priority').notNull().default('medium'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/**
+ * M:N junction linking projects to tickets. A ticket can belong to
+ * multiple projects; a project can contain many tickets. Composite PK.
+ */
+export const projectTickets = sqliteTable('project_tickets', {
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id),
+  ticketId: text('ticket_id')
+    .notNull()
+    .references(() => tickets.id),
 });
