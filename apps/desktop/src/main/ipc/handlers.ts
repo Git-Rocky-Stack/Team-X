@@ -44,10 +44,13 @@ import type {
   Employee,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  McpServerSummary,
   ResolveThreadRequest,
   ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
+  TestMcpConnectionRequest,
+  TestMcpConnectionResponse,
 } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
@@ -145,6 +148,9 @@ export interface IpcRoleLookup {
 // Public surface
 // ---------------------------------------------------------------------------
 
+import type { McpServersRepo } from '../db/repos/mcp-servers.js';
+import type { McpHost } from '../services/mcp-host.js';
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -152,6 +158,8 @@ export interface IpcHandlerDeps {
   messagesRepo: IpcMessagesRepo;
   orchestrator: IpcOrchestrator;
   roleLookup: IpcRoleLookup;
+  mcpHost: McpHost;
+  mcpServersRepo: McpServersRepo;
 }
 
 export interface IpcHandlers {
@@ -217,6 +225,41 @@ export interface IpcHandlers {
    * one source of truth for DM resolution.
    */
   chatResolveThread(req: ResolveThreadRequest): Promise<ResolveThreadResponse>;
+
+  // -----------------------------------------------------------------------
+  // MCP management handlers (Phase 2 — M10)
+  // -----------------------------------------------------------------------
+
+  /**
+   * `mcp.list` — return all MCP servers available to a company.
+   * Includes global servers (companyId=null) and company-specific servers.
+   */
+  mcpList(req: { companyId: string }): Promise<McpServerSummary[]>;
+
+  /**
+   * `mcp.toggle` — enable or disable an MCP server for a company.
+   */
+  mcpToggle(req: { serverId: string; enabled: boolean }): Promise<void>;
+
+  /**
+   * `mcp.addServer` — register a new MCP server (global or company-specific).
+   */
+  mcpAddServer(req: {
+    companyId: string | null;
+    name: string;
+    transport: 'stdio' | 'sse';
+    configJson: string;
+  }): Promise<{ serverId: string }>;
+
+  /**
+   * `mcp.removeServer` — remove an MCP server.
+   */
+  mcpRemoveServer(req: { serverId: string }): Promise<void>;
+
+  /**
+   * `mcp.testConnection` — test an MCP connection without persisting.
+   */
+  mcpTestConnection(req: TestMcpConnectionRequest): Promise<TestMcpConnectionResponse>;
 }
 
 // ---------------------------------------------------------------------------
@@ -289,8 +332,16 @@ function rowToChatMessage(row: MessageRow): ChatMessage {
 // ---------------------------------------------------------------------------
 
 export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
-  const { companiesRepo, employeesRepo, threadsRepo, messagesRepo, orchestrator, roleLookup } =
-    deps;
+  const {
+    companiesRepo,
+    employeesRepo,
+    threadsRepo,
+    messagesRepo,
+    orchestrator,
+    roleLookup,
+    mcpHost,
+    mcpServersRepo,
+  } = deps;
 
   return {
     async companiesList() {
@@ -445,6 +496,119 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         userId: HUMAN_USER_ID,
       });
       return { threadId };
+    },
+
+    // -----------------------------------------------------------------------
+    // MCP management handlers
+    // -----------------------------------------------------------------------
+
+    async mcpList({ companyId: _companyId }) {
+      const servers = mcpHost.listServers();
+      return servers.map((server) => ({
+        id: server.id,
+        companyId: server.companyId,
+        name: server.name,
+        transport: server.transport,
+        enabled: server.enabled,
+        lastHealth: server.lastHealth,
+        toolCount: server.tools.length,
+      }));
+    },
+
+    async mcpToggle({ serverId, enabled }) {
+      const server = mcpHost.getServer(serverId);
+      if (!server) {
+        throw new Error(`[ipc] mcp.toggle: server not found: ${serverId}`);
+      }
+
+      if (enabled && !server.connected) {
+        // Reconnect
+        const config = mcpServersRepo.getById(serverId);
+        if (!config) {
+          throw new Error(`[ipc] mcp.toggle: server config not found: ${serverId}`);
+        }
+        await mcpHost.connectToServer({
+          id: config.id,
+          companyId: config.companyId,
+          name: config.name,
+          transport: config.transport as 'stdio' | 'sse',
+          configJson: config.configJson,
+          enabled: config.enabled,
+          lastHealth: config.lastHealth,
+        });
+      } else if (!enabled && server.connected) {
+        // Disconnect
+        await mcpHost.disconnectServer(serverId);
+      }
+
+      mcpServersRepo.updateEnabled(serverId, enabled);
+    },
+
+    async mcpAddServer({ companyId, name, transport, configJson }) {
+      const serverId = mcpServersRepo.create({
+        companyId,
+        name,
+        transport,
+        configJson,
+      });
+
+      // Try to connect immediately
+      const config = mcpServersRepo.getById(serverId);
+      if (config) {
+        await mcpHost
+          .connectToServer({
+            id: config.id,
+            companyId: config.companyId,
+            name: config.name,
+            transport: config.transport as 'stdio' | 'sse',
+            configJson: config.configJson,
+            enabled: config.enabled,
+            lastHealth: config.lastHealth,
+          })
+          .catch((err) => {
+            console.error(`[ipc] mcp.addServer: failed to connect to ${name}:`, err);
+          });
+      }
+
+      return { serverId };
+    },
+
+    async mcpRemoveServer({ serverId }) {
+      await mcpHost.disconnectServer(serverId);
+      mcpServersRepo.delete(serverId);
+    },
+
+    async mcpTestConnection({ transport, configJson }) {
+      try {
+        const client = new (await import('@modelcontextprotocol/sdk/client/index.js')).Client({
+          name: 'team-x-test-connection',
+          version: '0.0.1',
+        });
+
+        const clientTransport =
+          transport === 'stdio'
+            ? new (await import('@modelcontextprotocol/sdk/client/stdio.js')).StdioClientTransport(
+                JSON.parse(configJson),
+              )
+            : new (await import('@modelcontextprotocol/sdk/client/sse.js')).SSEClientTransport(
+                new URL(JSON.parse(configJson).url),
+              );
+
+        await client.connect(clientTransport);
+        const tools = await client.listTools();
+        await client.close();
+
+        return {
+          ok: true,
+          toolCount: tools.tools?.length ?? 0,
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          ok: false,
+          error: message,
+        };
+      }
     },
   };
 }

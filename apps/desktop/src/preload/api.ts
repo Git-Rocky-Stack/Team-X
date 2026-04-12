@@ -35,15 +35,19 @@
  */
 
 import type {
+  AddMcpServerRequest,
   DashboardEvent,
   DashboardEventListener,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  McpServerSummary,
   ResolveThreadRequest,
   ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
   TeamXApi,
+  TestMcpConnectionRequest,
+  TestMcpConnectionResponse,
   UnsubscribeFn,
 } from '@team-x/shared-types';
 
@@ -83,6 +87,12 @@ const CHANNELS = {
   chatList: 'chat.list',
   chatResolveThread: 'chat.resolveThread',
   eventsDashboard: 'events.dashboard',
+  // MCP management (Phase 2 — M10)
+  mcpList: 'mcp.list',
+  mcpToggle: 'mcp.toggle',
+  mcpAddServer: 'mcp.addServer',
+  mcpRemoveServer: 'mcp.removeServer',
+  mcpTestConnection: 'mcp.testConnection',
 } as const;
 
 /**
@@ -127,6 +137,18 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
           ipc.removeListener(CHANNELS.eventsDashboard, ipcListener);
         };
       },
+    },
+    mcp: {
+      list: (companyId: string) =>
+        ipc.invoke(CHANNELS.mcpList, { companyId }) as Promise<McpServerSummary[]>,
+      toggle: (serverId: string, enabled: boolean) =>
+        ipc.invoke(CHANNELS.mcpToggle, { serverId, enabled }) as Promise<void>,
+      addServer: (req: AddMcpServerRequest) =>
+        ipc.invoke(CHANNELS.mcpAddServer, req) as Promise<{ serverId: string }>,
+      removeServer: (serverId: string) =>
+        ipc.invoke(CHANNELS.mcpRemoveServer, { serverId }) as Promise<void>,
+      testConnection: (req: TestMcpConnectionRequest) =>
+        ipc.invoke(CHANNELS.mcpTestConnection, req) as Promise<TestMcpConnectionResponse>,
     },
   };
 }

@@ -51,6 +51,7 @@ import type { ProviderStreamFn, StreamMessage, StreamUsage } from '@team-x/provi
 import { streamAgent } from '@team-x/provider-router';
 import type {
   TokenDeltaPayload,
+  ToolCalledPayload,
   WorkCompletedPayload,
   WorkStartedPayload,
 } from '@team-x/shared-types';
@@ -127,6 +128,21 @@ export interface RunAgentInput {
   providerName: string;
   /** Model id for telemetry + cost lookup — e.g. "claude-sonnet-4-6". */
   model: string;
+  /**
+   * AI SDK tools (pre-built via `buildProviderTools`). When present,
+   * the provider adapter passes them to `streamText({ tools })` and
+   * the model can invoke them during the turn. Tool execution happens
+   * inside the `execute` callbacks which the caller wires to McpHost.
+   */
+  tools?: Record<string, unknown>;
+  /** Max reasoning steps with tool use. Defaults to 1 (no tool loop). */
+  maxSteps?: number;
+  /**
+   * Called with the `runId` immediately after the runs row is created.
+   * The orchestrator uses this to thread the runId into tool execute
+   * callbacks that were built before `runAgent` was invoked.
+   */
+  onRunCreated?: (runId: string) => void;
 }
 
 export interface RunAgentResult {
@@ -149,6 +165,11 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     model: input.model,
     threadId: input.threadId,
   });
+
+  // Thread runId to tool execute callbacks built before this function.
+  if (input.onRunCreated) {
+    input.onRunCreated(runId);
+  }
 
   // 2. Append the empty assistant message. Authored by the employee
   //    (not 'system' or 'user') — see entities.ts AuthorKind narrow.
@@ -182,12 +203,14 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
 
   try {
     // 4. Drain the provider stream. `streamAgent` normalizes the
-    //    underlying adapter into the `{kind: 'delta'} | {kind: 'done'}`
-    //    union so this loop is the same for every provider.
+    //    underlying adapter into the StreamChunk union so this loop
+    //    is the same for every provider.
     for await (const chunk of streamAgent({
       providerFactory: input.provider,
       system: input.system,
       messages: input.messages,
+      tools: input.tools,
+      maxSteps: input.maxSteps,
     })) {
       if (chunk.kind === 'delta') {
         buffer += chunk.delta;
@@ -204,6 +227,20 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
           actorId: input.employeeId,
           actorKind: 'employee',
           payload: deltaPayload,
+        });
+      } else if (chunk.kind === 'tool-call') {
+        const toolCalledPayload: ToolCalledPayload = {
+          threadId: input.threadId,
+          messageId,
+          toolCallId: chunk.toolCallId,
+          toolName: chunk.toolName,
+        };
+        deps.bus.emit<ToolCalledPayload>({
+          type: 'tool.called',
+          companyId: input.companyId,
+          actorId: input.employeeId,
+          actorKind: 'employee',
+          payload: toolCalledPayload,
         });
       } else if (chunk.kind === 'done') {
         usage = chunk.usage;

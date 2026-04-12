@@ -39,7 +39,7 @@
  *   downstream cost-calculation path on the happy line.
  */
 
-import { type CoreMessage, streamText } from 'ai';
+import { type CoreMessage, type CoreTool, streamText } from 'ai';
 import { createOllama } from 'ollama-ai-provider';
 
 import type { ProviderStreamFn } from '../stream.js';
@@ -92,17 +92,31 @@ export function makeOllamaStream(options: OllamaAdapterOptions): ProviderStreamF
   }
   const provider = createOllama(providerOptions);
 
-  return async function* ollamaStream({ system, messages }) {
+  return async function* ollamaStream({ system, messages, tools, maxSteps }) {
     const result = await streamText({
       model: provider(options.model),
       system,
-      // Same structural-subset note as the Anthropic adapter — see
-      // `./anthropic.ts` for the full rationale.
       messages: messages as CoreMessage[],
+      ...(tools && Object.keys(tools).length > 0
+        ? { tools: tools as Record<string, CoreTool>, maxSteps: maxSteps ?? 1 }
+        : {}),
     });
 
-    for await (const textDelta of result.textStream) {
-      yield { delta: textDelta };
+    for await (const part of result.fullStream) {
+      switch (part.type) {
+        case 'text-delta':
+          yield { delta: part.textDelta };
+          break;
+        case 'tool-call':
+          yield {
+            toolCall: {
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              args: part.args as Record<string, unknown>,
+            },
+          };
+          break;
+      }
     }
 
     const usage = await result.usage;

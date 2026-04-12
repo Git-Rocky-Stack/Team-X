@@ -23,8 +23,16 @@ const calls = {
 
 const fakeModel = { __kind: 'fake-ollama-model' } as const;
 
+interface FullStreamPart {
+  type: string;
+  textDelta?: string;
+  toolCallId?: string;
+  toolName?: string;
+  args?: unknown;
+}
+
 interface FakeStreamResult {
-  textStream: AsyncIterable<string>;
+  fullStream: AsyncIterable<FullStreamPart>;
   usage: Promise<{ promptTokens: number; completionTokens: number; totalTokens: number }>;
 }
 let nextStreamTextResult: FakeStreamResult | null = null;
@@ -57,8 +65,8 @@ vi.mock('ai', () => ({
 
 import { makeOllamaStream } from './ollama.js';
 
-async function* iterableOf(chunks: string[]): AsyncIterable<string> {
-  for (const c of chunks) yield c;
+async function* iterableOf(chunks: string[]): AsyncIterable<FullStreamPart> {
+  for (const c of chunks) yield { type: 'text-delta', textDelta: c };
 }
 
 async function drain(
@@ -95,7 +103,7 @@ describe('makeOllamaStream', () => {
   describe('construction', () => {
     it('passes baseURL through to createOllama when provided', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['ok']),
+        fullStream: iterableOf(['ok']),
         usage: Promise.resolve({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }),
       };
       const stream = makeOllamaStream({
@@ -110,7 +118,7 @@ describe('makeOllamaStream', () => {
 
     it('omits baseURL from the options object when not supplied — SDK default kicks in', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf([]),
+        fullStream: iterableOf([]),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
       };
       const stream = makeOllamaStream({ model: 'qwen2.5:3b' });
@@ -121,7 +129,7 @@ describe('makeOllamaStream', () => {
 
     it('forwards optional custom headers to createOllama', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf([]),
+        fullStream: iterableOf([]),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
       };
       const stream = makeOllamaStream({
@@ -142,7 +150,7 @@ describe('makeOllamaStream', () => {
   describe('invocation', () => {
     it('binds the model id via the provider factory on each call', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['ok']),
+        fullStream: iterableOf(['ok']),
         usage: Promise.resolve({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }),
       };
       const stream = makeOllamaStream({ model: 'llama3.1:8b' });
@@ -154,7 +162,7 @@ describe('makeOllamaStream', () => {
 
     it('calls streamText with model + system + messages unchanged', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['ok']),
+        fullStream: iterableOf(['ok']),
         usage: Promise.resolve({ promptTokens: 2, completionTokens: 2, totalTokens: 4 }),
       };
       const history = [
@@ -179,7 +187,7 @@ describe('makeOllamaStream', () => {
   describe('streaming', () => {
     it('yields each textStream chunk as a delta in order', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['one ', 'two ', 'three']),
+        fullStream: iterableOf(['one ', 'two ', 'three']),
         usage: Promise.resolve({ promptTokens: 8, completionTokens: 3, totalTokens: 11 }),
       };
       const stream = makeOllamaStream({ model: 'qwen2.5:3b' });
@@ -194,7 +202,7 @@ describe('makeOllamaStream', () => {
 
     it('yields a final done chunk with usage resolved from result.usage', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['x']),
+        fullStream: iterableOf(['x']),
         usage: Promise.resolve({ promptTokens: 99, completionTokens: 17, totalTokens: 116 }),
       };
       const stream = makeOllamaStream({ model: 'qwen2.5:3b' });

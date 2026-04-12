@@ -8,6 +8,13 @@
       "when": 1775679879295,
       "tag": "0000_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1775985049640,
+      "tag": "0001_mcp_tables",
+      "breakpoints": true
     }
   ]
 }

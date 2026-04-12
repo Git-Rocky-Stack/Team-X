@@ -122,6 +122,25 @@ export type ResolveProvider = (employee: EmployeeRow) => Promise<{
   stream: ProviderStreamFn;
 }>;
 
+/**
+ * Resolver that builds AI SDK tools for an agent turn. The real
+ * implementation converts MCP tools (filtered by the employee's
+ * tools_allowed/denied) into AI SDK `CoreTool` objects with `execute`
+ * callbacks wired to `McpHost.callTool()`.
+ *
+ * `getRunId` is a getter the caller uses inside execute callbacks to
+ * retrieve the runId that `runAgent` creates at the start of the turn.
+ * It's a getter (not a value) because tool definitions are built
+ * before runAgent creates the run row.
+ *
+ * Returns null when no tools are available for this employee/company.
+ */
+export type ResolveTools = (args: {
+  employee: EmployeeRow;
+  company: CompanyRow;
+  getRunId: () => string;
+}) => Promise<{ tools: Record<string, unknown>; maxSteps: number } | null>;
+
 // ---------------------------------------------------------------------------
 // Public Orchestrator interface
 // ---------------------------------------------------------------------------
@@ -184,6 +203,8 @@ export interface BuildOrchestratorOptions {
   calcCost: CostCalculator;
   resolveSystemPrompt: ResolveSystemPrompt;
   resolveProvider: ResolveProvider;
+  /** Optional — when absent, agents have no tool access. */
+  resolveTools?: ResolveTools;
   /**
    * Concurrent dispatch cap. Phase 1 default is intentionally low (2)
    * so local ollama never gets stampeded; T36 reads the real number
@@ -224,6 +245,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     calcCost,
     resolveSystemPrompt,
     resolveProvider,
+    resolveTools,
     slots,
     now,
   } = opts;
@@ -262,9 +284,15 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       throw new Error(`orchestrator: company not found: ${thread.companyId}`);
     }
 
-    const [system, provider] = await Promise.all([
+    // Mutable ref — filled by runAgent's onRunCreated callback so
+    // tool execute closures can read it at call time.
+    let currentRunId = '';
+    const getRunId = () => currentRunId;
+
+    const [system, provider, toolConfig] = await Promise.all([
       resolveSystemPrompt({ employee, company }),
       resolveProvider(employee),
+      resolveTools ? resolveTools({ employee, company, getRunId }) : Promise.resolve(null),
     ]);
 
     const history = mapHistory(messagesRepo.listByThread(args.threadId));
@@ -286,6 +314,15 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         provider: provider.stream,
         providerName: provider.providerName,
         model: provider.model,
+        ...(toolConfig
+          ? {
+              tools: toolConfig.tools,
+              maxSteps: toolConfig.maxSteps,
+              onRunCreated: (runId: string) => {
+                currentRunId = runId;
+              },
+            }
+          : {}),
       },
     );
   }

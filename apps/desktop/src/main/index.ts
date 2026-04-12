@@ -46,12 +46,18 @@ import { BrowserWindow, app } from 'electron';
 
 import { calcCostUsd } from '@team-x/telemetry-core';
 
+import { type ToolSpec, buildProviderTools } from '@team-x/provider-router';
 import { closeDb, getDb, initDb } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath } from './db/paths.js';
 import { createCompaniesRepo } from './db/repos/companies.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
 import { createEventsRepo } from './db/repos/events.js';
+import {
+  createMcpServersRepo,
+  createToolCallsRepo,
+  seedDefaultMcpServers,
+} from './db/repos/mcp-servers.js';
 import { createMessagesRepo } from './db/repos/messages.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createThreadsRepo } from './db/repos/threads.js';
@@ -62,10 +68,12 @@ import { createEventBus } from './orchestrator/event-bus.js';
 import {
   type Orchestrator,
   type ResolveProvider,
+  type ResolveTools,
   buildOrchestrator,
 } from './orchestrator/index.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
+import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import {
   createProviderFactory,
   createTestModeResolveProvider,
@@ -181,6 +189,7 @@ async function createWindow(): Promise<void> {
 // ---------------------------------------------------------------------------
 let orchestrator: Orchestrator | null = null;
 let unregisterIpc: (() => void) | null = null;
+let mcpHostInstance: McpHost | null = null;
 
 app.whenReady().then(async () => {
   // ---- 1. Database --------------------------------------------------------
@@ -205,8 +214,29 @@ app.whenReady().then(async () => {
   const messagesRepo = createMessagesRepo(db);
   const runsRepo = createRunsRepo(db);
   const eventsRepo = createEventsRepo(db);
+  const mcpServersRepo = createMcpServersRepo(db);
+  const toolCallsRepo = createToolCallsRepo(db);
+
+  // Seed well-known MCP servers on first boot (disabled by default).
+  const mcpSeeded = seedDefaultMcpServers(db);
+  if (mcpSeeded > 0) {
+    console.log(`[mcp] seeded ${mcpSeeded} default MCP server(s)`);
+  }
 
   const bus = createEventBus({ repo: eventsRepo });
+
+  // ---- MCP Host initialization --------------------------------------------
+  const mcpHost = createMcpHost({
+    mcpServersRepo,
+    toolCallsRepo,
+    bus,
+  });
+  mcpHostInstance = mcpHost;
+  // Initialize MCP connections (best-effort, failures logged per-server)
+  await mcpHost.initialize().catch((err) => {
+    console.error('[main] MCP host initialization failed:', err);
+  });
+  console.log('[main] MCP host initialized');
 
   // Provider routing — two modes:
   //
@@ -246,6 +276,56 @@ app.whenReady().then(async () => {
     console.error('[role-loader] preload failed:', err);
   }
 
+  // Tool resolver: converts MCP tools into AI SDK tool objects with
+  // execute callbacks routed through McpHost. Skipped in test mode
+  // (no MCP servers, no tool calls).
+  const resolveTools: ResolveTools | undefined = testMode
+    ? undefined
+    : async ({ employee, company, getRunId }) => {
+        const mcpTools = mcpHost.listTools(company.id);
+        if (mcpTools.length === 0) return null;
+
+        const toolsAllowed: string[] = JSON.parse(employee.toolsAllowedJson ?? '[]');
+        const toolsDenied: string[] = JSON.parse(employee.toolsDeniedJson ?? '[]');
+
+        // Pre-filter at definition time so the model never sees denied tools.
+        const allowedTools = mcpTools.filter((t) => {
+          if (toolsDenied.includes(t.name)) return false;
+          if (toolsAllowed.length > 0 && !toolsAllowed.includes(t.name)) return false;
+          return true;
+        });
+        if (allowedTools.length === 0) return null;
+
+        const specs: ToolSpec[] = allowedTools.map((t) => ({
+          name: t.name,
+          description: t.description ?? '',
+          inputSchema: (t.inputSchema ?? { type: 'object' }) as Record<string, unknown>,
+          execute: async (args: Record<string, unknown>) => {
+            const serverId = mcpHost.findServerForTool(t.name, company.id);
+            if (!serverId) throw new Error(`No MCP server found for tool: ${t.name}`);
+
+            const result = await mcpHost.callTool({
+              serverId,
+              toolName: t.name,
+              toolArgs: args,
+              runId: getRunId(),
+              employeeId: employee.id,
+              toolsAllowed,
+              toolsDenied,
+            });
+            if (!result.success) {
+              throw new Error(result.error ?? `Tool '${t.name}' failed`);
+            }
+            return result.output;
+          },
+        }));
+
+        return {
+          tools: buildProviderTools(specs),
+          maxSteps: 5,
+        };
+      };
+
   orchestrator = buildOrchestrator({
     bus,
     messagesRepo,
@@ -256,6 +336,7 @@ app.whenReady().then(async () => {
     calcCost,
     resolveSystemPrompt: (args) => roleLoader.resolveSystemPrompt(args),
     resolveProvider,
+    resolveTools,
     slots: PHASE_1_ORCHESTRATOR_SLOTS,
   });
 
@@ -266,6 +347,8 @@ app.whenReady().then(async () => {
     messagesRepo,
     orchestrator,
     roleLookup: roleLoader,
+    mcpHost,
+    mcpServersRepo,
   });
   unregisterIpc = registerIpcHandlers(ipcHandlers, bus);
 
@@ -330,6 +413,14 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] ipc unregister failed:', err);
+    }
+    try {
+      if (mcpHostInstance !== null) {
+        await mcpHostInstance.shutdown();
+        mcpHostInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] MCP host shutdown failed:', err);
     }
     try {
       closeDb();

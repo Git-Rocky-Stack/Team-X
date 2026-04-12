@@ -46,8 +46,16 @@ const fakeModel = { __kind: 'fake-anthropic-model' } as const;
  * textStream + usage values. When `nextStreamTextError` is set, the
  * mocked `streamText` rejects instead.
  */
+interface FullStreamPart {
+  type: string;
+  textDelta?: string;
+  toolCallId?: string;
+  toolName?: string;
+  args?: unknown;
+}
+
 interface FakeStreamResult {
-  textStream: AsyncIterable<string>;
+  fullStream: AsyncIterable<FullStreamPart>;
   usage: Promise<{ promptTokens: number; completionTokens: number; totalTokens: number }>;
 }
 let nextStreamTextResult: FakeStreamResult | null = null;
@@ -86,9 +94,9 @@ vi.mock('ai', () => ({
 // Import AFTER the mocks so the adapter picks them up.
 import { makeAnthropicStream } from './anthropic.js';
 
-/** Helper: build an AsyncIterable from a fixed array of chunks. */
-async function* iterableOf(chunks: string[]): AsyncIterable<string> {
-  for (const c of chunks) yield c;
+/** Helper: build a fullStream AsyncIterable from a fixed array of text chunks. */
+async function* iterableOf(chunks: string[]): AsyncIterable<FullStreamPart> {
+  for (const c of chunks) yield { type: 'text-delta', textDelta: c };
 }
 
 /**
@@ -131,7 +139,7 @@ describe('makeAnthropicStream', () => {
   describe('construction', () => {
     it('passes apiKey through to createAnthropic', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['x']),
+        fullStream: iterableOf(['x']),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
       };
       const stream = makeAnthropicStream({ apiKey: 'sk-ant-test-123', model: 'claude-haiku-4-5' });
@@ -143,7 +151,7 @@ describe('makeAnthropicStream', () => {
 
     it('forwards an optional baseURL when supplied', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf([]),
+        fullStream: iterableOf([]),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
       };
       const stream = makeAnthropicStream({
@@ -160,7 +168,7 @@ describe('makeAnthropicStream', () => {
 
     it('omits baseURL from the options object when not supplied', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf([]),
+        fullStream: iterableOf([]),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'm' });
@@ -188,7 +196,7 @@ describe('makeAnthropicStream', () => {
   describe('invocation', () => {
     it('binds the model id via the provider factory on each call', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['ok']),
+        fullStream: iterableOf(['ok']),
         usage: Promise.resolve({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-sonnet-4-6' });
@@ -200,7 +208,7 @@ describe('makeAnthropicStream', () => {
 
     it('calls streamText with model + system + messages unchanged', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['ok']),
+        fullStream: iterableOf(['ok']),
         usage: Promise.resolve({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }),
       };
       const history = [
@@ -227,7 +235,7 @@ describe('makeAnthropicStream', () => {
   describe('streaming', () => {
     it('yields each textStream chunk as a delta in order', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['Hel', 'lo, ', 'world!']),
+        fullStream: iterableOf(['Hel', 'lo, ', 'world!']),
         usage: Promise.resolve({ promptTokens: 12, completionTokens: 3, totalTokens: 15 }),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-haiku-4-5' });
@@ -241,7 +249,7 @@ describe('makeAnthropicStream', () => {
 
     it('yields a final done chunk with usage resolved from result.usage', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf(['a', 'b']),
+        fullStream: iterableOf(['a', 'b']),
         usage: Promise.resolve({ promptTokens: 42, completionTokens: 7, totalTokens: 49 }),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-haiku-4-5' });
@@ -253,7 +261,7 @@ describe('makeAnthropicStream', () => {
 
     it('handles an empty textStream by still emitting a done chunk', async () => {
       nextStreamTextResult = {
-        textStream: iterableOf([]),
+        fullStream: iterableOf([]),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-haiku-4-5' });
@@ -275,13 +283,13 @@ describe('makeAnthropicStream', () => {
       }).rejects.toThrow(/rate limited/);
     });
 
-    it('propagates a mid-stream rejection from textStream', async () => {
-      async function* failing(): AsyncIterable<string> {
-        yield 'prefix ';
+    it('propagates a mid-stream rejection from fullStream', async () => {
+      async function* failing(): AsyncIterable<FullStreamPart> {
+        yield { type: 'text-delta', textDelta: 'prefix ' };
         throw new Error('connection reset');
       }
       nextStreamTextResult = {
-        textStream: failing(),
+        fullStream: failing(),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-haiku-4-5' });

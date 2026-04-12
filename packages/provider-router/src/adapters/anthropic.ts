@@ -51,7 +51,7 @@
  */
 
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { type CoreMessage, streamText } from 'ai';
+import { type CoreMessage, type CoreTool, streamText } from 'ai';
 
 import type { ProviderStreamFn } from '../stream.js';
 
@@ -113,22 +113,39 @@ export function makeAnthropicStream(options: AnthropicAdapterOptions): ProviderS
   }
   const provider = createAnthropic(providerOptions);
 
-  return async function* anthropicStream({ system, messages }) {
-    // `streamText` returns a Promise<StreamTextResult> in ai@3.4.x.
-    // The await here is the network handshake — auth + model-not-found
-    // errors land here, before we open the textStream iterator.
+  return async function* anthropicStream({ system, messages, tools, maxSteps }) {
     const result = await streamText({
       model: provider(options.model),
       system,
-      // The provider-router's `StreamMessage` shape (`role: 'system' |
-      // 'user' | 'assistant'`, `content: string`) is a structural subset
-      // of the Vercel SDK's `CoreMessage` discriminated union; the cast
-      // is a documentation artifact rather than a real coercion.
       messages: messages as CoreMessage[],
+      ...(tools && Object.keys(tools).length > 0
+        ? { tools: tools as Record<string, CoreTool>, maxSteps: maxSteps ?? 1 }
+        : {}),
     });
 
-    for await (const textDelta of result.textStream) {
-      yield { delta: textDelta };
+    // When tools are present we use fullStream to surface tool-call
+    // and tool-result events alongside text deltas. When no tools are
+    // configured, fullStream still works identically to the old
+    // textStream-only path — text-delta events are the only ones that
+    // fire.
+    for await (const part of result.fullStream) {
+      switch (part.type) {
+        case 'text-delta':
+          yield { delta: part.textDelta };
+          break;
+        case 'tool-call':
+          yield {
+            toolCall: {
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              args: part.args as Record<string, unknown>,
+            },
+          };
+          break;
+        // tool execution + results are handled automatically by the SDK
+        // via the execute callbacks wired into each tool definition.
+        // step-finish, finish, error — handled below via result.usage
+      }
     }
 
     const usage = await result.usage;

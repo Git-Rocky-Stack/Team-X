@@ -20,17 +20,68 @@ export interface StreamUsage {
   completionTokens: number;
 }
 
-export type StreamChunk = { kind: 'delta'; delta: string } | { kind: 'done'; usage: StreamUsage };
+// ---------------------------------------------------------------------------
+// Tool-call types
+// ---------------------------------------------------------------------------
 
+export interface StreamToolCall {
+  toolCallId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+}
+
+export interface StreamToolResult {
+  toolCallId: string;
+  toolName: string;
+  result: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// Stream chunk union
+// ---------------------------------------------------------------------------
+
+export type StreamChunk =
+  | { kind: 'delta'; delta: string }
+  | { kind: 'done'; usage: StreamUsage }
+  | { kind: 'tool-call'; toolCallId: string; toolName: string; args: Record<string, unknown> }
+  | { kind: 'tool-result'; toolCallId: string; toolName: string; result: unknown };
+
+// ---------------------------------------------------------------------------
+// Provider stream contract
+// ---------------------------------------------------------------------------
+
+/**
+ * Raw event shape yielded by provider adapters. Each field is optional;
+ * the adapter sets whichever fields apply to the current event.
+ */
+export interface ProviderStreamEvent {
+  delta?: string;
+  done?: boolean;
+  usage?: StreamUsage;
+  toolCall?: StreamToolCall;
+  toolResult?: StreamToolResult;
+}
+
+/**
+ * Factory that opens a streaming LLM turn. Concrete adapters (Anthropic,
+ * Ollama, etc.) close over auth + model config and conform to this shape.
+ *
+ * `tools` is typed as `Record<string, unknown>` to keep this module free
+ * of AI SDK imports — adapters cast to `Record<string, CoreTool>` internally.
+ */
 export type ProviderStreamFn = (args: {
   system: string;
   messages: StreamMessage[];
-}) => AsyncGenerator<{ delta?: string; done?: boolean; usage?: StreamUsage }>;
+  tools?: Record<string, unknown>;
+  maxSteps?: number;
+}) => AsyncGenerator<ProviderStreamEvent>;
 
 export interface StreamAgentArgs {
   providerFactory: ProviderStreamFn;
   system: string;
   messages: StreamMessage[];
+  tools?: Record<string, unknown>;
+  maxSteps?: number;
 }
 
 /**
@@ -41,7 +92,25 @@ export async function* streamAgent(args: StreamAgentArgs): AsyncGenerator<Stream
   for await (const evt of args.providerFactory({
     system: args.system,
     messages: args.messages,
+    tools: args.tools,
+    maxSteps: args.maxSteps,
   })) {
+    if (evt.toolCall) {
+      yield {
+        kind: 'tool-call',
+        toolCallId: evt.toolCall.toolCallId,
+        toolName: evt.toolCall.toolName,
+        args: evt.toolCall.args,
+      };
+    }
+    if (evt.toolResult) {
+      yield {
+        kind: 'tool-result',
+        toolCallId: evt.toolResult.toolCallId,
+        toolName: evt.toolResult.toolName,
+        result: evt.toolResult.result,
+      };
+    }
     if (evt.delta !== undefined) {
       yield { kind: 'delta', delta: evt.delta };
     }

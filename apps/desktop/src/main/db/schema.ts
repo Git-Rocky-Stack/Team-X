@@ -167,3 +167,39 @@ export const settings = sqliteTable('settings', {
   scopeId: text('scope_id'),
   updatedAt: integer('updated_at').notNull(),
 });
+
+/**
+ * MCP server configurations. Global servers (company_id=null) are available
+ * to all companies; per-company servers override or extend globals.
+ */
+export const mcpServers = sqliteTable('mcp_servers', {
+  id: text('id').primaryKey(),
+  /** Null = global server; otherwise scoped to this company. */
+  companyId: text('company_id'),
+  name: text('name').notNull(),
+  /** stdio | sse */
+  transport: text('transport').notNull(),
+  /** Command + args for stdio, or URL for SSE. */
+  configJson: text('config_json').notNull().default('{}'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  lastHealth: text('last_health'),
+  installedAt: integer('installed_at').notNull(),
+});
+
+/**
+ * Tool call audit log. Every tool invocation by an agent is recorded here.
+ * Input/output are truncated to 8KB max to prevent bloat.
+ */
+export const toolCalls = sqliteTable('tool_calls', {
+  id: text('id').primaryKey(),
+  runId: text('run_id').notNull(),
+  toolName: text('tool_name').notNull(),
+  mcpServerId: text('mcp_server_id'),
+  inputJson: text('input_json').notNull(),
+  outputJson: text('output_json'),
+  latencyMs: integer('latency_ms').notNull().default(0),
+  /** success | error | denied */
+  status: text('status').notNull().default('success'),
+  error: text('error'),
+  createdAt: integer('created_at').notNull(),
+});

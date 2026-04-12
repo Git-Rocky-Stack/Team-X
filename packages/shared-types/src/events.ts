@@ -7,7 +7,9 @@ export type EventType =
   | 'message.persisted'
   | 'work.completed'
   | 'work.failed'
-  | 'employee.status_changed';
+  | 'employee.status_changed'
+  | 'tool.called'
+  | 'tool.result';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -39,4 +41,19 @@ export interface WorkCompletedPayload {
   completionTokens: number;
   latencyMs: number;
   costUsd: number;
+}
+
+export interface ToolCalledPayload {
+  threadId: string;
+  messageId: string;
+  toolCallId: string;
+  toolName: string;
+}
+
+export interface ToolResultPayload {
+  threadId: string;
+  messageId: string;
+  toolCallId: string;
+  toolName: string;
+  success: boolean;
 }

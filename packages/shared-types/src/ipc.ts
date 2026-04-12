@@ -103,6 +103,47 @@ export interface ResolveThreadResponse {
 }
 
 // ---------------------------------------------------------------------------
+// MCP-related shapes
+// ---------------------------------------------------------------------------
+
+export interface McpServerSummary {
+  id: string;
+  companyId: string | null;
+  name: string;
+  transport: 'stdio' | 'sse';
+  enabled: boolean;
+  lastHealth: string | null;
+  toolCount: number;
+}
+
+export interface ListMcpServersRequest {
+  companyId: string;
+}
+
+export interface ToggleMcpServerRequest {
+  serverId: string;
+  enabled: boolean;
+}
+
+export interface AddMcpServerRequest {
+  companyId: string | null;
+  name: string;
+  transport: 'stdio' | 'sse';
+  configJson: string;
+}
+
+export interface TestMcpConnectionRequest {
+  transport: 'stdio' | 'sse';
+  configJson: string;
+}
+
+export interface TestMcpConnectionResponse {
+  ok: boolean;
+  error?: string;
+  toolCount?: number;
+}
+
+// ---------------------------------------------------------------------------
 // Low-level channel map (used by ipcMain.handle and its generic helpers)
 // ---------------------------------------------------------------------------
 
@@ -130,6 +171,27 @@ export interface IpcContract {
   'chat.resolveThread': {
     request: ResolveThreadRequest;
     response: ResolveThreadResponse;
+  };
+  // MCP management channels
+  'mcp.list': {
+    request: ListMcpServersRequest;
+    response: McpServerSummary[];
+  };
+  'mcp.toggle': {
+    request: ToggleMcpServerRequest;
+    response: undefined;
+  };
+  'mcp.addServer': {
+    request: AddMcpServerRequest;
+    response: { serverId: string };
+  };
+  'mcp.removeServer': {
+    request: { serverId: string };
+    response: undefined;
+  };
+  'mcp.testConnection': {
+    request: TestMcpConnectionRequest;
+    response: TestMcpConnectionResponse;
   };
 }
 
@@ -216,6 +278,18 @@ export interface TeamXApi {
      * `useEffect` cleanup) so dead listeners don't accumulate.
      */
     onDashboard(listener: DashboardEventListener): UnsubscribeFn;
+  };
+  mcp: {
+    /** List all MCP servers available to a company (global + company-specific). */
+    list(companyId: string): Promise<McpServerSummary[]>;
+    /** Enable or disable an MCP server. Connects/disconnects as needed. */
+    toggle(serverId: string, enabled: boolean): Promise<void>;
+    /** Register a new MCP server and attempt immediate connection. */
+    addServer(req: AddMcpServerRequest): Promise<{ serverId: string }>;
+    /** Disconnect and remove an MCP server. */
+    removeServer(serverId: string): Promise<void>;
+    /** Test an MCP connection without persisting. */
+    testConnection(req: TestMcpConnectionRequest): Promise<TestMcpConnectionResponse>;
   };
 }
 

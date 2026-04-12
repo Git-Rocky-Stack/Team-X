@@ -64,6 +64,12 @@ const REQUEST_CHANNELS = [
   'chat.send',
   'chat.list',
   'chat.resolveThread',
+  // MCP management (Phase 2 — M10)
+  'mcp.list',
+  'mcp.toggle',
+  'mcp.addServer',
+  'mcp.removeServer',
+  'mcp.testConnection',
 ] as const;
 
 /** Channel name for the one-way bus → renderer fan-out. */
@@ -105,6 +111,41 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('chat.resolveThread', async (_event, request: { employeeId: string }) => {
     return handlers.chatResolveThread(request);
   });
+
+  // MCP management handlers (Phase 2 — M10)
+  ipcMain.handle('mcp.list', async (_event, request: { companyId: string }) => {
+    return handlers.mcpList(request);
+  });
+
+  ipcMain.handle('mcp.toggle', async (_event, request: { serverId: string; enabled: boolean }) => {
+    return handlers.mcpToggle(request);
+  });
+
+  ipcMain.handle(
+    'mcp.addServer',
+    async (
+      _event,
+      request: {
+        companyId: string | null;
+        name: string;
+        transport: 'stdio' | 'sse';
+        configJson: string;
+      },
+    ) => {
+      return handlers.mcpAddServer(request);
+    },
+  );
+
+  ipcMain.handle('mcp.removeServer', async (_event, request: { serverId: string }) => {
+    return handlers.mcpRemoveServer(request);
+  });
+
+  ipcMain.handle(
+    'mcp.testConnection',
+    async (_event, request: { transport: 'stdio' | 'sse'; configJson: string }) => {
+      return handlers.mcpTestConnection(request);
+    },
+  );
 
   // Bus → renderer forwarder. The bus is synchronous fan-out, so the
   // listener runs on the same tick as the orchestrator's `emit` call —
