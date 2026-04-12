@@ -12,6 +12,7 @@ import { FloorView } from './features/dashboard/floor-view.js';
 import { StreamView } from './features/dashboard/stream-view.js';
 import { TimelineView } from './features/dashboard/timeline-view.js';
 import { HireDialog } from './features/hire/hire-dialog.js';
+import { MeetingsView } from './features/meetings/meetings-view.js';
 import { ProjectsView } from './features/projects/projects-view.js';
 import { TicketsView } from './features/tickets/tickets-view.js';
 
@@ -93,7 +94,7 @@ export default function App() {
       case 'projects':
         return <ProjectsView companyId={companyId} employees={employees} />;
       case 'meetings':
-        return <ComingSoon label="Meetings" />;
+        return <MeetingsView companyId={companyId} employees={employees} />;
       case 'chat':
         return <ComingSoon label="Chat" />;
       case 'telemetry':

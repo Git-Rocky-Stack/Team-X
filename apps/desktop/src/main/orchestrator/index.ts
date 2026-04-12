@@ -85,6 +85,7 @@ export interface OrchestratorEmployeesRepo {
 
 export interface OrchestratorCompaniesRepo {
   getById(id: string): CompanyRow | null;
+  setStatus(id: string, status: string): void;
 }
 
 export interface OrchestratorThreadsRepo {
@@ -195,6 +196,25 @@ export interface Orchestrator {
   resume(): void;
 
   /**
+   * Pause dispatch for a single company — used by the meeting primitive.
+   * Sets company.status to 'meeting' in the DB and blocks new work for
+   * that company. In-flight turns for the company continue to completion.
+   * Returns a Promise that resolves when all in-flight work for the
+   * company has drained.
+   */
+  pauseCompany(companyId: string): Promise<void>;
+
+  /**
+   * Resume dispatch for a previously paused company. Sets company.status
+   * back to 'running' in the DB and allows new work to proceed.
+   * No-op if the company is not paused.
+   */
+  resumeCompany(companyId: string): void;
+
+  /** Whether a specific company is currently paused (in a meeting). */
+  isCompanyPaused(companyId: string): boolean;
+
+  /**
    * Gracefully stop: pause the queue, await every in-flight turn, then
    * reject any subsequent `enqueueChat` calls. Safe to call multiple
    * times — second and later calls return the same drain promise.
@@ -288,6 +308,59 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
   let shuttingDown = false;
   let shutdownPromise: Promise<void> | null = null;
 
+  // Per-company pause tracking for the meeting primitive.
+  // When a company is paused, new work for that company waits on a
+  // gate promise until resumeCompany() resolves it.
+  const pausedCompanies = new Set<string>();
+  const companyGates = new Map<string, { resolve: () => void; promise: Promise<void> }>();
+  /** Track in-flight work per company so pauseCompany can drain. */
+  const companyInFlight = new Map<string, number>();
+
+  function incrementCompanyInFlight(companyId: string): void {
+    companyInFlight.set(companyId, (companyInFlight.get(companyId) ?? 0) + 1);
+  }
+
+  function decrementCompanyInFlight(companyId: string): void {
+    const count = (companyInFlight.get(companyId) ?? 1) - 1;
+    if (count <= 0) {
+      companyInFlight.delete(companyId);
+      // Notify any drain waiters for this company
+      const drainResolvers = companyDrainWaiters.get(companyId);
+      if (drainResolvers) {
+        for (const r of drainResolvers) r();
+        companyDrainWaiters.delete(companyId);
+      }
+    } else {
+      companyInFlight.set(companyId, count);
+    }
+  }
+
+  const companyDrainWaiters = new Map<string, Array<() => void>>();
+
+  function waitForCompanyDrain(companyId: string): Promise<void> {
+    if ((companyInFlight.get(companyId) ?? 0) === 0) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      const existing = companyDrainWaiters.get(companyId) ?? [];
+      existing.push(resolve);
+      companyDrainWaiters.set(companyId, existing);
+    });
+  }
+
+  /**
+   * If the company is paused, wait until it's resumed before proceeding.
+   * This is called inside the queued task, AFTER it gets a slot but
+   * BEFORE any lookups or provider calls — so a paused company genuinely
+   * does no work.
+   */
+  async function waitIfCompanyPaused(companyId: string): Promise<void> {
+    const gate = companyGates.get(companyId);
+    if (gate && pausedCompanies.has(companyId)) {
+      await gate.promise;
+    }
+  }
+
   async function runTurn(args: EnqueueChatArgs): Promise<void> {
     // All lookups happen inside the queued task. If the orchestrator
     // was paused between enqueue and dispatch, these don't fire.
@@ -295,6 +368,10 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     if (!thread) {
       throw new Error(`orchestrator: thread not found: ${args.threadId}`);
     }
+
+    // Per-company pause gate: if the company is in a meeting, wait
+    // until the meeting ends before doing any work.
+    await waitIfCompanyPaused(thread.companyId);
 
     const employee = employeesRepo.getById(args.employeeId);
     if (!employee) {
@@ -403,6 +480,9 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       throw new Error(`orchestrator: thread not found: ${args.threadId}`);
     }
 
+    // Per-company pause gate (same as runTurn).
+    await waitIfCompanyPaused(thread.companyId);
+
     const employee = employeesRepo.getById(args.employeeId);
     if (!employee) {
       throw new Error(`orchestrator: employee not found: ${args.employeeId}`);
@@ -490,6 +570,17 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     );
   }
 
+  /**
+   * Resolve the company id for an enqueued task. Used for in-flight
+   * tracking. We look up the thread to find the company — same lookup
+   * that runTurn does, but here we just need the company id for
+   * bookkeeping before the task enters the queue.
+   */
+  function resolveCompanyId(threadId: string): string | null {
+    const thread = threadsRepo.getById(threadId);
+    return thread?.companyId ?? null;
+  }
+
   // Self-reference for built-in tools to call back into.
   const enqueueAgentReplyInternal: EnqueueAgentReplyFn = (args) => {
     if (shuttingDown) {
@@ -497,7 +588,13 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         new Error('orchestrator: cannot enqueue — orchestrator is shutting down'),
       );
     }
-    return queue.enqueue(() => runAgentReplyTurn(args));
+    const cid = resolveCompanyId(args.threadId);
+    if (cid) incrementCompanyInFlight(cid);
+    return queue
+      .enqueue(() => runAgentReplyTurn(args))
+      .finally(() => {
+        if (cid) decrementCompanyInFlight(cid);
+      });
   };
 
   return {
@@ -507,7 +604,13 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
           new Error('orchestrator: cannot enqueue — orchestrator is shutting down'),
         );
       }
-      return queue.enqueue(() => runTurn(args));
+      const cid = resolveCompanyId(args.threadId);
+      if (cid) incrementCompanyInFlight(cid);
+      return queue
+        .enqueue(() => runTurn(args))
+        .finally(() => {
+          if (cid) decrementCompanyInFlight(cid);
+        });
     },
 
     enqueueAgentReply(args: EnqueueAgentReplyArgs): Promise<void> {
@@ -521,6 +624,39 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     resume(): void {
       if (shuttingDown) return;
       queue.resume();
+    },
+
+    async pauseCompany(companyId: string): Promise<void> {
+      if (pausedCompanies.has(companyId)) return;
+      pausedCompanies.add(companyId);
+      companiesRepo.setStatus(companyId, 'meeting');
+
+      // Create a gate that new work for this company will await.
+      let gateResolve: () => void = () => {};
+      const gatePromise = new Promise<void>((r) => {
+        gateResolve = r;
+      });
+      companyGates.set(companyId, { resolve: gateResolve, promise: gatePromise });
+
+      // Wait for any in-flight work for this company to finish.
+      await waitForCompanyDrain(companyId);
+    },
+
+    resumeCompany(companyId: string): void {
+      if (!pausedCompanies.has(companyId)) return;
+      pausedCompanies.delete(companyId);
+      companiesRepo.setStatus(companyId, 'running');
+
+      // Open the gate so any queued work for this company can proceed.
+      const gate = companyGates.get(companyId);
+      if (gate) {
+        gate.resolve();
+        companyGates.delete(companyId);
+      }
+    },
+
+    isCompanyPaused(companyId: string): boolean {
+      return pausedCompanies.has(companyId);
     },
 
     shutdown(): Promise<void> {

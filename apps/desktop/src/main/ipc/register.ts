@@ -45,6 +45,8 @@
 
 import { BrowserWindow, ipcMain } from 'electron';
 
+import type { MeetingMode } from '@team-x/shared-types';
+
 import type { EventBus } from '../orchestrator/event-bus.js';
 import type { IpcHandlers } from './handlers.js';
 
@@ -87,6 +89,12 @@ const REQUEST_CHANNELS = [
   'projects.delete',
   'projects.linkTicket',
   'projects.unlinkTicket',
+  // Meeting management (Phase 3 — M16)
+  'meetings.call',
+  'meetings.end',
+  'meetings.interject',
+  'meetings.list',
+  'meetings.get',
   // Ticket management (Phase 2 — M12)
   'tickets.create',
   'tickets.update',
@@ -291,6 +299,45 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
       return handlers.projectsUnlinkTicket(request);
     },
   );
+
+  // Meeting management handlers (Phase 3 — M16)
+  ipcMain.handle(
+    'meetings.call',
+    async (
+      _event,
+      request: {
+        companyId: string;
+        chairId: string;
+        attendeeIds: string[];
+        agenda: string;
+        mode?: string;
+      },
+    ) => {
+      return handlers.meetingsCall({
+        ...request,
+        mode: request.mode as MeetingMode | undefined,
+      });
+    },
+  );
+
+  ipcMain.handle('meetings.end', async (_event, request: { meetingId: string }) => {
+    return handlers.meetingsEnd(request);
+  });
+
+  ipcMain.handle(
+    'meetings.interject',
+    async (_event, request: { meetingId: string; content: string }) => {
+      return handlers.meetingsInterject(request);
+    },
+  );
+
+  ipcMain.handle('meetings.list', async (_event, request: { companyId: string }) => {
+    return handlers.meetingsList(request);
+  });
+
+  ipcMain.handle('meetings.get', async (_event, request: { meetingId: string }) => {
+    return handlers.meetingsGet(request);
+  });
 
   // Ticket management handlers (Phase 2 — M12)
   ipcMain.handle(

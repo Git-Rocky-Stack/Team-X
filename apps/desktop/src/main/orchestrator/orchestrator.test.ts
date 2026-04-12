@@ -446,6 +446,94 @@ describe('buildOrchestrator', () => {
     });
   });
 
+  describe('per-company pause (meeting primitive)', () => {
+    it('pauseCompany blocks new work for that company', async () => {
+      let started = false;
+      const provider: ProviderStreamFn = async function* () {
+        started = true;
+        yield { delta: 'x' };
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+      const orchestrator = buildDefaultOrchestrator(f, { provider, slots: 2 });
+      await orchestrator.pauseCompany(f.companyId);
+
+      const p = orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+      // Yield so any queued dispatch has a chance to run.
+      await new Promise((r) => setTimeout(r, 20));
+      expect(started).toBe(false);
+      expect(orchestrator.isCompanyPaused(f.companyId)).toBe(true);
+
+      orchestrator.resumeCompany(f.companyId);
+      await p;
+      expect(started).toBe(true);
+      expect(orchestrator.isCompanyPaused(f.companyId)).toBe(false);
+    });
+
+    it('pauseCompany drains in-flight work before resolving', async () => {
+      let finishFirst: () => void = () => {};
+      const gate = new Promise<void>((res) => {
+        finishFirst = res;
+      });
+      const provider: ProviderStreamFn = async function* () {
+        yield { delta: 'x' };
+        await gate;
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+      const orchestrator = buildDefaultOrchestrator(f, { provider, slots: 2 });
+
+      // Start a turn that blocks on the gate.
+      const chatP = orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+      // Let the turn enter the stream loop.
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Now pause — should wait for the in-flight turn.
+      let pauseResolved = false;
+      const pauseP = orchestrator.pauseCompany(f.companyId).then(() => {
+        pauseResolved = true;
+      });
+      await new Promise((r) => setTimeout(r, 10));
+      expect(pauseResolved).toBe(false);
+
+      // Release the in-flight turn.
+      finishFirst();
+      await chatP;
+      await pauseP;
+      expect(pauseResolved).toBe(true);
+    });
+
+    it('pauseCompany is idempotent', async () => {
+      const orchestrator = buildDefaultOrchestrator(f);
+      await orchestrator.pauseCompany(f.companyId);
+      await orchestrator.pauseCompany(f.companyId); // no-op
+      expect(orchestrator.isCompanyPaused(f.companyId)).toBe(true);
+      orchestrator.resumeCompany(f.companyId);
+    });
+
+    it('resumeCompany is a no-op if not paused', () => {
+      const orchestrator = buildDefaultOrchestrator(f);
+      // Should not throw.
+      orchestrator.resumeCompany(f.companyId);
+      expect(orchestrator.isCompanyPaused(f.companyId)).toBe(false);
+    });
+
+    it('sets company status in DB on pause and resume', async () => {
+      const orchestrator = buildDefaultOrchestrator(f);
+      await orchestrator.pauseCompany(f.companyId);
+      expect(f.companiesRepo.getById(f.companyId)?.status).toBe('meeting');
+
+      orchestrator.resumeCompany(f.companyId);
+      expect(f.companiesRepo.getById(f.companyId)?.status).toBe('running');
+    });
+  });
+
   describe('lookup failures', () => {
     it('rejects if the thread is missing', async () => {
       const orchestrator = buildDefaultOrchestrator(f);

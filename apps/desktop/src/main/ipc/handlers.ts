@@ -41,6 +41,8 @@ import type {
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   AssignTicketRequest,
+  CallMeetingRequest,
+  CallMeetingResponse,
   ChatMessage,
   CloseTicketRequest,
   Company,
@@ -55,20 +57,30 @@ import type {
   DeleteGoalRequest,
   DeleteProjectRequest,
   Employee,
+  EndMeetingResponse,
   GetGoalRequest,
+  GetMeetingRequest,
   GetProjectRequest,
   GetTicketRequest,
   Goal,
   GoalDetail,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  InterjectMeetingRequest,
+  InterjectMeetingResponse,
   LinkTicketToProjectRequest,
   ListEventsRequest,
   ListEventsResponse,
   ListGoalsRequest,
+  ListMeetingsRequest,
   ListProjectsRequest,
   ListTicketsRequest,
   McpServerSummary,
+  Meeting,
+  MeetingActionItem,
+  MeetingDetail,
+  MeetingMode,
+  MeetingStatus,
   Project,
   ProjectDetail,
   ReopenTicketRequest,
@@ -93,6 +105,7 @@ import type { RoleSpec } from '@team-x/shared-types';
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { CreateEmployeeInput, EmployeeRow } from '../db/repos/employees.js';
 import type { CreateGoalInput, GoalRow, UpdateGoalInput } from '../db/repos/goals.js';
+import type { MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { CreateProjectInput, ProjectRow, UpdateProjectInput } from '../db/repos/projects.js';
 import type {
@@ -104,6 +117,7 @@ import type {
   ThreadWithMembers,
 } from '../db/repos/threads.js';
 import type { CreateTicketInput, TicketRow, UpdateTicketInput } from '../db/repos/tickets.js';
+import type { createMeetingService } from '../orchestrator/meeting-service.js';
 
 /**
  * Hardcoded id of the (single) human user in Phase 1. Replaced by a
@@ -229,6 +243,13 @@ export interface IpcEventsRepo {
   listByCompany(companyId: string, cursor: number | undefined, limit: number): EventRow[];
 }
 
+export interface IpcMeetingsRepo {
+  getById(id: string): MeetingRow | null;
+  listByCompany(companyId: string): MeetingRow[];
+}
+
+export type IpcMeetingService = ReturnType<typeof createMeetingService>;
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -237,8 +258,10 @@ export interface IpcHandlerDeps {
   ticketsRepo: IpcTicketsRepo;
   goalsRepo: IpcGoalsRepo;
   projectsRepo: IpcProjectsRepo;
+  meetingsRepo: IpcMeetingsRepo;
   eventsRepo: IpcEventsRepo;
   orchestrator: IpcOrchestrator;
+  meetingService: IpcMeetingService;
   roleLookup: IpcRoleLookup;
   mcpHost: McpHost;
   mcpServersRepo: McpServersRepo;
@@ -390,6 +413,21 @@ export interface IpcHandlers {
   projectsLinkTicket(req: LinkTicketToProjectRequest): Promise<void>;
   /** `projects.unlinkTicket` — unlink a ticket from a project. */
   projectsUnlinkTicket(req: UnlinkTicketFromProjectRequest): Promise<void>;
+
+  // -----------------------------------------------------------------------
+  // Meeting management handlers (Phase 3 — M16)
+  // -----------------------------------------------------------------------
+
+  /** `meetings.call` — start a meeting (pause orchestrator, create thread + meeting). */
+  meetingsCall(req: CallMeetingRequest): Promise<CallMeetingResponse>;
+  /** `meetings.end` — end meeting, generate minutes, create action-item tickets, resume. */
+  meetingsEnd(req: { meetingId: string }): Promise<EndMeetingResponse>;
+  /** `meetings.interject` — Rocky sends a message mid-meeting. */
+  meetingsInterject(req: InterjectMeetingRequest): Promise<InterjectMeetingResponse>;
+  /** `meetings.list` — list all meetings for a company. */
+  meetingsList(req: ListMeetingsRequest): Promise<Meeting[]>;
+  /** `meetings.get` — get full meeting detail with thread messages and chair. */
+  meetingsGet(req: GetMeetingRequest): Promise<MeetingDetail>;
 
   // -----------------------------------------------------------------------
   // Ticket management handlers (Phase 2 — M12)
@@ -563,6 +601,35 @@ function rowToProject(row: ProjectRow): Project {
   };
 }
 
+function rowToMeeting(row: MeetingRow): Meeting {
+  let attendees: string[] = [];
+  try {
+    attendees = JSON.parse(row.attendeesJson);
+  } catch {
+    attendees = [];
+  }
+  let actionItems: MeetingActionItem[] = [];
+  try {
+    actionItems = JSON.parse(row.actionItemsJson);
+  } catch {
+    actionItems = [];
+  }
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    threadId: row.threadId,
+    chairId: row.chairId,
+    agenda: row.agenda,
+    mode: row.mode as MeetingMode,
+    status: row.status as MeetingStatus,
+    minutesMd: row.minutesMd,
+    attendees,
+    actionItems,
+    startedAt: row.startedAt,
+    endedAt: row.endedAt,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
@@ -576,8 +643,10 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     ticketsRepo,
     goalsRepo,
     projectsRepo,
+    meetingsRepo,
     eventsRepo,
     orchestrator,
+    meetingService,
     roleLookup,
     mcpHost,
     mcpServersRepo,
@@ -1081,6 +1150,81 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] projects.unlinkTicket: ticketId is required');
       }
       projectsRepo.unlinkTicket(req.projectId, req.ticketId);
+    },
+
+    // -----------------------------------------------------------------------
+    // Meeting management handlers (Phase 3 — M16)
+    // -----------------------------------------------------------------------
+
+    async meetingsCall(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] meetings.call: companyId is required');
+      }
+      if (typeof req.chairId !== 'string' || req.chairId.length === 0) {
+        throw new Error('[ipc] meetings.call: chairId is required');
+      }
+      if (!Array.isArray(req.attendeeIds) || req.attendeeIds.length === 0) {
+        throw new Error('[ipc] meetings.call: attendeeIds must be a non-empty array');
+      }
+      return meetingService.callMeeting({
+        companyId: req.companyId,
+        chairId: req.chairId,
+        attendeeIds: req.attendeeIds,
+        agenda: req.agenda ?? '',
+        mode: req.mode,
+      });
+    },
+
+    async meetingsEnd(req) {
+      if (typeof req.meetingId !== 'string' || req.meetingId.length === 0) {
+        throw new Error('[ipc] meetings.end: meetingId is required');
+      }
+      return meetingService.endMeeting(req.meetingId);
+    },
+
+    async meetingsInterject(req) {
+      if (typeof req.meetingId !== 'string' || req.meetingId.length === 0) {
+        throw new Error('[ipc] meetings.interject: meetingId is required');
+      }
+      if (typeof req.content !== 'string' || req.content.trim().length === 0) {
+        throw new Error('[ipc] meetings.interject: content is required');
+      }
+      return meetingService.interject(req.meetingId, req.content);
+    },
+
+    async meetingsList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] meetings.list: companyId is required');
+      }
+      return meetingsRepo.listByCompany(req.companyId).map(rowToMeeting);
+    },
+
+    async meetingsGet(req) {
+      if (typeof req.meetingId !== 'string' || req.meetingId.length === 0) {
+        throw new Error('[ipc] meetings.get: meetingId is required');
+      }
+      const meeting = meetingsRepo.getById(req.meetingId);
+      if (!meeting) {
+        throw new Error(`[ipc] meetings.get: meeting not found: ${req.meetingId}`);
+      }
+
+      // Fetch thread messages
+      let messages: ChatMessage[] = [];
+      if (meeting.threadId) {
+        const rows = messagesRepo.listByThread(meeting.threadId);
+        messages = rows.map(rowToChatMessage);
+      }
+
+      // Fetch chair employee
+      let chair: Employee | null = null;
+      const chairRow = employeesRepo.getById(meeting.chairId);
+      if (chairRow) chair = rowToEmployee(chairRow);
+
+      return {
+        ...rowToMeeting(meeting),
+        messages,
+        chair,
+      };
     },
 
     // -----------------------------------------------------------------------

@@ -59,6 +59,7 @@ import {
   createToolCallsRepo,
   seedDefaultMcpServers,
 } from './db/repos/mcp-servers.js';
+import { createMeetingsRepo } from './db/repos/meetings.js';
 import { createMessagesRepo } from './db/repos/messages.js';
 import { createProjectsRepo } from './db/repos/projects.js';
 import { createRunsRepo } from './db/repos/runs.js';
@@ -74,6 +75,7 @@ import {
   type ResolveTools,
   buildOrchestrator,
 } from './orchestrator/index.js';
+import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
@@ -222,6 +224,7 @@ app.whenReady().then(async () => {
   const ticketsRepo = createTicketsRepo(db);
   const goalsRepo = createGoalsRepo(db);
   const projectsRepo = createProjectsRepo(db);
+  const meetingsRepo = createMeetingsRepo(db);
 
   // Seed well-known MCP servers on first boot (disabled by default).
   const mcpSeeded = seedDefaultMcpServers(db);
@@ -346,6 +349,16 @@ app.whenReady().then(async () => {
     slots: PHASE_1_ORCHESTRATOR_SLOTS,
   });
 
+  const meetingService = createMeetingService({
+    orchestrator,
+    bus,
+    meetingsRepo,
+    threadsRepo,
+    messagesRepo,
+    employeesRepo,
+    ticketsRepo,
+  });
+
   const ipcHandlers = createIpcHandlers({
     companiesRepo,
     employeesRepo,
@@ -354,8 +367,10 @@ app.whenReady().then(async () => {
     ticketsRepo,
     goalsRepo,
     projectsRepo,
+    meetingsRepo,
     eventsRepo,
     orchestrator,
+    meetingService,
     roleLookup: roleLoader,
     mcpHost,
     mcpServersRepo,

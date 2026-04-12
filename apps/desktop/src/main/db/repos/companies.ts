@@ -75,5 +75,14 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
     list(): CompanyRow[] {
       return db.select().from(companies).all();
     },
+
+    /**
+     * Set the orchestrator-level status for a company.
+     * Used by the meeting primitive: 'meeting' pauses dispatch,
+     * 'running' resumes it.
+     */
+    setStatus(id: string, status: string): void {
+      db.update(companies).set({ status }).where(eq(companies.id, id)).run();
+    },
   };
 }

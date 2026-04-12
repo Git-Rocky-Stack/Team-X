@@ -10,7 +10,11 @@ export type EventType =
   | 'work.failed'
   | 'employee.status_changed'
   | 'tool.called'
-  | 'tool.result';
+  | 'tool.result'
+  | 'meeting.started'
+  | 'meeting.turn'
+  | 'meeting.interjection'
+  | 'meeting.ended';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -64,4 +68,37 @@ export interface AgentMessagePayload {
   toEmployeeId: string;
   threadId: string;
   messageId: string;
+}
+
+// ---------------------------------------------------------------------------
+// Meeting event payloads (Phase 3 — M16)
+// ---------------------------------------------------------------------------
+
+export interface MeetingStartedPayload {
+  meetingId: string;
+  threadId: string;
+  chairId: string;
+  attendees: string[];
+  agenda: string;
+}
+
+export interface MeetingTurnPayload {
+  meetingId: string;
+  threadId: string;
+  employeeId: string;
+  messageId: string;
+}
+
+export interface MeetingInterjectionPayload {
+  meetingId: string;
+  threadId: string;
+  messageId: string;
+}
+
+export interface MeetingEndedPayload {
+  meetingId: string;
+  threadId: string;
+  minutesMd: string | null;
+  actionItemCount: number;
+  ticketIds: string[];
 }

@@ -18,6 +18,42 @@ export type ActorKind = AuthorKind | 'orchestrator' | 'provider';
 export type EmployeeStatus = 'idle' | 'thinking' | 'blocked' | 'error';
 
 // ---------------------------------------------------------------------------
+// Company status (Phase 3 — M16)
+// ---------------------------------------------------------------------------
+
+/** Orchestrator dispatch status for a company. 'meeting' pauses all dispatch. */
+export type CompanyStatus = 'running' | 'meeting' | 'paused';
+
+// ---------------------------------------------------------------------------
+// Meetings (Phase 3 — M16)
+// ---------------------------------------------------------------------------
+
+export type MeetingStatus = 'active' | 'ended';
+export type MeetingMode = 'round-robin' | 'chair-directed' | 'freeform';
+
+/** An action item extracted from meeting minutes. */
+export interface MeetingActionItem {
+  title: string;
+  assigneeId?: string;
+  priority?: TicketPriority;
+}
+
+export interface Meeting {
+  id: string;
+  companyId: string;
+  threadId: string;
+  chairId: string;
+  agenda: string;
+  mode: MeetingMode;
+  status: MeetingStatus;
+  minutesMd: string | null;
+  attendees: string[];
+  actionItems: MeetingActionItem[];
+  startedAt: number;
+  endedAt: number | null;
+}
+
+// ---------------------------------------------------------------------------
 // Tickets
 // ---------------------------------------------------------------------------
 

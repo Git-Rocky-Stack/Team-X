@@ -38,6 +38,8 @@ import type {
   AddMcpServerRequest,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
+  CallMeetingRequest,
+  CallMeetingResponse,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -46,13 +48,18 @@ import type {
   CreateTicketResponse,
   DashboardEvent,
   DashboardEventListener,
+  EndMeetingResponse,
   Goal,
   GoalDetail,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  InterjectMeetingRequest,
+  InterjectMeetingResponse,
   ListEventsRequest,
   ListEventsResponse,
   McpServerSummary,
+  Meeting,
+  MeetingDetail,
   Project,
   ProjectDetail,
   ResolveThreadRequest,
@@ -129,6 +136,12 @@ const CHANNELS = {
   projectsDelete: 'projects.delete',
   projectsLinkTicket: 'projects.linkTicket',
   projectsUnlinkTicket: 'projects.unlinkTicket',
+  // Meeting management (Phase 3 — M16)
+  meetingsCall: 'meetings.call',
+  meetingsEnd: 'meetings.end',
+  meetingsInterject: 'meetings.interject',
+  meetingsList: 'meetings.list',
+  meetingsGet: 'meetings.get',
   // Ticket management (Phase 2 — M12)
   ticketsCreate: 'tickets.create',
   ticketsUpdate: 'tickets.update',
@@ -222,6 +235,18 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.projectsLinkTicket, { projectId, ticketId }) as Promise<void>,
       unlinkTicket: (projectId: string, ticketId: string) =>
         ipc.invoke(CHANNELS.projectsUnlinkTicket, { projectId, ticketId }) as Promise<void>,
+    },
+    meetings: {
+      call: (req: CallMeetingRequest) =>
+        ipc.invoke(CHANNELS.meetingsCall, req) as Promise<CallMeetingResponse>,
+      end: (meetingId: string) =>
+        ipc.invoke(CHANNELS.meetingsEnd, { meetingId }) as Promise<EndMeetingResponse>,
+      interject: (req: InterjectMeetingRequest) =>
+        ipc.invoke(CHANNELS.meetingsInterject, req) as Promise<InterjectMeetingResponse>,
+      list: (companyId: string) =>
+        ipc.invoke(CHANNELS.meetingsList, { companyId }) as Promise<Meeting[]>,
+      get: (meetingId: string) =>
+        ipc.invoke(CHANNELS.meetingsGet, { meetingId }) as Promise<MeetingDetail>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

@@ -71,6 +71,8 @@ export interface AppState {
   activeGoalId: string | null;
   /** Which projects subview is showing (Kanban / Goals). */
   projectsSubview: ProjectsSubview;
+  /** Currently selected meeting id for detail panel. */
+  activeMeetingId: string | null;
 
   setActiveView: (view: ActiveView) => void;
   setDashboardSubview: (subview: DashboardSubview) => void;
@@ -85,6 +87,7 @@ export interface AppState {
   openThread: (opts: OpenThreadOpts) => void;
   setThreadListView: (open: boolean) => void;
   setActiveTicketId: (ticketId: string | null) => void;
+  setActiveMeetingId: (meetingId: string | null) => void;
   handleDashboardEvent: (event: DashboardEvent) => void;
 }
 
@@ -107,9 +110,16 @@ export const useAppStore = create<AppState>((set) => ({
   activeProjectId: null,
   activeGoalId: null,
   projectsSubview: 'kanban',
+  activeMeetingId: null,
 
   setActiveView: (view) =>
-    set({ activeView: view, activeTicketId: null, activeProjectId: null, activeGoalId: null }),
+    set({
+      activeView: view,
+      activeTicketId: null,
+      activeProjectId: null,
+      activeGoalId: null,
+      activeMeetingId: null,
+    }),
 
   setDashboardSubview: (subview) => set({ dashboardSubview: subview }),
 
@@ -156,6 +166,7 @@ export const useAppStore = create<AppState>((set) => ({
   setThreadListView: (open) => set({ threadListView: open }),
 
   setActiveTicketId: (ticketId) => set({ activeTicketId: ticketId }),
+  setActiveMeetingId: (meetingId) => set({ activeMeetingId: meetingId }),
 
   setProjectsSubview: (subview) => set({ projectsSubview: subview }),
   setActiveProjectId: (projectId) => set({ activeProjectId: projectId }),

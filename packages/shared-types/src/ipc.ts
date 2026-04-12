@@ -30,7 +30,18 @@
  *     time.
  */
 
-import type { ChatMessage, Company, Employee, Goal, Project, Thread, Ticket } from './entities.js';
+import type {
+  ChatMessage,
+  Company,
+  Employee,
+  Goal,
+  Meeting,
+  MeetingActionItem,
+  MeetingMode,
+  Project,
+  Thread,
+  Ticket,
+} from './entities.js';
 import type { DashboardEvent } from './events.js';
 
 // ---------------------------------------------------------------------------
@@ -297,6 +308,59 @@ export interface ProjectDetail extends Project {
 }
 
 // ---------------------------------------------------------------------------
+// Meeting shapes (Phase 3 — M16)
+// ---------------------------------------------------------------------------
+
+export interface CallMeetingRequest {
+  companyId: string;
+  /** Employee id of the meeting chair. */
+  chairId: string;
+  /** Employee ids of all attendees (including the chair). */
+  attendeeIds: string[];
+  agenda: string;
+  /** Defaults to 'round-robin'. */
+  mode?: MeetingMode;
+}
+
+export interface CallMeetingResponse {
+  meetingId: string;
+  threadId: string;
+}
+
+export interface EndMeetingRequest {
+  meetingId: string;
+}
+
+export interface EndMeetingResponse {
+  minutesMd: string | null;
+  actionItems: MeetingActionItem[];
+  ticketIds: string[];
+}
+
+export interface InterjectMeetingRequest {
+  meetingId: string;
+  content: string;
+}
+
+export interface InterjectMeetingResponse {
+  messageId: string;
+}
+
+export interface ListMeetingsRequest {
+  companyId: string;
+}
+
+export interface GetMeetingRequest {
+  meetingId: string;
+}
+
+/** Full meeting detail with its thread messages for the detail panel. */
+export interface MeetingDetail extends Meeting {
+  messages: ChatMessage[];
+  chair: Employee | null;
+}
+
+// ---------------------------------------------------------------------------
 // MCP-related shapes
 // ---------------------------------------------------------------------------
 
@@ -445,6 +509,27 @@ export interface IpcContract {
   'projects.unlinkTicket': {
     request: UnlinkTicketFromProjectRequest;
     response: undefined;
+  };
+  // Meeting management channels (Phase 3 — M16)
+  'meetings.call': {
+    request: CallMeetingRequest;
+    response: CallMeetingResponse;
+  };
+  'meetings.end': {
+    request: EndMeetingRequest;
+    response: EndMeetingResponse;
+  };
+  'meetings.interject': {
+    request: InterjectMeetingRequest;
+    response: InterjectMeetingResponse;
+  };
+  'meetings.list': {
+    request: ListMeetingsRequest;
+    response: Meeting[];
+  };
+  'meetings.get': {
+    request: GetMeetingRequest;
+    response: MeetingDetail;
   };
   // Ticket management channels
   'tickets.create': {
@@ -614,6 +699,18 @@ export interface TeamXApi {
     linkTicket(projectId: string, ticketId: string): Promise<void>;
     /** Unlink a ticket from a project. */
     unlinkTicket(projectId: string, ticketId: string): Promise<void>;
+  };
+  meetings: {
+    /** Start a meeting — pauses orchestrator, creates meeting thread, chair speaks first. */
+    call(req: CallMeetingRequest): Promise<CallMeetingResponse>;
+    /** End a meeting — generate minutes, extract action items, resume orchestrator. */
+    end(meetingId: string): Promise<EndMeetingResponse>;
+    /** Rocky interjects mid-meeting. */
+    interject(req: InterjectMeetingRequest): Promise<InterjectMeetingResponse>;
+    /** List all meetings for a company. */
+    list(companyId: string): Promise<Meeting[]>;
+    /** Get full meeting detail with thread messages and chair. */
+    get(meetingId: string): Promise<MeetingDetail>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

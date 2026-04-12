@@ -27,7 +27,7 @@ const TABS: TabDef[] = [
   { label: 'Org', icon: GitBranch, view: 'org', disabled: true },
   { label: 'Projects', icon: KanbanSquare, view: 'projects' },
   { label: 'Tickets', icon: KanbanSquare, view: 'tickets' },
-  { label: 'Meetings', icon: Users2, view: 'meetings', disabled: true },
+  { label: 'Meetings', icon: Users2, view: 'meetings' },
   { label: 'Chat', icon: MessageSquare, view: 'chat', disabled: true },
   { label: 'Telemetry', icon: Gauge, view: 'telemetry', disabled: true },
   { label: 'Settings', icon: Settings, view: 'settings', disabled: true },

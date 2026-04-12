@@ -114,4 +114,24 @@ describe('companies repo', () => {
       expect(all.map((c) => c.slug).sort()).toEqual(['a', 'b', 'c']);
     });
   });
+
+  describe('setStatus', () => {
+    it('updates the company status column', () => {
+      const id = repo.create({ name: 'S', slug: 's' });
+      const before = repo.getById(id);
+      expect(before?.status).toBe('running');
+
+      repo.setStatus(id, 'meeting');
+      const after = repo.getById(id);
+      expect(after?.status).toBe('meeting');
+    });
+
+    it('can transition through all valid statuses', () => {
+      const id = repo.create({ name: 'T', slug: 't' });
+      for (const status of ['meeting', 'paused', 'running'] as const) {
+        repo.setStatus(id, status);
+        expect(repo.getById(id)?.status).toBe(status);
+      }
+    });
+  });
 });

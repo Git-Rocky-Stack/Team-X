@@ -5,7 +5,8 @@
  * events, runs, providers, settings.
  * Phase 2 additions: mcpServers, toolCalls (M10), tickets (M12),
  * threads.ticketId FK (M12).
- * Phase 3 additions: goals, projects, projectTickets (M15).
+ * Phase 3 additions: goals, projects, projectTickets (M15),
+ * meetings + companies.status (M16).
  *
  * Design notes:
  * - Primary keys are text-typed to hold nanoid values (see packages/shared-types).
@@ -34,6 +35,8 @@ export const companies = sqliteTable('companies', {
   /** Optional emoji or short icon identifier rendered in the company switcher. */
   icon: text('icon'),
   theme: text('theme').notNull().default('dark'),
+  /** running | meeting | paused. Controls orchestrator dispatch for this company. */
+  status: text('status').notNull().default('running'),
 });
 
 /** Each employee is an instantiated role from a role pack (see role-packs/). */
@@ -310,4 +313,45 @@ export const projectTickets = sqliteTable('project_tickets', {
   ticketId: text('ticket_id')
     .notNull()
     .references(() => tickets.id),
+});
+
+// ---------------------------------------------------------------------------
+// Phase 3 — M16: Meetings
+// ---------------------------------------------------------------------------
+
+/**
+ * Meeting records. Each meeting creates a thread (kind='meeting') for the
+ * conversation, has a chair (the employee who facilitates), and tracks
+ * attendees + status. On end, minutes_md and action_items_json are populated.
+ *
+ * The meeting primitive pauses the orchestrator for the company (via
+ * companies.status = 'meeting'), runs turns in controlled order, then
+ * resumes on end. Architectural invariant #2 makes this race-free.
+ */
+export const meetings = sqliteTable('meetings', {
+  id: text('id').primaryKey(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id),
+  /** FK to the meeting thread (kind='meeting'). */
+  threadId: text('thread_id')
+    .notNull()
+    .references(() => threads.id),
+  /** Employee who chairs the meeting — speaks first, directs turns. */
+  chairId: text('chair_id')
+    .notNull()
+    .references(() => employees.id),
+  agenda: text('agenda').notNull().default(''),
+  /** round-robin | chair-directed | freeform. */
+  mode: text('mode').notNull().default('round-robin'),
+  /** active | ended. */
+  status: text('status').notNull().default('active'),
+  /** Markdown summary generated on meeting end. */
+  minutesMd: text('minutes_md'),
+  /** JSON-encoded string[] of attendee employee ids. */
+  attendeesJson: text('attendees_json').notNull().default('[]'),
+  /** JSON-encoded action item array generated on meeting end. */
+  actionItemsJson: text('action_items_json').notNull().default('[]'),
+  startedAt: integer('started_at').notNull(),
+  endedAt: integer('ended_at'),
 });
