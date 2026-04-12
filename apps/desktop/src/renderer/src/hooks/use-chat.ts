@@ -31,3 +31,18 @@ export function useSendMessage() {
     },
   });
 }
+
+/**
+ * Fetch all threads for the given company. Used by the thread list
+ * sidebar in the chat drawer to show all conversations (user↔employee
+ * DMs, employee↔employee agent threads, etc.).
+ */
+export function useThreadList(companyId: string | null) {
+  return useQuery({
+    queryKey: ['threads', companyId],
+    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled` — queryFn only runs when companyId is non-null
+    queryFn: () => ipc.chat.listThreads(companyId!),
+    enabled: companyId !== null && companyId.length > 0,
+    refetchInterval: false,
+  });
+}

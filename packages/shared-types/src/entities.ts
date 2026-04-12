@@ -53,4 +53,25 @@ export interface ChatMessage {
   authorKind: AuthorKind;
   content: string;
   createdAt: number;
+  /** True when the message was sent by an agent to another agent. */
+  isAgentInitiated?: boolean;
+}
+
+export type ThreadKind = 'dm' | 'group' | 'meeting' | 'ticket' | 'broadcast';
+
+export interface ThreadMember {
+  memberId: string;
+  memberKind: 'user' | 'employee';
+  roleInThread?: string | null;
+}
+
+export interface Thread {
+  id: string;
+  companyId: string;
+  kind: ThreadKind;
+  subject: string | null;
+  createdBy: string;
+  createdAt: number;
+  members: ThreadMember[];
+  lastMessageAt: number | null;
 }

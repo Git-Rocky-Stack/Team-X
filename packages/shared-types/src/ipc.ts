@@ -30,7 +30,7 @@
  *     time.
  */
 
-import type { ChatMessage, Company, Employee } from './entities.js';
+import type { ChatMessage, Company, Employee, Thread } from './entities.js';
 import type { DashboardEvent } from './events.js';
 
 // ---------------------------------------------------------------------------
@@ -102,6 +102,10 @@ export interface ResolveThreadResponse {
   threadId: string;
 }
 
+export interface ListThreadsRequest {
+  companyId: string;
+}
+
 // ---------------------------------------------------------------------------
 // MCP-related shapes
 // ---------------------------------------------------------------------------
@@ -171,6 +175,10 @@ export interface IpcContract {
   'chat.resolveThread': {
     request: ResolveThreadRequest;
     response: ResolveThreadResponse;
+  };
+  'chat.listThreads': {
+    request: ListThreadsRequest;
+    response: Thread[];
   };
   // MCP management channels
   'mcp.list': {
@@ -267,6 +275,9 @@ export interface TeamXApi {
      * call the only way to rehydrate was to send a new message.
      */
     resolveThread(req: ResolveThreadRequest): Promise<ResolveThreadResponse>;
+
+    /** Return all threads for the given company with members and last-message timestamp. */
+    listThreads(companyId: string): Promise<Thread[]>;
   };
   events: {
     /**

@@ -5,6 +5,7 @@ export type EventType =
   | 'work.started'
   | 'token.delta'
   | 'message.persisted'
+  | 'message.agent_to_agent'
   | 'work.completed'
   | 'work.failed'
   | 'employee.status_changed'
@@ -56,4 +57,11 @@ export interface ToolResultPayload {
   toolCallId: string;
   toolName: string;
   success: boolean;
+}
+
+export interface AgentMessagePayload {
+  fromEmployeeId: string;
+  toEmployeeId: string;
+  threadId: string;
+  messageId: string;
 }

@@ -49,6 +49,8 @@ export interface AppendMessageInput {
   toolCalls?: unknown;
   /** Optional parent message id for threaded replies (meetings, etc.). */
   parentId?: string;
+  /** True when the message was sent by an agent to another agent (M11). */
+  isAgentInitiated?: boolean;
 }
 
 type MessagesDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -70,6 +72,7 @@ export function createMessagesRepo<TRunResult>(db: MessagesDb<TRunResult>) {
           content: input.content,
           toolCallsJson: input.toolCalls === undefined ? null : JSON.stringify(input.toolCalls),
           parentId: input.parentId ?? null,
+          isAgentInitiated: input.isAgentInitiated ?? false,
           createdAt: Date.now(),
         })
         .run();

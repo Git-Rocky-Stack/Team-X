@@ -15,7 +15,7 @@
  * see docs/plans/... Task 21 decision for the full rationale.
  */
 
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
@@ -54,6 +54,19 @@ export interface GetOrCreateDmThreadInput {
    */
   userId: string;
   userKind?: 'user';
+}
+
+export interface GetOrCreateEmployeeDmThreadInput {
+  companyId: string;
+  /** The employee initiating the conversation. */
+  fromEmployeeId: string;
+  /** The employee receiving the message. */
+  toEmployeeId: string;
+}
+
+/** Thread row enriched with its membership list for the listThreads API. */
+export interface ThreadWithMembers extends ThreadRow {
+  members: ThreadMemberRow[];
 }
 
 type ThreadsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -213,6 +226,112 @@ export function createThreadsRepo<TRunResult>(db: ThreadsDb<TRunResult>) {
         ])
         .run();
       return id;
+    },
+
+    /**
+     * Look up the DM thread between two employees, creating it if none
+     * exists. Same two-step matching strategy as `getOrCreateDmThread`
+     * but both members are `memberKind: 'employee'`.
+     *
+     * Order-independent: the thread between (A, B) and (B, A) is the
+     * same thread. We search for candidates where EITHER employee is
+     * a member, then verify the OTHER is also present.
+     */
+    getOrCreateEmployeeDmThread(input: GetOrCreateEmployeeDmThreadInput): string {
+      // Step 1 — find DM threads in the company where fromEmployee is a member.
+      const candidates = db
+        .select({ threadId: threadMembers.threadId })
+        .from(threadMembers)
+        .innerJoin(threads, eq(threadMembers.threadId, threads.id))
+        .where(
+          and(
+            eq(threadMembers.memberId, input.fromEmployeeId),
+            eq(threadMembers.memberKind, 'employee'),
+            eq(threads.kind, 'dm'),
+            eq(threads.companyId, input.companyId),
+          ),
+        )
+        .all();
+
+      // Step 2 — verify the toEmployee is also a member.
+      for (const { threadId } of candidates) {
+        const hasOther = db
+          .select({ memberId: threadMembers.memberId })
+          .from(threadMembers)
+          .where(
+            and(
+              eq(threadMembers.threadId, threadId),
+              eq(threadMembers.memberId, input.toEmployeeId),
+              eq(threadMembers.memberKind, 'employee'),
+            ),
+          )
+          .get();
+        if (hasOther) return threadId;
+      }
+
+      // Create a new employee↔employee DM thread.
+      const id = nanoid();
+      db.insert(threads)
+        .values({
+          id,
+          companyId: input.companyId,
+          kind: 'dm',
+          subject: null,
+          createdBy: input.fromEmployeeId,
+          createdAt: Date.now(),
+        })
+        .run();
+      db.insert(threadMembers)
+        .values([
+          {
+            threadId: id,
+            memberId: input.fromEmployeeId,
+            memberKind: 'employee',
+            roleInThread: null,
+          },
+          {
+            threadId: id,
+            memberId: input.toEmployeeId,
+            memberKind: 'employee',
+            roleInThread: null,
+          },
+        ])
+        .run();
+      return id;
+    },
+
+    /**
+     * Update the `last_message_at` timestamp on a thread. Called after
+     * every message append so the thread list can sort by recency.
+     */
+    updateLastMessageAt(threadId: string, timestamp: number): void {
+      db.update(threads)
+        .set({ lastMessageAt: timestamp })
+        .where(eq(threads.id, threadId))
+        .run();
+    },
+
+    /**
+     * Return every thread for a company with its membership list,
+     * ordered by `lastMessageAt` desc (most-recent first). Threads
+     * with no messages yet sort last (null lastMessageAt).
+     */
+    listByCompanyWithMembers(companyId: string): ThreadWithMembers[] {
+      const rows = db
+        .select()
+        .from(threads)
+        .where(eq(threads.companyId, companyId))
+        .orderBy(desc(threads.lastMessageAt))
+        .all();
+
+      return rows.map((row) => ({
+        ...row,
+        members: db
+          .select()
+          .from(threadMembers)
+          .where(eq(threadMembers.threadId, row.id))
+          .all(),
+      }));
     },
   };
 }

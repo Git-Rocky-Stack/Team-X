@@ -1,6 +1,6 @@
 import type { Employee } from '@team-x/shared-types';
 
-import { Plus, Users } from 'lucide-react';
+import { MessageSquare, Plus, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
 import { Separator } from '@/components/ui/separator.js';
@@ -98,6 +98,19 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
             Click + Hire to get started.
           </p>
         )}
+      </div>
+
+      <Separator />
+
+      <div className="px-2 py-2">
+        <button
+          type="button"
+          onClick={() => useAppStore.getState().openThreadList()}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+        >
+          <MessageSquare className="h-4 w-4" />
+          Threads
+        </button>
       </div>
 
       <Separator />

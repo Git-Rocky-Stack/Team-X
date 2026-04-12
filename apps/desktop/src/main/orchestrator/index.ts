@@ -52,7 +52,8 @@ import type { CompanyRow } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { FinishRunInput, StartRunInput } from '../db/repos/runs.js';
-import type { ThreadRow } from '../db/repos/threads.js';
+import type { GetOrCreateEmployeeDmThreadInput, ThreadRow } from '../db/repos/threads.js';
+import { buildBuiltInTools, type EnqueueAgentReplyFn } from './built-in-tools.js';
 import type { EventBus } from './event-bus.js';
 import { type WorkQueue, createWorkQueue } from './queue.js';
 import { type CostCalculator, runAgent } from './run-agent.js';
@@ -79,6 +80,7 @@ export interface OrchestratorRunsRepo {
 
 export interface OrchestratorEmployeesRepo {
   getById(id: string): EmployeeRow | null;
+  listByCompany(companyId: string): EmployeeRow[];
 }
 
 export interface OrchestratorCompaniesRepo {
@@ -87,6 +89,8 @@ export interface OrchestratorCompaniesRepo {
 
 export interface OrchestratorThreadsRepo {
   getById(id: string): ThreadRow | null;
+  getOrCreateEmployeeDmThread(input: GetOrCreateEmployeeDmThreadInput): string;
+  updateLastMessageAt(threadId: string, timestamp: number): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +162,13 @@ export interface EnqueueChatArgs {
   userMessageId: string;
 }
 
+export interface EnqueueAgentReplyArgs {
+  threadId: string;
+  employeeId: string;
+  /** The id of the agent message that triggered this reply. */
+  triggerMessageId: string;
+}
+
 export interface Orchestrator {
   /**
    * Queue a chat turn for the given employee. Returns a Promise that
@@ -167,6 +178,15 @@ export interface Orchestrator {
    * in shutdown.
    */
   enqueueChat(args: EnqueueChatArgs): Promise<void>;
+
+  /**
+   * Queue an agent-initiated reply turn. Used by the built-in
+   * `send_message_to_colleague` tool: after agent A sends a message
+   * to agent B, the orchestrator enqueues a turn for B on the same
+   * thread. The history mapping is role-relative: B's own messages
+   * map to `assistant`, all other messages map to `user`.
+   */
+  enqueueAgentReply(args: EnqueueAgentReplyArgs): Promise<void>;
 
   /** Stop dispatching new work. In-flight turns continue to completion. */
   pause(): void;
@@ -234,6 +254,19 @@ function mapHistory(rows: MessageRow[]): StreamMessage[] {
   }));
 }
 
+/**
+ * Role-relative history mapping for agent↔agent threads. The
+ * responding employee's messages map to `assistant`; all other
+ * messages map to `user`. This gives each agent the correct
+ * first-person perspective regardless of who initiated.
+ */
+function mapAgentHistory(rows: MessageRow[], respondingEmployeeId: string): StreamMessage[] {
+  return rows.map((row) => ({
+    role: row.authorId === respondingEmployeeId ? ('assistant' as const) : ('user' as const),
+    content: row.content,
+  }));
+}
+
 export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator {
   const {
     bus,
@@ -297,6 +330,39 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
 
     const history = mapHistory(messagesRepo.listByThread(args.threadId));
 
+    // Merge MCP tools with built-in tools (M11). Built-in tools are
+    // always available; MCP tools are subject to tools_allowed/denied.
+    const builtInSpecs = buildBuiltInTools(
+      {
+        bus,
+        employees: employeesRepo,
+        messages: messagesRepo,
+        threads: threadsRepo,
+        enqueueAgentReply: enqueueAgentReplyInternal,
+      },
+      args.employeeId,
+      company.id,
+    );
+
+    // Merge: if resolveTools returned MCP tools, import and merge.
+    // Built-in tools are ToolSpec[]; MCP tools are already
+    // Record<string, CoreTool>. We need to convert built-ins via
+    // buildProviderTools then spread both records together.
+    let finalTools: Record<string, unknown> | undefined;
+    let finalMaxSteps = 1;
+
+    // Convert built-in specs to CoreTool records.
+    const { buildProviderTools } = await import('@team-x/provider-router');
+    const builtInToolsRecord = buildProviderTools(builtInSpecs);
+
+    if (toolConfig) {
+      finalTools = { ...builtInToolsRecord, ...toolConfig.tools };
+      finalMaxSteps = toolConfig.maxSteps;
+    } else if (builtInSpecs.length > 0) {
+      finalTools = builtInToolsRecord;
+      finalMaxSteps = 5; // Allow multi-step for built-in tools
+    }
+
     await runAgent(
       {
         bus,
@@ -314,10 +380,10 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         provider: provider.stream,
         providerName: provider.providerName,
         model: provider.model,
-        ...(toolConfig
+        ...(finalTools
           ? {
-              tools: toolConfig.tools,
-              maxSteps: toolConfig.maxSteps,
+              tools: finalTools,
+              maxSteps: finalMaxSteps,
               onRunCreated: (runId: string) => {
                 currentRunId = runId;
               },
@@ -326,6 +392,116 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       },
     );
   }
+
+  /**
+   * Internal agent-reply turn: same as runTurn but uses
+   * role-relative history mapping for agent↔agent threads.
+   */
+  async function runAgentReplyTurn(args: EnqueueAgentReplyArgs): Promise<void> {
+    const thread = threadsRepo.getById(args.threadId);
+    if (!thread) {
+      throw new Error(`orchestrator: thread not found: ${args.threadId}`);
+    }
+
+    const employee = employeesRepo.getById(args.employeeId);
+    if (!employee) {
+      throw new Error(`orchestrator: employee not found: ${args.employeeId}`);
+    }
+
+    if (employee.companyId !== thread.companyId) {
+      throw new Error(
+        `orchestrator: employee ${args.employeeId} does not belong to ` +
+          `thread ${args.threadId}'s company`,
+      );
+    }
+
+    const company = companiesRepo.getById(thread.companyId);
+    if (!company) {
+      throw new Error(`orchestrator: company not found: ${thread.companyId}`);
+    }
+
+    let currentRunId = '';
+    const getRunId = () => currentRunId;
+
+    const [system, provider, toolConfig] = await Promise.all([
+      resolveSystemPrompt({ employee, company }),
+      resolveProvider(employee),
+      resolveTools ? resolveTools({ employee, company, getRunId }) : Promise.resolve(null),
+    ]);
+
+    // Role-relative history: this employee's messages → assistant,
+    // all others → user.
+    const history = mapAgentHistory(
+      messagesRepo.listByThread(args.threadId),
+      args.employeeId,
+    );
+
+    // Built-in tools for the recipient too.
+    const builtInSpecs = buildBuiltInTools(
+      {
+        bus,
+        employees: employeesRepo,
+        messages: messagesRepo,
+        threads: threadsRepo,
+        enqueueAgentReply: enqueueAgentReplyInternal,
+      },
+      args.employeeId,
+      company.id,
+    );
+
+    const { buildProviderTools } = await import('@team-x/provider-router');
+    const builtInToolsRecord = buildProviderTools(builtInSpecs);
+
+    let finalTools: Record<string, unknown> | undefined;
+    let finalMaxSteps = 1;
+
+    if (toolConfig) {
+      finalTools = { ...builtInToolsRecord, ...toolConfig.tools };
+      finalMaxSteps = toolConfig.maxSteps;
+    } else if (builtInSpecs.length > 0) {
+      finalTools = builtInToolsRecord;
+      finalMaxSteps = 5;
+    }
+
+    await runAgent(
+      {
+        bus,
+        messages: messagesRepo,
+        runs: runsRepo,
+        calcCost,
+        now,
+      },
+      {
+        companyId: company.id,
+        threadId: args.threadId,
+        employeeId: args.employeeId,
+        system,
+        messages: history,
+        provider: provider.stream,
+        providerName: provider.providerName,
+        model: provider.model,
+        ...(finalTools
+          ? {
+              tools: finalTools,
+              maxSteps: finalMaxSteps,
+              onRunCreated: (runId: string) => {
+                currentRunId = runId;
+              },
+            }
+          : {}),
+      },
+    );
+  }
+
+  // Self-reference for built-in tools to call back into.
+  const enqueueAgentReplyInternal: EnqueueAgentReplyFn = (args) => {
+    if (shuttingDown) {
+      return Promise.reject(
+        new Error('orchestrator: cannot enqueue — orchestrator is shutting down'),
+      );
+    }
+    return queue.enqueue(() => runAgentReplyTurn(args));
+  };
 
   return {
     enqueueChat(args: EnqueueChatArgs): Promise<void> {
@@ -337,13 +513,15 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       return queue.enqueue(() => runTurn(args));
     },
 
+    enqueueAgentReply(args: EnqueueAgentReplyArgs): Promise<void> {
+      return enqueueAgentReplyInternal(args);
+    },
+
     pause(): void {
       queue.pause();
     },
 
     resume(): void {
-      // Resume is a no-op once shutdown has been initiated — the
-      // paused-then-draining state is terminal.
       if (shuttingDown) return;
       queue.resume();
     },
@@ -352,10 +530,6 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       if (shutdownPromise) return shutdownPromise;
       shuttingDown = true;
       queue.pause();
-      // Drain resolves once `inFlight` hits zero. With the queue paused
-      // and the shuttingDown latch rejecting new enqueues, the in-flight
-      // set is monotonically non-increasing from here, so drain is
-      // guaranteed to resolve (no starvation).
       shutdownPromise = queue.drain();
       return shutdownPromise;
     },

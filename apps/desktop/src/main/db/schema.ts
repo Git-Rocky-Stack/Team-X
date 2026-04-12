@@ -75,6 +75,8 @@ export const threads = sqliteTable('threads', {
   /** Member id of whoever created the thread (user id or employee id). */
   createdBy: text('created_by').notNull(),
   createdAt: integer('created_at').notNull(),
+  /** Updated on every message append — drives thread-list sort order. */
+  lastMessageAt: integer('last_message_at'),
 });
 
 /** Membership edge: which users / employees belong to each thread. */
@@ -103,6 +105,8 @@ export const messages = sqliteTable('messages', {
   toolCallsJson: text('tool_calls_json'),
   /** Optional parent message id for threading (e.g. replies inside a meeting). */
   parentId: text('parent_id'),
+  /** True when the message was sent by an agent to another agent (M11). */
+  isAgentInitiated: integer('is_agent_initiated', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at').notNull(),
 });
 

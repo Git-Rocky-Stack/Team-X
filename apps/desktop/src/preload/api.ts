@@ -48,6 +48,7 @@ import type {
   TeamXApi,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
+  Thread,
   UnsubscribeFn,
 } from '@team-x/shared-types';
 
@@ -86,6 +87,7 @@ const CHANNELS = {
   chatSend: 'chat.send',
   chatList: 'chat.list',
   chatResolveThread: 'chat.resolveThread',
+  chatListThreads: 'chat.listThreads',
   eventsDashboard: 'events.dashboard',
   // MCP management (Phase 2 — M10)
   mcpList: 'mcp.list',
@@ -120,6 +122,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.chatList, { threadId }) as ReturnType<TeamXApi['chat']['list']>,
       resolveThread: (req: ResolveThreadRequest) =>
         ipc.invoke(CHANNELS.chatResolveThread, req) as Promise<ResolveThreadResponse>,
+      listThreads: (companyId: string) =>
+        ipc.invoke(CHANNELS.chatListThreads, { companyId }) as Promise<Thread[]>,
     },
     events: {
       onDashboard: (listener: DashboardEventListener): UnsubscribeFn => {

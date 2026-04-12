@@ -1,3 +1,23 @@
+/**
+ * Chat drawer — right-side sheet that houses three views:
+ *
+ *   1. **Employee DM** (existing) — opened by clicking an employee card.
+ *      Shows the user↔employee conversation with a composer.
+ *
+ *   2. **Thread list** (M11) — toggled via the list icon in the header
+ *      or the "Threads" button in the sidenav. Shows all threads for
+ *      the company, sorted by recency.
+ *
+ *   3. **Agent thread** (M11) — opened by clicking an employee↔employee
+ *      thread in the list. Read-only: the composer is replaced with an
+ *      "observing" banner. Messages show sender names and AI badges.
+ *
+ * The view mode is driven by Zustand state:
+ *   - `threadListView` → thread list
+ *   - `viewingAgentThread && activeThreadId` → agent thread (read-only)
+ *   - `selectedEmployeeId && !threadListView` → employee DM
+ */
+
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
@@ -5,13 +25,16 @@ import type { Employee } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet.js';
-import { useChatMessages, useSendMessage } from '@/hooks/use-chat.js';
+import { useChatMessages, useSendMessage, useThreadList } from '@/hooks/use-chat.js';
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
+import { ArrowLeft, Bot, Eye, List } from 'lucide-react';
+
 import { Composer } from './composer.js';
 import { MessageList } from './message-list.js';
+import { isAgentThread as checkAgentThread, ThreadList } from './thread-list.js';
 
 function statusColor(status: string): string {
   switch (status) {
@@ -45,6 +68,12 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const activeThreadId = useAppStore((s) => s.activeThreadId);
   const setActiveThreadId = useAppStore((s) => s.setActiveThreadId);
   const employeeLive = useAppStore((s) => s.employeeLive);
+  const threadListView = useAppStore((s) => s.threadListView);
+  const viewingAgentThread = useAppStore((s) => s.viewingAgentThread);
+  const openThread = useAppStore((s) => s.openThread);
+  const setThreadListView = useAppStore((s) => s.setThreadListView);
+  const companyId = useAppStore((s) => s.companyId);
+  const lastAgentMessageAt = useAppStore((s) => s.lastAgentMessageAt);
 
   const employee = employees.find((e) => e.id === selectedId) ?? null;
   const live = selectedId ? employeeLive[selectedId] : undefined;
@@ -56,23 +85,50 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const effectiveThreadId = activeThreadId ?? live?.lastThreadId ?? null;
 
   const { data: messages = [] } = useChatMessages(effectiveThreadId);
+  const { data: threads = [] } = useThreadList(companyId);
   const sendMutation = useSendMessage();
   const qc = useQueryClient();
 
-  // When the drawer opens on a fresh render cycle — after a Ctrl+R
-  // reload, after switching to a different employee, or on first
-  // mount — the Zustand store has no cached thread id, so
-  // `effectiveThreadId` is null and `useChatMessages` stays disabled.
-  // Ask main to resolve (or lazily create) the user↔employee DM
-  // thread and push its id into the store; the messages query then
-  // fires automatically and pulls the full history from SQLite.
-  //
-  // Gated on `chatOpen` so a background store change does not trigger
-  // a resolve while the drawer is closed, and on `effectiveThreadId`
-  // being null so we do not re-resolve every time the store updates
-  // a stable thread.
+  // Find the active thread in the threads list for agent-thread header info.
+  const activeThread = threads.find((t) => t.id === effectiveThreadId);
+  const agentThreadNames =
+    viewingAgentThread && activeThread
+      ? activeThread.members
+          .map((m) => employees.find((e) => e.id === m.memberId)?.name ?? 'Agent')
+          .join(' & ')
+      : '';
+
+  // For agent threads: find the currently streaming participant (if any).
+  const agentStreamingMember =
+    viewingAgentThread && activeThread
+      ? activeThread.members.find((m) => {
+          const ls = employeeLive[m.memberId];
+          return ls?.status === 'thinking' && ls?.lastThreadId === effectiveThreadId;
+        })
+      : undefined;
+  const agentStreamText = agentStreamingMember
+    ? (employeeLive[agentStreamingMember.memberId]?.currentStream ?? '')
+    : '';
+  const agentIsStreaming = agentStreamingMember !== undefined;
+  const agentStreamName = agentStreamingMember
+    ? (employees.find((e) => e.id === agentStreamingMember.memberId)?.name ?? 'Agent')
+    : '';
+
+  // ── Effects ────────────────────────────────────────────────────
+
+  // Invalidate thread list when an agent-to-agent message event fires.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger-only dep
+  useEffect(() => {
+    if (lastAgentMessageAt > 0) {
+      void qc.invalidateQueries({ queryKey: ['threads'] });
+    }
+  }, [lastAgentMessageAt, qc]);
+
+  // Resolve user↔employee DM thread on drawer open (existing behavior).
+  // Only fires for the employee DM view — not for thread list or agent threads.
   useEffect(() => {
     if (!chatOpen || !selectedId || effectiveThreadId !== null) return;
+    if (threadListView || viewingAgentThread) return;
     let cancelled = false;
     ipc.chat
       .resolveThread({ employeeId: selectedId })
@@ -85,19 +141,10 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     return () => {
       cancelled = true;
     };
-  }, [chatOpen, selectedId, effectiveThreadId, setActiveThreadId]);
+  }, [chatOpen, selectedId, effectiveThreadId, setActiveThreadId, threadListView, viewingAgentThread]);
 
-  // When the employee transitions from `thinking` → `idle`, the
-  // orchestrator has finished the turn and persisted the assistant
-  // reply to the DB, but the `useChatMessages` query will NOT refetch
-  // on its own (refetchInterval is off and the only invalidation in
-  // `useSendMessage` fires on send, not on completion). Without this
-  // effect the StreamingBubble vanishes the moment `isStreaming` flips
-  // false and the user sees nothing where the reply should be.
-  //
-  // The ref tracks the previous status so the invalidation only fires
-  // on the actual transition edge — not on every render, and not when
-  // the employee was already idle when the drawer opened.
+  // Invalidate messages when an employee transitions thinking → idle
+  // (employee DM view).
   const prevStatusRef = useRef<string | null>(null);
   useEffect(() => {
     const prev = prevStatusRef.current;
@@ -106,6 +153,20 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
       void qc.invalidateQueries({ queryKey: ['chat', effectiveThreadId] });
     }
   }, [displayStatus, effectiveThreadId, qc]);
+
+  // Invalidate messages when agent-thread streaming stops.
+  const prevAgentStreamRef = useRef(false);
+  useEffect(() => {
+    if (!viewingAgentThread || !effectiveThreadId) return;
+    const prev = prevAgentStreamRef.current;
+    prevAgentStreamRef.current = agentIsStreaming;
+    if (prev && !agentIsStreaming) {
+      void qc.invalidateQueries({ queryKey: ['chat', effectiveThreadId] });
+      void qc.invalidateQueries({ queryKey: ['threads'] });
+    }
+  }, [agentIsStreaming, viewingAgentThread, effectiveThreadId, qc]);
+
+  // ── Handlers ───────────────────────────────────────────────────
 
   function handleSend(content: string) {
     if (!selectedId) return;
@@ -116,7 +177,25 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     });
   }
 
-  if (!employee) return null;
+  function handleSelectThread(threadId: string) {
+    const thread = threads.find((t) => t.id === threadId);
+    if (!thread) return;
+    const isAgent = checkAgentThread(thread);
+    if (isAgent) {
+      openThread({ threadId, isAgentThread: true, employeeId: null });
+    } else {
+      const empMember = thread.members.find((m) => m.memberKind === 'employee');
+      openThread({ threadId, isAgentThread: false, employeeId: empMember?.memberId ?? null });
+    }
+  }
+
+  // ── Render gate ────────────────────────────────────────────────
+
+  const showDrawer =
+    chatOpen &&
+    (employee !== null || threadListView || (viewingAgentThread && effectiveThreadId !== null));
+
+  if (!showDrawer) return null;
 
   return (
     <Sheet open={chatOpen} onOpenChange={setChatOpen}>
@@ -124,30 +203,98 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
         side="right"
         className="flex w-[480px] max-w-full flex-col gap-0 p-0 sm:max-w-[480px]"
       >
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-200 text-xs font-semibold text-foreground/80">
-            {initials(employee.name)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
-              {employee.name}
-              <span className={cn('h-2 w-2 shrink-0 rounded-full', statusColor(displayStatus))} />
-            </SheetTitle>
-            <p className="truncate text-xs text-muted-foreground">{employee.title}</p>
-          </div>
-        </div>
+        {threadListView ? (
+          /* ── Thread list view ─────────────────────────────── */
+          <>
+            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <SheetTitle className="flex-1 text-sm font-semibold">Threads</SheetTitle>
+            </div>
+            <ThreadList
+              threads={threads}
+              employees={employees}
+              activeThreadId={effectiveThreadId}
+              onSelectThread={handleSelectThread}
+            />
+          </>
+        ) : viewingAgentThread && effectiveThreadId ? (
+          /* ── Agent thread view (read-only) ────────────────── */
+          <>
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setThreadListView(true)}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+                aria-label="Back to threads"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <SheetTitle className="text-sm font-semibold">{agentThreadNames}</SheetTitle>
+                <div className="mt-0.5 flex items-center gap-1">
+                  <Bot className="h-3 w-3 text-amber-500" />
+                  <span className="text-[11px] text-amber-500">Agent conversation</span>
+                </div>
+              </div>
+            </div>
 
-        {/* Messages */}
-        <MessageList
-          messages={messages}
-          streamingText={live?.currentStream ?? ''}
-          isStreaming={isThinking}
-          employeeName={employee.name}
-        />
+            {/* Messages */}
+            <MessageList
+              messages={messages}
+              streamingText={agentStreamText}
+              isStreaming={agentIsStreaming}
+              employeeName={agentStreamName}
+              isAgentThread
+              employees={employees}
+            />
 
-        {/* Composer */}
-        <Composer onSend={handleSend} disabled={isThinking || sendMutation.isPending} />
+            {/* Read-only banner */}
+            <div className="flex items-center gap-2 border-t border-border px-4 py-3">
+              <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">
+                Observing agent conversation — read only
+              </span>
+            </div>
+          </>
+        ) : employee ? (
+          /* ── Employee DM view (existing) ──────────────────── */
+          <>
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-200 text-xs font-semibold text-foreground/80">
+                {initials(employee.name)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
+                  {employee.name}
+                  <span
+                    className={cn('h-2 w-2 shrink-0 rounded-full', statusColor(displayStatus))}
+                  />
+                </SheetTitle>
+                <p className="truncate text-xs text-muted-foreground">{employee.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setThreadListView(true)}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+                aria-label="View all threads"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <MessageList
+              messages={messages}
+              streamingText={live?.currentStream ?? ''}
+              isStreaming={isThinking}
+              employeeName={employee.name}
+            />
+
+            {/* Composer */}
+            <Composer onSend={handleSend} disabled={isThinking || sendMutation.isPending} />
+          </>
+        ) : null}
       </SheetContent>
     </Sheet>
   );

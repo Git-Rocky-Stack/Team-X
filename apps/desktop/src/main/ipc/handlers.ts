@@ -51,6 +51,7 @@ import type {
   SendChatResponse,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
+  Thread,
 } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
@@ -65,6 +66,7 @@ import type {
   GetOrCreateDmThreadInput,
   ThreadMemberRow,
   ThreadRow,
+  ThreadWithMembers,
 } from '../db/repos/threads.js';
 
 /**
@@ -116,6 +118,7 @@ export interface IpcThreadsRepo {
   addMember(input: AddThreadMemberInput): void;
   listMembers(threadId: string): ThreadMemberRow[];
   getOrCreateDmThread(input: GetOrCreateDmThreadInput): string;
+  listByCompanyWithMembers(companyId: string): ThreadWithMembers[];
 }
 
 export interface IpcMessagesRepo {
@@ -226,6 +229,13 @@ export interface IpcHandlers {
    */
   chatResolveThread(req: ResolveThreadRequest): Promise<ResolveThreadResponse>;
 
+  /**
+   * `chat.listThreads` — return all threads for a company with their
+   * members and last-message timestamp, sorted by most-recent first.
+   * The renderer uses this to populate the thread list sidebar.
+   */
+  chatListThreads(req: { companyId: string }): Promise<Thread[]>;
+
   // -----------------------------------------------------------------------
   // MCP management handlers (Phase 2 — M10)
   // -----------------------------------------------------------------------
@@ -314,10 +324,7 @@ function rowToEmployee(row: EmployeeRow): Employee {
 }
 
 function rowToChatMessage(row: MessageRow): ChatMessage {
-  // Drop toolCallsJson + parentId — Phase 1 renderer does not consume
-  // them. Phase 2's tickets / meeting threading will widen the public
-  // ChatMessage shape and the mapper will start forwarding them.
-  return {
+  const msg: ChatMessage = {
     id: row.id,
     threadId: row.threadId,
     authorId: row.authorId,
@@ -325,6 +332,8 @@ function rowToChatMessage(row: MessageRow): ChatMessage {
     content: row.content,
     createdAt: row.createdAt,
   };
+  if (row.isAgentInitiated) msg.isAgentInitiated = true;
+  return msg;
 }
 
 // ---------------------------------------------------------------------------
@@ -496,6 +505,29 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         userId: HUMAN_USER_ID,
       });
       return { threadId };
+    },
+
+    async chatListThreads({ companyId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] chat.listThreads: companyId is required');
+      }
+      const rows = threadsRepo.listByCompanyWithMembers(companyId);
+      return rows.map(
+        (row): Thread => ({
+          id: row.id,
+          companyId: row.companyId,
+          kind: row.kind as Thread['kind'],
+          subject: row.subject,
+          createdBy: row.createdBy,
+          createdAt: row.createdAt,
+          lastMessageAt: row.lastMessageAt ?? null,
+          members: row.members.map((m) => ({
+            memberId: m.memberId,
+            memberKind: m.memberKind as 'user' | 'employee',
+            roleInThread: m.roleInThread,
+          })),
+        }),
+      );
     },
 
     // -----------------------------------------------------------------------

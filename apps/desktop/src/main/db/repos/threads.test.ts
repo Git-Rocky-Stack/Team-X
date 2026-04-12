@@ -257,4 +257,125 @@ describe('threads repo', () => {
       expect(threads.listByCompany(companyId)).toHaveLength(2);
     });
   });
+
+  describe('getOrCreateEmployeeDmThread', () => {
+    it('creates a new DM thread with both employees as members', () => {
+      const id = threads.getOrCreateEmployeeDmThread({
+        companyId,
+        fromEmployeeId: 'emp-ceo',
+        toEmployeeId: 'emp-swe',
+      });
+
+      expect(id).toBeTypeOf('string');
+      const row = threads.getById(id);
+      expect(row?.kind).toBe('dm');
+      expect(row?.companyId).toBe(companyId);
+      expect(row?.createdBy).toBe('emp-ceo');
+
+      const members = threads.listMembers(id);
+      expect(members).toHaveLength(2);
+      expect(members.every((m) => m.memberKind === 'employee')).toBe(true);
+      const ids = members.map((m) => m.memberId).sort();
+      expect(ids).toEqual(['emp-ceo', 'emp-swe']);
+    });
+
+    it('returns the same thread on subsequent calls — idempotent', () => {
+      const first = threads.getOrCreateEmployeeDmThread({
+        companyId,
+        fromEmployeeId: 'emp-ceo',
+        toEmployeeId: 'emp-swe',
+      });
+      const second = threads.getOrCreateEmployeeDmThread({
+        companyId,
+        fromEmployeeId: 'emp-ceo',
+        toEmployeeId: 'emp-swe',
+      });
+      expect(second).toBe(first);
+    });
+
+    it('is order-independent — (A,B) and (B,A) resolve the same thread', () => {
+      const ab = threads.getOrCreateEmployeeDmThread({
+        companyId,
+        fromEmployeeId: 'emp-ceo',
+        toEmployeeId: 'emp-swe',
+      });
+      const ba = threads.getOrCreateEmployeeDmThread({
+        companyId,
+        fromEmployeeId: 'emp-swe',
+        toEmployeeId: 'emp-ceo',
+      });
+      expect(ba).toBe(ab);
+    });
+
+    it('does not collide with a user↔employee DM', () => {
+      const userDm = threads.getOrCreateDmThread({
+        companyId,
+        employeeId: 'emp-swe',
+        userId: 'rocky',
+      });
+      const empDm = threads.getOrCreateEmployeeDmThread({
+        companyId,
+        fromEmployeeId: 'emp-ceo',
+        toEmployeeId: 'emp-swe',
+      });
+      expect(empDm).not.toBe(userDm);
+    });
+
+    it('isolates threads across companies', () => {
+      const dmA = threads.getOrCreateEmployeeDmThread({
+        companyId,
+        fromEmployeeId: 'emp-a',
+        toEmployeeId: 'emp-b',
+      });
+      const dmB = threads.getOrCreateEmployeeDmThread({
+        companyId: otherCompanyId,
+        fromEmployeeId: 'emp-a',
+        toEmployeeId: 'emp-b',
+      });
+      expect(dmA).not.toBe(dmB);
+    });
+  });
+
+  describe('updateLastMessageAt', () => {
+    it('sets the lastMessageAt timestamp on a thread', () => {
+      const id = threads.create({ companyId, kind: 'dm', createdBy: 'u' });
+      expect(threads.getById(id)?.lastMessageAt).toBeNull();
+
+      const now = Date.now();
+      threads.updateLastMessageAt(id, now);
+      expect(threads.getById(id)?.lastMessageAt).toBe(now);
+    });
+  });
+
+  describe('listByCompanyWithMembers', () => {
+    it('returns threads sorted by lastMessageAt desc with members', () => {
+      const t1 = threads.create({ companyId, kind: 'dm', createdBy: 'u' });
+      const t2 = threads.create({ companyId, kind: 'group', createdBy: 'u' });
+      threads.addMember({ threadId: t1, memberId: 'emp-a', memberKind: 'employee' });
+      threads.addMember({ threadId: t2, memberId: 'emp-b', memberKind: 'employee' });
+      threads.addMember({ threadId: t2, memberId: 'emp-c', memberKind: 'employee' });
+
+      // t2 has a more recent message
+      threads.updateLastMessageAt(t1, 1000);
+      threads.updateLastMessageAt(t2, 2000);
+
+      const result = threads.listByCompanyWithMembers(companyId);
+      expect(result).toHaveLength(2);
+      // Most-recent first
+      expect(result[0]?.id).toBe(t2);
+      expect(result[0]?.members).toHaveLength(2);
+      expect(result[1]?.id).toBe(t1);
+      expect(result[1]?.members).toHaveLength(1);
+    });
+
+    it('returns empty array for a company with no threads', () => {
+      expect(threads.listByCompanyWithMembers(companyId)).toEqual([]);
+    });
+
+    it('excludes threads from other companies', () => {
+      threads.create({ companyId, kind: 'dm', createdBy: 'u' });
+      threads.create({ companyId: otherCompanyId, kind: 'dm', createdBy: 'u' });
+      expect(threads.listByCompanyWithMembers(companyId)).toHaveLength(1);
+    });
+  });
 });

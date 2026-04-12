@@ -121,6 +121,29 @@ describe('messages repo', () => {
         }),
       ).toThrow();
     });
+
+    it('defaults isAgentInitiated to false when omitted', () => {
+      const id = messages.append({
+        threadId,
+        authorId: 'u',
+        authorKind: 'user',
+        content: 'hi',
+      });
+      const got = messages.listByThread(threadId).find((m) => m.id === id);
+      expect(got?.isAgentInitiated).toBe(false);
+    });
+
+    it('stores isAgentInitiated as true when set', () => {
+      const id = messages.append({
+        threadId,
+        authorId: 'emp-1',
+        authorKind: 'employee',
+        content: 'Hey colleague',
+        isAgentInitiated: true,
+      });
+      const got = messages.listByThread(threadId).find((m) => m.id === id);
+      expect(got?.isAgentInitiated).toBe(true);
+    });
   });
 
   describe('listByThread', () => {
