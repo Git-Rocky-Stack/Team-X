@@ -71,7 +71,7 @@ const TEST_MODE_REPLY = 'Our top priority this week is shipping the Phase 1 demo
 // Tests run strictly serial — only one Electron instance per host.
 test.describe.configure({ mode: 'serial' });
 
-test.describe('Team-X Phase 1 smoke', () => {
+test.describe('Team-X smoke', () => {
   let app: ElectronApplication;
   let window: Page;
   let userDataDir: string;
@@ -168,8 +168,8 @@ test.describe('Team-X Phase 1 smoke', () => {
     // --- 1. App shell renders --------------------------------------------
     await expect(window.getByText('Strategia-X', { exact: true })).toBeVisible();
     log('Strategia-X visible ✓');
-    await expect(window.getByText('Phase 1', { exact: true })).toBeVisible();
-    log('Phase 1 badge visible ✓');
+    await expect(window.getByText('Phase 2', { exact: true })).toBeVisible();
+    log('Phase 2 badge visible ✓');
 
     // --- 2. Both seeded employees render in the dashboard cards view -----
     // Using attribute-starts-with selectors rather than `getByRole`

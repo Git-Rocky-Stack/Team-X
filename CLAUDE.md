@@ -18,16 +18,29 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 ## Status
 
-**Phase 1 (Skeleton) — in progress.** Milestones 1-5 complete. Milestone 6 (demo + hardening) in progress.
+**Phase 2 (The Org) — complete.** All 13 milestones shipped. 379 unit tests + 2 E2E specs passing.
+
+### Phase 1 (Skeleton) — complete
 
 - **M1 (repo foundations):** pnpm workspace, TypeScript strict, Biome, Vitest, CI.
 - **M2 (shared packages):** `shared-types`, `role-schema` (parser + template renderer), `provider-router` (registry + streaming adapters for Anthropic + Ollama), `telemetry-core` (cost math).
 - **M3 (main process + DB):** Electron boots with context isolation, SQLite + Drizzle migrate on first run, seed creates the Strategia-X company with CEO + Senior Fullstack Engineer, keytar-backed `SecretsStore`, providers service seeds `ollama-local` + `anthropic`, dev `.env` → keychain bootstrap.
 - **M4 (agent runtime):** Append-only event bus, slot-semaphore work queue, `runAgent` with live streaming + persistence, orchestrator facade, real Anthropic + Ollama adapters via Vercel AI SDK, `provider-factory` (resolves employee → provider + model with keytar + privacy-tier fallback), `role-loader` (directory scan → role.md index → template rendering), IPC handlers (`employees.list`, `chat.send`, `chat.list`) with typed preload bridge (`window.teamx: TeamXApi`), full main/index.ts wiring (orchestrator + IPC + event forwarding + graceful shutdown), test-mode provider for Playwright E2E, smoke-chat.ts script for manual Ollama verification.
-- **M5 (renderer):** Tailwind + shadcn/ui dark theme, Zustand + React Query, IPC client hooks, app shell (top bar + sidenav + content area), dashboard cards view with live token stream preview, chat drawer with streaming replies + composer, hire dialog, empty/loading/error states, Inter + JetBrains Mono typography, live status counts, WCAG 2.1 AA accessibility pass. CP5 passed 2026-04-11.
-- **M6 (demo + hardening):** Playwright E2E smoke test (full chat round-trip against canned test-mode provider, 1.1s), CI e2e job (ubuntu + xvfb), CLAUDE.md testing + troubleshooting docs, DevTools + will-quit shutdown fixes. 324 unit tests + 1 E2E passing.
+- **M5 (renderer):** Tailwind + shadcn/ui dark theme, Zustand + React Query, IPC client hooks, app shell (top bar + sidenav + content area), dashboard cards view with live token stream preview, chat drawer with streaming replies + composer, hire dialog, empty/loading/error states, Inter + JetBrains Mono typography, live status counts, WCAG 2.1 AA accessibility pass.
+- **M6 (demo + hardening):** Playwright E2E smoke test (full chat round-trip against canned test-mode provider), CI e2e job (ubuntu + xvfb), DevTools + will-quit shutdown fixes.
 
-The detailed Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md) — 52 tasks across 6 milestones.
+### Phase 2 (The Org) — complete
+
+- **M7 (multi-company + workspace):** Company CRUD + soft-delete, `WorkspaceSwitcher`, `CreateCompanyDialog`, `CompanySettings` panel. DB migration adds `archived_at`, `mcp_configs_json`, `provider_prefs_json`, `max_concurrent_agents` to companies.
+- **M8 (role pack system + 55 roles):** Role-loader (`listRoles()`, `listByLevel()`, `reload()`), 55 F10 roles across 6 levels (Officer 5, Senior Mgmt 7, Management 8, Supervisor 5, Lead 5, IC 25), searchable hire dialog with level filter chips.
+- **M9 (org chart + hire/fire/promote):** `org_edges` table with cycle detection, `employees.fire`, `employees.promote`, `employees.setManager`, `orgchart.get` IPC channels, indented-list tree UI with color-coded levels, drag-to-rearrange, "Reports to" manager selection in hire flow.
+- **M10 (MCP host + tool calling):** `McpHost` singleton with stdio/SSE connection pool, `tools_allowed`/`tools_denied` enforcement at host level, `mcp_servers` + `tool_calls` tables, streaming tool-call support via `fullStream`, 5 `mcp.*` IPC channels, default seeds (Context7, Supabase), graceful shutdown.
+- **M11 (employee-to-employee messaging):** Built-in tools (`send_message_to_colleague`, `list_colleagues`), orchestrator `enqueueAgentReply` with role-relative history mapping, `is_agent_initiated` column, `ThreadList` UI with amber bot icons, read-only agent thread viewing.
+- **M12 (tickets + kanban):** Ticket CRUD (`tickets` table, 8 IPC channels), 4-column kanban board (open/in-progress/blocked/done) with drag-to-move, ticket detail panel with discussion thread, create-with-assign triggers orchestrator run, `CreateTicketDialog` with priority + assignee selection.
+- **M13 (demo + hardening):** Playwright E2E ticket-flow spec (full create-assign-agent-reply round-trip, 1.8s), production build fix (`inlineDynamicImports` for `__filename`/`__dirname` collision), smoke test updated for Phase 2 badge, lint cleanup. 379 unit tests + 2 E2E passing.
+
+The Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md).
+The Phase 2 plan lives at [`docs/plans/2026-04-11-team-x-phase-2-the-org.md`](docs/plans/2026-04-11-team-x-phase-2-the-org.md).
 
 ## Stack (locked)
 
@@ -93,7 +106,7 @@ Packaged installer generation via electron-builder (`pnpm dist`) lands in Phase 
 **Test, typecheck, lint:**
 
 ```bash
-pnpm test                       # vitest run across all workspaces (324 tests)
+pnpm test                       # vitest run across all workspaces (379 tests)
 pnpm test:watch                 # vitest in watch mode
 pnpm test:coverage              # vitest with coverage report
 pnpm typecheck                  # tsc --noEmit across all workspaces
@@ -112,12 +125,16 @@ pnpm -F @team-x/desktop test:e2e
 pnpm -F @team-x/desktop test:e2e:run
 ```
 
-The E2E spec lives at `apps/desktop/e2e/smoke.spec.ts`. It launches a real
-Electron instance against `out/main/index.js` with `NODE_ENV=test`, which
-flips `provider-factory.isTestMode()` to `true` and swaps the resolver
-for the canned-reply `createTestModeResolveProvider`. No Ollama, no
-Anthropic key, no network — the full chat round-trip is exercised
-through the orchestrator and event bus end-to-end.
+Two E2E specs live under `apps/desktop/e2e/`:
+
+- `smoke.spec.ts` — Phase 1 chat round-trip (boot, render employees, send message, canned reply).
+- `ticket-flow.spec.ts` — Phase 2 ticket lifecycle (navigate to Tickets, create ticket with assignee, agent processes via test-mode provider, verify reply in detail panel).
+
+Both launch a real Electron instance against `out/main/index.js` with
+`NODE_ENV=test`, which flips `provider-factory.isTestMode()` to `true`
+and swaps the resolver for the canned-reply `createTestModeResolveProvider`.
+No Ollama, no Anthropic key, no network — the full round-trips are
+exercised through the orchestrator and event bus end-to-end.
 
 Each run gets its own throwaway `--user-data-dir=<tmp>` so the test
 SQLite database never collides with Rocky's real dev DB at
@@ -197,8 +214,41 @@ The curated F10 role library is the crown jewel. When creating or editing `role.
 
 - **Unit tests (Vitest)** for: role.md parser, provider router logic, orchestrator scheduler math, telemetry calculations, backup/restore round-trip.
 - **Integration tests (Vitest)** for: MCP host + one real MCP, Drizzle migrations, worker lifecycle, meeting pause/resume.
-- **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow. Phase 1 ships one full-boot smoke that drives the chat round-trip end-to-end against a canned test-mode provider.
+- **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow. Phase 2 ships two specs: smoke (chat round-trip) and ticket-flow (create-assign-agent-reply lifecycle), both against the canned test-mode provider.
 - Every Phase-X demo must have green tests before the phase is marked shippable.
+
+## IPC channels (Phase 2)
+
+All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and exposed through the preload bridge.
+
+| Namespace | Channel | Description |
+|-----------|---------|-------------|
+| companies | `companies.create` | Create new company |
+| | `companies.update` | Update company settings |
+| | `companies.delete` | Soft-delete (archive) company |
+| employees | `employees.list` | List employees for company |
+| | `employees.create` | Hire from role catalog |
+| | `employees.fire` | Archive employee |
+| | `employees.promote` | Change role/level |
+| | `employees.setManager` | Update reporting line |
+| orgchart | `orgchart.get` | Get full org tree for company |
+| chat | `chat.send` | Send message to employee |
+| | `chat.list` | List messages in thread |
+| | `chat.resolveThread` | Get or create DM thread |
+| | `chat.listThreads` | List all threads for company |
+| mcp | `mcp.list` | List MCP servers for company |
+| | `mcp.add` | Register new MCP server |
+| | `mcp.remove` | Remove MCP server |
+| | `mcp.toggle` | Enable/disable MCP server |
+| | `mcp.health` | Check MCP server health |
+| tickets | `tickets.create` | File ticket (optional immediate assign) |
+| | `tickets.update` | Update mutable fields |
+| | `tickets.assign` | Assign + create thread + enqueue agent |
+| | `tickets.close` | Close ticket (status → done) |
+| | `tickets.reopen` | Reopen closed ticket |
+| | `tickets.addComment` | Add discussion comment (triggers agent) |
+| | `tickets.list` | List all tickets for company |
+| | `tickets.get` | Full detail with messages + assignee |
 
 ## Troubleshooting
 
@@ -240,6 +290,12 @@ The `*` glob also removes the `-shm` and `-wal` WAL companion files. On the next
 **`pnpm typecheck` passes but unit tests fail with "test is not defined".** Vitest is picking up an `e2e/*.spec.ts` Playwright file. Confirm `apps/desktop/vitest.config.ts` excludes `e2e/**` — the per-workspace exclude is required because `vitest.workspace.ts` resolves projects independently and the root `vitest.config.ts` exclude does not propagate down.
 
 **DevTools auto-opens during the Playwright run and the test hangs.** Should not happen — `main/index.ts` gates `openDevTools` on `process.env.NODE_ENV !== 'test'`. If the gate ever regresses, DevTools and Playwright fight over the same Chrome DevTools Protocol channel and every `expect().toBeVisible()` hangs indefinitely.
+
+**Production build fails with `__filename has already been declared`.** The `electron.vite.config.ts` injects an ESM `__filename`/`__dirname` shim as a banner. If Rollup code-splits into chunks, each chunk gets its own CJS shim from electron-vite, colliding with the banner. The fix: `inlineDynamicImports: true` in the main build output config forces a single-file bundle. This is the correct shape for an Electron main process with one entry point.
+
+**Ticket-flow E2E fails with strict mode violation on `getByText`.** Ticket description text appears in multiple DOM nodes (kanban card, detail panel description, initial thread message). Scope locators to a container: `detailPanel.locator('p').filter({ hasText: desc })` targets only the description paragraph, not the message `<div>`.
+
+**MCP servers fail to connect in dev.** MCP servers are seeded as templates (`enabled: false`) by default. Enable them via the Company Settings panel or directly in the `mcp_servers` table. Verify the MCP binary is on the PATH. Check `[mcp]` prefixed logs in the main process console.
 
 ## Things to NOT do
 

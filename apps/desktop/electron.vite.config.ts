@@ -35,7 +35,16 @@ export default defineConfig({
       outDir: 'out/main',
       rollupOptions: {
         input: { index: resolve(__dirname, 'src/main/index.ts') },
-        output: { banner: esmDirnameShim },
+        output: {
+          banner: esmDirnameShim,
+          // Force a single-file bundle for the main process. Without
+          // this, Rollup code-splits workspace deps into separate chunks
+          // where electron-vite's CJS shim re-declares __filename /
+          // __dirname, colliding with the banner shim above and failing
+          // the esbuild minify pass. A single entry = single output is
+          // the correct shape for an Electron main process anyway.
+          inlineDynamicImports: true,
+        },
       },
     },
   },

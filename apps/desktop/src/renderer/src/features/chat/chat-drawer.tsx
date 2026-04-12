@@ -117,7 +117,6 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   // ── Effects ────────────────────────────────────────────────────
 
   // Invalidate thread list when an agent-to-agent message event fires.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger-only dep
   useEffect(() => {
     if (lastAgentMessageAt > 0) {
       void qc.invalidateQueries({ queryKey: ['threads'] });
