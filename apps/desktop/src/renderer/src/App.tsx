@@ -17,6 +17,7 @@ import { ProjectsView } from './features/projects/projects-view.js';
 import { SettingsView } from './features/settings/settings-view.js';
 import { TelemetryView } from './features/telemetry/telemetry-view.js';
 import { TicketsView } from './features/tickets/tickets-view.js';
+import { VaultView } from './features/vault/vault-view.js';
 
 /**
  * Placeholder view for tabs that will be built in later milestones.
@@ -99,6 +100,8 @@ export default function App() {
         return <MeetingsView companyId={companyId} employees={employees} />;
       case 'chat':
         return <ComingSoon label="Chat" />;
+      case 'files':
+        return <VaultView companyId={companyId} />;
       case 'telemetry':
         return <TelemetryView />;
       case 'settings':

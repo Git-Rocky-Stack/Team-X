@@ -113,6 +113,14 @@ const REQUEST_CHANNELS = [
   'providers.update',
   'providers.remove',
   'providers.testConnection',
+  // Vault management (Phase 4 — M21)
+  'vault.upload',
+  'vault.download',
+  'vault.list',
+  'vault.search',
+  'vault.delete',
+  'vault.verify',
+  'vault.stats',
   // Ticket management (Phase 2 — M12)
   'tickets.create',
   'tickets.update',
@@ -458,6 +466,38 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('providers.testConnection', async (_event, request: { providerId: string }) => {
     return handlers.providersTestConnection(request);
+  });
+
+  // Vault management handlers (Phase 4 — M21)
+  ipcMain.handle(
+    'vault.upload',
+    async (_event, request: { companyId: string; sourcePath: string; tags?: string[] }) => {
+      return handlers.vaultUpload(request);
+    },
+  );
+
+  ipcMain.handle('vault.download', async (_event, request: { fileId: string }) => {
+    return handlers.vaultDownload(request);
+  });
+
+  ipcMain.handle('vault.list', async (_event, request: { companyId: string }) => {
+    return handlers.vaultList(request);
+  });
+
+  ipcMain.handle('vault.search', async (_event, request: { companyId: string; query: string }) => {
+    return handlers.vaultSearch(request);
+  });
+
+  ipcMain.handle('vault.delete', async (_event, request: { fileId: string }) => {
+    return handlers.vaultDelete(request);
+  });
+
+  ipcMain.handle('vault.verify', async (_event, request: { fileId: string }) => {
+    return handlers.vaultVerify(request);
+  });
+
+  ipcMain.handle('vault.stats', async (_event, request: { companyId: string }) => {
+    return handlers.vaultStats(request);
   });
 
   // Ticket management handlers (Phase 2 — M12)

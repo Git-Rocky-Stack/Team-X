@@ -117,6 +117,13 @@ import type {
   UpdateProjectRequest,
   UpdateProviderRequest,
   UpdateTicketRequest,
+  VaultDownloadResponse,
+  VaultFile,
+  VaultSearchResult,
+  VaultStatsResponse,
+  VaultUploadRequest,
+  VaultUploadResponse,
+  VaultVerifyResponse,
 } from '@team-x/shared-types';
 import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import { AUTO_THREAD_ID, DEFAULT_CONCURRENCY_CAPS, PRIVACY_TIER_RANK } from '@team-x/shared-types';
@@ -306,6 +313,23 @@ export interface IpcSecretsStore {
   setApiKey(providerId: string, key: string): Promise<void>;
 }
 
+/** Narrow vault-service surface the IPC handlers need. */
+export interface IpcVaultService {
+  store(
+    companyId: string,
+    sourcePath: string,
+    uploadedBy: string,
+    tags?: string[],
+  ): Promise<string>;
+  retrieve(fileId: string): Promise<{ file: VaultFile; absolutePath: string }>;
+  verify(fileId: string): Promise<{ ok: boolean; expected: string; actual: string }>;
+  remove(fileId: string): Promise<void>;
+  search(companyId: string, query: string): VaultSearchResult[];
+  list(companyId: string): VaultFile[];
+  get(fileId: string): VaultFile | null;
+  stats(companyId: string): { fileCount: number; totalBytes: number };
+}
+
 /** Narrow settings-repo surface the IPC handlers need. */
 export interface IpcSettingsRepo {
   get<T>(key: string, fallback: T): T;
@@ -331,6 +355,7 @@ export interface IpcHandlerDeps {
   providersService: IpcProvidersService;
   secretsStore: IpcSecretsStore;
   settingsRepo: IpcSettingsRepo;
+  vaultService: IpcVaultService;
   getHardwareProfile: () => HardwareProfile;
 }
 
@@ -542,6 +567,25 @@ export interface IpcHandlers {
   providersTestConnection(
     req: TestProviderConnectionRequest,
   ): Promise<TestProviderConnectionResponse>;
+
+  // -----------------------------------------------------------------------
+  // Vault management handlers (Phase 4 — M21)
+  // -----------------------------------------------------------------------
+
+  /** `vault.upload` — store a file in the vault from a disk path. */
+  vaultUpload(req: VaultUploadRequest): Promise<VaultUploadResponse>;
+  /** `vault.download` — get file metadata + absolute path for opening. */
+  vaultDownload(req: { fileId: string }): Promise<VaultDownloadResponse>;
+  /** `vault.list` — list all files in a company vault. */
+  vaultList(req: { companyId: string }): Promise<VaultFile[]>;
+  /** `vault.search` — full-text search across vault files. */
+  vaultSearch(req: { companyId: string; query: string }): Promise<VaultSearchResult[]>;
+  /** `vault.delete` — delete a file from vault (disk + DB). */
+  vaultDelete(req: { fileId: string }): Promise<void>;
+  /** `vault.verify` — verify SHA256 integrity of a vault file. */
+  vaultVerify(req: { fileId: string }): Promise<VaultVerifyResponse>;
+  /** `vault.stats` — get vault statistics for a company. */
+  vaultStats(req: { companyId: string }): Promise<VaultStatsResponse>;
 
   // -----------------------------------------------------------------------
   // Ticket management handlers (Phase 2 — M12)
@@ -768,6 +812,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     providersService,
     secretsStore,
     settingsRepo,
+    vaultService,
     getHardwareProfile,
   } = deps;
 
@@ -1510,6 +1555,71 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         return { ok: false, error: 'Provider is not configured (missing API key or disabled)' };
       }
       return { ok: true };
+    },
+
+    // -----------------------------------------------------------------------
+    // Vault management handlers (Phase 4 — M21)
+    // -----------------------------------------------------------------------
+
+    async vaultUpload(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] vault.upload: companyId is required');
+      }
+      if (typeof req.sourcePath !== 'string' || req.sourcePath.length === 0) {
+        throw new Error('[ipc] vault.upload: sourcePath is required');
+      }
+      const fileId = await vaultService.store(
+        req.companyId,
+        req.sourcePath,
+        HUMAN_USER_ID,
+        req.tags,
+      );
+      return { fileId };
+    },
+
+    async vaultDownload(req) {
+      if (typeof req.fileId !== 'string' || req.fileId.length === 0) {
+        throw new Error('[ipc] vault.download: fileId is required');
+      }
+      return vaultService.retrieve(req.fileId);
+    },
+
+    async vaultList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] vault.list: companyId is required');
+      }
+      return vaultService.list(req.companyId);
+    },
+
+    async vaultSearch(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] vault.search: companyId is required');
+      }
+      if (typeof req.query !== 'string' || req.query.trim().length === 0) {
+        throw new Error('[ipc] vault.search: query is required');
+      }
+      return vaultService.search(req.companyId, req.query.trim());
+    },
+
+    async vaultDelete(req) {
+      if (typeof req.fileId !== 'string' || req.fileId.length === 0) {
+        throw new Error('[ipc] vault.delete: fileId is required');
+      }
+      await vaultService.remove(req.fileId);
+    },
+
+    async vaultVerify(req) {
+      if (typeof req.fileId !== 'string' || req.fileId.length === 0) {
+        throw new Error('[ipc] vault.verify: fileId is required');
+      }
+      return vaultService.verify(req.fileId);
+    },
+
+    async vaultStats(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] vault.stats: companyId is required');
+      }
+      return vaultService.stats(req.companyId);
     },
 
     // -----------------------------------------------------------------------

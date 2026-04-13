@@ -48,6 +48,7 @@ import { calcCostUsd } from '@team-x/telemetry-core';
 
 import { type ToolSpec, buildProviderTools } from '@team-x/provider-router';
 import { closeDb, getDb, initDb } from './db/client.js';
+import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath } from './db/paths.js';
 import { createCompaniesRepo } from './db/repos/companies.js';
@@ -66,6 +67,7 @@ import { createRunsRepo } from './db/repos/runs.js';
 import { createSettingsRepo } from './db/repos/settings.js';
 import { createThreadsRepo } from './db/repos/threads.js';
 import { createTicketsRepo } from './db/repos/tickets.js';
+import { createVaultRepo } from './db/repos/vault.js';
 import { seed } from './db/seed.js';
 import { createIpcHandlers } from './ipc/handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
@@ -89,6 +91,7 @@ import {
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRoleLoader } from './services/role-loader.js';
 import { SecretsStore } from './services/secrets.js';
+import { createVaultService } from './services/vault.js';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
@@ -203,6 +206,8 @@ app.whenReady().then(async () => {
   initDb(dbPath());
   runMigrations(getDb(), resolveMigrationsFolder());
   console.log('[db] migrations applied');
+  const fts5Ready = initFts5(getDb());
+  console.log(`[db] FTS5 vault index: ${fts5Ready ? 'ready' : 'unavailable (fallback mode)'}`);
 
   // ---- 2-4. Seed company/employees, default providers, dev key import ----
   seed();
@@ -227,6 +232,7 @@ app.whenReady().then(async () => {
   const goalsRepo = createGoalsRepo(db);
   const projectsRepo = createProjectsRepo(db);
   const meetingsRepo = createMeetingsRepo(db);
+  const vaultRepo = createVaultRepo(db);
   const settingsRepo = createSettingsRepo(db);
 
   // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
@@ -363,6 +369,15 @@ app.whenReady().then(async () => {
     slots: PHASE_1_ORCHESTRATOR_SLOTS,
   });
 
+  const vaultService = createVaultService({
+    vaultRepo,
+    companiesBasePath: join(app.getPath('userData'), 'companies'),
+    getCompanySlug: (companyId: string) => {
+      const company = companiesRepo.list().find((c) => c.id === companyId);
+      return company?.slug ?? null;
+    },
+  });
+
   const meetingService = createMeetingService({
     orchestrator,
     bus,
@@ -392,6 +407,7 @@ app.whenReady().then(async () => {
     providersService,
     secretsStore,
     settingsRepo,
+    vaultService,
     getHardwareProfile: detectHardware,
   });
   unregisterIpc = registerIpcHandlers(ipcHandlers, bus);

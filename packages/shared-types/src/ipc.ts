@@ -505,6 +505,59 @@ export interface TestProviderConnectionResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Vault management shapes (Phase 4 — M21)
+// ---------------------------------------------------------------------------
+
+export interface VaultFile {
+  id: string;
+  companyId: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string;
+  tags: string[];
+  uploadedBy: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface VaultSearchResult {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  rank: number;
+}
+
+export interface VaultUploadRequest {
+  companyId: string;
+  /** Absolute path to the file on disk (selected via Electron file dialog). */
+  sourcePath: string;
+  tags?: string[];
+}
+
+export interface VaultUploadResponse {
+  fileId: string;
+}
+
+export interface VaultDownloadResponse {
+  file: VaultFile;
+  absolutePath: string;
+}
+
+export interface VaultVerifyResponse {
+  ok: boolean;
+  expected: string;
+  actual: string;
+}
+
+export interface VaultStatsResponse {
+  fileCount: number;
+  totalBytes: number;
+}
+
+// ---------------------------------------------------------------------------
 // Settings management shapes (Phase 3 — M19)
 // ---------------------------------------------------------------------------
 
@@ -737,6 +790,35 @@ export interface IpcContract {
     request: TestProviderConnectionRequest;
     response: TestProviderConnectionResponse;
   };
+  // Vault management channels (Phase 4 — M21)
+  'vault.upload': {
+    request: VaultUploadRequest;
+    response: VaultUploadResponse;
+  };
+  'vault.download': {
+    request: { fileId: string };
+    response: VaultDownloadResponse;
+  };
+  'vault.list': {
+    request: { companyId: string };
+    response: VaultFile[];
+  };
+  'vault.search': {
+    request: { companyId: string; query: string };
+    response: VaultSearchResult[];
+  };
+  'vault.delete': {
+    request: { fileId: string };
+    response: undefined;
+  };
+  'vault.verify': {
+    request: { fileId: string };
+    response: VaultVerifyResponse;
+  };
+  'vault.stats': {
+    request: { companyId: string };
+    response: VaultStatsResponse;
+  };
   // Ticket management channels
   'tickets.create': {
     request: CreateTicketRequest;
@@ -953,6 +1035,22 @@ export interface TeamXApi {
     remove(providerId: string): Promise<void>;
     /** Test a provider's API key + connectivity. */
     testConnection(providerId: string): Promise<TestProviderConnectionResponse>;
+  };
+  vault: {
+    /** Upload a file to the vault. sourcePath is an absolute path on disk. */
+    upload(req: VaultUploadRequest): Promise<VaultUploadResponse>;
+    /** Get file metadata and absolute path for download/preview. */
+    download(fileId: string): Promise<VaultDownloadResponse>;
+    /** List all files in a company vault, newest first. */
+    list(companyId: string): Promise<VaultFile[]>;
+    /** Full-text search across vault files. */
+    search(companyId: string, query: string): Promise<VaultSearchResult[]>;
+    /** Delete a file from vault (disk + database). */
+    delete(fileId: string): Promise<void>;
+    /** Verify SHA256 integrity of a vault file. */
+    verify(fileId: string): Promise<VaultVerifyResponse>;
+    /** Get vault statistics for a company. */
+    stats(companyId: string): Promise<VaultStatsResponse>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

@@ -33,6 +33,7 @@ export type ActiveView =
   | 'tickets'
   | 'meetings'
   | 'chat'
+  | 'files'
   | 'telemetry'
   | 'settings';
 

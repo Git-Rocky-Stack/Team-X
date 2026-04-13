@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 
 import {
   Building2,
+  FileArchive,
   Gauge,
   GitBranch,
   KanbanSquare,
@@ -29,6 +30,7 @@ const TABS: TabDef[] = [
   { label: 'Tickets', icon: KanbanSquare, view: 'tickets' },
   { label: 'Meetings', icon: Users2, view: 'meetings' },
   { label: 'Chat', icon: MessageSquare, view: 'chat', disabled: true },
+  { label: 'Files', icon: FileArchive, view: 'files' },
   { label: 'Telemetry', icon: Gauge, view: 'telemetry' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ];

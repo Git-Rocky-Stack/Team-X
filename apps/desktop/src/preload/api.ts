@@ -93,6 +93,13 @@ import type {
   UpdateProjectRequest,
   UpdateProviderRequest,
   UpdateTicketRequest,
+  VaultDownloadResponse,
+  VaultFile,
+  VaultSearchResult,
+  VaultStatsResponse,
+  VaultUploadRequest,
+  VaultUploadResponse,
+  VaultVerifyResponse,
 } from '@team-x/shared-types';
 
 /**
@@ -177,6 +184,14 @@ const CHANNELS = {
   providersUpdate: 'providers.update',
   providersRemove: 'providers.remove',
   providersTestConnection: 'providers.testConnection',
+  // Vault management (Phase 4 — M21)
+  vaultUpload: 'vault.upload',
+  vaultDownload: 'vault.download',
+  vaultList: 'vault.list',
+  vaultSearch: 'vault.search',
+  vaultDelete: 'vault.delete',
+  vaultVerify: 'vault.verify',
+  vaultStats: 'vault.stats',
   // Ticket management (Phase 2 — M12)
   ticketsCreate: 'tickets.create',
   ticketsUpdate: 'tickets.update',
@@ -323,6 +338,21 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.providersTestConnection, {
           providerId,
         }) as Promise<TestProviderConnectionResponse>,
+    },
+    vault: {
+      upload: (req: VaultUploadRequest) =>
+        ipc.invoke(CHANNELS.vaultUpload, req) as Promise<VaultUploadResponse>,
+      download: (fileId: string) =>
+        ipc.invoke(CHANNELS.vaultDownload, { fileId }) as Promise<VaultDownloadResponse>,
+      list: (companyId: string) =>
+        ipc.invoke(CHANNELS.vaultList, { companyId }) as Promise<VaultFile[]>,
+      search: (companyId: string, query: string) =>
+        ipc.invoke(CHANNELS.vaultSearch, { companyId, query }) as Promise<VaultSearchResult[]>,
+      delete: (fileId: string) => ipc.invoke(CHANNELS.vaultDelete, { fileId }) as Promise<void>,
+      verify: (fileId: string) =>
+        ipc.invoke(CHANNELS.vaultVerify, { fileId }) as Promise<VaultVerifyResponse>,
+      stats: (companyId: string) =>
+        ipc.invoke(CHANNELS.vaultStats, { companyId }) as Promise<VaultStatsResponse>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

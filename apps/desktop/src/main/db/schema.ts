@@ -1,5 +1,5 @@
 /**
- * Team-X SQLite schema (Phase 1 + Phase 2 + Phase 3).
+ * Team-X SQLite schema (Phase 1 + Phase 2 + Phase 3 + Phase 4).
  *
  * Phase 1 tables: companies, employees, threads, threadMembers, messages,
  * events, runs, providers, settings.
@@ -7,6 +7,7 @@
  * threads.ticketId FK (M12).
  * Phase 3 additions: goals, projects, projectTickets (M15),
  * meetings + companies.status (M16).
+ * Phase 4 additions: fileVault (M21).
  *
  * Design notes:
  * - Primary keys are text-typed to hold nanoid values (see packages/shared-types).
@@ -328,6 +329,49 @@ export const projectTickets = sqliteTable('project_tickets', {
  * companies.status = 'meeting'), runs turns in controlled order, then
  * resumes on end. Architectural invariant #2 makes this race-free.
  */
+// ---------------------------------------------------------------------------
+// Phase 4 — M21: File Vault
+// ---------------------------------------------------------------------------
+
+/**
+ * Filesystem-backed file store with SHA256 integrity and FTS5 full-text
+ * search. Blobs live on disk under `<userData>/companies/<slug>/vault/`;
+ * only metadata lives here. Architectural invariant #4 — never store
+ * file blobs in SQLite.
+ *
+ * The companion `file_vault_fts` FTS5 virtual table is maintained via
+ * triggers in the migration SQL (content-sync triggers on insert/update/delete).
+ * Drizzle doesn't model FTS5 tables, so search queries use raw SQL.
+ */
+export const fileVault = sqliteTable('file_vault', {
+  id: text('id').primaryKey(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id),
+  /** Sanitized filename on disk (may include SHA prefix for collision avoidance). */
+  filename: text('filename').notNull(),
+  /** Original name as the user uploaded it (preserved for display). */
+  originalName: text('original_name').notNull(),
+  mimeType: text('mime_type').notNull().default('application/octet-stream'),
+  sizeBytes: integer('size_bytes').notNull().default(0),
+  /** Hex-encoded SHA256 digest of the file content. Verified on read. */
+  sha256: text('sha256').notNull(),
+  /** Relative path inside the company vault directory. */
+  vaultPath: text('vault_path').notNull(),
+  /** Extracted text content for FTS5 indexing (markdown, txt, code, etc.). */
+  extractedText: text('extracted_text'),
+  /** JSON-encoded string[] of user-defined tags. */
+  tagsJson: text('tags_json').notNull().default('[]'),
+  /** Who uploaded the file (user id or employee id). */
+  uploadedBy: text('uploaded_by').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Phase 3 — M16: Meetings (continued from above)
+// ---------------------------------------------------------------------------
+
 export const meetings = sqliteTable('meetings', {
   id: text('id').primaryKey(),
   companyId: text('company_id')
