@@ -1,0 +1,114 @@
+appId: com.strategia.team-x
+productName: Team-X
+copyright: Copyright (c) 2026 Rocky Elsalaymeh
+
+directories:
+  buildResources: build
+  output: ../../release/${version}
+
+# electron-vite outputs to out/; we include that plus runtime deps.
+# Workspace packages (@team-x/*) are bundled by Vite — excluded here.
+files:
+  - out/**/*
+  - "!out/**/*.map"
+  - package.json
+  - node_modules/**/*
+  - "!node_modules/@team-x/**"
+  - "!node_modules/.pnpm/**/node_modules/@team-x/**"
+  - "!node_modules/**/{test,tests,__tests__,spec,specs}/**"
+  - "!node_modules/**/*.{md,ts,map}"
+  - "!node_modules/.package-lock.json"
+
+extraMetadata:
+  main: out/main/index.js
+
+# Native modules must be outside the asar archive because Node.js
+# cannot load .node binaries from within an asar.
+asar: true
+asarUnpack:
+  - "node_modules/better-sqlite3/**"
+  - "node_modules/keytar/**"
+
+# Role packs ship alongside the asar as extraResources so users can
+# edit/add packs without rebuilding. The files land in the app's
+# resources/ directory at runtime (accessible via process.resourcesPath).
+extraResources:
+  - from: ../../role-packs
+    to: role-packs
+    filter:
+      - "**/*"
+      - "!**/.git"
+
+# Rebuild native modules for the target Electron ABI.
+npmRebuild: true
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+
+# ─── Windows ──────────────────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - arm64
+  icon: build/icon.png
+  artifactName: Team-X-${version}-Setup-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Team-X
+  uninstallDisplayName: Team-X
+
+# ─── macOS ────────────────────────────────────────────────────────────
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: build/icon.png
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  artifactName: Team-X-${version}-${arch}.${ext}
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# ─── Linux ────────────────────────────────────────────────────────────
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: build/icon-512.png
+  category: Utility
+  desktop:
+    StartupWMClass: team-x
+  artifactName: Team-X-${version}-${arch}.${ext}
+
+# ─── Publishing ───────────────────────────────────────────────────────
+# Publish to GitHub Releases. The release workflow creates a draft
+# release and electron-builder uploads artifacts to it.
+# Set to "null" for local-only builds (pnpm dist).
+publish:
+  provider: github
+  owner: Rocky-Stack
+  repo: Team-X
+  releaseType: draft

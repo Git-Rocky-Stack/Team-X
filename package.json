@@ -20,6 +20,11 @@
     "test:coverage": "vitest run --coverage",
     "build": "pnpm -r build",
     "dev": "pnpm -F @team-x/desktop dev",
+    "dist": "pnpm -F @team-x/desktop dist",
+    "dist:win": "pnpm -F @team-x/desktop dist:win",
+    "dist:mac": "pnpm -F @team-x/desktop dist:mac",
+    "dist:linux": "pnpm -F @team-x/desktop dist:linux",
+    "dist:publish": "pnpm -F @team-x/desktop dist:publish",
     "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules"
   },
   "devDependencies": {

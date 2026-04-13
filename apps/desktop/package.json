@@ -11,6 +11,11 @@
     "test": "vitest run",
     "test:e2e": "electron-vite build && playwright test",
     "test:e2e:run": "playwright test",
+    "dist": "electron-vite build && electron-builder --publish never",
+    "dist:win": "electron-vite build && electron-builder --win --publish never",
+    "dist:mac": "electron-vite build && electron-builder --mac --publish never",
+    "dist:linux": "electron-vite build && electron-builder --linux --publish never",
+    "dist:publish": "electron-vite build && electron-builder --publish always",
     "postinstall": "electron-rebuild -f -w better-sqlite3,keytar"
   },
   "dependencies": {
@@ -32,6 +37,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.33.0",
+    "electron-updater": "^6.8.3",
     "keytar": "^7.9.0",
     "lucide-react": "^1.8.0",
     "nanoid": "^5.0.0",
@@ -51,6 +57,7 @@
     "autoprefixer": "^10.4.27",
     "drizzle-kit": "^0.24.0",
     "electron": "^31.0.0",
+    "electron-builder": "^26.8.1",
     "electron-vite": "^2.3.0",
     "postcss": "^8.5.9",
     "react": "^19.0.0",

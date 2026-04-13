@@ -128,7 +128,9 @@ import type {
   TicketAttachment,
   TicketDetail,
   UnlinkTicketFromProjectRequest,
+  UpdateCheckResult,
   UpdateGoalRequest,
+  UpdateInstallResult,
   UpdateProjectRequest,
   UpdateProviderRequest,
   UpdateTicketRequest,
@@ -377,6 +379,12 @@ export interface IpcSettingsRepo {
   set(key: string, value: unknown): void;
 }
 
+/** Narrow updater-service surface the IPC handlers need. */
+export interface IpcUpdaterService {
+  checkForUpdate(): Promise<UpdateCheckResult>;
+  downloadAndInstall(): Promise<UpdateInstallResult>;
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -400,6 +408,7 @@ export interface IpcHandlerDeps {
   vaultService: IpcVaultService;
   backupService: IpcBackupService;
   auditRepo: IpcAuditRepo;
+  updaterService: IpcUpdaterService;
   getHardwareProfile: () => HardwareProfile;
 }
 
@@ -657,6 +666,12 @@ export interface IpcHandlers {
   // Ticket management handlers (Phase 2 — M12)
   // -----------------------------------------------------------------------
 
+  /** `updater.check` — check GitHub Releases for a newer version. User-triggered only. */
+  updaterCheck(): Promise<UpdateCheckResult>;
+
+  /** `updater.install` — download and install the available update. App will restart. */
+  updaterInstall(): Promise<UpdateInstallResult>;
+
   /** `tickets.create` — file a new ticket. Optionally assigns immediately. */
   ticketsCreate(req: CreateTicketRequest): Promise<CreateTicketResponse>;
 
@@ -889,6 +904,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     vaultService,
     backupService,
     auditRepo,
+    updaterService,
     getHardwareProfile,
   } = deps;
 
@@ -2121,6 +2137,18 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           fileSizeBytes: vaultFile?.sizeBytes,
         };
       });
+    },
+
+    // -----------------------------------------------------------------------
+    // Updater (Phase 4 — M25)
+    // -----------------------------------------------------------------------
+
+    async updaterCheck() {
+      return updaterService.checkForUpdate();
+    },
+
+    async updaterInstall() {
+      return updaterService.downloadAndInstall();
     },
   };
 }

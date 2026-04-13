@@ -1,11 +1,11 @@
 {
   "currentPhase": "DEVELOPMENT",
-  "currentMilestone": "M24",
-  "milestoneName": "Audit Log UI",
-  "tasksCompleted": 6,
+  "currentMilestone": "M25",
+  "milestoneName": "Cross-Platform Installers",
+  "tasksCompleted": 9,
   "tasksFailed": 0,
-  "startedAt": "2026-04-13T10:30:00Z",
-  "completedAt": "2026-04-13T11:00:00Z",
+  "startedAt": "2026-04-13T11:10:00Z",
+  "completedAt": "2026-04-13T11:30:00Z",
   "phaseComplete": false,
   "phase": "Phase 4 — Ship-readiness"
 }

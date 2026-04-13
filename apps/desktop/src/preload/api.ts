@@ -103,7 +103,9 @@ import type {
   TicketAttachment,
   TicketDetail,
   UnsubscribeFn,
+  UpdateCheckResult,
   UpdateGoalRequest,
+  UpdateInstallResult,
   UpdateProjectRequest,
   UpdateProviderRequest,
   UpdateTicketRequest,
@@ -227,6 +229,9 @@ const CHANNELS = {
   auditList: 'audit.list',
   auditStats: 'audit.stats',
   auditExport: 'audit.export',
+  // Updater (Phase 4 — M25)
+  updaterCheck: 'updater.check',
+  updaterInstall: 'updater.install',
 } as const;
 
 /**
@@ -394,6 +399,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.auditStats, { companyId }) as Promise<AuditStats>,
       export: (req: AuditExportRequest) =>
         ipc.invoke(CHANNELS.auditExport, req) as Promise<AuditExportResponse>,
+    },
+    updater: {
+      check: () => ipc.invoke(CHANNELS.updaterCheck) as Promise<UpdateCheckResult>,
+      install: () => ipc.invoke(CHANNELS.updaterInstall) as Promise<UpdateInstallResult>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

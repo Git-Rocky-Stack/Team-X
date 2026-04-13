@@ -94,6 +94,7 @@ import {
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRoleLoader } from './services/role-loader.js';
 import { SecretsStore } from './services/secrets.js';
+import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -401,6 +402,11 @@ app.whenReady().then(async () => {
     },
   });
 
+  const updaterService = createUpdaterService({
+    isDev,
+    isTestMode: testMode,
+  });
+
   const meetingService = createMeetingService({
     orchestrator,
     bus,
@@ -434,6 +440,7 @@ app.whenReady().then(async () => {
     vaultService,
     backupService,
     auditRepo,
+    updaterService,
     getHardwareProfile: detectHardware,
   });
   unregisterIpc = registerIpcHandlers(ipcHandlers, bus);

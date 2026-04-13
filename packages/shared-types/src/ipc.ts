@@ -675,6 +675,48 @@ export interface AuditExportResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Updater shapes (Phase 4 — M25)
+// ---------------------------------------------------------------------------
+
+/** Status of the auto-updater lifecycle. */
+export type UpdaterStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+/** Result of checking for updates. */
+export interface UpdateCheckResult {
+  status: 'available' | 'not-available' | 'error';
+  /** Set when status is 'available'. */
+  version?: string;
+  /** Set when status is 'available'. Release notes markdown. */
+  releaseNotes?: string;
+  /** Set when status is 'available'. Release date ISO string. */
+  releaseDate?: string;
+  /** Set when status is 'error'. */
+  error?: string;
+}
+
+/** Progress of an update download. */
+export interface UpdateDownloadProgress {
+  percent: number;
+  bytesPerSecond: number;
+  transferred: number;
+  total: number;
+}
+
+/** Result of installing an update. */
+export interface UpdateInstallResult {
+  /** Whether the install was initiated (app will restart). */
+  initiated: boolean;
+  error?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Settings management shapes (Phase 3 — M19)
 // ---------------------------------------------------------------------------
 
@@ -975,6 +1017,15 @@ export interface IpcContract {
     request: ListAttachmentsRequest;
     response: TicketAttachment[];
   };
+  // Updater channels (Phase 4 — M25)
+  'updater.check': {
+    request: Record<string, never>;
+    response: UpdateCheckResult;
+  };
+  'updater.install': {
+    request: Record<string, never>;
+    response: UpdateInstallResult;
+  };
   // Ticket management channels
   'tickets.create': {
     request: CreateTicketRequest;
@@ -1223,6 +1274,12 @@ export interface TeamXApi {
     stats(companyId: string): Promise<AuditStats>;
     /** Export filtered audit events to a file (CSV or JSON). Returns the saved file path. */
     export(req: AuditExportRequest): Promise<AuditExportResponse>;
+  };
+  updater: {
+    /** Check GitHub Releases for a newer version. User-triggered only (zero phone-home). */
+    check(): Promise<UpdateCheckResult>;
+    /** Download and install the available update. App will restart. */
+    install(): Promise<UpdateInstallResult>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

@@ -20,7 +20,9 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 **Phase 2 (The Org) — complete.** All 13 milestones shipped.
 
-**Phase 3 (The Live Cockpit) — complete.** All 20 milestones shipped. 590 unit tests + 3 E2E specs passing.
+**Phase 3 (The Live Cockpit) — complete.** All 20 milestones shipped.
+
+**Phase 4 (Ship-readiness) — in progress.** M21-M25 shipped. 602 unit tests + 3 E2E specs passing.
 
 ### Phase 1 (Skeleton) — complete
 
@@ -51,9 +53,18 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 - **M19 (runtime modes + privacy):** Settings repo (key-value store with seedDefaults). Hardware profiler (CPU, RAM, GPU detection via `execFileSync` + wmic on Windows, session-cached). Strategy picker (`pickStrategy` — Auto/Hybrid/Always-On/Lean based on hardware + providers). Privacy tier types + constants (`PRIVACY_TIER_RANK`, `DEFAULT_CONCURRENCY_CAPS`, `STRATEGY_SLOTS`). 6 new `settings.*` IPC channels + handlers + preload bridge. Settings UI expanded with RuntimeSection (strategy selector + hw profile), PrivacySection (tier selector + per-provider allowed/blocked), ConcurrencySection (slot selector + per-provider caps). 530 tests passing.
 - **M20 (demo + hardening):** Playwright E2E meeting-flow spec (full call-interject-end-minutes round-trip). Smoke + ticket-flow E2E specs updated for Phase 3 badge. All 3 E2E specs green. CLAUDE.md finalized for Phase 3 completion. 590 unit tests + 3 E2E specs passing.
 
+### Phase 4 (Ship-readiness) — in progress
+
+- **M21 (file vault):** `file_vault` table + FTS5 (best-effort via `fts5-init.ts`), VaultRepo, VaultService (SHA256 integrity, text extraction), 7 IPC channels (`vault.*`), VaultView renderer with Files tab, search, detail panel. 31 tests.
+- **M22 (ticket attachments):** `ticket_attachments` linking table, TicketAttachmentsRepo, 3 IPC channels (`tickets.attachFile/detachFile/listAttachments`), attachment section in ticket detail panel with vault file picker. 8 tests.
+- **M23 (backup/restore):** BackupService (WAL checkpoint + DB + vault copy archive), 3 IPC channels (`backup.*`), BackupSection in Settings with create/restore/history UI. 5 tests.
+- **M24 (audit log UI):** AuditRepo (read-only queries on append-only events table), 3 IPC channels (`audit.*`), AuditView with summary cards, event type filter chips, actor search, date range picker, expandable rows with payload JSON viewer, CSV/JSON export. Audit tab enabled. 16 tests.
+- **M25 (cross-platform installers):** electron-builder config (NSIS/DMG/AppImage+deb), placeholder app icons, macOS entitlements, `dist`/`dist:win`/`dist:mac`/`dist:linux`/`dist:publish` scripts, UpdaterService (user-triggered only, zero phone-home) with 2 IPC channels (`updater.check`, `updater.install`), UpdaterSection in Settings UI, GitHub Actions release workflow (`release.yml` — matrix win/mac/linux, SHA256 checksums, draft release). 12 tests. 602 total.
+
 The Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md).
 The Phase 2 plan lives at [`docs/plans/2026-04-11-team-x-phase-2-the-org.md`](docs/plans/2026-04-11-team-x-phase-2-the-org.md).
 The Phase 3 plan lives at [`docs/plans/2026-04-12-team-x-phase-3-live-cockpit.md`](docs/plans/2026-04-12-team-x-phase-3-live-cockpit.md).
+The Phase 4 plan lives at [`docs/plans/2026-04-13-team-x-phase-4-ship-readiness.md`](docs/plans/2026-04-13-team-x-phase-4-ship-readiness.md).
 
 ## Stack (locked)
 
@@ -114,12 +125,22 @@ pnpm -F @team-x/desktop dev     # same, scoped to the desktop app
 pnpm build                      # production build of all workspaces
 ```
 
-Packaged installer generation via electron-builder (`pnpm dist`) lands in Phase 4 — no command yet. Playwright E2E tests are wired (T49) and run via `pnpm -F @team-x/desktop test:e2e`.
+**Packaged installers (Phase 4 — M25):**
+
+```bash
+pnpm dist                       # build + package for current platform
+pnpm dist:win                   # Windows NSIS installer (x64 + arm64)
+pnpm dist:mac                   # macOS DMG (x64 + arm64)
+pnpm dist:linux                 # Linux AppImage + deb (x64)
+pnpm dist:publish               # build + upload to GitHub Release draft
+```
+
+Output lands in `release/<version>/`. Playwright E2E tests are wired (T49) and run via `pnpm -F @team-x/desktop test:e2e`.
 
 **Test, typecheck, lint:**
 
 ```bash
-pnpm test                       # vitest run across all workspaces (590 tests)
+pnpm test                       # vitest run across all workspaces (602 tests)
 pnpm test:watch                 # vitest in watch mode
 pnpm test:coverage              # vitest with coverage report
 pnpm typecheck                  # tsc --noEmit across all workspaces
@@ -299,6 +320,8 @@ All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and 
 | audit | `audit.list` | Filtered, paginated audit event list (M24) |
 | | `audit.stats` | Aggregate statistics for summary cards |
 | | `audit.export` | Export filtered events to CSV/JSON file |
+| updater | `updater.check` | Check GitHub Releases for newer version (M25) |
+| | `updater.install` | Download and install update (app restarts) |
 
 ## Troubleshooting
 
@@ -354,6 +377,10 @@ The `*` glob also removes the `-shm` and `-wal` WAL companion files. On the next
 **Runtime strategy shows "Unknown" in Settings.** The hardware profiler runs `wmic` commands on Windows via `execFileSync`. If `wmic` is not on PATH (rare on Windows 11), GPU detection fails silently and defaults to conservative values. The strategy picker still works — it just assumes no GPU.
 
 **Telemetry charts show no data.** Telemetry reads from the `runs` table. If no agent runs have completed, all charts render zeros. Trigger a chat or ticket assignment to populate the runs table, then refresh the Telemetry tab.
+
+**`pnpm dist` fails with native module errors.** electron-builder needs native modules rebuilt for the target Electron ABI. Run `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` first. If packaging for a different platform (cross-compilation), native modules must be built on the target OS — use the GitHub Actions release workflow instead.
+
+**Updater shows "not available" in dev.** By design. The UpdaterService returns a no-op in dev and test mode (invariant #7: zero phone-home). The real updater only activates in packaged production builds where `app.isPackaged` is true.
 
 ## Things to NOT do
 
