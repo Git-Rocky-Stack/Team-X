@@ -99,8 +99,8 @@ linux:
         - x64
   icon: build/icon-512.png
   category: Utility
-  desktop:
-    StartupWMClass: team-x
+  executableArgs:
+    - --class=team-x
   artifactName: Team-X-${version}-${arch}.${ext}
 
 # ─── Publishing ───────────────────────────────────────────────────────
