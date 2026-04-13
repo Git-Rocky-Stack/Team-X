@@ -3,8 +3,10 @@
  *
  * Phase 3 — M18: providers management section.
  * Phase 3 — M19: runtime strategy, privacy tier, concurrency sections.
+ * Phase 4 — M23: backup & restore section.
  */
 
+import { BackupSection } from './backup-section.js';
 import { ConcurrencySection } from './concurrency-section.js';
 import { PrivacySection } from './privacy-section.js';
 import { ProvidersSection } from './providers-section.js';
@@ -24,6 +26,7 @@ export function SettingsView() {
         <PrivacySection />
         <ConcurrencySection />
         <ProvidersSection />
+        <BackupSection />
       </div>
     </div>
   );

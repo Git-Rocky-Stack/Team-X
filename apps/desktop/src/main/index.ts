@@ -81,6 +81,7 @@ import {
 } from './orchestrator/index.js';
 import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
+import { createBackupService } from './services/backup.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import { detectHardware } from './services/profiler.js';
@@ -380,6 +381,24 @@ app.whenReady().then(async () => {
     },
   });
 
+  const backupService = createBackupService({
+    dbPath: dbPath(),
+    companiesBasePath: join(app.getPath('userData'), 'companies'),
+    backupsDir: join(app.getPath('userData'), 'backups'),
+    appVersion: app.getVersion(),
+    checkpointWal: () => {
+      const rawDb = getDb();
+      // Drizzle's run() for raw SQL pragma
+      try {
+        (rawDb as unknown as { run: (q: unknown) => void }).run({
+          toSQL: () => ({ sql: 'PRAGMA wal_checkpoint(TRUNCATE)', params: [] }),
+        });
+      } catch {
+        // Fallback: just proceed without checkpoint
+      }
+    },
+  });
+
   const meetingService = createMeetingService({
     orchestrator,
     bus,
@@ -411,6 +430,7 @@ app.whenReady().then(async () => {
     secretsStore,
     settingsRepo,
     vaultService,
+    backupService,
     getHardwareProfile: detectHardware,
   });
   unregisterIpc = registerIpcHandlers(ipcHandlers, bus);

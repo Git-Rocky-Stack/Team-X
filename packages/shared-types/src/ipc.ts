@@ -558,6 +558,46 @@ export interface VaultStatsResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Backup/restore shapes (Phase 4 — M23)
+// ---------------------------------------------------------------------------
+
+export interface BackupManifest {
+  version: string;
+  createdAt: string;
+  appVersion: string;
+  companyCount: number;
+  fileCount: number;
+  totalSizeBytes: number;
+  dbSizeBytes: number;
+}
+
+export interface BackupEntry {
+  filename: string;
+  path: string;
+  createdAt: string;
+  sizeBytes: number;
+  manifest: BackupManifest | null;
+}
+
+export interface BackupCreateRequest {
+  /** Optional custom destination path. Uses default backups dir if omitted. */
+  destination?: string;
+}
+
+export interface BackupCreateResponse {
+  backupPath: string;
+  manifest: BackupManifest;
+}
+
+export interface BackupRestoreRequest {
+  backupPath: string;
+}
+
+export interface BackupRestoreResponse {
+  manifest: BackupManifest;
+}
+
+// ---------------------------------------------------------------------------
 // Ticket attachment shapes (Phase 4 — M22)
 // ---------------------------------------------------------------------------
 
@@ -855,6 +895,19 @@ export interface IpcContract {
     request: { companyId: string };
     response: VaultStatsResponse;
   };
+  // Backup/restore channels (Phase 4 — M23)
+  'backup.create': {
+    request: BackupCreateRequest;
+    response: BackupCreateResponse;
+  };
+  'backup.restore': {
+    request: BackupRestoreRequest;
+    response: BackupRestoreResponse;
+  };
+  'backup.list': {
+    request: Record<string, never>;
+    response: BackupEntry[];
+  };
   // Ticket attachment channels (Phase 4 — M22)
   'tickets.attachFile': {
     request: AttachFileRequest;
@@ -1100,6 +1153,14 @@ export interface TeamXApi {
     verify(fileId: string): Promise<VaultVerifyResponse>;
     /** Get vault statistics for a company. */
     stats(companyId: string): Promise<VaultStatsResponse>;
+  };
+  backup: {
+    /** Create a full backup (SQLite + vault files). */
+    create(req?: BackupCreateRequest): Promise<BackupCreateResponse>;
+    /** Restore from a backup directory. DESTRUCTIVE. */
+    restore(req: BackupRestoreRequest): Promise<BackupRestoreResponse>;
+    /** List all existing backup archives. */
+    list(): Promise<BackupEntry[]>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

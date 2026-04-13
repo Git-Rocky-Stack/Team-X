@@ -130,6 +130,10 @@ const REQUEST_CHANNELS = [
   'tickets.addComment',
   'tickets.list',
   'tickets.get',
+  // Backup/restore (Phase 4 — M23)
+  'backup.create',
+  'backup.restore',
+  'backup.list',
   // Ticket attachments (Phase 4 — M22)
   'tickets.attachFile',
   'tickets.detachFile',
@@ -502,6 +506,19 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('vault.stats', async (_event, request: { companyId: string }) => {
     return handlers.vaultStats(request);
+  });
+
+  // Backup/restore handlers (Phase 4 — M23)
+  ipcMain.handle('backup.create', async (_event, request: { destination?: string }) => {
+    return handlers.backupCreate(request ?? {});
+  });
+
+  ipcMain.handle('backup.restore', async (_event, request: { backupPath: string }) => {
+    return handlers.backupRestore(request);
+  });
+
+  ipcMain.handle('backup.list', async () => {
+    return handlers.backupList();
   });
 
   // Ticket management handlers (Phase 2 — M12)

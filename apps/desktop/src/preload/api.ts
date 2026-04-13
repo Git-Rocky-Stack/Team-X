@@ -42,6 +42,11 @@ import type {
   AddTicketCommentResponse,
   AttachFileRequest,
   AttachFileResponse,
+  BackupCreateRequest,
+  BackupCreateResponse,
+  BackupEntry,
+  BackupRestoreRequest,
+  BackupRestoreResponse,
   CallMeetingRequest,
   CallMeetingResponse,
   CreateGoalRequest,
@@ -205,6 +210,10 @@ const CHANNELS = {
   ticketsAddComment: 'tickets.addComment',
   ticketsList: 'tickets.list',
   ticketsGet: 'tickets.get',
+  // Backup/restore (Phase 4 — M23)
+  backupCreate: 'backup.create',
+  backupRestore: 'backup.restore',
+  backupList: 'backup.list',
   // Ticket attachments (Phase 4 — M22)
   ticketsAttachFile: 'tickets.attachFile',
   ticketsDetachFile: 'tickets.detachFile',
@@ -361,6 +370,13 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.vaultVerify, { fileId }) as Promise<VaultVerifyResponse>,
       stats: (companyId: string) =>
         ipc.invoke(CHANNELS.vaultStats, { companyId }) as Promise<VaultStatsResponse>,
+    },
+    backup: {
+      create: (req?: BackupCreateRequest) =>
+        ipc.invoke(CHANNELS.backupCreate, req ?? {}) as Promise<BackupCreateResponse>,
+      restore: (req: BackupRestoreRequest) =>
+        ipc.invoke(CHANNELS.backupRestore, req) as Promise<BackupRestoreResponse>,
+      list: () => ipc.invoke(CHANNELS.backupList) as Promise<BackupEntry[]>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

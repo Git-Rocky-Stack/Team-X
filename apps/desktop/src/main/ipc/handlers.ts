@@ -45,6 +45,11 @@ import type {
   AssignTicketRequest,
   AttachFileRequest,
   AttachFileResponse,
+  BackupCreateRequest,
+  BackupCreateResponse,
+  BackupEntry,
+  BackupRestoreRequest,
+  BackupRestoreResponse,
   CallMeetingRequest,
   CallMeetingResponse,
   ChatMessage,
@@ -326,6 +331,15 @@ export interface IpcSecretsStore {
   setApiKey(providerId: string, key: string): Promise<void>;
 }
 
+/** Narrow backup-service surface the IPC handlers need. */
+export interface IpcBackupService {
+  create(
+    destination?: string,
+  ): Promise<{ backupPath: string; manifest: import('@team-x/shared-types').BackupManifest }>;
+  restore(backupPath: string): Promise<import('@team-x/shared-types').BackupManifest>;
+  list(): Promise<BackupEntry[]>;
+}
+
 /** Narrow vault-service surface the IPC handlers need. */
 export interface IpcVaultService {
   store(
@@ -370,6 +384,7 @@ export interface IpcHandlerDeps {
   secretsStore: IpcSecretsStore;
   settingsRepo: IpcSettingsRepo;
   vaultService: IpcVaultService;
+  backupService: IpcBackupService;
   getHardwareProfile: () => HardwareProfile;
 }
 
@@ -600,6 +615,17 @@ export interface IpcHandlers {
   vaultVerify(req: { fileId: string }): Promise<VaultVerifyResponse>;
   /** `vault.stats` — get vault statistics for a company. */
   vaultStats(req: { companyId: string }): Promise<VaultStatsResponse>;
+
+  // -----------------------------------------------------------------------
+  // Backup/restore handlers (Phase 4 — M23)
+  // -----------------------------------------------------------------------
+
+  /** `backup.create` — create a full backup archive. */
+  backupCreate(req: BackupCreateRequest): Promise<BackupCreateResponse>;
+  /** `backup.restore` — restore from a backup. DESTRUCTIVE. */
+  backupRestore(req: BackupRestoreRequest): Promise<BackupRestoreResponse>;
+  /** `backup.list` — list existing backups. */
+  backupList(): Promise<BackupEntry[]>;
 
   // -----------------------------------------------------------------------
   // Ticket management handlers (Phase 2 — M12)
@@ -835,6 +861,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     secretsStore,
     settingsRepo,
     vaultService,
+    backupService,
     getHardwareProfile,
   } = deps;
 
@@ -1642,6 +1669,27 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] vault.stats: companyId is required');
       }
       return vaultService.stats(req.companyId);
+    },
+
+    // -----------------------------------------------------------------------
+    // Backup/restore handlers (Phase 4 — M23)
+    // -----------------------------------------------------------------------
+
+    async backupCreate(req) {
+      const result = await backupService.create(req.destination);
+      return result;
+    },
+
+    async backupRestore(req) {
+      if (typeof req.backupPath !== 'string' || req.backupPath.length === 0) {
+        throw new Error('[ipc] backup.restore: backupPath is required');
+      }
+      const manifest = await backupService.restore(req.backupPath);
+      return { manifest };
+    },
+
+    async backupList() {
+      return backupService.list();
     },
 
     // -----------------------------------------------------------------------
