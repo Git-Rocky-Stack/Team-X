@@ -2,11 +2,13 @@
  * SettingsView — top-level Settings tab.
  *
  * Phase 3 — M18: providers management section.
- * Future milestones will add company preferences, runtime mode,
- * privacy filter, and backup/restore sections.
+ * Phase 3 — M19: runtime strategy, privacy tier, concurrency sections.
  */
 
+import { ConcurrencySection } from './concurrency-section.js';
+import { PrivacySection } from './privacy-section.js';
 import { ProvidersSection } from './providers-section.js';
+import { RuntimeSection } from './runtime-section.js';
 
 export function SettingsView() {
   return (
@@ -18,6 +20,9 @@ export function SettingsView() {
         </p>
       </div>
       <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-6">
+        <RuntimeSection />
+        <PrivacySection />
+        <ConcurrencySection />
         <ProvidersSection />
       </div>
     </div>

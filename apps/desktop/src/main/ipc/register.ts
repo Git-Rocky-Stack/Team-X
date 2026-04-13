@@ -100,6 +100,13 @@ const REQUEST_CHANNELS = [
   'telemetry.dailyUsage',
   'telemetry.employeeStats',
   'telemetry.costBreakdown',
+  // Settings (Phase 3 — M19)
+  'settings.getRuntime',
+  'settings.setRuntime',
+  'settings.getPrivacy',
+  'settings.setPrivacy',
+  'settings.getConcurrency',
+  'settings.setConcurrency',
   // Provider management (Phase 3 — M18)
   'providers.list',
   'providers.add',
@@ -370,6 +377,41 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'telemetry.costBreakdown',
     async (_event, request: { companyId: string; fromMs?: number; toMs?: number }) => {
       return handlers.telemetryCostBreakdown(request);
+    },
+  );
+
+  // Settings handlers (Phase 3 — M19)
+  ipcMain.handle('settings.getRuntime', async () => {
+    return handlers.settingsGetRuntime();
+  });
+
+  ipcMain.handle('settings.setRuntime', async (_event, request: { strategy: string }) => {
+    return handlers.settingsSetRuntime(
+      request as import('@team-x/shared-types').SettingsSetRuntimeRequest,
+    );
+  });
+
+  ipcMain.handle('settings.getPrivacy', async () => {
+    return handlers.settingsGetPrivacy();
+  });
+
+  ipcMain.handle('settings.setPrivacy', async (_event, request: { maxTier: string }) => {
+    return handlers.settingsSetPrivacy(
+      request as import('@team-x/shared-types').SettingsSetPrivacyRequest,
+    );
+  });
+
+  ipcMain.handle('settings.getConcurrency', async () => {
+    return handlers.settingsGetConcurrency();
+  });
+
+  ipcMain.handle(
+    'settings.setConcurrency',
+    async (
+      _event,
+      request: { orchestratorSlots?: number; providerCaps?: Record<string, number> },
+    ) => {
+      return handlers.settingsSetConcurrency(request);
     },
   );
 

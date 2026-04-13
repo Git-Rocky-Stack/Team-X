@@ -63,6 +63,7 @@ import { createMeetingsRepo } from './db/repos/meetings.js';
 import { createMessagesRepo } from './db/repos/messages.js';
 import { createProjectsRepo } from './db/repos/projects.js';
 import { createRunsRepo } from './db/repos/runs.js';
+import { createSettingsRepo } from './db/repos/settings.js';
 import { createThreadsRepo } from './db/repos/threads.js';
 import { createTicketsRepo } from './db/repos/tickets.js';
 import { seed } from './db/seed.js';
@@ -79,6 +80,7 @@ import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
+import { detectHardware } from './services/profiler.js';
 import {
   createProviderFactory,
   createTestModeResolveProvider,
@@ -225,6 +227,13 @@ app.whenReady().then(async () => {
   const goalsRepo = createGoalsRepo(db);
   const projectsRepo = createProjectsRepo(db);
   const meetingsRepo = createMeetingsRepo(db);
+  const settingsRepo = createSettingsRepo(db);
+
+  // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
+  const settingsSeeded = settingsRepo.seedDefaults();
+  if (settingsSeeded > 0) {
+    console.log(`[settings] seeded ${settingsSeeded} default setting(s)`);
+  }
 
   // Seed well-known MCP servers on first boot (disabled by default).
   const mcpSeeded = seedDefaultMcpServers(db);
@@ -382,6 +391,8 @@ app.whenReady().then(async () => {
     mcpServersRepo,
     providersService,
     secretsStore,
+    settingsRepo,
+    getHardwareProfile: detectHardware,
   });
   unregisterIpc = registerIpcHandlers(ipcHandlers, bus);
 

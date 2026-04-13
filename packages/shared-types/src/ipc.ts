@@ -505,6 +505,46 @@ export interface TestProviderConnectionResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Settings management shapes (Phase 3 — M19)
+// ---------------------------------------------------------------------------
+
+export interface SettingsGetRuntimeResponse {
+  strategy: import('./providers.js').RuntimeStrategy;
+  hardwareProfile: import('./providers.js').HardwareProfile;
+  effectiveSlots: number;
+  reason: string;
+}
+
+export interface SettingsSetRuntimeRequest {
+  strategy: import('./providers.js').RuntimeStrategy;
+}
+
+export interface SettingsGetPrivacyResponse {
+  maxTier: PrivacyTier;
+  availableProviders: Array<{
+    id: string;
+    name: string;
+    kind: ProviderKind;
+    privacyTier: PrivacyTier;
+    allowed: boolean;
+  }>;
+}
+
+export interface SettingsSetPrivacyRequest {
+  maxTier: PrivacyTier;
+}
+
+export interface SettingsGetConcurrencyResponse {
+  orchestratorSlots: number;
+  providerCaps: Record<string, number>;
+}
+
+export interface SettingsSetConcurrencyRequest {
+  orchestratorSlots?: number;
+  providerCaps?: Record<string, number>;
+}
+
+// ---------------------------------------------------------------------------
 // Low-level channel map (used by ipcMain.handle and its generic helpers)
 // ---------------------------------------------------------------------------
 
@@ -650,6 +690,31 @@ export interface IpcContract {
   'telemetry.costBreakdown': {
     request: TelemetryCostBreakdownRequest;
     response: TelemetryCostBreakdownRow[];
+  };
+  // Settings channels (Phase 3 — M19)
+  'settings.getRuntime': {
+    request: Record<string, never>;
+    response: SettingsGetRuntimeResponse;
+  };
+  'settings.setRuntime': {
+    request: SettingsSetRuntimeRequest;
+    response: undefined;
+  };
+  'settings.getPrivacy': {
+    request: Record<string, never>;
+    response: SettingsGetPrivacyResponse;
+  };
+  'settings.setPrivacy': {
+    request: SettingsSetPrivacyRequest;
+    response: undefined;
+  };
+  'settings.getConcurrency': {
+    request: Record<string, never>;
+    response: SettingsGetConcurrencyResponse;
+  };
+  'settings.setConcurrency': {
+    request: SettingsSetConcurrencyRequest;
+    response: undefined;
   };
   // Provider management channels (Phase 3 — M18)
   'providers.list': {
@@ -862,6 +927,20 @@ export interface TeamXApi {
     employeeStats(companyId: string): Promise<TelemetryEmployeeStatsRow[]>;
     /** Cost breakdown by provider and model, with optional date range filter. */
     costBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
+  };
+  settings: {
+    /** Get runtime strategy, hardware profile, and effective orchestrator slots. */
+    getRuntime(): Promise<SettingsGetRuntimeResponse>;
+    /** Set runtime strategy (auto/hybrid/always-on/lean). */
+    setRuntime(req: SettingsSetRuntimeRequest): Promise<void>;
+    /** Get privacy tier setting and per-provider allowed/blocked status. */
+    getPrivacy(): Promise<SettingsGetPrivacyResponse>;
+    /** Set maximum privacy tier. */
+    setPrivacy(req: SettingsSetPrivacyRequest): Promise<void>;
+    /** Get concurrency settings (orchestrator slots + per-provider caps). */
+    getConcurrency(): Promise<SettingsGetConcurrencyResponse>;
+    /** Set concurrency settings. */
+    setConcurrency(req: SettingsSetConcurrencyRequest): Promise<void>;
   };
   providers: {
     /** List all configured providers with status. */

@@ -69,6 +69,12 @@ import type {
   ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
+  SettingsGetConcurrencyResponse,
+  SettingsGetPrivacyResponse,
+  SettingsGetRuntimeResponse,
+  SettingsSetConcurrencyRequest,
+  SettingsSetPrivacyRequest,
+  SettingsSetRuntimeRequest,
   TeamXApi,
   TelemetryCompanyStatsResponse,
   TelemetryCostBreakdownRequest,
@@ -158,6 +164,13 @@ const CHANNELS = {
   telemetryDailyUsage: 'telemetry.dailyUsage',
   telemetryEmployeeStats: 'telemetry.employeeStats',
   telemetryCostBreakdown: 'telemetry.costBreakdown',
+  // Settings (Phase 3 — M19)
+  settingsGetRuntime: 'settings.getRuntime',
+  settingsSetRuntime: 'settings.setRuntime',
+  settingsGetPrivacy: 'settings.getPrivacy',
+  settingsSetPrivacy: 'settings.setPrivacy',
+  settingsGetConcurrency: 'settings.getConcurrency',
+  settingsSetConcurrency: 'settings.setConcurrency',
   // Provider management (Phase 3 — M18)
   providersList: 'providers.list',
   providersAdd: 'providers.add',
@@ -283,6 +296,20 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         }) as Promise<TelemetryEmployeeStatsRow[]>,
       costBreakdown: (req: TelemetryCostBreakdownRequest) =>
         ipc.invoke(CHANNELS.telemetryCostBreakdown, req) as Promise<TelemetryCostBreakdownRow[]>,
+    },
+    settings: {
+      getRuntime: () =>
+        ipc.invoke(CHANNELS.settingsGetRuntime) as Promise<SettingsGetRuntimeResponse>,
+      setRuntime: (req: SettingsSetRuntimeRequest) =>
+        ipc.invoke(CHANNELS.settingsSetRuntime, req) as Promise<void>,
+      getPrivacy: () =>
+        ipc.invoke(CHANNELS.settingsGetPrivacy) as Promise<SettingsGetPrivacyResponse>,
+      setPrivacy: (req: SettingsSetPrivacyRequest) =>
+        ipc.invoke(CHANNELS.settingsSetPrivacy, req) as Promise<void>,
+      getConcurrency: () =>
+        ipc.invoke(CHANNELS.settingsGetConcurrency) as Promise<SettingsGetConcurrencyResponse>,
+      setConcurrency: (req: SettingsSetConcurrencyRequest) =>
+        ipc.invoke(CHANNELS.settingsSetConcurrency, req) as Promise<void>,
     },
     providers: {
       list: () => ipc.invoke(CHANNELS.providersList) as Promise<ProviderConfig[]>,

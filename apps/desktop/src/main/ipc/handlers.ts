@@ -91,6 +91,12 @@ import type {
   ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
+  SettingsGetConcurrencyResponse,
+  SettingsGetPrivacyResponse,
+  SettingsGetRuntimeResponse,
+  SettingsSetConcurrencyRequest,
+  SettingsSetPrivacyRequest,
+  SettingsSetRuntimeRequest,
   TelemetryCompanyStatsRequest,
   TelemetryCompanyStatsResponse,
   TelemetryCostBreakdownRequest,
@@ -112,8 +118,8 @@ import type {
   UpdateProviderRequest,
   UpdateTicketRequest,
 } from '@team-x/shared-types';
-import type { ProviderConfig } from '@team-x/shared-types';
-import { AUTO_THREAD_ID } from '@team-x/shared-types';
+import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
+import { AUTO_THREAD_ID, DEFAULT_CONCURRENCY_CAPS, PRIVACY_TIER_RANK } from '@team-x/shared-types';
 
 import type { RoleSpec } from '@team-x/shared-types';
 
@@ -259,6 +265,7 @@ export interface IpcRoleLookup {
 import type { EventRow } from '../db/repos/events.js';
 import type { McpServersRepo } from '../db/repos/mcp-servers.js';
 import type { McpHost } from '../services/mcp-host.js';
+import { pickStrategy } from '../services/runtime-strategy.js';
 
 export interface IpcEventsRepo {
   listByCompany(companyId: string, cursor: number | undefined, limit: number): EventRow[];
@@ -299,6 +306,12 @@ export interface IpcSecretsStore {
   setApiKey(providerId: string, key: string): Promise<void>;
 }
 
+/** Narrow settings-repo surface the IPC handlers need. */
+export interface IpcSettingsRepo {
+  get<T>(key: string, fallback: T): T;
+  set(key: string, value: unknown): void;
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -317,6 +330,8 @@ export interface IpcHandlerDeps {
   mcpServersRepo: McpServersRepo;
   providersService: IpcProvidersService;
   secretsStore: IpcSecretsStore;
+  settingsRepo: IpcSettingsRepo;
+  getHardwareProfile: () => HardwareProfile;
 }
 
 export interface IpcHandlers {
@@ -493,6 +508,23 @@ export interface IpcHandlers {
   telemetryEmployeeStats(req: TelemetryEmployeeStatsRequest): Promise<TelemetryEmployeeStatsRow[]>;
   /** `telemetry.costBreakdown` — cost by provider/model with optional date range. */
   telemetryCostBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
+
+  // -----------------------------------------------------------------------
+  // Settings handlers (Phase 3 — M19)
+  // -----------------------------------------------------------------------
+
+  /** `settings.getRuntime` — strategy, hardware profile, effective slots. */
+  settingsGetRuntime(): Promise<SettingsGetRuntimeResponse>;
+  /** `settings.setRuntime` — set runtime strategy override. */
+  settingsSetRuntime(req: SettingsSetRuntimeRequest): Promise<void>;
+  /** `settings.getPrivacy` — max privacy tier + per-provider allowed/blocked. */
+  settingsGetPrivacy(): Promise<SettingsGetPrivacyResponse>;
+  /** `settings.setPrivacy` — set max privacy tier. */
+  settingsSetPrivacy(req: SettingsSetPrivacyRequest): Promise<void>;
+  /** `settings.getConcurrency` — orchestrator slots + per-provider caps. */
+  settingsGetConcurrency(): Promise<SettingsGetConcurrencyResponse>;
+  /** `settings.setConcurrency` — update orchestrator slots + per-provider caps. */
+  settingsSetConcurrency(req: SettingsSetConcurrencyRequest): Promise<void>;
 
   // -----------------------------------------------------------------------
   // Provider management handlers (Phase 3 — M18)
@@ -735,6 +767,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     mcpServersRepo,
     providersService,
     secretsStore,
+    settingsRepo,
+    getHardwareProfile,
   } = deps;
 
   return {
@@ -1345,6 +1379,78 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] telemetry.costBreakdown: companyId is required');
       }
       return runsRepo.costBreakdown(req.companyId, req.fromMs, req.toMs);
+    },
+
+    // -----------------------------------------------------------------------
+    // Settings handlers (Phase 3 — M19)
+    // -----------------------------------------------------------------------
+
+    async settingsGetRuntime() {
+      const profile = getHardwareProfile();
+      const override = settingsRepo.get<import('@team-x/shared-types').RuntimeStrategy>(
+        'runtime_strategy',
+        'auto',
+      );
+      const providers = providersService.list();
+      const result = pickStrategy({ profile, providers, override });
+      return {
+        strategy: override === 'auto' ? override : result.strategy,
+        hardwareProfile: profile,
+        effectiveSlots: settingsRepo.get<number>('orchestrator_slots', result.slots),
+        reason: result.reason,
+      };
+    },
+
+    async settingsSetRuntime(req) {
+      settingsRepo.set('runtime_strategy', req.strategy);
+      // If not 'auto', also update the effective orchestrator slots
+      if (req.strategy !== 'auto') {
+        const { STRATEGY_SLOTS } = await import('@team-x/shared-types');
+        settingsRepo.set('orchestrator_slots', STRATEGY_SLOTS[req.strategy]);
+      }
+    },
+
+    async settingsGetPrivacy() {
+      const maxTier = settingsRepo.get<import('@team-x/shared-types').PrivacyTier>(
+        'max_privacy_tier',
+        'proprietary-cloud',
+      );
+      const providers = providersService.list();
+      const maxRank = PRIVACY_TIER_RANK[maxTier] ?? 2;
+      const availableProviders = providers.map((p) => ({
+        id: p.id,
+        name: p.name,
+        kind: p.kind,
+        privacyTier: p.privacyTier,
+        allowed: (PRIVACY_TIER_RANK[p.privacyTier] ?? 0) <= maxRank,
+      }));
+      return { maxTier, availableProviders };
+    },
+
+    async settingsSetPrivacy(req) {
+      settingsRepo.set('max_privacy_tier', req.maxTier);
+    },
+
+    async settingsGetConcurrency() {
+      const orchestratorSlots = settingsRepo.get<number>('orchestrator_slots', 6);
+      const providerCaps = settingsRepo.get<Record<string, number>>(
+        'concurrency_caps',
+        DEFAULT_CONCURRENCY_CAPS,
+      );
+      return { orchestratorSlots, providerCaps };
+    },
+
+    async settingsSetConcurrency(req) {
+      if (req.orchestratorSlots !== undefined) {
+        settingsRepo.set('orchestrator_slots', req.orchestratorSlots);
+      }
+      if (req.providerCaps !== undefined) {
+        const current = settingsRepo.get<Record<string, number>>(
+          'concurrency_caps',
+          DEFAULT_CONCURRENCY_CAPS,
+        );
+        settingsRepo.set('concurrency_caps', { ...current, ...req.providerCaps });
+      }
     },
 
     // -----------------------------------------------------------------------
