@@ -1,11 +1,11 @@
 {
   "currentPhase": "DEVELOPMENT",
-  "currentMilestone": "M25",
-  "milestoneName": "Cross-Platform Installers",
-  "tasksCompleted": 9,
+  "currentMilestone": "M26",
+  "milestoneName": "Documentation + Landing Site",
+  "tasksCompleted": 13,
   "tasksFailed": 0,
-  "startedAt": "2026-04-13T11:10:00Z",
-  "completedAt": "2026-04-13T11:30:00Z",
+  "startedAt": "2026-04-13T11:35:00Z",
+  "completedAt": "2026-04-13T11:50:00Z",
   "phaseComplete": false,
   "phase": "Phase 4 — Ship-readiness"
 }

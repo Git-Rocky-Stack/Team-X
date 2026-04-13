@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team-X — Run an AI Company. Not a Prompt.</title>
+  <meta name="description" content="Open-source, privacy-first desktop app for running AI-agent organizations. Hire employees, build org charts, manage projects, and watch your AI team work in real-time.">
+  <meta name="keywords" content="AI agents, local-first, desktop app, LLM orchestration, Electron, open-source, privacy-first">
+  <meta property="og:title" content="Team-X — Run an AI Company. Not a Prompt.">
+  <meta property="og:description" content="Open-source, privacy-first desktop app for running AI-agent organizations with 55 curated roles, real-time cockpit, and 10 LLM providers.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://strategia-x.github.io/team-x/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Team-X — Run an AI Company. Not a Prompt.">
+  <meta name="twitter:description" content="Open-source, privacy-first desktop app for running AI-agent organizations.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>T</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#FFAA2024', red: '#AA2024' },
+            surface: { '50': '#fafafa', '100': '#f4f4f5', '800': '#18181b', '900': '#09090b', '950': '#030305' }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    .gradient-text { background: linear-gradient(135deg, #f43f5e 0%, #ec4899 50%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-hover { transition: transform 200ms ease-out, box-shadow 200ms ease-out; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+    .fade-in { animation: fadeIn 0.6s ease-out forwards; opacity: 0; }
+    @keyframes fadeIn { to { opacity: 1; } }
+    .fade-in-delay-1 { animation-delay: 0.1s; }
+    .fade-in-delay-2 { animation-delay: 0.2s; }
+    .fade-in-delay-3 { animation-delay: 0.3s; }
+  </style>
+</head>
+
+<body class="dark bg-surface-950 text-zinc-100 antialiased">
+
+  <!-- Nav -->
+  <nav class="fixed top-0 w-full z-50 bg-surface-950/80 backdrop-blur-xl border-b border-zinc-800/50">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm">T</div>
+        <span class="font-semibold text-lg tracking-tight">Team-X</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm text-zinc-400">
+        <a href="#features" class="hover:text-zinc-100 transition-colors">Features</a>
+        <a href="#architecture" class="hover:text-zinc-100 transition-colors">Architecture</a>
+        <a href="#quickstart" class="hover:text-zinc-100 transition-colors">Quickstart</a>
+        <a href="https://github.com/strategia-x/team-x" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 transition-colors">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="relative pt-32 pb-20 md:pt-44 md:pb-32 overflow-hidden">
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-rose-500/10 via-transparent to-transparent"></div>
+    <div class="relative max-w-4xl mx-auto px-6 text-center">
+      <div class="fade-in inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800/60 border border-zinc-700/50 text-xs text-zinc-400 mb-8">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        Open Source &middot; Privacy-First &middot; Local-First
+      </div>
+      <h1 class="fade-in fade-in-delay-1 text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6">
+        Run an AI company.<br><span class="gradient-text">Not a prompt.</span>
+      </h1>
+      <p class="fade-in fade-in-delay-2 text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        Hire from 55 curated roles. Build an org chart with real hierarchy. Set goals, file tickets, call meetings, and watch your AI team work in real-time. Runs on local models by default.
+      </p>
+      <div class="fade-in fade-in-delay-3 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="https://github.com/strategia-x/team-x/releases" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-400 hover:to-purple-500 text-white font-semibold transition-all shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Download
+        </a>
+        <a href="#quickstart" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold transition-colors border border-zinc-700/50">
+          Get Started
+        </a>
+      </div>
+      <div class="fade-in fade-in-delay-3 mt-6 flex items-center justify-center gap-6 text-sm text-zinc-500">
+        <span>Windows</span>
+        <span class="w-1 h-1 rounded-full bg-zinc-700"></span>
+        <span>macOS</span>
+        <span class="w-1 h-1 rounded-full bg-zinc-700"></span>
+        <span>Linux</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="py-20 md:py-32">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Everything you need to run an AI org</h2>
+        <p class="text-zinc-400 text-lg max-w-2xl mx-auto">From hiring to shipping — Team-X gives you the full management stack for AI-agent organizations.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Feature 1 -->
+        <div class="card-hover rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">55 Curated Roles</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Hand-written F10-quality role specs across 6 hierarchy levels. Officers, managers, leads, and ICs — each with unique decision frameworks and communication styles.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="card-hover rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Multi-Company Workspace</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Run multiple AI organizations side-by-side. Each with its own employees, org chart, goals, projects, and provider settings.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="card-hover rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Kanban + Tickets</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">File tickets, assign them to agents, and watch them work. 4-column drag-and-drop kanban with automatic agent assignment and real-time discussion threads.</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="card-hover rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">One-Click Meetings</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Call an all-hands with selected attendees. Interject mid-meeting. Auto-generated minutes with action items that become tickets.</p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="card-hover rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <div class="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Privacy-First</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Zero phone-home. Ever. Runs fully on local models. API keys in the OS keychain. Privacy tier filtering controls which providers agents can use.</p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="card-hover rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">10 LLM Providers</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Ollama, Anthropic, OpenAI, Google, Groq, OpenRouter, Together, Fireworks, or any OpenAI-compatible endpoint. Adaptive runtime picks the best strategy.</p>
+        </div>
+
+        <!-- Feature 7 -->
+        <div class="card-hover rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <div class="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">MCP Tool Calling</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Agents use Model Context Protocol tools via a singleton host. stdio and SSE connections with tools_allowed/tools_denied enforcement.</p>
+        </div>
+
+        <!-- Feature 8 -->
+        <div class="card-hover rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <div class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Real-Time Telemetry</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Company stats, daily usage charts, per-employee breakdown, and cost analysis by provider and model. All data stays local.</p>
+        </div>
+
+        <!-- Feature 9 -->
+        <div class="card-hover rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <div class="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">File Vault + Backup</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">SHA256-verified file storage with full-text search. One-click backup/restore of your entire database and vault to a portable archive.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section id="architecture" class="py-20 md:py-32 border-t border-zinc-800/50">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Built for real work</h2>
+        <p class="text-zinc-400 text-lg max-w-2xl mx-auto">A custom orchestrator — not LangChain, not CrewAI — designed for hierarchical agent organizations with real scheduling, pause semantics, and cost tracking.</p>
+      </div>
+
+      <div class="rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-8 font-mono text-sm leading-relaxed overflow-x-auto">
+<pre class="text-zinc-300"><span class="text-zinc-500">Renderer (React 19)</span>
+  <span class="text-rose-400">|</span> typed IPC bridge (50+ channels)
+  <span class="text-rose-400">v</span>
+<span class="text-zinc-500">Main Process (Node.js + TypeScript)</span>
+  <span class="text-amber-400">|--- Orchestrator</span> <span class="text-zinc-600">(agent scheduler, event bus, work queue)</span>
+  <span class="text-amber-400">|      |--- Provider Router</span> <span class="text-zinc-600">(10 adapters, privacy tiers, concurrency caps)</span>
+  <span class="text-amber-400">|      |--- Role Loader</span> <span class="text-zinc-600">(55 roles, template rendering)</span>
+  <span class="text-amber-400">|      |--- MCP Host</span> <span class="text-zinc-600">(singleton, stdio/SSE pool, tool enforcement)</span>
+  <span class="text-emerald-400">|--- SQLite + Drizzle</span> <span class="text-zinc-600">(8 migrations, append-only events)</span>
+  <span class="text-blue-400">|--- Vault Service</span> <span class="text-zinc-600">(filesystem blobs, SHA256, FTS5)</span>
+  <span class="text-violet-400">|--- Secrets Store</span> <span class="text-zinc-600">(OS keychain via keytar)</span></pre>
+      </div>
+
+      <!-- Tech stack -->
+      <div class="mt-12 grid sm:grid-cols-2 gap-4">
+        <div class="rounded-xl bg-zinc-900/30 border border-zinc-800/40 p-5">
+          <h3 class="font-semibold mb-3 text-sm text-zinc-300 uppercase tracking-wider">Frontend</h3>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">React 19</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">TypeScript</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Tailwind CSS</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">shadcn/ui</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Zustand</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">React Query</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Recharts</span>
+          </div>
+        </div>
+        <div class="rounded-xl bg-zinc-900/30 border border-zinc-800/40 p-5">
+          <h3 class="font-semibold mb-3 text-sm text-zinc-300 uppercase tracking-wider">Backend</h3>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Electron</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Node.js 20</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">better-sqlite3</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Drizzle ORM</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Vercel AI SDK</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">MCP SDK</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">keytar</span>
+          </div>
+        </div>
+        <div class="rounded-xl bg-zinc-900/30 border border-zinc-800/40 p-5">
+          <h3 class="font-semibold mb-3 text-sm text-zinc-300 uppercase tracking-wider">Quality</h3>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Vitest (602 tests)</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Playwright (3 E2E)</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Biome</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">GitHub Actions CI</span>
+          </div>
+        </div>
+        <div class="rounded-xl bg-zinc-900/30 border border-zinc-800/40 p-5">
+          <h3 class="font-semibold mb-3 text-sm text-zinc-300 uppercase tracking-wider">Providers</h3>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Ollama</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Anthropic</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">OpenAI</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Google</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Groq</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">OpenRouter</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Together</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Fireworks</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quickstart -->
+  <section id="quickstart" class="py-20 md:py-32 border-t border-zinc-800/50">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Get started in 3 commands</h2>
+      </div>
+
+      <div class="space-y-6">
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-semibold text-sm">1</div>
+          <div class="flex-1">
+            <h3 class="font-semibold mb-2">Clone and install</h3>
+            <div class="rounded-xl bg-zinc-900/80 border border-zinc-800/50 p-4 font-mono text-sm">
+              <span class="text-zinc-500">$</span> <span class="text-zinc-200">git clone https://github.com/strategia-x/team-x.git && cd team-x</span><br>
+              <span class="text-zinc-500">$</span> <span class="text-zinc-200">pnpm install</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-semibold text-sm">2</div>
+          <div class="flex-1">
+            <h3 class="font-semibold mb-2">Start Ollama <span class="text-zinc-500 font-normal">(optional — for local models)</span></h3>
+            <div class="rounded-xl bg-zinc-900/80 border border-zinc-800/50 p-4 font-mono text-sm">
+              <span class="text-zinc-500">$</span> <span class="text-zinc-200">ollama serve</span><br>
+              <span class="text-zinc-500">$</span> <span class="text-zinc-200">ollama pull llama3.1:8b</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-semibold text-sm">3</div>
+          <div class="flex-1">
+            <h3 class="font-semibold mb-2">Launch</h3>
+            <div class="rounded-xl bg-zinc-900/80 border border-zinc-800/50 p-4 font-mono text-sm">
+              <span class="text-zinc-500">$</span> <span class="text-zinc-200">pnpm dev</span>
+            </div>
+            <p class="text-sm text-zinc-400 mt-2">The app opens with a seeded company, CEO, and engineer. Chat with your first AI employee.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-20 md:py-32 border-t border-zinc-800/50">
+    <div class="max-w-3xl mx-auto px-6 text-center">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Ready to run your AI company?</h2>
+      <p class="text-zinc-400 text-lg mb-8">Open-source. Free forever. Your data stays on your machine.</p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="https://github.com/strategia-x/team-x/releases" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-400 hover:to-purple-500 text-white font-semibold transition-all shadow-lg shadow-rose-500/25">
+          Download Team-X
+        </a>
+        <a href="https://github.com/strategia-x/team-x" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold transition-colors border border-zinc-700/50">
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-zinc-800/50 py-8">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-500">
+      <div class="flex items-center gap-2">
+        <div class="w-5 h-5 rounded bg-gradient-to-br from-rose-500 to-purple-600 flex items-center justify-center font-bold text-white text-[10px]">T</div>
+        <span>Team-X &middot; MIT License</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="https://github.com/strategia-x/team-x" class="hover:text-zinc-300 transition-colors">GitHub</a>
+        <a href="https://github.com/strategia-x/team-x/releases" class="hover:text-zinc-300 transition-colors">Releases</a>
+        <a href="https://strategia-x.com" class="hover:text-zinc-300 transition-colors">Strategia-X</a>
+      </div>
+      <span>&copy; 2026 Rocky Elsalaymeh</span>
+    </div>
+  </footer>
+
+</body>
+</html>
