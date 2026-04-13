@@ -100,6 +100,12 @@ const REQUEST_CHANNELS = [
   'telemetry.dailyUsage',
   'telemetry.employeeStats',
   'telemetry.costBreakdown',
+  // Provider management (Phase 3 — M18)
+  'providers.list',
+  'providers.add',
+  'providers.update',
+  'providers.remove',
+  'providers.testConnection',
   // Ticket management (Phase 2 — M12)
   'tickets.create',
   'tickets.update',
@@ -366,6 +372,51 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
       return handlers.telemetryCostBreakdown(request);
     },
   );
+
+  // Provider management handlers (Phase 3 — M18)
+  ipcMain.handle('providers.list', async () => {
+    return handlers.providersList();
+  });
+
+  ipcMain.handle(
+    'providers.add',
+    async (
+      _event,
+      request: {
+        name: string;
+        kind: string;
+        privacyTier: string;
+        configJson?: string;
+        apiKey?: string;
+      },
+    ) => {
+      return handlers.providersAdd(request as import('@team-x/shared-types').AddProviderRequest);
+    },
+  );
+
+  ipcMain.handle(
+    'providers.update',
+    async (
+      _event,
+      request: {
+        providerId: string;
+        name?: string;
+        enabled?: boolean;
+        configJson?: string;
+        apiKey?: string;
+      },
+    ) => {
+      return handlers.providersUpdate(request);
+    },
+  );
+
+  ipcMain.handle('providers.remove', async (_event, request: { providerId: string }) => {
+    return handlers.providersRemove(request);
+  });
+
+  ipcMain.handle('providers.testConnection', async (_event, request: { providerId: string }) => {
+    return handlers.providersTestConnection(request);
+  });
 
   // Ticket management handlers (Phase 2 — M12)
   ipcMain.handle(

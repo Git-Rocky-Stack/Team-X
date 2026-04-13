@@ -24,6 +24,7 @@
  * AND either local OR has-key-in-keychain).
  */
 
+import { randomUUID } from 'node:crypto';
 import type { PrivacyTier, ProviderConfig, ProviderKind } from '@team-x/shared-types';
 import { eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
@@ -90,6 +91,21 @@ export interface ProvidersService {
    * Settings tab will use to drive the "configured" badge.
    */
   isConfigured(id: string): Promise<boolean>;
+
+  /** Insert a new provider row. Returns the created config. */
+  add(provider: {
+    name: string;
+    kind: ProviderKind;
+    privacyTier: PrivacyTier;
+    configJson?: string;
+    enabled?: boolean;
+  }): ProviderConfig;
+
+  /** Partial update of mutable fields. */
+  update(id: string, fields: { name?: string; enabled?: boolean; configJson?: string }): void;
+
+  /** Delete a provider row and its keychain entry. */
+  remove(id: string): Promise<void>;
 }
 
 /**
@@ -149,11 +165,6 @@ export function createProvidersService<TRunResult>(
             id: DEFAULT_OLLAMA_LOCAL_ID,
             name: 'Ollama (Local)',
             kind: 'ollama',
-            // MUST include the `/api` suffix — the ollama-ai-provider SDK
-            // appends `/chat`, `/embed`, etc. directly to this baseURL
-            // without prepending `/api` of its own.  The SDK default is
-            // `http://127.0.0.1:11434/api`; overriding here without the
-            // `/api` segment lands on 404s like POST /chat.
             configJson: JSON.stringify({ baseUrl: 'http://localhost:11434/api' }),
             privacyTier: 'local',
             enabled: true,
@@ -165,6 +176,54 @@ export function createProvidersService<TRunResult>(
             configJson: '{}',
             privacyTier: 'proprietary-cloud',
             enabled: true,
+          },
+          {
+            id: 'openai',
+            name: 'OpenAI',
+            kind: 'openai',
+            configJson: '{}',
+            privacyTier: 'proprietary-cloud',
+            enabled: false,
+          },
+          {
+            id: 'google',
+            name: 'Google Gemini',
+            kind: 'google',
+            configJson: '{}',
+            privacyTier: 'proprietary-cloud',
+            enabled: false,
+          },
+          {
+            id: 'groq',
+            name: 'Groq',
+            kind: 'groq',
+            configJson: '{}',
+            privacyTier: 'open-source-cloud',
+            enabled: false,
+          },
+          {
+            id: 'openrouter',
+            name: 'OpenRouter',
+            kind: 'openrouter',
+            configJson: '{}',
+            privacyTier: 'proprietary-cloud',
+            enabled: false,
+          },
+          {
+            id: 'together',
+            name: 'Together AI',
+            kind: 'together',
+            configJson: '{}',
+            privacyTier: 'open-source-cloud',
+            enabled: false,
+          },
+          {
+            id: 'fireworks',
+            name: 'Fireworks AI',
+            kind: 'fireworks',
+            configJson: '{}',
+            privacyTier: 'open-source-cloud',
+            enabled: false,
           },
         ])
         .run();
@@ -186,6 +245,40 @@ export function createProvidersService<TRunResult>(
       if ((row.privacyTier as PrivacyTier) === 'local') return true;
       const key = await secrets.getApiKey(id);
       return key !== null && key.length > 0;
+    },
+
+    add(provider): ProviderConfig {
+      const id = randomUUID();
+      db.insert(providers)
+        .values({
+          id,
+          name: provider.name,
+          kind: provider.kind,
+          privacyTier: provider.privacyTier,
+          configJson: provider.configJson ?? '{}',
+          enabled: provider.enabled ?? false,
+        })
+        .run();
+      return rowToProviderConfig(getRaw(id)!);
+    },
+
+    update(id, fields): void {
+      const row = getRaw(id);
+      if (!row) throw new Error(`[providers] provider not found: ${id}`);
+
+      const values: Record<string, unknown> = {};
+      if (fields.name !== undefined) values.name = fields.name;
+      if (fields.enabled !== undefined) values.enabled = fields.enabled;
+      if (fields.configJson !== undefined) values.configJson = fields.configJson;
+
+      if (Object.keys(values).length > 0) {
+        db.update(providers).set(values).where(eq(providers.id, id)).run();
+      }
+    },
+
+    async remove(id): Promise<void> {
+      db.delete(providers).where(eq(providers.id, id)).run();
+      await secrets.deleteApiKey(id);
     },
   };
 }

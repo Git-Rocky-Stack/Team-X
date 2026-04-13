@@ -38,6 +38,8 @@
  */
 
 import type {
+  AddProviderRequest,
+  AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   AssignTicketRequest,
@@ -83,6 +85,7 @@ import type {
   MeetingStatus,
   Project,
   ProjectDetail,
+  RemoveProviderRequest,
   ReopenTicketRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
@@ -98,14 +101,18 @@ import type {
   TelemetryEmployeeStatsRow,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
+  TestProviderConnectionRequest,
+  TestProviderConnectionResponse,
   Thread,
   Ticket,
   TicketDetail,
   UnlinkTicketFromProjectRequest,
   UpdateGoalRequest,
   UpdateProjectRequest,
+  UpdateProviderRequest,
   UpdateTicketRequest,
 } from '@team-x/shared-types';
+import type { ProviderConfig } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
 import type { RoleSpec } from '@team-x/shared-types';
@@ -271,6 +278,27 @@ export interface IpcMeetingsRepo {
 
 export type IpcMeetingService = ReturnType<typeof createMeetingService>;
 
+/** Narrow providers-service surface the IPC handlers need. */
+export interface IpcProvidersService {
+  list(): ProviderConfig[];
+  get(id: string): ProviderConfig | null;
+  add(provider: {
+    name: string;
+    kind: import('@team-x/shared-types').ProviderKind;
+    privacyTier: import('@team-x/shared-types').PrivacyTier;
+    configJson?: string;
+    enabled?: boolean;
+  }): ProviderConfig;
+  update(id: string, fields: { name?: string; enabled?: boolean; configJson?: string }): void;
+  remove(id: string): Promise<void>;
+  isConfigured(id: string): Promise<boolean>;
+}
+
+/** Narrow secrets-store surface the IPC handlers need. */
+export interface IpcSecretsStore {
+  setApiKey(providerId: string, key: string): Promise<void>;
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -287,6 +315,8 @@ export interface IpcHandlerDeps {
   roleLookup: IpcRoleLookup;
   mcpHost: McpHost;
   mcpServersRepo: McpServersRepo;
+  providersService: IpcProvidersService;
+  secretsStore: IpcSecretsStore;
 }
 
 export interface IpcHandlers {
@@ -463,6 +493,23 @@ export interface IpcHandlers {
   telemetryEmployeeStats(req: TelemetryEmployeeStatsRequest): Promise<TelemetryEmployeeStatsRow[]>;
   /** `telemetry.costBreakdown` — cost by provider/model with optional date range. */
   telemetryCostBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
+
+  // -----------------------------------------------------------------------
+  // Provider management handlers (Phase 3 — M18)
+  // -----------------------------------------------------------------------
+
+  /** `providers.list` — list all configured providers. */
+  providersList(): Promise<ProviderConfig[]>;
+  /** `providers.add` — register a new provider. Saves API key to keychain if supplied. */
+  providersAdd(req: AddProviderRequest): Promise<AddProviderResponse>;
+  /** `providers.update` ��� update provider config. Saves API key to keychain if supplied. */
+  providersUpdate(req: UpdateProviderRequest): Promise<void>;
+  /** `providers.remove` — remove a provider and its keychain entry. */
+  providersRemove(req: RemoveProviderRequest): Promise<void>;
+  /** `providers.testConnection` — verify provider API key + connectivity. */
+  providersTestConnection(
+    req: TestProviderConnectionRequest,
+  ): Promise<TestProviderConnectionResponse>;
 
   // -----------------------------------------------------------------------
   // Ticket management handlers (Phase 2 — M12)
@@ -686,6 +733,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     roleLookup,
     mcpHost,
     mcpServersRepo,
+    providersService,
+    secretsStore,
   } = deps;
 
   return {
@@ -1296,6 +1345,65 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] telemetry.costBreakdown: companyId is required');
       }
       return runsRepo.costBreakdown(req.companyId, req.fromMs, req.toMs);
+    },
+
+    // -----------------------------------------------------------------------
+    // Provider management handlers (Phase 3 — M18)
+    // -----------------------------------------------------------------------
+
+    async providersList() {
+      return providersService.list();
+    },
+
+    async providersAdd(req) {
+      if (typeof req.name !== 'string' || req.name.trim().length === 0) {
+        throw new Error('[ipc] providers.add: name is required');
+      }
+      if (typeof req.kind !== 'string' || req.kind.trim().length === 0) {
+        throw new Error('[ipc] providers.add: kind is required');
+      }
+      const config = providersService.add({
+        name: req.name,
+        kind: req.kind,
+        privacyTier: req.privacyTier,
+        configJson: req.configJson,
+      });
+      if (typeof req.apiKey === 'string' && req.apiKey.trim().length > 0) {
+        await secretsStore.setApiKey(config.id, req.apiKey.trim());
+      }
+      return { providerId: config.id };
+    },
+
+    async providersUpdate(req) {
+      if (typeof req.providerId !== 'string' || req.providerId.length === 0) {
+        throw new Error('[ipc] providers.update: providerId is required');
+      }
+      providersService.update(req.providerId, {
+        name: req.name,
+        enabled: req.enabled,
+        configJson: req.configJson,
+      });
+      if (typeof req.apiKey === 'string' && req.apiKey.trim().length > 0) {
+        await secretsStore.setApiKey(req.providerId, req.apiKey.trim());
+      }
+    },
+
+    async providersRemove(req) {
+      if (typeof req.providerId !== 'string' || req.providerId.length === 0) {
+        throw new Error('[ipc] providers.remove: providerId is required');
+      }
+      await providersService.remove(req.providerId);
+    },
+
+    async providersTestConnection(req) {
+      if (typeof req.providerId !== 'string' || req.providerId.length === 0) {
+        throw new Error('[ipc] providers.testConnection: providerId is required');
+      }
+      const isReady = await providersService.isConfigured(req.providerId);
+      if (!isReady) {
+        return { ok: false, error: 'Provider is not configured (missing API key or disabled)' };
+      }
+      return { ok: true };
     },
 
     // -----------------------------------------------------------------------

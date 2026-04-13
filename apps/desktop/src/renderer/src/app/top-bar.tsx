@@ -30,7 +30,7 @@ const TABS: TabDef[] = [
   { label: 'Meetings', icon: Users2, view: 'meetings' },
   { label: 'Chat', icon: MessageSquare, view: 'chat', disabled: true },
   { label: 'Telemetry', icon: Gauge, view: 'telemetry' },
-  { label: 'Settings', icon: Settings, view: 'settings', disabled: true },
+  { label: 'Settings', icon: Settings, view: 'settings' },
 ];
 
 export function TopBar() {

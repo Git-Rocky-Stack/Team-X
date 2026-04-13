@@ -257,15 +257,20 @@ app.whenReady().then(async () => {
   //     that needs no LLM server, no keytar, and no network. Used by
   //     the Playwright E2E smoke test (T49) which boots a real Electron
   //     instance but must not depend on external infrastructure.
+  //
+  // Both secretsStore and providersService are constructed eagerly so
+  // the IPC handler layer (which exposes providers.* channels) can
+  // always reach them — the constructors are cheap (no keytar or DB
+  // call until a method is actually invoked).
   const testMode = isTestMode();
+  const secretsStore = new SecretsStore();
+  const providersService = getProvidersService();
   let resolveProvider: ResolveProvider;
 
   if (testMode) {
     resolveProvider = createTestModeResolveProvider();
     console.log('[main] test-mode provider active — canned responses, no LLM calls');
   } else {
-    const secretsStore = new SecretsStore();
-    const providersService = getProvidersService();
     const providerFactory = createProviderFactory({ providersService, secretsStore });
     resolveProvider = (employee) => providerFactory.resolveForEmployee(employee);
   }
@@ -375,6 +380,8 @@ app.whenReady().then(async () => {
     roleLookup: roleLoader,
     mcpHost,
     mcpServersRepo,
+    providersService,
+    secretsStore,
   });
   unregisterIpc = registerIpcHandlers(ipcHandlers, bus);
 

@@ -66,7 +66,14 @@
 import {
   type ProviderStreamFn,
   makeAnthropicStream,
+  makeFireworksStream,
+  makeGoogleStream,
+  makeGroqStream,
   makeOllamaStream,
+  makeOpenAICompatStream,
+  makeOpenAIStream,
+  makeOpenRouterStream,
+  makeTogetherStream,
 } from '@team-x/provider-router';
 import type { ProviderConfig, ProviderKind } from '@team-x/shared-types';
 
@@ -94,13 +101,15 @@ import { SecretsStore } from './secrets.js';
  */
 const DEFAULT_MODEL_BY_KIND: Partial<Record<ProviderKind, string>> = {
   anthropic: 'claude-haiku-4-5',
-  // Phase 1 default is llama3.1:8b because it's the smallest general-
-  // purpose model most dev machines already have cached from other
-  // projects, so the local-first demo path does not block on a multi-
-  // gigabyte pull. Phase 2's model_registry table will replace this
-  // hardcode with a tier-aware lookup driven by role.md
-  // preferred_model_tier.
   ollama: 'llama3.1:8b',
+  openai: 'gpt-4o-mini',
+  google: 'gemini-2.0-flash',
+  groq: 'llama-3.1-8b-instant',
+  openrouter: 'meta-llama/llama-3.1-8b-instruct',
+  together: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+  fireworks: 'accounts/fireworks/models/llama-v3p1-8b-instruct',
+  // custom-openai has no default — the caller must always specify a model
+  // because the target endpoint's model catalog is unknown.
 };
 
 /**
@@ -190,10 +199,86 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
         if (provider.baseUrl !== undefined) opts.baseURL = provider.baseUrl;
         return makeOllamaStream(opts);
       }
+      case 'openai': {
+        const apiKey = await secretsStore.getApiKey(provider.id);
+        if (apiKey === null || apiKey.length === 0) {
+          throw new Error(
+            `[provider-factory] OpenAI provider "${provider.id}" has no API key in the keychain`,
+          );
+        }
+        const opts: { apiKey: string; model: string; baseURL?: string } = { apiKey, model };
+        if (provider.baseUrl !== undefined) opts.baseURL = provider.baseUrl;
+        return makeOpenAIStream(opts);
+      }
+      case 'google': {
+        const apiKey = await secretsStore.getApiKey(provider.id);
+        if (apiKey === null || apiKey.length === 0) {
+          throw new Error(
+            `[provider-factory] Google provider "${provider.id}" has no API key in the keychain`,
+          );
+        }
+        const opts: { apiKey: string; model: string; baseURL?: string } = { apiKey, model };
+        if (provider.baseUrl !== undefined) opts.baseURL = provider.baseUrl;
+        return makeGoogleStream(opts);
+      }
+      case 'groq': {
+        const apiKey = await secretsStore.getApiKey(provider.id);
+        if (apiKey === null || apiKey.length === 0) {
+          throw new Error(
+            `[provider-factory] Groq provider "${provider.id}" has no API key in the keychain`,
+          );
+        }
+        const opts: { apiKey: string; model: string; baseURL?: string } = { apiKey, model };
+        if (provider.baseUrl !== undefined) opts.baseURL = provider.baseUrl;
+        return makeGroqStream(opts);
+      }
+      case 'openrouter': {
+        const apiKey = await secretsStore.getApiKey(provider.id);
+        if (apiKey === null || apiKey.length === 0) {
+          throw new Error(
+            `[provider-factory] OpenRouter provider "${provider.id}" has no API key in the keychain`,
+          );
+        }
+        return makeOpenRouterStream({ apiKey, model });
+      }
+      case 'together': {
+        const apiKey = await secretsStore.getApiKey(provider.id);
+        if (apiKey === null || apiKey.length === 0) {
+          throw new Error(
+            `[provider-factory] Together provider "${provider.id}" has no API key in the keychain`,
+          );
+        }
+        const opts: { apiKey: string; model: string; baseURL?: string } = { apiKey, model };
+        if (provider.baseUrl !== undefined) opts.baseURL = provider.baseUrl;
+        return makeTogetherStream(opts);
+      }
+      case 'fireworks': {
+        const apiKey = await secretsStore.getApiKey(provider.id);
+        if (apiKey === null || apiKey.length === 0) {
+          throw new Error(
+            `[provider-factory] Fireworks provider "${provider.id}" has no API key in the keychain`,
+          );
+        }
+        const opts: { apiKey: string; model: string; baseURL?: string } = { apiKey, model };
+        if (provider.baseUrl !== undefined) opts.baseURL = provider.baseUrl;
+        return makeFireworksStream(opts);
+      }
+      case 'custom-openai': {
+        const apiKey = await secretsStore.getApiKey(provider.id);
+        if (apiKey === null || apiKey.length === 0) {
+          throw new Error(
+            `[provider-factory] OpenAI-compatible provider "${provider.id}" has no API key in the keychain`,
+          );
+        }
+        if (provider.baseUrl === undefined || provider.baseUrl.trim() === '') {
+          throw new Error(
+            `[provider-factory] OpenAI-compatible provider "${provider.id}" requires a baseUrl`,
+          );
+        }
+        return makeOpenAICompatStream({ apiKey, model, baseURL: provider.baseUrl });
+      }
       default:
-        throw new Error(
-          `[provider-factory] provider kind "${provider.kind}" is not supported in Phase 1`,
-        );
+        throw new Error(`[provider-factory] provider kind "${provider.kind}" is not supported`);
     }
   }
 

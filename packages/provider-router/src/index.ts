@@ -14,3 +14,13 @@ export {
 export { buildProviderTools, type ToolSpec } from './tools.js';
 export { makeAnthropicStream, type AnthropicAdapterOptions } from './adapters/anthropic.js';
 export { makeOllamaStream, type OllamaAdapterOptions } from './adapters/ollama.js';
+export { makeOpenAIStream, type OpenAIAdapterOptions } from './adapters/openai.js';
+export { makeGoogleStream, type GoogleAdapterOptions } from './adapters/google.js';
+export { makeGroqStream, type GroqAdapterOptions } from './adapters/groq.js';
+export { makeOpenRouterStream, type OpenRouterAdapterOptions } from './adapters/openrouter.js';
+export { makeTogetherStream, type TogetherAdapterOptions } from './adapters/together.js';
+export { makeFireworksStream, type FireworksAdapterOptions } from './adapters/fireworks.js';
+export {
+  makeOpenAICompatStream,
+  type OpenAICompatAdapterOptions,
+} from './adapters/openai-compat.js';

@@ -43,6 +43,7 @@ import type {
   Ticket,
 } from './entities.js';
 import type { DashboardEvent } from './events.js';
+import type { PrivacyTier, ProviderConfig, ProviderKind } from './providers.js';
 
 // ---------------------------------------------------------------------------
 // Low-level request / response shapes
@@ -465,6 +466,45 @@ export interface TestMcpConnectionResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Provider management request/response shapes (Phase 3 — M18)
+// ---------------------------------------------------------------------------
+
+export interface AddProviderRequest {
+  name: string;
+  kind: ProviderKind;
+  privacyTier: PrivacyTier;
+  configJson?: string;
+  /** If supplied, saved to OS keychain — never stored in DB. */
+  apiKey?: string;
+}
+
+export interface AddProviderResponse {
+  providerId: string;
+}
+
+export interface UpdateProviderRequest {
+  providerId: string;
+  name?: string;
+  enabled?: boolean;
+  configJson?: string;
+  /** If supplied, saved to OS keychain — never stored in DB. */
+  apiKey?: string;
+}
+
+export interface RemoveProviderRequest {
+  providerId: string;
+}
+
+export interface TestProviderConnectionRequest {
+  providerId: string;
+}
+
+export interface TestProviderConnectionResponse {
+  ok: boolean;
+  error?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Low-level channel map (used by ipcMain.handle and its generic helpers)
 // ---------------------------------------------------------------------------
 
@@ -610,6 +650,27 @@ export interface IpcContract {
   'telemetry.costBreakdown': {
     request: TelemetryCostBreakdownRequest;
     response: TelemetryCostBreakdownRow[];
+  };
+  // Provider management channels (Phase 3 — M18)
+  'providers.list': {
+    request: Record<string, never>;
+    response: ProviderConfig[];
+  };
+  'providers.add': {
+    request: AddProviderRequest;
+    response: AddProviderResponse;
+  };
+  'providers.update': {
+    request: UpdateProviderRequest;
+    response: undefined;
+  };
+  'providers.remove': {
+    request: RemoveProviderRequest;
+    response: undefined;
+  };
+  'providers.testConnection': {
+    request: TestProviderConnectionRequest;
+    response: TestProviderConnectionResponse;
   };
   // Ticket management channels
   'tickets.create': {
@@ -801,6 +862,18 @@ export interface TeamXApi {
     employeeStats(companyId: string): Promise<TelemetryEmployeeStatsRow[]>;
     /** Cost breakdown by provider and model, with optional date range filter. */
     costBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
+  };
+  providers: {
+    /** List all configured providers with status. */
+    list(): Promise<ProviderConfig[]>;
+    /** Register a new provider. API key saved to OS keychain if supplied. */
+    add(req: AddProviderRequest): Promise<AddProviderResponse>;
+    /** Update provider config. API key saved to OS keychain if supplied. */
+    update(req: UpdateProviderRequest): Promise<void>;
+    /** Remove a provider and its keychain entry. */
+    remove(providerId: string): Promise<void>;
+    /** Test a provider's API key + connectivity. */
+    testConnection(providerId: string): Promise<TestProviderConnectionResponse>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

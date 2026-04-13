@@ -47,15 +47,15 @@ describe('createProvidersService', () => {
   });
 
   describe('seedIfEmpty', () => {
-    it('inserts exactly two default provider rows on an empty database', () => {
+    it('inserts all default provider rows on an empty database', () => {
       service.seedIfEmpty();
-      expect(service.list()).toHaveLength(2);
+      expect(service.list()).toHaveLength(8);
     });
 
     it('is idempotent — a second call on a seeded database does not duplicate rows', () => {
       service.seedIfEmpty();
       service.seedIfEmpty();
-      expect(service.list()).toHaveLength(2);
+      expect(service.list()).toHaveLength(8);
     });
 
     it('does not touch existing rows if the providers table is non-empty', () => {
@@ -116,7 +116,18 @@ describe('createProvidersService', () => {
       service.seedIfEmpty();
       const all = service.list();
       const ids = all.map((p) => p.id).sort();
-      expect(ids).toEqual([DEFAULT_ANTHROPIC_ID, DEFAULT_OLLAMA_LOCAL_ID].sort());
+      expect(ids).toEqual(
+        [
+          DEFAULT_ANTHROPIC_ID,
+          DEFAULT_OLLAMA_LOCAL_ID,
+          'fireworks',
+          'google',
+          'groq',
+          'openai',
+          'openrouter',
+          'together',
+        ].sort(),
+      );
     });
 
     it('tolerates a row with malformed configJson and returns it with no baseUrl', () => {
@@ -214,6 +225,71 @@ describe('createProvidersService', () => {
         })
         .run();
       expect(await service.isConfigured('ollama-disabled')).toBe(false);
+    });
+  });
+
+  describe('add', () => {
+    it('inserts a new provider and returns its config', () => {
+      const config = service.add({
+        name: 'My Custom',
+        kind: 'custom-openai',
+        privacyTier: 'proprietary-cloud',
+        configJson: JSON.stringify({ baseUrl: 'http://localhost:1234/v1' }),
+      });
+      expect(config.name).toBe('My Custom');
+      expect(config.kind).toBe('custom-openai');
+      expect(config.privacyTier).toBe('proprietary-cloud');
+      expect(config.baseUrl).toBe('http://localhost:1234/v1');
+      expect(config.enabled).toBe(false);
+      expect(service.get(config.id)).not.toBeNull();
+    });
+
+    it('defaults enabled to false and configJson to empty', () => {
+      const config = service.add({
+        name: 'Test',
+        kind: 'openai',
+        privacyTier: 'proprietary-cloud',
+      });
+      expect(config.enabled).toBe(false);
+      expect(config.baseUrl).toBeUndefined();
+    });
+  });
+
+  describe('update', () => {
+    it('updates name and enabled fields', () => {
+      service.seedIfEmpty();
+      service.update(DEFAULT_OLLAMA_LOCAL_ID, { name: 'Renamed Ollama', enabled: false });
+      const updated = service.get(DEFAULT_OLLAMA_LOCAL_ID);
+      expect(updated?.name).toBe('Renamed Ollama');
+      expect(updated?.enabled).toBe(false);
+    });
+
+    it('throws on nonexistent provider', () => {
+      expect(() => service.update('missing', { name: 'X' })).toThrow(/not found/);
+    });
+
+    it('does nothing when fields is empty', () => {
+      service.seedIfEmpty();
+      const before = service.get(DEFAULT_OLLAMA_LOCAL_ID);
+      service.update(DEFAULT_OLLAMA_LOCAL_ID, {});
+      const after = service.get(DEFAULT_OLLAMA_LOCAL_ID);
+      expect(after).toEqual(before);
+    });
+  });
+
+  describe('remove', () => {
+    it('deletes the provider row and keychain entry', async () => {
+      service.seedIfEmpty();
+      await secrets.setApiKey(DEFAULT_ANTHROPIC_ID, 'sk-test');
+      await service.remove(DEFAULT_ANTHROPIC_ID);
+      expect(service.get(DEFAULT_ANTHROPIC_ID)).toBeNull();
+      expect(await secrets.getApiKey(DEFAULT_ANTHROPIC_ID)).toBeNull();
+    });
+
+    it('is safe to call on a provider with no keychain entry', async () => {
+      service.seedIfEmpty();
+      await service.remove(DEFAULT_OLLAMA_LOCAL_ID);
+      expect(service.get(DEFAULT_OLLAMA_LOCAL_ID)).toBeNull();
     });
   });
 });

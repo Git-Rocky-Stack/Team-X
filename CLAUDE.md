@@ -47,6 +47,7 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 - **M15 (goals & projects):** `goals`, `projects`, `project_tickets` tables + migration. Goals repo (CRUD + recalcProgress), Projects repo (CRUD + ticket linking). 12 new IPC channels (5 goals.*, 7 projects.*). Projects kanban board (4-column drag-drop), project cards + detail panel, create project dialog. Goals subtab with progress bars, goal rows + detail panel, create goal dialog. Projects tab enabled. 412 tests passing.
 - **M16 (meeting primitive):** `meetings` table + `companies.status` column + migration. Meetings repo (CRUD + lifecycle). Per-company orchestrator pause/drain (`pauseCompany`/`resumeCompany`/`isCompanyPaused`). Meeting service (callMeeting/nextTurn/interject/endMeeting with minutes generation + action item extraction). 5 new IPC channels (meetings.*). MeetingsView with list panel, detail panel, call dialog, composer. Meetings tab enabled. 441 tests passing.
 - **M17 (telemetry dashboard):** 4 aggregate query methods on runs repo (companyStats, dailyUsage, employeeStats, costBreakdown). 4 telemetry IPC channels + handlers + preload bridge. Recharts integration. TelemetryView with 3 subviews: Company (summary cards + 30-day AreaCharts for tokens/cost), Employees (sortable per-employee table), Cost (PieChart by provider + BarChart by model + date range filter). Telemetry tab enabled. 456 tests passing.
+- **M18 (additional providers):** 7 new provider adapters (OpenAI, Google, Groq, OpenRouter, Together, Fireworks, OpenAI-compat) in `provider-router` via AI SDK + `createOpenAI` custom baseURL pattern. Provider factory extended with 7 `buildStream` cases + default models. Providers service with add/update/remove + 6 disabled seed rows. Env-key bootstrap for 7 API keys. 5 new `providers.*` IPC channels + handlers + preload bridge. SettingsView with ProvidersSection (card grid), ProviderCard (toggle, API key input, test connection, remove), AddProviderDialog (kind picker, privacy tier, key, base URL). Settings tab enabled. 501 tests passing.
 
 The Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md).
 The Phase 2 plan lives at [`docs/plans/2026-04-11-team-x-phase-2-the-org.md`](docs/plans/2026-04-11-team-x-phase-2-the-org.md).
@@ -116,7 +117,7 @@ Packaged installer generation via electron-builder (`pnpm dist`) lands in Phase 
 **Test, typecheck, lint:**
 
 ```bash
-pnpm test                       # vitest run across all workspaces (456 tests)
+pnpm test                       # vitest run across all workspaces (501 tests)
 pnpm test:watch                 # vitest in watch mode
 pnpm test:coverage              # vitest with coverage report
 pnpm typecheck                  # tsc --noEmit across all workspaces
@@ -273,6 +274,11 @@ All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and 
 | | `telemetry.dailyUsage` | Daily time-series of tokens + cost |
 | | `telemetry.employeeStats` | Per-employee breakdown |
 | | `telemetry.costBreakdown` | Cost by provider/model with date range |
+| providers | `providers.list` | List all configured providers (M18) |
+| | `providers.add` | Register a new provider (API key to keychain) |
+| | `providers.update` | Update config, toggle, set API key |
+| | `providers.remove` | Remove provider + keychain entry |
+| | `providers.testConnection` | Test provider API key + connectivity |
 | tickets | `tickets.create` | File ticket (optional immediate assign) |
 | | `tickets.update` | Update mutable fields |
 | | `tickets.assign` | Assign + create thread + enqueue agent |

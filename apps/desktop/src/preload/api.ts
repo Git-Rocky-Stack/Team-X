@@ -36,6 +36,8 @@
 
 import type {
   AddMcpServerRequest,
+  AddProviderRequest,
+  AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   CallMeetingRequest,
@@ -62,6 +64,7 @@ import type {
   MeetingDetail,
   Project,
   ProjectDetail,
+  ProviderConfig,
   ResolveThreadRequest,
   ResolveThreadResponse,
   SendChatRequest,
@@ -75,12 +78,14 @@ import type {
   TelemetryEmployeeStatsRow,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
+  TestProviderConnectionResponse,
   Thread,
   Ticket,
   TicketDetail,
   UnsubscribeFn,
   UpdateGoalRequest,
   UpdateProjectRequest,
+  UpdateProviderRequest,
   UpdateTicketRequest,
 } from '@team-x/shared-types';
 
@@ -153,6 +158,12 @@ const CHANNELS = {
   telemetryDailyUsage: 'telemetry.dailyUsage',
   telemetryEmployeeStats: 'telemetry.employeeStats',
   telemetryCostBreakdown: 'telemetry.costBreakdown',
+  // Provider management (Phase 3 — M18)
+  providersList: 'providers.list',
+  providersAdd: 'providers.add',
+  providersUpdate: 'providers.update',
+  providersRemove: 'providers.remove',
+  providersTestConnection: 'providers.testConnection',
   // Ticket management (Phase 2 — M12)
   ticketsCreate: 'tickets.create',
   ticketsUpdate: 'tickets.update',
@@ -272,6 +283,19 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         }) as Promise<TelemetryEmployeeStatsRow[]>,
       costBreakdown: (req: TelemetryCostBreakdownRequest) =>
         ipc.invoke(CHANNELS.telemetryCostBreakdown, req) as Promise<TelemetryCostBreakdownRow[]>,
+    },
+    providers: {
+      list: () => ipc.invoke(CHANNELS.providersList) as Promise<ProviderConfig[]>,
+      add: (req: AddProviderRequest) =>
+        ipc.invoke(CHANNELS.providersAdd, req) as Promise<AddProviderResponse>,
+      update: (req: UpdateProviderRequest) =>
+        ipc.invoke(CHANNELS.providersUpdate, req) as Promise<void>,
+      remove: (providerId: string) =>
+        ipc.invoke(CHANNELS.providersRemove, { providerId }) as Promise<void>,
+      testConnection: (providerId: string) =>
+        ipc.invoke(CHANNELS.providersTestConnection, {
+          providerId,
+        }) as Promise<TestProviderConnectionResponse>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

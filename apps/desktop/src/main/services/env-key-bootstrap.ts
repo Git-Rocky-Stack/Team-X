@@ -44,6 +44,21 @@ import { DEFAULT_ANTHROPIC_ID } from './providers.js';
 import { SecretsStore } from './secrets.js';
 
 /**
+ * Mapping from `.env` variable names to provider ids in the keychain.
+ * Each entry represents one potential env-to-keychain import. The
+ * provider id must match a seeded row in the `providers` table.
+ */
+const ENV_KEY_MAP: ReadonlyArray<{ envVar: string; providerId: string }> = [
+  { envVar: 'ANTHROPIC_API_KEY', providerId: DEFAULT_ANTHROPIC_ID },
+  { envVar: 'OPENAI_API_KEY', providerId: 'openai' },
+  { envVar: 'GOOGLE_GENERATIVE_AI_API_KEY', providerId: 'google' },
+  { envVar: 'GROQ_API_KEY', providerId: 'groq' },
+  { envVar: 'OPENROUTER_API_KEY', providerId: 'openrouter' },
+  { envVar: 'TOGETHER_API_KEY', providerId: 'together' },
+  { envVar: 'FIREWORKS_API_KEY', providerId: 'fireworks' },
+];
+
+/**
  * Options for `bootstrapEnvKeys`. Every field has a production-ready
  * default, so calling `bootstrapEnvKeys()` with no argument from
  * `main/index.ts` Just Works. Tests override each field individually.
@@ -85,18 +100,17 @@ function defaultEnvFilePath(): string {
 }
 
 /**
- * Transfer an `ANTHROPIC_API_KEY` from a `.env` file into the OS keychain
- * iff all of the following hold:
+ * Transfer API keys from a `.env` file into the OS keychain for every
+ * provider in `ENV_KEY_MAP`. For each entry, the import happens iff:
  *
  *   - we are running in dev (`isDev === true`),
- *   - the `.env` file exists on disk,
- *   - it parses cleanly,
- *   - it contains a non-empty, non-whitespace `ANTHROPIC_API_KEY` value,
- *   - the keychain does not already have a key for `DEFAULT_ANTHROPIC_ID`.
+ *   - the `.env` file exists on disk and parses cleanly,
+ *   - it contains a non-empty, non-whitespace value for the env var,
+ *   - the keychain does not already have a key for that provider.
  *
- * Any check that fails short-circuits the function with a silent return.
- * Successful imports log a single line confirming the import (without
- * the value).
+ * Any check that fails for a given entry is silently skipped — the
+ * remaining entries still run. Successful imports log a single line
+ * per key (without the value).
  */
 export async function bootstrapEnvKeys(options: BootstrapEnvKeysOptions = {}): Promise<void> {
   const isDev = options.isDev ?? process.env.NODE_ENV !== 'production';
@@ -105,27 +119,22 @@ export async function bootstrapEnvKeys(options: BootstrapEnvKeysOptions = {}): P
   const envFilePath = options.envFilePath ?? defaultEnvFilePath();
   if (!existsSync(envFilePath)) return;
 
-  // Parse into a local object so the values NEVER land in process.env.
-  // `processEnv: {}` tells dotenv to populate the supplied object instead
-  // of mutating the real process environment. This is critical: once a
-  // key is in process.env, any stray `console.log(process.env)` or
-  // crash-reporter dump would leak it.
   const isolatedEnv: Record<string, string> = {};
   const result = loadDotenv({ path: envFilePath, processEnv: isolatedEnv });
   if (result.error || !result.parsed) return;
 
-  const rawKey = isolatedEnv.ANTHROPIC_API_KEY;
-  if (typeof rawKey !== 'string') return;
-  const trimmedKey = rawKey.trim();
-  if (trimmedKey.length === 0) return;
-
   const secrets = options.secrets ?? new SecretsStore();
-  const existing = await secrets.getApiKey(DEFAULT_ANTHROPIC_ID);
-  if (existing !== null) return; // keychain wins — never overwrite
 
-  await secrets.setApiKey(DEFAULT_ANTHROPIC_ID, trimmedKey);
-  // Log WITHOUT the value. The file path is safe to log — it's the same
-  // path the user just configured — but the key itself never hits any
-  // log stream, not even a truncated prefix.
-  console.log(`[env-keys] imported ANTHROPIC_API_KEY from ${envFilePath} into OS keychain`);
+  for (const { envVar, providerId } of ENV_KEY_MAP) {
+    const rawKey = isolatedEnv[envVar];
+    if (typeof rawKey !== 'string') continue;
+    const trimmedKey = rawKey.trim();
+    if (trimmedKey.length === 0) continue;
+
+    const existing = await secrets.getApiKey(providerId);
+    if (existing !== null) continue;
+
+    await secrets.setApiKey(providerId, trimmedKey);
+    console.log(`[env-keys] imported ${envVar} from ${envFilePath} into OS keychain`);
+  }
 }
