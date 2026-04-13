@@ -67,7 +67,7 @@ describe('createSettingsRepo', () => {
   describe('seedDefaults', () => {
     it('seeds all default settings on empty DB', () => {
       const count = repo.seedDefaults();
-      expect(count).toBe(4);
+      expect(count).toBe(11);
       expect(repo.get<string>('runtime_strategy', '')).toBe('auto');
       expect(repo.get<string>('max_privacy_tier', '')).toBe('proprietary-cloud');
       expect(repo.get<number>('orchestrator_slots', 0)).toBe(6);
@@ -79,7 +79,7 @@ describe('createSettingsRepo', () => {
     it('does not overwrite existing settings', () => {
       repo.set('runtime_strategy', 'lean');
       const count = repo.seedDefaults();
-      expect(count).toBe(3); // only 3 new, runtime_strategy kept
+      expect(count).toBe(10); // only 10 new, runtime_strategy kept
       expect(repo.get<string>('runtime_strategy', '')).toBe('lean');
     });
 
@@ -87,6 +87,16 @@ describe('createSettingsRepo', () => {
       repo.seedDefaults();
       const count = repo.seedDefaults();
       expect(count).toBe(0);
+    });
+
+    it('seeds RAG defaults', () => {
+      repo.seedDefaults();
+
+      expect(repo.get('rag_enabled', false)).toBe(true);
+      expect(repo.get('rag_max_tokens', 0)).toBe(2000);
+      expect(repo.get('rag_threshold', 0)).toBe(0.7);
+      expect(repo.get('rag_top_k', 0)).toBe(5);
+      expect(repo.get('embedding_dimension', 0)).toBe(1536);
     });
   });
 });

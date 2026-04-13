@@ -26,6 +26,13 @@ const SETTING_DEFAULTS: Array<{ key: string; value: unknown }> = [
   { key: 'max_privacy_tier', value: 'proprietary-cloud' },
   { key: 'concurrency_caps', value: DEFAULT_CONCURRENCY_CAPS },
   { key: 'orchestrator_slots', value: 6 },
+  { key: 'rag_enabled', value: true },
+  { key: 'rag_max_tokens', value: 2000 },
+  { key: 'rag_threshold', value: 0.7 },
+  { key: 'rag_top_k', value: 5 },
+  { key: 'embedding_provider', value: 'auto' },
+  { key: 'embedding_model', value: 'auto' },
+  { key: 'embedding_dimension', value: 1536 },
 ];
 
 export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
