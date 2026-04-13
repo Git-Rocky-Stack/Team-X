@@ -22,7 +22,7 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 **Phase 3 (The Live Cockpit) — complete.** All 20 milestones shipped.
 
-**Phase 4 (Ship-readiness) — in progress.** M21-M25 shipped. 602 unit tests + 3 E2E specs passing.
+**Phase 4 (Ship-readiness) — complete.** All 27 milestones shipped. v1.0.0. 612 unit tests + 4 E2E specs passing.
 
 ### Phase 1 (Skeleton) — complete
 
@@ -53,7 +53,7 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 - **M19 (runtime modes + privacy):** Settings repo (key-value store with seedDefaults). Hardware profiler (CPU, RAM, GPU detection via `execFileSync` + wmic on Windows, session-cached). Strategy picker (`pickStrategy` — Auto/Hybrid/Always-On/Lean based on hardware + providers). Privacy tier types + constants (`PRIVACY_TIER_RANK`, `DEFAULT_CONCURRENCY_CAPS`, `STRATEGY_SLOTS`). 6 new `settings.*` IPC channels + handlers + preload bridge. Settings UI expanded with RuntimeSection (strategy selector + hw profile), PrivacySection (tier selector + per-provider allowed/blocked), ConcurrencySection (slot selector + per-provider caps). 530 tests passing.
 - **M20 (demo + hardening):** Playwright E2E meeting-flow spec (full call-interject-end-minutes round-trip). Smoke + ticket-flow E2E specs updated for Phase 3 badge. All 3 E2E specs green. CLAUDE.md finalized for Phase 3 completion. 590 unit tests + 3 E2E specs passing.
 
-### Phase 4 (Ship-readiness) — in progress
+### Phase 4 (Ship-readiness) — complete
 
 - **M21 (file vault):** `file_vault` table + FTS5 (best-effort via `fts5-init.ts`), VaultRepo, VaultService (SHA256 integrity, text extraction), 7 IPC channels (`vault.*`), VaultView renderer with Files tab, search, detail panel. 31 tests.
 - **M22 (ticket attachments):** `ticket_attachments` linking table, TicketAttachmentsRepo, 3 IPC channels (`tickets.attachFile/detachFile/listAttachments`), attachment section in ticket detail panel with vault file picker. 8 tests.
@@ -61,6 +61,7 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 - **M24 (audit log UI):** AuditRepo (read-only queries on append-only events table), 3 IPC channels (`audit.*`), AuditView with summary cards, event type filter chips, actor search, date range picker, expandable rows with payload JSON viewer, CSV/JSON export. Audit tab enabled. 16 tests.
 - **M25 (cross-platform installers):** electron-builder config (NSIS/DMG/AppImage+deb), placeholder app icons, macOS entitlements, `dist`/`dist:win`/`dist:mac`/`dist:linux`/`dist:publish` scripts, UpdaterService (user-triggered only, zero phone-home) with 2 IPC channels (`updater.check`, `updater.install`), UpdaterSection in Settings UI, GitHub Actions release workflow (`release.yml` — matrix win/mac/linux, SHA256 checksums, draft release). 12 tests. 602 total.
 - **M26 (documentation + landing site):** README.md (hero, features, architecture, tech stack, quickstart, testing, privacy), CONTRIBUTING.md (dev setup, coding standards, PR guidelines, role-pack contribution guide, IPC conventions), CHANGELOG.md (all 25 milestones in Keep a Changelog format), 7 user guide docs (`docs/user-guide/` — getting started, hiring, projects, vault, providers, backup, shortcuts), static landing site (`docs/site/index.html` — Tailwind CDN, dark theme, responsive, 9-feature grid, architecture diagram, quickstart).
+- **M27 (final hardening + v1.0.0):** Playwright E2E `vault-backup.spec.ts` (vault upload, verify integrity, backup create, verify list), Phase 4 badge in top bar, Ed25519 role-pack signature verification (`pack-signature.ts` — generate keypair, sign, verify with 10 tests), security audit (dependency audit, IPC validation sweep, context isolation, secrets handling — all PASS), version bump 0.0.1 → 1.0.0 across all 6 packages. 612 unit tests + 4 E2E specs passing.
 
 The Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md).
 The Phase 2 plan lives at [`docs/plans/2026-04-11-team-x-phase-2-the-org.md`](docs/plans/2026-04-11-team-x-phase-2-the-org.md).

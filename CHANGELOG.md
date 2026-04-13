@@ -7,10 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.0] — 2026-04-13
 
-### Added
-- README.md, CONTRIBUTING.md, CHANGELOG.md, user guide, and landing site (M26)
+### M27 — Final Hardening + v1.0.0 (2026-04-13)
+
+#### Added
+- Playwright E2E `vault-backup.spec.ts` — vault upload, SHA256 integrity verification, backup create, backup list verification
+- Ed25519 role-pack signature verification (`pack-signature.ts`) — keypair generation, archive signing, signature verification with 10 unit tests
+- Security audit report (`docs/audits/2026-04-13-m27-security-audit.md`) — dependency audit, IPC input validation sweep, context isolation check, secrets handling review (all PASS)
+- Phase 4 badge in top bar (replacing Phase 3)
+- Version bump from 0.0.1 to 1.0.0 across all 6 packages
+- 612 unit tests + 4 E2E specs passing
+
+### M26 — Documentation + Landing Site (2026-04-13)
+
+#### Added
+- `README.md` — hero section, feature grid, architecture overview, tech stack table, quickstart, testing guide, privacy section
+- `CONTRIBUTING.md` — development setup, coding standards, PR guidelines, role-pack contribution guide, IPC channel conventions
+- `CHANGELOG.md` — all 27 milestones documented in Keep a Changelog format
+- 7 user guide docs (`docs/user-guide/`) — getting started, hiring employees, managing projects, using the vault, configuring providers, backup and restore, keyboard shortcuts
+- Static landing site (`docs/site/index.html`) — Tailwind CDN, dark theme, responsive layout, 9-feature grid, architecture diagram, tech stack badges, 3-step quickstart
 
 ---
 

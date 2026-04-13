@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/strategia-x/team-x/actions/workflows/ci.yml/badge.svg)](https://github.com/strategia-x/team-x/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-602%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-612%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
@@ -148,8 +148,8 @@ Team-X/
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |
 | Lint / format | Biome |
-| Unit tests | Vitest (602 tests) |
-| E2E tests | Playwright (3 specs) |
+| Unit tests | Vitest (612 tests) |
+| E2E tests | Playwright (4 specs) |
 | CI | GitHub Actions |
 
 ---
@@ -198,13 +198,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **602 unit tests** across 54 test files and **3 Playwright E2E specs**:
+Team-X ships with **612 unit tests** across 55 test files and **4 Playwright E2E specs**:
 
 | Spec | Coverage |
 |------|----------|
 | `smoke.spec.ts` | Boot, render employees, chat round-trip |
 | `ticket-flow.spec.ts` | Create ticket, assign, agent reply |
 | `meeting-flow.spec.ts` | Call meeting, interject, end, verify minutes |
+| `vault-backup.spec.ts` | Vault upload, integrity check, backup create/verify |
 
 All E2E specs run against a canned test-mode provider — no Ollama, no API keys, no network.
 

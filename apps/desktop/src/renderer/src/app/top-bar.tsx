@@ -47,7 +47,7 @@ export function TopBar() {
         <Building2 className="h-5 w-5 text-brand" />
         <span className="text-sm font-semibold">Strategia-X</span>
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
-          Phase 3
+          Phase 4
         </Badge>
       </div>
 
