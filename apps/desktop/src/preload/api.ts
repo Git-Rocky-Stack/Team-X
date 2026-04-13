@@ -42,6 +42,11 @@ import type {
   AddTicketCommentResponse,
   AttachFileRequest,
   AttachFileResponse,
+  AuditEvent,
+  AuditExportRequest,
+  AuditExportResponse,
+  AuditFilter,
+  AuditStats,
   BackupCreateRequest,
   BackupCreateResponse,
   BackupEntry,
@@ -218,6 +223,10 @@ const CHANNELS = {
   ticketsAttachFile: 'tickets.attachFile',
   ticketsDetachFile: 'tickets.detachFile',
   ticketsListAttachments: 'tickets.listAttachments',
+  // Audit log (Phase 4 — M24)
+  auditList: 'audit.list',
+  auditStats: 'audit.stats',
+  auditExport: 'audit.export',
 } as const;
 
 /**
@@ -377,6 +386,14 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       restore: (req: BackupRestoreRequest) =>
         ipc.invoke(CHANNELS.backupRestore, req) as Promise<BackupRestoreResponse>,
       list: () => ipc.invoke(CHANNELS.backupList) as Promise<BackupEntry[]>,
+    },
+    audit: {
+      list: (filter: AuditFilter) =>
+        ipc.invoke(CHANNELS.auditList, filter) as Promise<AuditEvent[]>,
+      stats: (companyId: string) =>
+        ipc.invoke(CHANNELS.auditStats, { companyId }) as Promise<AuditStats>,
+      export: (req: AuditExportRequest) =>
+        ipc.invoke(CHANNELS.auditExport, req) as Promise<AuditExportResponse>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

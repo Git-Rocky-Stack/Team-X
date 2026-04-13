@@ -134,6 +134,10 @@ const REQUEST_CHANNELS = [
   'backup.create',
   'backup.restore',
   'backup.list',
+  // Audit log (Phase 4 — M24)
+  'audit.list',
+  'audit.stats',
+  'audit.export',
   // Ticket attachments (Phase 4 — M22)
   'tickets.attachFile',
   'tickets.detachFile',
@@ -520,6 +524,48 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('backup.list', async () => {
     return handlers.backupList();
   });
+
+  // Audit log handlers (Phase 4 — M24)
+  ipcMain.handle(
+    'audit.list',
+    async (
+      _event,
+      request: {
+        companyId: string;
+        eventTypes?: string[];
+        actorId?: string;
+        fromMs?: number;
+        toMs?: number;
+        limit?: number;
+        offset?: number;
+      },
+    ) => {
+      return handlers.auditList(request);
+    },
+  );
+
+  ipcMain.handle('audit.stats', async (_event, request: { companyId: string }) => {
+    return handlers.auditStats(request);
+  });
+
+  ipcMain.handle(
+    'audit.export',
+    async (
+      _event,
+      request: {
+        filter: {
+          companyId: string;
+          eventTypes?: string[];
+          actorId?: string;
+          fromMs?: number;
+          toMs?: number;
+        };
+        format: 'csv' | 'json';
+      },
+    ) => {
+      return handlers.auditExport(request);
+    },
+  );
 
   // Ticket management handlers (Phase 2 — M12)
   ipcMain.handle(

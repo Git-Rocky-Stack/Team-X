@@ -35,6 +35,7 @@ export type ActiveView =
   | 'chat'
   | 'files'
   | 'telemetry'
+  | 'audit'
   | 'settings';
 
 /** Dashboard inner subview tabs. */

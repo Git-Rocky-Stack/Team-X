@@ -51,6 +51,7 @@ import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath } from './db/paths.js';
+import { createAuditRepo } from './db/repos/audit.js';
 import { createCompaniesRepo } from './db/repos/companies.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
 import { createEventsRepo } from './db/repos/events.js';
@@ -228,6 +229,7 @@ app.whenReady().then(async () => {
   const messagesRepo = createMessagesRepo(db);
   const runsRepo = createRunsRepo(db);
   const eventsRepo = createEventsRepo(db);
+  const auditRepo = createAuditRepo(db);
   const mcpServersRepo = createMcpServersRepo(db);
   const toolCallsRepo = createToolCallsRepo(db);
   const ticketsRepo = createTicketsRepo(db);
@@ -431,6 +433,7 @@ app.whenReady().then(async () => {
     settingsRepo,
     vaultService,
     backupService,
+    auditRepo,
     getHardwareProfile: detectHardware,
   });
   unregisterIpc = registerIpcHandlers(ipcHandlers, bus);

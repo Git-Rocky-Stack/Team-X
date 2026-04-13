@@ -5,6 +5,7 @@ import { useEmployees } from '@/hooks/use-employees.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { AppLayout } from './app/layout.js';
+import { AuditView } from './features/audit/audit-view.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
 import { CardsView } from './features/dashboard/cards-view.js';
 import { DashboardSubtabs } from './features/dashboard/dashboard-subtabs.js';
@@ -104,6 +105,8 @@ export default function App() {
         return <VaultView companyId={companyId} />;
       case 'telemetry':
         return <TelemetryView />;
+      case 'audit':
+        return <AuditView companyId={companyId} employees={employees} />;
       case 'settings':
         return <SettingsView />;
       default:

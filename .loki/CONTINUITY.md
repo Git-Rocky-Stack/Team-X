@@ -1,42 +1,40 @@
-# Loki Continuity — Phase 3, M20
+# Loki Continuity — Phase 4, M21-M24 COMPLETE
 
 ## Current State
-- **M20 (Demo + hardening) COMPLETE.**
-- **Phase 3 (The Live Cockpit) COMPLETE.** All 7 milestones shipped (M14-M20).
-- 530 unit tests + 3 E2E specs passing. Typecheck + lint clean.
+- **M21 (File Vault) COMPLETE.** 31 tests. Committed: bdd1370.
+- **M22 (Ticket Attachments) COMPLETE.** 8 tests. Committed: b4afcd2.
+- **M23 (Backup/Restore) COMPLETE.** 5 tests. Committed: 3ebc131.
+- **M24 (Audit Log UI) COMPLETE.** 16 tests. Pending commit.
+- 590 unit tests + 3 E2E specs passing. Typecheck + lint clean.
+- **Next: M25 (Cross-platform installers).**
 
-## What M20 delivered
-1. **Playwright E2E meeting-flow spec:** `e2e/meeting-flow.spec.ts` — full meeting lifecycle (call meeting with 2 attendees, verify agenda system message, Rocky interjects, end meeting, verify minutes generation + "Ended" badge). Runs in ~2-3s against canned test-mode provider.
-2. **Smoke + ticket-flow E2E specs updated:** Phase badge assertion changed from "Phase 2" to "Phase 3" to match the current top-bar badge.
-3. **CLAUDE.md finalized:** Phase 3 status updated to "complete", M20 entry added, E2E docs updated from "Two" to "Three" specs, testing expectations updated, 4 new troubleshooting entries (meeting-flow strict mode, interject polling, runtime strategy, telemetry empty state).
-4. **Strict mode locator patterns documented:** Meeting detail panel has text collisions (agenda in h3 + system message, "Minutes" label + "Meeting Minutes" content). Solutions: tag-scoped locators (`locator('h3').filter`), `exact: true`, unique class selectors (`div.max-h-32`).
+## Phase 4 Progress
+1. [x] **M21** — File vault (DB + VaultService + 7 IPC + VaultView + Files tab)
+2. [x] **M22** — Ticket attachments (ticket_attachments table + 3 IPC + detail UI)
+3. [x] **M23** — Backup/restore (BackupService + 3 IPC + Settings UI)
+4. [x] **M24** — Audit log UI (AuditRepo + 3 IPC + AuditView + Audit tab)
+5. [ ] **M25** — Cross-platform installers (electron-builder)
+6. [ ] **M26** — README + LICENSE + docs + landing site
+7. [ ] **M27** — Final hardening + v1.0.0 public release
 
-## Files created
-- `apps/desktop/e2e/meeting-flow.spec.ts`
+## M24 Implementation Summary
+- **AuditRepo** (`db/repos/audit.ts`): read-only queries on append-only events table — `list()` (filtered, paginated), `stats()` (aggregates), `exportJson()`/`exportCsv()`, `distinctEventTypes()`.
+- **IPC**: 3 channels (`audit.list`, `audit.stats`, `audit.export`) — full handler→register→preload chain.
+- **AuditView** (`features/audit/audit-view.tsx`): summary cards (total/today/top type), event type filter chips, actor search, date range picker, expandable event rows with payload JSON viewer, CSV/JSON export buttons, pagination.
+- **Audit tab** enabled in top-bar between Telemetry and Settings.
+- **16 tests**: list filtering (company, types, actor, date range, pagination), stats (total, today, top types, empty), export (JSON validity, CSV structure, quote escaping), distinct types.
 
-## Files modified
-- `apps/desktop/e2e/smoke.spec.ts` — Phase 2 → Phase 3 badge assertion
-- `apps/desktop/e2e/ticket-flow.spec.ts` — Phase 2 → Phase 3 badge assertion
-- `CLAUDE.md` — Phase 3 complete, M20 entry, E2E docs, troubleshooting
-
-## Phase 3 summary (M14-M20)
-- **M14:** 4 dashboard subviews + subtab nav + top bar expansion to 8 tabs
-- **M15:** Goals + projects + ticket linking + kanban
-- **M16:** Meeting primitive + orchestrator pause/drain + minutes
-- **M17:** Telemetry dashboard + Recharts (company/employee/cost views)
-- **M18:** 7 provider adapters + settings UI + env-key bootstrap
-- **M19:** Runtime strategy + hardware profiler + privacy tiers + concurrency
-- **M20:** E2E meeting-flow spec + hardening + CLAUDE.md finalization
-
-## Next: Phase 4 (Ship-readiness)
-- File vault + blob storage
-- Backup/restore + audit log UI
-- Community role packs + signature verification
-- Installers + landing site
-- Public release
+## Key patterns established in M21-M24
+- **FTS5 best-effort init:** `fts5-init.ts` runs after migrations; sql-js tests use LIKE fallback.
+- **shared-types build:** Run `tsc --build` on shared-types before desktop typecheck when adding new exports.
+- **IPC wiring chain:** shared-types types → handlers interface + impl → register channels → preload bridge → renderer hooks.
+- **Service factory pattern:** deps injection, closure state, async init/shutdown.
+- **Read-only repo pattern (M24):** audit repo reads events table without writing — orchestrator remains sole writer (invariant #6).
 
 ## Mistakes & Learnings
-- Playwright strict mode violations are the #1 E2E debugging issue. Always scope locators to containers and use tag-specific selectors (`locator('h3')`, `locator('p.italic')`) when text appears in multiple elements.
-- `getByText('Minutes')` matches both the label "Minutes" and content containing "Meeting Minutes" — use `exact: true` for the label.
-- `whitespace-pre-wrap` class is used in both minutes content and message bubbles — not unique enough for a locator. Use `div.max-h-32` which is unique to the minutes section.
-- Phase badge assertions in E2E tests must be updated when the top-bar badge changes — they silently become stale since E2E tests run separately from vitest.
+- FTS5 not in sql-js — move virtual table creation to runtime init
+- Always rebuild shared-types declarations before typecheck
+- Biome: `\x00-\x1f` needs biome-ignore for intentional control char strip
+- Unused imports from copy-paste: always check after writing service files
+- TypeScript doesn't narrow array indexing — extract element before accessing properties
+- Handler file is "pure" (no Electron imports) but CAN use node built-ins (fs, path, os)

@@ -634,6 +634,47 @@ export interface ListAttachmentsRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Audit log shapes (Phase 4 — M24)
+// ---------------------------------------------------------------------------
+
+/** A single event row surfaced in the audit log UI. */
+export interface AuditEvent {
+  id: string;
+  companyId: string;
+  actorId: string;
+  actorKind: string;
+  eventType: string;
+  payloadJson: string;
+  createdAt: number;
+}
+
+export interface AuditFilter {
+  companyId: string;
+  eventTypes?: string[];
+  actorId?: string;
+  fromMs?: number;
+  toMs?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AuditStats {
+  totalEvents: number;
+  eventsToday: number;
+  topEventTypes: Array<{ eventType: string; count: number }>;
+}
+
+export interface AuditExportRequest {
+  filter: AuditFilter;
+  format: 'csv' | 'json';
+}
+
+export interface AuditExportResponse {
+  /** Absolute path to the exported file on disk. */
+  filePath: string;
+}
+
+// ---------------------------------------------------------------------------
 // Settings management shapes (Phase 3 — M19)
 // ---------------------------------------------------------------------------
 
@@ -908,6 +949,19 @@ export interface IpcContract {
     request: Record<string, never>;
     response: BackupEntry[];
   };
+  // Audit log channels (Phase 4 — M24)
+  'audit.list': {
+    request: AuditFilter;
+    response: AuditEvent[];
+  };
+  'audit.stats': {
+    request: { companyId: string };
+    response: AuditStats;
+  };
+  'audit.export': {
+    request: AuditExportRequest;
+    response: AuditExportResponse;
+  };
   // Ticket attachment channels (Phase 4 — M22)
   'tickets.attachFile': {
     request: AttachFileRequest;
@@ -1161,6 +1215,14 @@ export interface TeamXApi {
     restore(req: BackupRestoreRequest): Promise<BackupRestoreResponse>;
     /** List all existing backup archives. */
     list(): Promise<BackupEntry[]>;
+  };
+  audit: {
+    /** Filtered, paginated list of audit events. */
+    list(filter: AuditFilter): Promise<AuditEvent[]>;
+    /** Aggregate statistics for the audit summary cards. */
+    stats(companyId: string): Promise<AuditStats>;
+    /** Export filtered audit events to a file (CSV or JSON). Returns the saved file path. */
+    export(req: AuditExportRequest): Promise<AuditExportResponse>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

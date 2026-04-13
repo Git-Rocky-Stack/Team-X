@@ -45,6 +45,11 @@ import type {
   AssignTicketRequest,
   AttachFileRequest,
   AttachFileResponse,
+  AuditEvent,
+  AuditExportRequest,
+  AuditExportResponse,
+  AuditFilter,
+  AuditStats,
   BackupCreateRequest,
   BackupCreateResponse,
   BackupEntry,
@@ -357,6 +362,15 @@ export interface IpcVaultService {
   stats(companyId: string): { fileCount: number; totalBytes: number };
 }
 
+/** Narrow audit-repo surface the IPC handlers need. */
+export interface IpcAuditRepo {
+  list(filter: AuditFilter): EventRow[];
+  stats(companyId: string): AuditStats;
+  exportJson(filter: AuditFilter): string;
+  exportCsv(filter: AuditFilter): string;
+  distinctEventTypes(companyId: string): string[];
+}
+
 /** Narrow settings-repo surface the IPC handlers need. */
 export interface IpcSettingsRepo {
   get<T>(key: string, fallback: T): T;
@@ -385,6 +399,7 @@ export interface IpcHandlerDeps {
   settingsRepo: IpcSettingsRepo;
   vaultService: IpcVaultService;
   backupService: IpcBackupService;
+  auditRepo: IpcAuditRepo;
   getHardwareProfile: () => HardwareProfile;
 }
 
@@ -628,6 +643,17 @@ export interface IpcHandlers {
   backupList(): Promise<BackupEntry[]>;
 
   // -----------------------------------------------------------------------
+  // Audit log handlers (Phase 4 — M24)
+  // -----------------------------------------------------------------------
+
+  /** `audit.list` — filtered, paginated list of audit events. */
+  auditList(filter: AuditFilter): Promise<AuditEvent[]>;
+  /** `audit.stats` — aggregate statistics for the summary cards. */
+  auditStats(req: { companyId: string }): Promise<AuditStats>;
+  /** `audit.export` — export filtered events to a file. Returns saved path. */
+  auditExport(req: AuditExportRequest): Promise<AuditExportResponse>;
+
+  // -----------------------------------------------------------------------
   // Ticket management handlers (Phase 2 — M12)
   // -----------------------------------------------------------------------
 
@@ -862,6 +888,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     settingsRepo,
     vaultService,
     backupService,
+    auditRepo,
     getHardwareProfile,
   } = deps;
 
@@ -1690,6 +1717,50 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
 
     async backupList() {
       return backupService.list();
+    },
+
+    // -----------------------------------------------------------------------
+    // Audit log handlers (Phase 4 — M24)
+    // -----------------------------------------------------------------------
+
+    async auditList(filter) {
+      if (typeof filter.companyId !== 'string' || filter.companyId.length === 0) {
+        throw new Error('[ipc] audit.list: companyId is required');
+      }
+      const rows = auditRepo.list(filter);
+      return rows as AuditEvent[];
+    },
+
+    async auditStats(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] audit.stats: companyId is required');
+      }
+      return auditRepo.stats(req.companyId);
+    },
+
+    async auditExport(req) {
+      if (
+        !req.filter ||
+        typeof req.filter.companyId !== 'string' ||
+        req.filter.companyId.length === 0
+      ) {
+        throw new Error('[ipc] audit.export: filter.companyId is required');
+      }
+      if (req.format !== 'csv' && req.format !== 'json') {
+        throw new Error('[ipc] audit.export: format must be "csv" or "json"');
+      }
+      const content =
+        req.format === 'csv' ? auditRepo.exportCsv(req.filter) : auditRepo.exportJson(req.filter);
+      const { writeFileSync, mkdirSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      const { tmpdir } = await import('node:os');
+      const exportDir = join(tmpdir(), 'team-x-exports');
+      mkdirSync(exportDir, { recursive: true });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `audit-export-${timestamp}.${req.format}`;
+      const filePath = join(exportDir, filename);
+      writeFileSync(filePath, content, 'utf-8');
+      return { filePath };
     },
 
     // -----------------------------------------------------------------------

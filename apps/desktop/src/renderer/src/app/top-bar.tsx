@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Settings,
+  Shield,
   Users2,
 } from 'lucide-react';
 
@@ -32,6 +33,7 @@ const TABS: TabDef[] = [
   { label: 'Chat', icon: MessageSquare, view: 'chat', disabled: true },
   { label: 'Files', icon: FileArchive, view: 'files' },
   { label: 'Telemetry', icon: Gauge, view: 'telemetry' },
+  { label: 'Audit', icon: Shield, view: 'audit' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ];
 
