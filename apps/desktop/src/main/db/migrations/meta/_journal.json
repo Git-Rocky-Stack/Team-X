@@ -57,6 +57,13 @@
       "when": 1776576000000,
       "tag": "0007_ticket_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1776662400000,
+      "tag": "0008_embeddings",
+      "breakpoints": true
     }
   ]
 }

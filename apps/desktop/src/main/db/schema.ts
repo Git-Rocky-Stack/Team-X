@@ -23,7 +23,7 @@
  *   helper runs `PRAGMA foreign_keys = ON` (landing in Task 20).
  */
 
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { blob, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 /** One row per AI company the user has created (multi-company is Phase 2+). */
 export const companies = sqliteTable('companies', {
@@ -418,4 +418,35 @@ export const meetings = sqliteTable('meetings', {
   actionItemsJson: text('action_items_json').notNull().default('[]'),
   startedAt: integer('started_at').notNull(),
   endedAt: integer('ended_at'),
+});
+
+// ---------------------------------------------------------------------------
+// Phase 5 — M28: Embeddings (RAG)
+// ---------------------------------------------------------------------------
+
+/**
+ * Vector embeddings for RAG retrieval. Each row is one chunk of embedded
+ * content. The raw embedding vector is stored as a BLOB (Float32Array
+ * serialized). The companion `vec_embeddings` sqlite-vec virtual table
+ * is created best-effort in `vec-init.ts` (same pattern as FTS5).
+ *
+ * Architectural invariant #5: all LLM calls (including embedding
+ * generation) route through provider-router.
+ */
+export const embeddings = sqliteTable('embeddings', {
+  id: text('id').primaryKey(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id),
+  /** message | ticket | vault_file | meeting_minutes | goal | project. */
+  sourceType: text('source_type').notNull(),
+  /** FK to the originating row (message id, ticket id, etc.). */
+  sourceId: text('source_id').notNull(),
+  /** For long content split into chunks. 0 for single-chunk content. */
+  chunkIndex: integer('chunk_index').notNull().default(0),
+  /** The raw text that was embedded — used for display in source attribution. */
+  contentText: text('content_text').notNull(),
+  /** Serialized Float32Array — the embedding vector. */
+  embedding: blob('embedding', { mode: 'buffer' }).notNull(),
+  createdAt: integer('created_at').notNull(),
 });
