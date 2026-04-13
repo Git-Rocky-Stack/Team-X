@@ -20,7 +20,7 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 **Phase 2 (The Org) — complete.** All 13 milestones shipped.
 
-**Phase 3 (The Live Cockpit) — in progress.** M14-M15 shipped. 412 unit tests + 2 E2E specs passing.
+**Phase 3 (The Live Cockpit) — complete.** All 20 milestones shipped. 530 unit tests + 3 E2E specs passing.
 
 ### Phase 1 (Skeleton) — complete
 
@@ -41,7 +41,7 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 - **M12 (tickets + kanban):** Ticket CRUD (`tickets` table, 8 IPC channels), 4-column kanban board (open/in-progress/blocked/done) with drag-to-move, ticket detail panel with discussion thread, create-with-assign triggers orchestrator run, `CreateTicketDialog` with priority + assignee selection.
 - **M13 (demo + hardening):** Playwright E2E ticket-flow spec (full create-assign-agent-reply round-trip, 1.8s), production build fix (`inlineDynamicImports` for `__filename`/`__dirname` collision), smoke test updated for Phase 2 badge, lint cleanup. 379 unit tests + 2 E2E passing.
 
-### Phase 3 (The Live Cockpit) — in progress
+### Phase 3 (The Live Cockpit) — complete
 
 - **M14 (dashboard subviews):** 4 new subviews (Timeline, Stream, Floor, Org embed) + subtab nav in Dashboard, top bar expanded to all 8 tabs with disabled placeholders, `events.list` IPC with cursor-based pagination. 384 tests passing.
 - **M15 (goals & projects):** `goals`, `projects`, `project_tickets` tables + migration. Goals repo (CRUD + recalcProgress), Projects repo (CRUD + ticket linking). 12 new IPC channels (5 goals.*, 7 projects.*). Projects kanban board (4-column drag-drop), project cards + detail panel, create project dialog. Goals subtab with progress bars, goal rows + detail panel, create goal dialog. Projects tab enabled. 412 tests passing.
@@ -49,6 +49,7 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 - **M17 (telemetry dashboard):** 4 aggregate query methods on runs repo (companyStats, dailyUsage, employeeStats, costBreakdown). 4 telemetry IPC channels + handlers + preload bridge. Recharts integration. TelemetryView with 3 subviews: Company (summary cards + 30-day AreaCharts for tokens/cost), Employees (sortable per-employee table), Cost (PieChart by provider + BarChart by model + date range filter). Telemetry tab enabled. 456 tests passing.
 - **M18 (additional providers):** 7 new provider adapters (OpenAI, Google, Groq, OpenRouter, Together, Fireworks, OpenAI-compat) in `provider-router` via AI SDK + `createOpenAI` custom baseURL pattern. Provider factory extended with 7 `buildStream` cases + default models. Providers service with add/update/remove + 6 disabled seed rows. Env-key bootstrap for 7 API keys. 5 new `providers.*` IPC channels + handlers + preload bridge. SettingsView with ProvidersSection (card grid), ProviderCard (toggle, API key input, test connection, remove), AddProviderDialog (kind picker, privacy tier, key, base URL). Settings tab enabled. 501 tests passing.
 - **M19 (runtime modes + privacy):** Settings repo (key-value store with seedDefaults). Hardware profiler (CPU, RAM, GPU detection via `execFileSync` + wmic on Windows, session-cached). Strategy picker (`pickStrategy` — Auto/Hybrid/Always-On/Lean based on hardware + providers). Privacy tier types + constants (`PRIVACY_TIER_RANK`, `DEFAULT_CONCURRENCY_CAPS`, `STRATEGY_SLOTS`). 6 new `settings.*` IPC channels + handlers + preload bridge. Settings UI expanded with RuntimeSection (strategy selector + hw profile), PrivacySection (tier selector + per-provider allowed/blocked), ConcurrencySection (slot selector + per-provider caps). 530 tests passing.
+- **M20 (demo + hardening):** Playwright E2E meeting-flow spec (full call-interject-end-minutes round-trip). Smoke + ticket-flow E2E specs updated for Phase 3 badge. All 3 E2E specs green. CLAUDE.md finalized for Phase 3 completion. 530 unit tests + 3 E2E specs passing.
 
 The Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md).
 The Phase 2 plan lives at [`docs/plans/2026-04-11-team-x-phase-2-the-org.md`](docs/plans/2026-04-11-team-x-phase-2-the-org.md).
@@ -137,12 +138,13 @@ pnpm -F @team-x/desktop test:e2e
 pnpm -F @team-x/desktop test:e2e:run
 ```
 
-Two E2E specs live under `apps/desktop/e2e/`:
+Three E2E specs live under `apps/desktop/e2e/`:
 
 - `smoke.spec.ts` — Phase 1 chat round-trip (boot, render employees, send message, canned reply).
 - `ticket-flow.spec.ts` — Phase 2 ticket lifecycle (navigate to Tickets, create ticket with assignee, agent processes via test-mode provider, verify reply in detail panel).
+- `meeting-flow.spec.ts` — Phase 3 meeting lifecycle (navigate to Meetings, call meeting with attendees, Rocky interjects, end meeting, verify minutes generation).
 
-Both launch a real Electron instance against `out/main/index.js` with
+All three launch a real Electron instance against `out/main/index.js` with
 `NODE_ENV=test`, which flips `provider-factory.isTestMode()` to `true`
 and swaps the resolver for the canned-reply `createTestModeResolveProvider`.
 No Ollama, no Anthropic key, no network — the full round-trips are
@@ -226,7 +228,7 @@ The curated F10 role library is the crown jewel. When creating or editing `role.
 
 - **Unit tests (Vitest)** for: role.md parser, provider router logic, orchestrator scheduler math, telemetry calculations, backup/restore round-trip.
 - **Integration tests (Vitest)** for: MCP host + one real MCP, Drizzle migrations, worker lifecycle, meeting pause/resume.
-- **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow. Phase 2 ships two specs: smoke (chat round-trip) and ticket-flow (create-assign-agent-reply lifecycle), both against the canned test-mode provider.
+- **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow. Phase 3 ships three specs: smoke (chat round-trip), ticket-flow (create-assign-agent-reply lifecycle), and meeting-flow (call-interject-end-minutes lifecycle), all against the canned test-mode provider.
 - Every Phase-X demo must have green tests before the phase is marked shippable.
 
 ## IPC channels (Phase 2 + Phase 3)
@@ -341,6 +343,14 @@ The `*` glob also removes the `-shm` and `-wal` WAL companion files. On the next
 **Ticket-flow E2E fails with strict mode violation on `getByText`.** Ticket description text appears in multiple DOM nodes (kanban card, detail panel description, initial thread message). Scope locators to a container: `detailPanel.locator('p').filter({ hasText: desc })` targets only the description paragraph, not the message `<div>`.
 
 **MCP servers fail to connect in dev.** MCP servers are seeded as templates (`enabled: false`) by default. Enable them via the Company Settings panel or directly in the `mcp_servers` table. Verify the MCP binary is on the PATH. Check `[mcp]` prefixed logs in the main process console.
+
+**Meeting-flow E2E fails with strict mode violation.** Meeting agenda text appears in multiple DOM nodes (detail panel `<h3>` header + system message `<p>`). Scope locators to specific tags: `detailPanel.locator('h3').filter({ hasText: agenda })` for the header, `detailPanel.locator('p.italic')` for system messages. The "Minutes" label also collides with "Meeting Minutes" content — use `getByText('Minutes', { exact: true })` and `locator('div.max-h-32')` for the content.
+
+**Meeting interject not appearing in thread.** The meeting detail panel polls every 2s via `useMeetingDetail` refetchInterval. If an interjection doesn't appear, check that the `meetings.interject` IPC handler is registered and that the meeting status is still `'active'`. Ended meetings reject interjections with an error.
+
+**Runtime strategy shows "Unknown" in Settings.** The hardware profiler runs `wmic` commands on Windows via `execFileSync`. If `wmic` is not on PATH (rare on Windows 11), GPU detection fails silently and defaults to conservative values. The strategy picker still works — it just assumes no GPU.
+
+**Telemetry charts show no data.** Telemetry reads from the `runs` table. If no agent runs have completed, all charts render zeros. Trigger a chat or ticket assignment to populate the runs table, then refresh the Telemetry tab.
 
 ## Things to NOT do
 

@@ -1,0 +1,11 @@
+{
+  "currentPhase": "DEVELOPMENT",
+  "currentMilestone": "M20",
+  "milestoneName": "Demo + hardening",
+  "tasksCompleted": 4,
+  "tasksFailed": 0,
+  "startedAt": "2026-04-12T23:00:00Z",
+  "completedAt": "2026-04-12T23:30:00Z",
+  "phaseComplete": true,
+  "phase": "Phase 3 — The Live Cockpit"
+}
