@@ -40,6 +40,8 @@ import type {
   AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
+  AttachFileRequest,
+  AttachFileResponse,
   CallMeetingRequest,
   CallMeetingResponse,
   CreateGoalRequest,
@@ -50,6 +52,7 @@ import type {
   CreateTicketResponse,
   DashboardEvent,
   DashboardEventListener,
+  DetachFileRequest,
   EndMeetingResponse,
   Goal,
   GoalDetail,
@@ -87,6 +90,7 @@ import type {
   TestProviderConnectionResponse,
   Thread,
   Ticket,
+  TicketAttachment,
   TicketDetail,
   UnsubscribeFn,
   UpdateGoalRequest,
@@ -201,6 +205,10 @@ const CHANNELS = {
   ticketsAddComment: 'tickets.addComment',
   ticketsList: 'tickets.list',
   ticketsGet: 'tickets.get',
+  // Ticket attachments (Phase 4 — M22)
+  ticketsAttachFile: 'tickets.attachFile',
+  ticketsDetachFile: 'tickets.detachFile',
+  ticketsListAttachments: 'tickets.listAttachments',
 } as const;
 
 /**
@@ -370,6 +378,12 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.ticketsList, { companyId }) as Promise<Ticket[]>,
       get: (ticketId: string) =>
         ipc.invoke(CHANNELS.ticketsGet, { ticketId }) as Promise<TicketDetail>,
+      attachFile: (req: AttachFileRequest) =>
+        ipc.invoke(CHANNELS.ticketsAttachFile, req) as Promise<AttachFileResponse>,
+      detachFile: (req: DetachFileRequest) =>
+        ipc.invoke(CHANNELS.ticketsDetachFile, req) as Promise<void>,
+      listAttachments: (ticketId: string) =>
+        ipc.invoke(CHANNELS.ticketsListAttachments, { ticketId }) as Promise<TicketAttachment[]>,
     },
   };
 }

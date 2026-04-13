@@ -369,6 +369,26 @@ export const fileVault = sqliteTable('file_vault', {
 });
 
 // ---------------------------------------------------------------------------
+// Phase 4 — M22: Ticket Attachments
+// ---------------------------------------------------------------------------
+
+/**
+ * Links vault files to tickets. A ticket can have many attachments;
+ * a file can be attached to many tickets.
+ */
+export const ticketAttachments = sqliteTable('ticket_attachments', {
+  id: text('id').primaryKey(),
+  ticketId: text('ticket_id')
+    .notNull()
+    .references(() => tickets.id),
+  fileId: text('file_id')
+    .notNull()
+    .references(() => fileVault.id),
+  attachedBy: text('attached_by').notNull(),
+  attachedAt: integer('attached_at').notNull(),
+});
+
+// ---------------------------------------------------------------------------
 // Phase 3 — M16: Meetings (continued from above)
 // ---------------------------------------------------------------------------
 

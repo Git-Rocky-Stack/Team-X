@@ -66,6 +66,7 @@ import { createProjectsRepo } from './db/repos/projects.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createSettingsRepo } from './db/repos/settings.js';
 import { createThreadsRepo } from './db/repos/threads.js';
+import { createTicketAttachmentsRepo } from './db/repos/ticket-attachments.js';
 import { createTicketsRepo } from './db/repos/tickets.js';
 import { createVaultRepo } from './db/repos/vault.js';
 import { seed } from './db/seed.js';
@@ -233,6 +234,7 @@ app.whenReady().then(async () => {
   const projectsRepo = createProjectsRepo(db);
   const meetingsRepo = createMeetingsRepo(db);
   const vaultRepo = createVaultRepo(db);
+  const ticketAttachmentsRepo = createTicketAttachmentsRepo(db);
   const settingsRepo = createSettingsRepo(db);
 
   // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
@@ -394,6 +396,7 @@ app.whenReady().then(async () => {
     threadsRepo,
     messagesRepo,
     ticketsRepo,
+    ticketAttachmentsRepo,
     goalsRepo,
     projectsRepo,
     meetingsRepo,

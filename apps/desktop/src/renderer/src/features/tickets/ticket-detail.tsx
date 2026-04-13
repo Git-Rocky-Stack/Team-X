@@ -1,12 +1,18 @@
 import type { Employee } from '@team-x/shared-types';
-import { ArrowLeft, Clock, MessageSquare, Send, X } from 'lucide-react';
+import { ArrowLeft, Clock, FileText, MessageSquare, Paperclip, Send, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { Textarea } from '@/components/ui/textarea.js';
+import {
+  useAttachFile,
+  useDetachFile,
+  useTicketAttachments,
+} from '@/hooks/use-ticket-attachments.js';
 import { useAddTicketComment, useCloseTicket, useTicketDetail } from '@/hooks/use-tickets.js';
+import { useVaultFiles } from '@/hooks/use-vault.js';
 import { useAppStore } from '@/store/app-store.js';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -33,7 +39,12 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
   const { data: detail, isLoading } = useTicketDetail(ticketId);
   const addComment = useAddTicketComment();
   const closeTicket = useCloseTicket();
+  const { data: attachments = [] } = useTicketAttachments(ticketId);
+  const { data: vaultFiles = [] } = useVaultFiles(detail?.companyId ?? null);
+  const attachFile = useAttachFile();
+  const detachFile = useDetachFile();
   const [comment, setComment] = useState('');
+  const [showAttachPicker, setShowAttachPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   if (isLoading || !detail) {
@@ -121,6 +132,71 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
           </p>
         </div>
       )}
+
+      {/* Attachments */}
+      <div className="border-b border-border/50 px-4 py-2.5">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+            Attachments ({attachments.length})
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-[10px]"
+            onClick={() => setShowAttachPicker(!showAttachPicker)}
+          >
+            <Paperclip className="mr-1 h-3 w-3" />
+            Attach
+          </Button>
+        </div>
+        {showAttachPicker && vaultFiles.length > 0 && (
+          <div className="mb-2 max-h-24 overflow-y-auto rounded border border-border bg-surface-100 p-1.5">
+            {vaultFiles
+              .filter((vf) => !attachments.some((a) => a.fileId === vf.id))
+              .map((vf) => (
+                <button
+                  type="button"
+                  key={vf.id}
+                  className="flex w-full items-center gap-2 rounded px-2 py-1 text-[11px] hover:bg-surface-200 transition-colors"
+                  onClick={() => {
+                    attachFile.mutate({ ticketId, fileId: vf.id });
+                    setShowAttachPicker(false);
+                  }}
+                >
+                  <FileText className="h-3 w-3 text-muted-foreground" />
+                  <span className="truncate">{vf.originalName}</span>
+                </button>
+              ))}
+            {vaultFiles.filter((vf) => !attachments.some((a) => a.fileId === vf.id)).length ===
+              0 && (
+              <p className="px-2 py-1 text-[10px] text-muted-foreground/60 italic">
+                All vault files already attached
+              </p>
+            )}
+          </div>
+        )}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {attachments.map((att) => (
+              <div
+                key={att.id}
+                className="flex items-center gap-1.5 rounded-md bg-surface-100 border border-border/30 px-2 py-1"
+              >
+                <FileText className="h-3 w-3 text-muted-foreground/70" />
+                <span className="text-[11px] truncate max-w-[120px]">{att.fileName ?? 'File'}</span>
+                <button
+                  type="button"
+                  onClick={() => detachFile.mutate({ ticketId, fileId: att.fileId })}
+                  className="ml-0.5 rounded p-0.5 text-muted-foreground/50 hover:text-red-400 transition-colors"
+                  aria-label="Remove attachment"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Messages thread */}
       <ScrollArea className="flex-1 px-4 py-3">

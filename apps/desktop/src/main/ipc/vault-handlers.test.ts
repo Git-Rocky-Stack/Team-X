@@ -33,7 +33,13 @@ function makeMockVaultService(): IpcVaultService {
     verify: vi.fn().mockResolvedValue({ ok: true, expected: 'aaa', actual: 'aaa' }),
     remove: vi.fn().mockResolvedValue(undefined),
     search: vi.fn().mockReturnValue([
-      { id: 'file-1', originalName: 'README.md', mimeType: 'text/markdown', sizeBytes: 1024, rank: -1 },
+      {
+        id: 'file-1',
+        originalName: 'README.md',
+        mimeType: 'text/markdown',
+        sizeBytes: 1024,
+        rank: -1,
+      },
     ] satisfies VaultSearchResult[]),
     list: vi.fn().mockReturnValue([mockFile]),
     get: vi.fn().mockReturnValue(mockFile),
@@ -210,9 +216,7 @@ describe('vault IPC handlers', () => {
     });
 
     it('throws on empty companyId', async () => {
-      await expect(handlers.vaultStats({ companyId: '' })).rejects.toThrow(
-        'companyId is required',
-      );
+      await expect(handlers.vaultStats({ companyId: '' })).rejects.toThrow('companyId is required');
     });
   });
 });

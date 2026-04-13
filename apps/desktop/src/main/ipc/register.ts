@@ -130,6 +130,10 @@ const REQUEST_CHANNELS = [
   'tickets.addComment',
   'tickets.list',
   'tickets.get',
+  // Ticket attachments (Phase 4 — M22)
+  'tickets.attachFile',
+  'tickets.detachFile',
+  'tickets.listAttachments',
 ] as const;
 
 /** Channel name for the one-way bus → renderer fan-out. */
@@ -567,6 +571,25 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('tickets.get', async (_event, request: { ticketId: string }) => {
     return handlers.ticketsGet(request);
+  });
+
+  // Ticket attachment handlers (Phase 4 — M22)
+  ipcMain.handle(
+    'tickets.attachFile',
+    async (_event, request: { ticketId: string; fileId: string }) => {
+      return handlers.ticketsAttachFile(request);
+    },
+  );
+
+  ipcMain.handle(
+    'tickets.detachFile',
+    async (_event, request: { ticketId: string; fileId: string }) => {
+      return handlers.ticketsDetachFile(request);
+    },
+  );
+
+  ipcMain.handle('tickets.listAttachments', async (_event, request: { ticketId: string }) => {
+    return handlers.ticketsListAttachments(request);
   });
 
   // Bus → renderer forwarder. The bus is synchronous fan-out, so the

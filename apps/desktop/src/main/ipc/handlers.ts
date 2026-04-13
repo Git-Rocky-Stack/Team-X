@@ -43,6 +43,8 @@ import type {
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   AssignTicketRequest,
+  AttachFileRequest,
+  AttachFileResponse,
   CallMeetingRequest,
   CallMeetingResponse,
   ChatMessage,
@@ -58,6 +60,7 @@ import type {
   DashboardEvent,
   DeleteGoalRequest,
   DeleteProjectRequest,
+  DetachFileRequest,
   Employee,
   EndMeetingResponse,
   GetGoalRequest,
@@ -71,6 +74,7 @@ import type {
   InterjectMeetingRequest,
   InterjectMeetingResponse,
   LinkTicketToProjectRequest,
+  ListAttachmentsRequest,
   ListEventsRequest,
   ListEventsResponse,
   ListGoalsRequest,
@@ -111,6 +115,7 @@ import type {
   TestProviderConnectionResponse,
   Thread,
   Ticket,
+  TicketAttachment,
   TicketDetail,
   UnlinkTicketFromProjectRequest,
   UpdateGoalRequest,
@@ -220,6 +225,14 @@ export interface IpcTicketsRepo {
   setThreadId(id: string, threadId: string): void;
   close(id: string): void;
   reopen(id: string): void;
+}
+
+export interface IpcTicketAttachmentsRepo {
+  attach(ticketId: string, fileId: string, attachedBy: string): string;
+  detachByFile(ticketId: string, fileId: string): void;
+  listByTicket(
+    ticketId: string,
+  ): { id: string; ticketId: string; fileId: string; attachedBy: string; attachedAt: number }[];
 }
 
 export interface IpcGoalsRepo {
@@ -342,6 +355,7 @@ export interface IpcHandlerDeps {
   threadsRepo: IpcThreadsRepo;
   messagesRepo: IpcMessagesRepo;
   ticketsRepo: IpcTicketsRepo;
+  ticketAttachmentsRepo: IpcTicketAttachmentsRepo;
   goalsRepo: IpcGoalsRepo;
   projectsRepo: IpcProjectsRepo;
   meetingsRepo: IpcMeetingsRepo;
@@ -614,6 +628,13 @@ export interface IpcHandlers {
 
   /** `tickets.get` — get full ticket detail with thread messages and assignee. */
   ticketsGet(req: GetTicketRequest): Promise<TicketDetail>;
+
+  /** `tickets.attachFile` — attach a vault file to a ticket. */
+  ticketsAttachFile(req: AttachFileRequest): Promise<AttachFileResponse>;
+  /** `tickets.detachFile` — detach a file from a ticket. */
+  ticketsDetachFile(req: DetachFileRequest): Promise<void>;
+  /** `tickets.listAttachments` — list all attachments for a ticket. */
+  ticketsListAttachments(req: ListAttachmentsRequest): Promise<TicketAttachment[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -799,6 +820,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     threadsRepo,
     messagesRepo,
     ticketsRepo,
+    ticketAttachmentsRepo,
     goalsRepo,
     projectsRepo,
     meetingsRepo,
@@ -1934,6 +1956,52 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         messages,
         assignee,
       };
+    },
+
+    // -----------------------------------------------------------------------
+    // Ticket attachment handlers (Phase 4 — M22)
+    // -----------------------------------------------------------------------
+
+    async ticketsAttachFile(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.attachFile: ticketId is required');
+      }
+      if (typeof req.fileId !== 'string' || req.fileId.length === 0) {
+        throw new Error('[ipc] tickets.attachFile: fileId is required');
+      }
+      const attachmentId = ticketAttachmentsRepo.attach(req.ticketId, req.fileId, HUMAN_USER_ID);
+      return { attachmentId };
+    },
+
+    async ticketsDetachFile(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.detachFile: ticketId is required');
+      }
+      if (typeof req.fileId !== 'string' || req.fileId.length === 0) {
+        throw new Error('[ipc] tickets.detachFile: fileId is required');
+      }
+      ticketAttachmentsRepo.detachByFile(req.ticketId, req.fileId);
+    },
+
+    async ticketsListAttachments(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.listAttachments: ticketId is required');
+      }
+      const rows = ticketAttachmentsRepo.listByTicket(req.ticketId);
+      // Enrich with vault file metadata
+      return rows.map((row): TicketAttachment => {
+        const vaultFile = vaultService.get(row.fileId);
+        return {
+          id: row.id,
+          ticketId: row.ticketId,
+          fileId: row.fileId,
+          attachedBy: row.attachedBy,
+          attachedAt: row.attachedAt,
+          fileName: vaultFile?.originalName,
+          fileMimeType: vaultFile?.mimeType,
+          fileSizeBytes: vaultFile?.sizeBytes,
+        };
+      });
     },
   };
 }

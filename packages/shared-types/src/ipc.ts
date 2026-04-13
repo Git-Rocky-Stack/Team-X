@@ -558,6 +558,42 @@ export interface VaultStatsResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Ticket attachment shapes (Phase 4 — M22)
+// ---------------------------------------------------------------------------
+
+export interface TicketAttachment {
+  id: string;
+  ticketId: string;
+  fileId: string;
+  attachedBy: string;
+  attachedAt: number;
+  /** Populated from vault join — original filename for display. */
+  fileName?: string;
+  /** Populated from vault join — mime type for icon rendering. */
+  fileMimeType?: string;
+  /** Populated from vault join — byte size for display. */
+  fileSizeBytes?: number;
+}
+
+export interface AttachFileRequest {
+  ticketId: string;
+  fileId: string;
+}
+
+export interface AttachFileResponse {
+  attachmentId: string;
+}
+
+export interface DetachFileRequest {
+  ticketId: string;
+  fileId: string;
+}
+
+export interface ListAttachmentsRequest {
+  ticketId: string;
+}
+
+// ---------------------------------------------------------------------------
 // Settings management shapes (Phase 3 — M19)
 // ---------------------------------------------------------------------------
 
@@ -819,6 +855,19 @@ export interface IpcContract {
     request: { companyId: string };
     response: VaultStatsResponse;
   };
+  // Ticket attachment channels (Phase 4 — M22)
+  'tickets.attachFile': {
+    request: AttachFileRequest;
+    response: AttachFileResponse;
+  };
+  'tickets.detachFile': {
+    request: DetachFileRequest;
+    response: undefined;
+  };
+  'tickets.listAttachments': {
+    request: ListAttachmentsRequest;
+    response: TicketAttachment[];
+  };
   // Ticket management channels
   'tickets.create': {
     request: CreateTicketRequest;
@@ -1069,6 +1118,12 @@ export interface TeamXApi {
     list(companyId: string): Promise<Ticket[]>;
     /** Get full ticket detail with thread messages and assignee. */
     get(ticketId: string): Promise<TicketDetail>;
+    /** Attach a vault file to a ticket. */
+    attachFile(req: AttachFileRequest): Promise<AttachFileResponse>;
+    /** Detach a file from a ticket. */
+    detachFile(req: DetachFileRequest): Promise<void>;
+    /** List all file attachments for a ticket. */
+    listAttachments(ticketId: string): Promise<TicketAttachment[]>;
   };
 }
 
