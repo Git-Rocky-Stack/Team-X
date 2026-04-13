@@ -259,7 +259,9 @@ export function createProvidersService<TRunResult>(
           enabled: provider.enabled ?? false,
         })
         .run();
-      return rowToProviderConfig(getRaw(id)!);
+      const inserted = getRaw(id);
+      if (!inserted) throw new Error(`[providers] failed to read back inserted provider: ${id}`);
+      return rowToProviderConfig(inserted);
     },
 
     update(id, fields): void {

@@ -107,6 +107,7 @@ describe('makeOpenAICompatStream', () => {
     });
 
     it('throws synchronously on undefined baseURL', () => {
+      // biome-ignore lint/suspicious/noExplicitAny: intentionally omitting required field to test validation
       expect(() => makeOpenAICompatStream({ apiKey: 'k', model: 'm' } as any)).toThrow(/baseURL/i);
     });
   });
