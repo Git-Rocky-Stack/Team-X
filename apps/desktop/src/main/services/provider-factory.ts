@@ -409,6 +409,25 @@ const TEST_MODE_PROVIDER_NAME = 'test-mode';
 const TEST_MODE_MODEL = 'test-canned-v1';
 
 /**
+ * Sentinels the test-mode provider recognises inside user messages.
+ * Neutral, namespaced strings that no real user would type — so
+ * Playwright specs can steer the canned reply without touching the
+ * default canned-reply path that smoke / ticket-flow / meeting-flow /
+ * vault-backup depend on.
+ *
+ * - `__ECHO_SYSTEM__`        → the reply is the verbatim system prompt
+ *                              (used by `rag-flow.spec.ts` to assert
+ *                              on `[Source: ...]` RAG attributions).
+ * - `__ECHO_TEXT__:<payload>` → the reply is `<payload>` (everything
+ *                              after the colon through end-of-line).
+ *                              Used to seed the embeddings index with a
+ *                              distinctive marker the next turn can
+ *                              retrieve.
+ */
+const TEST_MODE_ECHO_SYSTEM = '__ECHO_SYSTEM__';
+const TEST_MODE_ECHO_TEXT = '__ECHO_TEXT__:';
+
+/**
  * Build a `ProviderStreamFn` that yields a canned reply in a handful
  * of delta chunks + a synthetic usage record, with zero latency and
  * zero network calls. Used by `main/index.ts` when
@@ -420,10 +439,17 @@ const TEST_MODE_MODEL = 'test-canned-v1';
  * The chunking mimics real provider behaviour (multiple small deltas
  * rather than one big blob) so the dashboard's token-stream preview
  * and the event bus's `token.delta` fan-out get a realistic exercise.
+ *
+ * Sentinel steering (M29 T9): when the most recent user message
+ * contains `__ECHO_SYSTEM__` the reply is the system prompt verbatim;
+ * when it contains `__ECHO_TEXT__:<payload>` the reply is `<payload>`.
+ * Both branches fall through to the default canned reply when the
+ * sentinel is absent, so every existing spec is unaffected.
  */
 function testModeStream(): ProviderStreamFn {
-  return async function* testMode() {
-    const words = TEST_MODE_REPLY.split(' ');
+  return async function* testMode(args) {
+    const reply = pickTestModeReply(args.system, args.messages);
+    const words = reply.split(' ');
     for (let i = 0; i < words.length; i++) {
       yield { delta: (i > 0 ? ' ' : '') + words[i] };
     }
@@ -435,6 +461,42 @@ function testModeStream(): ProviderStreamFn {
       },
     };
   };
+}
+
+/**
+ * Inspect the final user message and decide what the test-mode
+ * provider should stream back. Pure function so the sentinel-dispatch
+ * rules are unit-testable in isolation.
+ */
+function pickTestModeReply(
+  system: string,
+  messages: ReadonlyArray<{ role: string; content: string }>,
+): string {
+  // Walk from the end so a follow-up user message wins over an older one.
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (!m || m.role !== 'user') continue;
+    const content = m.content ?? '';
+    if (content.includes(TEST_MODE_ECHO_SYSTEM)) {
+      // Prefix the system prompt with a stable marker so the spec can
+      // distinguish it from the default canned reply without coupling
+      // to specific system-prompt wording.
+      return `[SYSTEM_ECHO]\n${system}`;
+    }
+    const echoIdx = content.indexOf(TEST_MODE_ECHO_TEXT);
+    if (echoIdx >= 0) {
+      const after = content.slice(echoIdx + TEST_MODE_ECHO_TEXT.length);
+      // Take the payload up to the next newline (if any) so a multi-
+      // paragraph user message still yields a clean reply string.
+      const nl = after.indexOf('\n');
+      const payload = (nl >= 0 ? after.slice(0, nl) : after).trim();
+      if (payload.length > 0) return payload;
+    }
+    // Only the most recent user message gates sentinel dispatch —
+    // break after the first user message we hit.
+    break;
+  }
+  return TEST_MODE_REPLY;
 }
 
 /**
@@ -532,4 +594,56 @@ export async function buildEmbedAdapter(args: {
   }
 
   return null;
+}
+
+/**
+ * Deterministic fake embed adapter for Playwright E2E — only used
+ * when `NODE_ENV === 'test'` AND `TEAM_X_RAG_TEST === '1'`. Generates
+ * stable, reproducible vectors from string hashes so the
+ * `rag-flow.spec.ts` spec can assert on retrieval without any real
+ * embedding provider, any network call, or any keychain lookup.
+ *
+ * Why this lives here (and not in the spec):
+ *
+ *   - Invariant #4 (provider-router is the only place that touches
+ *     LLM APIs): the embed-adapter interface is the same surface the
+ *     real adapters satisfy. The factory is the single seam where
+ *     adapters get constructed, so the test adapter belongs alongside
+ *     its production siblings.
+ *   - Invariant #7 (zero phone-home): the fake adapter makes no
+ *     network calls — its output is a pure function of its input. A
+ *     Playwright spec can enable RAG end-to-end with zero risk of
+ *     leaking out of the test harness.
+ *
+ * The hash-to-vector mapping uses a rolling 31-multiplier hash (same
+ * family as Java's `String.hashCode`) to pick a coordinate per
+ * character, then L2-normalises so cosine similarity behaves like a
+ * true similarity metric in [-1, 1]. Two strings that share substrings
+ * produce partially-overlapping vectors, which is all the spec needs
+ * to assert "a message containing the marker is retrieved when the
+ * query references the same marker".
+ *
+ * Phase 5 — M29 T9.
+ */
+export function makeFakeEmbedAdapter(dimension: number): EmbedAdapter {
+  return {
+    model: 'test-fake-embed',
+    dimension,
+    embed: async (texts: string[]): Promise<number[][]> => {
+      return texts.map((t) => {
+        const vec = new Array<number>(dimension).fill(0);
+        let h = 0;
+        for (let i = 0; i < t.length; i++) {
+          h = (h * 31 + t.charCodeAt(i)) >>> 0;
+          const idx = h % dimension;
+          vec[idx] = (vec[idx] ?? 0) + 1;
+        }
+        // L2-normalize so cosine similarity is a true metric.
+        let norm = 0;
+        for (const v of vec) norm += v * v;
+        norm = Math.sqrt(norm) || 1;
+        return vec.map((v) => v / norm);
+      });
+    },
+  };
 }

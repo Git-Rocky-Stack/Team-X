@@ -14,6 +14,7 @@ const workspaceDeps = [
   '@team-x/role-schema',
   '@team-x/provider-router',
   '@team-x/telemetry-core',
+  '@team-x/intelligence',
 ];
 
 // Both package.json files set "type": "module", so Electron loads

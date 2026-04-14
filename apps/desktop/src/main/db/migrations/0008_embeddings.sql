@@ -9,6 +9,7 @@ CREATE TABLE `embeddings` (
   `created_at` integer NOT NULL,
   UNIQUE(`source_id`, `chunk_index`)
 );
-
+--> statement-breakpoint
 CREATE INDEX `idx_embeddings_company` ON `embeddings`(`company_id`);
+--> statement-breakpoint
 CREATE INDEX `idx_embeddings_source` ON `embeddings`(`source_type`, `source_id`);

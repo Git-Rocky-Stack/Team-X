@@ -97,6 +97,7 @@ import {
   createProviderFactory,
   createTestModeResolveProvider,
   isTestMode,
+  makeFakeEmbedAdapter,
 } from './services/provider-factory.js';
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRagIndexer } from './services/rag-indexer.js';
@@ -319,7 +320,33 @@ app
     // meeting-flow specs boot against a canned provider with no network,
     // and we must not alter their semantics.
     async function buildRagService(): Promise<RagService | null> {
-      if (testMode) return null;
+      // Test-mode RAG (Playwright E2E — M29 T9): when the spec sets
+      // `TEAM_X_RAG_TEST=1` alongside `NODE_ENV=test`, wire the
+      // deterministic fake embed adapter so the rag-flow spec can
+      // drive a full round-trip without Ollama / OpenAI / network.
+      // Every other E2E spec (smoke / ticket-flow / meeting-flow /
+      // vault-backup) omits the flag, so the original `testMode →
+      // return null` short-circuit still applies and their semantics
+      // are preserved exactly.
+      const testRagMode = testMode && process.env.TEAM_X_RAG_TEST === '1';
+      if (testMode && !testRagMode) return null;
+
+      if (testRagMode) {
+        const dimension = 64; // small, deterministic, fast to hash
+        const adapter = makeFakeEmbedAdapter(dimension);
+        const embedText = createEmbedText(adapter);
+        const ragRepo: RagRepo = {
+          upsert: (input) => embeddingsRepo.upsert(input),
+          deleteBySource: (id) => embeddingsRepo.deleteBySource(id),
+          listByCompany: (cid) =>
+            embeddingsRepo
+              .listByCompany(cid)
+              .map((r) => ({ ...r, sourceType: r.sourceType as EmbeddingSourceType })),
+        };
+        console.log('[rag] test-mode fake embed adapter active (TEAM_X_RAG_TEST=1)');
+        return createRagService({ embedText, dimension, repo: ragRepo });
+      }
+
       const enabled = settingsRepo.get<boolean>('rag_enabled', false);
       if (!enabled) return null;
 
