@@ -31,6 +31,16 @@
  */
 
 import type {
+  CommandHistoryRequest,
+  CommandParseRequest,
+  CommandSuggestRequest,
+  IpcCommandHistoryEntry,
+  IpcExecuteRequest,
+  IpcExecuteResult,
+  IpcParseResult,
+  IpcSuggestItem,
+} from './command.js';
+import type {
   ChatMessage,
   Company,
   Employee,
@@ -1115,6 +1125,23 @@ export interface IpcContract {
     request: string;
     response: RagDeleteForCompanyResponse;
   };
+  // Command palette channels (Phase 5 — M30)
+  'command.parse': {
+    request: CommandParseRequest;
+    response: IpcParseResult;
+  };
+  'command.execute': {
+    request: IpcExecuteRequest;
+    response: IpcExecuteResult;
+  };
+  'command.history': {
+    request: CommandHistoryRequest;
+    response: IpcCommandHistoryEntry[];
+  };
+  'command.suggest': {
+    request: CommandSuggestRequest;
+    response: IpcSuggestItem[];
+  };
   // Ticket management channels
   'tickets.create': {
     request: CreateTicketRequest;
@@ -1381,6 +1408,35 @@ export interface TeamXApi {
     rebuildAll(companyId: string): Promise<RagRebuildAllResponse>;
     /** Destructive: wipe every embedding row for the company (no re-index). */
     deleteForCompany(companyId: string): Promise<RagDeleteForCompanyResponse>;
+  };
+  command: {
+    /**
+     * Classify the user's text, resolve any entity queries, fill slots,
+     * and return a discriminated-union `IpcParseResult` the palette UI
+     * can drive. No side effects — the result is a plan, not a
+     * dispatch. `currentView` + `recentIntents` are optional NLU
+     * context the classifier uses to bias prediction.
+     */
+    parse(req: CommandParseRequest): Promise<IpcParseResult>;
+    /**
+     * Run a parsed intent against the main process's existing IPC
+     * handlers. Destructive intents (`fire_employee`, `close_ticket`,
+     * `end_meeting`, `promote_employee`) require `confirmed: true`
+     * explicitly — omitting it returns `{ kind: 'needs_confirmation' }`
+     * without dispatching.
+     */
+    execute(req: IpcExecuteRequest): Promise<IpcExecuteResult>;
+    /**
+     * Newest-first page of the caller's command history. Defaults
+     * `limit` to the per-company FIFO cap (20) and `companyId` to the
+     * service's defaultCompanyId.
+     */
+    history(req?: CommandHistoryRequest): Promise<IpcCommandHistoryEntry[]>;
+    /**
+     * Prefix-matched suggestion rows for the palette's drop-down.
+     * M30 ships a static table; M31 may extend with RAG context.
+     */
+    suggest(req: CommandSuggestRequest): Promise<IpcSuggestItem[]>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

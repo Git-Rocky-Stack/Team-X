@@ -54,6 +54,9 @@ import type {
   BackupRestoreResponse,
   CallMeetingRequest,
   CallMeetingResponse,
+  CommandHistoryRequest,
+  CommandParseRequest,
+  CommandSuggestRequest,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -70,6 +73,11 @@ import type {
   HireEmployeeResponse,
   InterjectMeetingRequest,
   InterjectMeetingResponse,
+  IpcCommandHistoryEntry,
+  IpcExecuteRequest,
+  IpcExecuteResult,
+  IpcParseResult,
+  IpcSuggestItem,
   ListEventsRequest,
   ListEventsResponse,
   McpServerSummary,
@@ -243,6 +251,11 @@ const CHANNELS = {
   ragStats: 'rag.stats',
   ragRebuildAll: 'rag.rebuildAll',
   ragDeleteForCompany: 'rag.deleteForCompany',
+  // Command palette (Phase 5 — M30)
+  commandParse: 'command.parse',
+  commandExecute: 'command.execute',
+  commandHistory: 'command.history',
+  commandSuggest: 'command.suggest',
 } as const;
 
 /**
@@ -426,6 +439,16 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.ragRebuildAll, companyId) as Promise<RagRebuildAllResponse>,
       deleteForCompany: (companyId: string) =>
         ipc.invoke(CHANNELS.ragDeleteForCompany, companyId) as Promise<RagDeleteForCompanyResponse>,
+    },
+    command: {
+      parse: (req: CommandParseRequest) =>
+        ipc.invoke(CHANNELS.commandParse, req) as Promise<IpcParseResult>,
+      execute: (req: IpcExecuteRequest) =>
+        ipc.invoke(CHANNELS.commandExecute, req) as Promise<IpcExecuteResult>,
+      history: (req?: CommandHistoryRequest) =>
+        ipc.invoke(CHANNELS.commandHistory, req ?? {}) as Promise<IpcCommandHistoryEntry[]>,
+      suggest: (req: CommandSuggestRequest) =>
+        ipc.invoke(CHANNELS.commandSuggest, req) as Promise<IpcSuggestItem[]>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

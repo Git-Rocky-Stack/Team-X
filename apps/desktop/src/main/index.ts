@@ -84,6 +84,7 @@ import { createTicketsRepo } from './db/repos/tickets.js';
 import { createVaultRepo } from './db/repos/vault.js';
 import { messages as messagesTable } from './db/schema.js';
 import { seed } from './db/seed.js';
+import { buildCommandHandlers } from './ipc/command-handlers.js';
 import { createIpcHandlers } from './ipc/handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
@@ -832,6 +833,36 @@ app
     );
     ipcMain.handle('rag.deleteForCompany', (_evt, companyId: string) =>
       ragHandlers.deleteForCompany(companyId),
+    );
+
+    // ---- Command palette IPC handlers (Phase 5 — M30 T5) -------------------
+    //
+    // Mounted as a sibling block rather than folded into `createIpcHandlers`
+    // because CommandService sits above the handler factory — it consumes
+    // other IPC handlers (tickets, projects, meetings, vault, employees)
+    // as its dispatch target. The four channel strings are already listed
+    // in `REQUEST_CHANNELS` so `unregisterIpc()` strips them on shutdown
+    // alongside every other handler.
+    const commandHandlers = buildCommandHandlers({ commandService: commandServiceInstance });
+    ipcMain.handle(
+      'command.parse',
+      (_evt, req: import('@team-x/shared-types').CommandParseRequest) =>
+        commandHandlers['command.parse'](req),
+    );
+    ipcMain.handle(
+      'command.execute',
+      (_evt, req: import('@team-x/shared-types').IpcExecuteRequest) =>
+        commandHandlers['command.execute'](req),
+    );
+    ipcMain.handle(
+      'command.history',
+      (_evt, req: import('@team-x/shared-types').CommandHistoryRequest) =>
+        commandHandlers['command.history'](req),
+    );
+    ipcMain.handle(
+      'command.suggest',
+      (_evt, req: import('@team-x/shared-types').CommandSuggestRequest) =>
+        commandHandlers['command.suggest'](req),
     );
 
     console.log('[main] orchestrator + IPC ready');

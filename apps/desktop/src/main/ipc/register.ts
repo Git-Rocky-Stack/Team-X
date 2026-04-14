@@ -151,6 +151,11 @@ const REQUEST_CHANNELS = [
   'rag.stats',
   'rag.rebuildAll',
   'rag.deleteForCompany',
+  // Command palette (Phase 5 — M30)
+  'command.parse',
+  'command.execute',
+  'command.history',
+  'command.suggest',
 ] as const;
 
 /** Channel name for the one-way bus → renderer fan-out. */
