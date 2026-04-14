@@ -72,7 +72,21 @@ const cadenceSchema = z.object({
 const frontmatterSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  level: z.enum(['officer', 'senior_management', 'management', 'supervisor', 'lead', 'ic']),
+  level: z.enum([
+    'officer',
+    'senior_management',
+    'management',
+    'supervisor',
+    'lead',
+    'ic',
+    // `system` is reserved for framework-internal pseudo-employees that are
+    // never hired via UI — they exist per-company to own things like the
+    // agentic-loop thread history. The role-loader filters `level: system`
+    // out of `listRoles()` so they never appear in the hire dialog or NLU
+    // entity resolver; `getSpec()` still returns them so `resolveSystemPrompt`
+    // and direct bootstrap lookups continue to work.
+    'system',
+  ]),
   reports_to: z.array(z.string()).default([]),
   manages: z.array(z.string()).default([]),
   preferred_model_tier: z.enum(['high', 'mid', 'low']),

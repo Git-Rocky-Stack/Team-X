@@ -211,7 +211,18 @@ export interface IpcCompaniesRepo {
 
 export interface IpcEmployeesRepo {
   listByCompany(companyId: string): EmployeeRow[];
+  /**
+   * Non-system employees only — filtered by `is_system = 0`. Used by
+   * `employees.list` to hide the framework-internal `system-agent`
+   * pseudo-employee from the renderer.
+   */
+  listVisibleByCompany(companyId: string): EmployeeRow[];
   getById(id: string): EmployeeRow | null;
+  /**
+   * Look up the system pseudo-employee for a company + roleId, or null
+   * if none has been seeded yet. Backs `ensureSystemAgent` idempotency.
+   */
+  findSystemByRoleId(companyId: string, roleId: string): EmployeeRow | null;
   create(input: CreateEmployeeInput): string;
   delete(id: string): void;
 }
@@ -934,7 +945,10 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof companyId !== 'string' || companyId.length === 0) {
         throw new Error('[ipc] employees.list: companyId is required');
       }
-      const rows = employeesRepo.listByCompany(companyId);
+      // Hide framework-internal pseudo-employees (e.g., `system-agent`) from
+      // every renderer surface. `listVisibleByCompany` applies the
+      // `is_system = 0` predicate — see repos/employees.ts + migration 0010.
+      const rows = employeesRepo.listVisibleByCompany(companyId);
       return rows.map(rowToEmployee);
     },
 
@@ -952,6 +966,16 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       const spec = roleLookup.getSpec(roleId);
       if (!spec) {
         throw new Error(`[ipc] employees.create: role not found: ${roleId}`);
+      }
+
+      // Refuse to hire framework-internal roles via the IPC surface. Only
+      // `ensureSystemAgent` is allowed to seed `level: system` employees
+      // and it goes through the repo directly, not this handler.
+      if (spec.frontmatter.level === 'system') {
+        throw new Error(
+          `[ipc] employees.create: role "${roleId}" is framework-internal ` +
+            'and cannot be hired. Use the command palette for complex requests instead.',
+        );
       }
 
       const employeeId = employeesRepo.create({
@@ -976,6 +1000,17 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       const employee = employeesRepo.getById(employeeId);
       if (!employee) {
         throw new Error(`[ipc] employees.fire: employee not found: ${employeeId}`);
+      }
+      // Framework-internal pseudo-employees are seeded once per company and
+      // must never be removed via UI — the command palette + audit log +
+      // agentic loop all assume the system-agent row is stable. The hire
+      // dialog already can't surface them (filtered from
+      // `listVisibleByCompany`); this is the last line of defense.
+      if (employee.isSystem) {
+        throw new Error(
+          `[ipc] employees.fire: cannot fire framework-internal employee ${employeeId} ` +
+            `(role_id=${employee.roleId})`,
+        );
       }
       employeesRepo.delete(employeeId);
     },

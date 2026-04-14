@@ -65,6 +65,14 @@ export const employees = sqliteTable('employees', {
   toolsAllowedJson: text('tools_allowed_json').notNull().default('[]'),
   toolsDeniedJson: text('tools_denied_json').notNull().default('[]'),
   avatar: text('avatar'),
+  /**
+   * Framework-internal pseudo-employee flag. System employees (e.g., the
+   * agentic-loop `system-agent`) are never shown in the employee list,
+   * hire dialog, org chart, or delegation pickers. One system-agent
+   * per company is seeded idempotently via `ensureSystemAgent` at boot
+   * and on `companies.create`. Stored as INTEGER 0/1 for SQLite idiom.
+   */
+  isSystem: integer('is_system', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at').notNull(),
 });
 

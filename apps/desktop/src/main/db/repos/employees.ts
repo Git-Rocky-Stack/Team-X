@@ -12,7 +12,7 @@
  * scalar fields (status, name, title) can avoid the parse cost.
  */
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
@@ -35,6 +35,13 @@ export interface CreateEmployeeInput {
   toolsAllowed?: string[];
   toolsDenied?: string[];
   avatar?: string;
+  /**
+   * Framework-internal pseudo-employee flag. Defaults to `false`. The only
+   * production caller that passes `true` is `ensureSystemAgent` — the hire
+   * IPC handler rejects any request with `isSystem: true` before reaching
+   * this layer.
+   */
+  isSystem?: boolean;
 }
 
 type EmployeesDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -65,6 +72,7 @@ export function createEmployeesRepo<TRunResult>(db: EmployeesDb<TRunResult>) {
           toolsAllowedJson: JSON.stringify(input.toolsAllowed ?? []),
           toolsDeniedJson: JSON.stringify(input.toolsDenied ?? []),
           avatar: input.avatar ?? null,
+          isSystem: input.isSystem ?? false,
           createdAt: Date.now(),
         })
         .run();
@@ -77,9 +85,52 @@ export function createEmployeesRepo<TRunResult>(db: EmployeesDb<TRunResult>) {
       return row ?? null;
     },
 
-    /** Return every employee belonging to a given company. */
+    /**
+     * Return every employee belonging to a given company — system employees
+     * included. Callers that should NOT surface system employees (the
+     * `employees.list` IPC handler, org-chart builder, NLU entity resolver)
+     * must use `listVisibleByCompany` instead.
+     */
     listByCompany(companyId: string): EmployeeRow[] {
       return db.select().from(employees).where(eq(employees.companyId, companyId)).all();
+    },
+
+    /**
+     * Return every non-system employee belonging to a given company. This is
+     * the correct surface for anything user-facing — the hire dialog, org
+     * chart, delegation pickers, entity resolver. System pseudo-employees
+     * (e.g., the agentic-loop `system-agent`) are filtered out by the
+     * `is_system = 0` predicate, backed by the partial index added in
+     * migration 0010.
+     */
+    listVisibleByCompany(companyId: string): EmployeeRow[] {
+      return db
+        .select()
+        .from(employees)
+        .where(and(eq(employees.companyId, companyId), eq(employees.isSystem, false)))
+        .all();
+    },
+
+    /**
+     * Return the system employee for a company and roleId, or null if none
+     * has been seeded yet. The `ensureSystemAgent` bootstrap calls this
+     * before inserting, giving the per-company-per-role-id idempotency
+     * guarantee without requiring a unique SQL constraint (which would
+     * also need a migration on this mutable table).
+     */
+    findSystemByRoleId(companyId: string, roleId: string): EmployeeRow | null {
+      const row = db
+        .select()
+        .from(employees)
+        .where(
+          and(
+            eq(employees.companyId, companyId),
+            eq(employees.roleId, roleId),
+            eq(employees.isSystem, true),
+          ),
+        )
+        .get();
+      return row ?? null;
     },
 
     /**

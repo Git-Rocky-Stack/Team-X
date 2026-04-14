@@ -210,4 +210,93 @@ describe('employees repo', () => {
       expect(() => employees.updateStatus('unknown-id', 'thinking')).not.toThrow();
     });
   });
+
+  describe('listVisibleByCompany (M31 T0 — is_system filter)', () => {
+    const create = (cId: string, name: string, isSystem = false) =>
+      employees.create({
+        companyId: cId,
+        rolePackId: 'strategia-official',
+        roleId: isSystem ? 'system-agent' : 'r',
+        roleMdSha: 's',
+        level: isSystem ? 'system' : 'IC',
+        name,
+        title: isSystem ? 'Team-X Copilot' : 't',
+        isSystem,
+      });
+
+    it('excludes system employees from the visible list', () => {
+      create(companyId, 'alpha');
+      create(companyId, 'beta');
+      create(companyId, 'copilot', true);
+
+      const all = employees.listByCompany(companyId);
+      const visible = employees.listVisibleByCompany(companyId);
+      expect(all).toHaveLength(3);
+      expect(visible).toHaveLength(2);
+      expect(visible.map((e) => e.name).sort()).toEqual(['alpha', 'beta']);
+      expect(visible.every((e) => !e.isSystem)).toBe(true);
+    });
+
+    it('returns visible employees scoped to the given company only', () => {
+      create(companyId, 'alpha');
+      create(companyId, 'copilot-1', true);
+      create(otherCompanyId, 'gamma');
+      create(otherCompanyId, 'copilot-2', true);
+
+      expect(employees.listVisibleByCompany(companyId).map((e) => e.name)).toEqual(['alpha']);
+      expect(employees.listVisibleByCompany(otherCompanyId).map((e) => e.name)).toEqual(['gamma']);
+    });
+  });
+
+  describe('findSystemByRoleId (M31 T0 — bootstrap idempotency helper)', () => {
+    it('returns null when no system-agent has been seeded', () => {
+      expect(employees.findSystemByRoleId(companyId, 'system-agent')).toBeNull();
+    });
+
+    it('returns the matching system row for a company + roleId pair', () => {
+      const id = employees.create({
+        companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'system-agent',
+        roleMdSha: 's',
+        level: 'system',
+        name: 'Team-X Copilot',
+        title: 'Team-X Copilot',
+        isSystem: true,
+      });
+      const got = employees.findSystemByRoleId(companyId, 'system-agent');
+      expect(got?.id).toBe(id);
+      expect(got?.isSystem).toBe(true);
+    });
+
+    it('ignores non-system rows with the same roleId', () => {
+      // Imposter: roleId matches but is_system is 0. Must NOT be returned.
+      employees.create({
+        companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'system-agent',
+        roleMdSha: 's',
+        level: 'IC',
+        name: 'imposter',
+        title: 'imposter',
+        isSystem: false,
+      });
+      expect(employees.findSystemByRoleId(companyId, 'system-agent')).toBeNull();
+    });
+
+    it('scopes the lookup to the given company', () => {
+      employees.create({
+        companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'system-agent',
+        roleMdSha: 's',
+        level: 'system',
+        name: 'Team-X Copilot',
+        title: 'Team-X Copilot',
+        isSystem: true,
+      });
+      // Other company has no system-agent yet.
+      expect(employees.findSystemByRoleId(otherCompanyId, 'system-agent')).toBeNull();
+    });
+  });
 });

@@ -51,11 +51,15 @@ describe('seedIfEmpty', () => {
   });
 
   describe('first run on an empty database', () => {
-    it('returns a non-null result with one company id and two employee ids', () => {
+    it('returns a non-null result with one company id, two employee ids, and a systemAgentId', () => {
       const result = seedIfEmpty(ctx.db, defaultOptions);
       expect(result).not.toBeNull();
       expect(result?.companyId).toBeTypeOf('string');
       expect(result?.employeeIds).toHaveLength(2);
+      expect(result?.systemAgentId).toBeTypeOf('string');
+      expect(result?.systemAgentId?.length ?? 0).toBeGreaterThan(0);
+      // system-agent id must be distinct from the two regular employee ids
+      expect(result?.employeeIds).not.toContain(result?.systemAgentId);
     });
 
     it('creates exactly one company with the expected name + slug', () => {
@@ -77,11 +81,19 @@ describe('seedIfEmpty', () => {
       expect(parsed.values).toEqual(['Quality', 'Privacy', 'Speed', 'Ownership']);
     });
 
-    it('creates two employees linked to the company', () => {
+    it('creates two visible employees + one system-agent linked to the company', () => {
       const result = seedIfEmpty(ctx.db, defaultOptions);
       const employees = createEmployeesRepo(ctx.db);
-      const list = employees.listByCompany(result?.companyId ?? '');
-      expect(list).toHaveLength(2);
+      const all = employees.listByCompany(result?.companyId ?? '');
+      const visible = employees.listVisibleByCompany(result?.companyId ?? '');
+      // 2 regular + 1 system = 3 rows total; visible should exclude the
+      // system-agent pseudo-employee (migration 0010's is_system predicate).
+      expect(all).toHaveLength(3);
+      expect(visible).toHaveLength(2);
+      const systemRows = all.filter((e) => e.isSystem);
+      expect(systemRows).toHaveLength(1);
+      expect(systemRows[0]?.roleId).toBe('system-agent');
+      expect(systemRows[0]?.level).toBe('system');
     });
 
     it('pulls employee role ids + level from the parsed role.md frontmatter', () => {
@@ -141,7 +153,10 @@ describe('seedIfEmpty', () => {
       expect(companies.list()).toHaveLength(1);
 
       const employees = createEmployeesRepo(ctx.db);
-      expect(employees.listByCompany(first?.companyId ?? '')).toHaveLength(2);
+      // 2 regular employees + 1 system-agent = 3 rows. A re-seed must not
+      // create a second system-agent or duplicate the CEO / SWE.
+      expect(employees.listByCompany(first?.companyId ?? '')).toHaveLength(3);
+      expect(employees.listVisibleByCompany(first?.companyId ?? '')).toHaveLength(2);
     });
   });
 

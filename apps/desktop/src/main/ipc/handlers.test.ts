@@ -85,8 +85,17 @@ class FakeEmployeesRepo implements IpcEmployeesRepo {
     return this.byCompany.get(companyId) ?? [];
   }
 
+  listVisibleByCompany(companyId: string): EmployeeRow[] {
+    return (this.byCompany.get(companyId) ?? []).filter((r) => !r.isSystem);
+  }
+
   getById(id: string): EmployeeRow | null {
     return this.byId.get(id) ?? null;
+  }
+
+  findSystemByRoleId(companyId: string, roleId: string): EmployeeRow | null {
+    const rows = this.byCompany.get(companyId) ?? [];
+    return rows.find((r) => r.roleId === roleId && r.isSystem) ?? null;
   }
 
   create(input: CreateEmployeeInput): string {
@@ -268,6 +277,7 @@ function makeEmployeeRow(overrides: Partial<EmployeeRow> = {}): EmployeeRow {
     toolsAllowedJson: '[]',
     toolsDeniedJson: '[]',
     avatar: null,
+    isSystem: false,
     createdAt: 1_700_000_000_000,
     ...overrides,
   } as EmployeeRow;
@@ -506,6 +516,68 @@ describe('IPC: employees.create', () => {
         name: '  ',
       }),
     ).rejects.toThrow(/name is required/);
+  });
+
+  // M31 T0 — framework-internal roles (level: system) must never be hireable
+  // via the IPC surface. Only `ensureSystemAgent` may seed them.
+  it('refuses to hire a framework-internal role (level: system)', async () => {
+    const fx = buildFixture();
+    fx.roleLookup.putSpec(
+      makeRoleSpec({ id: 'system-agent', name: 'Team-X Copilot', level: 'system' }),
+    );
+    await expect(
+      fx.handlers.employeesCreate({
+        companyId: 'co-1',
+        roleId: 'system-agent',
+        name: 'Imposter',
+      }),
+    ).rejects.toThrow(/framework-internal/);
+    expect(fx.employees.createCalls).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// employees.fire — M31 T0 system-agent guard
+// ---------------------------------------------------------------------------
+
+describe('IPC: employees.fire', () => {
+  it('deletes a regular employee by id', async () => {
+    const fx = buildFixture();
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris', companyId: 'co-1' }));
+    await fx.handlers.employeesFire({ employeeId: 'emp-iris' });
+    expect(fx.employees.getById('emp-iris')).toBeNull();
+  });
+
+  it('rejects when employeeId is empty', async () => {
+    const fx = buildFixture();
+    await expect(fx.handlers.employeesFire({ employeeId: '' })).rejects.toThrow(
+      /employeeId is required/,
+    );
+  });
+
+  it('rejects when the employee does not exist', async () => {
+    const fx = buildFixture();
+    await expect(fx.handlers.employeesFire({ employeeId: 'ghost' })).rejects.toThrow(
+      /employee not found/,
+    );
+  });
+
+  it('refuses to fire a framework-internal system-agent (isSystem=true)', async () => {
+    const fx = buildFixture();
+    fx.employees.put(
+      makeEmployeeRow({
+        id: 'emp-sys',
+        companyId: 'co-1',
+        roleId: 'system-agent',
+        level: 'system',
+        isSystem: true,
+      }),
+    );
+    await expect(fx.handlers.employeesFire({ employeeId: 'emp-sys' })).rejects.toThrow(
+      /framework-internal/,
+    );
+    // Row must still be present after the refused delete.
+    expect(fx.employees.getById('emp-sys')).not.toBeNull();
   });
 });
 

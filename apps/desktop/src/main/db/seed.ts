@@ -32,6 +32,11 @@ import { join } from 'node:path';
 import { parseRoleMarkdown } from '@team-x/role-schema';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
+import {
+  SYSTEM_AGENT_DISPLAY_NAME,
+  SYSTEM_AGENT_ROLE_ID,
+  SYSTEM_AGENT_ROLE_PACK_ID,
+} from '../services/system-agent-bootstrap.js';
 import type { Schema } from './client.js';
 import { getDb } from './client.js';
 import { createCompaniesRepo } from './repos/companies.js';
@@ -57,6 +62,13 @@ export interface SeedOptions {
 export interface SeedResult {
   companyId: string;
   employeeIds: string[];
+  /**
+   * Id of the framework-internal `system-agent` pseudo-employee seeded
+   * for this company. Always present on a fresh seed — the agentic loop
+   * depends on this row. Hidden from the employees.list IPC and org
+   * chart via the `is_system` column (migration 0010).
+   */
+  systemAgentId: string;
 }
 
 type SeedDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -103,7 +115,36 @@ export function seedIfEmpty<TRunResult>(
     employeeIds.push(employeeId);
   }
 
-  return { companyId, employeeIds };
+  // Seed the framework-internal `system-agent` pseudo-employee. Every
+  // company has exactly one; it owns the agentic-loop thread history
+  // and is hidden from the user-facing employee list + org chart via
+  // `is_system = 1` (migration 0010, filtered by
+  // `listVisibleByCompany`). Path is hardcoded rather than looked up
+  // via `roleLookup` so `seedIfEmpty` stays self-contained and
+  // unit-testable without a role-loader instance.
+  const systemAgentPath = join(options.rolePacksRoot, 'system', 'system-agent.md');
+  const systemAgentSrc = readFileSync(systemAgentPath, 'utf8');
+  const systemAgentSpec = parseRoleMarkdown(systemAgentSrc, systemAgentPath);
+  if (systemAgentSpec.frontmatter.id !== SYSTEM_AGENT_ROLE_ID) {
+    throw new Error(
+      `[seed] system-agent role.md has id "${systemAgentSpec.frontmatter.id}", ` +
+        `expected "${SYSTEM_AGENT_ROLE_ID}"`,
+    );
+  }
+  const systemAgentId = employees.create({
+    companyId,
+    rolePackId: SYSTEM_AGENT_ROLE_PACK_ID,
+    roleId: systemAgentSpec.frontmatter.id,
+    roleMdSha: systemAgentSpec.sha256,
+    level: systemAgentSpec.frontmatter.level,
+    name: SYSTEM_AGENT_DISPLAY_NAME,
+    title: systemAgentSpec.frontmatter.name,
+    toolsAllowed: systemAgentSpec.frontmatter.tools_allowed ?? [],
+    toolsDenied: systemAgentSpec.frontmatter.tools_denied ?? [],
+    isSystem: true,
+  });
+
+  return { companyId, employeeIds, systemAgentId };
 }
 
 /**
@@ -139,7 +180,8 @@ export function seed(rolePacksRoot?: string): SeedResult | null {
 
   if (result) {
     console.log(
-      `[seed] created company ${result.companyId} + ${result.employeeIds.length} employees`,
+      `[seed] created company ${result.companyId} + ${result.employeeIds.length} employees ` +
+        `+ system-agent ${result.systemAgentId}`,
     );
   }
   return result;

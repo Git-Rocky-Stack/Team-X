@@ -4,7 +4,13 @@ export type RoleLevel =
   | 'management'
   | 'supervisor'
   | 'lead'
-  | 'ic';
+  | 'ic'
+  // `system` is reserved for framework-internal pseudo-employees that are
+  // never hired via UI. One `system-agent` per company owns the agentic-loop
+  // thread history. Filtered out of `RoleLoader.listRoles()` so it never
+  // surfaces in the hire dialog or NLU entity resolver, but reachable via
+  // `getSpec()` so `resolveSystemPrompt` and the system-agent bootstrap work.
+  | 'system';
 
 export type ModelTier = 'high' | 'mid' | 'low';
 

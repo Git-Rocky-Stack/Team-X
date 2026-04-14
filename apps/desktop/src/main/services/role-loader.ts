@@ -260,7 +260,11 @@ export function createRoleLoader(deps: RoleLoaderDeps): RoleLoader {
 
     listRoles(): RoleSpec[] {
       ensureScanned();
-      return Array.from(index.values());
+      // Filter out framework-internal pseudo-employees (e.g., system-agent).
+      // These still live in the index and are reachable via `getSpec()`, but
+      // surfaces that browse the role catalog — hire dialog, NLU entity
+      // resolver, delegation pickers — must never see them.
+      return Array.from(index.values()).filter((spec) => spec.frontmatter.level !== 'system');
     },
 
     async resolveSystemPrompt({ employee, company }): Promise<string> {
