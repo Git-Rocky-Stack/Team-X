@@ -5,12 +5,14 @@
  * Phase 3 — M19: runtime strategy, privacy tier, concurrency sections.
  * Phase 4 — M23: backup & restore section.
  * Phase 4 — M25: updater section.
+ * Phase 5 — M29: RAG configuration section.
  */
 
 import { BackupSection } from './backup-section.js';
 import { ConcurrencySection } from './concurrency-section.js';
 import { PrivacySection } from './privacy-section.js';
 import { ProvidersSection } from './providers-section.js';
+import { RagSection } from './rag-section.js';
 import { RuntimeSection } from './runtime-section.js';
 import { UpdaterSection } from './updater-section.js';
 
@@ -27,6 +29,7 @@ export function SettingsView() {
         <UpdaterSection />
         <RuntimeSection />
         <PrivacySection />
+        <RagSection />
         <ConcurrencySection />
         <ProvidersSection />
         <BackupSection />
