@@ -1,9 +1,12 @@
 {
-  "milestone": "M30",
-  "milestoneName": "NLU Engine",
+  "milestone": "M31",
+  "milestoneName": "Agentic Loop",
   "phase": "Phase 5 — Intelligence Layer",
   "planDoc": null,
   "tasks": [],
-  "note": "M30 task queue will be generated after M30 plan doc is written at docs/plans/2026-04-13-team-x-phase-5-m30-nlu-engine.md. Until then this queue is empty.",
-  "createdAt": "2026-04-13T21:10:00Z"
+  "note": "M30 (NLU Engine) complete 2026-04-14 across 11 tasks (T0-T10). M31 task queue will be generated after the M31 plan doc is written. Until then this queue is empty.",
+  "previousMilestone": "M30",
+  "previousMilestoneCompletedAt": "2026-04-14T01:30:00Z",
+  "createdAt": "2026-04-14T01:30:00Z",
+  "updatedAt": "2026-04-14T01:30:00Z"
 }

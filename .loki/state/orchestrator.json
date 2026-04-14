@@ -1,34 +1,48 @@
 {
   "currentPhase": "DEVELOPMENT",
-  "currentMilestone": "M30",
-  "milestoneName": "NLU Engine",
-  "tasksCompleted": 1,
+  "currentMilestone": "M31",
+  "milestoneName": "Agentic Loop",
+  "tasksCompleted": 0,
   "tasksFailed": 0,
-  "totalTasks": 11,
-  "planDoc": "docs/plans/2026-04-13-team-x-phase-5-m30-nlu-engine.md",
-  "startedAt": "2026-04-13T21:50:00Z",
+  "totalTasks": null,
+  "planDoc": null,
+  "startedAt": null,
   "completedAt": null,
   "phaseComplete": false,
   "phase": "Phase 5 — Intelligence Layer",
-  "previousMilestone": "M29",
-  "previousMilestoneName": "RAG integration into agent turns",
-  "previousMilestoneCompletedAt": "2026-04-13T21:10:00Z",
-  "nextMilestone": "M31",
-  "nextMilestoneName": "Agentic Loop",
-  "tasksInProgress": {
-    "T0": {
-      "label": "Vault event-bus wiring (bonus — fixes vault-backup.spec.ts)",
-      "status": "completed",
-      "completedAt": "2026-04-13T21:50:00Z",
-      "findingsDoc": "docs/plans/2026-04-13-vault-backup-regression-findings.md"
-    }
-  },
+  "previousMilestone": "M30",
+  "previousMilestoneName": "NLU Engine",
+  "previousMilestoneCompletedAt": "2026-04-14T01:30:00Z",
+  "nextMilestone": "M32",
+  "nextMilestoneName": "TBD",
+  "tasksInProgress": {},
   "baseline": {
-    "unitTests": 673,
-    "e2eSpecs": 5,
-    "e2eGreenCount": 5,
+    "unitTests": 819,
+    "e2eSpecs": 7,
+    "e2eGreenCount": 7,
     "lintErrors": 0,
-    "lintWarnings": 41,
+    "lintWarnings": 66,
     "typecheckClean": true
+  },
+  "history": {
+    "M30": {
+      "name": "NLU Engine",
+      "completedAt": "2026-04-14T01:30:00Z",
+      "tasksShipped": 11,
+      "commits": {
+        "T0": "f4ac227",
+        "T1": "84b5bc7",
+        "T2": "6d99aa4",
+        "T3": "73968c8",
+        "T4": "8285834",
+        "T5": "709bae5",
+        "T6": "15ba829",
+        "T7": "2a3ec7b",
+        "T8": "569d960",
+        "T9": "cbf8f5b"
+      },
+      "unitTestDelta": "+146 (673 → 819)",
+      "e2eDelta": "+2 (5 → 7; +vault-backup fix from T0 + command-palette from T8)"
+    }
   }
 }

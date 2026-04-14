@@ -1,99 +1,69 @@
-# Loki Continuity — Phase 5, M30 KICKOFF (T0 complete)
+# Loki Continuity — Phase 5, M30 COMPLETE
 
 ## Current State
 
 - **Phase 4 (Ship-readiness) SHIPPED.** v1.0.0 tagged. All 27 milestones complete.
 - **Phase 5 (Intelligence Layer) in flight.** Design doc at `docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md`.
 - **M28 (Intelligence Package + RAG Foundation) COMPLETE** — 2026-04-13.
-- **M29 (RAG integration into agent turns) COMPLETE** — 2026-04-13. All 10 tasks shipped. Commits 2d7e4bd → a marker commit.
-- **M30 (NLU Engine) IN PROGRESS** — plan doc at `docs/plans/2026-04-13-team-x-phase-5-m30-nlu-engine.md`. T0 (bonus — vault event-bus wiring) complete 2026-04-13; T1–T10 pending.
-- **Baseline at M30 T0 close:** 673 unit tests (+8 new vault emit tests) + 5 E2E specs (5/5 green — vault-backup now passing). Typecheck clean. Biome lint: 0 errors, 41 warnings (–2 from M29 close after converting two `eslint-disable` comments to `biome-ignore` in rag-flow.spec.ts).
+- **M29 (RAG integration into agent turns) COMPLETE** — 2026-04-13.
+- **M30 (NLU Engine + Command Palette) COMPLETE** — 2026-04-14. All 11 tasks shipped (T0–T10).
+- **M31 (Agentic Loop) NEXT** — plan doc not yet written.
+- **Baseline at M30 close:** 819 unit tests (+146 from 673 M29 baseline) + 7 E2E specs (+2: command-palette, vault-backup green). Typecheck clean across all 6 packages. Biome lint: 0 errors, 66 warnings.
 
-## M30 T0 — Vault event-bus wiring (COMPLETE)
-
-**Problem diagnosed:** `vault-backup.spec.ts` failed because `useVaultUpload`'s React Query invalidation lived only inside the mutation's `onSuccess`, and the E2E bypassed the hook by calling `window.teamx.vault.upload` directly via `page.evaluate`. Vault service emitted zero events, so the renderer had no alternate refresh path. Findings doc: `docs/plans/2026-04-13-vault-backup-regression-findings.md`.
-
-**Shipped in T0:**
-- Extended `shared-types/events.ts` with `vault.file_created` + `vault.file_deleted` event types + payload interfaces.
-- Threaded `EventBus` as optional dep into `createVaultService(deps)`. Emit AFTER DB commit with try/catch so bus failures don't take down uploads.
-- Composition root wires `bus` into the vault factory in `main/index.ts`.
-- New `useVaultEventSync(companyId)` hook in renderer subscribes to `events.onDashboard`, filters by companyId + vault.* event types, invalidates `['vault']` queries. Mounted once in `VaultView`.
-- Fixed two additional pre-existing test bugs surfaced by the unblock: `vault.verify` was called with an object instead of a string (preload expects positional), and `backup.create` response field is `backupPath` not `archivePath`.
-- +8 unit tests (`vault.test.ts`) covering: emit on success (2), payload shape, DB-throw → no emit, bus-throw → upload still succeeds, no-bus → silent, emit on delete + correct actorId propagation.
-- Converted two `eslint-disable` comments in `rag-flow.spec.ts` to `biome-ignore` (Biome doesn't honor the eslint pragmas — the lines were surfacing as errors under normal `pnpm lint`).
-
-**Side benefit:** Vault mutations now appear in the `AuditView` (which renders all persisted events). Closes a latent gap where uploads/deletes had no audit trail.
-
-## What shipped in M29
+## M30 shipped commits
 
 | Task | Commit | Deliverable | Tests |
 |------|--------|-------------|-------|
-| T1 | `2d7e4bd` | `embedText` + `EmbedAdapter` contract + Ollama/OpenAI embed adapters in provider-router | +4 |
-| T2 | `c99893a` | Extended `ResolveSystemPrompt` with `threadId`; orchestrator call sites + test trace updated | 0 (type-only) |
-| T3 | `4348b51` | `RagService` facade in @team-x/intelligence (`indexSource` + `retrieve` + `deleteBySource`) | +5 |
-| T4 | `26180cd` | `RagIndexer` event-bus subscriber (work.completed + meeting.ended dispatch) | +5 |
-| T5 | `941cb9f` | `composeSystemPromptWithRag` wrapper (dedup + token budget + `[Source: ...]` attribution) | +5 |
-| T6 | `132eee4` + `246ab39` | Composition root wiring in main/index.ts; `buildEmbedAdapter` in provider-factory; shutdown-ordering fix | 0 (integration) |
-| T7 | `8229021` + `9ca1ad0` | `rag.stats` / `rag.rebuildAll` / `rag.deleteForCompany` IPC; rebuild error isolation + strict-order test | +4 + 2 follow-ups = 6 |
-| T8 pre | `c4b91a5` | `settings.getRagConfig` / `setRagConfig` consolidated IPC (backend) | 0 |
-| T8 | `a2e23b6` | RAG Settings panel + `use-rag` hook + mount in SettingsView | 0 (renderer, no DOM test infra) |
-| T9 | `30c1550` | `rag-flow.spec.ts` E2E; `__ECHO_SYSTEM__` + `__ECHO_TEXT__` sentinels; `makeFakeEmbedAdapter`; electron.vite bundles `@team-x/intelligence`; `0008_embeddings.sql` statement-breakpoint fix | +1 E2E |
-| T10 | `e2883b4` (lint) + marker | Full verification + Biome autofix + CONTINUITY update + milestone marker | 0 |
+| T0 | `f4ac227` | Vault event-bus wiring — emit on create/delete, renderer invalidates via bus subscription. Unblocks `vault-backup.spec.ts` | +8 |
+| T1 | `84b5bc7` | Intent classifier — 15 intents, LLM-backed JSON output via `provider-router`, Zod validation, retry-once-on-parse-fail, 0.5 confidence threshold → `complex_request` fallback. 60-example fixture at 100% accuracy | +24 (18 unit + 6 fixture) |
+| T2 | `6d99aa4` | Entity resolver — fuzzy Levenshtein on employees/roles, FTS5 on tickets/vault files, `{unique \| ambiguous \| not_found}` tri-state | +35 |
+| T3 | `73968c8` | Slot filler — required-slots table per intent, `SLOT_KEY_ALIASES` seam, destructive-action confirmation gate, `{ready \| needs_clarification \| needs_confirmation}` output | +33 |
+| T4 | `8285834` | CommandService — `parse/execute/history/suggest/stop`, 20-case dispatch table (intent → existing IPC handlers), FIFO history cap 20 in dedicated `command_history` SQLite table, `command.executed` bus emit in try/catch | +20 |
+| T5 | `709bae5` | `command.*` IPC surface — 4 channels wired via preload bridge. `Expect<Equal<IntentName, IpcIntentName>>` drift guard keeps intelligence + shared-types in sync | +9 |
+| T6 | `15ba829` | Command palette UI — Radix Dialog, Ctrl+K global keybinding (platform-aware), debounced parse, intent/entity chips, confidence bar (red/amber/green), needs_confirmation dialog, history picker (ArrowUp), `/show` slash command, all 6 UI states (hover/focus/loading/error/empty/disabled) | 0 (no renderer DOM harness — gap noted; E2E covers in T8) |
+| T7 | `2a3ec7b` | History + audit — `intent-labels.ts` shared between palette and AuditView, new Dashboard "Commands" subtab (5th after Timeline/Stream/Floor/Org), audit row summary for `command.executed` payloads | +16 |
+| T8 | `569d960` | E2E spec + test-mode classifier seam — `NODE_ENV=test` swaps real LLM classifier for canned pattern table via `createTestClassifier()`. Spec exercises full round-trip: Ctrl+K → parse → destructive Cancel → destructive Confirm → verify in Commands subview. Added `employees.fire` IPC + repo method + React Query invalidation on execute success | +9 |
+| T9 | `cbf8f5b` | Documentation — README Features, `docs/user-guide/command-palette.md` (15 intents × 2 examples), CHANGELOG [Unreleased], CLAUDE.md Status + invariant #11 + Testing + IPC table | 0 |
+| T10 | this commit | Verification + marker — orchestrator.json → M31, pending.json cleared, CONTINUITY rewrite | 0 |
 
-**Net M29 delta:** 641 → 665 unit tests (+24). 4 → 5 E2E specs (rag-flow added).
+**Net M30 delta:** 673 → 819 unit tests (+146). 5 → 7 E2E specs (vault-backup fixed at T0 + new command-palette at T8).
 
-## Known issues (post-M30-T0)
+## M30 patterns to carry forward (new learnings)
 
-- **`vault-backup.spec.ts` regression — RESOLVED in M30 T0.** See section above.
-- **Two ABI rebuilds needed for full CI loop.** `pnpm test` (Vitest under Node) and `pnpm -F @team-x/desktop test:e2e` (Electron) require opposite native-module ABIs for `better-sqlite3`. The dance:
-  - For unit tests: `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release`
-  - For E2E: `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`
-  - CI should sequence the two rebuilds; the desktop package's postinstall currently handles only the Electron side.
+- **Subagent context exhaustion on E2E tasks.** T8 required THREE subagent handoffs (initial scaffold → mid-E2E bail → finisher bail → coordinator inline). Pattern confirmed from M29: big E2E tasks blow context. Workaround: coordinator runs the final gate (`pnpm test` / `pnpm -F @team-x/desktop test:e2e:run`) and commit inline. Scaffolding + spec authoring goes to subagent; verification + commit stays with coordinator. T9 (docs) hit the same wall but the docs were complete — only the commit step was left, handled inline.
+- **`Expect<Equal<A, B>>` compile-time drift guards are worth their weight.** T5 used this trick to couple `IntentName` (intelligence-package-owned) and `IpcIntentName` (shared-types-owned) without a cycle. Any future deviation surfaces at typecheck time. Pattern: two canonical definitions, drift check in the consumer.
+- **Canned-classifier seam mirrors canned-provider seam.** T8 added `createTestClassifier()` alongside `provider-factory.ts`'s `test-mode` stream. Gated on `NODE_ENV === 'test'`. Supports `__ECHO_INTENT__:<json>` sentinel for fine-grained spec control, mirroring the `__ECHO_TEXT__:` / `__ECHO_SYSTEM__` family already in the provider. This is now the standard pattern for any deterministic LLM-call swap in E2E.
+- **`SLOT_KEY_ALIASES` is a real architectural seam.** T3 hit the classifier-emits-`employeeName` vs slot-filler-needs-`employeeId` mismatch. The fix is a top-of-file alias table, not a parallel key scheme. T4 refines the seam further. New intents that want to reuse a slot must either match the canonical key or register an alias — do not introduce a third key space.
+- **ABI rebuild dance remains the biggest CI-loop pain point.** Confirmed for the Nth time: `pnpm test` (Node ABI) and `pnpm -F @team-x/desktop test:e2e` (Electron ABI) cannot run back-to-back without a rebuild in between. Rebuild command: `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` for Node ABI; `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` for Electron. A CI script that sequences these is still outstanding — documented in CLAUDE.md §Troubleshooting.
+- **Invariant #11 was promoted from finding to rule.** "IPC channels that mutate state must emit a bus event." This came out of the vault-backup regression (T0) but the underlying principle — renderer caches need a signal not routed through React Query — is universal. New IPC writes must follow the pattern: (1) persist, (2) emit bus event after commit, (3) subscribe in renderer via `events.onDashboard` filter. T0's `useVaultEventSync` is the reference implementation.
+- **Dashboard subtab additions are cheap.** T7's new "Commands" subtab required: store enum extension, subtab nav entry, new view file, guard bypass for no-employees case. ~5 touchpoints. The M14 pattern is sturdy — future subviews should follow the same template.
+- **Minimal inline toast instead of a new dep.** T6 shipped an `<output aria-live="polite">` undo toast scoped to the feature rather than add `sonner` or `react-hot-toast`. Flagged for a follow-up pass when a shared primitive is warranted. Don't add deps mid-milestone for one-off UX needs.
 
-## M30 — NLU Engine (plan doc written, T0 done, T1+ pending)
+## Architectural seams added in M30
 
-**Plan doc:** `docs/plans/2026-04-13-team-x-phase-5-m30-nlu-engine.md`. 11 tasks (T0–T10). T0 complete.
+- **`@team-x/intelligence/src/nlu/`** — new subtree. Three pure-factory modules (`intent-classifier.ts`, `entity-resolver.ts`, `slot-filler.ts`) + a shared fixtures directory. All DB-agnostic; all deps injected at factory time. Package still imports zero from Electron or better-sqlite3.
+- **`apps/desktop/src/main/services/command-service.ts`** — the main-process front-door. Intent → existing IPC handler dispatch, FIFO history in SQLite, bus emission on every execute (success or error), destructive confirmation gate, lifecycle `start()`/`stop()`.
+- **`apps/desktop/src/main/services/test-classifier.ts`** — NODE_ENV=test seam. Mirrors the provider-factory's test-mode pattern.
+- **`apps/desktop/src/main/db/repos/command-history.ts`** + migration `0009_command_history.sql` — SQLite ring buffer, indexed on `(company_id, executed_at DESC)`.
+- **`apps/desktop/src/renderer/src/features/command/`** — palette + `intent-labels.ts`. The intent-labels map is consumed by BOTH the palette (intent chip rendering) and AuditView (command.executed row summary) — shared source of truth.
+- **`apps/desktop/src/renderer/src/features/dashboard/commands-view.tsx`** — 5th dashboard subview + `[data-testid]` selectors for E2E.
 
-**Remaining task sketch:**
-- **T1** `intent-classifier.ts` — 15-intent schema (hire_employee, fire_employee, assign_ticket, create_ticket, close_ticket, promote_employee, create_project, create_goal, call_meeting, end_meeting, check_status, show_view, search_vault, complex_request, reopen_ticket), LLM-backed JSON output via provider-router.
-- **T2** `entity-resolver.ts` — fuzzy name (Levenshtein) + FTS5 lookup for employees, tickets, vault files, roles.
-- **T3** `slot-filler.ts` — missing-param detection + destructive-action confirmation gate.
-- **T4** `CommandService` main-process orchestrator with intent→IPC dispatch table.
-- **T5** `command.*` IPC surface (parse, execute, suggest, history).
-- **T6** Cmd+K command palette UI (Radix Dialog, live classification, entity chips, confidence bar, confirmation gate).
-- **T7** History + audit log integration (`command.executed` event + Recent Commands dashboard subview).
-- **T8** `command-palette.spec.ts` E2E (parse → confirm → execute → history).
-- **T9** Documentation (README, user guide, CHANGELOG, CLAUDE.md IPC table).
-- **T10** Verification + milestone marker.
+## Known issues (post-M30)
 
-## M29 Patterns to Carry Forward (learnings)
+- **ABI rebuild dance still manual** — see §M30 patterns.
+- **Renderer DOM test harness still missing** — T6 palette + T7 commands-view have no component tests. E2E covers the round-trip but not component units. Add jsdom + @testing-library/react in a follow-up if needed.
+- **`suggest` is currently a static list** — M30 ships a placeholder that returns common starter phrases. M31 or later can extend with LLM-backed completion.
+- **`complex_request` routes to a stub summary** — "Escalated to agentic loop (M31)." M31 must land the real handoff.
+- **Undo toast is scoped to the palette feature** — a shared primitive is due. Low priority.
 
-- **electron.vite.config.ts `workspaceDeps`.** Every new `@team-x/*` package that main/preload consumes MUST be added to the `externalizeDepsPlugin({ exclude: workspaceDeps })` list. Otherwise Vite leaves it external and Electron hits `ERR_UNKNOWN_FILE_EXTENSION` on the raw `.ts` source. Discovered the hard way in M29 T9 — took one user bug report (popup screenshot) to diagnose.
-- **Drizzle multi-statement migrations.** drizzle-kit doesn't auto-insert `--> statement-breakpoint` between CREATE TABLE and CREATE INDEX — you must either write one statement per file or insert separators by hand. The M28 `0008_embeddings.sql` was missing these and worked only because nothing else had run migrations against a clean DB until M29 T9's E2E spec. Fixed at head of M29 T9.
-- **Subagent-driven development pattern worked.** 10-task milestone, each task (mostly) dispatched to a fresh general-purpose implementer subagent with full task text + scene-setting context. Two-stage review (spec then quality) caught real issues: T4 code review spotted the listener isolation subtlety; T6 review caught the shutdown-ordering race (indexer must stop BEFORE orchestrator drain); T7 review flagged the lack of error isolation in rebuildSources. All addressed.
-- **Two subagents ran out of context mid-task** (T8 renderer, T9 spec) — the fix was to let them write partial backend scaffolding, then have the coordinator finish the last piece inline. Don't re-dispatch for small completions.
-- **Shared-types composite dist gotcha.** Any new export in `packages/shared-types/src/*.ts` must be followed by `pnpm -F @team-x/shared-types exec tsc --build --force` or downstream `@team-x/intelligence` / `@team-x/desktop` composite typechecks will fail with `TS2305: has no exported member`. Known from M28; re-confirmed twice in M29.
-- **Biome autofix on M29 artifacts.** 11 errors autofixed in T10 (all import-order + `import type` consolidation). Final baseline: 0 errors, 43 `noNonNullAssertion` warnings (+2 from 41 baseline). The +2 are in M29 test fixture code; acceptable.
-
-## Architectural Seams Added in M29 (for quick lookup)
-
-- **`EmbedAdapter` contract** in `@team-x/provider-router` — minimal `{model, dimension, embed(texts)}` interface. Mirrors `ProviderStreamFn` layering: pure factory (`createEmbedText`) enforces dimension + count invariants, adapter files (`ollama-embed.ts`, `openai-embed.ts`) own the HTTP.
-- **`RagService` facade** in `@team-x/intelligence` — two surface methods: `indexSource` + `retrieve`. Delete-then-insert on re-index so shorter content doesn't leave stale chunks. Float32Array ↔ Buffer serialization lives here, not in call sites.
-- **`RagIndexer`** in `apps/desktop/src/main/services/` — one event-bus subscriber, dispatch table routes `work.completed` → embed message, `meeting.ended` → embed minutes. Fire-and-forget async (void IIFE) with catch-and-log — never breaks event fan-out (see `event-bus.ts` listener-isolation contract).
-- **`composeSystemPromptWithRag`** in `apps/desktop/src/main/services/system-prompt.ts` — pure wrapper around the role.md render step. Dedups against recent thread history, enforces token budget, emits `[Source: label id]` attribution. Zero-regression guarantee when RAG disabled.
-- **Test-mode hooks for RAG E2E:**
-  - `__ECHO_SYSTEM__` → test-mode provider replies with the system prompt verbatim (asserts on retrieval).
-  - `__ECHO_TEXT__:<payload>` → test-mode provider replies with `<payload>` verbatim (seeds a distinctive marker into the embeddings index).
-  - `TEAM_X_RAG_TEST=1` env var → `buildRagService()` wires the deterministic `makeFakeEmbedAdapter` instead of falling through to null in test mode.
-
-## Next Session Startup Checklist
+## Next Session Startup Checklist (M31 kickoff)
 
 1. Read this CONTINUITY file.
-2. Read `.loki/state/orchestrator.json` → currentMilestone should be `M30`, tasksCompleted 1, totalTasks 11, T0 completed.
-3. Open `docs/plans/2026-04-13-team-x-phase-5-m30-nlu-engine.md` — plan is already written; T0 done. Start at T1.
-4. (Optional) Build `.loki/queue/pending.json` with one entry per T1–T10 for the orchestrator if running Loki Mode.
-5. Commit the T0 changes with a single atomic commit referencing the findings doc + M30 plan doc.
-6. Start T1: `intent-classifier.ts` in `packages/intelligence/src/nlu/`. Baseline on the 60-example fixture.
+2. Read `.loki/state/orchestrator.json` → currentMilestone should be `M31`, tasksCompleted 0.
+3. Read `docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md` §6 (M31 Agentic Loop design).
+4. Write `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md` with the task breakdown.
+5. Populate `.loki/queue/pending.json` with the M31 tasks.
+6. Consider whether the `complex_request` stub from M30 T4 handoff needs to be the M31 entry point, or whether M31 introduces a separate `AgenticLoop` service.
 
 ## Environment
 
@@ -102,4 +72,4 @@
 - Repo root: `C:\Users\User\Desktop\Development Projects\Strategia-Enhanced-App\Team-X`
 - Node: 20 LTS (ABI 125 for Electron, ABI 137 for local v22 — see Known Issues for the rebuild dance)
 - Package manager: pnpm workspaces
-- Test runner: Vitest (unit) + Playwright (E2E)
+- Test runner: Vitest (unit) + Playwright (E2E — 7 specs)
