@@ -1,4 +1,4 @@
-# Loki Continuity — Phase 5, M31 PLANNED + QUEUED
+# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 shipped)
 
 ## Current State
 
@@ -7,7 +7,10 @@
 - **M28 (Intelligence Package + RAG Foundation) COMPLETE** — 2026-04-13.
 - **M29 (RAG integration into agent turns) COMPLETE** — 2026-04-13.
 - **M30 (NLU Engine + Command Palette) COMPLETE** — 2026-04-14. 11 tasks (T0–T10).
-- **M31 (Agentic Loop) PLANNED + QUEUED** — plan doc at `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md`. 11 tasks queued in `.loki/queue/pending.json`. Orchestrator advanced. Ready to begin T0.
+- **M31 (Agentic Loop) IN PROGRESS** — plan doc at `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md`.
+  - **T0 SHIPPED** (commit `4f30efa`) — system-agent pseudo-employee, migration 0010 (`is_system` column + partial index), `system-agent.md` role card under `role-packs/strategia-official/roles/system/`, `system-agent-bootstrap.ts` with `ensureSystemAgent` + bus event, `employees.list` + `orgchart.get` + delegation pickers all filter `is_system = 0`. +89 employees.test rows + 151 bootstrap.test + 72 ipc/handlers tests.
+  - **T1 SHIPPED** (commit `67e0136`) — `@team-x/intelligence/src/loop/` (types, prompt, tool-registry, loop). Pure ReAct orchestrator, provider-agnostic, zero Electron/DB/fs coupling. Forward-scan brace-balanced parser, one-shot nudge recovery, hard step/token/wall-clock budgets. 33 new unit tests (loop 19, tool-registry 8, prompt 6).
+- **Current metrics:** 869 unit tests (+50 over baseline), 0 lint errors, 26 lint warnings (well under ≤76 target — biome --unsafe cleaned up 40 noNonNullAssertion warnings as side effect of clearing T0 useTemplate errors), typecheck clean, 7 E2E specs (untouched).
 - **Baseline at M31 start:** 819 unit tests + 7 E2E specs. Typecheck clean. Biome: 0 errors, 66 warnings.
 - **M31 targets:** ~905 unit tests (+86), 8 E2E specs (+1), 0 lint errors, ≤76 warnings.
 
@@ -76,14 +79,24 @@ M31 replaces the M30 T4 `complex_request` stub (`command-service.ts:770-775`) wi
 - **`complex_request` stub is the M31 entry point.** T4 explicitly replaces the stub at `command-service.ts:770-775`. Leave the exhaustiveness-guard switch case — swap the body.
 - **Undo toast scoped to palette.** Low-priority shared-primitive follow-up.
 
-## Next Session Startup Checklist (M31 kickoff — begin T0)
+## Next Session Startup Checklist (M31 mid-flight — begin T2)
 
 1. Read this CONTINUITY file.
-2. Read `.loki/state/orchestrator.json` → currentMilestone should be `M31`, totalTasks = 11, tasksCompleted = 0, planDoc set.
-3. Read `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md` — full plan doc.
-4. Pick `T0` from `.loki/queue/pending.json`, set its status to `in_progress`, execute.
-5. Commit atomically after each task. Update pending.json status + orchestrator `tasksCompleted` on each completion.
-6. After T10, clear pending.json and rewrite CONTINUITY with an M31-COMPLETE header.
+2. Read `.loki/state/orchestrator.json` → tasksCompleted should be 2 (T0 + T1), inflight.M31.commits = {T0:4f30efa, T1:67e0136}.
+3. Read `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md` — full plan doc, focus on T2 section.
+4. Pick `T2` from `.loki/queue/pending.json` (Read-side agentic tools). Set status `in_progress`, execute. T2 lives in `apps/desktop/src/main/services/agentic-tools.ts`. Six tools wrap existing repos with JSON-safe projections, max 50 rows, read-only enforced.
+5. The Tool contract is now in `@team-x/intelligence`'s `loop/types.ts` — import `type { Tool, ToolContext }` from there. Each tool is a `Tool<ZodArgs, ResultProjection>` with `schema` + `execute(args, ctx)`. Registry is per-company in T3.
+6. Commit atomically after each task. Update pending.json status + orchestrator `tasksCompleted` + inflight commit hash on each completion.
+7. After T10, move M31 from `inflight` into `history`, clear pending.json, rewrite CONTINUITY with an M31-COMPLETE header.
+
+## T1 patterns to carry forward (still active)
+
+- **JSON-only ReAct contract.** Assistant ends every turn with `{"action": ...}`. Forward-scan tracks brace depth (string-aware) to find the LAST top-level `{...}`; everything before it is `thought` (plan step). Don't change the prompt wording in `prompt.ts` without updating the parser — the contract is load-bearing.
+- **Typed tool-invocation result, never throws.** `ToolRegistry.invoke()` returns `{kind: 'ok' | 'unknown_tool' | 'invalid_args' | 'timeout' | 'threw'}`. The loop is a clean switch on these — no try/catch noise. Mirror this discipline in T2's tools: throw freely; the registry contains it.
+- **Nudge-once-then-fail.** Malformed action JSON or invalid args → one nudge prompt → second failure terminates with `tool_call_invalid`. Same discipline as M30 T1's intent classifier.
+- **Per-tool AbortController layered on outer signal.** Pre-aborted outer signal short-circuits before `execute` runs. `tool_timeout` is `localController aborted && !outer aborted`. Reuse this pattern in T3 when wrapping the loop's outer cancel.
+- **Telemetry on every step.** `{tokensIn, tokensOut, costUsd, provider, model}` — `ZERO_TELEMETRY` constant for tool_result/error steps. T3's `runs` row aggregates these; T17 telemetry dashboard reads them.
+- **biome --unsafe is OK for test-file `!` → `?.`.** Cleared 40 warnings in one shot. Watch out: in non-test code (entity-resolver.ts) the auto-fix lost a precondition — replace with explicit guard. Future biome cleanup runs should run typecheck immediately after.
 
 ## Environment
 
