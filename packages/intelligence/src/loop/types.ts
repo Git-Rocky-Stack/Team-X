@@ -153,9 +153,8 @@ export interface ToolContext {
   readonly runId: string;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: Tool args are heterogeneous by design.
 export interface Tool<
-  TArgs extends Record<string, unknown> = Record<string, any>,
+  TArgs extends Record<string, unknown> = Record<string, unknown>,
   TResult = unknown,
 > {
   readonly name: string;

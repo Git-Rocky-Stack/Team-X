@@ -48,7 +48,10 @@
     {
       "id": "T2",
       "title": "Read-side agentic tools — query_{employees,tickets,projects,meetings,vault,events}",
-      "status": "pending",
+      "status": "completed",
+      "startedAt": "2026-04-14T06:00:00Z",
+      "completedAt": "2026-04-14T06:45:00Z",
+      "actualTests": 40,
       "blockedBy": ["T1"],
       "estTests": 20,
       "files": [

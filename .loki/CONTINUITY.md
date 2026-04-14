@@ -1,4 +1,4 @@
-# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 shipped)
+# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 + T2 shipped)
 
 ## Current State
 
@@ -10,7 +10,8 @@
 - **M31 (Agentic Loop) IN PROGRESS** — plan doc at `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md`.
   - **T0 SHIPPED** (commit `4f30efa`) — system-agent pseudo-employee, migration 0010 (`is_system` column + partial index), `system-agent.md` role card under `role-packs/strategia-official/roles/system/`, `system-agent-bootstrap.ts` with `ensureSystemAgent` + bus event, `employees.list` + `orgchart.get` + delegation pickers all filter `is_system = 0`. +89 employees.test rows + 151 bootstrap.test + 72 ipc/handlers tests.
   - **T1 SHIPPED** (commit `67e0136`) — `@team-x/intelligence/src/loop/` (types, prompt, tool-registry, loop). Pure ReAct orchestrator, provider-agnostic, zero Electron/DB/fs coupling. Forward-scan brace-balanced parser, one-shot nudge recovery, hard step/token/wall-clock budgets. 33 new unit tests (loop 19, tool-registry 8, prompt 6).
-- **Current metrics:** 869 unit tests (+50 over baseline), 0 lint errors, 26 lint warnings (well under ≤76 target — biome --unsafe cleaned up 40 noNonNullAssertion warnings as side effect of clearing T0 useTemplate errors), typecheck clean, 7 E2E specs (untouched).
+  - **T2 SHIPPED** (commit pending) — `apps/desktop/src/main/services/agentic-tools.ts` — six read-only tools (`query_employees`, `query_tickets`, `query_projects`, `query_meetings`, `query_vault`, `query_events`) wrapping existing repos with JSON-safe projections, `{rows, truncated}` envelope capped at 50 rows, defensive `isSystem` filter on employees path, `summarizePayload` with 200-char cap + ellipsis. 40 new unit tests (+20 target). Also: added `zod` to `apps/desktop` deps, cleared T1's `Record<string, any>` default in `Tool` generic (→ `unknown`), rebuilt `packages/intelligence/dist` to surface loop types to composite consumers.
+- **Current metrics:** 909 unit tests (+90 over baseline, +40 over T1), 0 lint errors, 24 lint warnings (well under ≤76 target), typecheck clean, 7 E2E specs (untouched). 8 pre-existing ABI failures on `embeddings.test.ts` + `vec-init.test.ts` — same Node-v22/Electron-125 skew documented in §Troubleshooting; resolved by T10 rebuild dance.
 - **Baseline at M31 start:** 819 unit tests + 7 E2E specs. Typecheck clean. Biome: 0 errors, 66 warnings.
 - **M31 targets:** ~905 unit tests (+86), 8 E2E specs (+1), 0 lint errors, ≤76 warnings.
 
@@ -22,9 +23,9 @@ M31 replaces the M30 T4 `complex_request` stub (`command-service.ts:770-775`) wi
 
 | Task | Status | Est tests | Key deliverable |
 |------|--------|-----------|-----------------|
-| T0 | pending | 8 | `is_system` migration 0010 + `system-agent.md` role card + `ensureSystemAgent(companyId)` bootstrap |
-| T1 | pending | 18 | `@team-x/intelligence/src/loop/` — pure ReAct loop, tool registry, budget enforcement |
-| T2 | pending | 20 | `agentic-tools.ts` — 6 read-only tools wrapping employees/tickets/projects/meetings/vault/events repos |
+| T0 | shipped | 8 (actual 89+151+72) | `is_system` migration 0010 + `system-agent.md` role card + `ensureSystemAgent(companyId)` bootstrap |
+| T1 | shipped | 18 (actual 33) | `@team-x/intelligence/src/loop/` — pure ReAct loop, tool registry, budget enforcement |
+| T2 | shipped | 20 (actual 40) | `agentic-tools.ts` — 6 read-only tools wrapping employees/tickets/projects/meetings/vault/events repos |
 | T3 | pending | 12 | `AgenticLoopService` — start/stop/getRun, event bus integration, orchestrator pause respect |
 | T4 | pending | 6 | CommandService → AgenticLoopService wiring. Replaces T4 stub. `CommandHandlers.agenticLoopStart` |
 | T5 | pending | 6 | System-agent thread UX — Copilot Conversations section, inline step transcript |
@@ -79,15 +80,24 @@ M31 replaces the M30 T4 `complex_request` stub (`command-service.ts:770-775`) wi
 - **`complex_request` stub is the M31 entry point.** T4 explicitly replaces the stub at `command-service.ts:770-775`. Leave the exhaustiveness-guard switch case — swap the body.
 - **Undo toast scoped to palette.** Low-priority shared-primitive follow-up.
 
-## Next Session Startup Checklist (M31 mid-flight — begin T2)
+## Next Session Startup Checklist (M31 mid-flight — begin T3)
 
 1. Read this CONTINUITY file.
-2. Read `.loki/state/orchestrator.json` → tasksCompleted should be 2 (T0 + T1), inflight.M31.commits = {T0:4f30efa, T1:67e0136}.
-3. Read `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md` — full plan doc, focus on T2 section.
-4. Pick `T2` from `.loki/queue/pending.json` (Read-side agentic tools). Set status `in_progress`, execute. T2 lives in `apps/desktop/src/main/services/agentic-tools.ts`. Six tools wrap existing repos with JSON-safe projections, max 50 rows, read-only enforced.
-5. The Tool contract is now in `@team-x/intelligence`'s `loop/types.ts` — import `type { Tool, ToolContext }` from there. Each tool is a `Tool<ZodArgs, ResultProjection>` with `schema` + `execute(args, ctx)`. Registry is per-company in T3.
-6. Commit atomically after each task. Update pending.json status + orchestrator `tasksCompleted` + inflight commit hash on each completion.
-7. After T10, move M31 from `inflight` into `history`, clear pending.json, rewrite CONTINUITY with an M31-COMPLETE header.
+2. Read `.loki/state/orchestrator.json` → tasksCompleted should be 3 (T0 + T1 + T2), inflight.M31.commits includes T2 sha.
+3. Read `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md` — full plan doc, focus on T3 section.
+4. Pick `T3` from `.loki/queue/pending.json` (`AgenticLoopService` main-process front-door). Set status `in_progress`. Lives in `apps/desktop/src/main/services/agentic-loop-service.ts`. Methods: `start({companyId, userText})` → `{runId, threadId}`, `stop(runId)`, `getRun(runId)`. Respects `orchestrator.isCompanyPaused()`.
+5. T3 consumes T2's `createAgenticTools({companyId, employeesRepo, ticketsRepo, projectsRepo, meetingsRepo, vaultRepo, auditRepo})` and pipes through `createToolRegistry` from `@team-x/intelligence`. Provider hook: wrap `streamAgent` from provider-router as a `LoopCompleteFn` (collect deltas, return full completion + usage).
+6. T3 must also add a `NODE_ENV=test` seam — `test-agentic-provider.ts` mirroring M30 T8's `test-classifier.ts`. Scripted plan → tool_call → answer fixtures.
+7. Commit atomically after each task. Update pending.json status + orchestrator `tasksCompleted` + inflight commit hash on each completion.
+8. After T10, move M31 from `inflight` into `history`, clear pending.json, rewrite CONTINUITY with an M31-COMPLETE header.
+
+## T2 patterns to carry forward (new)
+
+- **Composite-project `dist/` is load-bearing.** `@team-x/intelligence` uses `composite: true` with `outDir: ./dist`. Consumers reach its types via project references, not `src/`, so dist/ must be rebuilt after every types.ts change or downstream packages see stale exports. Command: `pnpm -F @team-x/intelligence exec tsc` (without `--noEmit`). `pnpm typecheck` does NOT rebuild because every package's typecheck script ends in `--noEmit`. Future T1-style changes to intelligence must include a dist/ rebuild step.
+- **`{rows, truncated}` envelope is the agentic tool contract.** Drop `total`. Truncation is a single boolean; the LLM can tighten its filters and re-query if it needs more. Propagate this shape to T8's test-agentic-tools fixtures and any future agentic tools (M32 write-side tools MUST use the same envelope).
+- **`as unknown as Deps['fooRepo']` is the preferred test-stub cast.** Avoids `noExplicitAny` warnings while keeping mock shape minimal. Biome's line-scoped `biome-ignore` directive does NOT propagate into object-literal field values when they span multiple lines — hence the cleaner `unknown`-via-alias pattern. Reuse for all agentic service tests.
+- **`zod` is now in `apps/desktop` deps.** T2 added it explicitly (pinned `^3.23.0` to match intelligence). Any future main-process service that builds zod schemas can import from the local package without adding a dep. Kept in sync with the intelligence dep so runtime lib version matches.
+- **biome's formatter runs under `pnpm lint` (via `biome check`).** A formatter diff surfaces as a single `error` line regardless of `linter.rules`. If an unfamiliar error count appears after an edit, run `pnpm format` before triaging — the error is often trailing-comma/quote-style, not a real lint regression.
 
 ## T1 patterns to carry forward (still active)
 
