@@ -33,6 +33,10 @@ asarUnpack:
 # edit/add packs without rebuilding. The files land in the app's
 # resources/ directory at runtime (accessible via process.resourcesPath).
 extraResources:
+  - from: src/main/db/migrations
+    to: migrations
+    filter:
+      - "**/*"
   - from: ../../role-packs
     to: role-packs
     filter:
