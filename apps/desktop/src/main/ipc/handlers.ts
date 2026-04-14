@@ -107,9 +107,11 @@ import type {
   SendChatResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetPrivacyResponse,
+  SettingsGetRagConfigResponse,
   SettingsGetRuntimeResponse,
   SettingsSetConcurrencyRequest,
   SettingsSetPrivacyRequest,
+  SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
   TelemetryCompanyStatsRequest,
   TelemetryCompanyStatsResponse,
@@ -603,6 +605,10 @@ export interface IpcHandlers {
   settingsGetConcurrency(): Promise<SettingsGetConcurrencyResponse>;
   /** `settings.setConcurrency` — update orchestrator slots + per-provider caps. */
   settingsSetConcurrency(req: SettingsSetConcurrencyRequest): Promise<void>;
+  /** `settings.getRagConfig` — full RAG configuration snapshot (Phase 5 — M29). */
+  settingsGetRagConfig(): Promise<SettingsGetRagConfigResponse>;
+  /** `settings.setRagConfig` — patch one or more RAG configuration keys (Phase 5 — M29). */
+  settingsSetRagConfig(req: SettingsSetRagConfigRequest): Promise<void>;
 
   // -----------------------------------------------------------------------
   // Provider management handlers (Phase 3 — M18)
@@ -1587,6 +1593,79 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           DEFAULT_CONCURRENCY_CAPS,
         );
         settingsRepo.set('concurrency_caps', { ...current, ...req.providerCaps });
+      }
+    },
+
+    // -----------------------------------------------------------------------
+    // RAG configuration handlers (Phase 5 — M29)
+    // -----------------------------------------------------------------------
+
+    async settingsGetRagConfig() {
+      return {
+        ragEnabled: settingsRepo.get<boolean>('rag_enabled', false),
+        ragTopK: settingsRepo.get<number>('rag_top_k', 5),
+        ragThreshold: settingsRepo.get<number>('rag_threshold', 0.7),
+        ragMaxTokens: settingsRepo.get<number>('rag_max_tokens', 2000),
+        embeddingProvider: settingsRepo.get<string>('embedding_provider', 'auto'),
+        embeddingModel: settingsRepo.get<string>('embedding_model', 'auto'),
+        embeddingDimension: settingsRepo.get<number>('embedding_dimension', 1536),
+      };
+    },
+
+    async settingsSetRagConfig(req) {
+      // Validate + patch only the supplied keys. Each branch short-
+      // circuits on the "undefined" case so partial payloads (e.g.
+      // the user toggling just the master switch) never clobber the
+      // unrelated knobs.
+      if (req.ragEnabled !== undefined) {
+        if (typeof req.ragEnabled !== 'boolean') {
+          throw new Error('[ipc] settings.setRagConfig: ragEnabled must be boolean');
+        }
+        settingsRepo.set('rag_enabled', req.ragEnabled);
+      }
+      if (req.ragTopK !== undefined) {
+        if (!Number.isFinite(req.ragTopK) || req.ragTopK < 1 || req.ragTopK > 20) {
+          throw new Error('[ipc] settings.setRagConfig: ragTopK must be 1..20');
+        }
+        settingsRepo.set('rag_top_k', Math.round(req.ragTopK));
+      }
+      if (req.ragThreshold !== undefined) {
+        if (!Number.isFinite(req.ragThreshold) || req.ragThreshold < 0 || req.ragThreshold > 1) {
+          throw new Error('[ipc] settings.setRagConfig: ragThreshold must be 0..1');
+        }
+        settingsRepo.set('rag_threshold', req.ragThreshold);
+      }
+      if (req.ragMaxTokens !== undefined) {
+        if (
+          !Number.isFinite(req.ragMaxTokens) ||
+          req.ragMaxTokens < 100 ||
+          req.ragMaxTokens > 4000
+        ) {
+          throw new Error('[ipc] settings.setRagConfig: ragMaxTokens must be 100..4000');
+        }
+        settingsRepo.set('rag_max_tokens', Math.round(req.ragMaxTokens));
+      }
+      if (req.embeddingProvider !== undefined) {
+        if (typeof req.embeddingProvider !== 'string' || req.embeddingProvider.length === 0) {
+          throw new Error('[ipc] settings.setRagConfig: embeddingProvider must be non-empty');
+        }
+        settingsRepo.set('embedding_provider', req.embeddingProvider);
+      }
+      if (req.embeddingModel !== undefined) {
+        if (typeof req.embeddingModel !== 'string' || req.embeddingModel.length === 0) {
+          throw new Error('[ipc] settings.setRagConfig: embeddingModel must be non-empty');
+        }
+        settingsRepo.set('embedding_model', req.embeddingModel);
+      }
+      if (req.embeddingDimension !== undefined) {
+        if (
+          !Number.isFinite(req.embeddingDimension) ||
+          req.embeddingDimension < 64 ||
+          req.embeddingDimension > 8192
+        ) {
+          throw new Error('[ipc] settings.setRagConfig: embeddingDimension must be 64..8192');
+        }
+        settingsRepo.set('embedding_dimension', Math.round(req.embeddingDimension));
       }
     },
 

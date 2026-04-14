@@ -783,6 +783,48 @@ export interface SettingsSetConcurrencyRequest {
 }
 
 // ---------------------------------------------------------------------------
+// RAG configuration settings (Phase 5 — M29)
+// ---------------------------------------------------------------------------
+
+/**
+ * Full RAG configuration snapshot, pulled from the seven `rag_*` and
+ * `embedding_*` keys in the settings repo. Surfaced as a single IPC
+ * payload so the Settings panel gets one atomic read / write per
+ * user interaction.
+ */
+export interface SettingsGetRagConfigResponse {
+  /** Master switch. When false, RAG injection is skipped entirely. */
+  ragEnabled: boolean;
+  /** Number of nearest neighbours to retrieve per query. 1–20. */
+  ragTopK: number;
+  /** Cosine similarity threshold (0.0–1.0). Chunks below this are dropped. */
+  ragThreshold: number;
+  /** Token budget for the injected context window (100–4000). */
+  ragMaxTokens: number;
+  /** Provider id used for embedding calls. 'auto' lets the resolver pick. */
+  embeddingProvider: string;
+  /** Model name within the embedding provider. 'auto' lets the resolver pick. */
+  embeddingModel: string;
+  /** Vector dimension, must match the provider/model's output size. */
+  embeddingDimension: number;
+}
+
+/**
+ * Partial update for the RAG configuration. Every field is optional;
+ * the handler patches only the supplied keys, leaving the rest at
+ * their current values.
+ */
+export interface SettingsSetRagConfigRequest {
+  ragEnabled?: boolean;
+  ragTopK?: number;
+  ragThreshold?: number;
+  ragMaxTokens?: number;
+  embeddingProvider?: string;
+  embeddingModel?: string;
+  embeddingDimension?: number;
+}
+
+// ---------------------------------------------------------------------------
 // Low-level channel map (used by ipcMain.handle and its generic helpers)
 // ---------------------------------------------------------------------------
 
@@ -952,6 +994,14 @@ export interface IpcContract {
   };
   'settings.setConcurrency': {
     request: SettingsSetConcurrencyRequest;
+    response: undefined;
+  };
+  'settings.getRagConfig': {
+    request: Record<string, never>;
+    response: SettingsGetRagConfigResponse;
+  };
+  'settings.setRagConfig': {
+    request: SettingsSetRagConfigRequest;
     response: undefined;
   };
   // Provider management channels (Phase 3 — M18)
@@ -1269,6 +1319,10 @@ export interface TeamXApi {
     getConcurrency(): Promise<SettingsGetConcurrencyResponse>;
     /** Set concurrency settings. */
     setConcurrency(req: SettingsSetConcurrencyRequest): Promise<void>;
+    /** Get full RAG configuration snapshot (enabled, top-K, threshold, max-tokens, embedding provider/model/dimension). */
+    getRagConfig(): Promise<SettingsGetRagConfigResponse>;
+    /** Patch one or more RAG configuration keys. Missing keys retain their current value. */
+    setRagConfig(req: SettingsSetRagConfigRequest): Promise<void>;
   };
   providers: {
     /** List all configured providers with status. */

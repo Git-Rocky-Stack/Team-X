@@ -87,9 +87,11 @@ import type {
   SendChatResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetPrivacyResponse,
+  SettingsGetRagConfigResponse,
   SettingsGetRuntimeResponse,
   SettingsSetConcurrencyRequest,
   SettingsSetPrivacyRequest,
+  SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
   TeamXApi,
   TelemetryCompanyStatsResponse,
@@ -197,6 +199,8 @@ const CHANNELS = {
   settingsSetPrivacy: 'settings.setPrivacy',
   settingsGetConcurrency: 'settings.getConcurrency',
   settingsSetConcurrency: 'settings.setConcurrency',
+  settingsGetRagConfig: 'settings.getRagConfig',
+  settingsSetRagConfig: 'settings.setRagConfig',
   // Provider management (Phase 3 — M18)
   providersList: 'providers.list',
   providersAdd: 'providers.add',
@@ -363,6 +367,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.settingsGetConcurrency) as Promise<SettingsGetConcurrencyResponse>,
       setConcurrency: (req: SettingsSetConcurrencyRequest) =>
         ipc.invoke(CHANNELS.settingsSetConcurrency, req) as Promise<void>,
+      getRagConfig: () =>
+        ipc.invoke(CHANNELS.settingsGetRagConfig) as Promise<SettingsGetRagConfigResponse>,
+      setRagConfig: (req: SettingsSetRagConfigRequest) =>
+        ipc.invoke(CHANNELS.settingsSetRagConfig, req) as Promise<void>,
     },
     providers: {
       list: () => ipc.invoke(CHANNELS.providersList) as Promise<ProviderConfig[]>,

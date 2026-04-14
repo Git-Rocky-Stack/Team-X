@@ -107,6 +107,8 @@ const REQUEST_CHANNELS = [
   'settings.setPrivacy',
   'settings.getConcurrency',
   'settings.setConcurrency',
+  'settings.getRagConfig',
+  'settings.setRagConfig',
   // Provider management (Phase 3 — M18)
   'providers.list',
   'providers.add',
@@ -439,6 +441,21 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
       request: { orchestratorSlots?: number; providerCaps?: Record<string, number> },
     ) => {
       return handlers.settingsSetConcurrency(request);
+    },
+  );
+
+  // RAG configuration handlers (Phase 5 — M29)
+  ipcMain.handle('settings.getRagConfig', async () => {
+    return handlers.settingsGetRagConfig();
+  });
+
+  ipcMain.handle(
+    'settings.setRagConfig',
+    async (
+      _event,
+      request: import('@team-x/shared-types').SettingsSetRagConfigRequest,
+    ) => {
+      return handlers.settingsSetRagConfig(request);
     },
   );
 
