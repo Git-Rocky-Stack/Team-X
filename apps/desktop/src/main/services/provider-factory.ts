@@ -64,13 +64,16 @@
  */
 
 import {
+  type EmbedAdapter,
   type ProviderStreamFn,
   makeAnthropicStream,
   makeFireworksStream,
   makeGoogleStream,
   makeGroqStream,
+  makeOllamaEmbedAdapter,
   makeOllamaStream,
   makeOpenAICompatStream,
+  makeOpenAIEmbedAdapter,
   makeOpenAIStream,
   makeOpenRouterStream,
   makeTogetherStream,
@@ -457,4 +460,76 @@ export function createTestModeResolveProvider(): (
     model: TEST_MODE_MODEL,
     stream,
   });
+}
+
+// -----------------------------------------------------------------------------
+// Embedding adapters (Phase 5 — M29 T6)
+// -----------------------------------------------------------------------------
+
+/**
+ * Narrow reader surface for embedding construction — symmetric with
+ * `SecretsReader` above. The production `SecretsStore` structurally
+ * satisfies it; tests can pass a plain object with a single method.
+ */
+export interface EmbedSecretsReader {
+  getApiKey(providerId: string): Promise<string | null>;
+}
+
+/**
+ * Narrow registry surface the embed-adapter builder needs. Kept
+ * deliberately tiny so the RAG composition root can pass any object
+ * with a `.get(id)` method — the production `ProvidersService` qualifies
+ * via structural typing.
+ */
+export interface EmbedProvidersReader {
+  get(id: string): ProviderConfig | null;
+}
+
+/**
+ * Resolve a provider registry name (e.g. `"ollama-local"`,
+ * `"openai"`) to a bound `EmbedAdapter` that the RAG service can drive.
+ *
+ * Returns `null` when the named provider is missing, disabled, of a
+ * non-embedding-capable kind, or when a cloud provider's API key is
+ * absent from the keychain. All of these cases mean "RAG cannot run in
+ * this configuration" — the caller surfaces that as a no-op and lets
+ * the app fall through to its pre-M29 behaviour (invariant #7: zero
+ * regression when RAG is off).
+ *
+ * Only `ollama`, `openai`, and `custom-openai` kinds support embeddings
+ * via the Phase 5 adapter surface. Cloud providers require a key; local
+ * Ollama does not.
+ */
+export async function buildEmbedAdapter(args: {
+  provider: string;
+  model: string;
+  dimension: number;
+  providersService: EmbedProvidersReader;
+  secretsStore: EmbedSecretsReader;
+}): Promise<EmbedAdapter | null> {
+  const config = args.providersService.get(args.provider);
+  if (!config || !config.enabled) return null;
+
+  if (config.kind === 'ollama') {
+    const opts: { baseURL?: string; model: string; dimension: number } = {
+      model: args.model,
+      dimension: args.dimension,
+    };
+    if (config.baseUrl !== undefined) opts.baseURL = config.baseUrl;
+    return makeOllamaEmbedAdapter(opts);
+  }
+
+  if (config.kind === 'openai' || config.kind === 'custom-openai') {
+    const apiKey = await args.secretsStore.getApiKey(config.id);
+    if (apiKey === null || apiKey.length === 0) return null;
+    const opts: { apiKey: string; model: string; dimension: number; baseURL?: string } = {
+      apiKey,
+      model: args.model,
+      dimension: args.dimension,
+    };
+    if (config.baseUrl !== undefined) opts.baseURL = config.baseUrl;
+    return makeOpenAIEmbedAdapter(opts);
+  }
+
+  return null;
 }

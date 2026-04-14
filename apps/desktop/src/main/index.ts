@@ -46,13 +46,17 @@ import { BrowserWindow, app, dialog } from 'electron';
 
 import { calcCostUsd } from '@team-x/telemetry-core';
 
-import { type ToolSpec, buildProviderTools } from '@team-x/provider-router';
+import { createRagService, type RagRepo, type RagService } from '@team-x/intelligence';
+import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
+import type { EmbeddingSourceType } from '@team-x/shared-types';
+import { eq } from 'drizzle-orm';
 import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath } from './db/paths.js';
 import { createAuditRepo } from './db/repos/audit.js';
 import { createCompaniesRepo } from './db/repos/companies.js';
+import { createEmbeddingsRepo } from './db/repos/embeddings.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
 import { createEventsRepo } from './db/repos/events.js';
 import { createGoalsRepo } from './db/repos/goals.js';
@@ -70,6 +74,7 @@ import { createThreadsRepo } from './db/repos/threads.js';
 import { createTicketAttachmentsRepo } from './db/repos/ticket-attachments.js';
 import { createTicketsRepo } from './db/repos/tickets.js';
 import { createVaultRepo } from './db/repos/vault.js';
+import { messages as messagesTable } from './db/schema.js';
 import { seed } from './db/seed.js';
 import { createIpcHandlers } from './ipc/handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
@@ -87,13 +92,16 @@ import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import { detectHardware } from './services/profiler.js';
 import {
+  buildEmbedAdapter,
   createProviderFactory,
   createTestModeResolveProvider,
   isTestMode,
 } from './services/provider-factory.js';
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
+import { createRagIndexer } from './services/rag-indexer.js';
 import { createRoleLoader } from './services/role-loader.js';
 import { SecretsStore } from './services/secrets.js';
+import { composeSystemPromptWithRag } from './services/system-prompt.js';
 import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
 
@@ -204,6 +212,7 @@ async function createWindow(): Promise<void> {
 let orchestrator: Orchestrator | null = null;
 let unregisterIpc: (() => void) | null = null;
 let mcpHostInstance: McpHost | null = null;
+let ragIndexerInstance: { stop: () => void } | null = null;
 
 app
   .whenReady()
@@ -242,6 +251,7 @@ app
     const vaultRepo = createVaultRepo(db);
     const ticketAttachmentsRepo = createTicketAttachmentsRepo(db);
     const settingsRepo = createSettingsRepo(db);
+    const embeddingsRepo = createEmbeddingsRepo(db);
 
     // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
     const settingsSeeded = settingsRepo.seedDefaults();
@@ -296,6 +306,65 @@ app
     } else {
       const providerFactory = createProviderFactory({ providersService, secretsStore });
       resolveProvider = (employee) => providerFactory.resolveForEmployee(employee);
+    }
+
+    // ---- RAG: optional, off-by-default, zero-regression when disabled ------
+    //
+    // Invariant #7 (zero phone-home) is preserved: if the user has not
+    // configured a local embedding provider (Ollama) AND there is no key
+    // in the keychain for a cloud one, ragService resolves to `null` and
+    // every RAG-dependent code path falls back to its pre-M29 behaviour.
+    // Test mode always skips RAG — the Playwright smoke, ticket-flow, and
+    // meeting-flow specs boot against a canned provider with no network,
+    // and we must not alter their semantics.
+    async function buildRagService(): Promise<RagService | null> {
+      if (testMode) return null;
+      const enabled = settingsRepo.get<boolean>('rag_enabled', false);
+      if (!enabled) return null;
+
+      const provider = settingsRepo.get<string>('embedding_provider', 'ollama-local');
+      const model = settingsRepo.get<string>('embedding_model', 'nomic-embed-text');
+      const dimension = settingsRepo.get<number>('embedding_dimension', 768);
+
+      // 'auto' is the seeded sentinel — the Settings UI (M29-T8) will
+      // replace it with a concrete value when the user opts in. Until
+      // then, RAG stays off so no boot-time embed call fires against a
+      // provider the user has not explicitly chosen.
+      if (provider === 'auto' || model === 'auto') return null;
+
+      const adapter = await buildEmbedAdapter({
+        provider,
+        model,
+        dimension,
+        providersService,
+        secretsStore,
+      });
+      if (!adapter) return null;
+
+      const embedText = createEmbedText(adapter);
+      // The drizzle row type surfaces `sourceType: string` because it
+      // is a raw text column, but every write into `embeddings` goes
+      // through `RagService.indexSource` which already constrains the
+      // input to `EmbeddingSourceType`. The narrowing is therefore
+      // correct at runtime — wrap the repo in a thin adapter that
+      // asserts the narrower type rather than widening the public
+      // `RagRepo` contract or relaxing the embeddings schema.
+      const ragRepo: RagRepo = {
+        upsert: (input) => embeddingsRepo.upsert(input),
+        deleteBySource: (id) => embeddingsRepo.deleteBySource(id),
+        listByCompany: (cid) =>
+          embeddingsRepo
+            .listByCompany(cid)
+            .map((r) => ({ ...r, sourceType: r.sourceType as EmbeddingSourceType })),
+      };
+      return createRagService({ embedText, dimension, repo: ragRepo });
+    }
+
+    const ragService: RagService | null = await buildRagService();
+    if (ragService !== null) {
+      console.log('[rag] service ready — RAG-enhanced prompts active');
+    } else {
+      console.log('[rag] disabled or unconfigured — running without RAG');
     }
 
     // Role loader: turns (employee, company) into a rendered system prompt.
@@ -371,12 +440,83 @@ app
       companiesRepo,
       threadsRepo,
       calcCost,
-      resolveSystemPrompt: ({ employee, company }) =>
-        roleLoader.resolveSystemPrompt({ employee, company }),
+      resolveSystemPrompt: async ({ employee, company, threadId }) => {
+        // Base path — pure role.md render, no RAG. Called by the RAG
+        // wrapper as its `renderRoleSystemPrompt` dep, AND used as the
+        // direct return when RAG is off so the non-RAG code path is
+        // literally byte-identical to the pre-M29 behaviour.
+        const renderPlain = (): Promise<string> =>
+          roleLoader.resolveSystemPrompt({ employee, company });
+
+        if (ragService === null) return renderPlain();
+
+        const topK = settingsRepo.get<number>('rag_top_k', 5);
+        const threshold = settingsRepo.get<number>('rag_threshold', 0.7);
+        const maxTokens = settingsRepo.get<number>('rag_max_tokens', 2000);
+
+        return composeSystemPromptWithRag(
+          {
+            renderRoleSystemPrompt: renderPlain,
+            // Already gated above — ragService !== null means enabled.
+            isRagEnabled: () => true,
+            getRagConfig: () => ({ topK, threshold, maxTokens }),
+            getRecentUserMessages: ({ threadId: tid }) =>
+              messagesRepo
+                .listByThread(tid)
+                .filter((m) => m.authorKind === 'user')
+                .slice(-2)
+                .map((m) => ({ id: m.id, content: m.content, sourceId: m.id })),
+            retrieve: (q) => ragService.retrieve(q),
+            // ~4 chars per token is the canonical OpenAI rule of thumb;
+            // good enough for a maxTokens guard that is advisory, not a
+            // hard limit the provider enforces.
+            countTokens: (text) => Math.ceil(text.length / 4),
+          },
+          { employeeId: employee.id, companyId: company.id, threadId },
+        );
+      },
       resolveProvider,
       resolveTools,
       slots: PHASE_1_ORCHESTRATOR_SLOTS,
     });
+
+    // ---- RAG indexer: subscribes to the event bus, indexes on write --------
+    //
+    // Constructed after the orchestrator so `bus` is fully wired. When
+    // ragService is null the indexer's service callbacks are no-ops,
+    // so the subscription itself is cheap — `isEnabled()` short-circuits
+    // every event dispatch and nothing hits the embeddings table.
+    const ragIndexer = createRagIndexer({
+      bus,
+      service: {
+        indexSource: async (input) =>
+          ragService !== null ? ragService.indexSource(input) : 0,
+        retrieve: async (input) =>
+          ragService !== null ? ragService.retrieve(input) : [],
+        deleteBySource: (id) => (ragService !== null ? ragService.deleteBySource(id) : 0),
+      },
+      // messagesRepo has no `getById` — pull the single row directly via
+      // the shared drizzle handle. Scoped inline so there is no need to
+      // widen the repo surface for a one-shot read.
+      getMessage: (id) => {
+        const row = db.select().from(messagesTable).where(eq(messagesTable.id, id)).get();
+        if (!row) return null;
+        return { id: row.id, content: row.content, threadId: row.threadId };
+      },
+      getCompanyIdForThread: (threadId) => threadsRepo.getById(threadId)?.companyId ?? null,
+      // Meeting minutes live in the `minutes_md` column (markdown-
+      // rendered summary). The indexer's structural shape asks for a
+      // `minutesText` key, so we rename here at the boundary rather
+      // than widening the repo row type. Returns null when minutes
+      // have not been generated yet (meeting still active).
+      getMeetingMinutes: (id) => {
+        const m = meetingsRepo.getById(id);
+        return m?.minutesMd ? { id: m.id, minutesText: m.minutesMd } : null;
+      },
+      isEnabled: () => ragService !== null,
+    });
+    ragIndexer.start();
+    ragIndexerInstance = ragIndexer;
 
     const vaultService = createVaultService({
       vaultRepo,
@@ -485,7 +625,11 @@ app.on('window-all-closed', () => {
  * sits waiting for the event loop to drain.
  */
 app.on('will-quit', (event) => {
-  if (orchestrator === null && unregisterIpc === null) {
+  if (
+    orchestrator === null &&
+    unregisterIpc === null &&
+    ragIndexerInstance === null
+  ) {
     closeDb();
     return;
   }
@@ -509,6 +653,14 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] orchestrator shutdown failed:', err);
+    }
+    try {
+      if (ragIndexerInstance !== null) {
+        ragIndexerInstance.stop();
+        ragIndexerInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] rag indexer stop failed:', err);
     }
     try {
       if (unregisterIpc !== null) {
