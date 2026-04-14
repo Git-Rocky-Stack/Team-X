@@ -113,6 +113,7 @@ export interface OrchestratorThreadsRepo {
 export type ResolveSystemPrompt = (args: {
   employee: EmployeeRow;
   company: CompanyRow;
+  threadId: string;
 }) => Promise<string>;
 
 /**
@@ -400,7 +401,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     const getRunId = () => currentRunId;
 
     const [system, provider, toolConfig] = await Promise.all([
-      resolveSystemPrompt({ employee, company }),
+      resolveSystemPrompt({ employee, company, threadId: args.threadId }),
       resolveProvider(employee),
       resolveTools ? resolveTools({ employee, company, getRunId }) : Promise.resolve(null),
     ]);
@@ -504,7 +505,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     const getRunId = () => currentRunId;
 
     const [system, provider, toolConfig] = await Promise.all([
-      resolveSystemPrompt({ employee, company }),
+      resolveSystemPrompt({ employee, company, threadId: args.threadId }),
       resolveProvider(employee),
       resolveTools ? resolveTools({ employee, company, getRunId }) : Promise.resolve(null),
     ]);

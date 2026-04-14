@@ -46,7 +46,7 @@ interface Fixture {
   threadId: string;
   userMessageId: string;
   calcCost: CostCalculator;
-  systemPromptCalls: Array<{ employeeId: string; companyId: string }>;
+  systemPromptCalls: Array<{ employeeId: string; companyId: string; threadId: string }>;
   providerCalls: string[];
 }
 
@@ -144,8 +144,8 @@ function buildDefaultOrchestrator(
 
   const defaultResolveSystem: ResolveSystemPrompt =
     overrides.resolveSystemPrompt ??
-    (async ({ employee, company }) => {
-      f.systemPromptCalls.push({ employeeId: employee.id, companyId: company.id });
+    (async ({ employee, company, threadId }) => {
+      f.systemPromptCalls.push({ employeeId: employee.id, companyId: company.id, threadId });
       return `You are ${employee.name}, the ${employee.title} at ${company.name}.`;
     });
 
@@ -232,6 +232,7 @@ describe('buildOrchestrator', () => {
       expect(f.systemPromptCalls[0]).toEqual({
         employeeId: f.employeeId,
         companyId: f.companyId,
+        threadId: f.threadId,
       });
       expect(f.providerCalls).toEqual([f.employeeId]);
 

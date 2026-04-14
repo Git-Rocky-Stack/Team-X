@@ -371,7 +371,8 @@ app
       companiesRepo,
       threadsRepo,
       calcCost,
-      resolveSystemPrompt: (args) => roleLoader.resolveSystemPrompt(args),
+      resolveSystemPrompt: ({ employee, company }) =>
+        roleLoader.resolveSystemPrompt({ employee, company }),
       resolveProvider,
       resolveTools,
       slots: PHASE_1_ORCHESTRATOR_SLOTS,
