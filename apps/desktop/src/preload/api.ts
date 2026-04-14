@@ -67,6 +67,7 @@ import type {
   DashboardEventListener,
   DetachFileRequest,
   EndMeetingResponse,
+  FireEmployeeRequest,
   Goal,
   GoalDetail,
   HireEmployeeRequest,
@@ -163,6 +164,7 @@ const CHANNELS = {
   companiesList: 'companies.list',
   employeesList: 'employees.list',
   employeesCreate: 'employees.create',
+  employeesFire: 'employees.fire',
   chatSend: 'chat.send',
   chatList: 'chat.list',
   chatResolveThread: 'chat.resolveThread',
@@ -275,6 +277,7 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         >,
       create: (req: HireEmployeeRequest) =>
         ipc.invoke(CHANNELS.employeesCreate, req) as Promise<HireEmployeeResponse>,
+      fire: (req: FireEmployeeRequest) => ipc.invoke(CHANNELS.employeesFire, req) as Promise<void>,
     },
     chat: {
       send: (req: SendChatRequest) =>

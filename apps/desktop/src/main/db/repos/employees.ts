@@ -91,5 +91,23 @@ export function createEmployeesRepo<TRunResult>(db: EmployeesDb<TRunResult>) {
     updateStatus(id: string, status: string): void {
       db.update(employees).set({ status }).where(eq(employees.id, id)).run();
     },
+
+    /**
+     * Permanently delete an employee row (the "fire" operation).
+     * No-op when the id does not exist.
+     *
+     * Note: the schema has FK references from `tickets.assignee_id`
+     * and `projects.lead_id` into `employees.id`, both nullable.
+     * Callers that fire an employee with live assignments must first
+     * null out those FKs — the palette / CommandService path fires
+     * only freshly-hired employees in the M30 spec, so in practice
+     * this delete is always FK-clean. Surfaced as `delete` rather
+     * than a soft-delete to keep the repo surface symmetric with
+     * `create` and to mirror the UX semantics: fire removes them
+     * from every list, not merely flips an archive flag.
+     */
+    delete(id: string): void {
+      db.delete(employees).where(eq(employees.id, id)).run();
+    },
   };
 }

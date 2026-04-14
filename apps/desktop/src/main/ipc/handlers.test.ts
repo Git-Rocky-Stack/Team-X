@@ -105,6 +105,17 @@ class FakeEmployeesRepo implements IpcEmployeesRepo {
     this.put(row);
     return id;
   }
+
+  delete(id: string): void {
+    const row = this.byId.get(id);
+    if (!row) return;
+    this.byId.delete(id);
+    const list = this.byCompany.get(row.companyId) ?? [];
+    this.byCompany.set(
+      row.companyId,
+      list.filter((r) => r.id !== id),
+    );
+  }
 }
 
 class FakeThreadsRepo implements IpcThreadsRepo {

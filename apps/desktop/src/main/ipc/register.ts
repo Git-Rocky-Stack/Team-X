@@ -63,6 +63,7 @@ const REQUEST_CHANNELS = [
   'companies.list',
   'employees.list',
   'employees.create',
+  'employees.fire',
   'chat.send',
   'chat.list',
   'chat.resolveThread',
@@ -182,6 +183,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
       return handlers.employeesCreate(request);
     },
   );
+
+  ipcMain.handle('employees.fire', async (_event, request: { employeeId: string }) => {
+    return handlers.employeesFire(request);
+  });
 
   ipcMain.handle(
     'chat.send',

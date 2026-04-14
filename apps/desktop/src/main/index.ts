@@ -114,6 +114,7 @@ import { createRagIndexer } from './services/rag-indexer.js';
 import { createRoleLoader } from './services/role-loader.js';
 import { SecretsStore } from './services/secrets.js';
 import { composeSystemPromptWithRag } from './services/system-prompt.js';
+import { createTestClassifier } from './services/test-classifier.js';
 import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
 
@@ -661,7 +662,15 @@ app
         missingSlots: [],
       });
     };
-    const commandClassifier = createIntentClassifier({ complete: classifierComplete });
+    // Test-mode swap: when `NODE_ENV === 'test'` we bypass the LLM
+    // completion seam entirely and use `createTestClassifier()` — a
+    // deterministic canned table + sentinel override that lets the
+    // Playwright command-palette spec exercise the full parse → fill
+    // → execute → history loop without a live provider. Production
+    // and dev still use the real `createIntentClassifier`.
+    const commandClassifier = testMode
+      ? createTestClassifier()
+      : createIntentClassifier({ complete: classifierComplete });
     // DB rows type `status` as `string`; shared-types narrows to the
     // `EmployeeStatus` / `TicketStatus` unions. The casts below are
     // safe — the DB schema's CHECK constraints and repo write paths
@@ -712,9 +721,9 @@ app
       handlers: {
         employeesList: (req) => ipcHandlers.employeesList(req),
         employeesCreate: (req) => ipcHandlers.employeesCreate(req),
-        // employeesFire / employeesPromote — not yet registered; CommandService
-        // dispatcher guards for absence and emits `handler_error`. Wire in
-        // when the main-process IPC layer adds them.
+        employeesFire: (req) => ipcHandlers.employeesFire(req),
+        // employeesPromote — not yet wired; CommandService dispatcher
+        // guards for absence and emits `handler_error`.
         ticketsAssign: (req) =>
           ipcHandlers.ticketsAssign({ ticketId: req.ticketId, assigneeId: req.assigneeId }),
         ticketsCreate: (req) => ipcHandlers.ticketsCreate(req),

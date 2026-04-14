@@ -213,6 +213,7 @@ export interface IpcEmployeesRepo {
   listByCompany(companyId: string): EmployeeRow[];
   getById(id: string): EmployeeRow | null;
   create(input: CreateEmployeeInput): string;
+  delete(id: string): void;
 }
 
 export interface IpcThreadsRepo {
@@ -432,6 +433,16 @@ export interface IpcHandlers {
    * fields (level, title, sha, tools), and returns the new employee id.
    */
   employeesCreate(req: HireEmployeeRequest): Promise<HireEmployeeResponse>;
+
+  /**
+   * `employees.fire` — permanently remove an employee row.
+   *
+   * Destructive action gated behind the command-palette confirmation
+   * step (see CommandService `DESTRUCTIVE_INTENTS`). Throws if the
+   * employee id does not resolve to a live row so the palette surfaces
+   * a clear error instead of silently succeeding on a stale target.
+   */
+  employeesFire(req: { employeeId: string }): Promise<void>;
 
   /**
    * `chat.send` — append the user's message and enqueue an
@@ -956,6 +967,17 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       });
 
       return { employeeId };
+    },
+
+    async employeesFire({ employeeId }) {
+      if (typeof employeeId !== 'string' || employeeId.length === 0) {
+        throw new Error('[ipc] employees.fire: employeeId is required');
+      }
+      const employee = employeesRepo.getById(employeeId);
+      if (!employee) {
+        throw new Error(`[ipc] employees.fire: employee not found: ${employeeId}`);
+      }
+      employeesRepo.delete(employeeId);
     },
 
     async chatSend({ threadId, employeeId, content }) {

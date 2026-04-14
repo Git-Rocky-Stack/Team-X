@@ -99,6 +99,16 @@ export interface HireEmployeeResponse {
   employeeId: string;
 }
 
+/**
+ * Request payload for `employees.fire` — the destructive removal
+ * operation triggered through the command palette. The handler
+ * rejects unknown ids so callers cannot fire an already-deleted
+ * employee silently.
+ */
+export interface FireEmployeeRequest {
+  employeeId: string;
+}
+
 export interface ListChatRequest {
   threadId: string;
 }
@@ -851,6 +861,14 @@ export interface IpcContract {
     request: HireEmployeeRequest;
     response: HireEmployeeResponse;
   };
+  'employees.fire': {
+    request: FireEmployeeRequest;
+    // IpcContract-level response is intentionally `void` — the fire
+    // handler returns nothing, matching every other write-path entry
+    // in this contract (e.g. `mcp.toggle`, `tickets.close`).
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
   'chat.send': {
     request: SendChatRequest;
     response: SendChatResponse;
@@ -1224,6 +1242,13 @@ export interface TeamXApi {
      * fills in level/title/sha/tools, and inserts the row.
      */
     create(req: HireEmployeeRequest): Promise<HireEmployeeResponse>;
+
+    /**
+     * Permanently remove an employee. Destructive — gated behind the
+     * command-palette confirmation step when invoked via NLU. Throws
+     * if the id does not resolve to a live row.
+     */
+    fire(req: FireEmployeeRequest): Promise<void>;
   };
   chat: {
     /**

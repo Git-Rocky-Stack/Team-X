@@ -46,13 +46,27 @@ export function useCommandParse() {
   });
 }
 
-/** Mutation over `command.execute`. Invalidates history on success. */
+/**
+ * Mutation over `command.execute`. Invalidates the caches any
+ * executed command could have mutated so the dashboard / sidebar /
+ * tickets view refresh immediately:
+ *   - `command-history`  (always, for the Recent Commands subview).
+ *   - `employees`        (hire / fire / promote touch the roster).
+ *   - `tickets`          (create / assign / close / reopen touch kanban).
+ *
+ * The invalidations are broad on purpose — React Query's refetch-on-
+ * success is cheap, and a mis-targeted invalidation shows up as a
+ * stale UI bug faster than a memory regression. If any individual
+ * view starts refetching too aggressively, narrow the keyset here.
+ */
 export function useCommandExecute() {
   const queryClient = useQueryClient();
   return useMutation<IpcExecuteResult, Error, IpcExecuteRequest>({
     mutationFn: (req) => ipc.command.execute(req),
     onSuccess: (_result, req) => {
       queryClient.invalidateQueries({ queryKey: ['command-history', req.companyId] });
+      queryClient.invalidateQueries({ queryKey: ['employees', req.companyId] });
+      queryClient.invalidateQueries({ queryKey: ['tickets', req.companyId] });
     },
   });
 }
