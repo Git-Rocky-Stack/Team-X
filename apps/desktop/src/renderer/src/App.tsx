@@ -7,6 +7,7 @@ import { useAppStore } from '@/store/app-store.js';
 import { AppLayout } from './app/layout.js';
 import { AuditView } from './features/audit/audit-view.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
+import { CommandPalette } from './features/command/command-palette.js';
 import { CardsView } from './features/dashboard/cards-view.js';
 import { DashboardSubtabs } from './features/dashboard/dashboard-subtabs.js';
 import { FloorView } from './features/dashboard/floor-view.js';
@@ -44,6 +45,7 @@ export default function App() {
   const activeView = useAppStore((s) => s.activeView);
   const dashboardSubview = useAppStore((s) => s.dashboardSubview);
   const [hireOpen, setHireOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     if (companyId !== null) return;
@@ -53,6 +55,34 @@ export default function App() {
       }
     });
   }, [companyId, setCompanyId]);
+
+  // Global Cmd+K / Ctrl+K keybinding to toggle the command palette.
+  // Mounted once at the shell root so the shortcut works from any view.
+  // We also swallow Esc while the palette is open — Radix's Dialog
+  // already closes on Esc, so no additional handler is needed for that.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      // Only the K key with the platform meta modifier opens the palette.
+      if (event.key !== 'k' && event.key !== 'K') return;
+      const isMac = /Mac|iPod|iPhone|iPad/i.test(navigator.platform);
+      const modifier = isMac ? event.metaKey : event.ctrlKey;
+      if (!modifier) return;
+
+      // Don't hijack Cmd/Ctrl+K when focus is inside another dialog
+      // (e.g. the Hire dialog). Radix dialogs render inside a portal
+      // with role="dialog" — climb from the focused element and bail
+      // if we find one.
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[role="dialog"]')) {
+        return;
+      }
+
+      event.preventDefault();
+      setPaletteOpen((prev) => !prev);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const { data: employees = [], isLoading, isError, refetch } = useEmployees(companyId);
 
@@ -119,6 +149,7 @@ export default function App() {
       {renderContent()}
       <ChatDrawer employees={employees} />
       <HireDialog open={hireOpen} onOpenChange={setHireOpen} companyId={companyId} />
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} companyId={companyId} />
     </AppLayout>
   );
 }
