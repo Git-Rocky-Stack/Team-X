@@ -42,7 +42,7 @@
  */
 
 import { join } from 'node:path';
-import { BrowserWindow, app } from 'electron';
+import { BrowserWindow, app, dialog } from 'electron';
 
 import { calcCostUsd } from '@team-x/telemetry-core';
 
@@ -452,6 +452,13 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+}).catch((err) => {
+  console.error('[main] fatal: app initialization failed:', err);
+  dialog.showErrorBox(
+    'Team-X failed to start',
+    `Initialization error:\n\n${err instanceof Error ? err.message : String(err)}\n\nThe application will now exit.`,
+  );
+  app.exit(1);
 });
 
 app.on('window-all-closed', () => {
