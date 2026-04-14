@@ -20,11 +20,14 @@ import { createReadStream } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+import type { VaultFileCreatedPayload, VaultFileDeletedPayload } from '@team-x/shared-types';
+
 import type {
   CreateFileVaultInput,
   FileVaultRow,
   UpdateFileVaultInput,
 } from '../db/repos/vault.js';
+import type { EventBus } from '../orchestrator/event-bus.js';
 
 export interface VaultServiceDeps {
   vaultRepo: {
@@ -44,6 +47,19 @@ export interface VaultServiceDeps {
   companiesBasePath: string;
   /** Resolve company slug from id. */
   getCompanySlug: (companyId: string) => string | null;
+  /**
+   * Event bus for `vault.file_created` / `vault.file_deleted` fan-out.
+   *
+   * Emits fire AFTER the DB commit so the event-bus persistence
+   * ordering guarantee ("subscribers never see an event before it is
+   * durably persisted") applies transitively to the vault row itself.
+   * If omitted, the service runs silently — used by unit tests that
+   * do not want to assert on event emission.
+   *
+   * Added M30 T0 to close the vault-backup E2E staleness regression.
+   * See `docs/plans/2026-04-13-vault-backup-regression-findings.md`.
+   */
+  bus?: EventBus;
 }
 
 export interface VaultFile {
@@ -199,7 +215,7 @@ function rowToVaultFile(row: FileVaultRow): VaultFile {
 }
 
 export function createVaultService(deps: VaultServiceDeps) {
-  const { vaultRepo, companiesBasePath, getCompanySlug } = deps;
+  const { vaultRepo, companiesBasePath, getCompanySlug, bus } = deps;
 
   function getVaultDir(companyId: string): string {
     const slug = getCompanySlug(companyId);
@@ -259,6 +275,25 @@ export function createVaultService(deps: VaultServiceDeps) {
         tagsJson: JSON.stringify(tags ?? []),
         uploadedBy,
       });
+
+      // Fan out AFTER the DB commit so the event-bus persistence
+      // ordering guarantee applies: a subscriber that saw
+      // `vault.file_created` is safe to query the row it references.
+      // Wrap in try/catch — a bus emit failure must never take down
+      // the upload (the file is already on disk + in the DB).
+      if (bus) {
+        try {
+          bus.emit<VaultFileCreatedPayload>({
+            type: 'vault.file_created',
+            companyId,
+            actorId: uploadedBy,
+            actorKind: 'user',
+            payload: { fileId: id, originalName, mimeType, sizeBytes, sha256 },
+          });
+        } catch (err) {
+          console.error('[vault] failed to emit vault.file_created:', err);
+        }
+      }
 
       return id;
     },
@@ -326,6 +361,23 @@ export function createVaultService(deps: VaultServiceDeps) {
 
       // Delete from database (triggers FTS5 cleanup via migration triggers)
       vaultRepo.delete(fileId);
+
+      // Fan out AFTER the DB delete so subscribers observing
+      // `vault.file_deleted` can safely assume the row is gone. Emit
+      // failures are logged, not thrown — the delete already committed.
+      if (bus) {
+        try {
+          bus.emit<VaultFileDeletedPayload>({
+            type: 'vault.file_deleted',
+            companyId: row.companyId,
+            actorId: row.uploadedBy,
+            actorKind: 'user',
+            payload: { fileId },
+          });
+        } catch (err) {
+          console.error('[vault] failed to emit vault.file_deleted:', err);
+        }
+      }
     },
 
     /**

@@ -2,11 +2,11 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M30",
   "milestoneName": "NLU Engine",
-  "tasksCompleted": 0,
+  "tasksCompleted": 1,
   "tasksFailed": 0,
-  "totalTasks": 0,
-  "planDoc": null,
-  "startedAt": null,
+  "totalTasks": 11,
+  "planDoc": "docs/plans/2026-04-13-team-x-phase-5-m30-nlu-engine.md",
+  "startedAt": "2026-04-13T21:50:00Z",
   "completedAt": null,
   "phaseComplete": false,
   "phase": "Phase 5 — Intelligence Layer",
@@ -14,5 +14,21 @@
   "previousMilestoneName": "RAG integration into agent turns",
   "previousMilestoneCompletedAt": "2026-04-13T21:10:00Z",
   "nextMilestone": "M31",
-  "nextMilestoneName": "Agentic Loop"
+  "nextMilestoneName": "Agentic Loop",
+  "tasksInProgress": {
+    "T0": {
+      "label": "Vault event-bus wiring (bonus — fixes vault-backup.spec.ts)",
+      "status": "completed",
+      "completedAt": "2026-04-13T21:50:00Z",
+      "findingsDoc": "docs/plans/2026-04-13-vault-backup-regression-findings.md"
+    }
+  },
+  "baseline": {
+    "unitTests": 673,
+    "e2eSpecs": 5,
+    "e2eGreenCount": 5,
+    "lintErrors": 0,
+    "lintWarnings": 41,
+    "typecheckClean": true
+  }
 }

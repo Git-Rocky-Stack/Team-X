@@ -14,7 +14,9 @@ export type EventType =
   | 'meeting.started'
   | 'meeting.turn'
   | 'meeting.interjection'
-  | 'meeting.ended';
+  | 'meeting.ended'
+  | 'vault.file_created'
+  | 'vault.file_deleted';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -101,4 +103,27 @@ export interface MeetingEndedPayload {
   minutesMd: string | null;
   actionItemCount: number;
   ticketIds: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Vault event payloads (Phase 5 — M30 T0)
+//
+// Emitted by the vault service after the DB row is durably persisted.
+// Purpose: align vault with architectural invariant #6 (events table is
+// source of truth for realtime dashboard) and drive renderer React Query
+// cache invalidation without per-mutation `onSuccess` coupling. See
+// `docs/plans/2026-04-13-vault-backup-regression-findings.md` for the
+// full root-cause analysis.
+// ---------------------------------------------------------------------------
+
+export interface VaultFileCreatedPayload {
+  fileId: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string;
+}
+
+export interface VaultFileDeletedPayload {
+  fileId: string;
 }

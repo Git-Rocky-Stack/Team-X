@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import {
   useVaultDelete,
+  useVaultEventSync,
   useVaultFiles,
   useVaultSearch,
   useVaultStats,
@@ -77,6 +78,11 @@ export function VaultView({ companyId }: VaultViewProps) {
   const uploadMutation = useVaultUpload();
   const deleteMutation = useVaultDelete();
   const verifyMutation = useVaultVerify();
+
+  // Subscribe to main-process vault events so out-of-band mutations
+  // (E2E direct-IPC calls, agent tools, backup restores) invalidate
+  // the React Query cache. Mount-and-forget — hook handles cleanup.
+  useVaultEventSync(companyId);
 
   const displayFiles =
     searchQuery.trim().length > 0 && searchResults

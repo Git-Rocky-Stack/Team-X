@@ -551,6 +551,10 @@ app
         const company = companiesRepo.list().find((c) => c.id === companyId);
         return company?.slug ?? null;
       },
+      // M30 T0 — wire the event bus so vault mutations fan out to the
+      // renderer subscriber. Closes the vault-backup E2E staleness
+      // regression (see docs/plans/2026-04-13-vault-backup-regression-findings.md).
+      bus,
     });
 
     const backupService = createBackupService({

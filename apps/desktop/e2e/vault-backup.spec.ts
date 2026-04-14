@@ -178,15 +178,19 @@ test.describe('Team-X Phase 4 vault-backup flow', () => {
     log('vault stats updated to 1 file');
 
     // --- 5. Verify file integrity via IPC ------------------------------------
+    // Preload bridge signature is positional: `vault.verify(fileId: string)`.
+    // (See `apps/desktop/src/preload/api.ts` — the preload wraps the
+    // string into `{ fileId }` before invoking the IPC handler.) Response
+    // shape is `{ ok: boolean, expected: string, actual: string }`.
     const verifyResult = await window.evaluate(
       async ({ fid }: { fid: string }) => {
         // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
         const w = window as any;
-        return w.teamx.vault.verify({ fileId: fid });
+        return w.teamx.vault.verify(fid);
       },
       { fid: uploadResult.fileId },
     );
-    expect(verifyResult?.valid).toBe(true);
+    expect(verifyResult?.ok).toBe(true);
     log('SHA256 integrity verified');
 
     // --- 6. Navigate to Settings → Backup section ----------------------------
@@ -198,13 +202,15 @@ test.describe('Team-X Phase 4 vault-backup flow', () => {
     log('Backup & Restore section visible');
 
     // --- 7. Create backup via IPC -------------------------------------------
+    // Response shape: `{ backupPath, manifest }` — see
+    // `BackupCreateResponse` in `packages/shared-types/src/ipc.ts`.
     const backupResult = await window.evaluate(async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
       const w = window as any;
       return w.teamx.backup.create({});
     });
-    expect(backupResult?.archivePath).toBeTruthy();
-    log(`backup created: ${backupResult.archivePath}`);
+    expect(backupResult?.backupPath).toBeTruthy();
+    log(`backup created: ${backupResult.backupPath}`);
 
     // Verify backup list shows at least one entry.
     const backupList = await window.evaluate(async () => {

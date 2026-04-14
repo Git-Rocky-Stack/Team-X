@@ -145,7 +145,7 @@ test.describe('Team-X rag-flow', () => {
     // below the default 0.7. Drop to 0 so ANY shared-character overlap
     // is accepted for retrieval.
     const thresholdResult = await window.evaluate(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
       const teamx = (window as any).teamx;
       await teamx.settings.setRagConfig({ ragThreshold: 0 });
       return teamx.settings.getRagConfig();
@@ -192,7 +192,7 @@ test.describe('Team-X rag-flow', () => {
     const ragStats = await window.evaluate(async () => {
       // Use the first seeded company (main/seed.ts creates Strategia-X).
       // The contextBridge exposes the typed TeamXApi as window.teamx.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
       const teamx = (window as any).teamx;
       const companies = await teamx.companies.list();
       const cid = companies[0]?.id ?? '';
