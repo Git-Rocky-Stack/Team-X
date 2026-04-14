@@ -34,15 +34,31 @@ describe('rag.stats', () => {
     const result = await handlers.stats('c1');
     expect(result.lastIndexedAt).toBeNull();
   });
+
+  it('surfaces enabled=false when isRagEnabled returns false', async () => {
+    const deps = makeDeps({ isRagEnabled: () => false });
+    const handlers = buildRagHandlers(deps);
+    const result = await handlers.stats('c1');
+    expect(result.enabled).toBe(false);
+  });
 });
 
 describe('rag.rebuildAll', () => {
-  it('wipes existing embeddings then rebuilds', async () => {
-    const deps = makeDeps();
+  it('wipes existing embeddings BEFORE rebuilding (strict order)', async () => {
+    const order: string[] = [];
+    const deps = makeDeps({
+      deleteAllForCompany: vi.fn((cid: string) => {
+        order.push(`delete:${cid}`);
+        return 42;
+      }),
+      rebuildSources: vi.fn(async (cid: string) => {
+        order.push(`rebuild:${cid}`);
+        return 10;
+      }),
+    });
     const handlers = buildRagHandlers(deps);
     const result = await handlers.rebuildAll('c1');
-    expect(deps.deleteAllForCompany).toHaveBeenCalledWith('c1');
-    expect(deps.rebuildSources).toHaveBeenCalledWith('c1');
+    expect(order).toEqual(['delete:c1', 'rebuild:c1']);
     expect(result.scheduled).toBe(10);
   });
 });

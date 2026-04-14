@@ -621,21 +621,47 @@ app
         // embeds each non-empty one. If `ragService` is null (user has
         // not configured a provider), return 0 — the Settings UI then
         // surfaces "RAG disabled" to the user without raising.
+        //
+        // Per-source errors are isolated: a single embed-provider failure
+        // (network blip, rate limit) must not abort the entire rebuild
+        // mid-company after we've already wiped embeddings in the caller
+        // — that would leave the user with an empty index and no signal
+        // why. We log each failure, continue, and the returned count
+        // reflects successful indexes only. Settings UI can surface
+        // partial-success to the user when count < expected.
+        //
+        // TOCTOU note: while this rebuild runs, the RagIndexer is still
+        // subscribed and may fire indexSource for fresh agent replies.
+        // This is safe — RagService.indexSource is delete-then-upsert on
+        // (sourceId), so overlapping calls for different sourceIds never
+        // collide, and two calls for the same sourceId leave the latest
+        // content wins. No duplicates, no corruption.
         if (ragService === null) return 0;
         const threads = threadsRepo.listByCompany(companyId);
         let count = 0;
+        let failed = 0;
         for (const t of threads) {
           const msgs = messagesRepo.listByThread(t.id);
           for (const m of msgs) {
             if (!m.content.trim()) continue;
-            await ragService.indexSource({
-              companyId,
-              sourceType: 'message',
-              sourceId: m.id,
-              content: m.content,
-            });
-            count++;
+            try {
+              await ragService.indexSource({
+                companyId,
+                sourceType: 'message',
+                sourceId: m.id,
+                content: m.content,
+              });
+              count++;
+            } catch (err) {
+              failed++;
+              console.error(`[rag] rebuild: indexSource failed for message ${m.id}:`, err);
+            }
           }
+        }
+        if (failed > 0) {
+          console.warn(
+            `[rag] rebuild for company ${companyId}: ${count} succeeded, ${failed} failed`,
+          );
         }
         return count;
       },
