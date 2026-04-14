@@ -646,14 +646,11 @@ app.on('will-quit', (event) => {
   // closed by the time will-quit fires, so there is no UI to lose.
   event.preventDefault();
   void (async () => {
-    try {
-      if (orchestrator !== null) {
-        await orchestrator.shutdown();
-        orchestrator = null;
-      }
-    } catch (err) {
-      console.error('[main] orchestrator shutdown failed:', err);
-    }
+    // Stop the RAG indexer BEFORE draining the orchestrator: the indexer
+    // subscribes to the event bus, and the orchestrator writes events
+    // during its drain. Stopping the subscriber first means any final
+    // drain events simply have no listener — no in-flight embed call
+    // can land while the process is tearing down.
     try {
       if (ragIndexerInstance !== null) {
         ragIndexerInstance.stop();
@@ -661,6 +658,14 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] rag indexer stop failed:', err);
+    }
+    try {
+      if (orchestrator !== null) {
+        await orchestrator.shutdown();
+        orchestrator = null;
+      }
+    } catch (err) {
+      console.error('[main] orchestrator shutdown failed:', err);
     }
     try {
       if (unregisterIpc !== null) {
