@@ -717,6 +717,32 @@ export interface UpdateInstallResult {
 }
 
 // ---------------------------------------------------------------------------
+// RAG management shapes (Phase 5 — M29)
+// ---------------------------------------------------------------------------
+
+/** Aggregate statistics for a company's embedding store. */
+export interface RagStatsResponse {
+  /** Total embedding rows (chunks) stored for the company. */
+  embeddingCount: number;
+  /** Millisecond timestamp of the newest embedding row, or null if none. */
+  lastIndexedAt: number | null;
+  /** Whether the RAG subsystem is currently active (provider configured). */
+  enabled: boolean;
+}
+
+/** Result of wiping + re-indexing every eligible source for a company. */
+export interface RagRebuildAllResponse {
+  /** Count of sources scheduled for re-embedding. */
+  scheduled: number;
+}
+
+/** Result of wiping every embedding for a company (no re-index). */
+export interface RagDeleteForCompanyResponse {
+  /** Count of embedding rows removed. */
+  deleted: number;
+}
+
+// ---------------------------------------------------------------------------
 // Settings management shapes (Phase 3 — M19)
 // ---------------------------------------------------------------------------
 
@@ -1026,6 +1052,19 @@ export interface IpcContract {
     request: Record<string, never>;
     response: UpdateInstallResult;
   };
+  // RAG channels (Phase 5 — M29)
+  'rag.stats': {
+    request: string;
+    response: RagStatsResponse;
+  };
+  'rag.rebuildAll': {
+    request: string;
+    response: RagRebuildAllResponse;
+  };
+  'rag.deleteForCompany': {
+    request: string;
+    response: RagDeleteForCompanyResponse;
+  };
   // Ticket management channels
   'tickets.create': {
     request: CreateTicketRequest;
@@ -1280,6 +1319,14 @@ export interface TeamXApi {
     check(): Promise<UpdateCheckResult>;
     /** Download and install the available update. App will restart. */
     install(): Promise<UpdateInstallResult>;
+  };
+  rag: {
+    /** Aggregate embedding stats for the Settings panel summary card. */
+    stats(companyId: string): Promise<RagStatsResponse>;
+    /** Destructive: wipe then re-index every eligible source for the company. */
+    rebuildAll(companyId: string): Promise<RagRebuildAllResponse>;
+    /** Destructive: wipe every embedding row for the company (no re-index). */
+    deleteForCompany(companyId: string): Promise<RagDeleteForCompanyResponse>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

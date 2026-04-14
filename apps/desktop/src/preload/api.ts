@@ -78,6 +78,9 @@ import type {
   Project,
   ProjectDetail,
   ProviderConfig,
+  RagDeleteForCompanyResponse,
+  RagRebuildAllResponse,
+  RagStatsResponse,
   ResolveThreadRequest,
   ResolveThreadResponse,
   SendChatRequest,
@@ -232,6 +235,10 @@ const CHANNELS = {
   // Updater (Phase 4 — M25)
   updaterCheck: 'updater.check',
   updaterInstall: 'updater.install',
+  // RAG management (Phase 5 — M29)
+  ragStats: 'rag.stats',
+  ragRebuildAll: 'rag.rebuildAll',
+  ragDeleteForCompany: 'rag.deleteForCompany',
 } as const;
 
 /**
@@ -403,6 +410,14 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     updater: {
       check: () => ipc.invoke(CHANNELS.updaterCheck) as Promise<UpdateCheckResult>,
       install: () => ipc.invoke(CHANNELS.updaterInstall) as Promise<UpdateInstallResult>,
+    },
+    rag: {
+      stats: (companyId: string) =>
+        ipc.invoke(CHANNELS.ragStats, companyId) as Promise<RagStatsResponse>,
+      rebuildAll: (companyId: string) =>
+        ipc.invoke(CHANNELS.ragRebuildAll, companyId) as Promise<RagRebuildAllResponse>,
+      deleteForCompany: (companyId: string) =>
+        ipc.invoke(CHANNELS.ragDeleteForCompany, companyId) as Promise<RagDeleteForCompanyResponse>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

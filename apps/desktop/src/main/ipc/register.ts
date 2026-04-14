@@ -145,6 +145,10 @@ const REQUEST_CHANNELS = [
   // Updater (Phase 4 — M25)
   'updater.check',
   'updater.install',
+  // RAG management (Phase 5 — M29)
+  'rag.stats',
+  'rag.rebuildAll',
+  'rag.deleteForCompany',
 ] as const;
 
 /** Channel name for the one-way bus → renderer fan-out. */

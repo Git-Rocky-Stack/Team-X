@@ -42,7 +42,7 @@
  */
 
 import { join } from 'node:path';
-import { BrowserWindow, app, dialog } from 'electron';
+import { BrowserWindow, app, dialog, ipcMain } from 'electron';
 
 import { calcCostUsd } from '@team-x/telemetry-core';
 
@@ -77,6 +77,7 @@ import { createVaultRepo } from './db/repos/vault.js';
 import { messages as messagesTable } from './db/schema.js';
 import { seed } from './db/seed.js';
 import { createIpcHandlers } from './ipc/handlers.js';
+import { buildRagHandlers } from './ipc/rag-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
 import { createEventBus } from './orchestrator/event-bus.js';
 import {
@@ -587,6 +588,65 @@ app
       getHardwareProfile: detectHardware,
     });
     unregisterIpc = registerIpcHandlers(ipcHandlers, bus);
+
+    // ---- RAG IPC handlers (Phase 5 — M29 T7) -------------------------------
+    //
+    // Kept as a sibling registration block rather than folded into
+    // `createIpcHandlers` because the rag subsystem is optional at runtime
+    // (invariant #7): the `ragService` handle may be null for the whole
+    // session, and the rebuild closure has to close over `threadsRepo` +
+    // `messagesRepo` + `ragService` directly — none of which belong on the
+    // `IpcHandlers` DI surface just for this one callsite. The three
+    // channel strings are in `REQUEST_CHANNELS` so `unregisterIpc()` will
+    // strip them on shutdown alongside every other channel.
+    const ragHandlers = buildRagHandlers({
+      embeddingsRepo,
+      isRagEnabled: () => ragService !== null,
+      deleteAllForCompany: (companyId: string) => {
+        // The embeddings repo exposes `deleteBySource(sourceId)` but no
+        // bulk-by-company helper. Iterate the distinct source-ids for
+        // this company and sum the per-source delete counts — one write
+        // per source keeps the surface area tiny and avoids growing the
+        // repo just for this caller.
+        const rows = embeddingsRepo.listByCompany(companyId);
+        const uniqueSourceIds = new Set(rows.map((r) => r.sourceId));
+        let deleted = 0;
+        for (const sourceId of uniqueSourceIds) {
+          deleted += embeddingsRepo.deleteBySource(sourceId);
+        }
+        return deleted;
+      },
+      rebuildSources: async (companyId: string) => {
+        // Walks every message in every thread of this company and re-
+        // embeds each non-empty one. If `ragService` is null (user has
+        // not configured a provider), return 0 — the Settings UI then
+        // surfaces "RAG disabled" to the user without raising.
+        if (ragService === null) return 0;
+        const threads = threadsRepo.listByCompany(companyId);
+        let count = 0;
+        for (const t of threads) {
+          const msgs = messagesRepo.listByThread(t.id);
+          for (const m of msgs) {
+            if (!m.content.trim()) continue;
+            await ragService.indexSource({
+              companyId,
+              sourceType: 'message',
+              sourceId: m.id,
+              content: m.content,
+            });
+            count++;
+          }
+        }
+        return count;
+      },
+    });
+    ipcMain.handle('rag.stats', (_evt, companyId: string) => ragHandlers.stats(companyId));
+    ipcMain.handle('rag.rebuildAll', (_evt, companyId: string) =>
+      ragHandlers.rebuildAll(companyId),
+    );
+    ipcMain.handle('rag.deleteForCompany', (_evt, companyId: string) =>
+      ragHandlers.deleteForCompany(companyId),
+    );
 
     console.log('[main] orchestrator + IPC ready');
 
