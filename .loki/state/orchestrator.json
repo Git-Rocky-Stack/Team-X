@@ -4,9 +4,9 @@
   "milestoneName": "Agentic Loop",
   "tasksCompleted": 0,
   "tasksFailed": 0,
-  "totalTasks": null,
-  "planDoc": null,
-  "startedAt": null,
+  "totalTasks": 11,
+  "planDoc": "docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md",
+  "startedAt": "2026-04-14T02:15:00Z",
   "completedAt": null,
   "phaseComplete": false,
   "phase": "Phase 5 — Intelligence Layer",
@@ -14,7 +14,7 @@
   "previousMilestoneName": "NLU Engine",
   "previousMilestoneCompletedAt": "2026-04-14T01:30:00Z",
   "nextMilestone": "M32",
-  "nextMilestoneName": "TBD",
+  "nextMilestoneName": "Task Planner (decompose/delegate/review tools)",
   "tasksInProgress": {},
   "baseline": {
     "unitTests": 819,
@@ -23,6 +23,14 @@
     "lintErrors": 0,
     "lintWarnings": 66,
     "typecheckClean": true
+  },
+  "targets": {
+    "unitTests": 905,
+    "unitTestDelta": 86,
+    "e2eSpecs": 8,
+    "e2eSpecDelta": 1,
+    "lintErrors": 0,
+    "lintWarningsMax": 76
   },
   "history": {
     "M30": {
