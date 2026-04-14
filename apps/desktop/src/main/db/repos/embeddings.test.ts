@@ -61,8 +61,8 @@ describe('EmbeddingsRepo', () => {
     expect(id).toBe('emb-1');
     const row = repo.getById('emb-1');
     expect(row).not.toBeNull();
-    expect(row!.sourceType).toBe('message');
-    expect(row!.contentText).toBe('Hello world');
+    expect(row?.sourceType).toBe('message');
+    expect(row?.contentText).toBe('Hello world');
   });
 
   it('upserts replaces existing chunk', () => {
@@ -88,7 +88,7 @@ describe('EmbeddingsRepo', () => {
       createdAt: 2000,
     });
     const row = repo.getById('emb-1');
-    expect(row!.contentText).toBe('Updated');
+    expect(row?.contentText).toBe('Updated');
   });
 
   it('lists by source ordered by chunk_index', () => {
@@ -114,8 +114,8 @@ describe('EmbeddingsRepo', () => {
     });
     const chunks = repo.listBySource('tkt-1');
     expect(chunks).toHaveLength(2);
-    expect(chunks[0]!.chunkIndex).toBe(0);
-    expect(chunks[1]!.chunkIndex).toBe(1);
+    expect(chunks[0]?.chunkIndex).toBe(0);
+    expect(chunks[1]?.chunkIndex).toBe(1);
   });
 
   it('deletes by source', () => {

@@ -137,7 +137,7 @@ function makeHistoryRepo() {
     clearForCompany: vi.fn((companyId: string) => {
       const n = rows.filter((r) => r.companyId === companyId).length;
       for (let i = rows.length - 1; i >= 0; i--) {
-        if (rows[i]!.companyId === companyId) rows.splice(i, 1);
+        if (rows[i]?.companyId === companyId) rows.splice(i, 1);
       }
       return n;
     }),
@@ -320,8 +320,8 @@ describe('CommandService.execute', () => {
       assigneeId: 'emp-1',
     });
     expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe('command.executed');
-    const payload = events[0]!.payload as CommandExecutedPayload;
+    expect(events[0]?.type).toBe('command.executed');
+    const payload = events[0]?.payload as CommandExecutedPayload;
     expect(payload.intent).toBe('assign_ticket');
     expect(payload.outcome).toBe('ok');
     expect(payload.entities).toEqual({ ticketId: 'tix-9', employeeId: 'emp-1' });
@@ -355,7 +355,7 @@ describe('CommandService.execute', () => {
     expect(result.kind).toBe('ok');
     expect(fireMock).toHaveBeenCalledWith({ employeeId: 'emp-1' });
     expect(events).toHaveLength(1);
-    expect((events[0]!.payload as CommandExecutedPayload).outcome).toBe('ok');
+    expect((events[0]?.payload as CommandExecutedPayload).outcome).toBe('ok');
   });
 
   it('7. handler throw returns error result and emits error event', async () => {
@@ -377,7 +377,7 @@ describe('CommandService.execute', () => {
       expect(result.message).toContain('db is down');
     }
     expect(events).toHaveLength(1);
-    expect((events[0]!.payload as CommandExecutedPayload).outcome).toBe('error');
+    expect((events[0]?.payload as CommandExecutedPayload).outcome).toBe('error');
   });
 
   it('8. unknown intent rejects with unknown_intent', async () => {
@@ -473,12 +473,12 @@ describe('CommandService.history', () => {
     const hist = await svc.history(10, 'co-1');
     expect(hist).toHaveLength(3);
     // The repo fake uses `unshift` — most recent first.
-    expect(hist[0]!.text).toBe('c');
-    expect(hist[1]!.text).toBe('b');
-    expect(hist[2]!.text).toBe('a');
+    expect(hist[0]?.text).toBe('c');
+    expect(hist[1]?.text).toBe('b');
+    expect(hist[2]?.text).toBe('a');
     // Each entry must round-trip through JSON correctly.
-    expect(hist[0]!.intent).toBe('check_status');
-    expect(hist[0]!.outcome).toBe('ok');
+    expect(hist[0]?.intent).toBe('check_status');
+    expect(hist[0]?.outcome).toBe('ok');
   });
 
   it('11. FIFO cap 20 — 21st execute drops the oldest', async () => {
@@ -496,7 +496,7 @@ describe('CommandService.history', () => {
     // Oldest ("msg-0") should have been evicted.
     expect(hist.every((e) => e.text !== 'msg-0')).toBe(true);
     // Newest ("msg-20") must still be present.
-    expect(hist[0]!.text).toBe('msg-20');
+    expect(hist[0]?.text).toBe('msg-20');
   });
 });
 

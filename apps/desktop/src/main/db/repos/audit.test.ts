@@ -65,7 +65,7 @@ describe('audit repo', () => {
       seedEvents();
       const rows = audit.list({ companyId: 'co-1' });
       for (let i = 1; i < rows.length; i++) {
-        expect(rows[i - 1]!.createdAt).toBeGreaterThanOrEqual(rows[i]!.createdAt);
+        expect(rows[i - 1]?.createdAt).toBeGreaterThanOrEqual(rows[i]?.createdAt);
       }
     });
 
@@ -73,14 +73,14 @@ describe('audit repo', () => {
       seedEvents();
       const rows = audit.list({ companyId: 'co-1', eventTypes: ['employee.hired'] });
       expect(rows).toHaveLength(1);
-      expect(rows[0]!.eventType).toBe('employee.hired');
+      expect(rows[0]?.eventType).toBe('employee.hired');
     });
 
     it('filters by actor id', () => {
       seedEvents();
       const rows = audit.list({ companyId: 'co-1', actorId: 'emp-1' });
       expect(rows).toHaveLength(1);
-      expect(rows[0]!.actorId).toBe('emp-1');
+      expect(rows[0]?.actorId).toBe('emp-1');
     });
 
     it('respects limit and offset', () => {
@@ -99,7 +99,7 @@ describe('audit repo', () => {
     it('filters by date range', () => {
       seedEvents();
       const all = audit.list({ companyId: 'co-1' });
-      const midTime = all[1]!.createdAt;
+      const midTime = all[1]?.createdAt;
       const filtered = audit.list({ companyId: 'co-1', fromMs: midTime });
       expect(filtered.length).toBeGreaterThanOrEqual(1);
       for (const r of filtered) {
@@ -133,8 +133,8 @@ describe('audit repo', () => {
         payload: { name: 'Charlie' },
       });
       const s = audit.stats('co-1');
-      expect(s.topEventTypes[0]!.eventType).toBe('employee.hired');
-      expect(s.topEventTypes[0]!.count).toBe(2);
+      expect(s.topEventTypes[0]?.eventType).toBe('employee.hired');
+      expect(s.topEventTypes[0]?.count).toBe(2);
     });
 
     it('returns empty stats for company with no events', () => {

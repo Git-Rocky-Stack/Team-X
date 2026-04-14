@@ -10,14 +10,14 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
+import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import {
+  type BootstrapRoleLookup,
   SYSTEM_AGENT_DISPLAY_NAME,
   SYSTEM_AGENT_ROLE_ID,
   SYSTEM_AGENT_ROLE_PACK_ID,
-  type BootstrapRoleLookup,
   ensureSystemAgent,
 } from './system-agent-bootstrap.js';
 
@@ -111,14 +111,16 @@ describe('ensureSystemAgent', () => {
 
     const employees = createEmployeesRepo(ctx.db);
     expect(employees.findSystemByRoleId(companyId, SYSTEM_AGENT_ROLE_ID)?.id).toBe(a.employeeId);
-    expect(employees.findSystemByRoleId(otherCompanyId, SYSTEM_AGENT_ROLE_ID)?.id).toBe(b.employeeId);
+    expect(employees.findSystemByRoleId(otherCompanyId, SYSTEM_AGENT_ROLE_ID)?.id).toBe(
+      b.employeeId,
+    );
   });
 
   it('throws a helpful error when the role-loader has no system-agent spec', () => {
     const emptyLookup: BootstrapRoleLookup = { getSpec: () => null };
-    expect(() =>
-      ensureSystemAgent({ db: ctx.db, companyId, roleLookup: emptyLookup }),
-    ).toThrow(/no spec for id "system-agent"/i);
+    expect(() => ensureSystemAgent({ db: ctx.db, companyId, roleLookup: emptyLookup })).toThrow(
+      /no spec for id "system-agent"/i,
+    );
   });
 
   it('refuses to seed a non-system role as the system-agent', () => {
@@ -134,9 +136,9 @@ describe('ensureSystemAgent', () => {
         sha256: 'cafebabe'.repeat(8),
       }),
     };
-    expect(() =>
-      ensureSystemAgent({ db: ctx.db, companyId, roleLookup: wrongLevel }),
-    ).toThrow(/level "officer", expected "system"/i);
+    expect(() => ensureSystemAgent({ db: ctx.db, companyId, roleLookup: wrongLevel })).toThrow(
+      /level "officer", expected "system"/i,
+    );
   });
 
   it('propagates tools_allowed and tools_denied from the role spec', () => {

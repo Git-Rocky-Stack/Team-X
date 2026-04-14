@@ -30,8 +30,8 @@ describe('rankBySimilarity', () => {
     ];
     const results = rankBySimilarity(query, candidates, { topK: 2, threshold: 0.0 });
     expect(results).toHaveLength(2);
-    expect(results[0]!.id).toBe('a');
-    expect(results[1]!.id).toBe('c');
+    expect(results[0]?.id).toBe('a');
+    expect(results[1]?.id).toBe('c');
   });
 
   it('filters by threshold', () => {
@@ -44,7 +44,7 @@ describe('rankBySimilarity', () => {
       { topK: 10, threshold: 0.5 },
     );
     expect(results).toHaveLength(1);
-    expect(results[0]!.id).toBe('a');
+    expect(results[0]?.id).toBe('a');
   });
 
   it('returns empty when nothing exceeds threshold', () => {

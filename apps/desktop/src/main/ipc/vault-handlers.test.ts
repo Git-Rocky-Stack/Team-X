@@ -140,7 +140,7 @@ describe('vault IPC handlers', () => {
     it('returns all files for the company', async () => {
       const result = await handlers.vaultList({ companyId: 'co-1' });
       expect(result).toHaveLength(1);
-      expect(result[0]!.originalName).toBe('README.md');
+      expect(result[0]?.originalName).toBe('README.md');
       expect(vaultService.list).toHaveBeenCalledWith('co-1');
     });
 

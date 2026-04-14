@@ -233,7 +233,11 @@ async function resolveVaultFile(
 
   const matches = await deps.searchVault(trimmed, companyId);
   if (matches.length === 0) return { kind: 'not_found' };
-  if (matches.length === 1) return { kind: 'unique', value: matches[0]!.file };
+  if (matches.length === 1) {
+    const only = matches[0];
+    if (!only) return { kind: 'not_found' };
+    return { kind: 'unique', value: only.file };
+  }
 
   // Clear rank margin → unique.
   // FTS5 BM25 rank is negative; more-negative means better. We test

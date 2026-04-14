@@ -63,7 +63,7 @@ describe('vault repo', () => {
       });
 
       const row = vaultRepo.getById(id);
-      expect(JSON.parse(row!.tagsJson)).toEqual(['docs', 'important']);
+      expect(JSON.parse(row?.tagsJson)).toEqual(['docs', 'important']);
     });
 
     it('defaults tags to empty array', () => {
@@ -115,7 +115,7 @@ describe('vault repo', () => {
       const files = vaultRepo.listByCompany(companyId);
       expect(files).toHaveLength(2);
       // Newest first
-      expect(files[0]!.createdAt).toBeGreaterThanOrEqual(files[1]!.createdAt);
+      expect(files[0]?.createdAt).toBeGreaterThanOrEqual(files[1]?.createdAt);
     });
 
     it('returns empty array for company with no files', () => {
@@ -148,7 +148,7 @@ describe('vault repo', () => {
 
       const images = vaultRepo.listByMimePrefix(companyId, 'image/');
       expect(images).toHaveLength(1);
-      expect(images[0]!.originalName).toBe('photo.png');
+      expect(images[0]?.originalName).toBe('photo.png');
     });
   });
 
@@ -172,8 +172,8 @@ describe('vault repo', () => {
 
       const row = vaultRepo.getById(id);
       expect(row?.originalName).toBe('new-name.txt');
-      expect(JSON.parse(row!.tagsJson)).toEqual(['renamed']);
-      expect(row!.updatedAt).toBeGreaterThanOrEqual(row!.createdAt);
+      expect(JSON.parse(row?.tagsJson)).toEqual(['renamed']);
+      expect(row?.updatedAt).toBeGreaterThanOrEqual(row?.createdAt);
     });
   });
 
@@ -222,7 +222,7 @@ describe('vault repo', () => {
 
       const results = vaultRepo.search(companyId, 'README');
       expect(results.length).toBeGreaterThanOrEqual(1);
-      expect(results[0]!.originalName).toBe('README.md');
+      expect(results[0]?.originalName).toBe('README.md');
     });
 
     it('returns empty array when nothing matches', () => {

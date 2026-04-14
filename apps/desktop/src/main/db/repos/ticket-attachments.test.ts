@@ -123,7 +123,7 @@ describe('ticket attachments repo', () => {
       const list = attachmentsRepo.listByTicket(ticketId);
       expect(list).toHaveLength(2);
       // Newest first
-      expect(list[0]!.attachedAt).toBeGreaterThanOrEqual(list[1]!.attachedAt);
+      expect(list[0]?.attachedAt).toBeGreaterThanOrEqual(list[1]?.attachedAt);
     });
 
     it('returns empty array for ticket with no attachments', () => {
@@ -136,7 +136,7 @@ describe('ticket attachments repo', () => {
       attachmentsRepo.attach(ticketId, fileId, 'rocky');
       const list = attachmentsRepo.listByFile(fileId);
       expect(list).toHaveLength(1);
-      expect(list[0]!.ticketId).toBe(ticketId);
+      expect(list[0]?.ticketId).toBe(ticketId);
     });
   });
 

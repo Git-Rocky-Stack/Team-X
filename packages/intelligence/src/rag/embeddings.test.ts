@@ -14,7 +14,7 @@ describe('EmbeddingGenerator', () => {
     const results = await gen.embed(['Hello world']);
     expect(results).toHaveLength(1);
     expect(results[0]).toHaveLength(4);
-    expect(typeof results[0]![0]).toBe('number');
+    expect(typeof results[0]?.[0]).toBe('number');
   });
 
   it('generates embeddings for multiple texts', async () => {
@@ -28,7 +28,7 @@ describe('EmbeddingGenerator', () => {
     const buffers = await gen.embedAsBuffers(['Hello world']);
     expect(buffers).toHaveLength(1);
     expect(buffers[0]).toBeInstanceOf(Buffer);
-    expect(buffers[0]!.byteLength).toBe(16);
+    expect(buffers[0]?.byteLength).toBe(16);
   });
 
   it('handles empty input', async () => {

@@ -973,8 +973,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       // and it goes through the repo directly, not this handler.
       if (spec.frontmatter.level === 'system') {
         throw new Error(
-          `[ipc] employees.create: role "${roleId}" is framework-internal ` +
-            'and cannot be hired. Use the command palette for complex requests instead.',
+          `[ipc] employees.create: role "${roleId}" is framework-internal and cannot be hired. Use the command palette for complex requests instead.`,
         );
       }
 

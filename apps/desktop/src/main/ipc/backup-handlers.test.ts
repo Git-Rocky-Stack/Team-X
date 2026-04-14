@@ -103,7 +103,7 @@ describe('backup IPC handlers', () => {
     it('returns list of backups', async () => {
       const result = await handlers.backupList();
       expect(result).toHaveLength(1);
-      expect(result[0]!.filename).toBe('backup-2026-04-13');
+      expect(result[0]?.filename).toBe('backup-2026-04-13');
     });
   });
 });

@@ -118,16 +118,13 @@ export function ensureSystemAgent<TRunResult>(
   const spec = roleLookup.getSpec(SYSTEM_AGENT_ROLE_ID);
   if (!spec) {
     throw new Error(
-      `[system-agent] role-loader returned no spec for id "${SYSTEM_AGENT_ROLE_ID}". ` +
-        'Check that role-packs/strategia-official/roles/system/system-agent.md exists ' +
-        'and that the role-packs root is configured correctly for this process.',
+      `[system-agent] role-loader returned no spec for id "${SYSTEM_AGENT_ROLE_ID}". Check that role-packs/strategia-official/roles/system/system-agent.md exists and that the role-packs root is configured correctly for this process.`,
     );
   }
 
   if (spec.frontmatter.level !== 'system') {
     throw new Error(
-      `[system-agent] spec "${SYSTEM_AGENT_ROLE_ID}" has level "${spec.frontmatter.level}", ` +
-        'expected "system". Refusing to seed a non-system role as a system-agent.',
+      `[system-agent] spec "${SYSTEM_AGENT_ROLE_ID}" has level "${spec.frontmatter.level}", expected "system". Refusing to seed a non-system role as a system-agent.`,
     );
   }
 

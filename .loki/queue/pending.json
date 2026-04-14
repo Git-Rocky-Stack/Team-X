@@ -12,7 +12,9 @@
     {
       "id": "T0",
       "title": "System-agent seed + is_system column (migration 0010)",
-      "status": "pending",
+      "status": "completed",
+      "commit": "4f30efa",
+      "completedAt": "2026-04-14T03:00:00Z",
       "blockedBy": [],
       "estTests": 8,
       "files": [
@@ -27,7 +29,10 @@
     {
       "id": "T1",
       "title": "Agentic loop core — @team-x/intelligence/src/loop/",
-      "status": "pending",
+      "status": "completed",
+      "startedAt": "2026-04-14T04:00:00Z",
+      "completedAt": "2026-04-14T05:00:00Z",
+      "actualTests": 33,
       "blockedBy": ["T0"],
       "estTests": 18,
       "files": [
@@ -155,11 +160,7 @@
       "status": "pending",
       "blockedBy": ["T9"],
       "estTests": 0,
-      "files": [
-        ".loki/state/orchestrator.json",
-        ".loki/queue/pending.json",
-        ".loki/CONTINUITY.md"
-      ],
+      "files": [".loki/state/orchestrator.json", ".loki/queue/pending.json", ".loki/CONTINUITY.md"],
       "goal": "Repo-root typecheck clean. Biome 0 errors / ≤76 warnings. ~905 unit tests. ABI rebuild dance + 8/8 E2E specs green. Orchestrator → M32, queue cleared, CONTINUITY rewritten."
     }
   ],
