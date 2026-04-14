@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createEmbedText, type EmbedAdapter } from './embed.js';
+import { type EmbedAdapter, createEmbedText } from './embed.js';
 
 describe('createEmbedText', () => {
   it('delegates to the adapter for a single text', async () => {

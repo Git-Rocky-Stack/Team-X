@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { EmbedTextFn } from './embeddings.js';
 import {
-  createRagService,
   type RagEmbeddingRow,
   type RagRepo,
   type RagUpsertInput,
+  createRagService,
 } from './service.js';
-import type { EmbedTextFn } from './embeddings.js';
 
 const fakeEmbed: EmbedTextFn = async (texts) =>
   texts.map((t) => [t.length % 10, (t.charCodeAt(0) || 0) % 10, 1, 0]);

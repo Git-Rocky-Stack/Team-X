@@ -153,7 +153,8 @@ export function RagSection() {
     setConfirmAction(null);
     setRebuildFeedback(null);
     rebuildRag.mutate(undefined, {
-      onSuccess: (res) => setRebuildFeedback(`Scheduled ${res.scheduled} source(s) for re-indexing.`),
+      onSuccess: (res) =>
+        setRebuildFeedback(`Scheduled ${res.scheduled} source(s) for re-indexing.`),
     });
   }
 
@@ -187,10 +188,7 @@ export function RagSection() {
               Enabled
             </Badge>
           ) : (
-            <Badge
-              variant="outline"
-              className="text-muted-foreground text-[10px] px-1.5 py-0"
-            >
+            <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">
               Disabled
             </Badge>
           )}
@@ -282,9 +280,7 @@ export function RagSection() {
               placeholder="nomic-embed-text"
               className="h-8 text-xs"
             />
-            <p className="text-[10px] text-muted-foreground/70">
-              'auto' or model name
-            </p>
+            <p className="text-[10px] text-muted-foreground/70">'auto' or model name</p>
           </div>
           <div className="space-y-1">
             <label
@@ -334,10 +330,7 @@ export function RagSection() {
         {/* Top-K */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="rag-top-k"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="rag-top-k" className="text-[11px] font-medium text-muted-foreground">
               Top-K
             </label>
             <span className="text-[11px] font-mono text-foreground tabular-nums">
@@ -447,9 +440,7 @@ export function RagSection() {
       {setConfig.isError && (
         <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-          <span className="min-w-0 truncate">
-            Failed to save: {String(setConfig.error)}
-          </span>
+          <span className="min-w-0 truncate">Failed to save: {String(setConfig.error)}</span>
         </div>
       )}
 
@@ -471,9 +462,7 @@ export function RagSection() {
           )}
         </div>
         {!hasCompany ? (
-          <p className="text-[11px] text-muted-foreground">
-            Select a company to view index stats.
-          </p>
+          <p className="text-[11px] text-muted-foreground">Select a company to view index stats.</p>
         ) : statsLoading ? (
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -507,8 +496,8 @@ export function RagSection() {
       <div className="rounded-lg border border-border bg-surface-50 p-4 space-y-2">
         <p className="text-xs font-semibold text-foreground">Maintenance</p>
         <p className="text-[11px] text-muted-foreground leading-snug">
-          Rebuild re-indexes every eligible source. Delete wipes all embeddings without
-          re-indexing. Both actions are destructive and cannot be undone.
+          Rebuild re-indexes every eligible source. Delete wipes all embeddings without re-indexing.
+          Both actions are destructive and cannot be undone.
         </p>
 
         {/* Rebuild row */}
@@ -621,9 +610,7 @@ export function RagSection() {
         {rebuildRag.isError && (
           <div className="mt-2 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            <span className="min-w-0 truncate">
-              Rebuild failed: {String(rebuildRag.error)}
-            </span>
+            <span className="min-w-0 truncate">Rebuild failed: {String(rebuildRag.error)}</span>
           </div>
         )}
         {deleteFeedback && (
@@ -635,9 +622,7 @@ export function RagSection() {
         {deleteRag.isError && (
           <div className="mt-2 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            <span className="min-w-0 truncate">
-              Delete failed: {String(deleteRag.error)}
-            </span>
+            <span className="min-w-0 truncate">Delete failed: {String(deleteRag.error)}</span>
           </div>
         )}
       </div>

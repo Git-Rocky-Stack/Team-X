@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildRagHandlers, type RagHandlersDeps } from './rag-handlers.js';
+import { type RagHandlersDeps, buildRagHandlers } from './rag-handlers.js';
 
 function makeDeps(overrides: Partial<RagHandlersDeps> = {}): RagHandlersDeps {
   return {

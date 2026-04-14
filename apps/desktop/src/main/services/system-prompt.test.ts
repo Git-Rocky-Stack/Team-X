@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  composeSystemPromptWithRag,
   type ComposeDeps,
   type RecentMessage,
+  composeSystemPromptWithRag,
 } from './system-prompt.js';
 
 function makeDeps(overrides: Partial<ComposeDeps> = {}): ComposeDeps {
@@ -14,7 +14,13 @@ function makeDeps(overrides: Partial<ComposeDeps> = {}): ComposeDeps {
       { id: 'u1', content: 'What is our Q3 plan?', sourceId: 'u1' },
     ],
     retrieve: vi.fn(async () => [
-      { sourceType: 'ticket', sourceId: 'T-42', chunkIndex: 0, contentText: 'Q3 launch', similarity: 0.8 },
+      {
+        sourceType: 'ticket',
+        sourceId: 'T-42',
+        chunkIndex: 0,
+        contentText: 'Q3 launch',
+        similarity: 0.8,
+      },
     ]),
     countTokens: (s: string) => s.split(/\s+/).length,
     ...overrides,
@@ -61,8 +67,20 @@ describe('composeSystemPromptWithRag', () => {
     const long = 'word '.repeat(500);
     const deps = makeDeps({
       retrieve: vi.fn(async () => [
-        { sourceType: 'ticket', sourceId: 'T-1', chunkIndex: 0, contentText: long, similarity: 0.9 },
-        { sourceType: 'ticket', sourceId: 'T-2', chunkIndex: 0, contentText: long, similarity: 0.85 },
+        {
+          sourceType: 'ticket',
+          sourceId: 'T-1',
+          chunkIndex: 0,
+          contentText: long,
+          similarity: 0.9,
+        },
+        {
+          sourceType: 'ticket',
+          sourceId: 'T-2',
+          chunkIndex: 0,
+          contentText: long,
+          similarity: 0.85,
+        },
       ]),
       getRagConfig: () => ({ topK: 3, threshold: 0.3, maxTokens: 50 }),
     });

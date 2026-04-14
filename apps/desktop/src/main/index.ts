@@ -46,7 +46,7 @@ import { BrowserWindow, app, dialog, ipcMain } from 'electron';
 
 import { calcCostUsd } from '@team-x/telemetry-core';
 
-import { createRagService, type RagRepo, type RagService } from '@team-x/intelligence';
+import { type RagRepo, type RagService, createRagService } from '@team-x/intelligence';
 import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
 import type { EmbeddingSourceType } from '@team-x/shared-types';
 import { eq } from 'drizzle-orm';
@@ -517,10 +517,8 @@ app
     const ragIndexer = createRagIndexer({
       bus,
       service: {
-        indexSource: async (input) =>
-          ragService !== null ? ragService.indexSource(input) : 0,
-        retrieve: async (input) =>
-          ragService !== null ? ragService.retrieve(input) : [],
+        indexSource: async (input) => (ragService !== null ? ragService.indexSource(input) : 0),
+        retrieve: async (input) => (ragService !== null ? ragService.retrieve(input) : []),
         deleteBySource: (id) => (ragService !== null ? ragService.deleteBySource(id) : 0),
       },
       // messagesRepo has no `getById` — pull the single row directly via
@@ -738,11 +736,7 @@ app.on('window-all-closed', () => {
  * sits waiting for the event loop to drain.
  */
 app.on('will-quit', (event) => {
-  if (
-    orchestrator === null &&
-    unregisterIpc === null &&
-    ragIndexerInstance === null
-  ) {
+  if (orchestrator === null && unregisterIpc === null && ragIndexerInstance === null) {
     closeDb();
     return;
   }

@@ -7,7 +7,7 @@
 
 import type { EmbeddingSourceType } from '@team-x/shared-types';
 
-import { chunkText, type ChunkOptions } from './chunker.js';
+import { type ChunkOptions, chunkText } from './chunker.js';
 import type { EmbedTextFn } from './embeddings.js';
 import { cosineSimilarity } from './retriever.js';
 

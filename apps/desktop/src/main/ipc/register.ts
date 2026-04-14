@@ -451,10 +451,7 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle(
     'settings.setRagConfig',
-    async (
-      _event,
-      request: import('@team-x/shared-types').SettingsSetRagConfigRequest,
-    ) => {
+    async (_event, request: import('@team-x/shared-types').SettingsSetRagConfigRequest) => {
       return handlers.settingsSetRagConfig(request);
     },
   );
