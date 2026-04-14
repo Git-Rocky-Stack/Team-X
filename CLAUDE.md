@@ -24,6 +24,8 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 **Phase 4 (Ship-readiness) — complete.** All 27 milestones shipped. v1.0.0. 612 unit tests + 4 E2E specs passing.
 
+**Phase 5 (Intelligence Layer) — in progress.** M28 (RAG foundation), M29 (RAG into agent turns), and M30 (NLU engine + command palette) all complete. T10 marker pending. 819 unit tests + 7 E2E specs passing.
+
 ### Phase 1 (Skeleton) — complete
 
 - **M1 (repo foundations):** pnpm workspace, TypeScript strict, Biome, Vitest, CI.
@@ -220,6 +222,7 @@ These are non-negotiable. Violating any of them requires a design-doc amendment.
 8. **Secrets live in the OS keychain** (keytar). Never plaintext in config files.
 9. **Role-pack user edits are saved as overrides**, not mutations of the pack. Upstream pack updates must never clobber user customizations.
 10. **Runtime strategy is adaptive.** Default Auto; profile hardware + providers on startup; pick Hybrid / Always-On / Lean. User override always wins.
+11. **IPC channels that mutate state must emit a bus event.** Renderer-side caches subscribe to the bus for invalidation; IPC alone is not enough because E2E specs and programmatic callers bypass React Query. This was the root cause of the vault-backup.spec.ts regression (findings: `docs/plans/2026-04-13-vault-backup-regression-findings.md` §7).
 
 ## Working with role packs
 
@@ -251,10 +254,10 @@ The curated F10 role library is the crown jewel. When creating or editing `role.
 
 - **Unit tests (Vitest)** for: role.md parser, provider router logic, orchestrator scheduler math, telemetry calculations, backup/restore round-trip.
 - **Integration tests (Vitest)** for: MCP host + one real MCP, Drizzle migrations, worker lifecycle, meeting pause/resume.
-- **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow. Phase 3 ships three specs: smoke (chat round-trip), ticket-flow (create-assign-agent-reply lifecycle), and meeting-flow (call-interject-end-minutes lifecycle), all against the canned test-mode provider.
+- **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow, RAG flow, command palette flow. Seven specs ship today: smoke, ticket-flow, meeting-flow, vault-backup, rag-flow, command-palette, plus the Phase 4 baseline. All run against the canned test-mode provider (and canned classifier for command-palette).
 - Every Phase-X demo must have green tests before the phase is marked shippable.
 
-## IPC channels (Phase 2 + Phase 3)
+## IPC channels (Phase 2 + Phase 3 + Phase 5)
 
 All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and exposed through the preload bridge.
 
@@ -324,6 +327,10 @@ All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and 
 | | `audit.export` | Export filtered events to CSV/JSON file |
 | updater | `updater.check` | Check GitHub Releases for newer version (M25) |
 | | `updater.install` | Download and install update (app restarts) |
+| command | `command.parse` | Classify user text into an intent + entities + confidence (M30) |
+| | `command.execute` | Run a parsed intent (destructive intents require `confirmed: true`) |
+| | `command.history` | Last N commands (cap 20, newest-first) |
+| | `command.suggest` | Partial-text suggestions for autocomplete |
 
 ## Troubleshooting
 

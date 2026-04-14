@@ -32,6 +32,7 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 - **Goals and projects** — set company-level goals, create projects with ticket linking, track progress with visual indicators
 - **Kanban board** — 4-column ticket board (Open, In Progress, Blocked, Done) with drag-to-move and automatic agent assignment
 - **One-click meetings** — call an all-hands with selected attendees, interject mid-meeting as Rocky, auto-generated minutes with action item extraction
+- **Natural-language command palette** — Cmd+K to hire, fire, assign tickets, call meetings, and more. 15 intents, destructive-action confirmation gate, local-first
 - **Real-time telemetry** — company stats, daily usage charts, per-employee breakdown, cost analysis by provider and model with date range filtering
 
 ### AI Runtime

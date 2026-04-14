@@ -10,4 +10,5 @@ Welcome to the Team-X user guide. These docs cover everything you need to run yo
 4. [Using the Vault](using-the-vault.md) — File storage, search, integrity verification, ticket attachments
 5. [Configuring Providers](configuring-providers.md) — Adding LLM providers, privacy tiers, runtime strategies
 6. [Backup and Restore](backup-and-restore.md) — Creating backups, restoring, backup history
-7. [Keyboard Shortcuts](keyboard-shortcuts.md) — Navigation and productivity shortcuts
+7. [Command Palette](command-palette.md) — Natural-language commands (Cmd+K), 15 intents, destructive-action gate
+8. [Keyboard Shortcuts](keyboard-shortcuts.md) — Navigation and productivity shortcuts

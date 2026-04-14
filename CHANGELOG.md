@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### M30 — NLU Engine + Command Palette (2026-04-13)
+
+#### Added
+- Natural-language command palette (`Cmd+K` / `Ctrl+K`) exposing 15 intents through an LLM-backed classifier with a destructive-action confirmation gate
+- `@team-x/intelligence/nlu` — `intent-classifier` (LLM JSON output with one-shot retry + `complex_request` fallback), `entity-resolver` (fuzzy name match + FTS5 for tickets/vault, candidate disambiguation), `slot-filler` (per-intent required-slot table, destructive-intent confirmation summary)
+- 60-example labeled intent fixture (`packages/intelligence/src/nlu/fixtures/intent-examples.test.ts`) with deterministic mock-LLM driver achieving ≥90% classification accuracy
+- Test-mode classifier seam (`createTestModeClassifier`) — canned input → intent table for E2E spec without LLM round-trips
+- `CommandService` (`apps/desktop/src/main/services/command-service.ts`) — owns the intent → IPC handler dispatch table for all 15 intents, enforces destructive `confirmed: true` invariant, emits `command.executed` events on success
+- `command.parse`, `command.execute`, `command.history`, `command.suggest` IPC channels with typed `TeamXApi` bindings and preload bridge methods
+- Command palette UI — Radix `Dialog` (560px wide), debounced 200ms classification, intent + entity chips, color-coded confidence bar, candidate disambiguation rows, destructive-confirm step, undo toast on non-destructive success, `ArrowUp` history picker from empty input, `/show <view>` slash-command bypass
+- Command history persisted to `settings.command.history` (FIFO, last 20) plus a "Recent Commands" section on the Dashboard subview
+- `command_history` storage table semantics via the existing settings key-value store; `command.executed` event type added to `packages/shared-types/src/events.ts`
+- New user guide `docs/user-guide/command-palette.md` covering all 15 intents with examples, destructive-action gate, history, slash commands, troubleshooting, and privacy posture
+- E2E spec `apps/desktop/e2e/command-palette.spec.ts` exercising parse → confirm → execute → history with the canned classifier and a real `employees.fire` round-trip
+
+#### Changed
+- Audit log (`AuditView`) now renders `command.executed` events with human-readable intent + entities summary labels alongside existing event types
+- Top-bar architectural badge tracks Phase 5 progress; `CLAUDE.md` baseline test count updated 673 → 819 unit tests, E2E spec count 5 → 7
+- New architectural invariant #11 — *"IPC channels that mutate state must emit a bus event"* — added to `CLAUDE.md` to prevent the React Query staleness class of bug surfaced by `vault-backup.spec.ts`
+
+#### Fixed
+- `vault.file_created` / `vault.file_deleted` events now emit on DB commit from the vault service (M30 T0) — closes the renderer-cache staleness regression that broke `vault-backup.spec.ts` and lays groundwork for M32 RAG-on-vault. See `docs/plans/2026-04-13-vault-backup-regression-findings.md` §7 for the full root-cause analysis
+
+---
+
 ## [1.0.0] — 2026-04-13
 
 ### M27 — Final Hardening + v1.0.0 (2026-04-13)
