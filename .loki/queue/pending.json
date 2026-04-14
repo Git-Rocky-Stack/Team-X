@@ -49,6 +49,7 @@
       "id": "T2",
       "title": "Read-side agentic tools — query_{employees,tickets,projects,meetings,vault,events}",
       "status": "completed",
+      "commit": "7b5c4f9",
       "startedAt": "2026-04-14T06:00:00Z",
       "completedAt": "2026-04-14T06:45:00Z",
       "actualTests": 40,
