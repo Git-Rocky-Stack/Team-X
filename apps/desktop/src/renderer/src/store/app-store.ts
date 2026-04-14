@@ -39,7 +39,7 @@ export type ActiveView =
   | 'settings';
 
 /** Dashboard inner subview tabs. */
-export type DashboardSubview = 'cards' | 'timeline' | 'stream' | 'floor';
+export type DashboardSubview = 'cards' | 'timeline' | 'stream' | 'floor' | 'commands';
 
 /** Projects inner subview tabs. */
 export type ProjectsSubview = 'kanban' | 'goals';

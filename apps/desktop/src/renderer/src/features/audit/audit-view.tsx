@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.j
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { Separator } from '@/components/ui/separator.js';
+import { intentLabel } from '@/features/command/intent-labels.js';
 import { useAuditEvents, useAuditExport, useAuditStats } from '@/hooks/use-audit.js';
 
 // ---------------------------------------------------------------------------
@@ -51,6 +52,14 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   'work.completed': 'bg-sky-600/20 text-sky-400',
   'work.failed': 'bg-red-600/20 text-red-400',
   'token.delta': 'bg-gray-600/20 text-gray-400',
+  'command.executed': 'bg-brand/15 text-brand',
+};
+
+/** Override `formatEventType` output for event types where the
+ * auto-title-casing ("Command Executed") is less readable than a
+ * hand-tuned label. Keep this list tiny. */
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  'command.executed': 'Command',
 };
 
 const DEFAULT_COLOR = 'bg-zinc-600/20 text-zinc-400';
@@ -71,10 +80,45 @@ function formatTimestamp(ms: number): string {
 }
 
 function formatEventType(type: string): string {
+  const override = EVENT_TYPE_LABELS[type];
+  if (override) return override;
   return type
     .split('.')
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join(' ');
+}
+
+/**
+ * Compact one-line summary for event types that benefit from a
+ * payload-aware preview in the collapsed row. Today only
+ * `command.executed` opts in — everything else relies on the payload
+ * JSON viewer that expands on row click.
+ *
+ * Returns `null` when there's nothing meaningful to show so the row
+ * renderer can skip the summary span entirely (no empty element in
+ * the DOM).
+ */
+function buildRowSummary(eventType: string, payloadJson: string): string | null {
+  if (eventType !== 'command.executed') return null;
+  const payload = tryParsePayload(payloadJson);
+  if (!payload) return null;
+  const intent = typeof payload.intent === 'string' ? payload.intent : '';
+  const rawText = typeof payload.rawText === 'string' ? payload.rawText : '';
+  const outcome = payload.outcome === 'error' ? 'error' : 'ok';
+  const durationMs =
+    typeof payload.durationMs === 'number' && Number.isFinite(payload.durationMs)
+      ? Math.round(payload.durationMs)
+      : null;
+
+  const parts: string[] = [];
+  if (intent) parts.push(intentLabel(intent));
+  if (rawText) {
+    const truncated = rawText.length > 80 ? `${rawText.slice(0, 77)}...` : rawText;
+    parts.push(`"${truncated}"`);
+  }
+  if (durationMs !== null) parts.push(`${durationMs}ms`);
+  if (outcome === 'error') parts.push('failed');
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 function getActorLabel(actorId: string, actorKind: string, employees: Employee[]): string {
@@ -209,6 +253,7 @@ function EventRow({
 }) {
   const colorClass = EVENT_TYPE_COLORS[event.eventType] ?? DEFAULT_COLOR;
   const payload = isExpanded ? tryParsePayload(event.payloadJson) : null;
+  const rowSummary = buildRowSummary(event.eventType, event.payloadJson);
 
   return (
     <div className="border-b border-zinc-800/50 last:border-0">
@@ -231,11 +276,19 @@ function EventRow({
           {formatEventType(event.eventType)}
         </Badge>
 
-        <span className="ml-2 truncate text-sm text-zinc-300">
+        <span className="shrink-0 text-sm text-zinc-300">
           {getActorLabel(event.actorId, event.actorKind, employees)}
         </span>
 
-        <span className="ml-auto text-xs text-zinc-600">{event.actorKind}</span>
+        {rowSummary ? (
+          <span className="ml-2 min-w-0 flex-1 truncate text-xs text-zinc-400" title={rowSummary}>
+            {rowSummary}
+          </span>
+        ) : (
+          <span className="flex-1" />
+        )}
+
+        <span className="ml-auto shrink-0 text-xs text-zinc-600">{event.actorKind}</span>
       </button>
 
       {isExpanded && payload && (

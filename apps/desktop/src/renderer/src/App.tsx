@@ -9,6 +9,7 @@ import { AuditView } from './features/audit/audit-view.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
 import { CommandPalette } from './features/command/command-palette.js';
 import { CardsView } from './features/dashboard/cards-view.js';
+import { CommandsView } from './features/dashboard/commands-view.js';
 import { DashboardSubtabs } from './features/dashboard/dashboard-subtabs.js';
 import { FloorView } from './features/dashboard/floor-view.js';
 import { StreamView } from './features/dashboard/stream-view.js';
@@ -87,6 +88,13 @@ export default function App() {
   const { data: employees = [], isLoading, isError, refetch } = useEmployees(companyId);
 
   function renderDashboard() {
+    // Commands subview bypasses the loading/empty-state guards — it
+    // reads from `command_history` (M30) which is valuable even before
+    // the first employee is hired, and has its own loading/empty UI.
+    if (dashboardSubview === 'commands') {
+      return <CommandsView companyId={companyId} />;
+    }
+
     if (isLoading) return <CardsView employees={[]} isLoading />;
     if (isError) return <CardsView employees={[]} isError onRetry={() => refetch()} />;
     if (employees.length === 0) {

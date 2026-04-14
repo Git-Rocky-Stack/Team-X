@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 
-import { Grid3X3, LayoutGrid, Radio, ScrollText } from 'lucide-react';
+import { Grid3X3, LayoutGrid, Radio, ScrollText, Terminal } from 'lucide-react';
 
 import { type DashboardSubview, useAppStore } from '@/store/app-store.js';
 
@@ -15,6 +15,7 @@ const SUBTABS: SubtabDef[] = [
   { label: 'Timeline', icon: ScrollText, subview: 'timeline' },
   { label: 'Stream', icon: Radio, subview: 'stream' },
   { label: 'Floor', icon: Grid3X3, subview: 'floor' },
+  { label: 'Commands', icon: Terminal, subview: 'commands' },
 ];
 
 export function DashboardSubtabs() {

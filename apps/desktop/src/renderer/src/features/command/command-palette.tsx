@@ -47,27 +47,33 @@ import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { type ActiveView, useAppStore } from '@/store/app-store.js';
 
+import { INTENT_LABELS } from './intent-labels.js';
+
 // ---------------------------------------------------------------------------
-// Intent metadata — display labels + destructive-tint flag
+// Intent metadata — destructive-tint flag, paired with the shared
+// `INTENT_LABELS` mapping (kept in `intent-labels.ts` so the audit log
+// and Dashboard Commands subview render the same copy).
 // ---------------------------------------------------------------------------
 
-const INTENT_META: Record<IpcIntentName, { label: string; destructive: boolean }> = {
-  hire_employee: { label: 'Hire Employee', destructive: false },
-  fire_employee: { label: 'Fire Employee', destructive: true },
-  assign_ticket: { label: 'Assign Ticket', destructive: false },
-  create_ticket: { label: 'Create Ticket', destructive: false },
-  close_ticket: { label: 'Close Ticket', destructive: true },
-  reopen_ticket: { label: 'Reopen Ticket', destructive: false },
-  promote_employee: { label: 'Promote Employee', destructive: true },
-  create_project: { label: 'Create Project', destructive: false },
-  create_goal: { label: 'Create Goal', destructive: false },
-  call_meeting: { label: 'Call Meeting', destructive: false },
-  end_meeting: { label: 'End Meeting', destructive: true },
-  check_status: { label: 'Check Status', destructive: false },
-  show_view: { label: 'Show View', destructive: false },
-  search_vault: { label: 'Search Vault', destructive: false },
-  complex_request: { label: 'Route to Agent', destructive: false },
-};
+const DESTRUCTIVE_INTENT_SET: ReadonlySet<IpcIntentName> = new Set<IpcIntentName>([
+  'fire_employee',
+  'close_ticket',
+  'end_meeting',
+  'promote_employee',
+]);
+
+const INTENT_META: Record<IpcIntentName, { label: string; destructive: boolean }> = Object.freeze(
+  (Object.keys(INTENT_LABELS) as IpcIntentName[]).reduce(
+    (acc, intent) => {
+      acc[intent] = {
+        label: INTENT_LABELS[intent],
+        destructive: DESTRUCTIVE_INTENT_SET.has(intent),
+      };
+      return acc;
+    },
+    {} as Record<IpcIntentName, { label: string; destructive: boolean }>,
+  ),
+);
 
 /** Views the `/show <view>` slash-command accepts. */
 const SHOW_VIEW_LITERALS: ReadonlyArray<ActiveView> = [
