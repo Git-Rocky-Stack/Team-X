@@ -24,3 +24,12 @@ export {
   makeOpenAICompatStream,
   type OpenAICompatAdapterOptions,
 } from './adapters/openai-compat.js';
+export { createEmbedText, type EmbedAdapter, type EmbedTextFn } from './embed.js';
+export {
+  makeOllamaEmbedAdapter,
+  type OllamaEmbedAdapterOptions,
+} from './adapters/ollama-embed.js';
+export {
+  makeOpenAIEmbedAdapter,
+  type OpenAIEmbedAdapterOptions,
+} from './adapters/openai-embed.js';
