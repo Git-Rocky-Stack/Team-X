@@ -1,13 +1,17 @@
 {
   "currentPhase": "DEVELOPMENT",
-  "currentMilestone": "M28",
-  "milestoneName": "Intelligence Package + RAG Foundation",
-  "tasksCompleted": 10,
+  "currentMilestone": "M29",
+  "milestoneName": "RAG integration into agent turns",
+  "tasksCompleted": 0,
   "tasksFailed": 0,
-  "startedAt": "2026-04-13T12:00:00Z",
-  "completedAt": "2026-04-13T14:20:00Z",
+  "totalTasks": 10,
+  "planDoc": "docs/plans/2026-04-13-team-x-phase-5-m29-rag-agent-integration.md",
+  "startedAt": "2026-04-13T17:30:00Z",
+  "completedAt": null,
   "phaseComplete": false,
   "phase": "Phase 5 — Intelligence Layer",
-  "nextMilestone": "M29",
-  "nextMilestoneName": "RAG integration into agent turns"
+  "previousMilestone": "M28",
+  "previousMilestoneCompletedAt": "2026-04-13T14:20:00Z",
+  "nextMilestone": "M30",
+  "nextMilestoneName": "NLU Engine"
 }

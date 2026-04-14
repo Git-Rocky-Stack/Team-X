@@ -1,0 +1,126 @@
+{
+  "milestone": "M29",
+  "milestoneName": "RAG integration into agent turns",
+  "phase": "Phase 5 — Intelligence Layer",
+  "planDoc": "docs/plans/2026-04-13-team-x-phase-5-m29-rag-agent-integration.md",
+  "tasks": [
+    {
+      "id": "M29-T1",
+      "title": "embedText + Ollama/OpenAI embedding adapters in provider-router",
+      "goal": "Add the embedding seam to provider-router so the intelligence package has a provider-agnostic way to turn text into vectors. Implement EmbedAdapter contract + createEmbedText factory (enforces count + dimension invariants) + Ollama /api/embed adapter (default 768-dim nomic-embed-text) + OpenAI /embeddings adapter (default 1536-dim text-embedding-3-small). 4 tests.",
+      "files": [
+        "packages/provider-router/src/embed.ts",
+        "packages/provider-router/src/embed.test.ts",
+        "packages/provider-router/src/adapters/ollama-embed.ts",
+        "packages/provider-router/src/adapters/openai-embed.ts",
+        "packages/provider-router/src/index.ts"
+      ],
+      "commit": "feat(provider-router): M29 T1 — embedText + Ollama/OpenAI embedding adapters",
+      "status": "pending"
+    },
+    {
+      "id": "M29-T2",
+      "title": "Extend ResolveSystemPrompt with threadId",
+      "goal": "Change the ResolveSystemPrompt signature from ({employee, company}) to ({employee, company, threadId}). Update both call sites in orchestrator/index.ts (enqueueChat + enqueueAgentReply — threadId is already in scope via args). Update orchestrator.test.ts systemPromptCalls trace to include threadId so the wiring is asserted. Update meeting-service.test.ts stub. Type-only change — 0 new tests, but existing tests must still pass.",
+      "files": [
+        "apps/desktop/src/main/orchestrator/index.ts",
+        "apps/desktop/src/main/orchestrator/orchestrator.test.ts",
+        "apps/desktop/src/main/orchestrator/meeting-service.test.ts"
+      ],
+      "commit": "feat(orchestrator): M29 T2 — extend ResolveSystemPrompt with threadId",
+      "status": "pending"
+    },
+    {
+      "id": "M29-T3",
+      "title": "RagService facade in @team-x/intelligence",
+      "goal": "Build the one-call facade that composes chunker + embedder + repo into indexSource() and retrieve() methods. indexSource must delete existing chunks by sourceId before re-adding (so shorter re-indexes don't leave stale rows). retrieve must filter by companyId, apply threshold + topK, and support excludeSourceIds for dedup against in-thread history. Float32Array ↔ Buffer serialization for the embedding column. Export from packages/intelligence/src/rag/index.ts barrel. 5 tests.",
+      "files": [
+        "packages/intelligence/src/rag/service.ts",
+        "packages/intelligence/src/rag/service.test.ts",
+        "packages/intelligence/src/rag/index.ts"
+      ],
+      "commit": "feat(intelligence): M29 T3 — RagService (index + retrieve facade)",
+      "status": "pending"
+    },
+    {
+      "id": "M29-T4",
+      "title": "RagIndexer event-bus subscriber",
+      "goal": "Build the event-bus subscriber in apps/desktop/src/main/services/rag-indexer.ts. Dispatch table: work.completed → embed the final assistant message, meeting.ended → embed the minutes text. Must be async-safe (fire-and-forget via void IIFE), must catch and log errors instead of propagating (would destabilize event fan-out — see event-bus.ts listener-isolation contract). Respect isEnabled() callback — when RAG is off, no-op. start() and stop() lifecycle for the composition root to wire. 5 tests.",
+      "files": [
+        "apps/desktop/src/main/services/rag-indexer.ts",
+        "apps/desktop/src/main/services/rag-indexer.test.ts"
+      ],
+      "commit": "feat(services): M29 T4 — RagIndexer (event-bus subscriber for on-write indexing)",
+      "status": "pending"
+    },
+    {
+      "id": "M29-T5",
+      "title": "composeSystemPromptWithRag wrapper",
+      "goal": "Build the pure function that wraps the role.md render step with retrieve-and-inject. Accepts ComposeDeps with renderRoleSystemPrompt + retrieve + getRecentUserMessages + getRagConfig + countTokens callbacks. Behavior: RAG disabled → return base unchanged. No recent user messages → return base. Hits found → append ## Relevant Context block with [Source: label id] attribution, enforce maxTokens budget by stopping iteration, dedup retrieved chunks whose sourceId is already in recent thread history. 5 tests (disabled path, empty history, happy path, budget enforcement, dedup).",
+      "files": [
+        "apps/desktop/src/main/services/system-prompt.ts",
+        "apps/desktop/src/main/services/system-prompt.test.ts"
+      ],
+      "commit": "feat(services): M29 T5 — composeSystemPromptWithRag with dedup + token budget + attribution",
+      "status": "pending"
+    },
+    {
+      "id": "M29-T6",
+      "title": "Composition root wiring in main/index.ts",
+      "goal": "Wire everything together in apps/desktop/src/main/index.ts. Add buildEmbedAdapter helper in provider-factory.ts that resolves a provider name → EmbedAdapter via providersService + secretsStore. At main boot: build RagService (null when rag_enabled=false or no adapter resolves), start RagIndexer, replace the raw resolveSystemPrompt with composeSystemPromptWithRag. Wire app.on('will-quit') to call ragIndexer.stop(). Zero-regression guarantee: when RagService is null, the old code path runs unchanged. Typecheck clean, desktop suite still green.",
+      "files": [
+        "apps/desktop/src/main/index.ts",
+        "apps/desktop/src/main/services/provider-factory.ts"
+      ],
+      "commit": "feat(desktop): M29 T6 — wire RagService + RagIndexer + RAG-enhanced resolveSystemPrompt",
+      "status": "pending"
+    },
+    {
+      "id": "M29-T7",
+      "title": "rag.* IPC channels",
+      "goal": "Three IPC handlers: rag.stats (returns embeddingCount, lastIndexedAt, enabled), rag.rebuildAll (wipes embeddings for a company then re-indexes all sources), rag.deleteForCompany (returns delete count). buildRagHandlers factory takes deps via interface for testability. Register in main/index.ts via ipcMain.handle, expose on preload bridge, add channels to TeamXApi in shared-types. 4 tests.",
+      "files": [
+        "packages/shared-types/src/ipc.ts",
+        "apps/desktop/src/main/ipc/rag-handlers.ts",
+        "apps/desktop/src/main/ipc/rag-handlers.test.ts",
+        "apps/desktop/src/main/index.ts",
+        "apps/desktop/src/preload/index.ts"
+      ],
+      "commit": "feat(ipc): M29 T7 — rag.stats / rag.rebuildAll / rag.deleteForCompany IPC channels",
+      "status": "pending"
+    },
+    {
+      "id": "M29-T8",
+      "title": "RAG Settings UI panel",
+      "goal": "New RagSection component mounted in SettingsView below PrivacySection. Controls: enable toggle (binds rag_enabled setting), top-K number input (default 5), threshold slider (0.0-1.0, default 0.3), max-tokens number input (default 800), embedding provider/model/dimension selectors. Stats card: embedding count, last indexed timestamp, enabled state from rag.stats. Destructive actions: Rebuild (confirm → rag.rebuildAll), Delete (confirm → rag.deleteForCompany). Use existing Settings card wrapper, accent #FFAA2024 on primary actions. 2 component tests (render + rebuild click).",
+      "files": [
+        "apps/desktop/src/renderer/views/settings/RagSection.tsx",
+        "apps/desktop/src/renderer/views/settings/RagSection.test.tsx",
+        "apps/desktop/src/renderer/views/SettingsView.tsx",
+        "apps/desktop/src/renderer/hooks/useRag.ts"
+      ],
+      "commit": "feat(ui): M29 T8 — RAG Settings panel (toggle, top-K, threshold, rebuild, stats)",
+      "status": "pending"
+    },
+    {
+      "id": "M29-T9",
+      "title": "E2E rag-flow.spec.ts",
+      "goal": "New Playwright spec that exercises the full round-trip: create ticket → indexer embeds → open new chat thread → ask question referencing the ticket → assistant reply carries the fact. Extend the test-mode provider in provider-factory.ts to echo the system prompt when passed a __ECHO_SYSTEM__ sentinel, so the spec can assert [Source: ticket …] made it into the enriched system prompt. Set TEAM_X_RAG_TEST=1 env var in the Playwright config so the embed adapter swaps to a deterministic fake at boot.",
+      "files": [
+        "apps/desktop/e2e/rag-flow.spec.ts",
+        "apps/desktop/src/main/services/provider-factory.ts"
+      ],
+      "commit": "test(e2e): M29 T9 — rag-flow spec (ticket → RAG → chat recall)",
+      "status": "pending"
+    },
+    {
+      "id": "M29-T10",
+      "title": "Full verification + M29 milestone marker",
+      "goal": "Run pnpm test (target ~665), pnpm typecheck (clean all 6 workspaces), pnpm lint (0 errors, 41 warning baseline), pnpm -F @team-x/desktop test:e2e (5 specs green). Commit any lint fixes. Empty milestone-marker commit listing all M29 deliverables. Update .loki/CONTINUITY.md with M29 COMPLETE status, bump orchestrator.json to M30.",
+      "files": [],
+      "commit": "feat(intelligence): M29 complete — RAG integration into agent turns",
+      "status": "pending"
+    }
+  ],
+  "createdAt": "2026-04-13T17:30:00Z"
+}
