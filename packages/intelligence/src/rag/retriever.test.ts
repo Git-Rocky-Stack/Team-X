@@ -35,16 +35,23 @@ describe('rankBySimilarity', () => {
   });
 
   it('filters by threshold', () => {
-    const results = rankBySimilarity([1, 0], [
-      { id: 'a', vector: [1, 0], meta: {} },
-      { id: 'b', vector: [0, 1], meta: {} },
-    ], { topK: 10, threshold: 0.5 });
+    const results = rankBySimilarity(
+      [1, 0],
+      [
+        { id: 'a', vector: [1, 0], meta: {} },
+        { id: 'b', vector: [0, 1], meta: {} },
+      ],
+      { topK: 10, threshold: 0.5 },
+    );
     expect(results).toHaveLength(1);
     expect(results[0]!.id).toBe('a');
   });
 
   it('returns empty when nothing exceeds threshold', () => {
-    const results = rankBySimilarity([1, 0], [{ id: 'a', vector: [0, 1], meta: {} }], { topK: 10, threshold: 0.9 });
+    const results = rankBySimilarity([1, 0], [{ id: 'a', vector: [0, 1], meta: {} }], {
+      topK: 10,
+      threshold: 0.9,
+    });
     expect(results).toHaveLength(0);
   });
 });

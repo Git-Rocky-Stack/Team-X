@@ -9,7 +9,10 @@ describe('chunkText', () => {
   });
 
   it('splits long text into overlapping chunks', () => {
-    const sentences = Array.from({ length: 100 }, (_, i) => `Sentence number ${i} with some content.`);
+    const sentences = Array.from(
+      { length: 100 },
+      (_, i) => `Sentence number ${i} with some content.`,
+    );
     const longText = sentences.join(' ');
     const chunks = chunkText(longText, { maxTokens: 50, overlapTokens: 10 });
     expect(chunks.length).toBeGreaterThan(1);
@@ -18,7 +21,6 @@ describe('chunkText', () => {
       const currentChunk = chunks[i]!;
       const nextChunk = chunks[i + 1]!;
       const currentWords = currentChunk.split(/\s+/);
-      const nextWords = nextChunk.split(/\s+/);
       const lastWords = currentWords.slice(-10);
       const hasOverlap = lastWords.some((w) => nextChunk.includes(w));
       expect(hasOverlap).toBe(true);
@@ -40,7 +42,8 @@ describe('chunkText', () => {
   });
 
   it('respects sentence boundaries when possible', () => {
-    const text = 'First sentence. Second sentence. Third sentence. Fourth sentence. Fifth sentence.';
+    const text =
+      'First sentence. Second sentence. Third sentence. Fourth sentence. Fifth sentence.';
     const chunks = chunkText(text, { maxTokens: 10, overlapTokens: 2 });
     for (const chunk of chunks) {
       const trimmed = chunk.trim();

@@ -205,261 +205,264 @@ let orchestrator: Orchestrator | null = null;
 let unregisterIpc: (() => void) | null = null;
 let mcpHostInstance: McpHost | null = null;
 
-app.whenReady().then(async () => {
-  // ---- 1. Database --------------------------------------------------------
-  initDb(dbPath());
-  runMigrations(getDb(), resolveMigrationsFolder());
-  console.log('[db] migrations applied');
-  const fts5Ready = initFts5(getDb());
-  console.log(`[db] FTS5 vault index: ${fts5Ready ? 'ready' : 'unavailable (fallback mode)'}`);
+app
+  .whenReady()
+  .then(async () => {
+    // ---- 1. Database --------------------------------------------------------
+    initDb(dbPath());
+    runMigrations(getDb(), resolveMigrationsFolder());
+    console.log('[db] migrations applied');
+    const fts5Ready = initFts5(getDb());
+    console.log(`[db] FTS5 vault index: ${fts5Ready ? 'ready' : 'unavailable (fallback mode)'}`);
 
-  // ---- 2-4. Seed company/employees, default providers, dev key import ----
-  seed();
-  seedDefaultProviders();
-  // Dev-only: import ANTHROPIC_API_KEY from apps/desktop/.env into the OS
-  // keychain if the keychain has no anthropic key yet. No-op in packaged
-  // builds and whenever the .env file is absent. See env-key-bootstrap.ts
-  // for the full list of security invariants this function enforces.
-  await bootstrapEnvKeys();
+    // ---- 2-4. Seed company/employees, default providers, dev key import ----
+    seed();
+    seedDefaultProviders();
+    // Dev-only: import ANTHROPIC_API_KEY from apps/desktop/.env into the OS
+    // keychain if the keychain has no anthropic key yet. No-op in packaged
+    // builds and whenever the .env file is absent. See env-key-bootstrap.ts
+    // for the full list of security invariants this function enforces.
+    await bootstrapEnvKeys();
 
-  // ---- 5. Build services + orchestrator + IPC ----------------------------
-  const db = getDb();
-  const companiesRepo = createCompaniesRepo(db);
-  const employeesRepo = createEmployeesRepo(db);
-  const threadsRepo = createThreadsRepo(db);
-  const messagesRepo = createMessagesRepo(db);
-  const runsRepo = createRunsRepo(db);
-  const eventsRepo = createEventsRepo(db);
-  const auditRepo = createAuditRepo(db);
-  const mcpServersRepo = createMcpServersRepo(db);
-  const toolCallsRepo = createToolCallsRepo(db);
-  const ticketsRepo = createTicketsRepo(db);
-  const goalsRepo = createGoalsRepo(db);
-  const projectsRepo = createProjectsRepo(db);
-  const meetingsRepo = createMeetingsRepo(db);
-  const vaultRepo = createVaultRepo(db);
-  const ticketAttachmentsRepo = createTicketAttachmentsRepo(db);
-  const settingsRepo = createSettingsRepo(db);
+    // ---- 5. Build services + orchestrator + IPC ----------------------------
+    const db = getDb();
+    const companiesRepo = createCompaniesRepo(db);
+    const employeesRepo = createEmployeesRepo(db);
+    const threadsRepo = createThreadsRepo(db);
+    const messagesRepo = createMessagesRepo(db);
+    const runsRepo = createRunsRepo(db);
+    const eventsRepo = createEventsRepo(db);
+    const auditRepo = createAuditRepo(db);
+    const mcpServersRepo = createMcpServersRepo(db);
+    const toolCallsRepo = createToolCallsRepo(db);
+    const ticketsRepo = createTicketsRepo(db);
+    const goalsRepo = createGoalsRepo(db);
+    const projectsRepo = createProjectsRepo(db);
+    const meetingsRepo = createMeetingsRepo(db);
+    const vaultRepo = createVaultRepo(db);
+    const ticketAttachmentsRepo = createTicketAttachmentsRepo(db);
+    const settingsRepo = createSettingsRepo(db);
 
-  // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
-  const settingsSeeded = settingsRepo.seedDefaults();
-  if (settingsSeeded > 0) {
-    console.log(`[settings] seeded ${settingsSeeded} default setting(s)`);
-  }
+    // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
+    const settingsSeeded = settingsRepo.seedDefaults();
+    if (settingsSeeded > 0) {
+      console.log(`[settings] seeded ${settingsSeeded} default setting(s)`);
+    }
 
-  // Seed well-known MCP servers on first boot (disabled by default).
-  const mcpSeeded = seedDefaultMcpServers(db);
-  if (mcpSeeded > 0) {
-    console.log(`[mcp] seeded ${mcpSeeded} default MCP server(s)`);
-  }
+    // Seed well-known MCP servers on first boot (disabled by default).
+    const mcpSeeded = seedDefaultMcpServers(db);
+    if (mcpSeeded > 0) {
+      console.log(`[mcp] seeded ${mcpSeeded} default MCP server(s)`);
+    }
 
-  const bus = createEventBus({ repo: eventsRepo });
+    const bus = createEventBus({ repo: eventsRepo });
 
-  // ---- MCP Host initialization --------------------------------------------
-  const mcpHost = createMcpHost({
-    mcpServersRepo,
-    toolCallsRepo,
-    bus,
-  });
-  mcpHostInstance = mcpHost;
-  // Initialize MCP connections (best-effort, failures logged per-server)
-  await mcpHost.initialize().catch((err) => {
-    console.error('[main] MCP host initialization failed:', err);
-  });
-  console.log('[main] MCP host initialized');
+    // ---- MCP Host initialization --------------------------------------------
+    const mcpHost = createMcpHost({
+      mcpServersRepo,
+      toolCallsRepo,
+      bus,
+    });
+    mcpHostInstance = mcpHost;
+    // Initialize MCP connections (best-effort, failures logged per-server)
+    await mcpHost.initialize().catch((err) => {
+      console.error('[main] MCP host initialization failed:', err);
+    });
+    console.log('[main] MCP host initialized');
 
-  // Provider routing — two modes:
-  //
-  //   - Normal: providers service + secrets store + adapter factory.
-  //     The factory's `resolveForEmployee` IS the orchestrator's
-  //     `resolveProvider` slot — same shape, no adapter needed.
-  //
-  //   - Test mode (NODE_ENV=test): a canned instant-reply stream
-  //     that needs no LLM server, no keytar, and no network. Used by
-  //     the Playwright E2E smoke test (T49) which boots a real Electron
-  //     instance but must not depend on external infrastructure.
-  //
-  // Both secretsStore and providersService are constructed eagerly so
-  // the IPC handler layer (which exposes providers.* channels) can
-  // always reach them — the constructors are cheap (no keytar or DB
-  // call until a method is actually invoked).
-  const testMode = isTestMode();
-  const secretsStore = new SecretsStore();
-  const providersService = getProvidersService();
-  let resolveProvider: ResolveProvider;
+    // Provider routing — two modes:
+    //
+    //   - Normal: providers service + secrets store + adapter factory.
+    //     The factory's `resolveForEmployee` IS the orchestrator's
+    //     `resolveProvider` slot — same shape, no adapter needed.
+    //
+    //   - Test mode (NODE_ENV=test): a canned instant-reply stream
+    //     that needs no LLM server, no keytar, and no network. Used by
+    //     the Playwright E2E smoke test (T49) which boots a real Electron
+    //     instance but must not depend on external infrastructure.
+    //
+    // Both secretsStore and providersService are constructed eagerly so
+    // the IPC handler layer (which exposes providers.* channels) can
+    // always reach them — the constructors are cheap (no keytar or DB
+    // call until a method is actually invoked).
+    const testMode = isTestMode();
+    const secretsStore = new SecretsStore();
+    const providersService = getProvidersService();
+    let resolveProvider: ResolveProvider;
 
-  if (testMode) {
-    resolveProvider = createTestModeResolveProvider();
-    console.log('[main] test-mode provider active — canned responses, no LLM calls');
-  } else {
-    const providerFactory = createProviderFactory({ providersService, secretsStore });
-    resolveProvider = (employee) => providerFactory.resolveForEmployee(employee);
-  }
+    if (testMode) {
+      resolveProvider = createTestModeResolveProvider();
+      console.log('[main] test-mode provider active — canned responses, no LLM calls');
+    } else {
+      const providerFactory = createProviderFactory({ providersService, secretsStore });
+      resolveProvider = (employee) => providerFactory.resolveForEmployee(employee);
+    }
 
-  // Role loader: turns (employee, company) into a rendered system prompt.
-  // Preloaded eagerly so the cost of the role-pack scan is paid during
-  // boot rather than on the first user message.
-  const roleLoader = createRoleLoader({ rolePacksRoot: resolveRolePacksRoot() });
-  try {
-    roleLoader.preload();
-    console.log(`[role-loader] indexed ${roleLoader.size()} role(s)`);
-  } catch (err) {
-    // A missing role-packs directory is a wiring bug — surface it
-    // loudly but do not crash the app. Chats will fail with a clear
-    // error from the role loader on first send, which is the right
-    // place for the user to learn about it.
-    console.error('[role-loader] preload failed:', err);
-  }
+    // Role loader: turns (employee, company) into a rendered system prompt.
+    // Preloaded eagerly so the cost of the role-pack scan is paid during
+    // boot rather than on the first user message.
+    const roleLoader = createRoleLoader({ rolePacksRoot: resolveRolePacksRoot() });
+    try {
+      roleLoader.preload();
+      console.log(`[role-loader] indexed ${roleLoader.size()} role(s)`);
+    } catch (err) {
+      // A missing role-packs directory is a wiring bug — surface it
+      // loudly but do not crash the app. Chats will fail with a clear
+      // error from the role loader on first send, which is the right
+      // place for the user to learn about it.
+      console.error('[role-loader] preload failed:', err);
+    }
 
-  // Tool resolver: converts MCP tools into AI SDK tool objects with
-  // execute callbacks routed through McpHost. Skipped in test mode
-  // (no MCP servers, no tool calls).
-  const resolveTools: ResolveTools | undefined = testMode
-    ? undefined
-    : async ({ employee, company, getRunId }) => {
-        const mcpTools = mcpHost.listTools(company.id);
-        if (mcpTools.length === 0) return null;
+    // Tool resolver: converts MCP tools into AI SDK tool objects with
+    // execute callbacks routed through McpHost. Skipped in test mode
+    // (no MCP servers, no tool calls).
+    const resolveTools: ResolveTools | undefined = testMode
+      ? undefined
+      : async ({ employee, company, getRunId }) => {
+          const mcpTools = mcpHost.listTools(company.id);
+          if (mcpTools.length === 0) return null;
 
-        const toolsAllowed: string[] = JSON.parse(employee.toolsAllowedJson ?? '[]');
-        const toolsDenied: string[] = JSON.parse(employee.toolsDeniedJson ?? '[]');
+          const toolsAllowed: string[] = JSON.parse(employee.toolsAllowedJson ?? '[]');
+          const toolsDenied: string[] = JSON.parse(employee.toolsDeniedJson ?? '[]');
 
-        // Pre-filter at definition time so the model never sees denied tools.
-        const allowedTools = mcpTools.filter((t) => {
-          if (toolsDenied.includes(t.name)) return false;
-          if (toolsAllowed.length > 0 && !toolsAllowed.includes(t.name)) return false;
-          return true;
-        });
-        if (allowedTools.length === 0) return null;
+          // Pre-filter at definition time so the model never sees denied tools.
+          const allowedTools = mcpTools.filter((t) => {
+            if (toolsDenied.includes(t.name)) return false;
+            if (toolsAllowed.length > 0 && !toolsAllowed.includes(t.name)) return false;
+            return true;
+          });
+          if (allowedTools.length === 0) return null;
 
-        const specs: ToolSpec[] = allowedTools.map((t) => ({
-          name: t.name,
-          description: t.description ?? '',
-          inputSchema: (t.inputSchema ?? { type: 'object' }) as Record<string, unknown>,
-          execute: async (args: Record<string, unknown>) => {
-            const serverId = mcpHost.findServerForTool(t.name, company.id);
-            if (!serverId) throw new Error(`No MCP server found for tool: ${t.name}`);
+          const specs: ToolSpec[] = allowedTools.map((t) => ({
+            name: t.name,
+            description: t.description ?? '',
+            inputSchema: (t.inputSchema ?? { type: 'object' }) as Record<string, unknown>,
+            execute: async (args: Record<string, unknown>) => {
+              const serverId = mcpHost.findServerForTool(t.name, company.id);
+              if (!serverId) throw new Error(`No MCP server found for tool: ${t.name}`);
 
-            const result = await mcpHost.callTool({
-              serverId,
-              toolName: t.name,
-              toolArgs: args,
-              runId: getRunId(),
-              employeeId: employee.id,
-              toolsAllowed,
-              toolsDenied,
-            });
-            if (!result.success) {
-              throw new Error(result.error ?? `Tool '${t.name}' failed`);
-            }
-            return result.output;
-          },
-        }));
+              const result = await mcpHost.callTool({
+                serverId,
+                toolName: t.name,
+                toolArgs: args,
+                runId: getRunId(),
+                employeeId: employee.id,
+                toolsAllowed,
+                toolsDenied,
+              });
+              if (!result.success) {
+                throw new Error(result.error ?? `Tool '${t.name}' failed`);
+              }
+              return result.output;
+            },
+          }));
 
-        return {
-          tools: buildProviderTools(specs),
-          maxSteps: 5,
+          return {
+            tools: buildProviderTools(specs),
+            maxSteps: 5,
+          };
         };
-      };
 
-  orchestrator = buildOrchestrator({
-    bus,
-    messagesRepo,
-    runsRepo,
-    employeesRepo,
-    companiesRepo,
-    threadsRepo,
-    calcCost,
-    resolveSystemPrompt: (args) => roleLoader.resolveSystemPrompt(args),
-    resolveProvider,
-    resolveTools,
-    slots: PHASE_1_ORCHESTRATOR_SLOTS,
+    orchestrator = buildOrchestrator({
+      bus,
+      messagesRepo,
+      runsRepo,
+      employeesRepo,
+      companiesRepo,
+      threadsRepo,
+      calcCost,
+      resolveSystemPrompt: (args) => roleLoader.resolveSystemPrompt(args),
+      resolveProvider,
+      resolveTools,
+      slots: PHASE_1_ORCHESTRATOR_SLOTS,
+    });
+
+    const vaultService = createVaultService({
+      vaultRepo,
+      companiesBasePath: join(app.getPath('userData'), 'companies'),
+      getCompanySlug: (companyId: string) => {
+        const company = companiesRepo.list().find((c) => c.id === companyId);
+        return company?.slug ?? null;
+      },
+    });
+
+    const backupService = createBackupService({
+      dbPath: dbPath(),
+      companiesBasePath: join(app.getPath('userData'), 'companies'),
+      backupsDir: join(app.getPath('userData'), 'backups'),
+      appVersion: app.getVersion(),
+      checkpointWal: () => {
+        const rawDb = getDb();
+        // Drizzle's run() for raw SQL pragma
+        try {
+          (rawDb as unknown as { run: (q: unknown) => void }).run({
+            toSQL: () => ({ sql: 'PRAGMA wal_checkpoint(TRUNCATE)', params: [] }),
+          });
+        } catch {
+          // Fallback: just proceed without checkpoint
+        }
+      },
+    });
+
+    const updaterService = createUpdaterService({
+      isDev,
+      isTestMode: testMode,
+    });
+
+    const meetingService = createMeetingService({
+      orchestrator,
+      bus,
+      meetingsRepo,
+      threadsRepo,
+      messagesRepo,
+      employeesRepo,
+      ticketsRepo,
+    });
+
+    const ipcHandlers = createIpcHandlers({
+      companiesRepo,
+      employeesRepo,
+      threadsRepo,
+      messagesRepo,
+      ticketsRepo,
+      ticketAttachmentsRepo,
+      goalsRepo,
+      projectsRepo,
+      meetingsRepo,
+      runsRepo,
+      eventsRepo,
+      orchestrator,
+      meetingService,
+      roleLookup: roleLoader,
+      mcpHost,
+      mcpServersRepo,
+      providersService,
+      secretsStore,
+      settingsRepo,
+      vaultService,
+      backupService,
+      auditRepo,
+      updaterService,
+      getHardwareProfile: detectHardware,
+    });
+    unregisterIpc = registerIpcHandlers(ipcHandlers, bus);
+
+    console.log('[main] orchestrator + IPC ready');
+
+    // ---- 6. Window ---------------------------------------------------------
+    createWindow();
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  })
+  .catch((err) => {
+    console.error('[main] fatal: app initialization failed:', err);
+    dialog.showErrorBox(
+      'Team-X failed to start',
+      `Initialization error:\n\n${err instanceof Error ? err.message : String(err)}\n\nThe application will now exit.`,
+    );
+    app.exit(1);
   });
-
-  const vaultService = createVaultService({
-    vaultRepo,
-    companiesBasePath: join(app.getPath('userData'), 'companies'),
-    getCompanySlug: (companyId: string) => {
-      const company = companiesRepo.list().find((c) => c.id === companyId);
-      return company?.slug ?? null;
-    },
-  });
-
-  const backupService = createBackupService({
-    dbPath: dbPath(),
-    companiesBasePath: join(app.getPath('userData'), 'companies'),
-    backupsDir: join(app.getPath('userData'), 'backups'),
-    appVersion: app.getVersion(),
-    checkpointWal: () => {
-      const rawDb = getDb();
-      // Drizzle's run() for raw SQL pragma
-      try {
-        (rawDb as unknown as { run: (q: unknown) => void }).run({
-          toSQL: () => ({ sql: 'PRAGMA wal_checkpoint(TRUNCATE)', params: [] }),
-        });
-      } catch {
-        // Fallback: just proceed without checkpoint
-      }
-    },
-  });
-
-  const updaterService = createUpdaterService({
-    isDev,
-    isTestMode: testMode,
-  });
-
-  const meetingService = createMeetingService({
-    orchestrator,
-    bus,
-    meetingsRepo,
-    threadsRepo,
-    messagesRepo,
-    employeesRepo,
-    ticketsRepo,
-  });
-
-  const ipcHandlers = createIpcHandlers({
-    companiesRepo,
-    employeesRepo,
-    threadsRepo,
-    messagesRepo,
-    ticketsRepo,
-    ticketAttachmentsRepo,
-    goalsRepo,
-    projectsRepo,
-    meetingsRepo,
-    runsRepo,
-    eventsRepo,
-    orchestrator,
-    meetingService,
-    roleLookup: roleLoader,
-    mcpHost,
-    mcpServersRepo,
-    providersService,
-    secretsStore,
-    settingsRepo,
-    vaultService,
-    backupService,
-    auditRepo,
-    updaterService,
-    getHardwareProfile: detectHardware,
-  });
-  unregisterIpc = registerIpcHandlers(ipcHandlers, bus);
-
-  console.log('[main] orchestrator + IPC ready');
-
-  // ---- 6. Window ---------------------------------------------------------
-  createWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-}).catch((err) => {
-  console.error('[main] fatal: app initialization failed:', err);
-  dialog.showErrorBox(
-    'Team-X failed to start',
-    `Initialization error:\n\n${err instanceof Error ? err.message : String(err)}\n\nThe application will now exit.`,
-  );
-  app.exit(1);
-});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

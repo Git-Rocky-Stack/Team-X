@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createEmbeddingGenerator, type EmbedTextFn } from './embeddings.js';
+import { type EmbedTextFn, createEmbeddingGenerator } from './embeddings.js';
 
 const fakeEmbed: EmbedTextFn = async (texts) => {
   return texts.map((text) => {

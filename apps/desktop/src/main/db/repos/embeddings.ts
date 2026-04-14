@@ -45,16 +45,19 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
     },
 
     deleteBySource(sourceId: string): number {
-      const result = db.delete(embeddings).where(eq(embeddings.sourceId, sourceId)).run();
+      // better-sqlite3's RunResult always carries a `changes` count, but the
+      // generic TRunResult on BaseSQLiteDatabase doesn't narrow to it — cast
+      // through unknown so TS accepts the runtime-valid access without
+      // widening the public API surface.
+      const result = db
+        .delete(embeddings)
+        .where(eq(embeddings.sourceId, sourceId))
+        .run() as unknown as { changes: number };
       return result.changes;
     },
 
     listByCompany(companyId: string): EmbeddingRow[] {
-      return db
-        .select()
-        .from(embeddings)
-        .where(eq(embeddings.companyId, companyId))
-        .all();
+      return db.select().from(embeddings).where(eq(embeddings.companyId, companyId)).all();
     },
 
     countByCompany(companyId: string): number {

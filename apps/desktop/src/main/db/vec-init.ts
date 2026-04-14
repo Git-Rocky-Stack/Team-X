@@ -23,12 +23,14 @@ export function initVec<TRunResult>(
   dimension: number,
 ): boolean {
   try {
-    db.run(sql.raw(`
+    db.run(
+      sql.raw(`
       CREATE VIRTUAL TABLE IF NOT EXISTS vec_embeddings USING vec0(
         id TEXT PRIMARY KEY,
         embedding float[${dimension}]
       )
-    `));
+    `),
+    );
     return true;
   } catch (err) {
     console.warn(
