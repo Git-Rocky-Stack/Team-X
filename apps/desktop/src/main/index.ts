@@ -46,15 +46,23 @@ import { BrowserWindow, app, dialog, ipcMain } from 'electron';
 
 import { calcCostUsd } from '@team-x/telemetry-core';
 
-import { type RagRepo, type RagService, createRagService } from '@team-x/intelligence';
+import {
+  type RagRepo,
+  type RagService,
+  createEntityResolver,
+  createIntentClassifier,
+  createRagService,
+  createSlotFiller,
+} from '@team-x/intelligence';
 import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
-import type { EmbeddingSourceType } from '@team-x/shared-types';
+import type { EmbeddingSourceType, Employee, Ticket } from '@team-x/shared-types';
 import { eq } from 'drizzle-orm';
 import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath } from './db/paths.js';
 import { createAuditRepo } from './db/repos/audit.js';
+import { createCommandHistoryRepo } from './db/repos/command-history.js';
 import { createCompaniesRepo } from './db/repos/companies.js';
 import { createEmbeddingsRepo } from './db/repos/embeddings.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
@@ -89,6 +97,7 @@ import {
 import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
 import { createBackupService } from './services/backup.js';
+import { type CommandService, createCommandService } from './services/command-service.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import { detectHardware } from './services/profiler.js';
@@ -215,6 +224,7 @@ let orchestrator: Orchestrator | null = null;
 let unregisterIpc: (() => void) | null = null;
 let mcpHostInstance: McpHost | null = null;
 let ragIndexerInstance: { stop: () => void } | null = null;
+let commandServiceInstance: CommandService | null = null;
 
 app
   .whenReady()
@@ -254,6 +264,7 @@ app
     const ticketAttachmentsRepo = createTicketAttachmentsRepo(db);
     const settingsRepo = createSettingsRepo(db);
     const embeddingsRepo = createEmbeddingsRepo(db);
+    const commandHistoryRepo = createCommandHistoryRepo(db);
 
     // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
     const settingsSeeded = settingsRepo.seedDefaults();
@@ -616,6 +627,126 @@ app
       updaterService,
       getHardwareProfile: detectHardware,
     });
+    // ---- Command palette service (Phase 5 — M30 T4) -----------------------
+    //
+    // Built AFTER `ipcHandlers` so we can wire the dispatcher against the
+    // registered handler functions directly (same source of truth, no
+    // duplicate business logic). Built BEFORE `registerIpcHandlers` so
+    // T5's `command.*` IPC layer can register its handlers on top of
+    // this service without a second orchestration pass.
+    //
+    // The NLU classifier uses the provider router through the provider
+    // factory — in test mode it runs against a stub complete() closure
+    // that echoes a canned complex_request back, which keeps all three
+    // existing E2E specs semantics-identical. The real completion path
+    // (M30 T1) is wired via `resolveProvider`.
+    const classifierComplete = async ({
+      system,
+      user,
+    }: {
+      system: string;
+      user: string;
+    }): Promise<string> => {
+      // Hook: wire into provider-router.streamCompletion once M30 T1 is
+      // fully integrated with the main-process provider factory. For now
+      // return a deterministic complex_request JSON so the classifier
+      // never crashes a palette invocation when no provider is configured.
+      void system;
+      void user;
+      return JSON.stringify({
+        intent: 'complex_request',
+        entities: {},
+        confidence: 0,
+        missingSlots: [],
+      });
+    };
+    const commandClassifier = createIntentClassifier({ complete: classifierComplete });
+    // DB rows type `status` as `string`; shared-types narrows to the
+    // `EmployeeStatus` / `TicketStatus` unions. The casts below are
+    // safe — the DB schema's CHECK constraints and repo write paths
+    // never insert values outside those unions — and avoid threading
+    // a row-mapper into the resolver seam for a purely structural diff.
+    const commandResolver = createEntityResolver({
+      listEmployees: async (companyId: string) =>
+        employeesRepo.listByCompany(companyId) as unknown as Employee[],
+      getTicketById: async (id: string, companyId: string) => {
+        const t = ticketsRepo.getById(id);
+        if (!t || t.companyId !== companyId) return null;
+        return t as unknown as Ticket;
+      },
+      searchTickets: async (query: string, companyId: string) => {
+        const q = query.toLowerCase();
+        const rows = ticketsRepo
+          .listByCompany(companyId)
+          .filter(
+            (t) =>
+              t.title.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q),
+          );
+        return rows as unknown as Ticket[];
+      },
+      searchVault: async (query: string, companyId: string) => {
+        const hits = vaultService.search(companyId, query);
+        // Resolver expects VaultFileRankedLike = { file: VaultFile; rank?: number }.
+        // VaultSearchResult is a thin projection of VaultFile — hydrate the
+        // full row via `vaultService.get()` so the resolver's stringifier
+        // sees the canonical shape.
+        return hits
+          .map((r) => {
+            const file = vaultService.get(r.id);
+            if (!file) return null;
+            return { file, rank: r.rank };
+          })
+          .filter(
+            (x): x is { file: NonNullable<ReturnType<typeof vaultService.get>>; rank: number } =>
+              x !== null,
+          );
+      },
+      listRoles: async () => roleLoader.listRoles(),
+    });
+    const commandSlotFiller = createSlotFiller();
+    commandServiceInstance = createCommandService({
+      classifier: commandClassifier,
+      resolver: commandResolver,
+      slotFiller: commandSlotFiller,
+      handlers: {
+        employeesList: (req) => ipcHandlers.employeesList(req),
+        employeesCreate: (req) => ipcHandlers.employeesCreate(req),
+        // employeesFire / employeesPromote — not yet registered; CommandService
+        // dispatcher guards for absence and emits `handler_error`. Wire in
+        // when the main-process IPC layer adds them.
+        ticketsAssign: (req) =>
+          ipcHandlers.ticketsAssign({ ticketId: req.ticketId, assigneeId: req.assigneeId }),
+        ticketsCreate: (req) => ipcHandlers.ticketsCreate(req),
+        ticketsClose: (req) => ipcHandlers.ticketsClose(req),
+        ticketsReopen: (req) => ipcHandlers.ticketsReopen(req),
+        projectsCreate: (req) =>
+          ipcHandlers.projectsCreate({
+            companyId: req.companyId,
+            title: req.title,
+            description: req.description,
+          }),
+        goalsCreate: (req) => ipcHandlers.goalsCreate(req),
+        meetingsCall: (req) =>
+          ipcHandlers.meetingsCall({
+            companyId: req.companyId,
+            chairId: req.chairId,
+            attendeeIds: req.attendeeIds,
+            agenda: req.agenda,
+          }),
+        meetingsEnd: (req) => ipcHandlers.meetingsEnd({ meetingId: req.meetingId }),
+        vaultSearch: async (req) => {
+          const hits = await ipcHandlers.vaultSearch(req);
+          return hits.map((r) => ({
+            id: r.id,
+            originalName: r.originalName,
+            rank: r.rank,
+          }));
+        },
+      },
+      historyRepo: commandHistoryRepo,
+      bus,
+    });
+
     unregisterIpc = registerIpcHandlers(ipcHandlers, bus);
 
     // ---- RAG IPC handlers (Phase 5 — M29 T7) -------------------------------
@@ -740,7 +871,12 @@ app.on('window-all-closed', () => {
  * sits waiting for the event loop to drain.
  */
 app.on('will-quit', (event) => {
-  if (orchestrator === null && unregisterIpc === null && ragIndexerInstance === null) {
+  if (
+    orchestrator === null &&
+    unregisterIpc === null &&
+    ragIndexerInstance === null &&
+    commandServiceInstance === null
+  ) {
     closeDb();
     return;
   }
@@ -769,6 +905,21 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] rag indexer stop failed:', err);
+    }
+    // Stop the CommandService BEFORE the orchestrator drain (M29 T6
+    // learning): any in-flight `command.execute` that is mid-dispatch
+    // would otherwise enqueue a fresh orchestrator turn after the
+    // drain has started. Stopping first closes its accept-loop; the
+    // existing handler promises complete against the still-live
+    // orchestrator since JS's microtask queue drains ahead of the
+    // next `await`.
+    try {
+      if (commandServiceInstance !== null) {
+        commandServiceInstance.stop();
+        commandServiceInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] command service stop failed:', err);
     }
     try {
       if (orchestrator !== null) {

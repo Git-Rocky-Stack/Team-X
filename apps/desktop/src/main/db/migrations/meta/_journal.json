@@ -64,6 +64,13 @@
       "when": 1776662400000,
       "tag": "0008_embeddings",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1776748800000,
+      "tag": "0009_command_history",
+      "breakpoints": true
     }
   ]
 }

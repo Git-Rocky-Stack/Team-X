@@ -16,7 +16,8 @@ export type EventType =
   | 'meeting.interjection'
   | 'meeting.ended'
   | 'vault.file_created'
-  | 'vault.file_deleted';
+  | 'vault.file_deleted'
+  | 'command.executed';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -126,4 +127,35 @@ export interface VaultFileCreatedPayload {
 
 export interface VaultFileDeletedPayload {
   fileId: string;
+}
+
+// ---------------------------------------------------------------------------
+// Command event payload (Phase 5 — M30 T4)
+//
+// Emitted by `CommandService.execute()` after a dispatched natural-
+// language command completes — both on success and on failure so the
+// append-only audit trail (architectural invariant #6) captures every
+// palette invocation, not just the green path.
+//
+// `outcome` carries the success/failure signal. On `error`, `resultId`
+// is absent and the CommandService additionally logs the error code to
+// the console; the raw error message itself never enters the event bus
+// (PII hygiene — user-entered text stays in `rawText` but handler-side
+// error strings may leak row shapes or internal state).
+//
+// `durationMs` is wall-clock time from `execute()` entry to dispatcher
+// return, including `confirmed`-gate checks and history persistence.
+// Used by the Telemetry view to surface palette latency p50/p95.
+// ---------------------------------------------------------------------------
+
+export interface CommandExecutedPayload {
+  companyId: string;
+  actorId: string;
+  /** Matches `IntentName` from `@team-x/intelligence` — kept loose here to avoid a cross-package dep. */
+  intent: string;
+  entities: Record<string, string>;
+  rawText: string;
+  outcome: 'ok' | 'error';
+  resultId?: string | number;
+  durationMs: number;
 }

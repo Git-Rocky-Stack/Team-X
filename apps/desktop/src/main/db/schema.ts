@@ -450,3 +450,39 @@ export const embeddings = sqliteTable('embeddings', {
   embedding: blob('embedding', { mode: 'buffer' }).notNull(),
   createdAt: integer('created_at').notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Phase 5 — M30: Command history (Cmd+K palette)
+// ---------------------------------------------------------------------------
+
+/**
+ * Persisted NLU command history — one row per executed command
+ * (successful OR failed). Capped to 20 most-recent rows per company
+ * by the CommandService at write time via FIFO eviction. Audit trail
+ * for every natural-language command dispatched by the palette.
+ *
+ * `executed_at` is an ISO-8601 string so it sorts correctly lex and
+ * round-trips through JSON without timezone surprises. `result_id`
+ * is a string column even though some handlers return numeric ids —
+ * we coerce at the boundary so the schema can hold any id shape.
+ */
+export const commandHistory = sqliteTable('command_history', {
+  id: text('id').primaryKey(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id),
+  /** Actor who fired the command — 'user' for Rocky, else an employee id. */
+  actorId: text('actor_id').notNull(),
+  /** Raw user text at the palette. */
+  text: text('text').notNull(),
+  /** Classified `IntentName` from the NLU classifier. */
+  intent: text('intent').notNull(),
+  /** JSON-serialized `Record<string, string>` of dispatched entities. */
+  entitiesJson: text('entities_json').notNull(),
+  /** ISO-8601 timestamp (UTC). */
+  executedAt: text('executed_at').notNull(),
+  /** 'ok' | 'error'. */
+  outcome: text('outcome').notNull(),
+  /** Stringified result id from the dispatched handler, if any. */
+  resultId: text('result_id'),
+});

@@ -127,6 +127,15 @@ export interface RoleLoader {
    * new employee — the renderer only sends `roleId` + `name`.
    */
   getSpec(roleId: string): RoleSpec | null;
+
+  /**
+   * Return every parsed `RoleSpec` currently in the index. Used by
+   * the M30 NLU entity resolver to fuzzy-match role queries ("senior
+   * backend engineer") against the full catalog. Snapshot-copies the
+   * underlying `Map.values()` so callers can safely mutate or filter
+   * without perturbing the loader's own index.
+   */
+  listRoles(): RoleSpec[];
 }
 
 interface CompanySettings {
@@ -247,6 +256,11 @@ export function createRoleLoader(deps: RoleLoaderDeps): RoleLoader {
     getSpec(roleId: string): RoleSpec | null {
       ensureScanned();
       return index.get(roleId) ?? null;
+    },
+
+    listRoles(): RoleSpec[] {
+      ensureScanned();
+      return Array.from(index.values());
     },
 
     async resolveSystemPrompt({ employee, company }): Promise<string> {
