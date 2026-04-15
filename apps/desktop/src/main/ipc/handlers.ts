@@ -105,10 +105,12 @@ import type {
   ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
+  SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
   SettingsGetRuntimeResponse,
+  SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -391,6 +393,10 @@ export interface IpcAuditRepo {
 export interface IpcSettingsRepo {
   get<T>(key: string, fallback: T): T;
   set(key: string, value: unknown): void;
+  /** Agentic loop budgets — snapshot read. Phase 5 — M31. */
+  getAgentic(): SettingsGetAgenticResponse;
+  /** Agentic loop budgets — clamped write. Phase 5 — M31. */
+  setAgentic(req: SettingsSetAgenticRequest): void;
 }
 
 /** Narrow updater-service surface the IPC handlers need. */
@@ -631,6 +637,10 @@ export interface IpcHandlers {
   settingsGetRagConfig(): Promise<SettingsGetRagConfigResponse>;
   /** `settings.setRagConfig` — patch one or more RAG configuration keys (Phase 5 — M29). */
   settingsSetRagConfig(req: SettingsSetRagConfigRequest): Promise<void>;
+  /** `settings.getAgentic` — agentic-loop budget caps (max steps, max tokens, timeout ms) (Phase 5 — M31). */
+  settingsGetAgentic(): Promise<SettingsGetAgenticResponse>;
+  /** `settings.setAgentic` — patch one or more agentic-loop budget caps with clamping (Phase 5 — M31). */
+  settingsSetAgentic(req: SettingsSetAgenticRequest): Promise<void>;
 
   // -----------------------------------------------------------------------
   // Provider management handlers (Phase 3 — M18)
@@ -1723,6 +1733,21 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         }
         settingsRepo.set('embedding_dimension', Math.round(req.embeddingDimension));
       }
+    },
+
+    // -----------------------------------------------------------------------
+    // Agentic loop handlers (Phase 5 — M31)
+    // -----------------------------------------------------------------------
+
+    async settingsGetAgentic(): Promise<SettingsGetAgenticResponse> {
+      return settingsRepo.getAgentic();
+    },
+
+    async settingsSetAgentic(req: SettingsSetAgenticRequest): Promise<void> {
+      // Repo handles clamping + finite-number validation; the handler
+      // is a thin pass-through so that call-sites can share the same
+      // invariants regardless of entry point (IPC, test, future CLI).
+      settingsRepo.setAgentic(req);
     },
 
     // -----------------------------------------------------------------------

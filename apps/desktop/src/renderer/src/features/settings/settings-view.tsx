@@ -6,8 +6,10 @@
  * Phase 4 — M23: backup & restore section.
  * Phase 4 — M25: updater section.
  * Phase 5 — M29: RAG configuration section.
+ * Phase 5 — M31: agentic loop section (budget caps).
  */
 
+import { AgenticSection } from './agentic-section.js';
 import { BackupSection } from './backup-section.js';
 import { ConcurrencySection } from './concurrency-section.js';
 import { PrivacySection } from './privacy-section.js';
@@ -31,6 +33,7 @@ export function SettingsView() {
         <PrivacySection />
         <RagSection />
         <ConcurrencySection />
+        <AgenticSection />
         <ProvidersSection />
         <BackupSection />
       </div>

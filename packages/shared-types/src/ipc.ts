@@ -803,6 +803,52 @@ export interface SettingsSetConcurrencyRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Agentic loop settings (Phase 5 — M31)
+// ---------------------------------------------------------------------------
+
+/**
+ * Hard budget caps for an in-flight agentic-loop run (ReAct core).
+ *
+ * Read at run-start by `AgenticLoopService` so every new run observes
+ * the user's current preference; the values are also surfaced by the
+ * Settings → Runtime → Agentic Loop subsection so the user can dial
+ * the knobs without restarting the app.
+ *
+ * Clamps (enforced in both the handler and the Settings UI) are
+ * deliberately generous for default reasoning workloads but tight
+ * enough that a runaway loop cannot exhaust a local model's context
+ * window or a cloud provider's rate bucket.
+ */
+export interface SettingsGetAgenticResponse {
+  /** Maximum ReAct steps before the loop terminates with `budget_exhausted`. 1–32. */
+  maxSteps: number;
+  /** Token budget across all steps before the loop terminates. 512–64000. */
+  maxTokens: number;
+  /** Wall-clock timeout in milliseconds before the loop is aborted. 10000–600000. */
+  timeoutMs: number;
+}
+
+/**
+ * Partial update for the agentic loop configuration. Every field is
+ * optional; the handler patches only the supplied keys, leaving the
+ * rest at their current persisted values. Out-of-range integers are
+ * clamped to the nearest bound before persisting; non-finite numbers
+ * are rejected with an error.
+ */
+export interface SettingsSetAgenticRequest {
+  maxSteps?: number;
+  maxTokens?: number;
+  timeoutMs?: number;
+}
+
+/** Clamp bounds + defaults for the three agentic keys. Shared by repo, handler, and UI. */
+export const AGENTIC_SETTINGS_CLAMPS = {
+  maxSteps: { min: 1, max: 32, default: 8 },
+  maxTokens: { min: 512, max: 64000, default: 8000 },
+  timeoutMs: { min: 10000, max: 600000, default: 120000 },
+} as const;
+
+// ---------------------------------------------------------------------------
 // RAG configuration settings (Phase 5 — M29)
 // ---------------------------------------------------------------------------
 
@@ -1030,6 +1076,15 @@ export interface IpcContract {
   };
   'settings.setRagConfig': {
     request: SettingsSetRagConfigRequest;
+    response: undefined;
+  };
+  // Agentic loop channels (Phase 5 — M31)
+  'settings.getAgentic': {
+    request: Record<string, never>;
+    response: SettingsGetAgenticResponse;
+  };
+  'settings.setAgentic': {
+    request: SettingsSetAgenticRequest;
     response: undefined;
   };
   // Provider management channels (Phase 3 — M18)
@@ -1375,6 +1430,10 @@ export interface TeamXApi {
     getRagConfig(): Promise<SettingsGetRagConfigResponse>;
     /** Patch one or more RAG configuration keys. Missing keys retain their current value. */
     setRagConfig(req: SettingsSetRagConfigRequest): Promise<void>;
+    /** Get agentic-loop budget caps (max steps, max tokens, timeout ms). Phase 5 — M31. */
+    getAgentic(): Promise<SettingsGetAgenticResponse>;
+    /** Patch one or more agentic-loop budget caps. Values are clamped. Phase 5 — M31. */
+    setAgentic(req: SettingsSetAgenticRequest): Promise<void>;
   };
   providers: {
     /** List all configured providers with status. */

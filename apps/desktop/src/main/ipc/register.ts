@@ -110,6 +110,9 @@ const REQUEST_CHANNELS = [
   'settings.setConcurrency',
   'settings.getRagConfig',
   'settings.setRagConfig',
+  // Agentic loop (Phase 5 — M31)
+  'settings.getAgentic',
+  'settings.setAgentic',
   // Provider management (Phase 3 — M18)
   'providers.list',
   'providers.add',
@@ -463,6 +466,18 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'settings.setRagConfig',
     async (_event, request: import('@team-x/shared-types').SettingsSetRagConfigRequest) => {
       return handlers.settingsSetRagConfig(request);
+    },
+  );
+
+  // Agentic loop handlers (Phase 5 — M31)
+  ipcMain.handle('settings.getAgentic', async () => {
+    return handlers.settingsGetAgentic();
+  });
+
+  ipcMain.handle(
+    'settings.setAgentic',
+    async (_event, request: import('@team-x/shared-types').SettingsSetAgenticRequest) => {
+      return handlers.settingsSetAgentic(request);
     },
   );
 

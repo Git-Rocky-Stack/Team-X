@@ -1,15 +1,17 @@
 /**
- * React Query hooks for the Settings tab (Phase 3 — M19).
+ * React Query hooks for the Settings tab (Phase 3 — M19, extended in Phase 5 — M31).
  *
- * Six hooks matching the six settings IPC channels:
+ * Eight hooks matching the eight settings IPC channels:
  * - useRuntimeSettings / useSetRuntime
  * - usePrivacySettings / useSetPrivacy
  * - useConcurrencySettings / useSetConcurrency
+ * - useAgenticSettings / useSetAgentic (M31)
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type {
+  SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRuntimeRequest,
@@ -66,6 +68,27 @@ export function useSetConcurrency() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'concurrency'] });
       qc.invalidateQueries({ queryKey: ['settings', 'runtime'] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Agentic loop settings (Phase 5 — M31)
+// ---------------------------------------------------------------------------
+
+export function useAgenticSettings() {
+  return useQuery({
+    queryKey: ['settings', 'agentic'],
+    queryFn: () => ipc.settings.getAgentic(),
+  });
+}
+
+export function useSetAgentic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: SettingsSetAgenticRequest) => ipc.settings.setAgentic(req),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'agentic'] });
     },
   });
 }
