@@ -523,6 +523,120 @@ describe('createAgenticLoopService', () => {
     expect(second?.steps.some((s) => 'text' in s && s.text === 'mutation attempt')).toBe(false);
   });
 
+  // ─────────────────────────────────────────────────────────────────
+  // M32 T0 / F1 — getRunSnapshot
+  // Backfill projection tests. Covers:
+  //   1. null for unknown runId (silent IPC fallback path)
+  //   2. projected steps match the wire shape emitted by `agent.step`
+  //   3. terminal latches to { kind: 'completed', payload } after
+  //      finish, with durationMs + totalSteps derived correctly
+  //   4. terminal stays null for in-flight runs
+  //   5. failed runs project to { kind: 'failed', payload } with
+  //      the same reason string the `agentic.failed` event carries
+  // ─────────────────────────────────────────────────────────────────
+
+  it('getRunSnapshot returns null for unknown runId', () => {
+    const service = createAgenticLoopService(fx.deps);
+    expect(service.getRunSnapshot('does-not-exist')).toBeNull();
+  });
+
+  it('getRunSnapshot projects steps to the agent.step wire shape and latches terminal=completed', async () => {
+    const fixture = buildFixture({
+      script: ['{"action":"test_tool","args":{}}', '{"action":"final_answer","answer":"done"}'],
+    });
+    const service = createAgenticLoopService(fixture.deps);
+    const { runId, threadId } = await service.start({
+      companyId: fixture.companyId,
+      userText: 'snap me',
+    });
+    await service.waitForRun(runId);
+
+    const snap = service.getRunSnapshot(runId);
+    expect(snap).not.toBeNull();
+    expect(snap?.runId).toBe(runId);
+    expect(snap?.threadId).toBe(threadId);
+
+    // Every step carries the JSON-safe wire shape — no LoopStep fields leak.
+    expect(snap?.steps.length).toBeGreaterThanOrEqual(3);
+    for (const step of snap?.steps ?? []) {
+      expect(step.runId).toBe(runId);
+      expect(step.threadId).toBe(threadId);
+      expect(typeof step.stepIndex).toBe('number');
+      expect(['plan', 'tool_call', 'tool_result', 'answer', 'error']).toContain(step.kind);
+      expect(typeof step.tokensIn).toBe('number');
+      expect(typeof step.tokensOut).toBe('number');
+      expect(typeof step.costUsd).toBe('number');
+      expect(typeof step.provider).toBe('string');
+      expect(typeof step.model).toBe('string');
+    }
+
+    // Snapshot byte-for-byte parity with the emitted bus events.
+    const stepEvents = fixture.bus.emitted.filter((e) => e.type === 'agent.step');
+    expect(snap?.steps.length).toBe(stepEvents.length);
+
+    // Terminal latches to completed.
+    expect(snap?.terminal?.kind).toBe('completed');
+    if (snap?.terminal?.kind === 'completed') {
+      expect(snap.terminal.payload.answer).toBe('done');
+      expect(snap.terminal.payload.totalSteps).toBe(snap.steps.length);
+      expect(snap.terminal.payload.runId).toBe(runId);
+      expect(snap.terminal.payload.threadId).toBe(threadId);
+      expect(snap.terminal.payload.durationMs).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('getRunSnapshot terminal=null for an in-flight run', async () => {
+    // Hold the completion open via a never-resolving provider so the run
+    // stays in status='running' long enough to snapshot.
+    const fixture = buildFixture();
+    let releasePending: (() => void) | null = null;
+    const pending = new Promise<void>((resolve) => {
+      releasePending = resolve;
+    });
+    fixture.deps.resolveComplete = async () => ({
+      complete: async () => {
+        await pending;
+        return { text: '{"action":"final_answer","answer":"late"}' } as LoopProviderCompletion;
+      },
+      provider: 'slow',
+      model: 'slow-model',
+    });
+
+    const service = createAgenticLoopService(fixture.deps);
+    const { runId } = await service.start({ companyId: fixture.companyId, userText: 'block' });
+    // The run is in-flight; snapshot now.
+    const snap = service.getRunSnapshot(runId);
+    expect(snap).not.toBeNull();
+    expect(snap?.terminal).toBeNull();
+
+    releasePending?.();
+    await service.waitForRun(runId);
+  });
+
+  it('getRunSnapshot projects failed runs to terminal.kind=failed with the same reason as agentic.failed', async () => {
+    const fixture = buildFixture();
+    fixture.deps.resolveComplete = async () => ({
+      complete: async () => {
+        throw new Error('provider-down');
+      },
+      provider: 'broken',
+      model: 'broken-model',
+    });
+    const service = createAgenticLoopService(fixture.deps);
+    const { runId } = await service.start({ companyId: fixture.companyId, userText: 'boom' });
+    await service.waitForRun(runId);
+
+    const snap = service.getRunSnapshot(runId);
+    expect(snap?.terminal?.kind).toBe('failed');
+    const failedEvent = fixture.bus.emitted.find((e) => e.type === 'agentic.failed');
+    if (snap?.terminal?.kind === 'failed') {
+      expect(snap.terminal.payload.reason).toBe(
+        (failedEvent?.payload as { reason: string }).reason,
+      );
+      expect(snap.terminal.payload.totalSteps).toBe(snap.steps.length);
+    }
+  });
+
   it('throws an informative error when the system-agent is missing for the company', async () => {
     const fixture = buildFixture({ missingAgent: true });
     const service = createAgenticLoopService(fixture.deps);

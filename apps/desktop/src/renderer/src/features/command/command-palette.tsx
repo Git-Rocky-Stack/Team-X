@@ -821,7 +821,11 @@ function StepLogView({
   onOpenThread,
   onDismiss,
 }: StepLogViewProps) {
-  const { steps, result } = useAgentStepStream(threadId);
+  // M32 T0 / F1 — pass runId so the hook can backfill on mount. Fixes
+  // the race where fast providers complete before the bus subscription
+  // attaches and the palette would otherwise show only the final-answer
+  // card (or nothing at all).
+  const { steps, result } = useAgentStepStream(threadId, runId);
   const listRef = useRef<HTMLUListElement>(null);
   const [focusIdx, setFocusIdx] = useState<number | null>(null);
 

@@ -1073,6 +1073,10 @@ app
     ipcMain.handle('command.stop', (_evt, req: import('@team-x/shared-types').CommandStopRequest) =>
       commandHandlers['command.stop'](req),
     );
+    // Phase 5 — M32 T0 / F1. Palette step-log backfill on mount.
+    ipcMain.handle('command.getRunSnapshot', (_evt, req: { runId: string }) =>
+      commandHandlers['command.getRunSnapshot'](req),
+    );
 
     console.log('[main] orchestrator + IPC ready');
 

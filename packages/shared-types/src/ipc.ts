@@ -54,7 +54,7 @@ import type {
   Thread,
   Ticket,
 } from './entities.js';
-import type { DashboardEvent } from './events.js';
+import type { AgenticRunSnapshot, DashboardEvent } from './events.js';
 import type { PrivacyTier, ProviderConfig, ProviderKind } from './providers.js';
 
 // ---------------------------------------------------------------------------
@@ -1222,6 +1222,11 @@ export interface IpcContract {
     request: CommandStopRequest;
     response: CommandStopResult;
   };
+  // Agentic-loop run snapshot for palette backfill-on-mount (Phase 5 — M32 T0 / F1)
+  'command.getRunSnapshot': {
+    request: { runId: string };
+    response: AgenticRunSnapshot | null;
+  };
   // Ticket management channels
   'tickets.create': {
     request: CreateTicketRequest;
@@ -1540,6 +1545,17 @@ export interface TeamXApi {
      * is informational only.
      */
     stop(req: CommandStopRequest): Promise<CommandStopResult>;
+    /**
+     * Return a point-in-time snapshot of an agentic-loop run keyed by
+     * `runId` (Phase 5 — M32 T0 / F1). Projects the in-memory run
+     * state onto the wire shapes `agent.step` / `agentic.completed` /
+     * `agentic.failed` use, so the palette can backfill its step-log
+     * on mount for runs whose bus events fired before the renderer
+     * subscription attached. Returns `null` for unknown / evicted
+     * runs — callers treat that as "no backfill available" and fall
+     * back to the live stream alone.
+     */
+    getRunSnapshot(runId: string): Promise<AgenticRunSnapshot | null>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

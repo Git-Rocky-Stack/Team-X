@@ -40,6 +40,7 @@ import type {
   AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
+  AgenticRunSnapshot,
   AttachFileRequest,
   AttachFileResponse,
   AuditEvent,
@@ -267,6 +268,8 @@ const CHANNELS = {
   commandSuggest: 'command.suggest',
   // Agentic-loop cancellation (Phase 5 — M31 T6)
   commandStop: 'command.stop',
+  // Agentic-loop snapshot for palette backfill-on-mount (Phase 5 — M32 T0 / F1)
+  commandGetRunSnapshot: 'command.getRunSnapshot',
 } as const;
 
 /**
@@ -467,6 +470,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.commandSuggest, req) as Promise<IpcSuggestItem[]>,
       stop: (req: CommandStopRequest) =>
         ipc.invoke(CHANNELS.commandStop, req) as Promise<CommandStopResult>,
+      getRunSnapshot: (runId: string) =>
+        ipc.invoke(CHANNELS.commandGetRunSnapshot, { runId }) as Promise<AgenticRunSnapshot | null>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

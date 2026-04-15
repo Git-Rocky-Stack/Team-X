@@ -99,6 +99,7 @@ function makeServiceMock(
 function makeAgenticMock(
   overrides: {
     getRun?: (runId: string) => AgenticLoopRunState | null;
+    getRunSnapshot?: (runId: string) => unknown;
     stopImpl?: (runId: string) => void;
   } = {},
 ): AgenticLoopService {
@@ -106,6 +107,7 @@ function makeAgenticMock(
     start: vi.fn(),
     waitForRun: vi.fn(async () => undefined),
     getRun: vi.fn(overrides.getRun ?? (() => null)),
+    getRunSnapshot: vi.fn(overrides.getRunSnapshot ?? (() => null)),
     stop: vi.fn(overrides.stopImpl ?? (() => undefined)),
   } as unknown as AgenticLoopService;
 }
@@ -155,10 +157,11 @@ function build(
 // ---------------------------------------------------------------------------
 
 describe('buildCommandHandlers', () => {
-  it('returns the five expected channel keys', () => {
+  it('returns the six expected channel keys', () => {
     const handlers = build(makeServiceMock());
     expect(Object.keys(handlers).sort()).toEqual([
       'command.execute',
+      'command.getRunSnapshot',
       'command.history',
       'command.parse',
       'command.stop',
@@ -434,5 +437,51 @@ describe('buildCommandHandlers', () => {
     await expect(
       handlers['command.suggest']({ partial: 'x', companyId: 'company_1' }),
     ).rejects.toBe(boom);
+  });
+
+  // ───────────────────────────────────────────────────────────────
+  // M32 T0 / F1 — command.getRunSnapshot
+  // ───────────────────────────────────────────────────────────────
+
+  it('command.getRunSnapshot forwards runId to AgenticLoopService.getRunSnapshot and echoes the projection', async () => {
+    const snap = {
+      runId: 'run_42',
+      threadId: 'thread_42',
+      steps: [
+        {
+          runId: 'run_42',
+          threadId: 'thread_42',
+          stepIndex: 0,
+          kind: 'plan' as const,
+          data: { text: 'first' },
+          tokensIn: 5,
+          tokensOut: 7,
+          costUsd: 0.0001,
+          provider: 'test',
+          model: 'test-model',
+        },
+      ],
+      terminal: null,
+    };
+    const agentic = makeAgenticMock({ getRunSnapshot: () => snap });
+    const handlers = buildCommandHandlers({
+      commandService: makeServiceMock(),
+      agenticLoopService: agentic,
+    });
+
+    const out = await handlers['command.getRunSnapshot']({ runId: 'run_42' });
+
+    expect(out).toBe(snap);
+    expect(agentic.getRunSnapshot).toHaveBeenCalledWith('run_42');
+  });
+
+  it('command.getRunSnapshot returns null untouched for unknown runIds (no throw)', async () => {
+    const agentic = makeAgenticMock({ getRunSnapshot: () => null });
+    const handlers = buildCommandHandlers({
+      commandService: makeServiceMock(),
+      agenticLoopService: agentic,
+    });
+    const out = await handlers['command.getRunSnapshot']({ runId: 'does_not_exist' });
+    expect(out).toBeNull();
   });
 });

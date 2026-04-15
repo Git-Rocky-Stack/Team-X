@@ -73,6 +73,7 @@ import type {
   AgentStepPayload,
   AgenticCompletedPayload,
   AgenticFailedPayload,
+  AgenticRunSnapshot,
   DashboardEvent,
   EventType,
 } from '@team-x/shared-types';
@@ -260,6 +261,21 @@ export interface AgenticLoopService {
   start(args: StartArgs): Promise<StartResult>;
   stop(runId: string): void;
   getRun(runId: string): AgenticLoopRunState | null;
+  /**
+   * Point-in-time projection of a run's persisted step history and its
+   * terminal bus-event payload (when finished). Phase 5 — M32 T0 / F1.
+   *
+   * Shape matches the live bus stream exactly — each step is the same
+   * `AgentStepPayload` the `agent.step` event emits, and `terminal`
+   * latches to whichever of `agentic.completed` / `agentic.failed` the
+   * `finishRun` helper would emit. The renderer hook merges the snapshot
+   * with incoming bus events by `(runId, stepIndex)` to fix the race
+   * where a fast provider completes before `ipc.events.onDashboard`
+   * attaches — see `useAgentStepStream`.
+   *
+   * Returns `null` for unknown or evicted runs. Idempotent, no side-effects.
+   */
+  getRunSnapshot(runId: string): AgenticRunSnapshot | null;
   /**
    * Resolves when the background loop for `runId` terminates and all
    * terminal side-effects (runs.finish + agentic.completed|failed) have
@@ -725,11 +741,86 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
     return { ...entry.state, steps: entry.state.steps.slice() };
   }
 
+  /**
+   * Phase 5 — M32 T0 / F1. Pure projection of an in-memory run onto the
+   * wire shapes the bus emits. Keeps byte-for-byte parity with `onStep`
+   * (lines ~614–640 in this file) and `finishRun` so merging the backfill
+   * with the live stream in the renderer is lossless.
+   *
+   * Kept intentionally separate from `getRun` — that returns the full
+   * service-internal `AgenticLoopRunState` (including `LoopStep[]` which
+   * is not JSON-safe over IPC). `getRunSnapshot` returns the public,
+   * renderer-consumable projection.
+   */
+  function getRunSnapshot(runId: string): AgenticRunSnapshot | null {
+    const entry = runs.get(runId);
+    if (!entry) return null;
+    const { state } = entry;
+
+    const steps: AgentStepPayload[] = state.steps.map((step) => {
+      const body = projectStepBody(step);
+      return {
+        runId: state.runId,
+        threadId: state.threadId,
+        stepIndex: step.stepIndex,
+        kind: body.kind,
+        data: body.data,
+        tokensIn: step.telemetry.tokensIn,
+        tokensOut: step.telemetry.tokensOut,
+        costUsd: step.telemetry.costUsd,
+        provider: step.telemetry.provider,
+        model: step.telemetry.model,
+      };
+    });
+
+    let terminal: AgenticRunSnapshot['terminal'] = null;
+    if (state.endedAt !== null) {
+      const durationMs = state.endedAt - state.startedAt;
+      if (state.status === 'completed') {
+        terminal = {
+          kind: 'completed',
+          payload: {
+            runId: state.runId,
+            threadId: state.threadId,
+            answer: state.answer ?? '',
+            totalSteps: state.steps.length,
+            tokensIn: state.promptTokens,
+            tokensOut: state.completionTokens,
+            costUsd: state.costUsd,
+            durationMs,
+          },
+        };
+      } else if (state.status !== 'running') {
+        terminal = {
+          kind: 'failed',
+          payload: {
+            runId: state.runId,
+            threadId: state.threadId,
+            reason: state.errorReason ?? state.status,
+            message: state.errorMessage ?? '',
+            totalSteps: state.steps.length,
+            tokensIn: state.promptTokens,
+            tokensOut: state.completionTokens,
+            costUsd: state.costUsd,
+            durationMs,
+          },
+        };
+      }
+    }
+
+    return {
+      runId: state.runId,
+      threadId: state.threadId,
+      steps,
+      terminal,
+    };
+  }
+
   async function waitForRun(runId: string): Promise<void> {
     const entry = runs.get(runId);
     if (!entry) return;
     await entry.completion;
   }
 
-  return { start, stop, getRun, waitForRun };
+  return { start, stop, getRun, getRunSnapshot, waitForRun };
 }

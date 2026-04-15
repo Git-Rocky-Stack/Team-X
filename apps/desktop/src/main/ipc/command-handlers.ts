@@ -29,6 +29,7 @@
  */
 
 import type {
+  AgenticRunSnapshot,
   CommandHistoryRequest,
   CommandParseRequest,
   CommandStopRequest,
@@ -119,6 +120,7 @@ export interface CommandHandlers {
   'command.history'(req: CommandHistoryRequest): Promise<IpcCommandHistoryEntry[]>;
   'command.suggest'(req: CommandSuggestRequest): Promise<IpcSuggestItem[]>;
   'command.stop'(req: CommandStopRequest): Promise<CommandStopResult>;
+  'command.getRunSnapshot'(req: { runId: string }): Promise<AgenticRunSnapshot | null>;
 }
 
 export function buildCommandHandlers(deps: CommandHandlersDeps): CommandHandlers {
@@ -221,6 +223,22 @@ export function buildCommandHandlers(deps: CommandHandlersDeps): CommandHandlers
         logger.error(`[command.stop] failed to stop run ${req.runId}`, err);
         return { stopped: false };
       }
+    },
+
+    /**
+     * `command.getRunSnapshot` — backfill on mount for the palette
+     * step-log (Phase 5 — M32 T0 / F1).
+     *
+     * Thin pass-through to `AgenticLoopService.getRunSnapshot`. Returns
+     * `null` for unknown or evicted runs — the renderer hook treats
+     * that as "no backfill available" and relies purely on the live
+     * bus stream. Pure read; no side-effects, no mutation. Safe to
+     * call repeatedly.
+     */
+    async 'command.getRunSnapshot'(req: {
+      runId: string;
+    }): Promise<AgenticRunSnapshot | null> {
+      return agenticLoopService.getRunSnapshot(req.runId);
     },
   };
 }

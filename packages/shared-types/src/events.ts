@@ -252,3 +252,24 @@ export interface AgenticFailedPayload {
   costUsd: number;
   durationMs: number;
 }
+
+/**
+ * Point-in-time projection of an agentic-loop run for renderer backfill
+ * on mount (Phase 5 — M32 T0 / F1). Returned by `command.getRunSnapshot`
+ * so the palette step-log can replay a run whose bus events fired before
+ * the React subscription attached — the canonical root cause of users
+ * seeing only the final-answer card on fast providers.
+ *
+ * `terminal` latches once the run reaches a final state; while the run
+ * is still running it stays `null`. Consumers treat the snapshot as
+ * read-only and merge it with the live bus stream by `(runId, stepIndex)`.
+ */
+export interface AgenticRunSnapshot {
+  runId: string;
+  threadId: string;
+  steps: AgentStepPayload[];
+  terminal:
+    | { kind: 'completed'; payload: AgenticCompletedPayload }
+    | { kind: 'failed'; payload: AgenticFailedPayload }
+    | null;
+}
