@@ -1140,6 +1140,17 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] chat.listThreads: companyId is required');
       }
       const rows = threadsRepo.listByCompanyWithMembers(companyId);
+      // Build a Set of system-agent employee ids once per call so each
+      // thread's isSystemAgent flag is an O(1) lookup. `listByCompany`
+      // (not `listVisibleByCompany`) deliberately includes system
+      // pseudo-employees — exactly the set we need to classify threads
+      // against. Phase 5 — M31 T5.
+      const systemEmployeeIds = new Set<string>(
+        employeesRepo
+          .listByCompany(companyId)
+          .filter((e) => e.isSystem)
+          .map((e) => e.id),
+      );
       return rows.map(
         (row): Thread => ({
           id: row.id,
@@ -1154,6 +1165,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
             memberKind: m.memberKind as 'user' | 'employee',
             roleInThread: m.roleInThread,
           })),
+          isSystemAgent: row.members.some(
+            (m) => m.memberKind === 'employee' && systemEmployeeIds.has(m.memberId),
+          ),
         }),
       );
     },

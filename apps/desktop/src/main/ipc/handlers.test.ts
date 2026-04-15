@@ -193,6 +193,22 @@ class FakeThreadsRepo implements IpcThreadsRepo {
     }
     return this.nextDmThreadId;
   }
+
+  /**
+   * Mirror of the production `listByCompanyWithMembers` query — returns
+   * every stored thread for `companyId` with its membership list joined
+   * on. Backs the `chat.listThreads` handler tests (M31 T5). Sort order
+   * matches production (createdAt ascending) well enough for the
+   * projection assertions we care about.
+   */
+  listByCompanyWithMembers(companyId: string): (ThreadRow & { members: ThreadMemberRow[] })[] {
+    const result: (ThreadRow & { members: ThreadMemberRow[] })[] = [];
+    for (const row of this.threads.values()) {
+      if (row.companyId !== companyId) continue;
+      result.push({ ...row, members: this.members.get(row.id) ?? [] });
+    }
+    return result;
+  }
 }
 
 class FakeMessagesRepo implements IpcMessagesRepo {
@@ -857,5 +873,182 @@ describe('IPC: chat.resolveThread', () => {
     );
     // Must fail closed — no thread creation attempt for a missing employee.
     expect(fx.threads.getOrCreateCalls).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// chat.listThreads (Phase 5 — M31 T5)
+// ---------------------------------------------------------------------------
+
+describe('IPC: chat.listThreads', () => {
+  it('flags threads whose members include a system pseudo-employee as isSystemAgent: true', async () => {
+    const fx = buildFixture();
+
+    // Seed: one system pseudo-employee + one regular employee in co-1.
+    fx.employees.put(
+      makeEmployeeRow({
+        id: 'emp-system',
+        roleId: 'system-agent',
+        name: 'System Agent',
+        title: 'System Agent',
+        isSystem: true,
+      }),
+    );
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris', isSystem: false }));
+
+    // A Copilot Conversations thread — user + system pseudo-employee.
+    fx.threads.putThread(
+      makeThreadRow({
+        id: 'thread-copilot',
+        companyId: 'co-1',
+        kind: 'group',
+        subject: 'Copilot: who is on leave next week?',
+      }),
+    );
+    fx.threads.addMember({
+      threadId: 'thread-copilot',
+      memberId: HUMAN_USER_ID,
+      memberKind: 'user',
+    });
+    fx.threads.addMember({
+      threadId: 'thread-copilot',
+      memberId: 'emp-system',
+      memberKind: 'employee',
+    });
+
+    const result = await fx.handlers.chatListThreads({ companyId: 'co-1' });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe('thread-copilot');
+    expect(result[0]?.isSystemAgent).toBe(true);
+  });
+
+  it('returns isSystemAgent: false for user↔employee DMs with no system members', async () => {
+    const fx = buildFixture();
+
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris', isSystem: false }));
+    fx.threads.putThread(makeThreadRow({ id: 'thread-dm', companyId: 'co-1', kind: 'dm' }));
+    fx.threads.addMember({
+      threadId: 'thread-dm',
+      memberId: HUMAN_USER_ID,
+      memberKind: 'user',
+    });
+    fx.threads.addMember({
+      threadId: 'thread-dm',
+      memberId: 'emp-iris',
+      memberKind: 'employee',
+    });
+
+    const result = await fx.handlers.chatListThreads({ companyId: 'co-1' });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.isSystemAgent).toBe(false);
+  });
+
+  it('returns isSystemAgent: false when all employee members are non-system (multi-participant group)', async () => {
+    const fx = buildFixture();
+
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris', isSystem: false }));
+    fx.employees.put(makeEmployeeRow({ id: 'emp-mateo', isSystem: false }));
+
+    fx.threads.putThread(makeThreadRow({ id: 'thread-group', companyId: 'co-1', kind: 'group' }));
+    fx.threads.addMember({
+      threadId: 'thread-group',
+      memberId: HUMAN_USER_ID,
+      memberKind: 'user',
+    });
+    fx.threads.addMember({
+      threadId: 'thread-group',
+      memberId: 'emp-iris',
+      memberKind: 'employee',
+    });
+    fx.threads.addMember({
+      threadId: 'thread-group',
+      memberId: 'emp-mateo',
+      memberKind: 'employee',
+    });
+
+    const result = await fx.handlers.chatListThreads({ companyId: 'co-1' });
+
+    expect(result[0]?.isSystemAgent).toBe(false);
+  });
+
+  it('maps the full public Thread shape — members + lastMessageAt + isSystemAgent', async () => {
+    const fx = buildFixture();
+
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris', isSystem: false }));
+    fx.threads.putThread({
+      id: 'thread-dm',
+      companyId: 'co-1',
+      kind: 'dm',
+      subject: null,
+      createdBy: 'rocky',
+      createdAt: 1_700_000_000_000,
+      lastMessageAt: 1_700_000_500_000,
+    } as ThreadRow);
+    fx.threads.addMember({
+      threadId: 'thread-dm',
+      memberId: HUMAN_USER_ID,
+      memberKind: 'user',
+    });
+    fx.threads.addMember({
+      threadId: 'thread-dm',
+      memberId: 'emp-iris',
+      memberKind: 'employee',
+      roleInThread: 'participant',
+    });
+
+    const result = await fx.handlers.chatListThreads({ companyId: 'co-1' });
+
+    expect(result).toEqual([
+      {
+        id: 'thread-dm',
+        companyId: 'co-1',
+        kind: 'dm',
+        subject: null,
+        createdBy: 'rocky',
+        createdAt: 1_700_000_000_000,
+        lastMessageAt: 1_700_000_500_000,
+        members: [
+          { memberId: HUMAN_USER_ID, memberKind: 'user', roleInThread: null },
+          { memberId: 'emp-iris', memberKind: 'employee', roleInThread: 'participant' },
+        ],
+        isSystemAgent: false,
+      },
+    ]);
+  });
+
+  it('scopes results to the requested company — cross-company threads never leak', async () => {
+    const fx = buildFixture();
+
+    fx.employees.put(makeEmployeeRow({ id: 'emp-system-1', companyId: 'co-1', isSystem: true }));
+    fx.employees.put(makeEmployeeRow({ id: 'emp-system-2', companyId: 'co-2', isSystem: true }));
+
+    fx.threads.putThread(makeThreadRow({ id: 'thread-co1', companyId: 'co-1' }));
+    fx.threads.addMember({
+      threadId: 'thread-co1',
+      memberId: 'emp-system-1',
+      memberKind: 'employee',
+    });
+
+    fx.threads.putThread(makeThreadRow({ id: 'thread-co2', companyId: 'co-2' }));
+    fx.threads.addMember({
+      threadId: 'thread-co2',
+      memberId: 'emp-system-2',
+      memberKind: 'employee',
+    });
+
+    const co1 = await fx.handlers.chatListThreads({ companyId: 'co-1' });
+    expect(co1.map((t) => t.id)).toEqual(['thread-co1']);
+    expect(co1[0]?.isSystemAgent).toBe(true);
+
+    const co2 = await fx.handlers.chatListThreads({ companyId: 'co-2' });
+    expect(co2.map((t) => t.id)).toEqual(['thread-co2']);
+    expect(co2[0]?.isSystemAgent).toBe(true);
+  });
+
+  it('rejects when companyId is missing', async () => {
+    const fx = buildFixture();
+    await expect(fx.handlers.chatListThreads({ companyId: '' })).rejects.toThrow(/companyId/);
   });
 });

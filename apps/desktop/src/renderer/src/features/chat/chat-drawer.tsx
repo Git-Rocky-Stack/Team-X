@@ -25,16 +25,22 @@ import type { Employee } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet.js';
+import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
 import { useChatMessages, useSendMessage, useThreadList } from '@/hooks/use-chat.js';
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { ArrowLeft, Bot, Eye, List } from 'lucide-react';
+import { ArrowLeft, Bot, Eye, List, Loader2, Sparkles } from 'lucide-react';
 
 import { Composer } from './composer.js';
 import { MessageList } from './message-list.js';
-import { ThreadList, isAgentThread as checkAgentThread } from './thread-list.js';
+import { SystemAgentBadge } from './system-agent-badge.js';
+import {
+  ThreadList,
+  isAgentThread as checkAgentThread,
+  isCopilotThread as checkCopilotThread,
+} from './thread-list.js';
 
 function statusColor(status: string): string {
   switch (status) {
@@ -70,6 +76,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const employeeLive = useAppStore((s) => s.employeeLive);
   const threadListView = useAppStore((s) => s.threadListView);
   const viewingAgentThread = useAppStore((s) => s.viewingAgentThread);
+  const viewingCopilotThread = useAppStore((s) => s.viewingCopilotThread);
   const openThread = useAppStore((s) => s.openThread);
   const setThreadListView = useAppStore((s) => s.setThreadListView);
   const companyId = useAppStore((s) => s.companyId);
@@ -88,6 +95,14 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const { data: threads = [] } = useThreadList(companyId);
   const sendMutation = useSendMessage();
   const qc = useQueryClient();
+
+  // Copilot thread: subscribe to the agentic-loop step stream. The hook
+  // is a no-op when threadId is null OR the active thread is not a
+  // Copilot thread. Phase 5 — M31 T5.
+  const copilotThreadId = viewingCopilotThread ? effectiveThreadId : null;
+  const { steps: copilotSteps, result: copilotResult } = useAgentStepStream(copilotThreadId);
+  const copilotRunning =
+    copilotThreadId !== null && copilotResult === null && copilotSteps.length > 0;
 
   // Find the active thread in the threads list for agent-thread header info.
   const activeThread = threads.find((t) => t.id === effectiveThreadId);
@@ -127,7 +142,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   // Only fires for the employee DM view — not for thread list or agent threads.
   useEffect(() => {
     if (!chatOpen || !selectedId || effectiveThreadId !== null) return;
-    if (threadListView || viewingAgentThread) return;
+    if (threadListView || viewingAgentThread || viewingCopilotThread) return;
     let cancelled = false;
     ipc.chat
       .resolveThread({ employeeId: selectedId })
@@ -147,7 +162,34 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     setActiveThreadId,
     threadListView,
     viewingAgentThread,
+    viewingCopilotThread,
   ]);
+
+  // Copilot thread: refetch persisted messages when the live step count
+  // advances so the transcript stays in sync with `agent.step` events
+  // feeding `messagesRepo.append` in AgenticLoopService. Runs exactly
+  // once per new step.
+  const prevCopilotStepsRef = useRef(0);
+  useEffect(() => {
+    if (!viewingCopilotThread || !effectiveThreadId) {
+      prevCopilotStepsRef.current = 0;
+      return;
+    }
+    if (copilotSteps.length > prevCopilotStepsRef.current) {
+      prevCopilotStepsRef.current = copilotSteps.length;
+      void qc.invalidateQueries({ queryKey: ['chat', effectiveThreadId] });
+    }
+  }, [copilotSteps.length, viewingCopilotThread, effectiveThreadId, qc]);
+
+  // Copilot thread: when a run terminates (completed or failed) refetch
+  // both the thread and message lists so the final answer + run summary
+  // land in the view promptly.
+  useEffect(() => {
+    if (!viewingCopilotThread || !effectiveThreadId) return;
+    if (copilotResult === null) return;
+    void qc.invalidateQueries({ queryKey: ['chat', effectiveThreadId] });
+    void qc.invalidateQueries({ queryKey: ['threads'] });
+  }, [copilotResult, viewingCopilotThread, effectiveThreadId, qc]);
 
   // Invalidate messages when an employee transitions thinking → idle
   // (employee DM view).
@@ -186,6 +228,16 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   function handleSelectThread(threadId: string) {
     const thread = threads.find((t) => t.id === threadId);
     if (!thread) return;
+    const isCopilot = checkCopilotThread(thread);
+    if (isCopilot) {
+      openThread({
+        threadId,
+        isAgentThread: false,
+        isCopilotThread: true,
+        employeeId: null,
+      });
+      return;
+    }
     const isAgent = checkAgentThread(thread);
     if (isAgent) {
       openThread({ threadId, isAgentThread: true, employeeId: null });
@@ -199,7 +251,10 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
 
   const showDrawer =
     chatOpen &&
-    (employee !== null || threadListView || (viewingAgentThread && effectiveThreadId !== null));
+    (employee !== null ||
+      threadListView ||
+      (viewingAgentThread && effectiveThreadId !== null) ||
+      (viewingCopilotThread && effectiveThreadId !== null));
 
   if (!showDrawer) return null;
 
@@ -221,6 +276,80 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
               activeThreadId={effectiveThreadId}
               onSelectThread={handleSelectThread}
             />
+          </>
+        ) : viewingCopilotThread && effectiveThreadId ? (
+          /* ── Copilot thread view (read-only, M31 T5) ─────── */
+          <>
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setThreadListView(true)}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+                aria-label="Back to threads"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand">
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <span className="truncate">
+                    {activeThread?.subject ?? 'Copilot conversation'}
+                  </span>
+                  <SystemAgentBadge size="sm" />
+                </SheetTitle>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {copilotRunning
+                    ? `Thinking — ${copilotSteps.length} step${copilotSteps.length === 1 ? '' : 's'}`
+                    : copilotResult?.kind === 'completed'
+                      ? `Completed in ${copilotResult.payload.totalSteps} step${copilotResult.payload.totalSteps === 1 ? '' : 's'}`
+                      : copilotResult?.kind === 'failed'
+                        ? `Failed — ${copilotResult.payload.reason}`
+                        : 'Ready'}
+                </p>
+              </div>
+            </div>
+
+            {/* Messages — the agentic loop persists every step as a
+                message on this thread, so MessageList renders the full
+                step transcript (plan → tool_call → tool_result → answer)
+                without any extra client-side state. The live step stream
+                drives cache invalidation above so new steps land as soon
+                as they're emitted. */}
+            <MessageList
+              messages={messages}
+              streamingText=""
+              isStreaming={false}
+              employeeName="Copilot"
+              isAgentThread
+              employees={employees}
+            />
+
+            {/* Running indicator + read-only banner */}
+            <div className="flex items-center gap-2 border-t border-border px-4 py-3">
+              {copilotRunning ? (
+                <>
+                  <Loader2
+                    className="h-4 w-4 shrink-0 animate-spin text-brand"
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    Copilot is reasoning — transcript updates live
+                  </span>
+                </>
+              ) : copilotResult?.kind === 'failed' ? (
+                <span className="text-xs text-red-400">{copilotResult.payload.message}</span>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-xs text-muted-foreground">
+                    Copilot transcript — read only
+                  </span>
+                </>
+              )}
+            </div>
           </>
         ) : viewingAgentThread && effectiveThreadId ? (
           /* ── Agent thread view (read-only) ────────────────── */

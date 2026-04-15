@@ -180,4 +180,19 @@ export interface Thread {
   createdAt: number;
   members: ThreadMember[];
   lastMessageAt: number | null;
+  /**
+   * True when at least one employee member of this thread is a system
+   * pseudo-employee (`is_system = 1`). Computed by the `chat.listThreads`
+   * IPC handler so the renderer can surface system-agent threads (e.g.,
+   * the agentic-loop "Copilot Conversations" section) without having to
+   * look up each member against the visible-employees list — which
+   * excludes system pseudo-employees by design.
+   *
+   * Absent on threads returned from legacy endpoints that pre-date the
+   * M31 system-agent pseudo-employee seam; always present as a boolean
+   * from `chat.listThreads` responses emitted in M31+ builds.
+   *
+   * Phase 5 — M31.
+   */
+  isSystemAgent?: boolean;
 }

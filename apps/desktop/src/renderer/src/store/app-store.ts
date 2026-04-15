@@ -11,6 +11,13 @@ interface OpenThreadOpts {
   threadId: string;
   isAgentThread: boolean;
   employeeId: string | null;
+  /**
+   * True when the thread belongs to the M31 system pseudo-employee. The
+   * drawer switches to the read-only Copilot step-transcript layout and
+   * hides the composer. Defaults to false so existing callers keep the
+   * employee-DM / agent-thread behaviour unchanged.
+   */
+  isCopilotThread?: boolean;
 }
 
 /**
@@ -66,6 +73,13 @@ export interface AppState {
   threadListView: boolean;
   /** True when viewing an employee-to-employee thread (read-only). */
   viewingAgentThread: boolean;
+  /**
+   * True when viewing a system-agent (Copilot) thread. The drawer
+   * renders the M31 step-transcript read-only view with no composer.
+   * Mutually exclusive with `viewingAgentThread` — a thread is either
+   * employee-to-employee (classic agent thread) or user-to-system-agent.
+   */
+  viewingCopilotThread: boolean;
   /** Bumped on each `message.agent_to_agent` event — triggers thread list refetch. */
   lastAgentMessageAt: number;
   /** Currently selected ticket id for detail panel. */
@@ -113,6 +127,7 @@ export const useAppStore = create<AppState>((set) => ({
   employeeLive: {},
   threadListView: false,
   viewingAgentThread: false,
+  viewingCopilotThread: false,
   lastAgentMessageAt: 0,
   activeTicketId: null,
   activeProjectId: null,
@@ -140,6 +155,7 @@ export const useAppStore = create<AppState>((set) => ({
       activeThreadId: null,
       threadListView: false,
       viewingAgentThread: false,
+      viewingCopilotThread: false,
     }),
 
   setChatOpen: (open) =>
@@ -149,6 +165,7 @@ export const useAppStore = create<AppState>((set) => ({
       activeThreadId: open ? state.activeThreadId : null,
       threadListView: open ? state.threadListView : false,
       viewingAgentThread: open ? state.viewingAgentThread : false,
+      viewingCopilotThread: open ? state.viewingCopilotThread : false,
     })),
 
   setActiveThreadId: (threadId) => set({ activeThreadId: threadId }),
@@ -162,13 +179,15 @@ export const useAppStore = create<AppState>((set) => ({
       selectedEmployeeId: null,
       activeThreadId: null,
       viewingAgentThread: false,
+      viewingCopilotThread: false,
     }),
 
-  openThread: ({ threadId, isAgentThread, employeeId }) =>
+  openThread: ({ threadId, isAgentThread, employeeId, isCopilotThread }) =>
     set({
       activeThreadId: threadId,
       threadListView: false,
       viewingAgentThread: isAgentThread,
+      viewingCopilotThread: isCopilotThread ?? false,
       selectedEmployeeId: employeeId,
       chatOpen: true,
     }),
