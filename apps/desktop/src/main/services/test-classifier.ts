@@ -101,6 +101,15 @@ const CANNED_TABLE: Readonly<Record<string, CannedEntry>> = {
     entities: { roleQuery: 'CEO' },
     confidence: 0.92,
   },
+  // Phase 5 — M31 T8. Routes the palette's `complex_request` branch
+  // for the agentic-loop E2E spec. The phrase must also exist as a key
+  // in `test-agentic-provider.ts`'s `CANNED_TABLE` so the provider
+  // scripts a deterministic plan → tool_call → answer sequence.
+  'what is my team doing right now': {
+    intent: 'complex_request',
+    entities: {},
+    confidence: 0.88,
+  },
 };
 
 // ---------------------------------------------------------------------------

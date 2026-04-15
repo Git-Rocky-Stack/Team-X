@@ -122,6 +122,7 @@ import { createRoleLoader } from './services/role-loader.js';
 import { SecretsStore } from './services/secrets.js';
 import { composeSystemPromptWithRag } from './services/system-prompt.js';
 import { createTestAgenticCompleteFn } from './services/test-agentic-provider.js';
+import { createTestAgenticTools } from './services/test-agentic-tools.js';
 import { createTestClassifier } from './services/test-classifier.js';
 import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
@@ -800,8 +801,16 @@ app
         // still settle cleanly rather than deadlocking on the gate.
         isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
       },
-      buildTools: ({ companyId }) =>
-        createAgenticTools({
+      buildTools: ({ companyId }) => {
+        if (testMode) {
+          // Canned tool set — no repo access, deterministic envelopes
+          // per tool. Mirrors the `resolveComplete` test-mode branch
+          // below so E2E specs get a fully canned agentic loop with
+          // zero DB coupling. See `test-agentic-tools.ts` for the
+          // fixture shapes + sentinel override contract.
+          return createTestAgenticTools({ companyId });
+        }
+        return createAgenticTools({
           companyId,
           employeesRepo,
           ticketsRepo,
@@ -809,7 +818,8 @@ app
           meetingsRepo,
           vaultRepo,
           auditRepo,
-        }),
+        });
+      },
       resolveComplete: async ({ systemAgentId }) => {
         if (testMode) {
           // Canned path — no LLM, no keychain, no network. Matches

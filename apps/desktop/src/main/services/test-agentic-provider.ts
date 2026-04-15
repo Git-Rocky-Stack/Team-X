@@ -64,6 +64,14 @@ const CANNED_TABLE: Readonly<Record<string, readonly string[]>> = Object.freeze(
     '{"action":"query_employees","args":{}}',
     '{"action":"final_answer","answer":"The team consists of the CEO and a Senior Fullstack Engineer."}',
   ]),
+  // Phase 5 — M31 T8. E2E agentic-loop spec fixture. Classifier maps
+  // this phrase to `complex_request`, the palette routes it to the
+  // loop, and this script produces plan → tool_call → answer so the
+  // spec can assert on ≥3 steps and an answer card.
+  'what is my team doing right now': Object.freeze([
+    'Planning: list the current team to surface who is active before reporting on workload.\n{"action":"query_employees","args":{}}',
+    '{"action":"final_answer","answer":"Team currently has 2 employees active: Iris Kovač (CEO) and Mateo Reyes (Senior Fullstack Engineer). No open tickets in the queue right now."}',
+  ]),
 });
 
 /** Terminal step returned when no canned or sentinel script matches. */
