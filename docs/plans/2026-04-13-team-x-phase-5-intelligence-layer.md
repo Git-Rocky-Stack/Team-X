@@ -420,33 +420,48 @@ CREATE INDEX idx_insights_company_active ON copilot_insights(company_id, dismiss
 
 ## 9. Milestone Breakdown
 
-| # | Milestone | Deps | Key Deliverables | Est. Tests |
-|---|-----------|------|-----------------|------------|
-| **M28** | Intelligence package + RAG foundation | None | `packages/intelligence` scaffold, sqlite-vec embeddings table + migration, embedding generation pipeline, provider-router `embedText` adapter, chunker, settings keys | ~30 |
-| **M29** | RAG integration into agent turns | M28 | Event bus subscription for on-write indexing, `resolveSystemPrompt` enhancement with retrieval, context injection with dedup + attribution, RAG settings UI in Settings tab | ~25 |
-| **M30** | NLU Engine | M28 | Intent classifier (LLM-based JSON output), entity resolver (fuzzy match + FTS5), slot filler, `command.*` IPC channels + handlers + preload bridge | ~25 |
-| **M31** | Command Palette UI | M30 | `Cmd+K` overlay component, real-time NLU display, confirmation gates, structured command fallback, command history, keyboard navigation, System AI employee for complex requests | ~20 |
-| **M32** | Task Planner (built-in tools) | M29 | `decompose_project`, `delegate_subtask`, `review_deliverable` tools, guardrail enforcement, workload scoring function, level-based tool injection, new event types | ~30 |
-| **M33** | Copilot Service | M29 | System-copilot employee, periodic analyzer with LLM, `copilot_insights` table + migration, `copilot.*` IPC channels, insight generation + dedup + expiry | ~25 |
-| **M34** | Copilot UI + Dashboard widget | M33, M31 | Sidebar panel (toggle, insight cards, action dispatch, dismiss, ask input), dashboard widget (top 3 + view all), `Cmd+Shift+K` shortcut | ~15 |
-| **M35** | Demo + hardening | All | E2E tests (palette flow, RAG retrieval, copilot insight generation), performance tuning (embedding batch size, analysis interval), CLAUDE.md update, Phase 5 badge | ~15 |
+> **Resequenced 2026-04-15 (M31 T9).** The original plan split NLU (M30) and Command Palette UI (M31) across two milestones and had no dedicated milestone for the complex-request agentic loop — it was folded into M31 under the "System AI employee" line item. As built, M30 absorbed both the NLU engine *and* the palette UI (146 unit tests + 2 E2E specs across 11 tasks), and the agentic-loop work that originally lived in M31's "System AI employee" bullet grew into its own milestone. The table below reflects the actual shipped sequence. Downstream milestones (M32 Task Planner, M33 Copilot Service, M34 Copilot UI, M35 Demo + Hardening) keep their numbering; only their dependency pointers shift (M34 now depends on M30, since the palette ships there, not M31).
 
-**Total estimated new tests:** ~185 (bringing project total to ~800).
+| # | Milestone | Status | Deps | Key Deliverables | Tests |
+|---|-----------|--------|------|------------------|-------|
+| **M28** | Intelligence package + RAG foundation | ✅ Complete (2026-04-13) | None | `packages/intelligence` scaffold, sqlite-vec embeddings table + migration 0008, embedding generation pipeline, provider-router `embedText` adapter, chunker, RAG settings keys | 29 |
+| **M29** | RAG integration into agent turns | ✅ Complete (2026-04-13) | M28 | Event bus subscription for on-write indexing, `resolveSystemPrompt` enhancement with retrieval, context injection with dedup + attribution, RAG settings UI in Settings tab | 27 |
+| **M30** | NLU Engine + Command Palette | ✅ Complete (2026-04-14) | M28 | Intent classifier (LLM-based JSON output), entity resolver (fuzzy match + FTS5), slot filler, `command.*` IPC channels + handlers + preload bridge, `Cmd+K` overlay with real-time NLU display, 15 intents, confirmation gates for 4 destructive intents, command history (last 20), slash-command fallback, canned-classifier E2E spec | 146 (+2 E2E) |
+| **M31** | Agentic Loop (read-side) | 🚧 In progress — 9 of 11 tasks shipped (2026-04-15) | M30 | `system-agent` pseudo-employee (migration 0010, `is_system` column, hidden from org chart + delegation pickers), `@team-x/intelligence/loop/` ReAct scheduler (pure, provider-agnostic), 6 read-only repo-wrapping tools (`query_employees` / `query_tickets` / `query_projects` / `query_meetings` / `query_vault` / `query_events`), `AgenticLoopService` main-process front-door, CommandService `complex_request` dispatch, Copilot Conversations thread UX, palette step-log mode + `command.stop`, `agentic_max_steps` / `agentic_max_tokens` / `agentic_timeout_ms` settings, canned-provider E2E spec | 139 (+1 E2E) |
+| **M32** | Task Planner (write-side) | 📋 Next | M29, **M31** | `decompose_project`, `delegate_subtask`, `review_deliverable` tools, guardrail enforcement, workload scoring function, level-based tool injection, new `plan.*` / `task.*` / `review.*` event types. Builds on M31's agentic-loop harness — swaps read-only tools for the write-side set. | ~30 |
+| **M33** | Copilot Service | 📋 Planned | M29, M31 | System-copilot employee, periodic analyzer with LLM, `copilot_insights` table + migration, `copilot.*` IPC channels, insight generation + dedup + expiry. Reuses the agentic-loop scheduler from M31 for ask-the-copilot free-form questions. | ~25 |
+| **M34** | Copilot UI + Dashboard widget | 📋 Planned | M33, **M30** | Sidebar panel (toggle, insight cards, action dispatch, dismiss, ask input), dashboard widget (top 3 + view all), `Cmd+Shift+K` shortcut wired through the M30 palette | ~15 |
+| **M35** | Demo + hardening | 📋 Planned | All | E2E tests (RAG retrieval, copilot insight generation, write-side planner flow), performance tuning (embedding batch size, analysis interval), CLAUDE.md update, Phase 5 badge, Phase 5 CONTINUITY.md wrap-up | ~15 |
+
+**Shipped so far:** +341 unit tests (M28 + M29 + M30 + M31 T0–T8) + 3 E2E specs. Project totals as of M31 T9: **958 unit tests / 8 E2E specs**, from the Phase 4 baseline of 612 / 4.
+
+**Remaining estimated tests:** ~85 (M32 + M33 + M34 + M35). Projected Phase 5 exit: **~1040 unit tests / 10 E2E specs**.
 
 ---
 
 ## 10. New IPC Channel Summary
 
-| Namespace | Channel | Description |
-|-----------|---------|-------------|
-| command | `command.parse` | Parse NL text into intent + entities |
-| | `command.execute` | Execute a parsed command |
-| | `command.suggest` | Autocomplete suggestions for partial input |
-| | `command.history` | Recent command history |
-| copilot | `copilot.insights` | Active insights for company |
-| | `copilot.dismiss` | Dismiss an insight |
-| | `copilot.ask` | Free-form question to copilot |
-| | `copilot.configure` | Set analysis interval + categories |
+| Namespace | Channel | Milestone | Description |
+|-----------|---------|-----------|-------------|
+| command | `command.parse` | M30 | Parse NL text into intent + entities |
+| | `command.execute` | M30 | Execute a parsed command |
+| | `command.suggest` | M30 | Autocomplete suggestions for partial input |
+| | `command.history` | M30 | Recent command history |
+| | `command.stop` | M31 | Cancel an in-flight agentic-loop run (fires AbortController, terminal step emitted as `canceled`) |
+| settings | `settings.getAgentic` | M31 | Read `agentic_max_steps` / `agentic_max_tokens` / `agentic_timeout_ms` |
+| | `settings.setAgentic` | M31 | Write clamped agentic-loop budget caps |
+| copilot | `copilot.insights` | M33 | Active insights for company |
+| | `copilot.dismiss` | M33 | Dismiss an insight |
+| | `copilot.ask` | M33 | Free-form question to copilot (routes through the M31 agentic-loop harness) |
+| | `copilot.configure` | M33 | Set analysis interval + categories |
+
+**New bus event types** (append-only via `events` table, emitted by the M31 agentic-loop harness):
+
+| Event | Emitted by | Payload |
+|-------|------------|---------|
+| `agent.step` | `AgenticLoopService` | `{ runId, threadId, step: { kind: 'plan' \| 'tool_call' \| 'tool_result' \| 'answer' \| 'error', … } }` |
+| `agentic.completed` | `AgenticLoopService` | `{ runId, threadId, finalAnswer, stepCount, tokensUsed, durationMs }` |
+| `agentic.failed` | `AgenticLoopService` | `{ runId, threadId, reason: 'budget_exhausted' \| 'timeout' \| 'canceled' \| 'provider_error' \| 'tool_error', detail? }` |
 
 ---
 
@@ -468,6 +483,9 @@ CREATE INDEX idx_insights_company_active ON copilot_insights(company_id, dismiss
 | `planner_max_depth` | number | 2 | Max subtask nesting depth |
 | `planner_approval_level` | string | 'management' | Min level for auto-approve |
 | `planner_escalation_threshold` | number | 3 | Failures before escalation |
+| `agentic_max_steps` | number | 8 | Max loop iterations before `budget_exhausted` (M31) |
+| `agentic_max_tokens` | number | 8000 | Cumulative token budget across loop (M31) |
+| `agentic_timeout_ms` | number | 120000 | Wall-clock deadline per run (M31) |
 
 ---
 
@@ -499,4 +517,20 @@ All 10 existing invariants from the v1.0 design doc remain intact:
 | D5 | Copilot as system-level employee (not a service process) | Reuses existing chat infrastructure; can be talked to like any employee; appears in threads naturally | Locked |
 | D6 | Guardrails enforced at tool level, not prompt level | Prompts are advisory; tool-level enforcement is deterministic and can't be jailbroken | Locked |
 | D7 | Workload scoring is deterministic (no LLM) | Scoring must be fast, reproducible, and auditable; LLM adds latency and non-determinism to delegation | Locked |
+| D8 | M31 ships read-side tools only; write-side moves to M32 | Lets the agentic loop surface useful answers *now* without also needing to approve ticket creation/deletion. Keeps the scheduler testable before tool-permission complexity lands | Locked (2026-04-14) |
+| D9 | Complex-request thread persists on a per-company `system-agent` pseudo-employee, not on the user | Thread history is discoverable in a dedicated "Copilot Conversations" section; keeps user DMs uncluttered; sets up M33 (Copilot Service) to reuse the same seat | Locked (2026-04-14) |
+| D10 | Agentic-loop tools are built-in main-process closures over repos, NOT MCP servers | Preserves MCP-host singleton invariant; avoids N MCP connections per loop run; repo closures are faster, type-safe, and audit-trailed by default | Locked (2026-04-14) |
+
+---
+
+## 14. Follow-ups (post-M31)
+
+Two paper-cuts were surfaced during M31 T8 (E2E round-trip) that are **out of scope for M31** and carried forward. Both are small, safe renderer-only changes; both need to land before M32 writes start surfacing live agentic work in the org stream.
+
+| # | Follow-up | Root cause | Recommended landing | Size |
+|---|-----------|------------|---------------------|------|
+| **F1** | `useAgentStepStream` needs backfill on mount | Under the canned test provider the loop completes faster than React Query can attach its bus subscription. Only the terminal `answer` card is reliably observed live in the palette's step-log mode; intermediate `plan` / `tool_call` / `tool_result` steps arrive on the bus before any subscriber attaches. The persisted thread (Copilot Conversations drawer) gets all steps correctly because the chat-drawer refetches on mount. | Add a `getSteps(runId)` query on mount before attaching the bus listener. M32 prep (alongside new write-side tool-call cards), or sooner if the live step log becomes user-visible latency. | ~20 lines in `use-agent-step-stream.ts` + 2–3 unit tests |
+| **F2** | `useThreadList` has no `agent.*` bus invalidator | A thread list opened before a complex-request run completes shows stale "No threads yet" copy until a manual refetch. The E2E spec sidesteps by routing through the palette's "Open Thread" deep-link. | Add a 2-line `bus.on('agentic.completed', () => queryClient.invalidateQueries(['threads']))` call in `use-thread-list.ts`. M32 prep, or bundle into an M31 post-mortem doc patch. | ~2 lines in `use-thread-list.ts` + 1 unit test |
+
+Neither follow-up gates M32 acceptance, but both land cleaner *before* the M32 agentic loop starts creating tickets — otherwise a write-side loop finishing faster than subscribers can attach would mean users never see "ticket created" cards in the palette. Schedule in the M32 plan doc's T0 or T1 slot.
 | D8 | Command palette coexists with chat-based AI assistant | Palette for speed (quick commands), agent for depth (complex multi-step reasoning) | Locked |

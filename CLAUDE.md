@@ -24,7 +24,7 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 **Phase 4 (Ship-readiness) — complete.** All 27 milestones shipped. v1.0.0. 612 unit tests + 4 E2E specs passing.
 
-**Phase 5 (Intelligence Layer) — in progress.** M28 (RAG foundation), M29 (RAG into agent turns), and M30 (NLU engine + command palette) all complete. T10 marker pending. 819 unit tests + 7 E2E specs passing.
+**Phase 5 (Intelligence Layer) — in progress.** M28 (RAG foundation), M29 (RAG into agent turns), and M30 (NLU engine + command palette) all complete. **M31 (agentic loop) — T0–T8 shipped (9 of 11 tasks); T9 docs done; T10 verification + milestone marker pending.** 958 unit tests + 8 E2E specs passing.
 
 ### Phase 1 (Skeleton) — complete
 
@@ -65,10 +65,18 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 - **M26 (documentation + landing site):** README.md (hero, features, architecture, tech stack, quickstart, testing, privacy), CONTRIBUTING.md (dev setup, coding standards, PR guidelines, role-pack contribution guide, IPC conventions), CHANGELOG.md (all 25 milestones in Keep a Changelog format), 7 user guide docs (`docs/user-guide/` — getting started, hiring, projects, vault, providers, backup, shortcuts), static landing site (`docs/site/index.html` — Tailwind CDN, dark theme, responsive, 9-feature grid, architecture diagram, quickstart).
 - **M27 (final hardening + v1.0.0):** Playwright E2E `vault-backup.spec.ts` (vault upload, verify integrity, backup create, verify list), Phase 4 badge in top bar, Ed25519 role-pack signature verification (`pack-signature.ts` — generate keypair, sign, verify with 10 tests), security audit (dependency audit, IPC validation sweep, context isolation, secrets handling — all PASS), version bump 0.0.1 → 1.0.0 across all 6 packages. 612 unit tests + 4 E2E specs passing.
 
+### Phase 5 (Intelligence Layer) — in progress
+
+- **M28 (intelligence package + RAG foundation):** `packages/intelligence` scaffold, sqlite-vec embeddings table + migration 0008, chunker (token-aware with overlap), embedding pipeline (`buildEmbedAdapter` on the provider-router, plus a deterministic fake for tests), retriever with cosine-threshold gating, RAG settings keys. 29 tests. 641 total.
+- **M29 (RAG integration into agent turns):** `resolveSystemPrompt` composes retrieved context with role-md system prompts; on-write event-bus subscriptions re-index messages + vault files; dedup via SHA256 + sliding attribution block; RAG subsection in Settings → Runtime. 27 tests. 668 total.
+- **M30 (NLU engine + command palette):** LLM-backed intent classifier with strict JSON output, FTS5 + fuzzy entity resolver, slot filler, 14 structured intents + `complex_request` fallback. Command palette (`Cmd+K`) with real-time NLU display, confirmation gates for 4 destructive intents (fire / close / end-meeting / promote), command history (last 20, recall via `ArrowUp`), slash-command navigation (`/show dashboard`, etc.). 5 `command.*` IPC channels, canned-classifier `command-palette.spec.ts` E2E. 146 unit tests + 2 E2E. 819 unit / 7 E2E total. Also adds architectural invariant #11 — IPC mutations must emit bus events — after the `vault-backup.spec.ts` regression.
+- **M31 (agentic loop — read-side) — in progress, 9 of 11 tasks shipped:** M30 T4 left `complex_request` as a stub; M31 replaces it with a real ReAct-style agentic loop running on a hidden `system-agent` pseudo-employee. **T0** — `is_system` column (migration 0010) + partial index, `system-agent.md` role card under `role-packs/strategia-official/roles/system/`, `ensureSystemAgent(companyId)` bootstrap; filtered out of `employees.list` / `orgchart.get` / hire + delegation pickers. **T1** — `@team-x/intelligence/src/loop/` — pure ReAct scheduler, tool registry, zod-validated tool schemas, hard step/token/wall-clock budget enforcement, forward-scan brace-balanced tool-call parser with one-shot nudge recovery. No Electron, no DB, no fs coupling. **T2** — `apps/desktop/src/main/services/agentic-tools.ts` — 6 read-only tools (`query_employees` / `query_tickets` / `query_projects` / `query_meetings` / `query_vault` / `query_events`) wrapping existing repos with JSON-safe `{rows, truncated}` projections, max 50 rows per call, defensive `isSystem` filter, payload summary with 200-char cap. **T3** — `AgenticLoopService` front-door with `start / stop / getRun / waitForRun`, pause-aware `providerRouter.complete` wrapper polling `orchestrator.isCompanyPaused(companyId)` on every provider call, `AbortController`-driven stop with canceled-status coercion, `agent.step` / `agentic.completed` / `agentic.failed` bus events, `runs` row with kind `'agentic'`. Test seam `test-agentic-provider.ts` mirrors M30 T8's `test-classifier.ts` pattern (three-tier: `__ECHO_AGENT__:[…]` sentinel → canned per-prompt table → fallback). **T4** — CommandService → AgenticLoopService wiring; `CommandHandlers.agenticLoopStart(req)` returns `{ runId, threadId }`; stub at `command-service.ts:770-775` replaced with real dispatch. **T5** — System-agent thread UX: Copilot Conversations section in the chat sidenav (Sparkles icon, read-only compose box), persisted step transcript rendered inline in the chat drawer with step-card variants. **T6** — Palette step-log mode: `data-step-kind` attributes (`plan` / `tool_call` / `tool_result` / `answer` / `error`) as the stable E2E selector surface, six UI states (idle / streaming / complete / canceled / error / stopped), `command.stop` IPC channel + handler + preload bridge fires the AbortController. **T7** — Settings: three new clamped keys (`agentic_max_steps=8`, `agentic_max_tokens=8000`, `agentic_timeout_ms=120000`) with `settings.getAgentic` / `settings.setAgentic` IPC channels and a new Agentic Loop subsection in Settings → Runtime. **T8** — `agentic-loop.spec.ts` E2E (full round-trip: canned classifier returns `complex_request` → canned provider streams plan → `query_employees` tool call → tool result → grounded answer; asserts palette step log via `data-step-kind`, persisted thread in Copilot Conversations, `agentic.completed` bus event, audit row). 8 of 8 E2E specs green. T9 (docs — CLAUDE.md / CHANGELOG / README / `docs/user-guide/agentic-loop.md` / Phase 5 design-doc §9 resequence) — shipped this commit. T10 (verification + milestone marker) pending.
+
 The Phase 1 plan lives at [`docs/plans/2026-04-07-team-x-phase-1-skeleton.md`](docs/plans/2026-04-07-team-x-phase-1-skeleton.md).
 The Phase 2 plan lives at [`docs/plans/2026-04-11-team-x-phase-2-the-org.md`](docs/plans/2026-04-11-team-x-phase-2-the-org.md).
 The Phase 3 plan lives at [`docs/plans/2026-04-12-team-x-phase-3-live-cockpit.md`](docs/plans/2026-04-12-team-x-phase-3-live-cockpit.md).
 The Phase 4 plan lives at [`docs/plans/2026-04-13-team-x-phase-4-ship-readiness.md`](docs/plans/2026-04-13-team-x-phase-4-ship-readiness.md).
+The Phase 5 design lives at [`docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md`](docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md); the M31 implementation plan lives at [`docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md`](docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md).
 
 ## Stack (locked)
 
@@ -117,6 +125,7 @@ Team-X/
 2. **Phase 2 — The Org** — Role pack loader + 55 roles, multi-company, org chart editor, MCP host, tickets + kanban. Demo: *"File a ticket → agent picks it up, uses an MCP, closes it."*
 3. **Phase 3 — The Live Cockpit** — All 5 dashboard subviews, meeting primitive, goals + projects, telemetry, runtime modes, privacy tier filter. Demo: *"One-click all-hands → minutes → action items → tickets."*
 4. **Phase 4 — Ship-readiness** — File vault, backup/restore, audit log UI, installers, landing site, public release.
+5. **Phase 5 — Intelligence Layer** — `packages/intelligence` (RAG + NLU + agentic loop), command palette, system-agent pseudo-employee, write-side task planner, in-app copilot. Demo: *"Ask `Cmd+K` — 'why is the frontend team behind?' — get a grounded multi-paragraph answer citing specific tickets, employees, and events."*
 
 ## Build commands
 
@@ -309,6 +318,8 @@ All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and 
 | | `settings.setPrivacy` | Set max privacy tier |
 | | `settings.getConcurrency` | Orchestrator slots + per-provider caps |
 | | `settings.setConcurrency` | Update slots + caps |
+| | `settings.getAgentic` | Agentic loop budget caps (`agentic_max_steps`, `agentic_max_tokens`, `agentic_timeout_ms`) (M31) |
+| | `settings.setAgentic` | Update clamped agentic-loop budget caps |
 | providers | `providers.list` | List all configured providers (M18) |
 | | `providers.add` | Register a new provider (API key to keychain) |
 | | `providers.update` | Update config, toggle, set API key |
@@ -331,6 +342,17 @@ All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and 
 | | `command.execute` | Run a parsed intent (destructive intents require `confirmed: true`) |
 | | `command.history` | Last N commands (cap 20, newest-first) |
 | | `command.suggest` | Partial-text suggestions for autocomplete |
+| | `command.stop` | Cancel an in-flight agentic-loop run (fires `AbortController`; terminal step is emitted as `canceled`) (M31) |
+
+**Bus events added in Phase 5 (not IPC — append-only on the `events` table, consumed by the renderer via the event bus):**
+
+| Event | Emitted by | Milestone | Payload shape |
+|-------|------------|-----------|---------------|
+| `rag.index.*` | `rag-indexer.ts` | M28/M29 | `{ companyId, sourceKind, sourceId, chunkCount }` and friends for on-write embedding |
+| `command.executed` | `CommandService` | M30 | `{ companyId, intent, entities, result, durationMs }` — audit-loggable |
+| `agent.step` | `AgenticLoopService` | M31 | `{ runId, threadId, step: { kind: 'plan' \| 'tool_call' \| 'tool_result' \| 'answer' \| 'error', … } }` |
+| `agentic.completed` | `AgenticLoopService` | M31 | `{ runId, threadId, finalAnswer, stepCount, tokensUsed, durationMs }` |
+| `agentic.failed` | `AgenticLoopService` | M31 | `{ runId, threadId, reason: 'budget_exhausted' \| 'timeout' \| 'canceled' \| 'provider_error' \| 'tool_error', detail? }` |
 
 ## Troubleshooting
 
@@ -390,6 +412,18 @@ The `*` glob also removes the `-shm` and `-wal` WAL companion files. On the next
 **`pnpm dist` fails with native module errors.** electron-builder needs native modules rebuilt for the target Electron ABI. Run `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` first. If packaging for a different platform (cross-compilation), native modules must be built on the target OS — use the GitHub Actions release workflow instead.
 
 **Updater shows "not available" in dev.** By design. The UpdaterService returns a no-op in dev and test mode (invariant #7: zero phone-home). The real updater only activates in packaged production builds where `app.isPackaged` is true.
+
+**Agentic loop terminates immediately with `budget_exhausted` or `timeout`.** The three clamps live in `settings` (`agentic_max_steps` default 8, `agentic_max_tokens` default 8000, `agentic_timeout_ms` default 120000). Small local models frequently burn the step budget on malformed tool-call parsing — the M31 T1 parser grants one nudge-retry per malformed step and then counts the step. Bump `agentic_max_steps` to 12 or 16 for 7–8B local models, or switch to a larger model / cloud provider via Settings → Providers. If the loop is exhausting `agentic_max_tokens` before producing an answer, the `query_*` tools are returning too-wide projections — confirm no single tool call exceeds the 50-row cap (the envelope is `{rows, truncated}`; `truncated: true` is a signal to narrow the query).
+
+**Agentic loop step cards only show the final answer in the palette, not intermediate steps.** Known issue (F1 in the Phase 5 follow-ups section of `docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md` §14). Under the canned test provider the loop completes faster than React Query can attach the `useAgentStepStream` bus subscription, so only the terminal `answer` card is reliably observed live. The persisted thread in the Copilot Conversations section gets all steps correctly because the chat drawer refetches on mount. Target fix: `getSteps(runId)` backfill-on-mount inside `use-agent-step-stream.ts` before attaching the bus listener. Scheduled for M32 T0/T1.
+
+**System-agent thread doesn't appear in Copilot Conversations right after a complex_request.** Known issue (F2 in the Phase 5 follow-ups section). `useThreadList` has no `agent.*` bus invalidator, so a thread list opened before the agentic run completes shows stale "No threads yet" copy until a manual refetch. The `agentic-loop.spec.ts` E2E sidesteps this by routing through the palette's "Open Thread" deep-link. Target fix: a 2-line `bus.on('agentic.completed', () => queryClient.invalidateQueries(['threads']))` hook in `use-thread-list.ts`.
+
+**Agentic loop fires during a meeting and the user sees stale progress.** By design, not a bug — `AgenticLoopService.start()` observes `orchestrator.isCompanyPaused(companyId)` via a polling wrapper around `providerRouter.complete` (poll interval 250ms prod, 2ms test). The loop queues until the meeting ends, then resumes. The palette stays responsive; the step log shows a single plan card and then idles. Nothing is dropped.
+
+**System-agent missing from a company after restore from backup.** The M23 backup/restore path was ship-final in Phase 4 and predates the `is_system` column (migration 0010). Restoring a pre-M31 backup leaves no system-agent row. Fix: delete the `team-x.sqlite` file and let `seedIfEmpty` re-bootstrap, then manually re-import any thread data — or open a ticket to add a `backupService.ensurePostRestoreSystemAgents()` pass. Not currently gating any planned milestone.
+
+**`agentic-loop.spec.ts` hangs with "timed out waiting for `data-step-kind='answer'`".** The canned provider seam (`test-agentic-provider.ts`) is a three-tier lookup: the `__ECHO_AGENT__:[…]` JSON sentinel first, then the canned per-prompt table, then a generic fallback. If the spec was recently extended with a new prompt that doesn't match any key in `test-agentic-provider.ts` or `test-agentic-tools.ts`, the fallback path runs and can take minutes. Add the prompt key to both seams in lockstep — the rule is any new agentic surface must ship a matching test-side swap (T8 pattern).
 
 ## Things to NOT do
 

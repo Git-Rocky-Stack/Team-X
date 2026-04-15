@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/strategia-x/team-x/actions/workflows/ci.yml/badge.svg)](https://github.com/strategia-x/team-x/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-612%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-958%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
@@ -42,6 +42,14 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 - **Adaptive runtime strategy** — Auto, Hybrid, Always-On, or Lean mode based on hardware profile and available providers
 - **MCP tool calling** — agents use Model Context Protocol tools via a singleton host with connection pooling and `tools_allowed`/`tools_denied` enforcement
 - **Employee-to-employee messaging** — agents communicate with colleagues via built-in tools, forming collaborative workflows
+
+### Intelligence Layer
+
+- **RAG-grounded agent turns** — every agent prompt is augmented with retrieved context from messages and vault files via the `@team-x/intelligence` package (sqlite-vec embeddings, token-aware chunking with overlap, cosine-threshold gating, SHA256-dedup attribution blocks)
+- **Natural-language command palette** (`Cmd+K`) — 14 structured intents (hire / fire / promote / assign / create / close / reopen / project / goal / meeting / status / navigation / vault search) plus a `complex_request` fallback that hands off to the agentic loop. LLM-backed classifier with JSON-output retry, fuzzy entity resolution, FTS5 ticket lookup, destructive-action confirmation gate, last-20 command history
+- **Agentic loop for complex questions** — ask free-form questions like *"why is the frontend team behind schedule?"* or *"summarize what the CEO did this week"* and get a grounded multi-paragraph answer citing specific tickets, employees, and events. Runs a ReAct-style loop on a hidden `system-agent` pseudo-employee, dispatches six read-only query tools (`query_employees`, `query_tickets`, `query_projects`, `query_meetings`, `query_vault`, `query_events`), and terminates under hard step / token / wall-clock budgets (defaults 8 / 8000 / 120s — all configurable in Settings → Runtime)
+- **Live step log + persisted thread** — the palette streams each loop step as a labeled card (plan → tool call → tool result → answer) with provider and token footer. After the run completes, the full transcript lives on the system-agent in the "Copilot Conversations" sidebar section for later reference
+- **Cancel any run** — the loop honors an `AbortController` wired to the palette's Cancel button; terminal step is emitted as `canceled` and the audit log records the abort
 
 ### Ship-Ready
 
@@ -99,24 +107,32 @@ Add any supported provider in **Settings > Providers**: enter your API key, test
 Team-X/
   apps/desktop/             Electron app
     src/main/               Main process (Node.js + TypeScript)
-      db/                   SQLite + Drizzle ORM (8 migrations)
-      ipc/                  Typed IPC handlers (50+ channels)
+      db/                   SQLite + Drizzle ORM (10 migrations)
+      ipc/                  Typed IPC handlers (60+ channels)
       orchestrator/         Agent scheduler + event bus
-      services/             Vault, backup, MCP host, providers, updater
+      services/             Vault, backup, MCP host, providers, updater,
+                            rag-indexer, command-service, agentic-loop,
+                            agentic-tools, system-agent-bootstrap
     src/preload/            Context-isolated bridge (TeamXApi)
     src/renderer/           React 19 + Tailwind + shadcn/ui
-      features/             Audit, chat, dashboard, hire, meetings,
-                            projects, settings, telemetry, tickets, vault
-      hooks/                17 React Query hooks
+      features/             Audit, chat, command, dashboard, hire,
+                            meetings, projects, settings, telemetry,
+                            tickets, vault
+      hooks/                20+ React Query hooks
       store/                Zustand app store
-    e2e/                    3 Playwright specs
+    e2e/                    8 Playwright specs
   packages/
-    shared-types/           IPC contract types
+    shared-types/           IPC contract types, event types, entities
     role-schema/            Role.md parser + template renderer
     provider-router/        LLM provider registry + streaming adapters
     telemetry-core/         Cost calculation utilities
+    intelligence/           RAG (chunker, embedding, retriever),
+                            NLU (classifier, entity resolver, slot filler),
+                            agentic loop (ReAct scheduler, tool registry)
   role-packs/
-    strategia-official/     55 curated F10 roles across 6 levels
+    strategia-official/
+      roles/                55 curated F10 roles across 6 levels
+      roles/system/         Hidden system-agent pseudo-employee role card
 ```
 
 ### Key Design Decisions
