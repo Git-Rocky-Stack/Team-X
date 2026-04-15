@@ -1,4 +1,43 @@
-# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 + T2 + T3 + T4 + T5 + T6 + T7 + T8 shipped; T9–T10 pending)
+# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 + T2 + T3 + T4 + T5 + T6 + T7 + T8 + T9 shipped; T10 pending)
+
+## T9 SHIPPED — 2026-04-15 (commit `183562d`)
+
+**Docs — M31 rollup across CLAUDE.md, CHANGELOG, README, user-guide, Phase 5 design doc §9.**
+
+- `CLAUDE.md` — Status line updated: Phase 5 now reports "M31 (agentic loop) — T0–T8 shipped (9 of 11 tasks); T9 docs done; T10 verification + milestone marker pending. 958 unit tests + 8 E2E specs passing." New `### Phase 5 (Intelligence Layer) — in progress` block after Phase 4 block with full M28/M29/M30/M31 bullets. M31 bullet covers all 9 shipped tasks (T0-T8) with full technical detail: `is_system` migration 0010 + role card + bootstrap; pure ReAct `@team-x/intelligence/loop/` scheduler; 6 read-only query tools; `AgenticLoopService` with `start/stop/getRun/waitForRun`, pause-aware wrapper, `AbortController`; `test-agentic-provider.ts` three-tier seam; CommandService wiring; Copilot Conversations thread UX (Sparkles icon, read-only compose); palette step-log mode with `data-step-kind` stable selectors; `command.stop` IPC; three settings keys (`agentic_max_steps=8`, `agentic_max_tokens=8000`, `agentic_timeout_ms=120000`); `agentic-loop.spec.ts` 8/8 E2E green. Phase plan list gains Phase 5 bullet. IPC table gains `settings.getAgentic/setAgentic` + `command.stop`. New bus-events table documents `agent.step` / `agentic.completed` / `agentic.failed` + `command.executed` + `rag.index.*`. Troubleshooting section gains 6 new entries: `budget_exhausted`/`timeout`, step-cards-only-answer (F1), thread-list-stale (F2), meeting-pause-behavior, backup-missing-system-agent, spec-hangs-on-new-prompt. Phase 5 design + M31 plan link lines added.
+- `CHANGELOG.md` — New `### M31 — Agentic Loop (read-side) (2026-04-15)` entry prepended to `[Unreleased]` above the M30 entry. Status banner + 15 Added bullets + 4 Changed bullets + 1 Fixed bullet. Covers every shipped task with implementation-level detail; explicit baseline/target deltas (819→958 unit, 7→8 E2E).
+- `README.md` — Tests badge 612→958. New `### Intelligence Layer` feature subsection between AI Runtime and Ship-Ready — 5 bullets: RAG-grounded turns, command palette, agentic loop, live step log, cancel any run. Architecture block counts refreshed: 8→10 migrations, 50→60+ IPC channels, 3→8 Playwright specs, services/features/hooks/packages lists updated, role-packs path extended to show `roles/system/` system-agent folder.
+- `docs/user-guide/README.md` — TOC gains item 8 `[Agentic Loop](agentic-loop.md)`, Keyboard Shortcuts renumbers to 9.
+- `docs/user-guide/agentic-loop.md` (NEW, 247 LOC) — Style-matched to `command-palette.md`. Sections: Overview (6 bullets), When the Loop Triggers (routing table + 10 example prompts), Reading the Step Log (5 step kinds + 6 UI states), The System-Agent (4 facts about the hidden seat + role card override path), The Six Read-Only Tools (table + row/payload cap mechanics), Settings (defaults/ranges/clamps + per-hardware tuning recommendations), Stopping a Run (Cancel button + Esc escape hatch), Privacy and Runtime (invariant references), Example Run (5-step walkthrough of "why is the frontend team behind?"), Troubleshooting (8 entries), Privacy (audit log purge caveat).
+- `docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md` — §9 Milestone Breakdown fully rewritten to reflect as-shipped sequence: M28 ✅ / M29 ✅ / M30 ✅ (combined NLU+palette, 146 tests) / M31 🚧 (Agentic Loop, 9 of 11 shipped) / M32 📋 (Task Planner, deps now M29+M31) / M33 / M34 deps pointer M31→M30 / M35. §10 gains `command.stop` + `settings.getAgentic/setAgentic` rows and a new Bus Events table for `agent.step` / `agentic.completed` / `agentic.failed`. §11 gains `agentic_max_steps` / `agentic_max_tokens` / `agentic_timeout_ms`. §13 gains D8 (read-side only in M31), D9 (system-agent seat), D10 (built-in tools, NOT MCP). **New §14 Follow-ups (post-M31)** — F1 (`useAgentStepStream` backfill on mount, ~20 LOC), F2 (`useThreadList` bus invalidator, ~2 LOC). Both durable here per Rocky's instruction to queue to M32 prep or Phase 5 §follow-ups, NOT bundle into T9.
+
+**Tests:** 0 (docs-only). Metrics unchanged: 958 unit, 8 E2E green, 0 lint errors, 24 lint warnings, typecheck clean.
+
+**Diff surface:** 325 insertions / 34 deletions across 6 files. No code paths changed. No migrations. No IPC handler changes.
+
+**T9 patterns to carry forward:**
+
+- **Per-task Loki ledger pattern held.** T9 commit = one `docs(m31):` with all 5 in-scope files + the user-guide README TOC touch. T9 ledger commit (this one) updates orchestrator.json `tasksCompleted` 9→10, adds `T9: 183562d` to commits map, and stamps CONTINUITY with the SHIPPED block. Keep this shape for all future tasks.
+- **Rocky's follow-up-queueing rule is durable.** Paper-cuts surfaced in earlier tasks should land in the Phase 5 design doc's §follow-ups section (new §14) — NOT bundled into docs-only task commits, NOT silently deferred in CONTINUITY. The design-doc is the source of truth for M32 planning. F1 + F2 are now discoverable by any future agent reading the design doc.
+- **Three staleness patches (test badge, architecture counts, Phase 5 missing block) had to land in T9 to keep the docs honest.** The README was last updated in M26 (Phase 4); it claimed 612 tests / 3 E2E / 8 migrations. M29+M30+M31 shipped meanwhile. Partial-truth docs are a cut corner. When a scoped docs task touches a file, audit the surrounding staleness — bundle the fix if it's in-scope, call it out in CONTINUITY if it isn't.
+- **F10 user-guide style is the 3–7 section pattern with a mandatory Troubleshooting block.** `command-palette.md` has 9 sections totaling 7.6KB. `agentic-loop.md` ships 11 sections totaling ~14KB — larger because the loop has more moving parts (step kinds, tools, settings, example walkthrough) but the shape is the same: Overview → Triggering → Mechanics → Tools → Settings → Control → Privacy → Example → Troubleshooting → Privacy. Match this shape for future Phase 5 user-guide additions (copilot, task planner).
+- **Commit/diff surface shape for T9-class work: ~325 insertions / ~34 deletions / 1 new file.** Larger than the T8 E2E commit because it spans more files, but still atomic — every edit serves the milestone rollup. If a future docs-only commit balloons past 500 insertions, the scope has crept — split into two commits.
+
+**Next up — T10 (verification + milestone marker), still gating M31 completion:**
+
+1. `pnpm typecheck` at repo root (NOT `pnpm -F @team-x/desktop typecheck` — composite-mode regressions in shared packages get silently skipped).
+2. `pnpm lint` — expect 0 errors, ≤24 warnings (target was ≤76).
+3. `pnpm test` — full suite, expect 958 passing.
+4. ABI rebuild dance: `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` before E2E.
+5. `pnpm -F @team-x/desktop test:e2e` — expect 8/8 specs green (smoke, ticket-flow, meeting-flow, vault-backup, rag-flow, command-palette, agentic-loop, + M31 baseline).
+6. Update `orchestrator.json`: `currentMilestone` M31→M32, `milestoneName` → "Task Planner", set `completedAt`, move M31 block from `inflight` to `history` with full metrics. Clear `pending.json` tasks list.
+7. Rewrite CONTINUITY.md with an M31-COMPLETE header summarizing all 11 tasks with commits, test delta, patterns, and M32 prep seeds.
+8. Atomic commit: `chore(loki): M31 complete`.
+
+T10 is sequential after T9 (this commit) and gates M32 start. Single session is plenty.
+
+---
+
 
 ## T8 SHIPPED — 2026-04-15 (commit `31227d1`)
 
