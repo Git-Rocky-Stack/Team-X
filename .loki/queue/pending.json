@@ -83,14 +83,19 @@
     {
       "id": "T4",
       "title": "Wire CommandService → AgenticLoopService",
-      "status": "pending",
+      "status": "completed",
+      "commit": "179569a",
+      "startedAt": "2026-04-14T21:00:00Z",
+      "completedAt": "2026-04-14T21:40:00Z",
+      "actualTests": 5,
       "blockedBy": ["T3"],
       "estTests": 6,
       "files": [
         "apps/desktop/src/main/services/command-service.ts",
-        "apps/desktop/src/main/ipc/command-handlers.ts",
+        "apps/desktop/src/main/services/command-service.test.ts",
         "apps/desktop/src/main/index.ts",
-        "packages/shared-types/src/command.ts"
+        "packages/shared-types/src/command.ts",
+        "packages/shared-types/src/events.ts"
       ],
       "goal": "Replace the M30 T4 stub at command-service.ts:770-775. Extend CommandHandlers interface with agenticLoopStart. ExecuteResult gains {runId, threadId}. IntentName drift guard stays green."
     },
