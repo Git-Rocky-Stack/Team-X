@@ -64,13 +64,19 @@
     {
       "id": "T3",
       "title": "AgenticLoopService — main-process front-door",
-      "status": "pending",
+      "status": "completed",
+      "commit": "791e6f6",
+      "startedAt": "2026-04-14T19:00:00Z",
+      "completedAt": "2026-04-14T19:10:00Z",
+      "actualTests": 25,
       "blockedBy": ["T1", "T2"],
       "estTests": 12,
       "files": [
         "apps/desktop/src/main/services/agentic-loop-service.ts",
         "apps/desktop/src/main/services/agentic-loop-service.test.ts",
-        "apps/desktop/src/main/services/test-agentic-provider.ts"
+        "apps/desktop/src/main/services/test-agentic-provider.ts",
+        "apps/desktop/src/main/services/test-agentic-provider.test.ts",
+        "packages/shared-types/src/events.ts"
       ],
       "goal": "start/stop/getRun. Resolves system-agent, creates per-query thread, instantiates loop, subscribes onStep to event bus, emits agentic.completed/failed, respects orchestrator pause, writes runs row."
     },

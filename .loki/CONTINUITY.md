@@ -1,4 +1,4 @@
-# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 + T2 shipped)
+# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 + T2 + T3 shipped)
 
 ## Current State
 
@@ -11,7 +11,8 @@
   - **T0 SHIPPED** (commit `4f30efa`) — system-agent pseudo-employee, migration 0010 (`is_system` column + partial index), `system-agent.md` role card under `role-packs/strategia-official/roles/system/`, `system-agent-bootstrap.ts` with `ensureSystemAgent` + bus event, `employees.list` + `orgchart.get` + delegation pickers all filter `is_system = 0`. +89 employees.test rows + 151 bootstrap.test + 72 ipc/handlers tests.
   - **T1 SHIPPED** (commit `67e0136`) — `@team-x/intelligence/src/loop/` (types, prompt, tool-registry, loop). Pure ReAct orchestrator, provider-agnostic, zero Electron/DB/fs coupling. Forward-scan brace-balanced parser, one-shot nudge recovery, hard step/token/wall-clock budgets. 33 new unit tests (loop 19, tool-registry 8, prompt 6).
   - **T2 SHIPPED** (commit `7b5c4f9`) — `apps/desktop/src/main/services/agentic-tools.ts` — six read-only tools (`query_employees`, `query_tickets`, `query_projects`, `query_meetings`, `query_vault`, `query_events`) wrapping existing repos with JSON-safe projections, `{rows, truncated}` envelope capped at 50 rows, defensive `isSystem` filter on employees path, `summarizePayload` with 200-char cap + ellipsis. 40 new unit tests (+20 target). Also: added `zod` to `apps/desktop` deps, cleared T1's `Record<string, any>` default in `Tool` generic (→ `unknown`), rebuilt `packages/intelligence/dist` to surface loop types to composite consumers.
-- **Current metrics:** 909 unit tests (+90 over baseline, +40 over T1), 0 lint errors, 24 lint warnings (well under ≤76 target), typecheck clean, 7 E2E specs (untouched). 8 pre-existing ABI failures on `embeddings.test.ts` + `vec-init.test.ts` — same Node-v22/Electron-125 skew documented in §Troubleshooting; resolved by T10 rebuild dance.
+  - **T3 SHIPPED** (commit `791e6f6`) — `apps/desktop/src/main/services/agentic-loop-service.ts` + `test-agentic-provider.ts` seam. `createAgenticLoopService({employeesRepo, threadsRepo, messagesRepo, runsRepo, bus, orchestrator, buildTools, resolveComplete, ...})` with `start / stop / getRun / waitForRun`. `start()` resolves system-agent, creates dm thread with user+agent members, appends user message, writes `runs` row, instantiates `createAgenticLoop`, runs loop in background IIFE. `onStep` fans to bus as `agent.step` + persists message row per step. Terminal: `agentic.completed` or `agentic.failed` + `runs.finish`. `stop()` aborts via per-run `AbortController`; terminal status coerced to `'canceled'` regardless of which layer the abort propagated through. Pause-aware complete wrapper polls `orchestrator.isCompanyPaused(companyId)` on every provider call (poll default 250ms, test 2ms). Also ships: 3 new `EventType` values (`agent.step`, `agentic.completed`, `agentic.failed`) + payload interfaces in `shared-types/events.ts`; `test-agentic-provider.ts` — three-tier lookup (`__ECHO_AGENT__:[...]` sentinel / canned table / fallback) mirroring M30 T8 `test-classifier.ts` pattern, per-prompt call-count tracking. 25 new unit tests (+13 over target of 12) — 8 provider + 17 service.
+- **Current metrics:** 931 unit tests (+112 over 819 baseline, +22 over T2's 909 when ABI rebuild is current), 0 lint errors, 24 lint warnings (unchanged since T2), typecheck clean, 7 E2E specs (untouched). 8 pre-existing ABI failures on `embeddings.test.ts` + `vec-init.test.ts` — same Node-v22/Electron-125 skew documented in §Troubleshooting; resolved by T10 rebuild dance.
 - **Baseline at M31 start:** 819 unit tests + 7 E2E specs. Typecheck clean. Biome: 0 errors, 66 warnings.
 - **M31 targets:** ~905 unit tests (+86), 8 E2E specs (+1), 0 lint errors, ≤76 warnings.
 
@@ -26,7 +27,7 @@ M31 replaces the M30 T4 `complex_request` stub (`command-service.ts:770-775`) wi
 | T0 | shipped | 8 (actual 89+151+72) | `is_system` migration 0010 + `system-agent.md` role card + `ensureSystemAgent(companyId)` bootstrap |
 | T1 | shipped | 18 (actual 33) | `@team-x/intelligence/src/loop/` — pure ReAct loop, tool registry, budget enforcement |
 | T2 | shipped | 20 (actual 40) | `agentic-tools.ts` — 6 read-only tools wrapping employees/tickets/projects/meetings/vault/events repos |
-| T3 | pending | 12 | `AgenticLoopService` — start/stop/getRun, event bus integration, orchestrator pause respect |
+| T3 | shipped | 12 (actual 25) | `AgenticLoopService` — start/stop/getRun/waitForRun, pause-aware complete wrapper, abort coercion, shared-types event types |
 | T4 | pending | 6 | CommandService → AgenticLoopService wiring. Replaces T4 stub. `CommandHandlers.agenticLoopStart` |
 | T5 | pending | 6 | System-agent thread UX — Copilot Conversations section, inline step transcript |
 | T6 | pending | 0 (E2E) | Palette step-log mode + `command.stop` IPC + six UI states |
@@ -80,18 +81,34 @@ M31 replaces the M30 T4 `complex_request` stub (`command-service.ts:770-775`) wi
 - **`complex_request` stub is the M31 entry point.** T4 explicitly replaces the stub at `command-service.ts:770-775`. Leave the exhaustiveness-guard switch case — swap the body.
 - **Undo toast scoped to palette.** Low-priority shared-primitive follow-up.
 
-## Next Session Startup Checklist (M31 mid-flight — begin T3)
+## Next Session Startup Checklist (M31 mid-flight — begin T4)
 
 1. Read this CONTINUITY file.
-2. Read `.loki/state/orchestrator.json` → tasksCompleted should be 3 (T0 + T1 + T2), inflight.M31.commits includes T2 sha.
-3. Read `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md` — full plan doc, focus on T3 section.
-4. Pick `T3` from `.loki/queue/pending.json` (`AgenticLoopService` main-process front-door). Set status `in_progress`. Lives in `apps/desktop/src/main/services/agentic-loop-service.ts`. Methods: `start({companyId, userText})` → `{runId, threadId}`, `stop(runId)`, `getRun(runId)`. Respects `orchestrator.isCompanyPaused()`.
-5. T3 consumes T2's `createAgenticTools({companyId, employeesRepo, ticketsRepo, projectsRepo, meetingsRepo, vaultRepo, auditRepo})` and pipes through `createToolRegistry` from `@team-x/intelligence`. Provider hook: wrap `streamAgent` from provider-router as a `LoopCompleteFn` (collect deltas, return full completion + usage).
-6. T3 must also add a `NODE_ENV=test` seam — `test-agentic-provider.ts` mirroring M30 T8's `test-classifier.ts`. Scripted plan → tool_call → answer fixtures.
-7. Commit atomically after each task. Update pending.json status + orchestrator `tasksCompleted` + inflight commit hash on each completion.
+2. Read `.loki/state/orchestrator.json` → tasksCompleted should be 4 (T0 + T1 + T2 + T3), inflight.M31.commits includes T3 sha `791e6f6`.
+3. Read `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md` — focus on T4 section.
+4. Pick `T4` from `.loki/queue/pending.json` — wire `CommandService` → `AgenticLoopService`. Set status `in_progress`.
+5. T4 work:
+   - Extend `CommandHandlers` interface in `apps/desktop/src/main/services/command-service.ts` (line 144) with `agenticLoopStart: (args: { companyId, text }) => Promise<{ runId, threadId }>`.
+   - Replace the stub at `command-service.ts:770-775` (`case 'complex_request':` → currently returns `{summary: 'Escalated to agentic loop (M31).'}`) with a real call to `d.handlers.agenticLoopStart({companyId, text: req.rawText})`. Keep the exhaustiveness-guard switch case; swap only the body.
+   - Extend `ExecuteResult` (in `packages/shared-types/src/command.ts`) with optional `{ runId?, threadId? }` return fields so the palette can subscribe to live steps.
+   - Wire `agenticLoopStart` in `apps/desktop/src/main/ipc/command-handlers.ts` → call `AgenticLoopService.start()`.
+   - Instantiate `AgenticLoopService` in `apps/desktop/src/main/index.ts` composition root. Dependencies: structural repos already constructed for other services; `buildTools` calls T2's `createAgenticTools({companyId, ...})`; `resolveComplete` wraps `streamAgent` (production path) or imports `createTestAgenticCompleteFn` under `isTestMode()` — mirror provider-factory.ts's pattern.
+   - Preserve M30 T5's `Expect<Equal<IntentName, IpcIntentName>>` drift guard — DO NOT remove.
+6. Target: ~6 new unit tests for T4 (dispatcher happy path, type-export round-trip, audit-event payload gains runId/threadId, error path fires `agentic.failed`, `ExecuteResult` union shape).
+7. Commit atomically after T4 completion. Update pending.json + orchestrator.json + CONTINUITY.md with shipped status + commit sha.
 8. After T10, move M31 from `inflight` into `history`, clear pending.json, rewrite CONTINUITY with an M31-COMPLETE header.
 
-## T2 patterns to carry forward (new)
+## T3 patterns to carry forward (new)
+
+- **Abort coercion guarantees a clean `stop()` contract.** The underlying `@team-x/intelligence` loop maps abort into `tool_threw` / `tool_timeout` / `provider_error` depending on which layer was mid-flight. That leaks implementation detail into the bus. T3 resolves this by checking `controller.signal.aborted` at the terminal join point: if the controller was externally aborted AND the loop didn't naturally complete, we coerce `state.status='canceled'` + `errorReason='canceled'`. Natural `completed` wins (late-stop race goes to the runner). Same pattern belongs in T6's palette-stop flow.
+- **Pause-aware complete wrapper > per-iteration check.** Instead of polling pause inside the loop factory (which would require leaking orchestrator into `@team-x/intelligence`), wrap the `LoopCompleteFn` in a closure that `await waitUntilUnpaused(companyId, signal)` before calling through. Result: zero change to the pure loop package, full orchestrator-pause respect, and the signal integration falls out for free. `waitUntilUnpaused` is a polling gate (default 250ms) that signals AbortError when the outer controller fires; tests use 2ms polling for speed.
+- **Background IIFE + resolvable completion is the right shape for `start() returns immediately`.** `const completion = (async () => {...})();` wraps the whole loop lifecycle. The factory map stores `{state, controller, completion}`. `waitForRun(runId)` awaits `entry.completion` — no separate Promise resolver plumbing. `completion.catch(logger.error)` catches unhandled-rejection risk defensively; the IIFE's inner try/catch already swallows.
+- **Structural dep interfaces beat Pick<RepoType>.** Service deps declare `AgenticLoopThreadsRepo`, `AgenticLoopMessagesRepo`, etc. as local interfaces with only the method shapes the service uses. Tests implement them with hand-rolled classes; production wires them from the real drizzle repos. Mirrors meeting-service.ts precisely. Keeps tests decoupled from `ReturnType<typeof createThreadsRepo>` type regressions.
+- **`void newId` pattern for "reserved but not yet used" deps is a lint trap.** Biome's organizeImports + dead-code rule flagged the declaration. Dropped it entirely — future T4/T5/T6 tasks can re-add if they need a separate id generator. The `runs.start(...)` return already provides a runId, so the generator was decorative.
+- **Import sort + formatter diffs = 5 of the 7 first-run lint errors.** Run `pnpm format` before triaging after every service-file creation. Biome's organizeImports isn't a line-level autofix — it's a whole-file rewrite. `npx biome check --fix <file>` handles it per-file when `pnpm format` doesn't cover organizeImports.
+- **Shared-types events extension requires no dist rebuild for consumers during typecheck.** `packages/shared-types` is composite, but `pnpm typecheck` runs `tsc --noEmit` with project refs — it reads `.ts` source, not `dist/.d.ts`. The `pnpm -F @team-x/shared-types exec tsc` I ran was defensive and not strictly required; remove from T4/T5 checklists unless downstream is `dist`-consuming (which for in-repo packages, it's not under `--noEmit`).
+
+## T2 patterns to carry forward
 
 - **Composite-project `dist/` is load-bearing.** `@team-x/intelligence` uses `composite: true` with `outDir: ./dist`. Consumers reach its types via project references, not `src/`, so dist/ must be rebuilt after every types.ts change or downstream packages see stale exports. Command: `pnpm -F @team-x/intelligence exec tsc` (without `--noEmit`). `pnpm typecheck` does NOT rebuild because every package's typecheck script ends in `--noEmit`. Future T1-style changes to intelligence must include a dist/ rebuild step.
 - **`{rows, truncated}` envelope is the agentic tool contract.** Drop `total`. Truncation is a single boolean; the LLM can tighten its filters and re-query if it needs more. Propagate this shape to T8's test-agentic-tools fixtures and any future agentic tools (M32 write-side tools MUST use the same envelope).
