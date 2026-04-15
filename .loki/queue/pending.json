@@ -6,7 +6,7 @@
   "previousMilestone": "M30",
   "previousMilestoneCompletedAt": "2026-04-14T01:30:00Z",
   "createdAt": "2026-04-14T02:15:00Z",
-  "updatedAt": "2026-04-14T22:00:00Z",
+  "updatedAt": "2026-04-14T22:40:00Z",
   "totalTasks": 11,
   "tasks": [
     {
@@ -102,16 +102,24 @@
     {
       "id": "T5",
       "title": "System-agent thread UX (renderer)",
-      "status": "pending",
+      "status": "completed",
+      "commit": "0cd9e76",
+      "startedAt": "2026-04-14T22:05:00Z",
+      "completedAt": "2026-04-14T22:40:00Z",
+      "actualTests": 6,
       "blockedBy": ["T3"],
       "estTests": 6,
       "files": [
+        "packages/shared-types/src/entities.ts",
+        "apps/desktop/src/main/ipc/handlers.ts",
+        "apps/desktop/src/main/ipc/handlers.test.ts",
+        "apps/desktop/src/renderer/src/store/app-store.ts",
         "apps/desktop/src/renderer/src/features/chat/thread-list.tsx",
-        "apps/desktop/src/renderer/src/features/chat/thread-detail.tsx",
-        "apps/desktop/src/renderer/src/hooks/use-agent-step-stream.ts",
-        "apps/desktop/src/renderer/src/features/chat/system-agent-badge.tsx"
+        "apps/desktop/src/renderer/src/features/chat/system-agent-badge.tsx",
+        "apps/desktop/src/renderer/src/features/chat/chat-drawer.tsx",
+        "apps/desktop/src/renderer/src/hooks/use-agent-step-stream.ts"
       ],
-      "goal": "System-agent threads render in their own Copilot Conversations section with robot icon. Thread detail shows step transcript inline with final answer. Read-only (no compose box)."
+      "goal": "System-agent threads render in their own Copilot Conversations section with Sparkles icon. Chat drawer gains a 4th read-only branch showing the persisted step transcript with live header status (thinking / completed / failed) driven by the use-agent-step-stream hook. No composer."
     },
     {
       "id": "T6",
