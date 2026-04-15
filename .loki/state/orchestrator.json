@@ -1,58 +1,35 @@
 {
   "currentPhase": "DEVELOPMENT",
-  "currentMilestone": "M31",
-  "milestoneName": "Agentic Loop",
-  "tasksCompleted": 10,
+  "currentMilestone": "M32",
+  "milestoneName": "Task Planner (decompose/delegate/review tools)",
+  "tasksCompleted": 0,
   "tasksFailed": 0,
-  "totalTasks": 11,
-  "planDoc": "docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md",
-  "startedAt": "2026-04-14T02:15:00Z",
+  "totalTasks": 0,
+  "planDoc": null,
+  "startedAt": null,
   "completedAt": null,
   "phaseComplete": false,
-  "inflight": {
-    "M31": {
-      "commits": {
-        "T0": "4f30efa",
-        "T1": "67e0136",
-        "T2": "7b5c4f9",
-        "T3": "791e6f6",
-        "T4": "179569a",
-        "T5": "0cd9e76",
-        "T6": "29ed9d2",
-        "T7": "51defad",
-        "T8": "31227d1",
-        "T9": "183562d"
-      },
-      "metrics": {
-        "unitTests": 958,
-        "e2eSpecs": 8,
-        "e2eGreenCount": 8,
-        "lintErrors": 0,
-        "lintWarnings": 24,
-        "typecheckClean": true
-      }
-    }
-  },
+  "inflight": {},
   "phase": "Phase 5 — Intelligence Layer",
-  "previousMilestone": "M30",
-  "previousMilestoneName": "NLU Engine",
-  "previousMilestoneCompletedAt": "2026-04-14T01:30:00Z",
-  "nextMilestone": "M32",
-  "nextMilestoneName": "Task Planner (decompose/delegate/review tools)",
+  "previousMilestone": "M31",
+  "previousMilestoneName": "Agentic Loop",
+  "previousMilestoneCompletedAt": "2026-04-15T14:30:00Z",
+  "nextMilestone": "M33",
+  "nextMilestoneName": "Copilot Service",
   "tasksInProgress": {},
   "baseline": {
-    "unitTests": 819,
-    "e2eSpecs": 7,
-    "e2eGreenCount": 7,
+    "unitTests": 958,
+    "e2eSpecs": 8,
+    "e2eGreenCount": 8,
     "lintErrors": 0,
-    "lintWarnings": 66,
+    "lintWarnings": 24,
     "typecheckClean": true
   },
   "targets": {
-    "unitTests": 905,
-    "unitTestDelta": 86,
-    "e2eSpecs": 8,
-    "e2eSpecDelta": 1,
+    "unitTests": null,
+    "unitTestDelta": null,
+    "e2eSpecs": null,
+    "e2eSpecDelta": null,
     "lintErrors": 0,
     "lintWarningsMax": 76
   },
@@ -75,6 +52,32 @@
       },
       "unitTestDelta": "+146 (673 → 819)",
       "e2eDelta": "+2 (5 → 7; +vault-backup fix from T0 + command-palette from T8)"
+    },
+    "M31": {
+      "name": "Agentic Loop",
+      "completedAt": "2026-04-15T14:30:00Z",
+      "tasksShipped": 11,
+      "commits": {
+        "T0": "4f30efa",
+        "T1": "67e0136",
+        "T2": "7b5c4f9",
+        "T3": "791e6f6",
+        "T4": "179569a",
+        "T5": "0cd9e76",
+        "T6": "29ed9d2",
+        "T7": "51defad",
+        "T8": "31227d1",
+        "T9": "183562d",
+        "T10": "pending-final-commit"
+      },
+      "unitTestDelta": "+139 (819 → 958)",
+      "e2eDelta": "+1 (7 → 8; +agentic-loop.spec.ts from T8)",
+      "lintDelta": "warnings 66 → 24 (-42)",
+      "planDoc": "docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md",
+      "followUps": [
+        "F1: useAgentStepStream backfill on mount (design doc §14)",
+        "F2: useThreadList bus invalidator for agent.* events (design doc §14)"
+      ]
     }
   }
 }

@@ -1,238 +1,33 @@
 {
-  "milestone": "M31",
-  "milestoneName": "Agentic Loop",
+  "milestone": "M32",
+  "milestoneName": "Task Planner (decompose/delegate/review tools)",
   "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": "docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md",
-  "previousMilestone": "M30",
-  "previousMilestoneCompletedAt": "2026-04-14T01:30:00Z",
-  "createdAt": "2026-04-14T02:15:00Z",
-  "updatedAt": "2026-04-15T14:45:00Z",
-  "totalTasks": 11,
-  "tasks": [
-    {
-      "id": "T0",
-      "title": "System-agent seed + is_system column (migration 0010)",
-      "status": "completed",
-      "commit": "4f30efa",
-      "completedAt": "2026-04-14T03:00:00Z",
-      "blockedBy": [],
-      "estTests": 8,
-      "files": [
-        "apps/desktop/src/main/db/schema.ts",
-        "apps/desktop/src/main/db/migrations/0010_employee_is_system.sql",
-        "role-packs/strategia-official/roles/system-agent.md",
-        "apps/desktop/src/main/services/system-agent-bootstrap.ts",
-        "apps/desktop/src/main/db/repos/employees.ts"
-      ],
-      "goal": "Seed a hidden system-agent employee per company. is_system flag, indexed, filtered out of employees.list / org-chart / hire dialog / delegation pickers. Every downstream task depends on this."
-    },
-    {
-      "id": "T1",
-      "title": "Agentic loop core — @team-x/intelligence/src/loop/",
-      "status": "completed",
-      "startedAt": "2026-04-14T04:00:00Z",
-      "completedAt": "2026-04-14T05:00:00Z",
-      "actualTests": 33,
-      "blockedBy": ["T0"],
-      "estTests": 18,
-      "files": [
-        "packages/intelligence/src/loop/types.ts",
-        "packages/intelligence/src/loop/tool-registry.ts",
-        "packages/intelligence/src/loop/loop.ts",
-        "packages/intelligence/src/loop/prompt.ts",
-        "packages/intelligence/src/loop/loop.test.ts",
-        "packages/intelligence/src/index.ts"
-      ],
-      "goal": "Pure ReAct loop. Tool registry, budget enforcement (step/token/timeout), streaming onStep, strict JSON tool-call parsing with one-shot nudge recovery. No Electron / DB / fs coupling."
-    },
-    {
-      "id": "T2",
-      "title": "Read-side agentic tools — query_{employees,tickets,projects,meetings,vault,events}",
-      "status": "completed",
-      "commit": "7b5c4f9",
-      "startedAt": "2026-04-14T06:00:00Z",
-      "completedAt": "2026-04-14T06:45:00Z",
-      "actualTests": 40,
-      "blockedBy": ["T1"],
-      "estTests": 20,
-      "files": [
-        "apps/desktop/src/main/services/agentic-tools.ts",
-        "apps/desktop/src/main/services/agentic-tools.test.ts"
-      ],
-      "goal": "Six read-only tools wrapping existing repos with JSON-safe projections. Max 50 rows per call with truncation marker. Read-only enforced — no write repo method inside any tool."
-    },
-    {
-      "id": "T3",
-      "title": "AgenticLoopService — main-process front-door",
-      "status": "completed",
-      "commit": "791e6f6",
-      "startedAt": "2026-04-14T19:00:00Z",
-      "completedAt": "2026-04-14T19:10:00Z",
-      "actualTests": 25,
-      "blockedBy": ["T1", "T2"],
-      "estTests": 12,
-      "files": [
-        "apps/desktop/src/main/services/agentic-loop-service.ts",
-        "apps/desktop/src/main/services/agentic-loop-service.test.ts",
-        "apps/desktop/src/main/services/test-agentic-provider.ts",
-        "apps/desktop/src/main/services/test-agentic-provider.test.ts",
-        "packages/shared-types/src/events.ts"
-      ],
-      "goal": "start/stop/getRun. Resolves system-agent, creates per-query thread, instantiates loop, subscribes onStep to event bus, emits agentic.completed/failed, respects orchestrator pause, writes runs row."
-    },
-    {
-      "id": "T4",
-      "title": "Wire CommandService → AgenticLoopService",
-      "status": "completed",
-      "commit": "179569a",
-      "startedAt": "2026-04-14T21:00:00Z",
-      "completedAt": "2026-04-14T21:40:00Z",
-      "actualTests": 5,
-      "blockedBy": ["T3"],
-      "estTests": 6,
-      "files": [
-        "apps/desktop/src/main/services/command-service.ts",
-        "apps/desktop/src/main/services/command-service.test.ts",
-        "apps/desktop/src/main/index.ts",
-        "packages/shared-types/src/command.ts",
-        "packages/shared-types/src/events.ts"
-      ],
-      "goal": "Replace the M30 T4 stub at command-service.ts:770-775. Extend CommandHandlers interface with agenticLoopStart. ExecuteResult gains {runId, threadId}. IntentName drift guard stays green."
-    },
-    {
-      "id": "T5",
-      "title": "System-agent thread UX (renderer)",
-      "status": "completed",
-      "commit": "0cd9e76",
-      "startedAt": "2026-04-14T22:05:00Z",
-      "completedAt": "2026-04-14T22:40:00Z",
-      "actualTests": 6,
-      "blockedBy": ["T3"],
-      "estTests": 6,
-      "files": [
-        "packages/shared-types/src/entities.ts",
-        "apps/desktop/src/main/ipc/handlers.ts",
-        "apps/desktop/src/main/ipc/handlers.test.ts",
-        "apps/desktop/src/renderer/src/store/app-store.ts",
-        "apps/desktop/src/renderer/src/features/chat/thread-list.tsx",
-        "apps/desktop/src/renderer/src/features/chat/system-agent-badge.tsx",
-        "apps/desktop/src/renderer/src/features/chat/chat-drawer.tsx",
-        "apps/desktop/src/renderer/src/hooks/use-agent-step-stream.ts"
-      ],
-      "goal": "System-agent threads render in their own Copilot Conversations section with Sparkles icon. Chat drawer gains a 4th read-only branch showing the persisted step transcript with live header status (thinking / completed / failed) driven by the use-agent-step-stream hook. No composer."
-    },
-    {
-      "id": "T6",
-      "title": "Palette streaming integration — step log + stop",
-      "status": "completed",
-      "commit": "29ed9d2",
-      "startedAt": "2026-04-15T00:00:00Z",
-      "completedAt": "2026-04-15T01:30:00Z",
-      "actualTests": 4,
-      "blockedBy": ["T4", "T5"],
-      "estTests": 0,
-      "files": [
-        "apps/desktop/src/renderer/src/features/command/command-palette.tsx",
-        "apps/desktop/src/renderer/src/features/command/step-card.tsx",
-        "packages/shared-types/src/command.ts",
-        "packages/shared-types/src/ipc.ts",
-        "apps/desktop/src/main/ipc/command-handlers.ts",
-        "apps/desktop/src/main/ipc/command-handlers.test.ts",
-        "apps/desktop/src/main/ipc/register.ts",
-        "apps/desktop/src/preload/api.ts",
-        "apps/desktop/src/main/index.ts"
-      ],
-      "goal": "Palette switches to step-log mode when ExecuteResult.runId present. Live step cards, stop button (wires command.stop IPC), cumulative cost footer, terminal Open-Thread button. All six UI states implemented."
-    },
-    {
-      "id": "T7",
-      "title": "Settings — agentic loop controls",
-      "status": "completed",
-      "commit": "51defad",
-      "startedAt": "2026-04-14T21:43:00Z",
-      "completedAt": "2026-04-14T22:00:00Z",
-      "actualTests": 9,
-      "blockedBy": ["T3"],
-      "estTests": 8,
-      "files": [
-        "apps/desktop/src/main/db/repos/settings.ts",
-        "apps/desktop/src/main/db/repos/settings.test.ts",
-        "apps/desktop/src/renderer/src/features/settings/agentic-section.tsx",
-        "apps/desktop/src/renderer/src/features/settings/settings-view.tsx",
-        "apps/desktop/src/renderer/src/hooks/use-settings.ts",
-        "apps/desktop/src/main/ipc/handlers.ts",
-        "apps/desktop/src/main/ipc/register.ts",
-        "apps/desktop/src/preload/api.ts",
-        "packages/shared-types/src/ipc.ts"
-      ],
-      "goal": "Three settings keys (agentic_max_steps=8, agentic_max_tokens=8000, agentic_timeout_ms=120000) with clamps. New Agentic Loop subsection in Settings → Runtime."
-    },
-    {
-      "id": "T8",
-      "title": "E2E spec — agentic-loop.spec.ts",
-      "status": "completed",
-      "commit": "31227d1",
-      "startedAt": "2026-04-15T14:00:00Z",
-      "completedAt": "2026-04-15T14:45:00Z",
-      "actualTests": 1,
-      "blockedBy": ["T6", "T7"],
-      "estTests": 1,
-      "files": [
-        "apps/desktop/e2e/agentic-loop.spec.ts",
-        "apps/desktop/src/main/services/test-agentic-tools.ts",
-        "apps/desktop/src/main/services/test-agentic-provider.ts",
-        "apps/desktop/src/main/services/test-classifier.ts",
-        "apps/desktop/src/main/index.ts"
-      ],
-      "goal": "Full round-trip: Ctrl+K → complex_request → scripted plan → tool_call → tool_result → answer → thread persisted → audit rows visible. NODE_ENV=test seam gates real LLM/tools."
-    },
-    {
-      "id": "T9",
-      "title": "Documentation",
-      "status": "completed",
-      "commit": "183562d",
-      "startedAt": "2026-04-15T15:00:00Z",
-      "completedAt": "2026-04-15T15:45:00Z",
-      "actualTests": 0,
-      "blockedBy": ["T8"],
-      "estTests": 0,
-      "files": [
-        "CLAUDE.md",
-        "CHANGELOG.md",
-        "README.md",
-        "docs/user-guide/README.md",
-        "docs/user-guide/agentic-loop.md",
-        "docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md"
-      ],
-      "goal": "CLAUDE status + IPC + events + settings + troubleshooting. CHANGELOG [Unreleased] entry. README feature. New agentic-loop user guide. Resequence §9 of Phase 5 design doc to reflect actual shipped order."
-    },
-    {
-      "id": "T10",
-      "title": "Verification + milestone marker",
-      "status": "pending",
-      "blockedBy": ["T9"],
-      "estTests": 0,
-      "files": [".loki/state/orchestrator.json", ".loki/queue/pending.json", ".loki/CONTINUITY.md"],
-      "goal": "Repo-root typecheck clean. Biome 0 errors / ≤76 warnings. ~905 unit tests. ABI rebuild dance + 8/8 E2E specs green. Orchestrator → M32, queue cleared, CONTINUITY rewritten."
-    }
-  ],
+  "planDoc": null,
+  "previousMilestone": "M31",
+  "previousMilestoneCompletedAt": "2026-04-15T14:30:00Z",
+  "createdAt": null,
+  "updatedAt": "2026-04-15T14:30:00Z",
+  "totalTasks": 0,
+  "tasks": [],
   "baseline": {
-    "unitTests": 819,
-    "e2eSpecs": 7,
+    "unitTests": 958,
+    "e2eSpecs": 8,
     "lintErrors": 0,
-    "lintWarnings": 66,
+    "lintWarnings": 24,
     "typecheckClean": true
   },
   "targets": {
-    "unitTests": 905,
-    "e2eSpecs": 8,
+    "unitTests": null,
+    "e2eSpecs": null,
     "lintErrors": 0,
     "lintWarningsMax": 76
   },
   "notes": [
-    "Scope is READ-ONLY. Write-side Task Planner tools (decompose_project, delegate_subtask, review_deliverable) are deferred to M32. Any PR attempting to add a write-side tool in M31 must be rejected.",
-    "Every task after T0 assumes system-agent is resolvable per company. Do not parallelize T0 with anything.",
-    "Subagent budget for E2E (T8) is ~2 passes based on M30 pattern. Coordinator runs final verify + commit.",
-    "ABI rebuild dance is mandatory before T10 (both Node and Electron ABIs)."
+    "M31 (Agentic Loop — read-side) COMPLETE. All 11 tasks shipped, 8/8 E2E green, 958/958 unit tests passing.",
+    "M32 plan doc not yet written. Write it when M32 work begins — use docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md as the structural template.",
+    "M32 scope (from Phase 5 design §4 + §7): write-side Task Planner tools — decompose_project, delegate_subtask, review_deliverable. Swaps M31's read-only tool registry for the write set on the same AgenticLoopService harness. New event types: plan.*, task.*, review.*.",
+    "Two M31 follow-ups land best at M32 T0 or T1 (both renderer-only, small): F1 = useAgentStepStream backfill on mount (~20 LOC), F2 = useThreadList bus invalidator (~2 LOC). Full detail in docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md §14.",
+    "M31 patterns to carry into M32: three-tier canned test seam (classifier/provider/tools), {rows, truncated} envelope for agentic tools, data-step-kind as stable E2E selector, pause-aware providerRouter.complete wrapper, AbortController-driven stop with canceled-status coercion, per-task Loki ledger commits (chore(loki): M<N> T<N> — commit ledger (<sha>)).",
+    "ABI rebuild dance is mandatory before every T10-style verification run. Node ABI via `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` (pnpm rebuild silently no-ops when the prebuild dir is missing), Electron ABI via `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. Document this in the M32 plan T10 acceptance criteria."
   ]
 }
