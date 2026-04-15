@@ -1,4 +1,33 @@
-# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 + T2 + T3 + T4 shipped)
+# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 + T2 + T3 + T4 + T5 + T6 + T7 shipped; T8–T10 pending)
+
+## T6 SHIPPED — 2026-04-15 (commit `29ed9d2`)
+
+**Palette streaming integration — step log + stop.**
+
+- `packages/shared-types/src/command.ts` — `CommandStopRequest` / `CommandStopResult`.
+- `packages/shared-types/src/ipc.ts` — `command.stop` channel + `command.stop(req)` on bridge surface.
+- `apps/desktop/src/main/ipc/command-handlers.ts` — extends `CommandHandlersDeps` with `agenticLoopService` + optional `logger`. New `'command.stop'` handler: probes `getRun()`, calls `stop()` only when `status === 'running'`. Idempotent on unknown/terminal runs. Try/catch around service call — errors logged + `{ stopped: false }` returned, never rethrown.
+- `apps/desktop/src/main/ipc/command-handlers.test.ts` — 4 new tests (stopped:true happy path, unknown runId, terminal status, logger.error swallow). Renamed "four channel keys" → "five channel keys". New `makeAgenticMock()` + `runStateFixture()` helpers; `build()` helper wraps `buildCommandHandlers` for the common-case boilerplate.
+- `apps/desktop/src/main/ipc/register.ts` — `command.stop` added to `REQUEST_CHANNELS`.
+- `apps/desktop/src/preload/api.ts` — `commandStop: 'command.stop'` in `CHANNELS`, `stop(req)` method on bridge's `command` namespace.
+- `apps/desktop/src/main/index.ts` — composition root: null-guards `agenticLoopServiceInstance`, passes it to `buildCommandHandlers({...})`, registers `ipcMain.handle('command.stop', ...)`.
+- `apps/desktop/src/renderer/src/features/command/step-card.tsx` — NEW. `<StepCard>` + `<StepCardSkeleton>`. Per-kind render (plan/tool_call/tool_result/answer/error) with narrow helpers that soft-default partial payloads. `<details>` for tool envelopes (collapsed by default, 48rem max-height JSON scroller). Answer card brand-tinted border. Error card red-bordered. Six UI states: hover lift + brand/40 border, focus-visible ring, loading skeleton, error branch, dimmed (60% opacity when run is terminal), tabindex=-1 for programmatic focus without tab-order noise. `data-step-kind` attribute drives the palette's roving focus.
+- `apps/desktop/src/renderer/src/features/command/command-palette.tsx` — new `agenticRun: { runId, threadId } | null` + `stopPending` state. On execute success with `runId` + `threadId`, skip toast + `onOpenChange(false)`; set `agenticRun` and clear parseResult instead. New `<StepLogView>` subcomponent — sticky header (run id + status label + spinner), scrolling step list (auto-scrolls until terminal), cumulative footer (step count · total tokens · USD to 4 decimals, prefers terminal event's authoritative numbers), Stop button while running, Close + Open-Thread buttons when terminal. Dialog widens to 640px in step-log mode; max-height 640px with inner scroll. ArrowUp/Down key handler on the list roves focus between articles. Dialog close clears agentic state; backend run keeps streaming into persisted thread for chat drawer (M31 T5).
+
+**Tests:** +4 new unit tests on command-handlers.test.ts. No renderer DOM harness — E2E coverage deferred to T8 per plan doc.
+
+**Current metrics:** 958 unit tests passing. 0 lint errors, 24 lint warnings (unchanged from pre-T6). Typecheck clean across all 6 workspaces.
+
+**T6 patterns to carry forward:**
+
+- **Agentic-loop control surface splits cleanly.** Start path stays in `CommandService.execute` (via `CommandHandlers.agenticLoopStart` seam T4 shipped). Cancel path goes direct from `command-handlers.ts` to `AgenticLoopService.stop(runId)` because cancellation is run-id-keyed, not intent-keyed. The distinction is worth preserving for M32's write-side tools — any NEW agentic lifecycle channel should think about whether it's intent-scoped or run-scoped before deciding which service owns it.
+- **Biome rule `noNoninteractiveTabindex` accepts `tabIndex={-1}`.** `tabIndex={0}` on non-interactive semantic elements (`<article>`, `<section>`) is flagged. `-1` is OK because it only exposes the element to programmatic focus (`element.focus()`) — not keyboard Tab order. For roving-tabindex patterns, this is the right default; set `0` on the container role="listbox" if tab entry is needed. `// biome-ignore` comments do NOT propagate across the JS/JSX boundary reliably — prefer rewriting to pass the rule over disabling it.
+- **Biome's `useExhaustiveDependencies` pedantry on effects that read DOM state.** When a useEffect reads DOM derived from a state variable (e.g. `scrollHeight` which reflects array length), the rule flags the state dep as "unused" because the body doesn't read it directly. Two solutions: (a) add a `void stateVar.length;` no-op reference in the body (explicit + self-documenting), or (b) use a ref you bump manually. Option (a) is what M31 T6 used.
+- **Step-card narrowing contract.** Each kind's `data` payload has a known shape but shared-types types it as `unknown` for JSON safety. Narrow helpers (`narrowPlan`, `narrowToolCall`, etc.) do soft-validation with fallbacks rather than throwing — renderer never crashes on a malformed step. M32 write-side tools should follow the same pattern.
+- **Dialog mode-switching pattern.** The palette now has two mutually-exclusive body modes gated on `agenticRun`. Keeping the gate at the DialogContent body level (rather than a separate `<Dialog>` per mode) lets the same mount point keep its focus trap, Esc handling, and animation — fewer React reconciliation edges. If M34 Copilot UI wants a third mode (e.g. task planner preview), extend the same switch rather than forking the component.
+
+---
+
 
 ## Current State
 

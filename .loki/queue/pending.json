@@ -124,14 +124,23 @@
     {
       "id": "T6",
       "title": "Palette streaming integration — step log + stop",
-      "status": "pending",
+      "status": "completed",
+      "commit": "29ed9d2",
+      "startedAt": "2026-04-15T00:00:00Z",
+      "completedAt": "2026-04-15T01:30:00Z",
+      "actualTests": 4,
       "blockedBy": ["T4", "T5"],
       "estTests": 0,
       "files": [
         "apps/desktop/src/renderer/src/features/command/command-palette.tsx",
         "apps/desktop/src/renderer/src/features/command/step-card.tsx",
+        "packages/shared-types/src/command.ts",
         "packages/shared-types/src/ipc.ts",
-        "apps/desktop/src/main/ipc/command-handlers.ts"
+        "apps/desktop/src/main/ipc/command-handlers.ts",
+        "apps/desktop/src/main/ipc/command-handlers.test.ts",
+        "apps/desktop/src/main/ipc/register.ts",
+        "apps/desktop/src/preload/api.ts",
+        "apps/desktop/src/main/index.ts"
       ],
       "goal": "Palette switches to step-log mode when ExecuteResult.runId present. Live step cards, stop button (wires command.stop IPC), cumulative cost footer, terminal Open-Thread button. All six UI states implemented."
     },
