@@ -96,7 +96,28 @@ export interface ExecuteRequest {
 }
 
 export type ExecuteResult =
-  | { kind: 'ok'; intent: IntentName; resultId?: string | number; summary: string }
+  | {
+      kind: 'ok';
+      intent: IntentName;
+      resultId?: string | number;
+      summary: string;
+      /**
+       * Agentic-loop run id for the `complex_request` intent (M31 T4).
+       *
+       * Populated only when the dispatcher started an agentic loop via
+       * `CommandHandlers.agenticLoopStart`. Undefined for every other
+       * intent. Mirrored structurally on `IpcExecuteResult` in
+       * `@team-x/shared-types` so the renderer can subscribe to live
+       * `agent.step` events and jump to the system-agent thread on
+       * completion.
+       */
+      runId?: string;
+      /**
+       * System-agent DM thread id paired with `runId`. Same gating
+       * conditions apply — only populated for `complex_request`.
+       */
+      threadId?: string;
+    }
   | { kind: 'needs_confirmation'; summary: string }
   | {
       kind: 'error';
@@ -156,6 +177,26 @@ export interface CommandHandlers {
   employeesFire?(req: { employeeId: string }): Promise<void>;
   /** Not yet registered — optional. */
   employeesPromote?(req: { employeeId: string; roleId: string; newLevel: string }): Promise<void>;
+
+  /**
+   * Start the agentic loop for a `complex_request` intent (M31 T4).
+   *
+   * Wired by the composition root to `AgenticLoopService.start()`.
+   * Kept optional so existing tests (and any host that hasn't built an
+   * `AgenticLoopService` yet) still typecheck — the dispatcher guards
+   * for absence and returns `handler_error` with a clear message,
+   * mirroring the `employeesFire` / `employeesPromote` pattern above.
+   *
+   * Returns synchronously with `{ runId, threadId }`; the loop runs
+   * in the background on the main process, streaming `agent.step`
+   * events over the bus. Callers flow `runId`/`threadId` back to the
+   * renderer via `ExecuteResult`.
+   */
+  agenticLoopStart?(req: {
+    companyId: string;
+    text: string;
+    actorId?: string;
+  }): Promise<{ runId: string; threadId: string }>;
 
   ticketsAssign(req: { ticketId: string; assigneeId: string }): Promise<void>;
   ticketsCreate(req: {
@@ -460,10 +501,17 @@ export function createCommandService(deps: CommandServiceDeps): CommandService {
       // trail, even on error.
       let resultId: string | number | undefined;
       let summary: string;
+      // Agentic-loop cross-refs — only the `complex_request` branch
+      // populates these (M31 T4). Kept in local scope so the error
+      // path naturally leaves them undefined in the audit payload.
+      let runId: string | undefined;
+      let threadId: string | undefined;
       try {
         const dispatched = await dispatch(req, deps.handlers);
         resultId = dispatched.resultId;
         summary = dispatched.summary;
+        runId = dispatched.runId;
+        threadId = dispatched.threadId;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         logger.error(`dispatch failed for ${req.intent}`, err);
@@ -502,6 +550,8 @@ export function createCommandService(deps: CommandServiceDeps): CommandService {
         resultId,
         durationMs: Date.now() - startedAt,
         logger,
+        runId,
+        threadId,
       });
 
       return {
@@ -509,6 +559,13 @@ export function createCommandService(deps: CommandServiceDeps): CommandService {
         intent: req.intent,
         resultId,
         summary,
+        // Only attach the agentic cross-refs when the dispatcher
+        // actually produced them — keeps the event payload and the
+        // ExecuteResult shape minimal for non-agentic intents so
+        // downstream JSON / structural checks don't widen for no
+        // reason.
+        ...(runId !== undefined ? { runId } : {}),
+        ...(threadId !== undefined ? { threadId } : {}),
       };
     },
 
@@ -585,6 +642,17 @@ function missingRequiredEntity(
 interface DispatchOutcome {
   resultId?: string | number;
   summary: string;
+  /**
+   * Agentic-loop run id. Populated only by the `complex_request`
+   * branch (M31 T4) — every other dispatcher branch leaves it
+   * undefined. `execute()` propagates it to the `ok` ExecuteResult
+   * and to the audit event payload so the palette can subscribe to
+   * live steps and the Audit view can deep-link to the Copilot
+   * thread.
+   */
+  runId?: string;
+  /** System-agent DM thread id paired with `runId`. Same gating. */
+  threadId?: string;
 }
 
 async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<DispatchOutcome> {
@@ -768,10 +836,34 @@ async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<Dispat
     }
 
     case 'complex_request': {
-      // M31 will route this to the agentic loop. For now return a
-      // human-readable stub so the palette still feels responsive.
-      // TODO(M31): wire `d.handlers.agenticLoopStart(...)` here.
-      return { summary: 'Escalated to agentic loop (M31).' };
+      // M31 T4 — route to the agentic loop. `agenticLoopStart` is
+      // optional on the dispatch seam so existing tests (and any
+      // partial composition root) still typecheck; absence here is a
+      // hard-configuration bug, not a runtime-user bug, so we throw
+      // and let `execute()`'s try/catch shape a typed `handler_error`
+      // result + append an audit row. Same pattern as
+      // `fire_employee` / `promote_employee` above.
+      const start = h.agenticLoopStart;
+      if (!start) {
+        throw new Error('agentic loop not wired — AgenticLoopService missing from CommandHandlers');
+      }
+      const actorId = req.actorId?.trim() || 'user';
+      const text = req.rawText ?? '';
+      const { runId, threadId } = await start({
+        companyId: req.companyId,
+        text,
+        actorId,
+      });
+      return {
+        // resultId carries the runId so the Audit view and the command
+        // history list can show a stable reference without needing to
+        // know about the runId/threadId shape. runId/threadId are also
+        // passed through explicitly below for richer renderers.
+        resultId: runId,
+        summary: 'Started agentic loop — streaming steps live',
+        runId,
+        threadId,
+      };
     }
 
     default: {
@@ -800,6 +892,14 @@ interface WriteHistoryArgs {
   resultId?: string | number;
   durationMs: number;
   logger: { error: (m: string, e: unknown) => void };
+  /**
+   * Agentic-loop cross-refs (M31 T4). Only populated for the
+   * `complex_request` intent; every other intent leaves these
+   * undefined. Propagated into `CommandExecutedPayload` so the Audit
+   * view can deep-link palette invocations to their Copilot threads.
+   */
+  runId?: string;
+  threadId?: string;
 }
 
 async function writeHistoryAndEvent(args: WriteHistoryArgs): Promise<void> {
@@ -840,6 +940,11 @@ async function writeHistoryAndEvent(args: WriteHistoryArgs): Promise<void> {
       outcome: args.outcome,
       resultId: args.resultId,
       durationMs: args.durationMs,
+      // Exact-omit semantics — attaching `runId: undefined` would
+      // break a strict JSON round-trip on the bus (undefined keys
+      // serialize to `null`). Only emit when set.
+      ...(args.runId !== undefined ? { runId: args.runId } : {}),
+      ...(args.threadId !== undefined ? { threadId: args.threadId } : {}),
     };
     deps.bus.emit<CommandExecutedPayload>({
       type: 'command.executed',

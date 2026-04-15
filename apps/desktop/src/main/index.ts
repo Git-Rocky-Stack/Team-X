@@ -54,7 +54,9 @@ import {
   createRagService,
   createSlotFiller,
 } from '@team-x/intelligence';
+import type { LoopCompleteFn, LoopMessage, LoopProviderCompletion } from '@team-x/intelligence';
 import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
+import { streamAgent } from '@team-x/provider-router';
 import type { EmbeddingSourceType, Employee, Ticket } from '@team-x/shared-types';
 import { eq } from 'drizzle-orm';
 import { closeDb, getDb, initDb } from './db/client.js';
@@ -97,6 +99,11 @@ import {
 } from './orchestrator/index.js';
 import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
+import {
+  type AgenticLoopService,
+  createAgenticLoopService,
+} from './services/agentic-loop-service.js';
+import { createAgenticTools } from './services/agentic-tools.js';
 import { createBackupService } from './services/backup.js';
 import { type CommandService, createCommandService } from './services/command-service.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
@@ -114,6 +121,7 @@ import { createRagIndexer } from './services/rag-indexer.js';
 import { createRoleLoader } from './services/role-loader.js';
 import { SecretsStore } from './services/secrets.js';
 import { composeSystemPromptWithRag } from './services/system-prompt.js';
+import { createTestAgenticCompleteFn } from './services/test-agentic-provider.js';
 import { createTestClassifier } from './services/test-classifier.js';
 import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
@@ -227,6 +235,14 @@ let unregisterIpc: (() => void) | null = null;
 let mcpHostInstance: McpHost | null = null;
 let ragIndexerInstance: { stop: () => void } | null = null;
 let commandServiceInstance: CommandService | null = null;
+/**
+ * Agentic-loop front-door for the command palette's `complex_request`
+ * intent (M31 T4). Lives alongside the orchestrator because its
+ * pause-gate observer reads `orchestrator.isCompanyPaused` on every
+ * provider completion. Nullable at boot for symmetry with the other
+ * tear-down handles and to stay safe during early-crash cleanup.
+ */
+let agenticLoopServiceInstance: AgenticLoopService | null = null;
 
 app
   .whenReady()
@@ -714,6 +730,157 @@ app
       listRoles: async () => roleLoader.listRoles(),
     });
     const commandSlotFiller = createSlotFiller();
+
+    // ---- Agentic loop service (Phase 5 — M31 T4) --------------------------
+    //
+    // Front-door for the command-palette `complex_request` intent. Built
+    // AFTER the orchestrator (so the pause-gate observer can consult
+    // `isCompanyPaused` on every provider completion) and BEFORE the
+    // CommandService (so the handlers dispatch map can inject
+    // `agenticLoopStart`). `buildTools` runs per invocation — every
+    // loop run gets a fresh, company-scoped tool set so stale company
+    // bindings never bleed across concurrent runs.
+    //
+    // In test mode (`NODE_ENV === 'test'`), `resolveComplete` returns
+    // `createTestAgenticCompleteFn()` — a deterministic canned
+    // `LoopCompleteFn` mirroring the M30 `createTestClassifier` seam.
+    // The production branch wraps `streamAgent` from the provider
+    // router into the loop's non-streaming request/response shape by
+    // accumulating delta chunks + end-of-stream usage. T6 will thread
+    // live step deltas to the palette; T7 will plug the settings-
+    // driven budget overrides; T8 is the full E2E round-trip.
+    //
+    // `humanUserId: 'user'` matches CommandService's default actorId —
+    // keeps audit events and thread memberships consistent with the
+    // Phase 1 single-user posture.
+    agenticLoopServiceInstance = createAgenticLoopService({
+      employeesRepo: {
+        findSystemByRoleId: (cid, rid) => {
+          const row = employeesRepo.findSystemByRoleId(cid, rid);
+          return row ? { id: row.id } : null;
+        },
+      },
+      threadsRepo: {
+        // The agentic-loop service widens `kind` to `string` and
+        // `memberKind` to `'user' | 'employee' | string` in its
+        // structural contract so tests can hand-roll fakes without
+        // pulling the full drizzle row types. At runtime the service
+        // only ever passes the canonical Phase-1 values (`'dm'`,
+        // `'user'`, `'employee'`), so narrowing at the boundary is
+        // sound. The same pattern covers `messagesRepo.append` below.
+        create: (input) =>
+          threadsRepo.create({
+            companyId: input.companyId,
+            kind: input.kind as Parameters<typeof threadsRepo.create>[0]['kind'],
+            subject: input.subject,
+            createdBy: input.createdBy,
+          }),
+        addMember: (input) =>
+          threadsRepo.addMember({
+            threadId: input.threadId,
+            memberId: input.memberId,
+            memberKind: input.memberKind as Parameters<
+              typeof threadsRepo.addMember
+            >[0]['memberKind'],
+            ...(input.roleInThread !== undefined ? { roleInThread: input.roleInThread } : {}),
+          }),
+      },
+      messagesRepo: {
+        append: (input) => messagesRepo.append(input),
+      },
+      runsRepo: {
+        start: (input) => runsRepo.start(input),
+        finish: (id, input) => runsRepo.finish(id, input),
+      },
+      bus,
+      orchestrator: {
+        // Module-level `orchestrator` handle is nullable during the
+        // brief window between early-crash + will-quit cleanup. Treat
+        // "no orchestrator" as "not paused" so a mid-teardown run can
+        // still settle cleanly rather than deadlocking on the gate.
+        isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
+      },
+      buildTools: ({ companyId }) =>
+        createAgenticTools({
+          companyId,
+          employeesRepo,
+          ticketsRepo,
+          projectsRepo,
+          meetingsRepo,
+          vaultRepo,
+          auditRepo,
+        }),
+      resolveComplete: async ({ systemAgentId }) => {
+        if (testMode) {
+          // Canned path — no LLM, no keychain, no network. Matches
+          // the `createTestClassifier` seam exactly so every E2E spec
+          // can round-trip the agentic loop without external infra.
+          return {
+            complete: createTestAgenticCompleteFn(),
+            provider: 'test-mode',
+            model: 'test-mode-agent',
+          };
+        }
+        // Production — resolve the system-agent's configured provider
+        // + model via the standard factory, then wrap `streamAgent`
+        // into a `LoopCompleteFn`. The wrapper accumulates delta
+        // chunks into a single text + records the final usage tallies.
+        const emp = employeesRepo.getById(systemAgentId);
+        if (!emp) {
+          throw new Error(`[agentic-loop] system-agent employee ${systemAgentId} not found`);
+        }
+        const factory = createProviderFactory({ providersService, secretsStore });
+        const resolved = await factory.resolveForEmployee(emp);
+        const { providerName, model, stream } = resolved;
+        const complete: LoopCompleteFn = async ({ system, messages, signal }) => {
+          let text = '';
+          let promptTokens = 0;
+          let completionTokens = 0;
+          const streamMessages = messages.map((m: LoopMessage) => ({
+            role: m.role,
+            content: m.content,
+          }));
+          for await (const chunk of streamAgent({
+            providerFactory: stream,
+            system,
+            messages: streamMessages,
+          })) {
+            if (signal.aborted) {
+              throw new DOMException('Aborted', 'AbortError');
+            }
+            if (chunk.kind === 'delta') {
+              text += chunk.delta;
+            } else if (chunk.kind === 'done') {
+              promptTokens = chunk.usage.promptTokens;
+              completionTokens = chunk.usage.completionTokens;
+            }
+          }
+          const completion: LoopProviderCompletion = {
+            text,
+            usage: { promptTokens, completionTokens },
+            provider: providerName,
+            model,
+            // Real cost attribution lands in T7 alongside the settings
+            // budget controls. Zero here keeps the runs row well-
+            // formed and the telemetry charts stable until we plumb
+            // the `calcCostUsd` helper through this boundary.
+            costUsd: 0,
+          };
+          return completion;
+        };
+        return { complete, provider: providerName, model };
+      },
+      humanUserId: 'user',
+    });
+
+    // Capture the live handle so the CommandHandlers dispatch map can
+    // close over a non-null reference. Using the module-level
+    // `agenticLoopServiceInstance` directly would force a `!` assertion
+    // inside the closure (TS sees it as nullable); a local const keeps
+    // the closure clean and prevents accidental re-binding during
+    // later shutdown cleanup.
+    const agenticLoopSvc = agenticLoopServiceInstance;
+
     commandServiceInstance = createCommandService({
       classifier: commandClassifier,
       resolver: commandResolver,
@@ -752,6 +919,17 @@ app
             rank: r.rank,
           }));
         },
+        // M31 T4 — agentic loop entry point for `complex_request`.
+        // CommandService's dispatcher calls this with the original
+        // user text; the service resolves the per-company system-
+        // agent, opens a Copilot thread, and fires the ReAct loop in
+        // the background. `runId`/`threadId` flow back to the palette
+        // via the `ExecuteResult`.
+        agenticLoopStart: (req) =>
+          agenticLoopSvc.start({
+            companyId: req.companyId,
+            userText: req.text,
+          }),
       },
       historyRepo: commandHistoryRepo,
       bus,
@@ -915,7 +1093,8 @@ app.on('will-quit', (event) => {
     orchestrator === null &&
     unregisterIpc === null &&
     ragIndexerInstance === null &&
-    commandServiceInstance === null
+    commandServiceInstance === null &&
+    agenticLoopServiceInstance === null
   ) {
     closeDb();
     return;
@@ -960,6 +1139,20 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] command service stop failed:', err);
+    }
+    // Null the agentic-loop service handle — in-flight runs hold
+    // their own AbortController + background IIFE, so they naturally
+    // settle when the process terminates. Nulling prevents shutdown
+    // re-entry from observing a stale handle and re-triggering the
+    // full cleanup chain. A future milestone can add a drain-all
+    // helper if we ever see ghost runs; for now the orchestrator
+    // drain upstream covers the common case.
+    try {
+      if (agenticLoopServiceInstance !== null) {
+        agenticLoopServiceInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] agentic loop service teardown failed:', err);
     }
     try {
       if (orchestrator !== null) {

@@ -144,7 +144,27 @@ export interface IpcExecuteRequest {
  *     values so the UI can branch without string-matching.
  */
 export type IpcExecuteResult =
-  | { kind: 'ok'; intent: IpcIntentName; resultId?: string | number; summary: string }
+  | {
+      kind: 'ok';
+      intent: IpcIntentName;
+      resultId?: string | number;
+      summary: string;
+      /**
+       * Agentic-loop run id for the `complex_request` intent (M31 T4).
+       *
+       * Populated only when the underlying dispatch started an agentic
+       * loop via `AgenticLoopService.start()`. Other intents leave
+       * this undefined. Paired with `threadId` so the palette can
+       * subscribe to live `agent.step` events and the thread view can
+       * open directly to the Copilot conversation on completion.
+       */
+      runId?: string;
+      /**
+       * System-agent DM thread id for the `complex_request` intent
+       * (M31 T4). Undefined for every other intent. See `runId`.
+       */
+      threadId?: string;
+    }
   | { kind: 'needs_confirmation'; summary: string }
   | {
       kind: 'error';

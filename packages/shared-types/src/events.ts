@@ -161,6 +161,21 @@ export interface CommandExecutedPayload {
   outcome: 'ok' | 'error';
   resultId?: string | number;
   durationMs: number;
+  /**
+   * Agentic-loop run id — populated only for the `complex_request`
+   * intent (M31 T4). Correlates the audit event with the `runs` row
+   * the `AgenticLoopService` opened for this invocation, so the Audit
+   * view can deep-link from a palette command to the full step log
+   * in the Copilot thread.
+   */
+  runId?: string;
+  /**
+   * System-agent DM thread id — populated only for the
+   * `complex_request` intent (M31 T4). Pairs with `runId` so the
+   * renderer can jump straight to the conversation view when a user
+   * reopens a historical command-palette entry.
+   */
+  threadId?: string;
 }
 
 // ---------------------------------------------------------------------------

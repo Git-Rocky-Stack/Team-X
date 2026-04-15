@@ -408,17 +408,144 @@ describe('CommandService.execute', () => {
     expect(events).toHaveLength(0);
   });
 
-  it('12. complex_request returns M31-stub summary without touching handlers', async () => {
-    const { svc, handlers, events } = buildService();
-    const result = await svc.execute(baseReq({ intent: 'complex_request', entities: {} }));
+  it('12. complex_request dispatches to agenticLoopStart and returns ok with runId/threadId (M31 T4)', async () => {
+    const agenticLoopStart = vi.fn(async () => ({ runId: 'run-42', threadId: 'thr-42' }));
+    const { svc, handlers, events } = buildService({
+      handlers: makeHandlers({ agenticLoopStart }),
+    });
+    const result = await svc.execute(
+      baseReq({
+        intent: 'complex_request',
+        entities: {},
+        rawText: 'summarize the overdue tickets across all projects',
+      }),
+    );
     expect(result.kind).toBe('ok');
     if (result.kind === 'ok') {
-      expect(result.summary).toContain('agentic loop');
+      expect(result.runId).toBe('run-42');
+      expect(result.threadId).toBe('thr-42');
+      // resultId carries the runId so the Audit view and the
+      // palette history list both get a stable deep-link reference
+      // without needing to understand the agentic-loop shape.
+      expect(result.resultId).toBe('run-42');
+      expect(result.summary).toMatch(/agentic loop/i);
+      expect(result.intent).toBe('complex_request');
     }
-    // No concrete backend handler should have been called.
+    // The loop entry point must have received the rawText verbatim.
+    expect(agenticLoopStart).toHaveBeenCalledWith({
+      companyId: 'co-1',
+      text: 'summarize the overdue tickets across all projects',
+      actorId: 'user',
+    });
+    // No concrete backend handler should have fired.
     expect(handlers.employeesCreate).not.toHaveBeenCalled();
     expect(handlers.ticketsCreate).not.toHaveBeenCalled();
     expect(events).toHaveLength(1);
+  });
+
+  it('21. complex_request audit payload carries runId + threadId (M31 T4)', async () => {
+    const agenticLoopStart = vi.fn(async () => ({ runId: 'run-99', threadId: 'thr-99' }));
+    const { svc, events } = buildService({
+      handlers: makeHandlers({ agenticLoopStart }),
+    });
+    await svc.execute(baseReq({ intent: 'complex_request', entities: {} }));
+    expect(events).toHaveLength(1);
+    const payload = events[0]?.payload as CommandExecutedPayload;
+    expect(payload.intent).toBe('complex_request');
+    expect(payload.outcome).toBe('ok');
+    expect(payload.runId).toBe('run-99');
+    expect(payload.threadId).toBe('thr-99');
+    // resultId mirrors runId (see dispatcher note) so callers that
+    // only know about resultId can still deep-link.
+    expect(payload.resultId).toBe('run-99');
+  });
+
+  it('22. complex_request with missing agenticLoopStart returns handler_error (M31 T4)', async () => {
+    // Simulate a partial composition root where the agentic loop was
+    // never wired. `makeHandlers()` by default does NOT populate
+    // `agenticLoopStart` — the method is optional on the dispatch
+    // seam for exactly this reason. Dispatcher must surface a typed
+    // handler_error — never crash the palette — so the renderer
+    // falls back cleanly.
+    const { svc, events } = buildService();
+    const result = await svc.execute(baseReq({ intent: 'complex_request', entities: {} }));
+    expect(result.kind).toBe('error');
+    if (result.kind === 'error') {
+      expect(result.code).toBe('handler_error');
+      expect(result.message).toContain('agentic loop');
+    }
+    // Error path still writes an audit row so the Audit view shows
+    // the failed invocation with outcome='error'.
+    expect(events).toHaveLength(1);
+    expect((events[0]?.payload as CommandExecutedPayload).outcome).toBe('error');
+  });
+
+  it('23. complex_request with agenticLoopStart rejection surfaces as handler_error (M31 T4)', async () => {
+    const agenticLoopStart = vi.fn(async () => {
+      throw new Error('system-agent missing for company co-1');
+    });
+    const { svc, events } = buildService({
+      handlers: makeHandlers({ agenticLoopStart }),
+    });
+    const result = await svc.execute(baseReq({ intent: 'complex_request', entities: {} }));
+    expect(result.kind).toBe('error');
+    if (result.kind === 'error') {
+      expect(result.code).toBe('handler_error');
+      expect(result.message).toContain('system-agent missing');
+    }
+    expect(agenticLoopStart).toHaveBeenCalledOnce();
+    expect(events).toHaveLength(1);
+    const payload = events[0]?.payload as CommandExecutedPayload;
+    expect(payload.outcome).toBe('error');
+    // Error branch MUST NOT leak runId/threadId into the audit row —
+    // the loop never opened a thread, so claiming a reference would
+    // be a lie the Audit view would later try to dereference.
+    expect(payload.runId).toBeUndefined();
+    expect(payload.threadId).toBeUndefined();
+  });
+
+  it('24. complex_request forwards empty rawText when omitted (M31 T4)', async () => {
+    const agenticLoopStart = vi.fn(async () => ({ runId: 'r-1', threadId: 't-1' }));
+    const { svc } = buildService({
+      handlers: makeHandlers({ agenticLoopStart }),
+    });
+    // Caller hand-assembled an execute request without going through
+    // parse(), so rawText is undefined. Dispatcher must coerce to ''
+    // — the loop's provider will see an empty first user message and
+    // its own validation takes over (not this layer's concern).
+    await svc.execute({
+      intent: 'complex_request',
+      entities: {},
+      companyId: 'co-1',
+    });
+    expect(agenticLoopStart).toHaveBeenCalledWith({
+      companyId: 'co-1',
+      text: '',
+      actorId: 'user',
+    });
+  });
+
+  it('25. non-complex intents leave runId/threadId undefined in ExecuteResult + audit (M31 T4)', async () => {
+    const agenticLoopStart = vi.fn(async () => ({ runId: 'r-x', threadId: 't-x' }));
+    const { svc, events } = buildService({
+      handlers: makeHandlers({
+        agenticLoopStart,
+        employeesList: vi.fn(async () => [{ id: 'e1', name: 'A', status: 'active' }]),
+      }),
+    });
+    // Regression guard: a check_status execute must NOT touch the
+    // agentic loop, and the ok result must not grow stray runId /
+    // threadId fields that an earlier dispatcher state could leak.
+    const result = await svc.execute(baseReq({ intent: 'check_status', entities: {} }));
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.runId).toBeUndefined();
+      expect(result.threadId).toBeUndefined();
+    }
+    expect(agenticLoopStart).not.toHaveBeenCalled();
+    const payload = events[0]?.payload as CommandExecutedPayload;
+    expect(payload.runId).toBeUndefined();
+    expect(payload.threadId).toBeUndefined();
   });
 
   it('13. show_view returns ok navigation summary without calling a handler', async () => {
