@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M31",
   "milestoneName": "Agentic Loop",
-  "tasksCompleted": 8,
+  "tasksCompleted": 9,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md",
@@ -19,10 +19,13 @@
         "T4": "179569a",
         "T5": "0cd9e76",
         "T6": "29ed9d2",
-        "T7": "51defad"
+        "T7": "51defad",
+        "T8": "31227d1"
       },
       "metrics": {
         "unitTests": 958,
+        "e2eSpecs": 8,
+        "e2eGreenCount": 8,
         "lintErrors": 0,
         "lintWarnings": 24,
         "typecheckClean": true

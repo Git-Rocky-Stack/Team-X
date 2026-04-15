@@ -6,7 +6,7 @@
   "previousMilestone": "M30",
   "previousMilestoneCompletedAt": "2026-04-14T01:30:00Z",
   "createdAt": "2026-04-14T02:15:00Z",
-  "updatedAt": "2026-04-14T22:40:00Z",
+  "updatedAt": "2026-04-15T14:45:00Z",
   "totalTasks": 11,
   "tasks": [
     {
@@ -170,13 +170,19 @@
     {
       "id": "T8",
       "title": "E2E spec — agentic-loop.spec.ts",
-      "status": "pending",
+      "status": "completed",
+      "commit": "31227d1",
+      "startedAt": "2026-04-15T14:00:00Z",
+      "completedAt": "2026-04-15T14:45:00Z",
+      "actualTests": 1,
       "blockedBy": ["T6", "T7"],
       "estTests": 1,
       "files": [
         "apps/desktop/e2e/agentic-loop.spec.ts",
+        "apps/desktop/src/main/services/test-agentic-tools.ts",
         "apps/desktop/src/main/services/test-agentic-provider.ts",
-        "apps/desktop/src/main/services/test-agentic-tools.ts"
+        "apps/desktop/src/main/services/test-classifier.ts",
+        "apps/desktop/src/main/index.ts"
       ],
       "goal": "Full round-trip: Ctrl+K → complex_request → scripted plan → tool_call → tool_result → answer → thread persisted → audit rows visible. NODE_ENV=test seam gates real LLM/tools."
     },

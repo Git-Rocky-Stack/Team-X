@@ -1,4 +1,34 @@
-# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 + T2 + T3 + T4 + T5 + T6 + T7 shipped; T8–T10 pending)
+# Loki Continuity — Phase 5, M31 IN PROGRESS (T0 + T1 + T2 + T3 + T4 + T5 + T6 + T7 + T8 shipped; T9–T10 pending)
+
+## T8 SHIPPED — 2026-04-15 (commit `31227d1`)
+
+**E2E — `agentic-loop.spec.ts`: full complex_request round-trip under `NODE_ENV=test`.**
+
+- `apps/desktop/e2e/agentic-loop.spec.ts` (NEW, 292 LOC) — ONE test. Clones `command-palette.spec.ts` scaffolding verbatim (Electron launch, `--user-data-dir=<mkdtempSync>`, 5s close-with-SIGKILL-fallback, stdout/pageerror forwarding, `Strategia-X` shell wait). Flow: Ctrl+K → type canned phrase → intent chip "Route to Agent" → Enter → palette STAYS OPEN in step-log mode (M31 T6 UX) → terminal `[data-step-kind="answer"]` card with deterministic roster string → Open Thread → chat drawer asserts read-only Copilot Conversations thread persisted → Dashboard → Commands subtab asserts "Route to Agent" audit row. Uses `section[aria-label="Copilot Conversations"]` from T5.
+- `apps/desktop/src/main/services/test-agentic-tools.ts` (NEW, 312 LOC) — canned `Tool[]` registry. Three-tier posture mirrors `test-classifier.ts` + `test-agentic-provider.ts`:
+  1. `__ECHO_AGENT_TOOL__:<json>` sentinel override in any string-valued arg.
+  2. Canned per-tool table. `query_employees` returns a 2-row fixture (CEO + Senior Fullstack Engineer matching the seed — `Iris Kovač` + `Mateo Reyes`). Every other tool returns `{rows: [], truncated: false}`.
+  3. Fallback — empty envelope, never-throw contract preserved.
+  Zero DB coupling. Exports `createTestAgenticTools({ companyId })` returning tools with IDENTICAL names + descriptions + zod `inputSchema` to production so the system-prompt byte-for-byte matches. Runtime warning logs if imported outside `NODE_ENV=test`.
+- `apps/desktop/src/main/index.ts` — composition root `buildTools` gains an `isTestMode()` branch calling `createTestAgenticTools(...)`. Mirrors the T4 `resolveComplete` posture exactly. Production path unchanged.
+- `apps/desktop/src/main/services/test-classifier.ts` — adds canned entry: `"what is my team doing right now"` → `{intent: 'complex_request', entities: {}, confidence: 0.88}`.
+- `apps/desktop/src/main/services/test-agentic-provider.ts` — adds canned script for the same phrase: `[plan_text + query_employees tool_call, final_answer]`. Answer fixture: `"Team currently has 2 employees active: Iris Kovač (CEO) and Mateo Reyes (Senior Fullstack Engineer). No open tickets in the queue right now."`
+
+**Tests:** +1 E2E spec (7 → **8 green**, 26.3s total). 0 new unit tests (E2E coverage sufficient per task plan).
+
+**Current metrics:** 958 unit tests passing (unchanged). **8/8 E2E green**. 0 lint errors, 24 lint warnings (unchanged). Typecheck clean. ABI rebuild dance triggered once during subagent work (stale better-sqlite3/keytar after prior sandbox activity); resolved with `electron-rebuild -f -w better-sqlite3,keytar`.
+
+**T8 patterns to carry forward:**
+
+- **Three-tier canned seam is the complete E2E pattern for the agentic loop.** Classifier (`test-classifier.ts`), provider (`test-agentic-provider.ts`), and tools (`test-agentic-tools.ts`) each ship a `__ECHO_*__:<json>` sentinel + canned per-key table + fallback. Any future agentic milestone that adds a surface (e.g., M32's write-side Task Planner tools) must ship a matching test-side seam — new production tools are not shippable without an accompanying test-mode swap in the composition root. Enforce this in plan doc acceptance criteria.
+- **The subagent E2E-handoff pattern held.** CONTINUITY warned "T8 M30 required three handoffs." T8 M31 required ONE handoff — subagent handled scaffolding, provider/classifier extensions, composition-root edit, and ran `pnpm -F @team-x/desktop test:e2e:run` to green before reporting. Coordinator ran git-diff verification + biome spot-check + atomic commit. Budget ~1 subagent pass for T8-style work going forward, not three. The key difference vs M30: the canned-script surface was additive (not interleaved with wiring), so the subagent never needed to re-exit for clarification.
+- **Loop-under-canned-provider runs too fast for the live step-stream bus subscription.** The subagent flagged this explicitly: with zero network latency, the canned `complete` returns before `useAgentStepStream` subscribes via React Query. Only the terminal `answer` card is reliably observed in the palette's LIVE view; earlier steps (plan, tool_call, tool_result) arrive on the bus before any subscriber attaches. The persisted thread (Copilot Conversations drawer) gets all steps because the chat-drawer refetches on mount. **Remediation candidate (out-of-M31 scope):** `useAgentStepStream` should backfill via a `getSteps(runId)` query on mount before attaching the bus listener. Log as a follow-up in M32 prep or Phase 5 design §follow-ups.
+- **`useThreadList` has no bus invalidator for `agent.step` events.** Second paper-cut the subagent surfaced: a thread list opened before a copilot run completes can show stale "No threads yet" copy until a manual refetch. The spec routes via the palette's "Open Thread" deep-link to sidestep. Fix is a 2-line `bus.on('agentic.completed', …)` call in `use-thread-list.ts` — small, worth landing in T9 or M32.
+- **`data-step-kind` attribute is the stable E2E selector surface for the step log.** Every step-card variant sets `data-step-kind="plan" | "tool_call" | "tool_result" | "answer" | "error"`. Assert against these, not against rendered text — text is tight-coupled to the canned answer and breaks under minor fixture changes.
+- **Commit/diff surface is the right shape for T8-class work.** 634 insertions / 3 deletions across 5 files. Two new files (test-agentic-tools.ts + agentic-loop.spec.ts) + three minimal canned-table edits + one compositional-root branch. If a future T8-style commit is orders larger, the subagent strayed — reject and rescope.
+
+---
+
 
 ## T6 SHIPPED — 2026-04-15 (commit `29ed9d2`)
 
@@ -62,7 +92,7 @@ M31 replaces the M30 T4 `complex_request` stub (`command-service.ts:770-775`) wi
 | T5 | pending | 6 | System-agent thread UX — Copilot Conversations section, inline step transcript |
 | T6 | pending | 0 (E2E) | Palette step-log mode + `command.stop` IPC + six UI states |
 | T7 | pending | 8 | Settings: `agentic_max_steps` (8), `agentic_max_tokens` (8000), `agentic_timeout_ms` (120000) |
-| T8 | pending | 1 (E2E) | `agentic-loop.spec.ts` — full round-trip via `test-agentic-provider.ts` seam |
+| T8 | shipped | 1 (actual 1 E2E) | `agentic-loop.spec.ts` — full round-trip via classifier/provider/tools seams; **8/8 E2E green** |
 | T9 | pending | 0 | Docs — CLAUDE.md, CHANGELOG, README, `docs/user-guide/agentic-loop.md`, design-doc §9 resequence |
 | T10 | pending | 0 | Verification + milestone marker — typecheck, lint, tests, E2E, ABI rebuild dance, state update |
 
@@ -111,16 +141,16 @@ M31 replaces the M30 T4 `complex_request` stub (`command-service.ts:770-775`) wi
 - **`complex_request` stub is the M31 entry point.** T4 explicitly replaces the stub at `command-service.ts:770-775`. Leave the exhaustiveness-guard switch case — swap the body.
 - **Undo toast scoped to palette.** Low-priority shared-primitive follow-up.
 
-## Next Session Startup Checklist (M31 mid-flight — begin T5 or T7)
+## Next Session Startup Checklist (M31 mid-flight — begin T9 docs)
 
 1. Read this CONTINUITY file.
-2. Read `.loki/state/orchestrator.json` → tasksCompleted should be 5 (T0 + T1 + T2 + T3 + T4), inflight.M31.commits includes T4 sha `179569a`.
-3. Read `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md` — focus on whichever of T5/T7 you pick (both are unblocked by T3/T4).
-4. T5/T7 are parallel and independent. T6 blocks on T4+T5; T8 blocks on T6+T7. Pick in whatever order suits context budget.
-5. T5 (renderer UX): system-agent threads render in a new Copilot Conversations section with a robot badge. Thread detail shows step transcript inline with final answer. Read-only (no compose box). Files: `thread-list.tsx`, `thread-detail.tsx`, `use-agent-step-stream.ts`, `system-agent-badge.tsx`.
-6. T7 (settings): three keys (`agentic_max_steps=8`, `agentic_max_tokens=8000`, `agentic_timeout_ms=120000`) with clamps. New Agentic Loop subsection in Settings → Runtime. Files: `settings.ts` repo, `agentic-section.tsx`, `settings-handlers.ts`, `ipc.ts`.
-7. Commit atomically after each task. Update pending.json + orchestrator.json + CONTINUITY.md with shipped status + commit sha.
-8. After T10, move M31 from `inflight` into `history`, clear pending.json, rewrite CONTINUITY with an M31-COMPLETE header.
+2. Read `.loki/state/orchestrator.json` → tasksCompleted should be 9 (T0 + T1 + T2 + T3 + T4 + T5 + T6 + T7 + T8); inflight.M31.commits includes T8 sha `31227d1`.
+3. Read `docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md` — focus on T9 (docs) then T10 (verification + milestone marker).
+4. T9 is documentation-only. Files: `CLAUDE.md` (status block + M31 milestone entry + Agentic Loop troubleshooting), `CHANGELOG.md` ([Unreleased] entry with all 9 shipped tasks), `README.md` (new Agentic Loop feature blurb), `docs/user-guide/agentic-loop.md` (new user-facing guide — command-palette flow, settings, system-agent threads, troubleshooting), and `docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md` §9 (resequence the actual shipped order for M28 / M29 / M30 / M31).
+5. T10 (verification + milestone marker): full `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm -F @team-x/desktop test:e2e` with the ABI rebuild dance in between (both Node-v22 ABI 137 and Electron-125 ABI). Update orchestrator.json → set currentMilestone: 'M32' / name: 'Task Planner', move M31 block into `history`. Clear pending.json. Rewrite CONTINUITY.md with an M31-COMPLETE header summarizing all 11 tasks with commits, test delta (819 → target ~905 unit + 7 → 8 E2E), and patterns to carry forward.
+6. T9/T10 are sequential (T10 gates on T9). Single session is plenty if context budget allows.
+7. Commit atomically. T9 = one `docs(m31):` commit. T10 = one `chore(loki): M31 complete` commit.
+8. Two known follow-up paper-cuts flagged by T8 (see T8 patterns block above) — `useAgentStepStream` backfill + `useThreadList` bus invalidator. Prefer scheduling into M32 prep or Phase 5 design `§follow-ups`; do NOT bundle into T9 unless Rocky explicitly asks.
 
 ## T4 patterns to carry forward (new)
 
