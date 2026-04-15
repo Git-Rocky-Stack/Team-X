@@ -4,8 +4,8 @@
   "milestoneName": "Task Planner (decompose/delegate/review tools)",
   "tasksCompleted": 2,
   "tasksFailed": 0,
-  "totalTasks": null,
-  "planDoc": null,
+  "totalTasks": 11,
+  "planDoc": "docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md",
   "startedAt": "2026-04-15T15:18:00Z",
   "completedAt": null,
   "phaseComplete": false,
@@ -89,7 +89,7 @@
         "T0": "f515ea7",
         "T1": "62a0504"
       },
-      "tasksScope": "T0 + T1 = M31 follow-ups F1 + F2 (renderer-only preparations for the write-side loop). T2+ = decompose_project / delegate_subtask / review_deliverable write-side tools on the same AgenticLoopService harness. Plan doc not yet written.",
+      "tasksScope": "T0 + T1 = M31 follow-ups F1 + F2 (renderer-only preparations for the write-side loop). T2-T10 = decompose_project / delegate_subtask / review_deliverable write-side tools + workload scoring + level-based injection + new event types + confirmation gate + step-card variants + planner settings + E2E + docs + verification. Plan doc landed 2026-04-15 at docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md (commit 6055cfc). Also resolved shared-types composite-dist gotcha via script change (commit 83e0868) — manual tsc --build --force dance no longer required.",
       "unitTestDelta": "+6 (958 → 964)",
       "e2eDelta": "0",
       "lintDelta": "0"
