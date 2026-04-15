@@ -17,7 +17,10 @@ export type EventType =
   | 'meeting.ended'
   | 'vault.file_created'
   | 'vault.file_deleted'
-  | 'command.executed';
+  | 'command.executed'
+  | 'agent.step'
+  | 'agentic.completed'
+  | 'agentic.failed';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -157,5 +160,80 @@ export interface CommandExecutedPayload {
   rawText: string;
   outcome: 'ok' | 'error';
   resultId?: string | number;
+  durationMs: number;
+}
+
+// ---------------------------------------------------------------------------
+// Agentic loop event payloads (Phase 5 — M31 T3)
+//
+// Emitted by `AgenticLoopService` when the ReAct loop runs for a
+// `complex_request`. `agent.step` fires on every step (plan, tool_call,
+// tool_result, answer, error) so the palette + thread view can stream
+// reasoning live. `agentic.completed` and `agentic.failed` are the
+// terminal markers — exactly one of the two fires per run.
+//
+// Payload `kind` mirrors `LoopStep['kind']` from `@team-x/intelligence`;
+// it is re-typed here as a narrow union to avoid the cross-package
+// dependency (same discipline applied to `CommandExecutedPayload.intent`).
+//
+// `data` is the step-shape-specific body projected to a JSON-safe shape
+// so the renderer can round-trip through IPC without reconstructing
+// `LoopStep` classes. Callers emit the projected body; consumers read
+// it directly without instanceof checks.
+// ---------------------------------------------------------------------------
+
+export type AgentStepKind = 'plan' | 'tool_call' | 'tool_result' | 'answer' | 'error';
+
+export interface AgentStepPayload {
+  /** `runs.id` for this agentic invocation — correlates to a row in the runs table. */
+  runId: string;
+  /** System-agent DM thread this run belongs to. */
+  threadId: string;
+  /** Sequential step index within the run, starting at 0. */
+  stepIndex: number;
+  /** Discriminated body kind — matches `LoopStep['kind']`. */
+  kind: AgentStepKind;
+  /**
+   * Step-shape-specific payload. JSON-safe so the renderer can round-trip
+   * through the IPC bridge. Shape per kind:
+   *   - plan:        `{ text: string }`
+   *   - tool_call:   `{ toolCallId: string; toolName: string; args: Record<string, unknown> }`
+   *   - tool_result: `{ toolCallId: string; toolName: string; result: unknown }`
+   *   - answer:      `{ text: string }`
+   *   - error:       `{ reason: string; message: string }`
+   */
+  data: unknown;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  provider: string;
+  model: string;
+}
+
+export interface AgenticCompletedPayload {
+  runId: string;
+  threadId: string;
+  answer: string;
+  totalSteps: number;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  durationMs: number;
+}
+
+/**
+ * `reason` matches `LoopErrorReason` from `@team-x/intelligence`. Kept as
+ * a string here to avoid the cross-package dep; callers copy the value
+ * through without widening.
+ */
+export interface AgenticFailedPayload {
+  runId: string;
+  threadId: string;
+  reason: string;
+  message: string;
+  totalSteps: number;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
   durationMs: number;
 }
