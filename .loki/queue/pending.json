@@ -6,9 +6,9 @@
   "previousMilestone": "M31",
   "previousMilestoneCompletedAt": "2026-04-15T14:30:00Z",
   "createdAt": "2026-04-15T15:18:00Z",
-  "updatedAt": "2026-04-15T15:27:00Z",
+  "updatedAt": "2026-04-15T16:10:00Z",
   "totalTasks": 11,
-  "tasksShipped": 2,
+  "tasksShipped": 3,
   "tasks": [
     {
       "id": "T0",
@@ -25,6 +25,14 @@
       "commit": "62a0504",
       "unitTestDelta": "0 (964 → 964)",
       "scope": "Closes M31 follow-up F2. useEffect subscribes to agentic.completed / agentic.failed on the dashboard bus and invalidates ['threads', companyId] so the Copilot thread appears live without manual refetch."
+    },
+    {
+      "id": "T2",
+      "name": "Write-side agentic tools + workload scoring",
+      "status": "shipped",
+      "commit": "cdf7315",
+      "unitTestDelta": "+25 (964 → 989)",
+      "scope": "New file apps/desktop/src/main/services/agentic-tools-write.ts: three Tool factories (decompose_project for Officer/Senior-Mgmt/Management/system, delegate_subtask + review_deliverable for Management/Supervisor/Lead/system), deterministic scoreEmployee with locked Phase 5 §7.4 weights (0.4 role-fit + 0.3 (1-load) + 0.2 avail + 0.1 past-perf), computeRoleFit keyword heuristic over title+level (Risk #2 option (b) — capabilities frontmatter deferred to M33/M34), buildWriteSideTools level-gated composer, PLANNER_DEFAULTS fallback constants (T7 wires real settings), in-memory EscalationTracker, width-compatible WriteSideEventBus interface (type: string) so existing AgenticLoopEventBus drops in unchanged before T4 promotes new event-type literals into canonical EventType. Tools emit plan.proposed / task.delegated / task.escalated / review.requested / review.completed via bus.emit. Companion test file agentic-tools-write.test.ts ships 25 unit tests: 10-case score determinism, weights-sum-1.0, system/archived/fired score 0, availability+load+past-perf term verification, role-fit heuristic engineer→implement + baseline fallback + system→0, decompose max-tickets clamp + max-depth gate + approval-level gate, JSON-safe envelope round-trip, delegate happy path + fallback chain + escalation threshold + project linkage, review unfinished-ticket reject + happy path + reject+threshold escalation, composer level-gating (IC empty / Officer+SM decompose-only / Sup+Lead delegate+review / Mgmt+system all three), bus-throws non-fatal."
     }
   ],
   "baseline": {

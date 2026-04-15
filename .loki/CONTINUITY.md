@@ -1,4 +1,70 @@
-# Loki Continuity — Phase 5, M32 T0 + T1 SHIPPED (M31 follow-ups closed); M32 T2+ pending
+# Loki Continuity — Phase 5, M32 T2 SHIPPED (write-side tools online); M32 T3+ pending
+
+## M32 T2 SHIPPED — 2026-04-15
+
+**Milestone:** Task Planner (Phase 5 — Intelligence Layer). In progress.
+**Scope shipped this session:** Write-side agentic tools — `decompose_project`, `delegate_subtask`, `review_deliverable` — plus the deterministic workload scorer locked to Phase 5 §7.4 weights. New file `apps/desktop/src/main/services/agentic-tools-write.ts` (~1,150 LOC) and companion test file `agentic-tools-write.test.ts` (25 tests, all green). No changes to read-side or existing services — T3 is the integration step.
+**Commit:** T2 = `cdf7315`.
+**Session duration:** 2026-04-15T15:55:00Z → 2026-04-15T16:10:00Z.
+
+### Metrics delta
+
+| Metric | Pre-T2 | Post-T2 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 964 | 989 | +25 |
+| E2E specs | 8 | 8 | 0 |
+| Lint errors (new files) | 0 | 0 | 0 |
+| Lint warnings (workspace) | 24 | 24 | 0 |
+| Typecheck across all packages | clean | clean | — |
+
+### What shipped (one file, one test file, one commit)
+
+- **`agentic-tools-write.ts`** — three Tool factories matching M31 T2's read-side API shape:
+  - `buildDecomposeProjectTool(deps)` — gates on `planner_max_depth` + `planner_approval_level`, calls `deps.providerComplete` once for the LLM-side subtask generation, scores every visible employee against every parsed subtask via `scoreEmployee`, returns `DecomposedPlan = { planId, projectId, goalId, subtasks: PlanSubtask[], truncated }`. Emits `plan.proposed`. Truncates to `planner_max_tickets` and surfaces the `truncated` marker so the loop can re-plan with a tighter cap.
+  - `buildDelegateSubtaskTool(deps)` — validates the assignee chain (primary → fallbacks), skips over-load-cap candidates, accepts the first available, calls `ticketsRepo.create` + `ticketsRepo.assign`, links to project via `projectsRepo.linkTicket` when `parentProjectId` is supplied, emits `task.delegated`. On exhausted chain, increments `EscalationTracker.recordFailure(planId)` and emits `task.escalated` once `planner_escalation_threshold` is crossed. Returns `DelegationResult = { ticketId, assigneeId, assigneeName, status, fallbackUsed, attemptCount }`.
+  - `buildReviewDeliverableTool(deps)` — guards on `ticket.status === 'done'`, emits `review.requested` up front (so renderer can render a pending card before the LLM call), runs one `deps.providerComplete` for a plain-language summary, emits `review.completed`. On `action: 'reject'` with `planId`, increments tracker and emits `task.escalated` on threshold. Returns `ReviewResult = { ticketId, outcome, summary, escalated }`.
+- **Deterministic `scoreEmployee(employee, subtask, ctx)`** — pure, exported, locked to weights `0.4·role_fit + 0.3·(1-load_ratio) + 0.2·availability + 0.1·past_performance`. Past-performance defaults to 0.5 when `avgCompletionMs === null` (new hires not penalized). System / archived / fired employees score `0`.
+- **`computeRoleFit`** — keyword heuristic over employee `title` + `level` (Risk #2 option (b) per the M32 plan). Engineer titles match `implement` subtasks above level baseline; non-matching titles fall to `LEVEL_BASELINE_FIT` (officer/sm/management = 0.55, supervisor/lead = 0.5, ic = 0.45, system = 0). Capabilities-frontmatter enrichment is the deferred M33/M34 follow-up.
+- **`buildWriteSideTools(employee, deps)`** — level-gated composer. ICs return `[]`. Officer/Senior-Mgmt → decompose only. Supervisor/Lead → delegate + review. Management/system → all three.
+- **`PLANNER_DEFAULTS`** — module constants matching design §11 defaults: `maxTickets=10`, `maxDepth=2`, `approvalLevel='management'`, `escalationThreshold=3`, `loadDenominator=5`, `pastPerformanceCeilingMs=48h`. T7 will swap the static accessor for the settings repo via `deps.getPlanner`.
+- **`WriteSideEventBus` interface** — `type: string` (wider than `EventType`), so the existing `AgenticLoopEventBus` drops in unchanged for T3 wiring before T4 promotes the six new event-type literals into the canonical union.
+- **`EscalationTracker`** + `createInMemoryEscalationTracker()` — per-plan failure counter. T3 will pin one tracker per `runId`.
+- **25 unit tests** — score determinism (10 round-trip cases), weights sum 1.0, system/archived/fired score 0, availability/load/past-perf monotonicity, role-fit heuristic correctness, decompose clamps + approval-level gate, JSON-safe envelope round-trip via `JSON.stringify/parse`, delegate happy path + fallback chain + escalation threshold + project linkage, review unfinished-ticket reject + happy path + reject+threshold escalation, composer level-gating across all six levels, bus-emit-throws non-fatal.
+
+### Verification gates passed
+
+- `pnpm -r typecheck` — clean across all six packages on first run after fixing one strict-noUncheckedIndexedAccess error in `isApprovedLevel` (replaced `?? rank.management` with explicit `?? MGMT_RANK` literal).
+- `pnpm exec biome check apps/desktop/src/main/services/agentic-tools-write*.ts` — 0 errors after one auto-fix pass (quote style + multi-line concat → template literal).
+- `pnpm test` repo-wide — 989 / 989 pass (+25 from M32 baseline of 964). Single pre-existing sqlite-vec test failure in `vec-init.test.ts` is unrelated and predates M32.
+- Tests targeted at the new file pass in 21ms with no flakes across 3 separate runs.
+
+### Gotchas captured this session
+
+- **`tsc --strict noUncheckedIndexedAccess` chains** — `Record<string, number>` indexed access returns `number | undefined`. The `?? fallback` only narrows if the fallback itself is non-undefined; pulling another `rank.x` from the same record stays possibly-undefined. Fix: bind a literal-typed const (`const MGMT_RANK = 3`) and use that as the nullish fallback. Pattern applies anywhere we use `Record<K, V>` rank/lookup tables.
+- **Biome `noUselessStringConcat` is unsafe-fix only** — multi-line `'foo' + 'bar' + 'baz'` chains for long strings are flagged but the rewrite to a single template literal must be done by hand or with `--write --unsafe`. We did the rewrite by hand for the one decompose system-prompt to keep the auto-fix surface explicit.
+- **Width-compatible bus seam pattern** — when a downstream task (T4) will widen / promote a string-literal union into the canonical type, the in-progress task can declare its own `interface SomethingBus { emit<T>(input: { type: string; ... }) }`. The existing strongly-typed bus passes structurally because `string` is wider than the constrained union. Avoids touching `shared-types` out of order.
+- **Test-file `vi.fn` import is needed** — Biome auto-fix will remove it if `vi` is not used. Keep it explicit in the import for orchestrator stub even if mock-call assertions aren't currently asserted on; future tests will lean on it.
+
+### Patterns reinforced
+
+- **Repo + test mirror M31 T2 discipline** — same hand-rolled fake repos, same `{rows, truncated}` envelope vocabulary (extended with `{created, escalated}` for write-side artifacts), same `checkAborted(ctx)` first-line guard in every `execute`, same `Object.freeze` on returned arrays for runtime immutability.
+- **JSON-safe envelopes are testable** — every result type round-trips through `JSON.stringify(parse(x))` cleanly. The test asserts this directly for `decompose_project` to lock in the no-Date / no-Buffer / no-Drizzle-row contract.
+- **One LLM call per tool body, never per loop iteration** — `decompose_project` and `review_deliverable` each invoke `providerComplete` exactly once. The outer ReAct scheduler holds its own provider slot. Risk #1 in the M32 plan (nested provider dispatch under one loop run) stays at 2x slot cost as documented; revisit if cap pressure surfaces.
+- **Defense in depth for level gating** — `buildWriteSideTools` filters at registry construction AND `decompose_project`'s body re-checks `isApprovedLevel(actor.level, planner)`. Mirrors the read-side `isSystem` belt-and-suspenders pattern.
+
+### Next Session Startup Checklist (M32 T3+)
+
+1. Read this CONTINUITY file — most recent session at the top.
+2. Read `.loki/state/orchestrator.json` → `inFlightMilestone.M32` for T0+T1+T2 shipped state + `tasksCompleted: 3`, `baseline.unitTests: 964`, current at 989.
+3. Read `.loki/queue/pending.json` → `tasks` array shows T0 + T1 + T2 with `status: shipped`. T3 spec lives in the M32 plan doc §"T3: Extend AgenticLoopService — tool registry injection by level".
+4. **T3 is the integration step.** New `buildToolsForEmployee(employee, companyId): Tool[]` on `AgenticLoopService` that returns `[...readSideTools(companyId), ...buildWriteSideTools(employee, deps)]`. Add an optional `employeeId` field to `AgenticLoopService.start()` request — default resolves to system-agent (M31 semantics preserved). Composition root in `main/index.ts` swaps to `createTestAgenticTools` + write-side test seam under `NODE_ENV=test`.
+5. **T3 also extends `test-agentic-tools.ts`** with a three-tier seam mirror (`__ECHO_WRITE__:[...]` sentinel → canned per-prompt table → fallback) for the three new tools. Deterministic envelopes per tool name. Mirrors M31 T8's `test-agentic-tools.ts` posture — production + dev use `createAgenticTools`, only `NODE_ENV=test` swaps in.
+6. **T4 promotes the `WriteSideEventType` literals** into the canonical `EventType` union in `packages/shared-types/src/events.ts`, plus `AgentStepKind` gets `'ticket_created' | 'delegation_made' | 'review_pending'` and `AgentStepPayload` variants. The `WriteSideEventBus` interface in `agentic-tools-write.ts` already has `type: string` — no breaking change required, but the `'plan.proposed' satisfies WriteSideEventType` annotations in the tool bodies should be replaced with `satisfies EventType` for the canonical narrowing.
+7. T2 unit tests are immune to T4's shared-types changes by construction (string-literal `type: 'plan.proposed'` etc.). Adding new event-payload narrow types in T4 should NOT regress T2 tests; if it does, the discriminator field name has changed and the T4 commit is wrong.
+8. Commit cadence per CLAUDE.md + M32 plan: `<type>(m32): M32 T<N> — <summary>` for the work commit, `chore(loki): M32 T<N> — commit ledger (<sha>)` immediately after, updating orchestrator.json + pending.json + CONTINUITY.md.
+9. After T10, move M32 from `inFlightMilestone` into `history`, set `currentMilestone: 'M33'`, rewrite CONTINUITY top with M32-COMPLETE header + commit table.
+
+---
 
 ## M32 T0 + T1 SHIPPED — 2026-04-15
 

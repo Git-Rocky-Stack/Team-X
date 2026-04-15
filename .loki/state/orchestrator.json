@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M32",
   "milestoneName": "Task Planner (decompose/delegate/review tools)",
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md",
@@ -84,13 +84,14 @@
     "M32": {
       "name": "Task Planner",
       "startedAt": "2026-04-15T15:18:00Z",
-      "tasksShipped": 2,
+      "tasksShipped": 3,
       "commits": {
         "T0": "f515ea7",
-        "T1": "62a0504"
+        "T1": "62a0504",
+        "T2": "cdf7315"
       },
-      "tasksScope": "T0 + T1 = M31 follow-ups F1 + F2 (renderer-only preparations for the write-side loop). T2-T10 = decompose_project / delegate_subtask / review_deliverable write-side tools + workload scoring + level-based injection + new event types + confirmation gate + step-card variants + planner settings + E2E + docs + verification. Plan doc landed 2026-04-15 at docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md (commit 6055cfc). Also resolved shared-types composite-dist gotcha via script change (commit 83e0868) — manual tsc --build --force dance no longer required.",
-      "unitTestDelta": "+6 (958 → 964)",
+      "tasksScope": "T0 + T1 = M31 follow-ups F1 + F2 (renderer-only preparations for the write-side loop). T2 = write-side agentic tools (decompose_project / delegate_subtask / review_deliverable) + deterministic workload scorer + level-gated composer + WriteSideEventBus width-compatible bus seam + 25 unit tests. T3-T10 = level-based AgenticLoopService injection + new event types in shared-types + confirmation gate + step-card variants + planner settings + E2E + docs + verification. Plan doc landed at docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md (commit 6055cfc). Shared-types composite-dist gotcha resolved via script change (commit 83e0868) — manual tsc --build --force dance no longer required.",
+      "unitTestDelta": "+31 (958 → 989)",
       "e2eDelta": "0",
       "lintDelta": "0"
     }
