@@ -1,4 +1,78 @@
-# Loki Continuity — Phase 5, M31 COMPLETE (all 11 tasks shipped); M32 prep pending
+# Loki Continuity — Phase 5, M32 T0 + T1 SHIPPED (M31 follow-ups closed); M32 T2+ pending
+
+## M32 T0 + T1 SHIPPED — 2026-04-15
+
+**Milestone:** Task Planner (Phase 5 — Intelligence Layer). In progress.
+**Scope shipped this session:** M31 follow-ups F1 + F2 (see M31 `followUps` in orchestrator history).
+**Commits:** T0 = `f515ea7` (F1 backfill), T1 = `62a0504` (F2 invalidator).
+**Session duration:** 2026-04-15T15:18:00Z → 2026-04-15T15:27:00Z.
+
+### Metrics delta
+
+| Metric | Pre-T0 | Post-T1 | Delta |
+|--------|--------|---------|-------|
+| Unit tests | 958 | **964** | **+6** (4 agentic-loop-service + 2 command-handlers) |
+| E2E specs | 8 | **8** | 0 (no new specs — renderer-only fixes) |
+| Lint errors | 0 | **0** | 0 |
+| Lint warnings | 24 | **24** | 0 |
+| Typecheck | clean | **clean** | 0 |
+
+### T0 — F1 useAgentStepStream backfill on mount (`f515ea7`)
+
+**Root cause closed:** Under fast providers (canned seam, small local models) the agentic loop completes in sub-millisecond time and every `agent.step` / `agentic.completed` event fires before the React bus subscription attaches — the palette step-log would show only the terminal answer card (or nothing at all). Documented as F1 in [design doc §14](../docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md#14-follow-ups-post-m31).
+
+**Fix shape (10 files, 417 insertions):**
+
+| Layer | File | Change |
+|-------|------|--------|
+| shared-types | `packages/shared-types/src/events.ts` | New `AgenticRunSnapshot` wire type — `{ runId, threadId, steps: AgentStepPayload[], terminal: {kind:'completed',payload}\|{kind:'failed',payload}\|null }`. Terminal discriminated-union mirrors the hook's `AgentStreamResult` byte-for-byte. |
+| shared-types | `packages/shared-types/src/ipc.ts` | New `command.getRunSnapshot` IPC channel + `TeamXApi.command.getRunSnapshot(runId)` surface. Imports `AgenticRunSnapshot`. |
+| main/services | `agentic-loop-service.ts` | New `getRunSnapshot(runId)` method on the service interface + implementation. Pure projection of `state.steps` via existing `projectStepBody()` into JSON-safe `AgentStepPayload[]` + terminal synthesis that matches `finishRun()`'s emit shape exactly. Returns `null` for unknown / evicted runs. |
+| main/services | `agentic-loop-service.test.ts` | +4 tests: null for unknown, projection+completed terminal, in-flight terminal=null, failed projection with reason parity. |
+| main/ipc | `command-handlers.ts` | Thin `command.getRunSnapshot` adapter — imports `AgenticRunSnapshot`, adds channel to `CommandHandlers` record, registers handler factory. |
+| main/ipc | `command-handlers.test.ts` | +2 tests: forwards runId + echoes projection, returns null untouched for unknown runId. `makeAgenticMock` extended with `getRunSnapshot` + 5→6 expected channel keys. |
+| main | `index.ts` | `ipcMain.handle('command.getRunSnapshot', ...)` registration next to `command.stop`. |
+| preload | `api.ts` | `commandGetRunSnapshot` channel constant + `command.getRunSnapshot(runId)` bridge method + `AgenticRunSnapshot` import. Biome auto-formatted on save. |
+| renderer | `hooks/use-agent-step-stream.ts` | Hook signature extended — `useAgentStepStream(threadId, runId?)`. On mount, if runId provided: one-shot `ipc.command.getRunSnapshot(runId)` call BEFORE listener attach. `seen: Set<string>` keyed by `(runId, stepIndex)` absorbs any step that races the backfill. `result` latches to whichever of snapshot terminal / live terminal arrives first. Silent catch on IPC failure — falls through to live-only, matching pre-F1 behavior. |
+| renderer | `features/command/command-palette.tsx` | `StepLogView` passes `runId` to the hook (already available as a prop; comes back from `command.execute`'s `{ runId, threadId }` response). |
+
+**Wire-shape invariant:** The snapshot's `AgentStepPayload[]` is byte-for-byte identical to what `agent.step` emits on the bus. Any wire drift breaks the `(runId, stepIndex)` dedup. If a future write-side step kind (`ticket_created`, `delegation_made`, `review_pending`) is added, extend `AgentStepKind` in `events.ts` AND the switch in `projectStepBody` AND the hook's merge logic in lockstep.
+
+### T1 — F2 useThreadList bus invalidator (`62a0504`)
+
+**Root cause closed:** `useThreadList` had no dashboard event subscription — a thread list opened before an agentic run completes showed stale "No threads yet" copy until manual refetch, so users missed the live Copilot thread. Documented as F2 in design doc §14.
+
+**Fix shape (1 file, 25 insertions):**
+
+- `apps/desktop/src/renderer/src/hooks/use-chat.ts` — `useThreadList(companyId)` gains a `useEffect` that subscribes to `ipc.events.onDashboard`, invalidates `['threads', companyId]` on `agentic.completed` / `agentic.failed`, and cleans up on unmount. Satisfies architectural invariant #11 (IPC mutations must emit a bus event; renderer caches subscribe for invalidation).
+
+No new tests — the invalidator is declarative plumbing with no branching. The workspace's Vitest config is node env (no jsdom wiring), so renderer-hook tests would require new infrastructure. Future M32 write-side E2E specs will exercise this path naturally when the Copilot thread list renders during a live agentic run.
+
+### Gotchas captured this session
+
+1. **Composite TS project references read shared-types `dist/*.d.ts`, not `src/`.** After editing `packages/shared-types/src/events.ts`, `pnpm typecheck` reported `Module '"@team-x/shared-types"' has no exported member 'AgenticRunSnapshot'` in apps/desktop — even though shared-types' own typecheck passed. The project-reference config reads the emitted declarations from `dist/`, which had stayed stale because shared-types' `typecheck` script is `tsc --noEmit` (no build). Fix: `cd packages/shared-types && npx tsc --build --force` to regenerate `dist/*.d.ts`. Adding a line to the M32 plan T10 acceptance criteria.
+2. **ABI rebuild dance required before unit tests.** Initial `pnpm -F @team-x/desktop test` run after switching from E2E surfaced `NODE_MODULE_VERSION` mismatch on better-sqlite3 for `vec-init.test.ts` and `embeddings.test.ts`. Node ABI rebuild via `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` fixed both. Carries forward from M31's T10 guidance.
+
+### Patterns reinforced
+
+- **Pre-flight reconnaissance via `ctx_batch_execute`.** Single batched call with 8 commands + 6 queries replaced what would have been 14+ individual Bash/Read calls for pre-edit reconnaissance. Keeps context lean for the long implementation tail.
+- **Atomic per-task commits with descriptive commit bodies.** T0 and T1 shipped as two separate commits, each with the what/why/test-count captured in the body. Mirrors the M30/M31 ledger pattern. The ledger commit follow-up is the next task below.
+
+### Next Session Startup Checklist (M32 T2+)
+
+1. Read this CONTINUITY file — most recent session at the top.
+2. Read `.loki/state/orchestrator.json` → `inFlightMilestone.M32` for the T0+T1 shipped state + `currentMilestone: 'M32'`, `tasksCompleted: 2`, `baseline.unitTests: 964`.
+3. Read `.loki/queue/pending.json` → `tasks` array has T0 + T1 marked `shipped`; `totalTasks` is `null` until the M32 plan doc is written and T2+ get filed.
+4. **Write the M32 plan doc** at `docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md`. Structural template: M31 plan doc. Required sections: Overview, What ships, Invariants preserved, Success criteria, Task breakdown (T2–TN), Acceptance criteria (reiterate three-tier test seam + ABI rebuild dance + atomic-commit discipline + **new: shared-types dist rebuild step after type changes**).
+5. T2+ headline — write-side tool set (`decompose_project`, `delegate_subtask`, `review_deliverable`):
+   - Production impl in `apps/desktop/src/main/services/agentic-tools-write.ts` (new file) or extend `agentic-tools.ts` with a separate exports block.
+   - Extend `test-agentic-tools.ts` with write-side cases.
+   - New bus event types: `plan.created`, `plan.updated`, `task.delegated`, `task.reviewed`, `review.approved`, `review.rejected`. Add to `EventType` union in `events.ts` + any specific payload types needed.
+   - Extend `AgentStepKind` with new write-side kinds: `ticket_created`, `delegation_made`, `review_pending` — and update the hook's merge logic + the palette's `step-card.tsx` variants in lockstep.
+   - Audit-log visibility — AuditView event-type filter chips must include the new events.
+   - Confirmation gates for destructive writes (ticket creation, delegation).
+6. Guardrails remain tool-level, not prompt-level (design decision D6). Workload scoring stays deterministic (D7).
+7. Commit atomically per task; follow-up with `chore(loki): M32 T<N> — commit ledger (<sha>)` commits.
 
 ## M31 COMPLETE — 2026-04-15
 

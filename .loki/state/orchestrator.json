@@ -2,11 +2,11 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M32",
   "milestoneName": "Task Planner (decompose/delegate/review tools)",
-  "tasksCompleted": 0,
+  "tasksCompleted": 2,
   "tasksFailed": 0,
-  "totalTasks": 0,
+  "totalTasks": null,
   "planDoc": null,
-  "startedAt": null,
+  "startedAt": "2026-04-15T15:18:00Z",
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {},
@@ -18,7 +18,7 @@
   "nextMilestoneName": "Copilot Service",
   "tasksInProgress": {},
   "baseline": {
-    "unitTests": 958,
+    "unitTests": 964,
     "e2eSpecs": 8,
     "e2eGreenCount": 8,
     "lintErrors": 0,
@@ -75,9 +75,24 @@
       "lintDelta": "warnings 66 → 24 (-42)",
       "planDoc": "docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md",
       "followUps": [
-        "F1: useAgentStepStream backfill on mount (design doc §14)",
-        "F2: useThreadList bus invalidator for agent.* events (design doc §14)"
+        "F1: useAgentStepStream backfill on mount — closed in M32 T0 (f515ea7)",
+        "F2: useThreadList bus invalidator for agent.* events — closed in M32 T1 (62a0504)"
       ]
+    }
+  },
+  "inFlightMilestone": {
+    "M32": {
+      "name": "Task Planner",
+      "startedAt": "2026-04-15T15:18:00Z",
+      "tasksShipped": 2,
+      "commits": {
+        "T0": "f515ea7",
+        "T1": "62a0504"
+      },
+      "tasksScope": "T0 + T1 = M31 follow-ups F1 + F2 (renderer-only preparations for the write-side loop). T2+ = decompose_project / delegate_subtask / review_deliverable write-side tools on the same AgenticLoopService harness. Plan doc not yet written.",
+      "unitTestDelta": "+6 (958 → 964)",
+      "e2eDelta": "0",
+      "lintDelta": "0"
     }
   }
 }
