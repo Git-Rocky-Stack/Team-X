@@ -9,7 +9,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --build",
+    "build": "tsc --build --force",
+    "clean": "tsc --build --clean"
   },
   "devDependencies": {
     "typescript": "5.5.4"
