@@ -231,3 +231,25 @@ export interface CommandSuggestRequest {
   companyId: string;
   currentView?: string;
 }
+
+/**
+ * Request shape for `command.stop` (Phase 5 — M31 T6). Cancels an
+ * in-flight agentic-loop run started by an earlier `command.execute`
+ * that returned a `runId`. Idempotent — calling stop on an unknown
+ * or already-terminal run is a no-op and never throws.
+ */
+export interface CommandStopRequest {
+  runId: string;
+}
+
+/**
+ * Response shape for `command.stop`. `stopped` is true when the
+ * service found a matching in-flight run and raised its abort signal;
+ * false when the run was unknown or already in a terminal state. The
+ * renderer palette uses this only for logging — the terminal
+ * `agentic.failed` / `agentic.completed` event is the authoritative
+ * signal that the step-log view switches out of the running state.
+ */
+export interface CommandStopResult {
+  stopped: boolean;
+}

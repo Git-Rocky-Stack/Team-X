@@ -160,6 +160,8 @@ const REQUEST_CHANNELS = [
   'command.execute',
   'command.history',
   'command.suggest',
+  // Agentic-loop cancellation (Phase 5 — M31 T6)
+  'command.stop',
 ] as const;
 
 /** Channel name for the one-way bus → renderer fan-out. */

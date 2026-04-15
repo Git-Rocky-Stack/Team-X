@@ -28,6 +28,7 @@ import type {
   IpcSuggestItem,
 } from '@team-x/shared-types';
 
+import type { AgenticLoopRunState, AgenticLoopService } from '../services/agentic-loop-service.js';
 import type { CommandService } from '../services/command-service.js';
 import { buildCommandHandlers } from './command-handlers.js';
 
@@ -89,17 +90,78 @@ function makeServiceMock(
   } as unknown as CommandService;
 }
 
+/**
+ * Minimal `AgenticLoopService` stub for T6 `command.stop` tests. The
+ * factory only ever touches `getRun()` + `stop()`; the other methods
+ * are `vi.fn()` no-ops so the mock structurally satisfies the
+ * interface for the TypeScript compiler.
+ */
+function makeAgenticMock(
+  overrides: {
+    getRun?: (runId: string) => AgenticLoopRunState | null;
+    stopImpl?: (runId: string) => void;
+  } = {},
+): AgenticLoopService {
+  return {
+    start: vi.fn(),
+    waitForRun: vi.fn(async () => undefined),
+    getRun: vi.fn(overrides.getRun ?? (() => null)),
+    stop: vi.fn(overrides.stopImpl ?? (() => undefined)),
+  } as unknown as AgenticLoopService;
+}
+
+/**
+ * Build a minimal `AgenticLoopRunState` with just the fields
+ * `command.stop` probes (`runId`, `status`). The rest are filler so
+ * the type checker is satisfied — no production code path reads them.
+ */
+function runStateFixture(overrides: Partial<AgenticLoopRunState> = {}): AgenticLoopRunState {
+  return {
+    runId: 'run_1',
+    threadId: 'thread_1',
+    companyId: 'company_1',
+    systemAgentId: 'sys_agent',
+    provider: 'test',
+    model: 'test-model',
+    startedAt: 0,
+    endedAt: null,
+    status: 'running',
+    answer: null,
+    errorReason: null,
+    errorMessage: null,
+    steps: [],
+    promptTokens: 0,
+    completionTokens: 0,
+    costUsd: 0,
+    toolCallsCount: 0,
+    ...overrides,
+  };
+}
+
+/**
+ * Helper to reduce the boilerplate of calling `buildCommandHandlers`
+ * with both mocks every test. Any test that needs to customize the
+ * agentic mock passes `agenticLoopService` explicitly.
+ */
+function build(
+  commandService: CommandService,
+  agenticLoopService: AgenticLoopService = makeAgenticMock(),
+) {
+  return buildCommandHandlers({ commandService, agenticLoopService });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('buildCommandHandlers', () => {
-  it('returns the four expected channel keys', () => {
-    const handlers = buildCommandHandlers({ commandService: makeServiceMock() });
+  it('returns the five expected channel keys', () => {
+    const handlers = build(makeServiceMock());
     expect(Object.keys(handlers).sort()).toEqual([
       'command.execute',
       'command.history',
       'command.parse',
+      'command.stop',
       'command.suggest',
     ]);
   });
@@ -117,7 +179,7 @@ describe('buildCommandHandlers', () => {
       },
     };
     const service = makeServiceMock({ parse: canned });
-    const handlers = buildCommandHandlers({ commandService: service });
+    const handlers = build(service);
 
     const req: CommandParseRequest = {
       text: 'hire a senior backend engineer',
@@ -138,7 +200,7 @@ describe('buildCommandHandlers', () => {
 
   it('command.parse omits undefined currentView + recentIntents so the NluContext stays minimal', async () => {
     const service = makeServiceMock();
-    const handlers = buildCommandHandlers({ commandService: service });
+    const handlers = build(service);
 
     const req: CommandParseRequest = {
       text: 'what is everyone working on?',
@@ -169,7 +231,7 @@ describe('buildCommandHandlers', () => {
       summary: 'Filed ticket: Payment flow bug',
     };
     const service = makeServiceMock({ execute: canned });
-    const handlers = buildCommandHandlers({ commandService: service });
+    const handlers = build(service);
 
     const req: IpcExecuteRequest = {
       intent: 'create_ticket',
@@ -198,7 +260,7 @@ describe('buildCommandHandlers', () => {
         return { kind: 'needs_confirmation', summary: 'Fire employee emp_1?' };
       },
     });
-    const handlers = buildCommandHandlers({ commandService: service });
+    const handlers = build(service);
 
     const req: IpcExecuteRequest = {
       intent: 'fire_employee',
@@ -229,7 +291,7 @@ describe('buildCommandHandlers', () => {
       },
     ];
     const service = makeServiceMock({ history: canned });
-    const handlers = buildCommandHandlers({ commandService: service });
+    const handlers = build(service);
 
     const req: CommandHistoryRequest = { limit: 10, companyId: 'company_1' };
     const out = await handlers['command.history'](req);
@@ -240,7 +302,7 @@ describe('buildCommandHandlers', () => {
 
   it('command.history with an empty request passes undefined for both args (service applies defaults)', async () => {
     const service = makeServiceMock();
-    const handlers = buildCommandHandlers({ commandService: service });
+    const handlers = build(service);
 
     await handlers['command.history']({});
 
@@ -252,7 +314,7 @@ describe('buildCommandHandlers', () => {
       { text: 'Hire a senior backend engineer', intent: 'hire_employee' },
     ];
     const service = makeServiceMock({ suggest: canned });
-    const handlers = buildCommandHandlers({ commandService: service });
+    const handlers = build(service);
 
     const req: CommandSuggestRequest = {
       partial: 'hir',
@@ -266,6 +328,74 @@ describe('buildCommandHandlers', () => {
       companyId: 'company_1',
       currentView: 'employees',
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // T6 — command.stop
+  // -------------------------------------------------------------------------
+
+  it('command.stop returns { stopped: true } and calls AgenticLoopService.stop for a running run', async () => {
+    const agentic = makeAgenticMock({
+      getRun: (runId) => (runId === 'run_1' ? runStateFixture({ runId, status: 'running' }) : null),
+    });
+    const handlers = build(makeServiceMock(), agentic);
+
+    const out = await handlers['command.stop']({ runId: 'run_1' });
+
+    expect(out).toEqual({ stopped: true });
+    expect(agentic.getRun).toHaveBeenCalledWith('run_1');
+    expect(agentic.stop).toHaveBeenCalledTimes(1);
+    expect(agentic.stop).toHaveBeenCalledWith('run_1');
+  });
+
+  it('command.stop returns { stopped: false } for an unknown runId and does NOT call stop()', async () => {
+    const agentic = makeAgenticMock({ getRun: () => null });
+    const handlers = build(makeServiceMock(), agentic);
+
+    const out = await handlers['command.stop']({ runId: 'does_not_exist' });
+
+    expect(out).toEqual({ stopped: false });
+    expect(agentic.getRun).toHaveBeenCalledWith('does_not_exist');
+    expect(agentic.stop).not.toHaveBeenCalled();
+  });
+
+  it('command.stop returns { stopped: false } for a run that is already in a terminal state', async () => {
+    // Terminal = anything other than 'running'. We exercise the most
+    // common post-run status ('completed') here; the same branch also
+    // covers 'failed', 'canceled', and 'budget_exhausted'.
+    const agentic = makeAgenticMock({
+      getRun: (runId) => runStateFixture({ runId, status: 'completed', endedAt: 1 }),
+    });
+    const handlers = build(makeServiceMock(), agentic);
+
+    const out = await handlers['command.stop']({ runId: 'run_1' });
+
+    expect(out).toEqual({ stopped: false });
+    expect(agentic.stop).not.toHaveBeenCalled();
+  });
+
+  it('command.stop swallows exceptions from the service, logs them, and resolves { stopped: false }', async () => {
+    // The renderer has already captured the user's intent to cancel
+    // by the time this channel fires — re-raising the error to the
+    // caller produces a worse UX than failing open + logging.
+    const boom = new Error('abort signal wire broke');
+    const agentic = makeAgenticMock({
+      getRun: () => {
+        throw boom;
+      },
+    });
+    const log = { error: vi.fn() };
+    const handlers = buildCommandHandlers({
+      commandService: makeServiceMock(),
+      agenticLoopService: agentic,
+      logger: log,
+    });
+
+    const out = await handlers['command.stop']({ runId: 'run_1' });
+
+    expect(out).toEqual({ stopped: false });
+    expect(log.error).toHaveBeenCalledTimes(1);
+    expect(log.error.mock.calls[0]?.[1]).toBe(boom);
   });
 
   it('rethrows when CommandService throws — register.ts is the single telemetry/wrapping layer', async () => {
@@ -288,7 +418,7 @@ describe('buildCommandHandlers', () => {
         throw boom;
       },
     });
-    const handlers = buildCommandHandlers({ commandService: service });
+    const handlers = build(service);
 
     await expect(handlers['command.parse']({ text: 'x', companyId: 'company_1' })).rejects.toBe(
       boom,

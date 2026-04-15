@@ -31,6 +31,8 @@
 import type {
   CommandHistoryRequest,
   CommandParseRequest,
+  CommandStopRequest,
+  CommandStopResult,
   CommandSuggestRequest,
   IpcCommandHistoryEntry,
   IpcExecuteRequest,
@@ -42,6 +44,7 @@ import type {
 
 import type { IntentName } from '@team-x/intelligence';
 
+import type { AgenticLoopService } from '../services/agentic-loop-service.js';
 import type { CommandService } from '../services/command-service.js';
 
 // ---------------------------------------------------------------------------
@@ -86,10 +89,27 @@ export interface CommandHandlersDeps {
    * history repo, and handler dispatch map are all in scope.
    */
   commandService: CommandService;
+  /**
+   * Agentic-loop service handle (Phase 5 — M31 T6). Backs `command.stop`
+   * so the palette can cancel an in-flight `complex_request` run.
+   * `CommandService.execute` still owns the start path (via its own
+   * dep injection in T4); this surface exists only for the cancel
+   * side, which has no natural home on `CommandService` because it
+   * is run-id-keyed rather than intent-keyed.
+   */
+  agenticLoopService: AgenticLoopService;
+  /**
+   * Logger for non-throwing failures inside `command.stop`. Defaults
+   * to `console` when omitted. Matches the logger shape used by
+   * sibling services so tests can capture structured diagnostics.
+   */
+  logger?: {
+    error: (msg: string, err: unknown) => void;
+  };
 }
 
 /**
- * Channel-keyed map of the four async handlers the register layer
+ * Channel-keyed map of the five async handlers the register layer
  * mounts on `ipcMain.handle`. Keys mirror `IpcContract` channel
  * strings exactly so a typo becomes a type error.
  */
@@ -98,10 +118,11 @@ export interface CommandHandlers {
   'command.execute'(req: IpcExecuteRequest): Promise<IpcExecuteResult>;
   'command.history'(req: CommandHistoryRequest): Promise<IpcCommandHistoryEntry[]>;
   'command.suggest'(req: CommandSuggestRequest): Promise<IpcSuggestItem[]>;
+  'command.stop'(req: CommandStopRequest): Promise<CommandStopResult>;
 }
 
 export function buildCommandHandlers(deps: CommandHandlersDeps): CommandHandlers {
-  const { commandService } = deps;
+  const { commandService, agenticLoopService, logger = console } = deps;
 
   return {
     /**
@@ -164,6 +185,42 @@ export function buildCommandHandlers(deps: CommandHandlersDeps): CommandHandlers
         ...(req.currentView !== undefined ? { currentView: req.currentView } : {}),
       };
       return commandService.suggest(req.partial, context);
+    },
+
+    /**
+     * `command.stop` — cancel an in-flight agentic-loop run.
+     *
+     * Idempotent by design: the underlying `AgenticLoopService.stop()`
+     * is a no-op when the `runId` is unknown or already in a terminal
+     * state. We still probe `getRun()` first so the response can
+     * accurately report whether a live run was actually cancelled,
+     * which the palette uses for its "Stop" button telemetry.
+     *
+     * The authoritative "run has ended" signal is the `agentic.failed`
+     * (status=`canceled`) event on `events.dashboard` — the palette
+     * step-log mode subscribes to that, not to this return value, to
+     * flip out of the running state. Returning synchronously here
+     * avoids the renderer having to await the abort propagation
+     * through the provider / tool stack, which can be non-trivial.
+     *
+     * Failures inside `stop()` (vanishingly rare — the service path
+     * is sync aside from the abort signal) are logged and swallowed;
+     * we do NOT propagate them back to the renderer because the
+     * user's intent has already been captured by raising the abort
+     * signal on the underlying run, if there was one.
+     */
+    async 'command.stop'(req: CommandStopRequest): Promise<CommandStopResult> {
+      try {
+        const run = agenticLoopService.getRun(req.runId);
+        const stoppable = run !== null && run.status === 'running';
+        if (stoppable) {
+          agenticLoopService.stop(req.runId);
+        }
+        return { stopped: stoppable };
+      } catch (err) {
+        logger.error(`[command.stop] failed to stop run ${req.runId}`, err);
+        return { stopped: false };
+      }
     },
   };
 }

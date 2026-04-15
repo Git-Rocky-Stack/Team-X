@@ -33,6 +33,8 @@
 import type {
   CommandHistoryRequest,
   CommandParseRequest,
+  CommandStopRequest,
+  CommandStopResult,
   CommandSuggestRequest,
   IpcCommandHistoryEntry,
   IpcExecuteRequest,
@@ -1215,6 +1217,11 @@ export interface IpcContract {
     request: CommandSuggestRequest;
     response: IpcSuggestItem[];
   };
+  // Agentic-loop cancellation (Phase 5 — M31 T6)
+  'command.stop': {
+    request: CommandStopRequest;
+    response: CommandStopResult;
+  };
   // Ticket management channels
   'tickets.create': {
     request: CreateTicketRequest;
@@ -1521,6 +1528,18 @@ export interface TeamXApi {
      * M30 ships a static table; M31 may extend with RAG context.
      */
     suggest(req: CommandSuggestRequest): Promise<IpcSuggestItem[]>;
+    /**
+     * Cancel an in-flight agentic-loop run started by an earlier
+     * `command.execute` that returned a `runId` (Phase 5 — M31 T6).
+     *
+     * Idempotent: unknown or already-terminal run ids resolve to
+     * `{ stopped: false }` without throwing. The authoritative
+     * end-of-run signal is the `agentic.failed` (status=`canceled`)
+     * event on `events.dashboard` — the palette subscribes to that
+     * to exit the step-log running state; this call's return value
+     * is informational only.
+     */
+    stop(req: CommandStopRequest): Promise<CommandStopResult>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

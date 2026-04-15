@@ -56,6 +56,8 @@ import type {
   CallMeetingResponse,
   CommandHistoryRequest,
   CommandParseRequest,
+  CommandStopRequest,
+  CommandStopResult,
   CommandSuggestRequest,
   CreateGoalRequest,
   CreateGoalResponse,
@@ -263,6 +265,8 @@ const CHANNELS = {
   commandExecute: 'command.execute',
   commandHistory: 'command.history',
   commandSuggest: 'command.suggest',
+  // Agentic-loop cancellation (Phase 5 — M31 T6)
+  commandStop: 'command.stop',
 } as const;
 
 /**
@@ -461,6 +465,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.commandHistory, req ?? {}) as Promise<IpcCommandHistoryEntry[]>,
       suggest: (req: CommandSuggestRequest) =>
         ipc.invoke(CHANNELS.commandSuggest, req) as Promise<IpcSuggestItem[]>,
+      stop: (req: CommandStopRequest) =>
+        ipc.invoke(CHANNELS.commandStop, req) as Promise<CommandStopResult>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

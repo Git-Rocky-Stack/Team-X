@@ -35,19 +35,30 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { AlertCircle, CornerDownLeft, Loader2, Sparkles, Undo2, X } from 'lucide-react';
+import {
+  AlertCircle,
+  CornerDownLeft,
+  ExternalLink,
+  Loader2,
+  Sparkles,
+  StopCircle,
+  Undo2,
+  X,
+} from 'lucide-react';
 
 import type { IpcExecuteResult, IpcIntentName, IpcParseResult } from '@team-x/shared-types';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog.js';
+import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
 import { useCommandExecute, useCommandHistory, useCommandParse } from '@/hooks/use-command.js';
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { type ActiveView, useAppStore } from '@/store/app-store.js';
 
 import { INTENT_LABELS } from './intent-labels.js';
+import { StepCard, StepCardSkeleton } from './step-card.js';
 
 // ---------------------------------------------------------------------------
 // Intent metadata — destructive-tint flag, paired with the shared
@@ -255,6 +266,16 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
   const [historyIdx, setHistoryIdx] = useState<number | null>(null);
   const [confirmFocused, setConfirmFocused] = useState(false);
   const [toast, setToast] = useState<ToastPayload | null>(null);
+  /**
+   * Active agentic-loop run (Phase 5 — M31 T6). Populated when
+   * `command.execute` returns `{ kind: 'ok', runId, threadId }` for a
+   * `complex_request` intent. While non-null the palette body renders
+   * the live step-log view instead of the standard ready/confirm/etc
+   * branches. Reset on close + when the user explicitly opens the
+   * thread or dismisses.
+   */
+  const [agenticRun, setAgenticRun] = useState<{ runId: string; threadId: string } | null>(null);
+  const [stopPending, setStopPending] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
@@ -262,6 +283,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
 
   const activeView = useAppStore((s) => s.activeView);
   const setActiveView = useAppStore((s) => s.setActiveView);
+  const openThread = useAppStore((s) => s.openThread);
 
   const parseMutation = useCommandParse();
   const executeMutation = useCommandExecute();
@@ -279,6 +301,8 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
       setClarificationIdx(0);
       setHistoryIdx(null);
       setConfirmFocused(false);
+      setAgenticRun(null);
+      setStopPending(false);
     }
   }, [open]);
 
@@ -366,6 +390,15 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
         {
           onSuccess: (result: IpcExecuteResult) => {
             if (result.kind === 'ok') {
+              // Agentic-loop dispatch: enter step-log mode, keep palette
+              // open, and let the user watch the ReAct stream. Undo /
+              // toast semantics don't apply — the loop is read-only.
+              if (result.runId && result.threadId) {
+                setAgenticRun({ runId: result.runId, threadId: result.threadId });
+                setParseResult(null);
+                setParseError(null);
+                return;
+              }
               const destructive = INTENT_META[result.intent].destructive;
               setToast({
                 message: result.summary,
@@ -415,6 +448,34 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
     },
     [parseResult],
   );
+
+  // --- Agentic-loop actions (Phase 5 — M31 T6) -----------------------------
+
+  const handleStopAgentic = useCallback(async () => {
+    if (!agenticRun || stopPending) return;
+    setStopPending(true);
+    try {
+      await ipc.command.stop({ runId: agenticRun.runId });
+    } catch {
+      // Non-blocking: the terminal `agentic.failed` event on the bus
+      // is the authoritative signal that the run ended. If stop()
+      // itself failed (vanishingly rare), the user can just close
+      // the palette and the loop will time out on its own budget cap.
+    } finally {
+      setStopPending(false);
+    }
+  }, [agenticRun, stopPending]);
+
+  const handleOpenAgenticThread = useCallback(() => {
+    if (!agenticRun) return;
+    openThread({
+      threadId: agenticRun.threadId,
+      isAgentThread: false,
+      employeeId: null,
+      isCopilotThread: true,
+    });
+    onOpenChange(false);
+  }, [agenticRun, onOpenChange, openThread]);
 
   // --- Keydown on input ---------------------------------------------------
 
@@ -506,212 +567,438 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="w-[560px] max-w-[92vw] gap-0 border-border bg-surface-100 p-0"
+          className={cn(
+            'gap-0 border-border bg-surface-100 p-0',
+            agenticRun ? 'w-[640px] max-w-[96vw]' : 'w-[560px] max-w-[92vw]',
+          )}
           onOpenAutoFocus={(e) => {
             // Let us focus the input manually so autoFocus on mount works.
             e.preventDefault();
-            inputRef.current?.focus();
+            if (!agenticRun) inputRef.current?.focus();
           }}
         >
           <DialogTitle className="sr-only">Command Palette</DialogTitle>
 
-          {/* Input row */}
-          <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-            <Sparkles className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                setHistoryIdx(null);
-              }}
-              onKeyDown={handleInputKeyDown}
-              placeholder="Type a command — e.g. hire a senior backend engineer"
-              aria-label="Command input"
-              className="min-h-[44px] flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none"
+          {/* Agentic-loop step-log mode (Phase 5 — M31 T6) */}
+          {agenticRun ? (
+            <StepLogView
+              runId={agenticRun.runId}
+              threadId={agenticRun.threadId}
+              stopPending={stopPending}
+              onStop={handleStopAgentic}
+              onOpenThread={handleOpenAgenticThread}
+              onDismiss={() => onOpenChange(false)}
             />
-            {parseMutation.isPending && (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
-            )}
-          </div>
-
-          {/* Meta row */}
-          {(parseResult || parseMutation.isPending) && (
-            <div className="border-b border-border/60 bg-surface-50 px-4 py-2.5">
-              <MetaRow
-                parseResult={parseResult}
-                parsing={parseMutation.isPending}
-                confidence={confidence}
-              />
-            </div>
-          )}
-
-          {/* State-dispatch body */}
-          <div className="px-4 py-3">
-            {parseError && (
-              <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <div className="flex-1">
-                  <p className="font-medium">Couldn't parse that.</p>
-                  <p className="mt-0.5 text-xs opacity-90">{parseError}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!companyId || text.trim().length === 0) return;
-                    parseMutation.mutate(
-                      { text: text.trim(), companyId, currentView: activeView },
-                      {
-                        onSuccess: (r) => {
-                          setParseResult(r);
-                          setParseError(null);
-                        },
-                        onError: (err) => {
-                          setParseError(err instanceof Error ? err.message : 'Parse failed');
-                        },
-                      },
-                    );
+          ) : (
+            <>
+              {/* Input row */}
+              <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+                <Sparkles className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={text}
+                  onChange={(e) => {
+                    setText(e.target.value);
+                    setHistoryIdx(null);
                   }}
-                  className="rounded-md border border-red-500/40 px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {/* READY */}
-            {parseResult?.kind === 'ready' && !parseError && (
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-foreground">
-                  {parseResult.summary ?? `${INTENT_META[parseResult.intent].label} ready.`}
-                </p>
-                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                  Press <Kbd>Enter</Kbd> to run <CornerDownLeft className="h-3 w-3" />
-                </span>
-              </div>
-            )}
-
-            {/* NEEDS CLARIFICATION */}
-            {parseResult?.kind === 'needs_clarification' && !parseError && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">{parseResult.prompt}</p>
-                {parseResult.options && parseResult.options.length > 0 && (
-                  <ul aria-label="Clarification options" className="space-y-1">
-                    {parseResult.options.map((opt, i) => (
-                      <li key={opt}>
-                        <button
-                          type="button"
-                          aria-pressed={i === clarificationIdx}
-                          onClick={() => pickClarification(opt)}
-                          className={cn(
-                            'flex min-h-[44px] w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60',
-                            i === clarificationIdx
-                              ? 'bg-brand/10 text-foreground ring-1 ring-brand/40'
-                              : 'text-foreground/90 hover:bg-surface-200',
-                          )}
-                        >
-                          {opt}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                  onKeyDown={handleInputKeyDown}
+                  placeholder="Type a command — e.g. hire a senior backend engineer"
+                  aria-label="Command input"
+                  className="min-h-[44px] flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none"
+                />
+                {parseMutation.isPending && (
+                  <Loader2
+                    className="h-4 w-4 animate-spin text-muted-foreground"
+                    aria-hidden="true"
+                  />
                 )}
               </div>
-            )}
 
-            {/* NEEDS CONFIRMATION */}
-            {parseResult?.kind === 'needs_confirmation' && !parseError && (
-              <div className="space-y-3">
-                <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3">
-                  <p className="text-sm font-medium text-foreground">Confirm destructive action</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{parseResult.summary}</p>
+              {/* Meta row */}
+              {(parseResult || parseMutation.isPending) && (
+                <div className="border-b border-border/60 bg-surface-50 px-4 py-2.5">
+                  <MetaRow
+                    parseResult={parseResult}
+                    parsing={parseMutation.isPending}
+                    confidence={confidence}
+                  />
                 </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setParseResult(null);
-                      setText('');
-                      inputRef.current?.focus();
-                    }}
-                    className="min-h-[44px]"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    ref={confirmRef}
-                    variant="destructive"
-                    disabled={executeMutation.isPending}
-                    onClick={() => handleExecute(parseResult.intent, parseResult.entities, true)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleExecute(parseResult.intent, parseResult.entities, true);
-                      }
-                    }}
-                    className={cn(
-                      'min-h-[44px] bg-red-600 text-white hover:bg-red-600/90',
-                      confirmFocused && 'ring-2 ring-red-500/60 ring-offset-2',
+              )}
+
+              {/* State-dispatch body */}
+              <div className="px-4 py-3">
+                {parseError && (
+                  <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <div className="flex-1">
+                      <p className="font-medium">Couldn't parse that.</p>
+                      <p className="mt-0.5 text-xs opacity-90">{parseError}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!companyId || text.trim().length === 0) return;
+                        parseMutation.mutate(
+                          { text: text.trim(), companyId, currentView: activeView },
+                          {
+                            onSuccess: (r) => {
+                              setParseResult(r);
+                              setParseError(null);
+                            },
+                            onError: (err) => {
+                              setParseError(err instanceof Error ? err.message : 'Parse failed');
+                            },
+                          },
+                        );
+                      }}
+                      className="rounded-md border border-red-500/40 px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {/* READY */}
+                {parseResult?.kind === 'ready' && !parseError && (
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-foreground">
+                      {parseResult.summary ?? `${INTENT_META[parseResult.intent].label} ready.`}
+                    </p>
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      Press <Kbd>Enter</Kbd> to run <CornerDownLeft className="h-3 w-3" />
+                    </span>
+                  </div>
+                )}
+
+                {/* NEEDS CLARIFICATION */}
+                {parseResult?.kind === 'needs_clarification' && !parseError && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">{parseResult.prompt}</p>
+                    {parseResult.options && parseResult.options.length > 0 && (
+                      <ul aria-label="Clarification options" className="space-y-1">
+                        {parseResult.options.map((opt, i) => (
+                          <li key={opt}>
+                            <button
+                              type="button"
+                              aria-pressed={i === clarificationIdx}
+                              onClick={() => pickClarification(opt)}
+                              className={cn(
+                                'flex min-h-[44px] w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60',
+                                i === clarificationIdx
+                                  ? 'bg-brand/10 text-foreground ring-1 ring-brand/40'
+                                  : 'text-foreground/90 hover:bg-surface-200',
+                              )}
+                            >
+                              {opt}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  >
-                    {executeMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Confirming...
-                      </>
-                    ) : (
-                      'Confirm'
-                    )}
-                  </Button>
-                </div>
+                  </div>
+                )}
+
+                {/* NEEDS CONFIRMATION */}
+                {parseResult?.kind === 'needs_confirmation' && !parseError && (
+                  <div className="space-y-3">
+                    <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3">
+                      <p className="text-sm font-medium text-foreground">
+                        Confirm destructive action
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">{parseResult.summary}</p>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setParseResult(null);
+                          setText('');
+                          inputRef.current?.focus();
+                        }}
+                        className="min-h-[44px]"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        ref={confirmRef}
+                        variant="destructive"
+                        disabled={executeMutation.isPending}
+                        onClick={() =>
+                          handleExecute(parseResult.intent, parseResult.entities, true)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleExecute(parseResult.intent, parseResult.entities, true);
+                          }
+                        }}
+                        className={cn(
+                          'min-h-[44px] bg-red-600 text-white hover:bg-red-600/90',
+                          confirmFocused && 'ring-2 ring-red-500/60 ring-offset-2',
+                        )}
+                      >
+                        {executeMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Confirming...
+                          </>
+                        ) : (
+                          'Confirm'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* EMPTY — history picker hint */}
+                {!parseResult && !parseMutation.isPending && !parseError && text.length === 0 && (
+                  <HistoryHint
+                    historyCount={historyQuery.data?.length ?? 0}
+                    selectedIdx={historyIdx}
+                    selectedText={
+                      historyIdx !== null && historyQuery.data
+                        ? (historyQuery.data[historyIdx]?.text ?? null)
+                        : null
+                    }
+                  />
+                )}
+
+                {/* SLASH-COMMAND HINT */}
+                {!parseResult &&
+                  !parseMutation.isPending &&
+                  !parseError &&
+                  text.trim().startsWith('/') && (
+                    <div className="text-xs text-muted-foreground">
+                      <p>
+                        Slash-command mode. Press <Kbd>Enter</Kbd> to run.
+                      </p>
+                      <p className="mt-1 opacity-70">
+                        Supported:{' '}
+                        <code className="font-mono text-foreground/80">/show &lt;view&gt;</code>
+                        {' — '}
+                        e.g. <code className="font-mono text-foreground/80">/show tickets</code>
+                      </p>
+                    </div>
+                  )}
+
+                {/* COMPLEX REQUEST FALLBACK */}
+                {parseResult?.kind === 'ready' &&
+                  parseResult.intent === 'complex_request' &&
+                  !parseError && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      I'll route this to the conversational agent.
+                    </p>
+                  )}
               </div>
-            )}
-
-            {/* EMPTY — history picker hint */}
-            {!parseResult && !parseMutation.isPending && !parseError && text.length === 0 && (
-              <HistoryHint
-                historyCount={historyQuery.data?.length ?? 0}
-                selectedIdx={historyIdx}
-                selectedText={
-                  historyIdx !== null && historyQuery.data
-                    ? (historyQuery.data[historyIdx]?.text ?? null)
-                    : null
-                }
-              />
-            )}
-
-            {/* SLASH-COMMAND HINT */}
-            {!parseResult &&
-              !parseMutation.isPending &&
-              !parseError &&
-              text.trim().startsWith('/') && (
-                <div className="text-xs text-muted-foreground">
-                  <p>
-                    Slash-command mode. Press <Kbd>Enter</Kbd> to run.
-                  </p>
-                  <p className="mt-1 opacity-70">
-                    Supported:{' '}
-                    <code className="font-mono text-foreground/80">/show &lt;view&gt;</code>
-                    {' — '}
-                    e.g. <code className="font-mono text-foreground/80">/show tickets</code>
-                  </p>
-                </div>
-              )}
-
-            {/* COMPLEX REQUEST FALLBACK */}
-            {parseResult?.kind === 'ready' &&
-              parseResult.intent === 'complex_request' &&
-              !parseError && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  I'll route this to the conversational agent.
-                </p>
-              )}
-          </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
       {toast && <Toast toast={toast} onDismiss={() => setToast(null)} />}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Step-log view (Phase 5 — M31 T6)
+// ---------------------------------------------------------------------------
+
+interface StepLogViewProps {
+  runId: string;
+  threadId: string;
+  stopPending: boolean;
+  onStop: () => void;
+  onOpenThread: () => void;
+  onDismiss: () => void;
+}
+
+function StepLogView({
+  runId,
+  threadId,
+  stopPending,
+  onStop,
+  onOpenThread,
+  onDismiss,
+}: StepLogViewProps) {
+  const { steps, result } = useAgentStepStream(threadId);
+  const listRef = useRef<HTMLUListElement>(null);
+  const [focusIdx, setFocusIdx] = useState<number | null>(null);
+
+  // Auto-scroll to the newest step as they arrive. Skipped once the
+  // run reaches a terminal state so the user's scroll position is
+  // preserved while they re-read the transcript. `steps.length` is
+  // the trigger — biome flags it as unused because the body only
+  // reads DOM state, but the DOM state reflects `steps` and we need
+  // to re-run on every new step. Void-reference it to satisfy both
+  // the linter and the intent.
+  useEffect(() => {
+    if (result) return;
+    const el = listRef.current;
+    if (!el) return;
+    void steps.length;
+    el.scrollTop = el.scrollHeight;
+  }, [steps.length, result]);
+
+  // Cumulative totals — prefer the terminal event's authoritative
+  // numbers when available, otherwise fold over the per-step payloads.
+  // The terminal event's numbers include the final answer's tokens,
+  // which is why we don't use it during streaming.
+  const totals = useMemo(() => {
+    if (result) {
+      return {
+        tokensIn: result.payload.tokensIn,
+        tokensOut: result.payload.tokensOut,
+        costUsd: result.payload.costUsd,
+      };
+    }
+    return steps.reduce(
+      (acc, step) => ({
+        tokensIn: acc.tokensIn + step.tokensIn,
+        tokensOut: acc.tokensOut + step.tokensOut,
+        costUsd: acc.costUsd + step.costUsd,
+      }),
+      { tokensIn: 0, tokensOut: 0, costUsd: 0 },
+    );
+  }, [steps, result]);
+
+  const isRunning = result === null;
+  const terminalKind = result?.kind ?? null;
+
+  // Keyboard navigation over step cards. ArrowUp/Down advances focus
+  // to the next/previous <article> within the scroll container.
+  const onListKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLUListElement>) => {
+      if (steps.length === 0) return;
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+      const next =
+        e.key === 'ArrowDown'
+          ? Math.min((focusIdx ?? -1) + 1, steps.length - 1)
+          : Math.max((focusIdx ?? steps.length) - 1, 0);
+      setFocusIdx(next);
+      const node = listRef.current?.querySelectorAll<HTMLElement>('[data-step-kind]')[next];
+      node?.focus();
+    },
+    [focusIdx, steps.length],
+  );
+
+  return (
+    <div className="flex max-h-[640px] flex-col">
+      {/* Header */}
+      <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <Sparkles className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+        <div className="flex-1 min-w-0">
+          <p className="truncate text-sm font-medium text-foreground">
+            {isRunning
+              ? 'Copilot is thinking…'
+              : terminalKind === 'completed'
+                ? 'Answer ready'
+                : 'Run ended'}
+          </p>
+          <p className="truncate text-[11px] text-muted-foreground">
+            <code className="font-mono">{runId}</code>
+          </p>
+        </div>
+        {isRunning && (
+          <Loader2
+            className="h-4 w-4 shrink-0 animate-spin text-muted-foreground"
+            aria-hidden="true"
+          />
+        )}
+      </header>
+
+      {/* Step scroll container */}
+      <ul
+        ref={listRef}
+        aria-label="Agent step transcript"
+        onKeyDown={onListKeyDown}
+        className="flex min-h-[160px] flex-1 flex-col gap-2 overflow-y-auto bg-surface-50 px-4 py-3"
+      >
+        {steps.length === 0 && isRunning && (
+          <li>
+            <StepCardSkeleton />
+          </li>
+        )}
+        {steps.length === 0 && !isRunning && (
+          <li className="py-8 text-center text-xs text-muted-foreground">
+            The agent produced no steps before terminating.
+          </li>
+        )}
+        {steps.map((step) => (
+          <li key={`${step.runId}-${step.stepIndex}`}>
+            <StepCard step={step} isDimmed={!isRunning} />
+          </li>
+        ))}
+
+        {/* Terminal error card — rendered when `agentic.failed` was
+            not accompanied by an in-stream `error` step (e.g. a
+            budget-exhausted abort with no partial answer). */}
+        {result?.kind === 'failed' && (
+          <li role="alert" className="mt-1 rounded-md border border-red-500/60 bg-red-500/5 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-red-400">
+              Run failed — {result.payload.reason}
+            </p>
+            <p className="mt-1 text-sm text-foreground">{result.payload.message}</p>
+          </li>
+        )}
+      </ul>
+
+      {/* Footer — cumulative cost + action buttons */}
+      <footer className="flex items-center justify-between gap-3 border-t border-border bg-surface-100 px-4 py-3">
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground tabular-nums">
+          <span>
+            <span className="text-foreground/70">{steps.length}</span> step
+            {steps.length === 1 ? '' : 's'}
+          </span>
+          <span aria-hidden="true">·</span>
+          <span>
+            <span className="text-foreground/70">
+              {(totals.tokensIn + totals.tokensOut).toLocaleString()}
+            </span>{' '}
+            tok
+          </span>
+          <span aria-hidden="true">·</span>
+          <span>
+            <span className="text-foreground/70">${totals.costUsd.toFixed(4)}</span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isRunning ? (
+            <Button
+              variant="ghost"
+              onClick={onStop}
+              disabled={stopPending}
+              aria-label="Stop agentic run"
+              className="min-h-[36px] gap-1.5 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-400"
+            >
+              {stopPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <StopCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              Stop
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={onDismiss} className="min-h-[36px] text-xs">
+                Close
+              </Button>
+              <Button
+                variant="default"
+                onClick={onOpenThread}
+                aria-label="Open thread in chat drawer"
+                className="min-h-[36px] gap-1.5 bg-brand text-xs text-white hover:bg-brand/90"
+              >
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                Open Thread
+              </Button>
+            </>
+          )}
+        </div>
+      </footer>
+    </div>
   );
 }
 

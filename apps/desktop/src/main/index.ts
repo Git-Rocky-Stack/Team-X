@@ -1022,15 +1022,24 @@ app
       ragHandlers.deleteForCompany(companyId),
     );
 
-    // ---- Command palette IPC handlers (Phase 5 — M30 T5) -------------------
+    // ---- Command palette IPC handlers (Phase 5 — M30 T5, M31 T6) -----------
     //
     // Mounted as a sibling block rather than folded into `createIpcHandlers`
     // because CommandService sits above the handler factory — it consumes
     // other IPC handlers (tickets, projects, meetings, vault, employees)
-    // as its dispatch target. The four channel strings are already listed
+    // as its dispatch target. The five channel strings are already listed
     // in `REQUEST_CHANNELS` so `unregisterIpc()` strips them on shutdown
-    // alongside every other handler.
-    const commandHandlers = buildCommandHandlers({ commandService: commandServiceInstance });
+    // alongside every other handler. M31 T6 adds `command.stop` for
+    // agentic-loop cancellation; it needs the `AgenticLoopService` handle
+    // directly (not through CommandService) because cancellation is
+    // run-id-keyed rather than intent-keyed.
+    if (agenticLoopServiceInstance === null) {
+      throw new Error('agenticLoopServiceInstance must be initialized before command handlers');
+    }
+    const commandHandlers = buildCommandHandlers({
+      commandService: commandServiceInstance,
+      agenticLoopService: agenticLoopServiceInstance,
+    });
     ipcMain.handle(
       'command.parse',
       (_evt, req: import('@team-x/shared-types').CommandParseRequest) =>
@@ -1050,6 +1059,9 @@ app
       'command.suggest',
       (_evt, req: import('@team-x/shared-types').CommandSuggestRequest) =>
         commandHandlers['command.suggest'](req),
+    );
+    ipcMain.handle('command.stop', (_evt, req: import('@team-x/shared-types').CommandStopRequest) =>
+      commandHandlers['command.stop'](req),
     );
 
     console.log('[main] orchestrator + IPC ready');
