@@ -6,7 +6,7 @@
   "previousMilestone": "M30",
   "previousMilestoneCompletedAt": "2026-04-14T01:30:00Z",
   "createdAt": "2026-04-14T02:15:00Z",
-  "updatedAt": "2026-04-14T02:15:00Z",
+  "updatedAt": "2026-04-14T22:00:00Z",
   "totalTasks": 11,
   "tasks": [
     {
@@ -130,13 +130,22 @@
     {
       "id": "T7",
       "title": "Settings — agentic loop controls",
-      "status": "pending",
+      "status": "completed",
+      "commit": "51defad",
+      "startedAt": "2026-04-14T21:43:00Z",
+      "completedAt": "2026-04-14T22:00:00Z",
+      "actualTests": 9,
       "blockedBy": ["T3"],
       "estTests": 8,
       "files": [
         "apps/desktop/src/main/db/repos/settings.ts",
+        "apps/desktop/src/main/db/repos/settings.test.ts",
         "apps/desktop/src/renderer/src/features/settings/agentic-section.tsx",
-        "apps/desktop/src/main/ipc/settings-handlers.ts",
+        "apps/desktop/src/renderer/src/features/settings/settings-view.tsx",
+        "apps/desktop/src/renderer/src/hooks/use-settings.ts",
+        "apps/desktop/src/main/ipc/handlers.ts",
+        "apps/desktop/src/main/ipc/register.ts",
+        "apps/desktop/src/preload/api.ts",
         "packages/shared-types/src/ipc.ts"
       ],
       "goal": "Three settings keys (agentic_max_steps=8, agentic_max_tokens=8000, agentic_timeout_ms=120000) with clamps. New Agentic Loop subsection in Settings → Runtime."
