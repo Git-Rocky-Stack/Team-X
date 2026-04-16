@@ -103,6 +103,12 @@ import {
   type AgenticLoopService,
   createAgenticLoopService,
 } from './services/agentic-loop-service.js';
+import {
+  type WriteSideCompleteFn,
+  type WriteSideOrchestrator,
+  type WriteSideWorkloadProvider,
+  buildWriteSideTools,
+} from './services/agentic-tools-write.js';
 import { createAgenticTools } from './services/agentic-tools.js';
 import { createBackupService } from './services/backup.js';
 import { type CommandService, createCommandService } from './services/command-service.js';
@@ -122,7 +128,7 @@ import { createRoleLoader } from './services/role-loader.js';
 import { SecretsStore } from './services/secrets.js';
 import { composeSystemPromptWithRag } from './services/system-prompt.js';
 import { createTestAgenticCompleteFn } from './services/test-agentic-provider.js';
-import { createTestAgenticTools } from './services/test-agentic-tools.js';
+import { createTestToolsForEmployee } from './services/test-agentic-tools.js';
 import { createTestClassifier } from './services/test-classifier.js';
 import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
@@ -760,6 +766,21 @@ app
           const row = employeesRepo.findSystemByRoleId(cid, rid);
           return row ? { id: row.id } : null;
         },
+        // M32 T3 — explicit-employeeId path on AgenticLoopService.start().
+        // Maps the production EmployeeRow shape onto AgenticLoopEmployeeLookup
+        // so the loop can level-gate the write-side tool registry. Older
+        // rows without an explicit `isSystem` flag default to false (M31
+        // schema migration backfilled, but defending against legacy reads).
+        getById: (id) => {
+          const row = employeesRepo.getById(id);
+          if (!row) return null;
+          return {
+            id: row.id,
+            level: row.level,
+            isSystem: row.isSystem ?? false,
+            companyId: row.companyId,
+          };
+        },
       },
       threadsRepo: {
         // The agentic-loop service widens `kind` to `string` and
@@ -801,16 +822,24 @@ app
         // still settle cleanly rather than deadlocking on the gate.
         isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
       },
-      buildTools: ({ companyId }) => {
+      buildTools: ({ companyId, employee }) => {
         if (testMode) {
           // Canned tool set — no repo access, deterministic envelopes
-          // per tool. Mirrors the `resolveComplete` test-mode branch
-          // below so E2E specs get a fully canned agentic loop with
-          // zero DB coupling. See `test-agentic-tools.ts` for the
-          // fixture shapes + sentinel override contract.
-          return createTestAgenticTools({ companyId });
+          // per tool. Level-gated mirror of the production composition,
+          // so E2E specs that pass an explicit employeeId (M32 T3) get
+          // the same write-side subset they'd get in production. See
+          // `test-agentic-tools.ts` for the fixture shapes + sentinel
+          // override contract.
+          return createTestToolsForEmployee({ companyId, employee });
         }
-        return createAgenticTools({
+
+        // ─── Production composition (M32 T3) ─────────────────────────
+        // Read-side tools are always exposed (every actor can query).
+        // Write-side tools are level-gated by `buildWriteSideTools` per
+        // Phase 5 §7.1: decompose for Officer/Senior-Mgmt/Management/
+        // system, delegate+review for Management/Supervisor/Lead/system.
+        // ICs receive an empty write-side array.
+        const readSide = createAgenticTools({
           companyId,
           employeesRepo,
           ticketsRepo,
@@ -819,6 +848,92 @@ app
           vaultRepo,
           auditRepo,
         });
+
+        // Conservative workload provider — open-ticket count is a real
+        // repo lookup; in-meeting + completion-history are stubbed for
+        // T3 and tightened in M33 (per agentic-tools-write.ts §T3 notes
+        // and Phase 5 follow-ups). Conservative defaults still produce
+        // a deterministic workload score; emptier inboxes still rank
+        // higher, which is the load-balancing intent.
+        const workload: WriteSideWorkloadProvider = {
+          openTicketCount: (eid) => {
+            try {
+              return ticketsRepo
+                .listByCompany(companyId)
+                .filter((t) => t.assigneeId === eid && t.status !== 'done').length;
+            } catch {
+              return 0;
+            }
+          },
+          inMeeting: () => false,
+          avgCompletionMs: () => null,
+        };
+
+        // Write-side orchestrator seam. `enqueueAgentReply` is wired in
+        // M33 when the Copilot service threads delegation results back
+        // into the orchestrator queue; until then it's a best-effort
+        // no-op (T2 already documents this expectation in
+        // `delegate_subtask` body — the ticket is created and assigned,
+        // the orchestrator pickup is a separate path). `isCompanyPaused`
+        // mirrors the loop service's pause-gate observer for parity.
+        const writeOrchestrator: WriteSideOrchestrator = {
+          enqueueAgentReply: async () => {
+            // Intentional no-op for T3 — see comment block above.
+          },
+          isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
+        };
+
+        // Provider seam for the write-side tools' inner LLM calls
+        // (`decompose_project` for plan generation, `review_deliverable`
+        // for the review summary). Resolves the actor's configured
+        // provider+model on each invocation — the write-side tools fire
+        // infrequently enough that re-resolving per call is cheaper
+        // than caching across runs and dealing with stale provider
+        // settings. Wraps `streamAgent` into the non-streaming
+        // request/response shape `WriteSideCompleteFn` expects.
+        const writeProviderComplete: WriteSideCompleteFn = async (req) => {
+          const actorRow = employeesRepo.getById(employee.id);
+          if (!actorRow) {
+            throw new Error(
+              `[agentic-loop] Write-side actor "${employee.id}" not found in employees repo.`,
+            );
+          }
+          const factory = createProviderFactory({ providersService, secretsStore });
+          const resolved = await factory.resolveForEmployee(actorRow);
+          let text = '';
+          for await (const chunk of streamAgent({
+            providerFactory: resolved.stream,
+            system: req.system,
+            messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
+          })) {
+            if (req.signal.aborted) {
+              throw new DOMException('Aborted', 'AbortError');
+            }
+            if (chunk.kind === 'delta') {
+              text += chunk.delta;
+            }
+            // 'done' carries usage tallies — write-side `WriteSideCompleteFn`
+            // doesn't surface usage upstream, so we discard them here. The
+            // outer agentic loop's read-side telemetry covers the run-level
+            // accounting; per-tool inner-call accounting lands in M33.
+          }
+          return { text };
+        };
+
+        const writeSide = buildWriteSideTools(employee, {
+          companyId,
+          actorId: employee.id,
+          actorKind: 'employee',
+          employeesRepo,
+          ticketsRepo,
+          projectsRepo,
+          bus,
+          orchestrator: writeOrchestrator,
+          providerComplete: writeProviderComplete,
+          workload,
+        });
+
+        return [...readSide, ...writeSide];
       },
       resolveComplete: async ({ systemAgentId }) => {
         if (testMode) {

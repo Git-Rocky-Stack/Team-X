@@ -9,6 +9,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import {
+  type AgenticLoopEmployeeContext,
+  type AgenticLoopEmployeeLookup,
   type AgenticLoopEmployeesRepo,
   type AgenticLoopEventBus,
   type AgenticLoopMessagesRepo,
@@ -29,10 +31,19 @@ import {
 // ---------------------------------------------------------------------------
 
 class FakeEmployeesRepo implements AgenticLoopEmployeesRepo {
-  constructor(private readonly agentByCompany: Map<string, { id: string } | null>) {}
+  constructor(
+    private readonly agentByCompany: Map<string, { id: string } | null>,
+    /** Optional table for `getById` — populated by tests that exercise the M32 T3 explicit-employeeId path. */
+    private readonly byId: Map<string, AgenticLoopEmployeeLookup> = new Map(),
+  ) {}
   findSystemByRoleId(companyId: string, roleId: string): { id: string } | null {
     expect(roleId).toBe(SYSTEM_AGENT_ROLE_ID);
     return this.agentByCompany.get(companyId) ?? null;
+  }
+  /** Lazily defined — only the T3 tests pre-populate `byId`, the M31 tests
+   *  use `findSystemByRoleId` and never reach this method. */
+  getById(id: string): AgenticLoopEmployeeLookup | null {
+    return this.byId.get(id) ?? null;
   }
 }
 
@@ -192,6 +203,10 @@ interface FixtureOptions {
   model?: string;
   budgets?: { maxSteps: number; maxTokens: number; timeoutMs: number };
   missingAgent?: boolean;
+  /** M32 T3 — optional employee table for the explicit-employeeId path. */
+  byId?: ReadonlyArray<AgenticLoopEmployeeLookup>;
+  /** M32 T3 — capture buildTools args so tests can assert level-aware injection. */
+  captureBuildArgs?: { last: { companyId: string; employee: AgenticLoopEmployeeContext } | null };
 }
 
 const DEFAULT_ANSWER_SCRIPT: readonly string[] = Object.freeze([
@@ -226,7 +241,11 @@ function buildFixture(opts: FixtureOptions = {}): Fixture {
   if (!opts.missingAgent) {
     agentByCompany.set(companyId, { id: systemAgentId });
   }
-  const employees = new FakeEmployeesRepo(agentByCompany);
+  const byIdMap = new Map<string, AgenticLoopEmployeeLookup>();
+  for (const row of opts.byId ?? []) {
+    byIdMap.set(row.id, row);
+  }
+  const employees = new FakeEmployeesRepo(agentByCompany, byIdMap);
   const threads = new FakeThreadsRepo();
   const messages = new FakeMessagesRepo();
   const runsRepo = new FakeRunsRepo();
@@ -256,7 +275,12 @@ function buildFixture(opts: FixtureOptions = {}): Fixture {
     runsRepo,
     bus,
     orchestrator,
-    buildTools: () => tools,
+    buildTools: (args) => {
+      if (opts.captureBuildArgs) {
+        opts.captureBuildArgs.last = { companyId: args.companyId, employee: args.employee };
+      }
+      return tools;
+    },
     resolveComplete: async () => {
       if (opts.resolveThrows) {
         throw new Error('resolver-broken');
@@ -717,5 +741,90 @@ describe('createAgenticLoopService', () => {
     const before = Date.now();
     await service.waitForRun('nonexistent');
     expect(Date.now() - before).toBeLessThan(100);
+  });
+
+  // ─────────────────────────────────────────────────────────────────
+  // M32 T3 — explicit-employeeId path + employee context propagation
+  // ─────────────────────────────────────────────────────────────────
+
+  it('M32 T3: passes the resolved system-agent context to deps.buildTools when employeeId is omitted', async () => {
+    const captured: { last: { companyId: string; employee: AgenticLoopEmployeeContext } | null } = {
+      last: null,
+    };
+    const fixture = buildFixture({ captureBuildArgs: captured });
+    const service = createAgenticLoopService(fixture.deps);
+    await service.start({ companyId: fixture.companyId, userText: 'default-actor' });
+    expect(captured.last).not.toBeNull();
+    expect(captured.last?.companyId).toBe(fixture.companyId);
+    expect(captured.last?.employee.id).toBe(fixture.systemAgentId);
+    expect(captured.last?.employee.level).toBe('system');
+    expect(captured.last?.employee.isSystem).toBe(true);
+  });
+
+  it('M32 T3: resolves an explicit employeeId via getById and authors the run under that actor', async () => {
+    const captured: { last: { companyId: string; employee: AgenticLoopEmployeeContext } | null } = {
+      last: null,
+    };
+    const fixture = buildFixture({
+      captureBuildArgs: captured,
+      byId: [
+        {
+          id: 'emp-mgr-1',
+          companyId: 'co-1',
+          level: 'management',
+          isSystem: false,
+        },
+      ],
+    });
+    const service = createAgenticLoopService(fixture.deps);
+    const { runId } = await service.start({
+      companyId: fixture.companyId,
+      userText: 'mgr-actor',
+      employeeId: 'emp-mgr-1',
+    });
+    await service.waitForRun(runId);
+
+    expect(captured.last?.employee.id).toBe('emp-mgr-1');
+    expect(captured.last?.employee.level).toBe('management');
+    expect(captured.last?.employee.isSystem).toBe(false);
+
+    // The runs row records the actor employee, NOT the system-agent.
+    expect(fixture.runsRepo.started[0]?.input.employeeId).toBe('emp-mgr-1');
+    // Step messages author under the actor employee.
+    const stepMessages = fixture.messages.appended.slice(1);
+    expect(stepMessages.length).toBeGreaterThan(0);
+    for (const m of stepMessages) {
+      expect(m.authorId).toBe('emp-mgr-1');
+    }
+  });
+
+  it('M32 T3: throws when an explicit employeeId is unknown', async () => {
+    const fixture = buildFixture({ byId: [] });
+    const service = createAgenticLoopService(fixture.deps);
+    await expect(
+      service.start({
+        companyId: fixture.companyId,
+        userText: 'mystery actor',
+        employeeId: 'emp-ghost',
+      }),
+    ).rejects.toThrow(/No employee "emp-ghost"/);
+    // Cross-company guard side-effect — no thread, no runs row.
+    expect(fixture.threads.created).toHaveLength(0);
+    expect(fixture.runsRepo.started).toHaveLength(0);
+  });
+
+  it('M32 T3: rejects an explicit employeeId from a different company', async () => {
+    const fixture = buildFixture({
+      byId: [{ id: 'emp-other', companyId: 'co-other', level: 'lead', isSystem: false }],
+    });
+    const service = createAgenticLoopService(fixture.deps);
+    await expect(
+      service.start({
+        companyId: fixture.companyId,
+        userText: 'cross-company',
+        employeeId: 'emp-other',
+      }),
+    ).rejects.toThrow(/belongs to company "co-other"/);
+    expect(fixture.threads.created).toHaveLength(0);
   });
 });

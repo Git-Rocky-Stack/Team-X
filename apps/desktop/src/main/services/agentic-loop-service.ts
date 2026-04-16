@@ -84,8 +84,35 @@ import type {
 // repo types into the test surface.
 // ---------------------------------------------------------------------------
 
+/**
+ * Minimal employee projection used by the loop to (a) author messages
+ * + bus events with the actor's identity, and (b) hand the level-aware
+ * `buildTools` closure enough information to gate the write-side tool
+ * registry. Phase 5 — M32 T3.
+ */
+export interface AgenticLoopEmployeeContext {
+  readonly id: string;
+  readonly level: string;
+  readonly isSystem: boolean;
+}
+
+/**
+ * Lookup row returned by `getById`. Adds `companyId` so the service
+ * can guard against an employee from a different company being passed
+ * in as an explicit `employeeId` on `start()`.
+ */
+export interface AgenticLoopEmployeeLookup extends AgenticLoopEmployeeContext {
+  readonly companyId: string;
+}
+
 export interface AgenticLoopEmployeesRepo {
   findSystemByRoleId(companyId: string, roleId: string): { id: string } | null;
+  /**
+   * Lookup any employee by id. REQUIRED only when `start()` is called
+   * with an explicit `employeeId` — when omitted, the loop falls back
+   * to `findSystemByRoleId` and the M31 system-agent path. M32 T3.
+   */
+  getById?(id: string): AgenticLoopEmployeeLookup | null;
 }
 
 export interface AgenticLoopThreadsRepo {
@@ -175,8 +202,18 @@ export interface AgenticLoopServiceDeps {
   runsRepo: AgenticLoopRunsRepo;
   bus: AgenticLoopEventBus;
   orchestrator: AgenticLoopOrchestratorLike;
-  /** Build the read-only tool set for this loop run, scoped to `companyId`. */
-  buildTools(args: { companyId: string; signal: AbortSignal }): readonly Tool[];
+  /**
+   * Build the per-run tool registry. Receives the resolved actor employee
+   * so the composition root can level-gate the write-side tools per
+   * Phase 5 §7.1 (M32 T3). The composition root composes
+   * `[...readSideTools(companyId), ...buildWriteSideTools(employee, ...)]`
+   * — the loop itself is agnostic to which subset of tools is exposed.
+   */
+  buildTools(args: {
+    companyId: string;
+    signal: AbortSignal;
+    employee: AgenticLoopEmployeeContext;
+  }): readonly Tool[];
   /**
    * Resolve the provider + model + `LoopCompleteFn` for this run. Wrapping
    * `streamAgent` from the provider router happens here; the service
@@ -250,6 +287,16 @@ export interface AgenticLoopRunState {
 export interface StartArgs {
   companyId: string;
   userText: string;
+  /**
+   * Explicit actor employee id. When omitted (the M31 default), resolves
+   * to the company's `system-agent` pseudo-employee and the loop authors
+   * messages + bus events under that identity. When provided, the service
+   * looks the employee up via `employeesRepo.getById`, validates the
+   * employee belongs to `companyId`, and hands the employee context to
+   * `deps.buildTools` so the registry composer can level-gate the
+   * write-side tool set per Phase 5 §7.1. Phase 5 — M32 T3.
+   */
+  employeeId?: string;
 }
 
 export interface StartResult {
@@ -510,11 +557,41 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
   }
 
   async function start(args: StartArgs): Promise<StartResult> {
-    const systemAgent = deps.employeesRepo.findSystemByRoleId(args.companyId, SYSTEM_AGENT_ROLE_ID);
-    if (!systemAgent) {
-      throw new Error(
-        `[agentic-loop] No system-agent employee for company "${args.companyId}". Did system-agent-bootstrap run on company creation?`,
-      );
+    // ─── Resolve actor employee (M32 T3) ────────────────────────────────
+    // When `employeeId` is provided, look up the actor via the optional
+    // `getById` repo method and validate cross-company isolation. When
+    // omitted — the M31 default — fall through to the system-agent
+    // pseudo-employee. Either path produces an `AgenticLoopEmployeeContext`
+    // the loop uses for actor identity AND that the composition-root
+    // `buildTools` closure uses to level-gate the write-side registry.
+    let actorEmployee: AgenticLoopEmployeeContext;
+    if (args.employeeId !== undefined) {
+      if (!deps.employeesRepo.getById) {
+        throw new Error(
+          '[agentic-loop] Explicit employeeId requires employeesRepo.getById; ' +
+            'wire it from the composition root or omit employeeId to default to the system-agent.',
+        );
+      }
+      const row = deps.employeesRepo.getById(args.employeeId);
+      if (!row) {
+        throw new Error(
+          `[agentic-loop] No employee "${args.employeeId}" found for company "${args.companyId}".`,
+        );
+      }
+      if (row.companyId !== args.companyId) {
+        throw new Error(
+          `[agentic-loop] Employee "${args.employeeId}" belongs to company "${row.companyId}", not "${args.companyId}".`,
+        );
+      }
+      actorEmployee = { id: row.id, level: row.level, isSystem: row.isSystem };
+    } else {
+      const sys = deps.employeesRepo.findSystemByRoleId(args.companyId, SYSTEM_AGENT_ROLE_ID);
+      if (!sys) {
+        throw new Error(
+          `[agentic-loop] No system-agent employee for company "${args.companyId}". Did system-agent-bootstrap run on company creation?`,
+        );
+      }
+      actorEmployee = { id: sys.id, level: 'system', isSystem: true };
     }
 
     const threadId = deps.threadsRepo.create({
@@ -531,7 +608,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
     });
     deps.threadsRepo.addMember({
       threadId,
-      memberId: systemAgent.id,
+      memberId: actorEmployee.id,
       memberKind: 'employee',
     });
 
@@ -557,13 +634,16 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
     // Resolve provider BEFORE writing the runs row so the row carries
     // the actual provider/model identity (telemetry depends on this).
     // A resolver error here propagates — no runs row is written.
+    // NOTE: `systemAgentId` here is the actor employee id (system-agent
+    // by default, any employee under M32 T3 explicit-employeeId callers).
+    // The dep field name is preserved for M31 contract stability.
     const resolved = await deps.resolveComplete({
       companyId: args.companyId,
-      systemAgentId: systemAgent.id,
+      systemAgentId: actorEmployee.id,
     });
 
     const runId = deps.runsRepo.start({
-      employeeId: systemAgent.id,
+      employeeId: actorEmployee.id,
       provider: resolved.provider,
       model: resolved.model,
       threadId,
@@ -575,7 +655,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       runId,
       threadId,
       companyId: args.companyId,
-      systemAgentId: systemAgent.id,
+      systemAgentId: actorEmployee.id,
       provider: resolved.provider,
       model: resolved.model,
       startedAt,
@@ -604,6 +684,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
     const tools = deps.buildTools({
       companyId: args.companyId,
       signal: controller.signal,
+      employee: actorEmployee,
     });
 
     const loop: AgenticLoop = createAgenticLoop({
@@ -629,7 +710,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       try {
         deps.messagesRepo.append({
           threadId,
-          authorId: systemAgent.id,
+          authorId: actorEmployee.id,
           authorKind: 'employee',
           content: msg.content,
           toolCalls: msg.toolCalls,
@@ -643,7 +724,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
         deps.bus.emit<AgentStepPayload>({
           type: 'agent.step',
           companyId: args.companyId,
-          actorId: systemAgent.id,
+          actorId: actorEmployee.id,
           actorKind: 'employee',
           payload: {
             runId,

@@ -48,6 +48,12 @@ import type { Tool, ToolContext } from '@team-x/intelligence';
 import { z } from 'zod';
 
 import type {
+  DecomposedPlan,
+  DelegationResult,
+  ReviewResult,
+  SubtaskComplexity,
+} from './agentic-tools-write.js';
+import type {
   AgenticToolResult,
   EmployeeProjection,
   EventProjection,
@@ -309,4 +315,296 @@ export function createTestAgenticTools(_deps: TestAgenticToolsDeps): readonly To
       FIXTURE_EVENTS,
     ),
   ];
+}
+
+// ===========================================================================
+// M32 T3 — write-side seam mirror.
+//
+// Production composition (`buildWriteSideTools` in `agentic-tools-write.ts`)
+// wires `decompose_project` / `delegate_subtask` / `review_deliverable` to a
+// provider, the orchestrator, and several repos. Under `NODE_ENV=test` the
+// composition root swaps to the canned variant below so Playwright E2E
+// runs and `AgenticLoopService` tests can exercise the full level-aware
+// agentic path with zero LLM, DB, or orchestrator coupling.
+//
+// Three-tier posture, identical to the read-side seam above and to
+// `test-agentic-provider.ts` / `test-classifier.ts`:
+//
+//   1. Sentinel override — `__ECHO_WRITE__:<json>` embedded in any
+//      string-valued tool arg. The JSON payload is returned verbatim
+//      as the tool result. Lets specs pin a per-invocation result
+//      shape without code changes. The sentinel MUST decode to the
+//      tool's expected envelope shape (`DecomposedPlan` /
+//      `DelegationResult` / `ReviewResult`); malformed JSON falls
+//      through to the canned table.
+//   2. Canned table — per-tool fixture map keyed on a stable arg
+//      field (`brief` for decompose, `subtaskTitle` for delegate,
+//      `ticketId` for review). Lowercase-trimmed for robustness.
+//   3. Fallback — deterministic default envelope per tool. Keeps
+//      the contract never-throw so the loop can either re-plan or
+//      complete with a final answer even on novel inputs.
+//
+// Level-gating mirrors `buildWriteSideTools` exactly — the lockstep
+// invariant called out in agentic-tools-write.ts §T4. ICs receive an
+// empty write-side array; system-agent receives all three tools.
+// ===========================================================================
+
+/** Sentinel prefix for per-invocation write-side overrides. */
+export const ECHO_WRITE_SENTINEL = '__ECHO_WRITE__:';
+
+/**
+ * Levels permitted to invoke `decompose_project`. MUST mirror the
+ * `DECOMPOSE_LEVELS` constant in `agentic-tools-write.ts` exactly —
+ * a divergence here would let a level pass the test gate that production
+ * would reject (or vice-versa) and silently mask the bug under E2E runs.
+ */
+const TEST_DECOMPOSE_LEVELS: readonly string[] = Object.freeze([
+  'officer',
+  'senior-management',
+  'management',
+  'system',
+]);
+
+/**
+ * Levels permitted to invoke `delegate_subtask` and `review_deliverable`.
+ * Same lockstep invariant as `TEST_DECOMPOSE_LEVELS`.
+ */
+const TEST_DELEGATE_REVIEW_LEVELS: readonly string[] = Object.freeze([
+  'management',
+  'supervisor',
+  'lead',
+  'system',
+]);
+
+/** Schema mirrors the production `decomposeProjectSchema`. Strict so accidental
+ *  arg drift surfaces in the loop's safeParse step rather than at runtime. */
+const testDecomposeSchema = z
+  .object({
+    brief: z.string().trim().min(1).max(8000),
+    projectId: z.string().min(1).optional(),
+    goalId: z.string().min(1).optional(),
+    subtaskType: z.string().trim().min(1).optional(),
+    maxSubtasks: z.number().int().positive().optional(),
+    depth: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+type TestDecomposeArgs = z.infer<typeof testDecomposeSchema>;
+
+const testDelegateSchema = z
+  .object({
+    planId: z.string().min(1),
+    subtaskTitle: z.string().trim().min(1).max(280),
+    description: z.string().trim().max(8000).optional(),
+    assigneeId: z.string().min(1),
+    parentProjectId: z.string().min(1).optional(),
+    priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+    fallbackAssigneeIds: z.array(z.string().min(1)).max(10).optional(),
+    subtaskType: z.string().trim().min(1).optional(),
+  })
+  .strict();
+type TestDelegateArgs = z.infer<typeof testDelegateSchema>;
+
+const testReviewSchema = z
+  .object({
+    ticketId: z.string().min(1),
+    action: z.enum(['approve', 'request_changes', 'reject']),
+    comment: z.string().trim().max(8000).optional(),
+    planId: z.string().min(1).optional(),
+  })
+  .strict();
+type TestReviewArgs = z.infer<typeof testReviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Default canned envelopes — deterministic so specs can assert on stable
+// values. Mirror the JSON-safe shape of the production envelopes.
+// ---------------------------------------------------------------------------
+
+const FIXTURE_DECOMPOSED_PLAN: DecomposedPlan = Object.freeze({
+  planId: 'plan-test-1',
+  projectId: null,
+  goalId: null,
+  subtasks: Object.freeze([
+    Object.freeze({
+      title: 'Test subtask',
+      description: 'Deterministic test subtask emitted by createTestWriteSideTools.',
+      assigneeId: 'emp-test-swe',
+      assigneeName: 'Mateo Reyes',
+      assigneeScore: 0.65,
+      complexity: 'M' satisfies SubtaskComplexity,
+      dependsOn: Object.freeze([]) as readonly number[],
+      depth: 0,
+    }),
+  ]) as DecomposedPlan['subtasks'],
+  truncated: false,
+}) as DecomposedPlan;
+
+const FIXTURE_DELEGATION: DelegationResult = Object.freeze({
+  ticketId: 'tkt-test-1',
+  assigneeId: 'emp-test-swe',
+  assigneeName: 'Mateo Reyes',
+  status: 'created',
+  fallbackUsed: false,
+  attemptCount: 1,
+}) as DelegationResult;
+
+const FIXTURE_REVIEW: ReviewResult = Object.freeze({
+  ticketId: 'tkt-test-1',
+  outcome: 'approved',
+  summary: 'Test deliverable approved by createTestWriteSideTools.',
+  escalated: false,
+}) as ReviewResult;
+
+// ---------------------------------------------------------------------------
+// Per-prompt canned fixture tables. Lowercase-trimmed keys.
+// ---------------------------------------------------------------------------
+
+const CANNED_DECOMPOSE_TABLE: Readonly<Record<string, DecomposedPlan>> = Object.freeze({});
+const CANNED_DELEGATE_TABLE: Readonly<Record<string, DelegationResult>> = Object.freeze({});
+const CANNED_REVIEW_TABLE: Readonly<Record<string, ReviewResult>> = Object.freeze({});
+
+// ---------------------------------------------------------------------------
+// Sentinel + canned-table extractor — generic over result type.
+// ---------------------------------------------------------------------------
+
+function extractWriteSentinel<T>(args: Record<string, unknown>): T | null {
+  for (const v of Object.values(args)) {
+    if (typeof v !== 'string') continue;
+    const idx = v.indexOf(ECHO_WRITE_SENTINEL);
+    if (idx < 0) continue;
+    const payload = v.slice(idx + ECHO_WRITE_SENTINEL.length).trim();
+    if (payload.length === 0) continue;
+    try {
+      return JSON.parse(payload) as T;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function lookupCanned<T>(table: Readonly<Record<string, T>>, key: string | undefined): T | null {
+  if (key === undefined) return null;
+  const normalised = key.trim().toLowerCase();
+  if (normalised.length === 0) return null;
+  return table[normalised] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Tool factories — three-tier resolution per call.
+// ---------------------------------------------------------------------------
+
+function createTestDecomposeProjectTool(): Tool<TestDecomposeArgs, DecomposedPlan> {
+  return {
+    name: 'decompose_project',
+    description:
+      'Propose a ticket tree for a project brief. Required: `brief` (free-text). ' +
+      'Optional: `projectId`, `goalId`, `subtaskType`, `maxSubtasks`, `depth`. ' +
+      'Returns `{planId, subtasks, truncated}`. Test-mode mirror of the ' +
+      'production `decompose_project` tool — schema-identical, deterministic.',
+    schema: testDecomposeSchema,
+    async execute(args, ctx) {
+      checkAborted(ctx);
+      const sentinel = extractWriteSentinel<DecomposedPlan>(args as Record<string, unknown>);
+      if (sentinel !== null) return sentinel;
+      const canned = lookupCanned(CANNED_DECOMPOSE_TABLE, args.brief);
+      if (canned !== null) return canned;
+      return FIXTURE_DECOMPOSED_PLAN;
+    },
+  };
+}
+
+function createTestDelegateSubtaskTool(): Tool<TestDelegateArgs, DelegationResult> {
+  return {
+    name: 'delegate_subtask',
+    description:
+      'Create a ticket and assign it to an employee. Required: `planId`, `subtaskTitle`, ' +
+      '`assigneeId`. Optional: `description`, `parentProjectId`, `priority`, ' +
+      '`fallbackAssigneeIds`, `subtaskType`. Returns `{ticketId, assigneeId, ' +
+      'assigneeName, status, fallbackUsed, attemptCount}`. Test-mode mirror of ' +
+      'the production `delegate_subtask` tool — schema-identical, deterministic.',
+    schema: testDelegateSchema,
+    async execute(args, ctx) {
+      checkAborted(ctx);
+      const sentinel = extractWriteSentinel<DelegationResult>(args as Record<string, unknown>);
+      if (sentinel !== null) return sentinel;
+      const canned = lookupCanned(CANNED_DELEGATE_TABLE, args.subtaskTitle);
+      if (canned !== null) return canned;
+      return FIXTURE_DELEGATION;
+    },
+  };
+}
+
+function createTestReviewDeliverableTool(): Tool<TestReviewArgs, ReviewResult> {
+  return {
+    name: 'review_deliverable',
+    description:
+      "Review a completed ticket's output. Required: `ticketId`, `action` " +
+      '(approve|request_changes|reject). Optional: `comment`, `planId`. ' +
+      'Returns `{ticketId, outcome, summary, escalated}`. Test-mode mirror of ' +
+      'the production `review_deliverable` tool — schema-identical, deterministic.',
+    schema: testReviewSchema,
+    async execute(args, ctx) {
+      checkAborted(ctx);
+      const sentinel = extractWriteSentinel<ReviewResult>(args as Record<string, unknown>);
+      if (sentinel !== null) return sentinel;
+      const canned = lookupCanned(CANNED_REVIEW_TABLE, args.ticketId);
+      if (canned !== null) return canned;
+      return FIXTURE_REVIEW;
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Level-gated composer — mirrors `buildWriteSideTools` semantics exactly.
+// ---------------------------------------------------------------------------
+
+/** Minimal employee shape the composer level-gates on. */
+export interface TestEmployeeContext {
+  readonly id: string;
+  readonly level: string;
+  readonly isSystem: boolean;
+}
+
+export interface TestToolsForEmployeeArgs {
+  readonly companyId: string;
+  readonly employee: TestEmployeeContext;
+}
+
+/**
+ * Build the level-gated test-mode tool set for `employee`. Returns
+ * read-side tools (always) PLUS the write-side subset gated on the
+ * employee's level per Phase 5 §7.1 — same gates production uses
+ * via `buildWriteSideTools`. The composition root wires this in
+ * place of `[createAgenticTools, buildWriteSideTools]` under
+ * `NODE_ENV === 'test'`.
+ */
+export function createTestToolsForEmployee(args: TestToolsForEmployeeArgs): readonly Tool[] {
+  const readSide = createTestAgenticTools({ companyId: args.companyId });
+  const writeSide: Tool[] = [];
+  const level = args.employee.level;
+  if (TEST_DECOMPOSE_LEVELS.includes(level)) {
+    writeSide.push(createTestDecomposeProjectTool());
+  }
+  if (TEST_DELEGATE_REVIEW_LEVELS.includes(level)) {
+    writeSide.push(createTestDelegateSubtaskTool());
+    writeSide.push(createTestReviewDeliverableTool());
+  }
+  return [...readSide, ...writeSide];
+}
+
+/**
+ * Build only the write-side test tools for `employee`, level-gated. Useful
+ * when callers want to compose the read-side themselves. Returns an empty
+ * array for ICs and any level not on the decompose/delegate/review rosters.
+ */
+export function createTestWriteSideTools(employee: TestEmployeeContext): readonly Tool[] {
+  const out: Tool[] = [];
+  if (TEST_DECOMPOSE_LEVELS.includes(employee.level)) {
+    out.push(createTestDecomposeProjectTool());
+  }
+  if (TEST_DELEGATE_REVIEW_LEVELS.includes(employee.level)) {
+    out.push(createTestDelegateSubtaskTool());
+    out.push(createTestReviewDeliverableTool());
+  }
+  return out;
 }
