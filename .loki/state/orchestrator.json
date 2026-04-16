@@ -95,7 +95,7 @@
         "T7": "6ed012d",
         "T8": "2a4fc63",
         "T9": "dd2adc3",
-        "T10": "pending-final-commit"
+        "T10": "75040ed"
       },
       "unitTestDelta": "+75 (958 → 1033)",
       "e2eDelta": "+1 (7 → 8; +task-planner.spec.ts from T8; filesystem .spec.ts count)",
