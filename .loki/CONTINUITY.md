@@ -1,4 +1,60 @@
-# Loki Continuity — Phase 5, M32 T8 SHIPPED (task-planner.spec.ts E2E); M32 T9+ pending
+# Loki Continuity — Phase 5, **M32 COMPLETE** (Task Planner — write-side); M33 (Copilot Service) next
+
+## M32 COMPLETE — 2026-04-16 (T10 verification + milestone marker)
+
+**Milestone:** Task Planner (Phase 5 — Intelligence Layer). **Complete. All 11 tasks shipped.**
+**Phase 5 status:** M28 / M29 / M30 / M31 / M32 complete. M33 / M34 / M35 remaining.
+**Verification gates (T10):** All green.
+
+### Metrics delta (T10 — pure verification + marker, no code delta)
+
+| Metric | Pre-T10 | Post-T10 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1033 | 1033 | 0 |
+| E2E spec files | 8 | 8 | 0 |
+| E2E Playwright cases green | 9 | 9 | 0 (task-planner.spec.ts has 2 cases) |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings | 24 | 24 | 0 |
+| Typecheck across 6 packages | clean | clean | — |
+| Total E2E duration | 26.4s | 29.1s | +2.7s (Playwright warm-up variance) |
+
+### What shipped in T10
+
+- **ABI rebuild dance verified.** Node ABI rebuild for vitest via `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` (and same for keytar). Then Electron ABI rebuild for Playwright via `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. Confirmed pattern: `pnpm rebuild <pkg>` is a no-op under pnpm's content-addressed store — must invoke node-gyp directly in the module dir. Documented in orchestrator.json notes + pending.json notes for M33+.
+- **Full test suite** — `pnpm test`: 88 files / 1033 tests pass in 20.57s.
+- **Biome** — `pnpm lint`: 0 errors, 24 warnings (exactly at target ≤24). 330 files checked in 577ms.
+- **Typecheck** — `pnpm -r typecheck`: clean across all 6 workspace packages.
+- **E2E** — `pnpm -F @team-x/desktop test:e2e`: 9 passed in 29.1s (8 spec files; task-planner.spec.ts has 2 tests).
+- **orchestrator.json rewritten.** M32 folded from `inFlightMilestone` into `history.M32` block with full commit list (T0=f515ea7 / T1=62a0504 / T2=cdf7315 / T3=8bf1e9e / T4=dd17eff / T5=46401c1 / T6=219d8ef / T7=6ed012d / T8=2a4fc63 / T9=dd2adc3 / T10=pending-final-commit), unit-test delta +75 (958→1033), E2E delta +1 (7→8), lint delta 0. `currentMilestone=M33`, `milestoneName=Copilot Service`, `tasksCompleted=0`, `totalTasks=null` (plan doc not yet written). `nextMilestone=M34` (Copilot UI). Baseline post-M32: 1033 unit / 8 E2E / 0 errors / 24 warnings / typecheck clean. `phaseComplete=false` — M33 / M34 / M35 still ahead.
+- **pending.json reset** for M33. Only T0 (write plan doc) listed until the M33 plan doc materializes the full T1–TN breakdown — same pattern as M32's pre-T2 state.
+- **current-task.json rewritten** for M33 T0: author `docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md` using M32 plan doc as structural template.
+- **Phase 5 design doc §9** — M32 row flipped `🚧 In progress — 9 of 11 tasks shipped (2026-04-15)` → `✅ Complete (2026-04-16)`. Shipped-so-far summary updated to "Project totals as of M32 complete (2026-04-16): 1033 unit tests / 8 E2E specs (9 Playwright cases — one spec has 2 tests)".
+- **Atomic commit pending:** `chore(m32): M32 T10 — verification + milestone marker`. Ledger commit next: `chore(loki): M32 T10 — commit ledger (<sha>)`.
+
+### M32 follow-ups (post-completion)
+
+**None.** No paper-cuts surfaced during T8 E2E round-trip or T10 verification. The M31 follow-up class — race conditions between bus emit and React Query subscription attach — is closed by F1's `getRunSnapshot` backfill pattern, which is now the canonical way to reconcile a fast loop with a slow renderer subscription. Future write-side tool surfaces (M33 Copilot Service) should follow the same backfill-on-mount pattern.
+
+### Gotchas captured (T10)
+
+1. **pnpm rebuild <pkg> is a no-op for native modules under pnpm's content-addressed store.** When ABI needs to change (Electron ↔ Node), you must invoke node-gyp directly in the hashed module dir: `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release`. The first failure signature is `NODE_MODULE_VERSION 125 vs 137` mismatch from better-sqlite3's bindings loader. Same pattern for keytar. Document this in the M33+ plan docs' verification section.
+2. **Playwright case count ≠ spec file count.** `ls apps/desktop/e2e/*.spec.ts | wc -l = 8`, but `pnpm test:e2e` reports `9 passed` — one spec has 2 test cases. orchestrator.json + pending.json use `e2eSpecs: 8` (file count, authoritative) and `e2eGreenCount: 9` (Playwright case count, for parity with terminal output). Don't conflate the two.
+3. **Biome warning count is exactly at the target ceiling.** Rocky's CLAUDE.md says ≤24 warnings; we're at 24. Future milestones must plan warning-budget accordingly — the orchestrator.json baseline caps `lintWarningsMax: 76` for the planning-phase ceiling, but the operational target for steady-state is ≤24.
+
+### Patterns reinforced
+
+- **ABI rebuild dance** is now canonical for every `*-T10` verification run. Runbook: (1) node-gyp rebuild for better-sqlite3 + keytar → (2) `pnpm test` → (3) `pnpm lint` + `pnpm -r typecheck` → (4) `electron-rebuild -f -w better-sqlite3,keytar` → (5) `pnpm -F @team-x/desktop test:e2e`. Steps 2 and 4 cannot be swapped — vitest and Playwright need different ABIs.
+- **Milestone-marker file set is stable:** `.loki/state/orchestrator.json` (fold + advance currentMilestone), `.loki/queue/pending.json` (reset for next milestone), `.loki/queue/current-task.json` (rewrite for next-milestone T0), Phase 5 design doc §9 (flip status row + update totals), CONTINUITY.md (prepend checkpoint). Same five files every T10.
+
+### Next Session Startup Checklist (M33 T0+)
+
+1. Read this CONTINUITY header — M32 COMPLETE, M33 T0 is "write plan doc".
+2. Read `.loki/state/orchestrator.json` → history.M32 has full commit list; history.M31 T10 still `pending-final-commit` (pre-existing, not blocking).
+3. Read `.loki/queue/current-task.json` → M33 T0 goal + acceptance criteria.
+4. **T0 = write `docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md`** using M32 plan doc as template. Required sections: Overview, What ships, Invariants preserved, Success criteria, Task breakdown (T1–TN), Acceptance criteria (incl. ABI rebuild dance). Scope per Phase 5 design §9: new system-copilot pseudo-employee (second `is_system=1` row), periodic analyzer with LLM + RAG, proactive nudges in Copilot Conversations thread, `copilot.*` IPC + bus events, orchestrator integration for scheduled/event-triggered runs. Invariants #1 / #2 / #6 / #7 / #11 must be preserved.
+5. After plan doc: materialize T1–TN into pending.json and flip Phase 5 design doc §9 M33 status 📋 Planned → 🚧 In progress.
+
+---
 
 ## M32 T8 SHIPPED — 2026-04-15
 

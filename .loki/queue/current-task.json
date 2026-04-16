@@ -1,22 +1,18 @@
 {
-  "taskId": "M32-T10",
-  "milestone": "M32",
-  "title": "Verification + milestone marker — full test suite, biome, typecheck, E2E, M32 history fold",
-  "goal": "Complete M32 T10 — final verification pass and milestone marker. Run full test suite (vitest -r, target 1033/1033 green), biome check (target 0 errors, ≤24 warnings), pnpm -r typecheck (clean across all 6 packages), full E2E suite (`pnpm -F @team-x/desktop test:e2e`, target 8/8 green including task-planner.spec.ts). ABI rebuild dance required first: `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. After verification: fold M32 from inflightMilestone into history block in orchestrator.json, set phaseComplete=false (M33-M35 still ahead), update Phase 5 design doc §9 M32 status to ✅ Complete, write Phase 5 M32 follow-ups section in CONTINUITY.md (none expected), reset .loki/queue/pending.json with M33 task list, write new current-task.json for M33 T0. Atomic commit `chore(m32): M32 T10 — verification + milestone marker`. Ledger commit `chore(loki): M32 T10 — commit ledger (<sha>)`.",
+  "taskId": "M33-T0",
+  "milestone": "M33",
+  "title": "Write M33 plan doc — Copilot Service",
+  "goal": "Author docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md using docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md as the structural template. Required sections: Overview, What ships (T1–TN bullet list), Invariants preserved, Success criteria, Task breakdown (per-task scope with file paths + test deltas), Acceptance criteria (ABI rebuild dance + atomic-commit cadence + Loki ledger commits). Scope per Phase 5 design §9: new system-copilot pseudo-employee (second `is_system=1` row, separate role card at role-packs/strategia-official/roles/system/system-copilot.md), periodic analyzer with LLM + RAG retriever (M29) + pause-aware provider router (M31), proactive nudges surfaced in Copilot Conversations thread as a new message kind or tagged message, copilot.* IPC + bus events (e.g. `copilot.nudge`, `copilot.analyzed`), orchestrator integration for scheduled/event-triggered runs. Invariants to preserve: pure-view renderer (#1), singleton orchestrator (#2), append-only events table (#6), zero phone-home (#7), bus-event-on-IPC-mutation (#11).",
   "status": "pending",
-  "predecessor": "M32-T9 shipped as dd2adc3",
+  "predecessor": "M32-T10 shipped as part of M32 COMPLETE (2026-04-16)",
   "acceptance": [
-    "Full vitest run green (1033/1033 expected)",
-    "biome check passes (0 errors)",
-    "pnpm -r typecheck clean across all 6 packages",
-    "Full E2E run green (8/8 specs including task-planner.spec.ts)",
-    "orchestrator.json: M32 folded from inflightMilestone into history",
-    "Phase 5 design doc §9 M32 status flipped In-progress → ✅ Complete",
-    "pending.json reset for M33 (Copilot Service)",
-    "current-task.json rewritten for M33 T0",
-    "CONTINUITY.md updated with M32 COMPLETE checkpoint",
-    "Atomic commit: chore(m32): M32 T10 — verification + milestone marker",
-    "Ledger commit: chore(loki): M32 T10 — commit ledger (<sha>)"
+    "Plan doc lives at docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
+    "Mirrors the M32 plan doc structure (Overview + What ships + Invariants preserved + Success criteria + Task breakdown + Acceptance criteria)",
+    "Task breakdown enumerates T1–TN with per-task scope, file paths touched, unit/E2E test deltas, and commit-message templates",
+    "Documents ABI rebuild dance (Node via node-gyp + Electron via electron-rebuild) in the verification section",
+    "Updates Phase 5 design doc §9 M33 status from 📋 Planned → 🚧 In progress once T1 begins (this commit only writes the plan doc)",
+    "Atomic commit: `feat(m33): M33 T0 — plan doc`",
+    "Ledger commit: `chore(loki): M33 T0 — commit ledger (<sha>)`"
   ],
-  "createdAt": "2026-04-15T21:30:00Z"
+  "createdAt": "2026-04-16T07:20:00Z"
 }

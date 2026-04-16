@@ -1,108 +1,26 @@
 {
-  "milestone": "M32",
-  "milestoneName": "Task Planner (decompose/delegate/review tools)",
+  "milestone": "M33",
+  "milestoneName": "Copilot Service",
   "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": "docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md",
-  "previousMilestone": "M31",
-  "previousMilestoneCompletedAt": "2026-04-15T14:30:00Z",
-  "createdAt": "2026-04-15T15:18:00Z",
-  "updatedAt": "2026-04-15T21:25:00Z",
-  "totalTasks": 11,
-  "tasksShipped": 10,
+  "planDoc": null,
+  "previousMilestone": "M32",
+  "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
+  "createdAt": "2026-04-16T07:20:00Z",
+  "updatedAt": "2026-04-16T07:20:00Z",
+  "totalTasks": null,
+  "tasksShipped": 0,
   "tasks": [
     {
       "id": "T0",
-      "name": "F1 useAgentStepStream backfill on mount",
-      "status": "shipped",
-      "commit": "f515ea7",
-      "unitTestDelta": "+6 (958 → 964)",
-      "scope": "Closes M31 follow-up F1. New wire type AgenticRunSnapshot + command.getRunSnapshot IPC + AgenticLoopService.getRunSnapshot projection + hook backfill with (runId,stepIndex) dedup."
-    },
-    {
-      "id": "T1",
-      "name": "F2 useThreadList bus invalidator",
-      "status": "shipped",
-      "commit": "62a0504",
-      "unitTestDelta": "0 (964 → 964)",
-      "scope": "Closes M31 follow-up F2. useEffect subscribes to agentic.completed / agentic.failed on the dashboard bus and invalidates ['threads', companyId] so the Copilot thread appears live without manual refetch."
-    },
-    {
-      "id": "T2",
-      "name": "Write-side agentic tools + workload scoring",
-      "status": "shipped",
-      "commit": "cdf7315",
-      "unitTestDelta": "+25 (964 → 989)",
-      "scope": "New file apps/desktop/src/main/services/agentic-tools-write.ts: three Tool factories (decompose_project for Officer/Senior-Mgmt/Management/system, delegate_subtask + review_deliverable for Management/Supervisor/Lead/system), deterministic scoreEmployee with locked Phase 5 §7.4 weights (0.4 role-fit + 0.3 (1-load) + 0.2 avail + 0.1 past-perf), computeRoleFit keyword heuristic over title+level (Risk #2 option (b) — capabilities frontmatter deferred to M33/M34), buildWriteSideTools level-gated composer, PLANNER_DEFAULTS fallback constants (T7 wires real settings), in-memory EscalationTracker, width-compatible WriteSideEventBus interface (type: string) so existing AgenticLoopEventBus drops in unchanged before T4 promotes new event-type literals into canonical EventType. Tools emit plan.proposed / task.delegated / task.escalated / review.requested / review.completed via bus.emit. Companion test file agentic-tools-write.test.ts ships 25 unit tests: 10-case score determinism, weights-sum-1.0, system/archived/fired score 0, availability+load+past-perf term verification, role-fit heuristic engineer→implement + baseline fallback + system→0, decompose max-tickets clamp + max-depth gate + approval-level gate, JSON-safe envelope round-trip, delegate happy path + fallback chain + escalation threshold + project linkage, review unfinished-ticket reject + happy path + reject+threshold escalation, composer level-gating (IC empty / Officer+SM decompose-only / Sup+Lead delegate+review / Mgmt+system all three), bus-throws non-fatal."
-    },
-    {
-      "id": "T3",
-      "name": "Level-based tool injection + test seam",
-      "status": "shipped",
-      "commit": "8bf1e9e",
-      "unitTestDelta": "+11 (989 → 1000)",
-      "filesChanged": "5 files, +744 / -24 LOC: apps/desktop/src/main/index.ts (+131), apps/desktop/src/main/services/agentic-loop-service.ts (+107), apps/desktop/src/main/services/agentic-loop-service.test.ts (+115), apps/desktop/src/main/services/test-agentic-tools.test.ts (NEW +117), apps/desktop/src/main/services/test-agentic-tools.ts (NEW +298).",
-      "scope": "Extends AgenticLoopService with employee-aware tool-registry injection so the agentic loop is level-gated per Phase 5 §7.1 instead of flat per-company. New types: AgenticLoopEmployeeContext + AgenticLoopEmployeeLookup. AgenticLoopEmployeesRepo widened with optional getById(). buildTools deps signature gains employee context. StartArgs gains optional employeeId; start() resolves actor via explicit getById path or default system-agent fallback, validates cross-company isolation, and threads actorEmployee through every identity touchpoint (members, runs row, message authors, bus events) while preserving the `systemAgentId` field name on RunState for M31 wire-contract stability. Composition root in main/index.ts now composes [...readSideTools, ...buildWriteSideTools(employee, ...)] in production with a conservative open-ticket-count workload provider (in-meeting/avg-completion stubbed for M33), a no-op write-side orchestrator enqueue (M33 wires the real path), and a streamAgent-wrapped WriteSideCompleteFn that resolves the actor's provider per call; NODE_ENV=test branches to createTestToolsForEmployee. employeesRepo facade gains getById() that maps EmployeeRow → AgenticLoopEmployeeLookup with isSystem null-safe default. NEW test-agentic-tools.ts (298 LOC) ships the ECHO_WRITE_SENTINEL + per-tool canned tables + schema-identical decompose_project/delegate_subtask/review_deliverable factories with sentinel/canned/fallback three-tier resolution mirroring test-classifier and test-agentic-provider + createTestToolsForEmployee level-gated composer + createTestWriteSideTools standalone factory — lockstep invariant with production buildWriteSideTools gates. Tests +11: agentic-loop-service.test.ts +4 (M32 T3 default-actor capture, explicit employeeId resolution + actor authorship, unknown-id throw + side-effect-free, cross-company guard); NEW test-agentic-tools.test.ts +7 (system-agent gets all, IC read-only, officer = read+decompose, management = read+all, supervisor/lead = read+delegate+review, standalone factory IC empty + schema-identical mirror). Verification per commit message: pnpm -r typecheck clean across all 6 packages; biome check clean on all 5 T3 files (auto-fixed import order in main/index.ts and test-agentic-tools.test.ts); vitest green on agentic-loop-service.test.ts (25) + test-agentic-tools.test.ts (7) + agentic-tools-write.test.ts (25) + agentic-tools.test.ts (40)."
-    },
-    {
-      "id": "T4",
-      "name": "New event types + step kinds in shared-types",
-      "status": "shipped",
-      "commit": "dd17eff",
-      "unitTestDelta": "+3 (1000 → 1003)",
-      "filesChanged": "4 files, +266 / -13 LOC: packages/shared-types/src/events.ts (M), packages/shared-types/src/events-m32.test.ts (NEW), apps/desktop/src/main/services/agentic-tools-write.ts (M), apps/desktop/src/renderer/src/features/command/step-card.tsx (M).",
-      "scope": "Promotes WriteSideEventType literals into canonical EventType union (+6 members: plan.proposed, plan.approved, task.delegated, task.escalated, review.requested, review.completed). Extends AgentStepKind (+3 members: ticket_created, delegation_made, review_pending). Ships 6 JSON-safe payload types: PlanProposedPayload (subtask tree), PlanApprovedPayload (M33 prep), TaskDelegatedPayload (fallback+attempts), TaskEscalatedPayload (reason+original), ReviewRequestedPayload, ReviewCompletedPayload (outcome+escalation). AgentStepPayload.data doc extended with 3 new kind shapes. AgenticRunSnapshot.steps wire-shape invariant preserved. agentic-tools-write.ts: import type { EventType } added, all 6 satisfies WriteSideEventType swapped to satisfies EventType for canonical narrowing. step-card.tsx: 3 minimal case branches (ticket_created=emerald, delegation_made=sky/GitBranch, review_pending=amber/Brain) with data-step-kind stable E2E selectors; exhaustiveness guard preserved. T2 string-literal immunity CONFIRMED: 25/25 tests pass. Tests +3: events-m32.test.ts (NEW) — EventType union check via expectTypeOf for all 6, AgentStepKind union + AgentStepPayload construction for all 3, payload discriminator shapes for all 6 interfaces."
-    },
-    {
-      "id": "T5",
-      "name": "Write-side confirmation gate in palette",
-      "status": "shipped",
-      "commit": "46401c1",
-      "unitTestDelta": "+8 (1003 → 1011)",
-      "filesChanged": "4 files, +236 / -51 LOC: apps/desktop/src/main/services/command-service.ts (M), apps/desktop/src/main/services/command-service.test.ts (M), apps/desktop/src/renderer/src/features/command/command-palette.tsx (M), packages/shared-types/src/command.ts (M).",
-      "scope": "Write-side confirmation gate for complex_request intents with keyword heuristic (WRITE_SIDE_KEYWORDS regex). Gate 2.5 in execute() fires before agentic loop dispatch when rawText matches write-side verbs (decompose, delegate, create tickets, review) and confirmed !== true and skipConfirmation !== true. Returns { kind: 'needs_confirmation', gateKind: 'write-side', summary }. Existing Gate 2 (destructive) now also tags gateKind: 'destructive'. ExecuteRequest/IpcExecuteRequest gain skipConfirmation?: boolean (M33 Copilot prep). ExecuteResult/IpcExecuteResult/IpcParseResult needs_confirmation variant gains gateKind?: 'destructive' | 'write-side'. Palette conditionally renders amber (write-side) vs red (destructive) confirmation card. Tests +8: 4 heuristic (keyword matching + false negatives), 4 gate integration (needs_confirmation return, confirmed:true passthrough, skipConfirmation bypass, no-keyword passthrough)."
-    },
-    {
-      "id": "T6",
-      "name": "Full step-card variants + AuditView planner chips",
-      "status": "shipped",
-      "commit": "219d8ef",
-      "unitTestDelta": "+11 (1011 → 1022)",
-      "filesChanged": "4 files, +392 / -29 LOC: apps/desktop/src/renderer/src/features/command/step-card.tsx (M), apps/desktop/src/renderer/src/features/command/step-card-narrow.ts (NEW), apps/desktop/src/renderer/src/features/command/step-card-narrow.test.ts (NEW), apps/desktop/src/renderer/src/features/audit/audit-view.tsx (M).",
-      "scope": "T4-minimal step-card branches (ticket_created, delegation_made, review_pending) upgraded to full rendering with data narrowing, detail text, and color polish. Narrow helpers extracted to step-card-narrow.ts for testability without renderer deps (no jsdom). ticket_created: Ticket icon, title text, assignee + plan refs. delegation_made: GitBranch icon, assignee name, plan ref. review_pending: ClipboardCheck icon, outcome color-coding (approve=emerald, reject=red, pending=amber), ticket + reviewer refs. AuditView gains 6 new planner event types: EVENT_TYPE_COLORS (plan.proposed/approved violet, task.delegated sky, task.escalated rose, review.requested/completed amber), EVENT_TYPE_LABELS for all 6, buildRowSummary payload-aware summaries (subtask count, assignee, outcome, escalation). Tests +11: 4 narrowTicketCreated + 3 narrowDelegationMade + 4 narrowReviewPending."
-    },
-    {
-      "id": "T7",
-      "name": "Planner settings + UI",
-      "status": "shipped",
-      "commit": "6ed012d",
-      "unitTestDelta": "+11 (1022 → 1033)",
-      "filesChanged": "11 files, +676 / -2 LOC: packages/shared-types/src/ipc.ts (M), apps/desktop/src/main/db/repos/settings.ts (M), apps/desktop/src/main/db/repos/settings.test.ts (M), apps/desktop/src/main/db/repos/settings-planner.test.ts (NEW), apps/desktop/src/main/ipc/handlers.ts (M), apps/desktop/src/main/ipc/register.ts (M), apps/desktop/src/main/index.ts (M), apps/desktop/src/preload/api.ts (M), apps/desktop/src/renderer/src/hooks/use-settings.ts (M), apps/desktop/src/renderer/src/features/settings/planner-section.tsx (NEW), apps/desktop/src/renderer/src/features/settings/settings-view.tsx (M).",
-      "scope": "Four clamped planner settings keys (planner_max_tickets 1-50 default 10, planner_max_depth 1-4 default 2, planner_approval_level enum default 'management', planner_escalation_threshold 1-10 default 3). PLANNER_SETTINGS_CLAMPS + PLANNER_APPROVAL_LEVELS + PlannerApprovalLevel type + SettingsGetPlannerResponse/SettingsSetPlannerRequest in shared-types. settings repo getPlanner()/setPlanner() with enum validation + numeric clamping + seedDefaults extension (+4 keys). IpcSettingsRepo widened. IPC handlers settingsGetPlanner/settingsSetPlanner. register.ts channels + ipcMain.handle. Preload bridge channels + methods. React Query hooks usePlannerSettings/useSetPlanner. NEW PlannerSection component (GitBranch icon, 3 number inputs + 1 select, onBlur clamping, loading/error/saving states). SettingsView imports + renders PlannerSection after AgenticSection. Composition root wires settingsRepo.getPlanner() into writeSideDeps.getPlanner replacing static PLANNER_DEFAULTS fallback (loadDenominator + pastPerformanceCeilingMs stay as internal constants). Existing settings.test.ts seedDefaults count updated 14→18 and 13→17. Tests +11: 3 getPlanner (defaults/persisted/invalid-fallback) + 4 setPlanner clamping (maxTickets/maxDepth/escalationThreshold/approvalLevel-enum) + 1 non-finite rejection + 1 fractional rounding + 2 seedDefaults (seed+no-overwrite)."
-    },
-    {
-      "id": "T8",
-      "name": "E2E spec task-planner.spec.ts — write-side round-trip",
-      "status": "shipped",
-      "commit": "2a4fc63",
-      "unitTestDelta": "0 (1033 → 1033) — pure E2E task",
-      "e2eDelta": "+1 (7 → 8; +task-planner.spec.ts) — corrected from earlier '8 → 9' miscount; actual filesystem has 8 .spec.ts files",
-      "filesChanged": "3 files, +321 / -0 LOC: apps/desktop/e2e/task-planner.spec.ts (NEW), apps/desktop/src/main/services/test-classifier.ts (M), apps/desktop/src/main/services/test-agentic-provider.ts (M).",
-      "scope": "Pure test-harness extension — no production code. Canned classifier gains a lowercase-trimmed entry for 'decompose the frontend redesign into tickets' → complex_request (confidence 0.91). Phrase contains write-side keywords (decompose + tickets) so command-service.ts fires the T5 write-side confirmation gate before dispatching. Canned provider gains a CANNED_TABLE entry scripting plan → tool_call(decompose_project) → tool_result → tool_call(delegate_subtask) → tool_result → final_answer. Default FIXTURE_DECOMPOSED_PLAN (1 subtask, plan-test-1, assignee emp-test-swe) + FIXTURE_DELEGATION (tkt-test-1, Mateo Reyes) in test-agentic-tools.ts resolve the two tool calls with zero new canned entries. NEW spec apps/desktop/e2e/task-planner.spec.ts (285 LOC) mirrors agentic-loop.spec.ts with the T5 write-side-gate step inserted. Assertions: (1) Ctrl+K opens palette, (2) intent chip 'Route to Agent', (3) Enter shows amber 'Confirm write-side agentic run' card — asserts 'Confirm destructive action' ABSENT to guard against mis-routing, (4) Confirm click dispatches the loop, (5) data-step-kind='answer' card visible with canned text 'Decomposed the frontend redesign', (6) palette step count ≥ 1 (observed = 7 — proves F1 backfill working end-to-end), (7) 'Open Thread' closes palette + opens drawer on copilot thread, (8) 'Copilot transcript — read only' banner + canned answer text in transcript, (9) Dashboard → Commands shows 'Route to Agent' audit row. 8/8 E2E green in 26.4s; biome + typecheck clean. Invariants preserved: NODE_ENV=test gate, production paths untouched, three-tier canned-seam pattern, wire shapes unchanged. ABI rebuild dance required before E2E (documented — Node→Electron swap via `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`)."
-    },
-    {
-      "id": "T9",
-      "name": "Docs pass — CLAUDE.md + CHANGELOG + README + user-guide/task-planner.md + Phase 5 design resequence",
-      "status": "shipped",
-      "commit": "dd2adc3",
-      "unitTestDelta": "0 (1033 → 1033) — docs-only",
-      "e2eDelta": "0",
-      "filesChanged": "6 files, +273 / -20 LOC: CLAUDE.md (M), CHANGELOG.md (M), README.md (M), docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md (M), docs/user-guide/README.md (M), docs/user-guide/task-planner.md (NEW, ~290 LOC).",
-      "scope": "Cross-cutting docs refresh for M32 T0-T8. CLAUDE.md Phase 5 block: M31 entry summarized as shipped; new M32 entry covering T0 (F1 backfill) + T1 (F2 invalidator) + T2 (write-side tools + workload scoring) + T3 (level-gated injection + test seam) + T4 (new event types + step kinds) + T5 (amber write-side gate) + T6 (full step-card variants + AuditView chips) + T7 (planner settings + UI) + T8 (task-planner.spec.ts E2E). CLAUDE.md IPC table +settings.getPlanner / +settings.setPlanner / +command.getRunSnapshot. CLAUDE.md bus events table +6 planner events (plan.proposed / plan.approved / task.delegated / task.escalated / review.requested / review.completed). CLAUDE.md troubleshooting +7 planner entries; F1/F2 entries rewritten as RESOLVED with commit refs f515ea7 / 62a0504. CHANGELOG [Unreleased] M32 entry above M31 (Keep-a-Changelog, Added 15 / Changed 7 / Fixed 2). README tests badge 958 → 1033; Intelligence Layer +Task Planner blurb; Tech Stack Vitest 612 → 1033 + Playwright 4 → 8; Testing section 612 → 1033 unit + 4 → 8 E2E with 8-row spec table. NEW docs/user-guide/task-planner.md (~290 LOC F10 style mirroring agentic-loop.md): Overview / When the Planner Triggers / Reading the Step Log / The Three Write-Side Tools / Workload Scoring / Settings / Confirmation Gates (amber vs red) / Privacy and Runtime / Example Run (7-step canned-T8 transcript) / Troubleshooting (11 entries) / Privacy. docs/user-guide/README.md TOC adds Task Planner as #9; Keyboard Shortcuts moves to #10. Phase 5 design doc §9 M32 status flipped Next → In-progress with full shipped-scope deliverables row; §9 totals updated (416 unit + 4 E2E shipped, projected Phase 5 exit ~1090 / 9-10); §13 +D11 (write-side keyword heuristic, locked) + D12 (in-memory escalation tracker, locked); §14 F1+F2 marked CLOSED with commit refs; §15 NEW empty post-M32 follow-ups section; orphan duplicate D8 row at end of file removed. Correction: actual E2E spec count is 8 (8 .spec.ts files in apps/desktop/e2e), not 9 as earlier pending.json entries stated — all three docs corrected to 8 in this commit."
+      "name": "Write M33 plan doc — Copilot Service",
+      "status": "pending",
+      "scope": "Author docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md using docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md as structural template. Required sections: Overview, What ships, Invariants preserved, Success criteria, Task breakdown (T1–TN), Acceptance criteria. Scope per Phase 5 design §9: new system-copilot pseudo-employee (separate from system-agent; second `is_system=1` row with role role-packs/strategia-official/roles/system/system-copilot.md), periodic analyzer that runs on a schedule or event trigger (meeting ended, ticket closed, goal progress change) and uses the RAG retriever (M29) to synthesize proactive nudges, new copilot.* IPC surface + bus events, proactive-nudge surfacing in the Copilot Conversations thread (either as a new thread kind or a tagged message). Must keep the orchestrator pause semantics intact (copilot runs pause during meetings too) and must not emit bus events without also writing an audit row (invariant #11)."
     }
   ],
   "baseline": {
-    "unitTests": 964,
+    "unitTests": 1033,
     "e2eSpecs": 8,
+    "e2eGreenCount": 9,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true
@@ -114,15 +32,10 @@
     "lintWarningsMax": 76
   },
   "notes": [
-    "M31 (Agentic Loop — read-side) COMPLETE. All 11 tasks shipped, 8/8 E2E green, 958/958 unit tests passing.",
-    "M32 T0 + T1 SHIPPED — M31 follow-ups F1 + F2 closed. 964/964 unit tests green; lint 0 errors, 24 warnings (baseline). Commits: T0=f515ea7 (F1 backfill), T1=62a0504 (F2 invalidator).",
-    "M32 T3 SHIPPED — level-based tool injection + test seam. 1000/1000 unit tests green. Commit: T3=8bf1e9e. The agentic loop is now level-gated end-to-end from composition root through service to LLM tool registry. Next is T4: promote WriteSideEventType literals into the canonical EventType union in packages/shared-types/src/events.ts + AgentStepKind gains 'ticket_created' | 'delegation_made' | 'review_pending' + corresponding AgentStepPayload variants. Replace `satisfies WriteSideEventType` annotations in agentic-tools-write.ts tool bodies with `satisfies EventType` for canonical narrowing. T2 string-literal discriminators make those tests immune by construction — if they regress, the T4 commit is wrong.",
-    "M32 plan doc STILL not yet written. Write it when T2 work begins — use docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md as the structural template. Required sections: Overview, What ships, Invariants preserved, Success criteria, Task breakdown (T2–TN), Acceptance criteria (three-tier test seam + ABI rebuild dance + atomic-commit discipline).",
-    "M32 remaining scope (from Phase 5 design §4 + §7): write-side Task Planner tools — decompose_project, delegate_subtask, review_deliverable. Swaps M31's read-only tool registry for the write set on the same AgenticLoopService harness. New event types: plan.*, task.*, review.*.",
-    "With F1 + F2 in place, future M32 write-side specs can assume the palette step log backfills reliably and the Copilot Conversations list is live-invalidated. agentic-loop.spec.ts does NOT yet exercise the new surfaces; recommend extending it (or adding task-planner.spec.ts) when T2 lands so the backfill path has an E2E guard.",
-    "AgenticRunSnapshot (events.ts) is the new wire type to extend when write-side step kinds (ticket_created / delegation_made / review_pending) land — keep the shape JSON-safe and the discriminator field name `kind` to mirror AgentStepPayload.",
-    "M31 patterns to carry into M32: three-tier canned test seam (classifier/provider/tools), {rows, truncated} envelope for agentic tools, data-step-kind as stable E2E selector, pause-aware providerRouter.complete wrapper, AbortController-driven stop with canceled-status coercion, per-task Loki ledger commits (chore(loki): M<N> T<N> — commit ledger (<sha>)).",
-    "ABI rebuild dance is mandatory before every T10-style verification run. Node ABI via `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` (pnpm rebuild silently no-ops when the prebuild dir is missing), Electron ABI via `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. Document this in the M32 plan T10 acceptance criteria.",
-    "Gotcha RESOLVED same session (2026-04-15, plan-doc follow-up): composite TS project references read shared-types dist/*.d.ts from dist/, not src/. Fix landed in packages/shared-types/package.json — scripts.typecheck changed from `tsc --noEmit` to `tsc --build` (always emits + incremental); added `build: tsc --build --force` + `clean: tsc --build --clean`. Verified green via `rm -rf packages/shared-types/dist && pnpm -r typecheck`. Manual `tsc --build --force` dance is no longer required. M32 plan doc T4 + T10 notes updated in the same edit pass."
+    "M32 (Task Planner — write-side) COMPLETE (2026-04-16). 1033/1033 unit tests + 8 .spec.ts files (9 Playwright cases) green. Details in .loki/state/orchestrator.json history.M32.",
+    "M33 plan doc is the first deliverable. Previous milestones wrote their plan docs at T0 or T1 — M33 follows the same pattern. Copy the M32 template (Overview + What ships + Invariants preserved + Success criteria + Task breakdown + Acceptance criteria + ABI rebuild dance) and fill in the Copilot-Service-specific scope.",
+    "ABI rebuild dance is verified T10 procedure. Node rebuild (node-gyp) for vitest, Electron rebuild (electron-rebuild) for Playwright. Document this in the M33 plan doc acceptance criteria same way M32 did.",
+    "Full task breakdown for M33 gets materialized into this pending.json once the plan doc is written. Until then, T0 is the only task.",
+    "Patterns to carry forward: three-tier canned test seam, {rows, truncated} envelope, data-step-kind E2E selectors, pause-aware providerRouter wrapper, AbortController stop, atomic commits + ledger commits, bus-event + audit-row invariant (#11)."
   ]
 }

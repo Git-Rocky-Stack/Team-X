@@ -1,26 +1,26 @@
 {
   "currentPhase": "DEVELOPMENT",
-  "currentMilestone": "M32",
-  "milestoneName": "Task Planner (decompose/delegate/review tools)",
-  "tasksCompleted": 10,
+  "currentMilestone": "M33",
+  "milestoneName": "Copilot Service",
+  "tasksCompleted": 0,
   "tasksFailed": 0,
-  "totalTasks": 11,
-  "planDoc": "docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md",
-  "startedAt": "2026-04-15T15:18:00Z",
+  "totalTasks": null,
+  "planDoc": null,
+  "startedAt": null,
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {},
   "phase": "Phase 5 — Intelligence Layer",
-  "previousMilestone": "M31",
-  "previousMilestoneName": "Agentic Loop",
-  "previousMilestoneCompletedAt": "2026-04-15T14:30:00Z",
-  "nextMilestone": "M33",
-  "nextMilestoneName": "Copilot Service",
+  "previousMilestone": "M32",
+  "previousMilestoneName": "Task Planner",
+  "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
+  "nextMilestone": "M34",
+  "nextMilestoneName": "Copilot UI",
   "tasksInProgress": {},
   "baseline": {
-    "unitTests": 964,
+    "unitTests": 1033,
     "e2eSpecs": 8,
-    "e2eGreenCount": 8,
+    "e2eGreenCount": 9,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true
@@ -78,13 +78,12 @@
         "F1: useAgentStepStream backfill on mount — closed in M32 T0 (f515ea7)",
         "F2: useThreadList bus invalidator for agent.* events — closed in M32 T1 (62a0504)"
       ]
-    }
-  },
-  "inFlightMilestone": {
+    },
     "M32": {
       "name": "Task Planner",
       "startedAt": "2026-04-15T15:18:00Z",
-      "tasksShipped": 10,
+      "completedAt": "2026-04-16T07:20:00Z",
+      "tasksShipped": 11,
       "commits": {
         "T0": "f515ea7",
         "T1": "62a0504",
@@ -95,12 +94,28 @@
         "T6": "219d8ef",
         "T7": "6ed012d",
         "T8": "2a4fc63",
-        "T9": "dd2adc3"
+        "T9": "dd2adc3",
+        "T10": "pending-final-commit"
       },
-      "tasksScope": "T0 + T1 = M31 follow-ups F1 + F2. T2 = write-side agentic tools (decompose_project / delegate_subtask / review_deliverable) + deterministic workload scorer + level-gated composer + WriteSideEventBus + 25 unit tests. T3 = level-based AgenticLoopService tool-registry injection (employeesRepo.getById + AgenticLoopEmployeeContext/Lookup + actor threading + cross-company guard) + test-agentic-tools.ts three-tier seam + 11 unit tests. T4 = shared-types EventType promotion (+6 planner events) + AgentStepKind variants (ticket_created / delegation_made / review_pending) + 6 payload types + satisfies-EventType swap + step-card minimal branches + 3 type-level tests. T5 = write-side confirmation gate (amber card) with WRITE_SIDE_KEYWORDS heuristic + skipConfirmation opt-out + 8 unit tests. T6 = full step-card write-side variants (narrow helpers extracted to step-card-narrow.ts) + AuditView planner chips + 11 unit tests. T7 = 4 clamped planner settings keys + getPlanner/setPlanner IPC + PlannerSection UI + 11 unit tests. T8 = task-planner.spec.ts E2E round-trip — canned classifier + canned provider scripting plan→decompose_project→tool_result→delegate_subtask→tool_result→answer + default FIXTURE_DECOMPOSED_PLAN and FIXTURE_DELEGATION resolve the tool calls; spec asserts write-side gate title (amber), destructive gate absent, Confirm dispatch, step count ≥ 1 (observed = 7 — F1 backfill working), canned answer text in palette + copilot transcript, Dashboard audit row. 8/8 E2E green in 26.4s (corrected from earlier '9/9' miscount — actual filesystem has 8 .spec.ts files; orchestrator.json baseline e2eSpecs of 8 was correct, the inFlightMilestone.M32.e2eDelta of '+1 (8 → 9)' was off-by-one and should be '+1 (7 → 8)'). T9 = docs(m32) atomic commit dd2adc3 — CLAUDE.md Phase 5 block + IPC + bus events + 7 troubleshooting entries; CHANGELOG [Unreleased] M32 entry (Added 15 / Changed 7 / Fixed 2); README badge + Intelligence Layer Task Planner blurb + spec table 8 rows; NEW docs/user-guide/task-planner.md (~290 LOC F10 style); docs/user-guide/README.md TOC #9; Phase 5 design doc §9 M32 status flip + §13 D11/D12 + §14 F1/F2 closed + §15 new + orphan D8 removed. 6 files, +273 / -20. T10 remaining = verification + milestone marker (also reconcile e2eSpecs count to 8 in orchestrator.json + pending.json). Plan doc at docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md.",
       "unitTestDelta": "+75 (958 → 1033)",
-      "e2eDelta": "+1 (7 → 8)",
-      "lintDelta": "0"
+      "e2eDelta": "+1 (7 → 8; +task-planner.spec.ts from T8; filesystem .spec.ts count)",
+      "e2eGreenCountNote": "E2E green count reported by Playwright is 9 (one spec has 2 test cases); spec-file count is 8.",
+      "lintDelta": "0 (warnings steady at 24, errors 0)",
+      "planDoc": "docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md",
+      "verificationGates": {
+        "unitTests": "1033/1033 pass (20.57s)",
+        "lint": "0 errors / 24 warnings (target ≤24)",
+        "typecheck": "clean across all 6 packages",
+        "e2e": "9 passed in 29.1s (8 .spec.ts files)"
+      },
+      "followUps": []
     }
-  }
+  },
+  "inFlightMilestone": {},
+  "notes": [
+    "M32 (Task Planner — write-side) COMPLETE (2026-04-16). All 11 tasks shipped. 1033/1033 unit tests, 9/9 Playwright cases across 8 spec files green, 0 lint errors / 24 warnings, typecheck clean across all 6 packages. Verification per T10 ABI dance: Node rebuild via node-gyp (for vitest), then Electron rebuild via electron-rebuild (for E2E).",
+    "M33 (Copilot Service) is next. Plan doc not yet written — T0 will be to author docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md using the M32 plan doc as structural template. Scope per Phase 5 design §9: system-copilot pseudo-employee (separate from system-agent), periodic analyzer with LLM, proactive nudges surfaced in the Copilot Conversations thread, orchestrator integration for scheduled runs. Depends on M29 (RAG) + M31 (agentic loop) — both shipped.",
+    "M32 ABI rebuild dance is now documented as verified T10 procedure: Node ABI via `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` + same for keytar (pnpm rebuild is a no-op because pnpm's content-addressed store already has the hashed artifact). Electron ABI via `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. Pattern: Node rebuild → vitest → Electron rebuild → Playwright.",
+    "Patterns proven across M30/M31/M32 and ready to carry into M33: three-tier canned test seam (classifier + provider + tools), {rows, truncated} envelope for agentic tools, data-step-kind as stable E2E selector, pause-aware providerRouter.complete wrapper, AbortController-driven stop with canceled-status coercion, per-task atomic commits + Loki ledger commits (chore(loki): M<N> T<N> — commit ledger (<sha>)), ABI rebuild dance on verification gate."
+  ]
 }
