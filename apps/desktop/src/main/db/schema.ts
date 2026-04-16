@@ -494,3 +494,56 @@ export const commandHistory = sqliteTable('command_history', {
   /** Stringified result id from the dispatched handler, if any. */
   resultId: text('result_id'),
 });
+
+// ---------------------------------------------------------------------------
+// Phase 5 — M33: Copilot Insights
+// ---------------------------------------------------------------------------
+
+/**
+ * Periodic-analyzer output — proactive ambient insights produced by the
+ * `system-copilot` pseudo-employee (M33 T2) on a configurable interval
+ * (M33 T7) and surfaced in the Copilot UI (M34). The analyzer dedupes
+ * incoming drafts against existing active rows via `upsertWithDedup`
+ * (Jaccard bigram > 0.8 over lowercased titles, scoped to the same
+ * `(company_id, category)` bucket, with a numeric-drift guard so a
+ * count change like "3 blocked tickets" → "4 blocked tickets" never
+ * silently merges and masks the change).
+ *
+ * Schema per Phase 5 §8.4. `category` and `severity` are constrained
+ * via `CHECK` at the SQL DDL layer — Drizzle does not model `CHECK`,
+ * so the constraint set lives in `migrations/0011_copilot_insights.sql`.
+ *
+ * Composite index `idx_insights_company_active(company_id, dismissed_at,
+ * expires_at)` accelerates the hot-path `listActive` query
+ * (`WHERE company_id = ? AND dismissed_at IS NULL AND expires_at > ?`).
+ *
+ * Lifecycle: `create` → user dismissal stamps `dismissed_at`, OR the
+ * analyzer's `expireStale` sweep physically deletes rows past
+ * `expires_at`. Insights are NOT events — the `events` table stays
+ * append-only (architectural invariant #6).
+ */
+export const copilotInsights = sqliteTable('copilot_insights', {
+  id: text('id').primaryKey(),
+  companyId: text('company_id')
+    .notNull()
+    .references(() => companies.id, { onDelete: 'cascade' }),
+  /** operational | cost | org | workflow | anomaly. CHECK at DDL. */
+  category: text('category').notNull(),
+  /** critical | warning | info. CHECK at DDL. */
+  severity: text('severity').notNull(),
+  /** Short headline rendered as the insight card title. */
+  title: text('title').notNull(),
+  /** Markdown body — supporting evidence, numbers, source attribution. */
+  detail: text('detail').notNull(),
+  /** Optional human-readable suggestion ("Reassign blocked tickets to Bob"). */
+  actionSuggestion: text('action_suggestion'),
+  /** Optional NLU intent name to dispatch when the user clicks the action button (M34). */
+  actionIntent: text('action_intent'),
+  /** Optional JSON-serialized entity map for the action intent. */
+  actionEntitiesJson: text('action_entities_json'),
+  /** Stamped when the user dismisses the insight. NULL = active. */
+  dismissedAt: integer('dismissed_at'),
+  createdAt: integer('created_at').notNull(),
+  /** Hard expiry — `expireStale` deletes rows where `expires_at < now`. */
+  expiresAt: integer('expires_at').notNull(),
+});
