@@ -20,7 +20,13 @@ export type EventType =
   | 'command.executed'
   | 'agent.step'
   | 'agentic.completed'
-  | 'agentic.failed';
+  | 'agentic.failed'
+  | 'plan.proposed'
+  | 'plan.approved'
+  | 'task.delegated'
+  | 'task.escalated'
+  | 'review.requested'
+  | 'review.completed';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -197,7 +203,15 @@ export interface CommandExecutedPayload {
 // it directly without instanceof checks.
 // ---------------------------------------------------------------------------
 
-export type AgentStepKind = 'plan' | 'tool_call' | 'tool_result' | 'answer' | 'error';
+export type AgentStepKind =
+  | 'plan'
+  | 'tool_call'
+  | 'tool_result'
+  | 'answer'
+  | 'error'
+  | 'ticket_created'
+  | 'delegation_made'
+  | 'review_pending';
 
 export interface AgentStepPayload {
   /** `runs.id` for this agentic invocation — correlates to a row in the runs table. */
@@ -215,7 +229,10 @@ export interface AgentStepPayload {
    *   - tool_call:   `{ toolCallId: string; toolName: string; args: Record<string, unknown> }`
    *   - tool_result: `{ toolCallId: string; toolName: string; result: unknown }`
    *   - answer:      `{ text: string }`
-   *   - error:       `{ reason: string; message: string }`
+   *   - error:           `{ reason: string; message: string }`
+   *   - ticket_created:  `{ ticketId: string; title: string; assigneeId: string; planId: string }`
+   *   - delegation_made: `{ ticketId: string; assigneeId: string; assigneeName: string; planId: string }`
+   *   - review_pending:  `{ ticketId: string; reviewerId: string; outcome: string; planId: string | null }`
    */
   data: unknown;
   tokensIn: number;
@@ -251,6 +268,70 @@ export interface AgenticFailedPayload {
   tokensOut: number;
   costUsd: number;
   durationMs: number;
+}
+
+// ---------------------------------------------------------------------------
+// Write-side Task Planner event payloads (Phase 5 — M32 T4)
+//
+// Emitted by the three write-side agentic tools (decompose_project,
+// delegate_subtask, review_deliverable) through the WriteSideEventBus
+// interface defined in agentic-tools-write.ts. Each payload is JSON-safe
+// with discriminator field `type` for DashboardEvent<T> narrowing.
+// ---------------------------------------------------------------------------
+
+export interface PlanProposedPayload {
+  planId: string;
+  projectId: string;
+  goalId?: string;
+  subtaskCount: number;
+  truncated: boolean;
+  subtasks: Array<{
+    title: string;
+    assigneeId: string;
+    assigneeName: string;
+    complexity: string;
+    dependsOn: string[];
+  }>;
+}
+
+export interface PlanApprovedPayload {
+  planId: string;
+  projectId: string;
+  approvedBy: string;
+  ticketIds: string[];
+}
+
+export interface TaskDelegatedPayload {
+  ticketId: string;
+  planId: string;
+  assigneeId: string;
+  assigneeName: string;
+  parentProjectId: string | null;
+  fallbackUsed: boolean;
+  attemptCount: number;
+}
+
+export interface TaskEscalatedPayload {
+  planId: string;
+  originalAssigneeId?: string;
+  ticketId?: string;
+  escalatedTo: string;
+  reason: string;
+}
+
+export interface ReviewRequestedPayload {
+  ticketId: string;
+  reviewerId: string;
+  planId: string | null;
+}
+
+export interface ReviewCompletedPayload {
+  ticketId: string;
+  reviewerId: string;
+  outcome: string;
+  summary: string;
+  planId: string | null;
+  escalated: boolean;
 }
 
 /**

@@ -1,3 +1,5 @@
+import type { EventType } from '@team-x/shared-types';
+
 /**
  * Agentic write-side tools — main-process closures the agentic loop
  * (`@team-x/intelligence/loop`) invokes for the M32 Task Planner.
@@ -841,7 +843,7 @@ export function buildDecomposeProjectTool(
       // Emit bus event — actorKind defaults to `'agent'` for tool invocations.
       try {
         deps.bus.emit({
-          type: 'plan.proposed' satisfies WriteSideEventType,
+          type: 'plan.proposed' satisfies EventType,
           companyId: deps.companyId,
           actorId: deps.actorId,
           actorKind: deps.actorKind ?? 'agent',
@@ -934,7 +936,7 @@ export function buildDelegateSubtaskTool(
           // table is not in T2 scope, so we fall back to the actor as the escalation target).
           try {
             deps.bus.emit({
-              type: 'task.escalated' satisfies WriteSideEventType,
+              type: 'task.escalated' satisfies EventType,
               companyId: deps.companyId,
               actorId: deps.actorId,
               actorKind: deps.actorKind ?? 'agent',
@@ -987,7 +989,7 @@ export function buildDelegateSubtaskTool(
       // Emit bus event.
       try {
         deps.bus.emit({
-          type: 'task.delegated' satisfies WriteSideEventType,
+          type: 'task.delegated' satisfies EventType,
           companyId: deps.companyId,
           actorId: deps.actorId,
           actorKind: deps.actorKind ?? 'agent',
@@ -1058,7 +1060,7 @@ export function buildReviewDeliverableTool(
       // step card before the inner provider call returns.
       try {
         deps.bus.emit({
-          type: 'review.requested' satisfies WriteSideEventType,
+          type: 'review.requested' satisfies EventType,
           companyId: deps.companyId,
           actorId: deps.actorId,
           actorKind: deps.actorKind ?? 'agent',
@@ -1111,7 +1113,7 @@ export function buildReviewDeliverableTool(
           escalated = true;
           try {
             deps.bus.emit({
-              type: 'task.escalated' satisfies WriteSideEventType,
+              type: 'task.escalated' satisfies EventType,
               companyId: deps.companyId,
               actorId: deps.actorId,
               actorKind: deps.actorKind ?? 'agent',
@@ -1130,7 +1132,7 @@ export function buildReviewDeliverableTool(
 
       try {
         deps.bus.emit({
-          type: 'review.completed' satisfies WriteSideEventType,
+          type: 'review.completed' satisfies EventType,
           companyId: deps.companyId,
           actorId: deps.actorId,
           actorKind: deps.actorKind ?? 'agent',

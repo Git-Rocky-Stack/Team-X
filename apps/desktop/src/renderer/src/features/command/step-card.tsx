@@ -47,7 +47,7 @@
  * has to reason about `data: unknown`.
  */
 
-import { AlertTriangle, Brain, Check, Wrench } from 'lucide-react';
+import { AlertTriangle, Brain, Check, GitBranch, Wrench } from 'lucide-react';
 
 import type { AgentStepPayload } from '@team-x/shared-types';
 
@@ -292,10 +292,61 @@ export function StepCard({
       );
     }
 
+    case 'ticket_created': {
+      return (
+        <article
+          tabIndex={-1}
+          aria-label={`Step ${step.stepIndex + 1}: ticket created`}
+          className={cn(base, 'border-emerald-500/60 bg-emerald-500/5 hover:border-emerald-500')}
+          data-step-kind="ticket_created"
+        >
+          <StepHeader
+            icon={<Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />}
+            label="Ticket Created"
+            index={step.stepIndex}
+            labelClassName="text-emerald-400"
+          />
+        </article>
+      );
+    }
+
+    case 'delegation_made': {
+      return (
+        <article
+          tabIndex={-1}
+          aria-label={`Step ${step.stepIndex + 1}: delegation made`}
+          className={cn(base, 'border-sky-500/60 bg-sky-500/5 hover:border-sky-500')}
+          data-step-kind="delegation_made"
+        >
+          <StepHeader
+            icon={<GitBranch className="h-3.5 w-3.5 text-sky-400" aria-hidden="true" />}
+            label="Delegation"
+            index={step.stepIndex}
+            labelClassName="text-sky-400"
+          />
+        </article>
+      );
+    }
+
+    case 'review_pending': {
+      return (
+        <article
+          tabIndex={-1}
+          aria-label={`Step ${step.stepIndex + 1}: review pending`}
+          className={cn(base, 'border-amber-500/60 bg-amber-500/5 hover:border-amber-500')}
+          data-step-kind="review_pending"
+        >
+          <StepHeader
+            icon={<Brain className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />}
+            label="Review Pending"
+            index={step.stepIndex}
+            labelClassName="text-amber-400"
+          />
+        </article>
+      );
+    }
+
     default: {
-      // Exhaustiveness guard — AgentStepKind is a fixed union, so
-      // this branch is unreachable unless shared-types grows a new
-      // kind without this file being updated.
       const _exhaust: never = step.kind;
       void _exhaust;
       return null;
