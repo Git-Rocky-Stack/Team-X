@@ -1,18 +1,22 @@
 {
-  "taskId": "M32-T9",
+  "taskId": "M32-T10",
   "milestone": "M32",
-  "title": "Docs — CLAUDE.md + CHANGELOG + README + docs/user-guide/task-planner.md",
-  "goal": "Complete M32 T9 — docs pass reflecting shipped Task Planner work (T0-T8). Update CLAUDE.md Phase 5 block with T0-T8 shipped list + full Task Planner scope summary + new IPC channels for planner settings + new event types + new AgentStepKind variants. Add CHANGELOG [Unreleased] M32 entry (Keep-a-Changelog format). Refresh README Intelligence section (tests-badge 1033 unit / 9 E2E specs, Intelligence features block). NEW file docs/user-guide/task-planner.md — F10 style mirroring agentic-loop.md: Overview -> Mechanics -> Tools (decompose_project / delegate_subtask / review_deliverable) -> Settings (4 planner keys + clamps) -> Control (write-side confirmation gate + Cancel/Confirm flow) -> Privacy -> Example -> Troubleshooting. Phase 5 design-doc §10/§11/§13 resequence if needed to mark M32 shipped.",
+  "title": "Verification + milestone marker — full test suite, biome, typecheck, E2E, M32 history fold",
+  "goal": "Complete M32 T10 — final verification pass and milestone marker. Run full test suite (vitest -r, target 1033/1033 green), biome check (target 0 errors, ≤24 warnings), pnpm -r typecheck (clean across all 6 packages), full E2E suite (`pnpm -F @team-x/desktop test:e2e`, target 8/8 green including task-planner.spec.ts). ABI rebuild dance required first: `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. After verification: fold M32 from inflightMilestone into history block in orchestrator.json, set phaseComplete=false (M33-M35 still ahead), update Phase 5 design doc §9 M32 status to ✅ Complete, write Phase 5 M32 follow-ups section in CONTINUITY.md (none expected), reset .loki/queue/pending.json with M33 task list, write new current-task.json for M33 T0. Atomic commit `chore(m32): M32 T10 — verification + milestone marker`. Ledger commit `chore(loki): M32 T10 — commit ledger (<sha>)`.",
   "status": "pending",
-  "predecessor": "M32-T8 shipped as 2a4fc63",
+  "predecessor": "M32-T9 shipped as dd2adc3",
   "acceptance": [
-    "CLAUDE.md Phase 5 block updated with M32 T0-T8 shipped summary",
-    "CHANGELOG [Unreleased] gains M32 entry",
-    "README Intelligence section refreshed (test counts + spec counts + feature list)",
-    "docs/user-guide/task-planner.md written in F10 style (~300-400 LOC)",
-    "Phase 5 design doc resequence if warranted",
-    "Atomic commit: docs(m32): M32 T9 — docs pass for Task Planner",
-    "Ledger commit: chore(loki): M32 T9 — commit ledger (<sha>)"
+    "Full vitest run green (1033/1033 expected)",
+    "biome check passes (0 errors)",
+    "pnpm -r typecheck clean across all 6 packages",
+    "Full E2E run green (8/8 specs including task-planner.spec.ts)",
+    "orchestrator.json: M32 folded from inflightMilestone into history",
+    "Phase 5 design doc §9 M32 status flipped In-progress → ✅ Complete",
+    "pending.json reset for M33 (Copilot Service)",
+    "current-task.json rewritten for M33 T0",
+    "CONTINUITY.md updated with M32 COMPLETE checkpoint",
+    "Atomic commit: chore(m32): M32 T10 — verification + milestone marker",
+    "Ledger commit: chore(loki): M32 T10 — commit ledger (<sha>)"
   ],
-  "createdAt": "2026-04-15T20:55:00Z"
+  "createdAt": "2026-04-15T21:30:00Z"
 }
