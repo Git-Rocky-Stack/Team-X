@@ -1,4 +1,116 @@
-# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0, T1, T2 shipped); M32 (Task Planner) complete
+# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0–T3 shipped); M32 (Task Planner) complete
+
+## M33 T3 SHIPPED — 2026-04-16 (rolling event window + bus subscription)
+
+**Task:** M33 T3 — in-memory per-company rolling buffer feeding T4's CopilotAnalyzerService. Bounded deque (100 events), FIFO eviction, warm-start hydration from the append-only events log. Subscribes to the same event bus M29's RAG indexer consumes. Ships the read-side accumulator that the T4 analyzer's prompt builder will iterate.
+**Commit:** `c6b40ae` — `feat(m33): M33 T3 — rolling event window + bus subscription`.
+**Plan reference:** [M33 plan T3 §](../docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).
+
+### Metrics delta
+
+| Metric | Pre-T3 | Post-T3 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1052 | **1060** | **+8** (exact match to plan target) |
+| E2E specs | 8 | 8 | 0 (T9 ships the spec) |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings | 24 | 24 | 0 (pre-existing in intelligence/nlu; well under M33 ≤34 budget) |
+| Typecheck across 6 packages | clean | clean | — |
+| Files touched | — | 3 (+403 / −0) | — |
+
+### What shipped (one feat commit, three files)
+
+1. **`apps/desktop/src/main/services/copilot-event-window.ts` (NEW, 169 lines).** Pure subscriber-plus-accumulator; no I/O of its own beyond the bus handle + eventsRepo hydration query.
+   - `createCopilotEventWindow(deps: { bus, eventsRepo })` factory returning `{ start, stop, snapshot, clear }` — mirrors the rag-indexer M29 factory shape for consistency.
+   - `MAX_EVENTS_PER_COMPANY = 100` as a **private module constant** with an inline comment: "NOT a user-facing setting in M33 — if Rocky wants this tunable, it becomes a new settings key in M34+." Locked to prevent premature surface expansion.
+   - `EXCLUDED_EVENT_TYPES = new Set<EventType>(['token.delta'])` — applied at both push AND hydration boundaries. Streaming token deltas fire per character (~50–500 events per chat turn); admitting them would pin the 100-event window to streaming noise and evict every meaningful signal the analyzer cares about. Deliberate filter, documented in §2 design notes.
+   - `push(event)` — internal handler subscribed to `bus.subscribe(push)` on `start()`. Gets the per-company deque from a `Map<string, DashboardEvent[]>`, `.push(event)` then `.shift()` on overflow (FIFO eviction).
+   - `snapshot(companyId): DashboardEvent[]` — returns a **defensive copy** via spread (`[...deque]`). Rationale in §3 design notes: T4's analyzer will iterate the snapshot for 100–500ms while building prompts; returning the internal array by reference would expose a classic use-after-mutate race with live push+shift. Copy cost is trivial (≤100 events × ~hundreds of bytes).
+   - **Warm-start hydration on first snapshot per company** — if the company is not in the `hydrated: Set<string>` flag set, call `eventsRepo.listByCompany(companyId, undefined, MAX_EVENTS_PER_COMPANY)` and reverse the newest-first result into a chronological-order prefix. Merge with any live events pushed between `start()` and the first `snapshot()` (live events go AFTER history — chronologically newer). Re-bound on overflow. Set the hydrated flag so subsequent snapshots never re-query.
+   - `clear(companyId): void` — removes the deque AND the hydrated flag so the next snapshot re-hydrates. **NOT currently wired to companies.archive** — that IPC does not exist in the codebase today (companies repo has create/getById/getBySlug/list/setStatus only). Wiring deferred to the milestone that adds `companies.archive`; flagged as a T3 follow-up in the Loki ledger.
+   - `parseRow(EventRow): DashboardEvent` helper — **duplicated** from the module-private `parseRow` in `main/orchestrator/event-bus.ts`. Documented as duplication-with-intent; extracting to a shared module for one helper would widen the events surface unnecessarily. Flagged for extraction (`db/repos/events.ts` as `parseEventRow`) if a third consumer appears.
+   - `__TEST_INTERNALS__ = { MAX_EVENTS_PER_COMPANY, EXCLUDED_EVENT_TYPES } as const` — re-exports for test access without widening the public API. Marked "NEVER depend on this from production code" in JSDoc.
+
+2. **`apps/desktop/src/main/services/copilot-event-window.test.ts` (NEW, 195 lines, 8 tests).** Full coverage of the T3 acceptance surface.
+   - **Bounds (3 tests):** MAX-1 admitted without eviction (`toHaveLength(MAX - 1)`); exact MAX at boundary (`toHaveLength(MAX)`); MAX+5 overflow drops ids 0-4 and preserves chronological suffix — asserts `snap[0].id === 'e-5'` and `snap[snap.length-1].id === 'e-${MAX+4}'`.
+   - **Per-company isolation (2 tests):** pushes to `co-A` do not appear in `co-B` snapshot; `clear('co-A')` leaves `co-B` window intact (`co-A` returns `[]`, `co-B` still `['b-1']`).
+   - **Warm-start hydration (2 tests):** first snapshot hydrates from `eventsRepo.listByCompany` in chronological order (newest-first → reversed to oldest-first), asserts `listByCompany` called with `(companyId, undefined, MAX)`; second snapshot returns a defensive copy AND does NOT re-hydrate — combined test that mutates `s1.length = 0` + `s1.push(bogus)` and asserts `s2 === ['h-1']` with `listByCompany` still at call count 1.
+   - **Archive clear (1 test):** `clear(companyId)` empties the window AND re-hydrates on next snapshot; asserts post-clear snapshot returns `['h-1']` with `listByCompany` call count now 2.
+   - Test helpers: `FakeBus` class (implements `CopilotEventWindowBus`, in-memory `Set<Listener>`), `makeEventsRepo(rows)` factory with a `vi.fn()`-spied `listByCompany`, `makeEvent` + `makeEventRow` fixtures with sensible defaults.
+
+3. **`apps/desktop/src/main/index.ts` composition root (+39 lines).**
+   - Imports `createCopilotEventWindow` and `type CopilotEventWindow` from the new service module.
+   - `copilotEventWindowInstance: CopilotEventWindow | null = null` module handle declared alongside `ragIndexerInstance` for shutdown-time ordering consistency.
+   - Instantiation immediately after `ragIndexer.start()` with the same `bus` + `eventsRepo` dependencies — both are pure bus subscribers and ordering relative to each other is irrelevant.
+   - `will-quit` null-state short-circuit extended to include `copilotEventWindowInstance === null`.
+   - `will-quit` shutdown chain: stop the window AFTER the rag indexer but BEFORE the orchestrator drain. Same rationale as the rag indexer — stopping subscribers before the orchestrator drain means any final drain-phase events simply have no listener, preventing in-flight work from landing mid-teardown.
+
+### Architectural seams added by T3 (active for T4+)
+
+- **Bus-subscriber-plus-accumulator pattern template.** The `createCopilotEventWindow` factory shape is a copy-from template for any future bounded per-company accumulator (metrics aggregator, alerting window, cache warming). Factory takes `{ bus, eventsRepo }`, returns `{ start, stop, snapshot, clear }`, with warm-start + defensive-copy built in.
+- **Private-const-over-setting discipline.** Starting a tunable as a locked private constant keeps the initial surface minimal. T4 can reach for the same discipline for its 30s event-trigger debounce window — a magic number in a single module beats a settings round-trip every cycle.
+- **Parse-row duplication-with-intent documented.** Rather than prematurely widening `events.ts` for one helper, T3 duplicates `parseRow` and leaves a commented-in extraction signal. Future contributors have a clear breadcrumb for when to promote the helper.
+- **Deferred-wiring follow-up pattern.** `clear(companyId)` shipped as a public method + tested, wiring left for a later milestone. Clean separation of "method exists + tested" from "production call site exists" — lets T3 land without scope creep into companies.archive.
+
+### Verification gates passed
+
+- `pnpm exec biome check` on the 3 touched files — 0 errors, 0 warnings (post `--write` organize-imports autofix).
+- `pnpm -r typecheck` — clean across all 6 workspace packages.
+- `pnpm test` on the new test file — **8/8 pass in 9ms** (533ms total with transform+setup overhead).
+- `pnpm test` full suite — **1060/1060 pass** in 14.50s. +8 from T2 baseline, exact match to plan target.
+- `pnpm lint` full — 0 errors / 24 warnings (unchanged from T2; well under M33 ≤34 budget).
+- Atomic commit `c6b40ae` per M30/M31/M32/M33 ledger pattern.
+
+### Invariants preserved
+
+- **#1 (renderer is a pure view):** T3 touches only main-process code. Zero renderer edits.
+- **#2 (orchestrator is the only scheduler):** the event window is NOT a scheduler — it's a write-heavy accumulator that stores events for on-demand snapshot consumption. T4's analyzer will be the scheduler (setInterval + event-triggered), and it will observe `orchestrator.isCompanyPaused()` per M31 precedent.
+- **#4 (storage is SQLite + filesystem vault):** the in-memory buffer is ephemeral by design. Warm-start hydrates from the authoritative append-only events table on reboot — no persistence layer of its own.
+- **#6 (events table is append-only):** the window READS from the events table (via `listByCompany`) and NEVER writes to it. All write paths remain through the bus `emit()` → repo `append()` chain.
+- **#7 (zero phone-home):** no new network calls.
+- **#11 (IPC mutations emit bus events):** T3 adds no new IPC and does not mutate any state that would need a bus event. The window is a consumer only.
+
+### Gotchas captured this session
+
+- **`companies.archive` IPC doesn't exist yet.** The M33 plan doc's T3 acceptance said "wired to companies.archive (extend the existing archive handler)". A pre-edit grep swept for the archive path and found NOTHING — companies repo has create/getById/getBySlug/list/setStatus only; `archived_at` appears in one test fixture and no production code. Path forward: ship `clear()` as a tested public method, defer production wiring to the milestone that adds the archive IPC. Documented in the source file §5 design notes AND in the T3 follow-up ledger entry so the next contributor sees it immediately.
+- **`events.repo.listByCompany` JSDoc diverges from implementation on `token.delta` filtering.** The JSDoc says "Excludes token.delta events since they are high-frequency streaming noise". The SQL WHERE clauses only filter by companyId + cursor — no eventType filter. Stale comment; not a T3 concern to fix (it's a pre-existing issue in the events repo). CopilotEventWindow applies its own `EXCLUDED_EVENT_TYPES` filter at the window boundary, which is where the analyzer cares about it anyway. Leave the stale JSDoc untouched; if it were removed, the intent signal would vanish.
+- **Newest-first vs oldest-first confusion on warm-start merge.** `listByCompany` returns `DESC createdAt` (newest first); the deque needs oldest-first so analyzer prompt builders read chronologically. Warm-start reverses history with a `for (let i = historical.length - 1; i >= 0; i--)` and appends `live` events AFTER (they are chronologically newer). Confirmed by the "first snapshot hydrates in chronological order" test expecting `['h-1', 'h-2', 'h-3']` where `h-1.createdAt === 100`, `h-2 === 200`, `h-3 === 300`.
+- **`TokenDelta` vs `EventType` set membership.** `EXCLUDED_EVENT_TYPES` is `ReadonlySet<EventType>` built from a tuple — NOT a string array. TypeScript narrowing requires the Set generic + explicit construction so `EXCLUDED_EVENT_TYPES.has(event.type)` doesn't widen. Minor type correctness, matters for future exhaustive-switch consumers.
+- **Defensive-copy test combined with re-hydration test saves one test slot.** Rather than writing separate "snapshot returns defensive copy" and "second snapshot does not re-hydrate" tests, combined them: mutate `s1`, then assert `s2` is untouched AND `listByCompany` call count stays at 1. Both invariants verified in one test without padding the count. Kept total at +8 (exact plan target).
+- **Biome organize-imports is mandatory.** First biome check failed with 3 organize-imports errors across the 3 files (both new files + index.ts). `biome check --write` resolved all three automatically. Future lint-flagged PRs should run `--write` first before manual investigation — the tool fixes 90% of style surface automatically.
+
+### Patterns reinforced
+
+- **Pre-edit grep sweep catches missing assumptions.** The T3 plan assumed `companies.archive` existed; the sweep proved it didn't, which became the single most important discovery of the session. 5 minutes of grep saved a scope-creep commit. Always grep before wiring.
+- **Factory pattern with deps injection.** `createCopilotEventWindow(deps)` mirrors M29's `createRagIndexer(deps)` and M31's `createAgenticLoopService(deps)`. Composition root wires the real dependencies; tests wire fakes. Zero module-level singletons means test isolation is trivial.
+- **Type-exported deps interfaces for mockability.** `CopilotEventWindowBus` + `CopilotEventWindowEventsRepo` are exported interfaces that test helpers implement. No need to reach for `vitest.mock` on the full bus or events-repo module — the interfaces are narrow enough to hand-roll a fake.
+- **Atomic per-task commit + Loki ledger commit.** T3 shipped as commit `c6b40ae`; this ledger commit mirrors M30/M31/M32 cadence.
+
+### Follow-ups queued (post-T3)
+
+- **T3 FOLLOW-UP:** Wire `CopilotEventWindow.clear(companyId)` into `companies.archive` once that IPC is added. Current state: public method exists + tested, production path never calls it. Zero memory leak risk today (companies cannot be archived). Closes once archive IPC lands.
+- **No code debt carried into T4.** The warm-start + defensive-copy + exclusion filter are all orthogonal to T4's analyzer logic; T4 consumes `snapshot(companyId)` and the window handles the rest.
+
+### Next Session Startup Checklist (M33 T4 — headline task, full session)
+
+1. `git log --oneline -n 10` — confirm head is at `chore(loki): M33 T3 — commit ledger (c6b40ae)`.
+2. Read `.loki/queue/current-task.json` — it's been rewritten for **M33-T4** (CopilotAnalyzerService — biggest task of M33). Goal, acceptance (15 items), filesTouched (8), testsDelta (+14 unit), extensive notes.
+3. Read `.loki/queue/pending.json` — `tasksShipped: 4`; T4 is head-of-queue (headline task).
+4. Read `.loki/state/orchestrator.json` — `current.unitTests: 1060`, `asOfTask: T3`, `asOfTaskCommit: c6b40ae`.
+5. **Read Phase 5 design doc §8.4 (analyzer prompt contract), §8.5 (window consumer), §8.6 (bus event catalog), §8.7 (dedup + expiry semantics) IN FULL before the first edit.** T4 is the most specification-driven task of M33.
+6. Read `apps/desktop/src/main/services/agentic-loop-service.ts` in full — T4's pause-aware wrapper, AbortController cancel, canceled-status coercion, and runs-table integration all copy this shape.
+7. Pre-edit grep sweep:
+   - `grep -rn "runs.kind\|'agentic'" apps/desktop/src/main/db/migrations` — identify the M31 migration that added 'agentic' to runs.kind; copy its shape for migration 0012.
+   - `grep -rn "isCompanyPaused\|POLL_INTERVAL_MS" apps/desktop/src/main/services` — find the M31 pause-gate constants to reuse.
+   - `grep -rn "switch.*event.type\|event\\.type ===" apps/desktop/src` — exhaustive-switch sites that may need new copilot.* arms.
+8. Migration 0012: `pnpm -F @team-x/desktop exec drizzle-kit generate --name copilot_runs_kind`. REVIEW the generated SQL before commit — SQLite CHECK-constraint enum extension requires a temp-table swap.
+9. ABI rebuild dance BEFORE first vitest run: `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` + same for keytar. Migration 0012 changes schema; may need dev DB nuke at `%APPDATA%/Team-X/team-x/team-x.sqlite` if the CHECK swap can't apply to an existing DB.
+10. Consider a subagent pass for `buildAnalysisPrompt` scaffolding (Explore agent reads §8.4 + M29 retriever + M31 AgenticLoopService, returns a deterministic prompt template).
+11. Implement analyzer + event-trigger in separate files (do NOT extend T3's window with debouncer — keep T3 pure).
+12. 14 unit tests per acceptance breakdown.
+13. Atomic commit: `feat(m33): M33 T4 — copilot analyzer service + pause-aware scheduler`.
+14. Ledger commit: `chore(loki): M33 T4 — commit ledger (<sha>)`.
+
+---
 
 ## M33 T2 SHIPPED — 2026-04-16 (system-copilot pseudo-employee + role card)
 
