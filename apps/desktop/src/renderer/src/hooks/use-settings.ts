@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
+  SettingsSetCopilotRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRuntimeRequest,
@@ -111,6 +112,27 @@ export function useSetPlanner() {
     mutationFn: (req: SettingsSetPlannerRequest) => ipc.settings.setPlanner(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'planner'] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Copilot service settings (Phase 5 — M33)
+// ---------------------------------------------------------------------------
+
+export function useCopilotSettings() {
+  return useQuery({
+    queryKey: ['settings', 'copilot'],
+    queryFn: () => ipc.settings.getCopilot(),
+  });
+}
+
+export function useSetCopilot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: SettingsSetCopilotRequest) => ipc.settings.setCopilot(req),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'copilot'] });
     },
   });
 }

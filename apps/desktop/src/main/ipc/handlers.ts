@@ -107,12 +107,14 @@ import type {
   SendChatResponse,
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
+  SettingsGetCopilotResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
   SettingsGetRuntimeResponse,
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
+  SettingsSetCopilotRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -403,6 +405,25 @@ export interface IpcSettingsRepo {
   getPlanner(): SettingsGetPlannerResponse;
   /** Task planner guardrails — clamped/validated write. Phase 5 — M32. */
   setPlanner(req: SettingsSetPlannerRequest): void;
+  /** Copilot service settings — snapshot read (clamped). Phase 5 — M33. */
+  getCopilot(): SettingsGetCopilotResponse;
+  /** Copilot service settings — clamped/filtered write. Phase 5 — M33. */
+  setCopilot(req: SettingsSetCopilotRequest): void;
+}
+
+/**
+ * Narrow copilot-analyzer-service surface the IPC handlers need for the
+ * `settings.setCopilot` side effect (restart the per-company timer so
+ * a new interval / enabled / categories picks up without an app
+ * restart). The full service surface lives in
+ * `main/services/copilot-analyzer-service.ts`; this interface pulls in
+ * only the one method the IPC boundary requires.
+ *
+ * Phase 5 — M33 T7.
+ */
+export interface IpcCopilotAnalyzerService {
+  /** Restart the per-company analyzer timer. No-ops if the timer isn't running. */
+  restart(companyId: string): void;
 }
 
 /** Narrow updater-service surface the IPC handlers need. */
@@ -435,6 +456,13 @@ export interface IpcHandlerDeps {
   backupService: IpcBackupService;
   auditRepo: IpcAuditRepo;
   updaterService: IpcUpdaterService;
+  /**
+   * Copilot analyzer — restarted on `settings.setCopilot` so new
+   * interval / enabled / categories take effect without an app
+   * restart. Optional: composition-root injects the live instance in
+   * production; unit tests pass a stub. Phase 5 — M33 T7.
+   */
+  copilotAnalyzerService?: IpcCopilotAnalyzerService;
   getHardwareProfile: () => HardwareProfile;
 }
 
@@ -651,6 +679,15 @@ export interface IpcHandlers {
   settingsGetPlanner(): Promise<SettingsGetPlannerResponse>;
   /** `settings.setPlanner` — patch one or more task-planner guardrail settings with clamping / validation (Phase 5 — M32). */
   settingsSetPlanner(req: SettingsSetPlannerRequest): Promise<void>;
+  /** `settings.getCopilot` — copilot-service settings (enabled, interval in minutes, allowed categories) (Phase 5 — M33). */
+  settingsGetCopilot(): Promise<SettingsGetCopilotResponse>;
+  /**
+   * `settings.setCopilot` — patch one or more copilot-service settings with
+   * clamping + category filtering, then synchronously restart the
+   * per-company analyzer timer so the new values take effect without
+   * an app restart (Phase 5 — M33).
+   */
+  settingsSetCopilot(req: SettingsSetCopilotRequest): Promise<void>;
 
   // -----------------------------------------------------------------------
   // Provider management handlers (Phase 3 — M18)
@@ -953,6 +990,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     backupService,
     auditRepo,
     updaterService,
+    copilotAnalyzerService,
     getHardwareProfile,
   } = deps;
 
@@ -1784,6 +1822,28 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
 
     async settingsSetPlanner(req: SettingsSetPlannerRequest): Promise<void> {
       settingsRepo.setPlanner(req);
+    },
+
+    // -----------------------------------------------------------------------
+    // Copilot service handlers (Phase 5 — M33 T7)
+    // -----------------------------------------------------------------------
+
+    async settingsGetCopilot(): Promise<SettingsGetCopilotResponse> {
+      return settingsRepo.getCopilot();
+    },
+
+    async settingsSetCopilot(req: SettingsSetCopilotRequest): Promise<void> {
+      if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
+        throw new Error('[ipc] settings.setCopilot: companyId is required');
+      }
+      // Repo handles intervalMinutes clamping + categories filtering +
+      // empty-array fallback. After persisting, synchronously restart
+      // the per-company analyzer timer so the new interval / enabled /
+      // categories take effect on the next tick — no app restart needed.
+      settingsRepo.setCopilot(req);
+      if (copilotAnalyzerService) {
+        copilotAnalyzerService.restart(req.companyId);
+      }
     },
 
     // -----------------------------------------------------------------------

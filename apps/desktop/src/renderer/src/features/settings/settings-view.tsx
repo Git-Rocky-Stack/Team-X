@@ -13,6 +13,7 @@
 import { AgenticSection } from './agentic-section.js';
 import { BackupSection } from './backup-section.js';
 import { ConcurrencySection } from './concurrency-section.js';
+import { CopilotSection } from './copilot-section.js';
 import { PlannerSection } from './planner-section.js';
 import { PrivacySection } from './privacy-section.js';
 import { ProvidersSection } from './providers-section.js';
@@ -37,6 +38,7 @@ export function SettingsView() {
         <ConcurrencySection />
         <AgenticSection />
         <PlannerSection />
+        <CopilotSection />
         <ProvidersSection />
         <BackupSection />
       </div>

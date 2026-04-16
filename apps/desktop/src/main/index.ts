@@ -711,6 +711,18 @@ app
       backupService,
       auditRepo,
       updaterService,
+      // Lazy wrapper — the CopilotAnalyzerService is instantiated later
+      // in this same bootstrap block (after RAG indexer, agentic loop,
+      // etc.), so we close over the module-level handle and resolve it
+      // on each `restart` call. No-ops cleanly if a `setCopilot` IPC
+      // fires before the analyzer is live (defensive only — in practice
+      // the renderer cannot reach settings until after app-ready, which
+      // is after the analyzer has been wired).
+      copilotAnalyzerService: {
+        restart: (cid: string) => {
+          copilotAnalyzerServiceInstance?.restart(cid);
+        },
+      },
       getHardwareProfile: detectHardware,
     });
     // ---- Command palette service (Phase 5 — M30 T4) -----------------------
@@ -1145,6 +1157,19 @@ app
       bus,
       orchestrator: {
         isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
+      },
+      // Per-tick snapshot of copilot settings. T7 wires the real settings
+      // repo read — copilot settings are global today so `companyId` is
+      // intentionally ignored. Returning a fresh snapshot every call
+      // guarantees the analyzer picks up mutations on its next tick
+      // without needing explicit invalidation plumbing.
+      getSettings: (_companyId: string) => {
+        const snap = settingsRepo.getCopilot();
+        return {
+          enabled: snap.enabled,
+          intervalMinutes: snap.intervalMinutes,
+          categories: snap.categories,
+        };
       },
       resolveComplete: async ({ companyId, systemCopilotId }) => {
         if (testMode) {

@@ -67,7 +67,7 @@ describe('createSettingsRepo', () => {
   describe('seedDefaults', () => {
     it('seeds all default settings on empty DB', () => {
       const count = repo.seedDefaults();
-      expect(count).toBe(18);
+      expect(count).toBe(21);
       expect(repo.get<string>('runtime_strategy', '')).toBe('auto');
       expect(repo.get<string>('max_privacy_tier', '')).toBe('proprietary-cloud');
       expect(repo.get<number>('orchestrator_slots', 0)).toBe(6);
@@ -79,7 +79,7 @@ describe('createSettingsRepo', () => {
     it('does not overwrite existing settings', () => {
       repo.set('runtime_strategy', 'lean');
       const count = repo.seedDefaults();
-      expect(count).toBe(17); // only 17 new, runtime_strategy kept
+      expect(count).toBe(20); // 20 new after M33 copilot keys, runtime_strategy kept
       expect(repo.get<string>('runtime_strategy', '')).toBe('lean');
     });
 

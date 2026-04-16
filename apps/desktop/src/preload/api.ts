@@ -107,12 +107,14 @@ import type {
   SendChatResponse,
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
+  SettingsGetCopilotResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
   SettingsGetRuntimeResponse,
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
+  SettingsSetCopilotRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -232,6 +234,8 @@ const CHANNELS = {
   // Task planner (Phase 5 — M32)
   settingsGetPlanner: 'settings.getPlanner',
   settingsSetPlanner: 'settings.setPlanner',
+  settingsGetCopilot: 'settings.getCopilot',
+  settingsSetCopilot: 'settings.setCopilot',
   // Provider management (Phase 3 — M18)
   providersList: 'providers.list',
   providersAdd: 'providers.add',
@@ -425,6 +429,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.settingsGetPlanner) as Promise<SettingsGetPlannerResponse>,
       setPlanner: (req: SettingsSetPlannerRequest) =>
         ipc.invoke(CHANNELS.settingsSetPlanner, req) as Promise<void>,
+      getCopilot: () =>
+        ipc.invoke(CHANNELS.settingsGetCopilot) as Promise<SettingsGetCopilotResponse>,
+      setCopilot: (req: SettingsSetCopilotRequest) =>
+        ipc.invoke(CHANNELS.settingsSetCopilot, req) as Promise<void>,
     },
     providers: {
       list: () => ipc.invoke(CHANNELS.providersList) as Promise<ProviderConfig[]>,

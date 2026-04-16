@@ -531,6 +531,46 @@ describe('copilot-analyzer-service — AbortController', () => {
   });
 });
 
+describe('copilot-analyzer-service — restart picks up new settings', () => {
+  it('uses the latest intervalMinutes on the subsequent scheduled timer', () => {
+    // Capture every setInterval invocation so we can assert the scheduled
+    // cadence changed after restart without running any actual ticks.
+    const scheduled: number[] = [];
+    let currentInterval = 5;
+    const { deps } = baseDeps({
+      getSettings: () => ({
+        enabled: true,
+        intervalMinutes: currentInterval,
+        categories: ['operational', 'cost', 'org', 'workflow', 'anomaly'],
+      }),
+      setInterval: ((_fn: () => void, ms: number) => {
+        scheduled.push(ms);
+        // Must return a truthy handle — the production `stop()` gates
+        // `clearInterval(timer)` + `schedules.delete(companyId)` on
+        // `if (timer)`, so returning 0 would leave the schedule map
+        // stale and the subsequent `start()` would short-circuit on
+        // the `schedules.has()` guard.
+        return { ref: scheduled.length } as unknown as ReturnType<typeof setInterval>;
+      }) as unknown as typeof setInterval,
+      clearInterval: (() => {}) as unknown as typeof clearInterval,
+    });
+    const svc = createCopilotAnalyzerService(deps);
+
+    svc.start('co-1');
+    expect(scheduled).toEqual([5 * 60 * 1000]);
+
+    // Simulate a settings mutation changing the interval to 17 minutes.
+    currentInterval = 17;
+    svc.restart('co-1');
+
+    // Restart should have stopped the old timer and scheduled a new one
+    // using the updated interval — this is the exact behaviour the IPC
+    // handler relies on so a setCopilot mutation takes effect without
+    // an app restart.
+    expect(scheduled).toEqual([5 * 60 * 1000, 17 * 60 * 1000]);
+  });
+});
+
 afterEach(() => {
   vi.useRealTimers();
 });

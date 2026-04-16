@@ -116,6 +116,8 @@ const REQUEST_CHANNELS = [
   // Task planner (Phase 5 — M32)
   'settings.getPlanner',
   'settings.setPlanner',
+  'settings.getCopilot',
+  'settings.setCopilot',
   // Provider management (Phase 3 — M18)
   'providers.list',
   'providers.add',
@@ -502,6 +504,18 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'settings.setPlanner',
     async (_event, request: import('@team-x/shared-types').SettingsSetPlannerRequest) => {
       return handlers.settingsSetPlanner(request);
+    },
+  );
+
+  // Copilot service handlers (Phase 5 — M33 T7)
+  ipcMain.handle('settings.getCopilot', async () => {
+    return handlers.settingsGetCopilot();
+  });
+
+  ipcMain.handle(
+    'settings.setCopilot',
+    async (_event, request: import('@team-x/shared-types').SettingsSetCopilotRequest) => {
+      return handlers.settingsSetCopilot(request);
     },
   );
 

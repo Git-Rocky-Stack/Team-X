@@ -1,0 +1,258 @@
+/**
+ * CopilotSection — copilot-service settings (M33).
+ *
+ * Backs the three `copilot_*` settings keys introduced in M33: `copilot_enabled`
+ * (bool), `copilot_interval_minutes` (1–60), and `copilot_categories` (subset of
+ * `COPILOT_CATEGORIES`). Every save synchronously restarts the per-company
+ * `CopilotAnalyzerService` timer so the new interval / enabled / categories
+ * take effect without an app restart.
+ *
+ * Phase 5 — M33 T7.
+ */
+
+import { useEffect, useState } from 'react';
+
+import {
+  COPILOT_CATEGORIES,
+  COPILOT_SETTINGS_CLAMPS,
+  type CopilotCategory,
+  type SettingsGetCopilotResponse,
+} from '@team-x/shared-types';
+import { AlertTriangle, Loader2, Sparkles } from 'lucide-react';
+
+import { Input } from '@/components/ui/input.js';
+import { Skeleton } from '@/components/ui/skeleton.js';
+import { useCopilotSettings, useSetCopilot } from '@/hooks/use-settings.js';
+import { useAppStore } from '@/store/app-store.js';
+
+function clamp(value: number, min: number, max: number): number {
+  if (Number.isNaN(value) || !Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+/** Human-readable labels for category chips. */
+const CATEGORY_LABELS: Record<CopilotCategory, string> = {
+  operational: 'Operational',
+  cost: 'Cost',
+  org: 'Org Health',
+  workflow: 'Workflow',
+  anomaly: 'Anomaly',
+};
+
+export function CopilotSection() {
+  const companyId = useAppStore((s) => s.companyId);
+  const { data, isLoading, isError } = useCopilotSettings();
+  const setCopilot = useSetCopilot();
+
+  const [draft, setDraft] = useState<SettingsGetCopilotResponse | null>(null);
+
+  useEffect(() => {
+    if (data) setDraft(data);
+  }, [data]);
+
+  if (isLoading || !draft) {
+    return (
+      <section className="space-y-3" aria-busy="true">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Copilot
+          </h4>
+        </div>
+        <Skeleton className="h-56 rounded-lg" />
+      </section>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Copilot
+          </h4>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Failed to load copilot settings.
+        </div>
+      </section>
+    );
+  }
+
+  function commitEnabled(nextEnabled: boolean) {
+    if (!draft || !companyId) return;
+    if (draft.enabled === nextEnabled) return;
+    setDraft({ ...draft, enabled: nextEnabled });
+    setCopilot.mutate({ companyId, enabled: nextEnabled });
+  }
+
+  function commitIntervalMinutes(value: number) {
+    if (!draft || !companyId) return;
+    if (draft.intervalMinutes === value) return;
+    setDraft({ ...draft, intervalMinutes: value });
+    setCopilot.mutate({ companyId, intervalMinutes: value });
+  }
+
+  function toggleCategory(cat: CopilotCategory) {
+    if (!draft || !companyId) return;
+    const has = draft.categories.includes(cat);
+    const next = has ? draft.categories.filter((c) => c !== cat) : [...draft.categories, cat];
+    // Empty selection falls back server-side to the full set; echo that
+    // into the optimistic draft so the UI doesn't flash empty state
+    // between the mutation and the query invalidation.
+    const optimistic = next.length === 0 ? (COPILOT_CATEGORIES.slice() as CopilotCategory[]) : next;
+    setDraft({ ...draft, categories: optimistic });
+    setCopilot.mutate({ companyId, categories: next });
+  }
+
+  const { intervalMinutes } = COPILOT_SETTINGS_CLAMPS;
+
+  return (
+    <section className="space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Copilot
+        </h4>
+        {setCopilot.isPending && (
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
+        )}
+      </div>
+
+      {/* Description */}
+      <p className="text-[11px] text-muted-foreground leading-snug">
+        The copilot analyzer watches company activity and proposes actionable insights on a
+        schedule. Turn it off, change its cadence, or narrow the categories it reports on.
+      </p>
+
+      {/* Knobs */}
+      <div className="rounded-lg border border-border bg-surface-50 p-4 space-y-4">
+        {/* Enabled toggle */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <label
+              htmlFor="copilot-enabled"
+              className="text-[11px] font-medium text-muted-foreground"
+            >
+              Analyzer Enabled
+            </label>
+            <p className="text-[10px] text-muted-foreground/70">
+              When off, every scheduled and event-triggered tick short-circuits.
+            </p>
+          </div>
+          <button
+            id="copilot-enabled"
+            type="button"
+            role="switch"
+            aria-checked={draft.enabled}
+            onClick={() => commitEnabled(!draft.enabled)}
+            disabled={setCopilot.isPending || !companyId}
+            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors ${
+              draft.enabled
+                ? 'border-[#FFAA2024]/70 bg-[#FFAA2024]/80'
+                : 'border-border bg-surface-200'
+            } focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-background transition-transform ${
+                draft.enabled ? 'translate-x-4' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Interval minutes */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-4">
+            <label
+              htmlFor="copilot-interval-minutes"
+              className="text-[11px] font-medium text-muted-foreground"
+            >
+              Scheduled Interval (minutes)
+            </label>
+            <span className="text-[11px] font-mono text-foreground tabular-nums">
+              {draft.intervalMinutes}
+            </span>
+          </div>
+          <Input
+            id="copilot-interval-minutes"
+            type="number"
+            inputMode="numeric"
+            min={intervalMinutes.min}
+            max={intervalMinutes.max}
+            step={1}
+            value={draft.intervalMinutes}
+            onChange={(e) =>
+              setDraft({
+                ...draft,
+                intervalMinutes: Number.parseInt(e.target.value, 10) || 0,
+              })
+            }
+            onBlur={() => {
+              const next = clamp(draft.intervalMinutes, intervalMinutes.min, intervalMinutes.max);
+              if (next !== draft.intervalMinutes) setDraft({ ...draft, intervalMinutes: next });
+              commitIntervalMinutes(next);
+            }}
+            disabled={setCopilot.isPending || !companyId}
+            className="h-8 text-xs font-mono"
+          />
+          <p className="text-[10px] text-muted-foreground/70">
+            How often the analyzer tick fires ({intervalMinutes.min}–{intervalMinutes.max}, default{' '}
+            {intervalMinutes.default}). Saves restart the per-company timer immediately.
+          </p>
+        </div>
+
+        {/* Categories */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              Allowed Categories
+            </span>
+            <span className="text-[10px] font-mono text-foreground/70 tabular-nums">
+              {draft.categories.length}/{COPILOT_CATEGORIES.length}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {COPILOT_CATEGORIES.map((cat) => {
+              const checked = draft.categories.includes(cat);
+              return (
+                <label
+                  key={cat}
+                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] transition-colors ${
+                    checked
+                      ? 'border-[#FFAA2024]/50 bg-[#FFAA2024]/10 text-foreground'
+                      : 'border-border bg-surface-50 text-muted-foreground hover:text-foreground'
+                  } ${setCopilot.isPending || !companyId ? 'opacity-50' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleCategory(cat)}
+                    disabled={setCopilot.isPending || !companyId}
+                    className="h-3 w-3 rounded border-border"
+                  />
+                  <span>{CATEGORY_LABELS[cat]}</span>
+                </label>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground/70">
+            The analyzer only proposes insights in categories you enable. Clearing every category
+            falls back to the full set.
+          </p>
+        </div>
+      </div>
+
+      {/* Save error banner */}
+      {setCopilot.isError && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0 truncate">Failed to save: {String(setCopilot.error)}</span>
+        </div>
+      )}
+    </section>
+  );
+}

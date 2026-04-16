@@ -13,14 +13,20 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 import {
   AGENTIC_SETTINGS_CLAMPS,
+  COPILOT_CATEGORIES,
+  COPILOT_ENABLED_DEFAULT,
+  COPILOT_SETTINGS_CLAMPS,
+  type CopilotCategory,
   DEFAULT_CONCURRENCY_CAPS,
   PLANNER_APPROVAL_LEVELS,
   PLANNER_APPROVAL_LEVEL_DEFAULT,
   PLANNER_SETTINGS_CLAMPS,
   type PlannerApprovalLevel,
   type SettingsGetAgenticResponse,
+  type SettingsGetCopilotResponse,
   type SettingsGetPlannerResponse,
   type SettingsSetAgenticRequest,
+  type SettingsSetCopilotRequest,
   type SettingsSetPlannerRequest,
 } from '@team-x/shared-types';
 
@@ -56,6 +62,15 @@ const SETTING_DEFAULTS: Array<{ key: string; value: unknown }> = [
     key: 'planner_escalation_threshold',
     value: PLANNER_SETTINGS_CLAMPS.escalationThreshold.default,
   },
+  // Copilot service (Phase 5 — M33). Clamps live in COPILOT_SETTINGS_CLAMPS; categories
+  // default to the full COPILOT_CATEGORIES set — a conservative default that never
+  // leaves the user with a silently-disabled analyzer through a bad save.
+  { key: 'copilot_enabled', value: COPILOT_ENABLED_DEFAULT },
+  {
+    key: 'copilot_interval_minutes',
+    value: COPILOT_SETTINGS_CLAMPS.intervalMinutes.default,
+  },
+  { key: 'copilot_categories', value: COPILOT_CATEGORIES },
 ];
 
 /**
@@ -250,6 +265,77 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
         }
         const c = PLANNER_SETTINGS_CLAMPS.escalationThreshold;
         this.set('planner_escalation_threshold', clampInt(req.escalationThreshold, c.min, c.max));
+      }
+    },
+
+    /**
+     * Read the three copilot-service settings keys as a single typed
+     * snapshot. Missing keys fall back to the shared clamp defaults so
+     * the analyzer always observes sensible settings even on first
+     * boot before `seedDefaults()` has run.
+     *
+     * Clamp-at-read guarantees: a pre-existing out-of-range value in
+     * the DB (from a manual edit, a failed migration, or a prior-version
+     * save) is clamped on the read path so the analyzer never observes
+     * a value outside `[1, 60]`. Empty categories fall back to the full
+     * set at read time for the same reason.
+     *
+     * Phase 5 — M33.
+     */
+    getCopilot(): SettingsGetCopilotResponse {
+      const enabled = this.get<boolean>('copilot_enabled', COPILOT_ENABLED_DEFAULT);
+      const rawInterval = this.get<number>(
+        'copilot_interval_minutes',
+        COPILOT_SETTINGS_CLAMPS.intervalMinutes.default,
+      );
+      const ic = COPILOT_SETTINGS_CLAMPS.intervalMinutes;
+      const intervalMinutes = Number.isFinite(rawInterval)
+        ? clampInt(rawInterval, ic.min, ic.max)
+        : ic.default;
+      const rawCategories = this.get<unknown>('copilot_categories', COPILOT_CATEGORIES);
+      const filtered = Array.isArray(rawCategories)
+        ? (rawCategories.filter((x): x is CopilotCategory =>
+            (COPILOT_CATEGORIES as readonly string[]).includes(x as string),
+          ) as CopilotCategory[])
+        : [];
+      const categories =
+        filtered.length === 0 ? (COPILOT_CATEGORIES.slice() as CopilotCategory[]) : filtered;
+      return { enabled, intervalMinutes, categories };
+    },
+
+    /**
+     * Patch one or more copilot-service settings. `enabled` is coerced
+     * to boolean. `intervalMinutes` is clamped into `[min, max]` from
+     * `COPILOT_SETTINGS_CLAMPS`; fractional inputs are rounded; non-
+     * finite numbers are rejected. `categories` is filtered against
+     * `COPILOT_CATEGORIES` with an empty-array guard — an empty set
+     * (after filtering) falls back to the full `COPILOT_CATEGORIES`
+     * set rather than persisting a silently-disabled analyzer.
+     *
+     * Note: `req.companyId` is consumed by the IPC handler for the
+     * `CopilotAnalyzerService.restart(companyId)` side effect and is
+     * intentionally ignored here — copilot settings are global.
+     *
+     * Phase 5 — M33.
+     */
+    setCopilot(req: SettingsSetCopilotRequest): void {
+      if (req.enabled !== undefined) {
+        this.set('copilot_enabled', Boolean(req.enabled));
+      }
+      if (req.intervalMinutes !== undefined) {
+        if (!Number.isFinite(req.intervalMinutes)) {
+          throw new Error('[settings] setCopilot: intervalMinutes must be a finite number');
+        }
+        const c = COPILOT_SETTINGS_CLAMPS.intervalMinutes;
+        this.set('copilot_interval_minutes', clampInt(req.intervalMinutes, c.min, c.max));
+      }
+      if (req.categories !== undefined) {
+        const filtered = req.categories.filter((x): x is CopilotCategory =>
+          (COPILOT_CATEGORIES as readonly string[]).includes(x as string),
+        );
+        const safe: CopilotCategory[] =
+          filtered.length === 0 ? (COPILOT_CATEGORIES.slice() as CopilotCategory[]) : filtered;
+        this.set('copilot_categories', safe);
       }
     },
   };

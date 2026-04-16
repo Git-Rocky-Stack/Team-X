@@ -64,7 +64,7 @@ import type {
   Thread,
   Ticket,
 } from './entities.js';
-import type { AgenticRunSnapshot, DashboardEvent } from './events.js';
+import type { AgenticRunSnapshot, CopilotCategory, DashboardEvent } from './events.js';
 import type { PrivacyTier, ProviderConfig, ProviderKind } from './providers.js';
 
 // ---------------------------------------------------------------------------
@@ -916,6 +916,62 @@ export const PLANNER_APPROVAL_LEVELS: readonly PlannerApprovalLevel[] = [
 export const PLANNER_APPROVAL_LEVEL_DEFAULT: PlannerApprovalLevel = 'management';
 
 // ---------------------------------------------------------------------------
+// Copilot service settings (Phase 5 — M33)
+// ---------------------------------------------------------------------------
+
+/**
+ * Authoritative runtime list of the five copilot insight categories.
+ * Kept in sync with the `CopilotCategory` union in `./events.ts` and the
+ * SQL CHECK constraint in migration 0011. Renderer uses this to render
+ * the categories checkbox grid in `CopilotSection`; repo uses it to
+ * validate `copilot_categories` settings writes.
+ */
+export const COPILOT_CATEGORIES: readonly CopilotCategory[] = [
+  'operational',
+  'cost',
+  'org',
+  'workflow',
+  'anomaly',
+] as const;
+
+/** Snapshot of the three copilot-service settings keys. */
+export interface SettingsGetCopilotResponse {
+  /** Whether the analyzer runs at all. `false` short-circuits every scheduled + event-triggered tick. */
+  enabled: boolean;
+  /** Scheduled-tick interval in minutes. 1–60. */
+  intervalMinutes: number;
+  /** Allowed subset of `COPILOT_CATEGORIES`. Empty fallback → full set (conservative default). */
+  categories: CopilotCategory[];
+}
+
+/**
+ * Partial patch for copilot-service settings. Missing keys retain their
+ * current persisted value. `intervalMinutes` is clamped; `categories`
+ * is filtered against `COPILOT_CATEGORIES` with empty-array guard
+ * (empty → full set).
+ *
+ * `companyId` is required so the handler can synchronously call
+ * `CopilotAnalyzerService.restart(companyId)` after the write and the
+ * per-company scheduler picks up the new interval / enabled / categories
+ * without an app restart.
+ */
+export interface SettingsSetCopilotRequest {
+  /** Target company whose analyzer timer should be restarted after the write. */
+  companyId: string;
+  enabled?: boolean;
+  intervalMinutes?: number;
+  categories?: CopilotCategory[];
+}
+
+/** Clamp bounds + defaults for the `intervalMinutes` key. Shared by repo, handler, and UI. */
+export const COPILOT_SETTINGS_CLAMPS = {
+  intervalMinutes: { min: 1, max: 60, default: 5 },
+} as const;
+
+/** Default value for the `enabled` key when no setting is persisted. */
+export const COPILOT_ENABLED_DEFAULT = true;
+
+// ---------------------------------------------------------------------------
 // RAG configuration settings (Phase 5 — M29)
 // ---------------------------------------------------------------------------
 
@@ -1161,6 +1217,15 @@ export interface IpcContract {
   };
   'settings.setPlanner': {
     request: SettingsSetPlannerRequest;
+    response: undefined;
+  };
+  // Copilot service channels (Phase 5 — M33)
+  'settings.getCopilot': {
+    request: Record<string, never>;
+    response: SettingsGetCopilotResponse;
+  };
+  'settings.setCopilot': {
+    request: SettingsSetCopilotRequest;
     response: undefined;
   };
   // Provider management channels (Phase 3 — M18)
@@ -1541,6 +1606,15 @@ export interface TeamXApi {
     getPlanner(): Promise<SettingsGetPlannerResponse>;
     /** Patch one or more task-planner settings. Numeric values are clamped; approval level is validated. Phase 5 — M32. */
     setPlanner(req: SettingsSetPlannerRequest): Promise<void>;
+    /** Get copilot-service settings (enabled, interval in minutes, allowed category subset). Phase 5 — M33. */
+    getCopilot(): Promise<SettingsGetCopilotResponse>;
+    /**
+     * Patch one or more copilot-service settings. `intervalMinutes` is clamped;
+     * `categories` is filtered against `COPILOT_CATEGORIES` with empty-array
+     * fallback to the full set. Restarts the per-company analyzer timer so
+     * new settings take effect without an app restart. Phase 5 — M33.
+     */
+    setCopilot(req: SettingsSetCopilotRequest): Promise<void>;
   };
   providers: {
     /** List all configured providers with status. */
