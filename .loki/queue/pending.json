@@ -8,7 +8,7 @@
   "createdAt": "2026-04-15T15:18:00Z",
   "updatedAt": "2026-04-15T19:00:00Z",
   "totalTasks": 11,
-  "tasksShipped": 6,
+  "tasksShipped": 7,
   "tasks": [
     {
       "id": "T0",
@@ -60,6 +60,15 @@
       "unitTestDelta": "+8 (1003 → 1011)",
       "filesChanged": "4 files, +236 / -51 LOC: apps/desktop/src/main/services/command-service.ts (M), apps/desktop/src/main/services/command-service.test.ts (M), apps/desktop/src/renderer/src/features/command/command-palette.tsx (M), packages/shared-types/src/command.ts (M).",
       "scope": "Write-side confirmation gate for complex_request intents with keyword heuristic (WRITE_SIDE_KEYWORDS regex). Gate 2.5 in execute() fires before agentic loop dispatch when rawText matches write-side verbs (decompose, delegate, create tickets, review) and confirmed !== true and skipConfirmation !== true. Returns { kind: 'needs_confirmation', gateKind: 'write-side', summary }. Existing Gate 2 (destructive) now also tags gateKind: 'destructive'. ExecuteRequest/IpcExecuteRequest gain skipConfirmation?: boolean (M33 Copilot prep). ExecuteResult/IpcExecuteResult/IpcParseResult needs_confirmation variant gains gateKind?: 'destructive' | 'write-side'. Palette conditionally renders amber (write-side) vs red (destructive) confirmation card. Tests +8: 4 heuristic (keyword matching + false negatives), 4 gate integration (needs_confirmation return, confirmed:true passthrough, skipConfirmation bypass, no-keyword passthrough)."
+    },
+    {
+      "id": "T6",
+      "name": "Full step-card variants + AuditView planner chips",
+      "status": "shipped",
+      "commit": "219d8ef",
+      "unitTestDelta": "+11 (1011 → 1022)",
+      "filesChanged": "4 files, +392 / -29 LOC: apps/desktop/src/renderer/src/features/command/step-card.tsx (M), apps/desktop/src/renderer/src/features/command/step-card-narrow.ts (NEW), apps/desktop/src/renderer/src/features/command/step-card-narrow.test.ts (NEW), apps/desktop/src/renderer/src/features/audit/audit-view.tsx (M).",
+      "scope": "T4-minimal step-card branches (ticket_created, delegation_made, review_pending) upgraded to full rendering with data narrowing, detail text, and color polish. Narrow helpers extracted to step-card-narrow.ts for testability without renderer deps (no jsdom). ticket_created: Ticket icon, title text, assignee + plan refs. delegation_made: GitBranch icon, assignee name, plan ref. review_pending: ClipboardCheck icon, outcome color-coding (approve=emerald, reject=red, pending=amber), ticket + reviewer refs. AuditView gains 6 new planner event types: EVENT_TYPE_COLORS (plan.proposed/approved violet, task.delegated sky, task.escalated rose, review.requested/completed amber), EVENT_TYPE_LABELS for all 6, buildRowSummary payload-aware summaries (subtask count, assignee, outcome, escalation). Tests +11: 4 narrowTicketCreated + 3 narrowDelegationMade + 4 narrowReviewPending."
     }
   ],
   "baseline": {

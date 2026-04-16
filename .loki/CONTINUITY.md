@@ -1,4 +1,42 @@
-# Loki Continuity — Phase 5, M32 T5 SHIPPED (write-side confirmation gate); M32 T6+ pending
+# Loki Continuity — Phase 5, M32 T6 SHIPPED (step-card variants + AuditView chips); M32 T7+ pending
+
+## M32 T6 SHIPPED — 2026-04-15
+
+**Milestone:** Task Planner (Phase 5 — Intelligence Layer). In progress (7 of 11 tasks shipped).
+**Scope:** Full step-card write-side variants (ticket_created, delegation_made, review_pending) with data narrowing, detail text, deep-links, color polish. Narrow helpers extracted to `step-card-narrow.ts` for testability without renderer deps. AuditView extended with 6 new planner event types (colors, labels, payload-aware row summaries).
+**Commit:** T6 = `219d8ef`.
+
+### Metrics delta
+
+| Metric | Pre-T6 | Post-T6 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1011 | 1022 | +11 |
+| E2E specs | 8 | 8 | 0 |
+| Files touched | — | 4 (+392 / −29) | — |
+
+### What shipped
+
+**`apps/desktop/src/renderer/src/features/command/step-card-narrow.ts`** (NEW) — Pure narrow helpers for 3 write-side step kinds. Extracted from step-card.tsx so unit tests run in node-env Vitest without jsdom or Vite alias resolution. Exports `narrowTicketCreated`, `narrowDelegationMade`, `narrowReviewPending` — each takes `unknown`, returns typed object with safe defaults.
+
+**`apps/desktop/src/renderer/src/features/command/step-card.tsx`** (M) — Three T4-minimal case branches upgraded to full rendering. `ticket_created`: Ticket icon (lucide), title text, assignee + plan ID refs, emerald border. `delegation_made`: GitBranch icon, assignee name display, plan ref, sky border. `review_pending`: ClipboardCheck icon, outcome-based color (approve=emerald, reject=red, pending=amber), ticket + reviewer + plan refs, amber border. All three maintain `data-step-kind` stable E2E selectors. Imported narrow helpers from step-card-narrow.ts.
+
+**`apps/desktop/src/renderer/src/features/audit/audit-view.tsx`** (M) — `EVENT_TYPE_COLORS` gains 6 entries: plan.proposed/approved (violet), task.delegated (sky), task.escalated (rose), review.requested/completed (amber). `EVENT_TYPE_LABELS` gains 6 hand-tuned labels. `buildRowSummary` extended with `SUMMARIZABLE_TYPES` set and payload-aware compact summaries for all 6 planner events (subtask count + truncation for plan.proposed, tickets count for plan.approved, assignee name + fallback + attempts for task.delegated, truncated reason for task.escalated, ticket ID for review.requested, outcome + escalation flag for review.completed).
+
+**`step-card-narrow.test.ts`** (NEW) — 11 unit tests: narrowTicketCreated (well-formed, undefined, partial, non-string coercion), narrowDelegationMade (well-formed, undefined, partial), narrowReviewPending (well-formed, absent planId→null, undefined, non-string coercion).
+
+### Gotchas captured
+
+- **Renderer-aliased imports block Vitest node-env resolution.** `step-card.tsx` imports `@/lib/utils.js` (a Vite alias) — any test file importing from it transitively fails with `Failed to load url @/lib/utils.js`. Fix: extract the pure functions to a standalone `.ts` module with zero renderer deps. Pattern applies to any future renderer-adjacent utility that needs unit testing.
+
+### Next Session Startup Checklist (M32 T7+)
+
+1. Read this CONTINUITY — T0–T6 shipped, T7–T10 remaining.
+2. **T7 = Planner settings** — 4 new clamped keys (`planner_max_tickets`, `planner_max_depth`, `planner_approval_level`, `planner_escalation_threshold`) in Settings → Runtime. New `settings.getPlanner` / `settings.setPlanner` IPC pair. T2's `PLANNER_DEFAULTS` static accessor swapped for the live settings repo via `deps.getPlanner`. +8 unit tests.
+3. **T8 = E2E spec** `task-planner.spec.ts` — full round-trip through write-side tools with canned seam.
+4. **T9 = Docs** — CLAUDE.md, CHANGELOG, README, `docs/user-guide/task-planner.md`.
+5. **T10 = Verification + milestone marker** — ABI rebuild dance, full test suite, phase badge.
+
+---
 
 ## M32 T5 SHIPPED — 2026-04-15
 
