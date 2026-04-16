@@ -72,6 +72,23 @@ const CANNED_TABLE: Readonly<Record<string, readonly string[]>> = Object.freeze(
     'Planning: list the current team to surface who is active before reporting on workload.\n{"action":"query_employees","args":{}}',
     '{"action":"final_answer","answer":"Team currently has 2 employees active: Iris Kovač (CEO) and Mateo Reyes (Senior Fullstack Engineer). No open tickets in the queue right now."}',
   ]),
+  // Phase 5 — M32 T8. E2E task-planner spec fixture. Classifier maps
+  // this phrase to `complex_request`; the phrase contains the write-side
+  // keywords `decompose` and `tickets`, so command-service triggers the
+  // write-side confirmation gate before dispatch. On confirm, the system-
+  // agent receives both `decompose_project` and `delegate_subtask` tools
+  // (level = 'system' matches both TEST_DECOMPOSE_LEVELS and
+  // TEST_DELEGATE_REVIEW_LEVELS). The canned tools return their default
+  // fixtures — plan-test-1 with a single "Test subtask" assigned to
+  // emp-test-swe, then ticket tkt-test-1 created for Mateo Reyes. The
+  // spec asserts on the amber write-side gate card, the final answer
+  // card, the persisted copilot transcript, and the Dashboard Commands
+  // audit row.
+  'decompose the frontend redesign into tickets': Object.freeze([
+    'Planning: decompose the redesign into actionable tickets, then delegate each one.\n{"action":"decompose_project","args":{"brief":"Frontend redesign"}}',
+    'Planning: now delegate the proposed subtask to its scored assignee.\n{"action":"delegate_subtask","args":{"planId":"plan-test-1","subtaskTitle":"Test subtask","assigneeId":"emp-test-swe"}}',
+    '{"action":"final_answer","answer":"Decomposed the frontend redesign into 1 subtask and delegated ticket tkt-test-1 to Mateo Reyes."}',
+  ]),
 });
 
 /** Terminal step returned when no canned or sentinel script matches. */

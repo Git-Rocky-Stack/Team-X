@@ -110,6 +110,15 @@ const CANNED_TABLE: Readonly<Record<string, CannedEntry>> = {
     entities: {},
     confidence: 0.88,
   },
+  // Phase 5 — M32 T8. Write-side task-planner E2E spec fixture.
+  // Contains the keyword "decompose" which triggers WRITE_SIDE_KEYWORDS
+  // in command-service.ts, so execute() returns needs_confirmation with
+  // gateKind: 'write-side' before dispatching the agentic loop.
+  'decompose the frontend redesign into tickets': {
+    intent: 'complex_request',
+    entities: {},
+    confidence: 0.91,
+  },
 };
 
 // ---------------------------------------------------------------------------
