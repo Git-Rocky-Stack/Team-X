@@ -6,9 +6,9 @@
   "previousMilestone": "M32",
   "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
   "createdAt": "2026-04-16T07:20:00Z",
-  "updatedAt": "2026-04-16T15:10:00Z",
+  "updatedAt": "2026-04-16T15:26:00Z",
   "totalTasks": 11,
-  "tasksShipped": 5,
+  "tasksShipped": 6,
   "tasks": [
     {
       "id": "T0",
@@ -94,10 +94,21 @@
     {
       "id": "T5",
       "name": "copilot.* IPC surface + preload bridge",
-      "status": "pending",
-      "scope": "Four IPC channels per Phase 5 §8.6: copilot.insights, copilot.dismiss, copilot.ask, copilot.configure. Typed end-to-end via TeamXApi. Handlers in apps/desktop/src/main/ipc/copilot-handlers.ts. Preload bridge window.teamx.copilot. CopilotInsight wire type in packages/shared-types/src/copilot.ts. Unit tests +8 (4 channels × happy + error).",
+      "status": "completed",
+      "commit": "a085dc7",
+      "shippedAt": "2026-04-16T15:25:00Z",
+      "scope": "Four IPC channels per Phase 5 §8.6 (copilot.insights / copilot.dismiss / copilot.ask / copilot.configure) typed end-to-end via TeamXApi + IpcContract. NEW ipc/copilot-handlers.ts buildCopilotHandlers factory mirroring rag-handlers.ts. NEW shared-types/src/copilot.ts with JSON-safe CopilotInsight wire type + 4 IPC arg/result pairs + CopilotDismissedPayload. `copilot.dismissed` appended to EventType union. window.teamx.copilot namespace on preload bridge. REQUEST_CHANNELS extended with the 4 copilot channels + command.getRunSnapshot backfill (was missing from shutdown strip list). Composition root wires analyzer + insightsRepo + bus + isTestMode; copilot.ask throws 'not implemented' pending T6 agenticLoopStart wire-in; copilot.configure throws outside test mode directing to settings.setCopilot (T7). Tests +8 exact (2 per channel). 0 lint errors, 24 warnings, typecheck clean.",
       "commitTemplate": "feat(m33): M33 T5 — copilot.* IPC surface + preload bridge",
-      "testsDelta": "+8 unit"
+      "testsDelta": "+8 unit",
+      "metrics": {
+        "unitTestsBefore": 1074,
+        "unitTestsAfter": 1082,
+        "unitTestsDelta": "+8 (exact match to T5 target)",
+        "lintErrors": 0,
+        "lintWarnings": 24,
+        "typecheck": "clean",
+        "filesChanged": "9 (+939 / -1)"
+      }
     },
     {
       "id": "T6",
@@ -149,14 +160,14 @@
     "typecheckClean": true
   },
   "current": {
-    "unitTests": 1074,
+    "unitTests": 1082,
     "e2eSpecs": 8,
     "e2eGreenCount": 9,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "T4",
-    "asOfTaskCommit": "e672973"
+    "asOfTask": "T5",
+    "asOfTaskCommit": "a085dc7"
   },
   "targets": {
     "unitTests": 1058,

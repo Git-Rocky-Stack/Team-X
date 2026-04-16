@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M33",
   "milestoneName": "Copilot Service",
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
@@ -11,7 +11,7 @@
   "phaseComplete": false,
   "inflight": {
     "taskId": null,
-    "lastShipped": "T4"
+    "lastShipped": "T5"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M32",
@@ -29,7 +29,7 @@
     "typecheckClean": true
   },
   "current": {
-    "unitTests": 1074,
+    "unitTests": 1082,
     "e2eSpecs": 8,
     "e2eGreenCount": 9,
     "lintErrors": 0,
@@ -127,14 +127,15 @@
       "name": "Copilot Service",
       "startedAt": "2026-04-16T08:15:00Z",
       "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
-      "tasksShipped": 5,
+      "tasksShipped": 6,
       "totalTasks": 11,
       "commits": {
         "T0": "c5cdeee",
         "T1": "0a77d87",
         "T2": "4ce9d3e",
         "T3": "c6b40ae",
-        "T4": "e672973"
+        "T4": "e672973",
+        "T5": "a085dc7"
       },
       "baselineAtStart": {
         "unitTests": 1033,
@@ -145,14 +146,14 @@
         "typecheckClean": true
       },
       "current": {
-        "unitTests": 1074,
+        "unitTests": 1082,
         "e2eSpecs": 8,
         "e2eGreenCount": 9,
         "lintErrors": 0,
         "lintWarnings": 24,
         "typecheckClean": true,
-        "asOfTask": "T4",
-        "asOfTaskCommit": "e672973"
+        "asOfTask": "T5",
+        "asOfTaskCommit": "a085dc7"
       },
       "targets": {
         "unitTests": 1058,
@@ -165,6 +166,7 @@
     }
   },
   "notes": [
+    "M33 (Copilot Service) T5 SHIPPED (2026-04-16, commit a085dc7). +8 unit tests (1074 → 1082, exact T5 target — 2 tests per channel × 4 channels). NEW apps/desktop/src/main/ipc/copilot-handlers.ts — buildCopilotHandlers factory mirroring the rag-handlers.ts pattern exactly (pure, structural dep surface, zero electron imports). NEW apps/desktop/src/main/ipc/copilot-handlers.test.ts (8 tests: insights happy [newest-first + pagination + cursor + limit-clamp-to-100] + invalid-companyId; dismiss happy [bus emit + idempotent re-dismiss] + unknown-id; ask stub-happy [delegates when agenticLoopStart dep wired] + stub-throw / missing-text; configure happy [manual tick echoes counts] + production-throw [non-test-mode, analyzer untouched]). NEW packages/shared-types/src/copilot.ts — CopilotInsight wire row (JSON-safe projection distinct from CopilotInsightRow per T5 note 4), CopilotInsightListArgs/Result, CopilotDismissArgs/Result, CopilotAskArgs/Result, CopilotConfigureArgs/Result, CopilotDismissedPayload. `copilot.dismissed` appended to EventType union in shared-types/src/events.ts per invariant #11 (one new EventType literal). `copilot` namespace + 4 channels added to TeamXApi + IpcContract. Preload bridge: CHANNELS entries for copilotInsights/Dismiss/Ask/Configure + window.teamx.copilot namespace on the api surface. register.ts REQUEST_CHANNELS extended with the 4 copilot channels + command.getRunSnapshot (that one was already live on the bridge but missing from the shutdown strip list — fixed in the same commit). Composition root (main/index.ts) imports buildCopilotHandlers alongside buildRagHandlers, guards copilotAnalyzerServiceInstance non-null, instantiates with deps { copilotInsightsRepo, copilotAnalyzerService: copilotAnalyzerServiceInstance, bus, isTestMode }, registers 4 ipcMain.handle mappings right after command.getRunSnapshot. T5 leaves `agenticLoopStart` unset (undefined) so copilot.ask throws 'not implemented — T6 wires AgenticLoopService.start with system-copilot' — keeps the stub on-surface rather than a synthetic runId that would mislead the palette's step-stream hook. copilot.configure throws outside test mode with a clear message directing to settings.setCopilot (T7). 9 files changed (+939/-1). 0 lint errors / 24 warnings (baseline steady) / typecheck clean across all 6 workspace packages. Full suite 1082/1082 passing in 19.28s.",
     "M33 (Copilot Service) T4 SHIPPED (2026-04-16, commit e672973). Headline task — CopilotAnalyzerService (periodic + event-triggered scheduler) + CopilotEventTrigger (30s-debounced) + migration 0012 (runs.kind column, default 'work', 'copilot' on copilot ticks, 'agentic' available for future M31 backfill) + 3 EventType additions (copilot.insight / copilot.analyzed / copilot.expired) + CopilotCategory + CopilotSeverity + CopilotAnalyzedReason unions in shared-types + listStale(now) addition to CopilotInsightsRepo (non-mutating sibling to expireStale so per-row copilot.expired can fire BEFORE physical delete) + StartRunInput gains optional `kind` defaulting to 'work' at SQL layer. Structure mirrors M31 AgenticLoopService: pause-aware providerRouter wrapper (waitUntilUnpaused poll every 250ms prod / injectable pauseGatePollMs in tests), AbortController-driven stop with canceled-status coercion, runs-table row per tick with kind='copilot', terminal copilot.analyzed discipline (exactly one per tick). Dedup via upsertWithDedup.merged flag — copilot.insight fires ONLY on insert, merges are silent. Expiry sweep at top of tick (listStale then per-row emit then expireStale). Zod InsightDraftSchema + one-shot nudge retry + malformed_output skip. System-copilot identity resolved per-tick via findSystemByRoleId. Composition root wires companiesRepo+employeesRepo+runsRepo+copilotInsightsRepo+copilotEventWindow+bus+orchestrator+resolveComplete (test-mode returns '[]'; production wraps streamAgent). stopAll() method added for clean teardown from will-quit (no per-company iteration needed — companiesRepo not in shutdown closure scope). 11 files (+2144/-1): 2 new service files, 2 new test files, 1 new migration, 1 schema update + runs.ts + copilot-insights.ts + events.ts + journal + index.ts (imports + module-state handles + instantiation + shutdown). +14 unit tests (1060 → 1074, exact match to T4 target). 12 analyzer tests cover determinism+nudge+pause+dedup+expiry+cancel. 2 trigger tests cover single-signal debounce + coalesced-reset + non-signal filter + agentic.failed payload predicate. 0 lint errors / 24 warnings / typecheck clean across all 6 workspace packages.",
     "M33 T4 DESIGN CALLS: (a) migration 0012 ADDS `kind` column to runs rather than extending an enum — no `kind` column existed pre-M33 and no SQLite CHECK-constraint swap precedent for runs.kind in migrations 0000–0011. Default 'work' at SQL layer backfills every existing row; M31 agentic rows also default to 'work' today and are candidates for future backfill when Telemetry UI grows a per-kind filter (M34+). (b) `listStale` was added as a non-mutating sibling to `expireStale` rather than widening the latter's return shape — preserves T1's tested count-return contract. (c) CopilotEventTrigger is a SEPARATE file (not an extension of the T3 window) to keep T3 as a pure accumulator with its tests isolated. (d) ticket.closed + goal.progressChanged signals are future-ready — trigger subscribes but no upstream producer exists today; zero-cost until they land.",
     "M33 (Copilot Service) T3 SHIPPED (2026-04-16, commit c6b40ae). CopilotEventWindow — in-memory per-company rolling buffer feeding T4's CopilotAnalyzerService. Bounded deque (MAX_EVENTS_PER_COMPANY=100 private const, NOT a user setting in M33), FIFO eviction on overflow, warm-start hydration from eventsRepo.listByCompany on first snapshot per company (hydrated: Set<string> flag prevents re-hydration). Subscribes to the event bus via rag-indexer pattern (start/stop + unsubscribe handle). Defensive-copy on snapshot (spread) so T4's prompt-builder iteration cannot be mutated by live push+shift. Filters token.delta at boundary (~50-500 events/turn would pin the window to streaming noise). clear(companyId) public method shipped but NOT wired to companies.archive — that IPC does not exist in the codebase today (companies repo has create/getById/getBySlug/list/setStatus only); archive-clear wiring deferred to the milestone that adds companies.archive. parseRow helper duplicated from orchestrator/event-bus.ts (module-private there); flagged for shared-module extraction if a third consumer appears. Composition root: instantiated after ragIndexer.start() with same bus+eventsRepo deps, handled in will-quit shutdown alongside rag indexer. Tests +8 (1052 → 1060, exact match to plan target): bounds (3), isolation (2), warm-start (2 including defensive-copy verification), archive-clear (1).",
