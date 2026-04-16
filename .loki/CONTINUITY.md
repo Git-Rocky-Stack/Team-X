@@ -1,4 +1,100 @@
-# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0 shipped); M32 (Task Planner) complete
+# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0 + T1 shipped); M32 (Task Planner) complete
+
+## M33 T1 SHIPPED — 2026-04-16 (migration 0011 + CopilotInsightsRepo)
+
+**Task:** M33 T1 — schema + repo layer for Copilot insights. First code change in M33 — flips Phase 5 design doc §9 M33 row from 📋 Planned → 🚧 In progress (same commit).
+**Commit:** `0a77d87` — `feat(m33): M33 T1 — copilot_insights table + repo`.
+**Plan reference:** [M33 plan T1 §](../docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).
+
+### Metrics delta
+
+| Metric | Pre-T1 | Post-T1 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1033 | **1048** | **+15** (exact match to plan target) |
+| E2E specs | 8 | 8 | 0 (T9 ships the spec) |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings | 24 | 24 | 0 (well under M33 ≤34 budget) |
+| Typecheck across 6 packages | clean | clean | — |
+| Files touched | — | 6 (+824 / −1) | — |
+
+### What shipped (one feat commit, six files)
+
+**`apps/desktop/src/main/db/migrations/0011_copilot_insights.sql`** (NEW) — Table per Phase 5 §8.4 with CHECK constraints on `category` (`operational | cost | org | workflow | anomaly`) and `severity` (`critical | warning | info`), FK `company_id REFERENCES companies(id) ON DELETE CASCADE` (matches the archive-sweep semantics from M7), composite index `idx_insights_company_active(company_id, dismissed_at, expires_at)` for the `listActive` hot path. Migration style matches 0009/0008: backticks, 2-space indent, `--> statement-breakpoint` between table + index.
+
+**`apps/desktop/src/main/db/migrations/meta/_journal.json`** (M) — Added `idx: 11`, `tag: "0011_copilot_insights"`, `when: 1776921600000` (one day after 0010). Drizzle migrate at runtime reads journal + .sql; snapshots are dev-time-only and not required (existing `meta/` only has 0000–0002 snapshots).
+
+**`apps/desktop/src/main/db/schema.ts`** (M) — `copilotInsights` Drizzle table appended after `commandHistory` with the new "Phase 5 — M33: Copilot Insights" section header. CHECK constraints stay at the SQL DDL layer (Drizzle does not model CHECK). Inline doc comment captures the dedup contract + lifecycle + invariant #6 commentary (insights are NOT events — append-only events table stays untouched).
+
+**`apps/desktop/src/main/db/repos/copilot-insights.ts`** (NEW) — `CopilotInsightsRepo` factory mirroring tickets/projects shape (`BaseSQLiteDatabase<'sync', TRunResult, Schema>` cross-driver typing). Six methods:
+- `create(input)` — insert + return `nanoid()` id; `expiresAt` defaults to `now + DEFAULT_INSIGHT_TTL_MS` (24h).
+- `getById(id)` — `null` on miss.
+- `listActive(filter)` — composite WHERE: `companyId = ? AND dismissed_at IS NULL AND expires_at > now AND ...`. Optional category / severity / limit. Newest first via in-memory sort (preserves cross-driver compatibility).
+- `dismiss(id, now?)` — `UPDATE ... SET dismissed_at = ? WHERE id = ? AND dismissed_at IS NULL` — idempotent on re-dismissal (preserves first dismissal time).
+- `expireStale(now): number` — deletes rows where `expires_at < now`, returns deleted count. SELECT-then-DELETE pattern so Drizzle's cross-driver run() doesn't need `.changes` extraction.
+- `upsertWithDedup(draft, ctx): { id, merged }` — walks active-same-category candidates and merges via the locked predicate.
+
+**Dedup contract — locked order, cheap rejections first:**
+1. **Category-scoped** — `existing.category !== draft.category` → reject. Different categories never merge.
+2. **Numeric-drift guard** — extracted digit runs MUST match. Prevents `"Alice has 3 blocked tickets"` and `"Alice has 4 blocked tickets"` from silently merging and masking the count change. Asserted via `extractDigitRuns` exported helper.
+3. **Jaccard bigram > 0.8** — over normalized titles (`lowercase + collapsed whitespace + trim`, punctuation preserved). Range `[0, 1]`, symmetric, fast (O(min(|A|, |B|))). `JACCARD_MERGE_THRESHOLD = 0.8` constant exported for future tuning.
+
+**On merge:** `severity / detail / actionSuggestion / actionIntent / actionEntitiesJson / expiresAt` are refreshed from the draft; `created_at` is preserved so the user keeps seeing the original surfacing time, not the latest re-confirmation.
+
+Exports: `COPILOT_CATEGORIES` + `COPILOT_SEVERITIES` (frozen arrays, kept in sync with the SQL CHECK constraint), `DEFAULT_INSIGHT_TTL_MS = 24h`, `JACCARD_MERGE_THRESHOLD = 0.8`, plus the `bigrams` / `jaccardBigrams` / `extractDigitRuns` / `normalizeTitle` / `shouldMerge` helpers (exported for direct unit testing — production callers should use the repo methods).
+
+**`apps/desktop/src/main/db/repos/copilot-insights-repo.test.ts`** (NEW) — 15 unit tests using `makeTestDb` (sql.js + in-memory + every migration applied):
+
+- **CRUD (4)**: create returns non-empty id + every field round-trips (incl. action_intent + action_entities_json), getById hit, getById miss returns `null`, dismiss stamps `dismissed_at` + idempotent re-dismissal preserves first stamp.
+- **Dedup Jaccard threshold (6)**: exact-match merges into existing row, same-title-different-detail merges and updates mutable fields (severity / detail / actionSuggestion), different-title-same-category creates new row (low Jaccard), **numeric-drift guard MUST-NOT-MERGE** (asserts `jaccardBigrams(t1, t2) > 0.8` first to prove the guard fires independently of similarity), case-insensitivity merge (UPPERCASE matches lowercase), special-character / emoji / unicode safety (no crashes; helpers symmetric).
+- **expireStale (2)**: deletes past-expiry rows + returns count + future rows preserved, idempotent (second sweep returns 0).
+- **listActive filter composition (3)**: no filter excludes both dismissed and expired and sorts newest first (4 rows planted, 2 returned in expected order), category filter narrows to single category (3 planted across 2 categories), severity + limit compose with AND (4 planted across 2 severities, returns 2 critical newest-first capped).
+
+**`docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md`** (M) — §9 M33 row flipped `📋 Planned` → `🚧 In progress — 2 of 11 tasks shipped (2026-04-16)`. Row body extended with the dedup contract summary so the status table reflects the as-built shape.
+
+### Verification gates passed
+
+- `pnpm test` — 89 files / **1048 tests pass** in 18.59s (+15 net from 1033 baseline; exact match to T1 target).
+- `pnpm exec biome check` on the 3 touched .ts files — 0 errors, 0 warnings (no biome auto-fix needed).
+- `pnpm -r typecheck` — clean across all 6 workspace packages on first run.
+- `pnpm lint` workspace-wide — 0 errors, 24 warnings (steady at M32 baseline; well under M33 ≤34 budget).
+- ABI rebuild dance re-verified: bindings were stale at ABI 125 (post-E2E from M32 T10 verification), `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` (and same for keytar) produced ABI 137 builds, vitest immediately green.
+
+### Architectural invariants preserved
+
+- **#1 Renderer pure view** — repo lives in main only, no IPC yet (T5 surfaces).
+- **#4 SQLite + filesystem vault** — no blob storage; insights are metadata only.
+- **#6 Append-only events table** — `copilot_insights` is intentionally mutable by design (lifecycle: create → dismiss / expireStale → physical delete on next sweep). `events` table untouched.
+- **#7 Zero phone-home** — no network surface added.
+
+### Gotchas captured this session
+
+1. **Repo path divergence between plan doc and existing convention.** The M33 plan doc and current-task.json point at `apps/desktop/src/main/repos/copilot-insights.ts`, but every existing repo lives under `apps/desktop/src/main/db/repos/`. Followed the existing convention (`apps/desktop/src/main/db/repos/copilot-insights.ts`) since changing it would create a one-off outlier. Plan doc T1 paragraph reference is approximate; the canonical source is the colocated test file at the same path.
+2. **`pnpm rebuild <pkg>` is a no-op for native modules in pnpm's content-addressed store** — re-confirmed at T1. Must invoke `node-gyp rebuild --release` directly inside the hashed module dir (`node_modules/.pnpm/<pkg>@<version>/node_modules/<pkg>`). Carries forward from M32 T10 docs into M33+.
+3. **`vec-init.test.ts` console-spew is benign.** The sqlite-vec extension is best-effort (`vec0` module load fails when the extension binary isn't present). The catch path runs and the 2 tests pass — the stack-trace lines that appear in `pnpm test` output are from `console.error` inside the catch, not from a test failure. Documented behavior since M28; surfaces every test run; do not chase.
+4. **Dedup test for blocked-ticket-count drift cleanly absorbs both "below-threshold" and "MUST-NOT-MERGE for count drift" requirements** by asserting `jaccardBigrams(t1, t2) > 0.8` first, then the merge result is `false`. One test serves both criteria — keeps the count at 15 exactly per plan target.
+5. **`shouldMerge` exports are referenced via `void`** at the bottom of the test file to keep them imported (so a future test that targets the helpers directly doesn't need a re-import) without triggering biome's `noUnusedImports`. Pattern is non-essential — could also be deleted; left in to flag the helpers' availability.
+
+### Patterns reinforced
+
+- **Single-source-of-truth dedup predicate.** `shouldMerge(existing, draft)` is a pure function with three locked steps; the repo's `upsertWithDedup` walks candidates and short-circuits on the first hit. Future dedup tweaks (different threshold, different guard) edit only `shouldMerge` — repo body untouched.
+- **Cross-driver test harness via sql.js** — same `makeTestDb()` helper used by every repo test in the workspace. Migration 0011 applied cleanly under sql.js on first run, validating that the new SQL is dialect-agnostic.
+- **Atomic feat commit + ledger commit pair.** Per M30/M31/M32 cadence — work commit `feat(m33): M33 T<N> — <summary>` immediately followed by `chore(loki): M33 T<N> — commit ledger (<sha>)` updating orchestrator.json + pending.json + current-task.json + CONTINUITY.md.
+
+### Next Session Startup Checklist (M33 T2+)
+
+1. Read this CONTINUITY header — most recent session at the top.
+2. Read `.loki/state/orchestrator.json` → `inFlightMilestone.M33.commits.T1 = '0a77d87'`; `tasksCompleted: 2`; current 1048 / target 1058.
+3. Read `.loki/queue/pending.json` → T0 + T1 marked `completed`. T2 head-of-queue.
+4. Read `.loki/queue/current-task.json` → M33 T2 acceptance + files-touched + scope.
+5. **T2 = system-copilot pseudo-employee + role card**:
+   - New role-packs/strategia-official/roles/system/system-copilot.md
+   - ensureSystemCopilot(companyId) bootstrap (mirrors ensureSystemAgent shape)
+   - Extract isSystemRoleId predicate to packages/shared-types (M31 Handoff Notes flagged this for M33 T2)
+   - Filter sweep across employees.list, orgchart.get, hire dialog, delegation pickers, meeting attendees
+   - +4 unit tests
+6. Commit cadence: `feat(m33): M33 T2 — system-copilot pseudo-employee + role card`, then `chore(loki): M33 T2 — commit ledger (<sha>)`.
+
+---
 
 ## M33 T0 SHIPPED — 2026-04-16 (plan doc)
 

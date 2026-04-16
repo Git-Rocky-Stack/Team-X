@@ -1,31 +1,38 @@
 {
-  "taskId": "M33-T1",
+  "taskId": "M33-T2",
   "milestone": "M33",
   "milestoneName": "Copilot Service",
   "phase": "Phase 5 — Intelligence Layer",
   "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
-  "title": "Migration 0011 + CopilotInsightsRepo",
+  "title": "system-copilot pseudo-employee + role card",
   "status": "pending",
-  "predecessor": "M33-T0 shipped 2026-04-16T08:15Z, commit c5cdeee",
-  "goal": "Ship the schema + repo layer for copilot insights. Create migration 0011_copilot_insights.sql with the copilot_insights table per Phase 5 §8.4 (columns: id / company_id / category / severity / title / detail / action_suggestion / action_intent / action_entities_json / dismissed_at / created_at / expires_at; CHECK constraints on category and severity; composite index idx_insights_company_active on (company_id, dismissed_at, expires_at); FK company_id REFERENCES companies(id) ON DELETE CASCADE). Implement CopilotInsightsRepo at apps/desktop/src/main/repos/copilot-insights.ts with methods: create, listActive({companyId, category?, severity?, limit?}), dismiss(id), expireStale(now), upsertWithDedup(draft, ctx) (title-similarity via Jaccard bigram > 0.8 merge, category-scoped to prevent blocked-ticket-count drift false merges), getById. Add Drizzle schema to apps/desktop/src/main/db/schema.ts. Same commit flips Phase 5 design doc §9 M33 row from 📋 Planned to 🚧 In progress.",
+  "predecessor": "M33-T1 shipped 2026-04-16, commit 0a77d87 (migration 0011 + CopilotInsightsRepo + 15 unit tests)",
+  "goal": "Add the second is_system=1 pseudo-employee per company alongside M31's system-agent. Create role-packs/strategia-official/roles/system/system-copilot.md (role_id: system-copilot, level: system, tools_allowed: M31 read-only set + query_copilot_insights, tools_denied includes write-side tools — guards the analyzer from accidentally invoking decompose_project / delegate_subtask / review_deliverable). Extend the ensureSystemAgent bootstrap module with ensureSystemCopilot(companyId): EmployeeId — idempotent SELECT-then-INSERT, mirrors ensureSystemAgent shape. Extract isSystemRoleId(roleId): boolean predicate to packages/shared-types so the system-role identity check has one source of truth (replaces magic-string SYSTEM_AGENT_ROLE_ID checks scattered across employees / orgchart / hire / delegation paths). Filter sweep: employees.list, orgchart.get, hire dialog role catalog, delegation picker, meeting attendees — every surface that hides system-agent must also hide system-copilot. The is_system filter already does most of the work; this T2 hardens it with the role_id predicate so a future is_system=0 system role still gets filtered.",
   "acceptance": [
-    "Migration file exists at apps/desktop/src/main/db/migrations/0011_copilot_insights.sql with full DDL per Phase 5 §8.4",
-    "Drizzle schema.ts extended with copilotInsights table definition + type exports",
-    "CopilotInsightsRepo implements all 6 methods with full unit test coverage (+15 tests target per plan doc T1)",
-    "Dedup tests include MUST-NOT-MERGE case for blocked-ticket-count drift (e.g. 'Alice has 3 blocked tickets' vs 'Alice has 4 blocked tickets' → different rows)",
-    "dist/*.d.ts regenerated via tsc --build if shared-types wire-shape added",
-    "pnpm test green across all 6 packages, +15 unit tests net",
-    "Phase 5 design doc §9 M33 row status flipped: 📋 Planned → 🚧 In progress (same commit)",
-    "Atomic commit: feat(m33): M33 T1 — copilot_insights table + repo",
-    "Ledger commit: chore(loki): M33 T1 — commit ledger (<sha>)"
+    "role-packs/strategia-official/roles/system/system-copilot.md exists with full frontmatter (id, name, level: system, reports_to: null, manages: [], preferred_model_tier, preferred_providers, fallback_providers, tools_allowed: 6 read-only + query_copilot_insights, tools_denied: write-side tool names, decision_authority, kpis, output_format, temperature, license, author, version) + body sections per CLAUDE.md role-pack standard",
+    "isSystemRoleId(roleId): boolean predicate exported from packages/shared-types with constants for SYSTEM_AGENT_ROLE_ID + SYSTEM_COPILOT_ROLE_ID, +1 unit test",
+    "ensureSystemCopilot(db, companyId, options): EmployeeId added to apps/desktop/src/main/services/system-agent-bootstrap.ts (or sibling system-copilot-bootstrap.ts) — idempotent, called from seedIfEmpty + companies.create, +1 unit test",
+    "Filter sweep verified — employees.list / orgchart.get / hire dialog / delegation picker / meeting attendees all exclude system-copilot, +2 unit tests (one for repo-level filter via isSystemRoleId, one for ensureSystemCopilot calling SELECT-first idempotency)",
+    "+4 unit tests net (1033 → 1048 baseline at M33 T1 → 1052 target)",
+    "Lint clean (0 errors, ≤24 warnings — within M33 budget of ≤34)",
+    "Typecheck clean across all 6 workspace packages",
+    "Atomic commit: feat(m33): M33 T2 — system-copilot pseudo-employee + role card",
+    "Ledger commit: chore(loki): M33 T2 — commit ledger (<sha>)"
   ],
   "filesTouched": [
-    "apps/desktop/src/main/db/migrations/0011_copilot_insights.sql (NEW)",
-    "apps/desktop/src/main/db/schema.ts (extend)",
-    "apps/desktop/src/main/repos/copilot-insights.ts (NEW)",
-    "apps/desktop/src/main/repos/__tests__/copilot-insights-repo.test.ts (NEW)",
-    "docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md (§9 M33 status flip)"
+    "role-packs/strategia-official/roles/system/system-copilot.md (NEW)",
+    "packages/shared-types/src/system-roles.ts (NEW or extend) — isSystemRoleId predicate + constants",
+    "apps/desktop/src/main/services/system-agent-bootstrap.ts (extend) — ensureSystemCopilot",
+    "apps/desktop/src/main/db/seed.ts (call ensureSystemCopilot)",
+    "apps/desktop/src/main/db/repos/employees.ts (replace magic-string filter with isSystemRoleId where applicable; the is_system column filter remains primary)",
+    "Test files: shared-types unit test for predicate, bootstrap unit test for idempotency"
   ],
-  "testsDelta": "+15 unit",
-  "createdAt": "2026-04-16T08:15:00Z"
+  "testsDelta": "+4 unit",
+  "createdAt": "2026-04-16T01:15:00Z",
+  "notes": [
+    "T2 mirrors M31 T0's system-agent bootstrap pattern. Reuse ensureSystemAgent's idempotency + filter-sweep posture. Don't duplicate the is_system column logic — extend it with the role_id predicate so the analyzer can distinguish copilot from agent without an extra column.",
+    "isSystemRoleId predicate is the single-source-of-truth replacement for the ad-hoc role_id === 'system-agent' checks scattered across employees.ts, orgchart.ts, hire pickers, delegation pickers. M31 T2 noted this in Handoff notes — 'M33 T2 extracts this'.",
+    "Tool registry for system-copilot: M31 read-only set (query_employees / query_tickets / query_projects / query_meetings / query_vault / query_events) + query_copilot_insights (T6 ships the tool, T2 just declares the role's allowance). tools_denied lists the write-side tools so the analyzer is locked out of mutations even if the LLM hallucinates one.",
+    "Reuse the ABI rebuild dance for any T2 unit-test verification: better-sqlite3 + keytar via node-gyp; pnpm rebuild is a no-op."
+  ]
 }

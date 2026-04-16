@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M33",
   "milestoneName": "Copilot Service",
-  "tasksCompleted": 1,
+  "tasksCompleted": 2,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
@@ -11,7 +11,7 @@
   "phaseComplete": false,
   "inflight": {
     "taskId": null,
-    "lastShipped": "T0"
+    "lastShipped": "T1"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M32",
@@ -28,13 +28,21 @@
     "lintWarnings": 24,
     "typecheckClean": true
   },
-  "targets": {
-    "unitTests": null,
-    "unitTestDelta": null,
-    "e2eSpecs": null,
-    "e2eSpecDelta": null,
+  "current": {
+    "unitTests": 1048,
+    "e2eSpecs": 8,
+    "e2eGreenCount": 9,
     "lintErrors": 0,
-    "lintWarningsMax": 76
+    "lintWarnings": 24,
+    "typecheckClean": true
+  },
+  "targets": {
+    "unitTests": 1058,
+    "unitTestDelta": "+~25 (1033 → ~1058)",
+    "e2eSpecs": 9,
+    "e2eSpecDelta": "+1 (8 → 9; +copilot-service.spec.ts from T9)",
+    "lintErrors": 0,
+    "lintWarningsMax": 34
   },
   "history": {
     "M30": {
@@ -119,10 +127,11 @@
       "name": "Copilot Service",
       "startedAt": "2026-04-16T08:15:00Z",
       "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
-      "tasksShipped": 1,
+      "tasksShipped": 2,
       "totalTasks": 11,
       "commits": {
-        "T0": "c5cdeee"
+        "T0": "c5cdeee",
+        "T1": "0a77d87"
       },
       "baselineAtStart": {
         "unitTests": 1033,
@@ -131,6 +140,16 @@
         "lintErrors": 0,
         "lintWarnings": 24,
         "typecheckClean": true
+      },
+      "current": {
+        "unitTests": 1048,
+        "e2eSpecs": 8,
+        "e2eGreenCount": 9,
+        "lintErrors": 0,
+        "lintWarnings": 24,
+        "typecheckClean": true,
+        "asOfTask": "T1",
+        "asOfTaskCommit": "0a77d87"
       },
       "targets": {
         "unitTests": 1058,
@@ -143,10 +162,11 @@
     }
   },
   "notes": [
-    "M33 (Copilot Service) T0 SHIPPED (2026-04-16T08:15Z, commit c5cdeee). Plan doc at docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md — 292 lines, 11 tasks (T0–T10), mirrors M32 structural template. T0 did NOT bump Phase 5 design doc §9 M33 row (still reads 📋 Planned) — that flips 🚧 In progress at T1.",
-    "M33 task breakdown: T1 migration 0011 + CopilotInsightsRepo, T2 system-copilot role card + ensureSystemCopilot, T3 rolling event window + bus subscription, T4 CopilotAnalyzerService (periodic scheduler + LLM + dedup + expiry), T5 copilot.* IPC surface, T6 copilot.ask via agentic harness + query_copilot_insights tool, T7 copilot settings + UI, T8 test-copilot-provider canned seam, T9 copilot-service.spec.ts E2E, T10 docs + verification + milestone marker. Targets: +~25 unit tests, +1 E2E spec, ≤34 lint warnings, 0 lint errors, typecheck clean.",
+    "M33 (Copilot Service) T1 SHIPPED (2026-04-16, commit 0a77d87). Migration 0011 + CopilotInsightsRepo with 6 methods (create/getById/listActive/dismiss/expireStale/upsertWithDedup) + 15 unit tests. Dedup contract: category-scoped + numeric-drift guard + Jaccard bigram > 0.8 — locked order, cheap rejections first. Same commit flipped Phase 5 design doc §9 M33 row 📋 → 🚧 In progress — 2 of 11 tasks shipped (2026-04-16).",
+    "M33 T0 SHIPPED (2026-04-16T08:15Z, commit c5cdeee). Plan doc at docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md — 292 lines, 11 tasks (T0–T10), mirrors M32 structural template.",
+    "M33 task breakdown: T1 migration 0011 + CopilotInsightsRepo ✅, T2 system-copilot role card + ensureSystemCopilot, T3 rolling event window + bus subscription, T4 CopilotAnalyzerService (periodic scheduler + LLM + dedup + expiry), T5 copilot.* IPC surface, T6 copilot.ask via agentic harness + query_copilot_insights tool, T7 copilot settings + UI, T8 test-copilot-provider canned seam, T9 copilot-service.spec.ts E2E, T10 docs + verification + milestone marker. Targets: +~25 unit tests, +1 E2E spec, ≤34 lint warnings, 0 lint errors, typecheck clean.",
     "M32 (Task Planner — write-side) COMPLETE (2026-04-16T07:20Z). All 11 tasks shipped. 1033/1033 unit tests, 9/9 Playwright cases across 8 spec files green, 0 lint errors / 24 warnings, typecheck clean across all 6 packages.",
-    "M32 ABI rebuild dance is now documented as verified T10 procedure: Node ABI via `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` + same for keytar (pnpm rebuild is a no-op because pnpm's content-addressed store already has the hashed artifact). Electron ABI via `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. Pattern: Node rebuild → vitest → Electron rebuild → Playwright.",
+    "M32 ABI rebuild dance is now documented as verified T10 procedure: Node ABI via `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` + same for keytar (pnpm rebuild is a no-op because pnpm's content-addressed store already has the hashed artifact). Electron ABI via `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. Pattern: Node rebuild → vitest → Electron rebuild → Playwright. M33 T1 re-verified this dance — bindings were stale from prior E2E (ABI 125), node-gyp rebuild → vitest green at 1048/1048.",
     "Patterns proven across M30/M31/M32 and active for M33: three-tier canned test seam (classifier + provider + tools), {rows, truncated} envelope for agentic tools, data-step-kind as stable E2E selector, pause-aware providerRouter.complete wrapper, AbortController-driven stop with canceled-status coercion, per-task atomic commits + Loki ledger commits (chore(loki): M<N> T<N> — commit ledger (<sha>)), ABI rebuild dance on verification gate, is_system column + filter-sweep pattern (extended in M33 T2 with isSystemRoleId predicate)."
   ]
 }

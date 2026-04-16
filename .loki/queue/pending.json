@@ -6,9 +6,9 @@
   "previousMilestone": "M32",
   "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
   "createdAt": "2026-04-16T07:20:00Z",
-  "updatedAt": "2026-04-16T08:15:00Z",
+  "updatedAt": "2026-04-16T01:15:00Z",
   "totalTasks": 11,
-  "tasksShipped": 1,
+  "tasksShipped": 2,
   "tasks": [
     {
       "id": "T0",
@@ -21,10 +21,18 @@
     {
       "id": "T1",
       "name": "Migration 0011 + CopilotInsightsRepo",
-      "status": "pending",
-      "scope": "New migration 0011_copilot_insights.sql (table + composite index per Phase 5 §8.4, FK company_id CASCADE). CopilotInsightsRepo with create / listActive / dismiss / expireStale / upsertWithDedup (Jaccard bigram > 0.8 + same-category guard) / getById. Drizzle schema additions. Unit tests in copilot-insights-repo.test.ts (+15 unit: CRUD 4, dedup 6, expireStale 2, listActive filter 3). Same commit flips Phase 5 design doc §9 M33 row 📋 → 🚧.",
-      "commitTemplate": "feat(m33): M33 T1 — copilot_insights table + repo",
-      "testsDelta": "+15 unit"
+      "status": "completed",
+      "commit": "0a77d87",
+      "shippedAt": "2026-04-16T01:11:00Z",
+      "scope": "Migration 0011 (table + composite index, FK CASCADE, CHECK on category + severity per Phase 5 §8.4) + Drizzle schema + CopilotInsightsRepo (6 methods: create / getById / listActive / dismiss / expireStale / upsertWithDedup) + 15 unit tests. Dedup contract locked: category-scoped → numeric-drift guard → Jaccard bigram > 0.8 (cheap rejections first). Same commit flipped Phase 5 design doc §9 M33 row 📋 → 🚧 In progress — 2 of 11 tasks shipped (2026-04-16).",
+      "metrics": {
+        "unitTestsBefore": 1033,
+        "unitTestsAfter": 1048,
+        "unitTestsDelta": "+15 (exact match to T1 target)",
+        "lintErrors": 0,
+        "lintWarnings": 24,
+        "typecheck": "clean"
+      }
     },
     {
       "id": "T2",
@@ -107,6 +115,16 @@
     "lintWarnings": 24,
     "typecheckClean": true
   },
+  "current": {
+    "unitTests": 1048,
+    "e2eSpecs": 8,
+    "e2eGreenCount": 9,
+    "lintErrors": 0,
+    "lintWarnings": 24,
+    "typecheckClean": true,
+    "asOfTask": "T1",
+    "asOfTaskCommit": "0a77d87"
+  },
   "targets": {
     "unitTests": 1058,
     "unitTestDelta": "+~25 (1033 → ~1058)",
@@ -116,10 +134,11 @@
     "lintWarningsMax": 34
   },
   "notes": [
+    "M33 T1 SHIPPED (2026-04-16, commit 0a77d87). +15 unit tests (1033 → 1048, exact match to plan target). Migration 0011 + CopilotInsightsRepo + Drizzle schema additions. Dedup contract: category-scoped → numeric-drift guard → Jaccard bigram > 0.8. Phase 5 design doc §9 M33 row flipped 📋 → 🚧 In progress — 2 of 11 tasks shipped (2026-04-16) (same commit). 0 lint errors / 24 warnings / typecheck clean.",
     "M33 T0 SHIPPED (2026-04-16T08:15Z, commit c5cdeee). Plan doc materializes T1–T10 with per-task scope + commit templates + test deltas. Totals: +~48 unit tests across T1–T8 (targets +~25 net — aligns with design §9 M33 estimate after accounting for incidental tests not counted in per-task deltas).",
-    "T1 is head-of-queue. T1 + T2 can share a session (schema + pseudo-employee bootstrap). T3 is small-and-independent (~60 min). T4 is biggest — full session, subagent candidate for prompt builder scaffolding. T5 is boilerplate (~30 min). T6 depends on T5 + T2. T7 is fast (~25 min). T8 prerequisite for T9. T9 is full session with one subagent pass. T10 is gate-only + docs (~60 min) — ABI dance mandatory.",
+    "T2 is head-of-queue. T2 is small-and-independent and can share a session with T3 (rolling event window). T4 is biggest — full session, subagent candidate for prompt builder scaffolding. T5 is boilerplate (~30 min). T6 depends on T5 + T2. T7 is fast (~25 min). T8 prerequisite for T9. T9 is full session with one subagent pass. T10 is gate-only + docs (~60 min) — ABI dance mandatory.",
     "Architectural seams active: three-tier canned test seam, {rows, truncated} envelope, data-step-kind stable E2E selector, pause-aware providerRouter wrapper, AbortController stop, atomic + ledger commits, bus-event + audit-row invariant (#11), is_system + filter-sweep pattern with new isSystemRoleId predicate (M33 T2 extracts this).",
     "Blocker for M34: copilot.ask must return { runId, threadId } matching M31 command.execute complex_request shape so M34 sidebar attaches step-stream with no second wire format. Verify in T6.",
-    "ABI rebuild dance (verified across M31 + M32 T10): Node ABI `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` (+ keytar), Electron ABI `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` (comma-separated only — repeated -w flags crash @electron/rebuild@3.7.2)."
+    "ABI rebuild dance (verified across M31 + M32 T10 + re-verified at M33 T1 vitest): Node ABI `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` (+ keytar), Electron ABI `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` (comma-separated only — repeated -w flags crash @electron/rebuild@3.7.2)."
   ]
 }
