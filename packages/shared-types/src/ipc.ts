@@ -43,6 +43,16 @@ import type {
   IpcSuggestItem,
 } from './command.js';
 import type {
+  CopilotAskArgs,
+  CopilotAskResult,
+  CopilotConfigureArgs,
+  CopilotConfigureResult,
+  CopilotDismissArgs,
+  CopilotDismissResult,
+  CopilotInsightListArgs,
+  CopilotInsightListResult,
+} from './copilot.js';
+import type {
   ChatMessage,
   Company,
   Employee,
@@ -1291,6 +1301,23 @@ export interface IpcContract {
     request: { runId: string };
     response: AgenticRunSnapshot | null;
   };
+  // Copilot service channels (Phase 5 — M33 T5)
+  'copilot.insights': {
+    request: CopilotInsightListArgs;
+    response: CopilotInsightListResult;
+  };
+  'copilot.dismiss': {
+    request: CopilotDismissArgs;
+    response: CopilotDismissResult;
+  };
+  'copilot.ask': {
+    request: CopilotAskArgs;
+    response: CopilotAskResult;
+  };
+  'copilot.configure': {
+    request: CopilotConfigureArgs;
+    response: CopilotConfigureResult;
+  };
   // Ticket management channels
   'tickets.create': {
     request: CreateTicketRequest;
@@ -1624,6 +1651,44 @@ export interface TeamXApi {
      * back to the live stream alone.
      */
     getRunSnapshot(runId: string): Promise<AgenticRunSnapshot | null>;
+  };
+  copilot: {
+    /**
+     * Paginated list of active (non-dismissed, non-expired) insights
+     * for the company, newest-first. Cursor is the `createdAt` of the
+     * last row from the previous page; pass `undefined` for the first
+     * page. `nextCursor` is `null` when the page was the last one.
+     * Optional category + severity filters narrow the result set
+     * server-side so the UI does not paginate through dismissed or
+     * filtered-out rows. Phase 5 — M33 T5.
+     */
+    insights(args: CopilotInsightListArgs): Promise<CopilotInsightListResult>;
+    /**
+     * Mark an insight as dismissed. Idempotent when invoked on an
+     * already-dismissed row (the handler returns the prior
+     * `dismissedAt`). Emits `copilot.dismissed` on the event bus per
+     * invariant #11 so the renderer's React Query cache invalidates.
+     * Phase 5 — M33 T5.
+     */
+    dismiss(args: CopilotDismissArgs): Promise<CopilotDismissResult>;
+    /**
+     * Ask the `system-copilot` pseudo-employee a question. Routes
+     * through the agentic loop in the same shape M31's
+     * `complex_request` uses — the response `{ runId, threadId }`
+     * mirrors `IpcExecuteResult` so the palette's step-stream hook
+     * can subscribe with no wire-format divergence. Phase 5 — M33 T5
+     * ships the IPC slot; T6 wires the full loop.
+     */
+    ask(args: CopilotAskArgs): Promise<CopilotAskResult>;
+    /**
+     * Test-only: force a manual analyzer tick for the given company
+     * and resolve when it completes. Production callers receive an
+     * error directing them to `settings.setCopilot` (T7). Sole
+     * intended caller is the T9 Playwright spec, which needs to
+     * synchronously force a copilot cycle rather than wait on the
+     * 5-minute scheduled interval. Phase 5 — M33 T5.
+     */
+    configure(args: CopilotConfigureArgs): Promise<CopilotConfigureResult>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

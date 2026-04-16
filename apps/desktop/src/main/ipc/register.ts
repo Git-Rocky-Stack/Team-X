@@ -165,6 +165,13 @@ const REQUEST_CHANNELS = [
   'command.suggest',
   // Agentic-loop cancellation (Phase 5 — M31 T6)
   'command.stop',
+  // Agentic-loop run snapshot (Phase 5 — M32 T0 / F1)
+  'command.getRunSnapshot',
+  // Copilot service (Phase 5 — M33 T5)
+  'copilot.insights',
+  'copilot.dismiss',
+  'copilot.ask',
+  'copilot.configure',
 ] as const;
 
 /** Channel name for the one-way bus → renderer fan-out. */

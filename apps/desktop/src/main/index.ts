@@ -88,6 +88,7 @@ import { createVaultRepo } from './db/repos/vault.js';
 import { messages as messagesTable } from './db/schema.js';
 import { seed } from './db/seed.js';
 import { buildCommandHandlers } from './ipc/command-handlers.js';
+import { buildCopilotHandlers } from './ipc/copilot-handlers.js';
 import { createIpcHandlers } from './ipc/handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
@@ -1375,6 +1376,49 @@ app
     // Phase 5 — M32 T0 / F1. Palette step-log backfill on mount.
     ipcMain.handle('command.getRunSnapshot', (_evt, req: { runId: string }) =>
       commandHandlers['command.getRunSnapshot'](req),
+    );
+
+    // ---- Copilot IPC handlers (Phase 5 — M33 T5) ---------------------------
+    //
+    // Sibling registration block on the same pattern RAG and Command
+    // use — the Copilot subsystem has its own runtime deps (analyzer
+    // singleton + insights repo + bus emit for dismissals) and the
+    // handlers module lives in `ipc/copilot-handlers.ts` alongside
+    // `rag-handlers.ts`. The four channel strings are listed in
+    // `REQUEST_CHANNELS` so `unregisterIpc()` strips them on shutdown.
+    //
+    // T5 leaves `agenticLoopStart` unset so `copilot.ask` throws
+    // `not implemented` — T6 swaps in the real closure that routes
+    // through `AgenticLoopService.start` with `employeeId =
+    // system-copilot`. Keeping the stub on-surface (rather than a
+    // synthetic runId) prevents the palette's step-stream hook from
+    // binding to a ghost run.
+    if (copilotAnalyzerServiceInstance === null) {
+      throw new Error('copilotAnalyzerServiceInstance must be initialized before copilot handlers');
+    }
+    const copilotHandlers = buildCopilotHandlers({
+      copilotInsightsRepo,
+      copilotAnalyzerService: copilotAnalyzerServiceInstance,
+      bus,
+      isTestMode,
+    });
+    ipcMain.handle(
+      'copilot.insights',
+      (_evt, req: import('@team-x/shared-types').CopilotInsightListArgs) =>
+        copilotHandlers.insights(req),
+    );
+    ipcMain.handle(
+      'copilot.dismiss',
+      (_evt, req: import('@team-x/shared-types').CopilotDismissArgs) =>
+        copilotHandlers.dismiss(req),
+    );
+    ipcMain.handle('copilot.ask', (_evt, req: import('@team-x/shared-types').CopilotAskArgs) =>
+      copilotHandlers.ask(req),
+    );
+    ipcMain.handle(
+      'copilot.configure',
+      (_evt, req: import('@team-x/shared-types').CopilotConfigureArgs) =>
+        copilotHandlers.configure(req),
     );
 
     console.log('[main] orchestrator + IPC ready');

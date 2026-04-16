@@ -60,6 +60,14 @@ import type {
   CommandStopRequest,
   CommandStopResult,
   CommandSuggestRequest,
+  CopilotAskArgs,
+  CopilotAskResult,
+  CopilotConfigureArgs,
+  CopilotConfigureResult,
+  CopilotDismissArgs,
+  CopilotDismissResult,
+  CopilotInsightListArgs,
+  CopilotInsightListResult,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -275,6 +283,11 @@ const CHANNELS = {
   commandStop: 'command.stop',
   // Agentic-loop snapshot for palette backfill-on-mount (Phase 5 — M32 T0 / F1)
   commandGetRunSnapshot: 'command.getRunSnapshot',
+  // Copilot service (Phase 5 — M33 T5)
+  copilotInsights: 'copilot.insights',
+  copilotDismiss: 'copilot.dismiss',
+  copilotAsk: 'copilot.ask',
+  copilotConfigure: 'copilot.configure',
 } as const;
 
 /**
@@ -481,6 +494,16 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.commandStop, req) as Promise<CommandStopResult>,
       getRunSnapshot: (runId: string) =>
         ipc.invoke(CHANNELS.commandGetRunSnapshot, { runId }) as Promise<AgenticRunSnapshot | null>,
+    },
+    copilot: {
+      insights: (args: CopilotInsightListArgs) =>
+        ipc.invoke(CHANNELS.copilotInsights, args) as Promise<CopilotInsightListResult>,
+      dismiss: (args: CopilotDismissArgs) =>
+        ipc.invoke(CHANNELS.copilotDismiss, args) as Promise<CopilotDismissResult>,
+      ask: (args: CopilotAskArgs) =>
+        ipc.invoke(CHANNELS.copilotAsk, args) as Promise<CopilotAskResult>,
+      configure: (args: CopilotConfigureArgs) =>
+        ipc.invoke(CHANNELS.copilotConfigure, args) as Promise<CopilotConfigureResult>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

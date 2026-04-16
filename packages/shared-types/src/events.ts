@@ -29,7 +29,8 @@ export type EventType =
   | 'review.completed'
   | 'copilot.insight'
   | 'copilot.analyzed'
-  | 'copilot.expired';
+  | 'copilot.expired'
+  | 'copilot.dismissed';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
