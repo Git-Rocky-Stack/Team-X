@@ -1,4 +1,31 @@
-# Loki Continuity — Phase 5, **M32 COMPLETE** (Task Planner — write-side); M33 (Copilot Service) next
+# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0 shipped); M32 (Task Planner) complete
+
+## M33 T0 SHIPPED — 2026-04-16 (plan doc)
+
+**Task:** M33 T0 — author plan doc for Copilot Service milestone.
+**Commit:** `c5cdeee` — `feat(m33): M33 T0 — plan doc`.
+**Plan doc:** [`docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md`](../docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md) — 292 lines, 11 tasks (T0–T10), 11 invariants preserved, ABI rebuild dance documented in T10, commit cadence locked (`feat|test|chore(m33): M33 T<N> — <summary>` + `chore(loki): M33 T<N> — commit ledger (<sha>)`).
+
+### What shipped in T0
+
+- **Structural template mirrored from M32.** Required sections present and verified: Overview → Invariants preserved (11) → Success criteria → Task breakdown (T0–T10, 11 tasks) → Summary of deliverables → Risks + open questions → Handoff notes.
+- **T1–T10 scope materialized.** Each task has per-task scope, files touched, unit/E2E test deltas, and commit-message template. Totals: T1 +15 unit, T2 +4, T3 +8, T4 +14, T5 +8, T6 +5, T7 +7, T8 +5, T9 +1 E2E, T10 0 (gate-only).
+- **Target deltas locked.** Unit baseline 1033 → ~1058 (+~25 net, per design §9 estimate). E2E 8 specs → 9 specs (+1 `copilot-service.spec.ts`). Lint 0 errors / ≤34 warnings (24 baseline + 10 budget). Typecheck clean.
+- **Architectural seams carried forward** documented in Handoff notes: three-tier canned test seam, `{rows, truncated}` envelope, `data-step-kind` stable E2E selector, pause-aware `providerRouter.complete` wrapper, `AbortController` stop with canceled-status coercion, atomic + ledger commits, bus-event + audit-row invariant (#11), `is_system` + filter-sweep pattern with new `isSystemRoleId` predicate (M33 T2 extracts this).
+- **M34 prereq flagged.** `copilot.ask` (T6) must return `{ runId, threadId }` matching M31 `command.execute complex_request` shape so M34 sidebar attaches step-stream with no second wire format.
+- **Phase 5 design doc §9 NOT bumped yet.** M33 row still reads 📋 Planned — flips to 🚧 In progress at T1 when the first code change lands. T10 flips it to ✅ Complete.
+- **Ledger updates this commit:** `.loki/state/orchestrator.json` populated with `inFlightMilestone.M33` block (startedAt 2026-04-16T08:15Z, T0 commit c5cdeee, baseline + targets). `.loki/queue/pending.json` materializes T1–T10 as pending tasks with per-task scope + commit templates. This CONTINUITY entry.
+
+### Next task: M33 T1 — Migration 0011 + `CopilotInsightsRepo`
+
+**Scope:** New `apps/desktop/src/main/db/migrations/0011_copilot_insights.sql` (table + `idx_insights_company_active` composite index, FK `company_id CASCADE`). `CopilotInsightsRepo` in `apps/desktop/src/main/repos/copilot-insights.ts` — CRUD + `upsertWithDedup` (Jaccard bigram > 0.8, category-scoped guard against blocked-ticket-count drift merge). Drizzle schema additions. +15 unit tests.
+
+**Side effect:** Flips Phase 5 design doc §9 M33 row 📋 Planned → 🚧 In progress (same commit).
+
+**Commit:** `feat(m33): M33 T1 — copilot_insights table + repo`.
+**Ledger follow-up:** `chore(loki): M33 T1 — commit ledger (<sha>)`.
+
+---
 
 ## M32 COMPLETE — 2026-04-16 (T10 verification + milestone marker)
 

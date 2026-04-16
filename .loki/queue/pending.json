@@ -2,19 +2,101 @@
   "milestone": "M33",
   "milestoneName": "Copilot Service",
   "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": null,
+  "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
   "previousMilestone": "M32",
   "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
   "createdAt": "2026-04-16T07:20:00Z",
-  "updatedAt": "2026-04-16T07:20:00Z",
-  "totalTasks": null,
-  "tasksShipped": 0,
+  "updatedAt": "2026-04-16T08:15:00Z",
+  "totalTasks": 11,
+  "tasksShipped": 1,
   "tasks": [
     {
       "id": "T0",
       "name": "Write M33 plan doc — Copilot Service",
+      "status": "completed",
+      "commit": "c5cdeee",
+      "shippedAt": "2026-04-16T08:15:00Z",
+      "scope": "Author docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md using M32 plan doc as structural template. 11 tasks (T0–T10), 11 invariants preserved, ABI rebuild dance documented in T10, commit cadence locked. 292 lines."
+    },
+    {
+      "id": "T1",
+      "name": "Migration 0011 + CopilotInsightsRepo",
       "status": "pending",
-      "scope": "Author docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md using docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md as structural template. Required sections: Overview, What ships, Invariants preserved, Success criteria, Task breakdown (T1–TN), Acceptance criteria. Scope per Phase 5 design §9: new system-copilot pseudo-employee (separate from system-agent; second `is_system=1` row with role role-packs/strategia-official/roles/system/system-copilot.md), periodic analyzer that runs on a schedule or event trigger (meeting ended, ticket closed, goal progress change) and uses the RAG retriever (M29) to synthesize proactive nudges, new copilot.* IPC surface + bus events, proactive-nudge surfacing in the Copilot Conversations thread (either as a new thread kind or a tagged message). Must keep the orchestrator pause semantics intact (copilot runs pause during meetings too) and must not emit bus events without also writing an audit row (invariant #11)."
+      "scope": "New migration 0011_copilot_insights.sql (table + composite index per Phase 5 §8.4, FK company_id CASCADE). CopilotInsightsRepo with create / listActive / dismiss / expireStale / upsertWithDedup (Jaccard bigram > 0.8 + same-category guard) / getById. Drizzle schema additions. Unit tests in copilot-insights-repo.test.ts (+15 unit: CRUD 4, dedup 6, expireStale 2, listActive filter 3). Same commit flips Phase 5 design doc §9 M33 row 📋 → 🚧.",
+      "commitTemplate": "feat(m33): M33 T1 — copilot_insights table + repo",
+      "testsDelta": "+15 unit"
+    },
+    {
+      "id": "T2",
+      "name": "system-copilot pseudo-employee + role card",
+      "status": "pending",
+      "scope": "Second is_system=1 row per company. New role-packs/strategia-official/roles/system/system-copilot.md with role_id: system-copilot, tools_allowed scoped to M31 read-only set + query_copilot_insights, tools_denied includes write-side tools. Extend ensureSystemAgent module with ensureSystemCopilot(companyId). Extract isSystemRoleId predicate to packages/shared-types to prevent regression. Filter sweep: employees.list, orgchart.get, hire picker, delegation picker, meeting attendees. Unit tests +4.",
+      "commitTemplate": "feat(m33): M33 T2 — system-copilot pseudo-employee + role card",
+      "testsDelta": "+4 unit"
+    },
+    {
+      "id": "T3",
+      "name": "Rolling event window + bus subscription",
+      "status": "pending",
+      "scope": "CopilotEventWindow class — in-memory Map<companyId, bounded deque> (default 100 events, private constant). Bus subscription pushes events, drops oldest on overflow. snapshot(companyId) defensive copy. Warm-start hydrates from eventsRepo.list on first snapshot per company. clear(companyId) wired to companies.archive. Unit tests +8 (bounds 3, isolation 2, warm-start 2, archive clear 1).",
+      "commitTemplate": "feat(m33): M33 T3 — rolling event window + bus subscription",
+      "testsDelta": "+8 unit"
+    },
+    {
+      "id": "T4",
+      "name": "CopilotAnalyzerService — periodic scheduler + LLM + dedup + expiry",
+      "status": "pending",
+      "scope": "Biggest task. CopilotAnalyzerService with start/stop/tick/getLastAnalysisAt. buildAnalysisPrompt (deterministic, ≤2000 tokens). Zod InsightDraftSchema + one-shot nudge retry on malformed JSON. Pause-aware providerRouter.complete wrapper (actor: system-copilot). Dedup via upsertWithDedup. Expiry via expireStale per cycle. Event-triggered debounced runs (30s) for meeting.ended / ticket.closed / goal.progressChanged / agentic.failed budget_exhausted. Migration 0012 extends runs.kind enum with 'copilot'. Unit tests +14.",
+      "commitTemplate": "feat(m33): M33 T4 — copilot analyzer service + pause-aware scheduler",
+      "testsDelta": "+14 unit"
+    },
+    {
+      "id": "T5",
+      "name": "copilot.* IPC surface + preload bridge",
+      "status": "pending",
+      "scope": "Four IPC channels per Phase 5 §8.6: copilot.insights, copilot.dismiss, copilot.ask, copilot.configure. Typed end-to-end via TeamXApi. Handlers in apps/desktop/src/main/ipc/copilot-handlers.ts. Preload bridge window.teamx.copilot. CopilotInsight wire type in packages/shared-types/src/copilot.ts. Unit tests +8 (4 channels × happy + error).",
+      "commitTemplate": "feat(m33): M33 T5 — copilot.* IPC surface + preload bridge",
+      "testsDelta": "+8 unit"
+    },
+    {
+      "id": "T6",
+      "name": "copilot.ask routing + query_copilot_insights tool",
+      "status": "pending",
+      "scope": "Route copilot.ask through AgenticLoopService.start with employeeId = system-copilot. Returns { runId, threadId } — same shape as M31 command.execute complex_request (M34 sidebar prereq). New query_copilot_insights tool factory (read-only, {rows, truncated} envelope, 50-row cap). Tool registry: system-copilot gets M31 read-only set + new tool; system-agent continues with original set. Two distinct system threads in Copilot Conversations sidenav. Unit tests +5.",
+      "commitTemplate": "feat(m33): M33 T6 — copilot.ask routing + query_copilot_insights tool",
+      "testsDelta": "+5 unit"
+    },
+    {
+      "id": "T7",
+      "name": "Copilot settings + UI",
+      "status": "pending",
+      "scope": "Three clamped settings keys: copilot_enabled (bool, default true), copilot_interval_minutes (1-60, default 5), copilot_categories (subset of 5 categories, default all). settings.getCopilot / setCopilot IPC. CopilotSection UI under Settings → Runtime (alongside agentic + planner). setCopilot triggers copilotAnalyzerService.restart(companyId). Unit tests +7.",
+      "commitTemplate": "feat(m33): M33 T7 — copilot settings + UI",
+      "testsDelta": "+7 unit"
+    },
+    {
+      "id": "T8",
+      "name": "Canned copilot provider seam",
+      "status": "pending",
+      "scope": "Three-tier canned seam (mirror M30 test-classifier / M31 test-agentic-provider / M32 test-agentic-tools). __ECHO_COPILOT__:<json> sentinel → canned per-prompt table → fallback. Extend test-agentic-provider with system-copilot-actor entries for T9 E2E. NODE_ENV=test swaps provider. Unit tests +5.",
+      "commitTemplate": "test(m33): M33 T8 — canned copilot provider seam",
+      "testsDelta": "+5 unit"
+    },
+    {
+      "id": "T9",
+      "name": "copilot-service.spec.ts E2E round-trip",
+      "status": "pending",
+      "scope": "Full round-trip against canned provider. Seed events → copilot.tick (test-only IPC) → assert insight persisted → dismiss → assert dismissed_at + audit row → copilot.ask → assert grounded answer on system-copilot thread → assert destructive gate ABSENT → assert two system threads distinguishable. Subagent pass for canned-script generation. +1 E2E spec file.",
+      "commitTemplate": "test(m33): M33 T9 — copilot-service.spec.ts E2E round-trip",
+      "testsDelta": "+1 E2E spec"
+    },
+    {
+      "id": "T10",
+      "name": "Documentation + verification + milestone marker",
+      "status": "pending",
+      "scope": "docs/user-guide/copilot-service.md NEW (F10 style). Phase 5 design §9 M33 row 🚧 → ✅. CLAUDE.md Phase 5 section + IPC table + bus events table updated. CHANGELOG M33 entry. README Phase 5 row. .loki/CONTINUITY.md M33-COMPLETE header. Verification: pnpm -r typecheck clean, lint 0 errors ≤34 warnings, pnpm test ~1058/1058, ABI rebuild dance (node-gyp + electron-rebuild comma-separated -w), pnpm -F @team-x/desktop test:e2e:run 9 specs green. orchestrator.json history.M33 populated, currentMilestone → M34, pending.json cleared with M34 scope sketch.",
+      "commitTemplate": "chore(m33): M33 T10 — verification + milestone marker",
+      "testsDelta": "0 (gate-only)"
     }
   ],
   "baseline": {
@@ -26,16 +108,18 @@
     "typecheckClean": true
   },
   "targets": {
-    "unitTests": null,
-    "e2eSpecs": null,
+    "unitTests": 1058,
+    "unitTestDelta": "+~25 (1033 → ~1058)",
+    "e2eSpecs": 9,
+    "e2eSpecDelta": "+1 (8 → 9; +copilot-service.spec.ts from T9)",
     "lintErrors": 0,
-    "lintWarningsMax": 76
+    "lintWarningsMax": 34
   },
   "notes": [
-    "M32 (Task Planner — write-side) COMPLETE (2026-04-16). 1033/1033 unit tests + 8 .spec.ts files (9 Playwright cases) green. Details in .loki/state/orchestrator.json history.M32.",
-    "M33 plan doc is the first deliverable. Previous milestones wrote their plan docs at T0 or T1 — M33 follows the same pattern. Copy the M32 template (Overview + What ships + Invariants preserved + Success criteria + Task breakdown + Acceptance criteria + ABI rebuild dance) and fill in the Copilot-Service-specific scope.",
-    "ABI rebuild dance is verified T10 procedure. Node rebuild (node-gyp) for vitest, Electron rebuild (electron-rebuild) for Playwright. Document this in the M33 plan doc acceptance criteria same way M32 did.",
-    "Full task breakdown for M33 gets materialized into this pending.json once the plan doc is written. Until then, T0 is the only task.",
-    "Patterns to carry forward: three-tier canned test seam, {rows, truncated} envelope, data-step-kind E2E selectors, pause-aware providerRouter wrapper, AbortController stop, atomic commits + ledger commits, bus-event + audit-row invariant (#11)."
+    "M33 T0 SHIPPED (2026-04-16T08:15Z, commit c5cdeee). Plan doc materializes T1–T10 with per-task scope + commit templates + test deltas. Totals: +~48 unit tests across T1–T8 (targets +~25 net — aligns with design §9 M33 estimate after accounting for incidental tests not counted in per-task deltas).",
+    "T1 is head-of-queue. T1 + T2 can share a session (schema + pseudo-employee bootstrap). T3 is small-and-independent (~60 min). T4 is biggest — full session, subagent candidate for prompt builder scaffolding. T5 is boilerplate (~30 min). T6 depends on T5 + T2. T7 is fast (~25 min). T8 prerequisite for T9. T9 is full session with one subagent pass. T10 is gate-only + docs (~60 min) — ABI dance mandatory.",
+    "Architectural seams active: three-tier canned test seam, {rows, truncated} envelope, data-step-kind stable E2E selector, pause-aware providerRouter wrapper, AbortController stop, atomic + ledger commits, bus-event + audit-row invariant (#11), is_system + filter-sweep pattern with new isSystemRoleId predicate (M33 T2 extracts this).",
+    "Blocker for M34: copilot.ask must return { runId, threadId } matching M31 command.execute complex_request shape so M34 sidebar attaches step-stream with no second wire format. Verify in T6.",
+    "ABI rebuild dance (verified across M31 + M32 T10): Node ABI `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` (+ keytar), Electron ABI `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` (comma-separated only — repeated -w flags crash @electron/rebuild@3.7.2)."
   ]
 }
