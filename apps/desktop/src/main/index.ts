@@ -112,6 +112,8 @@ import {
 import { createAgenticTools } from './services/agentic-tools.js';
 import { createBackupService } from './services/backup.js';
 import { type CommandService, createCommandService } from './services/command-service.js';
+import { createCopilotEventWindow } from './services/copilot-event-window.js';
+import type { CopilotEventWindow } from './services/copilot-event-window.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import { detectHardware } from './services/profiler.js';
@@ -241,6 +243,13 @@ let orchestrator: Orchestrator | null = null;
 let unregisterIpc: (() => void) | null = null;
 let mcpHostInstance: McpHost | null = null;
 let ragIndexerInstance: { stop: () => void } | null = null;
+/**
+ * CopilotEventWindow — M33 T3. In-memory bounded rolling buffer of
+ * dashboard events keyed per company. Started after the event bus is
+ * wired; consumed by the T4 CopilotAnalyzerService. Held as a module
+ * handle for graceful shutdown alongside the other subscribers.
+ */
+let copilotEventWindowInstance: CopilotEventWindow | null = null;
 let commandServiceInstance: CommandService | null = null;
 /**
  * Agentic-loop front-door for the command palette's `complex_request`
@@ -579,6 +588,23 @@ app
     });
     ragIndexer.start();
     ragIndexerInstance = ragIndexer;
+
+    // ---- Copilot event window: bounded per-company rolling buffer ---------
+    //
+    // M33 T3. Subscribes to the same event bus the RAG indexer uses;
+    // feeds the T4 CopilotAnalyzerService. Bounded at 100 events per
+    // company, FIFO eviction, warm-start hydration from the events
+    // table on first snapshot per company. `clear(companyId)` is
+    // shipped as a public method but not yet wired — the
+    // `companies.archive` IPC referenced in the M33 plan does not
+    // exist today, so the archive-clear hookup is deferred to the
+    // milestone that adds it (tracked as an M33 T3 follow-up).
+    const copilotEventWindow = createCopilotEventWindow({
+      bus,
+      eventsRepo,
+    });
+    copilotEventWindow.start();
+    copilotEventWindowInstance = copilotEventWindow;
 
     const vaultService = createVaultService({
       vaultRepo,
@@ -1248,6 +1274,7 @@ app.on('will-quit', (event) => {
     orchestrator === null &&
     unregisterIpc === null &&
     ragIndexerInstance === null &&
+    copilotEventWindowInstance === null &&
     commandServiceInstance === null &&
     agenticLoopServiceInstance === null
   ) {
@@ -1279,6 +1306,18 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] rag indexer stop failed:', err);
+    }
+    // Stop the CopilotEventWindow alongside the RAG indexer — both are
+    // pure bus subscribers with no I/O of their own, so ordering
+    // relative to each other is irrelevant. Stopping here prevents
+    // the subscriber from observing drain-phase events.
+    try {
+      if (copilotEventWindowInstance !== null) {
+        copilotEventWindowInstance.stop();
+        copilotEventWindowInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] copilot event window stop failed:', err);
     }
     // Stop the CommandService BEFORE the orchestrator drain (M29 T6
     // learning): any in-flight `command.execute` that is mid-dispatch
