@@ -89,6 +89,19 @@ export interface ListActiveFilter {
   limit?: number;
   /** Optional clock override — defaults to `Date.now()`. Test seam. */
   now?: number;
+  /**
+   * When `true`, the query WIDENS past the default `dismissed_at IS NULL`
+   * predicate and returns dismissed rows alongside active ones (still
+   * subject to the `expires_at > now` TTL filter). Defaults to `false`
+   * (M33 T1 behaviour — active-only).
+   *
+   * Added in M33 T6 for the `query_copilot_insights` agentic tool, which
+   * opts in when the LLM wants historical context (e.g., "what insights
+   * has Rocky dismissed today that might still matter?"). The renderer's
+   * Copilot card list still calls `listActive` with the default so
+   * dismissed rows never leak back into the feed.
+   */
+  includeDismissed?: boolean;
 }
 
 export interface UpsertContext {
@@ -234,14 +247,22 @@ export function createCopilotInsightsRepo<TRunResult>(db: CopilotInsightsDb<TRun
      * expires_at > now`. Newest first. Optional category / severity / limit
      * filters compose with AND. Hits the composite index
      * `idx_insights_company_active`.
+     *
+     * When `filter.includeDismissed === true` (M33 T6) the
+     * `dismissed_at IS NULL` predicate is DROPPED, widening the result
+     * to include dismissed-but-not-yet-expired rows. The index still
+     * helps on the `(company_id, expires_at)` prefix even when the
+     * dismissal predicate is absent.
      */
     listActive(filter: ListActiveFilter): CopilotInsightRow[] {
       const now = filter.now ?? Date.now();
       const conds = [
         eq(copilotInsights.companyId, filter.companyId),
-        isNull(copilotInsights.dismissedAt),
         gt(copilotInsights.expiresAt, now),
       ];
+      if (filter.includeDismissed !== true) {
+        conds.push(isNull(copilotInsights.dismissedAt));
+      }
       if (filter.category !== undefined) {
         conds.push(eq(copilotInsights.category, filter.category));
       }

@@ -58,6 +58,7 @@ import type { LoopCompleteFn, LoopMessage, LoopProviderCompletion } from '@team-
 import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
 import { streamAgent } from '@team-x/provider-router';
 import type { EmbeddingSourceType, Employee, Ticket } from '@team-x/shared-types';
+import { SYSTEM_COPILOT_ROLE_ID } from '@team-x/shared-types';
 import { eq } from 'drizzle-orm';
 import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
@@ -105,6 +106,7 @@ import {
   type AgenticLoopService,
   createAgenticLoopService,
 } from './services/agentic-loop-service.js';
+import { buildCopilotToolRegistry } from './services/agentic-tools-copilot.js';
 import {
   type WriteSideCompleteFn,
   type WriteSideOrchestrator,
@@ -125,6 +127,7 @@ import {
 } from './services/copilot-event-trigger.js';
 import { createCopilotEventWindow } from './services/copilot-event-window.js';
 import type { CopilotEventWindow } from './services/copilot-event-window.js';
+import { createCopilotService } from './services/copilot-service.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import { detectHardware } from './services/profiler.js';
@@ -881,22 +884,30 @@ app
         isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
       },
       buildTools: ({ companyId, employee }) => {
+        // M33 T6 — resolve the actor's roleId once per run. The
+        // `AgenticLoopEmployeeContext` surface is intentionally narrow
+        // (id/level/isSystem) for M31/M32 compat; the roleId lookup
+        // lives at the composition root where the repo is in scope.
+        // Zero-cost for the common M31 case (system-agent) — one row
+        // lookup per agentic-loop start, never per-tool-call.
+        const actorRow = employeesRepo.getById(employee.id);
+        const roleId = actorRow?.roleId ?? '';
+        const employeeWithRole = { ...employee, roleId };
+
         if (testMode) {
           // Canned tool set — no repo access, deterministic envelopes
           // per tool. Level-gated mirror of the production composition,
           // so E2E specs that pass an explicit employeeId (M32 T3) get
-          // the same write-side subset they'd get in production. See
-          // `test-agentic-tools.ts` for the fixture shapes + sentinel
-          // override contract.
-          return createTestToolsForEmployee({ companyId, employee });
+          // the same write-side subset they'd get in production. T6
+          // threads `roleId` through so the test composer's copilot
+          // branch (`createTestToolsForEmployee` in
+          // `test-agentic-tools.ts`) picks up `query_copilot_insights`
+          // when the actor is the system-copilot pseudo-employee.
+          return createTestToolsForEmployee({ companyId, employee: employeeWithRole });
         }
 
-        // ─── Production composition (M32 T3) ─────────────────────────
+        // ─── Production composition (M32 T3 + M33 T6) ───────────────
         // Read-side tools are always exposed (every actor can query).
-        // Write-side tools are level-gated by `buildWriteSideTools` per
-        // Phase 5 §7.1: decompose for Officer/Senior-Mgmt/Management/
-        // system, delegate+review for Management/Supervisor/Lead/system.
-        // ICs receive an empty write-side array.
         const readSide = createAgenticTools({
           companyId,
           employeesRepo,
@@ -906,6 +917,32 @@ app
           vaultRepo,
           auditRepo,
         });
+
+        // M33 T6 — copilot branch. When the actor is the company's
+        // `system-copilot` pseudo-employee, the registry is
+        // `[...readSide, ...copilotTools]` — the M32 write-side set is
+        // specifically carved out so the copilot never decomposes,
+        // delegates, or reviews. The system-agent branch below stays
+        // unchanged with its original M31 read-only + M32 write-side
+        // tool set.
+        if (roleId === SYSTEM_COPILOT_ROLE_ID) {
+          const copilotTools = buildCopilotToolRegistry(
+            { roleId },
+            {
+              companyId,
+              copilotInsightsRepo: {
+                listActive: (filter) => copilotInsightsRepo.listActive(filter),
+              },
+            },
+          );
+          return [...readSide, ...copilotTools];
+        }
+
+        // ─── Write-side composition (M32 T3) — every non-copilot actor
+        // Write-side tools are level-gated by `buildWriteSideTools` per
+        // Phase 5 §7.1: decompose for Officer/Senior-Mgmt/Management/
+        // system-agent, delegate+review for Management/Supervisor/Lead/
+        // system-agent. ICs receive an empty write-side array.
 
         // Conservative workload provider — open-ticket count is a real
         // repo lookup; in-meeting + completion-history are stubbed for
@@ -1387,20 +1424,31 @@ app
     // `rag-handlers.ts`. The four channel strings are listed in
     // `REQUEST_CHANNELS` so `unregisterIpc()` strips them on shutdown.
     //
-    // T5 leaves `agenticLoopStart` unset so `copilot.ask` throws
-    // `not implemented` — T6 swaps in the real closure that routes
-    // through `AgenticLoopService.start` with `employeeId =
-    // system-copilot`. Keeping the stub on-surface (rather than a
-    // synthetic runId) prevents the palette's step-stream hook from
-    // binding to a ghost run.
+    // M33 T6 — `agenticLoopStart` is now wired via the copilot-service
+    // front-door. The service resolves the per-company system-copilot
+    // pseudo-employee via `findSystemByRoleId` and passes the id
+    // through to `AgenticLoopService.start` as the explicit
+    // `employeeId`, which selects the copilot branch in `buildTools`
+    // above (readSide + query_copilot_insights, no write-side tools).
+    // Wire contract (M31 parity): returns `{ runId, threadId }` — same
+    // shape as `command.execute` complex_request so the M34 sidebar
+    // can attach `useAgentStepStream` with zero wire-format branching.
     if (copilotAnalyzerServiceInstance === null) {
       throw new Error('copilotAnalyzerServiceInstance must be initialized before copilot handlers');
     }
+    const copilotServiceInstance = createCopilotService({
+      agenticLoopService: agenticLoopSvc,
+      employeesRepo: {
+        findSystemByRoleId: (cid, rid) => employeesRepo.findSystemByRoleId(cid, rid),
+      },
+    });
     const copilotHandlers = buildCopilotHandlers({
       copilotInsightsRepo,
       copilotAnalyzerService: copilotAnalyzerServiceInstance,
       bus,
       isTestMode,
+      agenticLoopStart: (req) =>
+        copilotServiceInstance.ask({ companyId: req.companyId, text: req.text }),
     });
     ipcMain.handle(
       'copilot.insights',

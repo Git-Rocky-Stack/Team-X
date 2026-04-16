@@ -186,18 +186,28 @@ describe('copilot.ask', () => {
     });
   });
 
-  it('throws when the stub is in effect (T5 default) or when text is missing', async () => {
-    // Stub: no agenticLoopStart wired — T5 default state.
-    const handlers1 = buildCopilotHandlers(makeDeps());
-    await expect(handlers1.ask({ companyId: 'c1', text: 'hello' })).rejects.toThrow(
-      /not implemented/i,
-    );
+  it('rejects empty companyId and empty / whitespace-only text before dispatching to the wired closure', async () => {
+    // M33 T6: the composition root ALWAYS wires `agenticLoopStart` via
+    // the copilot-service, so the T5 "stub in effect" branch is no
+    // longer reachable from the IPC surface. The factory still defends
+    // against a missing dep for safety (throws 'not implemented'), but
+    // the runtime contract the handlers enforce — and the one worth
+    // asserting on — is input validation BEFORE dispatch.
+    const agenticLoopStart = vi.fn(async () => ({ runId: 'r', threadId: 't' }));
+    const handlers = buildCopilotHandlers(makeDeps({ agenticLoopStart }));
 
-    // Validation: empty text on a wired handler still fails before dispatch.
-    const handlers2 = buildCopilotHandlers(
-      makeDeps({ agenticLoopStart: vi.fn(async () => ({ runId: 'r', threadId: 't' })) }),
-    );
-    await expect(handlers2.ask({ companyId: 'c1', text: '  ' })).rejects.toThrow(/text/);
+    // Empty text fails before dispatch.
+    await expect(handlers.ask({ companyId: 'c1', text: '  ' })).rejects.toThrow(/text/);
+    // Empty companyId fails before dispatch.
+    await expect(
+      handlers.ask({ companyId: '', text: 'hello' } as unknown as {
+        companyId: string;
+        text: string;
+      }),
+    ).rejects.toThrow(/companyId/);
+
+    // Neither invocation reaches the wired closure.
+    expect(agenticLoopStart).not.toHaveBeenCalled();
   });
 });
 

@@ -558,11 +558,17 @@ function createTestReviewDeliverableTool(): Tool<TestReviewArgs, ReviewResult> {
 // Level-gated composer — mirrors `buildWriteSideTools` semantics exactly.
 // ---------------------------------------------------------------------------
 
-/** Minimal employee shape the composer level-gates on. */
+/** Minimal employee shape the composer level-gates on. `roleId` is
+ *  optional for backward compatibility with M31/M32 callers — the
+ *  M33 T6 copilot branch observes it when present, falls through to
+ *  the M32 write-side branch when absent or unequal to
+ *  `SYSTEM_COPILOT_ROLE_ID`. */
 export interface TestEmployeeContext {
   readonly id: string;
   readonly level: string;
   readonly isSystem: boolean;
+  /** Role id — opt-in for callers that need the copilot branch. */
+  readonly roleId?: string;
 }
 
 export interface TestToolsForEmployeeArgs {
@@ -574,14 +580,25 @@ export interface TestToolsForEmployeeArgs {
  * Build the level-gated test-mode tool set for `employee`. Returns
  * read-side tools (always) PLUS the write-side subset gated on the
  * employee's level per Phase 5 §7.1 — same gates production uses
- * via `buildWriteSideTools`. The composition root wires this in
- * place of `[createAgenticTools, buildWriteSideTools]` under
+ * via `buildWriteSideTools`. Under M33 T6, when the employee is the
+ * framework-internal `system-copilot` (roleId match), the composer
+ * swaps the write-side subset for the copilot tool set
+ * (`query_copilot_insights`) — mirroring the production composition
+ * root in `main/index.ts`. The composition root wires this in place
+ * of `[createAgenticTools, buildWriteSideTools]` under
  * `NODE_ENV === 'test'`.
  */
 export function createTestToolsForEmployee(args: TestToolsForEmployeeArgs): readonly Tool[] {
   const readSide = createTestAgenticTools({ companyId: args.companyId });
-  const writeSide: Tool[] = [];
   const level = args.employee.level;
+
+  // M33 T6 — copilot branch. The copilot NEVER receives the M32
+  // write-side tools; it only gets the read-side set + query_copilot_insights.
+  if (args.employee.roleId === TEST_SYSTEM_COPILOT_ROLE_ID) {
+    return [...readSide, createTestQueryCopilotInsightsTool()];
+  }
+
+  const writeSide: Tool[] = [];
   if (TEST_DECOMPOSE_LEVELS.includes(level)) {
     writeSide.push(createTestDecomposeProjectTool());
   }
@@ -607,4 +624,158 @@ export function createTestWriteSideTools(employee: TestEmployeeContext): readonl
     out.push(createTestReviewDeliverableTool());
   }
   return out;
+}
+
+// ===========================================================================
+// M33 T6 — copilot seam mirror.
+//
+// Production composition (`buildCopilotToolRegistry` in
+// `agentic-tools-copilot.ts`) wires `query_copilot_insights` to the
+// `CopilotInsightsRepo` with a 50-row cap. Under `NODE_ENV=test` the
+// composition root swaps to the canned variant below when the actor
+// employee's `roleId === SYSTEM_COPILOT_ROLE_ID`, mirroring the read-
+// and write-side seams above (and `test-agentic-provider.ts` /
+// `test-classifier.ts`):
+//
+//   1. Sentinel override — `__ECHO_COPILOT_QUERY__:<json>` embedded in
+//      any string-valued arg. JSON payload is returned verbatim as
+//      `{rows, truncated}`. Malformed JSON falls through to the canned
+//      table. Lets specs pin a per-invocation envelope without code
+//      changes. (The embedded-in-string path is the same mechanic the
+//      read-side + write-side seams use — no new test-harness
+//      primitive is needed.)
+//   2. Canned table — currently `Object.freeze({})`; T9 extends it
+//      with per-prompt fixtures. Kept populated-by-default empty so
+//      the spec's first round-trip hits the fallback deterministically
+//      until a keyed entry lands.
+//   3. Fallback — `{rows: [], truncated: false}`. Keeps the tool
+//      contract never-throw so the loop can still answer against an
+//      empty envelope.
+//
+// Level-gating mirrors the production `buildCopilotToolRegistry`:
+// only the `system-copilot` role id receives this tool. The gate is
+// applied at the composer surface (see `createTestToolsForEmployee`
+// above), not inside the tool body — same shape the M32 write-side
+// seam uses for its `TEST_DECOMPOSE_LEVELS` / `TEST_DELEGATE_REVIEW_LEVELS`
+// gates.
+//
+// Import cycle note: `SYSTEM_COPILOT_ROLE_ID` lives in
+// `@team-x/shared-types/roles.ts` — importable from this test-only
+// module without cycles. The roleId value is duplicated as a local
+// `const` to stay consistent with the M31-era pattern that avoids
+// the shared-types import in the test seam; MUST match verbatim.
+// ===========================================================================
+
+/** Sentinel prefix for per-invocation copilot-query overrides. */
+export const ECHO_COPILOT_QUERY_SENTINEL = '__ECHO_COPILOT_QUERY__:';
+
+/** Canonical system-copilot role id — duplicated from
+ *  `@team-x/shared-types/roles.ts` so this test module stays
+ *  import-cycle-free. MUST match verbatim; enforced by the M33 T6
+ *  composer test suite. */
+const TEST_SYSTEM_COPILOT_ROLE_ID = 'system-copilot';
+
+const COPILOT_CATEGORIES = ['operational', 'cost', 'org', 'workflow', 'anomaly'] as const;
+const COPILOT_SEVERITIES = ['critical', 'warning', 'info'] as const;
+
+/** Schema mirrors the production `queryCopilotInsightsSchema` in
+ *  `agentic-tools-copilot.ts`. Strict so accidental arg drift surfaces
+ *  in the loop's safeParse step rather than at runtime. */
+const testCopilotQuerySchema = z
+  .object({
+    companyId: z.string().min(1).optional(),
+    category: z.enum(COPILOT_CATEGORIES).optional(),
+    severity: z.enum(COPILOT_SEVERITIES).optional(),
+    includeDismissed: z.boolean().optional(),
+    limit: z.number().int().positive().max(MAX_ROWS).optional(),
+  })
+  .strict();
+type TestCopilotQueryArgs = z.infer<typeof testCopilotQuerySchema>;
+
+/** Canned envelope shape for copilot-query results. Matches the
+ *  production `CopilotToolResult` field-for-field so specs can assert
+ *  on the same wire shape the renderer consumes. */
+interface TestCopilotInsightRow {
+  readonly id: string;
+  readonly companyId: string;
+  readonly category: string;
+  readonly severity: string;
+  readonly title: string;
+  readonly detail: string;
+  readonly actionSuggestion: string | null;
+  readonly actionIntent: string | null;
+  readonly dismissedAt: number | null;
+  readonly createdAt: number;
+  readonly expiresAt: number;
+}
+interface TestCopilotQueryEnvelope {
+  readonly rows: readonly TestCopilotInsightRow[];
+  readonly truncated: boolean;
+}
+
+/** Deterministic fallback envelope — empty rows, never-throw contract. */
+const FIXTURE_COPILOT_EMPTY: TestCopilotQueryEnvelope = Object.freeze({
+  rows: Object.freeze([]) as readonly TestCopilotInsightRow[],
+  truncated: false,
+});
+
+/** Per-prompt canned table keyed on a stable arg field. Empty in T6
+ *  (so the fallback fires by default); T9 populates it with per-spec
+ *  fixtures. */
+const CANNED_COPILOT_QUERY_TABLE: Readonly<Record<string, TestCopilotQueryEnvelope>> =
+  Object.freeze({});
+
+function extractCopilotSentinel(args: Record<string, unknown>): TestCopilotQueryEnvelope | null {
+  for (const v of Object.values(args)) {
+    if (typeof v !== 'string') continue;
+    const idx = v.indexOf(ECHO_COPILOT_QUERY_SENTINEL);
+    if (idx < 0) continue;
+    const payload = v.slice(idx + ECHO_COPILOT_QUERY_SENTINEL.length).trim();
+    if (payload.length === 0) continue;
+    try {
+      const parsed = JSON.parse(payload) as unknown;
+      if (parsed === null || typeof parsed !== 'object') return null;
+      const obj = parsed as { rows?: unknown; truncated?: unknown };
+      if (!Array.isArray(obj.rows)) return null;
+      return {
+        rows: obj.rows as readonly TestCopilotInsightRow[],
+        truncated: obj.truncated === true,
+      };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function lookupCannedCopilot(key: string | undefined): TestCopilotQueryEnvelope | null {
+  if (key === undefined) return null;
+  const normalized = key.trim().toLowerCase();
+  if (normalized.length === 0) return null;
+  return CANNED_COPILOT_QUERY_TABLE[normalized] ?? null;
+}
+
+function createTestQueryCopilotInsightsTool(): Tool<
+  TestCopilotQueryArgs,
+  TestCopilotQueryEnvelope
+> {
+  return {
+    name: 'query_copilot_insights',
+    description:
+      'List copilot insights for the current company, newest-first. ' +
+      'Optional filters: `category` (operational|cost|org|workflow|anomaly), ' +
+      '`severity` (critical|warning|info), `includeDismissed` (bool; default false — ' +
+      'set true to include dismissed rows), `limit` (1-50). Returns id, companyId, ' +
+      'category, severity, title, detail, actionSuggestion, actionIntent, ' +
+      'dismissedAt, createdAt, expiresAt.',
+    schema: testCopilotQuerySchema,
+    async execute(args, ctx) {
+      checkAborted(ctx);
+      const sentinel = extractCopilotSentinel(args as Record<string, unknown>);
+      if (sentinel !== null) return sentinel;
+      const canned = lookupCannedCopilot(args.category ?? args.severity ?? undefined);
+      if (canned !== null) return canned;
+      return FIXTURE_COPILOT_EMPTY;
+    },
+  };
 }
