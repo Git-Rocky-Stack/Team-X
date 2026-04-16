@@ -6,9 +6,9 @@
   "previousMilestone": "M31",
   "previousMilestoneCompletedAt": "2026-04-15T14:30:00Z",
   "createdAt": "2026-04-15T15:18:00Z",
-  "updatedAt": "2026-04-15T18:15:00Z",
+  "updatedAt": "2026-04-15T18:50:00Z",
   "totalTasks": 11,
-  "tasksShipped": 4,
+  "tasksShipped": 5,
   "tasks": [
     {
       "id": "T0",
@@ -42,6 +42,15 @@
       "unitTestDelta": "+11 (989 → 1000)",
       "filesChanged": "5 files, +744 / -24 LOC: apps/desktop/src/main/index.ts (+131), apps/desktop/src/main/services/agentic-loop-service.ts (+107), apps/desktop/src/main/services/agentic-loop-service.test.ts (+115), apps/desktop/src/main/services/test-agentic-tools.test.ts (NEW +117), apps/desktop/src/main/services/test-agentic-tools.ts (NEW +298).",
       "scope": "Extends AgenticLoopService with employee-aware tool-registry injection so the agentic loop is level-gated per Phase 5 §7.1 instead of flat per-company. New types: AgenticLoopEmployeeContext + AgenticLoopEmployeeLookup. AgenticLoopEmployeesRepo widened with optional getById(). buildTools deps signature gains employee context. StartArgs gains optional employeeId; start() resolves actor via explicit getById path or default system-agent fallback, validates cross-company isolation, and threads actorEmployee through every identity touchpoint (members, runs row, message authors, bus events) while preserving the `systemAgentId` field name on RunState for M31 wire-contract stability. Composition root in main/index.ts now composes [...readSideTools, ...buildWriteSideTools(employee, ...)] in production with a conservative open-ticket-count workload provider (in-meeting/avg-completion stubbed for M33), a no-op write-side orchestrator enqueue (M33 wires the real path), and a streamAgent-wrapped WriteSideCompleteFn that resolves the actor's provider per call; NODE_ENV=test branches to createTestToolsForEmployee. employeesRepo facade gains getById() that maps EmployeeRow → AgenticLoopEmployeeLookup with isSystem null-safe default. NEW test-agentic-tools.ts (298 LOC) ships the ECHO_WRITE_SENTINEL + per-tool canned tables + schema-identical decompose_project/delegate_subtask/review_deliverable factories with sentinel/canned/fallback three-tier resolution mirroring test-classifier and test-agentic-provider + createTestToolsForEmployee level-gated composer + createTestWriteSideTools standalone factory — lockstep invariant with production buildWriteSideTools gates. Tests +11: agentic-loop-service.test.ts +4 (M32 T3 default-actor capture, explicit employeeId resolution + actor authorship, unknown-id throw + side-effect-free, cross-company guard); NEW test-agentic-tools.test.ts +7 (system-agent gets all, IC read-only, officer = read+decompose, management = read+all, supervisor/lead = read+delegate+review, standalone factory IC empty + schema-identical mirror). Verification per commit message: pnpm -r typecheck clean across all 6 packages; biome check clean on all 5 T3 files (auto-fixed import order in main/index.ts and test-agentic-tools.test.ts); vitest green on agentic-loop-service.test.ts (25) + test-agentic-tools.test.ts (7) + agentic-tools-write.test.ts (25) + agentic-tools.test.ts (40)."
+    },
+    {
+      "id": "T4",
+      "name": "New event types + step kinds in shared-types",
+      "status": "shipped",
+      "commit": "dd17eff",
+      "unitTestDelta": "+3 (1000 → 1003)",
+      "filesChanged": "4 files, +266 / -13 LOC: packages/shared-types/src/events.ts (M), packages/shared-types/src/events-m32.test.ts (NEW), apps/desktop/src/main/services/agentic-tools-write.ts (M), apps/desktop/src/renderer/src/features/command/step-card.tsx (M).",
+      "scope": "Promotes WriteSideEventType literals into canonical EventType union (+6 members: plan.proposed, plan.approved, task.delegated, task.escalated, review.requested, review.completed). Extends AgentStepKind (+3 members: ticket_created, delegation_made, review_pending). Ships 6 JSON-safe payload types: PlanProposedPayload (subtask tree), PlanApprovedPayload (M33 prep), TaskDelegatedPayload (fallback+attempts), TaskEscalatedPayload (reason+original), ReviewRequestedPayload, ReviewCompletedPayload (outcome+escalation). AgentStepPayload.data doc extended with 3 new kind shapes. AgenticRunSnapshot.steps wire-shape invariant preserved. agentic-tools-write.ts: import type { EventType } added, all 6 satisfies WriteSideEventType swapped to satisfies EventType for canonical narrowing. step-card.tsx: 3 minimal case branches (ticket_created=emerald, delegation_made=sky/GitBranch, review_pending=amber/Brain) with data-step-kind stable E2E selectors; exhaustiveness guard preserved. T2 string-literal immunity CONFIRMED: 25/25 tests pass. Tests +3: events-m32.test.ts (NEW) — EventType union check via expectTypeOf for all 6, AgentStepKind union + AgentStepPayload construction for all 3, payload discriminator shapes for all 6 interfaces."
     }
   ],
   "baseline": {

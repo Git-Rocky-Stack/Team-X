@@ -1,4 +1,49 @@
-# Loki Continuity — Phase 5, M32 T3 SHIPPED (level-based tool injection + test seam); M32 T4+ pending
+# Loki Continuity — Phase 5, M32 T4 SHIPPED (canonical event types + step kinds); M32 T5+ pending
+
+## M32 T4 SHIPPED — 2026-04-15
+
+**Milestone:** Task Planner (Phase 5 — Intelligence Layer). In progress (5 of 11 tasks shipped).
+**Scope shipped this session:** Promoted WriteSideEventType literals into canonical EventType union (+6 members), extended AgentStepKind (+3 write-side step kinds), shipped 6 JSON-safe payload types, swapped `satisfies WriteSideEventType` → `satisfies EventType` in agentic-tools-write.ts (6 sites), added 3 minimal step-card case branches (ticket_created/delegation_made/review_pending) with `data-step-kind` stable E2E selectors. T2 string-literal immunity confirmed (25/25 untouched).
+**Commit:** T4 = `dd17eff`.
+**Session window:** 2026-04-15T18:30:00Z → 2026-04-15T18:50:00Z.
+
+### Metrics delta
+
+| Metric | Pre-T4 | Post-T4 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1000 | 1003 | +3 |
+| E2E specs | 8 | 8 | 0 |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings (workspace) | 24 | 24 | 0 |
+| Typecheck across 6 packages | clean | clean | — |
+| Files touched | — | 4 (+266 / −13) | — |
+
+### What shipped
+
+**`packages/shared-types/src/events.ts`** — EventType union gains 6 members (`plan.proposed`, `plan.approved`, `task.delegated`, `task.escalated`, `review.requested`, `review.completed`). AgentStepKind gains 3 members (`ticket_created`, `delegation_made`, `review_pending`). 6 new payload interfaces: PlanProposedPayload (subtask tree with assignee+complexity), PlanApprovedPayload (M33 forward — approval with ticket ids), TaskDelegatedPayload (receipt with fallback+attempts), TaskEscalatedPayload (reason+original assignee), ReviewRequestedPayload, ReviewCompletedPayload (outcome+escalation flag). AgentStepPayload data doc extended with 3 new kind shapes. AgenticRunSnapshot.steps picks up the extended AgentStepKind automatically — no wire-shape change.
+
+**`apps/desktop/src/main/services/agentic-tools-write.ts`** — `import type { EventType } from '@team-x/shared-types'` added. All 6 `satisfies WriteSideEventType` replaced with `satisfies EventType`. Local WriteSideEventType kept as documentation type. WriteSideEventBus interface stays `type: string` for width compatibility.
+
+**`apps/desktop/src/renderer/src/features/command/step-card.tsx`** — 3 new case branches before exhaustiveness guard: ticket_created (emerald border, Check icon), delegation_made (sky border, GitBranch icon), review_pending (amber border, Brain icon). Minimal rendering — T6 adds full detail + data narrowing. `data-step-kind` attributes present as stable E2E selectors. GitBranch added to lucide imports.
+
+**`packages/shared-types/src/events-m32.test.ts`** (NEW) — 3 type-level assertion tests: (1) EventType union includes all 6 planner events via `expectTypeOf` + runtime array length check; (2) AgentStepKind includes 3 write-side kinds via `expectTypeOf` + AgentStepPayload construction with `kind: 'ticket_created'`; (3) all 6 payload interfaces constructed with correct discriminator shapes + field assertions.
+
+### Gotchas captured
+
+- **Exhaustiveness guard in step-card.tsx breaks on AgentStepKind extension.** The `const _exhaust: never = step.kind` catches new kinds at compile time. T4 MUST add case branches for every new kind — even minimal ones — to keep typecheck green. T6 fleshes out the full design; T4 just needs the exhaustiveness guard to pass and `data-step-kind` selectors to exist.
+- **`PlanApprovedPayload` is forward-looking (M33).** No tool currently emits `plan.approved` — it's reserved for the Copilot service's plan-approval flow. Included per the T4 plan-doc spec to avoid a shared-types churn commit in M33.
+- **Biome auto-format on the test file** — object literal formatting was tightened by biome check --write. Run biome before commit to avoid a two-commit dance.
+
+### Next Session Startup Checklist (M32 T5+)
+
+1. Read this CONTINUITY file — most recent session at the top.
+2. Read `.loki/state/orchestrator.json` → `inFlightMilestone.M32.commits` shows T0–T4 shipped; `tasksCompleted: 5`; baseline 958 / current 1003.
+3. Read `.loki/queue/pending.json` → `tasks` array shows T0–T4 with `status: shipped`.
+4. **T5 = Confirmation gates** in the command palette for write-side agentic runs. `command.execute` extends its `confirmed?: boolean` field to detect write-side intents (heuristic: verbs like "decompose", "delegate", "create tickets", "review"). If detected AND `confirmed !== true`, returns `{ needsConfirmation: true, gateKind: 'write-side' }` before dispatching the loop. Palette renders confirmation card. Accept → re-call with `confirmed: true`. Reject → clean close. Existing M30 gates (fire/close/end-meeting/promote) unchanged. `skipConfirmation: true` opt-out for M33 Copilot. +8 unit tests.
+5. **T6 = Full step-card variants + AuditView chips.** The T4-minimal step-card branches get full rendering with data narrowing, detail text, and color polish. AuditView event-type filter chips must include the 6 new EventType members.
+6. Commit cadence: `feat(m32): M32 T<N> — <summary>`, then `chore(loki): M32 T<N> — commit ledger (<sha>)`.
+
+---
 
 ## M32 T3 SHIPPED — 2026-04-15
 
