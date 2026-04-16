@@ -1,4 +1,121 @@
-# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0 + T1 shipped); M32 (Task Planner) complete
+# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0, T1, T2 shipped); M32 (Task Planner) complete
+
+## M33 T2 SHIPPED — 2026-04-16 (system-copilot pseudo-employee + role card)
+
+**Task:** M33 T2 — second `is_system=1` pseudo-employee row per company alongside M31's `system-agent`. Hidden from every human-facing employee surface by inheriting the same `is_system=1` + `level='system'` gating the agent uses. Ships the identity layer that T4's CopilotAnalyzerService will own (`actor: system-copilot`) and that T6's `copilot.ask` will route against (`employeeId: system-copilot`).
+**Commit:** `4ce9d3e` — `feat(m33): M33 T2 — system-copilot pseudo-employee + role card`.
+**Plan reference:** [M33 plan T2 §](../docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).
+
+### Metrics delta
+
+| Metric | Pre-T2 | Post-T2 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1048 | **1052** | **+4** (exact match to plan target) |
+| E2E specs | 8 | 8 | 0 (T9 ships the spec) |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings | 24 | 24 | 0 (pre-existing in intelligence/nlu; well under M33 ≤34 budget) |
+| Typecheck across 6 packages | clean | clean | — |
+| Files touched | — | 6 (+563 / −62) | — |
+
+### What shipped (one feat commit, six files)
+
+1. **`role-packs/strategia-official/roles/system/system-copilot.md` (NEW, 117 lines).** F10 role card per the CLAUDE.md role-pack standard.
+   - Frontmatter: `id: system-copilot`, `name: Team-X Copilot (analyzer)`, `level: system`, `reports_to: []`, `manages: []`, `preferred_model_tier: mid`, `preferred_providers: [ollama, anthropic]`, `fallback_providers: [openai, groq]`.
+   - `tools_allowed`: M31 read-only set (`query_employees`, `query_tickets`, `query_projects`, `query_meetings`, `query_vault`, `query_events`) + `query_copilot_insights` (T6 ships the tool; T2 just declares the role's allowance).
+   - `tools_denied`: hard lock against write-side mutations — `decompose_project`, `delegate_subtask`, `review_deliverable` (M32's write-side toolkit), `send_message_to_colleague` (built-in from M11), plus `shell` / `filesystem` / `network` (never allowed for any read-only role, declared explicitly as belt-and-suspenders).
+   - Body emphasizes proactive monitoring (vs reactive Q&A which is system-agent's lane) and the JSON-at-analysis-time / prose-at-ask-time separation: the analyzer emits structured `InsightDraftSchema` (T4), the copilot.ask path emits grounded prose (T6).
+
+2. **`packages/shared-types/src/roles.ts` (NEW, 54 lines).** The single source of truth for system-role identity checks.
+   - Exports `SYSTEM_AGENT_ROLE_ID` and `SYSTEM_COPILOT_ROLE_ID` as typed string literals.
+   - Exports `SYSTEM_ROLE_IDS` as an `as const` tuple so future iterators don't miss a role.
+   - Exports `isSystemRoleId(roleId: string): boolean` predicate that point-check call sites use instead of magic-string equality. Future-proofing for a hypothetical third system role (e.g. M34+ system-notifier) — one import, zero grep sweep.
+   - Rationale: the `is_system` column is the authoritative runtime filter (it's what `listVisibleByCompany` + `agentic-tools-write` scorer query), but UI call sites that need to DISTINGUISH between system roles (M34 sidebar will label "Copilot" vs "Agent" differently) need the role_id to branch. The predicate + constants keep those branches type-safe.
+
+3. **`apps/desktop/src/main/services/system-agent-bootstrap.ts` (+185 / -62).** Extended with `ensureSystemCopilot` + refactored around a shared internal.
+   - New exports: `SYSTEM_COPILOT_ROLE_ID`, `SYSTEM_COPILOT_ROLE_PACK_ID`, `SYSTEM_COPILOT_DISPLAY_NAME` constants.
+   - New public `ensureSystemCopilot(db, companyId, deps)` — idempotent SELECT-then-INSERT into `employees` with `is_system = 1` + `role_id = SYSTEM_COPILOT_ROLE_ID`. Mirrors `ensureSystemAgent` shape exactly; callers just swap the role constant.
+   - Internal refactor: both `ensureSystemAgent` and `ensureSystemCopilot` now delegate to a shared `ensureSystemEmployee()` helper that owns the idempotency guard, the missing-spec guard, the wrong-level guard, and the INSERT-with-returning. Prevents drift between the two ensure functions as we add invariants.
+   - Legacy type aliases kept: `EnsureSystemAgentArgs = EnsureSystemEmployeeArgs` and `EnsureSystemAgentResult = EnsureSystemEmployeeResult`. M31 callers of `ensureSystemAgent(args: EnsureSystemAgentArgs)` keep compiling without touching the call sites.
+
+4. **`apps/desktop/src/main/db/seed.ts` (+46 / -0).** Seeds `system-copilot` inline immediately after `system-agent` in `seedIfEmpty`.
+   - Same hardcoded-path pattern as `system-agent` — no role-loader dependency during seed (role-loader bootstraps later and filtering `level !== 'system'` means the loader would never surface these rows anyway).
+   - `SeedResult` type gains `systemCopilotId: EmployeeId`.
+   - Boot log now reports both ids: `[seed] bootstrapped Strategia-X company with CEO + SWE + system-agent (${systemAgentId}) + system-copilot (${systemCopilotId})`.
+
+5. **`apps/desktop/src/main/services/system-agent-bootstrap.test.ts` (+198 / -0).** +4 new unit tests plus a shared fixture.
+   - `ensureSystemCopilot fresh-create` — asserts first call inserts the row with expected role_id + is_system=1.
+   - `ensureSystemCopilot idempotent re-run` — asserts second call returns the same EmployeeId without inserting a duplicate row.
+   - `both system roles coexist` — asserts `ensureSystemAgent` + `ensureSystemCopilot` on the same company yields two distinct `is_system=1` rows with different role_ids.
+   - `listVisibleByCompany hides both` — asserts the repo-level visibility filter excludes both system rows from the human-facing employee list.
+   - `makePairLookup()` fixture — new shared test helper that returns `RoleSpec` entries for BOTH system roles; used by the fresh-create and coexist tests to keep the assertion shape uniform.
+
+6. **`apps/desktop/src/main/db/seed.test.ts` (+25 / -14).** Two assertions updated to reflect the new post-seed invariant.
+   - Total row count: 3 → 4 (CEO + SWE + system-agent + system-copilot).
+   - Visible row count: 2 → 2 (unchanged; both system rows are hidden by `listVisibleByCompany`).
+
+### Filter-sweep verification (the surprise that saved a file)
+
+The T2 plan doc acceptance list called for edits to `employees.list`, `orgchart.get`, hire-dialog picker, delegation picker, and meeting attendees — one filter added per surface. But a pre-edit sweep proved the work was **already done** by M31 + M32 gates:
+
+- **`packages/role-schema/src/role-loader.ts` line 267** — `listRoles()` filters `level !== 'system'`. system-copilot has `level: system` in its role card frontmatter, so the loader auto-hides it from the hire dialog's role catalog. Zero change.
+- **`apps/desktop/src/main/db/repos/employees.ts` — `listVisibleByCompany`** — filters `is_system = false` (the authoritative runtime gate). system-copilot sets `is_system = 1`, so it's auto-hidden from every surface that calls `listVisibleByCompany` (employees.list IPC, orgchart.get, hire dialog's hired-employees check, delegation picker). Zero change.
+- **`apps/desktop/src/main/services/agentic-tools-write.ts` line 761 + `computeRoleFit` + `scoreEmployee`** — M32 already filters `!e.isSystem` in the delegation picker AND returns 0 role-fit/score for `isSystem` candidates. system-copilot auto-scored 0. Zero change.
+
+Net: **three would-be edits proved unnecessary, zero risk of regression, no corresponding tests needed.** The `isSystemRoleId` predicate in `packages/shared-types` is therefore future-proofing (M34 UI distinguishers) rather than a regression plug — documented as such in the T2 commit body.
+
+### Architectural seams added by T2 (active for T3+)
+
+- **Two-system-role pattern locked in.** Every future code path that iterates "system employees" can use `SYSTEM_ROLE_IDS` as the tuple + `isSystemRoleId()` as the predicate. No more magic-string `role_id === 'system-agent'` checks anywhere in the codebase.
+- **Shared `ensureSystemEmployee()` internal.** Adding a third system role (if ever needed) is now one export + one constant + one call, not a full copy-paste of the idempotency/guard logic.
+- **Legacy type aliases as a migration lever.** The `EnsureSystemAgent{Args,Result}` aliases demonstrate the pattern for renaming typed APIs without breaking downstream code — a template worth reaching for in M34+ when the agentic-loop contract inevitably needs to widen for multi-actor streams.
+
+### Verification gates passed
+
+- `pnpm exec biome check` on the 6 touched files — 0 errors, 0 warnings.
+- `pnpm -r typecheck` — clean across all 6 workspace packages.
+- `pnpm test` on the relevant vitest scopes — **1052/1052 pass**, +4 from T1 baseline, exact match to plan target.
+- E2E not run this task (T3–T8 don't touch E2E; T9 runs the full E2E pass).
+- Atomic commit `4ce9d3e` per M30/M31/M32/M33 ledger pattern.
+
+### Invariants preserved
+
+- **#1 (renderer is a pure view):** T2 touches only main-process code + packages/shared-types. Zero renderer edits.
+- **#7 (zero phone-home):** no new network calls; system-copilot's role card declares `tools_allowed` for analysis but the actual LLM calls ship in T4.
+- **#8 (secrets in OS keychain):** no API key handling in T2.
+- **#9 (role-pack user edits are overrides):** system-copilot.md is a first-party pack role; user-override mechanism (M8+) still applies unchanged.
+- **#11 (IPC mutations emit bus events):** T2 adds no new IPC; seed path already emits bus events via the existing `employees.created` → `events` table chain. Unchanged.
+
+### Gotchas captured this session
+
+- **Role-loader `level !== 'system'` filter is the quiet hero.** Any role card with `level: system` in its frontmatter is auto-hidden from the role catalog. Future system roles should ALWAYS set `level: system` as the first line of defense — the is_system column gates the DB-facing list, and the level gate covers the UI-side role picker.
+- **Legacy type aliases beat rename cascades.** Keeping `EnsureSystemAgentArgs` + `EnsureSystemAgentResult` as type aliases to the new generic names let T2 refactor the bootstrap module without touching any M31 call site. This pattern will pay off again in M34 when the agentic-loop contract needs to widen.
+- **Pre-edit sweeps prevent dead-code edits.** The filter-sweep step in the T2 plan would have generated 3 unnecessary edits to `employees.ts` / `orgchart.ts` / `hire-dialog.tsx` if taken at face value. A 5-minute grep confirmed the gates already existed and saved ~45 minutes of churn + the risk of accidentally breaking the existing gates. Always grep before edit on "add a filter" tasks.
+- **`SYSTEM_ROLE_IDS as const` tuple vs string union.** Declaring the tuple `as const` makes it narrowable in TypeScript (`(typeof SYSTEM_ROLE_IDS)[number]` yields `'system-agent' | 'system-copilot'`) without a manual union maintenance. Iterator call sites get exhaustive-check support for free.
+- **Seed test row-count assertions are a canary for unintended seed regressions.** The 3 → 4 update broke two `seed.test.ts` expectations — a deliberate canary that catches any accidental re-seed (e.g. a duplicate `ensureSystemCopilot` call in the bootstrap path). Keep these assertions strict, not loose (`toHaveLength(4)`, not `toHaveLength.atLeast(4)`).
+
+### Patterns reinforced
+
+- **Pre-flight reconnaissance via `ctx_batch_execute`.** Single batched call (10 commands + 5 queries) replaced what would have been 15+ individual Read/Grep/Bash calls for state + pending + CONTINUITY + git-log + git-show reconnaissance. Keeps context lean for the long implementation tail.
+- **Atomic per-task commit + Loki ledger commit.** T2 shipped as commit `4ce9d3e`; this ledger commit is `chore(loki): M33 T2 — commit ledger (4ce9d3e)`. Mirrors M30 / M31 / M32 cadence. No co-mingling of work + ledger in a single commit.
+- **Shared internal over copy-paste.** `ensureSystemEmployee` as the shared helper beats duplicated logic in `ensureSystemAgent` + `ensureSystemCopilot`. This is the same refactor shape that `buildWriteSideTools` used in M32 T2 — one internal factory, many public entry points.
+
+### Next Session Startup Checklist (M33 T3+)
+
+1. `git log --oneline -n 10` — confirm head is at `chore(loki): M33 T2 — commit ledger (4ce9d3e)`.
+2. Read `.loki/queue/current-task.json` — it's been rewritten for **M33-T3** (rolling event window + bus subscription). Goal, acceptance (12 items), filesTouched, testsDelta (+8 unit), notes are all T3-specific.
+3. Read `.loki/queue/pending.json` — `tasksShipped: 3`; T3 is head-of-queue, T4 is the biggest remaining task.
+4. Read `.loki/state/orchestrator.json` — `current.unitTests: 1052`, `asOfTask: T2`, `asOfTaskCommit: 4ce9d3e`.
+5. Skim `docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md` §T3 before the first edit — confirm the file placement (`apps/desktop/` vs `packages/intelligence/`) and the `MAX_EVENTS_PER_COMPANY = 100` constant value.
+6. Pre-edit grep sweep (mirror T2 discipline):
+   - `grep -rn "eventsRepo.listRecent\|listRecent" apps/desktop/src/main/db/repos/events.ts` — verify the method exists; add it if missing with signature `listRecent(companyId: string, limit: number): Event[]` ordered by `created_at DESC`.
+   - `grep -rn "companies.archive\|archiveCompany" apps/desktop/src/main/ipc apps/desktop/src/main/db` — identify the canonical archive path so `clear(companyId)` wires in at the right layer (IPC handler vs repo method).
+   - `grep -rn "bus.subscribe\|busSubscribe" apps/desktop/src/main/services` — find the subscribe entry point (mirror whatever M29 rag-indexer / M31 agentic-tools use).
+7. ABI rebuild dance BEFORE first vitest run: `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npx node-gyp rebuild --release` + same for keytar. Skip Electron rebuild (no E2E in T3).
+8. Implement T3 per acceptance list. 8 unit tests (3 bounds / 2 isolation / 2 warm-start / 1 archive-clear).
+9. Atomic commit: `feat(m33): M33 T3 — rolling event window + bus subscription`.
+10. Ledger commit: `chore(loki): M33 T3 — commit ledger (<sha>)`.
+
+---
 
 ## M33 T1 SHIPPED — 2026-04-16 (migration 0011 + CopilotInsightsRepo)
 

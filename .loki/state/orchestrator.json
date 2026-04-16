@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M33",
   "milestoneName": "Copilot Service",
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
@@ -11,7 +11,7 @@
   "phaseComplete": false,
   "inflight": {
     "taskId": null,
-    "lastShipped": "T1"
+    "lastShipped": "T2"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M32",
@@ -29,7 +29,7 @@
     "typecheckClean": true
   },
   "current": {
-    "unitTests": 1048,
+    "unitTests": 1052,
     "e2eSpecs": 8,
     "e2eGreenCount": 9,
     "lintErrors": 0,
@@ -127,11 +127,12 @@
       "name": "Copilot Service",
       "startedAt": "2026-04-16T08:15:00Z",
       "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
-      "tasksShipped": 2,
+      "tasksShipped": 3,
       "totalTasks": 11,
       "commits": {
         "T0": "c5cdeee",
-        "T1": "0a77d87"
+        "T1": "0a77d87",
+        "T2": "4ce9d3e"
       },
       "baselineAtStart": {
         "unitTests": 1033,
@@ -142,14 +143,14 @@
         "typecheckClean": true
       },
       "current": {
-        "unitTests": 1048,
+        "unitTests": 1052,
         "e2eSpecs": 8,
         "e2eGreenCount": 9,
         "lintErrors": 0,
         "lintWarnings": 24,
         "typecheckClean": true,
-        "asOfTask": "T1",
-        "asOfTaskCommit": "0a77d87"
+        "asOfTask": "T2",
+        "asOfTaskCommit": "4ce9d3e"
       },
       "targets": {
         "unitTests": 1058,
@@ -162,6 +163,7 @@
     }
   },
   "notes": [
+    "M33 (Copilot Service) T2 SHIPPED (2026-04-16, commit 4ce9d3e). system-copilot pseudo-employee — second is_system=1 row per company alongside M31's system-agent. NEW role card role-packs/strategia-official/roles/system/system-copilot.md (117 lines, level: system, tools_allowed: M31 read-only set + query_copilot_insights, tools_denied locks out decompose_project / delegate_subtask / review_deliverable / shell / filesystem / network / send_message_to_colleague). NEW packages/shared-types/src/roles.ts exports SYSTEM_AGENT_ROLE_ID, SYSTEM_COPILOT_ROLE_ID, SYSTEM_ROLE_IDS tuple, isSystemRoleId() predicate — future-proofing for point-check call sites. system-agent-bootstrap.ts extended with ensureSystemCopilot + shared ensureSystemEmployee internal; legacy EnsureSystemAgent{Args,Result} kept as type aliases for M31 callers. seed.ts seeds system-copilot inline after system-agent; SeedResult gains systemCopilotId. Filter sweep verified as auto-covered — role-loader.listRoles filters level !== 'system' (line 267), listVisibleByCompany filters is_system = false, agentic-tools-write filters !e.isSystem at line 761 + returns 0 in computeRoleFit/scoreEmployee for isSystem candidates. Tests +4 (1048 → 1052): ensureSystemCopilot fresh-create + idempotent re-run + both-system-roles-coexist + listVisibleByCompany-hides-both + makePairLookup() fixture. seed.test.ts assertions updated 3 rows → 4 rows post-seed.",
     "M33 (Copilot Service) T1 SHIPPED (2026-04-16, commit 0a77d87). Migration 0011 + CopilotInsightsRepo with 6 methods (create/getById/listActive/dismiss/expireStale/upsertWithDedup) + 15 unit tests. Dedup contract: category-scoped + numeric-drift guard + Jaccard bigram > 0.8 — locked order, cheap rejections first. Same commit flipped Phase 5 design doc §9 M33 row 📋 → 🚧 In progress — 2 of 11 tasks shipped (2026-04-16).",
     "M33 T0 SHIPPED (2026-04-16T08:15Z, commit c5cdeee). Plan doc at docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md — 292 lines, 11 tasks (T0–T10), mirrors M32 structural template.",
     "M33 task breakdown: T1 migration 0011 + CopilotInsightsRepo ✅, T2 system-copilot role card + ensureSystemCopilot, T3 rolling event window + bus subscription, T4 CopilotAnalyzerService (periodic scheduler + LLM + dedup + expiry), T5 copilot.* IPC surface, T6 copilot.ask via agentic harness + query_copilot_insights tool, T7 copilot settings + UI, T8 test-copilot-provider canned seam, T9 copilot-service.spec.ts E2E, T10 docs + verification + milestone marker. Targets: +~25 unit tests, +1 E2E spec, ≤34 lint warnings, 0 lint errors, typecheck clean.",
