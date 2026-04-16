@@ -47,7 +47,15 @@
  * has to reason about `data: unknown`.
  */
 
-import { AlertTriangle, Brain, Check, GitBranch, Wrench } from 'lucide-react';
+import {
+  AlertTriangle,
+  Brain,
+  Check,
+  ClipboardCheck,
+  GitBranch,
+  Ticket,
+  Wrench,
+} from 'lucide-react';
 
 import type { AgentStepPayload } from '@team-x/shared-types';
 
@@ -117,6 +125,14 @@ function narrowError(data: unknown): ErrorData {
     message: typeof d?.message === 'string' ? d.message : '',
   };
 }
+
+// Write-side narrow helpers — extracted to step-card-narrow.ts for
+// testability without renderer deps (Phase 5 — M32 T6).
+import {
+  narrowDelegationMade,
+  narrowReviewPending,
+  narrowTicketCreated,
+} from './step-card-narrow.js';
 
 /**
  * Stable JSON pretty-print with 2-space indent. If the value is not
@@ -293,28 +309,46 @@ export function StepCard({
     }
 
     case 'ticket_created': {
+      const d = narrowTicketCreated(step.data);
       return (
         <article
           tabIndex={-1}
-          aria-label={`Step ${step.stepIndex + 1}: ticket created`}
+          aria-label={`Step ${step.stepIndex + 1}: ticket created — ${d.title || 'untitled'}`}
           className={cn(base, 'border-emerald-500/60 bg-emerald-500/5 hover:border-emerald-500')}
           data-step-kind="ticket_created"
         >
           <StepHeader
-            icon={<Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />}
+            icon={<Ticket className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />}
             label="Ticket Created"
             index={step.stepIndex}
             labelClassName="text-emerald-400"
+            detail={
+              d.ticketId ? (
+                <code className="font-mono text-xs text-emerald-400/80">
+                  {d.ticketId.slice(0, 8)}
+                </code>
+              ) : undefined
+            }
           />
+          {d.title && <p className="mt-1.5 text-sm leading-relaxed text-foreground">{d.title}</p>}
+          {d.assigneeId && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Assigned to <span className="text-emerald-400">{d.assigneeId.slice(0, 8)}</span>
+              {d.planId ? (
+                <span className="ml-2 text-zinc-500">Plan {d.planId.slice(0, 8)}</span>
+              ) : null}
+            </p>
+          )}
         </article>
       );
     }
 
     case 'delegation_made': {
+      const d = narrowDelegationMade(step.data);
       return (
         <article
           tabIndex={-1}
-          aria-label={`Step ${step.stepIndex + 1}: delegation made`}
+          aria-label={`Step ${step.stepIndex + 1}: delegated to ${d.assigneeName || 'unknown'}`}
           className={cn(base, 'border-sky-500/60 bg-sky-500/5 hover:border-sky-500')}
           data-step-kind="delegation_made"
         >
@@ -323,25 +357,84 @@ export function StepCard({
             label="Delegation"
             index={step.stepIndex}
             labelClassName="text-sky-400"
+            detail={
+              d.ticketId ? (
+                <code className="font-mono text-xs text-sky-400/80">{d.ticketId.slice(0, 8)}</code>
+              ) : undefined
+            }
           />
+          <p className="mt-1.5 text-sm leading-relaxed text-foreground">
+            {d.assigneeName ? (
+              <>
+                Delegated to <span className="font-medium text-sky-400">{d.assigneeName}</span>
+              </>
+            ) : (
+              'Subtask delegated'
+            )}
+          </p>
+          {d.planId && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Plan <span className="text-zinc-400">{d.planId.slice(0, 8)}</span>
+            </p>
+          )}
         </article>
       );
     }
 
     case 'review_pending': {
+      const d = narrowReviewPending(step.data);
+      const outcomeColor =
+        d.outcome === 'approve'
+          ? 'text-emerald-400'
+          : d.outcome === 'reject'
+            ? 'text-red-400'
+            : 'text-amber-400';
       return (
         <article
           tabIndex={-1}
-          aria-label={`Step ${step.stepIndex + 1}: review pending`}
+          aria-label={`Step ${step.stepIndex + 1}: review ${d.outcome || 'pending'}`}
           className={cn(base, 'border-amber-500/60 bg-amber-500/5 hover:border-amber-500')}
           data-step-kind="review_pending"
         >
           <StepHeader
-            icon={<Brain className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />}
-            label="Review Pending"
+            icon={<ClipboardCheck className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />}
+            label="Review"
             index={step.stepIndex}
             labelClassName="text-amber-400"
+            detail={
+              d.outcome ? (
+                <span className={`text-xs font-medium ${outcomeColor}`}>{d.outcome}</span>
+              ) : undefined
+            }
           />
+          <p className="mt-1.5 text-sm leading-relaxed text-foreground">
+            {d.ticketId ? (
+              <>
+                Ticket{' '}
+                <code className="font-mono text-xs text-amber-400/80">
+                  {d.ticketId.slice(0, 8)}
+                </code>{' '}
+                under review
+              </>
+            ) : (
+              'Deliverable under review'
+            )}
+          </p>
+          {(d.reviewerId || d.planId) && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {d.reviewerId && (
+                <span>
+                  Reviewer <span className="text-zinc-400">{d.reviewerId.slice(0, 8)}</span>
+                </span>
+              )}
+              {d.reviewerId && d.planId && <span className="mx-1">·</span>}
+              {d.planId && (
+                <span>
+                  Plan <span className="text-zinc-400">{d.planId.slice(0, 8)}</span>
+                </span>
+              )}
+            </p>
+          )}
         </article>
       );
     }

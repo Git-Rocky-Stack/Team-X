@@ -53,6 +53,12 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   'work.failed': 'bg-red-600/20 text-red-400',
   'token.delta': 'bg-gray-600/20 text-gray-400',
   'command.executed': 'bg-brand/15 text-brand',
+  'plan.proposed': 'bg-violet-600/20 text-violet-400',
+  'plan.approved': 'bg-violet-600/20 text-violet-400',
+  'task.delegated': 'bg-sky-600/20 text-sky-400',
+  'task.escalated': 'bg-rose-600/20 text-rose-400',
+  'review.requested': 'bg-amber-600/20 text-amber-400',
+  'review.completed': 'bg-amber-600/20 text-amber-400',
 };
 
 /** Override `formatEventType` output for event types where the
@@ -60,6 +66,12 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
  * hand-tuned label. Keep this list tiny. */
 const EVENT_TYPE_LABELS: Record<string, string> = {
   'command.executed': 'Command',
+  'plan.proposed': 'Plan Proposed',
+  'plan.approved': 'Plan Approved',
+  'task.delegated': 'Task Delegated',
+  'task.escalated': 'Task Escalated',
+  'review.requested': 'Review Requested',
+  'review.completed': 'Review Completed',
 };
 
 const DEFAULT_COLOR = 'bg-zinc-600/20 text-zinc-400';
@@ -89,35 +101,85 @@ function formatEventType(type: string): string {
 }
 
 /**
- * Compact one-line summary for event types that benefit from a
- * payload-aware preview in the collapsed row. Today only
- * `command.executed` opts in — everything else relies on the payload
- * JSON viewer that expands on row click.
- *
- * Returns `null` when there's nothing meaningful to show so the row
- * renderer can skip the summary span entirely (no empty element in
- * the DOM).
+ * Event types that opt into payload-aware row summaries in the
+ * collapsed audit row. Returns `null` for non-matching types so the
+ * row renderer skips the summary span (no empty DOM element).
  */
+const SUMMARIZABLE_TYPES = new Set([
+  'command.executed',
+  'plan.proposed',
+  'plan.approved',
+  'task.delegated',
+  'task.escalated',
+  'review.requested',
+  'review.completed',
+]);
+
 function buildRowSummary(eventType: string, payloadJson: string): string | null {
-  if (eventType !== 'command.executed') return null;
+  if (!SUMMARIZABLE_TYPES.has(eventType)) return null;
   const payload = tryParsePayload(payloadJson);
   if (!payload) return null;
-  const intent = typeof payload.intent === 'string' ? payload.intent : '';
-  const rawText = typeof payload.rawText === 'string' ? payload.rawText : '';
-  const outcome = payload.outcome === 'error' ? 'error' : 'ok';
-  const durationMs =
-    typeof payload.durationMs === 'number' && Number.isFinite(payload.durationMs)
-      ? Math.round(payload.durationMs)
-      : null;
 
-  const parts: string[] = [];
-  if (intent) parts.push(intentLabel(intent));
-  if (rawText) {
-    const truncated = rawText.length > 80 ? `${rawText.slice(0, 77)}...` : rawText;
-    parts.push(`"${truncated}"`);
+  if (eventType === 'command.executed') {
+    const intent = typeof payload.intent === 'string' ? payload.intent : '';
+    const rawText = typeof payload.rawText === 'string' ? payload.rawText : '';
+    const outcome = payload.outcome === 'error' ? 'error' : 'ok';
+    const durationMs =
+      typeof payload.durationMs === 'number' && Number.isFinite(payload.durationMs)
+        ? Math.round(payload.durationMs)
+        : null;
+    const parts: string[] = [];
+    if (intent) parts.push(intentLabel(intent));
+    if (rawText) {
+      const truncated = rawText.length > 80 ? `${rawText.slice(0, 77)}...` : rawText;
+      parts.push(`"${truncated}"`);
+    }
+    if (durationMs !== null) parts.push(`${durationMs}ms`);
+    if (outcome === 'error') parts.push('failed');
+    return parts.length > 0 ? parts.join(' · ') : null;
   }
-  if (durationMs !== null) parts.push(`${durationMs}ms`);
-  if (outcome === 'error') parts.push('failed');
+
+  // Write-side planner events (M32 T6)
+  const parts: string[] = [];
+  switch (eventType) {
+    case 'plan.proposed': {
+      const count = typeof payload.subtaskCount === 'number' ? payload.subtaskCount : 0;
+      parts.push(`${count} subtask${count !== 1 ? 's' : ''}`);
+      if (payload.truncated === true) parts.push('truncated');
+      if (typeof payload.projectId === 'string') parts.push(payload.projectId.slice(0, 8));
+      break;
+    }
+    case 'plan.approved': {
+      const tickets = Array.isArray(payload.ticketIds) ? payload.ticketIds.length : 0;
+      parts.push(`${tickets} ticket${tickets !== 1 ? 's' : ''} approved`);
+      break;
+    }
+    case 'task.delegated': {
+      if (typeof payload.assigneeName === 'string') parts.push(`to ${payload.assigneeName}`);
+      if (payload.fallbackUsed === true) parts.push('fallback');
+      if (typeof payload.attemptCount === 'number' && payload.attemptCount > 1) {
+        parts.push(`${payload.attemptCount} attempts`);
+      }
+      break;
+    }
+    case 'task.escalated': {
+      if (typeof payload.reason === 'string') {
+        const truncated =
+          payload.reason.length > 60 ? `${payload.reason.slice(0, 57)}...` : payload.reason;
+        parts.push(truncated);
+      }
+      break;
+    }
+    case 'review.requested': {
+      if (typeof payload.ticketId === 'string') parts.push(payload.ticketId.slice(0, 8));
+      break;
+    }
+    case 'review.completed': {
+      if (typeof payload.outcome === 'string') parts.push(payload.outcome);
+      if (payload.escalated === true) parts.push('escalated');
+      break;
+    }
+  }
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
