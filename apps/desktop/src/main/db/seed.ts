@@ -36,6 +36,9 @@ import {
   SYSTEM_AGENT_DISPLAY_NAME,
   SYSTEM_AGENT_ROLE_ID,
   SYSTEM_AGENT_ROLE_PACK_ID,
+  SYSTEM_COPILOT_DISPLAY_NAME,
+  SYSTEM_COPILOT_ROLE_ID,
+  SYSTEM_COPILOT_ROLE_PACK_ID,
 } from '../services/system-agent-bootstrap.js';
 import type { Schema } from './client.js';
 import { getDb } from './client.js';
@@ -69,6 +72,15 @@ export interface SeedResult {
    * chart via the `is_system` column (migration 0010).
    */
   systemAgentId: string;
+  /**
+   * Id of the framework-internal `system-copilot` pseudo-employee seeded
+   * for this company (M33). Always present on a fresh seed — the copilot
+   * analyzer service depends on this row for its periodic-tick thread
+   * membership and insight attribution. Same visibility posture as the
+   * system-agent: hidden from every human-facing employee surface via
+   * `is_system = 1`.
+   */
+  systemCopilotId: string;
 }
 
 type SeedDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -144,7 +156,37 @@ export function seedIfEmpty<TRunResult>(
     isSystem: true,
   });
 
-  return { companyId, employeeIds, systemAgentId };
+  // Seed the framework-internal `system-copilot` pseudo-employee (M33).
+  // Parallel to `system-agent` — same visibility posture (hidden from
+  // `listVisibleByCompany` via `is_system = 1`), distinct role id and
+  // display name. The copilot analyzer service owns this row; the
+  // insights store + periodic-tick thread are attributed to it. Path
+  // is hardcoded to the same `system/` subdirectory so `seedIfEmpty`
+  // stays self-contained and unit-testable without a role-loader
+  // instance — mirrors the system-agent pattern above.
+  const systemCopilotPath = join(options.rolePacksRoot, 'system', 'system-copilot.md');
+  const systemCopilotSrc = readFileSync(systemCopilotPath, 'utf8');
+  const systemCopilotSpec = parseRoleMarkdown(systemCopilotSrc, systemCopilotPath);
+  if (systemCopilotSpec.frontmatter.id !== SYSTEM_COPILOT_ROLE_ID) {
+    throw new Error(
+      `[seed] system-copilot role.md has id "${systemCopilotSpec.frontmatter.id}", ` +
+        `expected "${SYSTEM_COPILOT_ROLE_ID}"`,
+    );
+  }
+  const systemCopilotId = employees.create({
+    companyId,
+    rolePackId: SYSTEM_COPILOT_ROLE_PACK_ID,
+    roleId: systemCopilotSpec.frontmatter.id,
+    roleMdSha: systemCopilotSpec.sha256,
+    level: systemCopilotSpec.frontmatter.level,
+    name: SYSTEM_COPILOT_DISPLAY_NAME,
+    title: systemCopilotSpec.frontmatter.name,
+    toolsAllowed: systemCopilotSpec.frontmatter.tools_allowed ?? [],
+    toolsDenied: systemCopilotSpec.frontmatter.tools_denied ?? [],
+    isSystem: true,
+  });
+
+  return { companyId, employeeIds, systemAgentId, systemCopilotId };
 }
 
 /**
@@ -181,7 +223,7 @@ export function seed(rolePacksRoot?: string): SeedResult | null {
   if (result) {
     console.log(
       `[seed] created company ${result.companyId} + ${result.employeeIds.length} employees ` +
-        `+ system-agent ${result.systemAgentId}`,
+        `+ system-agent ${result.systemAgentId} + system-copilot ${result.systemCopilotId}`,
     );
   }
   return result;

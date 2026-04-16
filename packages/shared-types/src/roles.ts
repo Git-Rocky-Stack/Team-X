@@ -51,3 +51,57 @@ export interface RoleSpec {
   sourcePath: string;
   sha256: string;
 }
+
+// ---------------------------------------------------------------------------
+// System pseudo-employee role ids
+// ---------------------------------------------------------------------------
+
+/**
+ * Canonical role id for the framework-internal **agentic-loop** copilot —
+ * the `complex_request` answerer seeded once per company (M31). Hidden
+ * from every human-facing employee surface (hire dialog, org chart,
+ * delegation picker, meeting-attendee picker).
+ *
+ * Duplicated as a local `const` in main-process modules that cannot
+ * import this package to avoid cycles (`agentic-loop-service.ts` and
+ * `system-agent-bootstrap.ts`). Every such duplicate MUST match this
+ * value verbatim — it is the SQL key in the per-company idempotency
+ * lookup (`employees.findSystemByRoleId`).
+ */
+export const SYSTEM_AGENT_ROLE_ID = 'system-agent';
+
+/**
+ * Canonical role id for the framework-internal **copilot analyzer** —
+ * the periodic-scheduler insights generator seeded once per company
+ * alongside `system-agent` (M33). Same visibility rules: hidden from
+ * every human-facing employee surface, reachable only via the
+ * `is_system = 1` lane.
+ */
+export const SYSTEM_COPILOT_ROLE_ID = 'system-copilot';
+
+/**
+ * Every framework-internal system pseudo-employee role id in one tuple.
+ * Exported so consumers that need an exhaustive list (test seams,
+ * filter sweeps, role-loader gate) can iterate without reaching for
+ * the individual constants. Adding a third system role requires a
+ * single touch here plus the corresponding `ensure*` bootstrap — the
+ * `isSystemRoleId` predicate below auto-updates.
+ */
+export const SYSTEM_ROLE_IDS = [SYSTEM_AGENT_ROLE_ID, SYSTEM_COPILOT_ROLE_ID] as const;
+
+/**
+ * Predicate — `true` when a given role id names a framework-internal
+ * system pseudo-employee (`system-agent`, `system-copilot`, or any
+ * future addition to `SYSTEM_ROLE_IDS`). Prefer this over point-checks
+ * on the individual constants so the filter sweep extends to new
+ * system roles without a code search.
+ *
+ * Not a replacement for the `is_system` database column — that column
+ * is the authoritative filter at query time (`listVisibleByCompany`).
+ * This predicate is for the small number of code paths that point-check
+ * by role id (role-loader gate, hire IPC reject, future UI label
+ * distinguishers) where the DB column is not yet in scope.
+ */
+export function isSystemRoleId(roleId: string): boolean {
+  return (SYSTEM_ROLE_IDS as readonly string[]).includes(roleId);
+}

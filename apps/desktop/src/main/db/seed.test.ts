@@ -81,19 +81,22 @@ describe('seedIfEmpty', () => {
       expect(parsed.values).toEqual(['Quality', 'Privacy', 'Speed', 'Ownership']);
     });
 
-    it('creates two visible employees + one system-agent linked to the company', () => {
+    it('creates two visible employees + system-agent + system-copilot linked to the company', () => {
       const result = seedIfEmpty(ctx.db, defaultOptions);
       const employees = createEmployeesRepo(ctx.db);
       const all = employees.listByCompany(result?.companyId ?? '');
       const visible = employees.listVisibleByCompany(result?.companyId ?? '');
-      // 2 regular + 1 system = 3 rows total; visible should exclude the
-      // system-agent pseudo-employee (migration 0010's is_system predicate).
-      expect(all).toHaveLength(3);
+      // 2 regular + 2 system (system-agent + system-copilot, M33 T2) = 4 rows
+      // total; visible should exclude both system pseudo-employees (migration
+      // 0010's is_system predicate auto-covers both).
+      expect(all).toHaveLength(4);
       expect(visible).toHaveLength(2);
       const systemRows = all.filter((e) => e.isSystem);
-      expect(systemRows).toHaveLength(1);
-      expect(systemRows[0]?.roleId).toBe('system-agent');
-      expect(systemRows[0]?.level).toBe('system');
+      expect(systemRows).toHaveLength(2);
+      const systemRoleIds = new Set(systemRows.map((r) => r.roleId));
+      expect(systemRoleIds.has('system-agent')).toBe(true);
+      expect(systemRoleIds.has('system-copilot')).toBe(true);
+      expect(systemRows.every((r) => r.level === 'system')).toBe(true);
     });
 
     it('pulls employee role ids + level from the parsed role.md frontmatter', () => {
@@ -153,9 +156,11 @@ describe('seedIfEmpty', () => {
       expect(companies.list()).toHaveLength(1);
 
       const employees = createEmployeesRepo(ctx.db);
-      // 2 regular employees + 1 system-agent = 3 rows. A re-seed must not
-      // create a second system-agent or duplicate the CEO / SWE.
-      expect(employees.listByCompany(first?.companyId ?? '')).toHaveLength(3);
+      // 2 regular employees + system-agent + system-copilot = 4 rows (M33 T2).
+      // A re-seed must not duplicate any of them — idempotency gate on the
+      // outer `companies.list().length > 0` check means `seedIfEmpty`
+      // returns early without touching the employees table at all.
+      expect(employees.listByCompany(first?.companyId ?? '')).toHaveLength(4);
       expect(employees.listVisibleByCompany(first?.companyId ?? '')).toHaveLength(2);
     });
   });
