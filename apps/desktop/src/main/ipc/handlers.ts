@@ -107,11 +107,13 @@ import type {
   SendChatResponse,
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
+  SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
   SettingsGetRuntimeResponse,
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
+  SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
@@ -397,6 +399,10 @@ export interface IpcSettingsRepo {
   getAgentic(): SettingsGetAgenticResponse;
   /** Agentic loop budgets — clamped write. Phase 5 — M31. */
   setAgentic(req: SettingsSetAgenticRequest): void;
+  /** Task planner guardrails — snapshot read. Phase 5 — M32. */
+  getPlanner(): SettingsGetPlannerResponse;
+  /** Task planner guardrails — clamped/validated write. Phase 5 — M32. */
+  setPlanner(req: SettingsSetPlannerRequest): void;
 }
 
 /** Narrow updater-service surface the IPC handlers need. */
@@ -641,6 +647,10 @@ export interface IpcHandlers {
   settingsGetAgentic(): Promise<SettingsGetAgenticResponse>;
   /** `settings.setAgentic` — patch one or more agentic-loop budget caps with clamping (Phase 5 — M31). */
   settingsSetAgentic(req: SettingsSetAgenticRequest): Promise<void>;
+  /** `settings.getPlanner` — task-planner guardrail settings (max tickets, depth, approval level, escalation threshold) (Phase 5 — M32). */
+  settingsGetPlanner(): Promise<SettingsGetPlannerResponse>;
+  /** `settings.setPlanner` — patch one or more task-planner guardrail settings with clamping / validation (Phase 5 — M32). */
+  settingsSetPlanner(req: SettingsSetPlannerRequest): Promise<void>;
 
   // -----------------------------------------------------------------------
   // Provider management handlers (Phase 3 — M18)
@@ -1762,6 +1772,18 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       // is a thin pass-through so that call-sites can share the same
       // invariants regardless of entry point (IPC, test, future CLI).
       settingsRepo.setAgentic(req);
+    },
+
+    // -----------------------------------------------------------------------
+    // Task planner handlers (Phase 5 — M32)
+    // -----------------------------------------------------------------------
+
+    async settingsGetPlanner(): Promise<SettingsGetPlannerResponse> {
+      return settingsRepo.getPlanner();
+    },
+
+    async settingsSetPlanner(req: SettingsSetPlannerRequest): Promise<void> {
+      settingsRepo.setPlanner(req);
     },
 
     // -----------------------------------------------------------------------

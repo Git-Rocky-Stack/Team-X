@@ -113,6 +113,9 @@ const REQUEST_CHANNELS = [
   // Agentic loop (Phase 5 — M31)
   'settings.getAgentic',
   'settings.setAgentic',
+  // Task planner (Phase 5 — M32)
+  'settings.getPlanner',
+  'settings.setPlanner',
   // Provider management (Phase 3 — M18)
   'providers.list',
   'providers.add',
@@ -480,6 +483,18 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'settings.setAgentic',
     async (_event, request: import('@team-x/shared-types').SettingsSetAgenticRequest) => {
       return handlers.settingsSetAgentic(request);
+    },
+  );
+
+  // Task planner handlers (Phase 5 — M32)
+  ipcMain.handle('settings.getPlanner', async () => {
+    return handlers.settingsGetPlanner();
+  });
+
+  ipcMain.handle(
+    'settings.setPlanner',
+    async (_event, request: import('@team-x/shared-types').SettingsSetPlannerRequest) => {
+      return handlers.settingsSetPlanner(request);
     },
   );
 

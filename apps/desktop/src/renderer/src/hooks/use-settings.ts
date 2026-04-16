@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
+  SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRuntimeRequest,
 } from '@team-x/shared-types';
@@ -89,6 +90,27 @@ export function useSetAgentic() {
     mutationFn: (req: SettingsSetAgenticRequest) => ipc.settings.setAgentic(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'agentic'] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Task planner settings (Phase 5 — M32)
+// ---------------------------------------------------------------------------
+
+export function usePlannerSettings() {
+  return useQuery({
+    queryKey: ['settings', 'planner'],
+    queryFn: () => ipc.settings.getPlanner(),
+  });
+}
+
+export function useSetPlanner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: SettingsSetPlannerRequest) => ipc.settings.setPlanner(req),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'planner'] });
     },
   });
 }

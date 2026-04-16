@@ -851,6 +851,61 @@ export const AGENTIC_SETTINGS_CLAMPS = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// Task planner settings (Phase 5 — M32)
+// ---------------------------------------------------------------------------
+
+/** Valid employee levels for planner approval gating. Matches role-pack frontmatter convention (hyphenated). */
+export type PlannerApprovalLevel =
+  | 'officer'
+  | 'senior-management'
+  | 'management'
+  | 'supervisor'
+  | 'lead';
+
+/** Snapshot of the four task-planner budget/guardrail keys. */
+export interface SettingsGetPlannerResponse {
+  /** Maximum number of subtasks per `decompose_project` call. 1–50. */
+  maxTickets: number;
+  /** Maximum nesting depth for subtask trees. 1–4. */
+  maxDepth: number;
+  /** Minimum employee level permitted to decompose projects. */
+  approvalLevel: PlannerApprovalLevel;
+  /** Consecutive delegation/review failures before escalation. 1–10. */
+  escalationThreshold: number;
+}
+
+/**
+ * Partial patch for task-planner settings. Missing keys retain their
+ * current persisted value. Numeric fields are clamped; `approvalLevel`
+ * is validated against the enum.
+ */
+export interface SettingsSetPlannerRequest {
+  maxTickets?: number;
+  maxDepth?: number;
+  approvalLevel?: PlannerApprovalLevel;
+  escalationThreshold?: number;
+}
+
+/** Clamp bounds + defaults for the four planner keys. Shared by repo, handler, and UI. */
+export const PLANNER_SETTINGS_CLAMPS = {
+  maxTickets: { min: 1, max: 50, default: 10 },
+  maxDepth: { min: 1, max: 4, default: 2 },
+  escalationThreshold: { min: 1, max: 10, default: 3 },
+} as const;
+
+/** Valid approval levels for the `planner_approval_level` setting. */
+export const PLANNER_APPROVAL_LEVELS: readonly PlannerApprovalLevel[] = [
+  'officer',
+  'senior-management',
+  'management',
+  'supervisor',
+  'lead',
+] as const;
+
+/** Default approval level when no setting is persisted. */
+export const PLANNER_APPROVAL_LEVEL_DEFAULT: PlannerApprovalLevel = 'management';
+
+// ---------------------------------------------------------------------------
 // RAG configuration settings (Phase 5 — M29)
 // ---------------------------------------------------------------------------
 
@@ -1087,6 +1142,15 @@ export interface IpcContract {
   };
   'settings.setAgentic': {
     request: SettingsSetAgenticRequest;
+    response: undefined;
+  };
+  // Task planner channels (Phase 5 — M32)
+  'settings.getPlanner': {
+    request: Record<string, never>;
+    response: SettingsGetPlannerResponse;
+  };
+  'settings.setPlanner': {
+    request: SettingsSetPlannerRequest;
     response: undefined;
   };
   // Provider management channels (Phase 3 — M18)
@@ -1446,6 +1510,10 @@ export interface TeamXApi {
     getAgentic(): Promise<SettingsGetAgenticResponse>;
     /** Patch one or more agentic-loop budget caps. Values are clamped. Phase 5 — M31. */
     setAgentic(req: SettingsSetAgenticRequest): Promise<void>;
+    /** Get task-planner guardrail settings (max tickets, max depth, approval level, escalation threshold). Phase 5 — M32. */
+    getPlanner(): Promise<SettingsGetPlannerResponse>;
+    /** Patch one or more task-planner settings. Numeric values are clamped; approval level is validated. Phase 5 — M32. */
+    setPlanner(req: SettingsSetPlannerRequest): Promise<void>;
   };
   providers: {
     /** List all configured providers with status. */

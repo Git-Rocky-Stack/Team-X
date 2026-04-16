@@ -931,6 +931,20 @@ app
           orchestrator: writeOrchestrator,
           providerComplete: writeProviderComplete,
           workload,
+          // T7 — settings-repo-backed planner guardrails replace the
+          // static PLANNER_DEFAULTS fallback. Every write-side tool call
+          // now reads the user's current planner settings live.
+          // `loadDenominator` and `pastPerformanceCeilingMs` are internal
+          // scoring constants (not user-facing settings), so they stay at
+          // their PLANNER_DEFAULTS values.
+          getPlanner: () => {
+            const p = settingsRepo.getPlanner();
+            return {
+              ...p,
+              loadDenominator: 5,
+              pastPerformanceCeilingMs: 172_800_000,
+            };
+          },
         });
 
         return [...readSide, ...writeSide];

@@ -14,8 +14,14 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import {
   AGENTIC_SETTINGS_CLAMPS,
   DEFAULT_CONCURRENCY_CAPS,
+  PLANNER_APPROVAL_LEVELS,
+  PLANNER_APPROVAL_LEVEL_DEFAULT,
+  PLANNER_SETTINGS_CLAMPS,
+  type PlannerApprovalLevel,
   type SettingsGetAgenticResponse,
+  type SettingsGetPlannerResponse,
   type SettingsSetAgenticRequest,
+  type SettingsSetPlannerRequest,
 } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
@@ -42,6 +48,14 @@ const SETTING_DEFAULTS: Array<{ key: string; value: unknown }> = [
   { key: 'agentic_max_steps', value: AGENTIC_SETTINGS_CLAMPS.maxSteps.default },
   { key: 'agentic_max_tokens', value: AGENTIC_SETTINGS_CLAMPS.maxTokens.default },
   { key: 'agentic_timeout_ms', value: AGENTIC_SETTINGS_CLAMPS.timeoutMs.default },
+  // Task planner guardrails (Phase 5 — M32). Clamps live in PLANNER_SETTINGS_CLAMPS.
+  { key: 'planner_max_tickets', value: PLANNER_SETTINGS_CLAMPS.maxTickets.default },
+  { key: 'planner_max_depth', value: PLANNER_SETTINGS_CLAMPS.maxDepth.default },
+  { key: 'planner_approval_level', value: PLANNER_APPROVAL_LEVEL_DEFAULT },
+  {
+    key: 'planner_escalation_threshold',
+    value: PLANNER_SETTINGS_CLAMPS.escalationThreshold.default,
+  },
 ];
 
 /**
@@ -169,6 +183,73 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
         }
         const c = AGENTIC_SETTINGS_CLAMPS.timeoutMs;
         this.set('agentic_timeout_ms', clampInt(req.timeoutMs, c.min, c.max));
+      }
+    },
+
+    /**
+     * Read the four task-planner guardrail keys as a single typed
+     * snapshot. Missing keys fall back to the shared clamp / enum
+     * defaults so the write-side tools always observe sensible
+     * guardrails even on first boot.
+     *
+     * Phase 5 — M32.
+     */
+    getPlanner(): SettingsGetPlannerResponse {
+      const rawLevel = this.get<string>('planner_approval_level', PLANNER_APPROVAL_LEVEL_DEFAULT);
+      const approvalLevel = (PLANNER_APPROVAL_LEVELS as readonly string[]).includes(rawLevel)
+        ? (rawLevel as PlannerApprovalLevel)
+        : PLANNER_APPROVAL_LEVEL_DEFAULT;
+      return {
+        maxTickets: this.get<number>(
+          'planner_max_tickets',
+          PLANNER_SETTINGS_CLAMPS.maxTickets.default,
+        ),
+        maxDepth: this.get<number>('planner_max_depth', PLANNER_SETTINGS_CLAMPS.maxDepth.default),
+        approvalLevel,
+        escalationThreshold: this.get<number>(
+          'planner_escalation_threshold',
+          PLANNER_SETTINGS_CLAMPS.escalationThreshold.default,
+        ),
+      };
+    },
+
+    /**
+     * Patch one or more task-planner guardrail keys. Numeric fields
+     * are independently clamped; `approvalLevel` is validated against
+     * `PLANNER_APPROVAL_LEVELS`. Missing keys retain their current
+     * persisted value.
+     *
+     * Phase 5 — M32.
+     */
+    setPlanner(req: SettingsSetPlannerRequest): void {
+      if (req.maxTickets !== undefined) {
+        if (!Number.isFinite(req.maxTickets)) {
+          throw new Error('[settings] setPlanner: maxTickets must be a finite number');
+        }
+        const c = PLANNER_SETTINGS_CLAMPS.maxTickets;
+        this.set('planner_max_tickets', clampInt(req.maxTickets, c.min, c.max));
+      }
+      if (req.maxDepth !== undefined) {
+        if (!Number.isFinite(req.maxDepth)) {
+          throw new Error('[settings] setPlanner: maxDepth must be a finite number');
+        }
+        const c = PLANNER_SETTINGS_CLAMPS.maxDepth;
+        this.set('planner_max_depth', clampInt(req.maxDepth, c.min, c.max));
+      }
+      if (req.approvalLevel !== undefined) {
+        if (!(PLANNER_APPROVAL_LEVELS as readonly string[]).includes(req.approvalLevel)) {
+          throw new Error(
+            `[settings] setPlanner: approvalLevel must be one of ${PLANNER_APPROVAL_LEVELS.join(', ')}`,
+          );
+        }
+        this.set('planner_approval_level', req.approvalLevel);
+      }
+      if (req.escalationThreshold !== undefined) {
+        if (!Number.isFinite(req.escalationThreshold)) {
+          throw new Error('[settings] setPlanner: escalationThreshold must be a finite number');
+        }
+        const c = PLANNER_SETTINGS_CLAMPS.escalationThreshold;
+        this.set('planner_escalation_threshold', clampInt(req.escalationThreshold, c.min, c.max));
       }
     },
   };

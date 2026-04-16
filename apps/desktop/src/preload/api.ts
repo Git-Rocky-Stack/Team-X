@@ -99,11 +99,13 @@ import type {
   SendChatResponse,
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
+  SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
   SettingsGetRuntimeResponse,
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
+  SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
@@ -219,6 +221,9 @@ const CHANNELS = {
   // Agentic loop (Phase 5 — M31)
   settingsGetAgentic: 'settings.getAgentic',
   settingsSetAgentic: 'settings.setAgentic',
+  // Task planner (Phase 5 — M32)
+  settingsGetPlanner: 'settings.getPlanner',
+  settingsSetPlanner: 'settings.setPlanner',
   // Provider management (Phase 3 — M18)
   providersList: 'providers.list',
   providersAdd: 'providers.add',
@@ -403,6 +408,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.settingsGetAgentic) as Promise<SettingsGetAgenticResponse>,
       setAgentic: (req: SettingsSetAgenticRequest) =>
         ipc.invoke(CHANNELS.settingsSetAgentic, req) as Promise<void>,
+      getPlanner: () =>
+        ipc.invoke(CHANNELS.settingsGetPlanner) as Promise<SettingsGetPlannerResponse>,
+      setPlanner: (req: SettingsSetPlannerRequest) =>
+        ipc.invoke(CHANNELS.settingsSetPlanner, req) as Promise<void>,
     },
     providers: {
       list: () => ipc.invoke(CHANNELS.providersList) as Promise<ProviderConfig[]>,
