@@ -6,9 +6,9 @@
   "previousMilestone": "M31",
   "previousMilestoneCompletedAt": "2026-04-15T14:30:00Z",
   "createdAt": "2026-04-15T15:18:00Z",
-  "updatedAt": "2026-04-15T18:50:00Z",
+  "updatedAt": "2026-04-15T19:00:00Z",
   "totalTasks": 11,
-  "tasksShipped": 5,
+  "tasksShipped": 6,
   "tasks": [
     {
       "id": "T0",
@@ -51,6 +51,15 @@
       "unitTestDelta": "+3 (1000 → 1003)",
       "filesChanged": "4 files, +266 / -13 LOC: packages/shared-types/src/events.ts (M), packages/shared-types/src/events-m32.test.ts (NEW), apps/desktop/src/main/services/agentic-tools-write.ts (M), apps/desktop/src/renderer/src/features/command/step-card.tsx (M).",
       "scope": "Promotes WriteSideEventType literals into canonical EventType union (+6 members: plan.proposed, plan.approved, task.delegated, task.escalated, review.requested, review.completed). Extends AgentStepKind (+3 members: ticket_created, delegation_made, review_pending). Ships 6 JSON-safe payload types: PlanProposedPayload (subtask tree), PlanApprovedPayload (M33 prep), TaskDelegatedPayload (fallback+attempts), TaskEscalatedPayload (reason+original), ReviewRequestedPayload, ReviewCompletedPayload (outcome+escalation). AgentStepPayload.data doc extended with 3 new kind shapes. AgenticRunSnapshot.steps wire-shape invariant preserved. agentic-tools-write.ts: import type { EventType } added, all 6 satisfies WriteSideEventType swapped to satisfies EventType for canonical narrowing. step-card.tsx: 3 minimal case branches (ticket_created=emerald, delegation_made=sky/GitBranch, review_pending=amber/Brain) with data-step-kind stable E2E selectors; exhaustiveness guard preserved. T2 string-literal immunity CONFIRMED: 25/25 tests pass. Tests +3: events-m32.test.ts (NEW) — EventType union check via expectTypeOf for all 6, AgentStepKind union + AgentStepPayload construction for all 3, payload discriminator shapes for all 6 interfaces."
+    },
+    {
+      "id": "T5",
+      "name": "Write-side confirmation gate in palette",
+      "status": "shipped",
+      "commit": "46401c1",
+      "unitTestDelta": "+8 (1003 → 1011)",
+      "filesChanged": "4 files, +236 / -51 LOC: apps/desktop/src/main/services/command-service.ts (M), apps/desktop/src/main/services/command-service.test.ts (M), apps/desktop/src/renderer/src/features/command/command-palette.tsx (M), packages/shared-types/src/command.ts (M).",
+      "scope": "Write-side confirmation gate for complex_request intents with keyword heuristic (WRITE_SIDE_KEYWORDS regex). Gate 2.5 in execute() fires before agentic loop dispatch when rawText matches write-side verbs (decompose, delegate, create tickets, review) and confirmed !== true and skipConfirmation !== true. Returns { kind: 'needs_confirmation', gateKind: 'write-side', summary }. Existing Gate 2 (destructive) now also tags gateKind: 'destructive'. ExecuteRequest/IpcExecuteRequest gain skipConfirmation?: boolean (M33 Copilot prep). ExecuteResult/IpcExecuteResult/IpcParseResult needs_confirmation variant gains gateKind?: 'destructive' | 'write-side'. Palette conditionally renders amber (write-side) vs red (destructive) confirmation card. Tests +8: 4 heuristic (keyword matching + false negatives), 4 gate integration (needs_confirmation return, confirmed:true passthrough, skipConfirmation bypass, no-keyword passthrough)."
     }
   ],
   "baseline": {

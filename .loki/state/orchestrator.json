@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M32",
   "milestoneName": "Task Planner (decompose/delegate/review tools)",
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md",
@@ -84,16 +84,17 @@
     "M32": {
       "name": "Task Planner",
       "startedAt": "2026-04-15T15:18:00Z",
-      "tasksShipped": 5,
+      "tasksShipped": 6,
       "commits": {
         "T0": "f515ea7",
         "T1": "62a0504",
         "T2": "cdf7315",
         "T3": "8bf1e9e",
-        "T4": "dd17eff"
+        "T4": "dd17eff",
+        "T5": "46401c1"
       },
       "tasksScope": "T0 + T1 = M31 follow-ups F1 + F2 (renderer-only preparations for the write-side loop). T2 = write-side agentic tools (decompose_project / delegate_subtask / review_deliverable) + deterministic workload scorer + level-gated composer + WriteSideEventBus width-compatible bus seam + 25 unit tests. T3 = level-based AgenticLoopService tool-registry injection — AgenticLoopEmployeeContext/Lookup types, employeesRepo.getById() extension, optional employeeId on StartArgs with system-agent default (M31 semantics preserved), cross-company isolation guard, actorEmployee threaded through members/runs-row/message-authors/bus-events while preserving systemAgentId field name for M31 wire stability; composition root in main/index.ts now composes [...readSideTools, ...buildWriteSideTools(employee, ...)] in production with a conservative open-ticket-count workload provider (in-meeting/avg-completion stubbed for M33) + no-op write-side orchestrator enqueue (M33 wires real path) + streamAgent-wrapped WriteSideCompleteFn that resolves actor's provider per call; NEW test-agentic-tools.ts (298 LOC) with ECHO_WRITE_SENTINEL + per-tool canned tables + schema-identical decompose/delegate/review factories + createTestToolsForEmployee level-gated composer + createTestWriteSideTools standalone factory; +11 unit tests (+4 service: default-actor capture, explicit employeeId actor authorship, unknown-id throw side-effect-free, cross-company guard; NEW test-agentic-tools.test.ts +7: system-agent all / IC read-only / officer read+decompose / management all / supervisor+lead read+delegate+review / standalone IC empty / schema-identical mirror). T4-T10 remaining = shared-types EventType promotion + AgentStepKind variants + confirmation gate + step-card variants + planner settings + E2E + docs + verification. Plan doc at docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md (commit 6055cfc). Shared-types composite-dist gotcha resolved via script change (commit 83e0868) — manual tsc --build --force dance no longer required.",
-      "unitTestDelta": "+45 (958 → 1003)",
+      "unitTestDelta": "+53 (958 → 1011)",
       "e2eDelta": "0",
       "lintDelta": "0"
     }

@@ -1,4 +1,29 @@
-# Loki Continuity — Phase 5, M32 T4 SHIPPED (canonical event types + step kinds); M32 T5+ pending
+# Loki Continuity — Phase 5, M32 T5 SHIPPED (write-side confirmation gate); M32 T6+ pending
+
+## M32 T5 SHIPPED — 2026-04-15
+
+**Milestone:** Task Planner (Phase 5 — Intelligence Layer). In progress (6 of 11 tasks shipped).
+**Scope:** Write-side confirmation gate for `complex_request` intents with keyword heuristic. Gate 2.5 in `execute()` — fires before agentic loop dispatch when rawText matches write-side verbs and `confirmed !== true` and `skipConfirmation !== true`. Palette renders amber card (write-side) vs red card (destructive). Existing M30 gates unchanged.
+**Commit:** T5 = `46401c1`.
+
+### Metrics delta
+
+| Metric | Pre-T5 | Post-T5 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1003 | 1011 | +8 |
+| E2E specs | 8 | 8 | 0 |
+| Files touched | — | 4 (+236 / −51) | — |
+
+### Next Session Startup Checklist (M32 T6+)
+
+1. Read this CONTINUITY — T0–T5 shipped, T6–T10 remaining.
+2. **T6 = Full step-card variants + AuditView chips.** T4-minimal step-card branches get full rendering with data narrowing, detail text, deep-links, and color polish. AuditView event-type filter chips grow by +6. +8 unit tests.
+3. **T7 = Planner settings** — 4 new clamped keys in Settings → Runtime.
+4. **T8 = E2E spec** `task-planner.spec.ts` — full round-trip through write-side tools.
+5. **T9 = Docs** — CLAUDE.md, CHANGELOG, README, `docs/user-guide/task-planner.md`.
+6. **T10 = Verification + milestone marker** — ABI rebuild dance, full test suite, phase badge.
+
+---
 
 ## M32 T4 SHIPPED — 2026-04-15
 
