@@ -1,4 +1,71 @@
-# Loki Continuity — Phase 5, M32 T7 SHIPPED (planner settings + UI); M32 T8+ pending
+# Loki Continuity — Phase 5, M32 T8 SHIPPED (task-planner.spec.ts E2E); M32 T9+ pending
+
+## M32 T8 SHIPPED — 2026-04-15
+
+**Milestone:** Task Planner (Phase 5 — Intelligence Layer). In progress (9 of 11 tasks shipped).
+**Scope:** New E2E spec `apps/desktop/e2e/task-planner.spec.ts` exercising the full write-side round-trip through the M31 agentic harness plus M32 T5's confirmation gate and T3's level-gated tool registry. Pure test-harness extension — no production code changes. Canned classifier + canned provider gain one entry each; write-side tool calls resolve via the existing default fixtures (FIXTURE_DECOMPOSED_PLAN + FIXTURE_DELEGATION).
+**Commit:** T8 = `2a4fc63`.
+
+### Metrics delta
+
+| Metric | Pre-T8 | Post-T8 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1033 | 1033 | 0 (pure E2E) |
+| E2E specs | 8 | 9 | **+1** (task-planner.spec.ts, 2.6s) |
+| Total E2E duration | 23.8s | 26.4s | +2.6s (new spec) |
+| Files touched | — | 3 (+321 / −0) | — |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings | 24 | 24 | 0 |
+| Typecheck across 6 packages | clean | clean | — |
+
+### What shipped
+
+**`apps/desktop/src/main/services/test-classifier.ts`** (M, +9 LOC) — CANNED_TABLE gains the lowercase-trimmed entry `'decompose the frontend redesign into tickets'` → `{ intent: 'complex_request', entities: {}, confidence: 0.91 }`. Phrase deliberately contains `decompose` + `tickets` which the WRITE_SIDE_KEYWORDS regex in command-service.ts matches, so the T5 write-side gate fires before the agentic loop dispatches. Comment above the entry calls out the cross-seam coupling for future maintainers.
+
+**`apps/desktop/src/main/services/test-agentic-provider.ts`** (M, +17 LOC) — CANNED_TABLE gains the scripted provider sequence for the same phrase: plan(`{"action":"decompose_project","args":{"brief":"Frontend redesign"}}`) → plan(`{"action":"delegate_subtask","args":{"planId":"plan-test-1","subtaskTitle":"Test subtask","assigneeId":"emp-test-swe"}}`) → `{"action":"final_answer","answer":"Decomposed the frontend redesign into 1 subtask and delegated ticket tkt-test-1 to Mateo Reyes."}`. Default FIXTURE_DECOMPOSED_PLAN (1 subtask, plan-test-1, assignee emp-test-swe, `FIXTURE_DELEGATION` ticket tkt-test-1/Mateo Reyes) in test-agentic-tools.ts resolves both tool calls without any new canned tool entries — the test-seam surface area stays minimal.
+
+**`apps/desktop/e2e/task-planner.spec.ts`** (NEW, +295 LOC) — Mirrors agentic-loop.spec.ts structure (serial mode, fresh `--user-data-dir=<tmp>` per test, main-process stdout/stderr piping, identical `beforeEach`/`afterEach`). Flow-under-test per numbered step in the file header comment. Key assertions:
+
+1. Palette opens via Ctrl+K; Radix dialog visible.
+2. Typed phrase → intent chip `Route to Agent` (complex_request label).
+3. Enter → palette stays open; amber card titled **"Confirm write-side agentic run"** renders. Guard: asserts `"Confirm destructive action"` is NOT present (regression catcher for write-side being mis-routed through the red destructive gate).
+4. Click `Confirm` → palette swaps to step-log mode; canned loop emits plan + tool_call(decompose_project) + tool_result + tool_call(delegate_subtask) + tool_result + answer.
+5. `data-step-kind="answer"` card contains `/Decomposed the frontend redesign/i`.
+6. Palette step count ≥ 1 (observed = 7 — **proves M32 T0's F1 backfill is working end-to-end**; under fast canned provider the palette captures all steps via getRunSnapshot, not just the terminal answer).
+7. `Open Thread` closes palette + opens chat drawer on the persisted copilot thread; "Copilot transcript — read only" banner visible.
+8. Canned answer text also appears in persisted copilot transcript (refetched from DB on drawer mount).
+9. `Escape` closes drawer; Dashboard → Commands subview shows the audit row (`Route to Agent` chip from `command.executed` emission).
+
+### Verification gates
+
+- `pnpm exec biome check` on the 3 touched files — 0 errors, 0 warnings.
+- `pnpm -r typecheck` — clean across all 6 workspace packages.
+- `pnpm test` — 88 files / 1033 tests pass in 14.5s (no unit-test delta — pure E2E task).
+- `pnpm -F @team-x/desktop test:e2e` — **9 passed in 26.4s**, including new `task-planner.spec.ts` at 2.6s.
+- Atomic commit `2a4fc63` per M31/M32 ledger pattern.
+
+### Gotchas captured
+
+- **ABI rebuild dance is mandatory between unit tests and E2E — documented, not a new finding.** Unit tests rebuild better-sqlite3 against Node's ABI (137 on Node 24), which crashes the Electron launch (Electron needs ABI 125). Dev workflow for T8-style verification: run unit tests first, then `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` before E2E. CONTINUITY from M31 T10 called this out; T8 re-confirmed.
+- **Stale Electron processes from a crashed E2E hold locks on native module binaries.** If electron-rebuild fails with `EPERM: operation not permitted, unlink '...keytar.node'`, kill dangling `electron.exe` processes first (`taskkill //F //IM electron.exe`) then retry. A crashed test run leaves worker processes orphaned on Windows specifically.
+- **F1 backfill is live for the canned-seam palette observation path.** Pre-M32 T0 the palette showed only the terminal answer card (bus subscription attached after provider completion). Post-T0 (`f515ea7`) the backfill via `command.getRunSnapshot` + `(runId, stepIndex)` dedup surfaces all intermediate plan / tool_call / tool_result cards. task-planner.spec.ts's observed step count of 7 — vs the "≥ 1" floor it asserts — confirms this is working. Going forward any new E2E spec under a canned seam can tighten step-count assertions if desired.
+- **Default canned-tool fixtures are already a complete write-side fixture set.** M32 T3's `FIXTURE_DECOMPOSED_PLAN` and `FIXTURE_DELEGATION` in test-agentic-tools.ts are structured so a provider script that calls `decompose_project` followed by `delegate_subtask` gets a coherent result chain out of the box. Future write-side specs can adopt the same pattern — scripting the provider with the two tool calls and letting the defaults resolve them — without a canned-tools-table extension. The `CANNED_DECOMPOSE_TABLE` / `CANNED_DELEGATE_TABLE` / `CANNED_REVIEW_TABLE` maps stay reserved for specs that need per-prompt fixture overrides.
+
+### Patterns reinforced
+
+- **Three-tier canned seam remains the only E2E pattern for agentic surfaces.** T8 added entries to two seams (classifier + provider) and consumed the third (tools) via its default fixtures. The lockstep invariant from M31 T8 holds — any new agentic surface ships its E2E harness extension inside the feat commit that introduces the production behavior, not as a separate follow-up.
+- **Write-side E2E does not require new production code.** T5 (gate) + T3 (tool registry injection) + default fixtures are sufficient. Future write-side behavior changes (e.g., M33 Copilot's `skipConfirmation: true` path) can assert against this spec as a regression guard.
+- **Regression-guard assertions catch future mis-routing.** The `"Confirm destructive action"` `not.toBeVisible()` check would immediately surface a bug where `complex_request` with write-side keywords accidentally routed through the destructive gate. Analogous negative assertions are cheap to add and high-leverage.
+
+### Next Session Startup Checklist (M32 T9+)
+
+1. Read this CONTINUITY — T0–T8 shipped, T9–T10 remaining.
+2. Read `.loki/state/orchestrator.json` → `inFlightMilestone.M32.commits.T8 = '2a4fc63'`; `tasksCompleted: 9`; baseline unit 958 / current 1033; E2E baseline 8 / current 9.
+3. Read `.loki/queue/pending.json` → T0–T8 `status: shipped`.
+4. **T9 = Docs.** Update CLAUDE.md's M32 block with T8 shipped + full Task Planner scope summary. Add the CHANGELOG `[Unreleased]` entry for M32. Update README's Intelligence Layer section (tests-badge 1033 → 1033, E2E-spec-count 8 → 9). NEW file `docs/user-guide/task-planner.md` — F10 style: Overview → Mechanics → Tools (decompose/delegate/review) → Settings → Control (confirmation gate) → Privacy → Example → Troubleshooting. Resequence Phase 5 design-doc §10/§11/§13 if needed to mark M32 shipped.
+5. **T10 = Verification + milestone marker.** Full ABI rebuild dance, `pnpm test` + `pnpm -r typecheck` + `pnpm -F @team-x/desktop test:e2e` green, then move M32 from `inFlightMilestone` into `history` in orchestrator.json, clear pending.json, rewrite this CONTINUITY top with an `M32-COMPLETE` header. Commit cadence per T7/T8: `feat(m32): M32 T<N> — <summary>` + `chore(loki): M32 T<N> — commit ledger (<sha>)`.
+
+---
 
 ## M32 T7 SHIPPED — 2026-04-15
 

@@ -1,0 +1,18 @@
+{
+  "taskId": "M32-T9",
+  "milestone": "M32",
+  "title": "Docs — CLAUDE.md + CHANGELOG + README + docs/user-guide/task-planner.md",
+  "goal": "Complete M32 T9 — docs pass reflecting shipped Task Planner work (T0-T8). Update CLAUDE.md Phase 5 block with T0-T8 shipped list + full Task Planner scope summary + new IPC channels for planner settings + new event types + new AgentStepKind variants. Add CHANGELOG [Unreleased] M32 entry (Keep-a-Changelog format). Refresh README Intelligence section (tests-badge 1033 unit / 9 E2E specs, Intelligence features block). NEW file docs/user-guide/task-planner.md — F10 style mirroring agentic-loop.md: Overview -> Mechanics -> Tools (decompose_project / delegate_subtask / review_deliverable) -> Settings (4 planner keys + clamps) -> Control (write-side confirmation gate + Cancel/Confirm flow) -> Privacy -> Example -> Troubleshooting. Phase 5 design-doc §10/§11/§13 resequence if needed to mark M32 shipped.",
+  "status": "pending",
+  "predecessor": "M32-T8 shipped as 2a4fc63",
+  "acceptance": [
+    "CLAUDE.md Phase 5 block updated with M32 T0-T8 shipped summary",
+    "CHANGELOG [Unreleased] gains M32 entry",
+    "README Intelligence section refreshed (test counts + spec counts + feature list)",
+    "docs/user-guide/task-planner.md written in F10 style (~300-400 LOC)",
+    "Phase 5 design doc resequence if warranted",
+    "Atomic commit: docs(m32): M32 T9 — docs pass for Task Planner",
+    "Ledger commit: chore(loki): M32 T9 — commit ledger (<sha>)"
+  ],
+  "createdAt": "2026-04-15T20:55:00Z"
+}

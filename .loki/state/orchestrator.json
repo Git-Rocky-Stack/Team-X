@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M32",
   "milestoneName": "Task Planner (decompose/delegate/review tools)",
-  "tasksCompleted": 8,
+  "tasksCompleted": 9,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md",
@@ -84,7 +84,7 @@
     "M32": {
       "name": "Task Planner",
       "startedAt": "2026-04-15T15:18:00Z",
-      "tasksShipped": 8,
+      "tasksShipped": 9,
       "commits": {
         "T0": "f515ea7",
         "T1": "62a0504",
@@ -93,11 +93,12 @@
         "T4": "dd17eff",
         "T5": "46401c1",
         "T6": "219d8ef",
-        "T7": "6ed012d"
+        "T7": "6ed012d",
+        "T8": "2a4fc63"
       },
-      "tasksScope": "T0 + T1 = M31 follow-ups F1 + F2 (renderer-only preparations for the write-side loop). T2 = write-side agentic tools (decompose_project / delegate_subtask / review_deliverable) + deterministic workload scorer + level-gated composer + WriteSideEventBus width-compatible bus seam + 25 unit tests. T3 = level-based AgenticLoopService tool-registry injection — AgenticLoopEmployeeContext/Lookup types, employeesRepo.getById() extension, optional employeeId on StartArgs with system-agent default (M31 semantics preserved), cross-company isolation guard, actorEmployee threaded through members/runs-row/message-authors/bus-events while preserving systemAgentId field name for M31 wire stability; composition root in main/index.ts now composes [...readSideTools, ...buildWriteSideTools(employee, ...)] in production with a conservative open-ticket-count workload provider (in-meeting/avg-completion stubbed for M33) + no-op write-side orchestrator enqueue (M33 wires real path) + streamAgent-wrapped WriteSideCompleteFn that resolves actor's provider per call; NEW test-agentic-tools.ts (298 LOC) with ECHO_WRITE_SENTINEL + per-tool canned tables + schema-identical decompose/delegate/review factories + createTestToolsForEmployee level-gated composer + createTestWriteSideTools standalone factory; +11 unit tests (+4 service: default-actor capture, explicit employeeId actor authorship, unknown-id throw side-effect-free, cross-company guard; NEW test-agentic-tools.test.ts +7: system-agent all / IC read-only / officer read+decompose / management all / supervisor+lead read+delegate+review / standalone IC empty / schema-identical mirror). T4-T10 remaining = shared-types EventType promotion + AgentStepKind variants + confirmation gate + step-card variants + planner settings + E2E + docs + verification. Plan doc at docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md (commit 6055cfc). Shared-types composite-dist gotcha resolved via script change (commit 83e0868) — manual tsc --build --force dance no longer required.",
+      "tasksScope": "T0 + T1 = M31 follow-ups F1 + F2. T2 = write-side agentic tools (decompose_project / delegate_subtask / review_deliverable) + deterministic workload scorer + level-gated composer + WriteSideEventBus + 25 unit tests. T3 = level-based AgenticLoopService tool-registry injection (employeesRepo.getById + AgenticLoopEmployeeContext/Lookup + actor threading + cross-company guard) + test-agentic-tools.ts three-tier seam + 11 unit tests. T4 = shared-types EventType promotion (+6 planner events) + AgentStepKind variants (ticket_created / delegation_made / review_pending) + 6 payload types + satisfies-EventType swap + step-card minimal branches + 3 type-level tests. T5 = write-side confirmation gate (amber card) with WRITE_SIDE_KEYWORDS heuristic + skipConfirmation opt-out + 8 unit tests. T6 = full step-card write-side variants (narrow helpers extracted to step-card-narrow.ts) + AuditView planner chips + 11 unit tests. T7 = 4 clamped planner settings keys + getPlanner/setPlanner IPC + PlannerSection UI + 11 unit tests. T8 = task-planner.spec.ts E2E round-trip — canned classifier + canned provider scripting plan→decompose_project→tool_result→delegate_subtask→tool_result→answer + default FIXTURE_DECOMPOSED_PLAN and FIXTURE_DELEGATION resolve the tool calls; spec asserts write-side gate title (amber), destructive gate absent, Confirm dispatch, step count ≥ 1 (observed = 7 — F1 backfill working), canned answer text in palette + copilot transcript, Dashboard audit row. 9/9 E2E green in 26.4s. T9-T10 remaining = docs + verification/milestone marker. Plan doc at docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md.",
       "unitTestDelta": "+75 (958 → 1033)",
-      "e2eDelta": "0",
+      "e2eDelta": "+1 (8 → 9)",
       "lintDelta": "0"
     }
   }

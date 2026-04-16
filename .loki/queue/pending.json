@@ -6,9 +6,9 @@
   "previousMilestone": "M31",
   "previousMilestoneCompletedAt": "2026-04-15T14:30:00Z",
   "createdAt": "2026-04-15T15:18:00Z",
-  "updatedAt": "2026-04-15T19:00:00Z",
+  "updatedAt": "2026-04-15T20:50:00Z",
   "totalTasks": 11,
-  "tasksShipped": 8,
+  "tasksShipped": 9,
   "tasks": [
     {
       "id": "T0",
@@ -78,6 +78,16 @@
       "unitTestDelta": "+11 (1022 → 1033)",
       "filesChanged": "11 files, +676 / -2 LOC: packages/shared-types/src/ipc.ts (M), apps/desktop/src/main/db/repos/settings.ts (M), apps/desktop/src/main/db/repos/settings.test.ts (M), apps/desktop/src/main/db/repos/settings-planner.test.ts (NEW), apps/desktop/src/main/ipc/handlers.ts (M), apps/desktop/src/main/ipc/register.ts (M), apps/desktop/src/main/index.ts (M), apps/desktop/src/preload/api.ts (M), apps/desktop/src/renderer/src/hooks/use-settings.ts (M), apps/desktop/src/renderer/src/features/settings/planner-section.tsx (NEW), apps/desktop/src/renderer/src/features/settings/settings-view.tsx (M).",
       "scope": "Four clamped planner settings keys (planner_max_tickets 1-50 default 10, planner_max_depth 1-4 default 2, planner_approval_level enum default 'management', planner_escalation_threshold 1-10 default 3). PLANNER_SETTINGS_CLAMPS + PLANNER_APPROVAL_LEVELS + PlannerApprovalLevel type + SettingsGetPlannerResponse/SettingsSetPlannerRequest in shared-types. settings repo getPlanner()/setPlanner() with enum validation + numeric clamping + seedDefaults extension (+4 keys). IpcSettingsRepo widened. IPC handlers settingsGetPlanner/settingsSetPlanner. register.ts channels + ipcMain.handle. Preload bridge channels + methods. React Query hooks usePlannerSettings/useSetPlanner. NEW PlannerSection component (GitBranch icon, 3 number inputs + 1 select, onBlur clamping, loading/error/saving states). SettingsView imports + renders PlannerSection after AgenticSection. Composition root wires settingsRepo.getPlanner() into writeSideDeps.getPlanner replacing static PLANNER_DEFAULTS fallback (loadDenominator + pastPerformanceCeilingMs stay as internal constants). Existing settings.test.ts seedDefaults count updated 14→18 and 13→17. Tests +11: 3 getPlanner (defaults/persisted/invalid-fallback) + 4 setPlanner clamping (maxTickets/maxDepth/escalationThreshold/approvalLevel-enum) + 1 non-finite rejection + 1 fractional rounding + 2 seedDefaults (seed+no-overwrite)."
+    },
+    {
+      "id": "T8",
+      "name": "E2E spec task-planner.spec.ts — write-side round-trip",
+      "status": "shipped",
+      "commit": "2a4fc63",
+      "unitTestDelta": "0 (1033 → 1033) — pure E2E task",
+      "e2eDelta": "+1 (8 → 9; +task-planner.spec.ts)",
+      "filesChanged": "3 files, +321 / -0 LOC: apps/desktop/e2e/task-planner.spec.ts (NEW), apps/desktop/src/main/services/test-classifier.ts (M), apps/desktop/src/main/services/test-agentic-provider.ts (M).",
+      "scope": "Pure test-harness extension — no production code. Canned classifier gains a lowercase-trimmed entry for 'decompose the frontend redesign into tickets' → complex_request (confidence 0.91). Phrase contains write-side keywords (decompose + tickets) so command-service.ts fires the T5 write-side confirmation gate before dispatching. Canned provider gains a CANNED_TABLE entry scripting plan → tool_call(decompose_project) → tool_result → tool_call(delegate_subtask) → tool_result → final_answer. Default FIXTURE_DECOMPOSED_PLAN (1 subtask, plan-test-1, assignee emp-test-swe) + FIXTURE_DELEGATION (tkt-test-1, Mateo Reyes) in test-agentic-tools.ts resolve the two tool calls with zero new canned entries. NEW spec apps/desktop/e2e/task-planner.spec.ts (285 LOC) mirrors agentic-loop.spec.ts with the T5 write-side-gate step inserted. Assertions: (1) Ctrl+K opens palette, (2) intent chip 'Route to Agent', (3) Enter shows amber 'Confirm write-side agentic run' card — asserts 'Confirm destructive action' ABSENT to guard against mis-routing, (4) Confirm click dispatches the loop, (5) data-step-kind='answer' card visible with canned text 'Decomposed the frontend redesign', (6) palette step count ≥ 1 (observed = 7 — proves F1 backfill working end-to-end), (7) 'Open Thread' closes palette + opens drawer on copilot thread, (8) 'Copilot transcript — read only' banner + canned answer text in transcript, (9) Dashboard → Commands shows 'Route to Agent' audit row. 9/9 E2E green in 26.4s; biome + typecheck clean. Invariants preserved: NODE_ENV=test gate, production paths untouched, three-tier canned-seam pattern, wire shapes unchanged. ABI rebuild dance required before E2E (documented — Node→Electron swap via `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`)."
     }
   ],
   "baseline": {
