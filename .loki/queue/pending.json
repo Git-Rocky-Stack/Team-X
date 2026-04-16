@@ -6,9 +6,9 @@
   "previousMilestone": "M32",
   "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
   "createdAt": "2026-04-16T07:20:00Z",
-  "updatedAt": "2026-04-16T15:26:00Z",
+  "updatedAt": "2026-04-16T15:48:00Z",
   "totalTasks": 11,
-  "tasksShipped": 6,
+  "tasksShipped": 7,
   "tasks": [
     {
       "id": "T0",
@@ -113,10 +113,21 @@
     {
       "id": "T6",
       "name": "copilot.ask routing + query_copilot_insights tool",
-      "status": "pending",
-      "scope": "Route copilot.ask through AgenticLoopService.start with employeeId = system-copilot. Returns { runId, threadId } — same shape as M31 command.execute complex_request (M34 sidebar prereq). New query_copilot_insights tool factory (read-only, {rows, truncated} envelope, 50-row cap). Tool registry: system-copilot gets M31 read-only set + new tool; system-agent continues with original set. Two distinct system threads in Copilot Conversations sidenav. Unit tests +5.",
+      "status": "completed",
+      "commit": "3c00be7",
+      "shippedAt": "2026-04-16T15:47:00Z",
+      "scope": "Replaced T5 copilot.ask stub with full round-trip through AgenticLoopService.start using employeeId=system-copilot. NEW agentic-tools-copilot.ts — query_copilot_insights Tool factory (zod-strict, {rows, truncated} envelope, 50-row cap, JSON-safe CopilotInsightProjection distinct from Drizzle CopilotInsightRow, includeDismissed flag threaded through ListActiveFilter). NEW buildCopilotToolRegistry(employee, deps) level-gated composer — returns [query_copilot_insights] when employee.roleId === SYSTEM_COPILOT_ROLE_ID; empty array otherwise. NEW copilot-service.ts CopilotService front-door wrapping AgenticLoopService.start; resolves per-company system-copilot via employeesRepo.findSystemByRoleId + passes id through as employeeId. Returns { runId, threadId } matching M31 IpcExecuteResult.complex_request shape for M34 sidebar wire-contract stability. EDIT test-agentic-tools.ts — extend three-tier canned seam with __ECHO_COPILOT_QUERY__:<json> sentinel + CANNED_COPILOT_QUERY_TABLE (empty) + FIXTURE_COPILOT_EMPTY fallback; TestEmployeeContext gains optional roleId; createTestToolsForEmployee swaps write-side for copilot tool set when roleId === 'system-copilot'. EDIT copilot-insights.ts — ListActiveFilter.includeDismissed optional flag; when true, listActive drops isNull(dismissedAt) predicate while keeping TTL filter. EDIT copilot-handlers.test.ts — flipped T5 'throws when stub in effect' to 'rejects empty companyId/text before dispatch' since comp root always wires agenticLoopStart now. EDIT main/index.ts — composition root wires agenticLoopStart via copilot-service; buildTools callback resolves roleId via employeesRepo.getById once per run and branches to [...readSide, ...buildCopilotToolRegistry(employee, deps)] for system-copilot — system-agent path (M31 read-only + M32 write-side) unchanged.",
       "commitTemplate": "feat(m33): M33 T6 — copilot.ask routing + query_copilot_insights tool",
-      "testsDelta": "+5 unit"
+      "testsDelta": "+5 unit",
+      "metrics": {
+        "unitTestsBefore": 1082,
+        "unitTestsAfter": 1087,
+        "unitTestsDelta": "+5 (exact match to T6 target)",
+        "lintErrors": 0,
+        "lintWarnings": 24,
+        "typecheck": "clean",
+        "filesChanged": "7 (+982 / -31) — 3 new + 4 edits"
+      }
     },
     {
       "id": "T7",
@@ -160,14 +171,14 @@
     "typecheckClean": true
   },
   "current": {
-    "unitTests": 1082,
+    "unitTests": 1087,
     "e2eSpecs": 8,
     "e2eGreenCount": 9,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "T5",
-    "asOfTaskCommit": "a085dc7"
+    "asOfTask": "T6",
+    "asOfTaskCommit": "3c00be7"
   },
   "targets": {
     "unitTests": 1058,
