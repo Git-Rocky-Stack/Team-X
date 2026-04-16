@@ -1,4 +1,66 @@
-# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0–T3 shipped); M32 (Task Planner) complete
+# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0–T4 shipped); M32 (Task Planner) complete
+
+## M33 T4 SHIPPED — 2026-04-16 (CopilotAnalyzerService — periodic scheduler + LLM + dedup + expiry)
+
+**Task:** M33 T4 — headline task. CopilotAnalyzerService (periodic + event-triggered scheduler) + CopilotEventTrigger (30s-debounced) + migration 0012 adding `runs.kind` + 3 EventType additions + `listStale` sibling on CopilotInsightsRepo + optional `kind` on StartRunInput. Structure mirrors M31 AgenticLoopService — pause-aware providerRouter wrapper, AbortController-driven stop with canceled-status coercion, runs-table row per tick with `kind='copilot'`, terminal bus-event discipline (exactly one `copilot.analyzed` per tick).
+**Commit:** `e672973` — `feat(m33): M33 T4 — copilot analyzer service + pause-aware scheduler`.
+**Plan reference:** [M33 plan T4 §](../docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).
+
+### Metrics delta
+
+| Metric | Pre-T4 | Post-T4 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1060 | **1074** | **+14** (exact match to plan target) |
+| E2E specs | 8 | 8 | 0 (T9 ships the spec) |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings | 24 | 24 | 0 (pre-existing intelligence/nlu warnings; under M33 ≤34 budget) |
+| Typecheck across 6 packages | clean | clean | — |
+| Files touched | — | 11 (+2144 / −1) | — |
+
+### What shipped (one feat commit, eleven files)
+
+1. **`apps/desktop/src/main/db/migrations/0012_runs_kind.sql` (NEW).** `ALTER TABLE runs ADD COLUMN kind text NOT NULL DEFAULT 'work'` — no CHECK (TS union enforces), default backfills all existing rows to 'work'. Pre-M33 had no `kind` column; migration ADDS rather than extends an enum. Journal entry idx 12.
+2. **`apps/desktop/src/main/db/schema.ts` — `runs.kind` field + `RunKind` union** (`'work' | 'agentic' | 'copilot'`) exported for writers.
+3. **`apps/desktop/src/main/db/repos/runs.ts` — `StartRunInput.kind` optional** (defaults 'work'); `start()` passes through.
+4. **`apps/desktop/src/main/db/repos/copilot-insights.ts` — NEW `listStale(now)` non-mutating sibling** to `expireStale`. Analyzer snapshots rows for per-row `copilot.expired` emission BEFORE physical delete. Preserves T1's count-return contract.
+5. **`packages/shared-types/src/events.ts` — +3 EventType** (`copilot.insight`, `copilot.analyzed`, `copilot.expired`) + `CopilotInsightPayload` + `CopilotAnalyzedPayload` + `CopilotExpiredPayload` + `CopilotCategory` + `CopilotSeverity` + `CopilotAnalyzedReason` unions.
+6. **`apps/desktop/src/main/services/copilot-analyzer-service.ts` (NEW, ~580 LOC).** The headline file.
+   - Factory → `{ start, stop, stopAll, tick, getLastAnalysisAt, restart }`.
+   - Pure exports for unit tests: `buildAnalysisPrompt`, `summarizeEventWindow`, `summarizeActiveInsights`, `extractJsonArray`, `parseDrafts`.
+   - Zod `InsightDraftSchema` with strict enums + title ≤200 / body ≤2000 / `expiresInHours` clamped [1,168].
+   - **Pause-aware wrapper `waitUntilUnpaused`** polls `orchestrator.isCompanyPaused` every `pauseGatePollMs` (default 250ms); AbortController honored.
+   - **Tick lifecycle:** settings gate → system-copilot resolution → pre-tick pause check → expiry sweep (listStale → per-row copilot.expired → expireStale) → prompt build → resolveComplete → runs.start({kind:'copilot'}) → AbortController per tick → provider call → Zod parse → one-shot nudge retry → dedup pass (emit copilot.insight only on insert) → runs.finish → terminal copilot.analyzed.
+   - **`stopAll()`** for will-quit teardown (companiesRepo not in shutdown closure scope).
+7. **`apps/desktop/src/main/services/copilot-analyzer-service.test.ts` (NEW, 12 tests).** Determinism (2), Zod+nudge (3), pause (2), dedup (2), expiry (2), abort (1).
+8. **`apps/desktop/src/main/services/copilot-event-trigger.ts` (NEW, ~140 LOC).** 30s-debounced per-company dispatcher. `reasonForEvent` pure helper. Timer resets on new signal (debounce not throttle). `ticket.closed` + `goal.progressChanged` future-ready.
+9. **`apps/desktop/src/main/services/copilot-event-trigger.test.ts` (NEW, 2 tests).** Single-signal debounce; coalesce with latest-reason + payload predicate filter on `agentic.failed`.
+10. **`apps/desktop/src/main/index.ts` — composition root wiring (+180 LOC).** New imports, module-scope handles, `copilotInsightsRepo` instantiation, analyzer+trigger after agenticLoopServiceInstance, will-quit early-null-state branch + shutdown (`trigger.stop()` + `analyzer.stopAll()`).
+
+### Design calls (documented for M34 + retro)
+
+- **Migration 0012 ADDS `kind` column, not extends an enum.** No pre-M33 `kind` column; no SQLite CHECK-swap precedent. Default 'work' backfills; M31 agentic rows remain 'work' today (candidates for future backfill when Telemetry grows per-kind filter).
+- **`listStale` is a non-mutating sibling.** Preserves T1's tested `expireStale` count-return; only T4 needs per-row attribution.
+- **CopilotEventTrigger is a SEPARATE file.** Keeps T3's window pure-accumulator. Dependency direction acyclic.
+- **`ticket.closed` + `goal.progressChanged` future-ready.** Zero-cost until upstream producers land.
+- **`stopAll()` over per-company shutdown iteration.** `companiesRepo` isn't in the will-quit closure scope; service owns its internal state.
+
+### Verification gates (green)
+
+- `pnpm typecheck` — clean across all 6 workspace packages.
+- `pnpm lint` — 0 errors, 24 warnings (baseline ≤34).
+- `pnpm test` — 1074/1074 pass in 17.09s. 92 test files.
+
+### Follow-ups for downstream tasks
+
+- **T5** — 4 `copilot.*` IPC channels + preload bridge + CopilotInsight wire type (distinct from CopilotInsightRow). +8 unit tests.
+- **T6** — `copilot.ask` via AgenticLoopService.start with employeeId=system-copilot; new `query_copilot_insights` read-side tool.
+- **T7** — 3 clamped settings keys + CopilotSection UI + analyzer.restart on setCopilot.
+- **T8** — Three-tier canned copilot provider seam.
+- **T9** — `copilot-service.spec.ts` E2E round-trip. +1 spec.
+- **T10** — Verification gates + milestone marker + docs. ABI rebuild dance.
+- **M31 backfill (deferred, M34+):** retrofit M31 AgenticLoopService to write `kind='agentic'` when Telemetry grows per-kind filter.
+
+---
 
 ## M33 T3 SHIPPED — 2026-04-16 (rolling event window + bus subscription)
 

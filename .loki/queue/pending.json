@@ -6,9 +6,9 @@
   "previousMilestone": "M32",
   "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
   "createdAt": "2026-04-16T07:20:00Z",
-  "updatedAt": "2026-04-16T14:45:00Z",
+  "updatedAt": "2026-04-16T15:10:00Z",
   "totalTasks": 11,
-  "tasksShipped": 4,
+  "tasksShipped": 5,
   "tasks": [
     {
       "id": "T0",
@@ -75,10 +75,21 @@
     {
       "id": "T4",
       "name": "CopilotAnalyzerService — periodic scheduler + LLM + dedup + expiry",
-      "status": "pending",
-      "scope": "Biggest task. CopilotAnalyzerService with start/stop/tick/getLastAnalysisAt. buildAnalysisPrompt (deterministic, ≤2000 tokens). Zod InsightDraftSchema + one-shot nudge retry on malformed JSON. Pause-aware providerRouter.complete wrapper (actor: system-copilot). Dedup via upsertWithDedup. Expiry via expireStale per cycle. Event-triggered debounced runs (30s) for meeting.ended / ticket.closed / goal.progressChanged / agentic.failed budget_exhausted. Migration 0012 extends runs.kind enum with 'copilot'. Unit tests +14.",
+      "status": "completed",
+      "commit": "e672973",
+      "shippedAt": "2026-04-16T15:05:00Z",
+      "scope": "Headline M33 task. CopilotAnalyzerService (start/stop/stopAll/tick/getLastAnalysisAt/restart) with buildAnalysisPrompt (deterministic ≤2000 event-summary chars), Zod InsightDraftSchema + one-shot nudge retry + malformed_output skip, pause-aware providerRouter.complete wrapper (actor: system-copilot), dedup via upsertWithDedup.merged flag (copilot.insight emits only on insert), per-cycle expiry sweep (listStale then per-row copilot.expired then expireStale), runs-table row per tick with kind='copilot'. Separate CopilotEventTrigger file with 30s-debounced per-company triggerAnalysis for meeting.ended / ticket.closed / goal.progressChanged / agentic.failed+budget_exhausted (debounce not throttle — timer resets on new signal, latest-reason wins). Migration 0012 ADDS runs.kind column (no CHECK, TS union enforces) with default 'work' backfill. +3 EventType literals + CopilotCategory / CopilotSeverity / CopilotAnalyzedReason unions. listStale added to CopilotInsightsRepo as non-mutating sibling (preserves T1 expireStale count-return). Composition root instantiates analyzer+trigger after agenticLoopServiceInstance; shutdown via analyzer.stopAll() + trigger.stop() alongside rag/copilotEventWindow.",
       "commitTemplate": "feat(m33): M33 T4 — copilot analyzer service + pause-aware scheduler",
-      "testsDelta": "+14 unit"
+      "testsDelta": "+14 unit",
+      "metrics": {
+        "unitTestsBefore": 1060,
+        "unitTestsAfter": 1074,
+        "unitTestsDelta": "+14 (exact match to T4 target)",
+        "lintErrors": 0,
+        "lintWarnings": 24,
+        "typecheck": "clean",
+        "filesChanged": "11 (+2144 / -1)"
+      }
     },
     {
       "id": "T5",
@@ -138,14 +149,14 @@
     "typecheckClean": true
   },
   "current": {
-    "unitTests": 1060,
+    "unitTests": 1074,
     "e2eSpecs": 8,
     "e2eGreenCount": 9,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "T3",
-    "asOfTaskCommit": "c6b40ae"
+    "asOfTask": "T4",
+    "asOfTaskCommit": "e672973"
   },
   "targets": {
     "unitTests": 1058,
