@@ -88,6 +88,12 @@ export interface ExecuteRequest {
   entities: Record<string, string>;
   /** Required-true for destructive intents (fire, close, reopen, end, promote). */
   confirmed?: boolean;
+  /**
+   * Bypass confirmation gate entirely (M32 T5 — M33 Copilot prep).
+   * Trusted callers (Copilot Conversations thread continuation) set
+   * this to skip the write-side gate without a confirm dialog.
+   */
+  skipConfirmation?: boolean;
   companyId: string;
   /** Defaults to 'user' (Rocky). Flows into `command.executed.actorId`. */
   actorId?: string;
@@ -118,7 +124,7 @@ export type ExecuteResult =
        */
       threadId?: string;
     }
-  | { kind: 'needs_confirmation'; summary: string }
+  | { kind: 'needs_confirmation'; summary: string; gateKind?: 'destructive' | 'write-side' }
   | {
       kind: 'error';
       code: 'missing_entity' | 'destructive_not_confirmed' | 'handler_error' | 'unknown_intent';
@@ -311,6 +317,28 @@ const DESTRUCTIVE_INTENTS: ReadonlySet<IntentName> = new Set<IntentName>([
 export const COMMAND_HISTORY_CAP = 20;
 
 /**
+ * Keyword pattern for write-side agentic requests (M32 T5).
+ *
+ * When the NLU classifies `complex_request`, the raw user text is
+ * tested against this pattern. A match means the agentic loop will
+ * likely invoke write-side tools (decompose_project, delegate_subtask,
+ * review_deliverable), so a confirmation gate fires first.
+ *
+ * Exported for unit-test access.
+ */
+export const WRITE_SIDE_KEYWORDS =
+  /\b(decompos|break\s+down|split\s+into|delegat|assign\s+\w*\s*ticket|create\s+ticket|review\s+deliverable|plan\s+task|file\s+ticket)/i;
+
+export function isWriteSideRequest(rawText: string): boolean {
+  return WRITE_SIDE_KEYWORDS.test(rawText);
+}
+
+function buildWriteSideSummary(rawText: string): string {
+  const truncated = rawText.length > 120 ? `${rawText.slice(0, 120)}...` : rawText;
+  return `This request may create tickets, delegate tasks, or modify project state. The agentic loop will run write-side tools to fulfill: "${truncated}"`;
+}
+
+/**
  * Static suggestion list — M30 ships a fixed palette. M31 can extend
  * this with context-aware suggestions from the RAG service.
  *
@@ -479,7 +507,25 @@ export function createCommandService(deps: CommandServiceDeps): CommandService {
       if (DESTRUCTIVE_INTENTS.has(req.intent) && req.confirmed !== true) {
         return {
           kind: 'needs_confirmation',
+          gateKind: 'destructive',
           summary: buildDestructiveSummary(req.intent, req.entities),
+        };
+      }
+
+      // Gate 2.5 — write-side agentic runs require confirmation (M32 T5).
+      // complex_request with write-side keywords (decompose, delegate,
+      // create tickets, review) gets a confirmation gate before the loop
+      // dispatches. skipConfirmation is an M33 Copilot escape hatch.
+      if (
+        req.intent === 'complex_request' &&
+        req.confirmed !== true &&
+        req.skipConfirmation !== true &&
+        isWriteSideRequest(rawText)
+      ) {
+        return {
+          kind: 'needs_confirmation',
+          gateKind: 'write-side',
+          summary: buildWriteSideSummary(rawText),
         };
       }
 

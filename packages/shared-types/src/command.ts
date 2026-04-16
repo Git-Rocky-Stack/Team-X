@@ -105,6 +105,7 @@ export type IpcParseResult =
       entities: Record<string, string>;
       summary: string;
       pending: IpcPendingParse;
+      gateKind?: 'destructive' | 'write-side';
     };
 
 /**
@@ -122,6 +123,13 @@ export interface IpcExecuteRequest {
   entities: Record<string, string>;
   /** Required-true for destructive intents. Ignored for non-destructive intents. */
   confirmed?: boolean;
+  /**
+   * Bypass confirmation gate entirely (M32 T5 — M33 Copilot prep).
+   * Trusted callers (e.g. Copilot Conversations thread continuation)
+   * set this to skip the write-side gate without surfacing a confirm
+   * dialog. Not exposed in the palette UI — M33 wires it.
+   */
+  skipConfirmation?: boolean;
   companyId: string;
   /** Defaults to 'user' in the service. */
   actorId?: string;
@@ -165,7 +173,17 @@ export type IpcExecuteResult =
        */
       threadId?: string;
     }
-  | { kind: 'needs_confirmation'; summary: string }
+  | {
+      kind: 'needs_confirmation';
+      summary: string;
+      /**
+       * `'destructive'` — M30 gate for fire/close/end/promote intents.
+       * `'write-side'` — M32 gate for complex_request with write-side
+       * keywords (decompose, delegate, create tickets, review).
+       * Absent on pre-M32 code paths for backwards compatibility.
+       */
+      gateKind?: 'destructive' | 'write-side';
+    }
   | {
       kind: 'error';
       code: 'missing_entity' | 'destructive_not_confirmed' | 'handler_error' | 'unknown_intent';

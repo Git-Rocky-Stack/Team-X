@@ -28,6 +28,7 @@ import {
   type CommandService,
   type ExecuteRequest,
   createCommandService,
+  isWriteSideRequest,
 } from './command-service.js';
 
 // ---------------------------------------------------------------------------
@@ -579,6 +580,110 @@ describe('CommandService.execute', () => {
       expect(result.summary).toMatch(/2 active/);
     }
     expect(handlers.employeesList).toHaveBeenCalledWith({ companyId: 'co-1' });
+  });
+});
+
+describe('M32 T5 — write-side confirmation gate', () => {
+  it('26. isWriteSideRequest detects decompose keyword', () => {
+    expect(isWriteSideRequest('decompose this project into tasks')).toBe(true);
+    expect(isWriteSideRequest('break down the auth feature')).toBe(true);
+    expect(isWriteSideRequest('split into subtasks for the team')).toBe(true);
+  });
+
+  it('27. isWriteSideRequest detects delegate + create ticket keywords', () => {
+    expect(isWriteSideRequest('delegate the remaining work to engineers')).toBe(true);
+    expect(isWriteSideRequest('create tickets for the payment integration')).toBe(true);
+    expect(isWriteSideRequest('review deliverable on ticket 42')).toBe(true);
+    expect(isWriteSideRequest('assign tickets to the backend team')).toBe(true);
+  });
+
+  it('28. isWriteSideRequest returns false for read-only queries', () => {
+    expect(isWriteSideRequest('what is the project status')).toBe(false);
+    expect(isWriteSideRequest('why is the frontend team behind')).toBe(false);
+    expect(isWriteSideRequest('show me the cost breakdown')).toBe(false);
+    expect(isWriteSideRequest('who is working on auth')).toBe(false);
+  });
+
+  it('29. isWriteSideRequest returns false for empty/short text', () => {
+    expect(isWriteSideRequest('')).toBe(false);
+    expect(isWriteSideRequest('hello')).toBe(false);
+  });
+
+  const baseReq = (overrides: Partial<ExecuteRequest> = {}): ExecuteRequest => ({
+    intent: 'check_status',
+    entities: {},
+    companyId: 'co-1',
+    actorId: 'user',
+    rawText: 'status check',
+    ...overrides,
+  });
+
+  it('30. complex_request with write-side keyword returns needs_confirmation with gateKind write-side', async () => {
+    const loopStart = vi.fn(async () => ({ runId: 'r-1', threadId: 'th-1' }));
+    const { svc, events } = buildService({
+      handlers: makeHandlers({ agenticLoopStart: loopStart } as Partial<CommandHandlers>),
+    });
+    const result = await svc.execute(
+      baseReq({
+        intent: 'complex_request',
+        rawText: 'decompose the onboarding project into tasks',
+      }),
+    );
+    expect(result.kind).toBe('needs_confirmation');
+    if (result.kind === 'needs_confirmation') {
+      expect(result.gateKind).toBe('write-side');
+      expect(result.summary).toContain('write-side tools');
+    }
+    expect(loopStart).not.toHaveBeenCalled();
+    expect(events).toHaveLength(0);
+  });
+
+  it('31. complex_request with write-side keyword + confirmed:true dispatches normally', async () => {
+    const loopStart = vi.fn(async () => ({ runId: 'r-1', threadId: 'th-1' }));
+    const { svc } = buildService({
+      handlers: makeHandlers({ agenticLoopStart: loopStart } as Partial<CommandHandlers>),
+    });
+    const result = await svc.execute(
+      baseReq({
+        intent: 'complex_request',
+        rawText: 'decompose the onboarding project into tasks',
+        confirmed: true,
+      }),
+    );
+    expect(result.kind).toBe('ok');
+    expect(loopStart).toHaveBeenCalled();
+  });
+
+  it('32. complex_request with write-side keyword + skipConfirmation:true bypasses gate', async () => {
+    const loopStart = vi.fn(async () => ({ runId: 'r-1', threadId: 'th-1' }));
+    const { svc } = buildService({
+      handlers: makeHandlers({ agenticLoopStart: loopStart } as Partial<CommandHandlers>),
+    });
+    const result = await svc.execute(
+      baseReq({
+        intent: 'complex_request',
+        rawText: 'delegate tasks to the engineering team',
+        skipConfirmation: true,
+      }),
+    );
+    expect(result.kind).toBe('ok');
+    expect(loopStart).toHaveBeenCalled();
+  });
+
+  it('33. complex_request without write-side keyword dispatches without gate', async () => {
+    const loopStart = vi.fn(async () => ({ runId: 'r-1', threadId: 'th-1' }));
+    const { svc, events } = buildService({
+      handlers: makeHandlers({ agenticLoopStart: loopStart } as Partial<CommandHandlers>),
+    });
+    const result = await svc.execute(
+      baseReq({
+        intent: 'complex_request',
+        rawText: 'why is the frontend team behind schedule',
+      }),
+    );
+    expect(result.kind).toBe('ok');
+    expect(loopStart).toHaveBeenCalled();
+    expect(events).toHaveLength(1);
   });
 });
 

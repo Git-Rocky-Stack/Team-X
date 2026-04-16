@@ -416,6 +416,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                 intent,
                 entities,
                 summary: result.summary,
+                gateKind: result.gateKind,
                 pending: {
                   intent,
                   entities,
@@ -700,55 +701,70 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                 )}
 
                 {/* NEEDS CONFIRMATION */}
-                {parseResult?.kind === 'needs_confirmation' && !parseError && (
-                  <div className="space-y-3">
-                    <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3">
-                      <p className="text-sm font-medium text-foreground">
-                        Confirm destructive action
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">{parseResult.summary}</p>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setParseResult(null);
-                          setText('');
-                          inputRef.current?.focus();
-                        }}
-                        className="min-h-[44px]"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        ref={confirmRef}
-                        variant="destructive"
-                        disabled={executeMutation.isPending}
-                        onClick={() =>
-                          handleExecute(parseResult.intent, parseResult.entities, true)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleExecute(parseResult.intent, parseResult.entities, true);
-                          }
-                        }}
-                        className={cn(
-                          'min-h-[44px] bg-red-600 text-white hover:bg-red-600/90',
-                          confirmFocused && 'ring-2 ring-red-500/60 ring-offset-2',
-                        )}
-                      >
-                        {executeMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Confirming...
-                          </>
-                        ) : (
-                          'Confirm'
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                {parseResult?.kind === 'needs_confirmation' &&
+                  !parseError &&
+                  (() => {
+                    const isWriteSide = parseResult.gateKind === 'write-side';
+                    const borderColor = isWriteSide ? 'border-amber-500/30' : 'border-red-500/30';
+                    const bgColor = isWriteSide ? 'bg-amber-500/10' : 'bg-red-500/10';
+                    const btnBg = isWriteSide
+                      ? 'bg-amber-600 text-white hover:bg-amber-600/90'
+                      : 'bg-red-600 text-white hover:bg-red-600/90';
+                    const ringColor = isWriteSide ? 'ring-amber-500/60' : 'ring-red-500/60';
+                    const title = isWriteSide
+                      ? 'Confirm write-side agentic run'
+                      : 'Confirm destructive action';
+                    return (
+                      <div className="space-y-3">
+                        <div className={cn('rounded-md border p-3', borderColor, bgColor)}>
+                          <p className="text-sm font-medium text-foreground">{title}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {parseResult.summary}
+                          </p>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              setParseResult(null);
+                              setText('');
+                              inputRef.current?.focus();
+                            }}
+                            className="min-h-[44px]"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            ref={confirmRef}
+                            variant={isWriteSide ? 'default' : 'destructive'}
+                            disabled={executeMutation.isPending}
+                            onClick={() =>
+                              handleExecute(parseResult.intent, parseResult.entities, true)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleExecute(parseResult.intent, parseResult.entities, true);
+                              }
+                            }}
+                            className={cn(
+                              'min-h-[44px]',
+                              btnBg,
+                              confirmFocused && `ring-2 ${ringColor} ring-offset-2`,
+                            )}
+                          >
+                            {executeMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Confirming...
+                              </>
+                            ) : (
+                              'Confirm'
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                 {/* EMPTY — history picker hint */}
                 {!parseResult && !parseMutation.isPending && !parseError && text.length === 0 && (
