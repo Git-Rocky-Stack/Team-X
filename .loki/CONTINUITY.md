@@ -1,4 +1,59 @@
-# Loki Continuity — Phase 5, M32 T6 SHIPPED (step-card variants + AuditView chips); M32 T7+ pending
+# Loki Continuity — Phase 5, M32 T7 SHIPPED (planner settings + UI); M32 T8+ pending
+
+## M32 T7 SHIPPED — 2026-04-15
+
+**Milestone:** Task Planner (Phase 5 — Intelligence Layer). In progress (8 of 11 tasks shipped).
+**Scope:** Four clamped planner settings keys wired end-to-end: shared-types (PLANNER_SETTINGS_CLAMPS + types + IPC contract + TeamXApi), settings repo (getPlanner/setPlanner + seed defaults), IPC handlers + register, preload bridge, React Query hooks, new PlannerSection component in Settings -> Runtime, composition root wiring replacing static PLANNER_DEFAULTS with live settings-repo-backed accessor.
+**Commit:** T7 = `6ed012d`.
+
+### Metrics delta
+
+| Metric | Pre-T7 | Post-T7 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1022 | 1033 | +11 |
+| E2E specs | 8 | 8 | 0 |
+| Files touched | — | 11 (+676 / -2) | — |
+
+### What shipped
+
+**`packages/shared-types/src/ipc.ts`** (M) — `PlannerApprovalLevel` type (5 hyphenated levels matching role-pack frontmatter), `SettingsGetPlannerResponse` + `SettingsSetPlannerRequest` interfaces, `PLANNER_SETTINGS_CLAMPS` (maxTickets 1-50 default 10, maxDepth 1-4 default 2, escalationThreshold 1-10 default 3), `PLANNER_APPROVAL_LEVELS` array, `PLANNER_APPROVAL_LEVEL_DEFAULT = 'management'`. IpcContract gains `settings.getPlanner` + `settings.setPlanner`. TeamXApi gains `getPlanner()` + `setPlanner()`.
+
+**`apps/desktop/src/main/db/repos/settings.ts`** (M) — `getPlanner()` reads 4 keys with fallback defaults, validates `approvalLevel` against enum (invalid → default). `setPlanner()` clamps numeric fields, validates approvalLevel enum, rejects non-finite numbers. `SETTING_DEFAULTS` extended with 4 planner keys.
+
+**`apps/desktop/src/main/ipc/handlers.ts`** (M) — `IpcSettingsRepo` widened with `getPlanner()`/`setPlanner()`. `IpcHandlers` gains `settingsGetPlanner`/`settingsSetPlanner`. Factory impl as thin pass-through to repo.
+
+**`apps/desktop/src/main/ipc/register.ts`** (M) — `REQUEST_CHANNELS` gains `settings.getPlanner`/`settings.setPlanner`. Two `ipcMain.handle` registrations.
+
+**`apps/desktop/src/preload/api.ts`** (M) — Channel constants + bridge methods + type imports for planner.
+
+**`apps/desktop/src/renderer/src/hooks/use-settings.ts`** (M) — `usePlannerSettings()` + `useSetPlanner()` React Query hooks.
+
+**`apps/desktop/src/renderer/src/features/settings/planner-section.tsx`** (NEW) — PlannerSection component: GitBranch icon header, 3 number inputs (maxTickets, maxDepth, escalationThreshold) with onBlur clamping, 1 select (approvalLevel) with human-readable labels, loading/error/saving states, save-on-change via mutation.
+
+**`apps/desktop/src/renderer/src/features/settings/settings-view.tsx`** (M) — Imports + renders PlannerSection after AgenticSection.
+
+**`apps/desktop/src/main/index.ts`** (M) — Composition root wires `settingsRepo.getPlanner()` into `writeSideDeps.getPlanner`, mapping the 4 user-facing settings + 2 internal constants (`loadDenominator=5`, `pastPerformanceCeilingMs=172800000`). Replaces the static `defaultPlanner()` fallback.
+
+**`apps/desktop/src/main/db/repos/settings.test.ts`** (M) — seedDefaults count updated 14→18 and 13→17 for 4 new planner keys.
+
+**`apps/desktop/src/main/db/repos/settings-planner.test.ts`** (NEW) — 11 unit tests: getPlanner defaults/persisted/invalid-fallback, setPlanner clamp maxTickets/maxDepth/escalationThreshold, approvalLevel enum validation, non-finite rejection, fractional rounding, seedDefaults seed+no-overwrite.
+
+### Gotchas captured
+
+- **`PlannerApprovalLevel` must use hyphenated `'senior-management'` not underscored `'senior_management'`.** The `EmployeeLevel` type in `agentic-tools-write.ts` uses hyphenated form matching role-pack frontmatter convention. Initial implementation used underscores, causing a type incompatibility at the composition root mapping. Fix: align shared-types with the existing convention.
+- **`PlannerSettings` has 6 fields but only 4 are user-facing.** `loadDenominator` and `pastPerformanceCeilingMs` are internal scoring constants, not user-facing settings. The composition root maps the 4 settings-repo fields + hardcodes the 2 internal constants.
+- **Existing `settings.test.ts` hardcodes `seedDefaults` count.** Adding 4 new seed defaults breaks the existing test. The count must be updated in lockstep.
+
+### Next Session Startup Checklist (M32 T8+)
+
+1. Read this CONTINUITY — T0–T7 shipped, T8–T10 remaining.
+2. **T8 = E2E spec** `task-planner.spec.ts` — full round-trip through write-side tools with canned seam.
+3. **T9 = Docs** — CLAUDE.md, CHANGELOG, README, `docs/user-guide/task-planner.md`.
+4. **T10 = Verification + milestone marker** — ABI rebuild dance, full test suite, phase badge.
+
+---
+
+## M32 T6 SHIPPED — 2026-04-15 (prior session)
 
 ## M32 T6 SHIPPED — 2026-04-15
 

@@ -8,7 +8,7 @@
   "createdAt": "2026-04-15T15:18:00Z",
   "updatedAt": "2026-04-15T19:00:00Z",
   "totalTasks": 11,
-  "tasksShipped": 7,
+  "tasksShipped": 8,
   "tasks": [
     {
       "id": "T0",
@@ -69,6 +69,15 @@
       "unitTestDelta": "+11 (1011 → 1022)",
       "filesChanged": "4 files, +392 / -29 LOC: apps/desktop/src/renderer/src/features/command/step-card.tsx (M), apps/desktop/src/renderer/src/features/command/step-card-narrow.ts (NEW), apps/desktop/src/renderer/src/features/command/step-card-narrow.test.ts (NEW), apps/desktop/src/renderer/src/features/audit/audit-view.tsx (M).",
       "scope": "T4-minimal step-card branches (ticket_created, delegation_made, review_pending) upgraded to full rendering with data narrowing, detail text, and color polish. Narrow helpers extracted to step-card-narrow.ts for testability without renderer deps (no jsdom). ticket_created: Ticket icon, title text, assignee + plan refs. delegation_made: GitBranch icon, assignee name, plan ref. review_pending: ClipboardCheck icon, outcome color-coding (approve=emerald, reject=red, pending=amber), ticket + reviewer refs. AuditView gains 6 new planner event types: EVENT_TYPE_COLORS (plan.proposed/approved violet, task.delegated sky, task.escalated rose, review.requested/completed amber), EVENT_TYPE_LABELS for all 6, buildRowSummary payload-aware summaries (subtask count, assignee, outcome, escalation). Tests +11: 4 narrowTicketCreated + 3 narrowDelegationMade + 4 narrowReviewPending."
+    },
+    {
+      "id": "T7",
+      "name": "Planner settings + UI",
+      "status": "shipped",
+      "commit": "6ed012d",
+      "unitTestDelta": "+11 (1022 → 1033)",
+      "filesChanged": "11 files, +676 / -2 LOC: packages/shared-types/src/ipc.ts (M), apps/desktop/src/main/db/repos/settings.ts (M), apps/desktop/src/main/db/repos/settings.test.ts (M), apps/desktop/src/main/db/repos/settings-planner.test.ts (NEW), apps/desktop/src/main/ipc/handlers.ts (M), apps/desktop/src/main/ipc/register.ts (M), apps/desktop/src/main/index.ts (M), apps/desktop/src/preload/api.ts (M), apps/desktop/src/renderer/src/hooks/use-settings.ts (M), apps/desktop/src/renderer/src/features/settings/planner-section.tsx (NEW), apps/desktop/src/renderer/src/features/settings/settings-view.tsx (M).",
+      "scope": "Four clamped planner settings keys (planner_max_tickets 1-50 default 10, planner_max_depth 1-4 default 2, planner_approval_level enum default 'management', planner_escalation_threshold 1-10 default 3). PLANNER_SETTINGS_CLAMPS + PLANNER_APPROVAL_LEVELS + PlannerApprovalLevel type + SettingsGetPlannerResponse/SettingsSetPlannerRequest in shared-types. settings repo getPlanner()/setPlanner() with enum validation + numeric clamping + seedDefaults extension (+4 keys). IpcSettingsRepo widened. IPC handlers settingsGetPlanner/settingsSetPlanner. register.ts channels + ipcMain.handle. Preload bridge channels + methods. React Query hooks usePlannerSettings/useSetPlanner. NEW PlannerSection component (GitBranch icon, 3 number inputs + 1 select, onBlur clamping, loading/error/saving states). SettingsView imports + renders PlannerSection after AgenticSection. Composition root wires settingsRepo.getPlanner() into writeSideDeps.getPlanner replacing static PLANNER_DEFAULTS fallback (loadDenominator + pastPerformanceCeilingMs stay as internal constants). Existing settings.test.ts seedDefaults count updated 14→18 and 13→17. Tests +11: 3 getPlanner (defaults/persisted/invalid-fallback) + 4 setPlanner clamping (maxTickets/maxDepth/escalationThreshold/approvalLevel-enum) + 1 non-finite rejection + 1 fractional rounding + 2 seedDefaults (seed+no-overwrite)."
     }
   ],
   "baseline": {
