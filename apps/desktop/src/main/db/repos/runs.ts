@@ -41,6 +41,14 @@ export interface StartRunInput {
   provider: string;
   model: string;
   threadId?: string;
+  /**
+   * Run discriminator — defaults to `work` (Phase 1 chat). `agentic`
+   * for M31 loop runs, `copilot` for M33 analyzer ticks. Added by
+   * migration 0012 (M33 T4). Writers that don't pass `kind` land in
+   * the `work` bucket courtesy of the SQL DEFAULT, preserving the
+   * Phase-1 telemetry shape.
+   */
+  kind?: 'work' | 'agentic' | 'copilot';
 }
 
 export interface FinishRunInput {
@@ -80,6 +88,7 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
           endedAt: null,
           status: 'running',
           error: null,
+          kind: input.kind ?? 'work',
         })
         .run();
       return id;

@@ -160,7 +160,19 @@ export const runs = sqliteTable('runs', {
   /** running | success | error | cancelled. */
   status: text('status').notNull().default('running'),
   error: text('error'),
+  /**
+   * Run discriminator — `work` (Phase 1 chat), `agentic` (M31 agentic
+   * loop), `copilot` (M33 analyzer). Added by migration 0012. Defaults
+   * to `work` at the SQL layer so unspecified legacy writers land in
+   * the right bucket. The narrow `RunKind` union below keeps new
+   * callers honest; widening it later costs a migration, not a
+   * schema-wide rewrite.
+   */
+  kind: text('kind').notNull().default('work'),
 });
+
+/** Narrow union matching the `runs.kind` values any writer is allowed to emit. */
+export type RunKind = 'work' | 'agentic' | 'copilot';
 
 /**
  * Installed LLM providers. API keys live in the OS keychain (keytar);

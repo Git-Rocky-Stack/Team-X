@@ -85,6 +85,13 @@
       "when": 1776921600000,
       "tag": "0011_copilot_insights",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1777008000000,
+      "tag": "0012_runs_kind",
+      "breakpoints": true
     }
   ]
 }

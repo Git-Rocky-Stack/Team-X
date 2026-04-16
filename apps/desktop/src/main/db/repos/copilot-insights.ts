@@ -292,6 +292,20 @@ export function createCopilotInsightsRepo<TRunResult>(db: CopilotInsightsDb<TRun
     },
 
     /**
+     * Non-mutating snapshot of rows the next `expireStale(now)` call
+     * would delete. Used by the `CopilotAnalyzerService` (M33 T4) to
+     * emit one `copilot.expired` bus event per row BEFORE the physical
+     * delete — per-row granularity lets the renderer animate individual
+     * card removal instead of a bulk reflow. Kept as a separate method
+     * rather than coupled into `expireStale`'s return shape so T1's
+     * `expireStale` contract (returns a count, not rows) is preserved
+     * for every caller that doesn't need per-row attribution.
+     */
+    listStale(now: number): CopilotInsightRow[] {
+      return db.select().from(copilotInsights).where(lt(copilotInsights.expiresAt, now)).all();
+    },
+
+    /**
      * Insert OR merge — see the contract block at the top of this file.
      * On merge, returns `{ id: <existing>, merged: true }`. On insert,
      * returns `{ id: <new nanoid>, merged: false }`.

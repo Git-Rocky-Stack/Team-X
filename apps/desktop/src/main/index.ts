@@ -66,6 +66,7 @@ import { dbPath } from './db/paths.js';
 import { createAuditRepo } from './db/repos/audit.js';
 import { createCommandHistoryRepo } from './db/repos/command-history.js';
 import { createCompaniesRepo } from './db/repos/companies.js';
+import { createCopilotInsightsRepo } from './db/repos/copilot-insights.js';
 import { createEmbeddingsRepo } from './db/repos/embeddings.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
 import { createEventsRepo } from './db/repos/events.js';
@@ -112,6 +113,15 @@ import {
 import { createAgenticTools } from './services/agentic-tools.js';
 import { createBackupService } from './services/backup.js';
 import { type CommandService, createCommandService } from './services/command-service.js';
+import {
+  type CopilotAnalyzerCompleteFn,
+  type CopilotAnalyzerService,
+  createCopilotAnalyzerService,
+} from './services/copilot-analyzer-service.js';
+import {
+  type CopilotEventTrigger,
+  createCopilotEventTrigger,
+} from './services/copilot-event-trigger.js';
 import { createCopilotEventWindow } from './services/copilot-event-window.js';
 import type { CopilotEventWindow } from './services/copilot-event-window.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
@@ -259,6 +269,22 @@ let commandServiceInstance: CommandService | null = null;
  * tear-down handles and to stay safe during early-crash cleanup.
  */
 let agenticLoopServiceInstance: AgenticLoopService | null = null;
+/**
+ * Copilot analyzer (M33 T4) — periodic + event-triggered scheduler
+ * producing proactive insights for each company. Observes the
+ * orchestrator pause gate on every provider call (same discipline as
+ * the agentic loop); writes runs with kind='copilot' via migration
+ * 0012; fans out `copilot.insight`/`copilot.analyzed`/`copilot.expired`
+ * on the bus.
+ */
+let copilotAnalyzerServiceInstance: CopilotAnalyzerService | null = null;
+/**
+ * Copilot event trigger (M33 T4) — bus subscriber that debounces
+ * meeting.ended / ticket.closed / goal.progressChanged /
+ * agentic.failed-budget_exhausted into supplementary analyzer ticks
+ * per Phase 5 §8.5. Separated from the window (T3) for test isolation.
+ */
+let copilotEventTriggerInstance: CopilotEventTrigger | null = null;
 
 app
   .whenReady()
@@ -299,6 +325,11 @@ app
     const settingsRepo = createSettingsRepo(db);
     const embeddingsRepo = createEmbeddingsRepo(db);
     const commandHistoryRepo = createCommandHistoryRepo(db);
+    // M33 T4 — copilot-insights repo consumed by the CopilotAnalyzerService
+    // below. Methods: create/getById/listActive/dismiss/expireStale/
+    // upsertWithDedup/listStale (the last one is the T4 addition; see
+    // copilot-insights.ts §listStale comment block for rationale).
+    const copilotInsightsRepo = createCopilotInsightsRepo(db);
 
     // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
     const settingsSeeded = settingsRepo.seedDefaults();
@@ -1038,6 +1069,119 @@ app
       humanUserId: 'user',
     });
 
+    // ---- Copilot analyzer (M33 T4) --------------------------------------
+    //
+    // Periodic + event-triggered insight producer. Stands alongside the
+    // agentic loop: both consume the pause gate, both are pure
+    // subscribers of the composition-root-wired repos + bus. The
+    // analyzer resolves the system-copilot employee on every tick via
+    // `findSystemByRoleId`; the per-tick runs row carries kind='copilot'
+    // so Telemetry → Cost discriminates copilot spend without any
+    // renderer changes (M33 T7 surfaces a label in settings).
+    //
+    // Test-mode (`NODE_ENV === 'test'`) wires a canned complete fn that
+    // echoes a fixed JSON array — keeps Phase 5 E2E specs semantics-
+    // identical without a real provider. The production branch wraps
+    // `streamAgent` into a non-streaming text+usage shape.
+    copilotAnalyzerServiceInstance = createCopilotAnalyzerService({
+      companiesRepo: { list: () => companiesRepo.list() },
+      employeesRepo: {
+        findSystemByRoleId: (cid, rid) => {
+          const row = employeesRepo.findSystemByRoleId(cid, rid);
+          return row ? { id: row.id } : null;
+        },
+      },
+      runsRepo: {
+        start: (input) => runsRepo.start(input),
+        finish: (id, input) => runsRepo.finish(id, input),
+      },
+      copilotInsightsRepo: {
+        listActive: (filter) => copilotInsightsRepo.listActive(filter),
+        upsertWithDedup: (draft, ctx) => copilotInsightsRepo.upsertWithDedup(draft, ctx),
+        expireStale: (now) => copilotInsightsRepo.expireStale(now),
+        listStale: (now) => copilotInsightsRepo.listStale(now),
+      },
+      copilotEventWindow: {
+        snapshot: (cid) => copilotEventWindow.snapshot(cid),
+      },
+      bus,
+      orchestrator: {
+        isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
+      },
+      resolveComplete: async ({ companyId, systemCopilotId }) => {
+        if (testMode) {
+          // Canned copilot completion for tests — returns an empty
+          // drafts array. T8 wires the full three-tier test-copilot
+          // provider seam; this placeholder keeps E2E specs semantics-
+          // identical until then.
+          const complete: CopilotAnalyzerCompleteFn = async () => ({
+            text: '[]',
+            promptTokens: 0,
+            completionTokens: 0,
+            costUsd: 0,
+            provider: 'test-mode',
+            model: 'test-copilot',
+          });
+          return { complete, provider: 'test-mode', model: 'test-copilot' };
+        }
+        // Production — resolve the system-copilot's configured
+        // provider + model via the factory, then adapt `streamAgent`
+        // into the analyzer's non-streaming request/response shape.
+        const emp = employeesRepo.getById(systemCopilotId);
+        if (!emp) {
+          throw new Error(
+            `[copilot-analyzer] system-copilot employee ${systemCopilotId} not found for company ${companyId}`,
+          );
+        }
+        const factory = createProviderFactory({ providersService, secretsStore });
+        const resolved = await factory.resolveForEmployee(emp);
+        const { providerName, model, stream } = resolved;
+        const complete: CopilotAnalyzerCompleteFn = async ({ system, user, signal }) => {
+          let text = '';
+          let promptTokens = 0;
+          let completionTokens = 0;
+          for await (const chunk of streamAgent({
+            providerFactory: stream,
+            system,
+            messages: [{ role: 'user', content: user }],
+          })) {
+            if (signal.aborted) {
+              throw new DOMException('Aborted', 'AbortError');
+            }
+            if (chunk.kind === 'delta') {
+              text += chunk.delta;
+            } else if (chunk.kind === 'done') {
+              promptTokens = chunk.usage.promptTokens;
+              completionTokens = chunk.usage.completionTokens;
+            }
+          }
+          return {
+            text,
+            promptTokens,
+            completionTokens,
+            // T7 plugs the real calcCostUsd wrapper; zero here keeps the
+            // runs row well-formed and telemetry charts stable.
+            costUsd: 0,
+            provider: providerName,
+            model,
+          };
+        };
+        return { complete, provider: providerName, model };
+      },
+    });
+
+    // ---- Copilot event trigger (M33 T4) ---------------------------------
+    //
+    // Supplementary-tick dispatcher. Subscribes to the shared event bus
+    // and debounces 4 signal types into a single analyzer tick per
+    // company (30s debounce — Phase 5 §8.5 locked). Split from the
+    // window (T3) to preserve pure-accumulator test isolation.
+    copilotEventTriggerInstance = createCopilotEventTrigger({
+      bus,
+      analyzer: copilotAnalyzerServiceInstance,
+    });
+    copilotEventTriggerInstance.start();
+
     // Capture the live handle so the CommandHandlers dispatch map can
     // close over a non-null reference. Using the module-level
     // `agenticLoopServiceInstance` directly would force a `!` assertion
@@ -1275,6 +1419,8 @@ app.on('will-quit', (event) => {
     unregisterIpc === null &&
     ragIndexerInstance === null &&
     copilotEventWindowInstance === null &&
+    copilotEventTriggerInstance === null &&
+    copilotAnalyzerServiceInstance === null &&
     commandServiceInstance === null &&
     agenticLoopServiceInstance === null
   ) {
@@ -1318,6 +1464,30 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] copilot event window stop failed:', err);
+    }
+    // Stop the CopilotEventTrigger — also a pure bus subscriber; its
+    // debounce timers are cleared on stop() so no delayed tick fires
+    // after teardown.
+    try {
+      if (copilotEventTriggerInstance !== null) {
+        copilotEventTriggerInstance.stop();
+        copilotEventTriggerInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] copilot event trigger stop failed:', err);
+    }
+    // Stop the CopilotAnalyzerService — clears every per-company
+    // schedule (setInterval timers) and aborts any in-flight tick via
+    // its stopAll() method. Nulling the handle releases the closure
+    // refs so the orchestrator drain can proceed without the analyzer
+    // re-binding to a stale reference.
+    try {
+      if (copilotAnalyzerServiceInstance !== null) {
+        copilotAnalyzerServiceInstance.stopAll();
+        copilotAnalyzerServiceInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] copilot analyzer stop failed:', err);
     }
     // Stop the CommandService BEFORE the orchestrator drain (M29 T6
     // learning): any in-flight `command.execute` that is mid-dispatch

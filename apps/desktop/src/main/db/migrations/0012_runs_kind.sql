@@ -1,0 +1,23 @@
+-- Migration 0012 — add `kind` discriminator to `runs` (Phase 5 — M33 T4).
+--
+-- Context: the `runs` table was Phase-1 shaped for a single run type
+-- ("an agent answered a chat"). Phase 5 introduced two additional kinds
+-- — M31's agentic loop and M33's copilot analyzer — that share the
+-- same telemetry surface (provider, model, tokens, cost, latency) but
+-- benefit from a kind-level split in the Telemetry tab and in any
+-- future per-kind budget controls.
+--
+-- Backfill: existing rows default to 'work' (the Phase-1 chat path).
+-- New rows from `AgenticLoopService` continue to write without `kind`
+-- (defaults to 'work' for M31 rows; see M33 T10 follow-up to backfill
+-- M31 runs with kind='agentic' if the Telemetry view grows a per-kind
+-- filter UI). The `CopilotAnalyzerService` writes kind='copilot' on
+-- every tick row so the Telemetry tab's cost breakdown surfaces
+-- copilot spend distinctly without renderer changes.
+--
+-- No CHECK constraint — the TypeScript union in `schema.ts`
+-- (`RunKind = 'work' | 'agentic' | 'copilot'`) keeps callers honest;
+-- widening later would force a SQLite CHECK temp-table swap which
+-- Drizzle does not model. Plain DEFAULT backfill is the cheapest path
+-- that preserves the existing row count + column order.
+ALTER TABLE `runs` ADD COLUMN `kind` text NOT NULL DEFAULT 'work';

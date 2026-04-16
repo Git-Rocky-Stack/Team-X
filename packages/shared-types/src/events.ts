@@ -26,7 +26,10 @@ export type EventType =
   | 'task.delegated'
   | 'task.escalated'
   | 'review.requested'
-  | 'review.completed';
+  | 'review.completed'
+  | 'copilot.insight'
+  | 'copilot.analyzed'
+  | 'copilot.expired';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -332,6 +335,89 @@ export interface ReviewCompletedPayload {
   summary: string;
   planId: string | null;
   escalated: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Copilot event payloads (Phase 5 — M33 T4)
+//
+// Emitted by the `CopilotAnalyzerService` on every tick — scheduled
+// (per-company interval) or event-triggered (30s-debounced on four
+// signal types: meeting.ended, ticket.closed, goal.progressChanged,
+// agentic.failed with reason='budget_exhausted').
+//
+// Discipline mirrors the M31/M32 convention:
+//   - category-prefixed literals (`copilot.*`).
+//   - one exported payload interface per event.
+//   - JSON-safe shapes; narrow unions replicated instead of cross-package imports.
+//
+// Semantics:
+//   - `copilot.insight` fires ONCE per newly-inserted row (dedup merges
+//     are silent). The insight is already persisted when the event fires;
+//     the renderer can optimistically project it into the cache.
+//   - `copilot.analyzed` fires EXACTLY ONCE per tick (terminal marker,
+//     success OR skipped OR malformed_output). Payload carries the full
+//     counts so the renderer can surface "N new / N merged / N expired".
+//   - `copilot.expired` fires ONCE per row that transitioned expired in
+//     the tick's `expireStale` sweep. Per-row granularity lets the
+//     renderer animate individual card removal instead of a bulk reflow.
+// ---------------------------------------------------------------------------
+
+/** Authoritative category set — kept in sync with the SQL CHECK in 0011 + repo constants. */
+export type CopilotCategory = 'operational' | 'cost' | 'org' | 'workflow' | 'anomaly';
+
+/** Authoritative severity set — kept in sync with the SQL CHECK in 0011 + repo constants. */
+export type CopilotSeverity = 'critical' | 'warning' | 'info';
+
+/**
+ * Reason a tick was fired. `scheduled` is the periodic interval; the
+ * four event-triggered reasons map 1:1 to the signal types the
+ * `CopilotEventTrigger` listens for. `manual` is test / IPC-forced ticks.
+ * `company_paused` means the tick no-oped because orchestrator.pause was
+ * active. `malformed_output` means the LLM returned unparseable JSON on
+ * both the initial prompt AND the one-shot nudge retry — the cycle is
+ * counted as spent but no insights were generated.
+ */
+export type CopilotAnalyzedReason =
+  | 'scheduled'
+  | 'manual'
+  | 'meeting.ended'
+  | 'ticket.closed'
+  | 'goal.progressChanged'
+  | 'agentic.budget_exhausted'
+  | 'company_paused'
+  | 'malformed_output';
+
+export interface CopilotInsightPayload {
+  insightId: string;
+  runId: string;
+  category: CopilotCategory;
+  severity: CopilotSeverity;
+  title: string;
+  expiresAt: number;
+}
+
+export interface CopilotAnalyzedPayload {
+  runId: string;
+  reason: CopilotAnalyzedReason;
+  /** Total drafts the LLM proposed (pre-dedup). */
+  insightsProposed: number;
+  /** Drafts that were newly inserted (dedup miss). */
+  insightsGenerated: number;
+  /** Drafts that were merged into an existing row. */
+  insightsMerged: number;
+  /** Rows that transitioned expired in this tick's sweep. */
+  insightsExpired: number;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  durationMs: number;
+}
+
+export interface CopilotExpiredPayload {
+  insightId: string;
+  runId: string;
+  category: CopilotCategory;
+  title: string;
 }
 
 /**
