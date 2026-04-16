@@ -6,9 +6,9 @@
   "previousMilestone": "M32",
   "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
   "createdAt": "2026-04-16T07:20:00Z",
-  "updatedAt": "2026-04-16T15:48:00Z",
+  "updatedAt": "2026-04-16T16:45:00Z",
   "totalTasks": 11,
-  "tasksShipped": 7,
+  "tasksShipped": 8,
   "tasks": [
     {
       "id": "T0",
@@ -132,10 +132,21 @@
     {
       "id": "T7",
       "name": "Copilot settings + UI",
-      "status": "pending",
-      "scope": "Three clamped settings keys: copilot_enabled (bool, default true), copilot_interval_minutes (1-60, default 5), copilot_categories (subset of 5 categories, default all). settings.getCopilot / setCopilot IPC. CopilotSection UI under Settings → Runtime (alongside agentic + planner). setCopilot triggers copilotAnalyzerService.restart(companyId). Unit tests +7.",
+      "status": "completed",
+      "commit": "4a373bd",
+      "shippedAt": "2026-04-16T16:43:00Z",
+      "scope": "Three clamped copilot settings keys wired end-to-end (copilot_enabled bool/true, copilot_interval_minutes 1-60/5, copilot_categories subset/full-default). NEW shared-types: SettingsGetCopilotResponse + SettingsSetCopilotRequest + COPILOT_SETTINGS_CLAMPS + COPILOT_ENABLED_DEFAULT + new runtime COPILOT_CATEGORIES constant (sibling to the events.ts type-only union; local copies in copilot-insights.ts / agentic-tools-copilot.ts / test-agentic-tools.ts left alone). IpcContract + TeamXApi extended with 2 channels. Settings repo: 3 new SETTING_DEFAULTS + getCopilot() + setCopilot() with clamp-at-read + write-side filter + empty→full conservative fallback. NEW settings-copilot.test.ts (+4). handlers.ts: IpcSettingsRepo + IpcHandlerDeps extended (copilotAnalyzerService optional), 2 new handler methods; setCopilot persists then analyzer.restart(companyId). register.ts + preload/api.ts wire the 2 channels. Composition root: lazy copilotAnalyzerService closure + settingsRepo.getCopilot() threaded into createCopilotAnalyzerService.getSettings. Renderer: useCopilotSettings + useSetCopilot hooks, NEW copilot-section.tsx (switch-style enabled toggle + 1-60 interval input + 5 category chips with optimistic empty→full fallback), rendered after PlannerSection. NEW settings-copilot-handlers.test.ts (+2 — getCopilot round-trip, setCopilot invokes analyzer.restart). copilot-analyzer-service.test.ts +1 restart test. settings.test.ts seed counts bumped 18→21 and 17→20.",
       "commitTemplate": "feat(m33): M33 T7 — copilot settings + UI",
-      "testsDelta": "+7 unit"
+      "testsDelta": "+7 unit",
+      "metrics": {
+        "unitTestsBefore": 1087,
+        "unitTestsAfter": 1094,
+        "unitTestsDelta": "+7 (exact match to T7 target)",
+        "lintErrors": 0,
+        "lintWarnings": 24,
+        "typecheck": "clean",
+        "filesChanged": "13 (+818 / -3) — 3 new + 10 edits"
+      }
     },
     {
       "id": "T8",
@@ -171,14 +182,14 @@
     "typecheckClean": true
   },
   "current": {
-    "unitTests": 1087,
+    "unitTests": 1094,
     "e2eSpecs": 8,
     "e2eGreenCount": 9,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "T6",
-    "asOfTaskCommit": "3c00be7"
+    "asOfTask": "T7",
+    "asOfTaskCommit": "4a373bd"
   },
   "targets": {
     "unitTests": 1058,
@@ -189,6 +200,8 @@
     "lintWarningsMax": 34
   },
   "notes": [
+    "M33 T7 SHIPPED (2026-04-16, commit 4a373bd). +7 unit tests (1087 → 1094, exact target). Three clamped copilot settings keys wired end-to-end through shared-types → repo → IPC → preload → renderer hooks + Section. New runtime COPILOT_CATEGORIES constant in shared-types (kept local copies untouched to bound T7 surface). SettingsSetCopilotRequest.companyId is required but consumed only by the handler's analyzer.restart side effect — settings are global-scope like agentic + planner. IpcHandlerDeps.copilotAnalyzerService is optional + threaded via a lazy closure at the composition root so init order (analyzer after createIpcHandlers) stays untouched. NEW settings-copilot.test.ts (+4), settings-copilot-handlers.test.ts (+2), extended copilot-analyzer-service.test.ts (+1). settings.test.ts seed counts bumped 18→21 and 17→20 for the 3 new defaults. Analyzer restart-harness note: fake setInterval MUST return a truthy handle — production stop() gates clearInterval + schedules.delete on `if (timer)`. 13 files (+818/-3), 0 lint errors / 24 warnings / typecheck clean across all 6 workspace packages.",
+    "T7 DESIGN CALLS: (a) COPILOT_CATEGORIES runtime constant added to shared-types as NEW export rather than extracting from copilot-insights.ts — bounds surface, single-source cleanup deferred. (b) companyId required on SettingsSetCopilotRequest but ignored at repo (global scope). (c) copilotAnalyzerService is optional dep + lazy closure at comp root — resolves module-level handle at call time. (d) settings-copilot-handlers.test.ts is NEW file (not folded into handlers.test.ts) matching per-subsystem pattern. (e) Fake setInterval must return truthy handle for restart tests.",
     "M33 T3 SHIPPED (2026-04-16, commit c6b40ae). +8 unit tests (1052 → 1060, exact match to T3 target). NEW services/copilot-event-window.ts with { start, stop, snapshot, clear } API. Bounded deque (100 events, private const), FIFO eviction, warm-start hydration from eventsRepo.listByCompany + hydrated Set flag for re-hydration guard. token.delta filtered at boundary (streaming noise). Defensive-copy on snapshot. Composition root wired after ragIndexer. clear(companyId) NOT wired to companies.archive — IPC doesn't exist today; deferred to milestone that adds it (T3 FOLLOW-UP). 3 files (+403 / -0), 0 lint errors / 24 warnings / typecheck clean.",
     "T3 FOLLOW-UP: Wire CopilotEventWindow.clear(companyId) into companies.archive once that IPC is added (M34+ scope). Current state: public clear() method exists + tested, production path never calls it because no archive path exists. Zero-surface-area until the archive IPC lands — documented in copilot-event-window.ts §5 design notes.",
     "M33 T2 SHIPPED (2026-04-16, commit 4ce9d3e). +4 unit tests (1048 → 1052, exact match to T2 target). NEW system-copilot role card (117-line role.md). NEW packages/shared-types/src/roles.ts — SYSTEM_AGENT_ROLE_ID + SYSTEM_COPILOT_ROLE_ID + SYSTEM_ROLE_IDS tuple + isSystemRoleId() predicate (future-proofing; is_system column stays authoritative runtime filter). system-agent-bootstrap.ts extended with ensureSystemCopilot + shared ensureSystemEmployee internal — legacy EnsureSystemAgent{Args,Result} kept as type aliases so M31 callers don't break. seed.ts seeds copilot inline after agent; SeedResult gains systemCopilotId. Filter sweep AUTO-COVERED — no employees.list / orgchart.get / hire-picker / delegation-picker / meeting-attendee code changes because is_system=1 + level='system' already gates every surface. 6 files (+563/-62), 0 lint errors / 24 warnings / typecheck clean.",
