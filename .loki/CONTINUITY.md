@@ -1,4 +1,105 @@
-# Loki Continuity — Phase 5, M32 T2 SHIPPED (write-side tools online); M32 T3+ pending
+# Loki Continuity — Phase 5, M32 T3 SHIPPED (level-based tool injection + test seam); M32 T4+ pending
+
+## M32 T3 SHIPPED — 2026-04-15
+
+**Milestone:** Task Planner (Phase 5 — Intelligence Layer). In progress (4 of 11 tasks shipped).
+**Scope shipped this session:** Level-based tool-registry injection on `AgenticLoopService` + schema-identical test seam for the three write-side tools. The agentic loop is now level-gated end-to-end from composition root → service → LLM tool registry. M31 wire contract and default semantics preserved — callers that omit `employeeId` still resolve to system-agent.
+**Commit:** T3 = `8bf1e9e`.
+**Session window:** 2026-04-15T18:00:00Z → 2026-04-15T18:20:00Z (code commit at 18:11 Pacific; ledger commit follows this session).
+
+### Metrics delta
+
+| Metric | Pre-T3 | Post-T3 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 989 | 1000 | +11 |
+| E2E specs | 8 | 8 | 0 |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings (workspace) | 24 | 24 | 0 |
+| Typecheck across 6 packages | clean | clean | — |
+| Files touched | — | 5 (+744 / −24) | — |
+
+### What shipped (one feat commit, five files)
+
+**Service layer — `apps/desktop/src/main/services/agentic-loop-service.ts` (+107 LOC):**
+
+- New types `AgenticLoopEmployeeContext` + `AgenticLoopEmployeeLookup` — the actor identity the loop threads through every touchpoint.
+- `AgenticLoopEmployeesRepo` widened with optional `getById(employeeId): AgenticLoopEmployeeLookup | null` — keeps M31 surface untouched while enabling explicit actor resolution.
+- `buildTools` deps signature now carries `employee: AgenticLoopEmployeeContext` so level-based composition happens at the service boundary, not inside the scheduler.
+- `StartArgs` gains optional `employeeId?: string`. `start()` resolves the actor via either the explicit `getById` path or a default fallback to the system-agent. Cross-company isolation is validated before dispatch (a fetched employee with a mismatched `companyId` is rejected). `actorEmployee` threads through members / runs row / message authors / bus-event `authorId`.
+- Critical wire-stability detail: the `RunState.systemAgentId` field name is preserved even when the actor is NOT the system agent. This keeps M31's wire contract stable — renderers keyed on `systemAgentId` don't need patching. Internally the field holds `actorEmployee.id` regardless.
+
+**Test seam — NEW `apps/desktop/src/main/services/test-agentic-tools.ts` (+298 LOC):**
+
+- `ECHO_WRITE_SENTINEL` literal + per-tool canned tables — the `__ECHO_WRITE__:[…]` JSON sentinel short-circuits to a deterministic envelope, the canned per-prompt table handles test fixtures, the fallback produces a deterministic default. Three-tier resolution mirrors `test-classifier.ts` (M30 T8) and `test-agentic-provider.ts` (M31 T3) posture.
+- Schema-identical `decompose_project` / `delegate_subtask` / `review_deliverable` factories — the zod schemas match production `agentic-tools-write.ts` byte-for-byte so the LLM sees the same tool surface under `NODE_ENV=test`.
+- `createTestToolsForEmployee(employee, companyId, deps)` — level-gated composer that mirrors `buildWriteSideTools` exactly. Supervisor/Lead get `[delegate_subtask, review_deliverable]`; Management/system get all three; Officer/Senior-Mgmt get `[decompose_project]`; IC gets `[]`. Lockstep invariant: if production gates change, this must change in the same commit.
+- `createTestWriteSideTools(employee, deps)` — standalone factory for unit-test consumption (no composition required).
+
+**Composition root — `apps/desktop/src/main/index.ts` (+131 LOC):**
+
+- `buildTools` closure receives `employee` and branches on `testMode`. Production: `[...readSideTools, ...buildWriteSideTools(employee, writeSideDeps)]`. Test: `createTestToolsForEmployee(...)`.
+- Production `writeSideDeps` carries:
+    - **Workload provider** — conservative open-ticket count from `ticketsRepo.countOpenByAssignee(employeeId)` for `load`. `inMeeting` and `avgCompletionDays` are stubbed (returns `false` and `0` respectively) and explicitly annotated as M33-pending. This is deliberate — M32 ships the Task Planner with a conservative workload shape; M33 wires the observability layer.
+    - **Write-side orchestrator enqueue** — a no-op today. M33 wires the real path when the Copilot service starts issuing directives autonomously. Preserving the hook surface avoids a future breaking change.
+    - **`WriteSideCompleteFn`** — wraps `streamAgent` to resolve the ACTOR's provider per call (not the system agent's). A CTO running through `decompose_project` uses the CTO's provider pref, not the copilot's.
+- `employeesRepo` facade gains `getById(id)` → maps `EmployeeRow → AgenticLoopEmployeeLookup` with `isSystem: row.is_system ?? false` null-safe fallback (Drizzle nullable column semantics).
+
+**Service tests — `agentic-loop-service.test.ts` (+115 LOC, +4 tests):**
+
+- **M32 T3 default-actor capture** — omitting `employeeId` captures the system-agent row onto `RunState` (name + id) and preserves M31's wire contract.
+- **M32 T3 explicit employeeId resolution** — passing an `employeeId` resolves via `getById()`, authors outgoing messages as that employee, and tags bus events with `authorId: employee.id`.
+- **M32 T3 unknown id throws side-effect-free** — an unresolvable `employeeId` throws before any side effect (no members, no runs row, no bus events).
+- **M32 T3 cross-company guard** — an employee from company A passed to a run for company B is rejected.
+
+**Test-seam tests — NEW `test-agentic-tools.test.ts` (+117 LOC, +7 tests):**
+
+- System-agent gets all three write-side tools.
+- IC gets none (read-only loop).
+- Officer + Senior-Mgmt get `decompose_project` only.
+- Management + system get all three.
+- Supervisor + Lead get `delegate_subtask` + `review_deliverable`.
+- `createTestWriteSideTools` standalone factory produces `[]` for IC.
+- `createTestWriteSideTools` is schema-identical to production `buildWriteSideTools` (zod schema shape identity check).
+
+### Verification gates passed (per commit message)
+
+- `pnpm -r typecheck` clean across all 6 workspaces.
+- `biome check` clean on the 5 touched files (auto-fixed import order in `main/index.ts` and `test-agentic-tools.test.ts` during the work; biome recommit clean).
+- `vitest`: `agentic-loop-service.test.ts` (25), `test-agentic-tools.test.ts` (7), `agentic-tools-write.test.ts` (25), `agentic-tools.test.ts` (40) all green.
+
+### Gotchas captured this session
+
+- **`systemAgentId` field name stability is non-negotiable.** The renderer-side hooks and E2E selectors introduced in M31 T5/T6 key on this name. Widening the semantic to "actor id (defaults to system-agent)" without renaming is the right call — renaming would cascade a patch across the palette, the Copilot thread surface, and the `agentic-loop.spec.ts` spec.
+- **Cross-company isolation check belongs in `start()`, not `buildTools`.** Putting it in `buildTools` leaks per-call cost and only catches the first tool call, not the run dispatch. The guard fires before any membership/run row/bus event is created — side-effect-free rejection is the contract.
+- **Workload provider's `inMeeting` / `avgCompletionDays` stubs are deliberate.** The deterministic scorer accepts them; M33 wires the live observability layer. Don't chase them before M33 — the stubs keep the write-side loop shippable at M32 with conservative-by-design workload estimates.
+- **Biome auto-fix import-order behavior** — `main/index.ts` and `test-agentic-tools.test.ts` triggered the import sorter. Running `biome check --write` before the work commit is the correct posture; catching it after commit would require a noisy follow-up.
+
+### Patterns reinforced
+
+- **Three-tier canned seam pattern is now the canonical shape for every agentic surface.** `test-classifier.ts` (M30) + `test-agentic-provider.ts` (M31) + `test-agentic-tools.ts` (M32) form the locked triad. Every new agentic surface ships with a matching `__ECHO_*__` sentinel + canned table + fallback. Any breaking change to the sentinel format ripples across all three.
+- **Lockstep invariant: production gate and test gate change in the same commit.** Both `buildWriteSideTools` (agentic-tools-write.ts, production) and `createTestWriteSideTools` (test-agentic-tools.ts, test) branch on the same `EmployeeLevel` set. Splitting the change across commits creates a window where the test seam drifts from prod — reject any such PR in review.
+- **Wire-stability field names trump semantic precision** when renaming would cascade across the renderer. `systemAgentId` now means "actor id, defaulting to system-agent" — the widening is reflected in documentation, not in code.
+
+### Next Session Startup Checklist (M32 T4+)
+
+1. Read this CONTINUITY file — most recent session at the top.
+2. Read `.loki/state/orchestrator.json` → `inFlightMilestone.M32.commits` shows T0+T1+T2+T3 shipped; `tasksCompleted: 4`; baseline 958 / current 1000.
+3. Read `.loki/queue/pending.json` → `tasks` array shows T0+T1+T2+T3 with `status: shipped`. T4–T10 spec lives in the M32 plan doc.
+4. **T4 is the shared-types promotion.** Promote the `WriteSideEventType` literals from `agentic-tools-write.ts` into the canonical `EventType` union in `packages/shared-types/src/events.ts`. Add `AgentStepKind` variants `'ticket_created' | 'delegation_made' | 'review_pending'` plus matching `AgentStepPayload` narrow-types. Replace `'plan.proposed' satisfies WriteSideEventType` annotations in tool bodies with `satisfies EventType` for canonical narrowing.
+5. **T4 must ALSO rebuild shared-types dist.** The composite-TS-project gotcha is resolved via `packages/shared-types/package.json::scripts.typecheck = tsc --build` (commit 83e0868) — `pnpm -r typecheck` now emits dist/\*.d.ts automatically, no manual `tsc --build --force` dance required. But if you add new exported types, confirm the dist reflects them via a clean `rm -rf packages/shared-types/dist && pnpm -r typecheck`.
+6. **T4 string-literal immunity check.** T2's `agentic-tools-write.test.ts` uses string-literal discriminators (`type: 'plan.proposed'` etc.) by construction, so adding new EventType variants should NOT regress T2. If it does, the T4 commit has renamed the discriminator field — that's a breaking change and the commit is wrong.
+7. **T5 = confirmation gate** for destructive writes (`decompose_project` creating tickets, `delegate_subtask` creating delegations). Mirrors the M30 T4 gate for `fire` / `close` / `end-meeting` / `promote` — a `confirmed: true` flag on the palette-level intent that must be set before the tool actually fires.
+8. **T6 = step-card variants** for the three new `AgentStepKind`s. Update `apps/desktop/src/renderer/palette/step-card.tsx` in lockstep with the shared-types promotion. `data-step-kind="ticket_created" | "delegation_made" | "review_pending"` as stable E2E selectors.
+9. Commit cadence: `<type>(m32): M32 T<N> — <summary>` for the work commit, immediately followed by `chore(loki): M32 T<N> — commit ledger (<sha>)` updating orchestrator.json + pending.json + CONTINUITY.md.
+10. After T10, move M32 from `inFlightMilestone` into `history`, set `currentMilestone: 'M33'`, rewrite CONTINUITY top with M32-COMPLETE header + commit table.
+
+### Open items carried into T4+
+
+- F1 and F2 follow-ups are closed (T0 + T1 of M32).
+- `agentic-loop.spec.ts` does not yet exercise the write-side surface. Recommend extending it (or adding a `task-planner.spec.ts`) during T8 so both the `ticket_created` / `delegation_made` / `review_pending` step kinds and the confirmation gate have E2E coverage.
+- No open bugs. No failing tests. No signal files in `.loki/signals/`.
+
+---
 
 ## M32 T2 SHIPPED — 2026-04-15
 
