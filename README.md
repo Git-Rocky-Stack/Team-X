@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/strategia-x/team-x/actions/workflows/ci.yml/badge.svg)](https://github.com/strategia-x/team-x/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-958%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-1033%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
@@ -50,6 +50,7 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 - **Agentic loop for complex questions** — ask free-form questions like *"why is the frontend team behind schedule?"* or *"summarize what the CEO did this week"* and get a grounded multi-paragraph answer citing specific tickets, employees, and events. Runs a ReAct-style loop on a hidden `system-agent` pseudo-employee, dispatches six read-only query tools (`query_employees`, `query_tickets`, `query_projects`, `query_meetings`, `query_vault`, `query_events`), and terminates under hard step / token / wall-clock budgets (defaults 8 / 8000 / 120s — all configurable in Settings → Runtime)
 - **Live step log + persisted thread** — the palette streams each loop step as a labeled card (plan → tool call → tool result → answer) with provider and token footer. After the run completes, the full transcript lives on the system-agent in the "Copilot Conversations" sidebar section for later reference
 - **Cancel any run** — the loop honors an `AbortController` wired to the palette's Cancel button; terminal step is emitted as `canceled` and the audit log records the abort
+- **Task Planner (write-side)** — Management-and-above agents can decompose projects into tickets with `decompose_project`, delegate subtasks with deterministic workload scoring (`delegate_subtask`), and review deliverables (`review_deliverable`). Level-gated tool injection — IC employees get read-only, Officers/Senior-Mgmt/Management get decomposition, Management/Supervisor/Lead get delegation + review. Every write-side run passes through an **amber confirmation gate** in the palette before any ticket is created; the deterministic 4-term scoring function (`0.4 * role_fit + 0.3 * (1 - load) + 0.2 * availability + 0.1 * past_performance`) is auditable in the `task.delegated` event payload. Four clamped settings (`planner_max_tickets`, `planner_max_depth`, `planner_approval_level`, `planner_escalation_threshold`) in Settings → Runtime → Task Planner
 
 ### Ship-Ready
 
@@ -165,8 +166,8 @@ Team-X/
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |
 | Lint / format | Biome |
-| Unit tests | Vitest (612 tests) |
-| E2E tests | Playwright (4 specs) |
+| Unit tests | Vitest (1033 tests) |
+| E2E tests | Playwright (8 specs) |
 | CI | GitHub Actions |
 
 ---
@@ -215,7 +216,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **612 unit tests** across 55 test files and **4 Playwright E2E specs**:
+Team-X ships with **1033 unit tests** across the workspace and **8 Playwright E2E specs**:
 
 | Spec | Coverage |
 |------|----------|
@@ -223,6 +224,10 @@ Team-X ships with **612 unit tests** across 55 test files and **4 Playwright E2E
 | `ticket-flow.spec.ts` | Create ticket, assign, agent reply |
 | `meeting-flow.spec.ts` | Call meeting, interject, end, verify minutes |
 | `vault-backup.spec.ts` | Vault upload, integrity check, backup create/verify |
+| `rag-flow.spec.ts` | RAG retrieval and attribution in agent turns |
+| `command-palette.spec.ts` | Cmd+K intent classification, destructive gate, history |
+| `agentic-loop.spec.ts` | Complex-request agentic loop, step log, persisted thread |
+| `task-planner.spec.ts` | Write-side planner, amber confirmation gate, decompose → delegate round-trip |
 
 All E2E specs run against a canned test-mode provider — no Ollama, no API keys, no network.
 

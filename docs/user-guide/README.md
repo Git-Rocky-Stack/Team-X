@@ -12,4 +12,5 @@ Welcome to the Team-X user guide. These docs cover everything you need to run yo
 6. [Backup and Restore](backup-and-restore.md) — Creating backups, restoring, backup history
 7. [Command Palette](command-palette.md) — Natural-language commands (Cmd+K), 15 intents, destructive-action gate
 8. [Agentic Loop](agentic-loop.md) — Ask free-form questions, grounded answers from the system-agent, 6 read-only tools, budget caps
-9. [Keyboard Shortcuts](keyboard-shortcuts.md) — Navigation and productivity shortcuts
+9. [Task Planner](task-planner.md) — Decompose projects into tickets, delegate with deterministic workload scoring, review deliverables, write-side confirmation gate
+10. [Keyboard Shortcuts](keyboard-shortcuts.md) — Navigation and productivity shortcuts
