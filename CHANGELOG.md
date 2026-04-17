@@ -27,7 +27,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] — 2026-04-20
 
-> **Status:** Phase 5 (Intelligence Layer) complete. Baseline: 612 unit tests / 4 E2E specs (v1.0.0) → **1162 unit tests / 11 E2E specs / 12 Playwright cases** (+550 unit, +7 E2E specs, +8 cases). Additive release — RAG foundation (M28), RAG into agent turns (M29), NLU engine + command palette (M30), agentic loop (M31), task planner (M32), copilot service (M33), copilot UI (M34), demo + hardening (M35). Zero breaking changes. Per-milestone entries preserved in original Added / Changed / Fixed order below.
+> **Status:** Phase 5 (Intelligence Layer) complete. Baseline: 612 unit tests / 4 E2E specs (v1.0.0) → **1169 unit tests / 11 E2E specs / 12 Playwright cases** (+557 unit, +7 E2E specs, +8 cases). Additive release — RAG foundation (M28), RAG into agent turns (M29), NLU engine + command palette (M30), agentic loop (M31), task planner (M32), copilot service (M33), copilot UI (M34), demo + hardening (M35). Zero breaking changes. Per-milestone entries preserved in original Added / Changed / Fixed order below.
+
+### M35 — Demo + Hardening (2026-04-20)
+
+> **Status:** Complete. Baseline: 1130 unit / 10 E2E (11 Playwright cases) → current: **1169 unit / 11 E2E (12 Playwright cases)** (+39 unit, +1 E2E spec, +1 Playwright case). Phase 5 exit-gate milestone. Hardens every M28–M34 deliverable and lands v1.1.0.
+
+#### Added
+- **Performance defaults audit** — `apps/desktop/src/main/db/seed.ts` carries a measurement block against Ollama + llama3.1:8b (Q4_K_M): cold 208s, warm 66s per analyzer tick against a 67-event / 2288-char / 734-prompt-token shaped prompt. All 10 Phase 5 settings clamps HELD on evidence (0.55× utilisation vs `agentic_timeout_ms`, 4.5× headroom vs 5-min copilot cadence, 4× headroom vs `agentic_max_tokens`). T1, commit `b68d09b`, +4 unit tests
+- **Cross-milestone integration E2E** — NEW `apps/desktop/e2e/phase-5-integration.spec.ts` exercising the full Phase 5 delivery in a single Electron boot: RAG index → command palette → `complex_request` → agentic-loop tool call → grounded answer → write-side decompose → copilot analyzer tick → insight card → dismiss. T2, commit `1108247`, +1 E2E / +1 Playwright case
+- **Audit view chips for 18 Phase 5 event types** — `rag.index.*`, `agent.step`, `agentic.*`, `plan.*`, `task.*`, `review.*`, `copilot.*`, `command.executed` each gain a chip with a 200-char payload summary. Narrow helpers extracted to `audit-event-chip-helpers.ts` for source-string-audit testability. T3, commit `51393f8`, +28 unit tests
+- **`docs/plans/2026-04-19-team-x-phase-5-retrospective.md`** — 271-line Phase 5 retrospective with locked six-section structure (delivery arc / what paid off / what cost time / deferred scope / Phase 6 seeds / appendix). Future phase retrospectives MUST match this structure. T4, commit `0f8b51c`
+- **Demo walkthrough + 5 scenario library** — NEW `docs/demo/phase-5-walkthrough.md` + 5 scenario docs under `docs/demo/scenarios/` (hire-a-CEO, ticket-lifecycle, one-click-all-hands, ask-copilot-grounded-answer, decompose-and-surface). 795 insertions across 6 new files. T5, commit `3cffe29`
+- **`docs/user-guide/demo-walkthrough.md`** — external-facing user-guide copy of the demo walkthrough for self-guided onboarding. T10
+- **`apps/desktop/src/e2e-regression-guards.test.ts`** — 2 mechanical guards banning `.waitForTimeout(N > 100ms)` as a synchronization primitive + requiring every E2E spec to use at least one `[data-*]` attribute locator. T9, commit `23f3b1b`, +2 unit tests
+- **`apps/desktop/src/phase-5-complete-marker.test.ts`** — 3 source-string-audit pins locking the Phase 5 exit state (CLAUDE.md Phase 5 COMPLETE literal + design doc §9 M35 ✅ Complete row + CONTINUITY.md Phase 5 COMPLETE header). Belt-and-suspenders guard against "in progress but v1.1.0 tagged" ambiguous state. T10, +3 unit tests
+
+#### Changed
+- **README + user-guide reconciliation sweep** — tests badge 1130 → 1162, E2E 10 → 11 specs, Phase 5 status flipped from "in progress" to "complete" across every user-facing doc. T6, commit `a966deb`
+- **CHANGELOG `[Unreleased]` → `[1.1.0]` promotion** — accumulated M30 + M31 + M32 + M33 + M33 F3/F4 + M34 entries promoted under a new "Phase 5 — Intelligence Layer" narrative header; `[Unreleased]` reset to six-category scaffold; version-link refs appended. T7, commit `cb0ab4c`
+- **Version bump 1.0.0 → 1.1.0** across 7 `package.json` files (workspace root + `apps/desktop` + 5 `packages/*`) + `top-bar.test.tsx` pinning the literal `Phase 5` badge string to catch accidental `Phase 6` bumps in CI. T8, commit `a8dc98e`, +2 unit tests
+- **CLAUDE.md Phase 5 status line** flipped from "in progress" to "complete. All 8 milestones shipped (M28 → M35). v1.1.0." + Phase 5 subheader flipped "in progress" → "complete" + M35 milestone block appended. T10
+- **Phase 5 design doc §9 M35 row** flipped 📋 Planned → ✅ Complete (2026-04-20) with full task breakdown metrics. §13 Decisions Log gains D13 (performance-defaults HOLD rationale) + D14 (Phase 5 exit-marker triad). T10
+- **`.loki/CONTINUITY.md`** — Phase 5 COMPLETE header prepended to top-of-file with full metrics delta table, T0–T10 commit table, patterns-that-carry-forward, and Phase 6 T0 Next Session Startup Checklist. T10
+
+#### Fixed
+- **`rag-flow.spec.ts` synchronisation** — `page.waitForTimeout(500)` replaced with `expect.poll` against `teamx.rag.stats.embeddingCount > 0` — eliminates the last fixed-duration sleep in the E2E suite. T9, commit `23f3b1b`
+- **`top-bar.test.tsx` TS2532 latent-from-T8** — `badgeMatch![1].trim()` → `badgeMatch?.[1]?.trim() ?? ''` — cleared the typecheck offender surfaced by T9's guard harness. T9
+- **6 E2E specs gain stable `[data-copilot-toolbar-toggle]` anchor** — `copilot-service.spec.ts`, `meeting-flow.spec.ts`, `rag-flow.spec.ts`, `smoke.spec.ts`, `ticket-flow.spec.ts`, `vault-backup.spec.ts`. Locks the Phase 5 badge assertion against a stable attribute rather than the copy. T9
 
 ### M34 — Copilot UI (2026-04-18)
 
