@@ -8,3 +8,4 @@ export * from './ipc.js';
 export * from './rag.js';
 export * from './command.js';
 export * from './copilot.js';
+export * from './capabilities.js';
