@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] — 2026-04-20
 
-> **Status:** Phase 5 (Intelligence Layer) complete. Baseline: 612 unit tests / 4 E2E specs (v1.0.0) → **1169 unit tests / 11 E2E specs / 12 Playwright cases** (+557 unit, +7 E2E specs, +8 cases). Additive release — RAG foundation (M28), RAG into agent turns (M29), NLU engine + command palette (M30), agentic loop (M31), task planner (M32), copilot service (M33), copilot UI (M34), demo + hardening (M35). Zero breaking changes. Per-milestone entries preserved in original Added / Changed / Fixed order below.
+> **Status:** Phase 5 (Intelligence Layer) complete. Baseline: 612 unit tests / 4 E2E specs (v1.0.0) → **1169 unit tests / 11 E2E specs / 12 Playwright cases** (+557 unit, +7 E2E specs, +8 cases). Additive release — RAG foundation (M28), RAG into agent turns (M29), NLU engine + command palette (M30), agentic loop (M31), task planner (M32), copilot service (M33), copilot UI (M34), demo + hardening (M35). Zero breaking changes. Per-milestone entries preserved in original Added / Changed / Fixed order below; M28 + M29 entries backfilled 2026-04-20 (post-v1.1.0 tag) per the M35 T7 follow-up — shipping state unchanged, CHANGELOG record updated for ledger completeness.
 
 ### M35 — Demo + Hardening (2026-04-20)
 
@@ -254,6 +254,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Fixed
 - `vault.file_created` / `vault.file_deleted` events now emit on DB commit from the vault service (M30 T0) — closes the renderer-cache staleness regression that broke `vault-backup.spec.ts` and lays groundwork for M32 RAG-on-vault. See `docs/plans/2026-04-13-vault-backup-regression-findings.md` §7 for the full root-cause analysis
+
+---
+
+### M29 — RAG Integration into Agent Turns (2026-04-13)
+
+> **Status:** Complete. Baseline: 641 unit tests → current: 668 unit tests (+27 unit). Layered RAG retrieval into agent turns on top of the M28 foundation. Entry backfilled 2026-04-20 per M35 T7 follow-up; no code or test changes from the original 2026-04-13 shipping state.
+
+#### Added
+- **`resolveSystemPrompt`** composes retrieved context with the role.md system prompt. Retrieval runs against the M28 `embeddings` table through the `@team-x/intelligence` retriever; hits above the similarity threshold are spliced in as a sliding attribution block at the top of the system prompt, leaving role identity untouched
+- **On-write event-bus re-indexing** — `RagIndexer` subscribes to message writes and vault file writes, chunks the new payload, embeds it via the M28 pipeline, and persists to the `embeddings` table. Zero polling; zero scheduled work; indexing tracks writes 1:1
+- **SHA256 content-hash dedup** — chunks carry a hash so re-indexing an unchanged source is a no-op. Mutated sources drop the old rows and write the new set in one transaction
+- **Sliding attribution block** — retrieved context lives in a single transparent `<context>...</context>` block above the role prompt. Role.md authors write stable identity without knowing retrieval exists
+- **RAG subsection in Settings → Runtime** — toggle plus the three M28 clamped numeric inputs (`rag_chunk_size`, `rag_chunk_overlap`, `rag_similarity_threshold`), with per-field help text and clamp enforcement
+- **27 new unit tests** across `resolveSystemPrompt`, the indexer's on-write subscriptions, dedup guards, and the attribution-block composition — lifts the unit baseline 641 → 668
+
+#### Changed
+- `orchestrator.runAgent` now calls `resolveSystemPrompt` before every agent turn. Zero-cost passthrough when RAG is disabled at the settings layer or when the query yields zero above-threshold hits
+- Phase 5 design doc (`docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md`) §9 Milestone Breakdown — M29 status flipped `📋 Planned` → `✅ Complete`
+
+---
+
+### M28 — Intelligence Package + RAG Foundation (2026-04-13)
+
+> **Status:** Complete. Baseline: 612 unit tests / 4 E2E (v1.0.0) → current: 641 unit tests / 4 E2E (+29 unit). Landed the `@team-x/intelligence` workspace package, the sqlite-vec vector store, and the embedding + retrieval primitives every later Phase 5 milestone (M29 / M30 / M31 / M33) builds on. Entry backfilled 2026-04-20 per M35 T7 follow-up; no code or test changes from the original 2026-04-13 shipping state.
+
+#### Added
+- **`packages/intelligence`** — new workspace package scaffold with `tsconfig.json` project reference wiring into the workspace build graph. Initial surface area is `@team-x/intelligence/rag`; M30 later adds `@team-x/intelligence/nlu` and M31 adds `@team-x/intelligence/loop` to the same package
+- **Migration 0008 — sqlite-vec `embeddings` table** with composite index on company + source. Best-effort sqlite-vec extension load with a LIKE-distance fallback so sql-js unit tests continue to run without the native extension
+- **Token-aware chunker** (`packages/intelligence/src/rag/chunker.ts`) — splits input into overlapping chunks with configurable chunk size and overlap. Prefers sentence boundaries over mid-sentence splits
+- **Embedding pipeline** — `buildEmbedAdapter(providerRouter, settings)` returns an embedder that routes through the existing provider-router + privacy-tier filter from M18 + M19. Deterministic `createFakeEmbedAdapter` for tests — returns a reproducible pseudo-random vector derived from `sha256(text)` so test assertions can pin exact cosine values
+- **Retriever** (`packages/intelligence/src/rag/retriever.ts`) — cosine-similarity query over the `embeddings` table with threshold and top-K gating. Below-threshold hits are discarded entirely, not returned with a flag — downstream consumers treat "no hits" and "no relevant hits" identically
+- **Three clamped RAG settings keys** seeded in `settings.seedDefaults`: `rag_chunk_size`, `rag_chunk_overlap`, `rag_similarity_threshold`. Persisted via the existing key-value settings store; read through a new `settingsRepo.getRag()` helper mirroring the M19 runtime / privacy / concurrency shape
+- **29 new unit tests** across the chunker (token-count determinism, overlap math, sentence-boundary preference, empty-input guard), embedding pipeline (batch happy path, provider-router integration, privacy-tier honoring, fake adapter determinism), and retriever (threshold gate, K cap, cosine math correctness, zero-hits empty return, sqlite-vec + LIKE-fallback parity) — lifts the unit baseline 612 → 641
+
+#### Changed
+- Settings key-value store gains `getRag()` / `setRag()` helpers alongside the existing M19 shape — M29's RagSection UI is a direct port of the existing RuntimeSection pattern
+- Phase 5 design doc (`docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md`) §9 Milestone Breakdown — M28 status flipped `📋 Planned` → `✅ Complete`
 
 ---
 
