@@ -16,13 +16,16 @@ import {
   X,
 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { Separator } from '@/components/ui/separator.js';
-import { intentLabel } from '@/features/command/intent-labels.js';
+import {
+  AuditEventChip,
+  buildRowSummary,
+  formatEventType,
+} from '@/features/audit/audit-event-chip.js';
 import { useAuditEvents, useAuditExport, useAuditStats } from '@/hooks/use-audit.js';
 
 // ---------------------------------------------------------------------------
@@ -30,51 +33,6 @@ import { useAuditEvents, useAuditExport, useAuditStats } from '@/hooks/use-audit
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 50;
-
-/** Event type → display color. */
-const EVENT_TYPE_COLORS: Record<string, string> = {
-  'employee.hired': 'bg-green-600/20 text-green-400',
-  'employee.fired': 'bg-red-600/20 text-red-400',
-  'employee.promoted': 'bg-blue-600/20 text-blue-400',
-  'ticket.created': 'bg-cyan-600/20 text-cyan-400',
-  'ticket.assigned': 'bg-yellow-600/20 text-yellow-400',
-  'ticket.closed': 'bg-emerald-600/20 text-emerald-400',
-  'meeting.started': 'bg-purple-600/20 text-purple-400',
-  'meeting.ended': 'bg-purple-600/20 text-purple-400',
-  'mcp.added': 'bg-orange-600/20 text-orange-400',
-  'mcp.removed': 'bg-orange-600/20 text-orange-400',
-  'chat.sent': 'bg-slate-600/20 text-slate-400',
-  'backup.created': 'bg-indigo-600/20 text-indigo-400',
-  'backup.restored': 'bg-indigo-600/20 text-indigo-400',
-  'vault.uploaded': 'bg-teal-600/20 text-teal-400',
-  'vault.deleted': 'bg-teal-600/20 text-teal-400',
-  'work.started': 'bg-sky-600/20 text-sky-400',
-  'work.completed': 'bg-sky-600/20 text-sky-400',
-  'work.failed': 'bg-red-600/20 text-red-400',
-  'token.delta': 'bg-gray-600/20 text-gray-400',
-  'command.executed': 'bg-brand/15 text-brand',
-  'plan.proposed': 'bg-violet-600/20 text-violet-400',
-  'plan.approved': 'bg-violet-600/20 text-violet-400',
-  'task.delegated': 'bg-sky-600/20 text-sky-400',
-  'task.escalated': 'bg-rose-600/20 text-rose-400',
-  'review.requested': 'bg-amber-600/20 text-amber-400',
-  'review.completed': 'bg-amber-600/20 text-amber-400',
-};
-
-/** Override `formatEventType` output for event types where the
- * auto-title-casing ("Command Executed") is less readable than a
- * hand-tuned label. Keep this list tiny. */
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  'command.executed': 'Command',
-  'plan.proposed': 'Plan Proposed',
-  'plan.approved': 'Plan Approved',
-  'task.delegated': 'Task Delegated',
-  'task.escalated': 'Task Escalated',
-  'review.requested': 'Review Requested',
-  'review.completed': 'Review Completed',
-};
-
-const DEFAULT_COLOR = 'bg-zinc-600/20 text-zinc-400';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -89,98 +47,6 @@ function formatTimestamp(ms: number): string {
     minute: '2-digit',
     second: '2-digit',
   });
-}
-
-function formatEventType(type: string): string {
-  const override = EVENT_TYPE_LABELS[type];
-  if (override) return override;
-  return type
-    .split('.')
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(' ');
-}
-
-/**
- * Event types that opt into payload-aware row summaries in the
- * collapsed audit row. Returns `null` for non-matching types so the
- * row renderer skips the summary span (no empty DOM element).
- */
-const SUMMARIZABLE_TYPES = new Set([
-  'command.executed',
-  'plan.proposed',
-  'plan.approved',
-  'task.delegated',
-  'task.escalated',
-  'review.requested',
-  'review.completed',
-]);
-
-function buildRowSummary(eventType: string, payloadJson: string): string | null {
-  if (!SUMMARIZABLE_TYPES.has(eventType)) return null;
-  const payload = tryParsePayload(payloadJson);
-  if (!payload) return null;
-
-  if (eventType === 'command.executed') {
-    const intent = typeof payload.intent === 'string' ? payload.intent : '';
-    const rawText = typeof payload.rawText === 'string' ? payload.rawText : '';
-    const outcome = payload.outcome === 'error' ? 'error' : 'ok';
-    const durationMs =
-      typeof payload.durationMs === 'number' && Number.isFinite(payload.durationMs)
-        ? Math.round(payload.durationMs)
-        : null;
-    const parts: string[] = [];
-    if (intent) parts.push(intentLabel(intent));
-    if (rawText) {
-      const truncated = rawText.length > 80 ? `${rawText.slice(0, 77)}...` : rawText;
-      parts.push(`"${truncated}"`);
-    }
-    if (durationMs !== null) parts.push(`${durationMs}ms`);
-    if (outcome === 'error') parts.push('failed');
-    return parts.length > 0 ? parts.join(' · ') : null;
-  }
-
-  // Write-side planner events (M32 T6)
-  const parts: string[] = [];
-  switch (eventType) {
-    case 'plan.proposed': {
-      const count = typeof payload.subtaskCount === 'number' ? payload.subtaskCount : 0;
-      parts.push(`${count} subtask${count !== 1 ? 's' : ''}`);
-      if (payload.truncated === true) parts.push('truncated');
-      if (typeof payload.projectId === 'string') parts.push(payload.projectId.slice(0, 8));
-      break;
-    }
-    case 'plan.approved': {
-      const tickets = Array.isArray(payload.ticketIds) ? payload.ticketIds.length : 0;
-      parts.push(`${tickets} ticket${tickets !== 1 ? 's' : ''} approved`);
-      break;
-    }
-    case 'task.delegated': {
-      if (typeof payload.assigneeName === 'string') parts.push(`to ${payload.assigneeName}`);
-      if (payload.fallbackUsed === true) parts.push('fallback');
-      if (typeof payload.attemptCount === 'number' && payload.attemptCount > 1) {
-        parts.push(`${payload.attemptCount} attempts`);
-      }
-      break;
-    }
-    case 'task.escalated': {
-      if (typeof payload.reason === 'string') {
-        const truncated =
-          payload.reason.length > 60 ? `${payload.reason.slice(0, 57)}...` : payload.reason;
-        parts.push(truncated);
-      }
-      break;
-    }
-    case 'review.requested': {
-      if (typeof payload.ticketId === 'string') parts.push(payload.ticketId.slice(0, 8));
-      break;
-    }
-    case 'review.completed': {
-      if (typeof payload.outcome === 'string') parts.push(payload.outcome);
-      if (payload.escalated === true) parts.push('escalated');
-      break;
-    }
-  }
-  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 function getActorLabel(actorId: string, actorKind: string, employees: Employee[]): string {
@@ -313,7 +179,6 @@ function EventRow({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const colorClass = EVENT_TYPE_COLORS[event.eventType] ?? DEFAULT_COLOR;
   const payload = isExpanded ? tryParsePayload(event.payloadJson) : null;
   const rowSummary = buildRowSummary(event.eventType, event.payloadJson);
 
@@ -334,9 +199,7 @@ function EventRow({
           {formatTimestamp(event.createdAt)}
         </span>
 
-        <Badge variant="outline" className={`shrink-0 text-xs ${colorClass}`}>
-          {formatEventType(event.eventType)}
-        </Badge>
+        <AuditEventChip eventType={event.eventType} />
 
         <span className="shrink-0 text-sm text-zinc-300">
           {getActorLabel(event.actorId, event.actorKind, employees)}
