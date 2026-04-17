@@ -1,4 +1,58 @@
-# Loki Continuity — **Phase 5 COMPLETE (2026-04-20, v1.1.0).** All 8 Phase 5 milestones shipped (M28 → M35). 1169 unit tests + 11 E2E specs (12 Playwright cases) passing. M35 T10 (the LAST Phase 5 task) shipped: CLAUDE.md Phase 5 status line flipped 'in progress' → 'complete. All 8 milestones shipped (M28 → M35). v1.1.0.'; Phase 5 design doc §9 M35 row flipped 📋 Planned → ✅ Complete; design doc §13 gained D13 (performance-defaults HOLD rationale) + D14 (Phase 5 exit-marker triad); Phase 5 COMPLETE header prepended to .loki/CONTINUITY.md; NEW docs/user-guide/demo-walkthrough.md (external-facing copy of docs/demo/phase-5-walkthrough.md); +3 unit release-marker tests (phase-5-complete-marker.test.ts — source-string audit pinning CLAUDE.md literal + design doc M35 ✅ Complete row + CONTINUITY.md Phase 5 COMPLETE header). Atomic + ledger commit cadence preserved. v1.1.0 git tag on the T10 ledger commit. **Phase 6 scope TBD — next session opens Phase 6 T0 (plan doc authoring).**
+# Loki Continuity — **M36 T0 SHIPPED (2026-04-21).** First Phase 6 milestone implementation opens. Plan-doc-only per Phase 5 M28 T0 precedent (no T1+ task breakdown inside the doc). docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md (196 lines / 210 insertions) locks: 41 capabilities across 6 categories (engineering 10 + product 7 + design 5 + operations 7 + strategy 6 + support 6); lowercase_snake_case case sensitivity (Q1 resolved); capabilities in role.md frontmatter not DB (D16 reaffirmed); pack version bump 1.0.0 → 1.1.0 on backfill completion (additive schema); subtractive categorization rubric (role.md body is canonical source, not title). Eight explicit non-goals: no changes to computeRoleFit (M37), no new DB tables, no new IPC, no new bus events, no user-authored strings (closed enum), no changes to M32's locked 4-weight signature (D18), no per-company capability differences, no capability hierarchies. Success criterion §6 #6: live decompose_project / delegate_subtask must produce byte-identical output to Phase 5 baseline — proof M36 is additive-only. Zero code / zero tests / zero IPC/bus/migrations in T0. Head-of-queue advances to **M36 T1 — capability taxonomy enum + shared-types scaffold** (~15 unit tests; packages/shared-types/src/capabilities.ts NEW; no parser changes yet — those land in M36 T2). Atomic commit `dc8d4d3` + ledger commit (this). — **Phase 5 COMPLETE (2026-04-20, v1.1.0).** All 8 Phase 5 milestones shipped (M28 → M35). 1169 unit tests + 11 E2E specs (12 Playwright cases) passing.
+
+## M36 T0 SHIPPED — 2026-04-21 — plan doc (Capabilities Taxonomy + Parser) (dc8d4d3)
+
+**Task:** M36 T0 — author `docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md` (first Phase 6 milestone plan doc). Plan-doc-only per Phase 5 M28 T0 precedent: no T1-T10 task-level table inside the doc. Locks the capability taxonomy + validation rules + backfill strategy + non-goals that constrain M36 T1+.
+
+**Atomic commit:** `dc8d4d3` — `feat(m36-t0): M36 T0 — plan doc (Capabilities Taxonomy + Parser)` (1 file / 210 insertions).
+**Ledger commit:** `chore(loki): M36 T0 — commit ledger (dc8d4d3)` (this commit).
+**Plan doc:** [docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md](../docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md).
+**Phase doc:** [docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md](../docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md) §5 M36 row + §7 D15 + D16 + §9 Q1.
+
+### What shipped
+
+Eight-section plan doc. No task-level breakdown (T1-T10 table intentionally absent — per pending.json directive mirroring Phase 5 M28 T0 and the just-shipped Phase 6 T0 a429abf). Sections:
+
+1. **Overview.** Closes the structural gap UPSTREAM of `computeRoleFit`. M32's current title+keyword heuristic was flagged four separate times in source comments as deferred. M36 delivers the VOCABULARY + SUBSTRATE; M37 will consume it downstream.
+2. **Non-goals (8 explicit exclusions).** No changes to `computeRoleFit` (that's M37). No new DB tables (D16 reaffirmed). No new IPC channels. No new bus events. No user-authored capability strings (closed enum). No changes to M32's locked 4-weight signature (D18 reaffirmed). No per-company capability differences. No capability hierarchies (flat strings, strict equality).
+3. **What ships.** Surface / deliverable / builds-on table + target metrics (1169 → ~1220 unit, 11 → 11 E2E, 13 → 13 migrations, 80+ → 80+ IPC, 31 → 31 bus events, 0 new settings keys).
+4. **Invariants preserved.** Explicit callouts for invariant #9 (role-pack user edits as overrides — backfill is additive to `strategia-official`, not destructive to user overrides) + invariant #6 (events append-only — taxonomy is build-time, no runtime events).
+5. **Architectural decisions (§5 — 8 subsections).**
+   - §5.1 **Locked taxonomy — 41 capabilities.** Phase 6 T0 §7 D15's `~40` target concretizes to 41: engineering (10: backend/frontend/mobile/data/ml + devops + site_reliability + security + qa + api_design), product (7), design (5), operations (7), strategy (6), support (6). Locked at T0 — future additions require retrospective-driven amendment.
+   - §5.2 **Q1 resolved — lowercase_snake_case.** Case-sensitive enum values. Strict equality at parse time; IDE autocomplete friendliness; consistent with `CopilotCategory` house style.
+   - §5.3 **Frontmatter, not DB table.** D16 reaffirmed. Consumers query via `roleLoader.getCapabilities(roleId)`.
+   - §5.4 **Validation rules.** Unknown capability → HARD ERROR. Zero capabilities on Strategia pack → HARD ERROR. Duplicate → dedup + WARNING. Missing field on non-Strategia pack → WARNING (back-compat for community packs pre-M36).
+   - §5.5 **Backfill strategy — level-clustered.** Officer (5) → Senior Mgmt (7) → Management (8) → Supervisor (5) → Lead (5) → IC (25) → System (2) = 57 total. Atomic commit per role or cluster.
+   - §5.6 **Categorization rubric — subtractive.** A role earns a capability ONLY if the role.md body explicitly describes owning/leading that function. Prevents title-keyword drift (M32 heuristic failure mode).
+   - §5.7 **Pack versioning — minor bump.** `strategia-official` pack.json 1.0.0 → 1.1.0. Additive schema extension; older parsers ignore unknown frontmatter keys.
+   - §5.8 **Source-string-audit marker.** Extends M35 T3/T8/T9/T10 lineage to 5-deep. Pins 6 category names + count (41) + 3 representative capability literals. Compounds to 6-deep at M41 T10.
+6. **Success criteria (6 simultaneous conditions).** Taxonomy authored + parser validates + 57 roles backfilled + pack re-signed + tests green + byte-identical `decompose_project` / `delegate_subtask` output vs Phase 5 baseline (proof M36 is additive-only).
+7. **References.** Cross-links to Phase 6 design doc + Phase 5 M32 + M34 + M35 + retrospective + CLAUDE.md.
+8. **Handoff.** Names M36 T1 expectations explicitly (capability taxonomy enum in shared-types, ~15 tests) without pre-binding T1+ breakdown.
+
+### Locked outcomes (final — not re-openable without retrospective amendment)
+
+- **Capability count:** `41` exactly (not `~40`). Support category needed 6 to cover CS / tech-writing / tech-support / content-marketing / sales / developer-relations without collapsing distinct functions.
+- **Case sensitivity:** `lowercase_snake_case` (Q1).
+- **Storage medium:** role.md frontmatter (D16 reaffirmed).
+- **Pack semver on backfill:** `1.0.0 → 1.1.0` (minor; additive).
+- **System role capabilities:** `system-agent` gets `{requirements_analysis, product_analytics}` (research + reporting flavor); `system-copilot` gets `{product_analytics, process_improvement}` (pattern-detection + advisory flavor).
+
+### Verification gates
+
+- **Unit tests:** 1169/1169 baseline preserved (docs-only, no code surface).
+- **E2E:** 12/12 Playwright cases across 11 specs — not re-run (no renderer or main-process changes).
+- **Lint:** 0 errors / 24 warnings — preserved.
+- **Typecheck:** clean across all 6 packages — not re-run (no TypeScript surface).
+- **Production build:** not re-run.
+
+### Head-of-queue
+
+**M36 T1 — capability taxonomy enum + shared-types scaffold.** Author `packages/shared-types/src/capabilities.ts` with the 41-string locked taxonomy + `Capability` union + `CAPABILITY_LIST` tuple + `CapabilityCategory` union + `CAPABILITY_CATEGORY_MAP` + `isCapability(s)` type guard. ~15 unit tests. Zero parser changes in T1 — parser extension lands in M36 T2. Zero role.md edits — backfill starts at M36 T3. See `.loki/queue/current-task.json` for acceptance criteria.
+
+---
+
+
 
 ## Phase 5 COMPLETE — 2026-04-20 — v1.1.0
 

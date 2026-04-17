@@ -1,13 +1,13 @@
 {
   "currentPhase": "DEVELOPMENT",
-  "currentMilestone": "Phase 6 T0",
-  "milestoneName": "Plan doc — Capabilities & Evidence",
+  "currentMilestone": "M36",
+  "milestoneName": "Capabilities Taxonomy + Parser",
   "tasksCompleted": 1,
   "tasksFailed": 0,
-  "totalTasks": 1,
-  "planDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-  "startedAt": "2026-04-20T15:00:00Z",
-  "completedAt": "2026-04-20T15:30:00Z",
+  "totalTasks": null,
+  "planDoc": "docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md",
+  "startedAt": "2026-04-21T00:00:00Z",
+  "completedAt": null,
   "phaseComplete": false,
   "inflight": {},
   "phase": "Phase 6 — Capabilities & Evidence",
@@ -16,11 +16,11 @@
   "previousPhase": "Phase 5 — Intelligence Layer",
   "previousPhaseCompletedAt": "2026-04-20T13:00:00Z",
   "previousPhaseVersionTag": "v1.1.0",
-  "previousMilestone": "M35",
-  "previousMilestoneName": "Demo + Hardening",
-  "previousMilestoneCompletedAt": "2026-04-20T13:00:00Z",
-  "nextMilestone": "M36",
-  "nextMilestoneName": "Capabilities taxonomy + role.md parser (authored at M36 T0 — locks ~40-capability enum across 6 categories, extends role-schema parser with capabilities: string[] field + validation, backfills all 55 F10 roles + 2 system roles under role-packs/strategia-official/roles/. Zero new DB tables — capabilities live in role.md frontmatter per invariant #9 decision D16)",
+  "previousMilestone": "Phase 6 T0",
+  "previousMilestoneName": "Plan doc — Capabilities & Evidence",
+  "previousMilestoneCompletedAt": "2026-04-20T15:30:00Z",
+  "nextMilestone": "M36 T1",
+  "nextMilestoneName": "Capability taxonomy enum + shared-types scaffold (authors packages/shared-types/src/capabilities.ts with 41-string locked taxonomy from M36 T0 plan doc §5.1 + Capability union + CAPABILITY_LIST runtime array + CapabilityCategory union + CAPABILITY_CATEGORY_MAP + isCapability(s) type guard + unit tests pinning the 6 category names, the 41 count, and three representative capability literals via source-string-audit per M35 lineage. Zero parser changes in M36 T1 — parser extension is M36 T2.)",
   "tasksInProgress": {},
   "baseline": {
     "unitTests": 1130,
@@ -407,6 +407,25 @@
         "typecheck": "clean across 6 packages",
         "productionBuild": "pnpm -F @team-x/desktop build succeeds"
       }
+    },
+    "M36-T0": {
+      "name": "Plan doc — Capabilities Taxonomy + Parser",
+      "shippedAt": "2026-04-21T00:00:00Z",
+      "commit": "dc8d4d3",
+      "deliverable": "NEW docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md (196 source lines / 210 insertions). Opens Phase 6 M36 — the first milestone implementation under the Phase 6 Capabilities & Evidence theme. Plan-doc-only per pending.json directive mirroring Phase 5 M28 T0 and the just-shipped Phase 6 T0 (a429abf): zero code, zero tests, zero IPC/bus/migrations in T0 itself. Structure: (1) Overview — closes the structural gap UPSTREAM of computeRoleFit (M32's title+level keyword heuristic flagged as deferred 4× in source comments) by delivering the VOCABULARY + SUBSTRATE; M37 will consume it downstream. (2) Non-goals — no changes to computeRoleFit (that's M37), no new DB tables (D16 reaffirmed), no new IPC channels, no new bus events, no user-authored capability strings (closed enum), no changes to M32's locked 4-weight signature (D18 reaffirmed), no per-company capability differences, no capability hierarchies (flat strings, strict equality). (3) What ships — surface/deliverable/builds-on table. (4) Invariants preserved — §3 references Phase 6 T0 §3; explicit callouts for #9 (role-pack overrides) + #6 (events append-only). (5) Locked taxonomy §5.1 — 41 capabilities across 6 categories (engineering 10 + product 7 + design 5 + operations 7 + strategy 6 + support 6); Phase 6 T0 §7 D15's ~40 target concretized to 41 (support category needed six to cover CS/tech-writing/tech-support/content-marketing/sales/devrel without collapsing distinct role functions). (6) Q1 resolved §5.2 — case-sensitive lowercase_snake_case convention. Strict equality at parse time; IDE autocomplete friendliness; consistent with CopilotCategory house style. (7) D16 reaffirmed §5.3 — capabilities in role.md frontmatter, not DB. (8) Validation rules §5.4 — unknown capability → HARD ERROR; zero capabilities on Strategia pack → HARD ERROR; duplicate → dedup + WARNING; missing field on non-Strategia pack → WARNING (back-compat). (9) Backfill strategy §5.5 — role-by-role, level-clustered (Officer → IC → system), atomic commit per role or cluster, pack re-sign at pack-version bump (1.0.0 → 1.1.0, minor — additive frontmatter field). (10) Categorization rubric §5.6 — SUBTRACTIVE, not additive: a role earns a capability ONLY if the role.md body explicitly describes owning/leading that function. Prevents title-keyword drift. (11) Source-string-audit test lineage §5.8 — extends M35 T3/T8/T9/T10 lineage to 5-deep. Pins category names + count (41) + three representative capability literals. Compounds to 6-deep at M41 T10. (12) Success criteria §6 — 6 simultaneous conditions including byte-identical decompose_project/delegate_subtask output vs Phase 5 baseline (proof M36 is additive-only — capabilities dormant until M37 consumes them). Zero code, zero tests, zero verification gates re-run per plan-doc-only precedent.",
+      "filesTouched": [
+        "docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md (NEW, 196 lines / 210 insertions)"
+      ],
+      "testsDelta": 0,
+      "verificationGates": {
+        "unitTests": "not re-run (docs-only delivery; 1169/1169 baseline preserved from M35 T10 / Phase 5 exit state)",
+        "lint": "not re-run (no code surface)",
+        "typecheck": "not re-run (no TypeScript surface)",
+        "e2e": "not re-run (no renderer or main-process surface; 12 cases / 11 spec files / 28.8s baseline preserved from M35 T10)"
+      },
+      "structureCompliance": "All required sections from pending.json §M36 T0 targets present: (1) Overview with gap-closure framing. (2) Non-goals enumerating eight explicit exclusions. (3) What ships with surface/deliverable/builds-on table + target metrics. (4) Invariants preserved with explicit #9 + #6 callouts. (5) Architectural decisions §5 with 8 subsections (5.1 taxonomy / 5.2 case sensitivity / 5.3 frontmatter vs DB / 5.4 validation / 5.5 backfill strategy / 5.6 categorization rubric / 5.7 pack versioning / 5.8 source-string-audit marker). (6) Success criteria (6 simultaneous conditions). (7) References (cross-links to Phase 6 design doc + Phase 5 M32/M34/M35 + retrospective + CLAUDE.md). (8) Handoff section naming M36 T1 expectations explicitly without pre-binding T1+ breakdown. DO NOT author T1+ compliance: plan doc contains zero task-level T1-T10 table (Phase 5 M28 T0 pattern followed verbatim).",
+      "themeSelectionEvidence": "M36 T0 scope locked verbatim from Phase 6 T0 plan doc §5 M36 row. No theme re-selection — M36 is the first milestone UNDER Phase 6's locked Capabilities & Evidence theme. Capability enum count (41) resolved at T0 landing; exact scope documented in §5.1 of the M36 T0 plan doc with category breakdowns (engineering 10 + product 7 + design 5 + operations 7 + strategy 6 + support 6). Q1 case-sensitivity resolved in §5.2 (lowercase_snake_case).",
+      "surpriseNote": "Two small authoring tensions surfaced and were resolved in-place before atomic commit: (a) the Phase 6 T0 plan doc §7 D15 specifies '~40 capabilities' — M36 T0 concretizes to 41 after category-by-category enumeration. The support category needed six entries (CS / tech-writing / tech-support / content-marketing / sales / devrel) to cover distinct role functions without collapsing; at 40 one of those six would have been dropped, which would leave actual Strategia roles with no matching capability. The locked count is 41. Future phases can amend only with retrospective-driven evidence (mirrors M32 4-weight signature). (b) Phase 6 T0 §7 specifies '~55 F10 roles + 2 system' — actual role count in role-packs/strategia-official/roles/ is 55 F10 + 2 system = 57 total. Backfill language uses 57 as the concrete number."
     },
     "Phase-6-T0": {
       "name": "Phase 6 plan doc — Capabilities & Evidence",
