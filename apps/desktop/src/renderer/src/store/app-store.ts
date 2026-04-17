@@ -94,8 +94,16 @@ export interface AppState {
   activeMeetingId: string | null;
   /** Which telemetry subview is showing (Company / Employees / Cost). */
   telemetrySubview: TelemetrySubview;
+  /**
+   * Whether the Copilot sidebar panel is open (Phase 5 — M34).
+   * Toggled by `Cmd+Shift+K`, the Sparkles toolbar button, and the
+   * dashboard widget's "View all" link. Single source of truth shared
+   * by all three entry points so the toggle state never drifts.
+   */
+  copilotSidebarOpen: boolean;
 
   setActiveView: (view: ActiveView) => void;
+  setCopilotSidebarOpen: (open: boolean) => void;
   setDashboardSubview: (subview: DashboardSubview) => void;
   setProjectsSubview: (subview: ProjectsSubview) => void;
   setTelemetrySubview: (subview: TelemetrySubview) => void;
@@ -135,6 +143,9 @@ export const useAppStore = create<AppState>((set) => ({
   projectsSubview: 'kanban',
   activeMeetingId: null,
   telemetrySubview: 'company',
+  copilotSidebarOpen: false,
+
+  setCopilotSidebarOpen: (open) => set({ copilotSidebarOpen: open }),
 
   setActiveView: (view) =>
     set({

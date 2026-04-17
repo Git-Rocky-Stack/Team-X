@@ -10,11 +10,13 @@ import {
   MessageSquare,
   Settings,
   Shield,
+  Sparkles,
   Users2,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Separator } from '@/components/ui/separator.js';
+import { cn } from '@/lib/utils.js';
 import { type ActiveView, useAppStore } from '@/store/app-store.js';
 
 interface TabDef {
@@ -40,6 +42,8 @@ const TABS: TabDef[] = [
 export function TopBar() {
   const activeView = useAppStore((s) => s.activeView);
   const setActiveView = useAppStore((s) => s.setActiveView);
+  const copilotSidebarOpen = useAppStore((s) => s.copilotSidebarOpen);
+  const setCopilotSidebarOpen = useAppStore((s) => s.setCopilotSidebarOpen);
 
   return (
     <header className="flex h-12 shrink-0 items-center border-b border-border bg-surface-50 px-4">
@@ -47,7 +51,7 @@ export function TopBar() {
         <Building2 className="h-5 w-5 text-brand" />
         <span className="text-sm font-semibold">Strategia-X</span>
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
-          Phase 4
+          Phase 5
         </Badge>
       </div>
 
@@ -81,6 +85,24 @@ export function TopBar() {
           );
         })}
       </nav>
+
+      <button
+        type="button"
+        onClick={() => setCopilotSidebarOpen(!copilotSidebarOpen)}
+        aria-label="Toggle Copilot sidebar (Cmd+Shift+K)"
+        aria-pressed={copilotSidebarOpen}
+        title="Copilot (Cmd+Shift+K)"
+        data-copilot-toolbar-toggle=""
+        className={cn(
+          'ml-auto flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+          copilotSidebarOpen
+            ? 'bg-brand/10 text-brand'
+            : 'text-muted-foreground hover:bg-surface-100 hover:text-foreground',
+        )}
+      >
+        <Sparkles className="h-4 w-4" />
+      </button>
     </header>
   );
 }

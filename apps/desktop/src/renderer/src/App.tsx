@@ -8,6 +8,8 @@ import { AppLayout } from './app/layout.js';
 import { AuditView } from './features/audit/audit-view.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
 import { CommandPalette } from './features/command/command-palette.js';
+import { CopilotDashboardWidget } from './features/copilot/copilot-dashboard-widget.js';
+import { CopilotSidebar } from './features/copilot/copilot-sidebar.js';
 import { CardsView } from './features/dashboard/cards-view.js';
 import { CommandsView } from './features/dashboard/commands-view.js';
 import { DashboardSubtabs } from './features/dashboard/dashboard-subtabs.js';
@@ -45,6 +47,8 @@ export default function App() {
   const setCompanyId = useAppStore((s) => s.setCompanyId);
   const activeView = useAppStore((s) => s.activeView);
   const dashboardSubview = useAppStore((s) => s.dashboardSubview);
+  const copilotSidebarOpen = useAppStore((s) => s.copilotSidebarOpen);
+  const setCopilotSidebarOpen = useAppStore((s) => s.setCopilotSidebarOpen);
   const [hireOpen, setHireOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
@@ -57,33 +61,45 @@ export default function App() {
     });
   }, [companyId, setCompanyId]);
 
-  // Global Cmd+K / Ctrl+K keybinding to toggle the command palette.
-  // Mounted once at the shell root so the shortcut works from any view.
-  // We also swallow Esc while the palette is open — Radix's Dialog
-  // already closes on Esc, so no additional handler is needed for that.
+  // Global keybindings (mounted once at the shell root so the shortcuts
+  // work from any view):
+  //   - `Cmd/Ctrl+K`        → toggle the command palette (M30).
+  //   - `Cmd/Ctrl+Shift+K`  → toggle the Copilot sidebar (M34).
+  //
+  // Both share the K key so a single handler dispatches based on the
+  // `shiftKey` modifier. Radix's Dialog already closes on Esc — no
+  // additional handler needed for dismissal.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      // Only the K key with the platform meta modifier opens the palette.
+      // Only the K key with the platform meta modifier triggers either shortcut.
       if (event.key !== 'k' && event.key !== 'K') return;
       const isMac = /Mac|iPod|iPhone|iPad/i.test(navigator.platform);
       const modifier = isMac ? event.metaKey : event.ctrlKey;
       if (!modifier) return;
 
-      // Don't hijack Cmd/Ctrl+K when focus is inside another dialog
-      // (e.g. the Hire dialog). Radix dialogs render inside a portal
-      // with role="dialog" — climb from the focused element and bail
-      // if we find one.
+      // Don't hijack Cmd/Ctrl+K (or Shift variant) when focus is inside
+      // another dialog (e.g. the Hire dialog). Radix dialogs render
+      // inside a portal with role="dialog" — climb from the focused
+      // element and bail if we find one. The Copilot sidebar is itself
+      // a Radix Sheet (also role="dialog"), so its own toggle key
+      // presses must still fire — we check the `data-copilot-sidebar-root`
+      // marker first and let those through.
       const target = event.target as HTMLElement | null;
-      if (target?.closest('[role="dialog"]')) {
+      const inCopilotSidebar = target?.closest('[data-copilot-sidebar-root]');
+      if (!inCopilotSidebar && target?.closest('[role="dialog"]')) {
         return;
       }
 
       event.preventDefault();
-      setPaletteOpen((prev) => !prev);
+      if (event.shiftKey) {
+        setCopilotSidebarOpen(!copilotSidebarOpen);
+      } else {
+        setPaletteOpen((prev) => !prev);
+      }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [copilotSidebarOpen, setCopilotSidebarOpen]);
 
   const { data: employees = [], isLoading, isError, refetch } = useEmployees(companyId);
 
@@ -116,7 +132,14 @@ export default function App() {
       case 'floor':
         return <FloorView employees={employees} />;
       default:
-        return <CardsView employees={employees} />;
+        return (
+          <div className="flex flex-col gap-4">
+            <div className="px-4 pt-4">
+              <CopilotDashboardWidget />
+            </div>
+            <CardsView employees={employees} />
+          </div>
+        );
     }
   }
 
@@ -158,6 +181,7 @@ export default function App() {
       <ChatDrawer employees={employees} />
       <HireDialog open={hireOpen} onOpenChange={setHireOpen} companyId={companyId} />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} companyId={companyId} />
+      <CopilotSidebar />
     </AppLayout>
   );
 }
