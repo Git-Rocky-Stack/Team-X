@@ -253,6 +253,7 @@ These are **hypotheses, not commitments**. The first Phase 6 session selects one
 **User value:** Scripted walkthrough ships in M35 T5. A recorded live demo with a real customer workflow converts far better than a scripted walkthrough. Coordinated with marketing; not a code deliverable.
 **Architectural cost:** Zero.
 **Risk:** Zero.
+**Scripted foundation:** [`docs/demo/phase-5-walkthrough.md`](../demo/phase-5-walkthrough.md) + 5 scenario stubs under [`docs/demo/scenarios/`](../demo/scenarios/) — the Phase 5 demo video would follow this script frame-for-frame.
 
 ### 6.7 Insight export (CSV / JSON)
 
