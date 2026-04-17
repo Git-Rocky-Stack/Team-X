@@ -140,6 +140,26 @@ describe('createRoleLoader (real strategia-official pack)', () => {
     loader.preload();
     expect(loader.size()).toBeGreaterThanOrEqual(2); // CEO + SWE at minimum
   });
+
+  it('indexes the full 57-role catalog (55 user + 2 system) after Phase-5.5 hotfix', () => {
+    const loader = createRoleLoader({ rolePacksRoot: REAL_ROLES_ROOT });
+    loader.preload();
+    expect(loader.size()).toBe(57);
+  });
+
+  it('strict-mode signature verification passes against the in-repo signed pack', () => {
+    // The strategia-official pack ships with a committed pack.sig. The
+    // composition root passes verifyMode='strict' in production; this
+    // test covers the same code path against the real pack to catch
+    // tree-hash drift caused by an un-signed role.md edit landing in
+    // a commit. If this test fails, run `pnpm sign:pack` and try again.
+    const loader = createRoleLoader({
+      rolePacksRoot: REAL_ROLES_ROOT,
+      verifyMode: 'strict',
+    });
+    expect(() => loader.preload()).not.toThrow();
+    expect(loader.size()).toBe(57);
+  });
 });
 
 // ===========================================================================

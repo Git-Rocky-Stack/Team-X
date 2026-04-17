@@ -12,6 +12,7 @@ build/
 .env
 .env.*
 !.env.example
+.secrets/
 
 # os / editor
 .DS_Store

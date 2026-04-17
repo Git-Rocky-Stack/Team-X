@@ -480,7 +480,20 @@ app
     // Role loader: turns (employee, company) into a rendered system prompt.
     // Preloaded eagerly so the cost of the role-pack scan is paid during
     // boot rather than on the first user message.
-    const roleLoader = createRoleLoader({ rolePacksRoot: resolveRolePacksRoot() });
+    //
+    // Pack-signature verification mode is platform-aware:
+    //   - production (packaged) builds → 'strict' refuses to load on tamper
+    //   - dev builds                   → 'warn' logs but loads (so Rocky can
+    //                                    edit role.md without re-signing on
+    //                                    every save; sign before commit)
+    //   - test mode                    → 'off' (E2E + unit tests build
+    //                                    synthetic packs without sigs)
+    const verifyMode: 'strict' | 'warn' | 'off' =
+      process.env.NODE_ENV === 'test' ? 'off' : isDev ? 'warn' : 'strict';
+    const roleLoader = createRoleLoader({
+      rolePacksRoot: resolveRolePacksRoot(),
+      verifyMode,
+    });
     try {
       roleLoader.preload();
       console.log(`[role-loader] indexed ${roleLoader.size()} role(s)`);

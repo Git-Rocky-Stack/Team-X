@@ -1,11 +1,13 @@
 {
   "id": "strategia-official",
   "name": "Strategia Official F10 Role Pack",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "author": "Strategia-X",
   "license": "MIT",
   "description": "The curated F10-quality default role library for Team-X. Hand-written role specifications for officers, senior management, management, supervisors, leads, and individual contributors across the modern software organization.",
   "homepage": "https://github.com/strategia-x/team-x",
-  "compatibleWith": ">=0.0.1",
-  "levels": ["officer", "senior_management", "management", "supervisor", "lead", "ic"]
+  "compatibleWith": ">=1.0.0",
+  "levels": ["officer", "senior_management", "management", "supervisor", "lead", "ic"],
+  "signed": true,
+  "publicKeyFingerprint": "6a06998ba2bf43381edadd92d815674e3b40227d3583ec8bea03a1442566d9c3"
 }

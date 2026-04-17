@@ -44,13 +44,63 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
-import { type RenderContext, parseRoleMarkdown, renderRoleBody } from '@team-x/role-schema';
+import {
+  type RenderContext,
+  parseRoleMarkdown,
+  renderRoleBody,
+  verifyPackDirectory,
+} from '@team-x/role-schema';
 import type { RoleSpec } from '@team-x/shared-types';
 
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
+
+/**
+ * Public key for the official Strategia role pack.
+ *
+ * This constant is the single trust anchor for the in-repo role library.
+ * Tampering with any role.md without re-signing via `pnpm sign:pack`
+ * will produce a tree-hash mismatch against the recorded `pack.sig`,
+ * which the loader refuses to load (in strict mode) or warns about
+ * loudly (in warn mode).
+ *
+ * Rotating this key requires:
+ *   1. Generating a new keypair via `node scripts/generate-pack-key.mjs`
+ *   2. Replacing the constant below
+ *   3. Updating `publicKeyFingerprint` in `role-packs/strategia-official/pack.json`
+ *   4. Re-signing every shipped pack version with the new key
+ *
+ * The chain of trust is the git history of THIS source file plus the
+ * keytar / vault-stored private key. A compromised private key is the
+ * only way to forge a valid signature without also patching this
+ * constant — and patching it would show up in code review.
+ */
+const STRATEGIA_OFFICIAL_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAKKnTy2su2+OJ0HhDQYvTALMwGis433Rx1hriq5y2RPY=
+-----END PUBLIC KEY-----
+`;
+
+const TRUSTED_PACK_KEYS: ReadonlyMap<string, string> = new Map([
+  ['strategia-official', STRATEGIA_OFFICIAL_PUBLIC_KEY],
+]);
+
+/**
+ * Pack-signature verification mode.
+ *
+ *   'strict' — refuse to load on any verification failure (missing sig,
+ *              wrong fingerprint, tampered tree). Production default.
+ *
+ *   'warn'   — log a clear warning and load anyway. Dev/test default —
+ *              lets Rocky edit role.md without re-signing on every save,
+ *              but surfaces tampering loudly so a missed `pnpm sign:pack`
+ *              before commit is impossible to overlook.
+ *
+ *   'off'    — skip verification entirely. Reserved for unit-test
+ *              fixtures that build synthetic packs without a sig.
+ */
+export type RolePackVerifyMode = 'strict' | 'warn' | 'off';
 
 export interface RoleLoaderDeps {
   /**
@@ -60,8 +110,19 @@ export interface RoleLoaderDeps {
    * NOT validate the path until the first `resolveSystemPrompt` call,
    * so tests can construct the loader against a fixture without paying
    * for a stat() at construction time.
+   *
+   * Pack-signature verification looks at `dirname(rolePacksRoot)` for a
+   * sibling `pack.json` + `pack.sig`. If no `pack.json` is found there,
+   * the directory is treated as unsigned (no verification attempted).
    */
   rolePacksRoot: string;
+
+  /**
+   * Pack-signature verification mode. Defaults to `'warn'` so dev /
+   * test builds can iterate without re-signing on every edit. The
+   * production composition root must pass `'strict'` explicitly.
+   */
+  verifyMode?: RolePackVerifyMode;
 
   /**
    * Optional override for the `today` template variable. Tests inject
@@ -238,8 +299,63 @@ export function createRoleLoader(deps: RoleLoaderDeps): RoleLoader {
     }
   }
 
+  function verifyPackSignatureIfPresent(): void {
+    const verifyMode: RolePackVerifyMode = deps.verifyMode ?? 'warn';
+    if (verifyMode === 'off') return;
+
+    // Pack root is the parent of rolePacksRoot (the `roles/` dir lives
+    // inside the pack, alongside `pack.json` and `pack.sig`). If the
+    // parent does not contain a `pack.json`, treat as an unsigned
+    // directory (e.g. test fixtures that scan a synthetic roles tree
+    // directly) and skip verification.
+    const packRoot = dirname(deps.rolePacksRoot);
+    let packJsonRaw: string;
+    try {
+      packJsonRaw = readFileSync(join(packRoot, 'pack.json'), 'utf8');
+    } catch {
+      return; // Not a pack root — synthetic fixture or community layout.
+    }
+
+    let packId: string | undefined;
+    try {
+      packId = (JSON.parse(packJsonRaw) as { id?: string }).id;
+    } catch {
+      // Malformed pack.json — surface as a warning at minimum because
+      // signed packs always have a parsable manifest.
+      const msg = `[role-loader] pack.json at ${packRoot} is not valid JSON; skipping signature verification`;
+      if (verifyMode === 'strict') throw new Error(msg);
+      console.warn(msg);
+      return;
+    }
+
+    if (!packId || !TRUSTED_PACK_KEYS.has(packId)) {
+      // Pack id not in our trust map — treat as community/untrusted.
+      // Phase 6 will add an installer that pins community public keys
+      // at install time; for now, an unknown pack id is allowed to
+      // load unsigned in warn mode and refused in strict mode.
+      if (verifyMode === 'strict') {
+        throw new Error(
+          `[role-loader] pack "${packId ?? '<unknown>'}" at ${packRoot} is not in the trusted-pack registry`,
+        );
+      }
+      return;
+    }
+
+    const publicKey = TRUSTED_PACK_KEYS.get(packId);
+    if (!publicKey) return; // unreachable, satisfies the type checker
+    const result = verifyPackDirectory(packRoot, publicKey);
+    if (result.valid) return;
+
+    const computed = result.computedTreeHash ?? 'n/a';
+    const envelope = result.envelopeTreeHash ?? 'n/a';
+    const msg = `[role-loader] pack signature verification FAILED for "${packId}" at ${packRoot}: ${result.error}\n  computed=${computed}\n  envelope=${envelope}\n  Run \`pnpm sign:pack\` after editing role.md files.`;
+    if (verifyMode === 'strict') throw new Error(msg);
+    console.warn(msg);
+  }
+
   function ensureScanned(): void {
     if (scanned) return;
+    verifyPackSignatureIfPresent();
     walk(deps.rolePacksRoot);
     scanned = true;
   }

@@ -25,6 +25,8 @@
     "dist:mac": "pnpm -F @team-x/desktop dist:mac",
     "dist:linux": "pnpm -F @team-x/desktop dist:linux",
     "dist:publish": "pnpm -F @team-x/desktop dist:publish",
+    "sign:pack": "node scripts/sign-pack.mjs strategia-official",
+    "sign:pack:keygen": "node scripts/generate-pack-key.mjs strategia-official",
     "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules"
   },
   "devDependencies": {
