@@ -1,25 +1,37 @@
 {
-  "taskId": "M34-T0",
-  "milestone": "M34",
-  "milestoneName": "Copilot UI",
+  "taskId": "M35-T1",
+  "milestone": "M35",
+  "milestoneName": "Demo + Hardening",
   "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": "docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md (M34 row §9; M34 implementation plan to be authored at T0)",
-  "title": "Write M34 plan doc — Copilot UI",
+  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T1 row, §4.2 settings-clamp table)",
+  "title": "Performance defaults pass + clamp audit",
   "status": "pending",
-  "predecessor": "M33-T10 shipped 2026-04-17 (commit 2fc998e). All 11 M33 tasks complete. 1099 unit tests / 9 E2E spec files / 10 Playwright cases green. M33 folded into orchestrator history.",
-  "goal": "Author docs/plans/2026-04-17-team-x-phase-5-m34-copilot-ui.md as the M34 implementation plan. Mirror the M33 plan doc's structural template (T0 = plan doc, then T1..T9 implementation tasks, T10 = docs + verification + milestone marker). Per Phase 5 design §9 M34 row deliverables: sidebar panel (toggle, insight cards with category + severity color coding, action dispatch button per insight, dismiss button, free-form ask input that calls copilot.ask), dashboard widget (top 3 insights + 'view all' link), Cmd+Shift+K shortcut wired through the M30 palette to open/focus the Copilot sidebar. M34 is renderer-only — consumes the M33 copilot.* IPC surface + 4 bus events (copilot.insight / copilot.analyzed / copilot.dismissed / copilot.expired). No new IPC, no new bus events, no new providers, no new migrations. Step-stream attachment reuses M31's useAgentStepStream + M32 T0's getRunSnapshot backfill pattern (M33 T6 wire-contract stability lets this work without changes).",
+  "predecessor": "M35-T0 shipped 2026-04-19 (commit da4ce1f — plan doc). M34 COMPLETE shipped 2026-04-18 (commits f1180cf + 893f8fd + af643ec). 1130 unit tests / 10 E2E spec files / 11 Playwright cases green. M34 and M33 folded into orchestrator history; M33 follow-ups F3 + F4 CLOSED in commit 039020b.",
+  "goal": "Evidence-based measurement pass across the 10 Phase 5 settings clamps (rag_chunk_size / rag_chunk_overlap / rag_similarity_threshold / agentic_max_steps / agentic_max_tokens / agentic_timeout_ms / planner_max_tickets / planner_max_depth / planner_escalation_threshold / copilot_interval_minutes). Seed Strategia-X demo company with realistic content (50 tickets / 10 projects / 2 goals / 5 vault files) and run one full copilot analyzer tick against (a) local Ollama + llama3.1:8b if available AND (b) the canned test-copilot-provider seam. Record wall-clock per clamp. Move defaults ONLY if measurement justifies it. Every change lands with a one-line comment in apps/desktop/src/main/db/seed.ts citing the measurement wall-clock (e.g., `// agentic_max_steps=12 — bumped from 8 after llama3.1:8b measured 11 steps avg on the Strategia-X seed (2026-04-19, M35 T1)`).",
   "acceptance": [
-    "NEW docs/plans/2026-04-17-team-x-phase-5-m34-copilot-ui.md — F10-quality plan doc mirroring M33 plan doc structure (Overview, What ships, Invariants preserved, Success criteria, Task breakdown T0–T10, Risks + open questions, Handoff notes for next session). Each task has scope + commit template + tests delta + ledger follow-up step.",
-    "Atomic commit: feat(m34): M34 T0 — plan doc.",
-    "Ledger commit: chore(loki): M34 T0 — commit ledger (<sha>) — promote T0 commit into orchestrator inFlightMilestone, seed T1 head-of-queue in pending.json, append M34 T0 DONE subsection to .loki/CONTINUITY.md."
+    "M35 plan doc §4.2 settings-clamp table defaults either (a) remain unchanged with rationale in the commit body, OR (b) update with one-line justifying-measurement comment in apps/desktop/src/main/db/seed.ts.",
+    "Unit tests added:",
+    "  1. settings seed defaults match the final (possibly updated) values.",
+    "  2. Clamp ranges unchanged — the clamp envelope is not moved by this task (only the default within the envelope).",
+    "  3. copilot_interval_minutes restart-on-change behavior still fires the analyzer.restart(companyId) side effect.",
+    "  4. Any revised default passes both the lower-clamp and upper-clamp assertions.",
+    "Zero new production files. All edits are to seed.ts + 2 test files.",
+    "pnpm test green (1130 → 1134). pnpm typecheck clean. pnpm lint 0 errors / ≤24 warnings.",
+    "Atomic commit: perf(m35): M35 T1 — performance defaults + clamp audit.",
+    "Ledger commit: chore(loki): M35 T1 — commit ledger (<sha>) — roll orchestrator.json tasksCompleted 1 → 2, update pending.json T1 status pending → shipped, update current-task.json to point at M35-T2, prepend M35 T1 DONE subsection to .loki/CONTINUITY.md."
   ],
   "filesTouched": [
-    "docs/plans/2026-04-17-team-x-phase-5-m34-copilot-ui.md — NEW"
+    "apps/desktop/src/main/db/seed.ts (measurement-justified default changes + one-line comment per change)",
+    "apps/desktop/src/main/services/copilot-analyzer-service.ts (comment additions only if any default changes affect cadence)",
+    "packages/intelligence/src/rag/indexer.ts (comment additions only if chunk defaults change)",
+    "apps/desktop/src/main/services/copilot-analyzer-service.test.ts (extend with restart-on-change assertion)",
+    "apps/desktop/src/main/repos/settings-repo.test.ts (extend with seed-default + clamp assertions)"
   ],
-  "tests": "0 (plan doc only)",
+  "tests": "+4 unit tests",
   "carryForward": [
-    "M33 architectural seams (three-tier canned test seam now four-member quartet, pause-aware providerRouter wrapper, AbortController stop, is_system + filter-sweep with isSystemRoleId predicate, atomic + ledger commit cadence, ABI rebuild dance, IPC-mutation-emits-bus-event invariant #11) all carry forward unchanged.",
-    "Copilot wire contract: copilot.ask returns { runId, threadId } matching M31 complex_request — M34 sidebar attaches step-stream via useAgentStepStream without a second wire format.",
-    "M33 follow-ups F3 + F4 are deferred and DO NOT block M34. F3 (CopilotEventWindow.clear unwired) awaits a companies.archive IPC. F4 (backup/restore needs post-restore system-copilot bootstrap) is a M34+ candidate but not on the M34 critical path."
+    "M34 architectural seams (three-tier canned test seam QUARTET, pause-aware providerRouter wrapper, AbortController stop, is_system + filter-sweep with isSystemRoleId predicate, atomic + ledger commit cadence, ABI rebuild dance, IPC-mutation-emits-bus-event invariant #11) all carry forward unchanged.",
+    "M33 follow-ups F3 + F4 CLOSED (commit 039020b). No open Phase 5 follow-ups.",
+    "Copilot wire contract: copilot.ask returns { runId, threadId } matching M31 complex_request — unchanged for M35.",
+    "Phase 5 badge is FROZEN at 'Phase 5' through v1.1.0 release. M35 T8 pins the literal string in a unit test. Phase 6 work is the next session after M35 T10."
   ]
 }

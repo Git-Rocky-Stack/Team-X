@@ -1,4 +1,105 @@
-# Loki Continuity — Phase 5, **M33 COMPLETE** (Copilot Service — all 11 tasks shipped); M34 (Copilot UI) is next
+# Loki Continuity — Phase 5, **M34 COMPLETE** (Copilot UI — all 11 tasks shipped) + **M33 F3/F4 CLOSED**; **M35 T0 SHIPPED** (Demo + Hardening plan doc). M35 T1 (performance defaults pass) is head-of-queue. Phase 5 exit is 10 tasks away.
+
+## M35 T0 SHIPPED — 2026-04-19 — plan doc (da4ce1f)
+
+**Task:** M35 T0 — author the Phase 5 exit-gate implementation plan.
+**Atomic commit:** `da4ce1f` — `feat(m35): M35 T0 — plan doc`.
+**Ledger commit:** `chore(loki): M34-COMPLETE roll-up + M35 T0 — commit ledger (da4ce1f)` (this commit).
+**Plan reference:** [M35 plan T0](../docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md).
+
+### What shipped
+
+- **NEW `docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md`** — 186 lines, F10-quality, mirrors the M33/M34 plan-doc structural template (Goal / Non-goals / Task breakdown T0–T10 / Architectural decisions / Accessibility / Test strategy / Verification sequence / Out-of-scope follow-ups / Handoff).
+- **T0–T10 breakdown:**
+  - T0 plan doc (this)
+  - T1 performance defaults pass + clamp audit (+4 unit)
+  - T2 cross-milestone integration E2E (+1 E2E spec)
+  - T3 observability polish — audit view chips for 9 Phase 5 event types (+3 unit)
+  - T4 Phase 5 retrospective doc (0 tests)
+  - T5 demo script + 5-scenario walkthrough library (0 tests)
+  - T6 README + user-guide reconciliation sweep (0 tests)
+  - T7 CHANGELOG [Unreleased] → [1.1.0] promotion (0 tests)
+  - T8 v1.0.0 → v1.1.0 + Phase 5 badge freeze pin (+2 unit)
+  - T9 regression hardening — flaky-test audit + stable selector sweep (+2 unit)
+  - T10 docs + verification + Phase 5 COMPLETE marker (+3 unit)
+- **Total:** ~15 unit + 1 E2E (matches Phase 5 design §9 M35 row estimate).
+
+### M34 COMPLETE roll-up (2026-04-18 — rolled into this ledger commit)
+
+M34 shipped across **3 commits** rather than the M30–M33 per-task atomic+ledger cadence. Recording the history here so the orchestrator is reconcilable:
+
+| Task | Commit | Scope |
+|---|---|---|
+| T1 | `f1180cf` | Lint fix — biome format 4 files (zero behavior change). Labeled `style(m33)` in the message but functionally M34 T1 per the plan doc. |
+| T2–T10 | `893f8fd` | `feat(m34): copilot UI — sidebar + dashboard widget + Cmd+Shift+K`. Squashed bundle: plan doc + `use-copilot` hook + `CopilotInsightCard` + `CopilotSidebar` + `CopilotDashboardWidget` + `Cmd+Shift+K` + Sparkles toolbar + store slice + copilot-helpers + 16 unit tests + copilot-ui.spec.ts E2E. |
+| T11 | `af643ec` | `docs(m34): milestone marker + docs sweep + Phase 5 badge update`. CLAUDE.md + CHANGELOG + README + Phase 5 design §9 + NEW copilot-ui.md + keyboard-shortcuts.md update + Phase 4 → Phase 5 badge bump across 5 specs. |
+
+**M34 metrics delta:** +31 unit tests (1099 → 1130), +1 E2E spec (9 → 10), +1 Playwright case (10 → 11), lint baseline preserved (0 net errors / 24 warnings steady), typecheck clean across 6 packages. Top-bar badge `Phase 4` → `Phase 5`.
+
+**M33 F3/F4 closed mid-stream** (commit `039020b` — `feat(m33): F3 + F4 — wire companies.archive + post-restore system-employee bootstrap`). F3 wired `CopilotEventWindow.clear(companyId)` to a new `companies.archive` IPC. F4 added `backupService.ensurePostRestoreSystemEmployees()` for backwards-compatible restore of pre-M31/pre-M33 backups. **No open Phase 5 follow-ups remain.**
+
+### Why M34 deviated from the commit cadence
+
+The M34 implementer bundled T2–T10 into one squashed `feat(m34)` commit. Reason not recorded in a ledger (there was none). Rocky's partnership standards prefer the atomic per-task cadence (M30/M31/M32/M33 pattern) because it gives surgical rollback granularity, clearer PR review slices, and honest Loki ledger progress. **M35 restores the per-task atomic + ledger cadence** — T1 through T10 each ship as their own `{feat,test,perf,chore,docs}(m35): M35 T<N> — <summary>` atomic commit followed by a matching `chore(loki): M35 T<N> — commit ledger (<sha>)` ledger commit.
+
+### Head-of-queue after this ledger commit
+
+**M35 T1 — Performance defaults pass + clamp audit.** Evidence-based measurement (not vibe-based optimization) across the 10 Phase 5 settings clamps documented in M35 plan doc §4.2. Seed Strategia-X demo company with realistic content (50 tickets / 10 projects / 2 goals / 5 vault files), run one full copilot analyzer tick against local Ollama + `llama3.1:8b` AND the canned `test-copilot-provider` seam, record wall-clock for each, move defaults only if measurement justifies it. Every change lands with a one-line comment in `seed.ts` citing the measurement (e.g., `// agentic_max_steps=12 — bumped from 8 after llama3.1:8b measured 11 steps avg on the Strategia-X seed (2026-04-19, M35 T1)`). +4 unit tests.
+
+### Phase 5 exit criteria (countdown)
+
+10 tasks remaining (T1 → T10). Target metrics at T10 completion:
+
+| Metric | M34 post | M35 T10 target | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1130 | ~1145 | +15 |
+| E2E spec files | 10 | 11 | +1 |
+| E2E Playwright cases | 11 | 12 | +1 |
+| Lint errors | 1 (M30 T2 dormant) | 0 (T9 clears) | -1 |
+| Lint warnings | 24 | ≤24 | 0 |
+| Typecheck | clean | clean | — |
+| Version | 1.0.0 | 1.1.0 | +0.1.0 |
+| Phase 5 design §9 M35 row | 📋 Planned | ✅ Complete | — |
+| Top-bar badge | Phase 5 | Phase 5 | frozen through v1.1.0 |
+
+### Patterns reinforced by M34 + carry forward to M35
+
+- **Renderer-only milestones work.** M34 shipped the entire Copilot UI surface without touching IPC, bus events, providers, or migrations. Enabled by rigorous wire-contract stability in M33 (`copilot.ask` returns `{ runId, threadId }` matching M31 `complex_request`).
+- **Data-attribute stable E2E selector surface is non-negotiable.** M34 added `data-copilot-insight-id` / `-category` / `-severity` + `data-copilot-sidebar-root` + `data-copilot-toolbar-toggle` + `data-copilot-widget-list`. M35 T9 audits every spec to ensure primary assertions prefer data-attributes over text-match.
+- **Severity color never carries meaning alone.** M34 copilot cards pair every severity color with a text badge. WCAG AA verified against the dark-theme surface. M35 T3 audit-view chip additions must match this contract.
+- **Pure helpers extracted for testability.** `copilot-helpers.ts` + `.test.ts` pattern (sortBySeverity / parseActionEntities / pickDashboardTopN) mirrors M32 T6's `step-card-narrow.ts`. 16 unit tests with no DOM / IPC / React coupling. Repeat this pattern in M35 T1 seed-default helpers.
+- **Keyboard shortcut collision handling.** `Cmd+K` + `Cmd+Shift+K` share a single `App.tsx` keydown handler with `event.shiftKey` discrimination. Avoided dual-listener event-ordering ambiguity. Pattern for future global shortcuts.
+
+### Architectural seams active for M35 (unchanged)
+
+- Three-tier canned test seam QUARTET — `test-classifier` + `test-agentic-provider` + `test-agentic-tools` + `test-copilot-provider`. All four still active; M35 T2 integration E2E uses all four in one Playwright session.
+- `{rows, truncated}` envelope — 50-row cap, 200-char summary.
+- Pause-aware `providerRouter.complete` wrapper — polls `orchestrator.isCompanyPaused(companyId)` on every provider call.
+- `AbortController`-driven stop with canceled-status coercion.
+- `is_system` + filter-sweep with `isSystemRoleId` predicate.
+- Atomic + Loki-ledger commit cadence (M34 deviated; M35 restores).
+- ABI rebuild dance on verification gate.
+- IPC mutation must emit bus event (invariant #11).
+
+### Environment
+
+- Windows 11 Pro 26200, Node v24.14.1 (ABI 137), Electron 125 (ABI varies), pnpm 9.15.4.
+- Dev DB: `%APPDATA%\Team-X\team-x\team-x.sqlite` (migrations 0001–0012 present, system-agent + system-copilot seeded per-company).
+- ABI state at this checkpoint: **Node** (post-vitest rebuild). Electron rebuild required before M35 T2 Playwright work.
+- Keychain: OS keychain (`keytar`). No API keys committed.
+- Ollama: optional. M35 T1 measurement pass prefers local `llama3.1:8b` if available; canned seam is the fallback.
+
+## Next Session Startup Checklist (begin M35 T1)
+
+1. Read this CONTINUITY header — M34 COMPLETE + M35 T0 SHIPPED. Head-of-queue M35-T1.
+2. Read `.loki/state/orchestrator.json` → `currentMilestone=M35`, `tasksCompleted=1`, `inflight.taskId=M35-T1`, `inflight.lastShipped=M35-T0`, baseline 1130 unit / 10 E2E / 11 Playwright cases.
+3. Read `.loki/queue/pending.json` → full T0–T10 breakdown materialized. T0 status=shipped, T1–T10 status=pending.
+4. Read `.loki/queue/current-task.json` → M35-T1 goal + acceptance criteria. Files to touch: `seed.ts` + 2 existing test files (no NEW production files).
+5. **T1 = performance measurement pass.** Seed Strategia-X with realistic content → run full analyzer tick → record wall-clock per clamp → update defaults ONLY if measurement justifies it → one-line measurement comment per change. +4 unit tests.
+6. Restore per-task atomic + ledger commit cadence (deviated in M34). After T1 production edits land, atomic commit `perf(m35): M35 T1 — performance defaults + clamp audit`, capture SHA, update state files, ledger commit `chore(loki): M35 T1 — commit ledger (<sha>)`.
+7. Phase 5 exit is 10 tasks away. T10 = Phase 5 COMPLETE marker + v1.1.0 tag + dist:win installer smoke-launch. After T10, the next session is Phase 6 T0 (scope TBD — no Phase 6 design doc exists yet).
+
+---
 
 ## M33 T10 SHIPPED — 2026-04-17 — M33 COMPLETE (docs + verification + milestone marker)
 

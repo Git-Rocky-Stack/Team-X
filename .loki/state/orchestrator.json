@@ -1,47 +1,50 @@
 {
   "currentPhase": "DEVELOPMENT",
-  "currentMilestone": "M34",
-  "milestoneName": "Copilot UI",
-  "tasksCompleted": 0,
+  "currentMilestone": "M35",
+  "milestoneName": "Demo + Hardening",
+  "tasksCompleted": 1,
   "tasksFailed": 0,
-  "totalTasks": null,
-  "planDoc": "docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md",
-  "startedAt": null,
+  "totalTasks": 11,
+  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md",
+  "startedAt": "2026-04-19T00:00:00Z",
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {
-    "taskId": null,
-    "lastShipped": null
+    "taskId": "M35-T1",
+    "lastShipped": "M35-T0",
+    "lastShippedCommit": "da4ce1f"
   },
   "phase": "Phase 5 — Intelligence Layer",
-  "previousMilestone": "M33",
-  "previousMilestoneName": "Copilot Service",
-  "previousMilestoneCompletedAt": "2026-04-17T01:30:00Z",
-  "nextMilestone": "M35",
-  "nextMilestoneName": "Demo + hardening",
+  "previousMilestone": "M34",
+  "previousMilestoneName": "Copilot UI",
+  "previousMilestoneCompletedAt": "2026-04-18T20:02:38Z",
+  "nextMilestone": "Phase 6",
+  "nextMilestoneName": "TBD (Phase 6 — post-Intelligence Layer, scope undefined)",
   "tasksInProgress": {},
   "baseline": {
-    "unitTests": 1099,
-    "e2eSpecs": 9,
-    "e2eGreenCount": 10,
+    "unitTests": 1130,
+    "e2eSpecs": 10,
+    "e2eGreenCount": 11,
     "lintErrors": 1,
-    "lintErrorsNote": "Pre-existing at packages/intelligence/src/nlu/entity-resolver.ts:352 (commit 6d99aa4c, M30 T2). Not added by M33.",
+    "lintErrorsNote": "Pre-existing at packages/intelligence/src/nlu/entity-resolver.ts:352 (commit 6d99aa4c, M30 T2). Not added by M34. M35 T9 optional clearance target.",
     "lintWarnings": 24,
-    "typecheckClean": true
+    "typecheckClean": true,
+    "asOfMilestone": "M34 complete (commit af643ec)"
   },
   "current": {
-    "unitTests": 1099,
-    "e2eSpecs": 9,
-    "e2eGreenCount": 10,
+    "unitTests": 1130,
+    "e2eSpecs": 10,
+    "e2eGreenCount": 11,
     "lintErrors": 1,
     "lintWarnings": 24,
     "typecheckClean": true
   },
   "targets": {
-    "unitTests": "TBD (M34 plan doc not yet authored)",
-    "e2eSpecs": "TBD",
+    "unitTests": "~1145 (+15 per Phase 5 design §9 M35 row)",
+    "e2eSpecs": 11,
+    "e2eSpecDelta": "+1 (phase-5-integration.spec.ts)",
     "lintErrors": 0,
-    "lintWarningsMax": 34
+    "lintWarningsMax": 24
   },
   "history": {
     "M30": {
@@ -136,7 +139,8 @@
         "T7": "4a373bd",
         "T8": "f245821",
         "T9": "43f5cf7",
-        "T10": "2fc998e"
+        "T10": "2fc998e",
+        "F3+F4": "039020b"
       },
       "unitTestDelta": "+66 (1033 → 1099)",
       "e2eDelta": "+1 (8 → 9; +copilot-service.spec.ts from T9; spec-file count). E2E green count Playwright = 10 (one spec has 2 test cases).",
@@ -149,17 +153,57 @@
         "e2e": "10 passed in 25.8s (9 .spec.ts files)"
       },
       "followUps": [
-        "F3: CopilotEventWindow.clear(companyId) not wired to companies.archive — IPC does not exist in codebase today; deferred to milestone that adds it. Public method exists + tested. Zero-surface-area until then.",
-        "F4: Backup/restore does not re-bootstrap system-copilot for pre-M33 backups (M23 path predates is_system column from M31 migration 0010). Workaround: delete SQLite file + let seedIfEmpty re-bootstrap. ~30 LOC fix in backupService.ensurePostRestoreSystemEmployees() — deferred to M34+."
+        "F3: CopilotEventWindow.clear(companyId) wired to companies.archive — CLOSED (commit 039020b, bundled with F4).",
+        "F4: Backup/restore post-restore system-employee bootstrap — CLOSED (commit 039020b)."
       ]
+    },
+    "M34": {
+      "name": "Copilot UI",
+      "startedAt": "2026-04-17T12:00:00Z",
+      "completedAt": "2026-04-18T20:02:38Z",
+      "tasksShipped": 11,
+      "commits": {
+        "T1": "f1180cf",
+        "T2_through_T10_squashed_feat": "893f8fd",
+        "T11_docs_and_marker": "af643ec",
+        "commitCadenceNote": "M34 broke from the one-task-per-commit cadence of M30–M33. T1 shipped as style(m33) lint-fix; T2 (plan doc) + T3–T10 (implementation + unit tests + E2E) landed as one squashed feat(m34) commit; T11 (docs + marker) landed separately. Ledger commits were NOT produced per-task — the M34 → M35 transition is reconciled in the M35 T0 ledger commit instead."
+      },
+      "unitTestDelta": "+31 (1099 → 1130)",
+      "e2eDelta": "+1 (9 → 10; +copilot-ui.spec.ts; spec-file count). E2E green count Playwright = 11 (one spec has 2 test cases).",
+      "lintDelta": "0 net (warnings steady at 24, 1 pre-existing M30 T2 error preserved)",
+      "planDoc": "docs/plans/2026-04-18-team-x-phase-5-m34-copilot-ui.md",
+      "verificationGates": {
+        "unitTests": "1130/1130 pass",
+        "lint": "1 pre-existing error / 24 warnings (baseline preserved)",
+        "typecheck": "clean across all 6 packages",
+        "e2e": "11 passed / 10 spec files",
+        "badgeBump": "Phase 4 → Phase 5 across 5 specs (smoke / ticket-flow / meeting-flow / vault-backup + new copilot-ui)"
+      },
+      "followUps": []
+    },
+    "M35-T0": {
+      "name": "Plan doc",
+      "shippedAt": "2026-04-19T00:00:00Z",
+      "commit": "da4ce1f",
+      "deliverable": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (186 lines). Mirrors M33/M34 structural template. T0–T10 breakdown covers perf defaults + cross-milestone E2E + observability polish + retrospective + demo script + README sweep + CHANGELOG promotion + v1.0.0 → v1.1.0 bump + regression hardening + Phase 5 COMPLETE marker.",
+      "testsDelta": 0
     }
   },
-  "inFlightMilestone": {},
+  "inFlightMilestone": {
+    "milestone": "M35",
+    "milestoneName": "Demo + Hardening",
+    "tasksShipped": 1,
+    "totalTasks": 11,
+    "headOfQueue": "M35-T1",
+    "headOfQueueName": "Performance defaults pass + clamp audit"
+  },
   "notes": [
-    "M33 (Copilot Service) COMPLETE (2026-04-17T01:30Z). All 11 tasks shipped (T0–T10). +66 unit tests (1033 → 1099, exceeded ~25 target by +41 — finer-grained per-task test coverage than the design doc estimated). +1 E2E spec (8 → 9 spec files; +1 Playwright case 9 → 10). 0 lint errors / 24 warnings / typecheck clean steady throughout. T10 commit: 2fc998e (chore(m33): M33 T10 — docs + verification + milestone marker). Documentation: NEW docs/user-guide/copilot-service.md (F10-style); Phase 5 design §9 M33 row 🚧 → ✅; CLAUDE.md Phase 5 + IPC + bus events + Troubleshooting (incl. NODE_MODULE_VERSION ABI dance entry); CHANGELOG.md M33 entry; README.md Intelligence Layer + tests badge 1033 → 1099.",
-    "Next milestone: M34 (Copilot UI — sidebar panel + dashboard widget + Cmd+Shift+K + insight cards + dismiss action + ask input). Phase 5 design §9 estimates ~15 unit tests for M34. Renderer-only milestone — consumes the M33 IPC surface. No new bus events, no new IPC channels, no new providers. M33 architectural seams (three-tier canned test seam, pause-aware providerRouter wrapper, AbortController stop, is_system filter-sweep with isSystemRoleId predicate, atomic + ledger commit cadence, ABI rebuild dance) all carry forward unchanged.",
-    "M33 follow-ups (F3, F4) documented in Phase 5 design doc §16 — both deferred, neither blocks M34. F3 awaits a companies.archive IPC that doesn't exist in the codebase today. F4 awaits a M34+ session that adds the post-restore system-employee bootstrap.",
-    "Verification recipe re-confirmed at M33 T10: (1) Node ABI: cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install. (2) pnpm test → 1099/1099 in 36.87s. (3) Electron ABI: pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar. (4) pnpm -F @team-x/desktop test:e2e → 10/10 in 25.8s. Repeat the dance when alternating between vitest and Playwright.",
-    "Patterns proven across M30/M31/M32/M33 and ready for M34: three-tier canned test seam (now four-member quartet), {rows, truncated} envelope, data-step-kind stable E2E selector, pause-aware providerRouter.complete wrapper, AbortController stop, atomic + Loki-ledger commit cadence (`chore(loki): M<N> T<N> — commit ledger (<sha>)`), ABI rebuild dance on verification gate, is_system + filter-sweep with isSystemRoleId predicate, IPC mutation must emit bus event (invariant #11)."
+    "M34 (Copilot UI) COMPLETE (2026-04-18T20:02:38Z). All 11 tasks shipped across 3 commits (f1180cf + 893f8fd + af643ec). +31 unit tests (1099 → 1130; plan-doc estimate ~14 unit + 1 E2E was met). +1 E2E spec (9 → 10; +copilot-ui.spec.ts). 0 net lint errors (1 pre-existing M30 T2 preserved) / 24 warnings / typecheck clean. Phase 4 → Phase 5 top-bar badge bump done + asserted across 5 specs. Zero new IPC / bus events / providers — consumed M33's copilot.* surface + M30 command.execute pipeline per architectural contract.",
+    "M33 follow-ups F3 + F4 CLOSED (commit 039020b — 'feat(m33): F3 + F4 — wire companies.archive + post-restore system-employee bootstrap'). F3 wired CopilotEventWindow.clear(companyId) to a new companies.archive IPC. F4 added backupService.ensurePostRestoreSystemEmployees() for backwards-compatible restore of pre-M31/pre-M33 backups. Both deliverables shipped and landed before M35 T0 plan doc authoring.",
+    "M35 T0 SHIPPED (commit da4ce1f — 'feat(m35): M35 T0 — plan doc'). Plan doc docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (186 lines) lands the full T0–T10 breakdown. 11-task breakdown: T0 plan doc, T1 perf defaults, T2 cross-milestone E2E, T3 observability polish, T4 retrospective, T5 demo script, T6 README sweep, T7 CHANGELOG promotion, T8 v1.1.0 version bump, T9 regression hardening, T10 Phase 5 COMPLETE marker.",
+    "M35 is the Phase 5 exit gate. Zero new IPC / bus events / providers / migrations — hardening + polish + release-marker milestone. v1.0.0 → v1.1.0 semver bump (additive Intelligence Layer, no breaking changes). Estimated ~15 unit tests + 1 cross-milestone E2E spec. Current baseline 1130 unit / 10 E2E → target ~1145 unit / 11 E2E.",
+    "Head-of-queue after T10 (Phase 5 COMPLETE marker): Phase 6. Phase 6 scope not yet defined. The first Phase 6 session authors docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md. Candidate themes surfaced from deferred follow-ups: cross-company copilot aggregation, proactive copilot → autonomous action, agent-to-agent negotiation, post-release telemetry digest (drives evidence-based clamp changes from real user data).",
+    "Architectural seams active for M35 (unchanged from M34 handoff): three-tier canned test seam QUARTET (test-classifier + test-agentic-provider + test-agentic-tools + test-copilot-provider), {rows, truncated} envelope, data-* stable E2E selector surface (data-step-kind / data-copilot-insight-id / data-copilot-sidebar-root / data-copilot-toolbar-toggle / data-copilot-widget-list), pause-aware providerRouter.complete wrapper, AbortController stop, is_system + filter-sweep with isSystemRoleId predicate, atomic + ledger commit cadence (M34 deviated — M35 restores the per-task ledger cadence), ABI rebuild dance on verification gate, IPC-mutation-emits-bus-event invariant #11.",
+    "Verification recipe for M35 T10 (unchanged from M34): (1) Node ABI: cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install. (2) pnpm test → target ~1145 in ≤45s. (3) pnpm typecheck → clean. (4) pnpm lint → 0 errors (T9 may clear the M30 T2 pre-existing), ≤24 warnings. (5) Electron ABI: pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar. (6) pnpm -F @team-x/desktop test:e2e → 11 specs / 12 cases in ≤35s. (7) pnpm -F @team-x/desktop build → production bundle succeeds. (8) pnpm dist:win → v1.1.0 installer under release/1.1.0/. Smoke-launch + verify Phase 5 badge, palette, sidebar, system seats, no console errors."
   ]
 }
