@@ -1,4 +1,73 @@
-# Loki Continuity — Phase 5, **M35 T9 SHIPPED** (Regression hardening — NEW `apps/desktop/src/e2e-regression-guards.test.ts` with 2 vitest guards banning `.waitForTimeout(N > 100ms)` + asserting every `e2e/*.spec.ts` carries a `[data-*]` attribute locator per the M30 `data-step-kind` / M33 `data-copilot-insight-id` / M34 `data-copilot-toolbar-toggle` convention; surgical in-commit fixes for the 2 real offenders flagged by the guards: `rag-flow.spec.ts` `waitForTimeout(500)` → `expect.poll` on `teamx.rag.stats.embeddingCount > 0`, and six specs lacking `[data-*]` (copilot-service, meeting-flow, rag-flow, smoke, ticket-flow, vault-backup) each gained a `[data-copilot-toolbar-toggle]` assertion after their Phase 5 badge check; adjacent T8-dormant hardening cleared a latent TS2532 on `top-bar.test.tsx` line 57 + biome format sweep; +2 unit → **1166**; full verification green — 1166/1166 vitest, 12/12 Playwright, typecheck clean, 0 lint errors / 24 warnings). **M35 T10 (docs + verification + Phase 5 COMPLETE marker, 3 unit tests) is head-of-queue — the LAST Phase 5 task.**
+# Loki Continuity — **Phase 5 COMPLETE (2026-04-20, v1.1.0).** All 8 Phase 5 milestones shipped (M28 → M35). 1169 unit tests + 11 E2E specs (12 Playwright cases) passing. M35 T10 (the LAST Phase 5 task) shipped: CLAUDE.md Phase 5 status line flipped 'in progress' → 'complete. All 8 milestones shipped (M28 → M35). v1.1.0.'; Phase 5 design doc §9 M35 row flipped 📋 Planned → ✅ Complete; design doc §13 gained D13 (performance-defaults HOLD rationale) + D14 (Phase 5 exit-marker triad); Phase 5 COMPLETE header prepended to .loki/CONTINUITY.md; NEW docs/user-guide/demo-walkthrough.md (external-facing copy of docs/demo/phase-5-walkthrough.md); +3 unit release-marker tests (phase-5-complete-marker.test.ts — source-string audit pinning CLAUDE.md literal + design doc M35 ✅ Complete row + CONTINUITY.md Phase 5 COMPLETE header). Atomic + ledger commit cadence preserved. v1.1.0 git tag on the T10 ledger commit. **Phase 6 scope TBD — next session opens Phase 6 T0 (plan doc authoring).**
+
+## Phase 5 COMPLETE — 2026-04-20 — v1.1.0
+
+**Phase 5 — Intelligence Layer.** Complete. All 8 milestones shipped. v1.1.0.
+
+**Delivery arc:** M28 (RAG foundation) → M29 (RAG into agent turns) → M30 (NLU engine + command palette) → M31 (agentic loop — read-side) → M32 (task planner — write-side) → M33 (Copilot Service — periodic analyzer + proactive insights + ask-the-copilot) + F3/F4 follow-ups → M34 (Copilot UI — sidebar + dashboard widget + `Cmd+Shift+K`) → M35 (Demo + Hardening — 11 tasks).
+
+**Final metrics (2026-04-20, v1.1.0):**
+
+| Metric | Phase 4 baseline (v1.0.0) | Phase 5 exit (v1.1.0) | Delta |
+|---|---:|---:|---:|
+| Unit tests | 612 | 1169 | +557 |
+| E2E spec files | 4 | 11 | +7 |
+| E2E Playwright cases | 4 | 12 | +8 |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings | 24 | 24 | 0 |
+| Typecheck across 6 packages | clean | clean | — |
+| Version | 1.0.0 | 1.1.0 | +0.1.0 |
+| Top-bar badge | Phase 4 | Phase 5 | — |
+
+### M35 — Demo + Hardening — tasks shipped (T0 – T10)
+
+| Task | Title | Commit | Tests delta | Headline |
+|---|---|---|---|---|
+| T0 | Plan doc | `da4ce1f` | 0 | 186-line plan, mirrors M33/M34 structural template, T1–T10 scope |
+| T1 | Performance defaults pass + clamp audit | `b68d09b` | +4 | All 10 settings clamps HELD on llama3.1:8b evidence (66s warm tick vs 120s timeout = 0.55× utilisation) |
+| T2 | Cross-milestone integration E2E | `1108247` | +1 E2E / +1 Playwright case | `phase-5-integration.spec.ts` — RAG → palette → agentic-loop → write-side → copilot insight round-trip in a single Electron boot |
+| T3 | Audit view chips for Phase 5 events | `51393f8` | +28 | 18 new chip variants with 200-char payload summary helpers extracted for source-string-audit testability |
+| T4 | Phase 5 retrospective | `0f8b51c` | 0 | 271-line `docs/plans/2026-04-19-team-x-phase-5-retrospective.md`; locked six-section structure; 7 Phase 6 seeds enumerated |
+| T5 | Demo walkthrough + 5 scenario library | `3cffe29` | 0 | `docs/demo/` — overall arc + 5 scenarios (hire-a-CEO, ticket-lifecycle, all-hands, ask-copilot, decompose-and-surface); 795 insertions / 6 new files |
+| T6 | README + user-guide reconciliation | `a966deb` | 0 | Tests badge 1130 → 1162, E2E 10 → 11 specs, Phase 5 status flipped across all user-facing docs |
+| T7 | CHANGELOG promotion | `cb0ab4c` | 0 | `[Unreleased]` → `[1.1.0] — 2026-04-20` under new "Phase 5 — Intelligence Layer" narrative header; version-link refs appended |
+| T8 | Version bump 1.0.0 → 1.1.0 + badge freeze | `a8dc98e` | +2 | 7 `package.json` files bumped + `top-bar.test.tsx` pins the literal `Phase 5` badge string (CI catches accidental `Phase 6` bump) |
+| T9 | Flaky-test audit + stable-selector sweep | `23f3b1b` | +2 | NEW `e2e-regression-guards.test.ts` (2 vitest guards); `rag-flow.spec.ts` waitForTimeout → expect.poll; 6 specs gain `[data-copilot-toolbar-toggle]` anchor |
+| **T10** | **Docs + verification + Phase 5 COMPLETE marker** | *(this commit)* | **+3** | **CLAUDE.md Phase 5 COMPLETE literal + design doc M35 ✅ Complete + CONTINUITY Phase 5 COMPLETE header + `docs/user-guide/demo-walkthrough.md` + 3 release-marker pins + v1.1.0 git tag** |
+
+### Patterns that carry forward to Phase 6
+
+- **Atomic work commit + Loki ledger commit cadence.** Eleven feature/test commits + ten ledger commits across M35 (T0–T10). Ledger commit format: `chore(loki): M35 T<N> — commit ledger (<sha>)`. Every milestone task gets its own ledger commit fold. Restored in M35 T1 after M34 deviation.
+- **Three-tier canned test seam — now quartet across M30/M31/M32/M33.** `test-classifier.ts` + `test-agentic-provider.ts` + `test-agentic-tools.ts` + `test-copilot-provider.ts`. Same shape across all four: `__ECHO_*__:<json>` sentinel → canned per-prompt table → fallback. Any future agentic surface MUST ship a matching test-side swap.
+- **Pause-aware `providerRouter.complete` wrapper.** M31 established, M33 reused. Every loop service polls `orchestrator.isCompanyPaused(companyId)` on every provider call. Meetings queue the next tick; no race.
+- **Source-string-audit unit tests (vitest env `node`, no DOM).** Pattern established at M35 T3 (audit chips), proven at M35 T8 (badge freeze), locked at M35 T9 (e2e regression guards), finalised at M35 T10 (Phase 5 COMPLETE pins). Four-test lineage = belt-and-suspenders guard for release markers.
+- **ABI rebuild dance verified across M31 + M32 + M33 + M35.** Pattern: Node rebuild → vitest → Electron rebuild → Playwright. Documented in CLAUDE.md Troubleshooting. Repeat as needed when alternating between the two test suites.
+- **`is_system` filter sweep with `isSystemRoleId` predicate.** M31 system-agent + M33 system-copilot both hidden from every human-facing surface via the same filter. Any third system seat in Phase 6 must extend the predicate in lockstep.
+- **Invariant #11 (IPC mutation must emit bus event) enforced end-to-end.** Established at M30 T2 as root-cause learning from the vault-backup.spec.ts regression; verified at every subsequent milestone E2E.
+- **Phase 5 retrospective structure is locked.** Future phase retrospectives MUST match the six-section structure from `docs/plans/2026-04-19-team-x-phase-5-retrospective.md` so delivery-arc comparisons remain apples-to-apples across phases.
+- **v1.1.0 tag discipline.** Tag points at the T10 LEDGER commit (not the atomic work commit) so the tagged SHA is the final Phase 5 SHA and the ledger changes are folded into the tag.
+
+### Next Session Startup Checklist (Phase 6 T0)
+
+1. Read this CONTINUITY header — Phase 5 is COMPLETE, v1.1.0 tagged, no in-flight milestone.
+2. Read `.loki/state/orchestrator.json` → `currentPhase: 'DEVELOPMENT'` (unchanged), `currentMilestone: null` (cleared), `phaseComplete: true`, `completedAt` set, history.M35 populated with commit list.
+3. Read `.loki/queue/pending.json` → reset to Phase 6 scaffold (empty `tasks` array, `milestone: null`).
+4. Read `docs/plans/2026-04-19-team-x-phase-5-retrospective.md` §6 for the 7 prioritised Phase 6 seeds:
+   - Post-release telemetry digest (evidence-based default tuning)
+   - Cross-company copilot rollups
+   - Proactive copilot → autonomous action
+   - Agent-to-agent negotiation
+   - Capabilities frontmatter on role.md
+   - Real customer demo (the `docs/demo/` walkthrough is the foundation)
+   - Insight export
+5. **Phase 6 T0 = write `docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md`** using the Phase 5 design doc as the structural template. Required sections: Overview, What ships, Invariants preserved, Success criteria, Milestone breakdown, Acceptance criteria, Decisions log scaffold.
+6. Pick ONE headline theme from the 7 seeds (or combine two if they compose naturally — e.g. post-release telemetry + copilot autonomous action share the same evidence-gathering backbone).
+7. Phase 6 first milestone scope TBD. DO NOT author milestone task breakdowns in T0 — T0 is plan-doc-only, mirrors Phase 5 M28 T0.
+8. First atomic commit of Phase 6: `feat(phase-6-t0): Phase 6 T0 — plan doc (<theme>)`. Ledger: `chore(loki): Phase 6 T0 — commit ledger (<sha>)`.
+
+---
+
+
 
 ## M35 T9 SHIPPED — 2026-04-20 — flaky-test audit + stable selector sweep (23f3b1b)
 

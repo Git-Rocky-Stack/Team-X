@@ -1,280 +1,49 @@
 {
-  "milestone": "M35",
-  "milestoneName": "Demo + Hardening",
-  "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md",
-  "planDocSection": "§3 (Task breakdown) + §4 (Architectural decisions) + §9 (Phase 5 design §9 M35 row)",
-  "previousMilestone": "M34",
-  "previousMilestoneCompletedAt": "2026-04-18T20:02:38Z",
-  "previousMilestoneCommit": "af643ec",
-  "createdAt": "2026-04-19T00:00:00Z",
-  "updatedAt": "2026-04-20T19:27:00Z",
-  "totalTasks": 11,
-  "tasksShipped": 10,
-  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa. M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — +28 unit → 1162). M35 T4 SHIPPED commit 0f8b51c (Phase 5 retrospective — 271 lines; zero code). M35 T5 SHIPPED commit 3cffe29 (demo walkthrough + 5-scenario library; zero code). M35 T6 SHIPPED commit a966deb (README + user-guide reconciliation sweep; zero code). M35 T7 SHIPPED commit cb0ab4c (CHANGELOG promotion [Unreleased] → [1.1.0] under 'Phase 5 — Intelligence Layer' narrative header; version-link refs introduced; zero code). M35 T8 SHIPPED commit a8dc98e (version bump 1.0.0 → 1.1.0 across 7 package.json files + Phase 5 badge freeze unit test at apps/desktop/src/renderer/src/app/top-bar.test.tsx; +2 unit → 1164). M35 T9 SHIPPED commit 23f3b1b (regression hardening — NEW apps/desktop/src/e2e-regression-guards.test.ts with 2 vitest guards: .waitForTimeout(>100ms) ban + [data-*] stable-selector sweep; rag-flow.spec.ts waitForTimeout(500) → expect.poll on rag.stats.embeddingCount>0; 6 specs got [data-copilot-toolbar-toggle] anchor; top-bar.test.tsx TS2532 latent-from-T8 fixed + biome format; +2 unit → 1166). Head-of-queue is M35 T10 (docs + verification + Phase 5 COMPLETE milestone marker, 3 unit tests). Last task before Phase 5 COMPLETE + v1.1.0 tag.",
-  "tasks": [
-    {
-      "id": "T0",
-      "name": "Plan doc",
-      "status": "shipped",
-      "commit": "da4ce1f",
-      "shippedAt": "2026-04-19T00:00:00Z",
-      "scope": "Author docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (186 lines). Mirrors M33/M34 plan-doc structural template. T0–T10 task breakdown covers all Phase 5 design §9 M35 deliverables.",
-      "commitTemplate": "feat(m35): M35 T0 — plan doc",
-      "testsDelta": 0
-    },
-    {
-      "id": "T1",
-      "name": "Performance defaults pass + clamp audit",
-      "status": "shipped",
-      "commit": "b68d09b",
-      "shippedAt": "2026-04-19T21:40:00Z",
-      "scope": "Measurement pass (not optimization pass) across the 10 settings clamps documented in the M35 plan doc §4.2 table. Analyzer-shaped prompt (50 ticket.comment + 10 project.updated + 2 goal.progressChanged + 5 vault.fileAdded = 67 bounded events, truncated to the 2000-char MAX_EVENT_SUMMARY_CHARS cap) fired at local Ollama + llama3.1:8b (Q4_K_M, 4.9 GB). Evidence: cold 208563 ms, warm #1 66847 ms, warm #2 65872 ms; 2288 chars / 734 prompt_eval tokens / ~200 eval tokens; well-formed JSON response. Decision: all 10 defaults HELD — measurement justifies holding, not moving (66 s warm tick vs 120 s agentic_timeout_ms = 0.55× utilisation; 5-min copilot cadence vs 66 s tick = 4.5× headroom; 8000 token budget vs 1600 projected = 4× headroom). Full measurement block + per-clamp rationale table lives in apps/desktop/src/main/db/seed.ts header.",
-      "filesTouched": [
-        "apps/desktop/src/main/db/seed.ts (+47 header comment lines, behavior untouched)",
-        "apps/desktop/src/main/db/repos/settings.test.ts (+96 lines, +3 unit tests)",
-        "apps/desktop/src/main/services/copilot-analyzer-service.test.ts (+40 lines, +1 unit test)"
-      ],
-      "commitTemplate": "perf(m35): M35 T1 — performance defaults + clamp audit",
-      "testsDelta": "+4 unit (1130 → 1134)",
-      "verificationGates": {
-        "unitTests": "1134/1134 pass (38.85s)",
-        "lint": "0 errors / 24 warnings (baseline restored — .loki/queue/pending.json format drift cleared surgically)",
-        "typecheck": "clean across all 6 packages",
-        "e2e": "not re-run (comment + test-only change; no production-path behavior change; E2E baseline at M34 T11 preserved)"
-      }
-    },
-    {
-      "id": "T2",
-      "name": "Cross-milestone E2E — RAG → NLU → agentic → planner → copilot",
-      "status": "shipped",
-      "commit": "1108247",
-      "shippedAt": "2026-04-19T23:55:00Z",
-      "scope": "NEW apps/desktop/e2e/phase-5-integration.spec.ts (495 lines). Single spec stitching the full Phase 5 stack in one Playwright session. Shipped scenario: (1) vault.upload + chat round-trip via CEO with __ECHO_TEXT__:<marker> sentinel fires work.completed → RagIndexer embeds the reply → rag.stats embedding count grows above baseline (the RagIndexer subscribes to work.completed + meeting.ended, not vault events — vault files are retrieved through FTS5 at agent-turn time rather than pre-indexed; the vault.upload IPC is still asserted in the same session as an independent Phase 4 surface). (2) Cmd+K 'what is my team doing right now' → canned classifier complex_request → canned agentic provider plan → query_employees → answer with 'Team currently has' text. (3) Cmd+K 'decompose the frontend redesign into tickets' → amber write-side gate → Confirm → decompose_project + delegate_subtask + answer with 'Decomposed the frontend redesign' text. (4) copilot.configure manual tick → insightsGenerated ≥ 1. (5) Toolbar Sparkles toggle → sidebar + insight card + dismiss + copilot.dismissed on events table (invariant #11) + ask-input sentinel → system-flagged thread count ≥1. Regression guards inline: destructive gate ABSENT full session; write-side gate ONLY Step 3; Phase 5 badge verbatim. Runtime 3.7s (under ≤15s budget). Launched with TEAM_X_RAG_TEST=1 + NODE_ENV=test. Zero production-code changes. Zero new canned-seam entries — reused existing keys + __ECHO_AGENT__: sentinel path.",
-      "filesTouched": ["apps/desktop/e2e/phase-5-integration.spec.ts (NEW, 495 lines)"],
-      "commitTemplate": "test(m35): M35 T2 — cross-milestone integration E2E spec",
-      "testsDelta": "+1 E2E spec (10 → 11 spec files; 11 → 12 Playwright cases)",
-      "verificationGates": {
-        "unitTests": "1134/1134 pass (24.41s) — unchanged from T1 baseline (T2 adds E2E only)",
-        "lint": "0 errors / 24 warnings (baseline restored via surgical biome format --write on the new spec)",
-        "typecheck": "clean across all 6 packages",
-        "e2e": "12 passed / 11 spec files / 40.6s total (integration spec runtime 3.7s)"
-      }
-    },
-    {
-      "id": "T3",
-      "name": "Observability polish — Audit view chip coverage audit",
-      "status": "shipped",
-      "commit": "51393f8",
-      "shippedAt": "2026-04-19T23:59:00Z",
-      "scope": "Phase 5 added 15 new event types; AuditView previously shipped chips for only 7 (M30 command.executed + M32 T6 planner chips). T3 chips the remaining 10 (rag.index.indexed, rag.index.reindexed, rag.index.removed, agent.step, agentic.completed, agentic.failed, copilot.analyzed, copilot.insight, copilot.dismissed, copilot.expired) with semantic-color-paired-with-text-label a11y contract + aria-label carrying the literal event-type name + data-event-type stable E2E selector surface. Payload-aware row-summary formatters surface the most useful payload field per type (agent.step → kind + stepIndex + runId slice; copilot.analyzed → reason + counts + durationMs; rag.index.* → sourceKind + sourceId slice + chunkCount; etc.). Hard 140-char summary cap via clampSummary. NEW `audit-event-chip-helpers.ts` pure-helper module split from the component `.tsx` so vitest resolves without `@/` alias cascade through Badge — mirrors the existing step-card-narrow.ts + step-card.tsx convention. Three representative event types pinned per acceptance #3 (rag.index.indexed / agent.step / copilot.analyzed) plus M32 T6 planner regression guards (plan.proposed + task.delegated) plus cross-cutting defaults. rag.index.* chips land defensively — the bus events are aspirational per CLAUDE.md's bus-event table but NOT currently emitted by rag-indexer.ts (verified via grep of lines 78, 88 — indexer only handles work.completed + meeting.ended and writes directly via ragService.indexSource without a bus emit).",
-      "filesTouched": [
-        "apps/desktop/src/renderer/src/features/audit/audit-event-chip-helpers.ts (NEW, 347 lines — pure helpers)",
-        "apps/desktop/src/renderer/src/features/audit/audit-event-chip.tsx (NEW, 89 lines — component shell + re-exports)",
-        "apps/desktop/src/renderer/src/features/audit/audit-event-chip.test.tsx (NEW, 263 lines — 28 unit tests)",
-        "apps/desktop/src/renderer/src/features/audit/audit-view.tsx (MODIFIED — removed 143 lines of duplicated helpers, added 10 lines for chip import + component replacement)"
-      ],
-      "commitTemplate": "feat(m35): M35 T3 — audit view chips for Phase 5 events",
-      "testsDelta": "+28 unit (1134 → 1162; plan estimated +3, shipped richer coverage per no-cutting-corners mandate)",
-      "verificationGates": {
-        "unitTests": "1162/1162 pass (15.17s) — 100 test files green",
-        "lint": "0 errors / 24 warnings (baseline restored via surgical biome format --write on the 4 new/edited audit files + .loki/state/orchestrator.json pre-existing format drift)",
-        "typecheck": "clean across all 6 packages",
-        "e2e": "not re-run (renderer-only chip change; no E2E spec asserts on audit-view selectors; matches M35 T1's comment+test-only precedent — E2E baseline preserved at 12 cases / 11 spec files / 40.6s from M35 T2)"
-      }
-    },
-    {
-      "id": "T4",
-      "name": "Phase 5 retrospective doc",
-      "status": "shipped",
-      "commit": "0f8b51c",
-      "shippedAt": "2026-04-19T23:59:30Z",
-      "scope": "NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md (271 lines). Locked 6-section structure per M35 plan doc §4.5: (1) What we shipped — M28 → M35 one-liners with commit range / test delta / architectural seam / (2) What went well — 10 compounding patterns (canned test-seam quartet + {rows, truncated} envelope + data-* stable selector surface + pause-aware providerRouter wrapper + AbortController stop + is_system filter-sweep + atomic+ledger cadence + ABI rebuild dance + pure-helpers+component split + invariant #11) / (3) What cost us time — Vitest/Playwright ABI dance + sqlite-vec extension load path + FTS5 regression birthing invariant #11 + malformed tool-call parser nudge-retry + F1/F2/F3/F4 follow-ups + @/ alias cascade + docblock accuracy drift + plan-vs-shipped test-count drift / (4) What we deferred — 9 items with Phase 6 sketches / (5) Metrics — test growth 612 → 1162 = +550 / +83% / E2E 4 → 11 specs / 12 cases / LOC 43,919 insertions / 207 files / EventType 16 → 31 / invariants 10 → 11 / cadence 80% strict atomic adherence / (6) Phase 6 seeds — 7 prioritized hypotheses (post-release telemetry digest / cross-company rollups / proactive copilot → autonomous action / agent-to-agent negotiation / capabilities frontmatter / real customer demo / insight export). Cross-link added from docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md §13 Decisions Log. 0 tests.",
-      "filesTouched": [
-        "docs/plans/2026-04-19-team-x-phase-5-retrospective.md (NEW, 271 lines)",
-        "docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md (+1 cross-link paragraph after §13 D12)"
-      ],
-      "commitTemplate": "docs(m35): M35 T4 — Phase 5 retrospective",
-      "testsDelta": 0,
-      "verificationGates": {
-        "unitTests": "not re-run (docs-only delivery; 1162/1162 baseline preserved from M35 T3)",
-        "lint": "not re-run (no code surface)",
-        "typecheck": "not re-run (no TypeScript surface)",
-        "e2e": "not re-run (no renderer or main-process surface)"
-      }
-    },
-    {
-      "id": "T5",
-      "name": "Demo script + scripted walkthrough",
-      "status": "shipped",
-      "commit": "3cffe29",
-      "shippedAt": "2026-04-19T23:59:45Z",
-      "scope": "NEW docs/demo/phase-5-walkthrough.md (overall Phase 5 demo script with verbatim 2-line hook 'Team-X is an AI-agent company that runs on your laptop. Here's what that looks like.', ~15 min runtime table, arc front-loading familiar interactions + back-loading headline Phase 5 capabilities, forward pointer to 7 Phase 6 seeds from retrospective §6, 1920×1080 @ 60fps recording setup) + 5 scenario stubs under docs/demo/scenarios/: 01-hire-a-ceo.md (Phase 1 callback, 3 min), 02-ticket-lifecycle.md (Phase 2 callback, 3 min, MCP tool call chip), 03-one-click-all-hands.md (Phase 3 callback, 2 min, orchestrator pause), 04-ask-copilot-grounded-answer.md (Phase 5 M30+M31 headline, 3 min, step log cycling with grounded answer), 05-decompose-and-surface.md (Phase 5 M32+M33+M34 headline, 4 min, amber write-side gate + copilot sidebar surfacing new insight). Each scenario doc follows locked structure (hook / setup / scripted sequence / key moments / duration / dependencies / data attributes / transition). Data attributes documented as stable narrator-DOM contract per Phase. Cross-link added in docs/plans/2026-04-19-team-x-phase-5-retrospective.md §6.6 'Real customer demo'. 795 insertions across 6 new files + 1 retrospective line. Zero code / zero tests / zero IPC/bus/migrations.",
-      "filesTouched": [
-        "docs/demo/phase-5-walkthrough.md (NEW, overall walkthrough)",
-        "docs/demo/scenarios/01-hire-a-ceo.md (NEW, Phase 1 callback, 3 min)",
-        "docs/demo/scenarios/02-ticket-lifecycle.md (NEW, Phase 2 callback, 3 min)",
-        "docs/demo/scenarios/03-one-click-all-hands.md (NEW, Phase 3 callback, 2 min)",
-        "docs/demo/scenarios/04-ask-copilot-grounded-answer.md (NEW, Phase 5 M30+M31 headline, 3 min)",
-        "docs/demo/scenarios/05-decompose-and-surface.md (NEW, Phase 5 M32+M33+M34 headline, 4 min)",
-        "docs/plans/2026-04-19-team-x-phase-5-retrospective.md (+1 Scripted foundation line in §6.6)"
-      ],
-      "commitTemplate": "docs(m35): M35 T5 — demo walkthrough + scenario library",
-      "testsDelta": 0,
-      "verificationGates": {
-        "unitTests": "not re-run (docs-only delivery; 1162/1162 baseline preserved from M35 T3 / T4)",
-        "lint": "not re-run (no code surface)",
-        "typecheck": "not re-run (no TypeScript surface)",
-        "e2e": "not re-run (no renderer or main-process surface; E2E baseline at M35 T2 preserved — 12 cases / 11 spec files / 40.6s)"
-      }
-    },
-    {
-      "id": "T6",
-      "name": "README + user-guide reconciliation sweep",
-      "status": "shipped",
-      "commit": "a966deb",
-      "shippedAt": "2026-04-20T00:00:15Z",
-      "scope": "Root README.md reconciled against the live M35 baseline: tests badge 1099 → 1162; tech-stack table Vitest 1033 → 1162 + Playwright 8 → 11 specs; Testing section 1033 → 1162 unit + 8 → 11 spec files + 12 Playwright cases note; spec table expanded 8 → 11 rows (adds copilot-service.spec.ts, copilot-ui.spec.ts, phase-5-integration.spec.ts); architecture tree 10 → 13 migrations (verified 0000-0012) + 60+ → 80+ IPC channels + 8 → 11 Playwright specs; command palette framing '15 intents' → '14 structured intents plus a complex_request fallback' (reconciles Live-Cockpit section with Intelligence-Layer section + CLAUDE.md). docs/user-guide/README.md rewritten: Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 / Reference grouping, Cmd+K + Cmd+Shift+K keyboard-first primer, See-also section linking root README + CONTRIBUTING + CHANGELOG + Phase 5 retrospective + Phase 5 demo walkthrough. Partial-truth audit (M31 T9 pattern) surfaced 6 drift sites — all fixed in-place. grep-verified no stale refs remain.",
-      "filesTouched": [
-        "README.md (MODIFIED, +19/-16 net)",
-        "docs/user-guide/README.md (MODIFIED — already existed from M34 era; full Phase-grouped rewrite, +35/-7 net)"
-      ],
-      "commitTemplate": "docs(m35): M35 T6 — README + user-guide reconciliation sweep",
-      "testsDelta": 0,
-      "verificationGates": {
-        "unitTests": "not re-run (docs-only delivery; 1162/1162 baseline preserved from M35 T3)",
-        "lint": "not re-run (no code surface)",
-        "typecheck": "not re-run (no TypeScript surface)",
-        "e2e": "not re-run (no renderer or main-process surface; E2E baseline at M35 T2 preserved — 12 cases / 11 spec files / 40.6s)"
-      }
-    },
-    {
-      "id": "T7",
-      "name": "CHANGELOG promotion [Unreleased] → [1.1.0]",
-      "status": "shipped",
-      "commit": "cb0ab4c",
-      "shippedAt": "2026-04-20T00:00:30Z",
-      "scope": "Promoted CHANGELOG.md [Unreleased] (M30 + M31 + M32 + M33 + M33 F3/F4 + M34 entries, reverse-chronological under per-milestone ### headers) into [1.1.0] — 2026-04-20 under a new 'Phase 5 — Intelligence Layer' narrative header. Keep a Changelog format preserved; per-milestone Added / Changed / Fixed ordering retained verbatim — zero re-authoring of existing content per carry-forward rule. Reset [Unreleased] to an empty six-category scaffold (Added / Changed / Fixed / Deprecated / Removed / Security) ready for Phase 6. Added release-note line: baseline delta 612 / 4 (v1.0.0) → 1162 unit / 11 E2E specs / 12 Playwright cases with M28-M35 enumerated as the additive shippable surface. Introduced bottom-of-file version-link refs for [Unreleased] / [1.1.0] / [1.0.0] (file had none; acceptance-#5 phrasing 'updated' was aspirational). Repo Git-Rocky-Stack/Team-X confirmed via git remote. Surfaced-but-not-acted drift: M28 + M29 had no [Unreleased] entries at start-of-task — NOT backfilled per 'DO NOT invent' carry-forward rule; header-level scope statement covers them. Zero code / zero tests / zero IPC/bus/migrations.",
-      "filesTouched": ["CHANGELOG.md (MODIFIED, +26 insertions)"],
-      "commitTemplate": "docs(m35): M35 T7 — CHANGELOG [Unreleased] → [1.1.0]",
-      "testsDelta": 0,
-      "verificationGates": {
-        "unitTests": "not re-run (docs-only delivery; 1162/1162 baseline preserved from M35 T3)",
-        "lint": "not re-run (no code surface)",
-        "typecheck": "not re-run (no TypeScript surface)",
-        "e2e": "not re-run (no renderer or main-process surface; E2E baseline at M35 T2 preserved — 12 cases / 11 spec files / 40.6s)"
-      }
-    },
-    {
-      "id": "T8",
-      "name": "Version bump 1.0.0 → 1.1.0 + Phase 5 badge freeze unit test",
-      "status": "shipped",
-      "commit": "a8dc98e",
-      "shippedAt": "2026-04-20T11:56:30Z",
-      "scope": "Repo-wide find-based sweep bumped version field 1.0.0 → 1.1.0 in 7 package.json files (not 6 — plan doc §3 T8 literal 'all 6' was a plan-authoring drift, reconciled via find). Bumped files: root package.json, apps/desktop/package.json, and 5 packages/* (shared-types, role-schema, provider-router, telemetry-core, intelligence). Added two unit tests at apps/desktop/src/renderer/src/app/top-bar.test.tsx (NEW file) via source-string audit per M35 T3 convention — no jsdom, no React rendering, since the per-workspace vitest config runs environment: 'node'. Test 1: matches <Badge>…</Badge> via whitespace-tolerant regex against top-bar.tsx source, asserts trimmed children === 'Phase 5' (canary against an accidental Phase 6 flip). Test 2: JSON.parse of apps/desktop/package.json, asserts version === '1.1.0' (semver pin against accidental downgrade or premature 1.2.0/2.0.0 bump). Path correction vs plan: top-bar.tsx is at apps/desktop/src/renderer/src/app/top-bar.tsx (NOT the plan-speculative .../components/app/ path) — test placed beside component. Grep audit clean: only non-CHANGELOG 1.0.0 references are .github/workflows/release.yml line 3 ('e.g. v1.0.0' as an example, not a current-version claim) and .loki/* working memory (this ledger commit). CHANGELOG.md [1.0.0] release marker + version-link ref preserved per T7 framing. Surfaced-but-not-acted drift: M28 + M29 had no [Unreleased] entries at start-of-T7 — NOT backfilled per 'DO NOT invent' carry-forward rule (documented in T7 surpriseNote + honored in T8 carry-forward). No landing-site badge update needed — docs/site/index.html is absent. Zero IPC/bus/migrations.",
-      "filesTouched": [
-        "package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-        "apps/desktop/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-        "packages/shared-types/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-        "packages/role-schema/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-        "packages/provider-router/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-        "packages/telemetry-core/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-        "packages/intelligence/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-        "apps/desktop/src/renderer/src/app/top-bar.test.tsx (NEW — 2 unit tests, source-string audit style)"
-      ],
-      "commitTemplate": "chore(m35): M35 T8 — v1.0.0 → v1.1.0 + Phase 5 badge pin",
-      "testsDelta": 2,
-      "verificationGates": {
-        "unitTests": "1164 passed (1164) — exactly target (1162 + 2). 101 test files, 22.02s. Vec-init.test.ts sqlite-vec 'no such module: vec0' stderr is the known graceful-fallback path from M28 (test passes ✓).",
-        "lint": "not re-run — package.json version bumps + new vitest test file within 0-error baseline. T9 optional clearance target for the pre-existing M30 T2 lint error unchanged.",
-        "typecheck": "not re-run — package.json fields only (no schema impact) + new test file uses pure node built-ins (fs/path/url) within vitest's standard type surface.",
-        "e2e": "not re-run — no renderer runtime surface changed; top-bar.tsx was NOT edited, only audited as a source string. E2E baseline at M35 T2 preserved (12 cases / 11 spec files / 40.6s)."
-      }
-    },
-    {
-      "id": "T9",
-      "name": "Regression hardening — flaky-test audit + stable selector sweep",
-      "status": "shipped",
-      "commit": "23f3b1b",
-      "shippedAt": "2026-04-20T19:22:00Z",
-      "scope": "NEW apps/desktop/src/e2e-regression-guards.test.ts — two vitest guards over apps/desktop/e2e/*.spec.ts. Guard #1 scans for .waitForTimeout(N) (capture-group extraction of numeric arg; regardless of receiver — page / window / frame / popup) and fails when N > 100 ms; the 100 ms floor lets drag-drop settling stand without flagging real fixed-duration sleeps. Guard #2 regex-asserts every spec contains at least one `[data-<kebab>]` attribute locator per the M30 data-step-kind / M33 data-copilot-insight-id / M34 data-copilot-toolbar-toggle convention. Deliberately does NOT flag setTimeout (every spec uses setTimeout(resolve, 5000) inside an afterEach Promise.race shutdown guard — upper-bound safety net, not a sync primitive — per surpriseWatch (c)). Placement discipline: lives under src/ because apps/desktop/vitest.config.ts excludes e2e/**; a guard placed in e2e/ would silently never run. Surgical in-commit fixes to the 2 real offenders the guards flagged at audit time: (A) rag-flow.spec.ts:188 `window.waitForTimeout(500)` → `expect.poll(async () => { ragStats = await window.evaluate(teamx.rag.stats…); return ragStats.embeddingCount }, { timeout: 10_000, intervals: [200,300,500,500,1000] }).toBeGreaterThan(0)` — waits on the real indexer-flush side-effect, not a timer; (B) six specs lacking [data-*] (copilot-service, meeting-flow, rag-flow, smoke, ticket-flow, vault-backup) each now assert `window.locator('[data-copilot-toolbar-toggle]').toBeVisible()` immediately after the Phase 5 badge check — anchors the stable-selector contract with a semantically meaningful assertion (proves the M34 top-bar Copilot Sparkles button mounted) without duplicating copilot-ui.spec coverage. Adjacent T8 dormant hardening (necessary to ship): top-bar.test.tsx TS2532 `Object is possibly 'undefined'` at line 57 surfaced after the Electron-ABI rebuild forced a composite-ref rebuild — replaced `expect(badgeMatch![1].trim()).toBe('Phase 5')` with `const captured = badgeMatch?.[1]?.trim() ?? ''; expect(captured).toBe('Phase 5')`, dropping the noNonNullAssertion biome-ignore. Biome format --write collapsed two multi-line call blocks. Skipped: the M30 T2 entity-resolver.ts lint clearance — acceptance criterion was 'only touch the file if the lint run genuinely flags it' and full `pnpm lint` reports 0 errors / 24 warnings (noNonNullAssertion findings are warnings in biome config, not errors).",
-      "filesTouched": [
-        "apps/desktop/src/e2e-regression-guards.test.ts (NEW — 2 vitest guards scanning e2e/*.spec.ts)",
-        "apps/desktop/e2e/rag-flow.spec.ts (MODIFIED — waitForTimeout(500) → expect.poll + [data-copilot-toolbar-toggle] anchor)",
-        "apps/desktop/e2e/smoke.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
-        "apps/desktop/e2e/ticket-flow.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
-        "apps/desktop/e2e/meeting-flow.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
-        "apps/desktop/e2e/vault-backup.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
-        "apps/desktop/e2e/copilot-service.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
-        "apps/desktop/src/renderer/src/app/top-bar.test.tsx (MODIFIED — TS2532 fix on badgeMatch indexed access + biome format)"
-      ],
-      "commitTemplate": "test(m35): M35 T9 — flaky-test audit + stable selector sweep",
-      "testsDelta": 2,
-      "verificationGates": {
-        "unitTests": "1166/1166 passed (+2 guard tests, 1164 → 1166 exact plan target; 102 test files; 25.86s after Node-ABI rebuild)",
-        "lint": "0 errors / 24 warnings (baseline preserved — my 6 new-file useTemplate/noUnusedTemplateLiteral findings auto-fixed + 1 pre-existing top-bar.test.tsx format error cleaned as adjacent hardening)",
-        "typecheck": "clean across all 6 workspace packages (after fixing the T8-dormant TS2532 on top-bar.test.tsx line 57)",
-        "e2e": "11 spec files / 12 Playwright cases green in 41.5s (test:e2e full run after electron-rebuild better-sqlite3+keytar)",
-        "guardSelfTest": "both guards pass on the current suite — 0 .waitForTimeout(>100ms) offenders, all 11 specs carry at least one [data-*] locator",
-        "recipeNote": "Node ABI ↔ Electron ABI rebuild dance executed per CLAUDE.md troubleshooting: electron-rebuild for E2E → cd better-sqlite3 pnpm dir && npm run install for Node ABI → vitest → electron-rebuild again before next E2E."
-      }
-    },
-    {
-      "id": "T10",
-      "name": "Docs + verification + Phase 5 COMPLETE milestone marker",
-      "status": "pending",
-      "scope": "Final verification gate (ABI rebuild dance → 1145 unit / 11 E2E / 0 lint errors / typecheck clean / dist:win smoke-launch). Flip CLAUDE.md Phase 5 status line to 'Phase 5 (Intelligence Layer) — complete. All 8 milestones shipped (M28 → M35). v1.1.0.' Flip Phase 5 design doc §9 M35 row 📋 Planned → ✅ Complete. Append M35 / Phase 5 COMPLETE subsection to CONTINUITY.md. NEW docs/user-guide/demo-walkthrough.md (external-facing copy of the M35 T5 demo script). Tag v1.1.0. 3 unit tests: CLAUDE.md Phase 5 line matches literal 'complete'; Phase 5 design §9 M35 row matches ✅; CONTINUITY.md first line matches 'Phase 5 COMPLETE'.",
-      "filesTouched": [
-        "CLAUDE.md",
-        "docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md",
-        "docs/user-guide/demo-walkthrough.md (NEW)",
-        ".loki/CONTINUITY.md",
-        ".loki/state/orchestrator.json",
-        ".loki/queue/pending.json",
-        ".loki/queue/current-task.json"
-      ],
-      "commitTemplate": "chore(m35): M35 T10 — docs + verification + Phase 5 COMPLETE marker",
-      "testsDelta": 3
-    }
-  ],
+  "milestone": null,
+  "milestoneName": null,
+  "phase": "Phase 6 — scope TBD",
+  "planDoc": null,
+  "planDocSection": null,
+  "previousPhase": "Phase 5 — Intelligence Layer",
+  "previousPhaseCompletedAt": "2026-04-20T13:00:00Z",
+  "previousPhaseVersionTag": "v1.1.0",
+  "previousMilestone": "M35",
+  "previousMilestoneName": "Demo + Hardening",
+  "previousMilestoneCompletedAt": "2026-04-20T13:00:00Z",
+  "previousMilestoneCommit": "6315ede (M35-T10 — Phase 5 COMPLETE marker)",
+  "createdAt": "2026-04-20T13:00:00Z",
+  "updatedAt": "2026-04-20T13:00:00Z",
+  "totalTasks": null,
+  "tasksShipped": 0,
+  "status": "Phase 5 COMPLETE (v1.1.0, 2026-04-20). All 8 milestones shipped (M28 → M35). 1169 unit tests / 11 E2E specs / 12 Playwright cases. Phase 6 is open with no milestones materialised yet. The first Phase 6 task is T0 — author the Phase 6 plan doc at docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md using the Phase 5 design doc (docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md) as the structural template. Scope selection draws from the 7 candidate themes enumerated in the Phase 5 retrospective §6: (1) post-release telemetry digest for evidence-based default tuning, (2) cross-company copilot rollups, (3) proactive copilot → autonomous action, (4) agent-to-agent negotiation, (5) capabilities frontmatter on role.md (enables role-fit scoring beyond the M32 keyword heuristic), (6) real customer demo (docs/demo/ walkthrough is the foundation), (7) insight export. DO NOT author milestone task breakdowns in T0 — T0 is plan-doc-only, mirroring Phase 5 M28 T0.",
+  "tasks": [],
   "baseline": {
-    "unitTests": 1130,
-    "e2eSpecs": 10,
-    "e2eGreenCount": 11,
-    "lintErrors": 1,
-    "lintErrorsNote": "Pre-existing at packages/intelligence/src/nlu/entity-resolver.ts:352 (commit 6d99aa4c, M30 T2). Not added by M34. M35 T9 optional clearance target.",
-    "lintWarnings": 24,
-    "typecheckClean": true
-  },
-  "current": {
-    "unitTests": 1162,
+    "unitTests": 1169,
     "e2eSpecs": 11,
     "e2eGreenCount": 12,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfMilestone": "M35 T7 shipped (commit cb0ab4c)"
+    "version": "1.1.0",
+    "asOfPhase": "Phase 5 COMPLETE (2026-04-20, v1.1.0)"
+  },
+  "current": {
+    "unitTests": 1169,
+    "e2eSpecs": 11,
+    "e2eGreenCount": 12,
+    "lintErrors": 0,
+    "lintWarnings": 24,
+    "typecheckClean": true,
+    "version": "1.1.0",
+    "asOfTask": "M35-T10 (Phase 5 COMPLETE, atomic commit 6315ede)"
   },
   "targets": {
-    "unitTests": 1145,
-    "unitTestDelta": "+15 (1130 → ~1145)",
-    "e2eSpecs": 11,
-    "e2eSpecDelta": "+1 (10 → 11; +phase-5-integration.spec.ts)",
-    "lintErrors": 0,
-    "lintWarningsMax": 24,
-    "version": "1.0.0 → 1.1.0"
+    "phase6T0": "Phase 6 plan doc at docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md — structural mirror of docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md; required sections: Overview, What ships, Invariants preserved, Success criteria, Milestone breakdown (placeholder count), Acceptance criteria, Decisions log scaffold. Zero code / zero tests in T0."
   },
   "notes": [
-    "M35 T7 (CHANGELOG promotion [Unreleased] → [1.1.0]) SHIPPED 2026-04-20 commit cb0ab4c. [Unreleased] accumulated M30 + M31 + M32 + M33 + M33 F3/F4 + M34 entries (reverse-chronological under per-milestone ### headers) promoted into [1.1.0] — 2026-04-20 under a new 'Phase 5 — Intelligence Layer' narrative header. Keep a Changelog per-milestone Added / Changed / Fixed ordering retained verbatim. [Unreleased] reset to empty six-category scaffold (Added / Changed / Fixed / Deprecated / Removed / Security) for Phase 6. Release-note line cites baseline delta 612 / 4 (v1.0.0) → 1162 unit / 11 E2E specs / 12 Playwright cases and enumerates M28-M35 as the additive shippable surface (M28/M29 named in header scope only — per-milestone entries were NOT in [Unreleased] at start-of-task and were NOT backfilled per carry-forward 'DO NOT invent' rule). Bottom-of-file version-link refs INTRODUCED (file had none — acceptance-#5 phrasing 'updated' was aspirational; compare URLs point at Git-Rocky-Stack/Team-X repo confirmed via git remote get-url origin). Zero code / zero tests / zero IPC/bus/migrations. Unit baseline 1162 preserved; no verification gates re-run (docs-only precedent from T4/T5/T6). Head-of-queue advances to M35 T8 (version bump 1.0.0 → 1.1.0 + Phase 5 badge freeze unit test — 2 tests, +2 → 1164 target). Atomic + ledger cadence held.",
-    "M35 T6 (README + user-guide reconciliation sweep) SHIPPED 2026-04-20 commit a966deb. Root README.md reconciled against the live M35 baseline — tests badge 1099 → 1162, Vitest 1033 → 1162, Playwright 8 → 11 specs + 12 cases note, spec table expanded 8 → 11 rows, architecture tree migrations 10 → 13 + IPC 60+ → 80+ channels, command palette framing '15 intents' → '14 structured intents plus a complex_request fallback' (aligns Live-Cockpit section with Intelligence-Layer section and CLAUDE.md). docs/user-guide/README.md rewritten with Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 / Reference grouping + Cmd+K + Cmd+Shift+K keyboard-first primer at top + See-also links to root README, CONTRIBUTING, CHANGELOG, Phase 5 retrospective (M35 T4), Phase 5 demo walkthrough (M35 T5). Partial-truth audit (M31 T9 pattern) surfaced 6 drift sites — all fixed in-place, zero TODOs. grep clean for stale 1099/1033/8 specs/10 migrations/15 intents references. Zero code / zero tests / zero IPC/bus/migrations. Unit baseline 1162 preserved; no verification gates re-run (docs-only precedent from T4/T5). Head-of-queue advances to M35 T7 (CHANGELOG promotion [Unreleased] → [1.1.0]). Atomic + ledger cadence held.",
-    "M35 T5 (Demo script + scripted walkthrough) SHIPPED 2026-04-19 commit 3cffe29. NEW docs/demo/phase-5-walkthrough.md (overall Phase 5 demo arc with verbatim hook + ~15 min runtime table + forward pointer to 7 Phase 6 seeds) + 5 scenario stubs under docs/demo/scenarios/ (01-hire-a-ceo.md Phase 1 callback 3 min / 02-ticket-lifecycle.md Phase 2 callback 3 min with MCP chip / 03-one-click-all-hands.md Phase 3 callback 2 min with orchestrator pause / 04-ask-copilot-grounded-answer.md Phase 5 M30+M31 headline 3 min with step log cycling / 05-decompose-and-surface.md Phase 5 M32+M33+M34 headline 4 min with amber write-side gate + copilot sidebar insight surface). Each scenario ≤150 lines with locked structure (hook / setup / scripted sequence / key moments / duration / dependencies / data attributes / transition). Cross-link added to retrospective §6.6 'Real customer demo'. 795 insertions / 6 new files / 7 files changed (incl. retrospective cross-link). Zero code / zero tests / zero IPC/bus/migrations. Unit baseline 1162 preserved; no verification gates re-run (docs-only delivery). Head-of-queue advances to M35 T6 (README + user-guide reconciliation sweep). Atomic + ledger commit cadence held.",
-    "M35 T4 (Phase 5 retrospective doc) SHIPPED 2026-04-19 commit 0f8b51c. NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md 271 lines with locked 6-section structure per M35 plan doc §4.5. Cross-link added from design doc §13 Decisions Log. Zero code / zero tests / zero IPC/bus/migration work. Unit baseline 1162 preserved; no verification gates re-run (docs-only delivery). Head-of-queue advances to M35 T5 (Demo script + scripted walkthrough).",
-    "M35 T0 (plan doc) SHIPPED 2026-04-19 commit da4ce1f. Plan doc docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (186 lines) covers all Phase 5 design §9 M35 deliverables + Phase 5 exit gate.",
-    "M35 T3 (audit view chips for Phase 5 events) SHIPPED 2026-04-19 commit 51393f8. 10 newly-chipped event types (rag.index.* ×3, agent.step, agentic.completed, agentic.failed, copilot.* ×4) + payload-aware row summaries + 28 unit tests. Unit baseline 1134 → 1162. Chip module split pattern established (audit-event-chip-helpers.ts pure + audit-event-chip.tsx component) mirrors the step-card-narrow convention and unblocks future renderer pure-helper extractions without vitest `@/` alias work.",
-    "Phase 5 exit strategy: M35 is the only unshipped Phase 5 milestone. 11 tasks total (T0 + T1 + T2 + T3 done). After T10 lands, Phase 5 is COMPLETE and v1.1.0 ships. Next session is Phase 6 T0 (write Phase 6 plan doc — scope TBD).",
-    "Zero new IPC / bus events / providers / migrations across M35. Purely integration hardening + performance measurement + documentation + release marker. Renderer-only and main-only edits are all additive.",
-    "M35 restores the per-task atomic + ledger commit cadence (M34 deviated with a squashed feat commit covering T2–T10 + separate T11 docs commit). M35 T1–T10 each land as their own atomic commit with a matching chore(loki) ledger commit fold.",
-    "Verification recipe at T10: (1) Node ABI rebuild, (2) pnpm test → ~1145, (3) pnpm typecheck → clean, (4) pnpm lint → 0 errors / ≤24 warnings, (5) Electron ABI rebuild, (6) pnpm -F @team-x/desktop test:e2e → 11/12 in ≤35s, (7) pnpm -F @team-x/desktop build, (8) pnpm dist:win smoke-launch against release/1.1.0/ installer.",
-    "Risk watch: (a) T1 measurement may justify no default changes — that is a valid outcome and T1 ships with unchanged defaults + evidence in comments. (b) T2 E2E may exceed 15s budget — that signals a canned seam doing real work; diagnose, do not widen the budget. (c) T8 version bump must also audit for any hardcoded '1.0.0' outside package.json (docs, comments, strings) — the pnpm dist:win smoke-launch verifies the installer version externally."
+    "Phase 5 COMPLETE (v1.1.0, 2026-04-20). This file is the Phase 6 scaffold; it holds no in-flight tasks until the Phase 6 plan doc (T0) materialises the T1+ breakdown.",
+    "First Phase 6 atomic commit: `feat(phase-6-t0): Phase 6 T0 — plan doc (<theme>)`. Ledger: `chore(loki): Phase 6 T0 — commit ledger (<sha>)`.",
+    "Theme selection must be explicit — do not default-pick. The Phase 5 retrospective §6 lists all 7 candidates with rationale + estimated size. Pick one headline theme (or combine two if they share an evidence backbone, e.g. post-release telemetry + autonomous action).",
+    "Patterns to carry forward from Phase 5 into Phase 6 T0: atomic + ledger commit cadence, three-tier canned test seam (quartet pattern — any new agentic surface MUST ship a matching test-side swap), pause-aware providerRouter.complete wrapper, source-string-audit unit test lineage (now 4-deep: M35 T3/T8/T9/T10), ABI rebuild dance, is_system filter sweep with isSystemRoleId predicate, invariant #11 (IPC mutation must emit bus event), locked six-section phase retrospective structure."
   ]
 }

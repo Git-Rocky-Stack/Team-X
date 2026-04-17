@@ -1,53 +1,38 @@
 {
-  "taskId": "M35-T10",
-  "milestone": "M35",
-  "milestoneName": "Demo + Hardening",
-  "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T10 row)",
-  "title": "Docs + verification + Phase 5 COMPLETE milestone marker",
+  "taskId": "Phase-6-T0",
+  "milestone": null,
+  "milestoneName": null,
+  "phase": "Phase 6 — scope TBD",
+  "planDoc": null,
+  "title": "Phase 6 T0 — author Phase 6 plan doc",
   "status": "pending",
-  "predecessor": "M35-T9 shipped 2026-04-20 (commit 23f3b1b — 'test(m35): M35 T9 — flaky-test audit + stable selector sweep'). Added NEW apps/desktop/src/e2e-regression-guards.test.ts with 2 vitest guards (+2 unit → 1166). Fixed rag-flow.spec.ts waitForTimeout(500) → expect.poll on teamx.rag.stats.embeddingCount > 0. Added [data-copilot-toolbar-toggle] stable-selector anchor to 6 specs (copilot-service, meeting-flow, rag-flow, smoke, ticket-flow, vault-backup). Adjacent hardening: top-bar.test.tsx TS2532 latent-from-T8 on badgeMatch![1].trim() fixed by switching to `badgeMatch?.[1]?.trim() ?? ''` + biome format sweep collapsed 2 multi-line call blocks. Full verification green: 1166/1166 vitest (+2 target hit exactly), 12/12 Playwright cases across 11 specs in 41.5s, typecheck clean across 6 packages, 0 lint errors / 24 warnings (baseline preserved). Unit baseline now 1166. E2E baseline 11 spec files / 12 Playwright cases (unchanged from T2). Predecessors T0 (da4ce1f) → T1 (b68d09b) → T2 (1108247) → T3 (51393f8) → T4 (0f8b51c) → T5 (3cffe29) → T6 (a966deb) → T7 (cb0ab4c) → T8 (a8dc98e) → T9 (23f3b1b).",
-  "goal": "Final task of M35 AND final task of Phase 5. Pure docs + release-marker milestone: (a) flip CLAUDE.md Phase 5 status line from 'in progress' to 'Phase 5 (Intelligence Layer) — complete. All 8 milestones shipped (M28 → M35). v1.1.0.'; (b) flip Phase 5 design doc §9 M35 row from 📋 Planned → ✅ Complete with shipped commit SHA range; (c) append a 'Phase 5 COMPLETE' section to .loki/CONTINUITY.md (top-of-file); (d) NEW docs/user-guide/demo-walkthrough.md (external-facing copy of the M35 T5 demo script under docs/demo/, promoted from internal → user-facing); (e) 3 unit tests pinning the release-marker strings via source-string audit per M35 T3 convention; (f) full Phase 5 exit verification — Node ABI rebuild → pnpm test (1169) → typecheck → lint → Electron ABI rebuild → test:e2e (11 specs / 12 cases) → pnpm build → pnpm dist:win smoke-launch against release/1.1.0/ installer; (g) tag v1.1.0 AFTER the ledger commit lands. Tests delta: +3 unit (1166 → 1169). Zero code-path changes; markdown + test scaffolding only. After T10 ships, M35 is complete, Phase 5 is complete, v1.1.0 is tagged, and the next session opens Phase 6.",
+  "predecessor": "Phase 5 COMPLETE (v1.1.0, 2026-04-20). M35 T10 shipped the Phase 5 exit-gate marker: CLAUDE.md Phase 5 literal flipped 'in progress' → 'complete'; design doc §9 M35 row flipped 📋 → ✅; CONTINUITY.md Phase 5 COMPLETE header prepended; docs/user-guide/demo-walkthrough.md promoted external; +3 unit release-marker tests (1166 → 1169). Full Phase 5 exit verification green: 1169/1169 vitest + 12/12 Playwright + typecheck clean + 0 lint errors / 24 warnings + production build. v1.1.0 git tag on the T10 ledger commit.",
+  "goal": "First Phase 6 task. Author docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md using the Phase 5 design doc (docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md) as the structural template. Required sections: Overview, What ships (bullet list of headline capabilities), Invariants preserved (map to the 11 architectural invariants in CLAUDE.md — call out any new ones), Success criteria, Milestone breakdown (§9 table placeholder — M36 onwards, status 📋 Planned for all rows at T0), Acceptance criteria (ABI rebuild dance, atomic + ledger commit cadence, source-string-audit test lineage), Decisions log scaffold (copy D1–D14 from Phase 5 as baseline carry-forward; new decisions get D15+ IDs). Scope selection MUST be explicit — do not default-pick. The Phase 5 retrospective §6 enumerates 7 candidate themes with rationale + estimated size: (1) post-release telemetry digest for evidence-based default tuning, (2) cross-company copilot rollups, (3) proactive copilot → autonomous action, (4) agent-to-agent negotiation, (5) capabilities frontmatter on role.md, (6) real customer demo, (7) insight export. Pick ONE headline theme (or combine two if they share an evidence backbone). Zero code / zero tests / zero IPC/bus/migrations in T0 — plan-doc-only deliverable, mirrors Phase 5 M28 T0.",
   "acceptance": [
-    "CLAUDE.md top-of-file Phase 5 status lines flipped from 'Phase 5 (Intelligence Layer) — in progress. M35 next.' (or current in-progress phrasing) → 'Phase 5 (Intelligence Layer) — complete. All 8 milestones shipped (M28 → M35). v1.1.0. Phase 6 (scope TBD) is the next milestone.' Under the 'Status' section the M35 summary paragraph lands with the same density as M33/M34 summaries (one dense paragraph, Rocky-voice, no cutting corners). Upstream history preserved verbatim — do NOT re-author M28–M34 summary text.",
-    "docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md §9 M35 row 📋 Planned → ✅ Complete with shipped commit SHA range (T0 da4ce1f → T10 <self-SHA>). §13 Decisions Log gains an M35 row if one is missing; otherwise updated in lockstep with the §9 flip. Markdown table formatting preserved — stray spaces or mis-aligned pipes will desync columns.",
-    "NEW docs/user-guide/demo-walkthrough.md — external-facing condensed copy of docs/demo/phase-5-walkthrough.md (M35 T5). Strip loki/CONTINUITY mentions, internal-only links, and anything that assumes a dev machine. Must read as a coherent user-facing demo any new user can follow.",
-    ".loki/CONTINUITY.md gains a 'Phase 5 COMPLETE (2026-04-20)' section at the TOP (not bottom) with a one-paragraph summary — baseline delta 612 unit / 4 E2E (v1.0.0) → 1169 unit / 11 E2E spec files / 12 Playwright cases (v1.1.0) — M28 through M35 enumerated as the additive shippable surface. One-sentence Phase 6 handoff: 'Phase 6 scope TBD; next session authors docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md.'",
-    "3 unit tests at apps/desktop/src/phase-5-completion-freeze.test.ts (source-string audit style per M35 T3/T8/T9 convention — vitest env 'node', no jsdom, no React rendering): (1) CLAUDE.md first 2000 chars match /Phase 5[^.]{0,200}complete/i and do NOT match /Phase 5[^.]{0,200}in progress/i; (2) docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md §9 M35 row matches /\\|\\s*M35[\\s\\S]{0,400}✅/; (3) .loki/CONTINUITY.md first 2000 chars contain the literal 'Phase 5 COMPLETE'.",
-    "Full verification gate (CLAUDE.md recipe): (1) Node ABI rebuild — cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install; (2) pnpm test → 1169/1169 pass (1166 + 3); (3) pnpm typecheck → clean across all 6 workspace packages; (4) pnpm lint → 0 errors / ≤24 warnings; (5) Electron ABI rebuild — pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar; (6) pnpm -F @team-x/desktop test:e2e → 11 spec files / 12 Playwright cases green in ≤45s; (7) pnpm -F @team-x/desktop build → production bundle succeeds; (8) pnpm dist:win → v1.1.0 installer lands under release/1.1.0/; smoke-launch + visually verify Phase 5 badge, palette (Cmd+K), Copilot sidebar (Cmd+Shift+K), both system seats present, no console errors, no unresolved migrations.",
-    "Atomic commit: `chore(m35): M35 T10 — docs + verification + Phase 5 COMPLETE marker`.",
-    "Ledger commit: `chore(loki): M35 T10 — commit ledger (<sha>)` — roll orchestrator.json tasksCompleted 10 → 11 + phaseComplete false → true + completedAt set + inflight cleared + current.unitTests 1166 → 1169 + current.asOfTask M35-T9 → M35-T10 + history.M35 block created mirroring M30–M34 structure. pending.json tasksShipped 10 → 11 + T10 pending → shipped + all M35 tasks shipped. current-task.json overwritten with a Phase 6 T0 bootstrap stub (awaits human scope input).",
-    "Tag commit: `git tag -s v1.1.0 -m 'Team-X v1.1.0 — Phase 5 Intelligence Layer'` (signed if GPG configured; unsigned tag acceptable if not). Tag lands AFTER the ledger commit, pointing at the ledger commit SHA — that is the last Phase 5 commit.",
-    "No feature code. No IPC changes. No bus events. No migrations. Any code-path change is out-of-scope and gets filed as a Phase 6 deferred."
+    "Plan doc lives at docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md with date stamp ≥ 2026-04-20",
+    "Structural mirror of docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md: Overview, What ships, Invariants preserved, Success criteria, Milestone breakdown (§9 table), Acceptance criteria, Decisions log scaffold",
+    "Theme selection is explicit — the plan doc §1 Overview names the chosen theme + links to the Phase 5 retrospective §6 seed row as justification",
+    "Milestone breakdown table has at least 3 rows (M36 onwards) with status 📋 Planned for all — scope of each is left as TBD until its plan-doc task lands later in Phase 6",
+    "Decisions log §13 carries forward D1–D14 verbatim as baseline; any new Phase 6 decisions land as D15+ with status 'Locked (<date>)'",
+    "Invariants §: reiterate the 11 CLAUDE.md invariants explicitly; call out any new invariants introduced by the Phase 6 theme with a rationale",
+    "Zero code / zero tests / zero IPC/bus/migrations — plan-doc-only per the Phase 5 M28 T0 precedent",
+    "CLAUDE.md Status section: add a Phase 6 — in progress bullet after the Phase 5 complete line"
   ],
-  "outOfScope": [
-    "NO feature code — T10 is a pure docs + release-marker task.",
-    "NO landing-site badge update — docs/site/index.html does not exist in this repo.",
-    "NO Phase 6 scope authoring — Phase 6 T0 (plan-doc authoring) happens in a separate session with Rocky's scope input.",
-    "NO retroactive edits to T0–T9 commits, the Phase 5 plan doc narrative beyond the §9 + §13 flips, or the M28–M34 history paragraphs.",
-    "NO sweeping refactors triggered by things surfaced during verification — file follow-ups as Phase 6 deferreds."
+  "filesTouched": [
+    "docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md (NEW)",
+    "CLAUDE.md (append Phase 6 — in progress line)",
+    ".loki/state/orchestrator.json (set currentPhase = 'DEVELOPMENT', currentMilestone = null, phase = 'Phase 6 — <theme>', phaseComplete = false, history.Phase5 rolled up with verificationGates)",
+    ".loki/queue/pending.json (initialise Phase 6 scaffold with T0 as the only shipped task)",
+    ".loki/queue/current-task.json (advance to Phase 6 T1 — scope TBD)",
+    ".loki/CONTINUITY.md (prepend Phase 6 T0 SHIPPED header after the Phase 5 COMPLETE section)"
   ],
-  "carryForward": [
-    "'DO NOT invent' rule from T7/T8/T9 carry-forward continues. M28 + M29 still have no [Unreleased] entries and that remains intentional — do NOT backfill.",
-    "Source-string audit convention (T3 / T8 / T9) is the preferred style for the 3 T10 unit tests — vitest env 'node', no jsdom, no React rendering, regex on file content.",
-    "Atomic work commit + separate ledger commit cadence restored by M35 (each task T1–T9) — T10 follows the same pattern.",
-    "Verification recipe: Node ABI → vitest → typecheck → lint → Electron ABI → Playwright → build → dist:win smoke-launch. No shortcuts."
-  ],
-  "surpriseWatch": [
-    "(a) The Phase 5 design doc §9 M35 row is inside a markdown table — one stray space or misaligned pipe will desync columns. Verify with a preview render before committing.",
-    "(b) pnpm dist:win pulls native modules; electron-builder will cross-fail if better-sqlite3 or keytar was last built for Node-ABI. Always rebuild for Electron before running dist (step 5 of the recipe, before step 8).",
-    "(c) The v1.1.0 git tag must point at the T10 LEDGER commit, not the atomic work commit — the ledger commit is the last commit on Phase 5.",
-    "(d) If the Phase 5 design doc §13 Decisions Log does NOT yet have an M35 row, add one; if it DOES (unlikely), update the shipped commit SHA.",
-    "(e) Full suite re-runs are cheap; don't skip any. The cost of a broken release-marker tag is orders of magnitude higher than the minute of re-verification."
-  ],
-  "risks": [
-    "Forgetting to flip the CLAUDE.md Phase 5 line leaves the repo in an ambiguous 'in progress but v1.1.0 tagged' state — the T10 unit test #1 is the belt-and-suspenders guard against this.",
-    "Tagging v1.1.0 before the ledger commit lands would orphan the ledger changes from the tagged SHA. Commit-order discipline: atomic → ledger → tag.",
-    "Running dist:win on a Node-ABI-built native module produces a non-launchable installer — smoke-launch catches it but wastes the dist pass."
-  ],
-  "commitTemplate": "chore(m35): M35 T10 — docs + verification + Phase 5 COMPLETE marker",
-  "ledgerTemplate": "chore(loki): M35 T10 — commit ledger (<sha>)",
-  "testsDelta": 3,
-  "expectedDuration": "60–90 minutes (docs edits + 3 unit tests + full verification recipe + dist:win smoke-launch)",
-  "notes": "T10 is the last Phase 5 task. After T10 ships, M35 is complete, Phase 5 is complete, v1.1.0 is tagged, and the next session opens Phase 6. First Phase 6 session authors docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md; scope TBD. Candidate themes surfaced from deferred follow-ups include cross-company copilot aggregation, proactive copilot → autonomous action, agent-to-agent negotiation, and post-release telemetry digest. No Phase 6 scope work in T10."
+  "testsDelta": 0,
+  "commitTemplate": "feat(phase-6-t0): Phase 6 T0 — plan doc (<theme>)",
+  "ledgerTemplate": "chore(loki): Phase 6 T0 — commit ledger (<sha>)",
+  "notes": [
+    "Phase 5 is complete and v1.1.0 is tagged. This is the first Phase 6 task. Read .loki/CONTINUITY.md top section (Phase 5 COMPLETE) for full context before starting.",
+    "Theme selection is the single biggest design decision of T0. Do not default-pick — read the Phase 5 retrospective §6 and weigh all 7 candidates explicitly. Ideally bring Rocky into the loop on theme choice before drafting.",
+    "Patterns to carry forward: atomic + ledger commit cadence, three-tier canned test seam (quartet), pause-aware providerRouter wrapper, source-string-audit lineage, ABI rebuild dance, is_system filter sweep, invariant #11, locked retrospective structure.",
+    "After T0 ships, Phase 6 T1+ tasks materialise based on which theme is chosen. Do NOT pre-author T1+ in T0."
+  ]
 }
