@@ -1,4 +1,110 @@
-# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0–T8 shipped); M32 (Task Planner) complete
+# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0–T9 shipped; T10 pending); M32 (Task Planner) complete
+
+## M33 T9 SHIPPED — 2026-04-17 (copilot-service.spec.ts E2E round-trip — full analyzer + ask lifecycle in 1.7s)
+
+**Task:** M33 T9 — single Playwright E2E spec exercising the full copilot analyzer + `copilot.ask` round-trip against the Phase 5 canned test seams. No network, no LLM, no live fixtures beyond the fresh-boot seed. Mirrors structurally `task-planner.spec.ts` (M32 T8) + `agentic-loop.spec.ts` (M31 T8) — real Electron instance booted against `out/main/index.js` with `NODE_ENV=test` + throwaway `--user-data-dir`, dual assertion pattern (expected-state PRESENT + destructive-gate ABSENT), `data-step-kind` selectors for palette step-log integration, forwarded main/renderer console logs.
+**Commit:** `43f5cf7` — `test(m33): M33 T9 — copilot-service.spec.ts E2E round-trip`.
+**Plan reference:** [M33 plan T9 §](../docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).
+
+### Metrics delta
+
+| Metric | Pre-T9 | Post-T9 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1099 | 1099 | 0 (test-only E2E — no unit additions) |
+| E2E spec files | 8 | 9 | +1 (+copilot-service.spec.ts) |
+| E2E green count | 9 | 10 | +1 (+1 Playwright case) |
+| Lint errors | 1 (pre-existing) | 1 (pre-existing) | 0 (baseline preserved) |
+| Lint warnings | 24 | 24 | 0 (baseline steady) |
+| Typecheck | clean | clean | — |
+| Spec runtime | — | 1.7s | new |
+| Full E2E suite runtime | ~26s | 27.4s | +1.4s |
+| Files changed | — | 2 (+458 / -6) | — |
+
+### What shipped (one test commit, two files)
+
+1. **`apps/desktop/e2e/copilot-service.spec.ts` (NEW, 422 LOC, 1 Playwright case).**
+   - Case title: `'configure tick → insight surfaces → dismiss → ask routes through system-copilot'`.
+   - Launch harness identical to `task-planner.spec.ts` — `_electron.launch` with `MAIN_ENTRY = resolve(__dirname, '../out/main/index.js')`, `NODE_ENV: 'test'`, `ELECTRON_ENABLE_LOGGING: '1'`, throwaway `userDataDir = mkdtempSync(join(tmpdir(), 'teamx-copilot-e2e-'))`, `test.describe.configure({ mode: 'serial' })` to prevent multi-instance collisions, `afterEach` force-kill after 5s if `app.close()` hangs.
+   - Flow (11 steps, each wrapped with a `[e2e:copilot]` log line):
+     1. Boot Electron + resolve seeded `companyId` via `window.teamx.companies.list()`.
+     2. Seed bus-visible events: `tickets.create` → `tickets.close` (flow through `CopilotEventWindow`; analyzer fixture actually fires on the always-present `strategia-x` substring regardless, but this proves the handler chain end-to-end through the IPC surface).
+     3. `copilot.configure({ companyId })` — T5 test-only manual-tick IPC → assert `tickResult.insightsGenerated >= 1`.
+     4. `copilot.insights({ companyId })` → assert `insights.length >= 1`, `category === 'operational'`, `severity === 'warning'`, `title` contains `'E2E canned copilot insight'`, `dismissedAt === null`, capture `insight.id`.
+     5. `copilot.dismiss({ id })` → assert `dismissResult.dismissedAt > 0`.
+     6. Re-query `copilot.insights` (default `includeDismissed: false`) → assert the dismissed row is no longer returned.
+     7. `events.list({ types: ['copilot.dismissed'] })` → assert ≥ 1 matching row with `companyId` match (invariant #11 regression guard: IPC mutation must emit bus event).
+     8. `copilot.ask({ companyId, text: <prompt + __ECHO_AGENT__: sentinel> })` → capture `{ runId, threadId }`.
+     9. Poll `command.getRunSnapshot(runId)` via `page.waitForFunction` with 20s timeout until terminal step `kind === 'answer'` (fail fast on `'error'`). Assert at least one `tool_call` step with `data.toolName === 'query_copilot_insights'`.
+     10. `chat.list(threadId)` → assert ≥ 2 messages on the system-copilot thread.
+     11. `chat.listThreads(companyId)` → locate copilot thread by id, assert `isSystemAgent: true` (the `thread-list.tsx` classifier key).
+     12. Regression guards: `expect(window.getByText('Confirm destructive action')).not.toBeVisible()` + `expect(window.getByText('Confirm write-side agentic run')).not.toBeVisible()` — copilot is advisory; neither the M30 destructive nor the M32 T5 write-side card may ever render.
+   - Classifier swap (M30 T8 seam) — NOT used. `copilot.ask` is an explicit IPC that bypasses the palette intent router.
+   - Agentic provider swap (M31 T3 seam) — `__ECHO_AGENT__:` tier-1 sentinel returns a 2-assistant-message scripted sequence: `[0]` a plan step with a `tool_call` JSON for `query_copilot_insights`, `[1]` a `final_answer` with a deterministic summary line.
+   - Agentic tools swap (M33 T6 seam) — `createTestToolsForEmployee()`. `CopilotService.ask` threads `system-copilot` through as the explicit `employeeId`, selecting the copilot composer branch (read-side tools + `query_copilot_insights`, no write-side tools). Canned tool body returns an empty `{rows: [], truncated: false}` envelope by default — enough for the loop to plan, tool-call, and answer in two scripted steps.
+   - Every `window.teamx` reference uses `(window as any).teamx` with a `biome-ignore lint/suspicious/noExplicitAny` pragma — same pattern `rag-flow.spec.ts` + `vault-backup.spec.ts` use because the E2E tsconfig doesn't see the renderer's `window.d.ts` augmentation.
+
+2. **`apps/desktop/src/main/services/test-copilot-provider.ts` (M, +36 / -6).**
+   - Replaced T8-shipped `CANNED_COPILOT_TABLE = Object.freeze({})` (empty seed) with a single baked-in entry:
+     ```
+     'strategia-x': JSON.stringify([{
+       category: 'operational',
+       severity: 'warning',
+       title: 'E2E canned copilot insight',
+       body: 'Deterministic insight seeded by the M33 T9 E2E spec ...',
+       expiresInHours: 24,
+       actionSuggestion: 'Dismiss this insight to verify the audit trail.',
+     }])
+     ```
+   - Key `'strategia-x'` is the always-present normalized-substring hit: `buildAnalysisPrompt` renders `Company: Strategia-X` verbatim, and `normalizePrompt` lowercases+trims+collapses to `company: strategia-x` which contains the key. No runtime fixture registration needed from the spec side.
+   - Docstring expanded to explain the baked-fixture pattern (mirrors `test-agentic-provider.ts`'s M31/M32 E2E fixtures) and WHY source-baked is correct under electron-vite's `inlineDynamicImports` (main-tree collapses to single file, module-path imports from `app.evaluate` cannot resolve).
+   - CRITICAL: the file remains test-only — the composition root only imports it when `isTestMode() === true`. Zero production code change.
+
+### Fixture-registration path decision
+
+Three paths were considered (per T9 coordinator brief):
+
+- **Path A — source-baked fixture in `CANNED_COPILOT_TABLE` (CHOSEN).** Simplest, isolated to test-seam module, no main-process access needed.
+- **Path B — `app.evaluate` to import-and-call `addCopilotFixture` in main process (REJECTED).** Electron-vite's `inlineDynamicImports: true` collapses `main/index.ts` + all its imports into `out/main/index.js`, so dynamic `import('./services/test-copilot-provider.js')` from inside `app.evaluate` cannot resolve the module path. T8 docstring explicitly invited Path A: *"If future milestones want baked-in scripts, add them here in lockstep with the test that consumes them."*
+- **Path C — new test-only IPC (`copilot.__test__.registerFixture`) (REJECTED).** Unnecessary. Would add main-process surface area for a purely test concern.
+
+### T8 baking status (verified)
+
+T8 did NOT bake `system-copilot`-actor CANNED_TABLE entries into `test-agentic-provider.ts` — grep confirmed only 3 pre-existing entries (`'why is the frontend team behind?'` M31, `'what is my team doing right now'` M31 T8, decompose phrase M32 T8). T9 uses the `__ECHO_AGENT__:` tier-1 sentinel path instead, which requires zero source change to `test-agentic-provider.ts`.
+
+### Gotchas captured this session
+
+1. **`AgentStepPayload.data` vs `.payload`.** Runtime field is `data`; JSDoc comment in `packages/shared-types/src/events.ts` calls it "payload". Cost one E2E run to catch. Spec asserts `step.data.toolName === 'query_copilot_insights'` with an inline comment documenting the trap.
+2. **Zod `z.string().optional()` rejects JSON `null`.** First fixture had `"actionIntent": null`, which silently failed `parseDrafts` → `proposedCount = 0` → spec tripped on `insightsProposed >= 1`. Fix: omit the field entirely so zod treats it as `undefined`. Documented inline on the fixture.
+3. **Substring-key stability.** `'strategia-x'` as a fixture key is stable because `buildAnalysisPrompt` always renders `Company: <name>` verbatim, and the Phase-1 seed company name is `Strategia-X`. If the seed company name ever changes, this spec and any future copilot-service fixture that piggybacks on it will break loudly — documented in the test-copilot-provider.ts docstring.
+4. **ABI rebuild dance (coordinator gotcha, re-verified).** After `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`, `better-sqlite3` was compiled for Electron ABI 125 and vitest (running system Node ABI 137) failed 23 tests with `NODE_MODULE_VERSION` mismatch. `pnpm rebuild better-sqlite3` silently no-op'd due to pnpm's content-addressed cache. Reliable fix: `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install` triggers a full node-gyp rebuild. Pattern to carry into T10: CLAUDE.md Troubleshooting needs a dedicated "Unit tests fail with NODE_MODULE_VERSION mismatch after running electron-rebuild" entry.
+
+### Verification gates passed
+
+- **Unit tests:** 1099/1099 in 20.2s (Vitest, 97 files). 0 delta — T9 is a pure E2E addition.
+- **E2E suite:** 10 cases / 9 spec files green in 27.4s against `out/main/index.js`. New spec: 1.7s.
+- **Lint:** 1 error / 24 warnings — BYTE-IDENTICAL to pre-T9 baseline (verified via `git stash` + `pnpm lint` diff). The sole error is pre-existing at `packages/intelligence/src/nlu/entity-resolver.ts:352` (non-null-assertion, commit `6d99aa4c` M30 T2). T9 added 0 errors, 0 warnings.
+- **Typecheck:** clean across all 6 workspace packages (shared-types, provider-router, role-schema, telemetry-core, intelligence, `@team-x/desktop` main/preload/renderer/e2e via 4 tsconfig references).
+- **ABI sanity:** `better-sqlite3` + `keytar` rebuilt for Electron ABI before the E2E run completed.
+
+### Invariants preserved
+
+- **#1 Renderer is a pure view** — spec interacts through `window.teamx.*` preload bridge only; no direct LLM or MCP calls.
+- **#7 Zero phone-home** — no network during the spec.
+- **#11 IPC mutations emit bus events** — regression-guarded by the `events.list({ types: ['copilot.dismissed'] })` assertion that fires after `copilot.dismiss`.
+
+### Next Session Startup Checklist (M33 T10)
+
+1. Reread this §.
+2. `.loki/queue/current-task.json` — now targets M33-T10 (docs + verification + milestone marker).
+3. `.loki/state/orchestrator.json` — `inFlightMilestone.M33.tasksShipped: 10`, `commits.T9: 43f5cf7`, `current.asOfTask: T9`, top-level `tasksCompleted: 10`, `current.e2eSpecs: 9`, `current.e2eGreenCount: 10`.
+4. `.loki/queue/pending.json` — T9 marked completed with metrics; T10 head-of-queue.
+5. Plan doc §T10 at `docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md` — full documentation + verification deliverables.
+6. Before starting T10: re-run `pnpm test` + `pnpm -F @team-x/desktop test:e2e` to confirm baseline still green. ABI rebuild dance required between them — document it explicitly in the T10 CLAUDE.md Troubleshooting entry.
+7. T10 deliverables sequence: (a) NEW `docs/user-guide/copilot-service.md` (~200-250 LOC, F10 voice, mirror `docs/user-guide/task-planner.md`), (b) Phase 5 design doc §9 M33 row 🚧 → ✅, (c) CLAUDE.md Phase 5 paragraph + IPC table (copilot.*) + bus-events table + Troubleshooting (5 entries min), (d) CHANGELOG.md M33 entry under Unreleased, (e) README.md Phase 5 row + 9-E2E-specs badge, (f) .loki ledger fold (orchestrator M33 → history, pending cleared with M34 sketch, CONTINUITY M33-COMPLETE header + retrospective).
+8. Atomic commit: `chore(m33): M33 T10 — docs + verification + milestone marker`. Ledger commit: `chore(loki): M33 T10 — commit ledger (<sha>) + M33-COMPLETE roll-up`. Both with Co-Authored-By trailer.
+9. Estimate: 90-120 min full session.
+
+---
 
 ## M33 T8 SHIPPED — 2026-04-16 (canned copilot provider seam — three-tier lookup, test-mode swap)
 

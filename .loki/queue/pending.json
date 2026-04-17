@@ -6,9 +6,9 @@
   "previousMilestone": "M32",
   "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
   "createdAt": "2026-04-16T07:20:00Z",
-  "updatedAt": "2026-04-16T17:05:00Z",
+  "updatedAt": "2026-04-17T00:55:00Z",
   "totalTasks": 11,
-  "tasksShipped": 9,
+  "tasksShipped": 10,
   "tasks": [
     {
       "id": "T0",
@@ -170,10 +170,29 @@
     {
       "id": "T9",
       "name": "copilot-service.spec.ts E2E round-trip",
-      "status": "pending",
-      "scope": "Full round-trip against canned provider. Seed events → copilot.tick (test-only IPC) → assert insight persisted → dismiss → assert dismissed_at + audit row → copilot.ask → assert grounded answer on system-copilot thread → assert destructive gate ABSENT → assert two system threads distinguishable. Subagent pass for canned-script generation. +1 E2E spec file.",
+      "status": "completed",
+      "commit": "43f5cf7",
+      "shippedAt": "2026-04-17T00:52:00Z",
+      "scope": "NEW apps/desktop/e2e/copilot-service.spec.ts (422 LOC, 1 Playwright case: 'configure tick → insight surfaces → dismiss → ask routes through system-copilot'). M apps/desktop/src/main/services/test-copilot-provider.ts (+36/-6 — replaced T8-baked Object.freeze({}) with single {'strategia-x': <InsightDraft JSON>} in CANNED_COPILOT_TABLE). No production code changed — test-copilot-provider.ts is test-seam-only. Fixture path: Path A (source-baked CANNED_COPILOT_TABLE) ruled out Path B (app.evaluate unresolvable under electron-vite inlineDynamicImports) + Path C (no new IPC needed). Spec flow: boot NODE_ENV=test → companies.list → tickets.create+close → copilot.configure(manual tick) → assert insightsGenerated ≥ 1 → copilot.insights captures id → copilot.dismiss → assert dismissedAt + events.list contains copilot.dismissed (invariant #11 regression guard) → copilot.ask with __ECHO_AGENT__: sentinel → poll command.getRunSnapshot for terminal answer + assert tool_call(query_copilot_insights) step → chat.list(threadId) ≥ 2 messages → chat.listThreads asserts isSystemAgent=true on copilot thread → regression guards: destructive gate + write-side gate both ABSENT. E2E 8 → 9 spec files, green count 9 → 10. Spec runtime 1.7s. T8 did NOT pre-bake system-copilot CANNED_TABLE entries in test-agentic-provider.ts — spec uses __ECHO_AGENT__: sentinel path instead. Gotchas: AgentStepPayload.data (not .payload), zod z.string().optional() rejects JSON null (omit field entirely), coordinator hit ABI rebuild dance (pnpm rebuild better-sqlite3 no-op'd; fix is `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install`).",
       "commitTemplate": "test(m33): M33 T9 — copilot-service.spec.ts E2E round-trip",
-      "testsDelta": "+1 E2E spec"
+      "testsDelta": "+1 E2E spec / +1 case (unit 1099 steady)",
+      "metrics": {
+        "unitTestsBefore": 1099,
+        "unitTestsAfter": 1099,
+        "unitTestsDelta": "0 (no unit tests added — test-only E2E spec)",
+        "e2eSpecsBefore": 8,
+        "e2eSpecsAfter": 9,
+        "e2eSpecsDelta": "+1 (+copilot-service.spec.ts)",
+        "e2eGreenCountBefore": 9,
+        "e2eGreenCountAfter": 10,
+        "lintErrors": 0,
+        "lintErrorsNewInT9": 0,
+        "lintWarnings": 24,
+        "typecheck": "clean",
+        "specRuntimeMs": 1700,
+        "fullE2ESuiteMs": 27400,
+        "filesChanged": "2 (+458 / -6)"
+      }
     },
     {
       "id": "T10",
