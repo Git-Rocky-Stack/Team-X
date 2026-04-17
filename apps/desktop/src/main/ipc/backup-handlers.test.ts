@@ -31,6 +31,17 @@ function makeMockBackupService(): IpcBackupService {
         manifest: mockManifest,
       },
     ]),
+    // M33 F4 — the mock returns a deterministic pre-M33 shape (one
+    // copilot was created) so the handler test can assert the counts
+    // land on the response. Per-test `.mockReturnValueOnce(...)` is
+    // free to override for coverage of the other branches.
+    ensurePostRestoreSystemEmployees: vi.fn().mockReturnValue({
+      companiesScanned: 1,
+      agentsCreated: 0,
+      copilotsCreated: 1,
+      perCompany: [{ companyId: 'c-1', agentCreated: false, copilotCreated: true }],
+      skipped: [],
+    }),
   };
 }
 
@@ -97,6 +108,16 @@ describe('backup IPC handlers', () => {
         'backupPath is required',
       );
     });
+
+    it('omits post-restore counts when bootstrap dep is unwired (legacy composition)', async () => {
+      const result = await handlers.backupRestore({ backupPath: '/tmp/backups/b' });
+      // buildTestHandlers does NOT pass ensurePostRestoreBootstrap, so
+      // the response should be manifest-only and the post-restore
+      // counts are `undefined`. Forward-compatible renderer tolerance
+      // is the point of the optional field on BackupRestoreResponse.
+      expect(result.manifest.version).toBe('1');
+      expect(result.postRestoreSystemEmployees).toBeUndefined();
+    });
   });
 
   describe('backupList', () => {
@@ -104,6 +125,99 @@ describe('backup IPC handlers', () => {
       const result = await handlers.backupList();
       expect(result).toHaveLength(1);
       expect(result[0]?.filename).toBe('backup-2026-04-13');
+    });
+  });
+
+  describe('backupRestore + post-restore bootstrap (M33 F4)', () => {
+    it('threads post-restore counts into the response when wired', async () => {
+      const bootstrapCalls: number[] = [];
+      const handlersWithBootstrap = createIpcHandlers({
+        companiesRepo: {} as never,
+        employeesRepo: {} as never,
+        threadsRepo: {} as never,
+        messagesRepo: {} as never,
+        ticketsRepo: {} as never,
+        ticketAttachmentsRepo: {} as never,
+        goalsRepo: {} as never,
+        projectsRepo: {} as never,
+        meetingsRepo: {} as never,
+        runsRepo: {} as never,
+        eventsRepo: {} as never,
+        orchestrator: {} as never,
+        meetingService: {} as never,
+        roleLookup: {} as never,
+        mcpHost: {} as never,
+        mcpServersRepo: {} as never,
+        providersService: {} as never,
+        secretsStore: {} as never,
+        settingsRepo: {} as never,
+        vaultService: {} as never,
+        backupService,
+        auditRepo: {} as never,
+        updaterService: {} as never,
+        ensurePostRestoreBootstrap: () => {
+          bootstrapCalls.push(Date.now());
+          return {
+            companiesScanned: 2,
+            agentsCreated: 2,
+            copilotsCreated: 2,
+            skipped: [],
+          };
+        },
+        getHardwareProfile: () => ({ cpuCores: 4, ramGb: 16, gpuName: null, gpuVramGb: null }),
+      });
+
+      const result = await handlersWithBootstrap.backupRestore({
+        backupPath: '/tmp/backups/pre-m31',
+      });
+      // Bootstrap was invoked exactly once AFTER the restore.
+      expect(bootstrapCalls).toHaveLength(1);
+      expect(result.postRestoreSystemEmployees).toEqual({
+        companiesScanned: 2,
+        agentsCreated: 2,
+        copilotsCreated: 2,
+        skipped: [],
+      });
+    });
+
+    it('swallows a bootstrap throw and returns manifest-only (restore must not fail)', async () => {
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const handlersWithBootstrap = createIpcHandlers({
+        companiesRepo: {} as never,
+        employeesRepo: {} as never,
+        threadsRepo: {} as never,
+        messagesRepo: {} as never,
+        ticketsRepo: {} as never,
+        ticketAttachmentsRepo: {} as never,
+        goalsRepo: {} as never,
+        projectsRepo: {} as never,
+        meetingsRepo: {} as never,
+        runsRepo: {} as never,
+        eventsRepo: {} as never,
+        orchestrator: {} as never,
+        meetingService: {} as never,
+        roleLookup: {} as never,
+        mcpHost: {} as never,
+        mcpServersRepo: {} as never,
+        providersService: {} as never,
+        secretsStore: {} as never,
+        settingsRepo: {} as never,
+        vaultService: {} as never,
+        backupService,
+        auditRepo: {} as never,
+        updaterService: {} as never,
+        ensurePostRestoreBootstrap: () => {
+          throw new Error('catastrophic bootstrap failure');
+        },
+        getHardwareProfile: () => ({ cpuCores: 4, ramGb: 16, gpuName: null, gpuVramGb: null }),
+      });
+
+      const result = await handlersWithBootstrap.backupRestore({
+        backupPath: '/tmp/backups/broken',
+      });
+      expect(result.manifest.version).toBe('1');
+      expect(result.postRestoreSystemEmployees).toBeUndefined();
+      expect(errSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -179,6 +179,7 @@ export interface IpcRendererLike {
  */
 const CHANNELS = {
   companiesList: 'companies.list',
+  companiesArchive: 'companies.archive',
   employeesList: 'employees.list',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
@@ -303,6 +304,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
   return {
     companies: {
       list: () => ipc.invoke(CHANNELS.companiesList) as ReturnType<TeamXApi['companies']['list']>,
+      archive: (companyId: string) =>
+        ipc.invoke(CHANNELS.companiesArchive, { companyId }) as ReturnType<
+          TeamXApi['companies']['archive']
+        >,
     },
     employees: {
       list: (companyId: string) =>

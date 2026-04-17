@@ -71,6 +71,18 @@ import type { PrivacyTier, ProviderConfig, ProviderKind } from './providers.js';
 // Low-level request / response shapes
 // ---------------------------------------------------------------------------
 
+/**
+ * `companies.archive` request (M33 T3 follow-up F3).
+ *
+ * Idempotent — if the company is already archived, the handler re-runs
+ * the full three-step quiesce (analyzer stop, event-window clear,
+ * status flip) and re-emits `company.archived`. That is intentional:
+ * we would rather repeat the cleanup than silently skip it on a retry.
+ */
+export interface ArchiveCompanyRequest {
+  companyId: string;
+}
+
 export interface ListEmployeesRequest {
   companyId: string;
 }
@@ -627,6 +639,25 @@ export interface BackupRestoreRequest {
 
 export interface BackupRestoreResponse {
   manifest: BackupManifest;
+  /**
+   * Post-restore system-employee bootstrap counts (M33 follow-up F4).
+   * Either or both `agentsCreated` / `copilotsCreated` are non-zero
+   * only when the restored backup pre-dates the migration that
+   * introduced the corresponding system row (M31 for agent, M33 for
+   * copilot). `skipped` captures per-company ensure failures without
+   * aborting the restore — callers surface a user-facing warning
+   * when non-empty.
+   *
+   * Optional for forward-compatibility with older handler
+   * implementations that predate F4; renderer consumers should
+   * tolerate `undefined`.
+   */
+  postRestoreSystemEmployees?: {
+    companiesScanned: number;
+    agentsCreated: number;
+    copilotsCreated: number;
+    skipped: Array<{ companyId: string; reason: string }>;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1021,6 +1052,11 @@ export interface IpcContract {
   'companies.list': {
     request: Record<string, never>;
     response: Company[];
+  };
+  'companies.archive': {
+    request: ArchiveCompanyRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
   };
   'employees.list': {
     request: ListEmployeesRequest;
@@ -1454,6 +1490,28 @@ export interface TeamXApi {
   companies: {
     /** Return every company. Phase 1 always returns exactly one. */
     list(): Promise<Company[]>;
+
+    /**
+     * Archive (soft-delete) a company. The handler performs a three-step
+     * quiesce in order BEFORE writing the row:
+     *
+     *   1. `CopilotAnalyzerService.stop(companyId)` — cancels any
+     *      in-flight periodic tick for the company and clears the
+     *      per-company timer so no new tick fires.
+     *   2. `CopilotEventWindow.clear(companyId)` — drops the in-memory
+     *      rolling buffer + `hydrated` flag so a future snapshot() for
+     *      the same id starts from an empty state (mirrors the semantics
+     *      when a company is unloaded and later reloaded).
+     *   3. `companiesRepo.archive(companyId)` — flips `status` to
+     *      `'archived'` so the orchestrator dispatcher treats the
+     *      company as inactive on the next scheduling pass.
+     *
+     * The handler then emits a `company.archived` bus event (invariant
+     * #11) so renderer caches can invalidate. Idempotent — re-archiving
+     * an already-archived company is a no-op on all three steps.
+     * Closes M33 T3 follow-up F3.
+     */
+    archive(companyId: string): Promise<void>;
   };
   employees: {
     /** Return every employee in the given company, mapped to the public Employee shape. */

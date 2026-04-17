@@ -142,6 +142,7 @@ import { getProvidersService, seedDefaultProviders } from './services/providers.
 import { createRagIndexer } from './services/rag-indexer.js';
 import { createRoleLoader } from './services/role-loader.js';
 import { SecretsStore } from './services/secrets.js';
+import { ensureSystemAgent, ensureSystemCopilot } from './services/system-agent-bootstrap.js';
 import { composeSystemPromptWithRag } from './services/system-prompt.js';
 import { createTestAgenticCompleteFn } from './services/test-agentic-provider.js';
 import { createTestToolsForEmployee } from './services/test-agentic-tools.js';
@@ -715,15 +716,54 @@ app
       // Lazy wrapper — the CopilotAnalyzerService is instantiated later
       // in this same bootstrap block (after RAG indexer, agentic loop,
       // etc.), so we close over the module-level handle and resolve it
-      // on each `restart` call. No-ops cleanly if a `setCopilot` IPC
-      // fires before the analyzer is live (defensive only — in practice
-      // the renderer cannot reach settings until after app-ready, which
-      // is after the analyzer has been wired).
+      // on each `restart` / `stop` call. No-ops cleanly if a
+      // `setCopilot` / `companies.archive` IPC fires before the analyzer
+      // is live (defensive only — in practice the renderer cannot
+      // reach settings until after app-ready, which is after the
+      // analyzer has been wired).
       copilotAnalyzerService: {
         restart: (cid: string) => {
           copilotAnalyzerServiceInstance?.restart(cid);
         },
+        stop: (cid: string) => {
+          copilotAnalyzerServiceInstance?.stop(cid);
+        },
       },
+      // Direct handle — already live at this point in the bootstrap
+      // (created on line ~638 and started before handlers build). Used
+      // by `companies.archive` (M33 F3) to drop the per-company rolling
+      // buffer + hydrated flag after the analyzer is stopped.
+      copilotEventWindow: {
+        clear: (cid: string) => {
+          copilotEventWindow.clear(cid);
+        },
+      },
+      // Event bus — used by `companies.archive` to emit `company.archived`
+      // so renderer caches invalidate (architectural invariant #11).
+      // Narrowed to `{ emit }` at the handler boundary; the richer
+      // `EventBus` surface lives inside the orchestrator.
+      bus: {
+        emit: (input) => bus.emit(input),
+      },
+      // Post-restore bootstrap (M33 F4). Closes over `db`,
+      // `companiesRepo`, and `roleLoader` so the handler stays free
+      // of drizzle + role-loader imports. The closure re-reads
+      // `companiesRepo.list()` on EACH invocation so it sees the
+      // just-restored DB — calling-time resolution is essential since
+      // the restore swaps the underlying file while the drizzle handle
+      // remains live.
+      ensurePostRestoreBootstrap: () =>
+        backupService.ensurePostRestoreSystemEmployees({
+          listCompanyIds: () => companiesRepo.list().map((c) => c.id),
+          ensureSystemForCompany: (companyId) => {
+            const agent = ensureSystemAgent({ db, companyId, roleLookup: roleLoader });
+            const copilot = ensureSystemCopilot({ db, companyId, roleLookup: roleLoader });
+            return {
+              agentCreated: agent.created,
+              copilotCreated: copilot.created,
+            };
+          },
+        }),
       getHardwareProfile: detectHardware,
     });
     // ---- Command palette service (Phase 5 — M30 T4) -----------------------

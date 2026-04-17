@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### M33 — Follow-ups F3 + F4 (2026-04-18)
+
+> **Status:** Complete. Baseline: 1099 unit / 9 E2E → current: **1114 unit / 9 E2E** (+15 unit tests, 0 E2E). Closes the two deferred items from Phase 5 §16.
+
+#### Added — F3 (`CopilotEventWindow.clear` wired to `companies.archive`)
+- **`companies.archive(companyId)` IPC channel** — soft-delete surface that was missing from the Phase 2 companies repo. NEW `ArchiveCompanyRequest` shape in `@team-x/shared-types`; channel registered in `apps/desktop/src/main/ipc/register.ts` + `apps/desktop/src/preload/api.ts` (`CHANNELS.companiesArchive` + `window.teamx.companies.archive(id)`); handler in `apps/desktop/src/main/ipc/handlers.ts::companiesArchive`
+- **`archive(id)` method on `createCompaniesRepo`** — idempotent single-column update flipping `status` to `'archived'`. Co-located with the existing `setStatus` surface so the meeting primitive's `running` / `meeting` / `paused` lifecycle and the new archive terminus share one write path
+- **Three-step quiesce order in the handler**: (1) `CopilotAnalyzerService.stop(companyId)` kills the per-company timer + aborts any in-flight tick, (2) `CopilotEventWindow.clear(companyId)` drops the in-memory rolling buffer + `hydrated` flag, (3) `companiesRepo.archive(companyId)` flips the row. Ordering is load-bearing — running (2) before (1) can race a tick that re-hydrates from the events log mid-clear. (4) emits `company.archived` on the bus (architectural invariant #11) so renderer caches invalidate
+- **`company.archived` bus event type** added to `EventType` in `packages/shared-types/src/events.ts` with typed `CompanyArchivedPayload` interface `{ companyId, archivedAt }`
+- **`CompanyStatus` widened** to `'running' | 'meeting' | 'paused' | 'archived'` with full JSDoc coverage per status
+- **`IpcCopilotEventWindow` + `IpcEventBus` narrow handler deps** (mirrors existing optional-dep pattern). `IpcCopilotAnalyzerService` extended with `stop(companyId)` alongside `restart(companyId)`. `IpcCompaniesRepo` extended with `archive(id)`. All three missing wirings surface as dev-mode warnings (never hard errors) so legacy test harnesses don't need the new deps
+- **4 unit tests for repo `archive` method** in `companies.test.ts` — transition, idempotency, row-isolation, unknown-id no-op. Handler wiring covered by composition root + the new backup-handlers tests (shared mock factory picks up the new dep shape)
+
+#### Added — F4 (post-restore `system-agent` + `system-copilot` bootstrap)
+- **`backupService.ensurePostRestoreSystemEmployees({ listCompanyIds, ensureSystemForCompany })`** — synchronous callback-driven sweep on the backup service that iterates the restored DB's companies and idempotently re-runs `ensureSystemAgent` + `ensureSystemCopilot` per company. Backup service stays free of drizzle + role-loader imports (composition root threads the callbacks in)
+- **Per-company failures do NOT abort the sweep** — a throw from `ensureSystemForCompany(cid)` is captured in `skipped[]` with a reason string and the loop moves on. Rationale: a single broken role-pack or DB constraint must not take down a multi-company restore. The restore itself is non-negotiable; system-employee repair is best-effort
+- **`BackupRestoreResponse.postRestoreSystemEmployees`** — new optional field on the IPC response `{ companiesScanned, agentsCreated, copilotsCreated, skipped }`. Forward-compatible: older handlers (or unit tests without the bootstrap dep) leave the field `undefined`, renderer consumers tolerate both shapes
+- **Handler-level error shield** — a catastrophic throw from `ensurePostRestoreBootstrap` (as opposed to per-company throws, which are already swallowed) is caught inside `backupRestore`, logged via `console.error`, and returns a manifest-only response. The DB + vault are already swapped at this point; failing the whole restore would leave users with an unusable app
+- **Composition root wiring in `apps/desktop/src/main/index.ts`** — closes over `db` + `companiesRepo` + `roleLoader` and builds the `ensurePostRestoreBootstrap` closure that resolves the company list at *call time* (not composition time) so the closure reads the just-restored DB, not the pre-restore snapshot
+- **7 new unit tests in `backup.test.ts`** — empty set, all-created (pre-M31), none-created (current-schema), mixed cohort, per-company throw via `skipped[]`, non-Error throw coercion, idempotency (second-pass zero counts). 3 new scenarios in `backup-handlers.test.ts` — unwired-dep manifest-only, wired-dep threads counts into response, catastrophic bootstrap throw swallowed + manifest-only
+
+#### Changed
+- `copilot-event-window.ts` §5 design note — "wiring deferred" replaced with the actual wiring reference including the three-step ordering rationale and the `bus.emit('company.archived')` invariant #11 callout. Operator-readable audit trail so future maintainers can see why `clear()` lives on this object and who calls it
+- `SystemAgentBootstrap` consumers documented — `seed.ts::seedIfEmpty` inlines the seed (keeps `seedIfEmpty` pure over the DB); `system-agent-bootstrap.ts` exports `ensureSystemAgent` / `ensureSystemCopilot` for runtime idempotent top-ups (post-restore F4 is the first production consumer; `companies.create` IPC remains a future milestone consumer)
+- CLAUDE.md IPC channel table + Troubleshooting section updated for both follow-ups (companies.archive entry + system-copilot-missing-after-restore entry pointing at F4 auto-bootstrap)
+
+---
+
 ### M33 — Copilot Service (periodic analyzer + proactive insights + ask-the-copilot) (2026-04-17)
 
 > **Status:** Complete (T0–T10, all 11 tasks shipped). Baseline: 1033 unit tests / 8 E2E specs → current: **1099 unit tests / 9 E2E specs** (10 Playwright cases) (+66 unit, +1 E2E). Plan: [`docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md`](docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).

@@ -21,8 +21,19 @@ export type EmployeeStatus = 'idle' | 'thinking' | 'blocked' | 'error';
 // Company status (Phase 3 — M16)
 // ---------------------------------------------------------------------------
 
-/** Orchestrator dispatch status for a company. 'meeting' pauses all dispatch. */
-export type CompanyStatus = 'running' | 'meeting' | 'paused';
+/**
+ * Orchestrator dispatch status for a company.
+ *
+ *  - `running`  — normal. Dispatcher fires. Copilot analyzer ticks.
+ *  - `meeting`  — meeting primitive holds the pause (M16). All new
+ *    dispatch is deferred until the meeting ends.
+ *  - `paused`   — explicit user pause (future). No new dispatch.
+ *  - `archived` — soft-delete. Dispatcher + copilot analyzer both
+ *    treat the company as inactive. The `companies.archive` IPC (M33
+ *    follow-up F3) stops the analyzer timer and clears the rolling
+ *    event window before writing this status.
+ */
+export type CompanyStatus = 'running' | 'meeting' | 'paused' | 'archived';
 
 // ---------------------------------------------------------------------------
 // Meetings (Phase 3 — M16)

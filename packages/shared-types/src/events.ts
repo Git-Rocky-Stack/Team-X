@@ -30,7 +30,8 @@ export type EventType =
   | 'copilot.insight'
   | 'copilot.analyzed'
   | 'copilot.expired'
-  | 'copilot.dismissed';
+  | 'copilot.dismissed'
+  | 'company.archived';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -419,6 +420,26 @@ export interface CopilotExpiredPayload {
   runId: string;
   category: CopilotCategory;
   title: string;
+}
+
+// ---------------------------------------------------------------------------
+// Company lifecycle event payload (M33 T3 follow-up F3)
+//
+// Emitted by the `companies.archive` IPC handler after the repo row is
+// flipped to `status = 'archived'`. The handler has already called
+// `CopilotAnalyzerService.stop(companyId)` + `CopilotEventWindow.clear(companyId)`
+// BEFORE the row update, so any subscriber that reacts to this event
+// can treat the company as fully quiesced on the copilot side.
+//
+// No `company.created` twin today — the design-doc decision log keeps
+// creation as an IPC-only side effect until `companies.create` lands.
+// ---------------------------------------------------------------------------
+
+export interface CompanyArchivedPayload {
+  /** The archived company id. Duplicated in the top-level `companyId` for DashboardEvent routing. */
+  companyId: string;
+  /** Wall-clock timestamp in ms when the archive handler wrote the row. */
+  archivedAt: number;
 }
 
 /**

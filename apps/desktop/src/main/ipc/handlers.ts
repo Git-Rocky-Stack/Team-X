@@ -42,6 +42,7 @@ import type {
   AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
+  ArchiveCompanyRequest,
   AssignTicketRequest,
   AttachFileRequest,
   AttachFileResponse,
@@ -213,6 +214,13 @@ export type {
 
 export interface IpcCompaniesRepo {
   list(): CompanyRow[];
+  /**
+   * Soft-delete a company — sets status to 'archived' (M33 F3).
+   * Idempotent. Handler must have called `CopilotAnalyzerService.stop`
+   * + `CopilotEventWindow.clear` BEFORE this write so a racing
+   * analyzer tick cannot observe a stale buffer after the row flips.
+   */
+  archive(id: string): void;
 }
 
 export interface IpcEmployeesRepo {
@@ -365,6 +373,30 @@ export interface IpcBackupService {
   ): Promise<{ backupPath: string; manifest: import('@team-x/shared-types').BackupManifest }>;
   restore(backupPath: string): Promise<import('@team-x/shared-types').BackupManifest>;
   list(): Promise<BackupEntry[]>;
+  /**
+   * Post-restore sweep that re-bootstraps `system-agent` +
+   * `system-copilot` for every company in the restored DB. Handler
+   * composes `listCompanyIds` + `ensureSystemForCompany` from the
+   * live db + roleLookup so the backup service stays free of
+   * drizzle + role-loader imports. Phase 5 — M33 follow-up F4.
+   */
+  ensurePostRestoreSystemEmployees(args: {
+    listCompanyIds: () => string[];
+    ensureSystemForCompany: (companyId: string) => {
+      agentCreated: boolean;
+      copilotCreated: boolean;
+    };
+  }): {
+    companiesScanned: number;
+    agentsCreated: number;
+    copilotsCreated: number;
+    perCompany: Array<{
+      companyId: string;
+      agentCreated: boolean;
+      copilotCreated: boolean;
+    }>;
+    skipped: Array<{ companyId: string; reason: string }>;
+  };
 }
 
 /** Narrow vault-service surface the IPC handlers need. */
@@ -424,6 +456,51 @@ export interface IpcSettingsRepo {
 export interface IpcCopilotAnalyzerService {
   /** Restart the per-company analyzer timer. No-ops if the timer isn't running. */
   restart(companyId: string): void;
+  /**
+   * Hard-stop the per-company analyzer timer and abort any in-flight
+   * tick. Used by `companies.archive` to quiesce the analyzer before
+   * the row flips (M33 F3). No-op if the timer isn't running.
+   */
+  stop(companyId: string): void;
+}
+
+/**
+ * Narrow slice of the `CopilotEventWindow` the IPC handlers need.
+ * `companies.archive` calls `clear(companyId)` to drop the in-memory
+ * rolling buffer + `hydrated` flag so any future snapshot for the
+ * same id starts empty (M33 F3).
+ *
+ * The full window service lives in
+ * `main/services/copilot-event-window.ts`; this interface exposes
+ * only the `clear` method the IPC boundary requires.
+ */
+export interface IpcCopilotEventWindow {
+  clear(companyId: string): void;
+}
+
+/**
+ * Narrow event-bus surface the IPC handlers need (M33 F3). Only
+ * `emit` is exposed — replay / subscribe live on the richer
+ * `EventBus` interface but are not used from handlers. Optional
+ * so existing tests that do not need emit can omit it; handlers
+ * that need to emit MUST tolerate `undefined` and fall back to a
+ * no-op with a warning so a missing wiring is caught in dev but
+ * does not take down the IPC call.
+ */
+export interface IpcEventBus {
+  /**
+   * Return type is intentionally `void` at this boundary — the handler
+   * discards the emitted event. The production `EventBus.emit` returns
+   * `DashboardEvent<T>`; narrowing to `void` keeps the handler-facing
+   * surface minimal and side-steps `lint/suspicious/noConfusingVoidType`.
+   */
+  emit<T = unknown>(input: {
+    type: EventType;
+    companyId: string;
+    actorId: string;
+    actorKind: ActorKind;
+    payload: T;
+  }): void;
 }
 
 /** Narrow updater-service surface the IPC handlers need. */
@@ -459,16 +536,57 @@ export interface IpcHandlerDeps {
   /**
    * Copilot analyzer — restarted on `settings.setCopilot` so new
    * interval / enabled / categories take effect without an app
-   * restart. Optional: composition-root injects the live instance in
-   * production; unit tests pass a stub. Phase 5 — M33 T7.
+   * restart; stopped on `companies.archive` (M33 F3). Optional:
+   * composition-root injects the live instance in production; unit
+   * tests pass a stub. Phase 5 — M33 T7 + F3.
    */
   copilotAnalyzerService?: IpcCopilotAnalyzerService;
+  /**
+   * Copilot event window — cleared on `companies.archive` (M33 F3)
+   * so a subsequent re-create of the same id (should one ever land)
+   * starts with a fresh buffer. Optional; handler falls through to a
+   * no-op + dev-mode warning if unwired so a missing composition root
+   * wiring does not surface as a hard IPC failure.
+   */
+  copilotEventWindow?: IpcCopilotEventWindow;
+  /**
+   * Event bus — used by `companies.archive` to fan out a
+   * `company.archived` event (architectural invariant #11). Optional;
+   * handler tolerates `undefined` and warns in dev-mode. Phase 5 —
+   * M33 F3.
+   */
+  bus?: IpcEventBus;
+  /**
+   * Post-restore bootstrap callback — invoked by `backup.restore`
+   * AFTER the DB + vault files have been swapped in. Composition
+   * root captures `db` + `companiesRepo` + `roleLookup` in the
+   * closure and delegates to
+   * `backupService.ensurePostRestoreSystemEmployees`. Optional so
+   * existing tests + pre-F4 callers don't need to wire it; the
+   * handler passes the counts through to the response as
+   * `undefined` when the dep is missing. Phase 5 — M33 F4.
+   */
+  ensurePostRestoreBootstrap?: () => {
+    companiesScanned: number;
+    agentsCreated: number;
+    copilotsCreated: number;
+    skipped: Array<{ companyId: string; reason: string }>;
+  };
   getHardwareProfile: () => HardwareProfile;
 }
 
 export interface IpcHandlers {
   /** `companies.list` — return every company. Phase 1 always returns exactly one. */
   companiesList(): Promise<Company[]>;
+
+  /**
+   * `companies.archive` — soft-delete a company. The handler quiesces
+   * the copilot path (analyzer stop + event-window clear) BEFORE
+   * flipping the row to `status = 'archived'`, then fans out a
+   * `company.archived` bus event (architectural invariant #11).
+   * Idempotent — re-archiving is safe. Phase 5 — M33 F3.
+   */
+  companiesArchive(req: ArchiveCompanyRequest): Promise<void>;
 
   /**
    * `employees.list` — return every employee in a given company,
@@ -991,12 +1109,67 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     auditRepo,
     updaterService,
     copilotAnalyzerService,
+    copilotEventWindow,
+    bus,
+    ensurePostRestoreBootstrap,
     getHardwareProfile,
   } = deps;
 
   return {
     async companiesList() {
       return companiesRepo.list().map(rowToCompany);
+    },
+
+    async companiesArchive({ companyId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] companies.archive: companyId is required');
+      }
+
+      // Quiesce order matters. Stop the analyzer FIRST so a mid-flight
+      // tick cannot observe a cleared buffer before we flip the row:
+      //
+      //   1. analyzer.stop(companyId)   — kill timer + abort in-flight tick.
+      //   2. eventWindow.clear(companyId) — drop rolling buffer + hydrated flag.
+      //   3. companiesRepo.archive(companyId) — flip status to 'archived'.
+      //   4. bus.emit('company.archived') — fan out for cache invalidation.
+      //
+      // Steps 1 + 2 are wrapped in optional-chaining because the handler
+      // is typed against optional deps (see IpcHandlerDeps comments); a
+      // missing wiring surfaces as a console warning in dev, never as a
+      // hard IPC failure. Step 3 is the durable write — it must succeed.
+      if (copilotAnalyzerService) {
+        copilotAnalyzerService.stop(companyId);
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] companies.archive: copilotAnalyzerService dep unwired — skipping stop()');
+      }
+      if (copilotEventWindow) {
+        copilotEventWindow.clear(companyId);
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] companies.archive: copilotEventWindow dep unwired — skipping clear()');
+      }
+      companiesRepo.archive(companyId);
+
+      // Invariant #11: IPC channels that mutate state must emit a bus
+      // event. Renderer caches subscribe to the bus for invalidation;
+      // IPC alone is not enough — see vault-backup.spec.ts regression
+      // postmortem. ActorKind is 'user' because the archive is always
+      // user-initiated today; if a future M ever adds a scheduled
+      // archive (retention policy, etc.) the actor kind will widen.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'company.archived',
+            companyId,
+            actorId: 'user',
+            actorKind: 'user',
+            payload: { companyId, archivedAt: Date.now() },
+          });
+        } catch (err) {
+          console.error('[ipc] companies.archive: bus emit failed (row still archived):', err);
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] companies.archive: bus dep unwired — renderer caches will NOT invalidate');
+      }
     },
 
     async employeesList({ companyId }) {
@@ -1984,7 +2157,51 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] backup.restore: backupPath is required');
       }
       const manifest = await backupService.restore(req.backupPath);
-      return { manifest };
+
+      // Post-restore sweep (M33 F4). Rebuilds the `system-agent` +
+      // `system-copilot` pseudo-employee rows for every company in the
+      // just-restored DB. The sweep is a no-op for current-schema
+      // backups — both flags return `false` across the board — but
+      // it is load-bearing for backups that pre-date M31 (agent) or
+      // M33 (copilot). We surface the counts in the response so the
+      // renderer can show a one-time "restored N agents, M copilots"
+      // toast when non-zero and silently skip otherwise.
+      //
+      // A missing `ensurePostRestoreBootstrap` dep (legacy test harness,
+      // or intentionally-unwired handler build) leaves the field
+      // undefined on the response. The renderer must tolerate that —
+      // see `BackupRestoreResponse.postRestoreSystemEmployees` JSDoc.
+      let postRestoreSystemEmployees: BackupRestoreResponse['postRestoreSystemEmployees'];
+      if (ensurePostRestoreBootstrap) {
+        try {
+          const result = ensurePostRestoreBootstrap();
+          postRestoreSystemEmployees = {
+            companiesScanned: result.companiesScanned,
+            agentsCreated: result.agentsCreated,
+            copilotsCreated: result.copilotsCreated,
+            skipped: result.skipped,
+          };
+        } catch (err) {
+          // A catastrophic failure in the bootstrap itself (not
+          // per-company — those are already swallowed + logged via
+          // `skipped[]`) must NOT fail the whole restore. The DB +
+          // vault are already swapped; the user would be left with
+          // an unusable app if we threw here. Log and continue with
+          // undefined counts — the renderer surfaces a restore-OK
+          // state and the user can retry the bootstrap via a future
+          // repair action.
+          console.error(
+            '[ipc] backup.restore: post-restore system-employee bootstrap failed — restore itself succeeded:',
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] backup.restore: ensurePostRestoreBootstrap dep unwired — pre-M33 backups will be missing system-copilot',
+        );
+      }
+
+      return { manifest, postRestoreSystemEmployees };
     },
 
     async backupList() {

@@ -84,5 +84,27 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
     setStatus(id: string, status: string): void {
       db.update(companies).set({ status }).where(eq(companies.id, id)).run();
     },
+
+    /**
+     * Archive a company — soft delete. Sets `status = 'archived'` so
+     * the orchestrator stops dispatching for it and the command
+     * palette / copilot analyzer treat it as inactive.
+     *
+     * The status column is the single source of truth for "is this
+     * company live?" — it already carries `running` / `meeting` /
+     * `paused`, and `archived` slots in cleanly without adding a
+     * migration. The column has no CHECK constraint at the schema
+     * level (see M3), so this is a pure value-domain extension.
+     *
+     * **Idempotent:** calling archive on an already-archived company
+     * is a no-op write; callers can safely retry. The IPC handler
+     * in `companies.archive` calls `CopilotEventWindow.clear(id)` +
+     * `CopilotAnalyzerService.stop(id)` BEFORE this write so mid-tick
+     * analyzers cannot observe stale buffers post-archive — closes
+     * M33 T3 follow-up F3.
+     */
+    archive(id: string): void {
+      db.update(companies).set({ status: 'archived' }).where(eq(companies.id, id)).run();
+    },
   };
 }

@@ -35,6 +35,65 @@ export interface BackupEntry {
   manifest: BackupManifest | null;
 }
 
+/**
+ * Per-company result of the post-restore system-employee bootstrap
+ * (M33 follow-up F4). Either flag is `true` only when a brand-new
+ * row was inserted — pre-existing system rows yield `false` on both.
+ */
+export interface PostRestoreCompanyResult {
+  companyId: string;
+  agentCreated: boolean;
+  copilotCreated: boolean;
+}
+
+/**
+ * Aggregate result of {@link BackupService.ensurePostRestoreSystemEmployees}.
+ *
+ *  - `companiesScanned` — total companies iterated (matches
+ *    `listCompanyIds().length` on success).
+ *  - `agentsCreated` — number of `system-agent` rows inserted.
+ *    For a post-M31 backup: 0. For a pre-M31 backup: equals
+ *    `companiesScanned`.
+ *  - `copilotsCreated` — number of `system-copilot` rows inserted.
+ *    For a post-M33 backup: 0. For a pre-M33 (but post-M31) backup:
+ *    equals `companiesScanned`.
+ *  - `perCompany` — breakdown by company id so the caller can log
+ *    or surface which rows were repaired. Ordering matches
+ *    `listCompanyIds()`.
+ *  - `skipped` — entries for companies where `ensureSystemForCompany`
+ *    threw. The restore itself is NOT rolled back — a pre-M33 backup
+ *    that survives every other step should not be marked invalid by
+ *    a single broken system-role seed. Callers log and continue.
+ */
+export interface EnsurePostRestoreResult {
+  companiesScanned: number;
+  agentsCreated: number;
+  copilotsCreated: number;
+  perCompany: PostRestoreCompanyResult[];
+  skipped: Array<{ companyId: string; reason: string }>;
+}
+
+/**
+ * Callbacks injected by the composition root so the backup service
+ * itself stays free of drizzle + role-loader imports. Matches the
+ * factory-pattern discipline used elsewhere in the codebase (vault,
+ * companies repo, etc.).
+ *
+ *  - `listCompanyIds` — returns every live company id in the freshly
+ *    restored DB. Implementation reads from `companiesRepo.list()`.
+ *  - `ensureSystemForCompany` — idempotent per-company bootstrap that
+ *    calls `ensureSystemAgent` + `ensureSystemCopilot`. Implementation
+ *    lives in `system-agent-bootstrap.ts` and the handler threads it
+ *    through from the composition root.
+ */
+export interface EnsurePostRestoreArgs {
+  listCompanyIds: () => string[];
+  ensureSystemForCompany: (companyId: string) => {
+    agentCreated: boolean;
+    copilotCreated: boolean;
+  };
+}
+
 export interface BackupServiceDeps {
   /** Path to the SQLite database file. */
   dbPath: string;
@@ -243,6 +302,75 @@ export function createBackupService(deps: BackupServiceDeps) {
       }
 
       return manifest;
+    },
+
+    /**
+     * Post-restore sweep that bootstraps the two system pseudo-employees
+     * (`system-agent`, `system-copilot`) for every company in the
+     * just-restored DB (M33 follow-up F4).
+     *
+     * Why this exists: the `restore` method above ships-final in Phase 4
+     * and predates both the `is_system` column (M31 migration 0010) AND
+     * the `system-copilot` row (M33 T2). Restoring a pre-M31 backup
+     * leaves no `system-agent` row; restoring a pre-M33 (but post-M31)
+     * backup leaves no `system-copilot` row. Either case strands users
+     * with a subtly broken app — the command palette's agentic loop
+     * and the copilot analyzer silently no-op because their pseudo-
+     * employee seats are empty.
+     *
+     * Execution contract:
+     *
+     *  - MUST be called AFTER `restore()` completes — the DB handle is
+     *    already pointing at the swapped file.
+     *  - Iterates every company id from the injected `listCompanyIds()`
+     *    callback. The handler composes this from `companiesRepo.list()`.
+     *  - For each company, calls `ensureSystemForCompany(companyId)`
+     *    which performs the idempotent `ensureSystemAgent` +
+     *    `ensureSystemCopilot` dual-seed. Both are no-ops when the
+     *    rows already exist — safe to run against a current-schema
+     *    backup (both flags return `false`).
+     *  - A throw from `ensureSystemForCompany` does NOT abort the
+     *    sweep. The failure is recorded in `skipped[]` and the loop
+     *    moves on to the next company. Rationale: a single broken
+     *    role-pack or DB constraint should not take down a
+     *    multi-company restore. Caller logs the `skipped[]` entries
+     *    and surfaces a user-facing warning if non-empty.
+     *
+     * This method is synchronous by design — the ensure functions
+     * themselves run inline against a BaseSQLiteDatabase. Wrapping
+     * in `async` would introduce an unnecessary microtask-boundary
+     * between the restore and the bootstrap on the same event loop turn.
+     */
+    ensurePostRestoreSystemEmployees(args: EnsurePostRestoreArgs): EnsurePostRestoreResult {
+      const { listCompanyIds, ensureSystemForCompany } = args;
+      const perCompany: PostRestoreCompanyResult[] = [];
+      const skipped: Array<{ companyId: string; reason: string }> = [];
+      let agentsCreated = 0;
+      let copilotsCreated = 0;
+
+      const ids = listCompanyIds();
+      for (const companyId of ids) {
+        try {
+          const outcome = ensureSystemForCompany(companyId);
+          perCompany.push({ companyId, ...outcome });
+          if (outcome.agentCreated) agentsCreated += 1;
+          if (outcome.copilotCreated) copilotsCreated += 1;
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          skipped.push({ companyId, reason });
+          console.warn(
+            `[backup] ensurePostRestoreSystemEmployees: company ${companyId} skipped — ${reason}`,
+          );
+        }
+      }
+
+      return {
+        companiesScanned: ids.length,
+        agentsCreated,
+        copilotsCreated,
+        perCompany,
+        skipped,
+      };
     },
 
     /**

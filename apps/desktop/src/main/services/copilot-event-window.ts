@@ -38,13 +38,32 @@
  *      wasteful AND would stamp newer in-memory events with stale
  *      history ordering.
  *
- *   5. Why no `companies.archive` wiring? The `companies.archive`
- *      IPC referenced in the M33 plan does not exist in the codebase
- *      today — companies repo has create/getById/getBySlug/list/
- *      setStatus but no archive/delete. `clear()` ships here as a
- *      public method; wiring it into the archive path is deferred to
- *      the milestone that adds `companies.archive` (flagged as an
- *      M33 T3 follow-up in the Loki ledger and CONTINUITY).
+ *   5. `companies.archive` wiring — landed. The `companies.archive`
+ *      IPC handler (M33 F3) now calls, in order:
+ *
+ *        (1) `CopilotAnalyzerService.stop(companyId)` — kill the
+ *            per-company timer and abort any in-flight tick so a
+ *            racing analyze call cannot observe the buffer mid-clear.
+ *        (2) `CopilotEventWindow.clear(companyId)` — this method —
+ *            drops the rolling buffer + `hydrated` flag.
+ *        (3) `companiesRepo.archive(companyId)` — flips the row to
+ *            `status = 'archived'` so the orchestrator dispatcher
+ *            stops scheduling for the company on the next pass.
+ *        (4) `bus.emit('company.archived', ...)` — fans out the
+ *            lifecycle event (architectural invariant #11).
+ *
+ *      Ordering matters: (1) MUST precede (2) or a tick can re-hydrate
+ *      from the events log the moment we clear it. (2) MUST precede
+ *      (3) because the analyzer also reads the row's status; clearing
+ *      the buffer before the row flips keeps the "was running, now
+ *      gone" semantics atomic from the copilot's perspective.
+ *
+ *      The IPC contract widens `CompanyStatus` with `'archived'`
+ *      (see `@team-x/shared-types/entities.ts`). The handler is
+ *      idempotent — re-archiving an already-archived company re-runs
+ *      every step (1)-(4) and re-emits the bus event. That is
+ *      intentional: we would rather repeat the cleanup than silently
+ *      skip it on a retry.
  */
 
 import type { ActorKind, DashboardEvent, EventType } from '@team-x/shared-types';

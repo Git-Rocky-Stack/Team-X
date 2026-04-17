@@ -134,4 +134,36 @@ describe('companies repo', () => {
       }
     });
   });
+
+  describe('archive', () => {
+    it("transitions status from 'running' to 'archived'", () => {
+      const id = repo.create({ name: 'Archive Me', slug: 'arc-me' });
+      expect(repo.getById(id)?.status).toBe('running');
+
+      repo.archive(id);
+      expect(repo.getById(id)?.status).toBe('archived');
+    });
+
+    it('is idempotent — repeated calls leave status archived', () => {
+      const id = repo.create({ name: 'X', slug: 'x' });
+      repo.archive(id);
+      repo.archive(id);
+      repo.archive(id);
+      expect(repo.getById(id)?.status).toBe('archived');
+    });
+
+    it('only affects the targeted company (other rows untouched)', () => {
+      const a = repo.create({ name: 'A', slug: 'a' });
+      const b = repo.create({ name: 'B', slug: 'b' });
+      repo.archive(a);
+      expect(repo.getById(a)?.status).toBe('archived');
+      expect(repo.getById(b)?.status).toBe('running');
+    });
+
+    it('is a no-op for an unknown id (no throw, no side effects on known rows)', () => {
+      const id = repo.create({ name: 'Real', slug: 'real' });
+      expect(() => repo.archive('not-a-real-id')).not.toThrow();
+      expect(repo.getById(id)?.status).toBe('running');
+    });
+  });
 });

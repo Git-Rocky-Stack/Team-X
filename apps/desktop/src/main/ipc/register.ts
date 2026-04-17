@@ -61,6 +61,7 @@ import type { IpcHandlers } from './handlers.js';
  */
 const REQUEST_CHANNELS = [
   'companies.list',
+  'companies.archive',
   'employees.list',
   'employees.create',
   'employees.fire',
@@ -188,6 +189,10 @@ const EVENT_CHANNEL = 'events.dashboard';
 export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () => void {
   ipcMain.handle('companies.list', async () => {
     return handlers.companiesList();
+  });
+
+  ipcMain.handle('companies.archive', async (_event, request: { companyId: string }) => {
+    return handlers.companiesArchive(request);
   });
 
   ipcMain.handle('employees.list', async (_event, request: { companyId: string }) => {
