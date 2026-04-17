@@ -1,37 +1,37 @@
 {
-  "taskId": "M35-T6",
+  "taskId": "M35-T7",
   "milestone": "M35",
   "milestoneName": "Demo + Hardening",
   "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T6 row)",
-  "title": "README + user-guide reconciliation sweep",
+  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T7 row)",
+  "title": "CHANGELOG promotion [Unreleased] → [1.1.0]",
   "status": "pending",
-  "predecessor": "M35-T5 shipped 2026-04-19 (commit 3cffe29 — 'docs(m35): M35 T5 — demo walkthrough + scenario library'). NEW docs/demo/phase-5-walkthrough.md + 5 scenario stubs under docs/demo/scenarios/ (01-hire-a-ceo.md Phase 1 callback / 02-ticket-lifecycle.md Phase 2 callback / 03-one-click-all-hands.md Phase 3 callback / 04-ask-copilot-grounded-answer.md Phase 5 M30+M31 headline / 05-decompose-and-surface.md Phase 5 M32+M33+M34 headline). Cross-link in docs/plans/2026-04-19-team-x-phase-5-retrospective.md §6.6. 795 insertions / 6 new files. Zero code / zero tests / zero IPC/bus/migrations. Unit baseline 1162 preserved. Atomic + ledger cadence held. M35-T4 shipped 2026-04-19 (commit 0f8b51c — Phase 5 retrospective). M35-T3 shipped 2026-04-19 (commit 51393f8 — audit view chips). M35-T2 shipped 2026-04-19 (commit 1108247 — cross-milestone integration E2E). M35-T1 shipped 2026-04-19 (commit b68d09b — performance defaults held). M35-T0 shipped 2026-04-19 (commit da4ce1f — plan doc).",
-  "goal": "Reconcile README.md feature matrix + docs/user-guide/ surface with the shipped Phase 5 capabilities. Audit for partial-truth documentation drift (same pattern as M31 T9). If docs/user-guide/README.md exists today, extend it to cross-link every shipped guide doc (agentic-loop / task-planner / copilot-service / copilot-ui plus the Phase 1-4 guides); if it doesn't exist, create it. Update README.md to reflect M35 exit test baseline (1162+ unit / 11 E2E specs / 12 Playwright cases) and Phase 5 feature coverage. Surface any drift where a shipped feature lacks a guide doc or a guide doc references a feature that changed name/shape across milestones. Pure documentation deliverable. Zero code / zero tests / zero IPC/bus/migrations.",
+  "predecessor": "M35-T6 shipped 2026-04-20 (commit a966deb — 'docs(m35): M35 T6 — README + user-guide reconciliation sweep'). Root README.md reconciled against live M35 baseline: tests badge 1099 → 1162, Vitest 1033 → 1162, Playwright 8 → 11 specs, spec table expanded 8 → 11 rows, architecture tree 10 → 13 migrations + 60+ → 80+ IPC channels, command palette framing '15 intents' → '14 structured + complex_request fallback'. docs/user-guide/README.md rewritten with Phase 1–5 + Reference grouping + Cmd+K + Cmd+Shift+K keyboard-first primer + See-also cross-links. Zero code / zero tests. Unit baseline 1162 preserved. M35-T5 (3cffe29 demo walkthrough). M35-T4 (0f8b51c Phase 5 retrospective). M35-T3 (51393f8 audit view chips). M35-T2 (1108247 cross-milestone E2E). M35-T1 (b68d09b performance defaults held). M35-T0 (da4ce1f plan doc).",
+  "goal": "Promote CHANGELOG.md [Unreleased] section (accumulated M28 + M29 + M30 + M31 + M32 + M33 + M34 entries) into a new [1.1.0] release section dated 2026-04-20. Keep a Changelog format preserved throughout — Added / Changed / Fixed / Deprecated / Removed / Security category order maintained. Add a 'Phase 5 — Intelligence Layer' header above the consolidated section. Reset [Unreleased] to an empty scaffold ready for Phase 6 work. Pure documentation deliverable. Zero code / zero tests / zero IPC/bus/migrations.",
   "acceptance": [
-    "docs/user-guide/README.md exists at the user-guide root with an index linking every guide doc. Current guide docs inventory: agentic-loop.md / backup-and-restore.md / command-palette.md / configuring-providers.md / copilot-service.md / copilot-ui.md / getting-started.md / hiring-employees.md / keyboard-shortcuts.md / managing-projects.md / task-planner.md / using-the-vault.md (12 total as of M34 T11). If README.md exists already, audit it for completeness — every guide doc must have a one-line description entry in a scannable table or list grouped by Phase (Phase 1-2 basics / Phase 3 collaboration / Phase 4 safety / Phase 5 intelligence).",
-    "Repo root README.md feature matrix reconciled with shipped Phase 5 surface. Audit each feature callout: (a) is it still accurate vs the current code path; (b) is the linked docs/user-guide/*.md present; (c) do the test badge counts match the M35 exit baseline (1162+ unit / 11 E2E specs / 12 Playwright cases). Fix drift in place — don't leave a TODO.",
-    "Partial-truth audit pass modelled on M31 T9. Grep for stale references to Phase 4, v1.0.0 (where Phase 5 / v1.1.0 would be more correct in a user-facing doc), 'coming soon' / 'TBD' / 'draft' callouts that shipped features now cover. Surface findings and fix them — not tickets for later.",
-    "Verify every guide doc is cross-linked from at least one other place in the repo (README.md feature row or docs/user-guide/README.md index or another guide doc's 'See also' section). Orphaned guide docs are documentation debt.",
-    "Zero code changes, zero IPC, zero bus events, zero migrations, zero tests. Pure markdown deliverables.",
-    "Atomic commit: docs(m35): M35 T6 — README + user-guide reconciliation sweep.",
-    "Ledger commit: chore(loki): M35 T6 — commit ledger (<sha>) — roll orchestrator.json tasksCompleted 6 → 7, update pending.json T6 status pending → shipped, overwrite current-task.json to M35-T7 (CHANGELOG promotion [Unreleased] → [1.1.0]), prepend M35 T6 DONE subsection to .loki/CONTINUITY.md."
+    "CHANGELOG.md [Unreleased] section promoted to [1.1.0] — 2026-04-20 with all accumulated M28-M34 entries preserved. Keep a Changelog (https://keepachangelog.com/en/1.1.0/) format: Added / Changed / Fixed / Deprecated / Removed / Security category ordering within the [1.1.0] section.",
+    "A 'Phase 5 — Intelligence Layer' header line sits above the [1.1.0] section as a narrative anchor for the release (mirrors any Phase 4 header that may exist above [1.0.0]).",
+    "[Unreleased] section reset to empty scaffold with the six category subheads (Added / Changed / Fixed / Deprecated / Removed / Security) present but body empty — ready for Phase 6 work to append entries in place.",
+    "Version + date line for [1.1.0] matches semver conventions: '## [1.1.0] — 2026-04-20' with en-dash.",
+    "Bottom-of-file version-link references updated: [Unreleased] now points to compare/v1.1.0...HEAD; [1.1.0] points to compare/v1.0.0...v1.1.0; [1.0.0] link preserved.",
+    "No entries lost in the promotion — every bullet that was under [Unreleased] on the predecessor commit lands under [1.1.0] with the same wording (or tightened wording, never dropped).",
+    "Zero code changes, zero IPC, zero bus events, zero migrations, zero tests. Pure markdown deliverable.",
+    "Atomic commit: docs(m35): M35 T7 — CHANGELOG [Unreleased] → [1.1.0].",
+    "Ledger commit: chore(loki): M35 T7 — commit ledger (<sha>) — roll orchestrator.json tasksCompleted 7 → 8, update pending.json T7 status pending → shipped, overwrite current-task.json to M35-T8 (version bump 1.0.0 → 1.1.0 + Phase 5 badge freeze unit test)."
   ],
   "filesTouched": [
-    "README.md (MODIFIED — feature matrix reconciliation + test badge update)",
-    "docs/user-guide/README.md (NEW or MODIFIED depending on current state)",
-    "docs/user-guide/*.md (any drift corrections surfaced by audit)"
+    "CHANGELOG.md (MODIFIED — promotion [Unreleased] → [1.1.0] + reset [Unreleased] scaffold + version-link refs)"
   ],
   "tests": "0 tests (pure documentation task)",
   "carryForward": [
-    "M35 T5 closed: docs/demo/phase-5-walkthrough.md + 5 scenario stubs. Retrospective §6.6 cross-linked. Commit 3cffe29. Zero tests. T5 is the 6th M35 task shipped; 5 remaining (T6-T10).",
-    "docs/user-guide/ is NOT a new directory — 13 files already exist (12 guide docs + existing README.md verified via ls during T5 authoring). T6 is a reconciliation sweep, not a creation task. Audit first, modify in-place, avoid over-authoring.",
-    "Test baseline current at 1162 unit / 11 E2E specs / 12 Playwright cases (as of M35 T3). T6 must update README.md badge assertions to match. T8 version bump will pin this again in unit tests.",
-    "Phase 5 badge FROZEN at 'Phase 5' through v1.1.0 release. Do not update any visible badge copy to 'Phase 6' — that's a T8/T10 concern only if ever.",
-    "Architectural seams referenced in M35 T5 demo scenarios (pause-aware providerRouter wrapper, {rows,truncated} envelope, data-* selector surface, canned test-seam quartet, is_system filter-sweep, AbortController stop) are documented in retrospective §2 and design doc §13. README.md feature callouts should link to those authoritative sources rather than re-explaining them inline.",
-    "ABI state at start of T6: Node (post M35 T5 — but T5 was docs-only, so no rebuild ran). T6 is a pure docs task — no ABI rebuild required. Next rebuild needed at T8 unit-test addition (Node) or T10 full verification (both).",
-    "Commit cadence: single docs(m35) atomic commit for all markdown updates; single chore(loki) ledger commit. Both must land same session. Atomic + ledger cadence held through T1-T5; T6 preserves it.",
-    "Scope boundary for T6: NO new code, NO new tests, NO new IPC/bus/migrations. Audit-and-fix, not audit-and-file-tickets. Keep sweep scoped — a 20-minute sweep, not a 2-hour rewrite.",
-    "Surprise watch: docs/user-guide/README.md may already be thoroughly indexed (M34 T11 or earlier milestone shipped it). If so, T6 work focuses on the root README.md feature matrix + badge counts. Don't invent work that's already done."
+    "M35 T6 closed: root README.md + docs/user-guide/README.md reconciled. Tests badge 1099 → 1162, 8 → 11 specs, spec table expanded, architecture tree 10 → 13 migrations, command palette '15 intents' → '14 structured + complex_request fallback'. docs/user-guide/README.md now grouped by Phase + has keyboard-first primer + See-also. Commit a966deb. Zero tests. T6 is the 7th M35 task shipped; 4 remaining (T7-T10).",
+    "CHANGELOG.md currently exists with [Unreleased] accumulating M28 through M34 entries. Read it first, audit what's there, then promote — DO NOT invent entries that aren't already written; the accumulation was done task-by-task across M28-M34 as part of each milestone's T9/T11 documentation step.",
+    "Test baseline current at 1162 unit / 11 E2E specs / 12 Playwright cases (as of M35 T3). T8 version bump will pin this in unit tests. The CHANGELOG [1.1.0] section should mention the test baseline as a release-note bullet (e.g., 'ships with 1162 unit tests + 11 Playwright E2E specs' in Added or Changed).",
+    "Phase 5 badge FROZEN at 'Phase 5' through v1.1.0 release. Do not update any visible badge copy to 'Phase 6' — that's a Phase-6-T0 concern.",
+    "v1.0.0 shipped 2026-04-13 as the Phase 4 ship-readiness release (CLAUDE.md M27 marker). v1.1.0 is the Phase 5 Intelligence Layer release — additive (RAG + NLU + agentic + planner + copilot), zero breaking changes, minor version bump per semver.",
+    "ABI state at start of T7: Node (post M35 T6 — T6 was docs-only, no rebuild). T7 is a pure docs task — no ABI rebuild required. Next rebuild at T8 unit-test addition (Node) or T10 full verification (both).",
+    "Commit cadence: single docs(m35) atomic commit for the CHANGELOG promotion; single chore(loki) ledger commit. Both same session. Atomic + ledger cadence held T1-T6; T7 preserves it.",
+    "Scope boundary: NO re-authoring CHANGELOG entries that already exist; NO new code, NO new tests, NO new IPC/bus/migrations. Promotion + scaffold reset + link refs only. Target under 15 minutes.",
+    "Surprise watch: CHANGELOG.md may or may not have Phase headers in its current form. Check before adding — if a 'Phase 4 — Ship-Ready' header already sits above [1.0.0], mirror the style for Phase 5 above [1.1.0]. If no phase headers exist, introduce one per the plan doc §3 T7 row — add to [1.1.0] and leave [1.0.0] unchanged (backfilling older releases is out of scope for T7)."
   ]
 }
