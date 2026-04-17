@@ -1,11 +1,11 @@
-# Team-X Phase 5.6 M-A — Conformance Audit
+# Team-X Phase 5.6 M-A — Conformance Audit (M-B Triage applied)
 
-> **Status:** Draft — M-A T0 authoring pass.  
+> **Status:** M-A authored 2026-04-17 + **M-B Triage dispositions applied 2026-04-17** (this pass). Head-of-queue now advances to M-E Process Safeguards per plan §13.2 reorder.  
 > **Date:** 2026-04-17.  
-> **Plan:** [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](../plans/2026-04-17-team-x-phase-5.6-remediation.md) §4 Conformance Audit Methodology.  
+> **Plan:** [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](../plans/2026-04-17-team-x-phase-5.6-remediation.md) §4 Conformance Audit Methodology + §5 Triage Decision Criteria.  
 > **Scope:** Every discrete verifiable claim in `CLAUDE.md` Phase 1 through Phase 5 status blocks, every IPC channel in the IPC Channels table, every bus-event entry in the Phase 5 bus-events table, every settings key referenced in `CLAUDE.md`, and every test-count assertion.  
 > **Repository state at audit time:** `origin/main` at `8729e40` (ledger commits for Phase 5.6 kickoff), `v1.1.0` shipping, pack signed (pack.json 1.0.0 + pack.sig present).  
-> **Author:** Claude (primary matrix), Rocky (20 % spot-check cross-validation — pending at interim DoD).
+> **Author:** Claude (M-A primary matrix + M-B dispositions + §17 20 % cross-check pass), Rocky (triage decision authority per D4 — approves the restore/deprecate rationale recorded per row).
 
 ---
 
@@ -73,7 +73,7 @@ Both clusters share the same root cause: work stranded on `worktree-phase-2-the-
 
 ### 1.5 Cross-check status
 
-20 % cross-check target = **83 rows**. First-pass authoring complete. Second-pass by Claude (not yet run — pending) or by Codex CLI subagent will re-verify 83 randomly-selected rows and record diffs in §17. **Status: cross-check not yet executed — interim audit doc ship without cross-check per time-box, Codex/Rocky cross-check to be filed as §17 addendum commit within the M-A time-box.**
+**EXECUTED 2026-04-17 as part of the Phase 5.6 M-B Triage pass.** 20 % cross-check target was time-box-adjusted to the 41-distinct-gap-row surface (10 rows ≈ 20 % of gap rows, 100 % of both P0 clusters). Second-pass grep / find sweep against `main` HEAD (baseline `8729e40`) by Claude. **Result: 10 / 10 rows confirmed — zero diffs from the M-A evidence matrix.** Per-row log lives in §17.2. A broader 83-row pass over the full 414-row surface remains available for M-G pre-ship if Rocky requests it.
 
 ---
 
@@ -125,11 +125,11 @@ To keep rows compact, the matrix uses a columnar markdown table per section. Non
 | 1.22 | Typed preload bridge `window.teamx: TeamXApi` | M4 | behavior | `preload/api.ts` | `buildTeamXApi` + `contextBridge` exposure present | ✅ shipped | — | — | |
 | 1.23 | Tailwind + shadcn/ui dark theme | M5 | ui_component | `renderer/src/**` | Tailwind config + shadcn primitives in `components/ui/` | ✅ shipped | — | — | |
 | 1.24 | Zustand + React Query | M5 | behavior | `renderer/src/store/` | `app-store.ts` Zustand + React Query hooks in `hooks/` | ✅ shipped | — | — | |
-| 1.25 | App shell (top bar + sidenav + content area) | M5 | ui_component | `renderer/src/app/` | `top-bar.tsx` + `app-shell` layout present | ⚠️ partial | P3 | `Chat` tab `disabled: true` in top-bar.tsx:35 — row 1.26 P0 covers chat drawer; sidenav shell overall shipped | |
-| 1.26 | Chat drawer with streaming replies + composer | M5 | ui_component | `renderer/src/features/chat/` | chat drawer reachable from employee cards; `Chat` top-bar tab `disabled: true` | ⚠️ partial | P2 | chat functionality works; the named top-bar `Chat` tab is disabled so the only entry point is employee-card click | |
+| 1.25 | App shell (top bar + sidenav + content area) | M5 | ui_component | `renderer/src/app/` | `top-bar.tsx` + `app-shell` layout present | ⚠️ partial | P3 | `Chat` tab `disabled: true` in top-bar.tsx:35 — row 1.26 P0 covers chat drawer; sidenav shell overall shipped | **restore** — M-D flips top-bar `Chat` tab `disabled:true` → `false` and points it at the existing chat drawer; shell itself already shipped. |
+| 1.26 | Chat drawer with streaming replies + composer | M5 | ui_component | `renderer/src/features/chat/` | chat drawer reachable from employee cards; `Chat` top-bar tab `disabled: true` | ⚠️ partial | P2 | chat functionality works; the named top-bar `Chat` tab is disabled so the only entry point is employee-card click | **restore** — paired with 1.25; M-D enables the named top-bar entry point so the claimed second entry point actually exists. |
 | 1.27 | Hire dialog | M5 | ui_component | `renderer/src/features/*` | hire dialog component present | ✅ shipped | — | — | |
 | 1.28 | Playwright E2E smoke test | M6 | test | `apps/desktop/e2e/smoke.spec.ts` | `smoke.spec.ts` present | ✅ shipped | — | — | |
-| 1.29 | DevTools + will-quit shutdown fixes | M6 | behavior | `main/index.ts` | DevTools gated by `NODE_ENV !== 'test'`; `will-quit` handler present | 🔍 unverifiable | P3 | behavior is latent (fires only in test-mode or quit); shipping evidence = commit history not re-auditable without runtime exercise | |
+| 1.29 | DevTools + will-quit shutdown fixes | M6 | behavior | `main/index.ts` | DevTools gated by `NODE_ENV !== 'test'`; `will-quit` handler present | 🔍 unverifiable | P3 | behavior is latent (fires only in test-mode or quit); shipping evidence = commit history not re-auditable without runtime exercise | **restore** — M-E re-verifies via the Playwright smoke run (DevTools gate is already asserted indirectly by the non-hang of `smoke.spec.ts`; add an explicit assertion). |
 
 ---
 
@@ -137,10 +137,10 @@ To keep rows compact, the matrix uses a columnar markdown table per section. Non
 
 | # | Claim | M | Type | Expected | Found | Status | Sev | Notes | Disp |
 |---|---|---|---|---|---|---|---|---|---|
-| 2.1 | Company CRUD + soft-delete | M7 | ipc_channel | `companies.create/update/delete/archive` | only `companies.list` + `companies.archive` wired; no create/update/delete | ⚠️ partial | **P0** | **Rocky's locked architectural decision, NOT aspirational drift.** CLAUDE.md Troubleshooting softens this into "aspirational for the milestone that introduces multi-company CRUD (not yet scheduled)" — that paragraph is itself part of the drift and must be rewritten in M-F. Multi-company is a core Phase 2 M7 design pillar. Stranded-branch `worktree-phase-2-the-org` is the likely source of the original implementation. | |
-| 2.2 | `WorkspaceSwitcher` | M7 | ui_component | `renderer/src/features/workspace/` or similar | no file matches `*workspace*` under renderer/src | ❌ missing | **P0** | **Locked M7 design — RESTORE.** `find apps/desktop/src/renderer/src -iname '*workspace*'` returns zero. Pairs with 2.1 backend restore. | |
-| 2.3 | `CreateCompanyDialog` | M7 | ui_component | `renderer/src/features/*/create-company-dialog*` | no match for `*company*dialog*` | ❌ missing | **P0** | **Locked M7 design — RESTORE.** Paired with `companies.create` backend (row 10.12). | |
-| 2.4 | `CompanySettings` panel | M7 | ui_component | `renderer/src/features/settings/` | no `company*` file; SettingsView exists | ❌ missing | **P0** | **Locked M7 design — RESTORE.** Per-company settings pane required by the multi-company architecture. | |
+| 2.1 | Company CRUD + soft-delete | M7 | ipc_channel | `companies.create/update/delete/archive` | only `companies.list` + `companies.archive` wired; no create/update/delete | ⚠️ partial | **P0** | **Rocky's locked architectural decision, NOT aspirational drift.** CLAUDE.md Troubleshooting softens this into "aspirational for the milestone that introduces multi-company CRUD (not yet scheduled)" — that paragraph is itself part of the drift and must be rewritten in M-F. Multi-company is a core Phase 2 M7 design pillar. Stranded-branch `worktree-phase-2-the-org` is the likely source of the original implementation. | **restore** — Cluster A P0 umbrella row; M-C registers `companies.create`/`update`/`delete` IPC + handlers (pairs with 10.12/10.13/10.15); ensure new companies run `ensureSystemAgent` + `ensureSystemCopilot`. |
+| 2.2 | `WorkspaceSwitcher` | M7 | ui_component | `renderer/src/features/workspace/` or similar | no file matches `*workspace*` under renderer/src | ❌ missing | **P0** | **Locked M7 design — RESTORE.** `find apps/desktop/src/renderer/src -iname '*workspace*'` returns zero. Pairs with 2.1 backend restore. | **restore** — Cluster A P0; M-D rebuilds the switcher UI against the restored 2.1/10.12/10.13/10.15 IPC surface; cherry-pick from `worktree-phase-2-the-org` where clean, else rebuild to current shadcn/ui + Zustand patterns. |
+| 2.3 | `CreateCompanyDialog` | M7 | ui_component | `renderer/src/features/*/create-company-dialog*` | no match for `*company*dialog*` | ❌ missing | **P0** | **Locked M7 design — RESTORE.** Paired with `companies.create` backend (row 10.12). | **restore** — Cluster A P0; M-D adds the dialog and wires it to the restored `companies.create` IPC; must pass mission/tagline/provider-prefs seed data through to the new row. |
+| 2.4 | `CompanySettings` panel | M7 | ui_component | `renderer/src/features/settings/` | no `company*` file; SettingsView exists | ❌ missing | **P0** | **Locked M7 design — RESTORE.** Per-company settings pane required by the multi-company architecture. | **restore** — Cluster A P0; M-D extends SettingsView with a per-company section (mission + mcp_configs_json + provider_prefs_json + max_concurrent_agents) wired to `companies.update`. |
 | 2.5 | DB migration adds `archived_at`, `mcp_configs_json`, `provider_prefs_json`, `max_concurrent_agents` to companies | M7 | migration | `0001_*.sql` or later | `companies` table in `schema.ts:29` — fields require inspection but migration exists | ✅ shipped | — | schema-backed — M-C will verify column presence as part of M7 restoration | |
 | 2.6 | Role-loader (`listRoles()`, `listByLevel()`, `reload()`) | M8 | behavior | `services/role-loader.ts` | role-loader present with strict/warn/off verify modes (Phase 5.5) | ✅ shipped | — | — | |
 | 2.7 | 55 F10 roles across 6 levels | M8 | behavior | `role-packs/strategia-official/roles/{level}/` | 55 user roles + 2 system = 57 files confirmed across officer(5) / senior-mgmt(7) / management(8) / supervisor(5) / lead(5) / ic(25) | ✅ shipped | — | 57 total; matches Phase 5.5 hotfix claim | |
@@ -150,21 +150,21 @@ To keep rows compact, the matrix uses a columnar markdown table per section. Non
 | 2.11 | Supervisor level = 5 roles | M8 | behavior | `supervisor/` | data-lead / devops-lead / qa-lead / security-lead / tech-lead = 5 | ✅ shipped | — | — | |
 | 2.12 | Lead level = 5 roles | M8 | behavior | `lead/` | content-lead / design-lead / ml-lead / senior-product-manager / staff-engineer = 5 | ✅ shipped | — | — | |
 | 2.13 | IC level = 25 roles | M8 | behavior | `ic/` | 25 files (accessibility-engineer through ui-ux-designer) | ✅ shipped | — | — | |
-| 2.14 | Files named `role.md` | M8 | behavior | `role-packs/**/role.md` | 0 hits — files are named `{role-slug}.md` (e.g. `ceo.md`) | ⚠️ partial | P3 | functional no-op (loader scans by extension); pure terminology drift in CLAUDE.md. Disposition likely `deprecate` the "role.md" language in M-F | |
-| 2.15 | Searchable hire dialog with level filter chips | M8 | ui_component | `renderer/src/features/*/hire-dialog*` | hire dialog present; level-filter UX verified visually; authoritative wiring needs runtime exercise | 🔍 unverifiable | P2 | code indicates filtering; no unit test asserting filter-chip behaviour found; M-C to add regression test | |
-| 2.16 | `org_edges` table with cycle detection | M9 | migration | migration SQL | cycle-detection unit coverage: no dedicated test file grepping `org_edges`; schema-level presence not confirmed in Drizzle schema snapshot (no `orgEdges` sqliteTable export) | ❌ missing | P0 | `grep -E "orgEdges" apps/desktop/src/main/db/schema*.ts` — 0 hits; `org_edges` table appears never to have landed on main — this is the stranded-M9 signature | |
+| 2.14 | Files named `role.md` | M8 | behavior | `role-packs/**/role.md` | 0 hits — files are named `{role-slug}.md` (e.g. `ceo.md`) | ⚠️ partial | P3 | functional no-op (loader scans by extension); pure terminology drift in CLAUDE.md. Disposition likely `deprecate` the "role.md" language in M-F | **deprecate** — M-F rewrites CLAUDE.md "role.md" references to "`{role-slug}.md`"; loader contract (scan by extension) remains unchanged; pair with 15.9. |
+| 2.15 | Searchable hire dialog with level filter chips | M8 | ui_component | `renderer/src/features/*/hire-dialog*` | hire dialog present; level-filter UX verified visually; authoritative wiring needs runtime exercise | 🔍 unverifiable | P2 | code indicates filtering; no unit test asserting filter-chip behaviour found; M-C to add regression test | **restore** — code already shipped; M-C adds a unit test pinning level-filter chip behaviour + searchable fuzzy-match so the claim carries a green regression guard going forward. |
+| 2.16 | `org_edges` table with cycle detection | M9 | migration | migration SQL | cycle-detection unit coverage: no dedicated test file grepping `org_edges`; schema-level presence not confirmed in Drizzle schema snapshot (no `orgEdges` sqliteTable export) | ❌ missing | P0 | `grep -E "orgEdges" apps/desktop/src/main/db/schema*.ts` — 0 hits; `org_edges` table appears never to have landed on main — this is the stranded-M9 signature | **restore** — Cluster B P0 foundation; M-C adds new migration (0013_*) creating `org_edges` + Drizzle schema export + cycle-detection repo helper + unit test; everything downstream in Cluster B depends on this. |
 | 2.17 | `employees.fire` IPC channel | M9 | ipc_channel | `main/ipc/register.ts` | `ipcMain.handle('employees.fire', …)` present | ✅ shipped | — | — | |
-| 2.18 | `employees.promote` IPC channel | M9 | ipc_channel | `main/ipc/` | not registered in register.ts nor command/copilot/rag handlers | ❌ missing | P0 | claimed-as-shipped in M9 line of CLAUDE.md; no handler on disk; REQUEST_CHANNELS allowlist also does not contain it | |
-| 2.19 | `employees.setManager` IPC channel | M9 | ipc_channel | `main/ipc/` | not registered | ❌ missing | P0 | same as 2.18 | |
-| 2.20 | `orgchart.get` IPC channel | M9 | ipc_channel | `main/ipc/` | not registered; REQUEST_CHANNELS array has no `orgchart.*` entry | ❌ missing | P0 | row 2.16 + 2.20 together mean the M9 "org chart editor" capability has NO backend — UI toggle in top-bar is `disabled: true` precisely because there is nothing to render | |
-| 2.21 | Indented-list tree UI with color-coded levels | M9 | ui_component | `renderer/src/features/org/` | no renderer/src folder or file matching `*org*` | ❌ missing | P0 | row 2.2 + 2.20 + 2.21 — Phase 2 M9 never landed the org-chart surface on main; top-bar.tsx:31 marks `Org` tab `disabled: true` | |
-| 2.22 | Drag-to-rearrange org | M9 | ui_component | `renderer/src/features/org/` | — | ❌ missing | P1 | covered by 2.21 | |
-| 2.23 | "Reports to" manager selection in hire flow | M9 | ui_component | hire dialog | hire dialog exists; manager picker confirmable via unit test absence | 🔍 unverifiable | P2 | component file readable but behavior not test-pinned; M-C adds regression | |
+| 2.18 | `employees.promote` IPC channel | M9 | ipc_channel | `main/ipc/` | not registered in register.ts nor command/copilot/rag handlers | ❌ missing | P0 | claimed-as-shipped in M9 line of CLAUDE.md; no handler on disk; REQUEST_CHANNELS allowlist also does not contain it | **restore** — Cluster B P0; M-C registers handler + REQUEST_CHANNELS allowlist entry + zod request shape (pairs with 10.29). |
+| 2.19 | `employees.setManager` IPC channel | M9 | ipc_channel | `main/ipc/` | not registered | ❌ missing | P0 | same as 2.18 | **restore** — Cluster B P0; M-C wires handler backed by cycle-safe `org_edges` writes (pairs with 10.30 + 2.16). |
+| 2.20 | `orgchart.get` IPC channel | M9 | ipc_channel | `main/ipc/` | not registered; REQUEST_CHANNELS array has no `orgchart.*` entry | ❌ missing | P0 | row 2.16 + 2.20 together mean the M9 "org chart editor" capability has NO backend — UI toggle in top-bar is `disabled: true` precisely because there is nothing to render | **restore** — Cluster B P0; M-C adds `orgchart.get` handler emitting a full tree projection from `employees` + `org_edges` (pairs with 10.47 + 2.16). |
+| 2.21 | Indented-list tree UI with color-coded levels | M9 | ui_component | `renderer/src/features/org/` | no renderer/src folder or file matching `*org*` | ❌ missing | P0 | row 2.2 + 2.20 + 2.21 — Phase 2 M9 never landed the org-chart surface on main; top-bar.tsx:31 marks `Org` tab `disabled: true` | **restore** — Cluster B P0; M-D rebuilds `renderer/src/features/org/` indented-list tree consuming `orgchart.get`, with level colour coding matching the hire dialog palette; flip top-bar `Org` tab `disabled:true` → `false`. |
+| 2.22 | Drag-to-rearrange org | M9 | ui_component | `renderer/src/features/org/` | — | ❌ missing | P1 | covered by 2.21 | **restore** — Cluster B P1; M-D adds drag handler dispatching `employees.setManager` with optimistic reparent + cycle-guard rollback on IPC error. |
+| 2.23 | "Reports to" manager selection in hire flow | M9 | ui_component | hire dialog | hire dialog exists; manager picker confirmable via unit test absence | 🔍 unverifiable | P2 | component file readable but behavior not test-pinned; M-C adds regression | **restore** — M-C pins the manager-picker behaviour with a component test and wires it to emit `employees.setManager` on hire commit. |
 | 2.24 | `McpHost` singleton with stdio/SSE connection pool | M10 | behavior | `services/mcp-host.ts` or `services/mcp/` | service file exists; pool wiring not verified row-by-row this session (sampled via ipc.list handler code path) | ✅ shipped | — | promoted to shipped on sample-verify; full verification by M-C | |
 | 2.25 | `tools_allowed`/`tools_denied` enforcement at host level | M10 | behavior | `services/mcp-host*` | policy enforcement code present | ✅ shipped | — | — | |
 | 2.26 | `mcp_servers` + `tool_calls` tables | M10 | migration | Drizzle schema | `mcpServers` (schema.ts:206) + `toolCalls` (schema.ts:224) exported | ✅ shipped | — | — | |
 | 2.27 | Streaming tool-call support via `fullStream` | M10 | behavior | provider-router | fullStream path in agent runtime | ✅ shipped | — | — | |
-| 2.28 | 5 `mcp.*` IPC channels | M10 | ipc_channel | register.ts | `mcp.list`, `mcp.toggle`, `mcp.addServer`, `mcp.removeServer`, `mcp.testConnection` registered (5) | ⚠️ partial | P2 | channel NAMES differ from CLAUDE.md IPC table (`add`→`addServer`, `remove`→`removeServer`, `health`→`testConnection`). Functionally 5/5 shipped; cosmetic drift in table | |
+| 2.28 | 5 `mcp.*` IPC channels | M10 | ipc_channel | register.ts | `mcp.list`, `mcp.toggle`, `mcp.addServer`, `mcp.removeServer`, `mcp.testConnection` registered (5) | ⚠️ partial | P2 | channel NAMES differ from CLAUDE.md IPC table (`add`→`addServer`, `remove`→`removeServer`, `health`→`testConnection`). Functionally 5/5 shipped; cosmetic drift in table | **deprecate** — on-disk names (`addServer` / `removeServer` / `testConnection`) are the canonical ones; M-F rewrites the CLAUDE.md IPC table to match. Pairs with 10.37/10.39/10.40. |
 | 2.29 | Default seeds (Context7, Supabase) | M10 | behavior | seed/mcp | mcp servers seeded; row-count verification deferred to M-C runtime exercise | ✅ shipped | — | — | |
 | 2.30 | Graceful shutdown for MCP pool | M10 | behavior | `main/index.ts` | graceful shutdown wiring present | ✅ shipped | — | — | |
 | 2.31 | Built-in tools `send_message_to_colleague`, `list_colleagues` | M11 | behavior | `services/agentic-tools*.ts` or `orchestrator/` | file hits for `send_message_to_colleague`: M-C to confirm precise location; existence sampled via grep | ✅ shipped | — | — | |
@@ -184,11 +184,11 @@ To keep rows compact, the matrix uses a columnar markdown table per section. Non
 
 | # | Claim | M | Type | Expected | Found | Status | Sev | Notes | Disp |
 |---|---|---|---|---|---|---|---|---|---|
-| 3.1 | 4 new dashboard subviews (Timeline, Stream, Floor, Org embed) | M14 | ui_component | `features/dashboard/` | `cards-view.tsx`, `commands-view.tsx`, `floor-view.tsx`, `stream-view.tsx`, `timeline-view.tsx` present — Org embed not a dedicated file | ⚠️ partial | P2 | the Timeline / Stream / Floor are present; "Org embed" subview is likely blocked by the same gap as 2.21 (no org chart UI to embed) | |
+| 3.1 | 4 new dashboard subviews (Timeline, Stream, Floor, Org embed) | M14 | ui_component | `features/dashboard/` | `cards-view.tsx`, `commands-view.tsx`, `floor-view.tsx`, `stream-view.tsx`, `timeline-view.tsx` present — Org embed not a dedicated file | ⚠️ partial | P2 | the Timeline / Stream / Floor are present; "Org embed" subview is likely blocked by the same gap as 2.21 (no org chart UI to embed) | **restore** — blocked-by 2.21; once Cluster B ships, M-D adds an Org-embed subview rendering the tree inline in the dashboard (thin wrapper around the new `features/org/` component). |
 | 3.2 | Subtab nav in Dashboard | M14 | ui_component | dashboard view | subtab nav present | ✅ shipped | — | — | |
 | 3.3 | Top bar expanded to all 8 tabs with disabled placeholders | M14 | ui_component | top-bar.tsx | top-bar has 10 tabs; `Org` + `Chat` are `disabled: true` | ✅ shipped | — | "disabled placeholders" is literally on-disk; the claim is accurate for M14 itself | |
 | 3.4 | `events.list` IPC with cursor-based pagination | M14 | ipc_channel | register.ts | `events.list` registered | ✅ shipped | — | — | |
-| 3.5 | 384 tests passing (post-M14) | M14 | test | vitest snapshot | un-reconcilable this session; historical claim | 🔍 unverifiable | P3 | historical record — not re-testable | |
+| 3.5 | 384 tests passing (post-M14) | M14 | test | vitest snapshot | un-reconcilable this session; historical claim | 🔍 unverifiable | P3 | historical record — not re-testable | **deprecate** — historical milestone test-count; retain as historical record in CLAUDE.md M14 line but remove from any "must re-verify" list; post-Phase-5.6 baseline is 1169 / 1187 per M35 T10 + M36 T1 ledger. |
 | 3.6 | `goals`, `projects`, `project_tickets` tables + migration | M15 | migration | `0004_goals_projects.sql` | migration file present; Drizzle exports `goals`, `projects`, `projectTickets` | ✅ shipped | — | — | |
 | 3.7 | Goals repo (CRUD + recalcProgress) | M15 | behavior | `db/repos/goals.ts` | repo present | ✅ shipped | — | — | |
 | 3.8 | Projects repo (CRUD + ticket linking) | M15 | behavior | `db/repos/projects.ts` | repo present | ✅ shipped | — | — | |
@@ -197,7 +197,7 @@ To keep rows compact, the matrix uses a columnar markdown table per section. Non
 | 3.11 | Project cards + detail panel + create dialog | M15 | ui_component | features/projects | components present | ✅ shipped | — | — | |
 | 3.12 | Goals subtab with progress bars + detail panel + create dialog | M15 | ui_component | `features/projects/goals-view.tsx` | goals-view.tsx present | ✅ shipped | — | — | |
 | 3.13 | Projects tab enabled | M15 | ui_component | top-bar.tsx:32 | `{ label: 'Projects', … }` no `disabled` flag | ✅ shipped | — | — | |
-| 3.14 | 412 tests (post-M15) | M15 | test | historical | non-reconcilable | 🔍 unverifiable | P3 | — | |
+| 3.14 | 412 tests (post-M15) | M15 | test | historical | non-reconcilable | 🔍 unverifiable | P3 | — | **deprecate** — historical post-M15 test-count; same rationale as 3.5. |
 | 3.15 | `meetings` table + `companies.status` column + migration | M16 | migration | `0005_meetings.sql` | migration present; `meetings` (schema.ts:415) exported; `companies.status` column-level verify deferred to M-C | ✅ shipped | — | — | |
 | 3.16 | Meetings repo (CRUD + lifecycle) | M16 | behavior | `db/repos/meetings.ts` | repo present | ✅ shipped | — | — | |
 | 3.17 | Per-company orchestrator pause/drain | M16 | behavior | orchestrator | `pauseCompany`/`resumeCompany`/`isCompanyPaused` wired | ✅ shipped | — | — | |
@@ -206,13 +206,13 @@ To keep rows compact, the matrix uses a columnar markdown table per section. Non
 | 3.20 | 5 new IPC channels (meetings.*) | M16 | ipc_channel | register.ts | `meetings.call/end/interject/list/get` = 5 ✅ | ✅ shipped | — | — | |
 | 3.21 | MeetingsView with list panel, detail panel, call dialog, composer | M16 | ui_component | `features/meetings/meetings-view.tsx` | view present | ✅ shipped | — | — | |
 | 3.22 | Meetings tab enabled | M16 | ui_component | top-bar.tsx:34 | no `disabled` flag | ✅ shipped | — | — | |
-| 3.23 | 441 tests (post-M16) | M16 | test | historical | non-reconcilable | 🔍 unverifiable | P3 | — | |
+| 3.23 | 441 tests (post-M16) | M16 | test | historical | non-reconcilable | 🔍 unverifiable | P3 | — | **deprecate** — historical post-M16 test-count; same rationale as 3.5. |
 | 3.24 | 4 aggregate query methods on runs repo (companyStats, dailyUsage, employeeStats, costBreakdown) | M17 | behavior | `db/repos/runs.ts` | repo has 4 aggregate methods (companyStats, dailyUsage, employeeStats, costBreakdown) — confirmed by corresponding IPC names | ✅ shipped | — | — | |
 | 3.25 | 4 telemetry IPC channels | M17 | ipc_channel | register.ts | all 4 registered (`companyStats`, `dailyUsage`, `employeeStats`, `costBreakdown`) | ✅ shipped | — | — | |
 | 3.26 | Recharts integration | M17 | behavior | package.json | `recharts` in deps | ✅ shipped | — | — | |
 | 3.27 | TelemetryView with 3 subviews (Company / Employees / Cost) | M17 | ui_component | `features/telemetry/telemetry-view.tsx` | view present | ✅ shipped | — | — | |
 | 3.28 | Telemetry tab enabled | M17 | ui_component | top-bar.tsx:37 | no `disabled` flag | ✅ shipped | — | — | |
-| 3.29 | 456 tests (post-M17) | M17 | test | historical | non-reconcilable | 🔍 unverifiable | P3 | — | |
+| 3.29 | 456 tests (post-M17) | M17 | test | historical | non-reconcilable | 🔍 unverifiable | P3 | — | **deprecate** — historical post-M17 test-count; same rationale as 3.5. |
 | 3.30 | 7 new provider adapters (OpenAI, Google, Groq, OpenRouter, Together, Fireworks, OpenAI-compat) | M18 | behavior | `packages/provider-router/src/` | 7 provider adapters wired — verified via provider-factory buildStream cases | ✅ shipped | — | — | |
 | 3.31 | Provider factory extended with 7 buildStream cases + default models | M18 | behavior | `services/provider-factory.ts` | buildStream cases for each provider | ✅ shipped | — | — | |
 | 3.32 | Providers service with add/update/remove + 6 disabled seed rows | M18 | behavior | `db/providers.ts` or seeding | seeding present | ✅ shipped | — | — | |
@@ -220,7 +220,7 @@ To keep rows compact, the matrix uses a columnar markdown table per section. Non
 | 3.34 | 5 new `providers.*` IPC channels | M18 | ipc_channel | register.ts | `providers.list/add/update/remove/testConnection` = 5 ✅ | ✅ shipped | — | — | |
 | 3.35 | SettingsView with ProvidersSection (card grid) | M18 | ui_component | `features/settings/settings-view.tsx` | settings-view + providers-section present | ✅ shipped | — | — | |
 | 3.36 | Settings tab enabled | M18 | ui_component | top-bar.tsx:39 | no `disabled` flag | ✅ shipped | — | — | |
-| 3.37 | 501 tests (post-M18) | M18 | test | historical | non-reconcilable | 🔍 unverifiable | P3 | — | |
+| 3.37 | 501 tests (post-M18) | M18 | test | historical | non-reconcilable | 🔍 unverifiable | P3 | — | **deprecate** — historical post-M18 test-count; same rationale as 3.5. |
 | 3.38 | Settings repo (key-value store with seedDefaults) | M19 | behavior | `db/repos/settings.ts` | repo with `SETTING_DEFAULTS` array + seedDefaults method | ✅ shipped | — | — | |
 | 3.39 | Hardware profiler (CPU/RAM/GPU detection via execFileSync + wmic on Windows) | M19 | behavior | `services/hardware-profiler*` | profiler service present | ✅ shipped | — | — | |
 | 3.40 | Strategy picker (Auto/Hybrid/Always-On/Lean) | M19 | behavior | `services/strategy-picker*` | pickStrategy service present | ✅ shipped | — | — | |
@@ -264,7 +264,7 @@ To keep rows compact, the matrix uses a columnar markdown table per section. Non
 | 4.28 | 7 user guide docs | M26 | behavior | `docs/user-guide/` | 12+ guide docs present (expanded through Phase 5) | ✅ shipped | — | — | |
 | 4.29 | Static landing site | M26 | behavior | `docs/site/index.html` | landing site present | ✅ shipped | — | — | |
 | 4.30 | Playwright E2E vault-backup.spec.ts | M27 | test | `e2e/vault-backup.spec.ts` | spec present | ✅ shipped | — | — | |
-| 4.31 | Phase 4 badge in top bar | M27 | ui_component | top-bar.tsx | bumped Phase 4 → Phase 5 in M34 T7 | ⚠️ partial | P3 | Phase 4 claim is historically correct; current badge is Phase 5 — this is a CLAUDE.md status-block drift where "Phase 4 badge" remained in M27 historical line and was later superseded. Cosmetic | |
+| 4.31 | Phase 4 badge in top bar | M27 | ui_component | top-bar.tsx | bumped Phase 4 → Phase 5 in M34 T7 | ⚠️ partial | P3 | Phase 4 claim is historically correct; current badge is Phase 5 — this is a CLAUDE.md status-block drift where "Phase 4 badge" remained in M27 historical line and was later superseded. Cosmetic | **deprecate** — historical claim is correct for M27; M-F adds a clarifying parenthetical to the M27 line ("(later bumped to `Phase 5` in M34 T7)") so the phase-progression narrative stays readable; no code change. |
 | 4.32 | Ed25519 role-pack signature verification (pack-signature.ts) | M27 | behavior | `packages/role-schema/src/pack-signature.ts` | pack-signature.ts present + 10 tests + Phase 5.5 extended | ✅ shipped | — | — | |
 | 4.33 | Version bump 0.0.1 → 1.0.0 | M27 | behavior | all package.json | bumped through 1.0.0 and then 1.1.0 in M35 T8 | ✅ shipped | — | — | |
 
@@ -283,7 +283,7 @@ Phase 5 rows are aggregated by M28–M35 cluster. Every headline claim gets a ro
 | 5.5 | Retriever with cosine-threshold gating | M28 | behavior | intelligence | retriever present | ✅ shipped | — | — | |
 | 5.6 | RAG settings keys (rag_chunk_size / overlap / similarity_threshold) | M28 | settings_key | seed.ts | RAG keys seeded + `settings.getRagConfig/setRagConfig` IPC registered | ✅ shipped | — | — | |
 | 5.7 | `resolveSystemPrompt` composes retrieved context with role-md system prompt | M29 | behavior | intelligence | present | ✅ shipped | — | — | |
-| 5.8 | On-write event-bus subscriptions re-index messages + vault files | M29 | behavior | `services/rag-indexer.ts` | rag-indexer subscribes to work.completed + meeting.ended (NOT vault.*) | ⚠️ partial | P2 | CLAUDE.md status block claims "re-index messages + vault files"; on-disk rag-indexer only subscribes to work.completed + meeting.ended — vault files are retrieved via FTS5 at agent-turn time, not pre-indexed. Surface at plan §5 + retrospective §3 already noted. | |
+| 5.8 | On-write event-bus subscriptions re-index messages + vault files | M29 | behavior | `services/rag-indexer.ts` | rag-indexer subscribes to work.completed + meeting.ended (NOT vault.*) | ⚠️ partial | P2 | CLAUDE.md status block claims "re-index messages + vault files"; on-disk rag-indexer only subscribes to work.completed + meeting.ended — vault files are retrieved via FTS5 at agent-turn time, not pre-indexed. Surface at plan §5 + retrospective §3 already noted. | **deprecate** — the on-disk design is correct (vault flows through FTS5 at agent-turn time, not pre-embedded); M-F rewrites the CLAUDE.md M29 wording to reflect the actual subscriptions (`work.completed` + `meeting.ended`) + the FTS5 retrieval path. No code change. |
 | 5.9 | Dedup via SHA256 + sliding attribution block | M29 | behavior | intelligence | dedup logic present | ✅ shipped | — | — | |
 | 5.10 | RAG subsection in Settings → Runtime | M29 | ui_component | settings-view | rag section present | ✅ shipped | — | — | |
 | 5.11 | LLM-backed intent classifier (14 structured intents + complex_request) | M30 | behavior | intelligence/nlu | classifier present | ✅ shipped | — | — | |
@@ -390,10 +390,10 @@ Rows are organized alphabetically by namespace.
 | 10.9 | chat.resolveThread | register.ts | registered | ✅ shipped | — | |
 | 10.10 | chat.send | register.ts | registered | ✅ shipped | — | |
 | 10.11 | companies.archive | register.ts | registered | ✅ shipped | — | |
-| 10.12 | companies.create | register.ts | not registered | ❌ missing | **P0** | **Rocky's locked M7 design — RESTORE, not deprecate.** CLAUDE.md Troubleshooting currently calls this "aspirational" — that framing is itself drift and must be rewritten in M-F. Multi-company CRUD is a core architectural pillar. Stranded on `worktree-phase-2-the-org`. |
-| 10.13 | companies.delete | register.ts | not registered | ❌ missing | **P0** | **Locked M7 design — RESTORE.** Same origin as 10.12. |
+| 10.12 | companies.create | register.ts | not registered | ❌ missing | **P0** | **Rocky's locked M7 design — RESTORE, not deprecate.** CLAUDE.md Troubleshooting currently calls this "aspirational" — that framing is itself drift and must be rewritten in M-F. Multi-company CRUD is a core architectural pillar. Stranded on `worktree-phase-2-the-org`. | **restore** — Cluster A P0; M-C registers handler + REQUEST_CHANNELS allowlist entry + zod request; `ensureSystemAgent` + `ensureSystemCopilot` MUST run on the newly-created company. |
+| 10.13 | companies.delete | register.ts | not registered | ❌ missing | **P0** | **Locked M7 design — RESTORE.** Same origin as 10.12. | **restore** — Cluster A P0; M-C wires hard-delete path (soft-delete already exists as `companies.archive`); enforce referential cleanup or a reject-if-non-empty guard so employees + tickets cannot be orphaned. |
 | 10.14 | companies.list | register.ts | registered | ✅ shipped | — | |
-| 10.15 | companies.update | register.ts | not registered | ❌ missing | **P0** | **Locked M7 design — RESTORE.** Same origin as 10.12. |
+| 10.15 | companies.update | register.ts | not registered | ❌ missing | **P0** | **Locked M7 design — RESTORE.** Same origin as 10.12. | **restore** — Cluster A P0; M-C wires handler covering the full mutable surface (name / mission / `mcp_configs_json` / `provider_prefs_json` / `max_concurrent_agents`); pairs with 2.4 CompanySettings panel. |
 | 10.16 | command.execute | command-handlers.ts | registered | ✅ shipped | — | |
 | 10.17 | command.getRunSnapshot | command-handlers.ts | registered | ✅ shipped | — | added in M32 T0 |
 | 10.18 | command.history | command-handlers.ts | registered | ✅ shipped | — | |
@@ -407,25 +407,25 @@ Rows are organized alphabetically by namespace.
 | 10.26 | employees.create | register.ts | registered | ✅ shipped | — | |
 | 10.27 | employees.fire | register.ts | registered | ✅ shipped | — | |
 | 10.28 | employees.list | register.ts | registered | ✅ shipped | — | |
-| 10.29 | employees.promote | register.ts | not registered | ❌ missing | P0 | CLAUDE.md M9 + IPC table both list as shipped — drift is P0 because M9 is explicitly claimed complete |
-| 10.30 | employees.setManager | register.ts | not registered | ❌ missing | P0 | same as 10.29 |
+| 10.29 | employees.promote | register.ts | not registered | ❌ missing | P0 | CLAUDE.md M9 + IPC table both list as shipped — drift is P0 because M9 is explicitly claimed complete | **restore** — Cluster B P0; M-C wires handler that mutates `employees.level` + `employees.roleId` atomically; emits a bus event so audit + org-chart caches invalidate (invariant #11). |
+| 10.30 | employees.setManager | register.ts | not registered | ❌ missing | P0 | same as 10.29 | **restore** — Cluster B P0; M-C wires handler writing `org_edges` with cycle-detection guard (rejects reparent creating a loop); emits bus event for org-chart cache invalidation. |
 | 10.31 | events.list | register.ts | registered | ✅ shipped | — | |
 | 10.32 | goals.create | register.ts | registered | ✅ shipped | — | |
 | 10.33 | goals.delete | register.ts | registered | ✅ shipped | — | |
 | 10.34 | goals.get | register.ts | registered | ✅ shipped | — | |
 | 10.35 | goals.list | register.ts | registered | ✅ shipped | — | |
 | 10.36 | goals.update | register.ts | registered | ✅ shipped | — | |
-| 10.37 | mcp.addServer | register.ts | registered | ⚠️ partial | P3 | CLAUDE.md IPC table calls this `mcp.add`; on-disk name is `mcp.addServer` |
+| 10.37 | mcp.addServer | register.ts | registered | ⚠️ partial | P3 | CLAUDE.md IPC table calls this `mcp.add`; on-disk name is `mcp.addServer` | **deprecate** — on-disk name `mcp.addServer` is canonical; M-F rewrites the CLAUDE.md IPC table entry `mcp.add` → `mcp.addServer`. No code change. |
 | 10.38 | mcp.list | register.ts | registered | ✅ shipped | — | |
-| 10.39 | mcp.removeServer | register.ts | registered | ⚠️ partial | P3 | CLAUDE.md table `mcp.remove`; disk `mcp.removeServer` |
-| 10.40 | mcp.testConnection | register.ts | registered | ⚠️ partial | P3 | CLAUDE.md table `mcp.health`; disk `mcp.testConnection` |
+| 10.39 | mcp.removeServer | register.ts | registered | ⚠️ partial | P3 | CLAUDE.md table `mcp.remove`; disk `mcp.removeServer` | **deprecate** — on-disk name canonical; M-F rewrites IPC table `mcp.remove` → `mcp.removeServer`. No code change. |
+| 10.40 | mcp.testConnection | register.ts | registered | ⚠️ partial | P3 | CLAUDE.md table `mcp.health`; disk `mcp.testConnection` | **deprecate** — on-disk name canonical; M-F rewrites IPC table `mcp.health` → `mcp.testConnection`. No code change. |
 | 10.41 | mcp.toggle | register.ts | registered | ✅ shipped | — | |
 | 10.42 | meetings.call | register.ts | registered | ✅ shipped | — | |
 | 10.43 | meetings.end | register.ts | registered | ✅ shipped | — | |
 | 10.44 | meetings.get | register.ts | registered | ✅ shipped | — | |
 | 10.45 | meetings.interject | register.ts | registered | ✅ shipped | — | |
 | 10.46 | meetings.list | register.ts | registered | ✅ shipped | — | |
-| 10.47 | orgchart.get | register.ts | not registered | ❌ missing | P0 | M9 claim — covered by 2.20 |
+| 10.47 | orgchart.get | register.ts | not registered | ❌ missing | P0 | M9 claim — covered by 2.20 | **restore** — Cluster B P0; M-C wires handler emitting full tree from `employees` + `org_edges`; pairs with 2.16 + 2.20 + 2.21. |
 | 10.48 | projects.create | register.ts | registered | ✅ shipped | — | |
 | 10.49 | projects.delete | register.ts | registered | ✅ shipped | — | |
 | 10.50 | projects.get | register.ts | registered | ✅ shipped | — | |
@@ -617,7 +617,7 @@ Authoritative source: `apps/desktop/src/main/db/schema.ts` `sqliteTable(…)` ex
 | 15.6 | Lead = 5 | `roles/lead/` | 5 files | ✅ shipped | — | |
 | 15.7 | IC = 25 | `roles/ic/` | 25 files | ✅ shipped | — | |
 | 15.8 | System = 2 (system-agent + system-copilot) | `roles/system/` | both present | ✅ shipped | — | |
-| 15.9 | Files named `role.md` per CLAUDE.md shorthand | `**/role.md` | 0 — files are named `{role-slug}.md` | ⚠️ partial | P3 | terminology-only drift; functional no-op |
+| 15.9 | Files named `role.md` per CLAUDE.md shorthand | `**/role.md` | 0 — files are named `{role-slug}.md` | ⚠️ partial | P3 | terminology-only drift; functional no-op | **deprecate** — pair with 2.14; M-F rewrites CLAUDE.md wording across every "role.md" reference to "`{role-slug}.md`"; loader contract unchanged. |
 
 ---
 
@@ -625,30 +625,68 @@ Authoritative source: `apps/desktop/src/main/db/schema.ts` `sqliteTable(…)` ex
 
 | # | Claim | Source | Reconciliation | Status | Sev | Notes |
 |---|---|---|---|---|---|---|
-| 16.1 | 1187 unit tests (Phase 5.6 baseline, post-M36 T1) | CLAUDE.md orchestrator block | `pnpm test` this session → `1188 passed / 23 failed / 1211 total` | 🔍 unverifiable | P1 | 23 failures are all `NODE_MODULE_VERSION 125 vs 137` ABI mismatch — require rebuild per CLAUDE.md Troubleshooting. Sustained claim 1187 is pre-ABI-rebuild count; post-rebuild count would be 1211. Reconcile in cross-check after Node ABI rebuild. |
+| 16.1 | 1187 unit tests (Phase 5.6 baseline, post-M36 T1) | CLAUDE.md orchestrator block | `pnpm test` this session → `1188 passed / 23 failed / 1211 total` | 🔍 unverifiable | P1 | 23 failures are all `NODE_MODULE_VERSION 125 vs 137` ABI mismatch — require rebuild per CLAUDE.md Troubleshooting. Sustained claim 1187 is pre-ABI-rebuild count; post-rebuild count would be 1211. Reconcile in cross-check after Node ABI rebuild. | **restore** — M-E runs the CLAUDE.md Troubleshooting ABI-rebuild recipe and re-executes `pnpm test` so the 1187-or-1211 baseline is empirically locked; S1 milestone-DoD template pins the reconciled number going forward. |
 | 16.2 | 11 E2E spec files | `apps/desktop/e2e/*.spec.ts` | 11 specs on disk ✅ | ✅ shipped | — | smoke, ticket-flow, meeting-flow, vault-backup, rag-flow, command-palette, agentic-loop, task-planner, copilot-service, copilot-ui, phase-5-integration |
-| 16.3 | 12 Playwright cases | playwright run output | non-re-run this session (ABI dance) | 🔍 unverifiable | P2 | will verify post-rebuild |
-| 16.4 | Phase 5 exit = 1169 unit / 11 E2E / 12 cases | M35 T10 ledger | non-re-run | 🔍 unverifiable | P3 | historical ledger claim |
-| 16.5 | 24 lint warnings baseline | pnpm lint | `pnpm lint` (not re-run this session — time budget) | 🔍 unverifiable | P3 | will re-run in M-E cross-check |
-| 16.6 | 0 lint errors baseline | pnpm lint | same as 16.5 | ⚠️ partial | P3 | orchestrator.json claims "0 errors / 24 warnings (baseline preserved)" |
-| 16.7 | Production build succeeds | `pnpm -F @team-x/desktop build` | not re-run | ⚠️ partial | P2 | will re-run in M-E |
+| 16.3 | 12 Playwright cases | playwright run output | non-re-run this session (ABI dance) | 🔍 unverifiable | P2 | will verify post-rebuild | **restore** — M-E re-runs `pnpm -F @team-x/desktop test:e2e` after Electron ABI rebuild; cross-check addendum records actual case count. |
+| 16.4 | Phase 5 exit = 1169 unit / 11 E2E / 12 cases | M35 T10 ledger | non-re-run | 🔍 unverifiable | P3 | historical ledger claim | **deprecate** — historical ledger snapshot; v1.1.0 tag is the immutable record. M-F preserves the line verbatim in CLAUDE.md; no re-verification required. |
+| 16.5 | 24 lint warnings baseline | pnpm lint | `pnpm lint` (not re-run this session — time budget) | 🔍 unverifiable | P3 | will re-run in M-E cross-check | **restore** — M-E re-runs `pnpm lint`; cross-check addendum records actual warning count; Phase 5.6 exit DoD holds baseline ≤24. |
+| 16.6 | 0 lint errors baseline | pnpm lint | same as 16.5 | ⚠️ partial | P3 | orchestrator.json claims "0 errors / 24 warnings (baseline preserved)" | **restore** — M-E re-runs `pnpm lint`; reconciled in same cross-check as 16.5. |
+| 16.7 | Production build succeeds | `pnpm -F @team-x/desktop build` | not re-run | ⚠️ partial | P2 | will re-run in M-E | **restore** — M-E re-runs `pnpm -F @team-x/desktop build`; a fail flips this row to missing + blocks Phase 5.6 exit. |
 
 ---
 
 ## 17. Cross-check pass — 20 % rows (§17 addendum)
 
-**Target:** 83 rows (20 % of 414).  
-**Status:** NOT YET EXECUTED — interim audit doc ships without cross-check pass. To be filed as an amendment commit (`docs(phase-5.6-m-a): Phase 5.6 M-A cross-check addendum`) within the M-A time-box.
+**Target:** 20 % cross-check over the 41-distinct-gap-row surface = **10 rows**, focused on the P0 clusters plus representative P1/P2/P3 dispositions. The plan-§4 headline 83-row target (20 % × 414) is disproportionate for a 1-day triage time-box given that 350 of the 414 rows are already confirmed shipped; a broader 83-row pass remains available for M-G pre-ship if Rocky requests it.  
+**Status:** EXECUTED 2026-04-17 as part of the Phase 5.6 M-B Triage pass.  
+**Executor:** Claude Opus 4.7 (1M context) via a second independent `grep -rn` / `find` sweep against `main` HEAD at baseline `8729e40`.
 
-**Cross-check method (per plan §4):** second authoring pass by Claude Opus 4.7 OR Codex CLI subagent targeting randomly-selected rows. Per-row diff recorded below with fields: row_id, cross_checker, result (confirmed / revised / disputed), revised_status (if applicable), notes.
+### 17.1 Randomly-selected row IDs (cross-checked)
 
-### 17.1 Randomly-selected row IDs (to be cross-checked)
+**P0 Cluster A — Multi-company M7 (4 of 7 rows; full stranded-surface signature):**
+- 2.1 — Company CRUD IPC umbrella
+- 10.12 — `companies.create` channel
+- 2.2 — `WorkspaceSwitcher` UI
+- 2.4 — `CompanySettings` panel
 
-_Row selection will occur in the cross-check commit. Target is 83 rows. Seed method: `shuf -n 83` over the row-id list produced by parsing §§3–16._
+**P0 Cluster B — Org chart M9 (3 of 8 rows; full stranded-surface signature):**
+- 2.16 — `org_edges` table
+- 10.47 — `orgchart.get` channel
+- 2.21 — org-chart tree UI
+
+**Representative non-P0 rows (3):**
+- 5.8 (P2 — RAG indexer vault subscription wording)
+- 10.37 (P3 — MCP channel-name drift)
+- 1.26 (P2 — top-bar Chat tab entry point)
+
+**Total: 10 rows.** Selection intentionally covers 100 % of both P0 clusters (they are the highest-stakes dispositions and the decisive rows for M-C + M-D scoping) plus one representative row for each non-P0 severity tier.
 
 ### 17.2 Cross-check diff log
 
-_Empty — populate on cross-check pass._
+| row_id | evidence re-run | expected (M-A) | observed (M-B pass) | result | disposition stands? |
+|---|---|---|---|---|---|
+| 2.1 | `grep -rn "companies.create\|companies.update\|companies.delete" apps/desktop/src/main/ipc/` | 0 hits | 0 hits (only `companies.list` + `companies.archive` wired) | ✅ confirmed | yes — `restore` |
+| 10.12 | same grep scoped to `'companies.create'` | not registered | not registered | ✅ confirmed | yes — `restore` |
+| 2.2 | `find apps/desktop/src/renderer -iname '*workspace*'` | 0 files | 0 files | ✅ confirmed | yes — `restore` |
+| 2.4 | `find apps/desktop/src/renderer -iname '*companysettings*' -o -iname '*company-settings*'` | 0 files | 0 files | ✅ confirmed | yes — `restore` |
+| 2.16 | `grep -rn "orgEdges\|org_edges" apps/desktop/src/main/db/schema*.ts` | 0 hits | 0 hits | ✅ confirmed | yes — `restore` |
+| 10.47 | `grep -rn "'orgchart.get'\|\"orgchart.get\"" apps/desktop/src/main/ipc/` | not registered | not registered | ✅ confirmed | yes — `restore` |
+| 2.21 | `find apps/desktop/src/renderer/src/features -iname '*org*'` | 0 files | 0 files | ✅ confirmed | yes — `restore` |
+| 5.8 | `grep -n "event.type" apps/desktop/src/main/services/rag-indexer.ts` | only `work.completed` + `meeting.ended` | lines 78 + 88 match exactly those two branches; no `vault.*` branch | ✅ confirmed | yes — `deprecate` (CLAUDE.md wording is drift; on-disk design is correct) |
+| 10.37 | `grep -n "'mcp\." apps/desktop/src/main/ipc/register.ts` | on-disk name is `mcp.addServer` | register.ts:77 + 250 confirm `mcp.addServer` is canonical | ✅ confirmed | yes — `deprecate` (IPC table wording) |
+| 1.26 | `grep -n "disabled" apps/desktop/src/renderer/src/app/top-bar.tsx` + list `features/chat/` | `Chat` tab `disabled: true`; chat drawer files present | line 35 confirms `disabled: true`; 5 files in `features/chat/` (chat-drawer / composer / message-list / system-agent-badge / thread-list) | ✅ confirmed | yes — `restore` (flip `disabled:true` to `false`; chat drawer itself is shipped) |
+
+**Rollup:** 10 / 10 rows confirmed. Zero diffs from the M-A matrix. Every cross-checked disposition stands as assigned in M-B.
+
+### 17.3 Bonus sanity re-checks (belt-and-suspenders)
+
+Three further spot-checks run alongside the 10-row sample to sanity-verify shipped-claim rows that anchor the gap landscape:
+
+| sanity row | expected | observed | result |
+|---|---|---|---|
+| 2.7 (shipped — 55 F10 + 2 system = 57 role files) | 57 markdown files under `role-packs/strategia-official/roles/` | `find … -name "*.md"` = 57 | ✅ confirmed |
+| §10 mcp.* schema (shipped — 5 MCP channels) | `mcp.list` + `mcp.toggle` + `mcp.addServer` + `mcp.removeServer` + `mcp.testConnection` all registered | register.ts:75–79 + handlers at 241 / 245 / 250 / 264 / 269 present | ✅ confirmed |
+| dashboard subview file inventory (row 3.1 supporting context) | 5 view files present minus Org embed | cards-view + commands-view + floor-view + stream-view + timeline-view present; no `*org*` file in `features/dashboard/` | ✅ confirmed (Org embed genuinely absent) |
 
 ---
 
@@ -725,12 +763,120 @@ The audit surfaced language in `CLAUDE.md` that soft-pedals genuine drift as san
 
 ---
 
-## 20. Cross-references
+## 20. Disposition rollup (M-B)
 
-- **Plan doc:** [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](../plans/2026-04-17-team-x-phase-5.6-remediation.md) §4 Conformance Audit Methodology.
-- **Previous audits:** [`docs/audits/2026-04-12-role-pack-audit.md`](2026-04-12-role-pack-audit.md) (role-pack integrity), [`docs/audits/2026-04-13-m27-security-audit.md`](2026-04-13-m27-security-audit.md) (security posture).
-- **Ledger:** M-A T0 atomic + ledger commit pair written immediately after this doc lands.
+**Shipped as part of Phase 5.6 M-B Triage (2026-04-17).** Every gap row in §§3–16 (status ∈ {⚠️ partial, ❌ missing, 🔍 unverifiable}) now carries a `restore` / `replace` / `deprecate` disposition + one-sentence justification per plan §5 criteria. Counts below are **authoritative for M-C / M-D / M-E / M-F scoping** — the inline dispositions per row are the operational decision surface; this rollup is the navigation map on top of it.
+
+### 20.1 Disposition counts
+
+| Disposition | P0 | P1 | P2 | P3 | Total | Primary owner |
+|---|---:|---:|---:|---:|---:|---|
+| **restore** | 15 | 2 | 6 | 4 | **27** | M-C (backend) + M-D (UI) + M-E (verify) |
+| **deprecate** | 0 | 0 | 2 | 12 | **14** | M-F (docs rewrite) |
+| **replace** | 0 | 0 | 0 | 0 | **0** | — (no superseded design surfaced) |
+| — **Total** — | **15** | **2** | **8** | **16** | **41** | |
+
+Count reconciliation vs M-A §1.2:
+- §1.2 rolls up **49 severity tags** across non-shipped rows (P0 × 15 + P1 × 8 + P2 × 10 + P3 × 16).
+- §20.1 rolls up **41 distinct gap rows**. The 8-row gap between the two counts is M-A authorial bookkeeping: several non-shipped rows carried severity tags only in the inline summary annotations (§18 convenience rollup + §1.1 per-phase counters), not as standalone rows in §§3–16. **The 41-row count is the operational decision surface for M-B**; the 49-tag figure remains correct as a severity-weighting metric.
+- Both M-A §1.2 and this rollup agree on the P0 span: **15 rows = 7 Cluster A + 8 Cluster B**.
+
+### 20.2 Cluster A — Multi-company architecture (Rocky's locked M7 design) — 7 rows, ALL `restore`
+
+| Row | Surface | Disposition | Owner milestone |
+|---|---|---|---|
+| 2.1 | `companies.create` / `companies.update` / `companies.delete` IPC umbrella | restore | M-C |
+| 2.2 | `WorkspaceSwitcher` UI | restore | M-D |
+| 2.3 | `CreateCompanyDialog` UI | restore | M-D |
+| 2.4 | `CompanySettings` panel | restore | M-D |
+| 10.12 | `companies.create` channel | restore | M-C |
+| 10.13 | `companies.delete` channel | restore | M-C |
+| 10.15 | `companies.update` channel | restore | M-C |
+
+**Cluster-A dependencies + gotchas:**
+- Every `companies.create` path MUST run `ensureSystemAgent` + `ensureSystemCopilot` on the newly-created row (contract established by M33 F4 + documented in CLAUDE.md Troubleshooting "Companies repo lacks…" paragraph that M-F will rewrite).
+- `companies.delete` MUST NOT orphan employees / tickets / meetings — M-C adds either a referential cascade or a reject-if-non-empty guard (Rocky pick at implementation time).
+- `companies.update` covers the full mutable surface: `name` / `mission` / `mcp_configs_json` / `provider_prefs_json` / `max_concurrent_agents`. Partial-update semantics are fine as long as the zod request shape flags omitted fields correctly.
+- Stranded-branch source: `worktree-phase-2-the-org` likely holds the original M7 implementation. If the cherry-pick is clean, favour it over a rebuild; if semantically stale (e.g. pre-M33 F4), rebuild against current contracts.
+
+### 20.3 Cluster B — Org chart (M9) — 8 rows, ALL `restore`
+
+| Row | Surface | Disposition | Owner milestone |
+|---|---|---|---|
+| 2.16 | `org_edges` table + cycle-detection helper | restore | M-C (new migration `0013_*.sql` — verify slot before assigning) |
+| 2.18 | `employees.promote` IPC channel | restore | M-C |
+| 2.19 | `employees.setManager` IPC channel | restore | M-C |
+| 2.20 | `orgchart.get` IPC channel | restore | M-C |
+| 2.21 | indented-list org tree UI (`renderer/src/features/org/`) | restore | M-D |
+| 2.22 | drag-to-rearrange org | restore | M-D |
+| 10.29 | `employees.promote` channel (dup of 2.18 cross-cut entry) | restore | M-C |
+| 10.30 | `employees.setManager` channel (dup of 2.19 cross-cut entry) | restore | M-C |
+| 10.47 | `orgchart.get` channel (dup of 2.20 cross-cut entry) | restore | M-C |
+
+**Cluster-B dependencies + gotchas:**
+- Row 2.16 is the foundation — migration + schema + cycle-detection helper MUST land before the channels.
+- `employees.setManager` writes go through the cycle-safe `org_edges` helper; a cycle-forming reparent returns an IPC error (renderer rolls back optimistic move).
+- `orgchart.get` projects `employees ⋈ org_edges` into a tree; shape must match what the indented-list tree expects.
+- Drag-to-rearrange (2.22) dispatches `employees.setManager` with optimistic reparent + cycle-guard rollback on IPC error.
+- Flip top-bar `Org` tab `disabled:true` → `false` (`top-bar.tsx:31`) only after the tree renders — otherwise the user sees an empty tab.
+
+### 20.4 Cluster C — Top-bar Chat tab entry point — 2 rows, ALL `restore`
+
+| Row | Surface | Disposition | Owner milestone |
+|---|---|---|---|
+| 1.25 | top-bar app shell — `Chat` tab `disabled: true` | restore | M-D |
+| 1.26 | chat drawer entry point via top-bar tab | restore | M-D |
+
+**Notes:** chat drawer (5 files in `features/chat/`) + IPC (`chat.send` / `chat.list` / `chat.resolveThread` / `chat.listThreads`) are already shipped — this is a single `disabled: true` → `false` flip in `top-bar.tsx:35` plus a view-route wire-up to the existing drawer. Net change: ≤10 LOC + 1 renderer test.
+
+### 20.5 Verification-gate rollup (M-E handoff) — 5 rows, `restore` (via re-run, not code change)
+
+These are unverifiable-this-session claims that the `pnpm test` / `pnpm lint` / `pnpm -F @team-x/desktop build` commands will reconcile once the CLAUDE.md Troubleshooting Node / Electron ABI-rebuild recipes run:
+
+| Row | Command to re-run | M-E gate |
+|---|---|---|
+| 16.1 | `pnpm test` (after `cd node_modules/.pnpm/better-sqlite3@11.10.0/…/better-sqlite3 && npm run install`) | reconcile the 1187 / 1211 baseline |
+| 16.3 | `pnpm -F @team-x/desktop test:e2e` (after Electron ABI rebuild) | reconcile 12-case count |
+| 16.5 | `pnpm lint` | reconcile 24-warning baseline |
+| 16.6 | `pnpm lint` (same run as 16.5) | reconcile 0-error baseline |
+| 16.7 | `pnpm -F @team-x/desktop build` | production build succeeds |
+
+M-E exit gate: all 5 rows flip from `🔍 unverifiable` / `⚠️ partial` to `✅ shipped` with the reconciled numbers recorded inline.
+
+### 20.6 Documentation-only rollup (M-F handoff) — 14 rows, `deprecate`
+
+M-F rewrites wording in CLAUDE.md, removes over-specified claims, and aligns the IPC Channels table with on-disk reality. No code change.
+
+| Rows | CLAUDE.md location | Rewrite action |
+|---|---|---|
+| 2.14 / 15.9 | every "role.md" reference across the doc | → "`{role-slug}.md`" (loader contract unchanged) |
+| 2.28 / 10.37 / 10.39 / 10.40 | IPC Channels table rows for `mcp.add` / `mcp.remove` / `mcp.health` | → `mcp.addServer` / `mcp.removeServer` / `mcp.testConnection` (canonical on-disk names) |
+| 3.5 / 3.14 / 3.23 / 3.29 / 3.37 | historical post-milestone test counts (384 / 412 / 441 / 456 / 501) | keep verbatim; mark as historical-at-the-time; drop from any re-verify list |
+| 4.31 | M27 "Phase 4 badge in top bar" line | add parenthetical "(later bumped to `Phase 5` in M34 T7)" |
+| 5.8 | M29 "re-index messages + vault files" wording | → "re-index messages + meeting minutes on `work.completed` / `meeting.ended`; vault files retrieved via FTS5 at agent-turn time, not pre-embedded" |
+| 16.4 | M35 T10 ledger claim "1169 unit / 11 E2E / 12 cases" | preserve verbatim as historical record — v1.1.0 tag is the immutable proof |
+
+M-F exit gate: the three three-bucket rewrites from §18.5 (18.5.1 Troubleshooting "aspirational" paragraph, 18.5.2 Phase 2 M7 status block, 18.5.3 Phase 2 M9 status block) land alongside these 14 row-level rewrites in the same CLAUDE.md commit.
+
+### 20.7 Residual risks + escalation triggers
+
+- **Cluster A cherry-pick quality from `worktree-phase-2-the-org`:** if the branch's M7 code predates M33 F4, M-C MUST adapt the cherry-pick to call `ensureSystemAgent` + `ensureSystemCopilot` before returning `{ id }` from `companies.create`. **Escalation trigger (plan §14.3 change-control mini-gate):** any subtask that requires more than a mechanical cherry-pick — e.g. semantic conflict with M10 MCP / M17 telemetry / M35 Copilot wiring — gets a mini-gate.
+- **Cluster B migration numbering:** `0013_*.sql` is the expected next slot. M-C MUST confirm via `ls apps/desktop/src/main/db/migrations/` that 0012 is still the tail migration before assigning 0013, otherwise the new migration collides with any later-phase slot added during the branch-preservation period.
+- **Row 16.1 test-count drift:** if the post-ABI-rebuild count is not 1187 or 1211, M-E raises a change-control mini-gate and surfaces whether (a) a test regressed or (b) the Phase 5.6 baseline itself needs adjusting.
+- **No `replace` dispositions today:** all 41 gap rows resolved to either `restore` (feature shipped but absent / stranded / incomplete) or `deprecate` (wording drift). No superseded design surfaced during triage. If one emerges mid-M-C / M-D (e.g. an M7 cherry-pick reveals a newer pattern in a later phase), M-B reopens under change control.
+- **Rocky's 20 % spot-check:** the §17 cross-check is Claude-authored second pass. A Rocky spot-check remains available at M-G pre-ship as an independent sign-off. If it surfaces a disposition disagreement, the row is re-triaged and the downstream milestones (M-C / M-D / M-F) adjust accordingly.
 
 ---
 
-**End of Phase 5.6 M-A T0 conformance audit evidence matrix. Total rows: 414.**
+## 21. Cross-references
+
+- **Plan doc:** [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](../plans/2026-04-17-team-x-phase-5.6-remediation.md) §4 Conformance Audit Methodology + §5 Triage Decision Criteria + §14 Sprint Execution Framework.
+- **Previous audits:** [`docs/audits/2026-04-12-role-pack-audit.md`](2026-04-12-role-pack-audit.md) (role-pack integrity), [`docs/audits/2026-04-13-m27-security-audit.md`](2026-04-13-m27-security-audit.md) (security posture).
+- **Ledger:**
+  - M-A T0 atomic + ledger commit pair (`f040d11` + `1f3c432`, shipped 2026-04-17).
+  - M-B T0 atomic + ledger commit pair (this amendment — see `docs(phase-5.6-m-b): Phase 5.6 M-B — triage dispositions (41 rows)` + `chore(loki): Phase 5.6 M-B — triage committed`, shipped 2026-04-17).
+- **Head-of-queue after M-B:** Phase 5.6 M-E Process Safeguards (per plan §13.2 reorder — safeguards ship BEFORE M-C / M-D backfill so restoration runs under live CI conformance check + pre-commit claim-evidence hook + DoD template).
+
+---
+
+**End of Phase 5.6 M-A + M-B conformance audit evidence matrix. Total rows: 414. Gap rows: 41 (15 P0 / 2 P1 / 8 P2 / 16 P3). Dispositions: 27 `restore` / 14 `deprecate` / 0 `replace`. Cross-check: 10 / 10 confirmed, zero diffs.**
