@@ -569,6 +569,46 @@ describe('copilot-analyzer-service — restart picks up new settings', () => {
     // an app restart.
     expect(scheduled).toEqual([5 * 60 * 1000, 17 * 60 * 1000]);
   });
+
+  it('M35 T1 — rescheduling preserves the measurement-held default when unchanged', () => {
+    // Regression guard for the M35 T1 measurement-held
+    // `copilot_interval_minutes = 5` default: a restart with the SAME
+    // interval must still produce a fresh timer at 5 × 60 × 1000 ms.
+    // This pins the invariant that `analyzer.restart(companyId)` is a
+    // true reschedule (stop + start), not a no-op — which is what the
+    // `settings.setCopilot` IPC handler depends on after the
+    // measurement pass confirmed 5-min cadence provides 4.5× headroom
+    // over the 66 s warm tick observed on llama3.1:8b. See
+    // `apps/desktop/src/main/db/seed.ts` M35 T1 header for the full
+    // measurement block.
+    const scheduled: number[] = [];
+    const cleared: Array<{ ref: number }> = [];
+    const { deps } = baseDeps({
+      getSettings: () => ({
+        enabled: true,
+        intervalMinutes: 5,
+        categories: ['operational', 'cost', 'org', 'workflow', 'anomaly'],
+      }),
+      setInterval: ((_fn: () => void, ms: number) => {
+        scheduled.push(ms);
+        return { ref: scheduled.length } as unknown as ReturnType<typeof setInterval>;
+      }) as unknown as typeof setInterval,
+      clearInterval: ((handle: { ref: number }) => {
+        cleared.push(handle);
+      }) as unknown as typeof clearInterval,
+    });
+    const svc = createCopilotAnalyzerService(deps);
+
+    svc.start('co-1');
+    svc.restart('co-1');
+
+    // Both schedule calls use the M35-T1-held default (5 min).
+    expect(scheduled).toEqual([5 * 60 * 1000, 5 * 60 * 1000]);
+    // The old timer was cleared before the new one was scheduled —
+    // proving restart is a real reschedule (not a no-op).
+    expect(cleared).toHaveLength(1);
+    expect(cleared[0]?.ref).toBe(1);
+  });
 });
 
 afterEach(() => {

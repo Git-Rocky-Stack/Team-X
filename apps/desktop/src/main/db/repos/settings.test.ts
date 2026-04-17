@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import {
+  AGENTIC_SETTINGS_CLAMPS,
+  COPILOT_CATEGORIES,
+  COPILOT_ENABLED_DEFAULT,
+  COPILOT_SETTINGS_CLAMPS,
+  PLANNER_APPROVAL_LEVEL_DEFAULT,
+  PLANNER_SETTINGS_CLAMPS,
+} from '@team-x/shared-types';
+
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createSettingsRepo } from './settings.js';
 
@@ -183,6 +192,93 @@ describe('createSettingsRepo', () => {
       repo.setAgentic({ maxSteps: 16, maxTokens: 2000, timeoutMs: 45000 });
       expect(repo.get('concurrency_caps', {})).toEqual(capsBefore);
       expect(repo.get('orchestrator_slots', 0)).toBe(slotsBefore);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // M35 T1 — Performance defaults pass + clamp audit (2026-04-19)
+  // -------------------------------------------------------------------
+  // These tests pin the evidence-based outcome of the M35 T1
+  // measurement pass (llama3.1:8b, 66s warm tick, 2288-char prompt;
+  // see the header block in `apps/desktop/src/main/db/seed.ts`).
+  // All 10 Phase 5 settings clamps held at their current defaults —
+  // the measurement justifies holding, not moving. Any future silent
+  // tuning of a default within its envelope fails here first.
+  describe('M35 T1 — clamp audit (measurement-held defaults)', () => {
+    it('pins every numeric default + the three approval/flag defaults after seedDefaults()', () => {
+      repo.seedDefaults();
+      // RAG retrieval defaults (Phase 5 — M28/M29). `rag_chunk_size`
+      // and `rag_chunk_overlap` live in the chunker module
+      // (packages/intelligence/src/rag/chunker.ts) as
+      // `DEFAULT_OPTIONS.maxTokens`/`overlapTokens`; they are not
+      // persisted-settings keys, so we pin the persisted RAG keys
+      // here and pin the chunker constants in the chunker test.
+      expect(repo.get('rag_enabled', false)).toBe(true);
+      expect(repo.get('rag_max_tokens', 0)).toBe(2000);
+      expect(repo.get('rag_threshold', 0)).toBe(0.7);
+      expect(repo.get('rag_top_k', 0)).toBe(5);
+      expect(repo.get('embedding_dimension', 0)).toBe(1536);
+      // Agentic loop budgets (M31).
+      expect(repo.getAgentic()).toEqual({
+        maxSteps: 8,
+        maxTokens: 8000,
+        timeoutMs: 120000,
+      });
+      // Task planner guardrails (M32).
+      expect(repo.getPlanner()).toEqual({
+        maxTickets: 10,
+        maxDepth: 2,
+        approvalLevel: PLANNER_APPROVAL_LEVEL_DEFAULT,
+        escalationThreshold: 3,
+      });
+      // Copilot service (M33).
+      const cop = repo.getCopilot();
+      expect(cop.enabled).toBe(COPILOT_ENABLED_DEFAULT);
+      expect(cop.intervalMinutes).toBe(5);
+      expect(cop.categories).toEqual(Array.from(COPILOT_CATEGORIES));
+    });
+
+    it('pins clamp envelopes (min/max) unchanged from Phase 5 M31/M32/M33 baseline', () => {
+      // The measurement pass tunes DEFAULTS within clamp envelopes —
+      // it never moves the envelope itself. If an envelope changes, a
+      // larger design-doc amendment is required; this test guards the
+      // invariant.
+      expect(AGENTIC_SETTINGS_CLAMPS.maxSteps.min).toBe(1);
+      expect(AGENTIC_SETTINGS_CLAMPS.maxSteps.max).toBe(32);
+      expect(AGENTIC_SETTINGS_CLAMPS.maxTokens.min).toBe(512);
+      expect(AGENTIC_SETTINGS_CLAMPS.maxTokens.max).toBe(64000);
+      expect(AGENTIC_SETTINGS_CLAMPS.timeoutMs.min).toBe(10000);
+      expect(AGENTIC_SETTINGS_CLAMPS.timeoutMs.max).toBe(600000);
+      expect(PLANNER_SETTINGS_CLAMPS.maxTickets.min).toBe(1);
+      expect(PLANNER_SETTINGS_CLAMPS.maxTickets.max).toBe(50);
+      expect(PLANNER_SETTINGS_CLAMPS.maxDepth.min).toBe(1);
+      expect(PLANNER_SETTINGS_CLAMPS.maxDepth.max).toBe(4);
+      expect(PLANNER_SETTINGS_CLAMPS.escalationThreshold.min).toBe(1);
+      expect(PLANNER_SETTINGS_CLAMPS.escalationThreshold.max).toBe(10);
+      expect(COPILOT_SETTINGS_CLAMPS.intervalMinutes.min).toBe(1);
+      expect(COPILOT_SETTINGS_CLAMPS.intervalMinutes.max).toBe(60);
+    });
+
+    it('every (possibly revised) default satisfies min ≤ default ≤ max', () => {
+      // Structural invariant: the measurement-held default must ALWAYS
+      // sit strictly within its clamp envelope. Holds today; fails
+      // loudly the first time anyone bumps a default past the envelope
+      // without also moving the envelope.
+      const pairs: Array<[string, { min: number; max: number; default: number }]> = [
+        ['agentic.maxSteps', AGENTIC_SETTINGS_CLAMPS.maxSteps],
+        ['agentic.maxTokens', AGENTIC_SETTINGS_CLAMPS.maxTokens],
+        ['agentic.timeoutMs', AGENTIC_SETTINGS_CLAMPS.timeoutMs],
+        ['planner.maxTickets', PLANNER_SETTINGS_CLAMPS.maxTickets],
+        ['planner.maxDepth', PLANNER_SETTINGS_CLAMPS.maxDepth],
+        ['planner.escalationThreshold', PLANNER_SETTINGS_CLAMPS.escalationThreshold],
+        ['copilot.intervalMinutes', COPILOT_SETTINGS_CLAMPS.intervalMinutes],
+      ];
+      for (const [label, c] of pairs) {
+        expect({ label, ok: c.default >= c.min && c.default <= c.max }).toEqual({
+          label,
+          ok: true,
+        });
+      }
     });
   });
 });

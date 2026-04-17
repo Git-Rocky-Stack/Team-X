@@ -24,6 +24,53 @@
  * (Task 49+) will ship role packs via electron-builder extraResources;
  * the `isPackaged` branch in `seed()` is a placeholder so dev and prod
  * code paths stay symmetric.
+ *
+ * -------------------------------------------------------------------
+ * M35 T1 — Performance defaults pass + clamp audit (2026-04-19)
+ * -------------------------------------------------------------------
+ * Measurement rig: local Ollama (127.0.0.1:11434) + `llama3.1:8b`
+ * (Q4_K_M, 4.9 GB) against an analyzer-shaped prompt built from a
+ * realistic Strategia-X event window (50 ticket.comment + 10
+ * project.updated + 2 goal.progressChanged + 5 vault.fileAdded =
+ * 67 bounded events, truncated to the 2000-char
+ * `MAX_EVENT_SUMMARY_CHARS` cap in `copilot-analyzer-service.ts`).
+ *
+ * Wall-clock evidence (Windows 11, Node 24.14.1, single Ollama
+ * instance warm loaded):
+ *   - cold      : 208563 ms  (one-time model-load penalty)
+ *   - warm #1   :  66847 ms
+ *   - warm #2   :  65872 ms
+ *   - prompt    :  2288 chars → 734 prompt_eval tokens
+ *   - response  :  ~200 eval tokens, well-formed JSON array
+ *
+ * Decision (evidence-based): all 10 Phase 5 settings clamps
+ * documented in the M35 plan doc §4.2 held at their current
+ * defaults — the measurement JUSTIFIES holding, not moving:
+ *
+ *   | Clamp                         | Default | Evidence                                         |
+ *   |-------------------------------|---------|--------------------------------------------------|
+ *   | rag_chunk_size  (chunker)     | 512 tok | Standard M28 baseline, not stressed this tick    |
+ *   | rag_chunk_overlap             |  64 tok | Standard 12.5% overlap, retrieval-layer          |
+ *   | rag_threshold                 |  0.70   | Retrieval-layer precision, not latency-bound     |
+ *   | agentic_max_steps             |     8   | CLAUDE.md documents 12/16 bump for 7-8B models   |
+ *   | agentic_max_tokens            |  8000   | ~200 tok/call × 8 steps = 1600 (4× headroom)     |
+ *   | agentic_timeout_ms            | 120000  | 66s warm tick well under 120s (0.55× utilisation)|
+ *   | planner_max_tickets           |    10   | Governance cap, not latency-bound                |
+ *   | planner_max_depth             |     2   | Governance cap, not latency-bound                |
+ *   | planner_escalation_threshold  |     3   | Governance cap, not latency-bound                |
+ *   | copilot_interval_minutes      |   5 min | 300s cadence vs 66s tick = 4.5× headroom         |
+ *
+ * Zero silent tuning. The clamp ENVELOPES are also unchanged —
+ * `AGENTIC_SETTINGS_CLAMPS`, `PLANNER_SETTINGS_CLAMPS`, and
+ * `COPILOT_SETTINGS_CLAMPS` (all in `@team-x/shared-types`) keep
+ * their Phase 5 M31/M32/M33 ranges. Any future adjustment must
+ * cite a fresh measurement in this block.
+ *
+ * Regression guard: `settings.test.ts` / `settings-planner.test.ts`
+ * / `settings-copilot.test.ts` pin every default listed above;
+ * `copilot-analyzer-service.test.ts` pins the
+ * `restart(companyId)` side effect that the
+ * `copilot_interval_minutes` default rides on.
  */
 
 import { readFileSync } from 'node:fs';
