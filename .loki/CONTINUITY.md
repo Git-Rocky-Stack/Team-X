@@ -1,4 +1,94 @@
-# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0–T9 shipped; T10 pending); M32 (Task Planner) complete
+# Loki Continuity — Phase 5, **M33 COMPLETE** (Copilot Service — all 11 tasks shipped); M34 (Copilot UI) is next
+
+## M33 T10 SHIPPED — 2026-04-17 — M33 COMPLETE (docs + verification + milestone marker)
+
+**Task:** M33 T10 — close the milestone. Author the F10 user guide, flip the Phase 5 design §9 row, refresh CLAUDE.md / CHANGELOG / README, run the full verification gate one final time (ABI rebuild dance + typecheck + lint + vitest + Playwright), fold M33 from `inFlightMilestone` into `history` in `.loki/state/orchestrator.json`, advance `currentMilestone` → M34, clear `pending.json` with the M34 seed, and rewrite this CONTINUITY header into `M33-COMPLETE` posture.
+**Atomic commit:** `2fc998e` — `chore(m33): M33 T10 — docs + verification + milestone marker`.
+**Ledger commit:** `chore(loki): M33 T10 — commit ledger (2fc998e) + M33-COMPLETE roll-up`.
+**Plan reference:** [M33 plan T10 §](../docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).
+
+### M33 Milestone Retrospective (T0 – T10)
+
+| Metric | Pre-M33 (post-M32 T10) | Post-M33 (post-T10) | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1033 | **1099** | **+66** (target was ~25 — exceeded by +41) |
+| E2E spec files | 8 | **9** | **+1** (`copilot-service.spec.ts`) |
+| E2E green count (Playwright cases) | 9 | **10** | **+1** |
+| Lint errors | 1 (pre-existing M30 T2) | 1 (pre-existing M30 T2) | **0 new** (baseline preserved exactly) |
+| Lint warnings | 24 | 24 | **0** (baseline preserved exactly) |
+| Typecheck | clean | clean | — |
+| Vitest runtime | 20.57s | 36.87s | +16.3s (post-ABI-rebuild) |
+| E2E suite runtime | 29.1s | 25.8s | -3.3s |
+| Migrations | 0010 (M31) | **0012** (`copilot_insights` + `runs.kind`) | **+2** |
+| New shared-types files | — | `roles.ts` + `copilot.ts` | **+2** |
+| New main-process service files | — | `copilot-event-window.ts` / `copilot-event-trigger.ts` / `copilot-analyzer-service.ts` / `agentic-tools-copilot.ts` / `copilot-service.ts` / `test-copilot-provider.ts` | **+6** |
+| New main-process IPC files | — | `copilot-handlers.ts` | **+1** |
+| New role cards | — | `system-copilot.md` | **+1** |
+| New IPC channels | — | `copilot.insights` / `copilot.dismiss` / `copilot.ask` / `copilot.configure` + `settings.getCopilot` / `settings.setCopilot` | **+6** |
+| New bus events | — | `copilot.analyzed` / `copilot.insight` / `copilot.dismissed` / `copilot.expired` | **+4** |
+| New settings keys | — | `copilot_enabled` / `copilot_interval_minutes` / `copilot_categories` | **+3** |
+
+### Tasks shipped (T0 – T10)
+
+| Task | Title | Commit | Tests delta | Headline |
+|---|---|---|---|---|
+| T0 | Plan doc | `c5cdeee` | 0 | 292-line plan, mirrors M32 structural template, T1–T10 scope |
+| T1 | Migration 0011 + `CopilotInsightsRepo` | `0a77d87` | +15 | Schema + repo + Jaccard dedup; flipped Phase 5 §9 row 📋 → 🚧 |
+| T2 | `system-copilot` pseudo-employee + role card | `4ce9d3e` | +4 | 2nd `is_system=1` row, hidden by filter sweep, `isSystemRoleId` predicate |
+| T3 | Rolling event window + bus subscription | `c6b40ae` | +8 | `CopilotEventWindow` — 100-event deque, FIFO, warm-start, `token.delta` filtered |
+| T4 | `CopilotAnalyzerService` (headline) | `e672973` | +14 | Periodic + event-triggered, pause-aware, dedup, expiry sweep, migration 0012 |
+| T5 | `copilot.*` IPC surface + preload bridge | `a085dc7` | +8 | 4 typed channels, `buildCopilotHandlers` factory |
+| T6 | `copilot.ask` routing + `query_copilot_insights` tool | `3c00be7` | +5 | Wire-contract stability for M34 sidebar attach |
+| T7 | Copilot settings + UI | `4a373bd` | +7 | 3 clamped keys + `CopilotSection` + `analyzer.restart` on write |
+| T8 | Canned copilot provider seam | `f245821` | +5 | `test-copilot-provider.ts` — fourth member of the test-seam quartet |
+| T9 | `copilot-service.spec.ts` E2E round-trip | `43f5cf7` | +0 (1 E2E +1 case) | Full analyzer + ask lifecycle in 1.7s |
+| **T10** | **Documentation + verification + milestone marker** | **`2fc998e`** | **0** | **This commit** |
+
+### Architectural seams reinforced
+
+- **Three-tier canned test seam — now a four-member quartet.** `test-classifier.ts` (M30) + `test-agentic-provider.ts` (M31) + `test-agentic-tools.ts` (M32) + `test-copilot-provider.ts` (M33). Same shape across all four: sentinel → canned (closure-local + runtime-mutable + frozen) → fallback. Future agentic surfaces follow the same template.
+- **Pause-aware `providerRouter.complete` wrapper.** `CopilotAnalyzerService` polls `orchestrator.isCompanyPaused(companyId)` on every provider call, same wrapper M31 built. Meeting in progress queues the next tick.
+- **AbortController-driven stop with canceled-status coercion.** `CopilotAnalyzerService.stop / stopAll` matches the M31 `AgenticLoopService` posture.
+- **`is_system` filter sweep extended.** `system-copilot` is hidden from `employees.list`, `orgchart.get`, hire dialog, delegation pickers, and meeting attendees by the same `level: 'system'` + `is_system = 1` filter the M31 `system-agent` introduced. NEW `isSystemRoleId` predicate in `shared-types/src/roles.ts` future-proofs against a third system role regressing the sweep.
+- **Atomic + Loki-ledger commit cadence.** Eleven feature/test commits + ten ledger commits across M33 (T0–T10). Ledger commit format: `chore(loki): M33 T<N> — commit ledger (<sha>)`. Every milestone task gets its own ledger commit fold.
+- **ABI rebuild dance** verified for the third time across M31 + M32 + M33. Documented in CLAUDE.md Troubleshooting (NEW entry from this T10).
+- **Invariant #11 (IPC mutation must emit bus event)** preserved end-to-end. `copilot.dismiss` emits `copilot.dismissed`. The `copilot-service.spec.ts` E2E asserts `events.list({ types: ['copilot.dismissed'] })` returns ≥ 1 row after dismissal.
+
+### Gotchas captured during M33
+
+1. **`AgentStepPayload.data` vs `.payload`.** Runtime field is `data`; JSDoc comment in `packages/shared-types/src/events.ts` calls it "payload". Caught at M33 T9; spec-side comment documents the trap.
+2. **Zod `z.string().optional()` rejects JSON `null`.** First T9 fixture had `"actionIntent": null`, which silently failed `parseDrafts`. Fix: omit the field entirely so zod treats it as `undefined`.
+3. **Substring-key stability.** `'strategia-x'` as a fixture key works because `buildAnalysisPrompt` always renders `Company: <name>` verbatim, and the seed company name is `Strategia-X`. Renaming the seed company would break the fixture loudly.
+4. **ABI rebuild dance after `electron-rebuild`.** `pnpm rebuild better-sqlite3` silently no-ops because pnpm's content-addressed cache already has the (Electron-ABI) artifact. The reliable fix is `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install` to trigger a full node-gyp rebuild for system Node ABI. Re-verified at T9 + T10.
+5. **Fake `setInterval` must return a truthy handle.** Production `stop()` gates `clearInterval` + `schedules.delete` on `if (timer)`. Fake setInterval returning `0` would leave the schedule map stale; documented inline in `copilot-analyzer-service.test.ts`.
+
+### Follow-ups (post-M33)
+
+| ID | Surface | Description | Disposition |
+|---|---|---|---|
+| **F3** | `CopilotEventWindow.clear(companyId)` not wired to `companies.archive` | Public method exists + unit-tested, but `companies.archive` IPC does not exist in the codebase today (companies repo has `create` / `getById` / `getBySlug` / `list` / `setStatus` only). | **DEFERRED.** Wire on the milestone that introduces `companies.archive`. Documented in `copilot-event-window.ts` §5 design notes + Phase 5 design §16. |
+| **F4** | Backup/restore does not re-bootstrap `system-copilot` for pre-M33 backups | M23 backup/restore path predates the `is_system` column (M31 migration 0010) and the `system-copilot` row. | **DEFERRED.** Add a `backupService.ensurePostRestoreSystemEmployees()` pass in M34 or later. Workaround: delete SQLite + let `seedIfEmpty` re-bootstrap. ~30 LOC. |
+
+Neither F3 nor F4 blocks M34 (Copilot UI — renderer-only, no schema or IPC changes).
+
+### Verification gates passed (final, T10)
+
+- **Typecheck:** `pnpm -r typecheck` — clean across all 6 workspace packages (shared-types, provider-router, role-schema, telemetry-core, intelligence, `@team-x/desktop` main/preload/renderer/e2e via 4 tsconfig references).
+- **Lint:** `pnpm lint` — 1 error / 24 warnings — BYTE-IDENTICAL to M33 baseline. The sole error is pre-existing at `packages/intelligence/src/nlu/entity-resolver.ts:352` (commit `6d99aa4c`, M30 T2). T10 added 0 errors, 0 warnings.
+- **Unit tests:** `pnpm test` — **1099/1099** in 36.87s after ABI rebuild dance. 0 delta from T9 (T10 is docs-only).
+- **E2E suite:** `pnpm -F @team-x/desktop test:e2e` — **10 cases / 9 spec files green** in 25.8s against `out/main/index.js`. Copilot spec: 1.9s.
+- **ABI sanity:** `better-sqlite3` rebuilt for system Node ABI (vitest), then for Electron ABI (Playwright). Both pass.
+
+### Next Session Startup Checklist (M34 T0)
+
+1. Reread this M33-COMPLETE retrospective.
+2. `.loki/queue/current-task.json` — now targets M34-T0 (write M34 plan doc).
+3. `.loki/state/orchestrator.json` — `currentMilestone: 'M34'`, M33 fully folded into `history.M33` with `completedAt: '2026-04-17T01:30:00Z'`, all 11 commits + final metrics.
+4. `.loki/queue/pending.json` — M33 cleared, M34 head-of-queue with T0 (plan doc) seeded; full T1–T10 breakdown deferred until T0 lands.
+5. M34 deliverables per Phase 5 design §9: sidebar panel, dashboard widget, `Cmd+Shift+K` shortcut. Renderer-only. Consumes M33's IPC + bus events. Wire-contract stability from M33 T6 means step-stream attach reuses M31's `useAgentStepStream` + M32 T0's `getRunSnapshot` backfill verbatim.
+6. Carry-forward: ABI rebuild dance, three-tier canned test seam (now four-member), `is_system` filter sweep with `isSystemRoleId` predicate, pause-aware wrapper, AbortController stop, atomic + ledger commit cadence, invariant #11.
+
+---
 
 ## M33 T9 SHIPPED — 2026-04-17 (copilot-service.spec.ts E2E round-trip — full analyzer + ask lifecycle in 1.7s)
 
