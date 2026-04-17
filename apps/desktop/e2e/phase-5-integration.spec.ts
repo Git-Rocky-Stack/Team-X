@@ -5,9 +5,16 @@
  * one session, proving every milestone integrates end-to-end without
  * regression:
  *
- *   - M28 / M29 — RAG foundation + agent-turn integration. A vault
- *                 upload fires the on-write indexer; `rag.stats`
- *                 confirms non-zero embeddings after the upload.
+ *   - M28 / M29 — RAG foundation + agent-turn integration. A chat
+ *                 round-trip drives `work.completed` through the
+ *                 orchestrator; the RagIndexer subscribes to
+ *                 `work.completed` + `meeting.ended` (NOT vault bus
+ *                 events) and embeds the assistant message, so
+ *                 `rag.stats` shows an `embeddingCount` delta over
+ *                 the pre-chat baseline. A `vault.upload` call sits
+ *                 alongside as an independent Phase-4 write-path
+ *                 assertion — vault files are retrieved via FTS5 at
+ *                 agent-turn time, not pre-embedded by the indexer.
  *   - M30       — NLU engine + command palette. `Cmd+K`, canned
  *                 classifier routes the text to `complex_request`.
  *   - M31       — Agentic loop (read-side). Canned agentic provider
@@ -44,9 +51,11 @@
  * sentinel the M33/M34 specs already exercise.
  *
  * Launched with `TEAM_X_RAG_TEST=1` alongside `NODE_ENV=test` so the
- * composition root swaps in the fake embed adapter and the RAG
- * indexer subscribes to the vault bus events. Other Phase 5 specs
- * omit this flag so their behaviour is unaffected.
+ * composition root swaps in the fake embed adapter (hash-based,
+ * deterministic, no network). The RagIndexer subscription wiring is
+ * unchanged — it keys on `work.completed` + `meeting.ended`, which
+ * the Step 1 chat round-trip triggers via `chat.send`. Other Phase 5
+ * specs omit this flag so their behaviour is unaffected.
  *
  * Build ordering note: requires `apps/desktop/out/main/index.js`. Use
  * `pnpm -F @team-x/desktop test:e2e` (build + run) or
