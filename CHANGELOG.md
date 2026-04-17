@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+### Deprecated
+
+### Removed
+
+### Security
+
+---
+
+## Phase 5 — Intelligence Layer
+
+## [1.1.0] — 2026-04-20
+
+> **Status:** Phase 5 (Intelligence Layer) complete. Baseline: 612 unit tests / 4 E2E specs (v1.0.0) → **1162 unit tests / 11 E2E specs / 12 Playwright cases** (+550 unit, +7 E2E specs, +8 cases). Additive release — RAG foundation (M28), RAG into agent turns (M29), NLU engine + command palette (M30), agentic loop (M31), task planner (M32), copilot service (M33), copilot UI (M34), demo + hardening (M35). Zero breaking changes. Per-milestone entries preserved in original Added / Changed / Fixed order below.
+
 ### M34 — Copilot UI (2026-04-18)
 
 > **Status:** Complete. Baseline: 1114 unit / 9 E2E (10 cases) → current: **1130 unit / 10 E2E (11 cases)** (+16 unit tests, +1 E2E spec). Renderer-only milestone — zero new IPC channels, zero new bus events, zero new providers.
@@ -487,3 +507,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for linting and formatting
 - Vitest for unit testing
 - GitHub Actions CI workflow
+
+---
+
+[Unreleased]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/Git-Rocky-Stack/Team-X/releases/tag/v1.0.0
