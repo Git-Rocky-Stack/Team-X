@@ -429,13 +429,13 @@ CREATE INDEX idx_insights_company_active ON copilot_insights(company_id, dismiss
 | **M30** | NLU Engine + Command Palette | ✅ Complete (2026-04-14) | M28 | Intent classifier (LLM-based JSON output), entity resolver (fuzzy match + FTS5), slot filler, `command.*` IPC channels + handlers + preload bridge, `Cmd+K` overlay with real-time NLU display, 15 intents, confirmation gates for 4 destructive intents, command history (last 20), slash-command fallback, canned-classifier E2E spec | 146 (+2 E2E) |
 | **M31** | Agentic Loop (read-side) | 🚧 In progress — 9 of 11 tasks shipped (2026-04-15) | M30 | `system-agent` pseudo-employee (migration 0010, `is_system` column, hidden from org chart + delegation pickers), `@team-x/intelligence/loop/` ReAct scheduler (pure, provider-agnostic), 6 read-only repo-wrapping tools (`query_employees` / `query_tickets` / `query_projects` / `query_meetings` / `query_vault` / `query_events`), `AgenticLoopService` main-process front-door, CommandService `complex_request` dispatch, Copilot Conversations thread UX, palette step-log mode + `command.stop`, `agentic_max_steps` / `agentic_max_tokens` / `agentic_timeout_ms` settings, canned-provider E2E spec | 139 (+1 E2E) |
 | **M32** | Task Planner (write-side) | ✅ Complete (2026-04-16) | M29, **M31** | `decompose_project`, `delegate_subtask`, `review_deliverable` tools (`agentic-tools-write.ts`), guardrail enforcement (level-gated tool injection per Phase 5 §7.1), deterministic workload scoring (locked §7.4 weights), six new `plan.*` / `task.*` / `review.*` event types in canonical `EventType` union, three new `AgentStepKind` variants (`ticket_created` / `delegation_made` / `review_pending`), write-side **amber** confirmation gate (Gate 2.5 in `command-service.ts`, distinct from M30 destructive **red** gate), four clamped `planner_*` settings keys + PlannerSection UI, `command.getRunSnapshot` IPC for step-stream backfill (closes F1), `useThreadList` bus invalidator (closes F2), canned `test-agentic-tools.ts` three-tier seam, `task-planner.spec.ts` E2E. Builds on M31's agentic-loop harness — swaps read-only tools for the write-side set. | 75 (+1 E2E) |
-| **M33** | Copilot Service | 🚧 In progress — 2 of 11 tasks shipped (2026-04-16) | M29, M31 | System-copilot employee, periodic analyzer with LLM, `copilot_insights` table + migration 0011 (CHECK-constrained `category` and `severity`, composite `idx_insights_company_active`, FK `company_id ON DELETE CASCADE`), `CopilotInsightsRepo` with deterministic `upsertWithDedup` (Jaccard bigram > 0.8 over normalized titles, category-scoped, numeric-drift guard so a count change like "3 blocked tickets" → "4 blocked tickets" never silently merges), `copilot.*` IPC channels, insight generation + dedup + expiry. Reuses the agentic-loop scheduler from M31 for ask-the-copilot free-form questions. | ~25 |
+| **M33** | Copilot Service | ✅ Complete (2026-04-17) | M29, M31 | System-copilot pseudo-employee (second `is_system=1` row per company, hidden from every human-facing surface, `query_copilot_insights` introspection tool added to the read-only set), periodic `CopilotAnalyzerService` (5-min default cadence, clamped 1–60 min, pause-aware via the M31 polling wrapper, AbortController stop), `CopilotEventTrigger` (30s-debounced supplementary analysis on `meeting.ended` / `ticket.closed` / `goal.progressChanged` / `agentic.failed { budget_exhausted }`), `CopilotEventWindow` (in-memory bounded deque, 100 events/company, FIFO eviction, `token.delta` filtered, warm-start hydration), migration 0011 `copilot_insights` table (CHECK-constrained `category` + `severity`, composite `idx_insights_company_active`, FK `company_id ON DELETE CASCADE`) + migration 0012 `runs.kind` column, `CopilotInsightsRepo` with deterministic `upsertWithDedup` (category scope → numeric-drift guard → Jaccard bigram > 0.8), four `copilot.*` IPC channels (`insights` / `dismiss` / `ask` / `configure`), `copilot.ask` routing through the M31 agentic harness with `system-copilot` actor + level-gated `query_copilot_insights` tool, three clamped settings keys (`copilot_enabled` / `copilot_interval_minutes` / `copilot_categories`) + CopilotSection UI, four new event types (`copilot.analyzed` / `copilot.insight` / `copilot.dismissed` / `copilot.expired`), canned `test-copilot-provider.ts` three-tier seam (fourth member of the agentic-surface seam quartet), `copilot-service.spec.ts` E2E. | 66 (+1 E2E) |
 | **M34** | Copilot UI + Dashboard widget | 📋 Planned | M33, **M30** | Sidebar panel (toggle, insight cards, action dispatch, dismiss, ask input), dashboard widget (top 3 + view all), `Cmd+Shift+K` shortcut wired through the M30 palette | ~15 |
 | **M35** | Demo + hardening | 📋 Planned | All | E2E tests (RAG retrieval, copilot insight generation, write-side planner flow), performance tuning (embedding batch size, analysis interval), CLAUDE.md update, Phase 5 badge, Phase 5 CONTINUITY.md wrap-up | ~15 |
 
-**Shipped so far:** +416 unit tests (M28 + M29 + M30 + M31 + M32) + 4 E2E specs. Project totals as of M32 complete (2026-04-16): **1033 unit tests / 8 E2E specs** (9 Playwright cases — one spec has 2 tests), from the Phase 4 baseline of 612 / 4.
+**Shipped so far:** +487 unit tests (M28 + M29 + M30 + M31 + M32 + M33) + 5 E2E specs. Project totals as of M33 complete (2026-04-17): **1099 unit tests / 9 E2E specs** (10 Playwright cases — one spec has 2 tests), from the Phase 4 baseline of 612 / 4.
 
-**Remaining estimated tests:** ~55 (M33 + M34 + M35). Projected Phase 5 exit: **~1090 unit tests / 9–10 E2E specs**.
+**Remaining estimated tests:** ~30 (M34 + M35). Projected Phase 5 exit: **~1129 unit tests / 10–11 E2E specs**.
 
 ---
 
@@ -455,13 +455,20 @@ CREATE INDEX idx_insights_company_active ON copilot_insights(company_id, dismiss
 | | `copilot.ask` | M33 | Free-form question to copilot (routes through the M31 agentic-loop harness) |
 | | `copilot.configure` | M33 | Set analysis interval + categories |
 
-**New bus event types** (append-only via `events` table, emitted by the M31 agentic-loop harness):
+Plus `settings.getCopilot` / `settings.setCopilot` (M33) for the three clamped copilot settings, and `command.getRunSnapshot` (M32) for `useAgentStepStream` backfill on mount.
 
-| Event | Emitted by | Payload |
-|-------|------------|---------|
-| `agent.step` | `AgenticLoopService` | `{ runId, threadId, step: { kind: 'plan' \| 'tool_call' \| 'tool_result' \| 'answer' \| 'error', … } }` |
-| `agentic.completed` | `AgenticLoopService` | `{ runId, threadId, finalAnswer, stepCount, tokensUsed, durationMs }` |
-| `agentic.failed` | `AgenticLoopService` | `{ runId, threadId, reason: 'budget_exhausted' \| 'timeout' \| 'canceled' \| 'provider_error' \| 'tool_error', detail? }` |
+**New bus event types** (append-only via `events` table):
+
+| Event | Emitted by | Milestone | Payload |
+|-------|------------|-----------|---------|
+| `agent.step` | `AgenticLoopService` | M31 | `{ runId, threadId, step: { kind: 'plan' \| 'tool_call' \| 'tool_result' \| 'answer' \| 'error' \| 'ticket_created' \| 'delegation_made' \| 'review_pending', … } }` |
+| `agentic.completed` | `AgenticLoopService` | M31 | `{ runId, threadId, finalAnswer, stepCount, tokensUsed, durationMs }` |
+| `agentic.failed` | `AgenticLoopService` | M31 | `{ runId, threadId, reason: 'budget_exhausted' \| 'timeout' \| 'canceled' \| 'provider_error' \| 'tool_error', detail? }` |
+| `plan.proposed` / `plan.approved` / `task.delegated` / `task.escalated` / `review.requested` / `review.completed` | `agentic-tools-write.ts` | M32 | See §9 M32 row + `packages/shared-types/src/events.ts` |
+| `copilot.analyzed` | `CopilotAnalyzerService` (per tick) | M33 | `{ companyId, reason: 'periodic' \| 'manual' \| 'event', durationMs, insightsProposed, insightsPersisted, insightsMerged, insightsExpired }` |
+| `copilot.insight` | `CopilotAnalyzerService` (per insert, NOT per merge) | M33 | `{ companyId, insightId, category, severity, title }` |
+| `copilot.dismissed` | `copilot.dismiss` IPC handler | M33 | `{ companyId, insightId, dismissedAt }` |
+| `copilot.expired` | `CopilotAnalyzerService` (per expiry sweep row) | M33 | `{ companyId, insightId, category, severity, title, expiredAt }` |
 
 ---
 
@@ -539,3 +546,14 @@ Two paper-cuts surfaced during M31 T8 (E2E round-trip) and were carried into M32
 ## 15. Follow-ups (post-M32)
 
 No paper-cuts surfaced during M32 T8 (E2E round-trip). The M31 follow-up class — race conditions between bus emit and React Query subscription attach — is closed by F1's `getRunSnapshot` backfill pattern, which is now the canonical way to reconcile a fast loop with a slow renderer subscription. Future write-side tool surfaces should follow the same backfill-on-mount pattern.
+
+---
+
+## 16. Follow-ups (post-M33)
+
+| ID | Surface | Description | Disposition | Cost |
+|---|---------|-------------|-------------|------|
+| **F3** | `CopilotEventWindow.clear(companyId)` not wired to `companies.archive` | The window's `clear(companyId)` public method exists and is unit-tested, but nothing calls it because the `companies.archive` IPC channel does not exist in the codebase today (companies repo has `create` / `getById` / `getBySlug` / `list` / `setStatus` only). Zero-surface-area until that IPC lands. | **DEFERRED.** Wire on the same milestone that introduces `companies.archive`. Documented in `copilot-event-window.ts` §5 design notes. | 0 net (already implemented, just not wired) |
+| **F4** | Backup/restore does not re-bootstrap `system-copilot` for pre-M33 backups | The M23 backup/restore path predates the `is_system` column (migration 0010) and the `system-copilot` row (M33 T2). Restoring a pre-M33 backup leaves no system-copilot row. | **DEFERRED.** Add a `backupService.ensurePostRestoreSystemEmployees()` pass in M34 or later. Workaround: delete the SQLite file and let `seedIfEmpty` re-bootstrap. | ~30 LOC |
+
+The M33 architectural seams — three-tier canned test seam (now four-member), pause-aware `providerRouter.complete` wrapper, AbortController stop, `is_system` filter-sweep with `isSystemRoleId` predicate, atomic + ledger commit cadence, ABI rebuild dance on verification — all carry forward to M34 unchanged. M34 (Copilot UI) is a renderer-only milestone that consumes the M33 IPC surface; no new bus events, no new IPC channels, no new providers.
