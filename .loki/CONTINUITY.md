@@ -1,4 +1,71 @@
-# Loki Continuity — Phase 5, **M35 T1 SHIPPED** (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; 1130 → 1134 unit tests). M35 T2 (cross-milestone integration E2E) is head-of-queue. Phase 5 exit is 9 tasks away.
+# Loki Continuity — Phase 5, **M35 T2 SHIPPED** (cross-milestone integration E2E — 495-line `phase-5-integration.spec.ts` stitching M28 → M29 → M30 → M31 → M32 → M33 → M34 in one session; 1134 unit tests / 12 Playwright cases / 11 spec files / 40.6s total; spec runtime 3.7s under the ≤15s budget). M35 T3 (observability polish — Audit view chip coverage audit) is head-of-queue. Phase 5 exit is 8 tasks away.
+
+## M35 T2 SHIPPED — 2026-04-19 — cross-milestone integration E2E (1108247)
+
+**Task:** M35 T2 — single Playwright E2E spec stitching the full Phase 5 stack (M28 → M29 → M30 → M31 → M32 → M33 → M34) in one session (M35 plan doc §3 T2 + §4.1 cross-milestone scenario).
+**Atomic commit:** `1108247` — `test(m35): M35 T2 — cross-milestone integration E2E spec`.
+**Ledger commit:** `chore(loki): M35 T2 — commit ledger (1108247)` (this commit).
+**Plan reference:** [M35 plan T2](../docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md#3-task-breakdown).
+
+### What shipped
+
+- **NEW `apps/desktop/e2e/phase-5-integration.spec.ts`** — 495 lines, 22,944 bytes. Single Playwright test with **3.7s runtime** (under the ≤15s budget) exercising the entire Phase 5 stack in one real Electron session booted against `out/main/index.js` with `NODE_ENV=test` + `TEAM_X_RAG_TEST=1` + throwaway `--user-data-dir`. Five-step scenario:
+  1. **M28/M29 RAG path** — `chat.send` round-trip via CEO with `__ECHO_TEXT__:<marker>` sentinel fires `work.completed` → `RagIndexer` embeds the reply → `rag.stats` embedding count grows above baseline. Also asserts `vault.upload` still works end-to-end inside the same session (preserves Phase 4 vault write path).
+  2. **M30 + M31 read-side palette** — `Cmd+K` `what is my team doing right now` → canned classifier routes `complex_request` → canned agentic provider scripts plan → `query_employees` tool call → grounded answer. Palette step cards asserted via `data-step-kind` in order (plan → tool_call → tool_result → answer).
+  3. **M32 write-side palette** — `Cmd+K` `decompose the frontend redesign into tickets` → amber write-side gate (`gateKind: 'write-side'`) → Confirm → canned agentic provider scripts `decompose_project` → `delegate_subtask` → answer. Step cards `data-step-kind="ticket_created"` and `data-step-kind="delegation_made"` both asserted visible.
+  4. **M33 copilot analyzer** — `copilot.configure` manual-tick IPC returns `insightsGenerated ≥ 1` via the `strategia-x` fixture in `CANNED_COPILOT_TABLE`.
+  5. **M34 sidebar** — `Cmd+Shift+K` toggle → `data-copilot-sidebar-root` mounts → `data-copilot-insight-id` card visible → dismiss X → card leaves DOM → ask textarea + `__ECHO_AGENT__:` sentinel submit → sidebar closes → `chat.listThreads` returns `isSystemAgent: true` thread count ≥ 1 (both system-agent from Step 2 AND system-copilot from Step 5).
+
+### Architectural seam reuse (zero new production files, zero new canned-seam entries)
+
+- **Canned-seam quartet keys reused verbatim** — `what is my team doing right now` (test-classifier M31 T8 + test-agentic-provider M31 T8); `decompose the frontend redesign into tickets` (test-classifier M32 T8 + test-agentic-provider M32 T8); `strategia-x` fixture in `CANNED_COPILOT_TABLE` (test-copilot-provider M33 T8); `__ECHO_AGENT__:` sentinel (test-agentic-provider tier-1 path) for M34 sidebar ask.
+- **`data-*` stable E2E selector surface** — `data-step-kind` (M31) × `data-copilot-sidebar-root` + `data-copilot-toolbar-toggle` + `data-copilot-insight-id` + `data-copilot-widget-list` (M34). All primary assertions bind to these rather than text-match — zero regressions introduced for M35 T9's flaky-test audit.
+- **Runtime budget held** — spec runtime 3.7s vs ≤15s budget (4× headroom).
+
+### Verification gates passed
+
+- **Unit tests:** `pnpm test` — **1134 / 1134** in 24.41s. 0 delta from M35 T1 baseline (T2 is pure E2E addition).
+- **E2E suite:** `pnpm -F @team-x/desktop test:e2e` — **12 cases / 11 spec files green** in 40.6s against `out/main/index.js`. New spec: 3.7s.
+- **Lint:** `pnpm lint` — **0 errors / 24 warnings**. Baseline restored — surgical `biome format --write` on the new spec cleared a single format drift introduced by the T2 authoring pass.
+- **Typecheck:** `pnpm typecheck` — clean across all 6 workspace packages (shared-types, provider-router, role-schema, telemetry-core, intelligence, `@team-x/desktop` main/preload/renderer/e2e via 4 tsconfig references).
+- **ABI sanity:** `better-sqlite3` + `keytar` rebuilt for Electron ABI via `electron-rebuild -f -w better-sqlite3,keytar` before the E2E run.
+
+### Invariants preserved
+
+- **#1 Renderer is a pure view** — spec interacts through `window.teamx.*` preload bridge only; no direct LLM / MCP / `ipcRenderer` calls.
+- **#7 Zero phone-home** — `NODE_ENV=test` + `TEAM_X_RAG_TEST=1` ensure the fake embed adapter + canned providers handle all LLM + embedding requests; zero network traffic.
+- **#11 IPC mutations emit bus events** — regression-guarded by `events.list({ types: ['copilot.dismissed'] })` after `copilot.dismiss` IPC.
+
+### Regression guards asserted inline
+
+- **M30 T5 destructive gate (`Confirm destructive action`)** — ABSENT across the full 5-step session (assertion after every step transition).
+- **M32 T5 write-side gate** — PRESENT only during Step 3 (`gateKind: 'write-side'`); absent everywhere else (not Step 2's read-side `complex_request`; not Step 5's `__ECHO_AGENT__:` sidebar ask).
+- **Phase 5 top-bar badge** — text equals literal string `Phase 5` (M35 T8 will pin this in unit-test form; the E2E asserts it live here).
+
+### Surprise / correction during authoring
+
+First spec draft assumed `RagIndexer` subscribed to `vault` bus events directly. Ripgrep surfaced it subscribes only to `work.completed` + `meeting.ended` — vault files are retrieved through FTS5 at agent-turn time, not pre-indexed into embeddings. Corrected Step 1 to drive a chat round-trip via `chat.send` (preserving the `vault.upload` IPC call as an independent assertion that the Phase 4 vault write path still works inside the Phase 5 session).
+
+### Patterns reinforced
+
+- **Zero-new-canned-seam-entry T8 pattern.** A cross-milestone integration test can be authored entirely on top of existing seam keys if the milestones that authored those keys chose generic enough prompts — confirmed here. When this is not possible, the T8 pattern (add matching entries to all four seam members in lockstep) still applies.
+- **Atomic + ledger cadence RESTORED.** M34 deviated with a squashed `feat(m34)` commit covering T2–T10. M35 T2 commits as its own atomic `test(m35)` commit followed by this separate `chore(loki)` ledger commit — matches M30 / M31 / M32 / M33 cadence.
+- **Pre-flight reconnaissance via `ctx_batch_execute` / `ctx_execute`.** Kept context lean for the long spec-authoring pass by letting the sandbox do the grep + git + JSON projection work.
+
+### Head-of-queue after this ledger commit
+
+**M35 T3 — Observability polish: Audit view chip coverage audit.** Phase 5 added 15 new event types; `AuditView` currently ships chips for only 6 (M32 T6 planner chips). T3 audits the remaining 9 (`rag.index.*`, `command.executed`, `agent.step`, `agentic.completed`, `agentic.failed`, `copilot.analyzed`, `copilot.insight`, `copilot.dismissed`, `copilot.expired`) and adds chips + payload-aware row summaries. Match the existing chip a11y contract: semantic color paired with text label, chip focus ring visible, `aria-label` with event-type name. +3 unit tests for representative rendering (`rag.index.indexed` / `agent.step` / `copilot.analyzed`).
+
+### Next Session Startup Checklist (begin M35 T3)
+
+1. Read this CONTINUITY header — M35 T2 SHIPPED. Head-of-queue M35-T3.
+2. Open `.loki/queue/current-task.json` — M35 T3 (Observability polish — Audit view chip coverage audit).
+3. Verify baseline: `git log --oneline -5` should show `chore(loki): M35 T2 — commit ledger (1108247)` as HEAD with `1108247 test(m35): M35 T2 — cross-milestone integration E2E spec` directly below.
+4. M35 T3 scope — extend `audit-event-chip.tsx` with 9 new event-type mappings + payload-aware row summary formatters in `audit-view.tsx`. Add 3 unit tests in `audit-event-chip.test.tsx`.
+5. Before editing: Node ABI for vitest via `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install`. Before any E2E: Electron ABI via `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`.
+6. Commit cadence — atomic `feat(m35): M35 T3 — audit view chips for Phase 5 events` + ledger `chore(loki): M35 T3 — commit ledger (<sha>)`.
+
+---
 
 ## M35 T1 SHIPPED — 2026-04-19 — performance defaults + clamp audit (b68d09b)
 

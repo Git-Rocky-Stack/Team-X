@@ -1,29 +1,36 @@
 {
-  "taskId": "M35-T2",
+  "taskId": "M35-T3",
   "milestone": "M35",
   "milestoneName": "Demo + Hardening",
   "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T2 row, §4.1 cross-milestone scenario)",
-  "title": "Cross-milestone integration E2E — RAG → NLU → agentic → planner → copilot",
+  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T3 row)",
+  "title": "Observability polish — Audit view chip coverage audit",
   "status": "pending",
-  "predecessor": "M35-T1 shipped 2026-04-19 (commit b68d09b — performance defaults + clamp audit; all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests 1130 → 1134; 0 lint errors / 24 warnings / typecheck clean). M35-T0 shipped 2026-04-19 (commit da4ce1f — plan doc). M34 COMPLETE shipped 2026-04-18 (commits f1180cf + 893f8fd + af643ec).",
-  "goal": "Author apps/desktop/e2e/phase-5-integration.spec.ts — a single Playwright spec stitching the full Phase 5 stack (M28 → M29 → M30 → M31 → M32 → M33 → M34) in one session. Scenario per M35 plan doc §4.1: (1) vault.addFile → M28 on-write chunker+embedder fires; (2) Cmd+K 'summarise the uploaded vault file' → M30 NLU + M31 agentic loop with M29 RAG retrieval resolves → answer cites the file; (3) Cmd+K 'decompose the Q1 roadmap into tickets' → M32 amber write-side gate → Confirm → decompose_project + delegate_subtask; (4) copilot.configure manual tick → M33 analyzer proposes insight; (5) Cmd+Shift+K sidebar opens → insight card visible → dismiss → ask-input fires M33 ask-the-copilot path via M34 sidebar. Runtime budget ≤15s. Uses the four-member canned-seam quartet (test-classifier + test-agentic-provider + test-agentic-tools + test-copilot-provider). Zero production code changes — purely additive test.",
+  "predecessor": "M35-T2 shipped 2026-04-19 (commit 1108247 — cross-milestone integration E2E; NEW apps/desktop/e2e/phase-5-integration.spec.ts stitches M28→M34 in one session; spec runtime 3.7s under ≤15s budget; 11 spec files / 12 Playwright cases green in 40.6s; 1134 unit / 0 lint errors / 24 warnings / typecheck clean). M35-T1 shipped 2026-04-19 (commit b68d09b — performance defaults + clamp audit; all 10 Phase 5 settings clamps HELD on llama3.1:8b evidence; +4 unit tests 1130 → 1134). M35-T0 shipped 2026-04-19 (commit da4ce1f — plan doc). M34 COMPLETE shipped 2026-04-18 (commits f1180cf + 893f8fd + af643ec).",
+  "goal": "Extend AuditView chip coverage to the 9 Phase 5 event types not yet chipped: rag.index.indexed, rag.index.reindexed, rag.index.removed, command.executed, agent.step, agentic.completed, agentic.failed, copilot.analyzed, copilot.insight, copilot.dismissed, copilot.expired. (Note: rag.index.* expands to indexed/reindexed/removed per M28/M29 wire contract — confirm the exact emitted literal strings with a grep of rag-indexer.ts before authoring the chip map.) Author matching payload-aware row-summary formatters so each event's audit row surfaces the most useful fact (e.g. agent.step → step.kind + runId slice; copilot.analyzed → reason + insightsPersisted count; task.delegated → assigneeId + score). Match the existing chip a11y contract exactly: semantic color paired with text label (never color-only), visible chip focus ring, aria-label containing the literal event-type name. +3 unit tests pinning chip render output for representative rows (rag.index.indexed / agent.step / copilot.analyzed).",
   "acceptance": [
-    "New apps/desktop/e2e/phase-5-integration.spec.ts — ≤15s runtime, asserts every transition via stable data-* selectors (data-step-kind + data-copilot-insight-id + data-copilot-sidebar-root + data-copilot-toolbar-toggle + data-copilot-widget-list).",
-    "Cross-milestone scenario exercises M28/M29 vault index + retrieval, M30 Cmd+K palette, M31 agentic step log + final answer, M32 amber write-side gate + decompose + delegate, M33 copilot.configure manual tick + copilot.insights, M34 Cmd+Shift+K sidebar + ask input.",
-    "Four-member canned-seam quartet wired: test-classifier (M30), test-agentic-provider + test-agentic-tools (M31/M32), test-copilot-provider (M33). Any new prompt keys added to the seam tables in lockstep (T8 pattern from M30/M31/M32/M33).",
-    "Regression guards (invariant #11 + M30 T5 destructive gate + M32 T5 write-side gate + Phase 5 top-bar badge) all asserted.",
-    "Full test suite green after Electron ABI rebuild: pnpm -F @team-x/desktop test:e2e → 11 specs / 12 cases. pnpm test → 1134/1134 unit green (T2 adds E2E only, not unit). pnpm typecheck clean. pnpm lint 0 errors / ≤24 warnings.",
-    "Atomic commit: test(m35): M35 T2 — cross-milestone integration E2E spec.",
-    "Ledger commit: chore(loki): M35 T2 — commit ledger (<sha>) — roll orchestrator.json tasksCompleted 2 → 3, update pending.json T2 status pending → shipped, update current-task.json to point at M35-T3, prepend M35 T2 DONE subsection to .loki/CONTINUITY.md."
+    "audit-event-chip.tsx gains entries for all 9 Phase 5 event types with semantic color + text label (never color-only) + visible focus ring + aria-label with event type literal.",
+    "audit-view.tsx row-summary formatter extended so each Phase 5 event renders its most useful payload field (agent.step → step.kind; copilot.analyzed → reason + counts; task.delegated → assigneeId + score; invariant: summary is always ≤140 chars).",
+    "audit-event-chip.test.tsx adds 3 unit tests (rag.index.indexed / agent.step / copilot.analyzed) asserting chip text, color class, aria-label, and keyboard focus ring.",
+    "No existing chip coverage regressed (M32 T6 planner chips for plan.proposed / plan.approved / task.delegated / task.escalated / review.requested / review.completed all still render per their frozen test).",
+    "Zero new IPC / bus events / migrations. Renderer-only edits.",
+    "Full test suite green after Node ABI rebuild: pnpm test → 1137 / 1137 (1134 + 3). pnpm typecheck clean. pnpm lint 0 errors / ≤24 warnings.",
+    "E2E suite unchanged: pnpm -F @team-x/desktop test:e2e → 12 cases / 11 spec files in ≤42s (T3 is renderer-only; no spec changes).",
+    "Atomic commit: feat(m35): M35 T3 — audit view chips for Phase 5 events.",
+    "Ledger commit: chore(loki): M35 T3 — commit ledger (<sha>) — roll orchestrator.json tasksCompleted 3 → 4, update pending.json T3 status pending → shipped, overwrite current-task.json to M35-T4 (Phase 5 retrospective doc), prepend M35 T3 DONE subsection to .loki/CONTINUITY.md."
   ],
-  "filesTouched": ["apps/desktop/e2e/phase-5-integration.spec.ts (NEW)"],
-  "tests": "+1 E2E spec (10 → 11 spec files; 11 → 12 Playwright cases)",
+  "filesTouched": [
+    "apps/desktop/src/renderer/src/features/audit/audit-view.tsx",
+    "apps/desktop/src/renderer/src/features/audit/audit-event-chip.tsx",
+    "apps/desktop/src/renderer/src/features/audit/audit-event-chip.test.tsx"
+  ],
+  "tests": "+3 unit (1134 → 1137)",
   "carryForward": [
-    "M35 T1 closed: all 10 Phase 5 settings clamps HELD at measurement-held defaults. Envelopes untouched. Measurement evidence lives in apps/desktop/src/main/db/seed.ts header + .loki/state/orchestrator.json history.M35-T1.ollamaEvidence.",
-    "Architectural seams (canned quartet / {rows, truncated} envelope / data-* selectors / pause-aware providerRouter wrapper / AbortController stop / is_system filter-sweep / atomic + ledger cadence / ABI rebuild dance / invariant #11) unchanged.",
-    "Copilot wire contract: copilot.ask returns { runId, threadId } matching M31 complex_request — unchanged for M35.",
+    "M35 T2 closed: phase-5-integration.spec.ts landed at 495 lines / 3.7s runtime / 4× budget headroom. Zero new canned-seam entries — reused 'what is my team doing right now' (M31 T8) + 'decompose the frontend redesign into tickets' (M32 T8) + 'strategia-x' CANNED_COPILOT_TABLE fixture (M33 T8) + __ECHO_AGENT__: sentinel (M31 tier-1 path).",
+    "Architectural seams (canned quartet / {rows, truncated} envelope / data-* selectors / pause-aware providerRouter wrapper / AbortController stop / is_system filter-sweep / atomic + ledger cadence / ABI rebuild dance / invariant #11) unchanged — all reinforced by the integration spec.",
     "Phase 5 badge is FROZEN at 'Phase 5' through v1.1.0 release. M35 T8 pins the literal string in a unit test. Phase 6 work is the next session after M35 T10.",
-    "ABI state at start of T2: Node (post M35 T1 vitest). Before running e2e, run `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` to switch to Electron ABI."
+    "ABI state at start of T3: Electron (post M35 T2 Playwright). Before running vitest, rebuild for Node ABI: cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install.",
+    "Bus-event emitter sources for the 9 new chips (grep these before authoring chip keys): rag-indexer.ts (rag.index.indexed / rag.index.reindexed / rag.index.removed); command-service.ts (command.executed); agentic-loop-service.ts (agent.step / agentic.completed / agentic.failed); copilot-analyzer-service.ts (copilot.analyzed / copilot.insight / copilot.expired); copilot-handlers.ts (copilot.dismissed). Cross-reference CLAUDE.md Phase 5 bus-event table to confirm wire contract.",
+    "Chip color palette (from existing M32 T6 conventions): sky = delegation/task; emerald = ticket-created/completed; amber = write-side/proposed; rose = escalated/failed; blue = info/analyzed; gray = dismissed/expired. Pick per semantics, never for visual variety — paired text label carries the actual meaning per a11y invariant."
   ]
 }

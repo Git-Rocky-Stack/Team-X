@@ -8,10 +8,10 @@
   "previousMilestoneCompletedAt": "2026-04-18T20:02:38Z",
   "previousMilestoneCommit": "af643ec",
   "createdAt": "2026-04-19T00:00:00Z",
-  "updatedAt": "2026-04-19T21:40:00Z",
+  "updatedAt": "2026-04-19T23:55:00Z",
   "totalTasks": 11,
-  "tasksShipped": 2,
-  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). Head-of-queue is M35 T2 (cross-milestone integration E2E). Tasks T2–T10 materialized from the plan doc §3 breakdown.",
+  "tasksShipped": 3,
+  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a 3.7s Playwright run; +1 E2E spec → 11 spec files / 12 Playwright cases). Head-of-queue is M35 T3 (observability polish — Audit view chip coverage audit). Tasks T3–T10 still pending from the plan doc §3 breakdown.",
   "tasks": [
     {
       "id": "T0",
@@ -47,11 +47,19 @@
     {
       "id": "T2",
       "name": "Cross-milestone E2E — RAG → NLU → agentic → planner → copilot",
-      "status": "pending",
-      "scope": "NEW apps/desktop/e2e/phase-5-integration.spec.ts. Single spec stitching the full Phase 5 stack in one Playwright session. Scenario per M35 plan doc §4.1: vault upload (M28 on-write chunker+embedder) → Cmd+K complex_request (M30 NLU → M31 agentic loop with M29 RAG retrieval) → Cmd+K 'decompose X into tickets' (M32 write-side gate + decompose_project + delegate_subtask) → copilot.configure manual tick (M33) → Cmd+Shift+K sidebar + insight card + dismiss + ask input (M34). Runtime budget ≤15s. Uses the four-member canned-seam quartet. No changes to production code — purely additive test.",
-      "filesTouched": ["apps/desktop/e2e/phase-5-integration.spec.ts (NEW)"],
+      "status": "shipped",
+      "commit": "1108247",
+      "shippedAt": "2026-04-19T23:55:00Z",
+      "scope": "NEW apps/desktop/e2e/phase-5-integration.spec.ts (495 lines). Single spec stitching the full Phase 5 stack in one Playwright session. Shipped scenario: (1) vault.upload + chat round-trip via CEO with __ECHO_TEXT__:<marker> sentinel fires work.completed → RagIndexer embeds the reply → rag.stats embedding count grows above baseline (the RagIndexer subscribes to work.completed + meeting.ended, not vault events — vault files are retrieved through FTS5 at agent-turn time rather than pre-indexed; the vault.upload IPC is still asserted in the same session as an independent Phase 4 surface). (2) Cmd+K 'what is my team doing right now' → canned classifier complex_request → canned agentic provider plan → query_employees → answer with 'Team currently has' text. (3) Cmd+K 'decompose the frontend redesign into tickets' → amber write-side gate → Confirm → decompose_project + delegate_subtask + answer with 'Decomposed the frontend redesign' text. (4) copilot.configure manual tick → insightsGenerated ≥ 1. (5) Toolbar Sparkles toggle → sidebar + insight card + dismiss + copilot.dismissed on events table (invariant #11) + ask-input sentinel → system-flagged thread count ≥1. Regression guards inline: destructive gate ABSENT full session; write-side gate ONLY Step 3; Phase 5 badge verbatim. Runtime 3.7s (under ≤15s budget). Launched with TEAM_X_RAG_TEST=1 + NODE_ENV=test. Zero production-code changes. Zero new canned-seam entries — reused existing keys + __ECHO_AGENT__: sentinel path.",
+      "filesTouched": ["apps/desktop/e2e/phase-5-integration.spec.ts (NEW, 495 lines)"],
       "commitTemplate": "test(m35): M35 T2 — cross-milestone integration E2E spec",
-      "testsDelta": "+1 E2E spec"
+      "testsDelta": "+1 E2E spec (10 → 11 spec files; 11 → 12 Playwright cases)",
+      "verificationGates": {
+        "unitTests": "1134/1134 pass (24.41s) — unchanged from T1 baseline (T2 adds E2E only)",
+        "lint": "0 errors / 24 warnings (baseline restored via surgical biome format --write on the new spec)",
+        "typecheck": "clean across all 6 packages",
+        "e2e": "12 passed / 11 spec files / 40.6s total (integration spec runtime 3.7s)"
+      }
     },
     {
       "id": "T3",
