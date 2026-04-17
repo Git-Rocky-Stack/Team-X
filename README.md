@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/strategia-x/team-x/actions/workflows/ci.yml/badge.svg)](https://github.com/strategia-x/team-x/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1099%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-1162%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
@@ -32,7 +32,7 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 - **Goals and projects** — set company-level goals, create projects with ticket linking, track progress with visual indicators
 - **Kanban board** — 4-column ticket board (Open, In Progress, Blocked, Done) with drag-to-move and automatic agent assignment
 - **One-click meetings** — call an all-hands with selected attendees, interject mid-meeting as Rocky, auto-generated minutes with action item extraction
-- **Natural-language command palette** — Cmd+K to hire, fire, assign tickets, call meetings, and more. 15 intents, destructive-action confirmation gate, local-first
+- **Natural-language command palette** — Cmd+K to hire, fire, assign tickets, call meetings, and more. 14 structured intents plus a `complex_request` fallback, destructive-action confirmation gate, local-first
 - **Real-time telemetry** — company stats, daily usage charts, per-employee breakdown, cost analysis by provider and model with date range filtering
 
 ### AI Runtime
@@ -110,8 +110,8 @@ Add any supported provider in **Settings > Providers**: enter your API key, test
 Team-X/
   apps/desktop/             Electron app
     src/main/               Main process (Node.js + TypeScript)
-      db/                   SQLite + Drizzle ORM (10 migrations)
-      ipc/                  Typed IPC handlers (60+ channels)
+      db/                   SQLite + Drizzle ORM (13 migrations)
+      ipc/                  Typed IPC handlers (80+ channels)
       orchestrator/         Agent scheduler + event bus
       services/             Vault, backup, MCP host, providers, updater,
                             rag-indexer, command-service, agentic-loop,
@@ -123,7 +123,7 @@ Team-X/
                             tickets, vault
       hooks/                20+ React Query hooks
       store/                Zustand app store
-    e2e/                    8 Playwright specs
+    e2e/                    11 Playwright specs
   packages/
     shared-types/           IPC contract types, event types, entities
     role-schema/            Role.md parser + template renderer
@@ -168,8 +168,8 @@ Team-X/
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |
 | Lint / format | Biome |
-| Unit tests | Vitest (1033 tests) |
-| E2E tests | Playwright (8 specs) |
+| Unit tests | Vitest (1162 tests) |
+| E2E tests | Playwright (11 specs) |
 | CI | GitHub Actions |
 
 ---
@@ -218,7 +218,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **1033 unit tests** across the workspace and **8 Playwright E2E specs**:
+Team-X ships with **1162 unit tests** across the workspace and **11 Playwright E2E specs** (12 Playwright test cases — one spec file contains two cases):
 
 | Spec | Coverage |
 |------|----------|
@@ -230,6 +230,9 @@ Team-X ships with **1033 unit tests** across the workspace and **8 Playwright E2
 | `command-palette.spec.ts` | Cmd+K intent classification, destructive gate, history |
 | `agentic-loop.spec.ts` | Complex-request agentic loop, step log, persisted thread |
 | `task-planner.spec.ts` | Write-side planner, amber confirmation gate, decompose → delegate round-trip |
+| `copilot-service.spec.ts` | Periodic analyzer tick, insight dedup, dismiss, ask-the-copilot, regression guards on destructive + write-side gates |
+| `copilot-ui.spec.ts` | Sparkles toolbar toggle, sidebar + insight card, dismiss optimistic update, `__ECHO_AGENT__` ask handoff, `Cmd+Shift+K` shortcut |
+| `phase-5-integration.spec.ts` | Cross-milestone stitch (M28 → M29 → M30 → M31 → M32 → M33 → M34) in one 3.7s session — RAG indexing, palette read-side round-trip, amber write-side gate, copilot tick + sidebar, invariant #11 regression guard |
 
 All E2E specs run against a canned test-mode provider — no Ollama, no API keys, no network.
 
