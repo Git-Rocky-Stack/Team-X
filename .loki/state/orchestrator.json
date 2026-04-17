@@ -1,8 +1,8 @@
 {
   "currentPhase": "REMEDIATION",
-  "currentMilestone": "Phase 5.6 M-B",
-  "milestoneName": "Triage",
-  "tasksCompleted": 1,
+  "currentMilestone": "Phase 5.6 M-E",
+  "milestoneName": "Process Safeguards",
+  "tasksCompleted": 2,
   "tasksFailed": 0,
   "totalTasks": 7,
   "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
@@ -50,8 +50,8 @@
   "previousMilestone": "M36 T1",
   "previousMilestoneName": "Capability taxonomy enum + shared-types scaffold",
   "previousMilestoneCompletedAt": "2026-04-21T14:00:00Z",
-  "nextMilestone": "Phase 5.6 M-E",
-  "nextMilestoneName": "Process Safeguards (REORDERED per §13.2 — ships BEFORE M-C/M-D) — S1–S6 suite: milestone DoD template, CI conformance check, pre-commit claim-evidence hook, Loki `verifiedBy` field, branch policy, quarterly re-audit cadence. 2–3 day estimate + 1 day buffer. Gated on M-B Loki exit-KPI closed.",
+  "nextMilestone": "Phase 5.6 M-C",
+  "nextMilestoneName": "Backend Backfill — 15 P0 RESTORE rows (Cluster A 7: companies.create/update/delete channels + handlers + ensureSystemAgent/Copilot on create; Cluster B 8: org_edges migration 0013 + cycle-detect helper + employees.promote/setManager/orgchart.get channels) plus selected P1/P2 RESTORE rows per audit §20.2/§20.3. 5–7 day estimate + 3 day buffer. Gated on M-E Loki exit-KPI closed (safeguards must ship first per §13.2 reorder so backfill runs under live CI + pre-commit + DoD template).",
   "tasksInProgress": {},
   "baseline": {
     "unitTests": 1130,
@@ -476,10 +476,51 @@
       "structureCompliance": "All 7 required sections from pending.json targets.phase6T0 present: (1) Overview with theme + goals + non-goals. (2) What ships with surface-deliverable-builds-on table + target metrics. (3) Invariants preserved referencing all 11 existing invariants + explicit list of what Phase 6 does NOT introduce. (4) Success criteria (5 simultaneously-met conditions). (5) Milestone breakdown (6-milestone placeholder M36-M41 with one-line scope + dependency each; no T1+ breakdown materialized per Phase 5 M28 T0 precedent). (6) Acceptance criteria (10 verification-gate items for phase exit). (7) Decisions log scaffold (D15-D23). Plus two extra sections: References (cross-links to Phase 5 design doc + retro + M32/M33/M35 plan docs + CLAUDE.md) + Open questions (Q1-Q4 non-blocking to T0).",
       "themeSelectionEvidence": "Explicit pick per queue note 'Theme selection must be explicit — do not default-pick'. Picked seeds #5 + #7 plus natural companions. Rejected: #1 (needs real-world usage data Team-X doesn't generate by design — zero phone-home invariant #7), #3 (HIGH value but needs own phase for safety/rollback/dry-run primitives), #2/#4/#6 (strong but less evidence-backed for 'next phase' positioning). Final theme title: 'Capabilities & Evidence — Maturing the Intelligence Layer'."
     },
+    "Phase-5.6-M-B": {
+      "name": "Triage",
+      "shippedAt": "2026-04-17T00:00:00Z",
+      "commit": "6b5d481",
+      "ledger": "pending-atomic-chore(loki)-phase-5.6-m-b",
+      "deliverable": "docs/audits/2026-04-17-conformance-audit.md amendment — 41 distinct gap rows now carry restore/replace/deprecate disposition + one-sentence justification. Dispositions: 27 restore (15 P0 + 2 P1 + 6 P2 + 4 P3) / 14 deprecate (0 P0 + 0 P1 + 2 P2 + 12 P3) / 0 replace. Cluster A (multi-company M7) 7 rows + Cluster B (org chart M9) 8 rows — both ALL RESTORE with per-row owner-milestone assignment (M-C backend / M-D UI). §17 cross-check EXECUTED: 10-row independent grep/find sweep against main HEAD 8729e40 confirms 10/10 with zero diffs from M-A matrix; three bonus sanity re-checks on shipped-claim rows all green. §20 disposition rollup appended with §20.1 counts / §20.2 Cluster A scoping / §20.3 Cluster B scoping / §20.4 Cluster C chat-tab / §20.5 M-E verification-gate (5 rows) / §20.6 M-F docs-only (14 rows) / §20.7 residual risks + escalation triggers. §21 renamed from prior §20 Cross-references. Count reconciliation note: §1.2 rolls 49 severity tags across non-shipped rows; §20.1 rolls 41 distinct gap rows (8-row gap is M-A authorial bookkeeping in §18 convenience rollup + §1.1 counters). 41-row count is the operational decision surface for M-C/M-D/M-E/M-F.",
+      "filesTouched": [
+        "docs/audits/2026-04-17-conformance-audit.md (MODIFIED — 202 insertions, 56 deletions; 737 → 883 lines; 76 → 97 KB)"
+      ],
+      "testsDelta": 0,
+      "e2eDelta": 0,
+      "verificationGates": {
+        "unitTests": "not re-run (docs-only; 1187 baseline preserved per M-A precedent — ABI rebuild requirement carried forward to M-E cross-check alongside row 16.1 reconciliation)",
+        "e2e": "not re-run (docs-only; 11 specs / 12 cases baseline preserved)",
+        "lint": "baseline preserved (markdown-only edits; no code surface)",
+        "typecheck": "clean (no code surface)",
+        "auditDoc": "every gap row disposition-assigned ✓; §17 cross-check 10/10 confirmed ✓; §20 rollup landed ✓; §21 renumbered cleanly ✓"
+      },
+      "dispositionRollup": {
+        "restore": { "P0": 15, "P1": 2, "P2": 6, "P3": 4, "total": 27 },
+        "deprecate": { "P0": 0, "P1": 0, "P2": 2, "P3": 12, "total": 14 },
+        "replace": { "P0": 0, "P1": 0, "P2": 0, "P3": 0, "total": 0 },
+        "gapRowsTotal": 41
+      },
+      "clusterA_restoreRows": ["2.1", "2.2", "2.3", "2.4", "10.12", "10.13", "10.15"],
+      "clusterB_restoreRows": ["2.16", "2.18", "2.19", "2.20", "2.21", "2.22", "10.29", "10.30", "10.47"],
+      "crossCheck": {
+        "executed": true,
+        "executor": "Claude Opus 4.7 (1M context)",
+        "baseline": "main HEAD 8729e40",
+        "rowsSampled": 10,
+        "rowsConfirmed": 10,
+        "diffsFromMA": 0,
+        "bonusSanityRechecks": 3
+      },
+      "followUps": [
+        "Per-cluster cherry-pick quality review vs worktree-phase-2-the-org — lands inside M-C as mechanical cherry-pick + adapt-if-stale decision per §20.7 residual risks",
+        "Rocky 20% spot-check available at M-G pre-ship as independent sign-off"
+      ]
+    },
     "Phase-5.6-M-A": {
       "name": "Conformance Audit",
       "shippedAt": "2026-04-17T00:00:00Z",
-      "commit": "pending-atomic-docs(phase-5.6-m-a)",
+      "commit": "1f3c432",
+      "ledger": "f040d11",
       "deliverable": "NEW docs/audits/2026-04-17-conformance-audit.md (414 rows). Evidence matrix per plan §4 schema covering every CLAUDE.md Phase 1–5 status-block bullet + every IPC channel in the IPC Channels table + every EventType bus event + every settings key + every test-count assertion + role-pack inventory + Drizzle tables + migrations. Per-row columns: claim / phase / milestone / evidence_type / expected_location / evidence_found / status / severity / notes / disposition (blank for M-B). Status values: shipped ✅ / partial ⚠️ / missing ❌ / unverifiable 🔍. Severity: P0 / P1 / P2 / P3. Summary tables §1.1 + §1.2 + §1.3 top-line drift headlines + §1.4 evidence types + §1.5 cross-check status. Cluster A (multi-company architecture, Rocky's locked M7 design) and Cluster B (M9 org chart) identified as the two P0 clusters, both stranded on `worktree-phase-2-the-org`. §18 M-B triage rollup + §18.5 M-F documentation-truth-up corrections enumerated inline.",
       "filesTouched": [
         "docs/audits/2026-04-17-conformance-audit.md (NEW, 414 rows)"
@@ -586,6 +627,7 @@
   },
   "inFlightMilestone": null,
   "notes": [
+    "PHASE 5.6 M-B SHIPPED 2026-04-17 — atomic docs(phase-5.6-m-b) commit 6b5d481 lands this session; paired chore(loki) ledger follows. Deliverable: audit-doc amendment — 41 distinct gap rows now carry restore/replace/deprecate disposition + one-sentence justification. Dispositions: 27 restore (Cluster A M7 multi-company 7 rows + Cluster B M9 org chart 8 rows both ALL RESTORE per Rocky's mid-M-A correction + 12 more across Chat tab / RAG-test-pinning / verify-gate rows) / 14 deprecate (MCP naming drift / role.md filename / historical test counts / Phase-4-badge / RAG vault wording / M35-ledger-claim) / 0 replace (no superseded design surfaced). §17 cross-check EXECUTED — 10-row independent grep/find sweep against main HEAD 8729e40, 10/10 confirmed, zero diffs from M-A matrix; three bonus sanity re-checks (57 role.md files / 5 MCP channels / dashboard subview inventory) all green. §20 disposition rollup appended with §20.1 counts table / §20.2 Cluster A scoping (7 rows, M-C/M-D owners) / §20.3 Cluster B scoping (8 rows, M-C migration 0013 as foundation) / §20.4 Cluster C chat-tab (2 rows, single `disabled:true`→`false` flip) / §20.5 M-E verify-gate rollup (5 rows, ABI-rebuild reconciliation) / §20.6 M-F docs-only rollup (14 rows, wording rewrite only) / §20.7 residual risks + escalation triggers. §21 renamed from prior §20 Cross-references. Count reconciliation note: §1.2 rolls 49 severity tags across non-shipped rows; §20.1 rolls 41 distinct gap rows (8-row gap is M-A authorial bookkeeping in §18 convenience rollup + §1.1 counters — not a defect, just two different counting schemes). 41-row count is the operational decision surface. Head-of-queue advances to Phase 5.6 M-E (Process Safeguards, 2-3d + 1d buffer) per approved §13.2 reorder — safeguards ship BEFORE M-C/M-D backfill so restoration runs under live CI conformance check + pre-commit claim-evidence hook + DoD template + Loki verifiedBy + branch policy + quarterly re-audit cadence. M-E exit is the gate before M-C starts any code-restoration work.",
     "PHASE 5.6 M-A SHIPPED 2026-04-17 — atomic docs(phase-5.6-m-a) + paired chore(loki) commits land this session. Deliverable: NEW docs/audits/2026-04-17-conformance-audit.md (414 rows, schema-compliant per plan §4). Key findings: two P0 clusters both stranded on worktree-phase-2-the-org — Cluster A (multi-company architecture, Rocky's locked M7 design, 7 rows) + Cluster B (M9 org chart, 8 rows). 15 P0 rows total; 8 P1; 10 P2; 16 P3. CROSS-CHECK §17 addendum PENDING — must land within M-A time-box (5 day + 2 day buffer). Scope-expansion mini-gate invoked ONCE mid-authoring when Rocky corrected Cluster A classification P1 → P0 (disposition deprecate → restore; CLAUDE.md Troubleshooting 'aspirational' framing recorded for M-F rewrite in §18.5). Test-count reconciliation deferred to post-ABI-rebuild cross-check (1187 claim vs session observation 1188 passed / 23 failed / 1211 total — 23 failures are NODE_MODULE_VERSION 125 vs 137 mismatch in better-sqlite3 in-memory tests, documented CLAUDE.md recipe resolves). Head-of-queue advances to M-B (Triage, 1-day + 0.5-day buffer, docs-only, fills disposition column per gap row using plan §5 criteria). After M-B: head-of-queue advances to M-E (Process Safeguards, ships BEFORE M-C/M-D per approved §13.2 reorder).",
     "PHASE 5.6 KICKOFF 2026-04-17 (approved + executing under Rocky's direction). Plan doc docs/plans/2026-04-17-team-x-phase-5.6-remediation.md §13 captures the full approval record: D1–D8 all signed off 'all yes' + M-E reorder adopted (ships BEFORE M-C/M-D, not parallel with M-D) + PMP/Agile additions layered (product backlog from M-B triage, sprint velocity as Loki exit-KPI, change-control mini-gate for mid-flight scope, Definition of Ready as sprint-entry gate — all specified in plan §14). M36 T2+ EXPLICITLY PAUSED per D8 — resume condition: Phase 5.6 M-G retrospective committed + v1.1.1 tagged. Kickoff artifacts produced this session: plan doc renamed (proposal.md → remediation.md), Phase 5.6 banner added to Team-X/CLAUDE.md, 4 unpushed commits pushed to origin/main per D1 (Phase 5.5 hotfix 8d5a0db + M36 T0/T1 chain), pending.json + current-task.json + this orchestrator.json all updated with Phase 5.6 redirect. Head-of-queue advances to Phase 5.6 M-A — Conformance Audit (5d + 2d buffer per plan §4). M-A is docs-only: author docs/audits/2026-04-XX-conformance-audit.md with evidence matrix (~200–400 rows, one per CLAUDE.md claim). Atomic docs(phase-5.6): kickoff commit + paired chore(loki): ledger follow this note.",
     "Phase 6 T0 SHIPPED 2026-04-20 (commit a429abf — 'feat(phase-6-t0): Phase 6 T0 — plan doc (Capabilities & Evidence)'). Phase 6 opens with an explicit theme pick per queue's 'do not default-pick' directive: Capabilities & Evidence — Maturing the Intelligence Layer. Plan doc at docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md (194 lines). Stitches Phase 5 retro §6 seeds #5 (capabilities frontmatter on role.md — M32 flagged deferred 4× in its source comments) + #7 (insight export) with natural companions (Telemetry per-kind filter surfacing M33 migration 0012's runs.kind column + insight feedback loop via dismissal-pattern → category downrank). 6-milestone placeholder breakdown M36 → M41. M36 headline: Capabilities taxonomy + role.md parser gains capabilities: string[] field + 55 F10 + 2 system roles backfilled. M37 preserves M32's LOCKED 4-weight signature (0.4 + 0.3 + 0.2 + 0.1) — ONLY computeRoleFit implementation changes, Jaccard overlap replaces keyword heuristic. M38 adds copilot_category_weights clamped 0.0-2.0 + dismissal pattern detector (3 same-category dismissals in 7 days → UI suggestion, NEVER auto-applied) + copilot.weights.changed bus event per invariant #11. M39 is read-path-only (no new migrations — runs.kind already in place from M33 migration 0012). M40 mirrors M24 audit-export UX surface. M41 is the phase exit gate matching M20/M27/M35 template (cross-milestone integration E2E + retrospective locked six-section structure + README sweep + CHANGELOG [1.1.0] → [1.2.0] promotion + v1.1.0 → v1.2.0 version bump across 7 package.json files + Phase 6 COMPLETE marker source-string-audit test extending the lineage M35 T3/T8/T9/T10 → M41 T10). Target metrics 1169 → ~1320 unit + 11 → 12 E2E specs + ~80+ → ~85+ IPC channels + 31 → 32 bus events + invariants 11 → 11 (Phase 6 is calibration within existing boundaries). Decisions log D15-D23 enumerated for each milestone's T0 landing. Open questions Q1-Q4 parked as non-blocking. Explicit non-goals: no autonomous action (retro #3 → Phase 7+), no cross-company aggregation (retro #2 → out of scope), no telemetry digest (retro #1 → infeasible pre-deployment, zero phone-home), no agent-to-agent negotiation (retro #4 → research-y), no new providers/MCP transports. Zero production code / zero tests / zero IPC/bus/migrations in T0 itself — plan-doc-only per the Phase 5 M28 T0 precedent. Atomic commit a429abf shipped; ledger commit follows this entry. Head-of-queue advances to M36 T0 — that session authors docs/plans/2026-0X-XX-team-x-phase-6-m36-capabilities-taxonomy.md mirroring the Phase 5 M31/M32/M33/M34/M35 milestone plan shape (structure + non-goals + architectural decisions per §4.5 spec) and does NOT author T1+ breakdown.",

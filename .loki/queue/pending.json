@@ -38,24 +38,34 @@
   },
   "subMilestones": [
     { "id": "M-A", "name": "Conformance Audit", "estimate": "5d + 2d buffer", "status": "shipped 2026-04-17 — docs/audits/2026-04-17-conformance-audit.md (414 rows); cross-check §17 addendum pending in time-box", "dor": "satisfied by Phase 5.6 kickoff evidence", "dod": "satisfied — audit doc committed + every claim has row + summary table present; §17 cross-check addendum scheduled as amendment commit" },
-    { "id": "M-B", "name": "Triage", "estimate": "1d + 0.5d buffer", "status": "queued — head-of-queue", "dor": "M-A Loki exit-KPI closed (this ledger commit)", "dod": "every gap row has disposition + one-sentence justification + restore/replace/deprecate rollup table" },
-    { "id": "M-E", "name": "Process Safeguards (REORDERED — ships BEFORE M-C/M-D per §13.2)", "estimate": "2–3d + 1d buffer", "status": "blocked-by-M-B", "dor": "M-B Loki exit-KPI closed", "dod": "all 6 safeguards S1–S6 committed + documented in CONTRIBUTING.md + positive-control test passing for each safeguard" },
+    { "id": "M-B", "name": "Triage", "estimate": "1d + 0.5d buffer", "status": "shipped 2026-04-17 — docs/audits/2026-04-17-conformance-audit.md amendment (41 rows disposition-assigned + §17 cross-check 10/10 confirmed + §20 rollup landed); atomic commit 6b5d481 + paired ledger", "dor": "satisfied by M-A Loki exit-KPI", "dod": "satisfied — every gap row has disposition + one-sentence justification; §20 rollup table present; §17 cross-check populated; zero replace dispositions (no superseded design surfaced)" },
+    { "id": "M-E", "name": "Process Safeguards (REORDERED — ships BEFORE M-C/M-D per §13.2)", "estimate": "2–3d + 1d buffer", "status": "queued — head-of-queue", "dor": "M-B Loki exit-KPI closed (this ledger commit)", "dod": "all 6 safeguards S1–S6 committed + documented in CONTRIBUTING.md + positive-control test passing for each safeguard" },
     { "id": "M-C", "name": "Backend Backfill", "estimate": "5–7d + 3d buffer", "status": "blocked-by-M-E", "dor": "M-E Loki exit-KPI closed + safeguards live on CI", "dod": "every restore row backend-complete + unit tests per IPC + migration applied clean + pnpm typecheck clean + zero Phase 5 regression" },
     { "id": "M-D", "name": "UI Backfill", "estimate": "5–7d + 3d buffer", "status": "blocked-by-M-C", "dor": "M-C Loki exit-KPI closed", "dod": "every restore row UI-complete + all 5 F10 states (loading/error/empty/disabled/hover) + WCAG AA + invariant #11 bus events wired + E2E for user-facing surface" },
     { "id": "M-F", "name": "Documentation Truth-Up", "estimate": "2d + 1d buffer", "status": "blocked-by-M-D", "dor": "M-D Loki exit-KPI closed", "dod": "zero claim lacks on-disk evidence + CLAUDE.md in three-bucket format (shipped/deferred/deprecated) + Phase 5.6 retrospective drafted" },
     { "id": "M-G", "name": "Branch Hygiene + Ship", "estimate": "1d + 0.5d buffer", "status": "blocked-by-M-F", "dor": "M-F Loki exit-KPI closed + audit cross-check shows zero remaining restore rows", "dod": "all 7 DoDs met + worktree-phase-2-the-org deleted local+origin + CHANGELOG [Unreleased] → [1.1.1] + v1.1.0 → v1.1.1 across 7 package.json + v1.1.1 git tag + main pushed + retrospective committed" }
   ],
   "activeSubMilestone": {
-    "id": "M-B",
-    "name": "Triage",
+    "id": "M-E",
+    "name": "Process Safeguards (REORDERED per §13.2 — ships BEFORE M-C/M-D)",
     "status": "queued — head-of-queue",
-    "nextSession": "Open M-B T0 per current-task.json — fill disposition column on every gap row in docs/audits/2026-04-17-conformance-audit.md + append §20 restore/replace/deprecate rollup table + §17 cross-check addendum (20% pass)"
+    "nextSession": "Open M-E T0 per current-task.json — ship S1 milestone DoD template + S2 CI conformance check + S3 pre-commit claim-evidence hook + S4 Loki `verifiedBy` field + S5 branch policy + S6 quarterly re-audit cadence. Each safeguard ships with a positive-control test. S2 must pass on the M-E atomic commit itself (safeguard's own introduction is its first gate)."
   },
   "previousSubMilestone": {
-    "id": "M-A",
-    "name": "Conformance Audit",
+    "id": "M-B",
+    "name": "Triage",
     "shippedAt": "2026-04-17T00:00:00Z",
-    "deliverable": "docs/audits/2026-04-17-conformance-audit.md — 414 rows; 350 shipped, 19 partial, 16 missing, 8 unverifiable; severity rollup 15 P0 / 8 P1 / 10 P2 / 16 P3; Clusters A (multi-company, 7 rows) + B (org chart, 8 rows) both RESTORE candidates stranded on worktree-phase-2-the-org; scope-expansion mini-gate invoked once (Cluster A P1 → P0 per Rocky's design-intent correction)"
+    "commit": "6b5d481",
+    "deliverable": "docs/audits/2026-04-17-conformance-audit.md amendment — 41 distinct gap rows disposition-assigned (27 restore / 14 deprecate / 0 replace); §17 cross-check executed — 10/10 rows re-verified via independent grep/find sweep against main HEAD 8729e40, zero diffs from M-A matrix; §20 rollup table appended with per-cluster scoping (Cluster A 7 rows, Cluster B 8 rows, Cluster C 2 rows, M-E verify-gate 5 rows, M-F docs-only 14 rows); residual risks + escalation triggers documented. Authoritative M-C/M-D/M-E/M-F scoping surface."
+  },
+  "previousSubMilestones": {
+    "M-A": {
+      "name": "Conformance Audit",
+      "shippedAt": "2026-04-17T00:00:00Z",
+      "commit": "1f3c432",
+      "ledger": "f040d11",
+      "deliverable": "docs/audits/2026-04-17-conformance-audit.md — 414 rows; 350 shipped, 19 partial, 16 missing, 8 unverifiable; severity rollup 15 P0 / 8 P1 / 10 P2 / 16 P3; Clusters A (multi-company, 7 rows) + B (org chart, 8 rows) both RESTORE candidates stranded on worktree-phase-2-the-org; scope-expansion mini-gate invoked once (Cluster A P1 → P0 per Rocky's design-intent correction)"
+    }
   },
   "baseline": {
     "asOfState": "Phase 5 exit (v1.1.0, 2026-04-20) + M36 T0/T1 shipped on top (v1.1.0 preserved per D8)",
@@ -70,7 +80,7 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-A SHIPPED (docs/audits/2026-04-17-conformance-audit.md — 414 rows)",
+    "asOfTask": "Phase 5.6 M-B SHIPPED (docs/audits/2026-04-17-conformance-audit.md amendment — 41 gap rows disposition-assigned + §17 cross-check 10/10 confirmed + §20 rollup)",
     "unitTests": 1187,
     "unitTestsNote": "Baseline preserved; ABI rebuild required for clean reconciliation (this-session run reported 1188 passed / 23 failed / 1211 total — all 23 failures are NODE_MODULE_VERSION 125 vs 137 mismatch in better-sqlite3 in-memory tests; reconcile in §17 cross-check after CLAUDE.md Troubleshooting ABI-rebuild recipe).",
     "e2eSpecs": 11,
@@ -93,7 +103,8 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
-    "PHASE 5.6 M-A SHIPPED 2026-04-17 — atomic docs(phase-5.6-m-a) commit + paired chore(loki) ledger land this session. Deliverable: NEW docs/audits/2026-04-17-conformance-audit.md (414 rows, schema-compliant per plan §4). Status distribution: 350 shipped / 19 partial / 16 missing / 8 unverifiable. Severity rollup (non-shipped only): 15 P0 / 8 P1 / 10 P2 / 16 P3. Two P0 clusters both stranded on worktree-phase-2-the-org: Cluster A (Rocky's LOCKED multi-company M7 design, 7 rows) + Cluster B (M9 org chart, 8 rows). Scope-expansion mini-gate INVOKED ONCE mid-authoring when Rocky corrected Cluster A P1 → P0 (disposition deprecate → restore; CLAUDE.md Troubleshooting 'aspirational' framing flagged for M-F rewrite per audit §18.5). Cross-check §17 addendum pending within M-A time-box. Head-of-queue advances to M-B (Triage) — fill disposition column per gap row using plan §5 criteria + append §20 rollup + land §17 cross-check addendum.",
+    "PHASE 5.6 M-B SHIPPED 2026-04-17 — atomic docs(phase-5.6-m-b) commit 6b5d481 lands this session; paired chore(loki) ledger follows. Deliverable: audit-doc amendment — 41 distinct gap rows now carry restore/replace/deprecate disposition + one-sentence justification (27 restore / 14 deprecate / 0 replace); §17 cross-check EXECUTED (10-row independent grep/find sweep against main HEAD 8729e40, 10/10 confirmed, zero diffs from M-A matrix, plus 3 bonus sanity re-checks on shipped-claim rows); §20 disposition rollup appended with per-cluster scoping (Cluster A 7 rows ALL restore / Cluster B 8 rows ALL restore / Cluster C 2 chat-tab restore rows / M-E verify-gate 5 rows / M-F docs-only 14 rows); residual risks + escalation triggers enumerated; §21 renamed from prior §20 Cross-references. Rocky's mid-M-A correction confirmed formally — both P0 clusters unambiguously RESTORE. Count reconciliation note: §1.2 rolls 49 severity tags across non-shipped rows; §20.1 rolls 41 distinct gap rows (8-row gap is M-A authorial bookkeeping in §18 convenience rollup + §1.1 counters). 41-row count is the operational decision surface. Head-of-queue advances to Phase 5.6 M-E (Process Safeguards, 2-3d + 1d buffer) per approved §13.2 reorder — safeguards ship BEFORE M-C/M-D so the backfill runs under live CI + pre-commit + DoD template + Loki verifiedBy + branch policy + quarterly cadence.",
+    "PHASE 5.6 M-A SHIPPED 2026-04-17 — atomic docs(phase-5.6-m-a) commit 1f3c432 + paired chore(loki) ledger f040d11. Deliverable: NEW docs/audits/2026-04-17-conformance-audit.md (414 rows, schema-compliant per plan §4). Status distribution: 350 shipped / 19 partial / 16 missing / 8 unverifiable. Severity rollup (non-shipped only): 15 P0 / 8 P1 / 10 P2 / 16 P3. Two P0 clusters both stranded on worktree-phase-2-the-org: Cluster A (Rocky's LOCKED multi-company M7 design, 7 rows) + Cluster B (M9 org chart, 8 rows). Scope-expansion mini-gate INVOKED ONCE mid-authoring when Rocky corrected Cluster A P1 → P0 (disposition deprecate → restore; CLAUDE.md Troubleshooting 'aspirational' framing flagged for M-F rewrite per audit §18.5). Cross-check §17 addendum now closed by M-B in the same-day amendment.",
     "PHASE 5.6 KICKOFF 2026-04-17 (approved + executing under Rocky's direction). Trigger: pre-M36-T2 audit surfaced that the Phase 5.5 hotfix (role-pack reconciliation) corrected symptoms of a deeper problem — systemic drift between CLAUDE.md status-block claims and on-disk reality across Phases 1–5 (M7 ~30% shipped, M9 ~10%, M11 partially; IPC channels and repo surfaces listed but not on main; UI tabs marked disabled:true). Root cause (5-whys in plan §3): no automated verification between 'implementer claims complete' and 'ledger says complete'. Symptom-not-cause fix would mean the same drift recurs at M40/M50/M60. Phase 5.6 is a Definition-of-Done failure repair operation with 7 sub-milestones A–G and 6 process safeguards S1–S6.",
     "M-E (Process Safeguards) REORDERED TO SHIP BEFORE M-C/M-D (architectural change from §8 original proposal, approved 2026-04-17 per §13.2). Safeguards ship in Week 2 alongside M-B triage; backfill (M-C Week 3, M-D Week 4) then runs under live CI conformance check + pre-commit hook + DoD template + Loki verifiedBy field + branch policy + quarterly re-audit cadence. The backfill becomes the first proof that the safeguards work.",
     "M36 T2+ EXPLICITLY PAUSED per D8. M36 T0 (plan doc dc8d4d3) + M36 T1 (capability taxonomy enum 52ac886) both on origin/main — preserved, no rollback. Resume at M36 T2 (role-schema parser extension) when Phase 5.6 M-G retrospective is committed and v1.1.1 is tagged. Rocky manually removes the m36PausedState block from this file at that point.",
