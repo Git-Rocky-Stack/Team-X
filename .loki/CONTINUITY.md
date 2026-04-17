@@ -1,4 +1,81 @@
-# Loki Continuity — Phase 5, **M35 T3 SHIPPED** (observability polish — AuditView chip coverage extended to 10 Phase 5 event types with payload-aware row summaries and a hard ≤140-char invariant; +28 unit tests, 1134 → 1162; chip module split into `audit-event-chip-helpers.ts` pure-surface + `audit-event-chip.tsx` component shell per the existing `step-card-narrow` convention so vitest resolves without `@/` alias work). M35 T4 (Phase 5 retrospective doc) is head-of-queue. Phase 5 exit is 7 tasks away.
+# Loki Continuity — Phase 5, **M35 T4 SHIPPED** (Phase 5 retrospective doc authored — `docs/plans/2026-04-19-team-x-phase-5-retrospective.md` 271 lines with locked 6-section structure from M35 plan doc §4.5; cross-link added from design doc §13 Decisions Log; zero code / zero tests / zero IPC/bus/migration work; pure markdown deliverable closing the Phase 5 exit-gate documentation requirement). M35 T5 (demo script + scripted walkthrough — 6 new markdown files across `docs/demo/` and `docs/demo/scenarios/`) is head-of-queue. Phase 5 exit is 6 tasks away.
+
+## M35 T4 SHIPPED — 2026-04-19 — Phase 5 retrospective doc (0f8b51c)
+
+**Task:** M35 T4 — author the Phase 5 retrospective doc covering the full M28 → M35 delivery arc with the locked six-section structure mandated by M35 plan doc §4.5. (M35 plan doc §3 T4 row.)
+**Atomic commit:** `0f8b51c` — `docs(m35): M35 T4 — Phase 5 retrospective`.
+**Ledger commit:** `chore(loki): M35 T4 — commit ledger (0f8b51c)` (this commit).
+**Plan reference:** [M35 plan T4](../docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md#3-task-breakdown).
+
+### What shipped
+
+- **NEW `docs/plans/2026-04-19-team-x-phase-5-retrospective.md`** (271 lines). Locked six-section structure per M35 plan doc §4.5 so future phase retros stay directly comparable.
+  - **§1 — What we shipped.** Milestone table covering M28 (RAG foundation, +29 unit) → M29 (RAG into agent turns, +27 unit) → M30 (NLU + command palette, +146 unit / +2 E2E, birthed invariant #11) → M31 (agentic loop read-side, +139 unit / +1 E2E) → M32 (task planner write-side, +75 unit / +1 E2E, F1+F2 closed) → M33 (copilot service, +66 unit / +1 E2E, F3+F4 closed) → M34 (copilot UI, +31 unit / +1 E2E) → M35 (in progress, +32 unit / +1 E2E so far). Each row carries commit range + headline architectural seam.
+  - **§2 — What went well.** Ten compounding architectural patterns enumerated with carry-forward rules: canned test-seam QUARTET (test-classifier + test-agentic-provider + test-agentic-tools + test-copilot-provider — M35 T2 integration spec reused every entry without adding a single new one), `{rows, truncated}` envelope on tool output, `data-*` stable E2E selector surface (`data-step-kind` / `data-copilot-*` / `data-event-type`), pause-aware `providerRouter.complete` wrapper (CopilotAnalyzerService reused it unchanged), `AbortController` stop plumbing, `is_system` filter-sweep + `isSystemRoleId` predicate (zero new filter code when M33 added the second pseudo-employee), atomic + ledger commit cadence (80% strict adherence over 55 tasks), documented ABI rebuild dance, pure-helpers `.ts` + component `.tsx` split (step-card-narrow precedent reapplied in M35 T3), IPC-mutation-emits-bus-event invariant #11.
+  - **§3 — What cost us time.** Eight recurring costs with root-cause attribution: Vitest/Playwright ABI mismatch dance (largest single DX tax), sqlite-vec extension load path (M28), FTS5 regression in `vault-backup.spec.ts` (M30 T0 — birthed invariant #11), malformed tool-call parser nudge-retry (M31 T1), F1/F2/F3/F4 follow-ups (each a renderer-cache or lifecycle edge case that slipped to the next milestone), vitest `@/` alias cascade through Badge (M35 T3, resolved architecturally), docblock accuracy drift (M35 T2 → T3 transition), plan-vs-shipped test-count drift (M35 T3 shipped +28 vs plan's +3).
+  - **§4 — What we deferred.** Nine-item table with Phase 6 sketches: insight export (CSV/JSON parity with AuditView), multi-company insight aggregation, drag-to-reorder (kanban / org-chart / insights), `capabilities` frontmatter on role.md, post-launch telemetry digest, proactive copilot → autonomous action, agent-to-agent negotiation, cross-company copilot aggregation, real customer demo.
+  - **§5 — Metrics.** Four metric tables: test growth (612 → 1162 unit = +550 / +83%; E2E 4 specs → 11 specs / 12 cases), LOC delta (207 files / 43,919 insertions / 489 deletions — additive milestone, not a rewrite), architectural surface delta (IPC channels ~60 → ~77 / +17, `EventType` union 16 → 31 / +15, `AgentStepKind` 0 → 8, architectural invariants 10 → 11, settings +10, migrations +5, pseudo-employees 0 → 2), follow-up count (4 opened + 4 closed, zero carrying into Phase 6), commit cadence adherence (80% strict atomic / 100% ledger).
+  - **§6 — Phase 6 seeds.** Seven prioritized hypotheses — not commitments — with user value + architectural cost + risk framing for Phase 6 T0 selection: post-release telemetry digest (evidence-based clamp tuning with local-only data, zero phone-home), cross-company insight aggregation + company switcher, proactive copilot → autonomous action (with approval tiers), agent-to-agent negotiation protocol, `capabilities` frontmatter + scored-fit upgrade, real customer demo (marketing coordination, zero code cost), insight export (CSV / JSON parity).
+  - **Closing note.** Three patterns named as the most valuable to carry forward explicitly: canned-seam quartet, `{rows, truncated}` envelope, `data-*` selector surface — each compounded across every milestone from M30 forward and paid for themselves many times over on M35 T2 when the integration spec stitched M28 → M34 in 3.7 seconds without a single new seam entry.
+- **MODIFIED `docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md`** — added one cross-link paragraph after §13 D12 pointing at the retrospective for discoverability from the locked design authority. Future phase retros MUST match the locked six-section structure so delivery-arc comparisons remain apples-to-apples.
+
+### Why the structure matters
+
+The locked six-section structure (shipped / went well / cost us time / deferred / metrics / seeds) makes future Phase 6 / Phase 7 / Phase N retros directly comparable. A Phase 6 retro that uses a different shape breaks the apples-to-apples comparison — that is why §13 D12 now explicitly requires the structure. The structure also maps cleanly onto Rocky's review-style cadence (plan-ceo-review / plan-eng-review / plan-design-review) because each section has a distinct audience: §1-2 for the CEO review, §3-5 for the eng review, §6 for the roadmap/planning session.
+
+### Metrics captured for Section 5
+
+- Test growth: 612 (Phase 4 exit) → 1162 (M35 T3). Delta +550 unit / +83%. Broken down per milestone: M28 +29 / M29 +27 / M30 +146 / M31 +139 / M32 +75 / M33 +66 / M34 +31 / M35 so far +32.
+- E2E growth: 4 spec files → 11 spec files / 12 Playwright cases. +7 specs / +8 cases. Spec additions: M30 T0 vault-backup fix + M30 T8 command-palette, M31 T8 agentic-loop, M32 T8 task-planner, M33 T9 copilot-service, M34 T10 copilot-ui, M35 T2 phase-5-integration.
+- LOC delta: 207 files changed / 43,919 insertions / 489 deletions (since Phase 5 branch-point). Mostly new code (intelligence package, two pseudo-employees, four canned seams, 27 new renderer features, 11 new IPC handlers, four new settings sections, chip helpers, tests). Deletions stayed small — additive milestone.
+- Architectural surface: IPC ~60 → ~77 (+17), `EventType` union 16 → 31 (+15), `AgentStepKind` 0 → 8, invariants 10 → 11 (#11 = IPC mutations emit bus events), settings +10, migrations +5 (0008 → 0012), pseudo-employees 0 → 2.
+- Follow-ups: F1 (`useAgentStepStream` backfill) closed M32 T0 `f515ea7`; F2 (`useThreadList` bus invalidator) closed M32 T1 `62a0504`; F3 (`CopilotEventWindow.clear`) + F4 (post-restore system-employee bootstrap) both closed in commit `039020b`. Zero dangling Phase 5 follow-ups.
+- Commit cadence adherence: 44/55 tasks (80%) strict atomic-per-task + ledger cadence. M34 deviated (T2–T10 squash). M35 restored.
+
+### Phase 6 seeds — prioritized (not selected)
+
+Seven candidates the retrospective surfaces for Phase 6 T0 selection. The first Phase 6 session picks one (or a new theme Rocky surfaces), authors `docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md`, and commits to the same atomic-per-task + ledger cadence:
+
+1. **Post-release telemetry digest** — evidence-based clamp tuning from local `runs` table. Low risk. Preserves zero-phone-home invariant.
+2. **Cross-company insight aggregation + company switcher** — activates when user has ≥2 companies. Low-medium risk.
+3. **Proactive copilot → autonomous action (with approval tiers)** — high architectural cost, medium risk. Autonomy needs careful UX.
+4. **Agent-to-agent negotiation protocol** — richer `send_message_to_colleague` layer. High architectural cost, high risk (token-burn without guardrails).
+5. **`capabilities` frontmatter + scored-fit upgrade** — improves `scoreEmployee` granularity; requires 55-role library sweep.
+6. **Real customer demo** — marketing coordination; zero code cost.
+7. **Insight export** — tiny. `copilot.export` IPC wrapping audit-export helpers.
+
+### Scope boundary observed
+
+Zero code changes. Zero tests. Zero IPC channels. Zero bus events. Zero migrations. Zero provider changes. Pure markdown delivery matching plan §3 T4 row (Tests column `—`).
+
+### Why M35 T4 closes cleanly
+
+T4 is the lightest task in the M35 slate (zero tests, zero code) but carries the highest information density — it retroactively encodes every Phase 5 lesson learned so Phase 6 sessions can plan against data, not memory. The locked-structure requirement in §13 of the design doc converts the retrospective from a one-time document into the seed template for every future phase retro. That structural investment is what makes the zero-code T4 worthwhile.
+
+### Files touched
+
+```
+docs/plans/2026-04-19-team-x-phase-5-retrospective.md (NEW, 271 lines)
+docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md (+1 cross-link paragraph after §13 D12)
+```
+
+### Verification gates
+
+No production-code surface touched. No test surface added. Docs-only delivery.
+
+- **Unit tests:** not re-run. 1162/1162 baseline preserved from M35 T3 (commit `51393f8`).
+- **Lint:** not re-run. No code surface to lint.
+- **Typecheck:** not re-run. No TypeScript surface to typecheck.
+- **E2E:** not re-run. No renderer or main-process surface to test.
+
+Verification matches the comment+test-only precedent from M35 T1 and the renderer-only precedent from M35 T3 — docs-only shipping has the same gate shape.
+
+### Head-of-queue handoff
+
+- **Next task:** M35 T5 — Demo script + scripted walkthrough. NEW `docs/demo/phase-5-walkthrough.md` + NEW `docs/demo/scenarios/` with 5 scenario stubs (hire-a-ceo / ticket-lifecycle / one-click-all-hands / ask-copilot-grounded-answer / decompose-and-surface). Zero tests. Cross-link from retrospective §6.6 "Real customer demo" to the walkthrough for marketing coordination.
+- **Phase 5 exit:** 6 tasks remaining (T5 + T6 + T7 + T8 + T9 + T10). Projected Phase 5 exit: 1162 + ~5–10 from T8 + T9 = ~1167–1172 unit / 11 E2E / v1.1.0.
+
+---
 
 ## M35 T3 SHIPPED — 2026-04-19 — audit view chips for Phase 5 events (51393f8)
 

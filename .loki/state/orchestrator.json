@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M35",
   "milestoneName": "Demo + Hardening",
-  "tasksCompleted": 4,
+  "tasksCompleted": 5,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md",
@@ -10,9 +10,9 @@
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {
-    "taskId": "M35-T4",
-    "lastShipped": "M35-T3",
-    "lastShippedCommit": "51393f8"
+    "taskId": "M35-T5",
+    "lastShipped": "M35-T4",
+    "lastShippedCommit": "0f8b51c"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M34",
@@ -36,10 +36,10 @@
     "e2eSpecs": 11,
     "e2eGreenCount": 12,
     "lintErrors": 0,
-    "lintErrorsNote": "M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts (1 spec / 1 case). M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests → 1162). 0-error baseline preserved via surgical `biome format --write` on the 4 new/edited audit files + one pre-existing .loki/state/orchestrator.json format drift cleared along the way.",
+    "lintErrorsNote": "M35 T4 (Phase 5 retrospective) was a pure-docs delivery — zero code, zero tests, zero lint surface. M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts (1 spec / 1 case). M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests → 1162). 0-error baseline preserved.",
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "M35-T3 (commit 51393f8)"
+    "asOfTask": "M35-T4 (commit 0f8b51c)"
   },
   "targets": {
     "unitTests": "~1162+ (revised up from plan estimate ~1145 after M35 T3 shipped +28 unit vs plan's +3; further +3–5 expected from T8 version-bump + T9 regression-hardening unit tests)",
@@ -233,6 +233,24 @@
       "cannedSeamReuse": "Zero new canned-seam entries. Reused existing keys: 'what is my team doing right now' (test-classifier M31 T8 + test-agentic-provider M31 T8) for read-side palette round-trip; 'decompose the frontend redesign into tickets' (test-classifier M32 T8 + test-agentic-provider M32 T8) for write-side palette round-trip; 'strategia-x' substring in CANNED_COPILOT_TABLE (M33 T8) for analyzer manual tick; __ECHO_AGENT__: sentinel (test-agentic-provider tier-1 path) for M34 sidebar ask.",
       "surpriseNote": "During authoring, the first spec draft assumed the RagIndexer subscribed to vault bus events. Grep surfaced it only subscribes to work.completed + meeting.ended — vault files are retrieved through FTS5 at agent-turn time, not pre-indexed into embeddings. Corrected Step 1 to drive a chat round-trip via chat.send (preserving the vault.upload IPC call as an independent assertion that the Phase 4 vault write path still works inside the Phase 5 session). Single-iteration refactor; E2E passed on second run. Follow-up docblock-accuracy fix shipped 2026-04-19 as commit 54830fa after the post-T3 user correction surfaced that the same RagIndexer subscription misread had survived into the spec's header docblock text (two passages rewritten; spec body unchanged)."
     },
+    "M35-T4": {
+      "name": "Phase 5 retrospective doc",
+      "shippedAt": "2026-04-19T23:59:30Z",
+      "commit": "0f8b51c",
+      "deliverable": "NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md (271 lines). Locked six-section structure per M35 plan doc §4.5 so future phase retros stay directly comparable: (1) What we shipped — one-liner per milestone M28 → M35 with commit range + unit/E2E delta + headline architectural seam; (2) What went well — 10 compounding patterns enumerated (canned test-seam quartet, {rows, truncated} envelope, data-* stable selector surface, pause-aware providerRouter wrapper, AbortController stop, is_system filter-sweep, atomic+ledger cadence, ABI rebuild dance, pure-helpers .ts + component .tsx split, invariant #11); (3) What cost us time — Vitest/Playwright ABI dance + sqlite-vec extension load path + FTS5 regression that birthed invariant #11 + malformed tool-call parser nudge-retry + F1/F2/F3/F4 follow-ups + @/ alias cascade + docblock accuracy drift + plan-vs-shipped test count drift; (4) What we deferred — insight export + multi-company aggregation + drag-to-reorder + capabilities frontmatter + post-launch telemetry digest + proactive autonomy + agent-to-agent negotiation; (5) Metrics — test growth table (612 → 1162 = +550 / +83%), E2E 4 → 11 specs / 12 cases, LOC delta (207 files / 43,919 insertions / 489 deletions), architectural surface delta (EventType 16 → 31, invariants 10 → 11, settings +10, migrations +5, pseudo-employees 0 → 2), follow-up count (4 closed), commit cadence adherence (80% strict, 100% ledger); (6) Phase 6 seeds — 7 prioritized hypotheses (post-release telemetry digest / cross-company rollups / proactive copilot → autonomous action / agent-to-agent negotiation / capabilities frontmatter / real customer demo / insight export), each with user value + architectural cost + risk scoped so any one could be a Phase 6 headline. Cross-link added from docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md §13 Decisions Log pointing at the retrospective for discoverability from the locked design authority. Zero code changes, zero tests, zero IPC/bus/migration work. Pure markdown deliverable per plan §3 T4 row.",
+      "filesTouched": [
+        "docs/plans/2026-04-19-team-x-phase-5-retrospective.md (NEW, 271 lines)",
+        "docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md (+1 cross-link paragraph after §13 D12)"
+      ],
+      "testsDelta": 0,
+      "verificationGates": {
+        "unitTests": "not re-run (docs-only delivery; baseline 1162/1162 preserved from M35 T3)",
+        "lint": "not re-run (no code surface)",
+        "typecheck": "not re-run (no TypeScript surface)",
+        "e2e": "not re-run (no renderer or main-process surface)"
+      },
+      "structureCompliance": "Locked six-section structure from M35 plan doc §4.5 followed verbatim. Each section delivers the deliverables enumerated in T4 acceptance list (shipped M28–M35 one-liners with commit range / architectural-pattern enumeration with carry-forward rules / cost enumeration with root-cause attribution / deferral table with Phase 6 sketches / metrics tables for test growth + LOC delta + architectural surface / Phase 6 seeds with user value + cost + risk framing)."
+    },
     "M35-T3": {
       "name": "Observability polish — Audit view chip coverage audit",
       "shippedAt": "2026-04-19T23:59:00Z",
@@ -260,12 +278,13 @@
   "inFlightMilestone": {
     "milestone": "M35",
     "milestoneName": "Demo + Hardening",
-    "tasksShipped": 4,
+    "tasksShipped": 5,
     "totalTasks": 11,
-    "headOfQueue": "M35-T4",
-    "headOfQueueName": "Phase 5 retrospective doc (0 tests)"
+    "headOfQueue": "M35-T5",
+    "headOfQueueName": "Demo script + scripted walkthrough (0 tests)"
   },
   "notes": [
+    "M35 T4 SHIPPED (commit 0f8b51c — 'docs(m35): M35 T4 — Phase 5 retrospective'). NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md (271 lines) authored per M35 plan doc §4.5 locked six-section structure: (1) What we shipped — M28 → M35 one-liners with commit range + test delta + architectural seam; (2) What went well — 10 compounding patterns (canned test-seam quartet / {rows, truncated} envelope / data-* selector surface / pause-aware providerRouter wrapper / AbortController stop / is_system filter-sweep / atomic+ledger cadence / ABI rebuild dance / pure-helpers + component split / invariant #11); (3) What cost us time — Vitest/Playwright ABI dance + sqlite-vec + FTS5 regression + malformed tool-call nudge-retry + F1/F2/F3/F4 + @/ alias cascade + docblock drift + test-count drift; (4) What we deferred — 9 items with Phase 6 sketches; (5) Metrics — test growth (612 → 1162 = +83%), E2E 4 → 11 specs / 12 cases, 43,919 insertions / 207 files, EventType 16 → 31, invariants 10 → 11, cadence 80% strict adherence; (6) Phase 6 seeds — 7 prioritized hypotheses. Cross-link added from design doc §13 Decisions Log. Zero code / zero tests / zero IPC/bus/migration work. Atomic commit + ledger cadence preserved (T4 atomic is docs(m35); ledger fold follows this entry). Head-of-queue advances to M35 T5 (Demo script + scripted walkthrough).",
     "M35 T3 SHIPPED (commit 51393f8 — 'feat(m35): M35 T3 — audit view chips for Phase 5 events'). Audit view chip coverage extended to 10 newly-chipped Phase 5 event types (rag.index.* ×3, agent.step, agentic.completed, agentic.failed, copilot.* ×4). New audit-event-chip-helpers.ts pure-helper module split from audit-event-chip.tsx component shell — mirrors step-card-narrow.ts + step-card.tsx convention so vitest resolves without `@/` alias config change. Test file imports from helpers module only. Payload-aware row-summary formatters surface the most useful payload field per event with a hard 140-char clamp invariant. A11y contract: semantic color paired with text label (WCAG 1.4.1), aria-label='Event type: <literal>' for screen readers, data-event-type stable E2E selector surface, focus ring inherited from Badge primitive. +28 unit tests (1134 → 1162; plan estimated +3 — shipped richer coverage per no-cutting-corners). Verification: 1162/1162 unit green (15.17s); typecheck clean; 0 lint errors / 24 warnings (surgical biome format --write on the 4 new/edited audit files + orchestrator.json pre-existing format drift). E2E NOT re-run (renderer-only chip change with no audit-view selectors asserted in any spec; M35 T1's comment+test-only precedent). Architectural surprise: rag.index.* events are aspirational per CLAUDE.md bus-event table but NOT currently emitted by rag-indexer.ts (keys only on work.completed + meeting.ended, writes via ragService.indexSource without a bus emit) — chips land defensively so audit rows surface correctly the moment the events start firing. Pre-ship T2 docblock-accuracy fix commit 54830fa rewrote two stale passages in phase-5-integration.spec.ts header that had claimed RagIndexer subscribes to vault bus events (same misread the user flagged via message correction). Atomic + ledger commit cadence held.",
     "M35 T2 SHIPPED (commit 1108247 — 'test(m35): M35 T2 — cross-milestone integration E2E spec'). New apps/desktop/e2e/phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a single 3.7-second Playwright run. Reuses the four-member canned-seam quartet (test-classifier + test-agentic-provider + test-agentic-tools + test-copilot-provider) with zero new entries — the existing canned keys + the __ECHO_AGENT__: sentinel path cover every transition. Launched with TEAM_X_RAG_TEST=1 alongside NODE_ENV=test so the RAG indexer subscribes and the chat round-trip in Step 1 produces a measurable embedding-count delta. Regression guards asserted inline: invariant #11 (copilot.dismissed lands on events table after dismiss), M30 destructive gate ABSENT across full session, M32 write-side gate fires ONLY in Step 3, Phase 5 top-bar badge verbatim. Verification gates green: 1134/1134 unit (unchanged), typecheck clean, 0 lint errors / 24 warnings, 12 E2E cases / 11 spec files in 40.6s total. Atomic + ledger commit cadence held — T2 shipped as its own test(m35) atomic commit followed by this ledger commit.",
     "M35 T1 SHIPPED (commit b68d09b — 'perf(m35): M35 T1 — performance defaults + clamp audit'). Evidence-based measurement pass across the 10 Phase 5 settings clamps against local Ollama + llama3.1:8b. Cold 208563 ms; warm 66847 / 65872 ms; 2288-char prompt / 734 prompt_eval tokens / ~200 eval tokens. All 10 defaults HELD — measurement justifies holding, not moving (66s warm tick vs 120s agentic_timeout_ms = 0.55× utilisation; 5-min copilot cadence vs 66s tick = 4.5× headroom; 8000 token budget vs 1600 projected = 4× headroom). Zero production behavior changes. +4 unit tests (1130 → 1134) pinning the measurement-held baseline (defaults snapshot + clamp envelope snapshot + [min,max] invariant + restart-reschedule regression guard). Verification: 1134/1134 unit green; typecheck clean; 0 lint errors / 24 warnings (pre-existing .loki/queue/pending.json format drift cleared surgically — the 'entity-resolver.ts:352' baseline attribution in M33/M34 notes was inaccurate). Full measurement block + per-clamp rationale table lives in apps/desktop/src/main/db/seed.ts header. Clamp envelopes untouched. M34-deviation from atomic + ledger commit cadence RESTORED — M35 T1 shipped as its own atomic perf(m35) commit followed by this ledger commit.",

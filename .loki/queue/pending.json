@@ -8,10 +8,10 @@
   "previousMilestoneCompletedAt": "2026-04-18T20:02:38Z",
   "previousMilestoneCommit": "af643ec",
   "createdAt": "2026-04-19T00:00:00Z",
-  "updatedAt": "2026-04-19T23:59:00Z",
+  "updatedAt": "2026-04-19T23:59:30Z",
   "totalTasks": 11,
-  "tasksShipped": 4,
-  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a 3.7s Playwright run; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa (rewrote two stale passages that claimed RagIndexer subscribes to vault bus events; verified at rag-indexer.ts:78,88 it keys on work.completed + meeting.ended only; spec body was already correct). M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — 10 new event types + payload-aware row summaries + 28 unit tests; +28 unit → 1162; chip module split into audit-event-chip-helpers.ts pure surface + audit-event-chip.tsx component shell per step-card-narrow convention). Head-of-queue is M35 T4 (Phase 5 retrospective doc). Tasks T4–T10 still pending from the plan doc §3 breakdown.",
+  "tasksShipped": 5,
+  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a 3.7s Playwright run; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa (rewrote two stale passages that claimed RagIndexer subscribes to vault bus events; verified at rag-indexer.ts:78,88 it keys on work.completed + meeting.ended only; spec body was already correct). M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — 10 new event types + payload-aware row summaries + 28 unit tests; +28 unit → 1162; chip module split into audit-event-chip-helpers.ts pure surface + audit-event-chip.tsx component shell per step-card-narrow convention). M35 T4 SHIPPED commit 0f8b51c (Phase 5 retrospective — NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md 271 lines; locked 6-section structure per plan §4.5; cross-link added from design doc §13 Decisions Log; zero code / zero tests). Head-of-queue is M35 T5 (Demo script + scripted walkthrough). Tasks T5–T10 still pending from the plan doc §3 breakdown.",
   "tasks": [
     {
       "id": "T0",
@@ -86,11 +86,22 @@
     {
       "id": "T4",
       "name": "Phase 5 retrospective doc",
-      "status": "pending",
-      "scope": "NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md. Locked 6-section structure per M35 plan doc §4.5: (1) What we shipped (M28–M34 one-liners) / (2) What went well (canned test seam quartet + {rows, truncated} envelope + data-* selector + pause-aware wrapper + AbortController stop + is_system filter-sweep + atomic+ledger cadence + ABI rebuild dance) / (3) What cost us time (Vitest/Playwright ABI dance + sqlite-vec extension load path + FTS5 regression + malformed tool-call parser nudge-retry + F1/F2/F3/F4 follow-ups) / (4) What we deferred (insight export / multi-company aggregation / drag-to-reorder / capabilities frontmatter / post-launch feedback loop) / (5) Metrics (test growth 612→1145 / E2E 4→11 / LOC delta / invariant count 10→11) / (6) Phase 6 seeds (cross-company rollups / proactive copilot autonomous action / agent-to-agent negotiation / real customer demo). 0 tests.",
-      "filesTouched": ["docs/plans/2026-04-19-team-x-phase-5-retrospective.md (NEW)"],
+      "status": "shipped",
+      "commit": "0f8b51c",
+      "shippedAt": "2026-04-19T23:59:30Z",
+      "scope": "NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md (271 lines). Locked 6-section structure per M35 plan doc §4.5: (1) What we shipped — M28 → M35 one-liners with commit range / test delta / architectural seam / (2) What went well — 10 compounding patterns (canned test-seam quartet + {rows, truncated} envelope + data-* stable selector surface + pause-aware providerRouter wrapper + AbortController stop + is_system filter-sweep + atomic+ledger cadence + ABI rebuild dance + pure-helpers+component split + invariant #11) / (3) What cost us time — Vitest/Playwright ABI dance + sqlite-vec extension load path + FTS5 regression birthing invariant #11 + malformed tool-call parser nudge-retry + F1/F2/F3/F4 follow-ups + @/ alias cascade + docblock accuracy drift + plan-vs-shipped test-count drift / (4) What we deferred — 9 items with Phase 6 sketches / (5) Metrics — test growth 612 → 1162 = +550 / +83% / E2E 4 → 11 specs / 12 cases / LOC 43,919 insertions / 207 files / EventType 16 → 31 / invariants 10 → 11 / cadence 80% strict atomic adherence / (6) Phase 6 seeds — 7 prioritized hypotheses (post-release telemetry digest / cross-company rollups / proactive copilot → autonomous action / agent-to-agent negotiation / capabilities frontmatter / real customer demo / insight export). Cross-link added from docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md §13 Decisions Log. 0 tests.",
+      "filesTouched": [
+        "docs/plans/2026-04-19-team-x-phase-5-retrospective.md (NEW, 271 lines)",
+        "docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md (+1 cross-link paragraph after §13 D12)"
+      ],
       "commitTemplate": "docs(m35): M35 T4 — Phase 5 retrospective",
-      "testsDelta": 0
+      "testsDelta": 0,
+      "verificationGates": {
+        "unitTests": "not re-run (docs-only delivery; 1162/1162 baseline preserved from M35 T3)",
+        "lint": "not re-run (no code surface)",
+        "typecheck": "not re-run (no TypeScript surface)",
+        "e2e": "not re-run (no renderer or main-process surface)"
+      }
     },
     {
       "id": "T5",
@@ -191,7 +202,7 @@
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfMilestone": "M35 T3 shipped (commit 51393f8)"
+    "asOfMilestone": "M35 T4 shipped (commit 0f8b51c)"
   },
   "targets": {
     "unitTests": 1145,
@@ -203,6 +214,7 @@
     "version": "1.0.0 → 1.1.0"
   },
   "notes": [
+    "M35 T4 (Phase 5 retrospective doc) SHIPPED 2026-04-19 commit 0f8b51c. NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md 271 lines with locked 6-section structure per M35 plan doc §4.5. Cross-link added from design doc §13 Decisions Log. Zero code / zero tests / zero IPC/bus/migration work. Unit baseline 1162 preserved; no verification gates re-run (docs-only delivery). Head-of-queue advances to M35 T5 (Demo script + scripted walkthrough).",
     "M35 T0 (plan doc) SHIPPED 2026-04-19 commit da4ce1f. Plan doc docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (186 lines) covers all Phase 5 design §9 M35 deliverables + Phase 5 exit gate.",
     "M35 T3 (audit view chips for Phase 5 events) SHIPPED 2026-04-19 commit 51393f8. 10 newly-chipped event types (rag.index.* ×3, agent.step, agentic.completed, agentic.failed, copilot.* ×4) + payload-aware row summaries + 28 unit tests. Unit baseline 1134 → 1162. Chip module split pattern established (audit-event-chip-helpers.ts pure + audit-event-chip.tsx component) mirrors the step-card-narrow convention and unblocks future renderer pure-helper extractions without vitest `@/` alias work.",
     "Phase 5 exit strategy: M35 is the only unshipped Phase 5 milestone. 11 tasks total (T0 + T1 + T2 + T3 done). After T10 lands, Phase 5 is COMPLETE and v1.1.0 ships. Next session is Phase 6 T0 (write Phase 6 plan doc — scope TBD).",
