@@ -116,8 +116,8 @@ test.describe('Team-X Phase 3 meeting flow', () => {
     // --- 1. App shell renders ------------------------------------------------
     await expect(window.getByText('Strategia-X', { exact: true })).toBeVisible();
     log('Strategia-X visible');
-    await expect(window.getByText('Phase 4', { exact: true })).toBeVisible();
-    log('Phase 4 badge visible');
+    await expect(window.getByText('Phase 5', { exact: true })).toBeVisible();
+    log('Phase 5 badge visible');
 
     // --- 2. Navigate to Meetings tab -----------------------------------------
     const meetingsTab = window.getByRole('button', { name: 'Meetings' });

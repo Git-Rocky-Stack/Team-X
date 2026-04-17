@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### M34 — Copilot UI (2026-04-18)
+
+> **Status:** Complete. Baseline: 1114 unit / 9 E2E (10 cases) → current: **1130 unit / 10 E2E (11 cases)** (+16 unit tests, +1 E2E spec). Renderer-only milestone — zero new IPC channels, zero new bus events, zero new providers.
+
+#### Added — Copilot sidebar panel + dashboard widget + `Cmd+Shift+K`
+- **`apps/desktop/src/renderer/src/features/copilot/copilot-sidebar.tsx`** — right-side Radix `Sheet` panel (focus trap + Esc dismissal + `role=dialog` inherited). Insight feed sorted `critical > warning > info` then newest-first within bucket. Ask textarea pinned at the bottom with Cmd/Ctrl+Enter submit; on success closes the sidebar and opens the chat drawer on the returned system-copilot thread via `useAppStore.openThread({ isCopilotThread: true })` so the M31 step-transcript layout renders automatically — zero duplicated wire code
+- **`apps/desktop/src/renderer/src/features/copilot/copilot-dashboard-widget.tsx`** — top-3 cap compact preview composed into the Dashboard Cards subview via `renderDashboard()`. Severity badge + category icon + action-suggestion button per card. `(View all (N) / Open sidebar)` footer link toggles the shared `copilotSidebarOpen` Zustand slice
+- **`apps/desktop/src/renderer/src/features/copilot/copilot-insight-card.tsx`** — shared card component with `variant: 'sidebar' | 'dashboard'`. Category icon map (operational=Activity, cost=DollarSign, org=Users, workflow=GitBranch, anomaly=AlertTriangle). Severity colour stripe + badge tokens (critical=`bg-red-950/60 text-red-300`, warning=`bg-amber-950/60 text-amber-300`, info=`bg-sky-950/60 text-sky-300`) — all WCAG AA verified against the dark-theme surface. Semantic `<li>` markup. `data-copilot-insight-id` / `-category` / `-severity` data attributes are the stable E2E selector surface (matches the M31 `data-step-kind` pattern)
+- **`apps/desktop/src/renderer/src/features/copilot/copilot-helpers.ts` + `.test.ts`** — pure helpers extracted for testability (no DOM, no IPC, no React). `sortBySeverity` (non-mutating, severity rank + `createdAt` tiebreak), `parseActionEntities` (defensive JSON parse — rejects arrays / primitives / null / non-string values per `IpcExecuteRequest.entities: Record<string, string>` contract), `pickDashboardTopN` (cap + `hasMore` + `total` projection). **16 unit tests** — matches the M32 T6 `step-card-narrow.ts` pattern
+- **`apps/desktop/src/renderer/src/hooks/use-copilot.ts`** — four React Query hooks: `useCopilotInsights(companyId, filters?)` (query with `staleTime: 30_000`, single `events.onDashboard` listener invalidates on `copilot.insight` / `copilot.dismissed` / `copilot.expired` per architectural invariant #11), `useDismissCopilotInsight()` (optimistic `onMutate` removes the row immediately, `onSettled` reconciles against server truth), `useAskCopilot()` (mutation returning `{ runId, threadId }` — the same `complex_request` wire shape M31 returns), `useCopilotConfigure()` (test-only manual-tick surface; production uses `settings.setCopilot` from M33 T7)
+- **Global keybinding — `Cmd+Shift+K` / `Ctrl+Shift+K`** — same single `App.tsx` keydown handler dispatches both `Cmd+K` (palette) and `Cmd+Shift+K` (copilot sidebar) based on `event.shiftKey`. Data-attribute bypass (`[data-copilot-sidebar-root]`) so the sidebar's own sheet (also `role=dialog`) does not block re-toggle
+- **Sparkles toolbar button** in `app/top-bar.tsx` — `data-copilot-toolbar-toggle`, `aria-pressed={copilotSidebarOpen}`, `aria-label="Toggle Copilot sidebar (Cmd+Shift+K)"`, title tooltip, active/inactive styling. Top-bar version badge bumped **`Phase 4` → `Phase 5`**
+- **Shared state slice** — `copilotSidebarOpen: boolean` + `setCopilotSidebarOpen(open)` added to `useAppStore` (`apps/desktop/src/renderer/src/store/app-store.ts`). Single source of truth shared by the `Cmd+Shift+K` handler, the Sparkles toolbar button, and the dashboard widget's "View all" link
+
+#### Added — E2E coverage
+- **`apps/desktop/e2e/copilot-ui.spec.ts`** — Playwright round-trip: seed ticket (`tickets.create + close`) → `copilot.configure` manual tick → assert `insightsGenerated ≥ 1` → click Sparkles toolbar → sidebar mounts → insight card visible via `data-copilot-insight-id` → active-count badge reads "1 active" → click dismiss X → card leaves DOM + `copilot.insights` IPC returns zero active → empty state renders → fill ask textarea with `__ECHO_AGENT__:` sentinel + click submit → sidebar closes → system-copilot thread resolved via `chat.listThreads` with `isSystemAgent=true` → regression guards on the M30 destructive gate + M32 T5 write-side gate both **absent**. Spec runtime **2.0s**
+- **Full E2E regression pass** — 10 specs / 11 cases green in 27.5s: smoke, ticket-flow, meeting-flow, vault-backup, rag-flow, command-palette, agentic-loop, task-planner, copilot-service, copilot-ui (NEW). Runtime `Phase 4` badge assertion updated to `Phase 5` in the four pre-existing specs (`smoke.spec.ts`, `ticket-flow.spec.ts`, `meeting-flow.spec.ts`, `vault-backup.spec.ts`) — runtime assertions only; describe titles and comment blocks preserved as-is for historical accuracy
+
+#### Changed
+- **Dashboard Cards subview** — now composes `<CopilotDashboardWidget />` above `<CardsView />` in `renderDashboard()`. Empty state when no insights are active; zero regression for fresh-boot users
+- **Root app shell (`App.tsx`)** — mounts `<CopilotSidebar />` alongside `<ChatDrawer />`, `<HireDialog />`, and `<CommandPalette />`. Keyboard handler dependency array grew to include `copilotSidebarOpen` + `setCopilotSidebarOpen` so the `Cmd+Shift+K` toggle reads the freshest store value
+
+#### Documentation
+- **NEW `docs/user-guide/copilot-ui.md`** — sidebar overview, dashboard widget, `Cmd+Shift+K` shortcut, insight card anatomy, ask-input workflow, confirmation-gate interactions, empty/error/keyboard-navigation notes
+- **Phase 5 design doc §9** — M34 row flipped `📋 Planned` → `✅ Complete`
+- **`CLAUDE.md`** — Phase 5 status line updated (M34 complete, M35 next). M34 milestone paragraph added (T1–T11 one-liners). Troubleshooting gains six new Copilot UI entries
+- **`docs/user-guide/keyboard-shortcuts.md`** — `Cmd+Shift+K` / `Ctrl+Shift+K` documented
+- **`README.md`** — feature list picks up the Copilot UI bullet
+
+#### Pre-implementation chore (bundled)
+- **Biome `pnpm lint:fix` sweep (T1, commit `f1180cf`)** — auto-formatted four pre-existing files (`apps/desktop/e2e/copilot-service.spec.ts`, `apps/desktop/src/main/ipc/handlers.ts`, `apps/desktop/src/main/services/backup.test.ts`) clearing the lint baseline before M34 implementation began. Pure whitespace / line-break normalization; zero behaviour change. Final lint: 0 errors, 24 warnings (all pre-existing `noNonNullAssertion` in `entity-resolver.ts` / `retriever.ts` / `chunker.ts` hot paths)
+
+---
+
 ### M33 — Follow-ups F3 + F4 (2026-04-18)
 
 > **Status:** Complete. Baseline: 1099 unit / 9 E2E → current: **1114 unit / 9 E2E** (+15 unit tests, 0 E2E). Closes the two deferred items from Phase 5 §16.

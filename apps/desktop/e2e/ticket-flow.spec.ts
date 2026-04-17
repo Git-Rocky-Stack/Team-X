@@ -123,8 +123,8 @@ test.describe('Team-X Phase 2 ticket flow', () => {
     // --- 1. App shell renders ------------------------------------------------
     await expect(window.getByText('Strategia-X', { exact: true })).toBeVisible();
     log('Strategia-X visible');
-    await expect(window.getByText('Phase 4', { exact: true })).toBeVisible();
-    log('Phase 4 badge visible');
+    await expect(window.getByText('Phase 5', { exact: true })).toBeVisible();
+    log('Phase 5 badge visible');
 
     // --- 2. Seeded employees present (needed for assignment) -----------------
     const sweCard = window.locator('button[aria-label^="Mateo Reyes, Senior Fullstack Engineer"]');

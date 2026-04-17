@@ -48,6 +48,21 @@ On macOS, use `Cmd` instead of `Ctrl`.
 | `Ctrl+M` | Call new meeting |
 | `Enter` | Send interjection (during active meeting) |
 
+## Command Palette and Copilot
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+K` / `Ctrl+K` | Toggle the command palette (Phase 5 — M30) |
+| `Cmd+Shift+K` / `Ctrl+Shift+K` | Toggle the Copilot sidebar (Phase 5 — M34) |
+| `Cmd+Enter` / `Ctrl+Enter` | Submit text in the palette / copilot ask input |
+
+Both the palette and the copilot sidebar share the `K` key — a single
+handler dispatches on `event.shiftKey`. When focus is inside another
+Radix dialog (Hire dialog, confirmation gates), the outer handler
+swallows the shortcut so those modals stay in control. The Copilot
+sidebar is itself a dialog but sets `data-copilot-sidebar-root` so its
+own toggle still works from inside it.
+
 ## General
 
 | Shortcut | Action |

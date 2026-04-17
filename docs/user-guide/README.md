@@ -13,4 +13,6 @@ Welcome to the Team-X user guide. These docs cover everything you need to run yo
 7. [Command Palette](command-palette.md) — Natural-language commands (Cmd+K), 15 intents, destructive-action gate
 8. [Agentic Loop](agentic-loop.md) — Ask free-form questions, grounded answers from the system-agent, 6 read-only tools, budget caps
 9. [Task Planner](task-planner.md) — Decompose projects into tickets, delegate with deterministic workload scoring, review deliverables, write-side confirmation gate
-10. [Keyboard Shortcuts](keyboard-shortcuts.md) — Navigation and productivity shortcuts
+10. [Copilot Service](copilot-service.md) — Periodic analyzer that surfaces operational / cost / org / workflow / anomaly insights, ask-the-copilot
+11. [Copilot UI](copilot-ui.md) — Sidebar panel + dashboard widget + `Cmd+Shift+K` shortcut for consuming copilot insights
+12. [Keyboard Shortcuts](keyboard-shortcuts.md) — Navigation and productivity shortcuts
