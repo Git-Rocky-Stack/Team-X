@@ -1,5 +1,60 @@
 # Loki Continuity — Phase 5, **M35 T5 SHIPPED** (Demo walkthrough + 5-scenario library authored under `docs/demo/` — single `phase-5-walkthrough.md` overall arc + 5 scenario stubs covering Phase 1 hire-a-CEO / Phase 2 ticket-lifecycle-with-MCP / Phase 3 one-click-all-hands / Phase 5 M30+M31 read-side grounded-answer / Phase 5 M32+M33+M34 write-side decompose-and-surface; 795 insertions across 6 new files + 1 retrospective §6.6 cross-link; zero code / zero tests / zero IPC/bus/migration work; 2nd consecutive pure-markdown deliverable after the retrospective — both tasks land the Phase 5 exit-gate documentation requirement). M35 T6 (README + user-guide reconciliation sweep) is head-of-queue. Phase 5 exit is 5 tasks away.
 
+## M35 T8 SHIPPED — 2026-04-20 — v1.0.0 → v1.1.0 + Phase 5 badge pin (a8dc98e)
+
+**Task:** M35 T8 — bump the repository version to the Phase 5 Intelligence Layer release marker, pin the top-bar badge so a premature `"Phase 6"` flip fails CI, and confirm no stale `1.0.0` claims survive outside CHANGELOG. (M35 plan doc §3 T8 row; plan's literal "all 6" count was a plan-authoring drift — reconciled via `find` sweep to the actual seven package.json files.)
+**Atomic commit:** `a8dc98e` — `chore(m35): M35 T8 — v1.0.0 → v1.1.0 + Phase 5 badge pin`.
+**Ledger commit:** `chore(loki): M35 T8 — commit ledger (a8dc98e)` (this commit).
+**Plan reference:** [M35 plan T8](../docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md#3-task-breakdown).
+
+### What shipped
+
+- **7 package.json version bumps** — root `package.json`, `apps/desktop/package.json`, and 5 packages (`shared-types`, `role-schema`, `provider-router`, `telemetry-core`, `intelligence`) all flipped `1.0.0 → 1.1.0` atomically. Repo-wide consistency via `find . -name 'package.json' -not -path '*/node_modules/*' -exec grep -l '"version"' {} \;` before the sweep and after to verify. Plan's literal "all 6" was a plan-authoring drift — honored the find-based actual count (7) over the static list.
+- **NEW `apps/desktop/src/renderer/src/app/top-bar.test.tsx`** (+2 unit tests → **1164**, exactly at target 1162+2) — source-string audit style per the M35 T3 convention. Test 1 matches `<Badge…>…</Badge>` via whitespace-tolerant regex against `top-bar.tsx` and asserts trimmed children === `'Phase 5'`. Test 2 `JSON.parse`s `apps/desktop/package.json` and asserts `version === '1.1.0'`. Both tests use pure `node:fs` + `node:path` + `node:url` — no jsdom, no React rendering, because the per-workspace `apps/desktop/vitest.config.ts` runs `environment: 'node'` and every renderer test to date (M30 T7, M32 T6, M34 T9, M35 T3) follows the source-string-audit convention.
+
+### Verification gates passed
+
+- ✅ `pnpm test` — **1164 passed (1164)**, 101 test files, 22.02s. Exactly target.
+- ✅ Node ABI smoke — `better-sqlite3` loaded against system Node without mismatch (skipped the electron-rebuild dance, which this session did not need).
+- ✅ sqlite-vec stderr from `vec-init.test.ts` is the known graceful-fallback path from M28 (test passes ✓ asserting the fallback shape).
+- ✅ Grep audit clean — non-CHANGELOG `1.0.0` references are only `.github/workflows/release.yml:3` (comment uses `v1.0.0` as an example) and `.loki/*` working memory (updated in this ledger commit). CHANGELOG `[1.0.0]` release marker and version-link ref preserved per T7 framing.
+- ✅ Atomic cadence — work commit `a8dc98e` before ledger commit.
+
+### Path correction vs plan doc
+
+Plan doc §3 T8 row speculated `apps/desktop/src/renderer/src/components/app/top-bar.test.tsx`. Real location is `apps/desktop/src/renderer/src/app/top-bar.tsx` (no `components/` subdir). Test file placed beside the component; updated CLAUDE.md-adjacent memory accordingly.
+
+### Carry-forward from T7 (honored)
+
+- ✅ **"DO NOT invent" rule** — M28 + M29 had no `[Unreleased]` entries at start-of-T7, not backfilled. T8 did NOT re-open that question. The CHANGELOG `[1.1.0]` header-level scope statement covers M28/M29 at the phase-narrative level, and that is the intentional shape per T7 surpriseNote.
+- ✅ **No CHANGELOG edits in T8** — T7 closed that surface. T8 only touched package.json versions + the new test file.
+
+### Gotchas captured this session
+
+- `apps/desktop/vitest.config.ts` runs `environment: 'node'`, so DOM-based React tests are not available to renderer-side unit tests. The M35 T3 chip test made this explicit; T8's top-bar test reinforces the convention. If a future renderer test genuinely needs DOM, the right call is to extend to Playwright (not introduce jsdom, which would be a heavy regression for two pinned literals).
+- Relative path from `apps/desktop/src/renderer/src/app/` to `apps/desktop/package.json` is exactly 4 `..` segments (`app` → `src` → `renderer` → `src` → `apps/desktop/`). Off-by-one here would silently read the wrong file — test asserts `typeof parsed.version === 'string'` as a secondary guard against a successful JSON parse of an unintended file.
+- The `<Badge …>Phase 5</Badge>` regex matches whitespace-tolerantly on both sides of the children to absorb JSX formatting drift from Biome or a future Prettier bump.
+
+### Patterns reinforced
+
+- **Source-string audit convention** (T3 → T8) — for renderer-side freeze tests, read the component file and assert literal content. No jsdom, no React renderer. Cheapest possible canary for literal UI strings.
+- **Find-based sweep over static file lists** — when a plan doc enumerates N files but `find` surfaces N+1, honor `find` for repo-wide consistency and note the drift in the commit body. Plan-authoring drift is normal; enforce reality at commit time.
+- **Two-commit atomic + ledger cadence** (continues from T5/T6/T7) — work commit stages only the feature surface (package.json + test file); ledger commit updates `.loki/state/orchestrator.json` + `.loki/queue/pending.json` + `.loki/queue/current-task.json` + this CONTINUITY append.
+
+### Next Session Startup Checklist (M35 T9)
+
+1. Read this CONTINUITY entry for T8 rollup context.
+2. Read `.loki/state/orchestrator.json` → `inflight.taskId: 'M35-T9'`, `lastShippedCommit: 'a8dc98e'`, `current.unitTests: 1164`.
+3. Read `.loki/queue/current-task.json` → full T9 spec (flaky-test audit + stable-selector sweep, +2 unit tests → 1166).
+4. **Placement discipline for the regression-guards test** — `apps/desktop/vitest.config.ts` EXCLUDES `e2e/**`. The new test that scans `apps/desktop/e2e/*.spec.ts` files from disk must live under `apps/desktop/src/` so vitest picks it up. Recommended path: `apps/desktop/src/e2e-regression-guards.test.ts`.
+5. **Test #1 (flake audit):** `readdirSync` walk `apps/desktop/e2e/*.spec.ts`, regex for `\.waitForTimeout\(\s*(\d+)` and top-level `setTimeout\s*\(` synchronization primitives. Floor: 100 ms. Above 100 ms requires a comment explaining why (kanban drag-drop settling, for instance).
+6. **Test #2 (stable-selector sweep):** for each E2E spec, regex-assert at least one `data-[a-z][a-z0-9-]*` attribute selector occurrence. Anchors the M30 `data-step-kind` + M33 `data-copilot-insight-id` + M34 `data-copilot-toolbar-toggle` pattern.
+7. **Optional M30 T2 lint clearance** — `packages/intelligence/src/nlu/entity-resolver.ts:352`. Likely already dormant (current.lintErrors is 0); grep + `pnpm lint` first; only edit if the run genuinely flags.
+8. After T9 ships, T10 is pure verification + docs reconciliation + milestone marker. T10 should reconcile the stale T5-era banner at the top of this CONTINUITY file (last updated 2026-04-19 — T6/T7/T8 have all shipped since without touching it).
+9. Commit cadence: work commit `test(m35): M35 T9 — flaky-test audit + stable selector sweep` + ledger commit `chore(loki): M35 T9 — commit ledger (<sha>)`.
+
+---
+
 ## M35 T5 SHIPPED — 2026-04-19 — Demo walkthrough + scenario library (3cffe29)
 
 **Task:** M35 T5 — author the Phase 5 demo script as the foundation for the future Phase 5 demo video + customer-demo coordination with Strategia-X marketing. (M35 plan doc §3 T5 row.)

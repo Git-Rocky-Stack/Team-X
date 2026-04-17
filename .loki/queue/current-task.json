@@ -1,46 +1,50 @@
 {
-  "taskId": "M35-T8",
+  "taskId": "M35-T9",
   "milestone": "M35",
   "milestoneName": "Demo + Hardening",
   "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T8 row)",
-  "title": "Version bump 1.0.0 → 1.1.0 + Phase 5 badge freeze unit test",
+  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T9 row)",
+  "title": "Regression hardening — flaky-test audit + stable selector sweep",
   "status": "pending",
-  "predecessor": "M35-T7 shipped 2026-04-20 (commit cb0ab4c — 'docs(m35): M35 T7 — CHANGELOG [Unreleased] → [1.1.0]'). Promoted [Unreleased] (M30 + M31 + M32 + M33 + M33 F3/F4 + M34 entries) into [1.1.0] — 2026-04-20 under new 'Phase 5 — Intelligence Layer' narrative header; reset [Unreleased] to six-category scaffold; introduced bottom-of-file version-link refs for [Unreleased] / [1.1.0] / [1.0.0]. Zero code / zero tests. Unit baseline 1162 preserved. Predecessors T0 (da4ce1f plan doc) → T1 (b68d09b perf defaults held) → T2 (1108247 cross-milestone E2E) → T3 (51393f8 audit view chips) → T4 (0f8b51c retrospective) → T5 (3cffe29 demo walkthrough) → T6 (a966deb README sweep) → T7 (cb0ab4c CHANGELOG promotion).",
-  "goal": "Bump the repository version from 1.0.0 → 1.1.0 across every package.json that carries a version (workspace root + apps/desktop + 5 packages/* — confirm via find before edit; plan doc §3 T8 row lists 7 files and uses the literal phrase 'all 6' which was a plan-authoring drift). Add a unit test pinning the top-bar badge literal string 'Phase 5' so an accidental bump to 'Phase 6' before Phase 6 work officially begins is caught by CI. Verify no other file (docs, comments, strings, constants) references the OLD 1.0.0 version in a way that would semantically claim the v1.0.0 release marker. Tests delta: +2 unit (1162 → 1164).",
+  "predecessor": "M35-T8 shipped 2026-04-20 (commit a8dc98e — 'chore(m35): M35 T8 — v1.0.0 → v1.1.0 + Phase 5 badge pin'). Bumped version field 1.0.0 → 1.1.0 across 7 workspace package.json files (root + apps/desktop + 5 packages/*, matching a repo-wide find sweep — plan doc's literal 'all 6' was a plan-authoring drift). Added NEW apps/desktop/src/renderer/src/app/top-bar.test.tsx (+2 unit tests → 1164) via source-string audit style per M35 T3 convention (no jsdom, no React rendering — vitest env is 'node'). Test 1 matches <Badge>…</Badge> regex in top-bar.tsx and asserts trimmed children === 'Phase 5' (canary against accidental Phase 6 flip). Test 2 JSON.parse of apps/desktop/package.json asserts version === '1.1.0' (semver pin). Path correction: top-bar.tsx lives at apps/desktop/src/renderer/src/app/ (NOT the plan-speculative .../components/app/). Grep audit clean — no stale 1.0.0 claims outside CHANGELOG.md and release.yml's example 'v1.0.0' comment. Predecessors T0 (da4ce1f) → T1 (b68d09b) → T2 (1108247) → T3 (51393f8) → T4 (0f8b51c) → T5 (3cffe29) → T6 (a966deb) → T7 (cb0ab4c) → T8 (a8dc98e). Unit baseline now 1164. E2E baseline 11 spec files / 12 Playwright cases (from T2).",
+  "goal": "Two small regression guards that harden the test suite against flake and against authors forgetting to use the data-* stable-selector pattern the M30/M31/M32/M34 specs established. (a) Regex-scan every apps/desktop/e2e/*.spec.ts and flag any `page.waitForTimeout(N)` or equivalent `setTimeout`-for-sync patterns where N > 100 ms — prefer `expect.poll` / `toPass` / `waitFor` instead. (b) Regex-scan every spec and assert at least one `data-*` attribute locator is used somewhere in the file (per the M30 data-step-kind, M33 data-copilot-insight-id, M34 data-copilot-toolbar-toggle convention). (c) Optional — clear the M30 T2 pre-existing lint error at packages/intelligence/src/nlu/entity-resolver.ts:352 if it is still dormant (orchestrator.json baseline.lintErrorsNote references it; current.lintErrors is already 0, so this is belt-and-suspenders). Tests delta: +2 unit (1164 → 1166). Zero spec-behavior changes unless the scan flags a real offender — in which case fix the offending spec in the same commit.",
   "acceptance": [
-    "Every package.json in the workspace with a `version` field flips 1.0.0 → 1.1.0 atomically. Concretely: `package.json` (root), `apps/desktop/package.json`, `packages/shared-types/package.json`, `packages/role-schema/package.json`, `packages/provider-router/package.json`, `packages/telemetry-core/package.json`, `packages/intelligence/package.json`. If `find` surfaces additional package.json files with a `version` field, they get bumped too — the goal is repo-wide consistency, not a fixed file list.",
-    "One new unit test pinning the literal top-bar badge string to 'Phase 5' (not 'Phase 6', not 'Phase 5.x'). Placement: extend `apps/desktop/src/renderer/src/components/app/top-bar.test.tsx` if it exists, otherwise NEW file with that name. Test asserts the badge renders with textContent === 'Phase 5'. Accuracy: the badge component lives in the top-bar — verify exact import path during authoring; do not invent.",
-    "One new unit test pinning the desktop package.json `version` field to '1.1.0'. Placement: a small repo-level vitest spec that reads `apps/desktop/package.json` (or root `package.json`) and asserts `version === '1.1.0'`. Together with #2 this is the +2 testsDelta.",
-    "Grep audit: scan repo for literal '1.0.0' occurrences. Expected survivals: CHANGELOG.md [1.0.0] release marker + version-link ref (both correct and must be preserved), retrospective metrics mentions, docs referencing v1.0.0 as a historical baseline. Flag any occurrence that claims the CURRENT release is 1.0.0 — fix in-place. Examples to watch: landing-site `docs/site/index.html` if it prints a version badge, README.md version badges if any, any in-code constant.",
-    "Atomic commit: `chore(m35): M35 T8 — v1.0.0 → v1.1.0 + Phase 5 badge pin`.",
-    "Ledger commit: `chore(loki): M35 T8 — commit ledger (<sha>)` — roll orchestrator.json tasksCompleted 8 → 9 + inflight {taskId: M35-T9, lastShipped: M35-T8, lastShippedCommit: <sha>}, update pending.json T8 status pending → shipped with commit + shippedAt + verificationGates, overwrite current-task.json to M35-T9 (regression hardening — flaky-test audit + stable selector sweep).",
-    "Tests green after bump: full vitest run (1162 + 2 = 1164) and Electron rebuild + Playwright (11 spec files / 12 cases) stay green. The Playwright pass matters specifically because the Phase 5 badge assertion is live in 5 specs (smoke / ticket-flow / meeting-flow / vault-backup / copilot-ui); a stale badge regression would surface here before landing.",
-    "Typecheck clean across all 6 workspace packages after the bump. Lint 0 errors / ≤24 warnings preserved.",
-    "ABI rebuild dance: (a) Node ABI before vitest: `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install`; (b) Electron ABI before Playwright: `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. This is the verified M31+M32+M33 recipe; skip it and the first test suite burns 23+ NODE_MODULE_VERSION failures."
+    "NEW vitest spec scanning e2e/*.spec.ts files. Placement discipline: the per-workspace apps/desktop/vitest.config.ts EXCLUDES e2e/** — a regression-guards test must live under src/ so vitest picks it up. Recommended path: apps/desktop/src/e2e-regression-guards.test.ts. Recon the config before authoring; do not invent a sibling directory unless vitest config is extended in lockstep.",
+    "Test #1 (flake audit): use readdirSync to walk apps/desktop/e2e/*.spec.ts; for each file, regex for `\\.waitForTimeout\\(\\s*(\\d+)` and any `setTimeout\\s*\\(` used as a synchronization primitive. Assert zero matches where the numeric argument exceeds 100 ms (the 100ms floor allows drag-lag quirks without masking real polls). If matches exist, fix the offending spec in the SAME commit by swapping to `expect.poll` / `toPass` / `locator.waitFor` and re-run E2E to green before continuing.",
+    "Test #2 (stable-selector sweep): for each apps/desktop/e2e/*.spec.ts, regex-assert at least one `data-[a-z][a-z0-9-]*` attribute selector occurrence (e.g. `[data-copilot-insight-id]`, `[data-step-kind=...]`, `[data-copilot-toolbar-toggle]`). Text-content fallbacks (`getByText`, `getByRole({ name: ... })`) are fine as secondary matchers but each spec must include at least one data-* to anchor the stable-selector contract.",
+    "Optional M30 T2 lint clearance: packages/intelligence/src/nlu/entity-resolver.ts:352 — if `pnpm lint` still surfaces the pre-existing error, fix in-line. Current `orchestrator.json.current.lintErrors: 0` suggests M35 T1 already neutralized it, so skip cleanly if dormant — only touch the file if the lint run genuinely flags it.",
+    "Tests green after addition: full `pnpm test` (1164 + 2 = 1166) and Electron rebuild + Playwright (11 spec files / 12 cases) stay green. If Playwright surfaces any flake during the T9 pass, capture the flake shape + fix in the same T9 commit — T9's explicit purpose is hardening against flake.",
+    "Atomic commit: `test(m35): M35 T9 — flaky-test audit + stable selector sweep`.",
+    "Ledger commit: `chore(loki): M35 T9 — commit ledger (<sha>)` — roll orchestrator.json tasksCompleted 9 → 10 + inflight {taskId: M35-T10, lastShipped: M35-T9, lastShippedCommit: <sha>}, update pending.json T9 status pending → shipped with commit + shippedAt + verificationGates, overwrite current-task.json to M35-T10 (final verification + docs reconciliation + milestone marker)."
   ],
-  "filesTouched": [
-    "package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-    "apps/desktop/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-    "packages/shared-types/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-    "packages/role-schema/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-    "packages/provider-router/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-    "packages/telemetry-core/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-    "packages/intelligence/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
-    "apps/desktop/src/renderer/src/components/app/top-bar.test.tsx (NEW or EXTEND — +1 badge pin test)",
-    "apps/desktop/src/renderer/src/lib/__tests__/version.test.ts (NEW — package.json version pin, path subject to confirmation during authoring)"
+  "outOfScope": [
+    "NO version changes (T8 closed that surface).",
+    "NO CHANGELOG edits (T7 closed that surface).",
+    "NO CLAUDE.md edits (T10 handles the Phase 5 COMPLETE line flip).",
+    "NO retrospective / demo / user-guide edits (T4 / T5 / T6 closed those surfaces).",
+    "NO sweeping spec rewrites — minimal surgical edits only where a guard catches a real offender."
   ],
-  "tests": "+2 unit tests (1162 → 1164)",
   "carryForward": [
-    "M35 T7 closed: CHANGELOG.md [Unreleased] → [1.1.0] promotion under 'Phase 5 — Intelligence Layer' header; six-category [Unreleased] scaffold; bottom-of-file version-link refs introduced. Commit cb0ab4c. Zero tests. 8 of 11 M35 tasks shipped; 3 remaining (T8 / T9 / T10).",
-    "M28 + M29 CHANGELOG entries ARE MISSING from [1.1.0] — surfaced during T7 acceptance pass but deliberately NOT backfilled per 'DO NOT invent' carry-forward rule. If Phase 6 T0 or a retrospective patch wants to backfill them into [1.1.0] retroactively, that's a future-phase decision. The release header-level scope statement ('RAG foundation (M28), RAG into agent turns (M29)') preserves scope faithfulness without claiming content that was never authored.",
-    "Test baseline current at 1162 unit / 11 E2E specs / 12 Playwright cases (as of M35 T3). T8 target +2 unit → 1164. T9 target +2 unit → 1166. T10 verification is the final gate.",
-    "Phase 5 badge FROZEN at 'Phase 5' through v1.1.0 release. DO NOT bump to 'Phase 6' in the top-bar component — that is a Phase 6 T0 concern. The badge-pin unit test this task adds is the insurance against an accidental premature bump.",
-    "v1.0.0 shipped 2026-04-13 as the Phase 4 ship-readiness release (CLAUDE.md M27 marker); v1.1.0 is the Phase 5 Intelligence Layer release — additive (RAG + NLU + agentic + planner + copilot + copilot UI + demo hardening), zero breaking changes, minor version bump per semver. Reinforces the T7 CHANGELOG framing.",
-    "ABI state at start of T8: Node (post M35 T7 — T7 was docs-only, no rebuild). T8 introduces unit tests so Node ABI rebuild is required before vitest; no E2E run expected at T8 (that lands at T10 verification).",
-    "Commit cadence: single chore(m35) atomic commit for the bump + badge-pin test; single chore(loki) ledger commit. Both same session. Atomic + ledger cadence held T1-T7; T8 preserves it.",
-    "Scope boundary: NO other version-string edits outside package.json + tests; NO CHANGELOG edits (T7 closed that surface); NO CLAUDE.md edits (T10 handles the Phase 5 COMPLETE line flip); NO retrospective edits. Bump + badge-pin test only. Target under 20 minutes.",
-    "Surprise watch: (a) root package.json may not carry a `version` field (pnpm workspace roots often omit it). If it does, bump. If it doesn't, document in the commit body. (b) the 'apps/desktop/src/renderer/src/components/app/top-bar.test.tsx' path is plan-speculative — confirm via `find apps/desktop/src/renderer/src -name 'top-bar*'` before authoring; may live elsewhere. (c) landing-site `docs/site/index.html` is likely the biggest risk for a stale '1.0.0' reference — grep explicitly. (d) Plan-doc-vs-reality count drift: plan doc §3 T8 row says 'all 6 package.json files' but lists 7; honor the find-based repo-wide sweep over the static count.",
-    "Risk watch: If pnpm workspace root's package.json doesn't have a version field, the +1 unit test pinning `version === '1.1.0'` should target a file that definitively has it (apps/desktop/package.json is the safest anchor — it's the Electron app's own version and electron-builder uses it for installer naming). If reading via `fs.readFileSync` inside a vitest test, use `path.resolve(__dirname, ...)` to avoid CWD-dependent test fragility."
-  ]
+    "'DO NOT invent' rule from T7 surpriseNote + T8 carry-forward continues to apply. M28 + M29 still have no [Unreleased] entries and that is intentional — do NOT backfill.",
+    "The source-string audit convention (T3 / T8) remains the preferred style for renderer-side unit tests given the node-only vitest environment. If a T9 guard needs browser DOM, don't introduce jsdom — keep it in Playwright.",
+    "The M31 data-step-kind + M33 data-copilot-insight-id + M34 data-copilot-toolbar-toggle attribute pattern is the canonical stable-selector surface — T9 asserts the pattern, doesn't extend it.",
+    "Atomic work commit + separate ledger commit cadence (CLAUDE.md M35 T7 framing) unchanged."
+  ],
+  "surpriseWatch": [
+    "(a) Vitest config: apps/desktop/vitest.config.ts EXCLUDES e2e/**. A regression-guards test that reads e2e/*.spec.ts files from disk must live under src/ to be picked up.",
+    "(b) Windows path handling: readdirSync against apps/desktop/e2e/ returns bare filenames without the parent prefix. Build paths explicitly with path.join to avoid platform flake.",
+    "(c) False-positive on test fixtures: if any E2E spec stores a 'setTimeout' literal inside a canned-provider fixture string (unlikely but possible), the regex may flag it. Use a multi-line regex that only matches top-level `page.waitForTimeout(` calls, not arbitrary substring matches.",
+    "(d) M30 T2 lint row may already be dormant — T1 cleared the error baseline. Don't re-introduce the error by over-editing the file; grep + run `pnpm lint` first.",
+    "(e) Playwright flake shape: if any of the 11 spec files go red during the T9 verification run, treat it as a legitimate T9 target (hardening against flake IS the task). Capture the flake in the commit body."
+  ],
+  "risks": [
+    "If the regression-guards test is placed under apps/desktop/e2e/ by accident, vitest won't pick it up and the guard silently never runs. Placement discipline is the single biggest T9 risk.",
+    "If the waitForTimeout regex catches a legitimate drag-drop settling delay (kanban specs occasionally need ~200ms for React DnD to settle), the mechanical rule conflicts with UX realities. The 100ms floor is the negotiation — above 100ms should have a comment explaining why.",
+    "If the data-* assertion breaks a spec that genuinely has none (e.g. a pure text-content test), T9 must add a minimal data-* attribute to the surface under test rather than weaken the assertion."
+  ],
+  "commitTemplate": "test(m35): M35 T9 — flaky-test audit + stable selector sweep",
+  "ledgerTemplate": "chore(loki): M35 T9 — commit ledger (<sha>)",
+  "testsDelta": 2,
+  "expectedDuration": "30–45 minutes (regex plumbing + full Playwright rerun)",
+  "notes": "T9 is the last active-development task before T10, which is pure verification + docs reconciliation + milestone marker. After T10, M35 is complete, Phase 5 is complete, and the next session opens Phase 6."
 }

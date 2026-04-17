@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M35",
   "milestoneName": "Demo + Hardening",
-  "tasksCompleted": 8,
+  "tasksCompleted": 9,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md",
@@ -10,9 +10,9 @@
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {
-    "taskId": "M35-T8",
-    "lastShipped": "M35-T7",
-    "lastShippedCommit": "cb0ab4c"
+    "taskId": "M35-T9",
+    "lastShipped": "M35-T8",
+    "lastShippedCommit": "a8dc98e"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M34",
@@ -32,14 +32,14 @@
     "asOfMilestone": "M34 complete (commit af643ec)"
   },
   "current": {
-    "unitTests": 1162,
+    "unitTests": 1164,
     "e2eSpecs": 11,
     "e2eGreenCount": 12,
     "lintErrors": 0,
-    "lintErrorsNote": "M35 T7 (CHANGELOG promotion [Unreleased] → [1.1.0]) was a pure-docs delivery — zero code, zero tests, zero lint surface. M35 T6 (README + user-guide reconciliation sweep), T5 (Demo walkthrough + scenario library), and T4 (Phase 5 retrospective) were also pure-docs. M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts. M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests → 1162). 0-error baseline preserved.",
+    "lintErrorsNote": "M35 T8 (v1.0.0 → v1.1.0 bump across 7 package.json files + Phase 5 badge freeze unit test at apps/desktop/src/renderer/src/app/top-bar.test.tsx) added +2 unit tests (1162 → 1164) via source-string audit style matching M35 T3 convention — no jsdom, no React rendering. M35 T7 (CHANGELOG promotion [Unreleased] → [1.1.0]) was a pure-docs delivery — zero code, zero tests, zero lint surface. M35 T6 / T5 / T4 were also pure-docs. M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts. M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests). 0-error baseline preserved.",
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "M35-T7 (commit cb0ab4c)"
+    "asOfTask": "M35-T8 (commit a8dc98e)"
   },
   "targets": {
     "unitTests": "~1167+ (revised up from plan estimate ~1145 after M35 T3 shipped +28 unit vs plan's +3; M35 T5 docs-only preserves baseline at 1162; further +5 expected from T8 version-bump +2 + T9 regression-hardening +2 unit tests — precise count lands at T10 verification gate)",

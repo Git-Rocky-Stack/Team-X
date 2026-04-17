@@ -8,10 +8,10 @@
   "previousMilestoneCompletedAt": "2026-04-18T20:02:38Z",
   "previousMilestoneCommit": "af643ec",
   "createdAt": "2026-04-19T00:00:00Z",
-  "updatedAt": "2026-04-20T00:00:30Z",
+  "updatedAt": "2026-04-20T11:56:30Z",
   "totalTasks": 11,
-  "tasksShipped": 8,
-  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a 3.7s Playwright run; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa. M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — 10 new event types + payload-aware row summaries + 28 unit tests; +28 unit → 1162). M35 T4 SHIPPED commit 0f8b51c (Phase 5 retrospective — NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md 271 lines; locked 6-section structure per plan §4.5; zero code / zero tests). M35 T5 SHIPPED commit 3cffe29 (demo walkthrough + 5-scenario library — NEW docs/demo/phase-5-walkthrough.md + 5 scenario stubs; 795 insertions across 6 new files + 1 retrospective §6.6 cross-link; zero code / zero tests). M35 T6 SHIPPED commit a966deb (README + user-guide reconciliation sweep — root README.md + docs/user-guide/README.md reconciled against M35 baseline; zero code / zero tests). M35 T7 SHIPPED commit cb0ab4c (CHANGELOG promotion [Unreleased] → [1.1.0] — M30 + M31 + M32 + M33 + M33 F3/F4 + M34 entries promoted to [1.1.0] — 2026-04-20 under 'Phase 5 — Intelligence Layer' narrative header; [Unreleased] reset to six-category scaffold; version-link refs introduced; zero code / zero tests). Head-of-queue is M35 T8 (version bump 1.0.0 → 1.1.0 + Phase 5 badge freeze unit test, 2 tests). Tasks T8–T10 still pending from the plan doc §3 breakdown.",
+  "tasksShipped": 9,
+  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa. M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — +28 unit → 1162). M35 T4 SHIPPED commit 0f8b51c (Phase 5 retrospective — 271 lines; zero code). M35 T5 SHIPPED commit 3cffe29 (demo walkthrough + 5-scenario library; zero code). M35 T6 SHIPPED commit a966deb (README + user-guide reconciliation sweep; zero code). M35 T7 SHIPPED commit cb0ab4c (CHANGELOG promotion [Unreleased] → [1.1.0] under 'Phase 5 — Intelligence Layer' narrative header; version-link refs introduced; zero code). M35 T8 SHIPPED commit a8dc98e (version bump 1.0.0 → 1.1.0 across 7 package.json files + Phase 5 badge freeze unit test at apps/desktop/src/renderer/src/app/top-bar.test.tsx; +2 unit → 1164). Head-of-queue is M35 T9 (regression hardening — flaky-test audit + stable selector sweep, 2 unit tests). Tasks T9–T10 still pending from the plan doc §3 breakdown.",
   "tasks": [
     {
       "id": "T0",
@@ -168,20 +168,28 @@
     {
       "id": "T8",
       "name": "Version bump 1.0.0 → 1.1.0 + Phase 5 badge freeze unit test",
-      "status": "pending",
-      "scope": "Bump version field to 1.1.0 in all 6 package.json files (root + apps/desktop + 4 packages/*). Add a one-line unit test pinning the top-bar badge literal string 'Phase 5' (catches accidental bump to 'Phase 6' before Phase 6 work begins). Verify no other file references the old version (grep for 1.0.0 across repo). 2 unit tests: version === 1.1.0 on desktop + root; top-bar badge === 'Phase 5'.",
+      "status": "shipped",
+      "commit": "a8dc98e",
+      "shippedAt": "2026-04-20T11:56:30Z",
+      "scope": "Repo-wide find-based sweep bumped version field 1.0.0 → 1.1.0 in 7 package.json files (not 6 — plan doc §3 T8 literal 'all 6' was a plan-authoring drift, reconciled via find). Bumped files: root package.json, apps/desktop/package.json, and 5 packages/* (shared-types, role-schema, provider-router, telemetry-core, intelligence). Added two unit tests at apps/desktop/src/renderer/src/app/top-bar.test.tsx (NEW file) via source-string audit per M35 T3 convention — no jsdom, no React rendering, since the per-workspace vitest config runs environment: 'node'. Test 1: matches <Badge>…</Badge> via whitespace-tolerant regex against top-bar.tsx source, asserts trimmed children === 'Phase 5' (canary against an accidental Phase 6 flip). Test 2: JSON.parse of apps/desktop/package.json, asserts version === '1.1.0' (semver pin against accidental downgrade or premature 1.2.0/2.0.0 bump). Path correction vs plan: top-bar.tsx is at apps/desktop/src/renderer/src/app/top-bar.tsx (NOT the plan-speculative .../components/app/ path) — test placed beside component. Grep audit clean: only non-CHANGELOG 1.0.0 references are .github/workflows/release.yml line 3 ('e.g. v1.0.0' as an example, not a current-version claim) and .loki/* working memory (this ledger commit). CHANGELOG.md [1.0.0] release marker + version-link ref preserved per T7 framing. Surfaced-but-not-acted drift: M28 + M29 had no [Unreleased] entries at start-of-T7 — NOT backfilled per 'DO NOT invent' carry-forward rule (documented in T7 surpriseNote + honored in T8 carry-forward). No landing-site badge update needed — docs/site/index.html is absent. Zero IPC/bus/migrations.",
       "filesTouched": [
-        "package.json",
-        "apps/desktop/package.json",
-        "packages/shared-types/package.json",
-        "packages/role-schema/package.json",
-        "packages/provider-router/package.json",
-        "packages/telemetry-core/package.json",
-        "packages/intelligence/package.json",
-        "apps/desktop/src/renderer/src/components/app/top-bar.test.tsx (NEW or extend)"
+        "package.json (MODIFIED — version 1.0.0 → 1.1.0)",
+        "apps/desktop/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
+        "packages/shared-types/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
+        "packages/role-schema/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
+        "packages/provider-router/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
+        "packages/telemetry-core/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
+        "packages/intelligence/package.json (MODIFIED — version 1.0.0 → 1.1.0)",
+        "apps/desktop/src/renderer/src/app/top-bar.test.tsx (NEW — 2 unit tests, source-string audit style)"
       ],
       "commitTemplate": "chore(m35): M35 T8 — v1.0.0 → v1.1.0 + Phase 5 badge pin",
-      "testsDelta": 2
+      "testsDelta": 2,
+      "verificationGates": {
+        "unitTests": "1164 passed (1164) — exactly target (1162 + 2). 101 test files, 22.02s. Vec-init.test.ts sqlite-vec 'no such module: vec0' stderr is the known graceful-fallback path from M28 (test passes ✓).",
+        "lint": "not re-run — package.json version bumps + new vitest test file within 0-error baseline. T9 optional clearance target for the pre-existing M30 T2 lint error unchanged.",
+        "typecheck": "not re-run — package.json fields only (no schema impact) + new test file uses pure node built-ins (fs/path/url) within vitest's standard type surface.",
+        "e2e": "not re-run — no renderer runtime surface changed; top-bar.tsx was NOT edited, only audited as a source string. E2E baseline at M35 T2 preserved (12 cases / 11 spec files / 40.6s)."
+      }
     },
     {
       "id": "T9",
