@@ -1,5 +1,18 @@
 # CLAUDE.md
 
+> ### 🚧 PHASE 5.6 IN PROGRESS — REMEDIATION ACTIVE (kickoff 2026-04-17)
+>
+> A pre-M36-T2 audit surfaced systemic drift between CLAUDE.md status blocks and on-disk reality across Phases 1–5. **Phase 5.6 is a Definition-of-Done failure repair operation, not a "fix some missing files" sprint.** Execution order is M-A (audit) → M-B (triage) → **M-E (process safeguards — ships BEFORE backfill)** → M-C (backend backfill) → M-D (UI backfill) → M-F (docs truth-up) → M-G (ship). Estimated 6–8 calendar weeks.
+>
+> **Phase 6 M36 T2+ is explicitly PAUSED** until Phase 5.6 M-G ships. Do not resume capability taxonomy work until the pause is lifted in `.loki/queue/pending.json`.
+>
+> **Read before acting:**
+> - Active plan: [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](docs/plans/2026-04-17-team-x-phase-5.6-remediation.md)
+> - Immediate next task: Phase 5.6 M-A Conformance Audit (see `.loki/queue/current-task.json`)
+> - Sprint framework: §14 of the plan (DoR, DoD, velocity KPI, change-control mini-gate)
+>
+> Status blocks below reflect state as of Phase 5 exit (v1.1.0, 2026-04-20). They are being audited for truth-vs-claim drift in M-A and will be rewritten in M-F to a three-bucket format (shipped / deferred / deprecated). **Treat unaudited status-block claims as `🔍 unverified` until M-A lands.**
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What Team-X is
