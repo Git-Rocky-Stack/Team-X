@@ -1,23 +1,26 @@
 {
   "currentPhase": "DEVELOPMENT",
-  "currentMilestone": null,
-  "milestoneName": null,
-  "tasksCompleted": 11,
+  "currentMilestone": "Phase 6 T0",
+  "milestoneName": "Plan doc — Capabilities & Evidence",
+  "tasksCompleted": 1,
   "tasksFailed": 0,
-  "totalTasks": 11,
-  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md",
-  "startedAt": "2026-04-19T00:00:00Z",
-  "completedAt": "2026-04-20T13:00:00Z",
-  "phaseComplete": true,
+  "totalTasks": 1,
+  "planDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+  "startedAt": "2026-04-20T15:00:00Z",
+  "completedAt": "2026-04-20T15:30:00Z",
+  "phaseComplete": false,
   "inflight": {},
-  "phase": "Phase 5 — Intelligence Layer",
-  "phaseCompletedAt": "2026-04-20T13:00:00Z",
-  "phaseVersionTag": "v1.1.0",
+  "phase": "Phase 6 — Capabilities & Evidence",
+  "phaseCompletedAt": null,
+  "phaseVersionTag": "v1.2.0 (target)",
+  "previousPhase": "Phase 5 — Intelligence Layer",
+  "previousPhaseCompletedAt": "2026-04-20T13:00:00Z",
+  "previousPhaseVersionTag": "v1.1.0",
   "previousMilestone": "M35",
   "previousMilestoneName": "Demo + Hardening",
   "previousMilestoneCompletedAt": "2026-04-20T13:00:00Z",
-  "nextMilestone": "Phase 6 T0",
-  "nextMilestoneName": "Phase 6 plan doc (scope TBD — 7 candidate themes from Phase 5 retrospective §6: post-release telemetry digest, cross-company copilot rollups, proactive copilot → autonomous action, agent-to-agent negotiation, capabilities frontmatter on role.md, real customer demo, insight export)",
+  "nextMilestone": "M36",
+  "nextMilestoneName": "Capabilities taxonomy + role.md parser (authored at M36 T0 — locks ~40-capability enum across 6 categories, extends role-schema parser with capabilities: string[] field + validation, backfills all 55 F10 roles + 2 system roles under role-packs/strategia-official/roles/. Zero new DB tables — capabilities live in role.md frontmatter per invariant #9 decision D16)",
   "tasksInProgress": {},
   "baseline": {
     "unitTests": 1130,
@@ -405,6 +408,24 @@
         "productionBuild": "pnpm -F @team-x/desktop build succeeds"
       }
     },
+    "Phase-6-T0": {
+      "name": "Phase 6 plan doc — Capabilities & Evidence",
+      "shippedAt": "2026-04-20T15:30:00Z",
+      "commit": "a429abf",
+      "deliverable": "NEW docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md (194 lines). Opens Phase 6 with an explicit theme pick from the Phase 5 retrospective §6 seeds: Capabilities & Evidence — Maturing the Intelligence Layer. Stitches seed #5 (capabilities frontmatter on role.md — M32 flagged deferred four separate times) + seed #7 (insight export) + natural companions (Telemetry per-kind filter surfacing M33's runs.kind column + insight feedback loop via dismissal-pattern → category downrank). 6-milestone placeholder breakdown (M36 Capabilities Taxonomy + Parser / M37 Role-Fit v2 Jaccard overlap preserving M32's locked 4-weight signature / M38 Insight Feedback Loop with copilot_category_weights clamped 0.0-2.0 + dismissal pattern detector / M39 Telemetry Per-Kind Filter read-path-only / M40 Insight Export JSON+CSV mirroring M24 audit-export / M41 Demo + Hardening + v1.2.0). Target metrics: 1169 → ~1320 unit, 11 → 12 E2E specs, 13 → 13 migrations (zero new), ~80+ → ~85+ IPC channels, 31 → 32 bus events (+1: copilot.weights.changed per invariant #11), invariants 11 → 11 (Phase 6 is calibration within existing boundaries). Decisions log scaffold D15-D23 enumerated for each milestone's T0 landing. Open questions Q1-Q4 parked as non-blocking. v1.1.0 → v1.2.0 additive release. Explicit non-goals: no autonomous action (retro seed #3 stays Phase 7+), no cross-company aggregation (retro seed #2 out of scope), no telemetry digest (retro seed #1 infeasible pre-deployment), no agent-to-agent negotiation (retro seed #4 research-y), no new providers/MCP transports. Zero production code, zero tests, zero IPC/bus/migrations in T0 itself — plan-doc-only per the Phase 5 M28 T0 precedent.",
+      "filesTouched": [
+        "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md (NEW, 194 lines)"
+      ],
+      "testsDelta": 0,
+      "verificationGates": {
+        "unitTests": "not re-run (docs-only delivery; 1169/1169 baseline preserved from M35 T10)",
+        "lint": "not re-run (no code surface)",
+        "typecheck": "not re-run (no TypeScript surface)",
+        "e2e": "not re-run (no renderer or main-process surface; E2E baseline at M35 T10 preserved — 12 cases / 11 spec files / 28.8s)"
+      },
+      "structureCompliance": "All 7 required sections from pending.json targets.phase6T0 present: (1) Overview with theme + goals + non-goals. (2) What ships with surface-deliverable-builds-on table + target metrics. (3) Invariants preserved referencing all 11 existing invariants + explicit list of what Phase 6 does NOT introduce. (4) Success criteria (5 simultaneously-met conditions). (5) Milestone breakdown (6-milestone placeholder M36-M41 with one-line scope + dependency each; no T1+ breakdown materialized per Phase 5 M28 T0 precedent). (6) Acceptance criteria (10 verification-gate items for phase exit). (7) Decisions log scaffold (D15-D23). Plus two extra sections: References (cross-links to Phase 5 design doc + retro + M32/M33/M35 plan docs + CLAUDE.md) + Open questions (Q1-Q4 non-blocking to T0).",
+      "themeSelectionEvidence": "Explicit pick per queue note 'Theme selection must be explicit — do not default-pick'. Picked seeds #5 + #7 plus natural companions. Rejected: #1 (needs real-world usage data Team-X doesn't generate by design — zero phone-home invariant #7), #3 (HIGH value but needs own phase for safety/rollback/dry-run primitives), #2/#4/#6 (strong but less evidence-backed for 'next phase' positioning). Final theme title: 'Capabilities & Evidence — Maturing the Intelligence Layer'."
+    },
     "M35": {
       "name": "Demo + Hardening",
       "startedAt": "2026-04-19T00:00:00Z",
@@ -443,6 +464,7 @@
   },
   "inFlightMilestone": null,
   "notes": [
+    "Phase 6 T0 SHIPPED 2026-04-20 (commit a429abf — 'feat(phase-6-t0): Phase 6 T0 — plan doc (Capabilities & Evidence)'). Phase 6 opens with an explicit theme pick per queue's 'do not default-pick' directive: Capabilities & Evidence — Maturing the Intelligence Layer. Plan doc at docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md (194 lines). Stitches Phase 5 retro §6 seeds #5 (capabilities frontmatter on role.md — M32 flagged deferred 4× in its source comments) + #7 (insight export) with natural companions (Telemetry per-kind filter surfacing M33 migration 0012's runs.kind column + insight feedback loop via dismissal-pattern → category downrank). 6-milestone placeholder breakdown M36 → M41. M36 headline: Capabilities taxonomy + role.md parser gains capabilities: string[] field + 55 F10 + 2 system roles backfilled. M37 preserves M32's LOCKED 4-weight signature (0.4 + 0.3 + 0.2 + 0.1) — ONLY computeRoleFit implementation changes, Jaccard overlap replaces keyword heuristic. M38 adds copilot_category_weights clamped 0.0-2.0 + dismissal pattern detector (3 same-category dismissals in 7 days → UI suggestion, NEVER auto-applied) + copilot.weights.changed bus event per invariant #11. M39 is read-path-only (no new migrations — runs.kind already in place from M33 migration 0012). M40 mirrors M24 audit-export UX surface. M41 is the phase exit gate matching M20/M27/M35 template (cross-milestone integration E2E + retrospective locked six-section structure + README sweep + CHANGELOG [1.1.0] → [1.2.0] promotion + v1.1.0 → v1.2.0 version bump across 7 package.json files + Phase 6 COMPLETE marker source-string-audit test extending the lineage M35 T3/T8/T9/T10 → M41 T10). Target metrics 1169 → ~1320 unit + 11 → 12 E2E specs + ~80+ → ~85+ IPC channels + 31 → 32 bus events + invariants 11 → 11 (Phase 6 is calibration within existing boundaries). Decisions log D15-D23 enumerated for each milestone's T0 landing. Open questions Q1-Q4 parked as non-blocking. Explicit non-goals: no autonomous action (retro #3 → Phase 7+), no cross-company aggregation (retro #2 → out of scope), no telemetry digest (retro #1 → infeasible pre-deployment, zero phone-home), no agent-to-agent negotiation (retro #4 → research-y), no new providers/MCP transports. Zero production code / zero tests / zero IPC/bus/migrations in T0 itself — plan-doc-only per the Phase 5 M28 T0 precedent. Atomic commit a429abf shipped; ledger commit follows this entry. Head-of-queue advances to M36 T0 — that session authors docs/plans/2026-0X-XX-team-x-phase-6-m36-capabilities-taxonomy.md mirroring the Phase 5 M31/M32/M33/M34/M35 milestone plan shape (structure + non-goals + architectural decisions per §4.5 spec) and does NOT author T1+ breakdown.",
     "M35 T7 FOLLOW-UP RESOLVED 2026-04-20 (commit 12bb053 — 'docs(changelog): M35 T7 follow-up — backfill M28 + M29 entries into [1.1.0]'). The T7 surpriseNote's deferred decision ('backfill M28/M29 CHANGELOG entries retroactively or leave as header-bullet only') is now definitively closed: BACKFILLED. M28 (intelligence package + RAG foundation, 29 tests, 612→641) + M29 (RAG into agent turns, 27 tests, 641→668) now have full per-milestone Added / Changed sections inside [1.1.0], matching the voice + structure of M30–M35. Each backfilled section carries an explicit 'Entry backfilled 2026-04-20 per M35 T7 follow-up; no code or test changes from the original 2026-04-13 shipping state' status line. [1.1.0] release-note header also updated to flag the retro-backfill. v1.1.0 tag + shipping state both unchanged (immutable). Zero code / zero tests / zero IPC/bus/migrations / zero verification-gate re-runs — pure markdown ledger-completeness patch. +38 insertions / -1 deletion on CHANGELOG.md. Rationale for resolving rather than deferring to Phase 6 T0: the tag captures what shipped; the CHANGELOG is the canonical ledger of what shipped in each version. Header-bullet-only coverage for two FOUNDATIONAL milestones (M28 is the substrate every later Phase 5 milestone builds on — M29/M30/M31/M33 all sit on top of the @team-x/intelligence package + sqlite-vec embeddings table + retriever) was documentation drift, not a faithful record. Closing before Phase 6 T0 opens honors the zero-corner-cutting mandate. M35 T7 history entry updated inline with the resolution reference.",
     "M35 T7 SHIPPED (commit cb0ab4c — 'docs(m35): M35 T7 — CHANGELOG [Unreleased] → [1.1.0]'). Promoted [Unreleased] (M30 + M31 + M32 + M33 + M33 F3/F4 + M34 entries, reverse-chronological) into [1.1.0] — 2026-04-20 under a new 'Phase 5 — Intelligence Layer' narrative header. Keep a Changelog per-milestone Added / Changed / Fixed ordering retained verbatim. Reset [Unreleased] to an empty six-category scaffold (Added / Changed / Fixed / Deprecated / Removed / Security). Added release-note line citing baseline delta 612 / 4 (v1.0.0) → 1162 unit / 11 E2E specs / 12 Playwright cases and enumerating M28-M35 as the additive shippable surface. Introduced bottom-of-file version-link refs for [Unreleased] / [1.1.0] / [1.0.0] (file previously had none — acceptance-#5 phrasing 'updated' was aspirational). Repo resolved as Git-Rocky-Stack/Team-X via git remote get-url origin. Carry-forward surfaced: M28 + M29 had NO CHANGELOG entries in [Unreleased] at start-of-task — NOT backfilled per 'DO NOT invent entries that aren't already written' rule; header-level scope statement covers them. Zero code / zero tests / zero IPC/bus/migrations. Unit baseline 1162 preserved; no verification gates re-run per docs-only precedent (T4/T5/T6). Atomic + ledger commit cadence held (T7 atomic docs(m35) → ledger fold follows this entry). Head-of-queue advances to M35 T8 (version bump 1.0.0 → 1.1.0 + Phase 5 badge freeze unit test, 2 tests).",
     "M35 T6 SHIPPED (commit a966deb — 'docs(m35): M35 T6 — README + user-guide reconciliation sweep'). Root README.md reconciled against the live M35 baseline: tests badge 1099 → 1162; tech-stack table Vitest 1033 → 1162 + Playwright 8 → 11 specs; Testing section updated to 1162 unit + 11 E2E specs / 12 Playwright cases (one spec has two cases); spec table expanded 8 → 11 rows (adds copilot-service.spec.ts, copilot-ui.spec.ts, phase-5-integration.spec.ts); architecture tree 10 → 13 migrations (verified 0000-0012 under apps/desktop/src/main/db/migrations/) + 60+ → 80+ IPC channels (per M30-M34 additions) + 8 → 11 Playwright specs; command palette '15 intents' framing reconciled to '14 structured intents plus a complex_request fallback' (aligns Live-Cockpit section with Intelligence-Layer section + CLAUDE.md). docs/user-guide/README.md rewritten with Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 / Reference grouping so readers navigate by when each feature shipped. Added keyboard-first primer at top surfacing Cmd+K (palette) + Cmd+Shift+K (copilot sidebar) as the two-shortcut entry points. Added See-also section linking back to root README, CONTRIBUTING, CHANGELOG, Phase 5 retrospective (M35 T4), Phase 5 demo walkthrough (M35 T5). Partial-truth audit modelled on M31 T9 surfaced 6 drift sites — all fixed in-place, zero TODOs filed. grep-verified no stale references remain (1099/1033/8 specs/10 migrations/15 intents all clean). Zero code / zero tests / zero IPC/bus/migrations — pure markdown deliverable. Unit baseline 1162 preserved; no verification gates re-run per docs-only precedent. Atomic + ledger commit cadence held (T6 atomic docs(m35) → ledger fold follows this entry). Head-of-queue advances to M35 T7 (CHANGELOG promotion [Unreleased] → [1.1.0]).",

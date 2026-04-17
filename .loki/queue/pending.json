@@ -1,21 +1,21 @@
 {
-  "milestone": null,
-  "milestoneName": null,
-  "phase": "Phase 6 — scope TBD",
-  "planDoc": null,
-  "planDocSection": null,
+  "milestone": "M36",
+  "milestoneName": "Capabilities Taxonomy + Parser",
+  "phase": "Phase 6 — Capabilities & Evidence",
+  "planDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+  "planDocSection": "§5 Milestone Breakdown — M36 row (Capabilities Taxonomy + Parser)",
   "previousPhase": "Phase 5 — Intelligence Layer",
   "previousPhaseCompletedAt": "2026-04-20T13:00:00Z",
   "previousPhaseVersionTag": "v1.1.0",
-  "previousMilestone": "M35",
-  "previousMilestoneName": "Demo + Hardening",
-  "previousMilestoneCompletedAt": "2026-04-20T13:00:00Z",
-  "previousMilestoneCommit": "6315ede (M35-T10 — Phase 5 COMPLETE marker)",
+  "previousMilestone": "Phase 6 T0",
+  "previousMilestoneName": "Plan doc — Capabilities & Evidence",
+  "previousMilestoneCompletedAt": "2026-04-20T15:30:00Z",
+  "previousMilestoneCommit": "a429abf (Phase 6 T0 — plan doc: Capabilities & Evidence)",
   "createdAt": "2026-04-20T13:00:00Z",
-  "updatedAt": "2026-04-20T13:00:00Z",
+  "updatedAt": "2026-04-20T15:30:00Z",
   "totalTasks": null,
   "tasksShipped": 0,
-  "status": "Phase 5 COMPLETE (v1.1.0, 2026-04-20). All 8 milestones shipped (M28 → M35). 1169 unit tests / 11 E2E specs / 12 Playwright cases. Phase 6 is open with no milestones materialised yet. The first Phase 6 task is T0 — author the Phase 6 plan doc at docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md using the Phase 5 design doc (docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md) as the structural template. Scope selection draws from the 7 candidate themes enumerated in the Phase 5 retrospective §6: (1) post-release telemetry digest for evidence-based default tuning, (2) cross-company copilot rollups, (3) proactive copilot → autonomous action, (4) agent-to-agent negotiation, (5) capabilities frontmatter on role.md (enables role-fit scoring beyond the M32 keyword heuristic), (6) real customer demo (docs/demo/ walkthrough is the foundation), (7) insight export. DO NOT author milestone task breakdowns in T0 — T0 is plan-doc-only, mirroring Phase 5 M28 T0.",
+  "status": "Phase 6 T0 SHIPPED 2026-04-20 (commit a429abf). Phase 6 theme: 'Capabilities & Evidence — Maturing the Intelligence Layer' (retro §6 seeds #5 + #7 plus natural companions: Telemetry per-kind filter + insight feedback loop). 6-milestone placeholder M36 → M41. Head-of-queue now advances to M36 T0 — the first M36 session must author docs/plans/2026-0X-XX-team-x-phase-6-m36-capabilities-taxonomy.md mirroring the Phase 5 milestone plan doc shape (structure + non-goals + architectural decisions). M36 scope per Phase 6 T0 plan doc §5: locked capability taxonomy (~40 capabilities across 6 categories: engineering / product / design / operations / strategy / support) in shared-types, role-schema parser gains capabilities: string[] field + validation + role-load-time errors for zero-capability roles, backfill of all 55 F10 roles + 2 system roles under role-packs/strategia-official/roles/. Zero new DB tables (decision D16 — capabilities live in role.md frontmatter per invariant #9). Cascading M37 is BLOCKED by M36 (role-fit v2 depends on capabilities taxonomy existing); M38 / M39 / M40 are independently parallelizable (do not share code surface with M36); M41 is phase-exit and depends on all prior. DO NOT author M36 T1+ breakdown in the M36 T0 plan doc — M36 T0 is plan-doc-only, mirroring Phase 5 M28 T0 and the just-shipped Phase 6 T0.",
   "tasks": [],
   "baseline": {
     "unitTests": 1169,
@@ -38,12 +38,15 @@
     "asOfTask": "M35-T10 (Phase 5 COMPLETE, atomic commit 6315ede)"
   },
   "targets": {
-    "phase6T0": "Phase 6 plan doc at docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md — structural mirror of docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md; required sections: Overview, What ships, Invariants preserved, Success criteria, Milestone breakdown (placeholder count), Acceptance criteria, Decisions log scaffold. Zero code / zero tests in T0."
+    "m36T0": "M36 T0 plan doc at docs/plans/2026-0X-XX-team-x-phase-6-m36-capabilities-taxonomy.md — structural mirror of the Phase 5 M31/M32/M33/M34/M35 milestone plan shape. Required sections: Overview + non-goals, What ships (surface-deliverable-builds-on table), Task breakdown (T0 → T10 pattern), Invariants preserved (reference to Phase 6 design doc §3), Architectural decisions per §4.5 spec, Acceptance criteria (verification gates + commit cadence + atomic+ledger rule), References. Zero code / zero tests in M36 T0.",
+    "m36SurfaceArea": "Capability taxonomy enum lives in packages/shared-types (sibling to existing CopilotCategory / CopilotSeverity / PRIVACY_TIER_RANK constants). role-schema parser gains capabilities: string[] field with strict enum validation (role-pack-signed parse fails fast). All 55 F10 role.md files under role-packs/strategia-official/roles/ gain capabilities: [...] frontmatter. Two system roles (system-agent.md + system-copilot.md) also carry capabilities (distinct from the tools_allowed surface — tools_allowed gates runtime tool access; capabilities drives role-fit scoring). Zero new DB tables per decision D16.",
+    "m36OpenQuestion": "Q1 from Phase 6 T0 plan doc §9 lands at M36 T0: case-sensitivity of capability enum values. Recommendation is lowercase-snake_case for strict equality + IDE autocomplete; final call at M36 T0."
   },
   "notes": [
-    "Phase 5 COMPLETE (v1.1.0, 2026-04-20). This file is the Phase 6 scaffold; it holds no in-flight tasks until the Phase 6 plan doc (T0) materialises the T1+ breakdown.",
-    "First Phase 6 atomic commit: `feat(phase-6-t0): Phase 6 T0 — plan doc (<theme>)`. Ledger: `chore(loki): Phase 6 T0 — commit ledger (<sha>)`.",
-    "Theme selection must be explicit — do not default-pick. The Phase 5 retrospective §6 lists all 7 candidates with rationale + estimated size. Pick one headline theme (or combine two if they share an evidence backbone, e.g. post-release telemetry + autonomous action).",
-    "Patterns to carry forward from Phase 5 into Phase 6 T0: atomic + ledger commit cadence, three-tier canned test seam (quartet pattern — any new agentic surface MUST ship a matching test-side swap), pause-aware providerRouter.complete wrapper, source-string-audit unit test lineage (now 4-deep: M35 T3/T8/T9/T10), ABI rebuild dance, is_system filter sweep with isSystemRoleId predicate, invariant #11 (IPC mutation must emit bus event), locked six-section phase retrospective structure."
+    "Phase 6 T0 SHIPPED (commit a429abf — 'feat(phase-6-t0): Phase 6 T0 — plan doc (Capabilities & Evidence)'). Theme selection was EXPLICIT per this file's previous guidance — Rocky did not default-pick. Chose retrospective §6 seeds #5 (capabilities frontmatter on role.md, flagged by M32 four separate times as deferred) + #7 (insight export) with natural companions (Telemetry per-kind filter from M33's dangling runs.kind column + insight feedback loop via dismissal-pattern → category downrank). Rejected: seed #1 (needs real-world usage data Team-X doesn't generate by design — zero phone-home invariant #7), seed #3 (HIGH value autonomous action but needs own phase for safety/rollback/dry-run primitives), seeds #2/#4/#6 (strong themes but less evidence-backed for 'next phase' positioning). v1.1.0 → v1.2.0 additive release targeted.",
+    "Head-of-queue: M36 T0 (Capabilities Taxonomy + Parser plan doc). BLOCKS M37 (role-fit v2 depends on taxonomy existing). DOES NOT BLOCK M38 / M39 / M40 (independent code surface — could parallelize if Phase 6 spins up multiple work streams). M41 is phase-exit, depends on all prior.",
+    "Atomic + ledger commit cadence RESTORED from M34 deviation at M35 T1 and carried verbatim through M35 T10. Phase 6 preserves this: each task ships as one atomic feat/fix/docs commit followed by one chore(loki) ledger commit. No squashed multi-task commits.",
+    "Patterns to carry forward from Phase 5 into Phase 6 (unchanged): three-tier canned test seam (quartet pattern — any new agentic surface in Phase 6 MUST ship a matching test-side swap; M38 analyzer weight-multiplier qualifies as an analyzer-side surface, but reuses the existing test-copilot-provider.ts seam), pause-aware providerRouter.complete wrapper, source-string-audit unit test lineage (now 5-deep: M35 T3 / T8 / T9 / T10 / Phase 6 T0 markers to come at M41 T10), ABI rebuild dance on verification gate, is_system filter sweep with isSystemRoleId predicate, invariant #11 (IPC mutation must emit bus event — M38's copilot.weights.changed follows this), locked six-section phase retrospective structure (M41 retrospective lineage now 2-deep).",
+    "Verification recipe for Phase 6 milestones (unchanged from M35): (1) Node ABI: cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install. (2) pnpm test → target grows ~+25 per milestone on code-milestones, 0 on docs-milestones. (3) pnpm typecheck → clean at repo root (NOT workspace-scoped). (4) pnpm lint → 0 errors, ≤24 warnings. (5) Electron ABI: pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar. (6) pnpm -F @team-x/desktop test:e2e → 12 specs / 13 cases at phase exit. (7) pnpm -F @team-x/desktop build → production bundle succeeds. (8) pnpm dist:win → v1.2.0 installer at M41 phase exit."
   ]
 }
