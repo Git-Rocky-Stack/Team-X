@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M35",
   "milestoneName": "Demo + Hardening",
-  "tasksCompleted": 9,
+  "tasksCompleted": 10,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md",
@@ -10,9 +10,9 @@
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {
-    "taskId": "M35-T9",
-    "lastShipped": "M35-T8",
-    "lastShippedCommit": "a8dc98e"
+    "taskId": "M35-T10",
+    "lastShipped": "M35-T9",
+    "lastShippedCommit": "23f3b1b"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M34",
@@ -32,14 +32,14 @@
     "asOfMilestone": "M34 complete (commit af643ec)"
   },
   "current": {
-    "unitTests": 1164,
+    "unitTests": 1166,
     "e2eSpecs": 11,
     "e2eGreenCount": 12,
     "lintErrors": 0,
-    "lintErrorsNote": "M35 T8 (v1.0.0 → v1.1.0 bump across 7 package.json files + Phase 5 badge freeze unit test at apps/desktop/src/renderer/src/app/top-bar.test.tsx) added +2 unit tests (1162 → 1164) via source-string audit style matching M35 T3 convention — no jsdom, no React rendering. M35 T7 (CHANGELOG promotion [Unreleased] → [1.1.0]) was a pure-docs delivery — zero code, zero tests, zero lint surface. M35 T6 / T5 / T4 were also pure-docs. M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts. M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests). 0-error baseline preserved.",
+    "lintErrorsNote": "M35 T9 (regression hardening — flaky-test audit + stable selector sweep) added NEW apps/desktop/src/e2e-regression-guards.test.ts with +2 vitest guards (1164 → 1166 exact target): (1) scans e2e/*.spec.ts for .waitForTimeout(N > 100) and bans fixed-duration sleeps as sync primitives; (2) asserts every spec carries at least one [data-*] attribute locator per the M30 data-step-kind / M33 data-copilot-insight-id / M34 data-copilot-toolbar-toggle convention. Placement under src/ (not e2e/) because apps/desktop/vitest.config.ts excludes e2e/**. Surgical in-commit fixes for the two real offenders flagged at audit time: rag-flow.spec.ts window.waitForTimeout(500) → expect.poll on teamx.rag.stats(cid).embeddingCount > 0 with intervals [200,300,500,500,1000] (waits on the real side-effect, not a timer); six specs lacking data-* (copilot-service, meeting-flow, rag-flow, smoke, ticket-flow, vault-backup) each now assert window.locator('[data-copilot-toolbar-toggle]').toBeVisible() right after the Phase 5 badge check (anchors the stable-selector contract without duplicating copilot-ui.spec coverage). Adjacent T8-dormant hardening: top-bar.test.tsx TS2532 on badgeMatch![1].trim() surfaced after Electron-ABI rebuild forced a composite-ref rebuild — replaced with `const captured = badgeMatch?.[1]?.trim() ?? ''` + separate expect, dropping the noNonNullAssertion biome-ignore. Biome format --write collapsed two multi-line call blocks to one-liners. Full-suite verification: 1166/1166 vitest, 12/12 Playwright cases (11 specs, 41.5s), typecheck clean across 6 packages, lint 0 errors / 24 warnings (baseline preserved). 0-error baseline preserved. M35 T8 (v1.0.0 → v1.1.0 bump across 7 package.json files + Phase 5 badge freeze unit test) added +2 unit tests (1162 → 1164). M35 T7 / T6 / T5 / T4 were pure-docs (zero tests, zero lint surface). M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts. M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests).",
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "M35-T8 (commit a8dc98e)"
+    "asOfTask": "M35-T9 (commit 23f3b1b)"
   },
   "targets": {
     "unitTests": "~1167+ (revised up from plan estimate ~1145 after M35 T3 shipped +28 unit vs plan's +3; M35 T5 docs-only preserves baseline at 1162; further +5 expected from T8 version-bump +2 + T9 regression-hardening +2 unit tests — precise count lands at T10 verification gate)",

@@ -1,4 +1,49 @@
-# Loki Continuity — Phase 5, **M35 T5 SHIPPED** (Demo walkthrough + 5-scenario library authored under `docs/demo/` — single `phase-5-walkthrough.md` overall arc + 5 scenario stubs covering Phase 1 hire-a-CEO / Phase 2 ticket-lifecycle-with-MCP / Phase 3 one-click-all-hands / Phase 5 M30+M31 read-side grounded-answer / Phase 5 M32+M33+M34 write-side decompose-and-surface; 795 insertions across 6 new files + 1 retrospective §6.6 cross-link; zero code / zero tests / zero IPC/bus/migration work; 2nd consecutive pure-markdown deliverable after the retrospective — both tasks land the Phase 5 exit-gate documentation requirement). M35 T6 (README + user-guide reconciliation sweep) is head-of-queue. Phase 5 exit is 5 tasks away.
+# Loki Continuity — Phase 5, **M35 T9 SHIPPED** (Regression hardening — NEW `apps/desktop/src/e2e-regression-guards.test.ts` with 2 vitest guards banning `.waitForTimeout(N > 100ms)` + asserting every `e2e/*.spec.ts` carries a `[data-*]` attribute locator per the M30 `data-step-kind` / M33 `data-copilot-insight-id` / M34 `data-copilot-toolbar-toggle` convention; surgical in-commit fixes for the 2 real offenders flagged by the guards: `rag-flow.spec.ts` `waitForTimeout(500)` → `expect.poll` on `teamx.rag.stats.embeddingCount > 0`, and six specs lacking `[data-*]` (copilot-service, meeting-flow, rag-flow, smoke, ticket-flow, vault-backup) each gained a `[data-copilot-toolbar-toggle]` assertion after their Phase 5 badge check; adjacent T8-dormant hardening cleared a latent TS2532 on `top-bar.test.tsx` line 57 + biome format sweep; +2 unit → **1166**; full verification green — 1166/1166 vitest, 12/12 Playwright, typecheck clean, 0 lint errors / 24 warnings). **M35 T10 (docs + verification + Phase 5 COMPLETE marker, 3 unit tests) is head-of-queue — the LAST Phase 5 task.**
+
+## M35 T9 SHIPPED — 2026-04-20 — flaky-test audit + stable selector sweep (23f3b1b)
+
+**Task:** M35 T9 — two mechanical regression guards that harden the E2E spec suite against silent flake and selector drift, plus surgical fixes for every offender flagged by the guards. (M35 plan doc §3 T9 row.)
+**Atomic commit:** `23f3b1b` — `test(m35): M35 T9 — flaky-test audit + stable selector sweep`.
+**Ledger commit:** `chore(loki): M35 T9 — commit ledger (23f3b1b)` (this commit).
+**Plan reference:** [M35 plan T9](../docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md#3-task-breakdown).
+
+### What shipped
+
+- **NEW `apps/desktop/src/e2e-regression-guards.test.ts`** — two vitest guards scanning `apps/desktop/e2e/*.spec.ts` at fresh read:
+  1. `.waitForTimeout(N)` scan — regex `/\.waitForTimeout\s*\(\s*(\d+)/g` over every spec, fails if any capture exceeds the 100 ms floor. 100 ms lets drag-drop settling stand (React DnD legitimately sits in the 50–100 ms range) without masking real fixed-duration sleeps. `setTimeout` is deliberately NOT flagged — every spec uses `setTimeout(resolve, 5000)` inside an `afterEach` `Promise.race` shutdown safety net; flagging them would require semantic analysis and false-positive every spec per surpriseWatch (c).
+  2. `[data-*]` sweep — regex `/\[data-[a-z][a-z0-9-]*/` asserts every spec carries at least one stable-selector anchor per the M30 `data-step-kind` / M33 `data-copilot-insight-id` / M34 `data-copilot-toolbar-toggle` convention. Text matchers (`getByText`, `getByRole({ name })`) are fine as secondary; one stable anchor per spec keeps the suite robust to copy / i18n / styling edits.
+  Placement discipline: lives under `src/` because `apps/desktop/vitest.config.ts` explicitly excludes `e2e/**` — a guard file in `e2e/` would silently never run, neutering the guard.
+- **Flake offender fix** — `apps/desktop/e2e/rag-flow.spec.ts:188` `window.waitForTimeout(500)` → `expect.poll(async () => { … teamx.rag.stats(cid) … return stats.embeddingCount }, { timeout: 10_000, intervals: [200, 300, 500, 500, 1000] }).toBeGreaterThan(0)`. Waits on the real side-effect (indexer flush) not a timer; fast machines exit immediately on the 200 ms tick, slow ones get up to 10 s.
+- **Six stable-selector anchors** — `copilot-service.spec.ts`, `meeting-flow.spec.ts`, `rag-flow.spec.ts`, `smoke.spec.ts`, `ticket-flow.spec.ts`, `vault-backup.spec.ts` each gained `await expect(window.locator('[data-copilot-toolbar-toggle]')).toBeVisible()` right after the Phase 5 badge check. Semantically meaningful (proves the M34 top-bar Copilot Sparkles button mounted) + anchors the stable-selector contract without duplicating `copilot-ui.spec` coverage.
+- **Adjacent T8-dormant hardening** — `top-bar.test.tsx:57` TS2532 `Object is possibly 'undefined'` on `badgeMatch![1].trim()` surfaced after the Electron-ABI rebuild forced a composite-ref rebuild; replaced with `const captured = badgeMatch?.[1]?.trim() ?? ''; expect(captured).toBe('Phase 5')`, dropping the `noNonNullAssertion` biome-ignore. Biome `format --write` collapsed two multi-line call blocks to one-liners in the same file. Lint baseline restored to 0 errors / 24 warnings.
+
+### Verification gates passed
+
+- ✅ `pnpm test` — **1166 passed (1166)**, 102 test files, 25.86s. Exactly +2 target (1164 → 1166).
+- ✅ `pnpm typecheck` — clean across all 6 workspace packages (after fixing the T8-dormant TS2532).
+- ✅ `pnpm lint` — 0 errors / 24 warnings (baseline preserved — my 6 new-file `useTemplate` / `noUnusedTemplateLiteral` auto-fixes + the 1 pre-existing `top-bar.test.tsx` format finding cleaned as adjacent hardening).
+- ✅ Electron-ABI rebuild — `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` completed cleanly.
+- ✅ Playwright — `pnpm -F @team-x/desktop test:e2e` — **12 passed (41.5s)** across 11 spec files. All assertions against the new `[data-copilot-toolbar-toggle]` anchor and the new `expect.poll` on `rag.stats` held.
+- ✅ Node-ABI rebuild — `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install` rebuilt better-sqlite3 for Node ABI 125 to run vitest after the Electron-ABI rebuild (exactly the M31/M32/M33 T10 dance).
+- ✅ Guard self-test — both guards pass on the current suite: 0 `.waitForTimeout(>100ms)` offenders, all 11 specs carry at least one `[data-*]` locator.
+- ✅ Atomic cadence — work commit `23f3b1b` before ledger commit.
+
+### Gotchas captured this session
+
+- **T8 left a latent TS2532** on `top-bar.test.tsx` line 57 that only surfaced under `tsc --build` mode (composite refs). T8's verification gate `pnpm -r typecheck` claim was technically correct at T8 time but the electron-rebuild in T9 forced a composite-ref rebuild that caught it. Moral: composite-mode regressions can lurk through multiple tasks until the next rebuild — treat `pnpm typecheck` as the source of truth, not in-IDE checks.
+- **The 8-error first lint pass** (`Found 8 errors`) was Biome counting fixable style findings (`useTemplate` / `noUnusedTemplateLiteral`) in my new test file as errors AND the pre-existing `top-bar.test.tsx` format + `retriever.ts` non-null-assertions as warnings, with the ERROR count reflecting severity. After autofix + manual template-literal consolidation + the format sweep, final count is **0 errors / 24 warnings** — baseline exact.
+- **Orchestrator's `current.lintErrors: 0` claim** was accurate-to-clean-state but the `format` finding was environment-triggered (biome picked up multi-line collapse opportunities that weren't previously flagged). Re-running a Biome sweep in a format-sensitive project can temporarily re-surface format errors without a code change — benign, fixable with `--write`.
+
+### Patterns reinforced
+
+- **Source-string audit convention** (T3 → T8 → T9) — for renderer-side + E2E-adjacent guard tests, read the file and regex-assert content. No jsdom, no React rendering. Cheapest canary for literal strings, attributes, or cross-file contract pins.
+- **Guard placement under `src/`** — `apps/desktop/vitest.config.ts` excludes `e2e/**`; ANY vitest scanner over E2E spec content must live beside other `src/*.test.ts` files to actually execute. Placement mistake is the biggest silent-failure mode for this category of test.
+- **ABI rebuild dance on verification** — Node ABI → vitest → Electron ABI → Playwright. `better-sqlite3` is the canary. Skipping either side produces a 23-failure `NODE_MODULE_VERSION` cascade that exactly matches CLAUDE.md troubleshooting.
+- **`[data-*]` stable-selector contract** — M30 (`data-step-kind`), M33 (`data-copilot-insight-id`), M34 (`data-copilot-toolbar-toggle`), now enforced by guard. Extending the contract to a new surface is one line in a renderer component + one assertion in the relevant spec.
+
+### Head-of-queue
+
+**M35 T10 — Docs + verification + Phase 5 COMPLETE milestone marker.** The LAST Phase 5 task. 3 unit tests, docs + release marker, full verification recipe including `dist:win` smoke-launch, then tag `v1.1.0`. After T10 lands: Phase 5 is complete, v1.1.0 is tagged, and the next session opens Phase 6 (scope TBD — candidates include cross-company copilot aggregation, proactive-copilot autonomy, agent-to-agent negotiation, post-release telemetry digest).
 
 ## M35 T8 SHIPPED — 2026-04-20 — v1.0.0 → v1.1.0 + Phase 5 badge pin (a8dc98e)
 

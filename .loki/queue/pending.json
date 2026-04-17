@@ -8,10 +8,10 @@
   "previousMilestoneCompletedAt": "2026-04-18T20:02:38Z",
   "previousMilestoneCommit": "af643ec",
   "createdAt": "2026-04-19T00:00:00Z",
-  "updatedAt": "2026-04-20T11:56:30Z",
+  "updatedAt": "2026-04-20T19:27:00Z",
   "totalTasks": 11,
-  "tasksShipped": 9,
-  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa. M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — +28 unit → 1162). M35 T4 SHIPPED commit 0f8b51c (Phase 5 retrospective — 271 lines; zero code). M35 T5 SHIPPED commit 3cffe29 (demo walkthrough + 5-scenario library; zero code). M35 T6 SHIPPED commit a966deb (README + user-guide reconciliation sweep; zero code). M35 T7 SHIPPED commit cb0ab4c (CHANGELOG promotion [Unreleased] → [1.1.0] under 'Phase 5 — Intelligence Layer' narrative header; version-link refs introduced; zero code). M35 T8 SHIPPED commit a8dc98e (version bump 1.0.0 → 1.1.0 across 7 package.json files + Phase 5 badge freeze unit test at apps/desktop/src/renderer/src/app/top-bar.test.tsx; +2 unit → 1164). Head-of-queue is M35 T9 (regression hardening — flaky-test audit + stable selector sweep, 2 unit tests). Tasks T9–T10 still pending from the plan doc §3 breakdown.",
+  "tasksShipped": 10,
+  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa. M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — +28 unit → 1162). M35 T4 SHIPPED commit 0f8b51c (Phase 5 retrospective — 271 lines; zero code). M35 T5 SHIPPED commit 3cffe29 (demo walkthrough + 5-scenario library; zero code). M35 T6 SHIPPED commit a966deb (README + user-guide reconciliation sweep; zero code). M35 T7 SHIPPED commit cb0ab4c (CHANGELOG promotion [Unreleased] → [1.1.0] under 'Phase 5 — Intelligence Layer' narrative header; version-link refs introduced; zero code). M35 T8 SHIPPED commit a8dc98e (version bump 1.0.0 → 1.1.0 across 7 package.json files + Phase 5 badge freeze unit test at apps/desktop/src/renderer/src/app/top-bar.test.tsx; +2 unit → 1164). M35 T9 SHIPPED commit 23f3b1b (regression hardening — NEW apps/desktop/src/e2e-regression-guards.test.ts with 2 vitest guards: .waitForTimeout(>100ms) ban + [data-*] stable-selector sweep; rag-flow.spec.ts waitForTimeout(500) → expect.poll on rag.stats.embeddingCount>0; 6 specs got [data-copilot-toolbar-toggle] anchor; top-bar.test.tsx TS2532 latent-from-T8 fixed + biome format; +2 unit → 1166). Head-of-queue is M35 T10 (docs + verification + Phase 5 COMPLETE milestone marker, 3 unit tests). Last task before Phase 5 COMPLETE + v1.1.0 tag.",
   "tasks": [
     {
       "id": "T0",
@@ -194,15 +194,30 @@
     {
       "id": "T9",
       "name": "Regression hardening — flaky-test audit + stable selector sweep",
-      "status": "pending",
-      "scope": "Regex-scan every e2e/*.spec.ts for: (a) primary assertions that rely on text-match where a data-* attribute exists (tighten to data-*); (b) any page.waitForTimeout(>100ms) as a synchronization primitive (replace with waitFor / toPass polling). Also clear the M30 T2 pre-existing lint error at packages/intelligence/src/nlu/entity-resolver.ts:352 if dormant. 2 unit tests: regex assertion that no spec uses waitForTimeout(>100); regex assertion that every spec uses at least one data-* locator.",
+      "status": "shipped",
+      "commit": "23f3b1b",
+      "shippedAt": "2026-04-20T19:22:00Z",
+      "scope": "NEW apps/desktop/src/e2e-regression-guards.test.ts — two vitest guards over apps/desktop/e2e/*.spec.ts. Guard #1 scans for .waitForTimeout(N) (capture-group extraction of numeric arg; regardless of receiver — page / window / frame / popup) and fails when N > 100 ms; the 100 ms floor lets drag-drop settling stand without flagging real fixed-duration sleeps. Guard #2 regex-asserts every spec contains at least one `[data-<kebab>]` attribute locator per the M30 data-step-kind / M33 data-copilot-insight-id / M34 data-copilot-toolbar-toggle convention. Deliberately does NOT flag setTimeout (every spec uses setTimeout(resolve, 5000) inside an afterEach Promise.race shutdown guard — upper-bound safety net, not a sync primitive — per surpriseWatch (c)). Placement discipline: lives under src/ because apps/desktop/vitest.config.ts excludes e2e/**; a guard placed in e2e/ would silently never run. Surgical in-commit fixes to the 2 real offenders the guards flagged at audit time: (A) rag-flow.spec.ts:188 `window.waitForTimeout(500)` → `expect.poll(async () => { ragStats = await window.evaluate(teamx.rag.stats…); return ragStats.embeddingCount }, { timeout: 10_000, intervals: [200,300,500,500,1000] }).toBeGreaterThan(0)` — waits on the real indexer-flush side-effect, not a timer; (B) six specs lacking [data-*] (copilot-service, meeting-flow, rag-flow, smoke, ticket-flow, vault-backup) each now assert `window.locator('[data-copilot-toolbar-toggle]').toBeVisible()` immediately after the Phase 5 badge check — anchors the stable-selector contract with a semantically meaningful assertion (proves the M34 top-bar Copilot Sparkles button mounted) without duplicating copilot-ui.spec coverage. Adjacent T8 dormant hardening (necessary to ship): top-bar.test.tsx TS2532 `Object is possibly 'undefined'` at line 57 surfaced after the Electron-ABI rebuild forced a composite-ref rebuild — replaced `expect(badgeMatch![1].trim()).toBe('Phase 5')` with `const captured = badgeMatch?.[1]?.trim() ?? ''; expect(captured).toBe('Phase 5')`, dropping the noNonNullAssertion biome-ignore. Biome format --write collapsed two multi-line call blocks. Skipped: the M30 T2 entity-resolver.ts lint clearance — acceptance criterion was 'only touch the file if the lint run genuinely flags it' and full `pnpm lint` reports 0 errors / 24 warnings (noNonNullAssertion findings are warnings in biome config, not errors).",
       "filesTouched": [
-        "apps/desktop/e2e/*.spec.ts (selector + timing audit, minimal edits where flagged)",
-        "packages/intelligence/src/nlu/entity-resolver.ts (M30 T2 lint clearance)",
-        "apps/desktop/e2e/regression-guards.test.ts (NEW — vitest scans the e2e/ directory)"
+        "apps/desktop/src/e2e-regression-guards.test.ts (NEW — 2 vitest guards scanning e2e/*.spec.ts)",
+        "apps/desktop/e2e/rag-flow.spec.ts (MODIFIED — waitForTimeout(500) → expect.poll + [data-copilot-toolbar-toggle] anchor)",
+        "apps/desktop/e2e/smoke.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
+        "apps/desktop/e2e/ticket-flow.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
+        "apps/desktop/e2e/meeting-flow.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
+        "apps/desktop/e2e/vault-backup.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
+        "apps/desktop/e2e/copilot-service.spec.ts (MODIFIED — [data-copilot-toolbar-toggle] anchor)",
+        "apps/desktop/src/renderer/src/app/top-bar.test.tsx (MODIFIED — TS2532 fix on badgeMatch indexed access + biome format)"
       ],
       "commitTemplate": "test(m35): M35 T9 — flaky-test audit + stable selector sweep",
-      "testsDelta": 2
+      "testsDelta": 2,
+      "verificationGates": {
+        "unitTests": "1166/1166 passed (+2 guard tests, 1164 → 1166 exact plan target; 102 test files; 25.86s after Node-ABI rebuild)",
+        "lint": "0 errors / 24 warnings (baseline preserved — my 6 new-file useTemplate/noUnusedTemplateLiteral findings auto-fixed + 1 pre-existing top-bar.test.tsx format error cleaned as adjacent hardening)",
+        "typecheck": "clean across all 6 workspace packages (after fixing the T8-dormant TS2532 on top-bar.test.tsx line 57)",
+        "e2e": "11 spec files / 12 Playwright cases green in 41.5s (test:e2e full run after electron-rebuild better-sqlite3+keytar)",
+        "guardSelfTest": "both guards pass on the current suite — 0 .waitForTimeout(>100ms) offenders, all 11 specs carry at least one [data-*] locator",
+        "recipeNote": "Node ABI ↔ Electron ABI rebuild dance executed per CLAUDE.md troubleshooting: electron-rebuild for E2E → cd better-sqlite3 pnpm dir && npm run install for Node ABI → vitest → electron-rebuild again before next E2E."
+      }
     },
     {
       "id": "T10",
