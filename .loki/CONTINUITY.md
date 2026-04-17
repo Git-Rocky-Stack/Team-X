@@ -1,4 +1,85 @@
-# Loki Continuity — Phase 5, **M34 COMPLETE** (Copilot UI — all 11 tasks shipped) + **M33 F3/F4 CLOSED**; **M35 T0 SHIPPED** (Demo + Hardening plan doc). M35 T1 (performance defaults pass) is head-of-queue. Phase 5 exit is 10 tasks away.
+# Loki Continuity — Phase 5, **M35 T1 SHIPPED** (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; 1130 → 1134 unit tests). M35 T2 (cross-milestone integration E2E) is head-of-queue. Phase 5 exit is 9 tasks away.
+
+## M35 T1 SHIPPED — 2026-04-19 — performance defaults + clamp audit (b68d09b)
+
+**Task:** M35 T1 — evidence-based measurement pass across the 10 Phase 5 settings clamps (M35 plan doc §4.2).
+**Atomic commit:** `b68d09b` — `perf(m35): M35 T1 — performance defaults + clamp audit`.
+**Ledger commit:** `chore(loki): M35 T1 — commit ledger (b68d09b)` (this commit).
+**Plan reference:** [M35 plan T1](../docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md#3-task-breakdown).
+
+### What shipped
+
+- **Measurement rig:** local Ollama (`127.0.0.1:11434`) + `llama3.1:8b` (Q4_K_M, 4.9 GB) against an analyzer-shaped prompt built from a realistic Strategia-X event window (50 `ticket.comment` + 10 `project.updated` + 2 `goal.progressChanged` + 5 `vault.fileAdded` = 67 bounded events, truncated to the 2000-char `MAX_EVENT_SUMMARY_CHARS` cap).
+- **Wall-clock evidence (Windows 11, Node 24.14.1):**
+  - cold: **208563 ms** (one-time model-load penalty)
+  - warm #1: **66847 ms**
+  - warm #2: **65872 ms**
+  - prompt: **2288 chars → 734 prompt_eval tokens**
+  - response: **~200 eval tokens**, well-formed JSON array
+- **Decision: all 10 defaults HELD.** Measurement justifies holding, not moving — 66 s warm tick vs 120 s `agentic_timeout_ms` = 0.55× utilisation; 5-min copilot cadence vs 66 s tick = 4.5× headroom; 8000 token budget vs ~200 eval × 8 steps = 1600 projected = 4× headroom. Full per-clamp rationale table lives in the `seed.ts` M35 T1 header block.
+- **Zero production behavior changes.** Clamp envelopes (`AGENTIC_SETTINGS_CLAMPS`, `PLANNER_SETTINGS_CLAMPS`, `COPILOT_SETTINGS_CLAMPS`) untouched. Zero new production files. Comment-only edit to `seed.ts`.
+- **+4 unit tests (1130 → 1134) pinning the measurement-held baseline:**
+  1. `settings.test.ts` — "pins every numeric default + the three approval/flag defaults after seedDefaults()" — snapshot test of all 10 defaults.
+  2. `settings.test.ts` — "pins clamp envelopes (min/max) unchanged from Phase 5 M31/M32/M33 baseline" — guards the invariant that M35 tunes defaults within envelopes, never moves the envelope itself.
+  3. `settings.test.ts` — "every (possibly revised) default satisfies min ≤ default ≤ max" — structural invariant.
+  4. `copilot-analyzer-service.test.ts` — "M35 T1 — rescheduling preserves the measurement-held default when unchanged" — proves `analyzer.restart(companyId)` is a real reschedule (stop + start), not a no-op, using the M35-T1-held 5-min default. Regression guard for the `settings.setCopilot` IPC handler contract.
+
+### Why "no defaults moved" is the right evidence-based outcome
+
+Per M35 plan doc §4.2: *"T1 runs a measurement pass (not an optimization pass) … Defaults move only if a measurement justifies it."* The measurement shows every current default sits comfortably above its usage ceiling on the target out-of-box model (llama3.1:8b Q4). Bumping defaults to favour smaller models would penalise cloud-provider users (Anthropic / OpenAI / Groq) where tighter defaults are correct. The Troubleshooting section of CLAUDE.md already documents the `agentic_max_steps → 12` / `agentic_timeout_ms → 180000` bump-path for 7-8B local-model users who want to tune per-host. **Zero silent tuning — every clamp default is now pinned by a regression test that fails loudly if anyone silently moves it.**
+
+### Why M34 deviated from the commit cadence (carry-forward)
+
+M34 shipped T2–T10 as one squashed `feat(m34)` commit. **M35 restores the per-task atomic + ledger cadence** of M30/M31/M32/M33. T1 through T10 each ship as their own `{feat,test,perf,chore,docs}(m35): M35 T<N>` atomic commit followed by a matching `chore(loki): M35 T<N> — commit ledger (<sha>)` ledger commit. **T1 re-proved the cadence on today's session: one atomic perf commit (`b68d09b`) + this ledger commit.**
+
+### Verification gates passed (T1)
+
+- **Unit tests:** 1134 / 1134 pass (38.85 s). +4 new tests. No regressions.
+- **Lint:** 0 errors / 24 warnings. The M34 baseline note attributed the pre-existing error to `packages/intelligence/src/nlu/entity-resolver.ts:352` — that was inaccurate. The actual error was a `biome-format` drift on `.loki/queue/pending.json` (introduced by the M35 T0 ledger commit's JSON serialisation). Surgical `biome format --write .loki/queue/pending.json` on the one file restored the 0-error baseline. Entity-resolver `noNonNullAssertion` diagnostics are all warnings (13 scoped there, 24 repo-wide), never errors.
+- **Typecheck:** clean across all 6 packages (`pnpm typecheck` = `pnpm -r typecheck`, both root and per-package — the M31 T18 caveat about workspace-scoped `pnpm -F @team-x/desktop typecheck` missing composite-mode regressions is still in force; root `pnpm typecheck` is the canonical run).
+- **E2E:** not re-run — T1 is a comment + test-only change with zero production-path behavior change; the M34 T11 baseline of 10 specs / 11 Playwright cases is preserved.
+
+### Architectural seams unchanged by T1
+
+The three-tier canned test seam quartet (`test-classifier` + `test-agentic-provider` + `test-agentic-tools` + `test-copilot-provider`), `{rows, truncated}` envelope, `data-*` stable E2E selector surface, pause-aware `providerRouter.complete` wrapper, `AbortController` stop, `is_system` + filter-sweep with `isSystemRoleId` predicate, atomic + ledger commit cadence, ABI rebuild dance, and IPC-mutation-emits-bus-event invariant #11 — all carry forward from M34 unchanged. T1 exercised none of these directly; it only exercised the `settings` repo + `CopilotAnalyzerService.restart()` contract.
+
+### Environment at this checkpoint
+
+- Windows 11 Pro 26200, Node v24.14.1 (ABI 137), pnpm 9.15.4.
+- Ollama reachable at `127.0.0.1:11434` with `llama3.1:8b` + `gemma4:26b` + `kimi-k2.5:cloud` installed. T1 measurement exclusively used `llama3.1:8b`.
+- Dev DB: `%APPDATA%\Team-X\team-x\team-x.sqlite` (migrations 0001–0012 present, system-agent + system-copilot seeded per-company). T1 did not touch the dev DB — all tests use `:memory:` SQLite via `makeTestDb`.
+- ABI state at this checkpoint: **Node** (post-vitest rebuild). Electron rebuild required before M35 T2 Playwright work: `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`.
+- Keychain: OS keychain (`keytar`). No API keys committed.
+
+### Head-of-queue after this ledger commit
+
+**M35 T2 — Cross-milestone integration E2E (RAG → NLU → agentic → planner → copilot).** New `apps/desktop/e2e/phase-5-integration.spec.ts`. Single Playwright spec stitching the full Phase 5 stack (M28 → M29 → M30 → M31 → M32 → M33 → M34) in one session. Scenario per M35 plan doc §4.1: vault upload fires M28 on-write chunker+embedder → Cmd+K complex_request routes through M30 NLU + M31 agentic loop with M29 RAG retrieval → Cmd+K "decompose X into tickets" fires M32 amber write-side gate + decompose_project + delegate_subtask → `copilot.configure` manual tick emits M33 insight → `Cmd+Shift+K` opens M34 sidebar + insight card + dismiss + ask input. Runtime budget ≤ 15 s. Uses the four-member canned-seam quartet. Zero production code changes — purely additive test. Commit template: `test(m35): M35 T2 — cross-milestone integration E2E spec`.
+
+### Phase 5 exit criteria (countdown)
+
+- [x] T0 — plan doc (da4ce1f)
+- [x] T1 — performance defaults + clamp audit (b68d09b)
+- [ ] T2 — cross-milestone integration E2E ← **HEAD-OF-QUEUE**
+- [ ] T3 — observability polish — audit view chips for 9 Phase 5 event types (+3 unit)
+- [ ] T4 — Phase 5 retrospective doc
+- [ ] T5 — demo script + 5-scenario walkthrough library
+- [ ] T6 — README + user-guide reconciliation sweep
+- [ ] T7 — CHANGELOG `[Unreleased]` → `[1.1.0]` promotion
+- [ ] T8 — v1.0.0 → v1.1.0 + Phase 5 badge freeze pin (+2 unit)
+- [ ] T9 — regression hardening (+2 unit)
+- [ ] T10 — docs + verification + Phase 5 COMPLETE marker (+3 unit)
+
+**Phase 5 exit is 9 tasks away.** After T10, the next session is Phase 6 T0 (scope TBD — no Phase 6 design doc exists yet).
+
+### Next Session Startup Checklist (begin M35 T2)
+
+1. Read this CONTINUITY header — M35 T1 SHIPPED. Head-of-queue M35-T2.
+2. Read `.loki/state/orchestrator.json` → `currentMilestone=M35`, `tasksCompleted=2`, `inflight.taskId=M35-T2`, `inflight.lastShipped=M35-T1`, `inflight.lastShippedCommit=b68d09b`, baseline 1134 unit / 10 E2E spec files / 11 Playwright cases.
+3. Read `.loki/queue/pending.json` → T0 + T1 shipped; T2 head-of-queue; T3–T10 pending.
+4. Read `.loki/queue/current-task.json` → M35-T2 goal + acceptance criteria. Files to touch: `apps/desktop/e2e/phase-5-integration.spec.ts` (NEW — no production files).
+5. **T2 = cross-milestone integration E2E.** Single Playwright spec stitching M28 → M29 → M30 → M31 → M32 → M33 → M34 with ≤ 15 s runtime. Four-member canned seam quartet wired. Stable `data-*` selectors throughout. Regression guards on invariant #11 + M30 destructive gate + M32 write-side gate + Phase 5 top-bar badge.
+6. Before running `test:e2e`: switch ABI to Electron — `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar`. After running vitest (if needed), switch back to Node via `cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install`.
+7. Atomic commit: `test(m35): M35 T2 — cross-milestone integration E2E spec`. Capture SHA. Ledger commit: `chore(loki): M35 T2 — commit ledger (<sha>)`. Roll state + queue + CONTINUITY.
 
 ## M35 T0 SHIPPED — 2026-04-19 — plan doc (da4ce1f)
 

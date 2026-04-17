@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M35",
   "milestoneName": "Demo + Hardening",
-  "tasksCompleted": 1,
+  "tasksCompleted": 2,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md",
@@ -10,9 +10,9 @@
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {
-    "taskId": "M35-T1",
-    "lastShipped": "M35-T0",
-    "lastShippedCommit": "da4ce1f"
+    "taskId": "M35-T2",
+    "lastShipped": "M35-T1",
+    "lastShippedCommit": "b68d09b"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M34",
@@ -32,12 +32,14 @@
     "asOfMilestone": "M34 complete (commit af643ec)"
   },
   "current": {
-    "unitTests": 1130,
+    "unitTests": 1134,
     "e2eSpecs": 10,
     "e2eGreenCount": 11,
-    "lintErrors": 1,
+    "lintErrors": 0,
+    "lintErrorsNote": "M35 T1 cleared the pre-existing error. The baseline-tagged 'entity-resolver.ts:352' attribution was inaccurate — the actual error was a biome-format drift on .loki/queue/pending.json. Surgical `biome format --write` on that file restored the 0-error baseline.",
     "lintWarnings": 24,
-    "typecheckClean": true
+    "typecheckClean": true,
+    "asOfTask": "M35-T1 (commit b68d09b)"
   },
   "targets": {
     "unitTests": "~1145 (+15 per Phase 5 design §9 M35 row)",
@@ -187,17 +189,45 @@
       "commit": "da4ce1f",
       "deliverable": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (186 lines). Mirrors M33/M34 structural template. T0–T10 breakdown covers perf defaults + cross-milestone E2E + observability polish + retrospective + demo script + README sweep + CHANGELOG promotion + v1.0.0 → v1.1.0 bump + regression hardening + Phase 5 COMPLETE marker.",
       "testsDelta": 0
+    },
+    "M35-T1": {
+      "name": "Performance defaults pass + clamp audit",
+      "shippedAt": "2026-04-19T21:40:00Z",
+      "commit": "b68d09b",
+      "deliverable": "Evidence-based measurement pass across the 10 Phase 5 settings clamps (rag_chunk_size / rag_chunk_overlap / rag_similarity_threshold / agentic_max_steps / agentic_max_tokens / agentic_timeout_ms / planner_max_tickets / planner_max_depth / planner_escalation_threshold / copilot_interval_minutes) against local Ollama + llama3.1:8b. Measurement: cold 208563 ms / warm #1 66847 ms / warm #2 65872 ms; 2288-char prompt / 734 prompt_eval tokens / ~200 eval tokens; JSON response well-formed. Decision: all 10 defaults HELD (measurement justifies holding, not moving — 66s warm tick vs 120s agentic_timeout_ms = 0.55× utilisation; 5-min copilot cadence vs 66s tick = 4.5× headroom; 8000 token budget vs 1600 projected = 4× headroom). Full measurement block + per-clamp rationale table lives in apps/desktop/src/main/db/seed.ts header. Zero production behavior changes; zero new production files; clamp envelopes unchanged.",
+      "filesTouched": [
+        "apps/desktop/src/main/db/seed.ts (+47 header comment lines, behavior untouched)",
+        "apps/desktop/src/main/db/repos/settings.test.ts (+96 lines, +3 unit tests)",
+        "apps/desktop/src/main/services/copilot-analyzer-service.test.ts (+40 lines, +1 unit test)"
+      ],
+      "testsDelta": "+4 unit (1130 → 1134)",
+      "verificationGates": {
+        "unitTests": "1134/1134 pass (38.85s)",
+        "lint": "0 errors / 24 warnings (baseline restored — pre-existing .loki/queue/pending.json format drift fixed surgically)",
+        "typecheck": "clean across all 6 packages",
+        "e2e": "not re-run for comment+test-only change (no production-path behavior change; E2E baseline at M34 T11 preserved)"
+      },
+      "ollamaEvidence": {
+        "model": "llama3.1:8b (Q4_K_M, 4.9 GB)",
+        "endpoint": "http://127.0.0.1:11434",
+        "prompt_chars": 2288,
+        "prompt_eval_count": 734,
+        "eval_count_avg": 200,
+        "cold_wall_ms": 208563,
+        "warm_wall_ms_avg": 66360
+      }
     }
   },
   "inFlightMilestone": {
     "milestone": "M35",
     "milestoneName": "Demo + Hardening",
-    "tasksShipped": 1,
+    "tasksShipped": 2,
     "totalTasks": 11,
-    "headOfQueue": "M35-T1",
-    "headOfQueueName": "Performance defaults pass + clamp audit"
+    "headOfQueue": "M35-T2",
+    "headOfQueueName": "Cross-milestone integration E2E (RAG → NLU → agentic → planner → copilot)"
   },
   "notes": [
+    "M35 T1 SHIPPED (commit b68d09b — 'perf(m35): M35 T1 — performance defaults + clamp audit'). Evidence-based measurement pass across the 10 Phase 5 settings clamps against local Ollama + llama3.1:8b. Cold 208563 ms; warm 66847 / 65872 ms; 2288-char prompt / 734 prompt_eval tokens / ~200 eval tokens. All 10 defaults HELD — measurement justifies holding, not moving (66s warm tick vs 120s agentic_timeout_ms = 0.55× utilisation; 5-min copilot cadence vs 66s tick = 4.5× headroom; 8000 token budget vs 1600 projected = 4× headroom). Zero production behavior changes. +4 unit tests (1130 → 1134) pinning the measurement-held baseline (defaults snapshot + clamp envelope snapshot + [min,max] invariant + restart-reschedule regression guard). Verification: 1134/1134 unit green; typecheck clean; 0 lint errors / 24 warnings (pre-existing .loki/queue/pending.json format drift cleared surgically — the 'entity-resolver.ts:352' baseline attribution in M33/M34 notes was inaccurate). Full measurement block + per-clamp rationale table lives in apps/desktop/src/main/db/seed.ts header. Clamp envelopes untouched. M34-deviation from atomic + ledger commit cadence RESTORED — M35 T1 shipped as its own atomic perf(m35) commit followed by this ledger commit.",
     "M34 (Copilot UI) COMPLETE (2026-04-18T20:02:38Z). All 11 tasks shipped across 3 commits (f1180cf + 893f8fd + af643ec). +31 unit tests (1099 → 1130; plan-doc estimate ~14 unit + 1 E2E was met). +1 E2E spec (9 → 10; +copilot-ui.spec.ts). 0 net lint errors (1 pre-existing M30 T2 preserved) / 24 warnings / typecheck clean. Phase 4 → Phase 5 top-bar badge bump done + asserted across 5 specs. Zero new IPC / bus events / providers — consumed M33's copilot.* surface + M30 command.execute pipeline per architectural contract.",
     "M33 follow-ups F3 + F4 CLOSED (commit 039020b — 'feat(m33): F3 + F4 — wire companies.archive + post-restore system-employee bootstrap'). F3 wired CopilotEventWindow.clear(companyId) to a new companies.archive IPC. F4 added backupService.ensurePostRestoreSystemEmployees() for backwards-compatible restore of pre-M31/pre-M33 backups. Both deliverables shipped and landed before M35 T0 plan doc authoring.",
     "M35 T0 SHIPPED (commit da4ce1f — 'feat(m35): M35 T0 — plan doc'). Plan doc docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (186 lines) lands the full T0–T10 breakdown. 11-task breakdown: T0 plan doc, T1 perf defaults, T2 cross-milestone E2E, T3 observability polish, T4 retrospective, T5 demo script, T6 README sweep, T7 CHANGELOG promotion, T8 v1.1.0 version bump, T9 regression hardening, T10 Phase 5 COMPLETE marker.",

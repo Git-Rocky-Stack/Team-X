@@ -1,37 +1,29 @@
 {
-  "taskId": "M35-T1",
+  "taskId": "M35-T2",
   "milestone": "M35",
   "milestoneName": "Demo + Hardening",
   "phase": "Phase 5 — Intelligence Layer",
-  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T1 row, §4.2 settings-clamp table)",
-  "title": "Performance defaults pass + clamp audit",
+  "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (§3 T2 row, §4.1 cross-milestone scenario)",
+  "title": "Cross-milestone integration E2E — RAG → NLU → agentic → planner → copilot",
   "status": "pending",
-  "predecessor": "M35-T0 shipped 2026-04-19 (commit da4ce1f — plan doc). M34 COMPLETE shipped 2026-04-18 (commits f1180cf + 893f8fd + af643ec). 1130 unit tests / 10 E2E spec files / 11 Playwright cases green. M34 and M33 folded into orchestrator history; M33 follow-ups F3 + F4 CLOSED in commit 039020b.",
-  "goal": "Evidence-based measurement pass across the 10 Phase 5 settings clamps (rag_chunk_size / rag_chunk_overlap / rag_similarity_threshold / agentic_max_steps / agentic_max_tokens / agentic_timeout_ms / planner_max_tickets / planner_max_depth / planner_escalation_threshold / copilot_interval_minutes). Seed Strategia-X demo company with realistic content (50 tickets / 10 projects / 2 goals / 5 vault files) and run one full copilot analyzer tick against (a) local Ollama + llama3.1:8b if available AND (b) the canned test-copilot-provider seam. Record wall-clock per clamp. Move defaults ONLY if measurement justifies it. Every change lands with a one-line comment in apps/desktop/src/main/db/seed.ts citing the measurement wall-clock (e.g., `// agentic_max_steps=12 — bumped from 8 after llama3.1:8b measured 11 steps avg on the Strategia-X seed (2026-04-19, M35 T1)`).",
+  "predecessor": "M35-T1 shipped 2026-04-19 (commit b68d09b — performance defaults + clamp audit; all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests 1130 → 1134; 0 lint errors / 24 warnings / typecheck clean). M35-T0 shipped 2026-04-19 (commit da4ce1f — plan doc). M34 COMPLETE shipped 2026-04-18 (commits f1180cf + 893f8fd + af643ec).",
+  "goal": "Author apps/desktop/e2e/phase-5-integration.spec.ts — a single Playwright spec stitching the full Phase 5 stack (M28 → M29 → M30 → M31 → M32 → M33 → M34) in one session. Scenario per M35 plan doc §4.1: (1) vault.addFile → M28 on-write chunker+embedder fires; (2) Cmd+K 'summarise the uploaded vault file' → M30 NLU + M31 agentic loop with M29 RAG retrieval resolves → answer cites the file; (3) Cmd+K 'decompose the Q1 roadmap into tickets' → M32 amber write-side gate → Confirm → decompose_project + delegate_subtask; (4) copilot.configure manual tick → M33 analyzer proposes insight; (5) Cmd+Shift+K sidebar opens → insight card visible → dismiss → ask-input fires M33 ask-the-copilot path via M34 sidebar. Runtime budget ≤15s. Uses the four-member canned-seam quartet (test-classifier + test-agentic-provider + test-agentic-tools + test-copilot-provider). Zero production code changes — purely additive test.",
   "acceptance": [
-    "M35 plan doc §4.2 settings-clamp table defaults either (a) remain unchanged with rationale in the commit body, OR (b) update with one-line justifying-measurement comment in apps/desktop/src/main/db/seed.ts.",
-    "Unit tests added:",
-    "  1. settings seed defaults match the final (possibly updated) values.",
-    "  2. Clamp ranges unchanged — the clamp envelope is not moved by this task (only the default within the envelope).",
-    "  3. copilot_interval_minutes restart-on-change behavior still fires the analyzer.restart(companyId) side effect.",
-    "  4. Any revised default passes both the lower-clamp and upper-clamp assertions.",
-    "Zero new production files. All edits are to seed.ts + 2 test files.",
-    "pnpm test green (1130 → 1134). pnpm typecheck clean. pnpm lint 0 errors / ≤24 warnings.",
-    "Atomic commit: perf(m35): M35 T1 — performance defaults + clamp audit.",
-    "Ledger commit: chore(loki): M35 T1 — commit ledger (<sha>) — roll orchestrator.json tasksCompleted 1 → 2, update pending.json T1 status pending → shipped, update current-task.json to point at M35-T2, prepend M35 T1 DONE subsection to .loki/CONTINUITY.md."
+    "New apps/desktop/e2e/phase-5-integration.spec.ts — ≤15s runtime, asserts every transition via stable data-* selectors (data-step-kind + data-copilot-insight-id + data-copilot-sidebar-root + data-copilot-toolbar-toggle + data-copilot-widget-list).",
+    "Cross-milestone scenario exercises M28/M29 vault index + retrieval, M30 Cmd+K palette, M31 agentic step log + final answer, M32 amber write-side gate + decompose + delegate, M33 copilot.configure manual tick + copilot.insights, M34 Cmd+Shift+K sidebar + ask input.",
+    "Four-member canned-seam quartet wired: test-classifier (M30), test-agentic-provider + test-agentic-tools (M31/M32), test-copilot-provider (M33). Any new prompt keys added to the seam tables in lockstep (T8 pattern from M30/M31/M32/M33).",
+    "Regression guards (invariant #11 + M30 T5 destructive gate + M32 T5 write-side gate + Phase 5 top-bar badge) all asserted.",
+    "Full test suite green after Electron ABI rebuild: pnpm -F @team-x/desktop test:e2e → 11 specs / 12 cases. pnpm test → 1134/1134 unit green (T2 adds E2E only, not unit). pnpm typecheck clean. pnpm lint 0 errors / ≤24 warnings.",
+    "Atomic commit: test(m35): M35 T2 — cross-milestone integration E2E spec.",
+    "Ledger commit: chore(loki): M35 T2 — commit ledger (<sha>) — roll orchestrator.json tasksCompleted 2 → 3, update pending.json T2 status pending → shipped, update current-task.json to point at M35-T3, prepend M35 T2 DONE subsection to .loki/CONTINUITY.md."
   ],
-  "filesTouched": [
-    "apps/desktop/src/main/db/seed.ts (measurement-justified default changes + one-line comment per change)",
-    "apps/desktop/src/main/services/copilot-analyzer-service.ts (comment additions only if any default changes affect cadence)",
-    "packages/intelligence/src/rag/indexer.ts (comment additions only if chunk defaults change)",
-    "apps/desktop/src/main/services/copilot-analyzer-service.test.ts (extend with restart-on-change assertion)",
-    "apps/desktop/src/main/repos/settings-repo.test.ts (extend with seed-default + clamp assertions)"
-  ],
-  "tests": "+4 unit tests",
+  "filesTouched": ["apps/desktop/e2e/phase-5-integration.spec.ts (NEW)"],
+  "tests": "+1 E2E spec (10 → 11 spec files; 11 → 12 Playwright cases)",
   "carryForward": [
-    "M34 architectural seams (three-tier canned test seam QUARTET, pause-aware providerRouter wrapper, AbortController stop, is_system + filter-sweep with isSystemRoleId predicate, atomic + ledger commit cadence, ABI rebuild dance, IPC-mutation-emits-bus-event invariant #11) all carry forward unchanged.",
-    "M33 follow-ups F3 + F4 CLOSED (commit 039020b). No open Phase 5 follow-ups.",
+    "M35 T1 closed: all 10 Phase 5 settings clamps HELD at measurement-held defaults. Envelopes untouched. Measurement evidence lives in apps/desktop/src/main/db/seed.ts header + .loki/state/orchestrator.json history.M35-T1.ollamaEvidence.",
+    "Architectural seams (canned quartet / {rows, truncated} envelope / data-* selectors / pause-aware providerRouter wrapper / AbortController stop / is_system filter-sweep / atomic + ledger cadence / ABI rebuild dance / invariant #11) unchanged.",
     "Copilot wire contract: copilot.ask returns { runId, threadId } matching M31 complex_request — unchanged for M35.",
-    "Phase 5 badge is FROZEN at 'Phase 5' through v1.1.0 release. M35 T8 pins the literal string in a unit test. Phase 6 work is the next session after M35 T10."
+    "Phase 5 badge is FROZEN at 'Phase 5' through v1.1.0 release. M35 T8 pins the literal string in a unit test. Phase 6 work is the next session after M35 T10.",
+    "ABI state at start of T2: Node (post M35 T1 vitest). Before running e2e, run `pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar` to switch to Electron ABI."
   ]
 }
