@@ -530,6 +530,8 @@ All 10 existing invariants from the v1.0 design doc remain intact:
 | D11 | Write-side gate is a keyword heuristic over `complex_request` text, not a separate intent | Keeping `complex_request` as the single agentic-loop entry point keeps the classifier stable; a dedicated `write_request` intent would force every spec to script a new classifier branch. The keyword regex (decompose / delegate / create tickets / assign owners / review) catches the common write phrasings without growing the intent surface | Locked (2026-04-15) |
 | D12 | Escalation tracker is in-memory per-process, not persisted | After-`planner_escalation_threshold` failures escalate up the org chart, but the failure counter resets on app restart. Persisting it would require a new `escalation_state` table for a feature that fires only when delegation is genuinely broken; the simpler design is to surface escalations as `task.escalated` events (which ARE persisted via the append-only events table) and let the manager's queue absorb the work. M33 may revisit if escalations need cross-session continuity | Locked (2026-04-15) |
 
+**Phase 5 retrospective:** The full Phase 5 delivery arc (M28 → M35), what paid off architecturally, what cost time, what got deferred, and prioritized Phase 6 seeds are captured in [`docs/plans/2026-04-19-team-x-phase-5-retrospective.md`](2026-04-19-team-x-phase-5-retrospective.md) (authored during M35 T4 as the Phase 5 exit-gate documentation). Future phase retros MUST match the locked six-section structure from that doc so delivery-arc comparisons remain apples-to-apples.
+
 ---
 
 ## 14. Follow-ups (post-M31)
