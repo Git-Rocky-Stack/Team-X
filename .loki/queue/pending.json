@@ -8,10 +8,10 @@
   "previousMilestoneCompletedAt": "2026-04-18T20:02:38Z",
   "previousMilestoneCommit": "af643ec",
   "createdAt": "2026-04-19T00:00:00Z",
-  "updatedAt": "2026-04-19T23:55:00Z",
+  "updatedAt": "2026-04-19T23:59:00Z",
   "totalTasks": 11,
-  "tasksShipped": 3,
-  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a 3.7s Playwright run; +1 E2E spec → 11 spec files / 12 Playwright cases). Head-of-queue is M35 T3 (observability polish — Audit view chip coverage audit). Tasks T3–T10 still pending from the plan doc §3 breakdown.",
+  "tasksShipped": 4,
+  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a 3.7s Playwright run; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa (rewrote two stale passages that claimed RagIndexer subscribes to vault bus events; verified at rag-indexer.ts:78,88 it keys on work.completed + meeting.ended only; spec body was already correct). M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — 10 new event types + payload-aware row summaries + 28 unit tests; +28 unit → 1162; chip module split into audit-event-chip-helpers.ts pure surface + audit-event-chip.tsx component shell per step-card-narrow convention). Head-of-queue is M35 T4 (Phase 5 retrospective doc). Tasks T4–T10 still pending from the plan doc §3 breakdown.",
   "tasks": [
     {
       "id": "T0",
@@ -64,15 +64,24 @@
     {
       "id": "T3",
       "name": "Observability polish — Audit view chip coverage audit",
-      "status": "pending",
-      "scope": "Phase 5 added 15 new event types; AuditView ships chips for only 6 (M32 T6 planner chips). T3 audits the remaining 9 (`rag.index.*`, `command.executed`, `agent.step`, `agentic.completed`, `agentic.failed`, `copilot.analyzed`, `copilot.insight`, `copilot.dismissed`, `copilot.expired`) and adds chips + payload-aware row summaries. Match the existing chip a11y contract: semantic color paired with text label, chip focus ring visible, aria-label with event type name. 3 unit tests for representative rendering (rag.index.indexed / agent.step / copilot.analyzed).",
+      "status": "shipped",
+      "commit": "51393f8",
+      "shippedAt": "2026-04-19T23:59:00Z",
+      "scope": "Phase 5 added 15 new event types; AuditView previously shipped chips for only 7 (M30 command.executed + M32 T6 planner chips). T3 chips the remaining 10 (rag.index.indexed, rag.index.reindexed, rag.index.removed, agent.step, agentic.completed, agentic.failed, copilot.analyzed, copilot.insight, copilot.dismissed, copilot.expired) with semantic-color-paired-with-text-label a11y contract + aria-label carrying the literal event-type name + data-event-type stable E2E selector surface. Payload-aware row-summary formatters surface the most useful payload field per type (agent.step → kind + stepIndex + runId slice; copilot.analyzed → reason + counts + durationMs; rag.index.* → sourceKind + sourceId slice + chunkCount; etc.). Hard 140-char summary cap via clampSummary. NEW `audit-event-chip-helpers.ts` pure-helper module split from the component `.tsx` so vitest resolves without `@/` alias cascade through Badge — mirrors the existing step-card-narrow.ts + step-card.tsx convention. Three representative event types pinned per acceptance #3 (rag.index.indexed / agent.step / copilot.analyzed) plus M32 T6 planner regression guards (plan.proposed + task.delegated) plus cross-cutting defaults. rag.index.* chips land defensively — the bus events are aspirational per CLAUDE.md's bus-event table but NOT currently emitted by rag-indexer.ts (verified via grep of lines 78, 88 — indexer only handles work.completed + meeting.ended and writes directly via ragService.indexSource without a bus emit).",
       "filesTouched": [
-        "apps/desktop/src/renderer/src/features/audit/audit-view.tsx",
-        "apps/desktop/src/renderer/src/features/audit/audit-event-chip.tsx",
-        "apps/desktop/src/renderer/src/features/audit/audit-event-chip.test.tsx"
+        "apps/desktop/src/renderer/src/features/audit/audit-event-chip-helpers.ts (NEW, 347 lines — pure helpers)",
+        "apps/desktop/src/renderer/src/features/audit/audit-event-chip.tsx (NEW, 89 lines — component shell + re-exports)",
+        "apps/desktop/src/renderer/src/features/audit/audit-event-chip.test.tsx (NEW, 263 lines — 28 unit tests)",
+        "apps/desktop/src/renderer/src/features/audit/audit-view.tsx (MODIFIED — removed 143 lines of duplicated helpers, added 10 lines for chip import + component replacement)"
       ],
       "commitTemplate": "feat(m35): M35 T3 — audit view chips for Phase 5 events",
-      "testsDelta": 3
+      "testsDelta": "+28 unit (1134 → 1162; plan estimated +3, shipped richer coverage per no-cutting-corners mandate)",
+      "verificationGates": {
+        "unitTests": "1162/1162 pass (15.17s) — 100 test files green",
+        "lint": "0 errors / 24 warnings (baseline restored via surgical biome format --write on the 4 new/edited audit files + .loki/state/orchestrator.json pre-existing format drift)",
+        "typecheck": "clean across all 6 packages",
+        "e2e": "not re-run (renderer-only chip change; no E2E spec asserts on audit-view selectors; matches M35 T1's comment+test-only precedent — E2E baseline preserved at 12 cases / 11 spec files / 40.6s from M35 T2)"
+      }
     },
     {
       "id": "T4",
@@ -176,13 +185,13 @@
     "typecheckClean": true
   },
   "current": {
-    "unitTests": 1130,
-    "e2eSpecs": 10,
-    "e2eGreenCount": 11,
-    "lintErrors": 1,
+    "unitTests": 1162,
+    "e2eSpecs": 11,
+    "e2eGreenCount": 12,
+    "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfMilestone": "M34 complete + M35 T0 shipped (commit da4ce1f)"
+    "asOfMilestone": "M35 T3 shipped (commit 51393f8)"
   },
   "targets": {
     "unitTests": 1145,
@@ -195,7 +204,8 @@
   },
   "notes": [
     "M35 T0 (plan doc) SHIPPED 2026-04-19 commit da4ce1f. Plan doc docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (186 lines) covers all Phase 5 design §9 M35 deliverables + Phase 5 exit gate.",
-    "Phase 5 exit strategy: M35 is the only unshipped Phase 5 milestone. 11 tasks total (T0 done). After T10 lands, Phase 5 is COMPLETE and v1.1.0 ships. Next session is Phase 6 T0 (write Phase 6 plan doc — scope TBD).",
+    "M35 T3 (audit view chips for Phase 5 events) SHIPPED 2026-04-19 commit 51393f8. 10 newly-chipped event types (rag.index.* ×3, agent.step, agentic.completed, agentic.failed, copilot.* ×4) + payload-aware row summaries + 28 unit tests. Unit baseline 1134 → 1162. Chip module split pattern established (audit-event-chip-helpers.ts pure + audit-event-chip.tsx component) mirrors the step-card-narrow convention and unblocks future renderer pure-helper extractions without vitest `@/` alias work.",
+    "Phase 5 exit strategy: M35 is the only unshipped Phase 5 milestone. 11 tasks total (T0 + T1 + T2 + T3 done). After T10 lands, Phase 5 is COMPLETE and v1.1.0 ships. Next session is Phase 6 T0 (write Phase 6 plan doc — scope TBD).",
     "Zero new IPC / bus events / providers / migrations across M35. Purely integration hardening + performance measurement + documentation + release marker. Renderer-only and main-only edits are all additive.",
     "M35 restores the per-task atomic + ledger commit cadence (M34 deviated with a squashed feat commit covering T2–T10 + separate T11 docs commit). M35 T1–T10 each land as their own atomic commit with a matching chore(loki) ledger commit fold.",
     "Verification recipe at T10: (1) Node ABI rebuild, (2) pnpm test → ~1145, (3) pnpm typecheck → clean, (4) pnpm lint → 0 errors / ≤24 warnings, (5) Electron ABI rebuild, (6) pnpm -F @team-x/desktop test:e2e → 11/12 in ≤35s, (7) pnpm -F @team-x/desktop build, (8) pnpm dist:win smoke-launch against release/1.1.0/ installer.",

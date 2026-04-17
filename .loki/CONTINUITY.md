@@ -1,4 +1,74 @@
-# Loki Continuity — Phase 5, **M35 T2 SHIPPED** (cross-milestone integration E2E — 495-line `phase-5-integration.spec.ts` stitching M28 → M29 → M30 → M31 → M32 → M33 → M34 in one session; 1134 unit tests / 12 Playwright cases / 11 spec files / 40.6s total; spec runtime 3.7s under the ≤15s budget). M35 T3 (observability polish — Audit view chip coverage audit) is head-of-queue. Phase 5 exit is 8 tasks away.
+# Loki Continuity — Phase 5, **M35 T3 SHIPPED** (observability polish — AuditView chip coverage extended to 10 Phase 5 event types with payload-aware row summaries and a hard ≤140-char invariant; +28 unit tests, 1134 → 1162; chip module split into `audit-event-chip-helpers.ts` pure-surface + `audit-event-chip.tsx` component shell per the existing `step-card-narrow` convention so vitest resolves without `@/` alias work). M35 T4 (Phase 5 retrospective doc) is head-of-queue. Phase 5 exit is 7 tasks away.
+
+## M35 T3 SHIPPED — 2026-04-19 — audit view chips for Phase 5 events (51393f8)
+
+**Task:** M35 T3 — extend AuditView chip coverage to the Phase 5 event types not yet chipped, author payload-aware row-summary formatters, and pin 3 representative event types (rag.index.indexed / agent.step / copilot.analyzed) with unit tests. (M35 plan doc §3 T3 row.)
+**Atomic commit:** `51393f8` — `feat(m35): M35 T3 — audit view chips for Phase 5 events`.
+**Docs-correction commit (pre-T3):** `54830fa` — `docs(m35): M35 T2 — phase-5-integration docblock accuracy fix` (corrected the two stale docblock passages that claimed RagIndexer subscribes to vault bus events; verified at `rag-indexer.ts:78,88` that it keys on `work.completed` + `meeting.ended` only; spec body was already correct — T2 ships unaffected).
+**Ledger commit:** `chore(loki): M35 T3 — commit ledger (51393f8)` (this commit).
+**Plan reference:** [M35 plan T3](../docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md#3-task-breakdown).
+
+### What shipped
+
+- **NEW `apps/desktop/src/renderer/src/features/audit/audit-event-chip-helpers.ts`** — pure-helper module (no React, no Badge, no `@/` aliases) hosting `EVENT_TYPE_COLORS`, `EVENT_TYPE_LABELS`, `DEFAULT_COLOR`, `ROW_SUMMARY_MAX_CHARS` (140 char cap), `SUMMARIZABLE_TYPES`, and the payload-aware `buildRowSummary` switch. Splits helpers from the React component so vitest exercises them without resolving `Badge`'s transitive `@/lib/utils` import — mirrors the existing `step-card-narrow.ts` + `step-card.tsx` convention. Cross-feature `intentLabel` import uses a relative path (`../command/intent-labels.js`) so the pure module stays vitest-resolvable.
+- **NEW `apps/desktop/src/renderer/src/features/audit/audit-event-chip.tsx`** — thin React component shell. Re-exports every helper from the `.ts` module + renders `<Badge>` with `aria-label="Event type: <literal>"` (screen readers announce wire-level type, not softened display label), `data-event-type` (stable E2E selector surface mirroring M31 `data-step-kind` / M34 `data-copilot-insight-id`), and inherits the Badge primitive's built-in `focus:ring-2 focus:ring-ring focus:ring-offset-2`.
+- **NEW `apps/desktop/src/renderer/src/features/audit/audit-event-chip.test.tsx`** — 28 unit tests. Three representative event types pinned per acceptance bullet #3: `rag.index.indexed` (M28/M29 aspirational RAG indexer — chip lands defensively; see below), `agent.step` (M31 agentic loop), `copilot.analyzed` (M33 copilot service). Each covers color class + display label + aria-label + summarizable predicate + payload-aware row summary. Regression guards for M32 T6 frozen planner chips (`plan.proposed` + `task.delegated`) land alongside. Cross-cutting defaults verify `DEFAULT_COLOR` fallback, title-cased unknown types, and the ≤140-char `ROW_SUMMARY_MAX_CHARS` clamp.
+- **MODIFIED `apps/desktop/src/renderer/src/features/audit/audit-view.tsx`** — removes the duplicated constants (`EVENT_TYPE_COLORS`, `EVENT_TYPE_LABELS`, `DEFAULT_COLOR`, `SUMMARIZABLE_TYPES`, `formatEventType`, `buildRowSummary`, `intentLabel` + `Badge` imports). Imports `AuditEventChip` + `buildRowSummary` + `formatEventType` from the new module. Replaces the inline `<Badge>` with `<AuditEventChip eventType={event.eventType} />`. `tryParsePayload` kept local (6-line utility, used only for the expanded-row JSON viewer).
+
+### 10 Phase 5 event types newly chipped (M30 `command.executed` + the six M32 T6 planner events were already chipped and preserved verbatim)
+
+| Event type             | Color           | Display label       | Row summary shape                                          |
+| ---------------------- | --------------- | ------------------- | ---------------------------------------------------------- |
+| `rag.index.indexed`    | blue (info)     | RAG Indexed         | `sourceKind · sourceId[:8] · N chunk(s)`                   |
+| `rag.index.reindexed`  | blue (info)     | RAG Reindexed       | `sourceKind · sourceId[:8] · N chunk(s) · reindex`         |
+| `rag.index.removed`    | gray (expired)  | RAG Removed         | `sourceKind · sourceId[:8] · removed`                      |
+| `agent.step`           | sky (progress)  | Agent Step          | `kind · step N · runId[:8]`                                |
+| `agentic.completed`    | emerald (done)  | Agentic Done        | `N step(s) · M tok · Xms`                                  |
+| `agentic.failed`       | rose (failed)   | Agentic Failed      | `reason · message[:60] | runId[:8]`                        |
+| `copilot.analyzed`     | blue (info)     | Copilot Analyzed    | `reason · N new · M merged · K expired · Xms`              |
+| `copilot.insight`      | amber (proposed)| Copilot Insight     | `category · severity · "title[:60]"`                       |
+| `copilot.dismissed`    | gray (expired)  | Copilot Dismissed   | `insightId[:8]`                                            |
+| `copilot.expired`      | gray (expired)  | Copilot Expired     | `category · "title[:60]"`                                  |
+
+### Key architectural surprises
+
+- **`rag.index.*` events are NOT currently emitted** — CLAUDE.md Phase 5 bus-event table documents them aspirationally but `rag-indexer.ts:78,88` only handles `work.completed` + `meeting.ended` and indexes directly via `ragService.indexSource()` (no bus emit). Chips land defensively so the audit row surfaces correctly the moment the events start firing. Confirmed per the M35 T3 plan carry-forward note: "confirm the exact emitted literal strings with a grep of rag-indexer.ts before authoring the chip map".
+- **`@/` alias does not resolve in vitest** — the existing renderer `.test.*` files all use relative imports (no `@/` in any of them). Badge.tsx internally imports `@/lib/utils` which cascades into any test that transitively pulls Badge. Split-module approach avoids a vitest config change.
+
+### A11y contract preserved + extended
+
+- Semantic color is always paired with a visible text label (WCAG 1.4.1 Use of Color). Color alone never carries meaning.
+- `aria-label` format: `"Event type: <literal event type>"` (e.g. `"Event type: copilot.analyzed"`) — screen readers announce the wire-level literal. Sighted users still see the title-cased display label ("Copilot Analyzed"). Both audiences served simultaneously.
+- Focus ring inherited from `Badge` primitive (`focus:ring-2 focus:ring-ring focus:ring-offset-2`) so chip remains keyboard-discoverable wherever it sits inside an interactive parent.
+
+### Test delta surprise — +28 unit (plan estimated +3)
+
+Plan estimated `+3 unit tests pinning chip render output for representative rows`. Shipped with `+28` after the 3 representative event-type clusters each split into 5–6 granular assertions (color, label, aria-label, summarizable, well-formed summary, pluralization, malformed-input guard) plus the M32 T6 regression guards and cross-cutting defaults. Richer coverage per the "no cutting corners" mandate; unit-count targets revise `1145 → 1162` (+28 over baseline 1134, +17 over plan's `~1145` target).
+
+### Verification gates passed
+
+- **Unit tests:** `pnpm test` — **1162 / 1162** in 15.17s (up from 1134 baseline; +28). 100 test files green.
+- **Typecheck:** `pnpm typecheck` — clean across all 6 workspace packages.
+- **Lint:** `pnpm lint` — **0 errors / 24 warnings**. Baseline restored via surgical `biome format --write` on the four edited/new audit files + `.loki/state/orchestrator.json` (pre-existing format drift cleared along the way, same pattern as M35 T1/T2).
+- **E2E suite:** NOT re-run. Renderer-only chip change with no spec asserting on audit-view selectors; matches M35 T1's comment+test-only precedent. E2E baseline preserved at 12 cases / 11 spec files / 40.6s from M35 T2.
+- **ABI sanity:** `better-sqlite3` rebuilt for Node ABI (`cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install`) before vitest. Electron ABI rebuild deferred to the next E2E gate.
+
+### Invariants preserved
+
+- **#1 Renderer is a pure view** — chip module has zero IPC touchpoints; consumes only the `AuditEvent` wire type and payload JSON string.
+- **#6 Events table append-only** — chip is a PURE consumer of `events.list` output; zero mutations.
+- **#7 Zero phone-home** — no new network paths.
+
+### Files delta
+
+- `apps/desktop/src/renderer/src/features/audit/audit-event-chip-helpers.ts` — NEW, 347 lines (pure helpers).
+- `apps/desktop/src/renderer/src/features/audit/audit-event-chip.tsx` — NEW, 89 lines (component shell + re-exports).
+- `apps/desktop/src/renderer/src/features/audit/audit-event-chip.test.tsx` — NEW, 263 lines (28 unit tests).
+- `apps/desktop/src/renderer/src/features/audit/audit-view.tsx` — MODIFIED (-143 lines: duplicated helpers removed; +10 lines: chip import + component replacement).
+
+### Next task
+
+M35 T4 — **Phase 5 retrospective doc**. NEW `docs/plans/2026-04-19-team-x-phase-5-retrospective.md`. Locked 6-section structure per M35 plan doc §4.5: (1) what we shipped (M28–M34 one-liners), (2) what went well (canned test seam quartet + `{rows, truncated}` envelope + `data-*` selector + pause-aware wrapper + AbortController stop + `is_system` filter-sweep + atomic+ledger cadence + ABI rebuild dance), (3) what cost us time (Vitest/Playwright ABI dance + sqlite-vec extension load path + FTS5 regression + malformed tool-call parser nudge-retry + F1/F2/F3/F4 follow-ups), (4) what we deferred, (5) metrics (test growth 612 → 1162 / E2E 4 → 11 / invariant count 10 → 11), (6) Phase 6 seeds. 0 tests. Atomic `docs(m35)` commit + ledger.
 
 ## M35 T2 SHIPPED — 2026-04-19 — cross-milestone integration E2E (1108247)
 
