@@ -7,29 +7,39 @@
   "previousPhase": "Phase 5 — Intelligence Layer",
   "previousPhaseCompletedAt": "2026-04-20T13:00:00Z",
   "previousPhaseVersionTag": "v1.1.0",
-  "previousMilestone": "M36 T0",
-  "previousMilestoneName": "Plan doc — Capabilities Taxonomy + Parser",
-  "previousMilestoneCompletedAt": "2026-04-21T00:00:00Z",
-  "previousMilestoneCommit": "dc8d4d3 (M36 T0 — plan doc: Capabilities Taxonomy + Parser)",
+  "previousMilestone": "M36 T1",
+  "previousMilestoneName": "Capability taxonomy enum + shared-types scaffold",
+  "previousMilestoneCompletedAt": "2026-04-21T14:00:00Z",
+  "previousMilestoneCommit": "52ac886 (M36 T1 — capability taxonomy enum + shared-types scaffold) + ledger 491d862",
   "createdAt": "2026-04-20T13:00:00Z",
-  "updatedAt": "2026-04-21T00:00:00Z",
+  "updatedAt": "2026-04-21T14:00:00Z",
   "totalTasks": null,
-  "tasksShipped": 1,
-  "status": "M36 T0 SHIPPED 2026-04-21 (commit dc8d4d3 — 'feat(m36-t0): M36 T0 — plan doc (Capabilities Taxonomy + Parser)'). Plan doc at docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md (196 source lines / 210 insertions). Structure: Overview, Non-goals (8 explicit exclusions), What ships (surface/deliverable/builds-on table + target metrics), Invariants preserved, Architectural decisions §5 with 8 subsections, Success criteria (6 simultaneous conditions), References, Handoff. Zero code / zero tests / zero IPC/bus/migrations — plan-doc-only per the Phase 5 M28 T0 precedent (no T1-T10 task-level table pre-authored). Locked outcomes from T0 landing: (a) taxonomy count concretized at 41 (not ~40 — support category needed 6 to cover CS/tech-writing/tech-support/content-marketing/sales/devrel); (b) Q1 case-sensitivity resolved as lowercase_snake_case; (c) D16 reaffirmed (frontmatter not DB); (d) pack version bump 1.0.0 → 1.1.0 on backfill completion; (e) system roles (system-agent + system-copilot) get research + analysis flavored capabilities respectively. Head-of-queue advances to M36 T1 — author packages/shared-types/src/capabilities.ts with the 41-string locked taxonomy + type guards + category map + unit tests pinning category names + count + 3 representative literals per source-string-audit lineage (M35 T3/T8/T9/T10 → M36 T1 = 5-deep). M36 T1 is shared-types-only; parser extension lands in M36 T2; backfill of 57 role.md files in M36 T3+ clusters. Atomic + ledger commit cadence preserved from M35 T1 onward.",
+  "tasksShipped": 2,
+  "status": "M36 T1 SHIPPED 2026-04-21 (commit 52ac886 — 'feat(m36-t1): M36 T1 — capability taxonomy enum + shared-types scaffold', ledger 491d862). packages/shared-types/src/capabilities.ts NEW (148 LOC): CapabilityCategory 6-literal union, CAPABILITY_CATEGORIES readonly array, CAPABILITY_CATEGORY_MAP 6-key record `as const satisfies Record<CapabilityCategory, readonly string[]>` with all 41 locked §5.1 strings in category-declaration order (engineering 10 / product 7 / design 5 / operations 7 / strategy 6 / support 6), Capability string-literal union derived from map via indexed-access type (single authoring surface — no dual-source drift), CAPABILITY_LIST flattened readonly array, isCapability(unknown) O(1) type guard backed by module-local Set. packages/shared-types/src/capabilities.test.ts NEW (162 LOC, 18 tests — 3 above the ~15 estimate): shape invariants (41-entry count, no duplicates, lowercase-snake_case regex), category invariants (6 categories in declaration order, per-category counts pinning §5.1 verbatim), map ↔ list bidirectional consistency (flatten equals list, no cross-category leakage), pinned literal spot-check (12 representative strings across all 6 categories), isCapability happy path (every CAPABILITY_LIST entry returns true) + rejection paths (unknown strings, mixed case, hyphens, abbreviations, whitespace, empty string, 10 non-string values), type-level narrowing proof. packages/shared-types/src/index.ts MODIFIED (+1 line: './capabilities.js' export). Verification: vitest 24/24 pass in shared-types (was 6/6); full-repo typecheck clean across 6 packages; biome 0 errors on 3 touched files. unitTests 1169 → 1187 (+18). Zero IPC / zero bus events / zero migrations / zero settings keys — additive-only per M36 non-goals §2. Head-of-queue advances to M36 T2 (role-schema parser extension: capabilities field validation with zero-capability hard-error, unknown-capability hard-error, duplicate dedup + warning, missing-field policy by pack source per §5.4). Atomic + ledger commit cadence preserved.",
   "tasks": [
     {
       "id": "M36-T1",
       "title": "Capability taxonomy enum + shared-types scaffold",
-      "status": "pending",
+      "status": "shipped",
       "scope": "Author packages/shared-types/src/capabilities.ts with the 41-string locked taxonomy from the M36 T0 plan doc §5.1 + Capability string-literal union + CAPABILITY_LIST runtime array + CapabilityCategory string-literal union + CAPABILITY_CATEGORY_MAP (6-key record: category → Capability[]) + isCapability(s) type guard. Unit tests pin: (1) the 6 category names literally, (2) the exact total count 41, (3) per-category counts (engineering 10, product 7, design 5, operations 7, strategy 6, support 6), (4) three representative capability literals across three different categories, (5) every CAPABILITY_LIST entry passes isCapability, (6) CAPABILITY_CATEGORY_MAP maps every capability to exactly one category (no duplicates, no orphans). Export surface added to packages/shared-types/src/index.ts. Zero parser changes in T1 — that lands in T2. Estimated +~15 unit tests.",
       "filesTouched": [
-        "packages/shared-types/src/capabilities.ts (NEW)",
-        "packages/shared-types/src/capabilities.test.ts (NEW)",
-        "packages/shared-types/src/index.ts (MODIFIED — export surface)"
+        "packages/shared-types/src/capabilities.ts (NEW, 148 LOC)",
+        "packages/shared-types/src/capabilities.test.ts (NEW, 162 LOC)",
+        "packages/shared-types/src/index.ts (MODIFIED, +1 export line)"
       ],
       "testsDeltaEstimate": 15,
+      "testsDeltaActual": 18,
       "commitTemplate": "feat(m36-t1): M36 T1 — capability taxonomy enum + shared-types scaffold",
-      "ledgerTemplate": "chore(loki): M36 T1 — commit ledger (<sha>)"
+      "ledgerTemplate": "chore(loki): M36 T1 — commit ledger (<sha>)",
+      "shippedCommit": "52ac886",
+      "shippedLedger": "491d862",
+      "shippedAt": "2026-04-21T14:00:00Z",
+      "verification": {
+        "vitest": "24/24 pass in @team-x/shared-types (was 6/6 — +18 in capabilities.test.ts)",
+        "typecheck": "clean across 6 packages (telemetry-core / provider-router / role-schema / intelligence / shared-types / desktop)",
+        "lint": "biome 0 errors, 0 warnings on 3 touched files",
+        "regressions": "none — Phase 5 test suites untouched; additive-only import surface"
+      }
     }
   ],
   "baseline": {
@@ -43,14 +53,14 @@
     "asOfPhase": "Phase 5 COMPLETE (2026-04-20, v1.1.0)"
   },
   "current": {
-    "unitTests": 1169,
+    "unitTests": 1187,
     "e2eSpecs": 11,
     "e2eGreenCount": 12,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
     "version": "1.1.0",
-    "asOfTask": "M36-T0 (plan doc shipped, atomic commit dc8d4d3; baseline unchanged — docs-only)"
+    "asOfTask": "M36-T1 (capability taxonomy enum shipped, atomic commit 52ac886 + ledger 491d862; +18 unit tests in shared-types — 1169 → 1187; shape-locked 41 literals; zero renderer / IPC / bus / migration surface touched)"
   },
   "targets": {
     "m36": "Per M36 T0 plan doc §3 Target metrics: 1169 → ~1220 unit tests (+50 estimate), 11 → 11 E2E specs (no renderer surface in M36), 13 → 13 migrations (zero new per D16), 80+ → 80+ IPC (zero new), 31 → 31 bus events (zero new), 0 new settings keys. Files touched (estimate): packages/shared-types/src/capabilities.ts NEW; packages/role-schema/src/parser.ts + schema.ts MODIFIED; 57 role.md files MODIFIED; 3+ new test files + 1 audit test under apps/desktop/src/.",
@@ -58,6 +68,7 @@
     "m36NonGoals": "Eight explicit exclusions per M36 T0 plan doc §2: no changes to computeRoleFit (M37's job); no new DB tables (D16); no new IPC channels; no new bus events; no user-authored capability strings (closed enum); no changes to M32's locked 4-weight signature (D18); no per-company capability differences; no capability hierarchies (flat strings, strict equality). Running live decompose_project / delegate_subtask after M36 ships must produce byte-identical output to Phase 5 baseline (success criterion §6 #6 — proof that M36 is additive-only)."
   },
   "notes": [
+    "M36 T1 SHIPPED (commit 52ac886 — 'feat(m36-t1): M36 T1 — capability taxonomy enum + shared-types scaffold', ledger 491d862). packages/shared-types/src/capabilities.ts NEW delivers the locked 41-capability / 6-category taxonomy as a single-source-of-truth map with Capability union derived via indexed-access type (no dual-source drift). capabilities.test.ts NEW delivers 18 unit tests (estimate was ~15; overshoot of +3 because isCapability rejection paths needed three distinct buckets: unknown-string variants, empty-string, non-string values). Verification clean on vitest 24/24 + full-repo typecheck + biome 0-errors. Zero regression risk — additive-only, no Phase 5 surface touched. Next session opens M36 T2 (role-schema parser extension — capabilities field validation per §5.4: HARD ERROR on zero-capabilities + unknown-capability + non-string array element; WARNING + dedup on duplicates; Strategia-pack vs non-Strategia-pack missing-field asymmetry).",
     "M36 T0 SHIPPED (commit dc8d4d3 — 'feat(m36-t0): M36 T0 — plan doc (Capabilities Taxonomy + Parser)'). Plan-doc-only per Phase 5 M28 T0 precedent: no T1+ task-level breakdown inside the plan doc. Locked outcomes from the T0 landing: 41 capabilities (not ~40), lowercase_snake_case case sensitivity, frontmatter not DB, 1.0.0 → 1.1.0 pack minor bump, subtractive categorization rubric. Head-of-queue now advances to M36 T1 (capability taxonomy enum + shared-types scaffold, ~15 tests). Atomic + ledger commit cadence held.",
     "Phase 6 T0 SHIPPED (commit a429abf — 'feat(phase-6-t0): Phase 6 T0 — plan doc (Capabilities & Evidence)'). Theme selection was EXPLICIT — Rocky did not default-pick. Chose retrospective §6 seeds #5 (capabilities frontmatter on role.md, flagged by M32 four separate times as deferred) + #7 (insight export) with natural companions (Telemetry per-kind filter from M33's dangling runs.kind column + insight feedback loop via dismissal-pattern → category downrank). Rejected: seed #1 (zero phone-home invariant #7), seed #3 (autonomous action needs own phase), seeds #2/#4/#6 (less evidence-backed). v1.1.0 → v1.2.0 additive release targeted.",
     "Head-of-queue after M36 T0: M36 T1 (capability taxonomy enum + shared-types scaffold). M36 internal cascade: T1 (taxonomy enum) → T2 (parser validation) → T3-T8 (backfill clusters by level) → T9 (pack re-sign + version bump) → T10 (source-string-audit marker + verification + M36 COMPLETE ledger). Not pre-bound; task numbers may adjust during implementation.",
