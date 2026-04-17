@@ -65,13 +65,43 @@ export const FIXTURE_COPILOT_EMPTY: Readonly<CopilotAnalyzerCompleteResult> = Ob
 });
 
 /**
- * Frozen canned-table fixtures. Seeded empty — T9 registers prompt
- * fixtures via `addCopilotFixture(...)` in per-spec setup. Kept
- * immutable so the production bundle never mutates module state at
- * load time. If future milestones want baked-in scripts, add them
- * here in lockstep with the test that consumes them.
+ * Frozen canned-table fixtures. Immutable so the production bundle
+ * never mutates module state at load time — the runtime-mutable
+ * `runtimeFixtures` Map is the write path for per-spec registrations
+ * via `addCopilotFixture`.
+ *
+ * Baked-in entries land here in lockstep with the specs that consume
+ * them. Following the same pattern `test-agentic-provider.ts` uses
+ * for M31/M32 E2E fixtures — keeping the fixture at source (rather
+ * than registering via `app.evaluate`) keeps the spec body small and
+ * sidesteps main-process bundle-resolution issues with electron-vite's
+ * `inlineDynamicImports` collapsing the entire main tree into a single
+ * file.
  */
-export const CANNED_COPILOT_TABLE: Readonly<Record<string, string>> = Object.freeze({});
+export const CANNED_COPILOT_TABLE: Readonly<Record<string, string>> = Object.freeze({
+  // Phase 5 — M33 T9. E2E copilot-service spec fixture. The analyzer
+  // prompt always contains `Company: <name>` verbatim via
+  // `buildAnalysisPrompt`, so the normalized substring `strategia-x`
+  // (the Phase-1 seed company) is a stable tier-2 hit. The response
+  // parses via `parseDrafts` into a single `InsightDraft` that the
+  // analyzer persists through `CopilotInsightsRepo.insert`. Exactly
+  // one draft keeps the spec's assertion surface small.
+  // `actionIntent` + `actionSuggestion` are `z.string().optional()` —
+  // JSON `null` fails validation (null is not a string), so we omit
+  // them entirely and let zod treat them as `undefined`. The analyzer
+  // repo's `CopilotInsightInput` builder already handles the missing
+  // fields by projecting them as nullable columns.
+  'strategia-x': JSON.stringify([
+    {
+      category: 'operational',
+      severity: 'warning',
+      title: 'E2E canned copilot insight',
+      body: 'Deterministic insight seeded by the M33 T9 E2E spec to exercise the copilot analyzer → insights → dismiss round-trip end-to-end without a live LLM.',
+      expiresInHours: 24,
+      actionSuggestion: 'Dismiss this insight to verify the audit trail.',
+    },
+  ]),
+});
 
 /**
  * Runtime-mutable fixture registry. `addCopilotFixture` writes here;
