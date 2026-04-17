@@ -6,9 +6,9 @@
   "previousMilestone": "M32",
   "previousMilestoneCompletedAt": "2026-04-16T07:20:00Z",
   "createdAt": "2026-04-16T07:20:00Z",
-  "updatedAt": "2026-04-16T16:45:00Z",
+  "updatedAt": "2026-04-16T17:05:00Z",
   "totalTasks": 11,
-  "tasksShipped": 8,
+  "tasksShipped": 9,
   "tasks": [
     {
       "id": "T0",
@@ -151,10 +151,21 @@
     {
       "id": "T8",
       "name": "Canned copilot provider seam",
-      "status": "pending",
-      "scope": "Three-tier canned seam (mirror M30 test-classifier / M31 test-agentic-provider / M32 test-agentic-tools). __ECHO_COPILOT__:<json> sentinel → canned per-prompt table → fallback. Extend test-agentic-provider with system-copilot-actor entries for T9 E2E. NODE_ENV=test swaps provider. Unit tests +5.",
-      "commitTemplate": "test(m33): M33 T8 — canned copilot provider seam",
-      "testsDelta": "+5 unit"
+      "status": "completed",
+      "commit": "f245821",
+      "shippedAt": "2026-04-16T17:05:00Z",
+      "scope": "Fourth member of the agentic-surface test-seam quartet. NEW apps/desktop/src/main/services/test-copilot-provider.ts (~217 LOC) — three-tier canned lookup: (1) __ECHO_COPILOT__:<json> sentinel → JSON.parse + JSON.stringify round-trip + echo verbatim, (2) normalized-substring match against closure-local inlineFixtures → runtime-mutable runtimeFixtures Map (written via addCopilotFixture) → frozen CANNED_COPILOT_TABLE (seeded empty), first-hit wins, (3) FIXTURE_COPILOT_EMPTY never-throw fallback returning text: '[]', promptTokens: 0, completionTokens: 0, costUsd: 0, provider: 'test-mode', model: 'test-copilot' — shape-identical to the T4 inline placeholder. Exports: TEST_COPILOT_SENTINEL + TEST_COPILOT_PROVIDER + TEST_COPILOT_MODEL + FIXTURE_COPILOT_EMPTY + CANNED_COPILOT_TABLE + TestCopilotCompleteOptions + createTestCopilotComplete + addCopilotFixture + clearCopilotFixtures. Normalization is the M30 pattern (lowercase + trim + collapse whitespace). Defensive empty-prompt Error throw mirrors production-provider behaviour. NEW test-copilot-provider.test.ts (+5 tests exact — sentinel echo, normalized-substring canned hit, fallback empty drafts, empty-prompt Error rejection, provider/model stamping across all three tiers). main/index.ts composition root: replaces T4 inline placeholder in test-mode resolveComplete branch with createTestCopilotComplete(); production branch untouched; import sorted alphabetically (test-agentic-provider → test-agentic-tools → test-classifier → test-copilot-provider). Actor routing preserved — non-copilot actors continue to hit M31's test-agentic-provider.",
+      "commitTemplate": "feat(m33): M33 T8 — canned copilot provider seam",
+      "testsDelta": "+5 unit",
+      "metrics": {
+        "unitTestsBefore": 1094,
+        "unitTestsAfter": 1099,
+        "unitTestsDelta": "+5 (exact match to T8 target)",
+        "lintErrors": 0,
+        "lintWarnings": 24,
+        "typecheck": "clean",
+        "filesChanged": "3 (+298 / -12)"
+      }
     },
     {
       "id": "T9",
@@ -182,14 +193,14 @@
     "typecheckClean": true
   },
   "current": {
-    "unitTests": 1094,
+    "unitTests": 1099,
     "e2eSpecs": 8,
     "e2eGreenCount": 9,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "T7",
-    "asOfTaskCommit": "4a373bd"
+    "asOfTask": "T8",
+    "asOfTaskCommit": "f245821"
   },
   "targets": {
     "unitTests": 1058,
@@ -200,6 +211,8 @@
     "lintWarningsMax": 34
   },
   "notes": [
+    "M33 T8 SHIPPED (2026-04-16, commit f245821). +5 unit tests (1094 → 1099, exact target). Fourth member of the agentic-surface test-seam quartet — mirrors test-classifier.ts (M30) + test-agentic-provider.ts (M31) + test-agentic-tools.ts (M32) structurally. Three-tier lookup: __ECHO_COPILOT__:<json> sentinel (JSON.parse + JSON.stringify round-trip + echo verbatim) → normalized-substring match (inlineFixtures → runtimeFixtures → frozen CANNED_COPILOT_TABLE, first-hit wins) → FIXTURE_COPILOT_EMPTY never-throw fallback (shape-identical to T4 placeholder). addCopilotFixture(key, value) + clearCopilotFixtures() are the T9-facing helpers — CANNED_COPILOT_TABLE remains frozen empty. Defensive empty-prompt rejection mirrors production-provider behaviour (specs can assert error shape instead of tracking false-negative empty drafts). Composition root wires createTestCopilotComplete() into test-mode resolveComplete branch — actor routing preserved (non-copilot actors continue to hit M31's test-agentic-provider). 3 files (+298/-12), 0 lint errors / 24 warnings steady / typecheck clean across all 6 packages.",
+    "T8 DESIGN CALLS: (a) CANNED_COPILOT_TABLE is FROZEN empty — per-spec fixtures live in module-scope runtimeFixtures Map, written via addCopilotFixture; clearCopilotFixtures() is the afterEach reset. Module-load-time constants never mutated. (b) Substring matching (NOT exact match) on normalized user prompts — M30 pattern. T9 fixture keys can be short fragments of live prompts. (c) Sentinel JSON round-trip (parse + stringify) normalizes encoding + whitespace — byte-identical output across runs. (d) Empty-prompt Error throw mirrors production-provider — specs assert error shape instead of silent empty drafts. (e) Match priority at lookup: closure-local inlineFixtures → runtimeFixtures → CANNED_COPILOT_TABLE (frozen). First matching key in the outer-to-inner source list wins.",
     "M33 T7 SHIPPED (2026-04-16, commit 4a373bd). +7 unit tests (1087 → 1094, exact target). Three clamped copilot settings keys wired end-to-end through shared-types → repo → IPC → preload → renderer hooks + Section. New runtime COPILOT_CATEGORIES constant in shared-types (kept local copies untouched to bound T7 surface). SettingsSetCopilotRequest.companyId is required but consumed only by the handler's analyzer.restart side effect — settings are global-scope like agentic + planner. IpcHandlerDeps.copilotAnalyzerService is optional + threaded via a lazy closure at the composition root so init order (analyzer after createIpcHandlers) stays untouched. NEW settings-copilot.test.ts (+4), settings-copilot-handlers.test.ts (+2), extended copilot-analyzer-service.test.ts (+1). settings.test.ts seed counts bumped 18→21 and 17→20 for the 3 new defaults. Analyzer restart-harness note: fake setInterval MUST return a truthy handle — production stop() gates clearInterval + schedules.delete on `if (timer)`. 13 files (+818/-3), 0 lint errors / 24 warnings / typecheck clean across all 6 workspace packages.",
     "T7 DESIGN CALLS: (a) COPILOT_CATEGORIES runtime constant added to shared-types as NEW export rather than extracting from copilot-insights.ts — bounds surface, single-source cleanup deferred. (b) companyId required on SettingsSetCopilotRequest but ignored at repo (global scope). (c) copilotAnalyzerService is optional dep + lazy closure at comp root — resolves module-level handle at call time. (d) settings-copilot-handlers.test.ts is NEW file (not folded into handlers.test.ts) matching per-subsystem pattern. (e) Fake setInterval must return truthy handle for restart tests.",
     "M33 T3 SHIPPED (2026-04-16, commit c6b40ae). +8 unit tests (1052 → 1060, exact match to T3 target). NEW services/copilot-event-window.ts with { start, stop, snapshot, clear } API. Bounded deque (100 events, private const), FIFO eviction, warm-start hydration from eventsRepo.listByCompany + hydrated Set flag for re-hydration guard. token.delta filtered at boundary (streaming noise). Defensive-copy on snapshot. Composition root wired after ragIndexer. clear(companyId) NOT wired to companies.archive — IPC doesn't exist today; deferred to milestone that adds it (T3 FOLLOW-UP). 3 files (+403 / -0), 0 lint errors / 24 warnings / typecheck clean.",

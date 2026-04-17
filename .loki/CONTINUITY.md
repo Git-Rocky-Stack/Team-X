@@ -1,4 +1,84 @@
-# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0–T4 shipped); M32 (Task Planner) complete
+# Loki Continuity — Phase 5, **M33 in progress** (Copilot Service — T0–T8 shipped); M32 (Task Planner) complete
+
+## M33 T8 SHIPPED — 2026-04-16 (canned copilot provider seam — three-tier lookup, test-mode swap)
+
+**Task:** M33 T8 — fourth member of the agentic-surface test-seam quartet. Materializes `test-copilot-provider.ts` mirroring `test-classifier.ts` (M30) + `test-agentic-provider.ts` (M31) + `test-agentic-tools.ts` (M32) structurally: `__ECHO_COPILOT__:<json>` sentinel → normalized-substring canned-table lookup → `FIXTURE_COPILOT_EMPTY` never-throw fallback. Composition root's test-mode `resolveComplete` branch swapped from the T4 inline `async () => ({ text: '[]', ... })` placeholder to `createTestCopilotComplete()`. Production branch untouched. Actor routing preserved — non-copilot actors continue to hit M31's `test-agentic-provider`.
+**Commit:** `f245821` — `feat(m33): M33 T8 — canned copilot provider seam`.
+**Plan reference:** [M33 plan T8 §](../docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).
+
+### Metrics delta
+
+| Metric | Pre-T8 | Post-T8 | Delta |
+|---|---:|---:|---:|
+| Unit tests | 1094 | **1099** | **+5** (exact match to plan target) |
+| E2E specs | 8 | 8 | 0 (T9 ships the spec) |
+| Lint errors | 0 | 0 | 0 |
+| Lint warnings | 24 | 24 | 0 (baseline steady; under M33 ≤34 budget) |
+| Typecheck across 6 packages | clean | clean | — |
+| Files touched | — | 3 (+298 / −12) | — |
+
+### What shipped (one feat commit, three files)
+
+1. **`apps/desktop/src/main/services/test-copilot-provider.ts` (NEW, ~217 LOC).**
+   - Three-tier canned `CopilotAnalyzerCompleteFn` factory.
+   - Tier 1 — sentinel `__ECHO_COPILOT__:<json>` parsed with `JSON.parse` + re-stringified so callers see byte-identical encoding across runs.
+   - Tier 2 — normalized-substring match (lowercase + trim + whitespace-collapse per M30 pattern) against three ordered sources: closure-local `inlineFixtures` (via `options.fixtures`) → module-scope runtime-mutable `runtimeFixtures` Map (written via `addCopilotFixture`) → frozen `CANNED_COPILOT_TABLE` (seeded empty; T9 populates via `addCopilotFixture` in spec setup). First matching key wins.
+   - Tier 3 — `FIXTURE_COPILOT_EMPTY` never-throw fallback returning `text: '[]', promptTokens: 0, completionTokens: 0, costUsd: 0, provider: 'test-mode', model: 'test-copilot'` — shape-identical to the T4 inline placeholder so pre-T9 E2E behavior stays byte-identical.
+   - Defensive empty-prompt `throw new Error('[test-copilot-provider] empty user prompt')` mirrors production-provider behaviour where a zero-length user prompt is an upstream pipeline bug.
+   - Pre-aborted `req.signal` throws `DOMException('Aborted', 'AbortError')` before any tier executes.
+   - Exports: `TEST_COPILOT_SENTINEL` + `TEST_COPILOT_PROVIDER` + `TEST_COPILOT_MODEL` + `FIXTURE_COPILOT_EMPTY` + `CANNED_COPILOT_TABLE` + `TestCopilotCompleteOptions` + `createTestCopilotComplete` + `addCopilotFixture` + `clearCopilotFixtures`.
+2. **`apps/desktop/src/main/services/test-copilot-provider.test.ts` (NEW, 73 LOC, +5 tests).**
+   - Test 1 — sentinel echoes verbatim JSON payload (round-trip equality via `JSON.parse` on both sides).
+   - Test 2 — normalized-substring canned hit ('Frontend Team  IS behind' fixture key matched against 'Please analyze why the frontend team is  BEHIND today.' user prompt; whitespace + casing variation proves the normalizer).
+   - Test 3 — `FIXTURE_COPILOT_EMPTY` returned on unmatched prompts (`r === FIXTURE_COPILOT_EMPTY` structural equality + `r.text === '[]'`).
+   - Test 4 — empty + whitespace-only prompts reject with `/empty user prompt/`.
+   - Test 5 — provider/model stamping: `TEST_COPILOT_PROVIDER` + `TEST_COPILOT_MODEL` + `costUsd: 0` across all three tiers (sentinel + table + fallback).
+   - `beforeEach(clearCopilotFixtures)` isolates runtime fixtures.
+3. **`apps/desktop/src/main/index.ts` (M, +8 / −12).**
+   - Import sorted: `test-agentic-provider` → `test-agentic-tools` → `test-classifier` → `test-copilot-provider` (Biome organizeImports error fix).
+   - Test-mode `resolveComplete` branch at L1174 swapped from inline `async () => ({ text: '[]', ... })` placeholder to `createTestCopilotComplete()`. Return shape unchanged — still `{ complete, provider: 'test-mode', model: 'test-copilot' }`. Production branch at L1189+ untouched (EmployeeFactory + streamAgent adapter path).
+
+### Verification gates passed
+
+- **Unit tests:** 1099/1099 in 44.36s (Vitest). +5 exact match to plan target.
+- **Targeted suite:** 5/5 in 1.84s on the new `test-copilot-provider.test.ts`.
+- **Lint:** 0 errors / 24 warnings (baseline steady; post-fix). Initial run had 2 errors (organizeImports on `main/index.ts` + format on the test file) which were resolved in the same session.
+- **Typecheck:** clean across all 6 workspace packages (`@team-x/desktop` main/preload/renderer/e2e + intelligence + provider-router + role-schema + shared-types + telemetry-core).
+
+### Gotchas captured this session
+
+- **Normalized-substring match needs substring equivalence after normalization.** First canned-table test used fixture key `'Frontend Team Behind'` against a prompt normalizing to `'please analyze why the frontend team is behind today.'`; the normalized fixture key `'frontend team behind'` is NOT a substring because `' is '` sits between `'team'` and `'behind'`. Fixed by switching the fixture to `'Frontend Team  IS behind'` (double-space intentional — proves the whitespace-collapse path) → normalizes to `'frontend team is behind'` → matches. Pattern for T9: fixture keys must be real substrings of the normalized analyzer prompt. If in doubt, `console.log(normalizePrompt(user))` from a failing spec.
+- **Biome organizeImports error is blocking, not warning.** Added `createTestCopilotComplete` import between `test-agentic-tools` and `test-classifier` (alphabetically `copilot > classifier`, so it belongs AFTER `test-classifier`). First pass inserted it in the wrong slot → Biome emitted a blocking error. Lesson for M33+ imports: trace the full alphabetical position within the import block, not just the adjacent sibling.
+- **Biome formatter collapses short multi-line `await complete(...)` calls.** First pass wrote `const r = await complete(\n  buildReq('...'),\n);` across three lines for readability → formatter emitted a blocking error demanding the single-line form `const r = await complete(buildReq('...'));`. Keep multi-line calls only when the argument list actually needs vertical space.
+- **Sentinel JSON round-trip is mandatory.** Raw `payload.slice()` would pass embedded whitespace through verbatim; callers would see non-deterministic outputs on runs with different editor line endings / trailing whitespace. Round-tripping through `JSON.parse` + `JSON.stringify` normalizes encoding — byte-identical across runs. Matches the M30 classifier's pattern.
+- **Runtime-mutable registry + frozen constant is the right split.** `CANNED_COPILOT_TABLE` stays frozen so production bundles never mutate module state; `runtimeFixtures` Map absorbs the spec-level churn and `clearCopilotFixtures()` is the `afterEach` reset. Mirrors the test-classifier.ts T8 pattern the M30 design doc locked.
+- **First-hit-wins priority: closure → runtime → canned.** Inline `options.fixtures` wins over `addCopilotFixture` wins over frozen `CANNED_COPILOT_TABLE`. Lets isolated unit tests override a running fixture without `clearCopilotFixtures()`.
+
+### Patterns reinforced
+
+- **Three-tier canned seam quartet is complete.** `test-classifier.ts` (M30) + `test-agentic-provider.ts` (M31) + `test-agentic-tools.ts` (M32) + `test-copilot-provider.ts` (M33) share the locked shape: sentinel `__ECHO_*__:<json>` → canned per-key table → never-throw fallback. Every future agentic surface ships a matching seam; any breaking change to the sentinel format ripples across all four.
+- **Shape-compatible test-mode placeholder swaps.** T4 landed the inline `async () => ({ text: '[]', ... })` placeholder specifically so T8's drop-in would be zero-risk. The `FIXTURE_COPILOT_EMPTY` shape matches the placeholder field-for-field — pre-T9 E2E behavior stays byte-identical until specs register fixtures.
+- **Lockstep: test seam + composition root in one commit.** `buildWriteSideTools` (production) + `createTestWriteSideTools` (test) ship together (M32 T3); same discipline here — `createTestCopilotComplete` + its wire into `main/index.ts` in the SAME commit. Splitting creates a drift window where the test seam lags production.
+- **Defensive never-throw contract protects E2E runs.** Drifted prompts → `FIXTURE_COPILOT_EMPTY`, zero-length prompts → explicit `Error`. Neither path hangs; both are assertable. E2E specs can prove absence (destructive gate absent throughout) without racing a silent fallback.
+
+### Open items carried into T9
+
+- **Canned fixtures to register in T9:** 2-3 copilot analyzer insight arrays (via `addCopilotFixture`) + 1-2 `query_copilot_insights` envelopes (via the M32 T6 `CANNED_COPILOT_QUERY_TABLE` + `__ECHO_COPILOT_QUERY__` sentinel in `test-agentic-tools.ts`). None registered at module load — per-spec setup only.
+- **__test__ tick IPC channel for T9.** The analyzer exposes `tick(companyId, opts?)` in-process; the spec needs to invoke it without waiting 60s for the scheduler. Budget: add `copilot.__test__.tick` IPC gated on `testMode`, mirror the M31 `command.getRunSnapshot` registration pattern. Throws clearly in production.
+- **Sidenav two-system-threads assertion.** Confirmed T2 lands `system-copilot` alongside `system-agent` and T6 routes `copilot.ask` through it; T9 must assert the renderer shows both and distinguishes by name.
+
+### Next Session Startup Checklist (M33 T9+)
+
+1. Reread this §.
+2. `.loki/queue/current-task.json` — now targets M33-T9 (`copilot-service.spec.ts` E2E).
+3. `.loki/state/orchestrator.json` — `inFlightMilestone.M33.tasksShipped: 9`, `commits.T8: f245821`, `current.asOfTask: T8`.
+4. `.loki/queue/pending.json` — T8 marked completed with metrics; T9 head-of-queue.
+5. Plan doc §T9 at `docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md` — full round-trip flow + deliverables + canned-provider extensions.
+6. Reference specs: `apps/desktop/e2e/task-planner.spec.ts` (M32 T8) + `agentic-loop.spec.ts` (M31 T8) for Electron-launch harness + `data-step-kind` selector patterns.
+7. Before starting: `pnpm test` (should read 1099/1099); `pnpm -F @team-x/desktop test:e2e` (should read 9/9 Playwright cases across 8 spec files) — confirms baseline before T9 work starts.
+8. One subagent pass budget for canned-script generation; coordinator does git-diff verification + biome spot-check + atomic commit.
+
+---
 
 ## M33 T4 SHIPPED — 2026-04-16 (CopilotAnalyzerService — periodic scheduler + LLM + dedup + expiry)
 

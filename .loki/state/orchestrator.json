@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M33",
   "milestoneName": "Copilot Service",
-  "tasksCompleted": 8,
+  "tasksCompleted": 9,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
@@ -11,7 +11,7 @@
   "phaseComplete": false,
   "inflight": {
     "taskId": null,
-    "lastShipped": "T7"
+    "lastShipped": "T8"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M32",
@@ -29,7 +29,7 @@
     "typecheckClean": true
   },
   "current": {
-    "unitTests": 1094,
+    "unitTests": 1099,
     "e2eSpecs": 8,
     "e2eGreenCount": 9,
     "lintErrors": 0,
@@ -127,7 +127,7 @@
       "name": "Copilot Service",
       "startedAt": "2026-04-16T08:15:00Z",
       "planDoc": "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
-      "tasksShipped": 8,
+      "tasksShipped": 9,
       "totalTasks": 11,
       "commits": {
         "T0": "c5cdeee",
@@ -137,7 +137,8 @@
         "T4": "e672973",
         "T5": "a085dc7",
         "T6": "3c00be7",
-        "T7": "4a373bd"
+        "T7": "4a373bd",
+        "T8": "f245821"
       },
       "baselineAtStart": {
         "unitTests": 1033,
@@ -148,14 +149,14 @@
         "typecheckClean": true
       },
       "current": {
-        "unitTests": 1094,
+        "unitTests": 1099,
         "e2eSpecs": 8,
         "e2eGreenCount": 9,
         "lintErrors": 0,
         "lintWarnings": 24,
         "typecheckClean": true,
-        "asOfTask": "T7",
-        "asOfTaskCommit": "4a373bd"
+        "asOfTask": "T8",
+        "asOfTaskCommit": "f245821"
       },
       "targets": {
         "unitTests": 1058,
@@ -168,6 +169,8 @@
     }
   },
   "notes": [
+    "M33 (Copilot Service) T8 SHIPPED (2026-04-16, commit f245821). +5 unit tests (1094 → 1099, exact T8 target). NEW apps/desktop/src/main/services/test-copilot-provider.ts (~217 LOC) — fourth member of the agentic-surface test-seam quartet (test-classifier.ts M30 + test-agentic-provider.ts M31 + test-agentic-tools.ts M32 + test-copilot-provider.ts M33). Three-tier lookup: (1) `__ECHO_COPILOT__:<json>` sentinel in the user prompt → JSON.parse + JSON.stringify round-trip + echo verbatim, (2) normalized-substring match against closure-local fixtures → runtime-mutable `runtimeFixtures` Map → frozen `CANNED_COPILOT_TABLE` (seeded empty; T9 populates), first-hit wins, (3) `FIXTURE_COPILOT_EMPTY` never-throw fallback returning `text: '[]', promptTokens: 0, completionTokens: 0, costUsd: 0, provider: 'test-mode', model: 'test-copilot'` — shape-identical to the T4 inline placeholder. Exports: TEST_COPILOT_SENTINEL + TEST_COPILOT_PROVIDER + TEST_COPILOT_MODEL + FIXTURE_COPILOT_EMPTY + CANNED_COPILOT_TABLE + TestCopilotCompleteOptions + createTestCopilotComplete + addCopilotFixture + clearCopilotFixtures. Normalization is the M30 pattern (lowercase + trim + collapse whitespace). Defensive empty-prompt Error throw mirrors production-provider behaviour so specs can assert the shape instead of silently receiving empty drafts. NEW test-copilot-provider.test.ts (+5 tests exact — sentinel echo, normalized-substring canned hit, fallback empty drafts, empty-prompt Error rejection, provider/model stamping across all three tiers). main/index.ts composition root: replaces the T4 inline `async () => ({ text: '[]', … })` placeholder in the test-mode `resolveComplete` branch with `createTestCopilotComplete()`; production branch untouched; import sorted alphabetically (test-agentic-provider → test-agentic-tools → test-classifier → test-copilot-provider). Actor routing preserved — non-copilot actors (system-agent) continue to hit M31's test-agentic-provider via the agentic-loop path; system-copilot invocations hit this new seam via CopilotAnalyzerService.resolveComplete. 3 files (+298/-12). 0 lint errors / 24 warnings steady / typecheck clean across all 6 workspace packages. Full suite 1099/1099 passing in 44.36s.",
+    "M33 T8 DESIGN CALLS: (a) `CANNED_COPILOT_TABLE` is a FROZEN empty Record — per-spec fixtures live in a module-scope `runtimeFixtures` Map written via `addCopilotFixture(key, response)`, preserving the invariant that module-load-time constants are never mutated. `clearCopilotFixtures()` is the afterEach reset. (b) Substring matching (NOT exact match) on normalized user prompts, matching M30's test-classifier pattern — T9 fixture keys can be short recognizable fragments of live prompts. (c) Sentinel JSON round-trip (JSON.parse + JSON.stringify) normalizes encoding + whitespace so callers see byte-identical output across runs even if the embedded payload had stray whitespace. (d) Empty-prompt rejection throws an Error rather than returning FIXTURE_COPILOT_EMPTY silently — mirrors production-provider behaviour where a zero-length user prompt is a pipeline bug upstream; specs can assert the error shape instead of tracking a false-negative empty-drafts return. (e) Match priority at lookup: closure-local inlineFixtures → runtimeFixtures → CANNED_COPILOT_TABLE (frozen). Inner loop iterates each source; first matching key wins. Keeps closure-over-options viable for isolated unit tests without touching module state.",
     "M33 (Copilot Service) T7 SHIPPED (2026-04-16, commit 4a373bd). +7 unit tests (1087 → 1094, exact T7 target). Three clamped copilot settings keys wired end-to-end: copilot_enabled (bool default true), copilot_interval_minutes (1-60 default 5), copilot_categories (subset of COPILOT_CATEGORIES default full set). NEW packages/shared-types/src/ipc.ts exports: SettingsGetCopilotResponse / SettingsSetCopilotRequest wire types, COPILOT_SETTINGS_CLAMPS, COPILOT_ENABLED_DEFAULT, and COPILOT_CATEGORIES runtime constant (new — the type-only CopilotCategory union from events.ts grows a sibling value-level export; local copies in copilot-insights.ts / agentic-tools-copilot.ts / test-agentic-tools.ts left alone to bound T7 surface). IpcContract gains settings.getCopilot / settings.setCopilot channels; TeamXApi.settings gains getCopilot / setCopilot methods. Settings repo extended: 3 new SETTING_DEFAULTS entries + getCopilot() + setCopilot() with clamp-at-read (stale out-of-range persisted values return the clamp bound) + write-side filter (unknown categories stripped, empty categories fall back to full set — conservative default). NEW settings-copilot.test.ts (+4 tests: defaults, dual-path interval clamp, empty→full fallback, unknown-filter). handlers.ts extends IpcSettingsRepo + IpcHandlerDeps (optional copilotAnalyzerService dep), adds settingsGetCopilot + settingsSetCopilot handlers; setCopilot fires repo write then analyzer.restart(companyId) synchronously so the per-company timer picks up the new interval without an app restart. register.ts + preload/api.ts wire the 2 channels end-to-end. Composition root wires lazy copilotAnalyzerService closure (resolves the module-level handle at call time — analyzer is instantiated after createIpcHandlers) and threads settingsRepo.getCopilot() into createCopilotAnalyzerService.getSettings dep (per-tick snapshot, global-scope — companyId ignored in T7). Renderer: use-settings.ts gains useCopilotSettings + useSetCopilot React Query hooks; NEW copilot-section.tsx (Strategia-red Sparkles header, switch-style enabled toggle, number input 1-60 for interval, 5 category checkbox chips with empty→full optimistic fallback) rendered in settings-view.tsx after PlannerSection. NEW settings-copilot-handlers.test.ts (+2 tests: getCopilot round-trips via createIpcHandlers, setCopilot persists AND invokes analyzer.restart with correct companyId). copilot-analyzer-service.test.ts extended with 1 restart-picks-up-new-interval test verifying the setInterval ms delta after a simulated settings change. settings.test.ts seed-count assertions bumped 18→21 and 17→20 for the 3 new keys. 13 files (+818/-3), 0 lint errors / 24 warnings / typecheck clean across all 6 workspace packages. 1094/1094 unit tests passing in 23.66s.",
     "M33 T7 DESIGN CALLS: (a) COPILOT_CATEGORIES runtime constant added to shared-types as a NEW export rather than extracting the existing literal from copilot-insights.ts — keeps the repo/service and shared-types independent and bounds T7 surface. Ripple cleanup to a single source can happen in a later milestone. (b) SettingsSetCopilotRequest.companyId is REQUIRED but semantically consumed only by the handler's analyzer.restart side effect; the repo itself ignores it (copilot settings are global scope like agentic + planner). Alternative designs (per-company scope_id; handler iterates companiesRepo.list()) were both rejected — the queue spec is explicit and the global/per-timer split matches the production reality where multi-company setups are rare today. (c) copilotAnalyzerService dep on IpcHandlerDeps is OPTIONAL + a lazy wrapper closure at the composition root — the analyzer is instantiated AFTER createIpcHandlers in main/index.ts so we either reorder init (big blast radius) or close over copilotAnalyzerServiceInstance. The closure approach preserves init order and defensively no-ops if a setCopilot fires before the analyzer is live (renderer can't reach settings until after app-ready, which is post-analyzer). (d) The settings-copilot-handlers.test.ts file is NEW rather than folded into the sparse handlers.test.ts — matches the per-subsystem test-file pattern (copilot-handlers.test.ts / rag-handlers.test.ts / backup-handlers.test.ts / updater-handlers.test.ts / vault-handlers.test.ts). (e) Analyzer restart-test harness note: setInterval MUST return a truthy handle — production stop() gates clearInterval + schedules.delete on `if (timer)`, so returning 0 from the fake setInterval would leave the schedule map stale and start() would short-circuit on schedules.has. Documented inline as a comment for future test authors.",
     "M33 (Copilot Service) T6 SHIPPED (2026-04-16, commit 3c00be7). +5 unit tests (1082 → 1087, exact T6 target). Replaces the T5 copilot.ask stub with a full round-trip through AgenticLoopService.start using employeeId = system-copilot. NEW services/agentic-tools-copilot.ts — query_copilot_insights Tool factory (zod-strict schema, {rows, truncated} envelope, MAX_COPILOT_ROWS=50 cap, over-fetch-by-one truncation detection, JSON-safe CopilotInsightProjection distinct from Drizzle CopilotInsightRow, includeDismissed flag defaulting false) + buildCopilotToolRegistry(employee, deps) level-gated composer returning [query_copilot_insights] when employee.roleId === SYSTEM_COPILOT_ROLE_ID, [] otherwise. NEW services/copilot-service.ts CopilotService front-door wrapping AgenticLoopService.start — resolves system-copilot via employeesRepo.findSystemByRoleId(companyId, SYSTEM_COPILOT_ROLE_ID), passes id through as explicit employeeId. Return shape { runId, threadId } matches M31 IpcExecuteResult.complex_request field-for-field (M34 sidebar wire-contract stability). EDIT test-agentic-tools.ts — extends three-tier canned seam: ECHO_COPILOT_QUERY_SENTINEL='__ECHO_COPILOT_QUERY__:', CANNED_COPILOT_QUERY_TABLE (empty in T6; T9 populates), FIXTURE_COPILOT_EMPTY fallback (never-throw contract); TestEmployeeContext.roleId? added; createTestToolsForEmployee swaps write-side for copilot tool set when roleId matches. EDIT db/repos/copilot-insights.ts — ListActiveFilter.includeDismissed? optional; listActive drops isNull(dismissedAt) predicate when true (TTL filter preserved). EDIT ipc/copilot-handlers.test.ts — flipped T5 'throws when stub in effect' assertion to 'rejects empty companyId/text before dispatch' since comp root always wires agenticLoopStart now. EDIT main/index.ts — +SYSTEM_COPILOT_ROLE_ID + buildCopilotToolRegistry + createCopilotService imports; buildTools callback resolves roleId via employeesRepo.getById once per run (zero cost for system-agent default) and branches to [...readSide, ...buildCopilotToolRegistry(employee, deps)] for system-copilot — system-agent path (M31 read-only + M32 write-side) unchanged; buildCopilotHandlers wires agenticLoopStart via copilot-service closure. 7 files (+982/-31), 0 lint errors / 24 warnings / typecheck clean across all 6 packages. 1087/1087 tests passing in 18.77s.",
