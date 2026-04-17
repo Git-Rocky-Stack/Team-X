@@ -8,10 +8,10 @@
   "previousMilestoneCompletedAt": "2026-04-18T20:02:38Z",
   "previousMilestoneCommit": "af643ec",
   "createdAt": "2026-04-19T00:00:00Z",
-  "updatedAt": "2026-04-19T23:59:30Z",
+  "updatedAt": "2026-04-19T23:59:45Z",
   "totalTasks": 11,
-  "tasksShipped": 5,
-  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a 3.7s Playwright run; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa (rewrote two stale passages that claimed RagIndexer subscribes to vault bus events; verified at rag-indexer.ts:78,88 it keys on work.completed + meeting.ended only; spec body was already correct). M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — 10 new event types + payload-aware row summaries + 28 unit tests; +28 unit → 1162; chip module split into audit-event-chip-helpers.ts pure surface + audit-event-chip.tsx component shell per step-card-narrow convention). M35 T4 SHIPPED commit 0f8b51c (Phase 5 retrospective — NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md 271 lines; locked 6-section structure per plan §4.5; cross-link added from design doc §13 Decisions Log; zero code / zero tests). Head-of-queue is M35 T5 (Demo script + scripted walkthrough). Tasks T5–T10 still pending from the plan doc §3 breakdown.",
+  "tasksShipped": 6,
+  "status": "M35 T0 SHIPPED commit da4ce1f (plan doc). M35 T1 SHIPPED commit b68d09b (performance defaults + clamp audit — all 10 defaults HELD on llama3.1:8b evidence; +4 unit tests → 1134). M35 T2 SHIPPED commit 1108247 (cross-milestone integration E2E — phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a 3.7s Playwright run; +1 E2E spec → 11 spec files / 12 Playwright cases). M35 T2 docblock-accuracy fix SHIPPED commit 54830fa. M35 T3 SHIPPED commit 51393f8 (audit view chips for Phase 5 events — 10 new event types + payload-aware row summaries + 28 unit tests; +28 unit → 1162; chip module split into audit-event-chip-helpers.ts pure surface + audit-event-chip.tsx component shell per step-card-narrow convention). M35 T4 SHIPPED commit 0f8b51c (Phase 5 retrospective — NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md 271 lines; locked 6-section structure per plan §4.5; zero code / zero tests). M35 T5 SHIPPED commit 3cffe29 (demo walkthrough + 5-scenario library — NEW docs/demo/phase-5-walkthrough.md + 5 scenario stubs covering Phase 1 callback / Phase 2 callback / Phase 3 callback / Phase 5 M30+M31 read-side headline / Phase 5 M32+M33+M34 write-side headline; 795 insertions across 6 new files + 1 retrospective §6.6 cross-link; zero code / zero tests). Head-of-queue is M35 T6 (README + user-guide reconciliation sweep). Tasks T6–T10 still pending from the plan doc §3 breakdown.",
   "tasks": [
     {
       "id": "T0",
@@ -106,18 +106,27 @@
     {
       "id": "T5",
       "name": "Demo script + scripted walkthrough",
-      "status": "pending",
-      "scope": "NEW docs/demo/phase-5-walkthrough.md — the Phase 5 demo video would follow this script. Also NEW docs/demo/scenarios/ directory with 5 scenario stubs: (1) Hire a CEO, chat with it, watch it think (Phase 1 callback); (2) File a ticket → agent picks it up, uses MCP, closes it (Phase 2 callback); (3) One-click all-hands → minutes → action items → tickets (Phase 3 callback); (4) Ask Cmd+K 'why is the frontend team behind?' → get grounded multi-paragraph answer citing tickets (Phase 5 M30+M31 headline); (5) 'Decompose the Q1 roadmap into tickets' → write-side gate → decompose + delegate → copilot surfaces insight about the new workload (Phase 5 M32+M33+M34 headline). 0 tests.",
+      "status": "shipped",
+      "commit": "3cffe29",
+      "shippedAt": "2026-04-19T23:59:45Z",
+      "scope": "NEW docs/demo/phase-5-walkthrough.md (overall Phase 5 demo script with verbatim 2-line hook 'Team-X is an AI-agent company that runs on your laptop. Here's what that looks like.', ~15 min runtime table, arc front-loading familiar interactions + back-loading headline Phase 5 capabilities, forward pointer to 7 Phase 6 seeds from retrospective §6, 1920×1080 @ 60fps recording setup) + 5 scenario stubs under docs/demo/scenarios/: 01-hire-a-ceo.md (Phase 1 callback, 3 min), 02-ticket-lifecycle.md (Phase 2 callback, 3 min, MCP tool call chip), 03-one-click-all-hands.md (Phase 3 callback, 2 min, orchestrator pause), 04-ask-copilot-grounded-answer.md (Phase 5 M30+M31 headline, 3 min, step log cycling with grounded answer), 05-decompose-and-surface.md (Phase 5 M32+M33+M34 headline, 4 min, amber write-side gate + copilot sidebar surfacing new insight). Each scenario doc follows locked structure (hook / setup / scripted sequence / key moments / duration / dependencies / data attributes / transition). Data attributes documented as stable narrator-DOM contract per Phase. Cross-link added in docs/plans/2026-04-19-team-x-phase-5-retrospective.md §6.6 'Real customer demo'. 795 insertions across 6 new files + 1 retrospective line. Zero code / zero tests / zero IPC/bus/migrations.",
       "filesTouched": [
-        "docs/demo/phase-5-walkthrough.md (NEW)",
-        "docs/demo/scenarios/01-hire-a-ceo.md (NEW)",
-        "docs/demo/scenarios/02-ticket-lifecycle.md (NEW)",
-        "docs/demo/scenarios/03-one-click-all-hands.md (NEW)",
-        "docs/demo/scenarios/04-ask-copilot-grounded-answer.md (NEW)",
-        "docs/demo/scenarios/05-decompose-and-surface.md (NEW)"
+        "docs/demo/phase-5-walkthrough.md (NEW, overall walkthrough)",
+        "docs/demo/scenarios/01-hire-a-ceo.md (NEW, Phase 1 callback, 3 min)",
+        "docs/demo/scenarios/02-ticket-lifecycle.md (NEW, Phase 2 callback, 3 min)",
+        "docs/demo/scenarios/03-one-click-all-hands.md (NEW, Phase 3 callback, 2 min)",
+        "docs/demo/scenarios/04-ask-copilot-grounded-answer.md (NEW, Phase 5 M30+M31 headline, 3 min)",
+        "docs/demo/scenarios/05-decompose-and-surface.md (NEW, Phase 5 M32+M33+M34 headline, 4 min)",
+        "docs/plans/2026-04-19-team-x-phase-5-retrospective.md (+1 Scripted foundation line in §6.6)"
       ],
       "commitTemplate": "docs(m35): M35 T5 — demo walkthrough + scenario library",
-      "testsDelta": 0
+      "testsDelta": 0,
+      "verificationGates": {
+        "unitTests": "not re-run (docs-only delivery; 1162/1162 baseline preserved from M35 T3 / T4)",
+        "lint": "not re-run (no code surface)",
+        "typecheck": "not re-run (no TypeScript surface)",
+        "e2e": "not re-run (no renderer or main-process surface; E2E baseline at M35 T2 preserved — 12 cases / 11 spec files / 40.6s)"
+      }
     },
     {
       "id": "T6",
@@ -202,7 +211,7 @@
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfMilestone": "M35 T4 shipped (commit 0f8b51c)"
+    "asOfMilestone": "M35 T5 shipped (commit 3cffe29)"
   },
   "targets": {
     "unitTests": 1145,
@@ -214,6 +223,7 @@
     "version": "1.0.0 → 1.1.0"
   },
   "notes": [
+    "M35 T5 (Demo script + scripted walkthrough) SHIPPED 2026-04-19 commit 3cffe29. NEW docs/demo/phase-5-walkthrough.md (overall Phase 5 demo arc with verbatim hook + ~15 min runtime table + forward pointer to 7 Phase 6 seeds) + 5 scenario stubs under docs/demo/scenarios/ (01-hire-a-ceo.md Phase 1 callback 3 min / 02-ticket-lifecycle.md Phase 2 callback 3 min with MCP chip / 03-one-click-all-hands.md Phase 3 callback 2 min with orchestrator pause / 04-ask-copilot-grounded-answer.md Phase 5 M30+M31 headline 3 min with step log cycling / 05-decompose-and-surface.md Phase 5 M32+M33+M34 headline 4 min with amber write-side gate + copilot sidebar insight surface). Each scenario ≤150 lines with locked structure (hook / setup / scripted sequence / key moments / duration / dependencies / data attributes / transition). Cross-link added to retrospective §6.6 'Real customer demo'. 795 insertions / 6 new files / 7 files changed (incl. retrospective cross-link). Zero code / zero tests / zero IPC/bus/migrations. Unit baseline 1162 preserved; no verification gates re-run (docs-only delivery). Head-of-queue advances to M35 T6 (README + user-guide reconciliation sweep). Atomic + ledger commit cadence held.",
     "M35 T4 (Phase 5 retrospective doc) SHIPPED 2026-04-19 commit 0f8b51c. NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md 271 lines with locked 6-section structure per M35 plan doc §4.5. Cross-link added from design doc §13 Decisions Log. Zero code / zero tests / zero IPC/bus/migration work. Unit baseline 1162 preserved; no verification gates re-run (docs-only delivery). Head-of-queue advances to M35 T5 (Demo script + scripted walkthrough).",
     "M35 T0 (plan doc) SHIPPED 2026-04-19 commit da4ce1f. Plan doc docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md (186 lines) covers all Phase 5 design §9 M35 deliverables + Phase 5 exit gate.",
     "M35 T3 (audit view chips for Phase 5 events) SHIPPED 2026-04-19 commit 51393f8. 10 newly-chipped event types (rag.index.* ×3, agent.step, agentic.completed, agentic.failed, copilot.* ×4) + payload-aware row summaries + 28 unit tests. Unit baseline 1134 → 1162. Chip module split pattern established (audit-event-chip-helpers.ts pure + audit-event-chip.tsx component) mirrors the step-card-narrow convention and unblocks future renderer pure-helper extractions without vitest `@/` alias work.",

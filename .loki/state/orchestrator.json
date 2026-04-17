@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M35",
   "milestoneName": "Demo + Hardening",
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md",
@@ -10,9 +10,9 @@
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {
-    "taskId": "M35-T5",
-    "lastShipped": "M35-T4",
-    "lastShippedCommit": "0f8b51c"
+    "taskId": "M35-T6",
+    "lastShipped": "M35-T5",
+    "lastShippedCommit": "3cffe29"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M34",
@@ -36,13 +36,13 @@
     "e2eSpecs": 11,
     "e2eGreenCount": 12,
     "lintErrors": 0,
-    "lintErrorsNote": "M35 T4 (Phase 5 retrospective) was a pure-docs delivery — zero code, zero tests, zero lint surface. M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts (1 spec / 1 case). M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests → 1162). 0-error baseline preserved.",
+    "lintErrorsNote": "M35 T5 (Demo walkthrough + scenario library) was a pure-docs delivery — zero code, zero tests, zero lint surface. M35 T4 (Phase 5 retrospective) was also pure-docs. M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts. M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests → 1162). 0-error baseline preserved.",
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "M35-T4 (commit 0f8b51c)"
+    "asOfTask": "M35-T5 (commit 3cffe29)"
   },
   "targets": {
-    "unitTests": "~1162+ (revised up from plan estimate ~1145 after M35 T3 shipped +28 unit vs plan's +3; further +3–5 expected from T8 version-bump + T9 regression-hardening unit tests)",
+    "unitTests": "~1167+ (revised up from plan estimate ~1145 after M35 T3 shipped +28 unit vs plan's +3; M35 T5 docs-only preserves baseline at 1162; further +5 expected from T8 version-bump +2 + T9 regression-hardening +2 unit tests — precise count lands at T10 verification gate)",
     "e2eSpecs": 11,
     "e2eSpecDelta": "+1 (phase-5-integration.spec.ts)",
     "lintErrors": 0,
@@ -273,17 +273,42 @@
       "a11yContract": "1. Semantic color ALWAYS paired with visible text label (WCAG 1.4.1 Use of Color). 2. aria-label='Event type: <literal>' so screen readers announce wire-level type (e.g. 'Event type: copilot.analyzed'). Sighted users still see title-cased display label ('Copilot Analyzed'). 3. Focus ring inherited from Badge primitive's built-in `focus:ring-2 focus:ring-ring focus:ring-offset-2`. 4. data-event-type mirrors literal event type as stable E2E selector surface.",
       "surpriseNote": "First authoring pass placed all helpers + component in a single audit-event-chip.tsx file per the plan's filesTouched list. Vitest run surfaced two transitive `@/` alias resolution failures: (a) the test file's import of audit-event-chip.tsx cascaded into Badge which imports @/lib/utils (cn helper); (b) switching the chip's internal imports from @/ to relative did not help because Badge's own @/lib/utils import is a FILE-LEVEL dep that vitest still couldn't resolve. Fix was architectural rather than config-level: split the module into pure-helpers `.ts` (zero React, zero Badge, zero @/ aliases) + component `.tsx`, and point the test at the pure-helpers module directly. This mirrors the existing step-card-narrow.ts + step-card.tsx convention and unblocks future renderer unit tests without requiring a vitest @/ alias config change. Net new file: audit-event-chip-helpers.ts (one file over the plan's filesTouched list — acceptable because the split aligns with an ALREADY-ESTABLISHED codebase convention).",
       "testCountDelta": "Plan estimate was +3 unit tests pinning chip render for 3 representative event types. Shipped +28: each representative event type cluster (rag.index.indexed / agent.step / copilot.analyzed) decomposed into 5–8 granular assertions (color, display label, aria-label, summarizable predicate, well-formed summary, pluralization edge case, malformed-input guard) plus M32 T6 planner regression guards (plan.proposed + task.delegated) plus cross-cutting defaults (DEFAULT_COLOR fallback + title-cased unknowns + ROW_SUMMARY_MAX_CHARS clamp). Granular style is more diagnostic — each assertion has its own `it` name so failures pinpoint the exact regression."
+    },
+    "M35-T5": {
+      "name": "Demo script + scripted walkthrough",
+      "shippedAt": "2026-04-19T23:59:45Z",
+      "commit": "3cffe29",
+      "deliverable": "NEW docs/demo/phase-5-walkthrough.md + 5 scenario stubs under docs/demo/scenarios/ (01-hire-a-ceo.md Phase 1 callback 3 min / 02-ticket-lifecycle.md Phase 2 callback 3 min / 03-one-click-all-hands.md Phase 3 callback 2 min / 04-ask-copilot-grounded-answer.md Phase 5 M30+M31 headline 3 min / 05-decompose-and-surface.md Phase 5 M32+M33+M34 headline 4 min). Walkthrough opens with verbatim 2-line hook ('Team-X is an AI-agent company that runs on your laptop. Here's what that looks like.'), runtime table totals ~15 min with buffer, arc front-loads familiar interactions (hire/ticket/meeting) and back-loads headline Phase 5 capabilities (grounded answers via Cmd+K step log, write-side planning via amber gate, proactive copilot insights via Cmd+Shift+K sidebar). Each scenario doc follows the locked structure: hook / setup preconditions / scripted sequence (numbered with exact UI targets) / key moments to highlight on camera / expected duration / dependencies / data attributes / transition-to-next. Data attributes enumerated per scenario as the stable contract for narrator DOM targets: data-testid=hire-dialog-trigger + data-role-id=ceo (scenario 1), data-testid=create-ticket + data-ticket-id (scenario 2), data-testid=call-meeting + data-meeting-id (scenario 3), data-step-kind=plan|tool_call|tool_result|answer (scenario 4), data-step-kind=ticket_created|delegation_made + data-copilot-sidebar-root + data-copilot-insight-id + data-copilot-toolbar-toggle (scenario 5). Cross-link added in docs/plans/2026-04-19-team-x-phase-5-retrospective.md §6.6 'Real customer demo' pointing at the new walkthrough + scenarios directory. 795 insertions across 6 new files + 1 retrospective line. Zero code / zero tests / zero IPC/bus/migrations — pure markdown deliverable per M35 plan doc §3 T5 row.",
+      "filesTouched": [
+        "docs/demo/phase-5-walkthrough.md (NEW)",
+        "docs/demo/scenarios/01-hire-a-ceo.md (NEW)",
+        "docs/demo/scenarios/02-ticket-lifecycle.md (NEW)",
+        "docs/demo/scenarios/03-one-click-all-hands.md (NEW)",
+        "docs/demo/scenarios/04-ask-copilot-grounded-answer.md (NEW)",
+        "docs/demo/scenarios/05-decompose-and-surface.md (NEW)",
+        "docs/plans/2026-04-19-team-x-phase-5-retrospective.md (+1 Scripted foundation line in §6.6)"
+      ],
+      "testsDelta": 0,
+      "verificationGates": {
+        "unitTests": "not re-run (docs-only delivery; 1162/1162 baseline preserved from M35 T3 / T4)",
+        "lint": "not re-run (no code surface)",
+        "typecheck": "not re-run (no TypeScript surface)",
+        "e2e": "not re-run (no renderer or main-process surface; E2E baseline at M35 T2 preserved — 12 cases / 11 spec files / 40.6s)"
+      },
+      "structureCompliance": "Each scenario doc ≤150 lines with locked structure (hook / setup / scripted sequence / key moments / duration / dependencies / data attributes / transition). Overall walkthrough delivers verbatim hook line + audience + runtime table + arc + forward pointer to Phase 6 seeds + recording setup + script hygiene + versioning — all 10 acceptance-list items from the M35 plan §3 T5 row confirmed during authoring.",
+      "surpriseNote": "Zero surprises. The carry-forward note warned docs/demo/ was a new directory — git tracked it cleanly on first commit (7 files changed / 795 insertions, all as mode 100644) without requiring a .gitkeep because scenario files populated the subdirectory. Tone-match pulled from docs/user-guide/copilot-ui.md (executive, direct, no marketing fluff) at authoring time."
     }
   },
   "inFlightMilestone": {
     "milestone": "M35",
     "milestoneName": "Demo + Hardening",
-    "tasksShipped": 5,
+    "tasksShipped": 6,
     "totalTasks": 11,
-    "headOfQueue": "M35-T5",
-    "headOfQueueName": "Demo script + scripted walkthrough (0 tests)"
+    "headOfQueue": "M35-T6",
+    "headOfQueueName": "README + user-guide reconciliation sweep (0 tests)"
   },
   "notes": [
+    "M35 T5 SHIPPED (commit 3cffe29 — 'docs(m35): M35 T5 — demo walkthrough + scenario library'). NEW docs/demo/phase-5-walkthrough.md (overall Phase 5 demo script with verbatim 2-line hook, ~15 min runtime table, front-loaded familiar interactions + back-loaded headline Phase 5 capabilities, forward pointer to 7 Phase 6 seeds from retrospective §6, 1920×1080 @ 60fps recording setup). NEW 5 scenario stubs: docs/demo/scenarios/01-hire-a-ceo.md (Phase 1 — hire dialog → CEO → streaming chat, 3 min), 02-ticket-lifecycle.md (Phase 2 — ticket file → agent → MCP tool call → close, 3 min), 03-one-click-all-hands.md (Phase 3 — meeting → interject → minutes, 2 min), 04-ask-copilot-grounded-answer.md (Phase 5 M30+M31 — Cmd+K 'why is the frontend team behind?' → classifier → agentic loop step log → grounded answer, 3 min), 05-decompose-and-surface.md (Phase 5 M32+M33+M34 — Cmd+K 'decompose the Q1 roadmap into tickets' → amber write-side gate → Confirm → decompose_project + delegate_subtask → copilot sidebar surfaces new insight → dismiss → copilot.dismissed event on append-only table per invariant #11, 4 min). Each scenario doc follows locked structure (hook / setup / scripted sequence / key moments / duration / dependencies / data attributes / transition). Data attributes documented as stable narrator-DOM contract: data-testid=hire-dialog-trigger, data-role-id=ceo, data-testid=create-ticket, data-ticket-id, data-testid=call-meeting, data-meeting-id, data-step-kind, data-copilot-sidebar-root, data-copilot-insight-id, data-copilot-toolbar-toggle. Cross-link added in docs/plans/2026-04-19-team-x-phase-5-retrospective.md §6.6 'Real customer demo' pointing at the walkthrough. 795 insertions across 6 new files + 1 retrospective line. Zero code / zero tests / zero IPC/bus/migrations. Atomic + ledger commit cadence held (T5 atomic docs(m35); ledger fold follows this entry). Head-of-queue advances to M35 T6 (README + user-guide reconciliation sweep).",
     "M35 T4 SHIPPED (commit 0f8b51c — 'docs(m35): M35 T4 — Phase 5 retrospective'). NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md (271 lines) authored per M35 plan doc §4.5 locked six-section structure: (1) What we shipped — M28 → M35 one-liners with commit range + test delta + architectural seam; (2) What went well — 10 compounding patterns (canned test-seam quartet / {rows, truncated} envelope / data-* selector surface / pause-aware providerRouter wrapper / AbortController stop / is_system filter-sweep / atomic+ledger cadence / ABI rebuild dance / pure-helpers + component split / invariant #11); (3) What cost us time — Vitest/Playwright ABI dance + sqlite-vec + FTS5 regression + malformed tool-call nudge-retry + F1/F2/F3/F4 + @/ alias cascade + docblock drift + test-count drift; (4) What we deferred — 9 items with Phase 6 sketches; (5) Metrics — test growth (612 → 1162 = +83%), E2E 4 → 11 specs / 12 cases, 43,919 insertions / 207 files, EventType 16 → 31, invariants 10 → 11, cadence 80% strict adherence; (6) Phase 6 seeds — 7 prioritized hypotheses. Cross-link added from design doc §13 Decisions Log. Zero code / zero tests / zero IPC/bus/migration work. Atomic commit + ledger cadence preserved (T4 atomic is docs(m35); ledger fold follows this entry). Head-of-queue advances to M35 T5 (Demo script + scripted walkthrough).",
     "M35 T3 SHIPPED (commit 51393f8 — 'feat(m35): M35 T3 — audit view chips for Phase 5 events'). Audit view chip coverage extended to 10 newly-chipped Phase 5 event types (rag.index.* ×3, agent.step, agentic.completed, agentic.failed, copilot.* ×4). New audit-event-chip-helpers.ts pure-helper module split from audit-event-chip.tsx component shell — mirrors step-card-narrow.ts + step-card.tsx convention so vitest resolves without `@/` alias config change. Test file imports from helpers module only. Payload-aware row-summary formatters surface the most useful payload field per event with a hard 140-char clamp invariant. A11y contract: semantic color paired with text label (WCAG 1.4.1), aria-label='Event type: <literal>' for screen readers, data-event-type stable E2E selector surface, focus ring inherited from Badge primitive. +28 unit tests (1134 → 1162; plan estimated +3 — shipped richer coverage per no-cutting-corners). Verification: 1162/1162 unit green (15.17s); typecheck clean; 0 lint errors / 24 warnings (surgical biome format --write on the 4 new/edited audit files + orchestrator.json pre-existing format drift). E2E NOT re-run (renderer-only chip change with no audit-view selectors asserted in any spec; M35 T1's comment+test-only precedent). Architectural surprise: rag.index.* events are aspirational per CLAUDE.md bus-event table but NOT currently emitted by rag-indexer.ts (keys only on work.completed + meeting.ended, writes via ragService.indexSource without a bus emit) — chips land defensively so audit rows surface correctly the moment the events start firing. Pre-ship T2 docblock-accuracy fix commit 54830fa rewrote two stale passages in phase-5-integration.spec.ts header that had claimed RagIndexer subscribes to vault bus events (same misread the user flagged via message correction). Atomic + ledger commit cadence held.",
     "M35 T2 SHIPPED (commit 1108247 — 'test(m35): M35 T2 — cross-milestone integration E2E spec'). New apps/desktop/e2e/phase-5-integration.spec.ts stitches M28 → M29 → M30 → M31 → M32 → M33 → M34 in a single 3.7-second Playwright run. Reuses the four-member canned-seam quartet (test-classifier + test-agentic-provider + test-agentic-tools + test-copilot-provider) with zero new entries — the existing canned keys + the __ECHO_AGENT__: sentinel path cover every transition. Launched with TEAM_X_RAG_TEST=1 alongside NODE_ENV=test so the RAG indexer subscribes and the chat round-trip in Step 1 produces a measurable embedding-count delta. Regression guards asserted inline: invariant #11 (copilot.dismissed lands on events table after dismiss), M30 destructive gate ABSENT across full session, M32 write-side gate fires ONLY in Step 3, Phase 5 top-bar badge verbatim. Verification gates green: 1134/1134 unit (unchanged), typecheck clean, 0 lint errors / 24 warnings, 12 E2E cases / 11 spec files in 40.6s total. Atomic + ledger commit cadence held — T2 shipped as its own test(m35) atomic commit followed by this ledger commit.",

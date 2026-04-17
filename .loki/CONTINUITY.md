@@ -1,4 +1,67 @@
-# Loki Continuity — Phase 5, **M35 T4 SHIPPED** (Phase 5 retrospective doc authored — `docs/plans/2026-04-19-team-x-phase-5-retrospective.md` 271 lines with locked 6-section structure from M35 plan doc §4.5; cross-link added from design doc §13 Decisions Log; zero code / zero tests / zero IPC/bus/migration work; pure markdown deliverable closing the Phase 5 exit-gate documentation requirement). M35 T5 (demo script + scripted walkthrough — 6 new markdown files across `docs/demo/` and `docs/demo/scenarios/`) is head-of-queue. Phase 5 exit is 6 tasks away.
+# Loki Continuity — Phase 5, **M35 T5 SHIPPED** (Demo walkthrough + 5-scenario library authored under `docs/demo/` — single `phase-5-walkthrough.md` overall arc + 5 scenario stubs covering Phase 1 hire-a-CEO / Phase 2 ticket-lifecycle-with-MCP / Phase 3 one-click-all-hands / Phase 5 M30+M31 read-side grounded-answer / Phase 5 M32+M33+M34 write-side decompose-and-surface; 795 insertions across 6 new files + 1 retrospective §6.6 cross-link; zero code / zero tests / zero IPC/bus/migration work; 2nd consecutive pure-markdown deliverable after the retrospective — both tasks land the Phase 5 exit-gate documentation requirement). M35 T6 (README + user-guide reconciliation sweep) is head-of-queue. Phase 5 exit is 5 tasks away.
+
+## M35 T5 SHIPPED — 2026-04-19 — Demo walkthrough + scenario library (3cffe29)
+
+**Task:** M35 T5 — author the Phase 5 demo script as the foundation for the future Phase 5 demo video + customer-demo coordination with Strategia-X marketing. (M35 plan doc §3 T5 row.)
+**Atomic commit:** `3cffe29` — `docs(m35): M35 T5 — demo walkthrough + scenario library`.
+**Ledger commit:** `chore(loki): M35 T5 — commit ledger (3cffe29)` (this commit).
+**Plan reference:** [M35 plan T5](../docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md#3-task-breakdown).
+
+### What shipped
+
+- **NEW `docs/demo/phase-5-walkthrough.md`** — overall Phase 5 demo script. Opens with a 2-line hook (*"Team-X is an AI-agent company that runs on your laptop. Here's what that looks like."*), establishes audience + runtime table + arc (Phase 1 callback → Phase 2 callback → Phase 3 callback → Phase 5 M30+M31 headline → Phase 5 M32+M33+M34 headline), and closes with a forward pointer to the 7 Phase 6 seeds from the retrospective §6. Recording setup section pins 1920×1080 @ 60fps / DevTools closed / Dashboard → Cards home-base between cuts so narration returns to a stable frame. Versioning line ties this walkthrough to Team-X v1.1.0 — future scenario edits track with milestone plan docs in lockstep.
+- **NEW `docs/demo/scenarios/01-hire-a-ceo.md`** (Phase 1 callback, 3 min) — hire-dialog → CEO role from Officer filter chip → streaming reply in chat drawer. Phase 1 M3 + M4 + M5 dependencies listed. Data attributes: `data-testid="hire-dialog-trigger"`, `data-role-id="ceo"`, `data-testid="chat-composer"`. Key-moments section calls out token-delta streaming (zoom on the chat panel) + Dashboard → Stream subview (optional B-roll) + the CEO employee card's cost+latency entry point to Telemetry tab.
+- **NEW `docs/demo/scenarios/02-ticket-lifecycle.md`** (Phase 2 callback, 3 min) — ticket file → assign → agent picks up → MCP tool-call chip (blue wrench icon from Context7 seed) → agent closes. Phase 2 M9 + M10 + M12 dependencies listed. Data attributes: `data-testid="create-ticket"`, `data-ticket-id="<uuid>"`, `data-testid="ticket-detail-close"`. Key-moments section pauses camera on the MCP chip for 1-2s (visible proof the agent reached outside the app through a sanctioned protocol) + optional Audit tab B-roll showing `ticket.created` + `ticket.closed` chips.
+- **NEW `docs/demo/scenarios/03-one-click-all-hands.md`** (Phase 3 callback, 2 min) — meeting call → orchestrator pause (amber status dot) → CEO reads agenda → Rocky interjects → end meeting → minutes + action items render as structured block. Phase 3 M16 + Phase 1 M4 + Phase 2 M12 dependencies listed. Data attributes: `data-testid="call-meeting"`, `data-meeting-id="<uuid>"`, `data-testid="meeting-end"`. Key-moments section lands the "orchestrator is the only scheduler" theme via the amber status dot (no new tickets, no new agent runs while meeting is live).
+- **NEW `docs/demo/scenarios/04-ask-copilot-grounded-answer.md`** (Phase 5 M30+M31 headline, 3 min) — Cmd+K 'why is the frontend team behind?' → classifier chip under the input (`intent=complex_request, confidence=0.94`) → submit → step log cycles (plan → tool_call `query_employees` → tool_result `{rows, truncated}` → tool_call `query_tickets` → tool_result → answer) → grounded answer names specific ticket IDs + employee names → system-agent thread persists under Copilot Conversations. Phase 5 M28 + M29 + M30 + M31 dependencies listed. Data attributes: `data-step-kind="plan"|"tool_call"|"tool_result"|"answer"`. Key-moments section explicitly calls out step-log cards as the single best visual in the whole demo — narrator lets it breathe 5-8s.
+- **NEW `docs/demo/scenarios/05-decompose-and-surface.md`** (Phase 5 M32+M33+M34 headline, 4 min) — Cmd+K 'decompose the Q1 roadmap into tickets' → amber write-side gate → Confirm → step log cycles including `ticket_created` (emerald) + `delegation_made` (sky) variants → 8 tickets materialize on kanban → wait 10s → Cmd+Shift+K opens copilot sidebar → new insight ('New workload created — 8 tickets delegated across 3 engineers, review queue not yet defined') → dismiss X → `copilot.dismissed` event lands on append-only events table (invariant #11) → Audit tab row confirms mutation is auditable. Phase 5 M32 + M33 + M34 dependencies listed. Data attributes: `data-step-kind="ticket_created"|"delegation_made"`, `data-copilot-sidebar-root`, `data-copilot-insight-id="<uuid>"`, `data-copilot-toolbar-toggle`. Key-moments section pauses 2-3s on the amber gate (the ethical-AI moment of the demo) + the audit tab row at the end (invariant #11 on full display).
+- **MODIFIED `docs/plans/2026-04-19-team-x-phase-5-retrospective.md`** — added one 'Scripted foundation' line to §6.6 ('Real customer demo') pointing at `docs/demo/phase-5-walkthrough.md` + `docs/demo/scenarios/`. Cross-link closes the loop from the retrospective's Phase 6 seed back to the shipped artifact.
+
+### Why each scenario has the shape it does
+
+The scenarios front-load the familiar (hire, ticket, meeting) and back-load the headline Phase 5 capabilities (grounded answers, write-side planning, proactive insights). Rationale: a viewer unfamiliar with Team-X needs to trust the app is real before they can evaluate the intelligence layer. Scenarios 1-3 establish that trust in 8 minutes through concrete interactions. Scenarios 4-5 deliver the headline value in 7 minutes with the step log as the single best visual. The closing frame deliberately leaves the copilot sidebar open as the last image — that's the product.
+
+### Acceptance-list compliance
+
+- ✅ Walkthrough narrative connects 5 scenarios into 10-15 min arc (runtime table totals ~15 min with buffer).
+- ✅ Hook line verbatim: *"Team-X is an AI-agent company that runs on your laptop. Here's what that looks like."*
+- ✅ Forward pointer to Phase 6 candidates (7 seeds from retrospective §6 enumerated in closing section).
+- ✅ Each scenario doc structure: hook / setup preconditions / scripted sequence (numbered with exact UI targets) / key moments / expected duration / dependencies / data attributes / transition-to-next. ≤150 lines each.
+- ✅ Data attributes documented per acceptance #2-6: `data-testid="hire-dialog-trigger"`, `data-role-id="ceo"`, `data-testid="create-ticket"`, `data-ticket-id`, `data-testid="call-meeting"`, `data-step-kind`, `data-copilot-insight-id`, `data-copilot-sidebar-root`.
+- ✅ `docs/demo/` is a NEW directory — git tracks it (one file per subdirectory is sufficient; scenario files exist, no .gitkeep needed per carryForward note).
+- ✅ Zero code changes, zero IPC, zero bus events, zero migrations, zero tests.
+- ✅ Cross-link from retrospective §6.6 ('Real customer demo') added.
+- ✅ Tone matches `docs/user-guide/*.md` (executive, direct, no marketing fluff — verified against `docs/user-guide/copilot-ui.md` tone sample pulled during authoring).
+
+### Verification gates
+
+- **Unit tests:** not re-run (docs-only delivery; 1162/1162 baseline preserved from M35 T3 / T4).
+- **Lint:** not re-run (no code surface).
+- **Typecheck:** not re-run (no TypeScript surface).
+- **E2E:** not re-run (no renderer or main-process surface; E2E baseline at M35 T2 preserved — 12 cases / 11 spec files / 40.6s).
+
+### Surprise watch from carry-forward
+
+None materialised. Carry-forward note warned that `docs/demo/` was a new directory and to verify git tracks it — `git status --short` confirmed all 6 files staged as `A`; no `.gitkeep` needed because scenario files populate the subdirectory. Commit landed cleanly as 7 files changed / 795 insertions.
+
+### Architectural seams referenced in scenario docs (not demoable, but narratively implied)
+
+- Canned test-seam quartet (`test-classifier` / `test-agentic-provider` / `test-agentic-tools` / `test-copilot-provider`) — explains why scenarios 4+5 work repeatably against real providers (they rely on the same prompt → classifier → planner → provider pipeline tested in the quartet).
+- `{rows, truncated}` envelope — visible in tool_result step cards in scenario 4.
+- `data-*` stable E2E selector surface — enumerated per scenario so narrator can open DevTools on camera.
+- Pause-aware `providerRouter.complete` wrapper — scenario 3 demonstrates this via the amber status dot during meeting.
+- `AbortController` stop plumbing — scenario 4 mentions the stop button exists (not used in demo flow).
+- `is_system` + filter-sweep — Copilot Conversations section in chat drawer (scenario 4's "system-agent thread persists" line).
+
+### M35 progress
+
+T5 is the 6th M35 task shipped; 5 remaining (T6-T10). Next up: M35 T6 — README + user-guide reconciliation sweep (NEW `docs/user-guide/README.md` index linking 10 existing guide docs + README feature matrix reconciliation with shipped Phase 5 surface + tests-badge update to reflect M35 exit count).
+
+### Commit cadence
+
+Atomic + ledger cadence held. T5 shipped as its own atomic `docs(m35)` commit (`3cffe29`) followed by this ledger commit. 80% strict atomic adherence across the Phase 5 task-count count holds steady (M34 was the only deviation).
+
+---
 
 ## M35 T4 SHIPPED — 2026-04-19 — Phase 5 retrospective doc (0f8b51c)
 
