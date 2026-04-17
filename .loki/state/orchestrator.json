@@ -2,7 +2,7 @@
   "currentPhase": "DEVELOPMENT",
   "currentMilestone": "M35",
   "milestoneName": "Demo + Hardening",
-  "tasksCompleted": 7,
+  "tasksCompleted": 8,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5-m35-demo-hardening.md",
@@ -10,9 +10,9 @@
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {
-    "taskId": "M35-T7",
-    "lastShipped": "M35-T6",
-    "lastShippedCommit": "a966deb"
+    "taskId": "M35-T8",
+    "lastShipped": "M35-T7",
+    "lastShippedCommit": "cb0ab4c"
   },
   "phase": "Phase 5 — Intelligence Layer",
   "previousMilestone": "M34",
@@ -36,10 +36,10 @@
     "e2eSpecs": 11,
     "e2eGreenCount": 12,
     "lintErrors": 0,
-    "lintErrorsNote": "M35 T6 (README + user-guide reconciliation sweep) was a pure-docs delivery — zero code, zero tests, zero lint surface. M35 T5 (Demo walkthrough + scenario library) and M35 T4 (Phase 5 retrospective) were also pure-docs. M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts. M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests → 1162). 0-error baseline preserved.",
+    "lintErrorsNote": "M35 T7 (CHANGELOG promotion [Unreleased] → [1.1.0]) was a pure-docs delivery — zero code, zero tests, zero lint surface. M35 T6 (README + user-guide reconciliation sweep), T5 (Demo walkthrough + scenario library), and T4 (Phase 5 retrospective) were also pure-docs. M35 T1 cleared the pre-existing M30 T2 error. M35 T2 added phase-5-integration.spec.ts. M35 T3 added audit-event-chip-helpers.ts + audit-event-chip.tsx + audit-event-chip.test.tsx (+28 unit tests → 1162). 0-error baseline preserved.",
     "lintWarnings": 24,
     "typecheckClean": true,
-    "asOfTask": "M35-T6 (commit a966deb)"
+    "asOfTask": "M35-T7 (commit cb0ab4c)"
   },
   "targets": {
     "unitTests": "~1167+ (revised up from plan estimate ~1145 after M35 T3 shipped +28 unit vs plan's +3; M35 T5 docs-only preserves baseline at 1162; further +5 expected from T8 version-bump +2 + T9 regression-hardening +2 unit tests — precise count lands at T10 verification gate)",
@@ -316,17 +316,36 @@
       },
       "structureCompliance": "Each scenario doc ≤150 lines with locked structure (hook / setup / scripted sequence / key moments / duration / dependencies / data attributes / transition). Overall walkthrough delivers verbatim hook line + audience + runtime table + arc + forward pointer to Phase 6 seeds + recording setup + script hygiene + versioning — all 10 acceptance-list items from the M35 plan §3 T5 row confirmed during authoring.",
       "surpriseNote": "Zero surprises. The carry-forward note warned docs/demo/ was a new directory — git tracked it cleanly on first commit (7 files changed / 795 insertions, all as mode 100644) without requiring a .gitkeep because scenario files populated the subdirectory. Tone-match pulled from docs/user-guide/copilot-ui.md (executive, direct, no marketing fluff) at authoring time."
+    },
+    "M35-T7": {
+      "name": "CHANGELOG promotion [Unreleased] → [1.1.0]",
+      "shippedAt": "2026-04-20T00:00:30Z",
+      "commit": "cb0ab4c",
+      "deliverable": "CHANGELOG.md promoted [Unreleased] (accumulated M30 + M31 + M32 + M33 + M33 F3/F4 + M34 entries) into [1.1.0] — 2026-04-20 under a new 'Phase 5 — Intelligence Layer' narrative header. Per-milestone Added / Changed / Fixed ordering retained verbatim — zero re-authoring of existing entries per carry-forward rule. Reset [Unreleased] to a six-category scaffold (Added / Changed / Fixed / Deprecated / Removed / Security) ready for Phase 6 work. Added release-note line citing baseline delta 612 / 4 (v1.0.0) → 1162 unit / 11 E2E specs / 12 Playwright cases and enumerating M28-M35 as the additive shippable surface (M28/M29 named in the release header even though per-milestone entries were not in [Unreleased] — preserves scope faithfulness without inventing content). Appended bottom-of-file version-link refs: [Unreleased] → compare/v1.1.0...HEAD, [1.1.0] → compare/v1.0.0...v1.1.0, [1.0.0] → releases/tag/v1.0.0. Repo confirmed as Git-Rocky-Stack/Team-X via git remote get-url origin. Zero code / zero tests / zero IPC/bus/migrations — pure markdown deliverable per M35 plan doc §3 T7 row.",
+      "filesTouched": [
+        "CHANGELOG.md (MODIFIED, +26 insertions — scaffold + Phase 5 header + [1.1.0] release-note line + version-link refs; existing M30-M34 entries untouched below the repositioned [1.1.0] anchor)"
+      ],
+      "testsDelta": 0,
+      "verificationGates": {
+        "unitTests": "not re-run (docs-only delivery; 1162/1162 baseline preserved from M35 T3 / T4 / T5 / T6)",
+        "lint": "not re-run (no code surface)",
+        "typecheck": "not re-run (no TypeScript surface)",
+        "e2e": "not re-run (no renderer or main-process surface; E2E baseline at M35 T2 preserved — 12 cases / 11 spec files / 40.6s)"
+      },
+      "structureCompliance": "All 8 acceptance-list items from current-task.json T7 row confirmed: (1) [Unreleased] promoted to [1.1.0] — 2026-04-20 with every M30-M34 entry preserved verbatim. (2) 'Phase 5 — Intelligence Layer' header line sits above [1.1.0] as narrative anchor. (3) [Unreleased] reset to six-category scaffold with empty bodies. (4) Version + date line matches semver convention '## [1.1.0] — 2026-04-20' with en-dash. (5) Bottom-of-file version-link refs added (file previously had none — introduced fresh rather than updated). (6) No entries lost — grep confirms 6 milestone headers inside [1.1.0] (M34, M33 Follow-ups, M33 Copilot Service, M32, M31, M30). (7) Zero code / zero tests / zero IPC/bus/migrations. (8) Atomic commit docs(m35): M35 T7 — CHANGELOG [Unreleased] → [1.1.0] landed as cb0ab4c.",
+      "surpriseNote": "Carry-forward warned M28 + M29 entries might be in [Unreleased] — they were NOT. [Unreleased] at start-of-task contained M30 → M34 only (M28 + M29 never had CHANGELOG entries authored during their T9/T11 passes — a documentation drift surfaced here but NOT fixed per 'DO NOT invent entries that aren't already written' carry-forward rule). Noted in release header as 'RAG foundation (M28), RAG into agent turns (M29)' scope bullets — header-level scope statement, not per-milestone entries. If CONTINUITY.md's M35 T7 paragraph or the Phase 5 retrospective §1 (What we shipped) already cover M28/M29 deliverables adequately, no further action needed. If Phase 6 T0 or a follow-up patch wants to backfill M28/M29 CHANGELOG entries retroactively into [1.1.0], that is a future-phase decision — out of T7 scope. Second surprise: existing file had NO compare-URL refs at the bottom, so T7 INTRODUCED them (acceptance #5 phrasing 'updated' was aspirational). Repo remote resolved via git remote get-url origin → https://github.com/Git-Rocky-Stack/Team-X.git."
     }
   },
   "inFlightMilestone": {
     "milestone": "M35",
     "milestoneName": "Demo + Hardening",
-    "tasksShipped": 7,
+    "tasksShipped": 8,
     "totalTasks": 11,
-    "headOfQueue": "M35-T7",
-    "headOfQueueName": "CHANGELOG promotion [Unreleased] → [1.1.0] (0 tests)"
+    "headOfQueue": "M35-T8",
+    "headOfQueueName": "Version bump 1.0.0 → 1.1.0 + Phase 5 badge freeze unit test (2 tests)"
   },
   "notes": [
+    "M35 T7 SHIPPED (commit cb0ab4c — 'docs(m35): M35 T7 — CHANGELOG [Unreleased] → [1.1.0]'). Promoted [Unreleased] (M30 + M31 + M32 + M33 + M33 F3/F4 + M34 entries, reverse-chronological) into [1.1.0] — 2026-04-20 under a new 'Phase 5 — Intelligence Layer' narrative header. Keep a Changelog per-milestone Added / Changed / Fixed ordering retained verbatim. Reset [Unreleased] to an empty six-category scaffold (Added / Changed / Fixed / Deprecated / Removed / Security). Added release-note line citing baseline delta 612 / 4 (v1.0.0) → 1162 unit / 11 E2E specs / 12 Playwright cases and enumerating M28-M35 as the additive shippable surface. Introduced bottom-of-file version-link refs for [Unreleased] / [1.1.0] / [1.0.0] (file previously had none — acceptance-#5 phrasing 'updated' was aspirational). Repo resolved as Git-Rocky-Stack/Team-X via git remote get-url origin. Carry-forward surfaced: M28 + M29 had NO CHANGELOG entries in [Unreleased] at start-of-task — NOT backfilled per 'DO NOT invent entries that aren't already written' rule; header-level scope statement covers them. Zero code / zero tests / zero IPC/bus/migrations. Unit baseline 1162 preserved; no verification gates re-run per docs-only precedent (T4/T5/T6). Atomic + ledger commit cadence held (T7 atomic docs(m35) → ledger fold follows this entry). Head-of-queue advances to M35 T8 (version bump 1.0.0 → 1.1.0 + Phase 5 badge freeze unit test, 2 tests).",
     "M35 T6 SHIPPED (commit a966deb — 'docs(m35): M35 T6 — README + user-guide reconciliation sweep'). Root README.md reconciled against the live M35 baseline: tests badge 1099 → 1162; tech-stack table Vitest 1033 → 1162 + Playwright 8 → 11 specs; Testing section updated to 1162 unit + 11 E2E specs / 12 Playwright cases (one spec has two cases); spec table expanded 8 → 11 rows (adds copilot-service.spec.ts, copilot-ui.spec.ts, phase-5-integration.spec.ts); architecture tree 10 → 13 migrations (verified 0000-0012 under apps/desktop/src/main/db/migrations/) + 60+ → 80+ IPC channels (per M30-M34 additions) + 8 → 11 Playwright specs; command palette '15 intents' framing reconciled to '14 structured intents plus a complex_request fallback' (aligns Live-Cockpit section with Intelligence-Layer section + CLAUDE.md). docs/user-guide/README.md rewritten with Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 / Reference grouping so readers navigate by when each feature shipped. Added keyboard-first primer at top surfacing Cmd+K (palette) + Cmd+Shift+K (copilot sidebar) as the two-shortcut entry points. Added See-also section linking back to root README, CONTRIBUTING, CHANGELOG, Phase 5 retrospective (M35 T4), Phase 5 demo walkthrough (M35 T5). Partial-truth audit modelled on M31 T9 surfaced 6 drift sites — all fixed in-place, zero TODOs filed. grep-verified no stale references remain (1099/1033/8 specs/10 migrations/15 intents all clean). Zero code / zero tests / zero IPC/bus/migrations — pure markdown deliverable. Unit baseline 1162 preserved; no verification gates re-run per docs-only precedent. Atomic + ledger commit cadence held (T6 atomic docs(m35) → ledger fold follows this entry). Head-of-queue advances to M35 T7 (CHANGELOG promotion [Unreleased] → [1.1.0]).",
     "M35 T5 SHIPPED (commit 3cffe29 — 'docs(m35): M35 T5 — demo walkthrough + scenario library'). NEW docs/demo/phase-5-walkthrough.md (overall Phase 5 demo script with verbatim 2-line hook, ~15 min runtime table, front-loaded familiar interactions + back-loaded headline Phase 5 capabilities, forward pointer to 7 Phase 6 seeds from retrospective §6, 1920×1080 @ 60fps recording setup). NEW 5 scenario stubs: docs/demo/scenarios/01-hire-a-ceo.md (Phase 1 — hire dialog → CEO → streaming chat, 3 min), 02-ticket-lifecycle.md (Phase 2 — ticket file → agent → MCP tool call → close, 3 min), 03-one-click-all-hands.md (Phase 3 — meeting → interject → minutes, 2 min), 04-ask-copilot-grounded-answer.md (Phase 5 M30+M31 — Cmd+K 'why is the frontend team behind?' → classifier → agentic loop step log → grounded answer, 3 min), 05-decompose-and-surface.md (Phase 5 M32+M33+M34 — Cmd+K 'decompose the Q1 roadmap into tickets' → amber write-side gate → Confirm → decompose_project + delegate_subtask → copilot sidebar surfaces new insight → dismiss → copilot.dismissed event on append-only table per invariant #11, 4 min). Each scenario doc follows locked structure (hook / setup / scripted sequence / key moments / duration / dependencies / data attributes / transition). Data attributes documented as stable narrator-DOM contract: data-testid=hire-dialog-trigger, data-role-id=ceo, data-testid=create-ticket, data-ticket-id, data-testid=call-meeting, data-meeting-id, data-step-kind, data-copilot-sidebar-root, data-copilot-insight-id, data-copilot-toolbar-toggle. Cross-link added in docs/plans/2026-04-19-team-x-phase-5-retrospective.md §6.6 'Real customer demo' pointing at the walkthrough. 795 insertions across 6 new files + 1 retrospective line. Zero code / zero tests / zero IPC/bus/migrations. Atomic + ledger commit cadence held (T5 atomic docs(m35); ledger fold follows this entry). Head-of-queue advances to M35 T6 (README + user-guide reconciliation sweep).",
     "M35 T4 SHIPPED (commit 0f8b51c — 'docs(m35): M35 T4 — Phase 5 retrospective'). NEW docs/plans/2026-04-19-team-x-phase-5-retrospective.md (271 lines) authored per M35 plan doc §4.5 locked six-section structure: (1) What we shipped — M28 → M35 one-liners with commit range + test delta + architectural seam; (2) What went well — 10 compounding patterns (canned test-seam quartet / {rows, truncated} envelope / data-* selector surface / pause-aware providerRouter wrapper / AbortController stop / is_system filter-sweep / atomic+ledger cadence / ABI rebuild dance / pure-helpers + component split / invariant #11); (3) What cost us time — Vitest/Playwright ABI dance + sqlite-vec + FTS5 regression + malformed tool-call nudge-retry + F1/F2/F3/F4 + @/ alias cascade + docblock drift + test-count drift; (4) What we deferred — 9 items with Phase 6 sketches; (5) Metrics — test growth (612 → 1162 = +83%), E2E 4 → 11 specs / 12 cases, 43,919 insertions / 207 files, EventType 16 → 31, invariants 10 → 11, cadence 80% strict adherence; (6) Phase 6 seeds — 7 prioritized hypotheses. Cross-link added from design doc §13 Decisions Log. Zero code / zero tests / zero IPC/bus/migration work. Atomic commit + ledger cadence preserved (T4 atomic is docs(m35); ledger fold follows this entry). Head-of-queue advances to M35 T5 (Demo script + scripted walkthrough).",
