@@ -146,6 +146,7 @@ import { composeSystemPromptWithRag } from './services/system-prompt.js';
 import { createTestAgenticCompleteFn } from './services/test-agentic-provider.js';
 import { createTestToolsForEmployee } from './services/test-agentic-tools.js';
 import { createTestClassifier } from './services/test-classifier.js';
+import { createTestCopilotComplete } from './services/test-copilot-provider.js';
 import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
 
@@ -1173,18 +1174,13 @@ app
       },
       resolveComplete: async ({ companyId, systemCopilotId }) => {
         if (testMode) {
-          // Canned copilot completion for tests — returns an empty
-          // drafts array. T8 wires the full three-tier test-copilot
-          // provider seam; this placeholder keeps E2E specs semantics-
-          // identical until then.
-          const complete: CopilotAnalyzerCompleteFn = async () => ({
-            text: '[]',
-            promptTokens: 0,
-            completionTokens: 0,
-            costUsd: 0,
-            provider: 'test-mode',
-            model: 'test-copilot',
-          });
+          // M33 T8 — three-tier canned copilot provider seam.
+          // Sentinel `__ECHO_COPILOT__:<json>` → runtime / canned table
+          // substring match → `FIXTURE_COPILOT_EMPTY` fallback (shape-
+          // identical to the T4 inline placeholder for drifted
+          // prompts). T9 registers per-spec fixtures via
+          // `addCopilotFixture` without touching this wire.
+          const complete: CopilotAnalyzerCompleteFn = createTestCopilotComplete();
           return { complete, provider: 'test-mode', model: 'test-copilot' };
         }
         // Production — resolve the system-copilot's configured
