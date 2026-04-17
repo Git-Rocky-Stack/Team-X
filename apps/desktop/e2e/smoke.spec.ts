@@ -170,6 +170,12 @@ test.describe('Team-X smoke', () => {
     log('Strategia-X visible ✓');
     await expect(window.getByText('Phase 5', { exact: true })).toBeVisible();
     log('Phase 5 badge visible ✓');
+    // M34 Copilot UI toolbar Sparkles button — stable-selector anchor per
+    // M35 T9 regression-guard convention (see
+    // apps/desktop/src/e2e-regression-guards.test.ts). Anchors the
+    // data-* attribute contract without duplicating copilot-ui.spec
+    // coverage — just proves the top-bar rendered with the M34 surface.
+    await expect(window.locator('[data-copilot-toolbar-toggle]')).toBeVisible();
 
     // --- 2. Both seeded employees render in the dashboard cards view -----
     // Using attribute-starts-with selectors rather than `getByRole`

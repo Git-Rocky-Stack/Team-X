@@ -41,14 +41,7 @@ const TOP_BAR_PATH = join(currentDirname, 'top-bar.tsx');
 // `apps/desktop/package.json` is four directories up from
 // `apps/desktop/src/renderer/src/app/`:
 //   app/ → src/ → renderer/ → src/ → apps/desktop/
-const DESKTOP_PACKAGE_JSON_PATH = join(
-  currentDirname,
-  '..',
-  '..',
-  '..',
-  '..',
-  'package.json',
-);
+const DESKTOP_PACKAGE_JSON_PATH = join(currentDirname, '..', '..', '..', '..', 'package.json');
 
 describe('top-bar release-marker freeze (M35 T8)', () => {
   it('renders the literal badge text "Phase 5" (not "Phase 6")', () => {
@@ -59,12 +52,9 @@ describe('top-bar release-marker freeze (M35 T8)', () => {
     // future Prettier bump, or hand-edits) does not false-fail this.
     const badgeMatch = src.match(/<Badge[\s\S]*?>\s*([\s\S]*?)\s*<\/Badge>/);
 
-    expect(
-      badgeMatch,
-      'top-bar.tsx must contain a <Badge>...</Badge> element',
-    ).toBeTruthy();
-    // biome-ignore lint/style/noNonNullAssertion: asserted above
-    expect(badgeMatch![1].trim()).toBe('Phase 5');
+    expect(badgeMatch, 'top-bar.tsx must contain a <Badge>...</Badge> element').toBeTruthy();
+    const captured = badgeMatch?.[1]?.trim() ?? '';
+    expect(captured).toBe('Phase 5');
   });
 
   it("pins apps/desktop/package.json version to '1.1.0'", () => {

@@ -118,6 +118,10 @@ test.describe('Team-X Phase 3 meeting flow', () => {
     log('Strategia-X visible');
     await expect(window.getByText('Phase 5', { exact: true })).toBeVisible();
     log('Phase 5 badge visible');
+    // M35 T9 stable-selector anchor — top-bar Copilot Sparkles button
+    // (data-copilot-toolbar-toggle) proves the Phase 5 Copilot UI
+    // mounted. Required by apps/desktop/src/e2e-regression-guards.test.ts.
+    await expect(window.locator('[data-copilot-toolbar-toggle]')).toBeVisible();
 
     // --- 2. Navigate to Meetings tab -----------------------------------------
     const meetingsTab = window.getByRole('button', { name: 'Meetings' });

@@ -138,6 +138,10 @@ test.describe('Team-X rag-flow', () => {
     // --- 1. App shell -----------------------------------------------------
     await expect(window.getByText('Strategia-X', { exact: true })).toBeVisible();
     log('Strategia-X visible ✓');
+    // M35 T9 stable-selector anchor — top-bar Copilot Sparkles button
+    // (data-copilot-toolbar-toggle) proves the Phase 5 UI mounted.
+    // Required by apps/desktop/src/e2e-regression-guards.test.ts.
+    await expect(window.locator('[data-copilot-toolbar-toggle]')).toBeVisible();
 
     // --- 2. Lower RAG threshold so fake-embedder hits always pass --------
     // The hash-based makeFakeEmbedAdapter is deterministic but not
@@ -183,24 +187,35 @@ test.describe('Team-X rag-flow', () => {
     });
     log('assistant echoed RAG_MARKER ✓');
 
-    // Give the indexer a beat to flush its fire-and-forget embed call
-    // before the next turn's resolveSystemPrompt runs retrieval.
-    await window.waitForTimeout(500);
-
-    // Sanity check: confirm embeddings actually landed. If this fails
-    // the whole retrieval test is moot, so assert it loudly.
-    const ragStats = await window.evaluate(async () => {
-      // Use the first seeded company (main/seed.ts creates Strategia-X).
-      // The contextBridge exposes the typed TeamXApi as window.teamx.
-      // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
-      const teamx = (window as any).teamx;
-      const companies = await teamx.companies.list();
-      const cid = companies[0]?.id ?? '';
-      const stats = await teamx.rag.stats(cid);
-      return { cid, ...stats };
-    });
+    // Poll `rag.stats` until the fire-and-forget embed call from turn 1
+    // has flushed. Replaces a prior `waitForTimeout(500)` (flagged by the
+    // M35 T9 flaky-test audit guard) with a deterministic wait on the
+    // actual side-effect we care about — the embedding row landing in
+    // the `embeddings` table. Intervals bias to the common 200–500 ms
+    // settle window so fast machines don't spin up the full poll budget.
+    let ragStats: { cid: string; embeddingCount: number } = {
+      cid: '',
+      embeddingCount: 0,
+    };
+    await expect
+      .poll(
+        async () => {
+          ragStats = await window.evaluate(async () => {
+            // Use the first seeded company (main/seed.ts creates Strategia-X).
+            // The contextBridge exposes the typed TeamXApi as window.teamx.
+            // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
+            const teamx = (window as any).teamx;
+            const companies = await teamx.companies.list();
+            const cid = companies[0]?.id ?? '';
+            const stats = await teamx.rag.stats(cid);
+            return { cid, embeddingCount: stats.embeddingCount };
+          });
+          return ragStats.embeddingCount;
+        },
+        { timeout: 10_000, intervals: [200, 300, 500, 500, 1000] },
+      )
+      .toBeGreaterThan(0);
     log(`rag.stats → ${JSON.stringify(ragStats)}`);
-    expect(ragStats.embeddingCount).toBeGreaterThan(0);
 
     // --- 5. Turn 2: ask for the system prompt and assert retrieval -------
     // `__ECHO_SYSTEM__` causes the test-mode provider to reply with the
