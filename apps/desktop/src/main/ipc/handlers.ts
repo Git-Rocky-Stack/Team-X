@@ -1140,7 +1140,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (copilotAnalyzerService) {
         copilotAnalyzerService.stop(companyId);
       } else if (process.env.NODE_ENV !== 'production') {
-        console.warn('[ipc] companies.archive: copilotAnalyzerService dep unwired — skipping stop()');
+        console.warn(
+          '[ipc] companies.archive: copilotAnalyzerService dep unwired — skipping stop()',
+        );
       }
       if (copilotEventWindow) {
         copilotEventWindow.clear(companyId);
@@ -1168,7 +1170,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           console.error('[ipc] companies.archive: bus emit failed (row still archived):', err);
         }
       } else if (process.env.NODE_ENV !== 'production') {
-        console.warn('[ipc] companies.archive: bus dep unwired — renderer caches will NOT invalidate');
+        console.warn(
+          '[ipc] companies.archive: bus dep unwired — renderer caches will NOT invalidate',
+        );
       }
     },
 

@@ -281,9 +281,7 @@ test.describe('Team-X Phase 5 — M33 copilot service', () => {
       const teamx = (window as any).teamx;
       return teamx.copilot.insights({ companyId: cid, limit: 50 });
     }, companyId);
-    const stillActive = afterDismiss.insights.find(
-      (i: { id: string }) => i.id === insight.id,
-    );
+    const stillActive = afterDismiss.insights.find((i: { id: string }) => i.id === insight.id);
     expect(stillActive).toBeUndefined();
     log('dismissed insight no longer appears in default listActive query');
 

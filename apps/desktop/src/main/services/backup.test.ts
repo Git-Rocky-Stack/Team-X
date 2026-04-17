@@ -90,7 +90,8 @@ describe('BackupService.ensurePostRestoreSystemEmployees', () => {
     };
     const result = service.ensurePostRestoreSystemEmployees({
       listCompanyIds: () => ['c-1', 'c-2', 'c-3'],
-      ensureSystemForCompany: (cid) => outcomes[cid] ?? { agentCreated: false, copilotCreated: false },
+      ensureSystemForCompany: (cid) =>
+        outcomes[cid] ?? { agentCreated: false, copilotCreated: false },
     });
     expect(result.companiesScanned).toBe(3);
     expect(result.agentsCreated).toBe(1);
