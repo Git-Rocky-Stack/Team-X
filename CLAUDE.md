@@ -1,17 +1,24 @@
 # CLAUDE.md
 
-> ### 🚧 PHASE 5.6 IN PROGRESS — REMEDIATION ACTIVE (kickoff 2026-04-17)
+> ### 🚧 PHASE 5.6 IN PROGRESS — M-A SHIPPED, M-B HEAD-OF-QUEUE (2026-04-17)
 >
 > A pre-M36-T2 audit surfaced systemic drift between CLAUDE.md status blocks and on-disk reality across Phases 1–5. **Phase 5.6 is a Definition-of-Done failure repair operation, not a "fix some missing files" sprint.** Execution order is M-A (audit) → M-B (triage) → **M-E (process safeguards — ships BEFORE backfill)** → M-C (backend backfill) → M-D (UI backfill) → M-F (docs truth-up) → M-G (ship). Estimated 6–8 calendar weeks.
+>
+> **M-A Conformance Audit SHIPPED 2026-04-17** — `docs/audits/2026-04-17-conformance-audit.md` (414 rows). Status distribution: 350 shipped / 19 partial / 16 missing / 8 unverifiable. Severity rollup (non-shipped): **15 P0** / 8 P1 / 10 P2 / 16 P3. Two P0 clusters, both stranded on `worktree-phase-2-the-org`:
+> - **Cluster A — Multi-company architecture (M7, Rocky's LOCKED design — not aspirational):** `companies.create/update/delete` IPC + `WorkspaceSwitcher` + `CreateCompanyDialog` + `CompanySettings` panel. **7 P0 rows → RESTORE.**
+> - **Cluster B — M9 org chart:** `orgchart.get` IPC + `employees.promote` + `employees.setManager` + `org_edges` table + tree UI + drag-to-rearrange. **8 P0 rows → RESTORE.**
+>
+> The CLAUDE.md Troubleshooting section currently frames Cluster A as "aspirational for the milestone that introduces multi-company CRUD" — **that paragraph is itself part of the drift and will be rewritten in M-F** (see audit §18.5). Multi-company CRUD is a **core Phase 2 M7 architectural decision**, not a down-stream deferral.
 >
 > **Phase 6 M36 T2+ is explicitly PAUSED** until Phase 5.6 M-G ships. Do not resume capability taxonomy work until the pause is lifted in `.loki/queue/pending.json`.
 >
 > **Read before acting:**
 > - Active plan: [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](docs/plans/2026-04-17-team-x-phase-5.6-remediation.md)
-> - Immediate next task: Phase 5.6 M-A Conformance Audit (see `.loki/queue/current-task.json`)
-> - Sprint framework: §14 of the plan (DoR, DoD, velocity KPI, change-control mini-gate)
+> - **M-A conformance audit:** [`docs/audits/2026-04-17-conformance-audit.md`](docs/audits/2026-04-17-conformance-audit.md) — required reading before M-B
+> - Immediate next task: Phase 5.6 M-B Triage (see `.loki/queue/current-task.json`) — fill `disposition` column on every gap row + append §20 restore/replace/deprecate rollup + §17 cross-check addendum (20% pass)
+> - Sprint framework: §14 of the plan (DoR, DoD, velocity KPI, change-control mini-gate — invoked once in M-A per scope-expansion record)
 >
-> Status blocks below reflect state as of Phase 5 exit (v1.1.0, 2026-04-20). They are being audited for truth-vs-claim drift in M-A and will be rewritten in M-F to a three-bucket format (shipped / deferred / deprecated). **Treat unaudited status-block claims as `🔍 unverified` until M-A lands.**
+> Status blocks below reflect state as of Phase 5 exit (v1.1.0, 2026-04-20). M-A audit matrix supersedes them for claim-vs-reality questions; M-F will rewrite them in a three-bucket format (shipped / deferred / deprecated). **Treat unaudited status-block claims as `🔍 unverified` — use the M-A audit doc as the truth source until M-F rewrites ship.**
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
