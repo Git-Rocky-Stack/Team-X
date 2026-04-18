@@ -16,13 +16,13 @@
       "name": "Migration 0013 (org_edges table)",
       "shippedAt": "2026-04-17T00:00:00Z",
       "atomicCommit": "f417a18",
-      "ledgerCommit": "pending-this-ledger-commit",
+      "ledgerCommit": "cfc7204",
       "verifiedBy": [
         "apps/desktop/src/main/db/migrations/0013_org_edges.sql (NEW, hand-authored to match 0011 inline-FK convention)",
         "apps/desktop/src/main/db/migrations/meta/_journal.json (idx 13 entry, timestamp 1777094400000)",
         "apps/desktop/src/main/db/schema.ts (orgEdges sqliteTable + composite index_org_edges_company_manager)",
         "apps/desktop/src/main/db/0013-org-edges-migration.test.ts (NEW, 10 unit tests pinning shape + UNIQUE + CASCADE + FK enforcement)",
-        "atomic commit f417a18 + paired chore(loki) ledger",
+        "atomic commit f417a18 + paired chore(loki) ledger cfc7204",
         "vitest 1247/1247 in 19.33s (1237 M-E baseline + 10 new migration tests)",
         "audit:claims 86 verified / 9 allowlisted / 0 UNALLOWED out of 95 (allowlist unchanged — step (a) doesn't restore IPC channels)",
         "typecheck clean across 6 packages",
@@ -30,6 +30,42 @@
       ],
       "deliverable": "Foundation migration for Cluster B (M9 Org Chart, audit row 2.16, P0). Restores org_edges table with two design upgrades over the worktree-phase-2-the-org reference SQL: (1) ON DELETE CASCADE on every FK (worktree had bare FKs), keeps hard-deletes safe when M-C step e ships companies.delete; (2) composite (company_id, manager_id) index for orgchart.get tree projection (M-C step c). UNIQUE on report_id enforces single-manager-per-report at SQL layer; cycle prevention deferred to step c repo layer (wouldCycle helper). Hand-authored migration SQL because drizzle-kit auto-emit dumps every table — repo skips snapshots after 0002 by long-standing convention (only 0000/0001/0002 snapshots exist in meta/). Drizzle-kit's emitted snapshot was deleted to match the convention.",
       "nextStep": "step (b) — companies.create IPC + handler + repo extension calling ensureSystemAgent + ensureSystemCopilot bootstrap (matches Phase 1 seedIfEmpty + M33 F4 post-restore sweep)"
+    },
+    {
+      "step": "b",
+      "name": "companies.create IPC + system-employee bootstrap",
+      "shippedAt": "2026-04-17T00:00:00Z",
+      "atomicCommit": "b858067",
+      "ledgerCommit": "pending-this-ledger-commit",
+      "verifiedBy": [
+        "packages/shared-types/src/events.ts (MODIFIED — adds 'company.created' to EventType union + CompanyCreatedPayload interface; updates the 'no twin today' comment that explicitly anticipated this milestone)",
+        "packages/shared-types/src/ipc.ts (MODIFIED — CompaniesCreateRequest + CompaniesCreateResponse interfaces; IpcContract['companies.create'] entry; TeamXApi.companies.create method)",
+        "apps/desktop/src/main/ipc/handlers.ts (MODIFIED — extends IpcCompaniesRepo with create + getById; adds optional ensureSystemForCompany dep to IpcHandlerDeps; companiesCreate handler with input validation + duplicate-slug rewrap + system-bootstrap call + company.created bus emit per invariant #11)",
+        "apps/desktop/src/main/index.ts (MODIFIED — composes ensureSystemForCompany over ensureSystemAgent + ensureSystemCopilot, mirrors the F4 closure)",
+        "apps/desktop/src/main/ipc/register.ts (MODIFIED — 'companies.create' added to REQUEST_CHANNELS + ipcMain.handle binding)",
+        "apps/desktop/src/preload/api.ts (MODIFIED — CHANNELS.companiesCreate constant + companies.create method exposing the IPC)",
+        "apps/desktop/src/main/ipc/companies-handlers.test.ts (NEW — 28 vitest unit tests covering happy path / full input-validation matrix / duplicate slug / missing-dep refusal / bus-emit-throw tolerance)",
+        "apps/desktop/src/main/ipc/handlers.test.ts (MODIFIED — extends FakeCompaniesRepo with create + getById + archive to satisfy widened interface)",
+        "scripts/check-claim-evidence.allowlist.json (MODIFIED — companies.create entry DELETED in lockstep; allowlist 9 → 8)",
+        "atomic commit b858067 (9 files / +875 / -18) + paired chore(loki) ledger",
+        "vitest 1275/1275 in 30.06s (1247 step (a) baseline → +28 unit tests; 108 test files green)",
+        "audit:claims 87 verified / 8 allowlisted / 0 UNALLOWED out of 95 (companies.create migrated from allowlist into verified-on-disk in same atomic; allowlist shrinkage starts here per acceptance #5)",
+        "typecheck clean across 6 packages",
+        "lint 0 errors / 24 warnings (baseline preserved; biome --write auto-fixed 2 long-line format errors in handlers.ts + companies-handlers.test.ts)",
+        "E2E not re-run (no renderer surface in step b; baseline at M-C step a preserved at 11 specs / 12 cases — M-D opens the renderer surface)"
+      ],
+      "deliverable": "Restores Cluster A multi-company CRUD foundation per audit row 10.12 (P0; Rocky's locked M7 architectural decision — NOT aspirational). The companies.create IPC channel ships with handler + preload bridge + register wiring + 28 unit tests, atomically seeding both system pseudo-employees (system-agent from M31 + system-copilot from M33) before returning so every new company is fully usable on first observation. Mirrors the seed-flow + M33 F4 post-restore invariant. Input validation: non-empty trimmed name (≤120 chars), slug regex /^[a-z0-9][a-z0-9-]{0,62}$/ (URL-safe; matches existing 'strategia-x' convention), settings shape guard, icon/theme type guards. Duplicate slug surfaces SQL UNIQUE constraint as friendlier 'slug … is already in use' message. Missing ensureSystemForCompany dep throws (refuses to leave a half-bootstrap row); bus-emit failure is logged + swallowed (durable write already landed). New 'company.created' bus event satisfies architectural invariant #11.",
+      "designDecisions": {
+        "depShape": "ensureSystemForCompany?: (companyId) => { agentEmployeeId, copilotEmployeeId, agentCreated, copilotCreated } — optional on the deps interface (matches the M33 F4 ensurePostRestoreBootstrap convention) but the handler throws when undefined because companies.create cannot ship a usable company without the system pair. Composition root captures db + roleLoader in the closure, same handles the F4 sweep uses.",
+        "slugRegex": "/^[a-z0-9][a-z0-9-]{0,62}$/ — lowercase alphanumerics + hyphen, 1–63 chars, no leading hyphen. Matches the existing strategia-x slug + the M-D CreateCompanyDialog will hand-roll the same regex. Enforced at IPC boundary so SQL UNIQUE failures surface only for genuine duplicates.",
+        "duplicateSlugMessage": "Repo throws raw 'UNIQUE constraint failed: companies.slug' on duplicate. Handler catches + rewraps as 'slug … is already in use' for renderer toast UX while preserving any other repo throw verbatim.",
+        "busEmitTolerance": "company.created bus emit failure does NOT cascade into IPC throw. The repo write + bootstrap already succeeded; bus failure is logged + the response still includes the new ids. Mirrors companies.archive's invariant-#11 pattern.",
+        "missingDepThrow": "ensureSystemForCompany unwired throws BEFORE any SQL writes. Different from M33 F4 (which warns + degrades on a missing bootstrap because the DB + vault are already swapped) — companies.create is a fresh-state operation, refusing to ship a half-formed company is correct fail-loud behavior.",
+        "responseShape": "Returns { companyId, systemAgentEmployeeId, systemCopilotEmployeeId } so the renderer can open Copilot Conversations or the command palette without a follow-up employees.list round-trip (those rows are filtered out of listVisibleByCompany by the is_system filter sweep).",
+        "newBusEvent": "company.created added to EventType union + CompanyCreatedPayload interface added. The events.ts comment block at line 425+ explicitly anticipated this — 'No company.created twin today — the design-doc decision log keeps creation as an IPC-only side effect until companies.create lands.' Phase 5.6 M-C step b is when companies.create lands."
+      },
+      "safeguardProof": "Second M-C proof at scale of the M-E safeguards. S2 conformance gate ran GREEN on b858067 — companies.create allowlist entry deleted in same atomic so audit:claims 86/9/0 → 87/8/0 (the new IPC is verified-on-disk, not allowlisted). S3 pre-commit hook clean on staged diff. S4 verifiedBy populated on the paired ledger entry per contract. M-E acceptance #ciGate validated: the safeguard catches its own conformance violations + the restoration commit shrinks the allowlist as evidence lands.",
+      "nextStep": "step (c) — org-edges repo (createOrgEdgesRepo with cycle-detect via wouldCycle helper) + orgchart.get IPC channel + handler + preload bridge. Cluster B foundation; depends on Migration 0013 (already shipped in step a). Allowlist shrinkage continues — orgchart.get entry deleted from scripts/check-claim-evidence.allowlist.json in lockstep with the channel restoration."
     }
   ],
   "interimDoR": [

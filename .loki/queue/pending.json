@@ -117,9 +117,9 @@
   "activeSubMilestone": {
     "id": "M-C",
     "name": "Backend Backfill",
-    "status": "in progress — step (a) Migration 0013 (org_edges table) SHIPPED 2026-04-17 (atomic commit f417a18); steps (b)-(e) remain. M-E safeguards passed first M-C proof — S2 conformance gate green on f417a18 (86 verified / 9 allowlisted / 0 UNALLOWED), S3 pre-commit hook ran clean, S4 verifiedBy populated on the paired chore(loki) ledger. +10 unit tests (1237 → 1247).",
-    "nextSession": "Continue M-C T0 with step (b) — companies.create IPC + handler + repo extension calling ensureSystemAgent + ensureSystemCopilot bootstrap (matches Phase 1 seedIfEmpty + M33 F4 post-restore sweep). Cluster A foundation. Allowlist shrinkage starts here — companies.create entry deleted from scripts/check-claim-evidence.allowlist.json in lockstep. After step (b): step (c) org-edges repo + cycle-detect helper + orgchart.get IPC; step (d) employees.promote + setManager; step (e) companies.update + delete. Each step is its own atomic + ledger commit per S4 contract.",
-    "stepsShippedSummary": "step (a) shipped — Migration 0013 (org_edges table). Steps (b)-(e) remain."
+    "status": "in progress — step (a) Migration 0013 SHIPPED (atomic f417a18 + ledger cfc7204) AND step (b) companies.create IPC + system-employee bootstrap SHIPPED 2026-04-17 (atomic b858067; +28 unit; 1247 → 1275). M-E safeguards passed second-at-scale M-C proof — S2 conformance gate green on b858067 (87 verified / 8 allowlisted / 0 UNALLOWED — allowlist shrunk in lockstep with the restoration), S3 pre-commit hook ran clean, S4 verifiedBy populated on the paired chore(loki) ledger. Steps (c)-(e) remain.",
+    "nextSession": "Continue M-C T0 with step (c) — org-edges repo (createOrgEdgesRepo with cycle-detect via wouldCycle helper) + orgchart.get IPC channel + handler + preload bridge. Cluster B foundation; depends on Migration 0013 (shipped step a). Allowlist shrinkage continues — orgchart.get entry deleted from scripts/check-claim-evidence.allowlist.json in lockstep with the channel restoration. After step (c): step (d) employees.promote + setManager (depends on org-edges repo); step (e) companies.update + delete. Each step is its own atomic + paired ledger commit per S4 contract.",
+    "stepsShippedSummary": "step (a) Migration 0013 + step (b) companies.create + bootstrap shipped. Steps (c)-(e) remain."
   },
   "previousSubMilestone": {
     "id": "M-E",
@@ -173,14 +173,15 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-B SHIPPED (docs/audits/2026-04-17-conformance-audit.md amendment — 41 gap rows disposition-assigned + §17 cross-check 10/10 confirmed + §20 rollup)",
-    "unitTests": 1187,
-    "unitTestsNote": "Baseline preserved; ABI rebuild required for clean reconciliation (this-session run reported 1188 passed / 23 failed / 1211 total — all 23 failures are NODE_MODULE_VERSION 125 vs 137 mismatch in better-sqlite3 in-memory tests; reconcile in §17 cross-check after CLAUDE.md Troubleshooting ABI-rebuild recipe).",
+    "asOfTask": "Phase 5.6 M-C step b SHIPPED (companies.create IPC + system-employee bootstrap; commit b858067)",
+    "unitTests": 1275,
+    "unitTestsNote": "Baseline 1247 (M-C step a) → 1275 (+28 from companies-handlers.test.ts; ABI rebuild dance executed before vitest per CLAUDE.md Troubleshooting recipe).",
     "e2eSpecs": 11,
     "e2eGreenCount": 12,
     "lintErrors": 0,
     "lintWarnings": 24,
     "typecheckClean": true,
+    "auditClaims": "87 verified / 8 allowlisted / 0 UNALLOWED out of 95 (companies.create migrated from allowlist into verified-on-disk in same atomic; allowlist shrunk 9 → 8)",
     "version": "1.1.0 (target 1.1.1 on M-G ship)"
   },
   "targets": {
