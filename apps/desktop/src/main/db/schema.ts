@@ -23,7 +23,7 @@
  *   helper runs `PRAGMA foreign_keys = ON` (landing in Task 20).
  */
 
-import { blob, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { blob, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 /** One row per AI company the user has created (multi-company is Phase 2+). */
 export const companies = sqliteTable('companies', {
@@ -559,3 +559,57 @@ export const copilotInsights = sqliteTable('copilot_insights', {
   /** Hard expiry — `expireStale` deletes rows where `expires_at < now`. */
   expiresAt: integer('expires_at').notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Phase 2 — M9: Org Chart (restored in Phase 5.6 M-C, migration 0013)
+// ---------------------------------------------------------------------------
+
+/**
+ * Org chart edges. One row per (manager → report) reporting relationship.
+ *
+ * Originally shipped on the `worktree-phase-2-the-org` branch as part of
+ * M9 but never merged into main (audit row 2.16, P0). Restored here under
+ * Phase 5.6 M-C with two design upgrades over the worktree original:
+ *   1. `ON DELETE CASCADE` on every FK (worktree had bare FKs) — keeps
+ *      hard-deletes safe when companies.delete (M-C step e) ships.
+ *   2. Composite index on `(company_id, manager_id)` — accelerates the
+ *      hot-path `orgchart.get` tree projection (walking the org from CEO
+ *      down requires repeated "list reports of manager X" queries).
+ *
+ * The UNIQUE constraint on `report_id` enforces single-manager-per-report
+ * at the SQL layer (no diamond inheritance, no orphan reports).
+ *
+ * Cycle prevention is the repo layer's job (`wouldCycle()` walks up the
+ * manager chain before any insert/update). The SQL layer cannot detect
+ * cycles without a recursive CTE; embedding the check in a trigger
+ * would surprise non-app callers (drizzle-studio, raw queries).
+ *
+ * CASCADE behavior:
+ * - `company_id`: when a company is hard-deleted, every org edge for
+ *   that company drops cleanly.
+ * - `manager_id` / `report_id`: hard-deleting an employee row (test
+ *   fixtures, M-G branch cleanup) cascades the edge. Production
+ *   `employees.fire` is a soft-delete (firedAt column); soft-deleted
+ *   managers retain edges, surfacing as "fired but still appears as
+ *   manager" — the repo's tree projection filters these at read time.
+ */
+export const orgEdges = sqliteTable(
+  'org_edges',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    managerId: text('manager_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    reportId: text('report_id')
+      .notNull()
+      .unique()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => ({
+    companyManagerIdx: index('idx_org_edges_company_manager').on(table.companyId, table.managerId),
+  }),
+);
