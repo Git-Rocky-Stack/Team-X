@@ -66,6 +66,8 @@ const REQUEST_CHANNELS = [
   'employees.list',
   'employees.create',
   'employees.fire',
+  // Org chart (Phase 2 — M9; restored Phase 5.6 M-C step c per audit row 2.21)
+  'orgchart.get',
   'chat.send',
   'chat.list',
   'chat.resolveThread',
@@ -219,6 +221,12 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('employees.fire', async (_event, request: { employeeId: string }) => {
     return handlers.employeesFire(request);
+  });
+
+  // Org chart handler (Phase 2 — M9; restored Phase 5.6 M-C step c).
+  // Returns the full projection (employees + edges + rootIds) in one round-trip.
+  ipcMain.handle('orgchart.get', async (_event, request: { companyId: string }) => {
+    return handlers.orgchartGet(request);
   });
 
   ipcMain.handle(

@@ -211,6 +211,54 @@ export interface ListThreadsRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Org chart shapes (Phase 2 — M9; restored Phase 5.6 M-C step c)
+// ---------------------------------------------------------------------------
+
+/**
+ * Request for the full org-chart projection of a given company. The
+ * handler filters out framework-internal pseudo-employees (is_system = 1)
+ * so the returned `employees` array is renderer-ready and every
+ * `OrgchartEdge` references employees that appear in the same payload.
+ */
+export interface OrgchartGetRequest {
+  companyId: string;
+}
+
+/**
+ * Wire shape of one `org_edges` row — the public projection that the
+ * `orgchart.get` IPC response carries. `companyId` is implicit (the
+ * request scoped everything to one company), so the wire type drops it
+ * to keep the payload compact for rehydrating renderer tree views.
+ */
+export interface OrgchartEdge {
+  id: string;
+  managerId: string;
+  reportId: string;
+  createdAt: number;
+}
+
+/**
+ * Full org-chart projection response. `employees` contains every
+ * non-system employee in the company (same filter `employees.list` uses
+ * via `listVisibleByCompany`); `edges` is every `(managerId, reportId)`
+ * relationship in the company's reporting graph; `rootIds` is the
+ * convenience set of employees with no manager edge (graph roots — the
+ * CEO in the canonical case, but also any freshly-hired employee before
+ * their reporting line is wired).
+ *
+ * Keeping the three as flat parallel arrays rather than pre-building a
+ * nested tree lets the renderer choose its own layout (indented list,
+ * tree view, Sankey, reports-to-card grid) without a follow-up IPC
+ * round-trip. Tree building is an O(n) pass over `edges` keyed by
+ * `managerId`.
+ */
+export interface OrgchartGetResponse {
+  employees: Employee[];
+  edges: OrgchartEdge[];
+  rootIds: string[];
+}
+
+// ---------------------------------------------------------------------------
 // Events / timeline shapes (Phase 3 — M14)
 // ---------------------------------------------------------------------------
 
@@ -1126,6 +1174,11 @@ export interface IpcContract {
     // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
     response: void;
   };
+  // Org chart channel (Phase 2 — M9; restored Phase 5.6 M-C step c per audit row 2.21)
+  'orgchart.get': {
+    request: OrgchartGetRequest;
+    response: OrgchartGetResponse;
+  };
   'chat.send': {
     request: SendChatRequest;
     response: SendChatResponse;
@@ -1606,6 +1659,17 @@ export interface TeamXApi {
      * if the id does not resolve to a live row.
      */
     fire(req: FireEmployeeRequest): Promise<void>;
+  };
+  orgchart: {
+    /**
+     * Full org-chart projection for a company — employees, reporting
+     * edges, and graph roots in one round-trip. Framework-internal
+     * system pseudo-employees (`system-agent` / `system-copilot`) are
+     * filtered out of both `employees` and `edges` on the main side so
+     * the renderer never has to special-case them. Phase 2 — M9;
+     * restored under Phase 5.6 M-C step c per audit row 2.21.
+     */
+    get(companyId: string): Promise<OrgchartGetResponse>;
   };
   chat: {
     /**

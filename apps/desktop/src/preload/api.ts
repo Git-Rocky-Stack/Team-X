@@ -97,6 +97,7 @@ import type {
   McpServerSummary,
   Meeting,
   MeetingDetail,
+  OrgchartGetResponse,
   Project,
   ProjectDetail,
   ProviderConfig,
@@ -186,6 +187,8 @@ const CHANNELS = {
   employeesList: 'employees.list',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
+  // Org chart (Phase 2 — M9; restored Phase 5.6 M-C step c)
+  orgchartGet: 'orgchart.get',
   chatSend: 'chat.send',
   chatList: 'chat.list',
   chatResolveThread: 'chat.resolveThread',
@@ -322,6 +325,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       create: (req: HireEmployeeRequest) =>
         ipc.invoke(CHANNELS.employeesCreate, req) as Promise<HireEmployeeResponse>,
       fire: (req: FireEmployeeRequest) => ipc.invoke(CHANNELS.employeesFire, req) as Promise<void>,
+    },
+    orgchart: {
+      get: (companyId: string) =>
+        ipc.invoke(CHANNELS.orgchartGet, { companyId }) as Promise<OrgchartGetResponse>,
     },
     chat: {
       send: (req: SendChatRequest) =>

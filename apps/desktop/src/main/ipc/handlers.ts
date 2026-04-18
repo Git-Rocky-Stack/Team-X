@@ -100,6 +100,9 @@ import type {
   MeetingDetail,
   MeetingMode,
   MeetingStatus,
+  OrgchartEdge,
+  OrgchartGetRequest,
+  OrgchartGetResponse,
   Project,
   ProjectDetail,
   RemoveProviderRequest,
@@ -163,6 +166,7 @@ import type { CreateEmployeeInput, EmployeeRow } from '../db/repos/employees.js'
 import type { CreateGoalInput, GoalRow, UpdateGoalInput } from '../db/repos/goals.js';
 import type { MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
+import type { OrgEdgeRow } from '../db/repos/orgchart.js';
 import type { CreateProjectInput, ProjectRow, UpdateProjectInput } from '../db/repos/projects.js';
 import type {
   CompanyStats,
@@ -314,6 +318,18 @@ export interface IpcProjectsRepo {
   unlinkTicket(projectId: string, ticketId: string): void;
   listTickets(projectId: string): string[];
   countTicketsByStatus(projectId: string): { total: number; done: number };
+}
+
+/**
+ * Narrow org-edges repo surface the IPC layer consumes. `orgchart.get`
+ * only needs `listByCompany`; `setManager` / `removeByReport` /
+ * `wouldCycle` land when the M-C step d `employees.promote` +
+ * `employees.setManager` channels ship. Keeping the IPC-facing
+ * interface tight lets tests hand-roll fakes without pulling the full
+ * `createOrgEdgesRepo` signature.
+ */
+export interface IpcOrgEdgesRepo {
+  listByCompany(companyId: string): OrgEdgeRow[];
 }
 
 /**
@@ -538,6 +554,7 @@ export interface IpcHandlerDeps {
   goalsRepo: IpcGoalsRepo;
   projectsRepo: IpcProjectsRepo;
   meetingsRepo: IpcMeetingsRepo;
+  orgEdgesRepo: IpcOrgEdgesRepo;
   runsRepo: IpcRunsRepo;
   eventsRepo: IpcEventsRepo;
   orchestrator: IpcOrchestrator;
@@ -678,6 +695,21 @@ export interface IpcHandlers {
    * a clear error instead of silently succeeding on a stale target.
    */
   employeesFire(req: { employeeId: string }): Promise<void>;
+
+  /**
+   * `orgchart.get` — full org-chart projection for a company (Phase 2
+   * — M9, restored under Phase 5.6 M-C step c per audit row 2.21).
+   * Returns non-system employees + every reporting edge + the set of
+   * root ids (employees with no manager edge).
+   *
+   * Defensive projection: edges that reference employees outside the
+   * non-system set (e.g. a freshly-fired manager whose edges have not
+   * been cleaned up by a future `employees.fire` flow) are dropped
+   * at handler time so the renderer never sees a dangling edge. The
+   * repo-layer `wouldCycle` guard prevents write-side corruption;
+   * this read-side filter is the belt-and-suspenders complement.
+   */
+  orgchartGet(req: OrgchartGetRequest): Promise<OrgchartGetResponse>;
 
   /**
    * `chat.send` — append the user's message and enqueue an
@@ -1160,6 +1192,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     goalsRepo,
     projectsRepo,
     meetingsRepo,
+    orgEdgesRepo,
     runsRepo,
     eventsRepo,
     orchestrator,
@@ -1433,6 +1466,49 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         );
       }
       employeesRepo.delete(employeeId);
+    },
+
+    async orgchartGet({ companyId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] orgchart.get: companyId is required');
+      }
+      // Non-system employees only — matches `employees.list` contract.
+      // Framework-internal pseudo-employees (`system-agent` /
+      // `system-copilot`) must never surface in the renderer org tree.
+      const employeeRows = employeesRepo.listVisibleByCompany(companyId);
+      const visibleIds = new Set<string>(employeeRows.map((e) => e.id));
+
+      // Defensive edge filter — drop any edge whose manager OR report
+      // references an employee outside `visibleIds`. This can happen
+      // legitimately when a freshly-fired system employee's edges have
+      // not yet been cleaned up (future `employees.fire` flow), or
+      // pathologically if a direct DB write inserted a reference to an
+      // archived/deleted employee. The repo write path's `wouldCycle`
+      // is the canonical guard; this filter keeps the renderer
+      // defensive against state it cannot render.
+      const edges: OrgchartEdge[] = orgEdgesRepo
+        .listByCompany(companyId)
+        .filter((row) => visibleIds.has(row.managerId) && visibleIds.has(row.reportId))
+        .map((row) => ({
+          id: row.id,
+          managerId: row.managerId,
+          reportId: row.reportId,
+          createdAt: row.createdAt,
+        }));
+
+      // Root ids = every visible employee that has no manager edge
+      // pointing at them. For a canonical org tree this is the single
+      // CEO row; during onboarding / post-hire-before-wire moments the
+      // set can include any number of unassigned employees. The
+      // renderer uses this as the top of its indented-list tree view.
+      const reportIds = new Set<string>(edges.map((e) => e.reportId));
+      const rootIds: string[] = employeeRows.map((e) => e.id).filter((id) => !reportIds.has(id));
+
+      return {
+        employees: employeeRows.map(rowToEmployee),
+        edges,
+        rootIds,
+      };
     },
 
     async chatSend({ threadId, employeeId, content }) {

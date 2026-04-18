@@ -79,6 +79,7 @@ import {
 } from './db/repos/mcp-servers.js';
 import { createMeetingsRepo } from './db/repos/meetings.js';
 import { createMessagesRepo } from './db/repos/messages.js';
+import { createOrgEdgesRepo } from './db/repos/orgchart.js';
 import { createProjectsRepo } from './db/repos/projects.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createSettingsRepo } from './db/repos/settings.js';
@@ -326,6 +327,10 @@ app
     const goalsRepo = createGoalsRepo(db);
     const projectsRepo = createProjectsRepo(db);
     const meetingsRepo = createMeetingsRepo(db);
+    // Phase 5.6 M-C step c — restores Cluster B (M9 org chart) per audit
+    // row 2.21. Backs `orgchart.get` IPC + the forthcoming
+    // `employees.promote` / `employees.setManager` IPCs in step d.
+    const orgEdgesRepo = createOrgEdgesRepo(db);
     const vaultRepo = createVaultRepo(db);
     const ticketAttachmentsRepo = createTicketAttachmentsRepo(db);
     const settingsRepo = createSettingsRepo(db);
@@ -712,6 +717,7 @@ app
       goalsRepo,
       projectsRepo,
       meetingsRepo,
+      orgEdgesRepo,
       runsRepo,
       eventsRepo,
       orchestrator,
