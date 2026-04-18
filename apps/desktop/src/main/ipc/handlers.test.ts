@@ -58,6 +58,17 @@ import {
 
 class FakeCompaniesRepo implements IpcCompaniesRepo {
   private rows: CompanyRow[] = [];
+  /** Visible to tests so they can assert on insert ordering / call counts. */
+  createCalls: Array<{
+    name: string;
+    slug: string;
+    settings?: Record<string, unknown>;
+    icon?: string;
+    theme?: string;
+  }> = [];
+  /** Visible to tests so archive call assertions don't need a spy wrapper. */
+  archiveCalls: string[] = [];
+  private nextIdCounter = 1;
 
   put(row: CompanyRow): void {
     this.rows.push(row);
@@ -65,6 +76,47 @@ class FakeCompaniesRepo implements IpcCompaniesRepo {
 
   list(): CompanyRow[] {
     return this.rows;
+  }
+
+  create(input: {
+    name: string;
+    slug: string;
+    settings?: Record<string, unknown>;
+    icon?: string;
+    theme?: string;
+  }): string {
+    this.createCalls.push(input);
+    // Mirror the SQL UNIQUE constraint surfacing — the production repo
+    // hands sqlite the row and lets the constraint throw; the fake
+    // pre-checks so tests can drive the duplicate-slug code path.
+    const dup = this.rows.find((r) => r.slug === input.slug);
+    if (dup) {
+      throw new Error(`UNIQUE constraint failed: companies.slug (slug=${input.slug})`);
+    }
+    const id = `company-new-${this.nextIdCounter++}`;
+    this.rows.push({
+      id,
+      name: input.name,
+      slug: input.slug,
+      createdAt: Date.now(),
+      settingsJson: JSON.stringify(input.settings ?? {}),
+      icon: input.icon ?? null,
+      theme: input.theme ?? 'dark',
+      status: 'running',
+    } as CompanyRow);
+    return id;
+  }
+
+  getById(id: string): CompanyRow | null {
+    return this.rows.find((r) => r.id === id) ?? null;
+  }
+
+  archive(id: string): void {
+    this.archiveCalls.push(id);
+    const row = this.rows.find((r) => r.id === id);
+    if (row) {
+      (row as { status: string }).status = 'archived';
+    }
   }
 }
 

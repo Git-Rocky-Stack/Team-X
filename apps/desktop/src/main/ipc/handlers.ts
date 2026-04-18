@@ -60,6 +60,8 @@ import type {
   CallMeetingResponse,
   ChatMessage,
   CloseTicketRequest,
+  CompaniesCreateRequest,
+  CompaniesCreateResponse,
   Company,
   CompanySettings,
   CreateGoalRequest,
@@ -214,6 +216,23 @@ export type {
 
 export interface IpcCompaniesRepo {
   list(): CompanyRow[];
+  /**
+   * Insert a new company row and return its generated id. Backs the
+   * `companies.create` IPC handler (Phase 5.6 M-C step b — restores
+   * Cluster A multi-company CRUD per audit row 10.12). The repo write
+   * is the SQL-layer step; the IPC handler additionally invokes the
+   * system-employee bootstrap and emits the `company.created` bus event
+   * to satisfy architectural invariant #11.
+   */
+  create(input: {
+    name: string;
+    slug: string;
+    settings?: Record<string, unknown>;
+    icon?: string;
+    theme?: string;
+  }): string;
+  /** Look up a company by id — used by the create handler to project the row → public Company shape after insertion. */
+  getById(id: string): CompanyRow | null;
   /**
    * Soft-delete a company — sets status to 'archived' (M33 F3).
    * Idempotent. Handler must have called `CopilotAnalyzerService.stop`
@@ -572,6 +591,31 @@ export interface IpcHandlerDeps {
     copilotsCreated: number;
     skipped: Array<{ companyId: string; reason: string }>;
   };
+  /**
+   * Per-company system-employee bootstrap callback — invoked by
+   * `companies.create` AFTER the new company row inserts and BEFORE
+   * the `company.created` bus event fires. Composition root captures
+   * `db` + `roleLookup` (the same handles the F4 post-restore sweep
+   * uses) and delegates to `ensureSystemAgent` + `ensureSystemCopilot`
+   * from `services/system-agent-bootstrap.ts`.
+   *
+   * Returns the seeded employee ids so the IPC response can hand them
+   * to the renderer in one round-trip (avoids a follow-up
+   * `employees.list` to find the framework-internal rows by role-id
+   * filter — both rows are filtered out of `listVisibleByCompany`).
+   *
+   * Optional so existing tests + pre-Phase-5.6 callers don't need to
+   * wire it; the handler treats `undefined` as a fatal misconfig and
+   * throws (different from the F4 path which warns + degrades, because
+   * `companies.create` cannot ship a usable company without a system
+   * pair). Phase 5.6 M-C step b — restores Cluster A multi-company CRUD.
+   */
+  ensureSystemForCompany?: (companyId: string) => {
+    agentEmployeeId: string;
+    copilotEmployeeId: string;
+    agentCreated: boolean;
+    copilotCreated: boolean;
+  };
   getHardwareProfile: () => HardwareProfile;
 }
 
@@ -587,6 +631,28 @@ export interface IpcHandlers {
    * Idempotent — re-archiving is safe. Phase 5 — M33 F3.
    */
   companiesArchive(req: ArchiveCompanyRequest): Promise<void>;
+
+  /**
+   * `companies.create` — create a new company AND seed its two system
+   * pseudo-employees (`system-agent` + `system-copilot`) atomically
+   * before returning. Phase 5.6 M-C step b — restores Cluster A
+   * multi-company CRUD per audit row 10.12 (Rocky's locked M7
+   * architectural decision).
+   *
+   * The handler validates input, calls `companiesRepo.create` to insert
+   * the row, then invokes the injected `ensureSystemForCompany`
+   * callback (closes over `db` + `roleLookup` and delegates to
+   * `ensureSystemAgent` + `ensureSystemCopilot`). On bootstrap success
+   * the handler emits a `company.created` bus event with the new ids
+   * (architectural invariant #11) and returns the company id + the two
+   * system employee ids in one round-trip.
+   *
+   * Throws on duplicate slug (SQL UNIQUE constraint), invalid input
+   * (empty name; slug not matching `/^[a-z0-9][a-z0-9-]{0,62}$/`), or
+   * a missing `ensureSystemForCompany` dep — the handler refuses to
+   * leave a partially-bootstrapped company on the table.
+   */
+  companiesCreate(req: CompaniesCreateRequest): Promise<CompaniesCreateResponse>;
 
   /**
    * `employees.list` — return every employee in a given company,
@@ -1112,12 +1178,132 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     copilotEventWindow,
     bus,
     ensurePostRestoreBootstrap,
+    ensureSystemForCompany,
     getHardwareProfile,
   } = deps;
 
   return {
     async companiesList() {
       return companiesRepo.list().map(rowToCompany);
+    },
+
+    async companiesCreate(req) {
+      // Input validation — fail closed on missing/empty fields BEFORE any
+      // SQL writes so a malformed request never leaves a partial row.
+      if (!req || typeof req !== 'object') {
+        throw new Error('[ipc] companies.create: request body is required');
+      }
+      const name = typeof req.name === 'string' ? req.name.trim() : '';
+      if (name.length === 0) {
+        throw new Error('[ipc] companies.create: name is required (non-empty after trim)');
+      }
+      if (name.length > 120) {
+        throw new Error('[ipc] companies.create: name exceeds 120 chars');
+      }
+      const slug = typeof req.slug === 'string' ? req.slug : '';
+      // URL-safe slug per design — lowercase alphanumerics + hyphen, 1–63
+      // chars, no leading hyphen. Matches the convention seedIfEmpty
+      // already uses for `'strategia-x'` and what the renderer's future
+      // CreateCompanyDialog will hand-roll. Enforced at the IPC boundary
+      // so SQL UNIQUE failures only surface for genuine duplicates, not
+      // for malformed-by-construction slugs.
+      if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(slug)) {
+        throw new Error(
+          `[ipc] companies.create: slug "${slug}" must match /^[a-z0-9][a-z0-9-]{0,62}$/ (lowercase alphanumerics + hyphen, 1–63 chars, no leading hyphen)`,
+        );
+      }
+      if (
+        req.settings !== undefined &&
+        (req.settings === null || typeof req.settings !== 'object')
+      ) {
+        throw new Error('[ipc] companies.create: settings must be a plain object when provided');
+      }
+      if (req.icon !== undefined && typeof req.icon !== 'string') {
+        throw new Error('[ipc] companies.create: icon must be a string when provided');
+      }
+      if (req.theme !== undefined && typeof req.theme !== 'string') {
+        throw new Error('[ipc] companies.create: theme must be a string when provided');
+      }
+
+      // The system-employee bootstrap is REQUIRED — a company without
+      // its system pair cannot serve a `complex_request` palette query
+      // (system-agent missing) or run the copilot analyzer (system-copilot
+      // missing). Fail loud rather than ship a half-formed row.
+      if (!ensureSystemForCompany) {
+        throw new Error(
+          '[ipc] companies.create: ensureSystemForCompany dep unwired — refusing to create a company without the system-agent + system-copilot bootstrap path. Check the composition root in main/index.ts.',
+        );
+      }
+
+      // SQL write — surfaces UNIQUE-constraint failure on duplicate slug
+      // as a thrown sqlite error. The handler does NOT pre-check via
+      // getBySlug() because the check + insert would race against any
+      // concurrent create; let the SQL UNIQUE be the canonical guard.
+      let companyId: string;
+      try {
+        companyId = companiesRepo.create({
+          name,
+          slug,
+          settings: req.settings,
+          icon: req.icon,
+          theme: req.theme,
+        });
+      } catch (err) {
+        // Surface a friendlier message on duplicate slug — sqlite's
+        // raw error text is "UNIQUE constraint failed: companies.slug"
+        // which is fine for logs but not for the renderer's toast.
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('UNIQUE') && msg.includes('slug')) {
+          throw new Error(`[ipc] companies.create: slug "${slug}" is already in use`);
+        }
+        throw err;
+      }
+
+      // System-employee bootstrap — same path the seed flow + post-restore
+      // sweep use. If this throws, the company row is already inserted
+      // but unusable. Surface the throw so the caller knows to retry
+      // after fixing the loader root (e.g., re-installing role-packs).
+      const bootstrap = ensureSystemForCompany(companyId);
+
+      // Architectural invariant #11 — IPC channels that mutate state
+      // MUST emit a bus event so renderer caches invalidate. Mirrors
+      // companies.archive's pattern: the durable write succeeded by
+      // the time we get here, so a bus failure must NOT cascade into
+      // a thrown IPC (the row is already there). Log + move on.
+      const createdAt = Date.now();
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'company.created',
+            companyId,
+            actorId: 'user',
+            actorKind: 'user',
+            payload: {
+              companyId,
+              slug,
+              name,
+              systemAgentEmployeeId: bootstrap.agentEmployeeId,
+              systemCopilotEmployeeId: bootstrap.copilotEmployeeId,
+              createdAt,
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] companies.create: bus emit failed (row still created with id ${companyId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] companies.create: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+
+      return {
+        companyId,
+        systemAgentEmployeeId: bootstrap.agentEmployeeId,
+        systemCopilotEmployeeId: bootstrap.copilotEmployeeId,
+      };
     },
 
     async companiesArchive({ companyId }) {

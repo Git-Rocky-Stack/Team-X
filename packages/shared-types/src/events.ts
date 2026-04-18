@@ -31,7 +31,8 @@ export type EventType =
   | 'copilot.analyzed'
   | 'copilot.expired'
   | 'copilot.dismissed'
-  | 'company.archived';
+  | 'company.archived'
+  | 'company.created';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -423,16 +424,21 @@ export interface CopilotExpiredPayload {
 }
 
 // ---------------------------------------------------------------------------
-// Company lifecycle event payload (M33 T3 follow-up F3)
+// Company lifecycle event payloads
 //
-// Emitted by the `companies.archive` IPC handler after the repo row is
-// flipped to `status = 'archived'`. The handler has already called
-// `CopilotAnalyzerService.stop(companyId)` + `CopilotEventWindow.clear(companyId)`
-// BEFORE the row update, so any subscriber that reacts to this event
-// can treat the company as fully quiesced on the copilot side.
+// `company.archived` (M33 T3 follow-up F3) — emitted by `companies.archive`
+// AFTER the row is flipped to `status = 'archived'`. The handler has already
+// called `CopilotAnalyzerService.stop(companyId)` + `CopilotEventWindow.clear(
+// companyId)` BEFORE the row update, so subscribers can treat the company as
+// fully quiesced on the copilot side.
 //
-// No `company.created` twin today — the design-doc decision log keeps
-// creation as an IPC-only side effect until `companies.create` lands.
+// `company.created` (Phase 5.6 M-C step b — restores Cluster A multi-company
+// CRUD per audit row 10.12) — emitted by `companies.create` AFTER the row
+// inserts AND the system-employee bootstrap (`ensureSystemAgent` +
+// `ensureSystemCopilot`) returns successfully. The two pseudo-employees
+// always exist by the time this event fires, mirroring the seed-flow
+// invariant from `seedIfEmpty`. Architectural invariant #11 — IPC channels
+// that mutate state must emit a bus event so renderer caches invalidate.
 // ---------------------------------------------------------------------------
 
 export interface CompanyArchivedPayload {
@@ -440,6 +446,21 @@ export interface CompanyArchivedPayload {
   companyId: string;
   /** Wall-clock timestamp in ms when the archive handler wrote the row. */
   archivedAt: number;
+}
+
+export interface CompanyCreatedPayload {
+  /** The newly-created company id. Duplicated in the top-level `companyId` for DashboardEvent routing. */
+  companyId: string;
+  /** The slug the user supplied (unique per app; enforces no-collision invariant at SQL layer). */
+  slug: string;
+  /** The display name the user supplied. */
+  name: string;
+  /** The `system-agent` pseudo-employee row id seeded by the bootstrap (M31). Always non-null on success. */
+  systemAgentEmployeeId: string;
+  /** The `system-copilot` pseudo-employee row id seeded by the bootstrap (M33). Always non-null on success. */
+  systemCopilotEmployeeId: string;
+  /** Wall-clock timestamp in ms when the create handler wrote the row. */
+  createdAt: number;
 }
 
 /**

@@ -83,6 +83,54 @@ export interface ArchiveCompanyRequest {
   companyId: string;
 }
 
+/**
+ * `companies.create` request (Phase 5.6 M-C step b — restores Cluster A
+ * multi-company CRUD per audit row 10.12; the locked M7 architectural
+ * decision).
+ *
+ * `slug` MUST be unique app-wide. The handler enforces a non-empty
+ * trimmed `name` and a slug matching `/^[a-z0-9][a-z0-9-]{0,62}$/`
+ * (lowercase alphanumerics + hyphen, 1–63 chars, no leading hyphen) so
+ * the renderer can rely on a stable URL-safe identifier without
+ * server-side rewriting. Duplicate slug surfaces as a SQL UNIQUE
+ * constraint failure that the handler rethrows with a friendlier
+ * message; callers should pre-check via `companies.list` if they want
+ * to validate before submit.
+ *
+ * `settings` is a free-form JSON object persisted as a text column;
+ * Phase 1 used `mission` + `hq` + `description`. The schema lives in
+ * `CompanySettings` from `./entities.js`.
+ *
+ * `icon` is an optional emoji or short visual marker; `theme` defaults
+ * to `'dark'` per the Strategia design system.
+ */
+export interface CompaniesCreateRequest {
+  name: string;
+  slug: string;
+  settings?: Record<string, unknown>;
+  icon?: string;
+  theme?: string;
+}
+
+/**
+ * `companies.create` response. Returns the new company id PLUS the two
+ * system pseudo-employee ids the bootstrap seeded inline (`system-agent`
+ * from M31 + `system-copilot` from M33). The renderer can use the
+ * agent/copilot ids immediately to open Copilot Conversations or the
+ * command palette without a follow-up `employees.list` round-trip.
+ *
+ * The bootstrap is part of the `companies.create` write transaction
+ * surface in spirit — the IPC handler invokes `ensureSystemForCompany`
+ * synchronously after `companiesRepo.create` succeeds and BEFORE the
+ * `company.created` bus event fires, so subscribers see a fully-formed
+ * company on first observation (matches the `seedIfEmpty` invariant).
+ */
+export interface CompaniesCreateResponse {
+  companyId: string;
+  systemAgentEmployeeId: string;
+  systemCopilotEmployeeId: string;
+}
+
 export interface ListEmployeesRequest {
   companyId: string;
 }
@@ -1058,6 +1106,10 @@ export interface IpcContract {
     // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
     response: void;
   };
+  'companies.create': {
+    request: CompaniesCreateRequest;
+    response: CompaniesCreateResponse;
+  };
   'employees.list': {
     request: ListEmployeesRequest;
     response: Employee[];
@@ -1488,8 +1540,32 @@ export type UnsubscribeFn = () => void;
  */
 export interface TeamXApi {
   companies: {
-    /** Return every company. Phase 1 always returns exactly one. */
+    /** Return every company. Phase 1 + Phase 5.6 onwards may return many. */
     list(): Promise<Company[]>;
+
+    /**
+     * Create a new company and seed its two system pseudo-employees
+     * (`system-agent` + `system-copilot`) atomically before returning.
+     * Phase 5.6 M-C step b — restores Cluster A multi-company CRUD
+     * (Rocky's locked M7 architectural decision; audit row 10.12).
+     *
+     * The handler validates the request (non-empty trimmed `name`, slug
+     * matching `/^[a-z0-9][a-z0-9-]{0,62}$/`), inserts the row via
+     * `companiesRepo.create`, then synchronously invokes
+     * `ensureSystemForCompany(companyId)` which delegates to
+     * `ensureSystemAgent` + `ensureSystemCopilot` (same path used by
+     * `seed.ts::seedIfEmpty` and `backupService.ensurePostRestoreSystemEmployees`).
+     * After the bootstrap returns, the handler emits a `company.created`
+     * bus event with the new company id + the two system employee ids
+     * (architectural invariant #11) so renderer caches can invalidate.
+     *
+     * Throws on duplicate slug (SQL UNIQUE constraint), on invalid input,
+     * or if the role-loader is missing the `system-agent` / `system-copilot`
+     * specs. The IPC fails closed: a thrown bootstrap leaves the company
+     * row inserted but unusable — callers should retry after fixing the
+     * loader root rather than treat the row as live.
+     */
+    create(req: CompaniesCreateRequest): Promise<CompaniesCreateResponse>;
 
     /**
      * Archive (soft-delete) a company. The handler performs a three-step

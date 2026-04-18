@@ -62,6 +62,7 @@ import type { IpcHandlers } from './handlers.js';
 const REQUEST_CHANNELS = [
   'companies.list',
   'companies.archive',
+  'companies.create',
   'employees.list',
   'employees.create',
   'employees.fire',
@@ -194,6 +195,16 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('companies.archive', async (_event, request: { companyId: string }) => {
     return handlers.companiesArchive(request);
   });
+
+  // companies.create — Phase 5.6 M-C step b — restores Cluster A multi-company
+  // CRUD (audit row 10.12). Handler validates input + seeds the system-agent /
+  // system-copilot pair atomically + emits `company.created`.
+  ipcMain.handle(
+    'companies.create',
+    async (_event, request: import('@team-x/shared-types').CompaniesCreateRequest) => {
+      return handlers.companiesCreate(request);
+    },
+  );
 
   ipcMain.handle('employees.list', async (_event, request: { companyId: string }) => {
     return handlers.employeesList(request);

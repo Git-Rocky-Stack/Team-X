@@ -777,6 +777,25 @@ app
             };
           },
         }),
+      // Per-company system-employee bootstrap — invoked by `companies.create`
+      // (Phase 5.6 M-C step b — restores Cluster A multi-company CRUD per
+      // audit row 10.12). Same `db` + `roleLoader` handles the F4
+      // post-restore sweep uses; idempotent at the bootstrap layer
+      // (findSystemByRoleId short-circuits if the rows already exist).
+      // Returns BOTH the employee ids AND the created/found flags so the
+      // IPC handler can include the ids in the response without a
+      // follow-up `employees.list` call (those rows are filtered out of
+      // listVisibleByCompany by the is_system filter sweep).
+      ensureSystemForCompany: (companyId) => {
+        const agent = ensureSystemAgent({ db, companyId, roleLookup: roleLoader });
+        const copilot = ensureSystemCopilot({ db, companyId, roleLookup: roleLoader });
+        return {
+          agentEmployeeId: agent.employeeId,
+          copilotEmployeeId: copilot.employeeId,
+          agentCreated: agent.created,
+          copilotCreated: copilot.created,
+        };
+      },
       getHardwareProfile: detectHardware,
     });
     // ---- Command palette service (Phase 5 — M30 T4) -----------------------

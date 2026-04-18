@@ -60,6 +60,8 @@ import type {
   CommandStopRequest,
   CommandStopResult,
   CommandSuggestRequest,
+  CompaniesCreateRequest,
+  CompaniesCreateResponse,
   CopilotAskArgs,
   CopilotAskResult,
   CopilotConfigureArgs,
@@ -180,6 +182,7 @@ export interface IpcRendererLike {
 const CHANNELS = {
   companiesList: 'companies.list',
   companiesArchive: 'companies.archive',
+  companiesCreate: 'companies.create',
   employeesList: 'employees.list',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
@@ -304,6 +307,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
   return {
     companies: {
       list: () => ipc.invoke(CHANNELS.companiesList) as ReturnType<TeamXApi['companies']['list']>,
+      create: (req: CompaniesCreateRequest) =>
+        ipc.invoke(CHANNELS.companiesCreate, req) as Promise<CompaniesCreateResponse>,
       archive: (companyId: string) =>
         ipc.invoke(CHANNELS.companiesArchive, { companyId }) as ReturnType<
           TeamXApi['companies']['archive']
