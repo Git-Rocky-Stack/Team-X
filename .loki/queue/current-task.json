@@ -66,6 +66,40 @@
       },
       "safeguardProof": "Second M-C proof at scale of the M-E safeguards. S2 conformance gate ran GREEN on b858067 — companies.create allowlist entry deleted in same atomic so audit:claims 86/9/0 → 87/8/0 (the new IPC is verified-on-disk, not allowlisted). S3 pre-commit hook clean on staged diff. S4 verifiedBy populated on the paired ledger entry per contract. M-E acceptance #ciGate validated: the safeguard catches its own conformance violations + the restoration commit shrinks the allowlist as evidence lands.",
       "nextStep": "step (c) — org-edges repo (createOrgEdgesRepo with cycle-detect via wouldCycle helper) + orgchart.get IPC channel + handler + preload bridge. Cluster B foundation; depends on Migration 0013 (already shipped in step a). Allowlist shrinkage continues — orgchart.get entry deleted from scripts/check-claim-evidence.allowlist.json in lockstep with the channel restoration."
+    },
+    {
+      "step": "c",
+      "name": "org-edges repo + orgchart.get IPC",
+      "shippedAt": "2026-04-18T00:00:00Z",
+      "atomicCommit": "c2e6c92",
+      "ledgerCommit": "pending-this-ledger-commit",
+      "verifiedBy": [
+        "apps/desktop/src/main/db/repos/orgchart.ts (NEW — createOrgEdgesRepo factory with listByCompany + getByReport + listReports + setManager [upsert with cycle guard] + removeByReport + removeByManager + wouldCycle [visited-set + MAX_CHAIN_DEPTH=256 belt-and-suspenders]; cross-driver generic typing matching companies.ts + employees.ts archetype)",
+        "apps/desktop/src/main/db/repos/orgchart.test.ts (NEW, 21 vitest tests seeding a real 5-employee tree; covers setManager upsert + cycle rejection [direct + transitive + self-edge] + legal re-parent + remove flows + listByCompany + listReports + wouldCycle under fresh/2-step/multi-step/legal-reparent conditions)",
+        "apps/desktop/src/main/ipc/orgchart-handlers.test.ts (NEW, 15 vitest tests mirroring companies-handlers.test.ts pattern; 5 describe blocks — happy path / rootIds computation / system + defensive filter / input validation / cross-company scoping; noop-as-never for unused deps)",
+        "packages/shared-types/src/ipc.ts (MODIFIED — OrgchartGetRequest + OrgchartEdge + OrgchartGetResponse types; IpcContract['orgchart.get']; TeamXApi.orgchart.get namespace; response shape flat {employees[], edges[], rootIds[]} with companyId dropped from OrgchartEdge wire shape as implicit in scoped request)",
+        "apps/desktop/src/main/ipc/handlers.ts (MODIFIED — OrgchartEdge/Request/Response type imports; OrgEdgeRow import from ../db/repos/orgchart.js; IpcOrgEdgesRepo narrow interface with listByCompany only; orgEdgesRepo threaded into IpcHandlerDeps; orgchartGet added to IpcHandlers interface; handler body with defensive edge filter dropping edges whose manager OR report is outside listVisibleByCompany; orgEdgesRepo destructured in createIpcHandlers factory)",
+        "apps/desktop/src/main/ipc/register.ts (MODIFIED — 'orgchart.get' added to REQUEST_CHANNELS tuple + ipcMain.handle binding)",
+        "apps/desktop/src/preload/api.ts (MODIFIED — OrgchartGetResponse type import; CHANNELS.orgchartGet constant; orgchart namespace in buildTeamXApi exposing get(companyId))",
+        "apps/desktop/src/main/index.ts (MODIFIED — createOrgEdgesRepo import from ./db/repos/orgchart.js; orgEdgesRepo = createOrgEdgesRepo(db) composition alongside other repos; orgEdgesRepo injected into createIpcHandlers deps)",
+        "scripts/check-claim-evidence.allowlist.json (MODIFIED — orgchart.get entry DELETED in lockstep with IPC restoration; allowlist 8 → 7)",
+        "atomic commit c2e6c92 (9 files / +1012 / -8) + paired chore(loki) ledger",
+        "vitest 1311/1311 in 26.21s (1275 step b baseline → +36 tests: 21 repo + 15 handler; 110 test files green)",
+        "audit:claims 88 verified / 7 allowlisted / 0 UNALLOWED out of 95 (orgchart.get migrated from allowlist into verified-on-disk in same atomic per acceptance #5)",
+        "typecheck clean across 6 packages",
+        "lint 0 errors / 24 warnings (baseline preserved; biome --write auto-fixed 3 format-only errors in orgchart.ts + orgchart.test.ts + orgchart-handlers.test.ts + handlers.ts)",
+        "E2E not re-run (no renderer surface in step c — channel has no UI consumer until M-D; baseline at M-C step b preserved at 11 specs / 12 cases)"
+      ],
+      "deliverable": "Restores Cluster B (M9 org chart) backend READ surface per audit rows 2.16 / 2.21. Builds on step (a) Migration 0013 (org_edges table) and step (b) companies.create (system-employee bootstrap). Ships the full org-edges repo factory + narrow IPC interface + orgchart.get handler + preload + composition-root wiring in one atomic. Response shape is flat {employees[], edges[], rootIds[]} — renderer builds whatever tree layout (indented list, tree view, Sankey) O(n) from parallel arrays without a follow-up IPC round-trip. Defensive edge filter at handler time drops edges referencing employees outside listVisibleByCompany (system pseudo-employees, soft/hard-deleted rows, or cross-company FK violations from direct-DB writes).",
+      "designDecisions": {
+        "responseShape": "Flat parallel arrays {employees[], edges[], rootIds[]}. Renderer builds tree O(n) keyed by managerId. Decision: don't pre-nest on the server — the renderer may want multiple layouts (indented list, tree view, Sankey, reports-to cards) and serving flat data lets it choose without a follow-up IPC.",
+        "defensiveEdgeFilter": "Edges whose managerId OR reportId references an employee outside listVisibleByCompany are DROPPED at handler time (not repo layer). Catches: (1) system pseudo-employees that a direct-DB-write incorrectly pointed at; (2) soft/hard-deleted employees whose edges have not been cleaned up by a future employees.fire flow; (3) cross-company FK violations from a drizzle-studio direct edit. The repo's wouldCycle is the write-path canonical guard; this read filter is belt-and-suspenders.",
+        "narrowInterface": "IpcOrgEdgesRepo exposes only listByCompany to the IPC layer. setManager/wouldCycle/removeByReport/removeByManager are declared on createOrgEdgesRepo but NOT in IpcOrgEdgesRepo — they land in the IPC surface when step d's employees.setManager IPC ships. Keeps the IPC-facing interface tight so unit-test fakes don't have to implement the full repo surface until the write-side IPCs need it.",
+        "rootIdsConvenience": "rootIds surfaced as a first-class response field rather than computed client-side. Renderer reads it directly to find tree roots (typically the single CEO row) without iterating edges. Also useful for empty-state detection — rootIds === [] + employees === [] means a fresh company with no org wired yet.",
+        "noBusEmit": "orgchart.get is read-only; invariant #11 (IPC mutations must emit bus events) does not apply. No new EventType required in this step."
+      },
+      "safeguardProof": "Third M-C proof at scale of the M-E safeguards. S2 conformance gate ran GREEN on c2e6c92 — orgchart.get allowlist entry deleted in same atomic so audit:claims 87/8/0 → 88/7/0 (the new IPC is verified-on-disk, not allowlisted). S3 pre-commit hook clean on staged diff. S4 verifiedBy populated on the paired ledger entry per contract. M-E acceptance #ciGate continues to validate.",
+      "nextStep": "step (d) — employees.promote + employees.setManager IPC channels + handlers + preload bridge. Cluster B finalization (audit rows 2.19 + 2.20). Depends on the org-edges repo shipped in step c (setManager + removeByManager + wouldCycle + listReports all already wired). Allowlist shrinkage continues — employees.promote + employees.setManager entries deleted from scripts/check-claim-evidence.allowlist.json in lockstep with the channel restorations (allowlist 7 → 5 on step d ship). New bus events: employee.promoted + employee.managerSet per invariant #11."
     }
   ],
   "interimDoR": [
