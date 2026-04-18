@@ -75,6 +75,9 @@ import type {
   DeleteProjectRequest,
   DetachFileRequest,
   Employee,
+  EmployeesPromoteRequest,
+  EmployeesPromoteResponse,
+  EmployeesSetManagerRequest,
   EndMeetingResponse,
   GetGoalRequest,
   GetMeetingRequest,
@@ -162,7 +165,11 @@ import { AUTO_THREAD_ID, DEFAULT_CONCURRENCY_CAPS, PRIVACY_TIER_RANK } from '@te
 import type { RoleSpec } from '@team-x/shared-types';
 
 import type { CompanyRow } from '../db/repos/companies.js';
-import type { CreateEmployeeInput, EmployeeRow } from '../db/repos/employees.js';
+import type {
+  CreateEmployeeInput,
+  EmployeeRow,
+  PromoteEmployeeInput,
+} from '../db/repos/employees.js';
 import type { CreateGoalInput, GoalRow, UpdateGoalInput } from '../db/repos/goals.js';
 import type { MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
@@ -262,6 +269,12 @@ export interface IpcEmployeesRepo {
   findSystemByRoleId(companyId: string, roleId: string): EmployeeRow | null;
   create(input: CreateEmployeeInput): string;
   delete(id: string): void;
+  /**
+   * Atomic role swap — backs the `employees.promote` IPC handler.
+   * Phase 5.6 M-C step d (audit row 2.19). Updates the role-bound
+   * columns in place; does NOT touch org-edges.
+   */
+  promote(input: PromoteEmployeeInput): void;
 }
 
 export interface IpcThreadsRepo {
@@ -321,15 +334,33 @@ export interface IpcProjectsRepo {
 }
 
 /**
- * Narrow org-edges repo surface the IPC layer consumes. `orgchart.get`
- * only needs `listByCompany`; `setManager` / `removeByReport` /
- * `wouldCycle` land when the M-C step d `employees.promote` +
- * `employees.setManager` channels ship. Keeping the IPC-facing
- * interface tight lets tests hand-roll fakes without pulling the full
- * `createOrgEdgesRepo` signature.
+ * Org-edges repo surface the IPC layer consumes. `orgchart.get` reads
+ * `listByCompany`; `employees.setManager` (M-C step d, audit row 2.20)
+ * adds the write surface — `setManager` (upsert with built-in
+ * `wouldCycle` rejection), `removeByReport` (clears the report's
+ * manager edge), `getByReport` (snapshot the previous manager id for
+ * the `employee.managerSet` event payload), and `wouldCycle` (exposed
+ * for handler-level pre-check messaging — the repo's `setManager` also
+ * runs the same guard internally so the IPC fails closed).
  */
 export interface IpcOrgEdgesRepo {
   listByCompany(companyId: string): OrgEdgeRow[];
+  /** Look up the existing edge whose `report_id = reportId`, or null. M-C step d. */
+  getByReport(reportId: string): OrgEdgeRow | null;
+  /**
+   * Upsert the edge pointing at the report. Throws on directed-cycle
+   * rejection. M-C step d.
+   */
+  setManager(input: { companyId: string; managerId: string; reportId: string }): string;
+  /** Clear the edge whose `report_id = reportId`. No-op when no edge exists. M-C step d. */
+  removeByReport(reportId: string): void;
+  /**
+   * Pre-check whether making `managerId` the manager of `reportId`
+   * would close a directed cycle. Repo's `setManager` runs the same
+   * guard internally; exposed here so the IPC handler can produce a
+   * friendlier error message before invoking the SQL write. M-C step d.
+   */
+  wouldCycle(companyId: string, managerId: string, reportId: string): boolean;
 }
 
 /**
@@ -695,6 +726,27 @@ export interface IpcHandlers {
    * a clear error instead of silently succeeding on a stale target.
    */
   employeesFire(req: { employeeId: string }): Promise<void>;
+
+  /**
+   * `employees.promote` — atomic role swap (Phase 5.6 M-C step d;
+   * audit row 2.19; restores Cluster B M9). Resolves the new role spec
+   * via the role-loader, refuses framework-internal roles + employees,
+   * updates the row, and emits an `employee.promoted` bus event with
+   * the full pre/post snapshot.
+   */
+  employeesPromote(req: EmployeesPromoteRequest): Promise<EmployeesPromoteResponse>;
+
+  /**
+   * `employees.setManager` — set or clear the org-edge whose report
+   * side is the given employee (Phase 5.6 M-C step d; audit row 2.20;
+   * restores Cluster B M9). `managerId === null` clears the edge
+   * (report becomes a graph root); `managerId !== null` upserts via
+   * the repo's cycle-checked `setManager`. Refuses framework-internal
+   * employees on either side and refuses cross-company edges. Emits
+   * an `employee.managerSet` bus event with the previous + new manager
+   * ids so the renderer can animate the move.
+   */
+  employeesSetManager(req: EmployeesSetManagerRequest): Promise<void>;
 
   /**
    * `orgchart.get` — full org-chart projection for a company (Phase 2
@@ -1466,6 +1518,223 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         );
       }
       employeesRepo.delete(employeeId);
+    },
+
+    async employeesPromote(req) {
+      // Input validation — fail closed before any SQL writes.
+      if (!req || typeof req !== 'object') {
+        throw new Error('[ipc] employees.promote: request body is required');
+      }
+      const employeeId = typeof req.employeeId === 'string' ? req.employeeId : '';
+      if (employeeId.length === 0) {
+        throw new Error('[ipc] employees.promote: employeeId is required');
+      }
+      const newRoleId = typeof req.newRoleId === 'string' ? req.newRoleId : '';
+      if (newRoleId.length === 0) {
+        throw new Error('[ipc] employees.promote: newRoleId is required');
+      }
+
+      const employee = employeesRepo.getById(employeeId);
+      if (!employee) {
+        throw new Error(`[ipc] employees.promote: employee not found: ${employeeId}`);
+      }
+      // Same defense-in-depth as `employees.fire`: framework-internal
+      // pseudo-employees (system-agent / system-copilot) are seeded
+      // once per company and must never be re-roled via the IPC.
+      if (employee.isSystem) {
+        throw new Error(
+          `[ipc] employees.promote: cannot promote framework-internal employee ${employeeId} ` +
+            `(role_id=${employee.roleId})`,
+        );
+      }
+
+      const spec = roleLookup.getSpec(newRoleId);
+      if (!spec) {
+        throw new Error(`[ipc] employees.promote: role not found: ${newRoleId}`);
+      }
+      // Refuse to promote INTO a framework-internal role — only
+      // `ensureSystemAgent` is allowed to seed `level: system` rows
+      // and it goes through the repo directly. Mirrors the same guard
+      // in `employees.create`.
+      if (spec.frontmatter.level === 'system') {
+        throw new Error(
+          `[ipc] employees.promote: role "${newRoleId}" is framework-internal and cannot be assigned`,
+        );
+      }
+
+      // Snapshot the pre-promote shape so the response + bus event
+      // payload carry the full delta. Reads from the row we already
+      // fetched — no second SQL round-trip.
+      const previousRoleId = employee.roleId;
+      const previousLevel = employee.level;
+      const previousTitle = employee.title;
+      const newLevel = spec.frontmatter.level;
+      const newTitle = spec.frontmatter.name;
+
+      employeesRepo.promote({
+        employeeId,
+        roleId: spec.frontmatter.id,
+        level: newLevel,
+        title: newTitle,
+        roleMdSha: spec.sha256,
+        toolsAllowed: spec.frontmatter.tools_allowed ?? [],
+        toolsDenied: spec.frontmatter.tools_denied ?? [],
+      });
+
+      // Architectural invariant #11 — emit AFTER the durable write so
+      // a bus failure cannot cascade into the IPC throw (the row is
+      // already promoted by the time we get here). Mirrors the
+      // `companies.archive` / `companies.create` patterns.
+      const promotedAt = Date.now();
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'employee.promoted',
+            companyId: employee.companyId,
+            actorId: 'user',
+            actorKind: 'user',
+            payload: {
+              employeeId,
+              previousRoleId,
+              newRoleId: spec.frontmatter.id,
+              previousLevel,
+              newLevel,
+              previousTitle,
+              newTitle,
+              promotedAt,
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] employees.promote: bus emit failed (row still promoted, id=${employeeId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] employees.promote: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+
+      return {
+        employeeId,
+        previousRoleId,
+        newRoleId: spec.frontmatter.id,
+        previousLevel,
+        newLevel,
+        previousTitle,
+        newTitle,
+      };
+    },
+
+    async employeesSetManager(req) {
+      if (!req || typeof req !== 'object') {
+        throw new Error('[ipc] employees.setManager: request body is required');
+      }
+      const employeeId = typeof req.employeeId === 'string' ? req.employeeId : '';
+      if (employeeId.length === 0) {
+        throw new Error('[ipc] employees.setManager: employeeId is required');
+      }
+      // `managerId === null` is the documented "detach / make root"
+      // path. Any non-string non-null value is invalid.
+      const managerId =
+        req.managerId === null
+          ? null
+          : typeof req.managerId === 'string' && req.managerId.length > 0
+            ? req.managerId
+            : undefined;
+      if (managerId === undefined) {
+        throw new Error(
+          '[ipc] employees.setManager: managerId must be a non-empty string or null (to detach)',
+        );
+      }
+
+      const employee = employeesRepo.getById(employeeId);
+      if (!employee) {
+        throw new Error(`[ipc] employees.setManager: employee not found: ${employeeId}`);
+      }
+      if (employee.isSystem) {
+        throw new Error(
+          `[ipc] employees.setManager: cannot edit reporting line for framework-internal employee ${employeeId}`,
+        );
+      }
+
+      // Snapshot the previous manager id for the bus event payload BEFORE
+      // we touch the edge — the repo's removeByReport is destructive and
+      // we'd lose the prior state if we read after.
+      const previousEdge = orgEdgesRepo.getByReport(employeeId);
+      const previousManagerId = previousEdge?.managerId ?? null;
+
+      if (managerId === null) {
+        // Detach path — clear the edge. No-op when no edge exists, matches
+        // `removeByReport`'s existing semantics.
+        orgEdgesRepo.removeByReport(employeeId);
+      } else {
+        // Upsert path. Validate the manager exists, is non-system, and
+        // shares a company with the report BEFORE invoking setManager so
+        // the friendlier error message surfaces (the repo's wouldCycle is
+        // a redundant inner guard).
+        if (managerId === employeeId) {
+          throw new Error(
+            '[ipc] employees.setManager: managerId and employeeId must differ (self-edges are cyclic)',
+          );
+        }
+        const manager = employeesRepo.getById(managerId);
+        if (!manager) {
+          throw new Error(`[ipc] employees.setManager: manager not found: ${managerId}`);
+        }
+        if (manager.isSystem) {
+          throw new Error(
+            `[ipc] employees.setManager: cannot assign framework-internal employee ${managerId} as manager`,
+          );
+        }
+        if (manager.companyId !== employee.companyId) {
+          throw new Error(
+            `[ipc] employees.setManager: manager ${managerId} and report ${employeeId} must share a company`,
+          );
+        }
+        // Pre-flight cycle check so the renderer gets a friendlier
+        // message than the repo's raw "would create cycle" throw.
+        if (orgEdgesRepo.wouldCycle(employee.companyId, managerId, employeeId)) {
+          throw new Error(
+            `[ipc] employees.setManager: would create reporting cycle — ${managerId} already reports (directly or transitively) to ${employeeId}`,
+          );
+        }
+        orgEdgesRepo.setManager({
+          companyId: employee.companyId,
+          managerId,
+          reportId: employeeId,
+        });
+      }
+
+      // Architectural invariant #11 — emit AFTER the durable write.
+      const setAt = Date.now();
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'employee.managerSet',
+            companyId: employee.companyId,
+            actorId: 'user',
+            actorKind: 'user',
+            payload: {
+              employeeId,
+              companyId: employee.companyId,
+              managerId,
+              previousManagerId,
+              setAt,
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] employees.setManager: bus emit failed (edge still updated, employee=${employeeId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] employees.setManager: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
     },
 
     async orgchartGet({ companyId }) {

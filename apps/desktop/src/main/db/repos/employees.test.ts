@@ -299,4 +299,204 @@ describe('employees repo', () => {
       expect(employees.findSystemByRoleId(otherCompanyId, 'system-agent')).toBeNull();
     });
   });
+
+  describe('promote (Phase 5.6 M-C step d — restores Cluster B per audit row 2.19)', () => {
+    const seed = (overrides: { name?: string; level?: string; roleId?: string } = {}) =>
+      employees.create({
+        companyId,
+        rolePackId: 'strategia-official',
+        roleId: overrides.roleId ?? 'senior-fullstack-engineer',
+        roleMdSha: 'sha-old',
+        level: overrides.level ?? 'IC',
+        name: overrides.name ?? 'Iris',
+        title: 'Senior Fullstack Engineer',
+        toolsAllowed: ['browse'],
+        toolsDenied: ['shell'],
+      });
+
+    it('atomically swaps roleId, level, title, roleMdSha, and tools_*_json', () => {
+      const id = seed();
+      employees.promote({
+        employeeId: id,
+        roleId: 'engineering-manager',
+        level: 'management',
+        title: 'Engineering Manager',
+        roleMdSha: 'sha-new',
+        toolsAllowed: ['browse', 'context7'],
+        toolsDenied: ['shell', 'exec'],
+      });
+      const got = employees.getById(id);
+      expect(got?.roleId).toBe('engineering-manager');
+      expect(got?.level).toBe('management');
+      expect(got?.title).toBe('Engineering Manager');
+      expect(got?.roleMdSha).toBe('sha-new');
+      expect(JSON.parse(got?.toolsAllowedJson ?? '[]')).toEqual(['browse', 'context7']);
+      expect(JSON.parse(got?.toolsDeniedJson ?? '[]')).toEqual(['shell', 'exec']);
+    });
+
+    it('preserves the employee name (promotes are role swaps, not renames)', () => {
+      const id = seed({ name: 'Mateo Reyes' });
+      employees.promote({
+        employeeId: id,
+        roleId: 'lead-engineer',
+        level: 'lead',
+        title: 'Lead Engineer',
+        roleMdSha: 'sha-x',
+        toolsAllowed: [],
+        toolsDenied: [],
+      });
+      expect(employees.getById(id)?.name).toBe('Mateo Reyes');
+    });
+
+    it('preserves the companyId (promotes never cross companies)', () => {
+      const id = seed();
+      employees.promote({
+        employeeId: id,
+        roleId: 'lead-engineer',
+        level: 'lead',
+        title: 'Lead Engineer',
+        roleMdSha: 'sha-x',
+        toolsAllowed: [],
+        toolsDenied: [],
+      });
+      expect(employees.getById(id)?.companyId).toBe(companyId);
+    });
+
+    it('preserves status and modelPref / providerPref (orthogonal to role)', () => {
+      const id = employees.create({
+        companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'senior-fullstack-engineer',
+        roleMdSha: 'sha-old',
+        level: 'IC',
+        name: 'Iris',
+        title: 'Senior Fullstack Engineer',
+        modelPref: 'claude-haiku-4-5',
+        providerPref: 'anthropic',
+      });
+      employees.updateStatus(id, 'thinking');
+      employees.promote({
+        employeeId: id,
+        roleId: 'engineering-manager',
+        level: 'management',
+        title: 'Engineering Manager',
+        roleMdSha: 'sha-new',
+        toolsAllowed: [],
+        toolsDenied: [],
+      });
+      const got = employees.getById(id);
+      expect(got?.status).toBe('thinking');
+      expect(got?.modelPref).toBe('claude-haiku-4-5');
+      expect(got?.providerPref).toBe('anthropic');
+    });
+
+    it('preserves createdAt (promote is an update, not a re-insert)', () => {
+      const id = seed();
+      const before = employees.getById(id)?.createdAt;
+      employees.promote({
+        employeeId: id,
+        roleId: 'lead-engineer',
+        level: 'lead',
+        title: 'Lead Engineer',
+        roleMdSha: 'sha-x',
+        toolsAllowed: [],
+        toolsDenied: [],
+      });
+      expect(employees.getById(id)?.createdAt).toBe(before);
+    });
+
+    it('serializes empty tools arrays as "[]" (matches create defaults)', () => {
+      const id = seed();
+      employees.promote({
+        employeeId: id,
+        roleId: 'lead-engineer',
+        level: 'lead',
+        title: 'Lead Engineer',
+        roleMdSha: 'sha-x',
+        toolsAllowed: [],
+        toolsDenied: [],
+      });
+      const got = employees.getById(id);
+      expect(got?.toolsAllowedJson).toBe('[]');
+      expect(got?.toolsDeniedJson).toBe('[]');
+    });
+
+    it('supports lateral moves (same level, different role)', () => {
+      const id = seed({ level: 'IC' });
+      employees.promote({
+        employeeId: id,
+        roleId: 'senior-data-engineer',
+        level: 'IC',
+        title: 'Senior Data Engineer',
+        roleMdSha: 'sha-data',
+        toolsAllowed: [],
+        toolsDenied: [],
+      });
+      expect(employees.getById(id)?.title).toBe('Senior Data Engineer');
+      expect(employees.getById(id)?.level).toBe('IC');
+    });
+
+    it('supports down-moves (re-roling a manager back into IC work)', () => {
+      const id = seed({ level: 'management' });
+      employees.promote({
+        employeeId: id,
+        roleId: 'principal-engineer',
+        level: 'IC',
+        title: 'Principal Engineer',
+        roleMdSha: 'sha-pe',
+        toolsAllowed: [],
+        toolsDenied: [],
+      });
+      expect(employees.getById(id)?.level).toBe('IC');
+    });
+
+    it('does NOT touch other employees in the same company', () => {
+      const a = seed({ name: 'Alice' });
+      const b = seed({ name: 'Bob' });
+      const bSnapshot = employees.getById(b);
+      employees.promote({
+        employeeId: a,
+        roleId: 'lead-engineer',
+        level: 'lead',
+        title: 'Lead Engineer',
+        roleMdSha: 'sha-x',
+        toolsAllowed: [],
+        toolsDenied: [],
+      });
+      expect(employees.getById(b)).toEqual(bSnapshot);
+    });
+
+    it('is a no-op when the id does not exist (does not throw)', () => {
+      expect(() =>
+        employees.promote({
+          employeeId: 'definitely-not-real',
+          roleId: 'r',
+          level: 'IC',
+          title: 't',
+          roleMdSha: 's',
+          toolsAllowed: [],
+          toolsDenied: [],
+        }),
+      ).not.toThrow();
+    });
+
+    it('round-trips a tools_allowed array containing duplicates verbatim', () => {
+      const id = seed();
+      employees.promote({
+        employeeId: id,
+        roleId: 'r',
+        level: 'IC',
+        title: 't',
+        roleMdSha: 's',
+        toolsAllowed: ['browse', 'browse', 'context7'],
+        toolsDenied: [],
+      });
+      // Repo does NOT dedup — caller responsibility (matches create()).
+      expect(JSON.parse(employees.getById(id)?.toolsAllowedJson ?? '[]')).toEqual([
+        'browse',
+        'browse',
+        'context7',
+      ]);
+    });
+  });
 });

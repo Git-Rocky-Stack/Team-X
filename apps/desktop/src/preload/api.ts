@@ -79,6 +79,9 @@ import type {
   DashboardEvent,
   DashboardEventListener,
   DetachFileRequest,
+  EmployeesPromoteRequest,
+  EmployeesPromoteResponse,
+  EmployeesSetManagerRequest,
   EndMeetingResponse,
   FireEmployeeRequest,
   Goal,
@@ -187,6 +190,9 @@ const CHANNELS = {
   employeesList: 'employees.list',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
+  // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
+  employeesPromote: 'employees.promote',
+  employeesSetManager: 'employees.setManager',
   // Org chart (Phase 2 — M9; restored Phase 5.6 M-C step c)
   orgchartGet: 'orgchart.get',
   chatSend: 'chat.send',
@@ -325,6 +331,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       create: (req: HireEmployeeRequest) =>
         ipc.invoke(CHANNELS.employeesCreate, req) as Promise<HireEmployeeResponse>,
       fire: (req: FireEmployeeRequest) => ipc.invoke(CHANNELS.employeesFire, req) as Promise<void>,
+      promote: (req: EmployeesPromoteRequest) =>
+        ipc.invoke(CHANNELS.employeesPromote, req) as Promise<EmployeesPromoteResponse>,
+      setManager: (req: EmployeesSetManagerRequest) =>
+        ipc.invoke(CHANNELS.employeesSetManager, req) as Promise<void>,
     },
     orgchart: {
       get: (companyId: string) =>

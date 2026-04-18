@@ -44,6 +44,39 @@ export interface CreateEmployeeInput {
   isSystem?: boolean;
 }
 
+/**
+ * Input for the `promote` repo method (Phase 5.6 M-C step d — restores
+ * Cluster B per audit row 2.19). The handler resolves the new role spec
+ * via the role-loader and projects the relevant fields onto this shape;
+ * the repo stays pure SQL and does not import the role-loader.
+ *
+ * `name` is intentionally absent — promotes are role changes, not rename
+ * operations. Callers that want to rename in the same UI flow issue a
+ * follow-up `employees.update` (a future channel) or call the repo's
+ * forthcoming `rename` method directly.
+ *
+ * `tools_allowed_json` / `tools_denied_json` are stored as JSON text;
+ * the repo serializes the supplied string arrays the same way `create`
+ * does, keeping the column-shape contract identical between hire and
+ * promote.
+ */
+export interface PromoteEmployeeInput {
+  /** The employee row id to mutate. Caller validates the row exists + is non-system before invoking. */
+  employeeId: string;
+  /** The role id from the role-pack catalog the employee is promoted into. */
+  roleId: string;
+  /** The level frontmatter value of the new role (e.g., 'management'). */
+  level: string;
+  /** The role-pack `name` frontmatter value, used as the employee's display title. */
+  title: string;
+  /** SHA-256 of the new role.md file contents (rotates on every role-pack edit). */
+  roleMdSha: string;
+  /** Tool-id allowlist from the new role's frontmatter. Persisted as JSON. */
+  toolsAllowed: string[];
+  /** Tool-id blocklist from the new role's frontmatter. Persisted as JSON. */
+  toolsDenied: string[];
+}
+
 type EmployeesDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export function createEmployeesRepo<TRunResult>(db: EmployeesDb<TRunResult>) {
@@ -141,6 +174,36 @@ export function createEmployeesRepo<TRunResult>(db: EmployeesDb<TRunResult>) {
      */
     updateStatus(id: string, status: string): void {
       db.update(employees).set({ status }).where(eq(employees.id, id)).run();
+    },
+
+    /**
+     * Promote (or laterally re-role) an employee — atomic UPDATE that
+     * swaps the role-bound columns in place: `roleId`, `level`, `title`,
+     * `roleMdSha`, `toolsAllowedJson`, `toolsDeniedJson`. Phase 5.6 M-C
+     * step d — restores Cluster B per audit row 2.19.
+     *
+     * Pure SQL — does NOT touch the org-edges table. If the level change
+     * implies a different reporting line, the IPC handler issues a
+     * follow-up `employees.setManager` call (or the renderer surfaces
+     * the request via the manager-picker UI).
+     *
+     * No-op when the id does not exist — no error, no throw — to mirror
+     * `updateStatus`. The IPC-layer caller is expected to `getById`
+     * first and surface a 404-style error before reaching this layer.
+     * The companion `promote` IPC handler (M-C step d) does exactly that.
+     */
+    promote(input: PromoteEmployeeInput): void {
+      db.update(employees)
+        .set({
+          roleId: input.roleId,
+          level: input.level,
+          title: input.title,
+          roleMdSha: input.roleMdSha,
+          toolsAllowedJson: JSON.stringify(input.toolsAllowed),
+          toolsDeniedJson: JSON.stringify(input.toolsDenied),
+        })
+        .where(eq(employees.id, input.employeeId))
+        .run();
     },
 
     /**

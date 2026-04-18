@@ -181,6 +181,90 @@ export interface FireEmployeeRequest {
   employeeId: string;
 }
 
+/**
+ * Request payload for `employees.promote` (Phase 5.6 M-C step d — restores
+ * Cluster B per audit row 2.19). Promotes an existing employee into a
+ * different role from the role-pack catalog. The handler resolves the
+ * `newRoleId` against the live role-loader, refuses framework-internal
+ * roles (`level === 'system'`), refuses to mutate framework-internal
+ * employees (`is_system === true`, mirrors `employees.fire` defense),
+ * and updates the employee row's `roleId` / `level` / `title` /
+ * `roleMdSha` / `tools_allowed_json` / `tools_denied_json` columns
+ * atomically. The `name` field is preserved — promotes are role
+ * changes, not rename operations.
+ *
+ * The handler emits an `employee.promoted` bus event AFTER the durable
+ * row update so renderer caches (org-chart, employee list, hire dialog
+ * Reports-to picker) can invalidate (architectural invariant #11).
+ *
+ * Both up-promotes (IC → Lead → Management) and lateral / down-promotes
+ * are supported. The org-chart edge graph is NOT touched by a promote;
+ * if the new level changes the reporting line, the caller must follow
+ * up with an `employees.setManager` call.
+ */
+export interface EmployeesPromoteRequest {
+  /** The employee row id to promote. Must reference a non-system, live row. */
+  employeeId: string;
+  /**
+   * The role id from the role-pack catalog to promote into. Resolved via
+   * the role-loader at handler time; missing / framework-internal roles
+   * surface as a thrown IPC.
+   */
+  newRoleId: string;
+}
+
+/**
+ * Response from `employees.promote`. Returns the full pre/post snapshot
+ * so the renderer can render the change inline (e.g., "Promoted from
+ * Senior Fullstack Engineer to Engineering Manager") without a
+ * follow-up `employees.list` round-trip. Mirrors the
+ * `EmployeePromotedPayload` event shape so audit-view chips and toast
+ * rendering share one projection contract.
+ */
+export interface EmployeesPromoteResponse {
+  employeeId: string;
+  previousRoleId: string;
+  newRoleId: string;
+  previousLevel: string;
+  newLevel: string;
+  previousTitle: string;
+  newTitle: string;
+}
+
+/**
+ * Request payload for `employees.setManager` (Phase 5.6 M-C step d —
+ * restores Cluster B per audit row 2.20). Sets or clears the org-edge
+ * pointing AT the employee (i.e., the report side of the relationship).
+ *
+ * `managerId === null` is the documented "detach from tree / make root"
+ * shape — the handler dispatches to `orgEdgesRepo.removeByReport` and
+ * the report becomes a graph root on the next `orgchart.get` projection.
+ * `managerId !== null` is the upsert shape — the handler dispatches to
+ * `orgEdgesRepo.setManager`, which has built-in `wouldCycle` rejection
+ * so a request that would close a directed cycle in the reporting graph
+ * fails closed with a friendlier error message before any SQL writes.
+ *
+ * Same defense-in-depth as `employees.fire` / `employees.promote`: the
+ * handler refuses framework-internal employees on either side of the
+ * edge (manager OR report), and refuses cross-company edges (manager
+ * and report must share a `companyId`).
+ *
+ * Emits `employee.managerSet` AFTER the durable write so renderer org-
+ * tree caches invalidate (architectural invariant #11). The previous
+ * manager id is included in the payload so the renderer can animate
+ * the move on the indented tree view rather than a hard re-render.
+ */
+export interface EmployeesSetManagerRequest {
+  /** The report — the employee whose manager edge is being set or cleared. */
+  employeeId: string;
+  /**
+   * The new manager id, or `null` to detach the report (make them a
+   * graph root). When non-null, the handler dispatches `setManager`
+   * (upsert) — when null, the handler dispatches `removeByReport`.
+   */
+  managerId: string | null;
+}
+
 export interface ListChatRequest {
   threadId: string;
 }
@@ -1174,6 +1258,19 @@ export interface IpcContract {
     // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
     response: void;
   };
+  // Org chart write-side channels (Phase 2 — M9; restored Phase 5.6 M-C step d
+  // per audit rows 2.19 + 2.20). `promote` swaps the employee's role-pack
+  // role; `setManager` upserts (or clears) the org-edge whose report side
+  // is the employee. Both emit bus events per architectural invariant #11.
+  'employees.promote': {
+    request: EmployeesPromoteRequest;
+    response: EmployeesPromoteResponse;
+  };
+  'employees.setManager': {
+    request: EmployeesSetManagerRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
   // Org chart channel (Phase 2 — M9; restored Phase 5.6 M-C step c per audit row 2.21)
   'orgchart.get': {
     request: OrgchartGetRequest;
@@ -1659,6 +1756,30 @@ export interface TeamXApi {
      * if the id does not resolve to a live row.
      */
     fire(req: FireEmployeeRequest): Promise<void>;
+
+    /**
+     * Promote an employee into a different role from the role-pack
+     * catalog. The handler resolves the new role spec, refuses
+     * framework-internal roles + employees, updates the row's
+     * roleId/level/title/roleMdSha/tools_*_json columns atomically,
+     * and emits an `employee.promoted` bus event. Returns the full
+     * pre/post snapshot so the renderer can render the change inline
+     * without a follow-up `employees.list` round-trip. Phase 5.6
+     * M-C step d — restores Cluster B per audit row 2.19.
+     */
+    promote(req: EmployeesPromoteRequest): Promise<EmployeesPromoteResponse>;
+
+    /**
+     * Set or clear the org-edge pointing at the given employee
+     * (the report). `managerId !== null` upserts the edge via
+     * `orgEdgesRepo.setManager` (with `wouldCycle` rejection);
+     * `managerId === null` clears it via `removeByReport`, making
+     * the report a graph root. Refuses framework-internal employees
+     * on either side and refuses cross-company edges. Emits an
+     * `employee.managerSet` bus event after the durable write.
+     * Phase 5.6 M-C step d — restores Cluster B per audit row 2.20.
+     */
+    setManager(req: EmployeesSetManagerRequest): Promise<void>;
   };
   orgchart: {
     /**

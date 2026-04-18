@@ -70,6 +70,10 @@ class FakeEmployeesRepo implements IpcEmployeesRepo {
   delete(id: string): void {
     this.rows = this.rows.filter((r) => r.id !== id);
   }
+
+  promote(): void {
+    throw new Error('FakeEmployeesRepo.promote: unused by orgchart.get tests');
+  }
 }
 
 class FakeOrgEdgesRepo implements IpcOrgEdgesRepo {
@@ -81,6 +85,21 @@ class FakeOrgEdgesRepo implements IpcOrgEdgesRepo {
 
   listByCompany(companyId: string): OrgEdgeRow[] {
     return this.rows.filter((r) => r.companyId === companyId);
+  }
+
+  // Write-side methods unused by orgchart.get tests — step d's
+  // employees-set-manager-handlers.test.ts hand-rolls its own fake.
+  getByReport(): OrgEdgeRow | null {
+    throw new Error('FakeOrgEdgesRepo.getByReport: unused by orgchart.get tests');
+  }
+  setManager(): string {
+    throw new Error('FakeOrgEdgesRepo.setManager: unused by orgchart.get tests');
+  }
+  removeByReport(): void {
+    throw new Error('FakeOrgEdgesRepo.removeByReport: unused by orgchart.get tests');
+  }
+  wouldCycle(): boolean {
+    throw new Error('FakeOrgEdgesRepo.wouldCycle: unused by orgchart.get tests');
   }
 }
 

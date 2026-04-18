@@ -66,6 +66,10 @@ const REQUEST_CHANNELS = [
   'employees.list',
   'employees.create',
   'employees.fire',
+  // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d
+  // per audit rows 2.19 + 2.20). Both emit bus events per invariant #11.
+  'employees.promote',
+  'employees.setManager',
   // Org chart (Phase 2 — M9; restored Phase 5.6 M-C step c per audit row 2.21)
   'orgchart.get',
   'chat.send',
@@ -222,6 +226,23 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('employees.fire', async (_event, request: { employeeId: string }) => {
     return handlers.employeesFire(request);
   });
+
+  // Org chart write-side handlers (Phase 2 — M9; restored Phase 5.6 M-C step d).
+  // promote: atomic role swap; setManager: upsert / clear org-edge with
+  // cycle rejection. Both emit `employee.*` bus events per invariant #11.
+  ipcMain.handle(
+    'employees.promote',
+    async (_event, request: import('@team-x/shared-types').EmployeesPromoteRequest) => {
+      return handlers.employeesPromote(request);
+    },
+  );
+
+  ipcMain.handle(
+    'employees.setManager',
+    async (_event, request: import('@team-x/shared-types').EmployeesSetManagerRequest) => {
+      return handlers.employeesSetManager(request);
+    },
+  );
 
   // Org chart handler (Phase 2 — M9; restored Phase 5.6 M-C step c).
   // Returns the full projection (employees + edges + rootIds) in one round-trip.

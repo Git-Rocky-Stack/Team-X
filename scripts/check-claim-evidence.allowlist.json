@@ -20,22 +20,6 @@
       "reason": "Cluster A multi-company CRUD soft-delete (alongside companies.archive which IS shipped)."
     },
     {
-      "claim": "employees.promote",
-      "kind": "ipc",
-      "auditRow": "2.19",
-      "disposition": "restore",
-      "owner": "Phase 5.6 M-C",
-      "reason": "Cluster B (M9 org chart hire/fire/promote)."
-    },
-    {
-      "claim": "employees.setManager",
-      "kind": "ipc",
-      "auditRow": "2.20",
-      "disposition": "restore",
-      "owner": "Phase 5.6 M-C",
-      "reason": "Cluster B (M9 org chart) — reporting line edit."
-    },
-    {
       "claim": "mcp.add",
       "kind": "ipc",
       "auditRow": "10.37",

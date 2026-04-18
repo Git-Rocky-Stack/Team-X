@@ -32,7 +32,9 @@ export type EventType =
   | 'copilot.expired'
   | 'copilot.dismissed'
   | 'company.archived'
-  | 'company.created';
+  | 'company.created'
+  | 'employee.promoted'
+  | 'employee.managerSet';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -461,6 +463,58 @@ export interface CompanyCreatedPayload {
   systemCopilotEmployeeId: string;
   /** Wall-clock timestamp in ms when the create handler wrote the row. */
   createdAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Employee lifecycle event payloads (Phase 5.6 M-C step d — restores Cluster B
+// per audit rows 2.19 + 2.20)
+//
+// `employee.promoted` (audit row 2.19) — emitted by `employees.promote` AFTER
+// the row's roleId / level / title / roleMdSha / tools_*_json columns are
+// updated in place. Carries both the `previousRoleId` / `previousLevel`
+// snapshot AND the post-promote `newRoleId` / `newLevel` so audit-view chips
+// can render the full delta without a follow-up `employees.list` round-trip.
+//
+// `employee.managerSet` (audit row 2.20) — emitted by `employees.setManager`
+// AFTER the org-edge upsert (or removal, when `managerId === null`). The
+// `previousManagerId` is included so the renderer can animate the move on
+// the indented org-tree view; `null` on either field means the report was
+// previously / is now a graph root (no manager edge).
+//
+// Both payloads satisfy architectural invariant #11 — IPC channels that
+// mutate state must emit a bus event so renderer caches invalidate.
+// ---------------------------------------------------------------------------
+
+export interface EmployeePromotedPayload {
+  /** The promoted employee id. */
+  employeeId: string;
+  /** The role id the employee held BEFORE the promote. */
+  previousRoleId: string;
+  /** The role id the employee holds NOW. */
+  newRoleId: string;
+  /** The level the employee held BEFORE the promote (e.g., 'lead'). */
+  previousLevel: string;
+  /** The level the employee holds NOW (e.g., 'management'). */
+  newLevel: string;
+  /** The role title the employee held BEFORE the promote. */
+  previousTitle: string;
+  /** The role title the employee holds NOW (matches the new role-pack `name` frontmatter). */
+  newTitle: string;
+  /** Wall-clock timestamp in ms when the promote handler wrote the row. */
+  promotedAt: number;
+}
+
+export interface EmployeeManagerSetPayload {
+  /** The report — the employee whose manager edge was set or cleared. */
+  employeeId: string;
+  /** Companion company-scope id (matches the `companyId` on the DashboardEvent envelope). */
+  companyId: string;
+  /** The new manager id, or null if the report was detached (made a graph root). */
+  managerId: string | null;
+  /** The previous manager id, or null if the report was previously a graph root. */
+  previousManagerId: string | null;
+  /** Wall-clock timestamp in ms when the setManager handler wrote the row. */
+  setAt: number;
 }
 
 /**

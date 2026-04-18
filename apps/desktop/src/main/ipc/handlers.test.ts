@@ -177,6 +177,17 @@ class FakeEmployeesRepo implements IpcEmployeesRepo {
       list.filter((r) => r.id !== id),
     );
   }
+
+  promote(input: import('../db/repos/employees.js').PromoteEmployeeInput): void {
+    const row = this.byId.get(input.employeeId);
+    if (!row) return;
+    (row as { roleId: string }).roleId = input.roleId;
+    (row as { level: string }).level = input.level;
+    (row as { title: string }).title = input.title;
+    (row as { roleMdSha: string }).roleMdSha = input.roleMdSha;
+    (row as { toolsAllowedJson: string }).toolsAllowedJson = JSON.stringify(input.toolsAllowed);
+    (row as { toolsDeniedJson: string }).toolsDeniedJson = JSON.stringify(input.toolsDenied);
+  }
 }
 
 class FakeThreadsRepo implements IpcThreadsRepo {
