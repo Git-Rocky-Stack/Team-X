@@ -117,8 +117,9 @@
   "activeSubMilestone": {
     "id": "M-C",
     "name": "Backend Backfill",
-    "status": "queued — head-of-queue",
-    "nextSession": "Open M-C T0 per current-task.json — restore the 15 P0 RESTORE rows (Cluster A 7: companies.create/update/delete IPC + handlers + ensureSystemAgent/Copilot bootstrap on create; Cluster B 8: org_edges migration 0013 + cycle-detect helper + employees.fire/promote/setManager + orgchart.get IPC + repos) plus selected P1/P2 RESTORE rows per audit §20.2 / §20.3. M-E safeguards now LIVE: every M-C commit runs under the conformance CI gate + pre-commit claim-evidence hook + DoD template + Loki verifiedBy contract. Estimate 5–7d + 3d buffer. As restoration lands, the corresponding scripts/check-claim-evidence.allowlist.json entries shrink — M-G ships with the allowlist deleted (workflow flips to --strict mode)."
+    "status": "in progress — step (a) Migration 0013 (org_edges table) SHIPPED 2026-04-17 (atomic commit f417a18); steps (b)-(e) remain. M-E safeguards passed first M-C proof — S2 conformance gate green on f417a18 (86 verified / 9 allowlisted / 0 UNALLOWED), S3 pre-commit hook ran clean, S4 verifiedBy populated on the paired chore(loki) ledger. +10 unit tests (1237 → 1247).",
+    "nextSession": "Continue M-C T0 with step (b) — companies.create IPC + handler + repo extension calling ensureSystemAgent + ensureSystemCopilot bootstrap (matches Phase 1 seedIfEmpty + M33 F4 post-restore sweep). Cluster A foundation. Allowlist shrinkage starts here — companies.create entry deleted from scripts/check-claim-evidence.allowlist.json in lockstep. After step (b): step (c) org-edges repo + cycle-detect helper + orgchart.get IPC; step (d) employees.promote + setManager; step (e) companies.update + delete. Each step is its own atomic + ledger commit per S4 contract.",
+    "stepsShippedSummary": "step (a) shipped — Migration 0013 (org_edges table). Steps (b)-(e) remain."
   },
   "previousSubMilestone": {
     "id": "M-E",

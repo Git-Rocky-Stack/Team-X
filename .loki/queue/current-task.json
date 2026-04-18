@@ -10,6 +10,28 @@
   "title": "Phase 5.6 M-C T0 — Backend backfill: Cluster A multi-company CRUD + Cluster B M9 org chart + selected P1/P2 RESTORE rows per audit §20.2/§20.3",
   "status": "queued — head-of-queue for the Phase 5.6 sprint sequence (M-E safeguards now LIVE on CI + pre-commit + DoD template + Loki verifiedBy contract)",
   "predecessor": "Phase 5.6 M-E (Process Safeguards) SHIPPED 2026-04-17 — atomic commit e4f681a + paired ledger. Six safeguards S1–S6 active: milestone DoD template + CI conformance check + pre-commit claim-evidence hook + Loki verifiedBy field + branch policy + quarterly re-audit cadence. M-A audit (414 rows, commit 1f3c432) + M-B triage (41 gap rows disposition-assigned, commit 6b5d481) provide authoritative restore scope.",
+  "stepsShipped": [
+    {
+      "step": "a",
+      "name": "Migration 0013 (org_edges table)",
+      "shippedAt": "2026-04-17T00:00:00Z",
+      "atomicCommit": "f417a18",
+      "ledgerCommit": "pending-this-ledger-commit",
+      "verifiedBy": [
+        "apps/desktop/src/main/db/migrations/0013_org_edges.sql (NEW, hand-authored to match 0011 inline-FK convention)",
+        "apps/desktop/src/main/db/migrations/meta/_journal.json (idx 13 entry, timestamp 1777094400000)",
+        "apps/desktop/src/main/db/schema.ts (orgEdges sqliteTable + composite index_org_edges_company_manager)",
+        "apps/desktop/src/main/db/0013-org-edges-migration.test.ts (NEW, 10 unit tests pinning shape + UNIQUE + CASCADE + FK enforcement)",
+        "atomic commit f417a18 + paired chore(loki) ledger",
+        "vitest 1247/1247 in 19.33s (1237 M-E baseline + 10 new migration tests)",
+        "audit:claims 86 verified / 9 allowlisted / 0 UNALLOWED out of 95 (allowlist unchanged — step (a) doesn't restore IPC channels)",
+        "typecheck clean across 6 packages",
+        "lint 0 errors / 24 warnings (baseline preserved)"
+      ],
+      "deliverable": "Foundation migration for Cluster B (M9 Org Chart, audit row 2.16, P0). Restores org_edges table with two design upgrades over the worktree-phase-2-the-org reference SQL: (1) ON DELETE CASCADE on every FK (worktree had bare FKs), keeps hard-deletes safe when M-C step e ships companies.delete; (2) composite (company_id, manager_id) index for orgchart.get tree projection (M-C step c). UNIQUE on report_id enforces single-manager-per-report at SQL layer; cycle prevention deferred to step c repo layer (wouldCycle helper). Hand-authored migration SQL because drizzle-kit auto-emit dumps every table — repo skips snapshots after 0002 by long-standing convention (only 0000/0001/0002 snapshots exist in meta/). Drizzle-kit's emitted snapshot was deleted to match the convention.",
+      "nextStep": "step (b) — companies.create IPC + handler + repo extension calling ensureSystemAgent + ensureSystemCopilot bootstrap (matches Phase 1 seedIfEmpty + M33 F4 post-restore sweep)"
+    }
+  ],
   "interimDoR": [
     "M-E (Process Safeguards) SHIPPED — DONE 2026-04-17 (commit e4f681a)",
     "Conformance CI gate live (.github/workflows/conformance.yml + pnpm audit:claims green: 86 verified / 9 allowlisted / 0 UNALLOWED)",
