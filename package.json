@@ -27,6 +27,9 @@
     "dist:publish": "pnpm -F @team-x/desktop dist:publish",
     "sign:pack": "node scripts/sign-pack.mjs strategia-official",
     "sign:pack:keygen": "node scripts/generate-pack-key.mjs strategia-official",
+    "audit:claims": "node scripts/check-claim-evidence.mjs",
+    "audit:claims:strict": "node scripts/check-claim-evidence.mjs --strict",
+    "audit:claims:json": "node scripts/check-claim-evidence.mjs --json",
     "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules"
   },
   "devDependencies": {

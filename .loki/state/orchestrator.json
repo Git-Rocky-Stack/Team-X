@@ -501,7 +501,17 @@
         "gapRowsTotal": 41
       },
       "clusterA_restoreRows": ["2.1", "2.2", "2.3", "2.4", "10.12", "10.13", "10.15"],
-      "clusterB_restoreRows": ["2.16", "2.18", "2.19", "2.20", "2.21", "2.22", "10.29", "10.30", "10.47"],
+      "clusterB_restoreRows": [
+        "2.16",
+        "2.18",
+        "2.19",
+        "2.20",
+        "2.21",
+        "2.22",
+        "10.29",
+        "10.30",
+        "10.47"
+      ],
       "crossCheck": {
         "executed": true,
         "executor": "Claude Opus 4.7 (1M context)",
@@ -522,9 +532,7 @@
       "commit": "1f3c432",
       "ledger": "f040d11",
       "deliverable": "NEW docs/audits/2026-04-17-conformance-audit.md (414 rows). Evidence matrix per plan §4 schema covering every CLAUDE.md Phase 1–5 status-block bullet + every IPC channel in the IPC Channels table + every EventType bus event + every settings key + every test-count assertion + role-pack inventory + Drizzle tables + migrations. Per-row columns: claim / phase / milestone / evidence_type / expected_location / evidence_found / status / severity / notes / disposition (blank for M-B). Status values: shipped ✅ / partial ⚠️ / missing ❌ / unverifiable 🔍. Severity: P0 / P1 / P2 / P3. Summary tables §1.1 + §1.2 + §1.3 top-line drift headlines + §1.4 evidence types + §1.5 cross-check status. Cluster A (multi-company architecture, Rocky's locked M7 design) and Cluster B (M9 org chart) identified as the two P0 clusters, both stranded on `worktree-phase-2-the-org`. §18 M-B triage rollup + §18.5 M-F documentation-truth-up corrections enumerated inline.",
-      "filesTouched": [
-        "docs/audits/2026-04-17-conformance-audit.md (NEW, 414 rows)"
-      ],
+      "filesTouched": ["docs/audits/2026-04-17-conformance-audit.md (NEW, 414 rows)"],
       "testsDelta": 0,
       "e2eDelta": 0,
       "verificationGates": {

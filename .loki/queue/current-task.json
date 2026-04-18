@@ -2,6 +2,8 @@
   "taskId": "Phase-5.6-M-E-T0",
   "milestone": "Phase 5.6 M-E",
   "milestoneName": "Process Safeguards",
+  "verifiedBy": null,
+  "verifiedByContract": "Phase 5.6 M-E S4 — verifiedBy is REQUIRED (non-empty string array) when status begins with 'shipped'. Validator: apps/desktop/src/loki-verified-by.test.ts. Schema: .loki/queue/schema.json. Set on ship by populating with concrete evidence artifact paths.",
   "phase": "Phase 5.6 — Reconciliation & Remediation",
   "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
   "planDocSection": "§8 Process Safeguards S1–S6 + §13.2 reorder approval (ships BEFORE M-C/M-D) + §14 Sprint Execution Framework",

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://team-x.local/schemas/loki-queue.json",
+  "title": "Team-X Loki queue schema",
+  "description": "Phase 5.6 M-E S4 — schema for .loki/queue/pending.json and .loki/queue/current-task.json. Adds the verifiedBy field as a HARD requirement on every shipped sub-milestone so the ledger names the concrete evidence artifact (test path, spec path, migration path, CI run URL) that proves the milestone shipped. Enforcement: apps/desktop/src/loki-verified-by.test.ts walks both files and fails CI if any shipped entry lacks a non-empty verifiedBy array. Plan: docs/plans/2026-04-17-team-x-phase-5.6-remediation.md §7 S5.",
+  "definitions": {
+    "verifiedBy": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Concrete evidence artifact path or URL — e.g. 'apps/desktop/src/check-claim-evidence.test.ts (19 tests)', 'apps/desktop/e2e/copilot-ui.spec.ts', 'apps/desktop/src/main/db/migrations/0013_org_edges.sql', 'https://github.com/Git-Rocky-Stack/Team-X/actions/runs/<id>'."
+      },
+      "description": "Non-empty array of evidence artifact identifiers proving the milestone shipped. Required on every entry whose status begins with 'shipped'."
+    },
+    "subMilestone": {
+      "type": "object",
+      "required": ["id", "name", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "estimate": { "type": "string" },
+        "status": { "type": "string", "minLength": 1 },
+        "dor": { "type": "string" },
+        "dod": { "type": "string" },
+        "verifiedBy": { "$ref": "#/definitions/verifiedBy" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "pattern": "^shipped" } } },
+          "then": { "required": ["verifiedBy"] }
+        }
+      ]
+    },
+    "currentTask": {
+      "type": "object",
+      "required": ["taskId", "milestone", "status"],
+      "properties": {
+        "taskId": { "type": "string" },
+        "milestone": { "type": "string" },
+        "status": { "type": "string" },
+        "verifiedBy": {
+          "oneOf": [
+            { "$ref": "#/definitions/verifiedBy" },
+            {
+              "type": "null",
+              "description": "Placeholder before milestone completion — must be populated before status flips to shipped."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "_lifecycle": "Per-task verifiedBy lifecycle: (1) On task open, current-task.json carries verifiedBy: null. (2) On task ship, the atomic+ledger commit pair populates verifiedBy with one OR more concrete artifact identifiers. (3) The shipped sub-milestone's pending.json entry inherits the same verifiedBy array. (4) The orchestrator.json history block records the verifiedBy for posterity. (5) The vitest validator runs on every PR via the standard pnpm test gate — drift cannot land without a paired CI failure.",
+    "_examples": {
+      "phase56_M_A": ["docs/audits/2026-04-17-conformance-audit.md (414 rows)"],
+      "phase56_M_B": [
+        "docs/audits/2026-04-17-conformance-audit.md §17 cross-check + §20 rollup",
+        "atomic commit 6b5d481"
+      ],
+      "phase56_M_E": [
+        "scripts/check-claim-evidence.mjs",
+        "apps/desktop/src/check-claim-evidence.test.ts (19 tests)",
+        ".github/workflows/conformance.yml",
+        ".husky/pre-commit",
+        "docs/templates/milestone-dod.md",
+        "CONTRIBUTING.md §Process Safeguards"
+      ]
+    }
+  }
+}

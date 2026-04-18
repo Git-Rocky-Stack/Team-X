@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Phase 5.6 M-E S3 — pre-commit claim-evidence hook.
+#
+# Fast-path of the S2 CI conformance check, scoped to ONLY the structured
+# claims that changed in the staged CLAUDE.md diff. Keeps local commits
+# snappy (<2s on a warm cache) while still catching the "edited a CLAUDE.md
+# claim without on-disk evidence" failure mode at the earliest possible
+# moment — before a commit even lands.
+#
+# Activate locally with:
+#     git config core.hooksPath .husky
+#
+# (One-time per clone. The CONTRIBUTING.md §Process Safeguards section
+# documents this.)
+#
+# Override (with reason) for emergency commits:
+#     git commit --no-verify -m "..."
+#
+# Plan: docs/plans/2026-04-17-team-x-phase-5.6-remediation.md §7 S2.
+# Engine: scripts/check-claim-evidence.mjs.
+
+set -e
+
+# Skip silently if Node is not on PATH — the hook is best-effort. CI
+# always runs the full audit on push/PR via .github/workflows/conformance.yml,
+# so a missing local Node does not let drift escape into main.
+if ! command -v node >/dev/null 2>&1; then
+  exit 0
+fi
+
+# Skip if CLAUDE.md is not in the staged diff — nothing for the hook to do.
+if ! git diff --cached --name-only --diff-filter=AMR | grep -q "^CLAUDE\.md$"; then
+  exit 0
+fi
+
+# Run the engine in --staged mode. The engine itself diffs CLAUDE.md
+# against HEAD and limits the audit to ONLY the claims that appear in the
+# diff. Exits 0 if no structured claims changed.
+node scripts/check-claim-evidence.mjs --staged

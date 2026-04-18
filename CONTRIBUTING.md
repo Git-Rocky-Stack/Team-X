@@ -14,6 +14,9 @@ Thank you for your interest in contributing to Team-X. This guide covers everyth
 - [Testing](#testing)
 - [Contributing Role Packs](#contributing-role-packs)
 - [IPC Channel Conventions](#ipc-channel-conventions)
+- [Process Safeguards](#process-safeguards)
+- [Branch Policy](#branch-policy)
+- [Quarterly Conformance Re-Audit](#quarterly-conformance-re-audit)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -333,6 +336,122 @@ All IPC channels follow a typed contract defined in `packages/shared-types/src/i
 5. **Create a React hook** in `src/renderer/src/hooks/`
 
 Channel naming: `namespace.verb` (e.g., `vault.upload`, `meetings.call`).
+
+---
+
+## Process Safeguards
+
+> Phase 5.6 M-E shipped a six-point safeguard suite (S1–S6) that catches CLAUDE.md/reality drift before it merges. Drift was allowed to accumulate for 10+ milestones before the M-A conformance audit ([`docs/audits/2026-04-17-conformance-audit.md`](docs/audits/2026-04-17-conformance-audit.md)) caught it; the safeguards make the same drift impossible to recur.
+>
+> Plan: [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](docs/plans/2026-04-17-team-x-phase-5.6-remediation.md) §7.
+
+| ID | Safeguard | Lives at | Enforcement |
+|---|---|---|---|
+| **S1** | Milestone DoD template | [`docs/templates/milestone-dod.md`](docs/templates/milestone-dod.md) | Every milestone exit checklist (M-C onward + every future phase) |
+| **S2** | CI conformance check | [`.github/workflows/conformance.yml`](.github/workflows/conformance.yml) + [`scripts/check-claim-evidence.mjs`](scripts/check-claim-evidence.mjs) | Runs on every push + PR via `pnpm audit:claims`; fails on any unallowed missing-evidence claim |
+| **S3** | Pre-commit claim-evidence hook | [`.husky/pre-commit`](.husky/pre-commit) | Local fast-path of S2 scoped to staged CLAUDE.md diffs |
+| **S4** | Loki ledger `verifiedBy` field | [`.loki/queue/schema.json`](.loki/queue/schema.json) + [`apps/desktop/src/loki-verified-by.test.ts`](apps/desktop/src/loki-verified-by.test.ts) | Every shipped sub-milestone names concrete evidence artifacts; vitest fails if missing |
+| **S5** | Branch policy | This file's [§Branch Policy](#branch-policy) section | Stranded `worktree-*` branches caught at the 14-day mark; merge-or-delete by 30 days |
+| **S6** | Quarterly re-audit cadence | [`docs/audits/SCHEDULE.md`](docs/audits/SCHEDULE.md) + this file's [§Quarterly Conformance Re-Audit](#quarterly-conformance-re-audit) section | Re-audit every 3 months OR every 5 milestones, whichever first |
+
+### Engaging the safeguards locally
+
+```bash
+# One-time per clone — point Git at the husky-style hooks directory.
+git config core.hooksPath .husky
+
+# Manually run the full conformance check (matches what CI runs).
+pnpm audit:claims
+
+# Strict mode (zero allowlist) — used at M-G ship and at quarterly re-audits.
+pnpm audit:claims:strict
+
+# JSON output for tooling.
+pnpm audit:claims:json > audit-claims.json
+```
+
+### When the conformance check fails
+
+If `pnpm audit:claims` reports an unallowed gap, you have three paths:
+
+1. **Add the evidence.** Implement the IPC handler / bus event / migration / etc. that the claim requires. Re-run.
+2. **Allowlist the gap with an audit row.** Add an entry to [`scripts/check-claim-evidence.allowlist.json`](scripts/check-claim-evidence.allowlist.json) with `claim`, `auditRow`, `disposition`, `owner`, `reason`. Open a paired audit-doc row first — the allowlist is NOT a free pass, it is a cross-reference to a tracked gap.
+3. **Remove the claim from CLAUDE.md.** If the feature was never actually built and never will be, delete the row from CLAUDE.md and add an `M-F docs-truth-up` style explanation in the commit message.
+
+`--no-verify` is reserved for emergency commits and MUST be paired with a follow-up commit that addresses the root cause.
+
+---
+
+## Branch Policy
+
+> **S5 of the Phase 5.6 M-E process safeguards suite.** The root cause of the M7/M9 drift surfaced in the M-A conformance audit was a stranded `worktree-phase-2-the-org` branch that everyone assumed had been merged but never was. This policy makes the same failure mode impossible to recur.
+
+### Long-lived branches
+
+- `main` — the primary development branch. All ship traffic flows through here.
+- `feat/<description>` — short-lived feature branches. Target lifetime: ≤2 weeks.
+- `fix/<description>` — short-lived bug-fix branches. Target lifetime: ≤1 week.
+- `worktree-*` prefix — RESERVED for short-lived scratch / experiment branches under `git worktree`. **NOT** a long-lived integration target.
+
+### Stranded-branch detection
+
+- Any branch with un-merged commits older than **14 days** triggers a stale-branch warning at the next quarterly conformance re-audit.
+- A merge plan or deletion is required before the **30-day** mark.
+- Branches preserved for evidence (e.g. `worktree-phase-2-the-org` during Phase 5.6 M-A → M-G) are documented in the active phase plan with an explicit deletion gate. They are NOT exempt from the policy — they are exempt by-name with a paper trail.
+
+### Cherry-pick contract
+
+Cherry-picking IS a valid restoration tactic when a branch is stranded but its content is salvageable (Phase 5.5 hotfix used it for the 20 stranded role.md files; Phase 5.6 M-C uses it for Cluster A + Cluster B). Rules:
+
+1. The cherry-pick commit message MUST cite the source SHA AND the audit row that justifies the restoration.
+2. The commit MUST adapt the cherry-picked code to the current main HEAD (no force-merge of stale APIs).
+3. The cherry-pick MUST be paired with a passing test that exercises the restored surface.
+4. If the cherry-pick fails on conflict and the conflict is non-trivial (>20 lines OR involves a renamed module), abandon the cherry-pick and re-implement from scratch with the branch as a reference, not a source.
+
+### Merge-before-delete workflow
+
+Branches are deleted by:
+
+1. Merging into `main` (preferred — preserves the commit chain).
+2. OR cherry-picking the salvage-worthy commits into a fresh branch, merging that, then deleting the original (used when the stranded branch's history is too divergent to merge cleanly).
+3. OR explicitly deprecating the branch with a `docs/audits/<date>-branch-deprecation-<name>.md` row that names every commit the project is choosing to drop and the reason.
+
+Path 3 is the LAST RESORT and requires the milestone-completion ledger entry to enumerate the dropped SHAs.
+
+### Stranded-branch sweep cadence
+
+Performed at every quarterly conformance re-audit (S6). Output: a row in the audit doc per branch — name, age, last-touch SHA, owner, recommendation (merge / cherry-pick / deprecate / preserve-with-reason).
+
+---
+
+## Quarterly Conformance Re-Audit
+
+> **S6 of the Phase 5.6 M-E process safeguards suite.** Drift accumulated for 10+ milestones before the first audit caught it; quarterly cycles cap the next remediation at ≤3 months of accumulated drift, not 10+ milestones'.
+
+### Cadence
+
+> **Every 3 months OR every 5 milestones, whichever first.**
+
+The 5-milestone counter is the safety net for fast-shipping seasons. Phase 5 shipped 8 milestones in ~2 weeks; under 3-month-only cadence, a similar burst could ship 10+ milestones before the next audit. The 5-milestone trip wire keeps the audit cycle in lockstep with delivery velocity.
+
+### Schedule
+
+The single source of truth for upcoming audits + audit history lives at [`docs/audits/SCHEDULE.md`](docs/audits/SCHEDULE.md). That doc carries:
+
+- Audit log (date / trigger / audit doc / drift surfaced / remediation)
+- Next scheduled re-audit date + 5-milestone counter state
+- Delta-diff template (re-audits compare against the previous audit, NOT a full re-author)
+
+### Outcome routing
+
+If a re-audit surfaces:
+
+- **≥1 P0 row OR ≥3 P1 rows** → open a Phase 5.6-style remediation playbook (M-A audit → M-B triage → M-E safeguards (already in place — re-verify) → M-C/M-D restore → M-F docs → M-G ship).
+- **<1 P0 + <3 P1** → fold remediation into the next regular phase; track gaps via the audit doc + allowlist.
+
+### Owner
+
+Currently: **Rocky Elsalaymeh** (delegated to Loki/Claude on the day, supervised review). Once Team-X has a deployment cadence with multiple maintainers (Phase 6+), the audit owner rotates per the audit log entry.
 
 ---
 

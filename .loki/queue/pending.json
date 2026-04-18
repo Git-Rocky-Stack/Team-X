@@ -37,13 +37,70 @@
     "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
   },
   "subMilestones": [
-    { "id": "M-A", "name": "Conformance Audit", "estimate": "5d + 2d buffer", "status": "shipped 2026-04-17 — docs/audits/2026-04-17-conformance-audit.md (414 rows); cross-check §17 addendum pending in time-box", "dor": "satisfied by Phase 5.6 kickoff evidence", "dod": "satisfied — audit doc committed + every claim has row + summary table present; §17 cross-check addendum scheduled as amendment commit" },
-    { "id": "M-B", "name": "Triage", "estimate": "1d + 0.5d buffer", "status": "shipped 2026-04-17 — docs/audits/2026-04-17-conformance-audit.md amendment (41 rows disposition-assigned + §17 cross-check 10/10 confirmed + §20 rollup landed); atomic commit 6b5d481 + paired ledger", "dor": "satisfied by M-A Loki exit-KPI", "dod": "satisfied — every gap row has disposition + one-sentence justification; §20 rollup table present; §17 cross-check populated; zero replace dispositions (no superseded design surfaced)" },
-    { "id": "M-E", "name": "Process Safeguards (REORDERED — ships BEFORE M-C/M-D per §13.2)", "estimate": "2–3d + 1d buffer", "status": "queued — head-of-queue", "dor": "M-B Loki exit-KPI closed (this ledger commit)", "dod": "all 6 safeguards S1–S6 committed + documented in CONTRIBUTING.md + positive-control test passing for each safeguard" },
-    { "id": "M-C", "name": "Backend Backfill", "estimate": "5–7d + 3d buffer", "status": "blocked-by-M-E", "dor": "M-E Loki exit-KPI closed + safeguards live on CI", "dod": "every restore row backend-complete + unit tests per IPC + migration applied clean + pnpm typecheck clean + zero Phase 5 regression" },
-    { "id": "M-D", "name": "UI Backfill", "estimate": "5–7d + 3d buffer", "status": "blocked-by-M-C", "dor": "M-C Loki exit-KPI closed", "dod": "every restore row UI-complete + all 5 F10 states (loading/error/empty/disabled/hover) + WCAG AA + invariant #11 bus events wired + E2E for user-facing surface" },
-    { "id": "M-F", "name": "Documentation Truth-Up", "estimate": "2d + 1d buffer", "status": "blocked-by-M-D", "dor": "M-D Loki exit-KPI closed", "dod": "zero claim lacks on-disk evidence + CLAUDE.md in three-bucket format (shipped/deferred/deprecated) + Phase 5.6 retrospective drafted" },
-    { "id": "M-G", "name": "Branch Hygiene + Ship", "estimate": "1d + 0.5d buffer", "status": "blocked-by-M-F", "dor": "M-F Loki exit-KPI closed + audit cross-check shows zero remaining restore rows", "dod": "all 7 DoDs met + worktree-phase-2-the-org deleted local+origin + CHANGELOG [Unreleased] → [1.1.1] + v1.1.0 → v1.1.1 across 7 package.json + v1.1.1 git tag + main pushed + retrospective committed" }
+    {
+      "id": "M-A",
+      "name": "Conformance Audit",
+      "estimate": "5d + 2d buffer",
+      "status": "shipped 2026-04-17 — docs/audits/2026-04-17-conformance-audit.md (414 rows); cross-check §17 addendum pending in time-box",
+      "dor": "satisfied by Phase 5.6 kickoff evidence",
+      "dod": "satisfied — audit doc committed + every claim has row + summary table present; §17 cross-check addendum scheduled as amendment commit",
+      "verifiedBy": [
+        "docs/audits/2026-04-17-conformance-audit.md (414 rows, schema-compliant per plan §4)",
+        "atomic commit 1f3c432 + paired ledger f040d11"
+      ]
+    },
+    {
+      "id": "M-B",
+      "name": "Triage",
+      "estimate": "1d + 0.5d buffer",
+      "status": "shipped 2026-04-17 — docs/audits/2026-04-17-conformance-audit.md amendment (41 rows disposition-assigned + §17 cross-check 10/10 confirmed + §20 rollup landed); atomic commit 6b5d481 + paired ledger",
+      "dor": "satisfied by M-A Loki exit-KPI",
+      "dod": "satisfied — every gap row has disposition + one-sentence justification; §20 rollup table present; §17 cross-check populated; zero replace dispositions (no superseded design surfaced)",
+      "verifiedBy": [
+        "docs/audits/2026-04-17-conformance-audit.md amendment (§17 cross-check 10/10 + §20 disposition rollup, 41 distinct gap rows)",
+        "atomic commit 6b5d481 + paired ledger 61ba84f"
+      ]
+    },
+    {
+      "id": "M-E",
+      "name": "Process Safeguards (REORDERED — ships BEFORE M-C/M-D per §13.2)",
+      "estimate": "2–3d + 1d buffer",
+      "status": "queued — head-of-queue",
+      "dor": "M-B Loki exit-KPI closed (this ledger commit)",
+      "dod": "all 6 safeguards S1–S6 committed + documented in CONTRIBUTING.md + positive-control test passing for each safeguard"
+    },
+    {
+      "id": "M-C",
+      "name": "Backend Backfill",
+      "estimate": "5–7d + 3d buffer",
+      "status": "blocked-by-M-E",
+      "dor": "M-E Loki exit-KPI closed + safeguards live on CI",
+      "dod": "every restore row backend-complete + unit tests per IPC + migration applied clean + pnpm typecheck clean + zero Phase 5 regression"
+    },
+    {
+      "id": "M-D",
+      "name": "UI Backfill",
+      "estimate": "5–7d + 3d buffer",
+      "status": "blocked-by-M-C",
+      "dor": "M-C Loki exit-KPI closed",
+      "dod": "every restore row UI-complete + all 5 F10 states (loading/error/empty/disabled/hover) + WCAG AA + invariant #11 bus events wired + E2E for user-facing surface"
+    },
+    {
+      "id": "M-F",
+      "name": "Documentation Truth-Up",
+      "estimate": "2d + 1d buffer",
+      "status": "blocked-by-M-D",
+      "dor": "M-D Loki exit-KPI closed",
+      "dod": "zero claim lacks on-disk evidence + CLAUDE.md in three-bucket format (shipped/deferred/deprecated) + Phase 5.6 retrospective drafted"
+    },
+    {
+      "id": "M-G",
+      "name": "Branch Hygiene + Ship",
+      "estimate": "1d + 0.5d buffer",
+      "status": "blocked-by-M-F",
+      "dor": "M-F Loki exit-KPI closed + audit cross-check shows zero remaining restore rows",
+      "dod": "all 7 DoDs met + worktree-phase-2-the-org deleted local+origin + CHANGELOG [Unreleased] → [1.1.1] + v1.1.0 → v1.1.1 across 7 package.json + v1.1.1 git tag + main pushed + retrospective committed"
+    }
   ],
   "activeSubMilestone": {
     "id": "M-E",
@@ -56,6 +113,11 @@
     "name": "Triage",
     "shippedAt": "2026-04-17T00:00:00Z",
     "commit": "6b5d481",
+    "ledger": "61ba84f",
+    "verifiedBy": [
+      "docs/audits/2026-04-17-conformance-audit.md amendment (§17 cross-check 10/10 confirmed + §20 disposition rollup, 41 distinct gap rows)",
+      "atomic commit 6b5d481 + paired ledger 61ba84f"
+    ],
     "deliverable": "docs/audits/2026-04-17-conformance-audit.md amendment — 41 distinct gap rows disposition-assigned (27 restore / 14 deprecate / 0 replace); §17 cross-check executed — 10/10 rows re-verified via independent grep/find sweep against main HEAD 8729e40, zero diffs from M-A matrix; §20 rollup table appended with per-cluster scoping (Cluster A 7 rows, Cluster B 8 rows, Cluster C 2 rows, M-E verify-gate 5 rows, M-F docs-only 14 rows); residual risks + escalation triggers documented. Authoritative M-C/M-D/M-E/M-F scoping surface."
   },
   "previousSubMilestones": {
@@ -64,6 +126,10 @@
       "shippedAt": "2026-04-17T00:00:00Z",
       "commit": "1f3c432",
       "ledger": "f040d11",
+      "verifiedBy": [
+        "docs/audits/2026-04-17-conformance-audit.md (414 rows, schema-compliant per plan §4)",
+        "atomic commit 1f3c432 + paired ledger f040d11"
+      ],
       "deliverable": "docs/audits/2026-04-17-conformance-audit.md — 414 rows; 350 shipped, 19 partial, 16 missing, 8 unverifiable; severity rollup 15 P0 / 8 P1 / 10 P2 / 16 P3; Clusters A (multi-company, 7 rows) + B (org chart, 8 rows) both RESTORE candidates stranded on worktree-phase-2-the-org; scope-expansion mini-gate invoked once (Cluster A P1 → P0 per Rocky's design-intent correction)"
     }
   },
