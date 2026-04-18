@@ -1,8 +1,8 @@
 {
   "currentPhase": "REMEDIATION",
-  "currentMilestone": "Phase 5.6 M-E",
-  "milestoneName": "Process Safeguards",
-  "tasksCompleted": 2,
+  "currentMilestone": "Phase 5.6 M-C",
+  "milestoneName": "Backend Backfill",
+  "tasksCompleted": 3,
   "tasksFailed": 0,
   "totalTasks": 7,
   "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
@@ -50,8 +50,8 @@
   "previousMilestone": "M36 T1",
   "previousMilestoneName": "Capability taxonomy enum + shared-types scaffold",
   "previousMilestoneCompletedAt": "2026-04-21T14:00:00Z",
-  "nextMilestone": "Phase 5.6 M-C",
-  "nextMilestoneName": "Backend Backfill — 15 P0 RESTORE rows (Cluster A 7: companies.create/update/delete channels + handlers + ensureSystemAgent/Copilot on create; Cluster B 8: org_edges migration 0013 + cycle-detect helper + employees.promote/setManager/orgchart.get channels) plus selected P1/P2 RESTORE rows per audit §20.2/§20.3. 5–7 day estimate + 3 day buffer. Gated on M-E Loki exit-KPI closed (safeguards must ship first per §13.2 reorder so backfill runs under live CI + pre-commit + DoD template).",
+  "nextMilestone": "Phase 5.6 M-D",
+  "nextMilestoneName": "UI Backfill — restore the renderer surface for Cluster A (WorkspaceSwitcher + CreateCompanyDialog + CompanySettings panel) + Cluster B (org-chart tree UI + drag-to-rearrange + Reports-to manager picker in hire flow) + chat tab enable. Depends on M-C IPC + repo surface. 5–7 day estimate + 3 day buffer. Runs UNDER live M-E safeguards (CI conformance gate + pre-commit hook + DoD template + Loki verifiedBy contract).",
   "tasksInProgress": {},
   "baseline": {
     "unitTests": 1130,
@@ -475,6 +475,80 @@
       },
       "structureCompliance": "All 7 required sections from pending.json targets.phase6T0 present: (1) Overview with theme + goals + non-goals. (2) What ships with surface-deliverable-builds-on table + target metrics. (3) Invariants preserved referencing all 11 existing invariants + explicit list of what Phase 6 does NOT introduce. (4) Success criteria (5 simultaneously-met conditions). (5) Milestone breakdown (6-milestone placeholder M36-M41 with one-line scope + dependency each; no T1+ breakdown materialized per Phase 5 M28 T0 precedent). (6) Acceptance criteria (10 verification-gate items for phase exit). (7) Decisions log scaffold (D15-D23). Plus two extra sections: References (cross-links to Phase 5 design doc + retro + M32/M33/M35 plan docs + CLAUDE.md) + Open questions (Q1-Q4 non-blocking to T0).",
       "themeSelectionEvidence": "Explicit pick per queue note 'Theme selection must be explicit — do not default-pick'. Picked seeds #5 + #7 plus natural companions. Rejected: #1 (needs real-world usage data Team-X doesn't generate by design — zero phone-home invariant #7), #3 (HIGH value but needs own phase for safety/rollback/dry-run primitives), #2/#4/#6 (strong but less evidence-backed for 'next phase' positioning). Final theme title: 'Capabilities & Evidence — Maturing the Intelligence Layer'."
+    },
+    "Phase-5.6-M-E": {
+      "name": "Process Safeguards",
+      "shippedAt": "2026-04-17T00:00:00Z",
+      "commit": "e4f681a",
+      "ledger": "pending-atomic-chore(loki)",
+      "verifiedBy": [
+        "scripts/check-claim-evidence.mjs (S2/S3 engine — 86 verified / 9 allowlisted / 0 UNALLOWED out of 95 on M-E commit e4f681a)",
+        "apps/desktop/src/check-claim-evidence.test.ts (19 vitest unit tests pinning parser + allowlist + summarizer + step-summary)",
+        "apps/desktop/src/loki-verified-by.test.ts (7 vitest unit tests pinning verifiedBy contract on pending.json sub-milestones + previousSubMilestones + current-task)",
+        ".github/workflows/conformance.yml (S2 CI gate — runs `pnpm audit:claims` on push + PR)",
+        ".husky/pre-commit (S3 local fast-path)",
+        "docs/templates/milestone-dod.md (S1 — 8-section claim-evidence-verification chain)",
+        ".loki/queue/schema.json (S4 JSON Schema 2020-12)",
+        "CONTRIBUTING.md §Process Safeguards + §Branch Policy + §Quarterly Re-Audit (T9 + S5 + S6)",
+        "docs/audits/SCHEDULE.md (S6 cadence — next audit 2026-07-17)",
+        "scripts/check-claim-evidence.allowlist.json (9 entries cross-referenced to M-A audit rows; shrinks as M-C/M-D restoration lands)",
+        "atomic commit e4f681a + paired chore(loki) ledger"
+      ],
+      "deliverable": "Six-point process-safeguards suite (S1–S6) shipped per plan §7. The safeguards make Phase 5.6 M-C + M-D + every future phase impossible to drift under by catching claim-vs-evidence divergence automatically in CI + pre-commit + Loki ledger + quarterly cadence. Engine at scripts/check-claim-evidence.mjs parses CLAUDE.md IPC channel table (81 channels across 17 namespaces) + bus events table (14 events) and verifies each via `git grep` cross-referenced to scripts/check-claim-evidence.allowlist.json (9 known gaps from M-A audit). Today: 86 verified / 9 allowlisted / 0 UNALLOWED out of 95. The safeguard's first proof is its own atomic commit running clean — S2 conformance check green on M-E commit per acceptance #ciGate. M-A + M-B verifiedBy backfilled in this commit so the S4 contract holds from day one.",
+      "filesTouched": [
+        "scripts/check-claim-evidence.mjs (NEW, 408 lines — engine)",
+        "scripts/check-claim-evidence.allowlist.json (NEW, 79 lines — known-gaps allowlist cross-referenced to audit rows)",
+        "apps/desktop/src/check-claim-evidence.test.ts (NEW, 244 lines, 19 unit tests)",
+        "apps/desktop/src/loki-verified-by.test.ts (NEW, 112 lines, 7 unit tests)",
+        ".github/workflows/conformance.yml (NEW, 74 lines)",
+        ".husky/pre-commit (NEW, 39 lines)",
+        "docs/templates/milestone-dod.md (NEW, 95 lines)",
+        "docs/audits/SCHEDULE.md (NEW, 75 lines)",
+        ".loki/queue/schema.json (NEW, 73 lines)",
+        "CONTRIBUTING.md (MODIFIED, +119 lines: §Process Safeguards index + §Branch Policy + §Quarterly Re-Audit)",
+        "package.json (MODIFIED, +3 lines: audit:claims / audit:claims:strict / audit:claims:json scripts)",
+        ".loki/queue/pending.json (MODIFIED — M-A + M-B verifiedBy backfilled per S4 contract)",
+        ".loki/queue/current-task.json (MODIFIED — verifiedBy: null slot added per S4 schema)",
+        ".loki/state/orchestrator.json (MODIFIED — surgical biome format pass cleared one pre-existing format-drift row)"
+      ],
+      "testsDelta": "+26 unit (19 claim-evidence + 7 verifiedBy)",
+      "e2eDelta": 0,
+      "verificationGates": {
+        "unitTests": "1237/1237 pass in 21.43s (1187 baseline + 26 M-E + 24 reconciled via better-sqlite3 ABI rebuild post-rebuild from the M-A 23-failure note)",
+        "e2e": "not re-run (M-E is process-only, e2eDeltaEstimate=0, zero main/renderer/IPC/migration surface touched — E2E baseline at 11 specs / 12 Playwright cases preserved)",
+        "lint": "0 errors / 24 warnings (baseline preserved; surgical biome format pass on .loki/state/orchestrator.json cleared one pre-existing format drift row, matching the M35 T1 / T3 precedent)",
+        "typecheck": "clean across 6 packages",
+        "auditClaims": "86 verified / 9 allowlisted / 0 UNALLOWED out of 95 — S2 conformance check GREEN on M-E commit e4f681a (the safeguard's own introduction is its first gate, per acceptance #ciGate)",
+        "ciGate": "PASS — workflow file ships in same commit as engine, allowlist, and known-gap baseline"
+      },
+      "safeguardMatrix": {
+        "S1": "docs/templates/milestone-dod.md — 8-section checklist (Identity / Plan + Acceptance / Code / Tests / CLAUDE.md three-bucket / Documentation / Loki ledger / Retrospective + No corners cut)",
+        "S2": ".github/workflows/conformance.yml + scripts/check-claim-evidence.mjs (engine) + scripts/check-claim-evidence.allowlist.json (9 known gaps cross-referenced to M-A audit rows)",
+        "S3": ".husky/pre-commit (opt-in local fast-path scoped to staged CLAUDE.md diffs)",
+        "S4": ".loki/queue/schema.json (JSON Schema 2020-12) + apps/desktop/src/loki-verified-by.test.ts (7-test validator)",
+        "S5": "CONTRIBUTING.md §Branch Policy (14-day stale-branch warning + 30-day merge-or-delete + cherry-pick contract + merge-before-delete workflow)",
+        "S6": "CONTRIBUTING.md §Quarterly Re-Audit + docs/audits/SCHEDULE.md (next audit 2026-07-17 — every 3 months OR every 5 milestones)"
+      },
+      "allowlistComposition": {
+        "totalEntries": 9,
+        "clusterA_multiCompany_M7": [
+          "companies.create (audit 10.12)",
+          "companies.update (audit 10.13)",
+          "companies.delete (audit 10.15)"
+        ],
+        "clusterB_orgChart_M9": [
+          "employees.promote (audit 2.19)",
+          "employees.setManager (audit 2.20)",
+          "orgchart.get (audit 2.21)"
+        ],
+        "mcpNamingDrift": [
+          "mcp.add (audit 10.37)",
+          "mcp.remove (audit 10.39)",
+          "mcp.health (audit 10.40)"
+        ],
+        "shrinkagePlan": "Cluster A + B entries deleted by M-C as restoration lands. MCP naming-drift entries deleted by M-F as IPC table is rewritten. M-G ships with allowlist file removed (workflow flips to --strict mode)."
+      },
+      "followUps": []
     },
     "Phase-5.6-M-B": {
       "name": "Triage",

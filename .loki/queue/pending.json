@@ -65,15 +65,27 @@
       "id": "M-E",
       "name": "Process Safeguards (REORDERED — ships BEFORE M-C/M-D per §13.2)",
       "estimate": "2–3d + 1d buffer",
-      "status": "queued — head-of-queue",
+      "status": "shipped 2026-04-17 — atomic commit e4f681a (S1 docs/templates/milestone-dod.md + S2 .github/workflows/conformance.yml + S3 .husky/pre-commit + S4 .loki/queue/schema.json + apps/desktop/src/loki-verified-by.test.ts + S5 CONTRIBUTING.md §Branch Policy + S6 docs/audits/SCHEDULE.md + CONTRIBUTING.md §Quarterly Re-Audit + scripts/check-claim-evidence.mjs engine + 19-test vitest pinning); paired chore(loki) ledger follows",
       "dor": "M-B Loki exit-KPI closed (this ledger commit)",
-      "dod": "all 6 safeguards S1–S6 committed + documented in CONTRIBUTING.md + positive-control test passing for each safeguard"
+      "dod": "satisfied — all 6 safeguards S1–S6 committed + indexed in CONTRIBUTING.md §Process Safeguards + positive-control tests green (19 claim-evidence + 7 verifiedBy = 26 unit tests; conformance check 86 verified / 9 allowlisted / 0 UNALLOWED out of 95)",
+      "verifiedBy": [
+        "scripts/check-claim-evidence.mjs (S2/S3 engine — 86 verified / 9 allowlisted / 0 UNALLOWED)",
+        "apps/desktop/src/check-claim-evidence.test.ts (19 vitest unit tests)",
+        "apps/desktop/src/loki-verified-by.test.ts (7 vitest unit tests)",
+        ".github/workflows/conformance.yml (S2 CI gate)",
+        ".husky/pre-commit (S3 local fast-path)",
+        "docs/templates/milestone-dod.md (S1)",
+        ".loki/queue/schema.json (S4)",
+        "CONTRIBUTING.md §Process Safeguards + §Branch Policy + §Quarterly Re-Audit (T9 + S5 + S6)",
+        "docs/audits/SCHEDULE.md (S6 cadence)",
+        "atomic commit e4f681a + paired chore(loki) ledger"
+      ]
     },
     {
       "id": "M-C",
       "name": "Backend Backfill",
       "estimate": "5–7d + 3d buffer",
-      "status": "blocked-by-M-E",
+      "status": "queued — head-of-queue",
       "dor": "M-E Loki exit-KPI closed + safeguards live on CI",
       "dod": "every restore row backend-complete + unit tests per IPC + migration applied clean + pnpm typecheck clean + zero Phase 5 regression"
     },
@@ -103,24 +115,38 @@
     }
   ],
   "activeSubMilestone": {
-    "id": "M-E",
-    "name": "Process Safeguards (REORDERED per §13.2 — ships BEFORE M-C/M-D)",
+    "id": "M-C",
+    "name": "Backend Backfill",
     "status": "queued — head-of-queue",
-    "nextSession": "Open M-E T0 per current-task.json — ship S1 milestone DoD template + S2 CI conformance check + S3 pre-commit claim-evidence hook + S4 Loki `verifiedBy` field + S5 branch policy + S6 quarterly re-audit cadence. Each safeguard ships with a positive-control test. S2 must pass on the M-E atomic commit itself (safeguard's own introduction is its first gate)."
+    "nextSession": "Open M-C T0 per current-task.json — restore the 15 P0 RESTORE rows (Cluster A 7: companies.create/update/delete IPC + handlers + ensureSystemAgent/Copilot bootstrap on create; Cluster B 8: org_edges migration 0013 + cycle-detect helper + employees.fire/promote/setManager + orgchart.get IPC + repos) plus selected P1/P2 RESTORE rows per audit §20.2 / §20.3. M-E safeguards now LIVE: every M-C commit runs under the conformance CI gate + pre-commit claim-evidence hook + DoD template + Loki verifiedBy contract. Estimate 5–7d + 3d buffer. As restoration lands, the corresponding scripts/check-claim-evidence.allowlist.json entries shrink — M-G ships with the allowlist deleted (workflow flips to --strict mode)."
   },
   "previousSubMilestone": {
-    "id": "M-B",
-    "name": "Triage",
+    "id": "M-E",
+    "name": "Process Safeguards",
     "shippedAt": "2026-04-17T00:00:00Z",
-    "commit": "6b5d481",
-    "ledger": "61ba84f",
+    "commit": "e4f681a",
+    "ledger": "pending-atomic-chore(loki)-phase-5.6-m-e",
     "verifiedBy": [
-      "docs/audits/2026-04-17-conformance-audit.md amendment (§17 cross-check 10/10 confirmed + §20 disposition rollup, 41 distinct gap rows)",
-      "atomic commit 6b5d481 + paired ledger 61ba84f"
+      "scripts/check-claim-evidence.mjs (S2/S3 engine — 86 verified / 9 allowlisted / 0 UNALLOWED out of 95)",
+      "apps/desktop/src/check-claim-evidence.test.ts (19 vitest unit tests)",
+      "apps/desktop/src/loki-verified-by.test.ts (7 vitest unit tests)",
+      ".github/workflows/conformance.yml + .husky/pre-commit + docs/templates/milestone-dod.md + .loki/queue/schema.json + CONTRIBUTING.md §Process Safeguards + docs/audits/SCHEDULE.md",
+      "atomic commit e4f681a + paired ledger"
     ],
-    "deliverable": "docs/audits/2026-04-17-conformance-audit.md amendment — 41 distinct gap rows disposition-assigned (27 restore / 14 deprecate / 0 replace); §17 cross-check executed — 10/10 rows re-verified via independent grep/find sweep against main HEAD 8729e40, zero diffs from M-A matrix; §20 rollup table appended with per-cluster scoping (Cluster A 7 rows, Cluster B 8 rows, Cluster C 2 rows, M-E verify-gate 5 rows, M-F docs-only 14 rows); residual risks + escalation triggers documented. Authoritative M-C/M-D/M-E/M-F scoping surface."
+    "deliverable": "Six-point process-safeguards suite shipped to make Phase 5.6 M-C + M-D + every future phase impossible to drift under. S1 milestone DoD template (docs/templates/milestone-dod.md). S2 CI conformance check (.github/workflows/conformance.yml + scripts/check-claim-evidence.mjs engine + scripts/check-claim-evidence.allowlist.json with 9 known gaps cross-referenced to M-A audit rows; today 86 verified / 9 allowlisted / 0 UNALLOWED out of 95). S3 pre-commit claim-evidence hook (.husky/pre-commit fast-path scoped to staged CLAUDE.md diffs; opt-in via `git config core.hooksPath .husky`). S4 Loki verifiedBy field (.loki/queue/schema.json JSON Schema 2020-12 + apps/desktop/src/loki-verified-by.test.ts 7-test validator; M-A + M-B verifiedBy backfilled in this commit so the contract holds from day one). S5 branch policy (CONTRIBUTING.md §Branch Policy: 14-day stale-branch warning + 30-day merge-or-delete + cherry-pick contract + merge-before-delete workflow). S6 quarterly conformance re-audit cadence (CONTRIBUTING.md §Quarterly Re-Audit + docs/audits/SCHEDULE.md: every 3 months OR every 5 milestones, next 2026-07-17). Plus T9 (CONTRIBUTING.md §Process Safeguards index) + 19-test claim-evidence vitest pinning + biome lint clean (0 errors / 24 warnings baseline preserved) + typecheck clean across 6 packages + full vitest 1237/1237 in 21.43s. The safeguard's first proof is its own atomic commit running clean — S2 conformance check green on commit e4f681a per acceptance #ciGate."
   },
   "previousSubMilestones": {
+    "M-B": {
+      "name": "Triage",
+      "shippedAt": "2026-04-17T00:00:00Z",
+      "commit": "6b5d481",
+      "ledger": "61ba84f",
+      "verifiedBy": [
+        "docs/audits/2026-04-17-conformance-audit.md amendment (§17 cross-check 10/10 confirmed + §20 disposition rollup, 41 distinct gap rows)",
+        "atomic commit 6b5d481 + paired ledger 61ba84f"
+      ],
+      "deliverable": "docs/audits/2026-04-17-conformance-audit.md amendment — 41 distinct gap rows disposition-assigned (27 restore / 14 deprecate / 0 replace); §17 cross-check executed — 10/10 rows re-verified via independent grep/find sweep against main HEAD 8729e40, zero diffs from M-A matrix; §20 rollup table appended with per-cluster scoping (Cluster A 7 rows, Cluster B 8 rows, Cluster C 2 rows, M-E verify-gate 5 rows, M-F docs-only 14 rows); residual risks + escalation triggers documented. Authoritative M-C/M-D/M-E/M-F scoping surface."
+    },
     "M-A": {
       "name": "Conformance Audit",
       "shippedAt": "2026-04-17T00:00:00Z",
