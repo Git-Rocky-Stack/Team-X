@@ -1,3 +1,5 @@
+import type { Capability } from './capabilities.js';
+
 export type RoleLevel =
   | 'officer'
   | 'senior_management'
@@ -39,6 +41,7 @@ export interface RoleFrontmatter {
   kpis: string[];
   cadences?: RoleCadence[];
   output_format?: string;
+  capabilities?: Capability[];
   temperature: number;
   license: string;
   author: string;

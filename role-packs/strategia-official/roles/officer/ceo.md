@@ -25,6 +25,7 @@ temperature: 0.4
 license: MIT
 author: Strategia-X
 version: 1.0.0
+capabilities: [executive_leadership, business_strategy, fundraising, corporate_development]
 ---
 
 # Identity

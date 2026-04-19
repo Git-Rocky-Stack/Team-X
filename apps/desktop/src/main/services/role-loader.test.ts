@@ -322,4 +322,34 @@ describe('createRoleLoader (synthetic fixtures)', () => {
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
   });
+
+  it('requires capabilities when scanning a strategia-official pack manifest', () => {
+    const rolesRoot = join(tmpRoot, 'roles');
+    mkdirSync(rolesRoot, { recursive: true });
+    writeFileSync(
+      join(tmpRoot, 'pack.json'),
+      JSON.stringify({
+        id: 'strategia-official',
+        name: 'Strategia Official F10 Role Pack',
+        version: '1.1.0',
+      }),
+      'utf8',
+    );
+    writeRole('roles/legacy-role.md', minimalFrontmatter('legacy-role'), '# legacy');
+
+    const errors: Array<{ filePath: string; error: Error }> = [];
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const loader = createRoleLoader({
+      rolePacksRoot: rolesRoot,
+      verifyMode: 'warn',
+      onParseError: (filePath, error) => errors.push({ filePath, error }),
+    });
+
+    loader.preload();
+
+    expect(loader.size()).toBe(0);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.error.message).toMatch(/capabilities: Required/i);
+    warnSpy.mockRestore();
+  });
 });

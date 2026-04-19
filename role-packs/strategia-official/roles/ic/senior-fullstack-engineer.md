@@ -22,6 +22,7 @@ temperature: 0.2
 license: MIT
 author: Strategia-X
 version: 1.0.0
+capabilities: [backend_engineering, frontend_engineering, api_design]
 ---
 
 # Identity

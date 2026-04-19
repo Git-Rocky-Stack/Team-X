@@ -22,6 +22,7 @@ temperature: 0.4
 license: MIT
 author: Rocky Stack
 version: 1.0.0
+capabilities: [qa_engineering, process_improvement, people_management]
 ---
 
 # Identity

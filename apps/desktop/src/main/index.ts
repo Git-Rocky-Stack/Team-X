@@ -1117,6 +1117,7 @@ app
           orchestrator: writeOrchestrator,
           providerComplete: writeProviderComplete,
           workload,
+          roleLookup: roleLoader,
           // T7 — settings-repo-backed planner guardrails replace the
           // static PLANNER_DEFAULTS fallback. Every write-side tool call
           // now reads the user's current planner settings live.

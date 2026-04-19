@@ -22,6 +22,7 @@ temperature: 0.3
 license: MIT
 author: Rocky Stack
 version: 1.0.0
+capabilities: [requirements_analysis, process_improvement, product_analytics]
 ---
 
 # Identity

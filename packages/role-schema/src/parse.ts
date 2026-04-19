@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { RoleSpec } from '@team-x/shared-types';
+import { type Capability, type RoleSpec, isCapability } from '@team-x/shared-types';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 
@@ -98,6 +98,7 @@ const frontmatterSchema = z.object({
   decision_authority: z.enum(['final', 'delegated', 'advisory']),
   escalates_to: z.array(z.string()).default([]),
   kpis: z.array(z.string()).default([]),
+  capabilities: z.array(z.unknown()).optional(),
   cadences: z.array(cadenceSchema).optional(),
   output_format: z.string().optional(),
   temperature: z.number().min(0).max(2),
@@ -106,16 +107,79 @@ const frontmatterSchema = z.object({
   version: z.string().min(1),
 });
 
-export function parseRoleMarkdown(source: string, sourcePath: string): RoleSpec {
+export interface ParseRoleMarkdownOptions {
+  /**
+   * M36 keeps missing capabilities backward-compatible for older community
+   * packs by default. Official-pack loaders can opt into the stricter
+   * post-backfill rule once all 57 Strategia roles carry capabilities.
+   */
+  requireCapabilities?: boolean;
+
+  /**
+   * Duplicate capabilities are recoverable authoring drift: parse the role,
+   * dedupe deterministically, and report a warning to the caller's log sink.
+   */
+  onWarning?: (message: string) => void;
+}
+
+function invalidFrontmatter(sourcePath: string, message: string): Error {
+  return new Error(`Invalid role frontmatter in ${sourcePath}: ${message}`);
+}
+
+function normalizeCapabilities(
+  raw: unknown[] | undefined,
+  sourcePath: string,
+  opts: ParseRoleMarkdownOptions,
+): Capability[] | undefined {
+  if (raw === undefined) {
+    if (opts.requireCapabilities) {
+      throw invalidFrontmatter(sourcePath, 'capabilities: Required');
+    }
+    return undefined;
+  }
+
+  if (raw.length === 0) {
+    throw invalidFrontmatter(sourcePath, 'capabilities: must contain at least 1 capability');
+  }
+
+  const seen = new Set<Capability>();
+  const capabilities: Capability[] = [];
+  for (const value of raw) {
+    if (typeof value !== 'string') {
+      throw invalidFrontmatter(sourcePath, 'capabilities: every capability must be a string');
+    }
+    if (!isCapability(value)) {
+      throw invalidFrontmatter(sourcePath, `capabilities: unknown capability "${value}"`);
+    }
+    if (seen.has(value)) {
+      opts.onWarning?.(`[role-schema] duplicate capability "${value}" in ${sourcePath}; deduping`);
+      continue;
+    }
+    seen.add(value);
+    capabilities.push(value);
+  }
+
+  return capabilities;
+}
+
+export function parseRoleMarkdown(
+  source: string,
+  sourcePath: string,
+  opts: ParseRoleMarkdownOptions = {},
+): RoleSpec {
   const { data, content } = splitFrontmatter(source);
   const parsed = frontmatterSchema.safeParse(data);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Invalid role frontmatter in ${sourcePath}: ${issues}`);
   }
+  const capabilities = normalizeCapabilities(parsed.data.capabilities, sourcePath, opts);
   const sha256 = createHash('sha256').update(source, 'utf8').digest('hex');
   return {
-    frontmatter: parsed.data,
+    frontmatter: {
+      ...parsed.data,
+      capabilities,
+    },
     body: content.trim(),
     sourcePath,
     sha256,

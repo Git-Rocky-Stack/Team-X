@@ -21,6 +21,7 @@
  */
 
 import type { ToolContext } from '@team-x/intelligence';
+import type { Capability, RoleSpec } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -59,6 +60,7 @@ interface FakeEmployee {
   level: string;
   status: string;
   isSystem: boolean;
+  roleId?: string;
 }
 
 interface FakeTicket {
@@ -93,6 +95,7 @@ interface MakeDepsOpts {
   workload?: Partial<WriteSideWorkloadProvider>;
   providerText?: string;
   providerImpl?: AgenticToolsWriteDeps['providerComplete'];
+  roleSpecs?: Map<string, readonly Capability[]>;
   planner?: Partial<PlannerSettings>;
   busThrows?: boolean;
 }
@@ -220,6 +223,15 @@ function makeDeps(opts: MakeDepsOpts = {}): {
     orchestrator,
     providerComplete,
     workload,
+    roleLookup: {
+      getSpec(roleId: string) {
+        const capabilities = opts.roleSpecs?.get(roleId);
+        if (!capabilities) return null;
+        return {
+          frontmatter: { capabilities },
+        } as RoleSpec;
+      },
+    },
     getPlanner: () => planner,
     newId: () => `id-${ticker++}`,
     now: () => 1_700_000_000_000,
@@ -311,6 +323,32 @@ describe('scoreEmployee — determinism + formula', () => {
     expect(fast).toBeGreaterThan(noHistory);
     expect(noHistory).toBeGreaterThan(slow);
   });
+
+  it('capability role-fit changes only the locked role_fit term', () => {
+    const emp: ScorerEmployee = {
+      id: 'backend',
+      name: 'Backend',
+      title: 'No Keyword Title',
+      level: 'ic',
+      status: 'idle',
+      isSystem: false,
+      capabilities: ['backend_engineering'],
+    };
+
+    const score = scoreEmployee(
+      emp,
+      { title: 'API work', requiredCapabilities: ['backend_engineering'] },
+      baseCtx,
+    );
+
+    expect(score).toBeCloseTo(0.4 * 1 + 0.3 * 1 + 0.2 * 1 + 0.1 * 0.5, 10);
+  });
+
+  it('keeps the M32 keyword score for subtasks without required capabilities', () => {
+    const score = scoreEmployee(baseEmp, baseHint, baseCtx);
+
+    expect(score).toBeCloseTo(0.4 * 0.9 + 0.3 * 1 + 0.2 * 1 + 0.1 * 0.5, 10);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -357,6 +395,83 @@ describe('computeRoleFit — title heuristic (no capabilities key)', () => {
       isSystem: true,
     };
     expect(computeRoleFit(emp, { title: 'anything', type: 'implement' })).toBe(0);
+  });
+});
+
+describe('computeRoleFit — capabilities v2', () => {
+  it('returns 1.0 when employee capabilities exactly cover required capabilities', () => {
+    const emp: ScorerEmployee = {
+      id: 'backend',
+      name: 'Backend',
+      title: 'Office Generalist',
+      level: 'ic',
+      status: 'idle',
+      isSystem: false,
+      capabilities: ['backend_engineering', 'api_design'],
+    };
+
+    expect(
+      computeRoleFit(emp, {
+        title: 'Build service contract',
+        type: 'implement',
+        requiredCapabilities: ['backend_engineering', 'api_design'],
+      }),
+    ).toBe(1);
+  });
+
+  it('uses Jaccard overlap for partial capability matches', () => {
+    const emp: ScorerEmployee = {
+      id: 'fullstack',
+      name: 'Fullstack',
+      title: 'Senior Fullstack Engineer',
+      level: 'ic',
+      status: 'idle',
+      isSystem: false,
+      capabilities: ['backend_engineering', 'api_design'],
+    };
+
+    expect(
+      computeRoleFit(emp, {
+        title: 'Build typed UI client',
+        requiredCapabilities: ['frontend_engineering', 'api_design'],
+      }),
+    ).toBeCloseTo(1 / 3, 10);
+  });
+
+  it('falls back to the M32 keyword heuristic when required capabilities are absent', () => {
+    const emp: ScorerEmployee = {
+      id: 'legacy',
+      name: 'Legacy',
+      title: 'Senior Software Engineer',
+      level: 'ic',
+      status: 'idle',
+      isSystem: false,
+      capabilities: ['content_marketing'],
+    };
+
+    expect(
+      computeRoleFit(emp, { title: 'Implement auth module', type: 'implement' }),
+    ).toBeGreaterThan(0.5);
+  });
+
+  it('falls back to the M32 keyword heuristic when required capabilities are empty', () => {
+    const emp: ScorerEmployee = {
+      id: 'legacy-empty',
+      name: 'Legacy Empty',
+      title: 'Senior Software Engineer',
+      level: 'ic',
+      status: 'idle',
+      isSystem: false,
+      capabilities: ['content_marketing'],
+    };
+
+    expect(
+      computeRoleFit(emp, {
+        title: 'Implement auth module',
+        type: 'implement',
+        requiredCapabilities: [],
+      }),
+    ).toBeGreaterThan(0.5);
   });
 });
 
@@ -440,6 +555,89 @@ describe('decompose_project', () => {
     expect(back.subtasks.length).toBe(2);
     expect(back.subtasks[0].title).toBe('A');
     expect(back.subtasks[1].dependsOn).toEqual([0]);
+  });
+
+  it('passes requiredCapabilities from provider output into role-fit scoring', async () => {
+    const subtasks = [
+      {
+        title: 'Backend API',
+        description: 'Build API',
+        complexity: 'M',
+        dependsOn: [],
+        requiredCapabilities: ['backend_engineering', 'api_design'],
+      },
+    ];
+    const roleSpecs = new Map<string, readonly Capability[]>([
+      ['backend-developer', ['backend_engineering', 'api_design']],
+      ['content-strategist', ['content_marketing']],
+    ]);
+    const { deps } = makeDeps({
+      employees: [
+        {
+          id: 'backend',
+          companyId: 'co-1',
+          name: 'Backend Dev',
+          title: 'Generalist',
+          level: 'ic',
+          status: 'idle',
+          isSystem: false,
+          roleId: 'backend-developer',
+        },
+        {
+          id: 'content',
+          companyId: 'co-1',
+          name: 'Content',
+          title: 'Senior Software Engineer',
+          level: 'ic',
+          status: 'idle',
+          isSystem: false,
+          roleId: 'content-strategist',
+        },
+      ],
+      providerText: JSON.stringify(subtasks),
+      roleSpecs,
+    });
+
+    const tool = buildDecomposeProjectTool(deps);
+    const result = (await tool.execute({ brief: 'Build API' }, makeCtx())) as DecomposedPlan;
+
+    expect(result.subtasks[0]?.assigneeId).toBe('backend');
+  });
+
+  it('drops invalid provider-required capabilities before scoring', async () => {
+    const roleSpecs = new Map<string, readonly Capability[]>([
+      ['backend-developer', ['backend_engineering']],
+    ]);
+    const { deps } = makeDeps({
+      employees: [
+        {
+          id: 'backend',
+          companyId: 'co-1',
+          name: 'Backend Dev',
+          title: 'Office Generalist',
+          level: 'ic',
+          status: 'idle',
+          isSystem: false,
+          roleId: 'backend-developer',
+        },
+      ],
+      providerText: JSON.stringify([
+        {
+          title: 'Backend API',
+          description: 'Build API',
+          complexity: 'M',
+          dependsOn: [],
+          requiredCapabilities: ['backend_engineering', 'not_real'],
+        },
+      ]),
+      roleSpecs,
+    });
+
+    const tool = buildDecomposeProjectTool(deps);
+    const result = (await tool.execute({ brief: 'Build API' }, makeCtx())) as DecomposedPlan;
+
+    expect(result.subtasks[0]?.assigneeId).toBe('backend');
+    expect(result.subtasks[0]?.assigneeScore).toBeCloseTo(0.95, 10);
   });
 });
 

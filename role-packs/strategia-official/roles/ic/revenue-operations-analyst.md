@@ -22,6 +22,7 @@ temperature: 0.3
 license: MIT
 author: Rocky Stack
 version: 1.0.0
+capabilities: [sales, financial_operations, product_analytics]
 ---
 
 # Identity

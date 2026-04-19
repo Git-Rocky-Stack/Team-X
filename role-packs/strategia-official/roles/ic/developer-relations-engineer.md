@@ -22,6 +22,7 @@ temperature: 0.3
 license: MIT
 author: Rocky Stack
 version: 1.0.0
+capabilities: [developer_relations, technical_writing, api_design]
 ---
 
 # Identity

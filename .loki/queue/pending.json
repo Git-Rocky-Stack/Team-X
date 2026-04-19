@@ -154,8 +154,19 @@
         "auditClaimsAfter": "92/3/0",
         "allowlistAfter": 3,
         "e2eDelta": 0,
-        "findingsClosed": ["P1.1 stale-active-companyId after delete/archive", "P2.1 error-state retry affordance", "P3.1 trigger aria-label error-state threading"],
-        "findingsDeferred": ["P2.2 empty-state dead-end (closed implicitly by live Create CTA)", "P3.2 cross-hook citation iterator over-constraint (re-evaluate at 2nd global-scope hook)", "P3.3 touch targets <44px (desktop-first scope)", "P4.1 aria-current 'true' vs 'page'", "P4.2 DropdownMenuShortcut unused", "P4.3 bundle-size delta"],
+        "findingsClosed": [
+          "P1.1 stale-active-companyId after delete/archive",
+          "P2.1 error-state retry affordance",
+          "P3.1 trigger aria-label error-state threading"
+        ],
+        "findingsDeferred": [
+          "P2.2 empty-state dead-end (closed implicitly by live Create CTA)",
+          "P3.2 cross-hook citation iterator over-constraint (re-evaluate at 2nd global-scope hook)",
+          "P3.3 touch targets <44px (desktop-first scope)",
+          "P4.1 aria-current 'true' vs 'page'",
+          "P4.2 DropdownMenuShortcut unused",
+          "P4.3 bundle-size delta"
+        ],
         "nextStep": "E2E pre-flight spec (workspace-switcher.spec.ts), then step (c) CompanySettings"
       }
     ]

@@ -53,3 +53,8 @@ prebuilds/
 
 # local runtime
 .team-x/
+.loki/signals/
+docs/Old.Claude-md-to-4-19-26.txt
+
+# local agent context
+CLAUDE.md

@@ -25,6 +25,7 @@ temperature: 0.7
 license: MIT
 author: Rocky Stack
 version: 1.0.0
+capabilities: [executive_leadership, content_marketing, market_analysis, partnerships]
 ---
 
 # Identity

@@ -22,6 +22,7 @@ temperature: 0.4
 license: MIT
 author: Rocky Stack
 version: 1.0.0
+capabilities: [content_marketing, technical_writing, people_management]
 ---
 
 # Identity

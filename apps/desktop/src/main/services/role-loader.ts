@@ -255,6 +255,7 @@ export function createRoleLoader(deps: RoleLoaderDeps): RoleLoader {
    * caller surface (`resolveSystemPrompt` is already async).
    */
   function walk(dir: string): void {
+    const requireCapabilities = readPackIdForCapabilityPolicy() === 'strategia-official';
     let entries: string[];
     try {
       entries = readdirSync(dir);
@@ -291,12 +292,32 @@ export function createRoleLoader(deps: RoleLoaderDeps): RoleLoader {
       }
 
       try {
-        const spec = parseRoleMarkdown(source, full);
+        const spec = parseRoleMarkdown(source, full, {
+          requireCapabilities,
+          onWarning: (message) => console.warn(message),
+        });
         index.set(spec.frontmatter.id, spec);
       } catch (err) {
         onParseError(full, err as Error);
       }
     }
+  }
+
+  let capabilityPolicyPackId: string | null | undefined;
+
+  function readPackIdForCapabilityPolicy(): string | undefined {
+    if (capabilityPolicyPackId !== undefined) {
+      return capabilityPolicyPackId ?? undefined;
+    }
+
+    const packRoot = dirname(deps.rolePacksRoot);
+    try {
+      const packJsonRaw = readFileSync(join(packRoot, 'pack.json'), 'utf8');
+      capabilityPolicyPackId = (JSON.parse(packJsonRaw) as { id?: string }).id ?? null;
+    } catch {
+      capabilityPolicyPackId = null;
+    }
+    return capabilityPolicyPackId ?? undefined;
   }
 
   function verifyPackSignatureIfPresent(): void {

@@ -22,6 +22,7 @@ temperature: 0.6
 license: MIT
 author: Rocky Stack
 version: 1.0.0
+capabilities: [product_strategy, roadmap_planning, executive_leadership, product_management]
 ---
 
 # Identity

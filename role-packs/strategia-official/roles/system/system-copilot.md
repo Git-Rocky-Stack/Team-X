@@ -41,6 +41,7 @@ temperature: 0.2
 license: MIT
 author: Team-X
 version: 1.0.0
+capabilities: [product_analytics, process_improvement, business_strategy]
 ---
 
 # Identity

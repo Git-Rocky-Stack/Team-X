@@ -27,6 +27,10 @@ version: 1.0.0
 You are the CEO of {{company.name}}.
 `;
 
+function withCapabilities(source: string, capabilitiesYaml: string): string {
+  return source.replace('version: 1.0.0\n', `version: 1.0.0\n${capabilitiesYaml}`);
+}
+
 describe('parseRoleMarkdown', () => {
   it('parses frontmatter and body from a valid role.md', () => {
     const spec = parseRoleMarkdown(SAMPLE, '/fake/ceo.md');
@@ -77,6 +81,76 @@ describe('parseRoleMarkdown', () => {
     // Required fields still resolve
     expect(spec.frontmatter.id).toBe('chief-executive-officer');
     expect(spec.frontmatter.temperature).toBe(0.4);
+  });
+
+  it('parses a valid capabilities frontmatter list', () => {
+    const source = withCapabilities(
+      SAMPLE,
+      'capabilities: [executive_leadership, business_strategy, fundraising]\n',
+    );
+
+    const spec = parseRoleMarkdown(source, '/fake/ceo.md');
+
+    expect(spec.frontmatter.capabilities).toEqual([
+      'executive_leadership',
+      'business_strategy',
+      'fundraising',
+    ]);
+  });
+
+  it('allows missing capabilities by default for backward-compatible community packs', () => {
+    const spec = parseRoleMarkdown(SAMPLE, '/fake/pre-m36-community-role.md');
+
+    expect(spec.frontmatter.capabilities).toBeUndefined();
+  });
+
+  it('throws on missing capabilities when requireCapabilities is enabled', () => {
+    expect(() =>
+      parseRoleMarkdown(SAMPLE, '/fake/strategia-official/roles/officer/ceo.md', {
+        requireCapabilities: true,
+      }),
+    ).toThrow(/capabilities/i);
+  });
+
+  it('throws when capabilities is an empty list', () => {
+    const source = withCapabilities(SAMPLE, 'capabilities: []\n');
+
+    expect(() => parseRoleMarkdown(source, '/fake/empty-capabilities.md')).toThrow(/capabilities/i);
+  });
+
+  it('throws when capabilities contains an unknown capability', () => {
+    const source = withCapabilities(
+      SAMPLE,
+      'capabilities: [executive_leadership, made_up_capability]\n',
+    );
+
+    expect(() => parseRoleMarkdown(source, '/fake/unknown-capability.md')).toThrow(
+      /made_up_capability/,
+    );
+  });
+
+  it('throws when capabilities contains a non-string value', () => {
+    const source = withCapabilities(SAMPLE, 'capabilities: [executive_leadership, 42]\n');
+
+    expect(() => parseRoleMarkdown(source, '/fake/non-string-capability.md')).toThrow(
+      /capabilities/i,
+    );
+  });
+
+  it('dedupes duplicate capabilities and reports a warning', () => {
+    const warnings: string[] = [];
+    const source = withCapabilities(
+      SAMPLE,
+      'capabilities: [executive_leadership, fundraising, executive_leadership]\n',
+    );
+
+    const spec = parseRoleMarkdown(source, '/fake/duplicate-capabilities.md', {
+      onWarning: (message) => warnings.push(message),
+    });
+
+    expect(spec.frontmatter.capabilities).toEqual(['executive_leadership', 'fundraising']);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatch(/duplicate capability "executive_leadership"/i);
   });
 
   // --- Frontmatter splitter edge cases (added when gray-matter was

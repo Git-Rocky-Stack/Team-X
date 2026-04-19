@@ -1,4 +1,10 @@
-import type { EventType } from '@team-x/shared-types';
+import {
+  CAPABILITY_LIST,
+  type Capability,
+  type EventType,
+  type RoleSpec,
+  isCapability,
+} from '@team-x/shared-types';
 
 /**
  * Agentic write-side tools — main-process closures the agentic loop
@@ -247,6 +253,8 @@ export interface SubtaskHint {
   readonly type?: string;
   /** Estimated complexity — informs role-fit weighting for senior roles. */
   readonly complexity?: SubtaskComplexity;
+  /** Capability hints emitted by decomposition outputs when available. */
+  readonly requiredCapabilities?: readonly Capability[];
 }
 
 /** Cheap projection of an employee row used by the scorer. */
@@ -257,6 +265,7 @@ export interface ScorerEmployee {
   readonly level: string;
   readonly status: string;
   readonly isSystem: boolean;
+  readonly capabilities?: readonly Capability[];
 }
 
 /** Per-call scoring context — pure, deterministic, repo-callback-free. */
@@ -329,11 +338,10 @@ function deriveSubtaskType(title: string): string {
 }
 
 /**
- * Compute a deterministic role-fit score in `[0, 1]` for an employee
- * against a subtask hint. Pure — no DB reads, no clock, no randomness.
+ * Compute the M32 keyword role-fit score. Kept as the fallback for legacy
+ * decomposition outputs that do not provide required capability hints.
  */
-export function computeRoleFit(employee: ScorerEmployee, subtask: SubtaskHint): number {
-  if (employee.isSystem) return 0;
+function computeKeywordRoleFit(employee: ScorerEmployee, subtask: SubtaskHint): number {
   const type = subtask.type ?? deriveSubtaskType(subtask.title);
   const keywords = TITLE_KEYWORDS[type] ?? [];
   const titleLower = employee.title.toLowerCase();
@@ -348,6 +356,39 @@ export function computeRoleFit(employee: ScorerEmployee, subtask: SubtaskHint): 
   const baseline = LEVEL_BASELINE_FIT[employee.level] ?? 0.4;
   const bonus = Math.min(0.35 + 0.1 * (hits - 1), 1.0 - baseline);
   return clamp01(baseline + bonus);
+}
+
+function computeCapabilityRoleFit(
+  employeeCapabilities: readonly Capability[],
+  requiredCapabilities: readonly Capability[],
+): number {
+  if (employeeCapabilities.length === 0 || requiredCapabilities.length === 0) return 0;
+
+  const employeeSet = new Set(employeeCapabilities);
+  const requiredSet = new Set(requiredCapabilities);
+  let intersection = 0;
+
+  for (const capability of requiredSet) {
+    if (employeeSet.has(capability)) intersection += 1;
+  }
+
+  const union = new Set([...employeeSet, ...requiredSet]).size;
+  return union === 0 ? 0 : clamp01(intersection / union);
+}
+
+/**
+ * Compute a deterministic role-fit score in `[0, 1]` for an employee
+ * against a subtask hint. Pure — no DB reads, no clock, no randomness.
+ */
+export function computeRoleFit(employee: ScorerEmployee, subtask: SubtaskHint): number {
+  if (employee.isSystem) return 0;
+
+  const requiredCapabilities = subtask.requiredCapabilities ?? [];
+  if (requiredCapabilities.length > 0) {
+    return computeCapabilityRoleFit(employee.capabilities ?? [], requiredCapabilities);
+  }
+
+  return computeKeywordRoleFit(employee, subtask);
 }
 
 // ---------------------------------------------------------------------------
@@ -464,6 +505,10 @@ export interface WriteSideWorkloadProvider {
   avgCompletionMs(employeeId: string, subtaskType: string): number | null;
 }
 
+export interface WriteSideRoleLookup {
+  getSpec(roleId: string): RoleSpec | null;
+}
+
 /**
  * Planner guardrail accessor — T7 backs this with the settings repo.
  * Until then `defaultPlanner()` returns the static `PLANNER_DEFAULTS`.
@@ -531,6 +576,7 @@ export interface AgenticToolsWriteDeps {
   readonly orchestrator: WriteSideOrchestrator;
   readonly providerComplete: WriteSideCompleteFn;
   readonly workload: WriteSideWorkloadProvider;
+  readonly roleLookup?: WriteSideRoleLookup;
   readonly escalationTracker?: EscalationTracker;
   readonly getPlanner?: () => PlannerSettings;
   readonly newId?: () => string;
@@ -619,6 +665,14 @@ function trackerOf(deps: AgenticToolsWriteDeps): EscalationTracker {
   return (deps as unknown as { __defaultTracker: EscalationTracker }).__defaultTracker;
 }
 
+function capabilitiesForEmployee(
+  deps: AgenticToolsWriteDeps,
+  employee: { readonly roleId?: string },
+): readonly Capability[] {
+  if (!employee.roleId || !deps.roleLookup) return [];
+  return deps.roleLookup.getSpec(employee.roleId)?.frontmatter.capabilities ?? [];
+}
+
 function isApprovedLevel(level: string, planner: PlannerSettings): boolean {
   // Approval ladder: officer > senior-management > management > supervisor > lead > ic.
   const rank: Record<string, number> = {
@@ -641,13 +695,14 @@ function isApprovedLevel(level: string, planner: PlannerSettings): boolean {
  * The provider call returns one JSON object per subtask, one per line, OR
  * a top-level JSON array. Either shape parses; malformed lines are skipped.
  *
- * Schema per subtask: `{ title: string, description?: string, complexity?: 'S'|'M'|'L', dependsOn?: number[] }`.
+ * Schema per subtask: `{ title: string, description?: string, complexity?: 'S'|'M'|'L', dependsOn?: number[], requiredCapabilities?: Capability[] }`.
  */
 function parseDecomposition(raw: string): Array<{
   title: string;
   description: string;
   complexity: SubtaskComplexity;
   dependsOn: number[];
+  requiredCapabilities: Capability[];
 }> {
   const trimmed = raw.trim();
   if (trimmed.length === 0) return [];
@@ -656,6 +711,7 @@ function parseDecomposition(raw: string): Array<{
     description: string;
     complexity: SubtaskComplexity;
     dependsOn: number[];
+    requiredCapabilities: Capability[];
   }> = [];
 
   const candidates: unknown[] = [];
@@ -701,7 +757,17 @@ function parseDecomposition(raw: string): Array<{
         dependsOn.push(d);
       }
     }
-    collected.push({ title, description, complexity, dependsOn });
+    const requiredCapabilitiesRaw = Array.isArray(obj.requiredCapabilities)
+      ? obj.requiredCapabilities
+      : [];
+    const requiredCapabilities: Capability[] = [];
+    for (const rawCapability of requiredCapabilitiesRaw) {
+      if (isCapability(rawCapability) && !requiredCapabilities.includes(rawCapability)) {
+        requiredCapabilities.push(rawCapability);
+      }
+    }
+
+    collected.push({ title, description, complexity, dependsOn, requiredCapabilities });
   }
 
   return collected;
@@ -767,7 +833,7 @@ export function buildDecomposeProjectTool(
       }
 
       // Provider call — single inner LLM dispatch.
-      const system = `You are a Project Decomposition planner. Given a project brief, propose up to ${maxSubtasks} subtasks. Output a JSON array; each element must have: \`title\` (string ≤ 280 chars), \`description\` (string ≤ 2000 chars), \`complexity\` (one of "S"|"M"|"L"), \`dependsOn\` (array of zero-based indices into the same array, no cycles). Output JSON only — no prose, no markdown.`;
+      const system = `You are a Project Decomposition planner. Given a project brief, propose up to ${maxSubtasks} subtasks. Output a JSON array; each element must have: \`title\` (string <= 280 chars), \`description\` (string <= 2000 chars), \`complexity\` (one of "S"|"M"|"L"), \`dependsOn\` (array of zero-based indices into the same array, no cycles), \`requiredCapabilities\` (array of capability enum strings, optional but preferred). Allowed capabilities: ${CAPABILITY_LIST.join(', ')}. Output JSON only - no prose, no markdown.`;
       const provider = await deps.providerComplete({
         system,
         messages: [
@@ -790,6 +856,7 @@ export function buildDecomposeProjectTool(
           title: raw.title,
           type: args.subtaskType ?? deriveSubtaskType(raw.title),
           complexity: raw.complexity,
+          requiredCapabilities: raw.requiredCapabilities,
         };
         let bestId: string | null = null;
         let bestName: string | null = null;
@@ -803,6 +870,7 @@ export function buildDecomposeProjectTool(
               level: e.level,
               status: e.status,
               isSystem: e.isSystem,
+              capabilities: capabilitiesForEmployee(deps, e),
             },
             hint,
             {

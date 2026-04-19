@@ -37,6 +37,7 @@ temperature: 0.2
 license: MIT
 author: Team-X
 version: 1.0.0
+capabilities: [requirements_analysis, product_analytics, technical_writing]
 ---
 
 # Identity
