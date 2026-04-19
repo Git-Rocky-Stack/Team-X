@@ -136,7 +136,7 @@ test.describe('Team-X rag-flow', () => {
     log('test body entered');
 
     // --- 1. App shell -----------------------------------------------------
-    await expect(window.getByText('Strategia-X', { exact: true })).toBeVisible();
+    await expect(window.locator('[data-testid="app-brand-name"]')).toBeVisible();
     log('Strategia-X visible ✓');
     // M35 T9 stable-selector anchor — top-bar Copilot Sparkles button
     // (data-copilot-toolbar-toggle) proves the Phase 5 UI mounted.

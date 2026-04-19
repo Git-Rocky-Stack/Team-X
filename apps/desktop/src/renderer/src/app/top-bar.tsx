@@ -50,7 +50,9 @@ export function TopBar() {
     <header className="flex h-12 shrink-0 items-center border-b border-border bg-surface-50 px-4">
       <div className="flex items-center gap-2">
         <Building2 className="h-5 w-5 text-brand" />
-        <span className="text-sm font-semibold">Strategia-X</span>
+        <span className="text-sm font-semibold" data-testid="app-brand-name">
+          Strategia-X
+        </span>
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
           Phase 5
         </Badge>

@@ -153,7 +153,7 @@ test.describe('Team-X Phase 5 — M35 T2 cross-milestone integration', () => {
     });
 
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByText('Strategia-X', { exact: true })).toBeVisible();
+    await expect(window.locator('[data-testid="app-brand-name"]')).toBeVisible();
   });
 
   test.afterEach(async () => {

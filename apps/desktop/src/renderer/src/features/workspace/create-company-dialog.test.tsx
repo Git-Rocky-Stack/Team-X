@@ -78,7 +78,15 @@ describe('CreateCompanyDialog (features/workspace/create-company-dialog.tsx)', (
 
   it('closes the dialog on success and resets form state', () => {
     expect(dialogSrc).toMatch(
-      /onSuccess:\s*\(result\)\s*=>\s*\{[\s\S]*?reset\(\)[\s\S]*?onOpenChange\(false\)/,
+      /onSuccess:\s*async\s*\(result,\s*variables\)\s*=>\s*\{[\s\S]*?finally\s*\{[\s\S]*?reset\(\)[\s\S]*?onOpenChange\(false\)/,
+    );
+  });
+
+  it('hydrates the companies cache before flipping the active companyId', () => {
+    expect(dialogSrc).toContain('useQueryClient');
+    expect(dialogSrc).toMatch(/setQueryData<Company\[\]>\(\['companies'\]/);
+    expect(dialogSrc).toMatch(
+      /setQueryData<Company\[\]>\(\['companies'\][\s\S]*?invalidateQueries\(\{ queryKey:\s*\['companies'\]\s*\}\)[\s\S]*?finally\s*\{[\s\S]*?setCompanyId\(result\.companyId\)/,
     );
   });
 

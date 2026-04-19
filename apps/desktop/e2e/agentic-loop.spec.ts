@@ -105,7 +105,7 @@ test.describe('Team-X Phase 5 — M31 agentic loop', () => {
     await window.waitForLoadState('domcontentloaded');
     // Wait for the app shell brand to render so we know the React
     // tree mounted before issuing keyboard events.
-    await expect(window.getByText('Strategia-X', { exact: true })).toBeVisible();
+    await expect(window.locator('[data-testid="app-brand-name"]')).toBeVisible();
   });
 
   test.afterEach(async () => {

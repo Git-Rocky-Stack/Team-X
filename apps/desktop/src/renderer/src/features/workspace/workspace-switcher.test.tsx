@@ -95,7 +95,7 @@ describe('WorkspaceSwitcher (features/workspace/workspace-switcher.tsx)', () => 
     // wired to setCreateOpen(true), and open the CreateCompanyDialog.
     expect(src).toContain('data-workspace-switcher-action="create-company"');
     expect(src).toMatch(/Create workspace…/);
-    expect(src).toMatch(/onSelect=\{\s*\(e\)\s*=>\s*\{[\s\S]*?setCreateOpen\(true\)/);
+    expect(src).toMatch(/onSelect=\{\(\)\s*=>\s*setCreateOpen\(true\)\}/);
     // Negative assertions: the disabled placeholder attributes +
     // "Soon" badge + step-(b) tooltip MUST NOT reappear.
     expect(src).not.toContain('data-workspace-switcher-action="create-company-placeholder"');

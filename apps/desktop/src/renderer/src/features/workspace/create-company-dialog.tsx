@@ -1,5 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Building2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+import type { Company } from '@team-x/shared-types';
 
 import { Button } from '@/components/ui/button.js';
 import {
@@ -90,6 +93,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const setCompanyId = useAppStore((s) => s.setCompanyId);
+  const queryClient = useQueryClient();
   const createMutation = useCreateCompany();
 
   // Auto-suggest slug from name UNTIL the user manually edits the slug
@@ -148,10 +152,30 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
     createMutation.mutate(
       { name: name.trim(), slug, theme },
       {
-        onSuccess: (result) => {
-          setCompanyId(result.companyId);
-          reset();
-          onOpenChange(false);
+        onSuccess: async (result, variables) => {
+          const createdCompany: Company = {
+            id: result.companyId,
+            name: variables.name,
+            slug: variables.slug,
+            createdAt: Date.now(),
+            settings:
+              variables.theme === 'light' || variables.theme === 'dark'
+                ? { theme: variables.theme }
+                : {},
+          };
+
+          queryClient.setQueryData<Company[]>(['companies'], (current = []) => {
+            if (current.some((company) => company.id === createdCompany.id)) return current;
+            return [...current, createdCompany];
+          });
+
+          try {
+            await queryClient.invalidateQueries({ queryKey: ['companies'] });
+          } finally {
+            setCompanyId(result.companyId);
+            reset();
+            onOpenChange(false);
+          }
         },
         onError: (err) => {
           const message = err instanceof Error ? err.message : String(err);

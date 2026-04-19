@@ -170,10 +170,7 @@ export function WorkspaceSwitcher() {
            * 2026-04-19 ground-zero audit remediation.
            */}
           <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              setCreateOpen(true);
-            }}
+            onSelect={() => setCreateOpen(true)}
             data-workspace-switcher-action="create-company"
           >
             <Plus className="mr-2 h-3.5 w-3.5" />

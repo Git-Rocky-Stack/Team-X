@@ -155,7 +155,7 @@ test.describe('Team-X Phase 5 — M33 copilot service', () => {
     await window.waitForLoadState('domcontentloaded');
     // Wait for the app shell brand to render so we know the React tree
     // mounted before issuing IPC calls through the preload bridge.
-    await expect(window.getByText('Strategia-X', { exact: true })).toBeVisible();
+    await expect(window.locator('[data-testid="app-brand-name"]')).toBeVisible();
     // M35 T9 stable-selector anchor — the M34 top-bar Copilot Sparkles
     // button (data-copilot-toolbar-toggle) confirms the Phase 5 Copilot
     // UI actually mounted before this spec starts driving IPC. Required
