@@ -107,7 +107,7 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 ### Step (d) — Chat tab enable (Cluster C)
 
-> **2026-04-19 — SHIPPED in working tree.** Step (d) enabled the Chat top-bar tab, added `ChatView` as a thread-list landing surface over the existing `useThreadList` + `ThreadList` components, and hands selected rows to the already-mounted `ChatDrawer` through the app store. `apps/desktop/e2e/workspace-switcher.spec.ts` now includes a Chat tab case that resolves a seeded employee thread, opens the tab, selects the thread, and confirms the drawer opens.
+> **2026-04-19 — SHIPPED in commit `579f730`.** Step (d) enabled the Chat top-bar tab, added `ChatView` as a thread-list landing surface over the existing `useThreadList` + `ThreadList` components, and hands selected rows to the already-mounted `ChatDrawer` through the app store. `apps/desktop/e2e/workspace-switcher.spec.ts` now includes a Chat tab case that resolves a seeded employee thread, opens the tab, selects the thread, and confirms the drawer opens.
 
 **Goal:** The smallest restore row in M-D. Flip the Chat tab from disabled to enabled and wire the view to the existing chat drawer.
 

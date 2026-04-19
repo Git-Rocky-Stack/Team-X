@@ -65,14 +65,14 @@
   },
   "current": {
     "unitTests": 1671,
-    "unitTestsNote": "Phase 5.6 M-D step (d) verified in working tree — 6 new ChatView source-string contract tests. Focused renderer suite passed 3 files / 105 tests; root total inferred from 1665 step (c) baseline + 6 new tests.",
+    "unitTestsNote": "Phase 5.6 M-D step (d) shipped in atomic 579f730 — 6 new ChatView source-string contract tests. Focused renderer suite passed 3 files / 105 tests; root total inferred from 1665 step (c) baseline + 6 new tests.",
     "e2eSpecs": 12,
     "e2eGreenCount": 16,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; biome --fix auto-fixed format-only errors on the step e files. 0 rule-suppressions.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 5.6 M-D step (d) Chat tab enable verified in working tree; head-of-queue advances to M-D step (e) OrgChartView read-side",
+    "asOfTask": "Phase 5.6 M-D step (d) Chat tab enable shipped (atomic 579f730); head-of-queue advances to M-D step (e) OrgChartView read-side",
     "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (90/5 → 92/3 at step e ship; M-C-exit allowlist target reached)",
     "phase5Complete": true,
     "version": "1.1.0"

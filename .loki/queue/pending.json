@@ -125,11 +125,11 @@
   "activeSubMilestone": {
     "id": "M-D",
     "name": "UI Backfill",
-    "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf per Rocky's iron-rule directive against deferred placeholders) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) shipped 2026-04-19 (atomic 7fac251) + step (d) Chat tab enable verified in working tree; next: step (e) OrgChartView read-side",
+    "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf per Rocky's iron-rule directive against deferred placeholders) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) shipped 2026-04-19 (atomic 7fac251) + step (d) shipped 2026-04-19 (atomic 579f730); next: step (e) OrgChartView read-side",
     "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
     "auditDoc": "docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md",
     "nextSession": "Proceed with M-D step (e): OrgChartView read-side. Scope: add useOrgChart/useOrgChartEventSync, render the org chart tree read-side, enable the Org tab, and update App routing. No new IPC channels in M-D; allowlist preserved at 3.",
-    "stepsShippedSummary": "M-D IN PROGRESS. 4 of 7 atomic steps effectively landed (step (b) collapsed forward into step (a) hardening atomic per iron-rule) plus the workspace-switcher pre-flight gate: atomic 5d0c5bc (step a foundation; +31 tests to 1603) + atomic e611cbf (step (a+b) collapse + ground-zero audit P1.1/P2.1/P3.1 closures + full CreateCompanyDialog ship; +31 tests to 1634) + atomic 1d04e77 (workspace-switcher E2E pre-flight + created-company cache race fix + app-brand selector hardening; vitest 1655, E2E 12 specs / 13 cases) + atomic 7fac251 step (c) CompanySettings/HireDialog manager-select (+10 source-string contract tests, desktop vitest 1335, E2E 12 specs / 15 cases) + pending-current-working-tree step (d) Chat tab enable (+6 source-string contract tests, focused renderer 105/105, E2E 12 specs / 16 cases). Remaining: (e) OrgChartView read-side, (f) Org-chart interactions, (g) E2E + final verification gate.",
+    "stepsShippedSummary": "M-D IN PROGRESS. 4 of 7 atomic steps effectively landed (step (b) collapsed forward into step (a) hardening atomic per iron-rule) plus the workspace-switcher pre-flight gate: atomic 5d0c5bc (step a foundation; +31 tests to 1603) + atomic e611cbf (step (a+b) collapse + ground-zero audit P1.1/P2.1/P3.1 closures + full CreateCompanyDialog ship; +31 tests to 1634) + atomic 1d04e77 (workspace-switcher E2E pre-flight + created-company cache race fix + app-brand selector hardening; vitest 1655, E2E 12 specs / 13 cases) + atomic 7fac251 step (c) CompanySettings/HireDialog manager-select (+10 source-string contract tests, desktop vitest 1335, E2E 12 specs / 15 cases) + atomic 579f730 step (d) Chat tab enable (+6 source-string contract tests, focused renderer 105/105, E2E 12 specs / 16 cases). Remaining: (e) OrgChartView read-side, (f) Org-chart interactions, (g) E2E + final verification gate.",
     "stepsShipped": [
       {
         "step": "a",
@@ -227,7 +227,7 @@
       {
         "step": "d",
         "shippedAt": "2026-04-19T23:40:00Z",
-        "atomicCommit": "pending-current-working-tree",
+        "atomicCommit": "579f730",
         "summary": "Enabled the Chat top-bar tab, added ChatView over useThreadList + ThreadList, routed App.tsx chat view to ChatView, kept ChatDrawer mounted app-shell-wide, and expanded workspace-switcher E2E with Chat tab thread-selection handoff to the drawer.",
         "qaDoc": "docs/qa/2026-04-19-m-d-step-d-chat-tab.md",
         "testsDelta": 6,
@@ -326,7 +326,7 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-D step (d) Chat tab enable verified in working tree; head-of-queue advances to step (e) OrgChartView read-side",
+    "asOfTask": "Phase 5.6 M-D step (d) shipped 2026-04-19 (atomic 579f730); head-of-queue advances to step (e) OrgChartView read-side",
     "unitTests": 1671,
     "unitTestsNote": "M-D step (d) adds 6 ChatView source-string contract tests. Focused renderer suite passed 3 files / 105 tests; root total inferred from 1665 step (c) baseline + 6 new tests.",
     "e2eSpecs": 12,
