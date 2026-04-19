@@ -2,7 +2,7 @@ import type { Employee, Meeting } from '@team-x/shared-types';
 import { Calendar, Clock, Plus, Users2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { useMeetings } from '@/hooks/use-meetings.js';
+import { useMeetingEventSync, useMeetings } from '@/hooks/use-meetings.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { CallMeetingDialog } from './call-meeting-dialog.js';
@@ -77,6 +77,7 @@ function MeetingRow({ meeting }: { meeting: Meeting }) {
 
 export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
   const { data: meetings = [], isLoading, isError, refetch } = useMeetings(companyId);
+  useMeetingEventSync(companyId);
   const activeMeetingId = useAppStore((s) => s.activeMeetingId);
   const setActiveMeetingId = useAppStore((s) => s.setActiveMeetingId);
   const [callOpen, setCallOpen] = useState(false);

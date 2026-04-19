@@ -2,7 +2,7 @@ import type { Employee } from '@team-x/shared-types';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import { useGoals } from '@/hooks/use-goals.js';
+import { useGoalEventSync, useGoals } from '@/hooks/use-goals.js';
 import { useProjects } from '@/hooks/use-projects.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -18,6 +18,7 @@ interface GoalsViewProps {
 export function GoalsView({ companyId, employees }: GoalsViewProps) {
   const { data: goals = [], isLoading } = useGoals(companyId);
   const { data: projects = [] } = useProjects(companyId);
+  useGoalEventSync(companyId);
   const activeGoalId = useAppStore((s) => s.activeGoalId);
   const setActiveGoalId = useAppStore((s) => s.setActiveGoalId);
   const [createOpen, setCreateOpen] = useState(false);

@@ -1,7 +1,7 @@
 import type { Employee } from '@team-x/shared-types';
 import { useState } from 'react';
 
-import { useTickets } from '@/hooks/use-tickets.js';
+import { useTicketEventSync, useTickets } from '@/hooks/use-tickets.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { CreateTicketDialog } from './create-ticket-dialog.js';
@@ -15,6 +15,7 @@ interface TicketsViewProps {
 
 export function TicketsView({ companyId, employees }: TicketsViewProps) {
   const { data: tickets = [], isLoading, isError, refetch } = useTickets(companyId);
+  useTicketEventSync(companyId);
   const activeTicketId = useAppStore((s) => s.activeTicketId);
   const [createOpen, setCreateOpen] = useState(false);
 

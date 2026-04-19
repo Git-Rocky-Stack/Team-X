@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';
 
@@ -49,4 +50,43 @@ export function useDeleteGoal() {
       qc.invalidateQueries({ queryKey: ['goals'] });
     },
   });
+}
+
+/**
+ * Subscribe to the main-process dashboard bus and invalidate the
+ * React Query goals cache when an indirectly-related event lands for
+ * the current company.
+ *
+ * Subscribed events:
+ * - `plan.approved` — plan approval rolls up to linked goal progress
+ * - `task.delegated` — M32 planner writes a ticket that may belong
+ *   to a project linked to a goal (affects aggregate progress)
+ *
+ * Why this exists: goal progress is a derived aggregate over linked
+ * projects + tickets. When an agent tool lands a ticket via the M32
+ * planner, the goal's aggregate progress may change on the next
+ * `goalsRepo.get()` call even though no direct `goal.*` event was
+ * emitted. Subscribing to the indirect events gets the renderer close
+ * to real-time without waiting for the main-side gap to close.
+ *
+ * FOLLOWUP-P1 (main-side Invariant #11 gap): The `goals.create`,
+ * `goals.update`, `goals.delete` IPC handlers do NOT emit bus events,
+ * and no direct `goal.progressChanged` event exists in the EventType
+ * union today (the literal appears only in JSDoc). Once main emits
+ * goal-lifecycle events this subscription list expands.
+ *
+ * Added 2026-04-18 per `docs/qa/2026-04-18-ground-zero-audit.md` §3.1.
+ */
+export function useGoalEventSync(companyId: string | null): void {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!companyId) return;
+    const unsubscribe = ipc.events.onDashboard((event) => {
+      if (event.companyId !== companyId) return;
+      if (event.type !== 'plan.approved' && event.type !== 'task.delegated') return;
+      qc.invalidateQueries({ queryKey: ['goals', companyId] });
+      qc.invalidateQueries({ queryKey: ['goal-detail'] });
+    });
+    return unsubscribe;
+  }, [companyId, qc]);
 }

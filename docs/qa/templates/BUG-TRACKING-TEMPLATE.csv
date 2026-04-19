@@ -1,0 +1,4 @@
+Bug ID,Title,Severity,Component,Test Case ID,Status,Reported Date,Reported By,Assigned To,Description,Steps to Reproduce,Expected Result,Actual Result,Environment,Screenshots/Logs,Resolution,Resolved Date,Verified By,Verification Date
+BUG-001,Example Bug Title,P1,Component,TC-001,Open,2026-04-18,QA Engineer,Engineering Lead,Description of the bug,"1. Step 1
+2. Step 2",Expected behavior,Actual behavior,"OS: macOS
+Node.js: v18.0.0",,,,,

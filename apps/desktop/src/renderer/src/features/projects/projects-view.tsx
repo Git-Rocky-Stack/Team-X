@@ -2,7 +2,7 @@ import type { Employee } from '@team-x/shared-types';
 import { useState } from 'react';
 
 import { useGoals } from '@/hooks/use-goals.js';
-import { useProjects } from '@/hooks/use-projects.js';
+import { useProjectEventSync, useProjects } from '@/hooks/use-projects.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { GoalsView } from './goals-view.js';
@@ -20,6 +20,7 @@ interface ProjectsViewProps {
 export function ProjectsView({ companyId, employees }: ProjectsViewProps) {
   const { data: projects = [], isLoading, isError, refetch } = useProjects(companyId);
   const { data: goals = [] } = useGoals(companyId);
+  useProjectEventSync(companyId);
   const projectsSubview = useAppStore((s) => s.projectsSubview);
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const [createOpen, setCreateOpen] = useState(false);
