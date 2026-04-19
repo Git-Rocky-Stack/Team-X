@@ -157,6 +157,10 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
             id: result.companyId,
             name: variables.name,
             slug: variables.slug,
+            status: 'running',
+            icon: null,
+            theme:
+              variables.theme === 'light' || variables.theme === 'dark' ? variables.theme : 'dark',
             createdAt: Date.now(),
             settings:
               variables.theme === 'light' || variables.theme === 'dark'

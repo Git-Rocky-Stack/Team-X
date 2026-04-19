@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { UserPlus } from 'lucide-react';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import {
@@ -13,7 +15,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
+import { useEmployeeEventSync, useEmployees } from '@/hooks/use-employees.js';
 import { useHireEmployee } from '@/hooks/use-hire.js';
+import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 
 interface RoleOption {
@@ -65,25 +69,49 @@ interface HireDialogProps {
 export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
   const [selectedRole, setSelectedRole] = useState<RoleOption | null>(null);
   const [name, setName] = useState('');
+  const [managerId, setManagerId] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  useEmployeeEventSync(companyId);
+  const { data: employees = [] } = useEmployees(companyId);
+  const queryClient = useQueryClient();
   const hireMutation = useHireEmployee();
 
   function handleClose() {
     setSelectedRole(null);
     setName('');
+    setManagerId('');
+    setSubmitError(null);
+    setIsSubmitting(false);
+    hireMutation.reset();
     onOpenChange(false);
   }
 
-  function handleConfirm() {
-    if (!selectedRole || !companyId || name.trim().length === 0) return;
+  async function handleConfirm() {
+    if (!selectedRole || !companyId || name.trim().length === 0 || isSubmitting) return;
 
-    hireMutation.mutate(
-      { companyId, roleId: selectedRole.roleId, name: name.trim() },
-      {
-        onSuccess: () => {
-          handleClose();
-        },
-      },
-    );
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      const result = await hireMutation.mutateAsync({
+        companyId,
+        roleId: selectedRole.roleId,
+        name: name.trim(),
+      });
+      if (managerId.length > 0) {
+        await ipc.employees.setManager({ employeeId: result.employeeId, managerId: managerId });
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['employees', companyId] }),
+        queryClient.invalidateQueries({ queryKey: ['orgchart', companyId] }),
+      ]);
+      handleClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setSubmitError(message || 'Failed to hire employee.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -139,30 +167,56 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
 
         {/* Name input — shown when a role is selected */}
         {selectedRole && (
-          <div className="space-y-1.5">
-            <label htmlFor="hire-name" className="text-xs font-medium text-muted-foreground">
-              Employee name
-            </label>
-            <Input
-              id="hire-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Iris Kovac"
-              autoFocus
-            />
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label htmlFor="hire-name" className="text-xs font-medium text-muted-foreground">
+                Employee name
+              </label>
+              <Input
+                id="hire-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Iris Kovac"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="hire-manager" className="text-xs font-medium text-muted-foreground">
+                Reports to (optional)
+              </label>
+              <select
+                id="hire-manager"
+                value={managerId}
+                onChange={(e) => setManagerId(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                data-hire-manager-select=""
+              >
+                <option value="">No manager</option>
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.name} - {employee.title}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
+
+        {submitError ? <p className="text-xs text-destructive">{submitError}</p> : null}
 
         <DialogFooter>
           <Button variant="ghost" onClick={handleClose}>
             Cancel
           </Button>
           <Button
-            onClick={handleConfirm}
-            disabled={!selectedRole || name.trim().length === 0 || hireMutation.isPending}
+            onClick={() => void handleConfirm()}
+            disabled={
+              !selectedRole || name.trim().length === 0 || hireMutation.isPending || isSubmitting
+            }
             className="bg-brand text-white hover:bg-brand/90"
           >
-            {hireMutation.isPending ? 'Hiring...' : 'Confirm Hire'}
+            {hireMutation.isPending || isSubmitting ? 'Hiring...' : 'Confirm Hire'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -64,15 +64,15 @@
     "asOfMilestone": "M34 complete (commit af643ec)"
   },
   "current": {
-    "unitTests": 1655,
-    "unitTestsNote": "Phase 5.6 M-D workspace-switcher pre-flight shipped — 121 test files / 1655 tests green after commit 1d04e77 (workspace-switcher E2E + created-company cache hydration fix + selector hardening).",
+    "unitTests": 1665,
+    "unitTestsNote": "Phase 5.6 M-D step (c) verified in working tree — 10 new CompanySettings source-string contract tests. Desktop package suite passed 87 files / 1335 tests after Node ABI rebuild; shared entities check passed 16/16; root total inferred from 1655 pre-flight baseline + 10 new tests.",
     "e2eSpecs": 12,
-    "e2eGreenCount": 13,
+    "e2eGreenCount": 15,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; biome --fix auto-fixed format-only errors on the step e files. 0 rule-suppressions.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 5.6 M-D workspace-switcher pre-flight shipped (atomic 1d04e77); head-of-queue advances to M-D step (c) CompanySettings + HireDialog manager-select",
+    "asOfTask": "Phase 5.6 M-D step (c) CompanySettings + HireDialog manager-select verified in working tree; head-of-queue advances to M-D step (d) Chat tab enable",
     "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (90/5 → 92/3 at step e ship; M-C-exit allowlist target reached)",
     "phase5Complete": true,
     "version": "1.1.0"

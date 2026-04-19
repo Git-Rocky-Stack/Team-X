@@ -125,11 +125,11 @@
   "activeSubMilestone": {
     "id": "M-D",
     "name": "UI Backfill",
-    "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf per Rocky's iron-rule directive against deferred placeholders) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77); next: step (c) CompanySettings + HireDialog manager-select",
+    "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf per Rocky's iron-rule directive against deferred placeholders) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) CompanySettings/HireDialog manager-select verified in working tree; next: step (d) Chat tab enable",
     "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
     "auditDoc": "docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md",
-    "nextSession": "Proceed with M-D step (c): CompanySettings panel + HireDialog manager-select extension. Scope: add features/workspace/company-settings.tsx wired to companies.update/archive/delete; add Company settings CTA to WorkspaceSwitcher; add Reports to (optional) select to HireDialog and call employees.setManager after employees.create when selected. No new IPC channels in M-D; allowlist preserved at 3.",
-    "stepsShippedSummary": "M-D IN PROGRESS. 2 of 7 atomic steps effectively landed (step (b) collapsed forward into step (a) hardening atomic per iron-rule) plus the workspace-switcher pre-flight gate: atomic 5d0c5bc (step a foundation; +31 tests to 1603) + atomic e611cbf (step (a+b) collapse + ground-zero audit P1.1/P2.1/P3.1 closures + full CreateCompanyDialog ship; +31 tests to 1634) + atomic 1d04e77 (workspace-switcher E2E pre-flight + created-company cache race fix + app-brand selector hardening; vitest 1655, E2E 12 specs / 13 cases). Remaining: (c) CompanySettings + HireDialog manager-select, (d) Chat tab enable, (e) OrgChartView read-side, (f) Org-chart interactions, (g) E2E + final verification gate.",
+    "nextSession": "Proceed with M-D step (d): Chat tab enable. Scope: enable the Chat top-bar tab, add a chat landing view over existing chat drawer/thread-list surfaces, and update top-bar disabled-tab assertions. No new IPC channels in M-D; allowlist preserved at 3.",
+    "stepsShippedSummary": "M-D IN PROGRESS. 3 of 7 atomic steps effectively landed (step (b) collapsed forward into step (a) hardening atomic per iron-rule) plus the workspace-switcher pre-flight gate: atomic 5d0c5bc (step a foundation; +31 tests to 1603) + atomic e611cbf (step (a+b) collapse + ground-zero audit P1.1/P2.1/P3.1 closures + full CreateCompanyDialog ship; +31 tests to 1634) + atomic 1d04e77 (workspace-switcher E2E pre-flight + created-company cache race fix + app-brand selector hardening; vitest 1655, E2E 12 specs / 13 cases) + pending-current-working-tree step (c) CompanySettings/HireDialog manager-select (+10 source-string contract tests, desktop vitest 1335, E2E 12 specs / 15 cases). Remaining: (d) Chat tab enable, (e) OrgChartView read-side, (f) Org-chart interactions, (g) E2E + final verification gate.",
     "stepsShipped": [
       {
         "step": "a",
@@ -193,6 +193,36 @@
           "pnpm typecheck — clean"
         ],
         "nextStep": "step (c) — CompanySettings panel + HireDialog manager-select"
+      },
+      {
+        "step": "c",
+        "shippedAt": "2026-04-19T21:25:00Z",
+        "atomicCommit": "pending-current-working-tree",
+        "summary": "CompanySettings sheet wired to companies.update/archive/delete + Company wire-shape status/icon/theme widening + archived-company filtering in useCompanies + HireDialog Reports to manager select with employees.setManager after hire + workspace-switcher E2E expansion for settings and hire-manager org edge.",
+        "qaDoc": "docs/qa/2026-04-19-m-d-step-c-company-settings-hire-manager.md",
+        "testsDelta": 10,
+        "vitestTotalAfter": 1665,
+        "auditClaimsAfter": "92/3/0",
+        "allowlistAfter": 3,
+        "e2eDelta": 2,
+        "e2eSpecsAfter": 12,
+        "e2eGreenCasesAfter": 15,
+        "verifiedBy": [
+          "apps/desktop/src/renderer/src/features/workspace/company-settings.tsx",
+          "apps/desktop/src/renderer/src/features/workspace/company-settings.test.tsx",
+          "apps/desktop/e2e/workspace-switcher.spec.ts",
+          "packages/shared-types/src/entities.ts",
+          "apps/desktop/src/main/ipc/handlers.ts",
+          "apps/desktop/src/renderer/src/features/hire/hire-dialog.tsx",
+          "docs/qa/2026-04-19-m-d-step-c-company-settings-hire-manager.md",
+          "pnpm -F @team-x/desktop exec vitest run src/renderer/src/features/workspace/company-settings.test.tsx — 10/10",
+          "pnpm -F @team-x/desktop test — 87 files / 1335 tests",
+          "pnpm -F @team-x/desktop exec playwright test e2e/workspace-switcher.spec.ts — 3/3 cases",
+          "pnpm -F @team-x/desktop typecheck — clean",
+          "pnpm lint — 0 errors / 21 warnings",
+          "pnpm -F @team-x/desktop build — clean"
+        ],
+        "nextStep": "step (d) — Chat tab enable"
       }
     ]
   },
@@ -267,11 +297,11 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-D workspace-switcher pre-flight shipped (atomic 1d04e77) — step (a+b) now protected by E2E; head-of-queue advances to step (c) CompanySettings + HireDialog manager-select",
-    "unitTests": 1655,
-    "unitTestsNote": "M-D pre-flight gate: 121 test files / 1655 tests green after created-company cache hydration fix + WorkspaceSwitcher source audits + app-brand selector hardening.",
+    "asOfTask": "Phase 5.6 M-D step (c) CompanySettings + HireDialog manager-select verified in working tree; head-of-queue advances to step (d) Chat tab enable",
+    "unitTests": 1665,
+    "unitTestsNote": "M-D step (c) adds 10 CompanySettings source-string contract tests. Desktop package verification passed 87 files / 1335 tests after Node ABI rebuild; shared entities check passed 16/16; root total inferred from 1655 pre-flight baseline + 10 new tests.",
     "e2eSpecs": 12,
-    "e2eGreenCount": 13,
+    "e2eGreenCount": 15,
     "lintErrors": 0,
     "lintWarnings": 21,
     "typecheckClean": true,

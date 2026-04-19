@@ -88,20 +88,22 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 ### Step (c) — `CompanySettings` panel + `HireDialog` manager-select
 
+> **2026-04-19 — SHIPPED in working tree.** Step (c) landed the live `CompanySettings` sheet, widened the public `Company` projection with `status/icon/theme`, filters archived companies out of `useCompanies()` by default, and extended `HireDialog` with a same-company "Reports to (optional)" picker that writes `employees.setManager` after hire. `apps/desktop/e2e/workspace-switcher.spec.ts` now covers create/switch, settings edit/archive/delete, and hire-with-manager edge creation.
+
 **Goal:** Ship the edit/archive/delete flow + close the last Phase-2 hire-dialog gap.
 
 **Files:**
 - NEW `apps/desktop/src/renderer/src/features/workspace/company-settings.tsx` — sheet-based panel (mirrors `CopilotSidebar` + `sheet.tsx` primitive), sections: "General" (name/slug/icon/theme), "Danger zone" (archive / delete with type-to-confirm). Wires to `ipc.companies.update / archive / delete`.
 - MODIFIED `features/workspace/workspace-switcher.tsx` — add "Company settings…" CTA at the bottom of the dropdown that opens the sheet.
 - MODIFIED `features/hire/hire-dialog.tsx` — add "Reports to (optional)" select driven by `useEmployees` filtered to the same company; on submit, after `employees.create` resolves, call `employees.setManager` if a manager was chosen. Mirror M-C step d's input contract.
-- NEW `features/workspace/company-settings.test.tsx` — RTL for happy path + archive-guard + delete-type-to-confirm.
+- NEW `features/workspace/company-settings.test.tsx` — source-string audit for panel wiring + archive guard + delete type-to-confirm + Company wire-shape widening + HireDialog manager-select contract.
 
 **Design decisions:**
 - **Delete confirmation.** Type-to-confirm with the exact company name. No checkbox-and-confirm because deletion is irreversible (per M-C step e contract) — the friction should be proportional to the blast radius.
 - **Archive, not delete, by default.** The panel's primary CTA is Archive; Delete is the secondary, collapsed-by-default "Advanced" section.
 - **HireDialog manager-select uses `useEmployees` not a fresh query.** The hook already runs for the sidenav employee list, so reusing it keeps the cache warm; the dialog just filters the rows to exclude the employee being hired (not applicable in the create path) and system pseudo-employees (already filtered by `listVisibleByCompany`).
 
-**Acceptance:** panel opens, edits persist (verified by switcher reflecting the new name), archive moves the company out of the switcher, delete removes the company end-to-end, hire flow with manager select produces a wired reporting edge (verified by `orgchart.get` returning the edge in step e).
+**Acceptance:** panel opens, edits persist (verified by switcher reflecting the new name), archive moves the company out of the switcher, delete removes the company end-to-end, hire flow with manager select produces a wired reporting edge (verified by `orgchart.get` returning the edge in `apps/desktop/e2e/workspace-switcher.spec.ts`).
 
 ### Step (d) — Chat tab enable (Cluster C)
 
@@ -163,13 +165,13 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 **Goal:** Close the milestone with a real end-to-end spec and run the full verification gate.
 
 **Files:**
-- EXISTING `apps/desktop/e2e/workspace-switcher.spec.ts` — pre-flight already covers boot, switcher render, create company end-to-end, active switch, and switch-back. Step (g) extends this spec to archive/delete and audit-event assertions for `company.created / updated / archived / deleted`.
+- EXISTING `apps/desktop/e2e/workspace-switcher.spec.ts` — pre-flight already covers boot, switcher render, create company end-to-end, active switch, and switch-back. Step (c) has already extended this spec to edit/archive/delete and hire manager-edge assertions; Step (g) adds audit-event assertions for `company.created / updated / archived / deleted`.
 - NEW `apps/desktop/e2e/org-chart.spec.ts` — boot, navigate to Org tab, assert tree renders, hire an employee, promote them, drag-rearrange, fire; asserts `employee.*` bus events land in Audit.
 - MODIFIED E2E specs that assert Chat tab disabled (if any — grep first) → flip to asserting it's enabled.
 
 **Acceptance (M-D exit KPI):**
 - vitest: baseline 1572 + new unit tests (estimate +30–60 across hooks + components).
-- E2E: 12 specs / 13 cases after the workspace-switcher pre-flight; target 13 specs / 14+ cases at M-D exit after the org-chart spec lands.
+- E2E: 12 specs / 15 cases after the step (c) workspace-switcher expansion; target 13 specs / 16+ cases at M-D exit after the org-chart spec lands.
 - typecheck clean across 6 packages.
 - lint 0 errors / ≤21 warnings (baseline preserved).
 - `pnpm audit:claims`: 92 / 3 / 0 preserved — no allowlist movement expected (M-D adds no IPC channels).

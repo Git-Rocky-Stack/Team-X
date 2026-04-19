@@ -66,6 +66,7 @@ import type {
   CompaniesUpdateRequest,
   Company,
   CompanySettings,
+  CompanyStatus,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -1220,6 +1221,9 @@ function rowToCompany(row: CompanyRow): Company {
     id: row.id,
     name: row.name,
     slug: row.slug,
+    status: row.status as CompanyStatus,
+    icon: row.icon,
+    theme: row.theme,
     createdAt: row.createdAt,
     settings,
   };

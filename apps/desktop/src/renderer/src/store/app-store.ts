@@ -112,7 +112,7 @@ export interface AppState {
   setSelectedEmployee: (id: string | null) => void;
   setChatOpen: (open: boolean) => void;
   setActiveThreadId: (threadId: string | null) => void;
-  setCompanyId: (id: string) => void;
+  setCompanyId: (id: string | null) => void;
   openThreadList: () => void;
   openThread: (opts: OpenThreadOpts) => void;
   setThreadListView: (open: boolean) => void;

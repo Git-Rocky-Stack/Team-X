@@ -4,21 +4,17 @@ import { useEffect } from 'react';
 import { ipc } from '@/lib/ipc.js';
 
 /**
- * Lists every company known to the app. The switcher and the
+ * Lists active companies known to the app. The switcher and the
  * CompanySettings panel are the only two consumers today; both want
- * the same list, so this hook is a global-scope query rather than
- * company-scoped.
+ * the same active list, so this hook is a global-scope query rather
+ * than company-scoped.
  *
  * Contract notes:
  * - `ipc.companies.list()` returns every row regardless of status
- *   (see `apps/desktop/src/main/db/repos/companies.ts:list()`). The
- *   `Company` wire shape does NOT carry `status` today; an archive-
- *   status field widening lands in Phase 5.6 M-D step (c) alongside
- *   the `CompanySettings` sheet that surfaces archived companies
- *   separately. Until then, callers must render every row — the
- *   switcher is harmless in the single-company dev default, and
- *   archived companies are invisible from the switcher in any
- *   workspace that has ever archived one (documented TODO for step c).
+ *   (see `apps/desktop/src/main/db/repos/companies.ts:list()`).
+ *   Phase 5.6 M-D step (c) widened the `Company` wire shape with
+ *   `status`, so this hook filters archived rows by default while
+ *   preserving the raw IPC cache for future restore/admin surfaces.
  * - `queryKey: ['companies']` — intentionally global (not keyed on a
  *   companyId) because the switcher lives in the top-bar above the
  *   active-company scope and must survive companyId flips.
@@ -27,6 +23,7 @@ export function useCompanies() {
   return useQuery({
     queryKey: ['companies'],
     queryFn: () => ipc.companies.list(),
+    select: (companies) => companies.filter((company) => company.status !== 'archived'),
   });
 }
 

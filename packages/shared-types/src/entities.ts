@@ -209,6 +209,9 @@ export interface Company {
   id: string;
   name: string;
   slug: string;
+  status: CompanyStatus;
+  icon: string | null;
+  theme: string;
   createdAt: number;
   settings: CompanySettings;
 }

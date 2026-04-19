@@ -5,7 +5,8 @@
  * had source-string unit guards: boot, open the WorkspaceSwitcher,
  * create a second workspace through the live dialog, verify the new
  * workspace becomes active, then switch back to the seeded Strategia-X
- * workspace from the menu.
+ * workspace from the menu. Phase 5.6 M-D step (c) extends the spec
+ * over the CompanySettings panel and HireDialog manager-select.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -27,6 +28,23 @@ const __dirname = dirname(__filename);
 const MAIN_ENTRY = resolve(__dirname, '../out/main/index.js');
 
 test.describe.configure({ mode: 'serial' });
+
+function slugify(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
+async function createWorkspace(window: Page, name: string): Promise<void> {
+  const switcher = window.locator('[data-workspace-switcher-trigger]');
+  await switcher.click();
+  await window.locator('[data-workspace-switcher-action="create-company"]').click();
+  const dialog = window.locator('[data-create-company-dialog]');
+  await expect(dialog).toBeVisible();
+  await window.locator('[data-create-company-field="name"]').fill(name);
+  await window.locator('[data-create-company-field="slug"]').fill(slugify(name));
+  await window.locator('[data-create-company-submit]').click();
+  await expect(dialog).toBeHidden();
+  await expect(switcher).toContainText(name);
+}
 
 test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
   let app: ElectronApplication;
@@ -95,7 +113,7 @@ test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
   test('creates a workspace and keeps the seeded workspace reachable', async () => {
     const log = (msg: string) => console.log(`[e2e:workspace] ${msg}`);
     const workspaceName = `E2E Workspace ${Date.now().toString(36)}`;
-    const workspaceSlug = workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const workspaceSlug = slugify(workspaceName);
 
     const switcher = window.locator('[data-workspace-switcher-trigger]');
     await expect(switcher).toBeVisible();
@@ -144,5 +162,117 @@ test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
     await expect(switcher).toHaveAccessibleName(/Workspace switcher .*Strategia-X/);
     await expect(switcher).toContainText('Strategia-X');
     log('seeded Strategia-X workspace remains reachable via the switcher');
+  });
+
+  test('updates, archives, and deletes workspaces through CompanySettings', async () => {
+    const log = (msg: string) => console.log(`[e2e:company-settings] ${msg}`);
+    const suffix = Date.now().toString(36);
+    const workspaceName = `Settings Workspace ${suffix}`;
+    const renamedWorkspace = `Renamed Workspace ${suffix}`;
+    const deleteWorkspace = `Delete Workspace ${suffix}`;
+    const switcher = window.locator('[data-workspace-switcher-trigger]');
+
+    await createWorkspace(window, workspaceName);
+    log('created settings target workspace');
+
+    await switcher.click();
+    await window.locator('[data-workspace-switcher-action="company-settings"]').click();
+    const panel = window.locator('[data-company-settings-panel]');
+    await expect(panel).toBeVisible();
+    await window.locator('[data-company-settings-field="name"]').fill(renamedWorkspace);
+    await window.locator('[data-company-settings-field="slug"]').fill(slugify(renamedWorkspace));
+    await window.locator('[data-company-settings-save]').click();
+    await expect
+      .poll(async () => {
+        // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
+        const companies = await window.evaluate(async () => (window as any).teamx.companies.list());
+        return companies.some((c: { name: string }) => c.name === renamedWorkspace);
+      })
+      .toBe(true);
+    await window.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+    await expect(switcher).toContainText(renamedWorkspace);
+    log('rename persisted and switcher reflected the new name');
+
+    await switcher.click();
+    await window.locator('[data-workspace-switcher-action="company-settings"]').click();
+    await window.locator('[data-company-settings-archive]').click();
+    await expect(panel).toBeHidden();
+    await expect(switcher).toContainText('Strategia-X');
+    await switcher.click();
+    await expect(
+      window.locator('[data-workspace-switcher-item]').filter({ hasText: renamedWorkspace }),
+    ).toHaveCount(0);
+    await window.keyboard.press('Escape');
+    const archivedStatus = await window.evaluate(async (name) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
+      const companies = await (window as any).teamx.companies.list();
+      return companies.find((c: { name: string }) => c.name === name)?.status ?? null;
+    }, renamedWorkspace);
+    expect(archivedStatus).toBe('archived');
+    log('archive hid the workspace from the switcher and marked it archived');
+
+    await createWorkspace(window, deleteWorkspace);
+    await switcher.click();
+    await window.locator('[data-workspace-switcher-action="company-settings"]').click();
+    await window.getByText('Permanently delete this workspace').click();
+    await window.locator('[data-company-settings-delete-confirm]').fill(deleteWorkspace);
+    await window.locator('[data-company-settings-delete]').click();
+    await expect(panel).toBeHidden();
+    await expect(switcher).toContainText('Strategia-X');
+    const stillExists = await window.evaluate(async (name) => {
+      // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
+      const companies = await (window as any).teamx.companies.list();
+      return companies.some((c: { name: string }) => c.name === name);
+    }, deleteWorkspace);
+    expect(stillExists).toBe(false);
+    log('delete removed the workspace end-to-end');
+  });
+
+  test('hires with an optional manager and writes the org edge', async () => {
+    const log = (msg: string) => console.log(`[e2e:hire-manager] ${msg}`);
+    const hireName = `Managed Hire ${Date.now().toString(36)}`;
+    const seeded = await window.evaluate(async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
+      const teamx = (window as any).teamx;
+      const companies = await teamx.companies.list();
+      const companyId = companies.find((c: { name: string }) => c.name === 'Strategia-X').id;
+      const employees = await teamx.employees.list(companyId);
+      const ceo = employees.find(
+        (employee: { roleId: string }) => employee.roleId === 'chief-executive-officer',
+      );
+      return { companyId, ceoId: ceo.id };
+    });
+
+    await window.getByRole('button', { name: /Hire/i }).first().click();
+    await window.getByRole('button', { name: /Senior Fullstack Engineer/ }).click();
+    await window.locator('#hire-name').fill(hireName);
+    await window.locator('[data-hire-manager-select]').selectOption(seeded.ceoId);
+    await window.getByRole('button', { name: 'Confirm Hire' }).click();
+    await expect(window.getByRole('dialog', { name: /Hire Employee/ })).toBeHidden({
+      timeout: 15_000,
+    });
+
+    await expect
+      .poll(async () =>
+        window.evaluate(
+          async ({ companyId, ceoId, hireName }) => {
+            // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
+            const teamx = (window as any).teamx;
+            const org = await teamx.orgchart.get(companyId);
+            const hire = org.employees.find(
+              (employee: { name: string }) => employee.name === hireName,
+            );
+            if (!hire) return false;
+            return org.edges.some(
+              (edge: { managerId: string; reportId: string }) =>
+                edge.managerId === ceoId && edge.reportId === hire.id,
+            );
+          },
+          { companyId: seeded.companyId, ceoId: seeded.ceoId, hireName },
+        ),
+      )
+      .toBe(true);
+    log('manager select wrote the reporting edge');
   });
 });

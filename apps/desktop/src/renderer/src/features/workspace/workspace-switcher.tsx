@@ -1,4 +1,4 @@
-import { Building2, Check, ChevronsUpDown, Plus, RefreshCw } from 'lucide-react';
+import { Building2, Check, ChevronsUpDown, Plus, RefreshCw, Settings } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -14,6 +14,7 @@ import { useCompanies, useCompanyEventSync } from '@/hooks/use-companies.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
+import { CompanySettings } from './company-settings.js';
 import { CreateCompanyDialog } from './create-company-dialog.js';
 
 /**
@@ -27,19 +28,17 @@ import { CreateCompanyDialog } from './create-company-dialog.js';
  * the 2026-04-19 ground-zero audit P1 remediation (see
  * `docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md`). No disabled
  * "Soon" placeholders — the "Create workspace…" CTA is LIVE today
- * and wires to the `CreateCompanyDialog` end-to-end. The "Company
- * settings…" CTA still lands in step (c).
+ * and wires to the `CreateCompanyDialog` end-to-end. Step (c) wires
+ * the "Company settings…" CTA to the live `CompanySettings` sheet.
  *
  * Architectural contract:
  * - Single mount in the top-bar. Unmount dropping the
  *   `useCompanyEventSync` subscription would leave the switcher
  *   stale on cross-process writes, so the hook must live on a
  *   persistent app-shell surface (not inside a view that can unmount).
- * - `useCompanies()` is a global-scope query; the switcher shows all
- *   rows today because the `Company` wire shape does not carry an
- *   archive status. The filter lands alongside the status-field
- *   widening in step (c) when `CompanySettings` needs to surface
- *   archived companies separately.
+ * - `useCompanies()` is a global-scope query that filters archived
+ *   rows by default now that step (c) widened the `Company` wire
+ *   shape with `status`.
  *
  * Accessibility:
  * - Trigger is a standard `<button>` wrapped by Radix — keyboard
@@ -74,6 +73,7 @@ export function WorkspaceSwitcher() {
   const activeCompanyId = useAppStore((s) => s.companyId);
   const setCompanyId = useAppStore((s) => s.setCompanyId);
   const [createOpen, setCreateOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const activeCompany = useMemo(
     () => companies.find((c) => c.id === activeCompanyId) ?? null,
@@ -176,10 +176,19 @@ export function WorkspaceSwitcher() {
             <Plus className="mr-2 h-3.5 w-3.5" />
             <span className="flex-1">Create workspace…</span>
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => setSettingsOpen(true)}
+            disabled={!activeCompany || isError}
+            data-workspace-switcher-action="company-settings"
+          >
+            <Settings className="mr-2 h-3.5 w-3.5" />
+            <span className="flex-1">Company settings…</span>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <CreateCompanyDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CompanySettings open={settingsOpen} onOpenChange={setSettingsOpen} company={activeCompany} />
     </>
   );
 }
