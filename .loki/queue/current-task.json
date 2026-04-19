@@ -4,11 +4,13 @@
   "milestoneName": "UI Backfill",
   "verifiedBy": [
     "M-D step a — atomic commit 5d0c5bc (dropdown-menu primitive + use-companies hook + WorkspaceSwitcher foundation + plan doc + 31 unit tests)",
-    "M-D plan doc — docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md (7 atomic steps a/b/c/d/e/f/g, scope/DoD/risk register per M-E S1 safeguard)",
-    "M-D exit KPI — vitest 1603/1603 green at step-a ship (1572 step-f baseline + 31 new: 17 WorkspaceSwitcher + 11 useCompanyEventSync + 3 TopBar mount audit)",
+    "M-D step (a+b) hardening collapse — atomic commit e611cbf (App.tsx stale-active-companyId guard + WorkspaceSwitcher live Create CTA + retry row + aria-label error-state + CreateCompanyDialog full implementation + use-create-company hook + audit doc + 31 new unit tests)",
+    "M-D step (a+b) ground-zero audit — docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md (1 P1 + 2 P2 + 3 P3 + 3 P4 findings; P1.1 + P2.1 + P3.1 closed inline by atomic e611cbf per Rocky's iron-rule directive against deferred placeholders)",
+    "M-D plan doc — docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md (7 atomic steps a/b/c/d/e/f/g; revised post-audit to mark step (b) collapsed-into-step-(a) per the iron-rule directive)",
+    "M-D exit KPI — vitest 1634/1634 green at step (a+b) ship (1572 step-f baseline + 62 new: step-a 31 + step-b/hardening 31 across CreateCompanyDialog + useCreateCompany + App.tsx audit + WorkspaceSwitcher revisions)",
     "M-D exit KPI — pnpm audit:claims 92 verified / 3 allowlisted / 0 UNALLOWED preserved (no allowlist movement — M-D adds no IPC channels)",
     "M-D exit KPI — pnpm typecheck clean across 6 packages (preserved)",
-    "M-D exit KPI — pnpm lint 0 errors / 21 warnings (preserved from M-C step d hardening baseline)",
+    "M-D exit KPI — pnpm lint 0 errors / 21 warnings (preserved from M-C step d hardening baseline; dialog theme picker refactored from <button role='radio'> to native <fieldset>+<legend>+<input type='radio'> per Biome useSemanticElements + WCAG 4.1.2 / 1.3.1 — proactive a11y improvement triggered during hardening)",
     "M-D exit KPI — E2E baseline preserved at 11 specs / 12 Playwright cases (step g adds the renderer-surface E2E specs for Cluster A + B)"
   ],
   "verifiedByContract": "Phase 5.6 M-E S4 — verifiedBy is REQUIRED (non-empty string array) when status begins with 'shipped'. Validator: apps/desktop/src/loki-verified-by.test.ts. Schema: .loki/queue/schema.json. Set on ship by populating with concrete evidence artifact paths.",
@@ -16,7 +18,7 @@
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
   "planDocSection": "§3 Step decomposition (7 atomic steps a/b/c/d/e/f/g) + §6 DoR + §7 DoD + §8 Risks + parent plan docs/plans/2026-04-17-team-x-phase-5.6-remediation.md §6 M-D",
   "title": "Phase 5.6 M-D T0 — UI Backfill: Cluster A WorkspaceSwitcher/CreateCompanyDialog/CompanySettings + Cluster B org chart tree + drag + Cluster C chat tab enable",
-  "status": "in-progress — step (a) shipped 2026-04-19 (atomic commit 5d0c5bc); head-of-queue advances to step (b) CreateCompanyDialog",
+  "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf); head-of-queue advances to workspace-switcher E2E pre-flight, then step (c) CompanySettings + HireDialog manager-select",
   "predecessor": "Phase 5.6 M-C (Backend Backfill) SHIPPED 2026-04-18 — atomic commits f417a18 + b858067 + c2e6c92 + 19dbd35 + c6b118a + fd3617b + a4dc24e + 582d0f0. Every Cluster A + B backend surface verified on-disk; allowlist shrunk 9 → 3 entries over the M-C run. M-C bus-event coverage is complete for every state-mutating IPC channel (companies.*/employees.*/tickets.*/projects.*/goals.*), so M-D consumes the invariant #11 surface without adding new emits.",
   "stepsShipped": [
     {
@@ -24,7 +26,7 @@
       "name": "dropdown-menu primitive + use-companies hook + WorkspaceSwitcher foundation",
       "shippedAt": "2026-04-19T00:00:00Z",
       "atomicCommit": "5d0c5bc",
-      "ledgerCommit": "pending-this-ledger-commit",
+      "ledgerCommit": "a73830a",
       "verifiedBy": [
         "apps/desktop/package.json (MODIFIED — @radix-ui/react-dropdown-menu ^2.1.15 added to the existing Radix family pairing with react-dialog 1.1.15)",
         "pnpm-lock.yaml (MODIFIED — lockfile advance for the dropdown-menu dep + its transitive closure, +13 packages net)",
@@ -53,6 +55,45 @@
       },
       "safeguardProof": "First M-D proof at scale of the M-E safeguards. S1 satisfied by the plan doc landing in the same atomic per the Milestone DoD template. S2 conformance gate expected GREEN on 5d0c5bc — no new IPC channels + no allowlist movement (preserved at 92/3/0). S3 pre-commit hook clean on staged diff — no CLAUDE.md edits in this atomic (M-D status is tracked on this ledger, not on the CLAUDE.md status blocks; M-F rewrites those per the three-bucket convention). S4 verifiedBy populated on this paired ledger entry per contract.",
       "nextStep": "step (b) — CreateCompanyDialog. NEW features/workspace/create-company-dialog.tsx dialog form (name / slug / settings stub / icon / theme) wired to ipc.companies.create with client-side validation mirroring the M-C step b handler contract (/^[a-z0-9][a-z0-9-]{0,62}$/ slug regex + name trim ≤120 chars + auto-suggest slug from name until user manually edits). Swaps the disabled 'Soon' placeholder in the WorkspaceSwitcher for a live 'Create company…' CTA that opens the dialog. Success → setCompanyId(result.companyId) + close + toast; error → inline field errors + keep dialog open. Companion test file workspace-switcher update narrowing the placeholder assertion. No new IPC channels (companies.create already shipped in M-C step b). Allowlist preserved at 3."
+    },
+    {
+      "step": "a+b-hardening",
+      "name": "Step (a+b) collapse — ground-zero audit P1/P2/P3 closures + CreateCompanyDialog full ship",
+      "shippedAt": "2026-04-19T00:00:00Z",
+      "atomicCommit": "e611cbf",
+      "ledgerCommit": "8e39949",
+      "verifiedBy": [
+        "docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md (NEW — 6-dimension scoped audit producing 1 P1 + 2 P2 + 3 P3 + 3 P4 findings; mirrors docs/qa/2026-04-18-ground-zero-audit.md style; lineage pointer to predecessor + autonomous-run-report; disposition rollup explicit per finding)",
+        "apps/desktop/src/renderer/src/App.tsx (MODIFIED — P1.1 closure: replaced one-shot window.teamx.companies.list() preload-bridge fetch with reactive useCompanies hook + widened auto-select guard to 'no active company OR active company id is no longer in the list'. Audit citation in effect comment.)",
+        "apps/desktop/src/renderer/src/features/workspace/workspace-switcher.tsx (MODIFIED — P2.1 closure: error row now actionable with onSelect refetch + RefreshCw icon + 'Retry loading workspaces' copy; P3.1 closure: aria-label threads error state via triggerAriaLabel const; step (b) collapse: 'Soon' placeholder REPLACED with live Create workspace CTA wired to setCreateOpen + CreateCompanyDialog mounted as fragment sibling)",
+        "apps/desktop/src/renderer/src/features/workspace/create-company-dialog.tsx (NEW — full step (b) ship: name + slug + theme form, slug auto-suggest with dirty-flag opt-out, client-side validation mirroring M-C step b handler contract, semantic <fieldset>+<legend>+<input type='radio'> theme picker, aria-invalid + aria-describedby on field errors, duplicate-slug rewrap pattern-match → slug field error, generic error → submit footer row, double-submit guard, all 5 F10 states with stable data-create-company-* anchors, JSDoc cites iron-rule + audit + plan)",
+        "apps/desktop/src/renderer/src/features/workspace/create-company-dialog.test.tsx (NEW — 24 source-string audit assertions: export contract / IPC wiring / validation contract mirroring main-side / slug regex pin / name length cap / suggestSlug helper / slug-dirty latch / trim before submit / setCompanyId on success / dialog close on success / duplicate-slug rewrap pattern / generic error footer / double-submit guard / 5 F10 data-* anchors / 3 error data-* anchors / loading label / disabled state / aria-invalid + aria-describedby / semantic radiogroup via fieldset+legend+input / focus-within ring / JSDoc anchors)",
+        "apps/desktop/src/renderer/src/hooks/use-create-company.ts (NEW — useMutation wrapper for companies.create; intentionally NO onSuccess invalidation since global useCompanyEventSync owns the company.created bus path per invariant #11; double-invalidation negative test pins this contract)",
+        "apps/desktop/src/renderer/src/features/workspace/workspace-switcher.test.tsx (MODIFIED — assertions updated: error-row Retry contract + LIVE Create CTA contract with negative assertions against the disabled-placeholder reappearance + CreateCompanyDialog sibling mount + aria-label triggerAriaLabel const + JSDoc audit anchor)",
+        "apps/desktop/src/renderer/src/hooks/event-sync-hooks.test.ts (MODIFIED — NEW App.tsx active-company selection describe block: useCompanies single-source-of-truth assertion + widened guard pin + companies-undefined short-circuit + [companyId, setCompanyId, companies] dep array + negative assertion against window.teamx.companies.list() reappearance + audit citation)",
+        "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md (MODIFIED — step (a) revision note documenting the (a+b) collapse + iron-rule rationale; step (b) entry marked COLLAPSED with historical context preserved)",
+        "atomic commit e611cbf (9 files / +1052 / -113)",
+        "vitest 1634/1634 green (1572 step-f baseline → +62 from step (a) [+31] + step (a+b) hardening [+31])",
+        "audit:claims 92 verified / 3 allowlisted / 0 UNALLOWED preserved",
+        "typecheck clean across 6 packages",
+        "lint 0 errors / 21 warnings (baseline preserved; biome --fix auto-resolved 4 format-only issues + 1 useSemanticElements error fixed by refactoring theme picker from button[role=radio] to native fieldset+input[type=radio] — net a11y improvement, not a workaround)",
+        "E2E not re-run (no IPC contract change at the boundary; baseline 11 specs / 12 cases preserved — pre-flight workspace-switcher.spec.ts ships next per Rocky's option-2 follow-on)"
+      ],
+      "deliverable": "Closes the 2026-04-19 ground-zero audit's 1 P1 + 2 of 3 P2 findings inline + collapses step (b) CreateCompanyDialog forward into the same atomic per Rocky's iron-rule directive against deferred placeholders. The placeholder 'Soon' Create CTA is REJECTED — the switcher now opens a fully-wired CreateCompanyDialog, and the M-D Cluster A multi-company create flow is end-to-end usable today. The P1.1 stale-active-companyId guard fix replaces the App.tsx one-shot preload-bridge fetch with the reactive useCompanies hook, widening the auto-select condition from 'companyId === null' to 'companyId === null OR active company is no longer in the list' — closing the silent-failure path where a user who deleted their active workspace was left with every downstream view pointing at a dead row. The P2.1 error-row refactor swaps a dead-end 'retry in a moment' message for an actionable Retry item that calls refetch directly. The P3.1 aria-label threads error state into the screen-reader announcement so it matches what sighted users see. Sub-finding: during hardening verification, Biome's useSemanticElements caught the theme picker's button[role=radio] composite-widget pattern; refactored to native fieldset+legend+input[type=radio] for a net a11y improvement (real form control + auto-grouping + better screen-reader behavior).",
+      "designDecisions": {
+        "ironRuleClosure": "Rocky's iron-rule directive against the disabled 'Soon' placeholder forced step (b) forward into the same atomic. The original step-(a)-only ship was correct in scope but cut a corner with the placeholder. The hardening atomic absorbs step (b) cleanly: the switcher now ships with a live CTA + working dialog instead of a UX dead-end. Future plan-doc revisions in M-F will rewrite the step-by-step retrospective in this light.",
+        "p11ActiveCompanyGuard": "Widened App.tsx guard from `companyId !== null` → `companyId !== null && companies.some(c => c.id === companyId)`. Replaces the one-shot `window.teamx.companies.list()` direct preload-bridge call with the reactive useCompanies hook so the effect re-runs when the list mutates on bus events. Net architecture win: single source of truth for the companies list (the hook), reactive auto-select (no stale-id silent-failure window), no double-fetch (hook + direct call would have duplicated network).",
+        "p21ActionableErrorRetry": "Error row converted from disabled 'in a moment' copy to actionable DropdownMenuItem with onSelect → refetch(). Uses e.preventDefault() to stop the menu from closing on the retry click (so the user sees the loading state surface inside the menu rather than re-opening it manually). RefreshCw icon for the affordance.",
+        "p31AriaLabelThreading": "triggerAriaLabel computed const replaces the inline conditional aria-label expression. When isError, label reads 'Workspace switcher — workspaces failed to load'; otherwise the prior 'Workspace switcher — active: <name>' shape preserves. Screen reader now hears what sighted users see.",
+        "createDialogValidationMirror": "Slug regex /^[a-z0-9][a-z0-9-]{0,62}$/ + name trim ≤120 chars hard-coded as constants in the dialog. Mirrors the M-C step b handler contract exactly so a server rejection is a genuine concurrency edge (duplicate slug under race) rather than a trivial typo the client could have caught. SLUG_REGEX + MAX_NAME_LENGTH constants are pinned in the test for drift detection.",
+        "noOnSuccessInvalidationOnCreateMutation": "useCreateCompany has NO onSuccess invalidation — the global useCompanyEventSync hook listens for company.created on the bus and invalidates ['companies']. A local invalidation here would double-invalidate AND re-establish the per-hook pattern the global sync was designed to replace. Negative test asserts useQueryClient is NOT imported in the hook — catches a future refactor that accidentally re-adds it.",
+        "themePickerSemanticRefactor": "Biome's useSemanticElements rule flagged the original <button type='button' role='radio'> theme picker as preferring native <input type='radio'>. Refactored to <fieldset><legend>+<label><input type='radio' className='sr-only' /></label></fieldset> — keeps the button-style visual via Tailwind on the label, gains real form-control semantics + auto-grouping by name attribute. Not a workaround — a net a11y improvement. The negative test asserts role='radio' and role='radiogroup' do NOT reappear.",
+        "duplicateSlugFieldRouting": "The main-side handler re-wraps SQL UNIQUE violations as 'slug \"X\" is already in use'. The dialog's onError pattern-matches that string + routes the error to the slug field via setSlugError instead of the generic submit footer. Keeps the user's eye on the offending field. Other errors land in the footer row.",
+        "noToastInfra": "Success path closes the dialog + flips companyId — no toast, matching the existing HireDialog convention. A repo-wide toast/notification primitive does not exist today; introducing one would be a cross-cutting scope creep beyond M-D step (b). The switcher's re-render to show the new active workspace is the visual confirmation.",
+        "fragmentSiblingDialogMount": "CreateCompanyDialog mounts as a sibling of DropdownMenu inside a fragment, not nested inside the menu content. Radix's DropdownMenu focus-trap would conflict with the dialog's focus-trap on open if nested; sibling mount lets each Radix root manage its own focus independently."
+      },
+      "safeguardProof": "Second M-D proof at scale of the M-E safeguards. S1 satisfied — audit doc + plan doc revisions ship in same atomic per the milestone DoD template. S2 conformance gate expected GREEN on e611cbf (no IPC additions, allowlist preserved at 92/3/0). S3 pre-commit hook clean on staged diff (no CLAUDE.md edits in this atomic). S4 verifiedBy populated on this paired ledger entry per contract. The hardening commit demonstrates the iron-rule discipline: a P1 surfaced by post-ship QA gets fixed inline rather than deferred, mirroring the M-C step d hardening precedent.",
+      "nextStep": "Per Rocky's option-2 follow-on directive: write apps/desktop/e2e/workspace-switcher.spec.ts pre-flight E2E spec exercising the now-live step (a+b) surface end-to-end. After that: step (c) — CompanySettings panel + HireDialog manager-select extension. M-D progression remains on track."
     }
   ],
   "interimDoR": [
@@ -99,14 +140,14 @@
     "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md (M-D T0 plan doc; shipped step a)",
     ".loki/queue/pending.json + current-task.json (UPDATED per step — activeSubMilestone step progression + stepsShipped array append)"
   ],
-  "testsDeltaEstimate": "60–100 unit across all 7 steps (step a landed +31; step b ~15; step c ~20; step d ~5; step e ~20; step f ~30; step g adds 2 E2E specs not unit)",
+  "testsDeltaEstimate": "60–100 unit across all 7 steps (step a landed +31; step (a+b) hardening/CreateCompanyDialog landed +31; step c ~20; step d ~5; step e ~20; step f ~30; step g adds 2 E2E specs not unit)",
   "e2eDeltaEstimate": 2,
   "estimateDays": 6,
   "bufferDays": 3,
   "commitTemplate": "feat(phase-5.6-m-d): Phase 5.6 M-D step <letter> — <scope>",
   "ledgerTemplate": "chore(loki): Phase 5.6 M-D step <letter> committed (<sha>) — head-of-queue advances to step <next>",
   "verification": {
-    "unitTests": "1603 at step a ship (1572 + 31); ~1630–1660 estimated at M-D exit (step g)",
+    "unitTests": "1634 at step (a+b) hardening ship (1572 + 31 step a + 31 step (a+b)); ~1660–1690 estimated at M-D exit (step g)",
     "e2eSpecs": "11 specs / 12 cases at step a ship (baseline preserved); 13 specs / 14+ cases at M-D exit (step g adds workspace-switcher + org-chart specs)",
     "lint": "0 errors / 21 warnings (M-C step d hardening baseline preserved)",
     "typecheck": "clean across 6 packages",
@@ -115,7 +156,7 @@
   },
   "notes": [
     "M-D is the first sprint to run entirely on M-C's restored backend surface. Every UI component consumes a verified-on-disk IPC channel + subscribes to the invariant #11 bus events M-C wired. Zero backend additions in M-D scope.",
-    "Restoration order WITHIN M-D: (a) WorkspaceSwitcher foundation [SHIPPED]. (b) CreateCompanyDialog. (c) CompanySettings + HireDialog manager-select. (d) Chat tab enable (independent — can interleave with b/c). (e) OrgChartView read-side (independent — can interleave). (f) Org-chart interactions (depends on e). (g) E2E spec + final verification gate.",
+    "Restoration order WITHIN M-D: (a) WorkspaceSwitcher foundation [SHIPPED]. (b) CreateCompanyDialog + step-a audit hardening [SHIPPED via step (a+b) collapse]. Next: workspace-switcher E2E pre-flight, then (c) CompanySettings + HireDialog manager-select. (d) Chat tab enable (independent — can interleave with c). (e) OrgChartView read-side (independent — can interleave). (f) Org-chart interactions (depends on e). (g) E2E spec + final verification gate.",
     "Each step is its own atomic + ledger. Allowlist preserved at 3 entries throughout M-D — the remaining 3 are mcp.* naming-drift rows scheduled for M-F docs-only IPC table renames.",
     "Do NOT start M-F (Documentation Truth-Up) before M-D ships. M-F rewrites CLAUDE.md status blocks in three-bucket format which requires M-D exit-KPI as an input.",
     "The Company wire shape widening to include archive status is deferred to step (c) alongside the CompanySettings archived-companies UX. In the dev default single-company seed, this has zero visible effect at step (a).",

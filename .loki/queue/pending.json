@@ -125,10 +125,11 @@
   "activeSubMilestone": {
     "id": "M-D",
     "name": "UI Backfill",
-    "status": "in-progress — step (a) shipped 2026-04-19 (atomic commit 5d0c5bc); head-of-queue advances to step (b) CreateCompanyDialog",
+    "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf per Rocky's iron-rule directive against deferred placeholders); next: E2E pre-flight spec, then step (c) CompanySettings",
     "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
-    "nextSession": "Open M-D step (b) — CreateCompanyDialog. NEW features/workspace/create-company-dialog.tsx dialog form (name / slug / settings stub / icon / theme) wired to ipc.companies.create with client-side validation mirroring the M-C step b handler contract (/^[a-z0-9][a-z0-9-]{0,62}$/ slug regex + name trim ≤120 chars + auto-suggest slug from name until user manually edits). Swap the WorkspaceSwitcher disabled 'Soon' placeholder for a live 'Create company…' CTA that opens the dialog. Success → setCompanyId(result.companyId) + close + toast; error → inline field errors + keep dialog open. Companion workspace-switcher.test.tsx update narrowing the placeholder assertion. No new IPC channels (companies.create already shipped in M-C step b). Allowlist preserved at 3.",
-    "stepsShippedSummary": "M-D IN PROGRESS. 1 of 7 atomic steps landed: a (dropdown-menu primitive + use-companies hook + WorkspaceSwitcher foundation + plan doc; atomic 5d0c5bc; +31 unit tests to 1603 total). Head-of-queue advances to step b.",
+    "auditDoc": "docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md",
+    "nextSession": "Per Rocky's option-2 follow-on: write apps/desktop/e2e/workspace-switcher.spec.ts as a pre-flight E2E spec exercising the step (a+b) surface end-to-end (boot → switcher renders via data-workspace-switcher-trigger → click expands → click Create workspace opens dialog → fill name/slug/theme → submit → new company active in switcher → old company still reachable via menu). After the spec ships + baseline E2E run confirms 12 specs / 13+ cases green, advance head-of-queue to step (c) CompanySettings + HireDialog manager-select extension. No new IPC channels in M-D; allowlist preserved at 3.",
+    "stepsShippedSummary": "M-D IN PROGRESS. 2 of 7 atomic steps effectively landed (step (b) collapsed forward into step (a) hardening atomic per iron-rule): atomic 5d0c5bc (step a foundation; +31 tests to 1603) + atomic e611cbf (step (a+b) collapse + ground-zero audit P1.1/P2.1/P3.1 closures + full CreateCompanyDialog ship; +31 tests to 1634). Remaining: (c) CompanySettings + HireDialog manager-select, (d) Chat tab enable, (e) OrgChartView read-side, (f) Org-chart interactions, (g) E2E + final verification gate.",
     "stepsShipped": [
       {
         "step": "a",
@@ -140,7 +141,22 @@
         "auditClaimsAfter": "92/3/0",
         "allowlistAfter": 3,
         "e2eDelta": 0,
-        "nextStep": "b — CreateCompanyDialog"
+        "nextStep": "b — CreateCompanyDialog (collapsed into a+b-hardening below per iron-rule)"
+      },
+      {
+        "step": "a+b-hardening",
+        "shippedAt": "2026-04-19T00:00:00Z",
+        "atomicCommit": "e611cbf",
+        "summary": "Ground-zero audit P1.1 (stale-active-companyId guard) + P2.1 (error-row retry) + P3.1 (aria-label error-state) closures + step (b) CreateCompanyDialog full ship + theme picker a11y refactor (button[role=radio] → native fieldset+input[type=radio])",
+        "auditDoc": "docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md",
+        "testsDelta": 31,
+        "vitestTotalAfter": 1634,
+        "auditClaimsAfter": "92/3/0",
+        "allowlistAfter": 3,
+        "e2eDelta": 0,
+        "findingsClosed": ["P1.1 stale-active-companyId after delete/archive", "P2.1 error-state retry affordance", "P3.1 trigger aria-label error-state threading"],
+        "findingsDeferred": ["P2.2 empty-state dead-end (closed implicitly by live Create CTA)", "P3.2 cross-hook citation iterator over-constraint (re-evaluate at 2nd global-scope hook)", "P3.3 touch targets <44px (desktop-first scope)", "P4.1 aria-current 'true' vs 'page'", "P4.2 DropdownMenuShortcut unused", "P4.3 bundle-size delta"],
+        "nextStep": "E2E pre-flight spec (workspace-switcher.spec.ts), then step (c) CompanySettings"
       }
     ]
   },
