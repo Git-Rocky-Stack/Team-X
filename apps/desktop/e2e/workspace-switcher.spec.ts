@@ -275,4 +275,32 @@ test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
       .toBe(true);
     log('manager select wrote the reporting edge');
   });
+
+  test('opens the Chat tab and hands thread selection to the drawer', async () => {
+    const log = (msg: string) => console.log(`[e2e:chat-tab] ${msg}`);
+    const seeded = await window.evaluate(async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
+      const teamx = (window as any).teamx;
+      const companies = await teamx.companies.list();
+      const companyId = companies.find((c: { name: string }) => c.name === 'Strategia-X').id;
+      const employees = await teamx.employees.list(companyId);
+      const ceo = employees.find(
+        (employee: { roleId: string }) => employee.roleId === 'chief-executive-officer',
+      );
+      await teamx.chat.resolveThread({ employeeId: ceo.id });
+      return { ceoName: ceo.name };
+    });
+
+    await window.getByRole('button', { name: 'Chat', exact: true }).click();
+    await expect(window.locator('[data-chat-view]')).toBeVisible();
+    await expect(window.getByText('Conversations', { exact: true })).toBeVisible();
+    log('Chat tab rendered the conversation list');
+
+    await window.getByRole('button', { name: new RegExp(seeded.ceoName) }).click();
+    const drawer = window.getByRole('dialog');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole('heading', { name: seeded.ceoName })).toBeVisible();
+    await expect(window.locator('textarea[placeholder*="Message"]')).toBeVisible();
+    log('thread selection opened the existing chat drawer');
+  });
 });

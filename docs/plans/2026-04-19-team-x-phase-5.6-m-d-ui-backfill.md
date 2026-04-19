@@ -88,7 +88,7 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 ### Step (c) — `CompanySettings` panel + `HireDialog` manager-select
 
-> **2026-04-19 — SHIPPED in working tree.** Step (c) landed the live `CompanySettings` sheet, widened the public `Company` projection with `status/icon/theme`, filters archived companies out of `useCompanies()` by default, and extended `HireDialog` with a same-company "Reports to (optional)" picker that writes `employees.setManager` after hire. `apps/desktop/e2e/workspace-switcher.spec.ts` now covers create/switch, settings edit/archive/delete, and hire-with-manager edge creation.
+> **2026-04-19 — SHIPPED in commit `7fac251`.** Step (c) landed the live `CompanySettings` sheet, widened the public `Company` projection with `status/icon/theme`, filters archived companies out of `useCompanies()` by default, and extended `HireDialog` with a same-company "Reports to (optional)" picker that writes `employees.setManager` after hire. `apps/desktop/e2e/workspace-switcher.spec.ts` now covers create/switch, settings edit/archive/delete, and hire-with-manager edge creation.
 
 **Goal:** Ship the edit/archive/delete flow + close the last Phase-2 hire-dialog gap.
 
@@ -106,6 +106,8 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 **Acceptance:** panel opens, edits persist (verified by switcher reflecting the new name), archive moves the company out of the switcher, delete removes the company end-to-end, hire flow with manager select produces a wired reporting edge (verified by `orgchart.get` returning the edge in `apps/desktop/e2e/workspace-switcher.spec.ts`).
 
 ### Step (d) — Chat tab enable (Cluster C)
+
+> **2026-04-19 — SHIPPED in working tree.** Step (d) enabled the Chat top-bar tab, added `ChatView` as a thread-list landing surface over the existing `useThreadList` + `ThreadList` components, and hands selected rows to the already-mounted `ChatDrawer` through the app store. `apps/desktop/e2e/workspace-switcher.spec.ts` now includes a Chat tab case that resolves a seeded employee thread, opens the tab, selects the thread, and confirms the drawer opens.
 
 **Goal:** The smallest restore row in M-D. Flip the Chat tab from disabled to enabled and wire the view to the existing chat drawer.
 
@@ -165,13 +167,13 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 **Goal:** Close the milestone with a real end-to-end spec and run the full verification gate.
 
 **Files:**
-- EXISTING `apps/desktop/e2e/workspace-switcher.spec.ts` — pre-flight already covers boot, switcher render, create company end-to-end, active switch, and switch-back. Step (c) has already extended this spec to edit/archive/delete and hire manager-edge assertions; Step (g) adds audit-event assertions for `company.created / updated / archived / deleted`.
+- EXISTING `apps/desktop/e2e/workspace-switcher.spec.ts` — pre-flight already covers boot, switcher render, create company end-to-end, active switch, and switch-back. Step (c) has already extended this spec to edit/archive/delete and hire manager-edge assertions; Step (d) adds the Chat tab/thread-selection case; Step (g) adds audit-event assertions for `company.created / updated / archived / deleted`.
 - NEW `apps/desktop/e2e/org-chart.spec.ts` — boot, navigate to Org tab, assert tree renders, hire an employee, promote them, drag-rearrange, fire; asserts `employee.*` bus events land in Audit.
 - MODIFIED E2E specs that assert Chat tab disabled (if any — grep first) → flip to asserting it's enabled.
 
 **Acceptance (M-D exit KPI):**
 - vitest: baseline 1572 + new unit tests (estimate +30–60 across hooks + components).
-- E2E: 12 specs / 15 cases after the step (c) workspace-switcher expansion; target 13 specs / 16+ cases at M-D exit after the org-chart spec lands.
+- E2E: 12 specs / 16 cases after the step (d) Chat tab expansion; target 13 specs / 17+ cases at M-D exit after the org-chart spec lands.
 - typecheck clean across 6 packages.
 - lint 0 errors / ≤21 warnings (baseline preserved).
 - `pnpm audit:claims`: 92 / 3 / 0 preserved — no allowlist movement expected (M-D adds no IPC channels).

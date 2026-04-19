@@ -6,21 +6,22 @@
     "M-D step a — atomic commit 5d0c5bc (dropdown-menu primitive + use-companies hook + WorkspaceSwitcher foundation + plan doc + 31 unit tests)",
     "M-D step (a+b) hardening collapse — atomic commit e611cbf (App.tsx stale-active-companyId guard + WorkspaceSwitcher live Create CTA + retry row + aria-label error-state + CreateCompanyDialog full implementation + use-create-company hook + audit doc + 31 new unit tests)",
     "M-D step (a+b) workspace-switcher pre-flight — atomic commit 1d04e77 (apps/desktop/e2e/workspace-switcher.spec.ts + created-company cache hydration fix + Radix menu close fix + app-brand selector hardening; full E2E 13/13, vitest 1655/1655)",
-    "M-D step (c) — working tree verified 2026-04-19 (CompanySettings sheet + Company status/icon/theme projection + archived filtering + HireDialog manager-select + workspace-switcher E2E expansion; desktop vitest 1335/1335, focused source audit 10/10, workspace-switcher E2E 3/3)",
+    "M-D step (c) — atomic commit 7fac251 (CompanySettings sheet + Company status/icon/theme projection + archived filtering + HireDialog manager-select + workspace-switcher E2E expansion; desktop vitest 1335/1335, focused source audit 10/10, workspace-switcher E2E 3/3)",
+    "M-D step (d) — working tree verified 2026-04-19 (Chat tab enabled + ChatView thread-list landing + ChatDrawer handoff + workspace-switcher E2E chat-tab case; focused renderer suite 105/105, workspace-switcher E2E 4/4, typecheck/build/lint green)",
     "M-D step (a+b) ground-zero audit — docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md (1 P1 + 2 P2 + 3 P3 + 3 P4 findings; P1.1 + P2.1 + P3.1 closed inline by atomic e611cbf per Rocky's iron-rule directive against deferred placeholders)",
     "M-D plan doc — docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md (7 atomic steps a/b/c/d/e/f/g; revised post-audit to mark step (b) collapsed-into-step-(a) per the iron-rule directive)",
     "M-D exit KPI — vitest 1634/1634 green at step (a+b) ship (1572 step-f baseline + 62 new: step-a 31 + step-b/hardening 31 across CreateCompanyDialog + useCreateCompany + App.tsx audit + WorkspaceSwitcher revisions)",
     "M-D exit KPI — pnpm audit:claims 92 verified / 3 allowlisted / 0 UNALLOWED preserved (no allowlist movement — M-D adds no IPC channels)",
     "M-D exit KPI — pnpm typecheck clean across 6 packages (preserved)",
     "M-D exit KPI — pnpm lint 0 errors / 21 warnings (preserved from M-C step d hardening baseline; dialog theme picker refactored from <button role='radio'> to native <fieldset>+<legend>+<input type='radio'> per Biome useSemanticElements + WCAG 4.1.2 / 1.3.1 — proactive a11y improvement triggered during hardening)",
-    "M-D current KPI — E2E advanced to 12 specs / 13 Playwright cases after workspace-switcher pre-flight; step g extends workspace-switcher coverage and adds org-chart spec"
+    "M-D current KPI — E2E advanced to 12 specs / 16 Playwright cases after step (d); step g adds the remaining org-chart spec"
   ],
   "verifiedByContract": "Phase 5.6 M-E S4 — verifiedBy is REQUIRED (non-empty string array) when status begins with 'shipped'. Validator: apps/desktop/src/loki-verified-by.test.ts. Schema: .loki/queue/schema.json. Set on ship by populating with concrete evidence artifact paths.",
   "phase": "Phase 5.6 — Reconciliation & Remediation",
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
   "planDocSection": "§3 Step decomposition (7 atomic steps a/b/c/d/e/f/g) + §6 DoR + §7 DoD + §8 Risks + parent plan docs/plans/2026-04-17-team-x-phase-5.6-remediation.md §6 M-D",
   "title": "Phase 5.6 M-D T0 — UI Backfill: Cluster A WorkspaceSwitcher/CreateCompanyDialog/CompanySettings + Cluster B org chart tree + drag + Cluster C chat tab enable",
-  "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) CompanySettings/HireDialog manager-select verified in working tree; head-of-queue is step (d) Chat tab enable",
+  "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) shipped 2026-04-19 (atomic 7fac251) + step (d) Chat tab enable verified in working tree; head-of-queue is step (e) OrgChartView read-side",
   "predecessor": "Phase 5.6 M-C (Backend Backfill) SHIPPED 2026-04-18 — atomic commits f417a18 + b858067 + c2e6c92 + 19dbd35 + c6b118a + fd3617b + a4dc24e + 582d0f0. Every Cluster A + B backend surface verified on-disk; allowlist shrunk 9 → 3 entries over the M-C run. M-C bus-event coverage is complete for every state-mutating IPC channel (companies.*/employees.*/tickets.*/projects.*/goals.*), so M-D consumes the invariant #11 surface without adding new emits.",
   "stepsShipped": [
     {
@@ -120,7 +121,7 @@
       "step": "c",
       "name": "CompanySettings panel + HireDialog manager-select",
       "shippedAt": "2026-04-19T21:25:00Z",
-      "atomicCommit": "pending-current-working-tree",
+      "atomicCommit": "7fac251",
       "verifiedBy": [
         "apps/desktop/src/renderer/src/features/workspace/company-settings.tsx (NEW — sheet-based settings panel wired to companies.update/archive/delete)",
         "apps/desktop/src/renderer/src/features/workspace/company-settings.test.tsx (NEW — 10 source-string contract tests)",
@@ -140,6 +141,28 @@
       ],
       "deliverable": "Restores the Cluster A workspace settings surface and closes the remaining hire-dialog manager assignment gap. The top-bar WorkspaceSwitcher now exposes a live Company settings CTA that opens a controlled Radix Sheet. The sheet edits name/slug/icon/theme through companies.update, archives through companies.archive, and permanently deletes through companies.delete behind exact-name confirmation. The public Company projection now carries status/icon/theme so archived workspaces can be excluded from active selection via useCompanies(). HireDialog now mounts the employees event-sync/query surface, presents a same-company Reports to select, and writes employees.setManager after a successful hire when a manager is chosen. The workspace-switcher Playwright spec covers edit/archive/delete and verifies the hire manager edge through orgchart.get.",
       "nextStep": "step (d) — Chat tab enable"
+    },
+    {
+      "step": "d",
+      "name": "Chat tab enable",
+      "shippedAt": "2026-04-19T23:40:00Z",
+      "atomicCommit": "pending-current-working-tree",
+      "verifiedBy": [
+        "apps/desktop/src/renderer/src/features/chat/chat-view.tsx (NEW — Chat tab landing surface over useThreadList + ThreadList)",
+        "apps/desktop/src/renderer/src/features/chat/chat-view.test.tsx (NEW — 6 source-string contract tests; RED first, then PASS)",
+        "apps/desktop/src/renderer/src/app/top-bar.tsx (MODIFIED — Chat tab enabled; Org remains disabled for step e)",
+        "apps/desktop/src/renderer/src/App.tsx (MODIFIED — case 'chat' renders ChatView while ChatDrawer remains app-shell mounted)",
+        "apps/desktop/e2e/workspace-switcher.spec.ts (MODIFIED — +1 Chat tab case resolving a seeded employee thread and opening the drawer)",
+        "docs/qa/2026-04-19-m-d-step-d-chat-tab.md (NEW — verification evidence note)",
+        "pnpm -F @team-x/desktop exec vitest run src/renderer/src/features/chat/chat-view.test.tsx — RED first, then 6/6",
+        "focused renderer suite — 3 files / 105 tests",
+        "pnpm -F @team-x/desktop typecheck — clean",
+        "pnpm lint — 0 errors / 21 warnings",
+        "pnpm -F @team-x/desktop build — clean",
+        "pnpm -F @team-x/desktop exec playwright test e2e/workspace-switcher.spec.ts — 4/4 cases"
+      ],
+      "deliverable": "Restores the Cluster C Chat entry point. The top-bar Chat tab is now clickable and routes to ChatView instead of the ComingSoon placeholder. ChatView consumes the existing chat.listThreads surface through useThreadList, reuses the established ThreadList renderer, covers no-company/loading/error states with stable data selectors, and hands selected rows to the already-mounted ChatDrawer via openThread. No new IPC channels, migrations, or bus events were added.",
+      "nextStep": "step (e) — OrgChartView read-side"
     }
   ],
   "interimDoR": [
@@ -161,7 +184,7 @@
     "Every new component is keyboard-navigable + WCAG 2.1 AA compliant",
     "Every new hook is invalidated by appropriate bus events per invariant #11 (use-companies global-scope, use-org-chart per-company, etc.)",
     "Each restore step is its own atomic commit + paired ledger with verifiedBy populated per S4 contract",
-    "Step (g) E2E spec — workspace-switcher.spec.ts + org-chart.spec.ts — exercises end-to-end user-facing flows against the test-mode provider",
+    "Step (g) E2E spec — workspace-switcher.spec.ts + org-chart.spec.ts — exercises end-to-end user-facing flows against the test-mode provider; workspace-switcher.spec.ts already covers create/switch, settings edit/archive/delete, hire-manager edge, and Chat tab handoff",
     "vitest green throughout (1572 → ~1630–1660 estimated; actual delta per step tracked on ledger entries)",
     "typecheck clean across 6 packages + lint 0 errors / ≤21 warnings baseline preserved + audit:claims 92/3/0 preserved (no IPC additions in M-D)",
     "Audit §20.2 / §20.3 / §20.4 evidence_found column updated for the 7 UI restore rows at M-D exit",
@@ -186,15 +209,15 @@
     "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md (M-D T0 plan doc; shipped step a)",
     ".loki/queue/pending.json + current-task.json (UPDATED per step — activeSubMilestone step progression + stepsShipped array append)"
   ],
-  "testsDeltaEstimate": "60–100 unit across all 7 steps (step a landed +31; step (a+b) hardening/CreateCompanyDialog landed +31; step c landed +10 source-string contract tests; step d ~5; step e ~20; step f ~30; step g adds 1 remaining E2E spec not unit)",
+  "testsDeltaEstimate": "60–100 unit across all 7 steps (step a landed +31; step (a+b) hardening/CreateCompanyDialog landed +31; step c landed +10 source-string contract tests; step d landed +6 source-string contract tests; step e ~20; step f ~30; step g adds 1 remaining E2E spec not unit)",
   "e2eDeltaEstimate": 2,
   "estimateDays": 6,
   "bufferDays": 3,
   "commitTemplate": "feat(phase-5.6-m-d): Phase 5.6 M-D step <letter> — <scope>",
   "ledgerTemplate": "chore(loki): Phase 5.6 M-D step <letter> committed (<sha>) — head-of-queue advances to step <next>",
   "verification": {
-    "unitTests": "1665 inferred after step (c): pre-flight baseline 1655 + 10 CompanySettings contract tests; desktop package verification passed 87 files / 1335 tests",
-    "e2eSpecs": "12 specs / 15 cases after step (c) workspace-switcher expansion; 13 specs / 16+ cases at M-D exit after org-chart spec lands",
+    "unitTests": "1671 inferred after step (d): pre-flight baseline 1655 + 10 CompanySettings contract tests + 6 ChatView contract tests",
+    "e2eSpecs": "12 specs / 16 cases after step (d) Chat tab expansion; 13 specs / 17+ cases at M-D exit after org-chart spec lands",
     "lint": "0 errors / 21 warnings (M-C step d hardening baseline preserved)",
     "typecheck": "clean across 6 packages",
     "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED preserved (M-D adds no IPC channels)",
@@ -202,7 +225,7 @@
   },
   "notes": [
     "M-D is the first sprint to run entirely on M-C's restored backend surface. Every UI component consumes a verified-on-disk IPC channel + subscribes to the invariant #11 bus events M-C wired. Zero backend additions in M-D scope.",
-    "Restoration order WITHIN M-D: (a) WorkspaceSwitcher foundation [SHIPPED]. (b) CreateCompanyDialog + step-a audit hardening [SHIPPED via step (a+b) collapse]. Workspace-switcher E2E pre-flight [SHIPPED via 1d04e77]. (c) CompanySettings + HireDialog manager-select [SHIPPED in working tree]. Next: (d) Chat tab enable. (e) OrgChartView read-side. (f) Org-chart interactions (depends on e). (g) remaining org-chart E2E spec + final verification gate.",
+    "Restoration order WITHIN M-D: (a) WorkspaceSwitcher foundation [SHIPPED]. (b) CreateCompanyDialog + step-a audit hardening [SHIPPED via step (a+b) collapse]. Workspace-switcher E2E pre-flight [SHIPPED via 1d04e77]. (c) CompanySettings + HireDialog manager-select [SHIPPED via 7fac251]. (d) Chat tab enable [SHIPPED in working tree]. Next: (e) OrgChartView read-side. (f) Org-chart interactions (depends on e). (g) remaining org-chart E2E spec + final verification gate.",
     "Each step is its own atomic + ledger. Allowlist preserved at 3 entries throughout M-D — the remaining 3 are mcp.* naming-drift rows scheduled for M-F docs-only IPC table renames.",
     "Do NOT start M-F (Documentation Truth-Up) before M-D ships. M-F rewrites CLAUDE.md status blocks in three-bucket format which requires M-D exit-KPI as an input.",
     "The Company wire shape is now widened in step (c) to include status/icon/theme. useCompanies() filters archived rows from active workspace selection; the main-side rowToCompany projection now exposes the needed fields.",

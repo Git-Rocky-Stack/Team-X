@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/app-store.js';
 import { AppLayout } from './app/layout.js';
 import { AuditView } from './features/audit/audit-view.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
+import { ChatView } from './features/chat/chat-view.js';
 import { CommandPalette } from './features/command/command-palette.js';
 import { CopilotDashboardWidget } from './features/copilot/copilot-dashboard-widget.js';
 import { CopilotSidebar } from './features/copilot/copilot-sidebar.js';
@@ -177,7 +178,7 @@ export default function App() {
       case 'meetings':
         return <MeetingsView companyId={companyId} employees={employees} />;
       case 'chat':
-        return <ComingSoon label="Chat" />;
+        return <ChatView companyId={companyId} employees={employees} />;
       case 'files':
         return <VaultView companyId={companyId} />;
       case 'telemetry':

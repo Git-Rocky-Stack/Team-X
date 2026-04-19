@@ -33,7 +33,7 @@ const TABS: TabDef[] = [
   { label: 'Projects', icon: KanbanSquare, view: 'projects' },
   { label: 'Tickets', icon: KanbanSquare, view: 'tickets' },
   { label: 'Meetings', icon: Users2, view: 'meetings' },
-  { label: 'Chat', icon: MessageSquare, view: 'chat', disabled: true },
+  { label: 'Chat', icon: MessageSquare, view: 'chat' },
   { label: 'Files', icon: FileArchive, view: 'files' },
   { label: 'Telemetry', icon: Gauge, view: 'telemetry' },
   { label: 'Audit', icon: Shield, view: 'audit' },
