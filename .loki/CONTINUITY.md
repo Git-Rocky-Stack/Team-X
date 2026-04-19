@@ -1999,3 +1999,67 @@ Both land in design doc [§14 Follow-ups](../docs/plans/2026-04-13-team-x-phase-
 - **Destructive-action gate** applies to write-side tools. `review_deliverable { action: 'reject' }` and `delegate_subtask { overwrite: true }` need `confirmed: true` in the palette before the IPC fires.
 - **Command history + audit log** are append-only. Every M32 write-side command execution writes a `command.executed` event AND the appropriate `plan.*` / `task.*` / `review.*` event.
 - **`Cmd+K`** remains the only surface. Sidebar / dashboard widgets (M34) will fire `command.execute` too, not a separate write-side IPC.
+
+---
+
+## Phase 5.6 M-C COMPLETE — Backend Backfill (2026-04-18)
+
+All five M-C sub-steps shipped across six atomic commits with clean M-E safeguards throughout:
+
+| Step | Commit | Delivery | Tests Δ |
+|------|--------|----------|---------|
+| a | `f417a18` | Migration 0013 — `org_edges` table with CASCADE FKs on company/manager/report | +10 (migration pin) |
+| b | `b858067` | `companies.create` IPC + `ensureSystemForCompany` bootstrap | +28 |
+| c | `c2e6c92` | `createOrgEdgesRepo` factory + `orgchart.get` IPC (read side) | +36 |
+| d | `19dbd35` | `employees.promote` + `employees.setManager` IPCs (write side) | +46 |
+| d-harden | `c6b118a` | QA hardening BUG-001..008 + LEVEL_RANK + `assertCompanyActive` helper + atomic org-edges mutations | +39 |
+| e | `fd3617b` | `companies.update` + `companies.delete` IPCs (Cluster A finalization) | +58 |
+
+**Unit tests:** 1237 baseline → 1454 at step e ship (+217 cumulative across M-C, 115 test files). **E2E baseline preserved** — 11 specs / 12 Playwright cases (no renderer surface until M-D).
+
+**Allowlist lifecycle:** 9 entries at M-E ship → 3 at M-C exit. Six IPC channels migrated from allowlist to verified-on-disk in lockstep with their restoration commits (companies.create, companies.update, companies.delete, orgchart.get, employees.promote, employees.setManager). The remaining 3 entries are all mcp.* naming-drift rows scheduled for M-F docs sweep.
+
+**M-E safeguards proved six times in-flight:** S2 CI conformance gate GREEN on every M-C commit with allowlist shrinkage in the same atomic; S3 pre-commit hook clean on every staged diff; S4 verifiedBy field populated on every paired chore(loki) ledger.
+
+### Cluster A (multi-company CRUD) — RESTORE complete
+
+Audit rows 2.1 / 2.2 / 2.3 / 2.4 / 10.12 / 10.13 / 10.15. Backend surface:
+
+- `companies.create` (step b) — validates input, inserts row, atomically seeds `system-agent` + `system-copilot`, emits `company.created`.
+- `companies.update` (step e) — `assertCompanyActive` guard + per-field validation mirroring create, repo-level patch-only writer, UNIQUE-slug rewrap, emits `company.updated` with typed `patchedKeys` subset.
+- `companies.delete` (step e) — destructive sibling of archive. Snapshot-before-delete (captures slug+name so the bus event has a valid identifier), quiesce pipeline identical to archive (analyzer.stop → eventWindow.clear), then transactional 15-table FK-safe cascade sweep: indirect leaves → cross-referencing children (meetings/tickets/projects) → direct children (threads/goals/file_vault/embeddings/command_history) → loose-reference rows (mcp_servers scoped-only; NULL=global survives; events) → employees (CASCADEs org_edges) → copilot_insights (CASCADE explicit for audit parity) → companies. Archived companies ARE deletable (permanent-remove semantic).
+- `companies.archive` (pre-existing M33 F3) — unchanged, remains the soft-delete path.
+
+### Cluster B (M9 org chart) — RESTORE complete
+
+Audit rows 2.16 / 2.19 / 2.20 / 2.21. Backend surface:
+
+- Migration 0013 (step a) — `org_edges` table with UNIQUE on `report_id`, composite index `(company_id, manager_id)`, CASCADE FKs on company + manager + report.
+- `createOrgEdgesRepo` (step c) — `listByCompany` + `getByReport` + `listReports` + `setManager` (atomic upsert with inline wouldCycle check + previousManagerId snapshot) + `removeByReport` (atomic with previousManagerId snapshot) + `removeByManager` + `wouldCycle` (visited-set + MAX_CHAIN_DEPTH=256 belt-and-suspenders). Step d hardening refactored setManager + removeByReport into a single `db.transaction(tx => …)` to eliminate the TOCTOU window.
+- `orgchart.get` (step c) — flat `{employees[], edges[], rootIds[]}` projection with defensive edge filter dropping edges whose manager OR report is outside `listVisibleByCompany`.
+- `employees.promote` (step d) — atomic role swap (roleId / level / title / roleMdSha / tools_*_json updated in place; pure SQL; does not touch org_edges); refuses system employees; emits `employee.promoted` with full pre/post snapshot for renderer delta rendering; step d hardening added strict `rank(manager) < rank(report)` inversion guard via LEVEL_RANK.
+- `employees.setManager` (step d) — handles both upsert (pre-flight `wouldCycle` rejection with friendlier error) AND detach (null=remove; report becomes graph root); emits `employee.managerSet` with `previousManagerId` snapshot for renderer animation; step d hardening added the atomic setManager contract + handler rewrap of the repo's cycle throw.
+
+### Helpers introduced / carried forward
+
+- `assertCompanyActive(companiesRepo, companyId, channel)` — step d hardening BUG-002; reused by `employees.promote` / `employees.setManager` / `companies.update`. Refuses archived rows AND genuinely-missing ids with a clear channel-named error message.
+- `LEVEL_RANK` + `normalizeLevel` + `getLevelRank` (step d hardening) — locked Phase 2 M9 hierarchy in shared-types/entities.ts; `fail-open null` on unknown level strings + dev-mode warning prevents the IPC from bricking if a future role pack adds a new tier.
+- `HUMAN_USER_ID` actor sweep (step d hardening BUG-005) — every handler emitting a bus event now uses the `HUMAN_USER_ID` constant, not the literal `'user'` string. Swept across companies.create / companies.archive / companies.update / companies.delete / employees.promote / employees.setManager.
+- `ensureSystemForCompany` closure (step b) — composition-root captures `db` + `roleLookup`, delegates to `ensureSystemAgent` + `ensureSystemCopilot`. Same path the seed flow + M33 F4 post-restore sweep use. `companies.create` throws loud when unwired (refuses to leave a half-bootstrap row).
+
+### Tests pattern (carry forward to M-D)
+
+- Hand-rolled fakes in every per-namespace `*-handlers.test.ts` file satisfy only the narrow IPC dep surfaces. Unused methods throw `'unused by <suite> tests'` so future cross-tests accidentally reaching them fail loud.
+- Per-repo `*.test.ts` uses real sql.js via `makeTestDb()` with `PRAGMA foreign_keys = ON` so FK constraints + CASCADE behavior is exercised end-to-end.
+- `companies.test.ts` full-cascade sweep test seeds rows in all 15 company-scoped tables for BOTH a target company AND a sibling, proves after delete: (a) every scoped row for the target is gone, (b) every corresponding row for the sibling survives, (c) NULL-companyId global mcp_server survives, (d) indirect leaves (thread_members / messages / runs / project_tickets / ticket_attachments) mirror the same surgical pattern.
+
+### Next Session Startup Checklist (begin M-D)
+
+1. Read `.loki/queue/pending.json` — `activeSubMilestone.id = 'M-D'`, `previousSubMilestone.id = 'M-C'` (full verifiedBy manifest across all 5 sub-steps).
+2. Read `.loki/queue/current-task.json` — step e shipped block is the authoritative M-C closure record; M-D T0 needs a fresh `current-task.json` sprint plan referencing audit §20.2 / §20.3 UI scope.
+3. Audit §20.2 (Cluster A UI): `WorkspaceSwitcher` + `CreateCompanyDialog` + `CompanySettings` panel wired to `companies.list / create / update / archive / delete`.
+4. Audit §20.3 (Cluster B UI): indented-list org chart + drag-to-rearrange + Reports-to manager picker wired to `orgchart.get` + `employees.promote` + `employees.setManager`.
+5. Every M-D deliverable must: (a) consume M-C backend surface, (b) subscribe to `company.*` / `employee.*` bus events for cache invalidation per invariant #11, (c) ship all 5 F10 UI states (loading / error / empty / disabled / hover), (d) pass WCAG AA, (e) include E2E spec exercising the user-facing flow against the test-mode provider.
+6. Allowlist shrinkage complete for M-C — M-D does not shrink the allowlist further; remaining 3 entries (mcp.add / mcp.remove / mcp.health) are naming-drift rows scheduled for M-F docs-only IPC table renames.
+7. Same atomic + ledger commit cadence. Same ABI rebuild dance for vitest vs Playwright alternation.
+8. **Pause boundary:** Phase 6 M36 T2+ remains paused per D8 in `.loki/queue/pending.json`. Do not advance M-D to Phase 6 work until M-G retrospective ships and Rocky removes the `m36PausedState` block.
