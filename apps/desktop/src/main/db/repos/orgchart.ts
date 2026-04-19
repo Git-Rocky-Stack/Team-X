@@ -104,57 +104,127 @@ export function createOrgEdgesRepo<TRunResult>(db: OrgEdgesDb<TRunResult>) {
     },
 
     /**
-     * Set the manager of a given report, inserting a new edge or
-     * updating the existing one in place. Returns the edge id.
+     * Atomically set the manager of a given report — runs the cycle
+     * check, snapshots the previous manager id, and writes the upsert
+     * inside a single SQLite transaction so concurrent IPC callers
+     * cannot interleave reads/writes that would race past the guard.
      *
-     * Upsert is keyed on `report_id` (UNIQUE at SQL layer) so every
-     * report has at most one manager at any moment. Callers that
-     * need to remove a report from the org tree use
-     * `removeByReport` instead — passing a null manager is not a
-     * supported shape (an edge always points at something).
+     * Phase 5.6 M-C step d hardening (BUG-003 + BUG-004): the prior
+     * implementation called `wouldCycle` and the upsert in two separate
+     * statements, opening a TOCTOU window where a concurrent edge
+     * insertion between the check and the write could close a cycle
+     * the inner check believed it had ruled out. Wrapping both in
+     * `db.transaction` (synchronous on better-sqlite3 + sql.js) makes
+     * the read-modify-write atomic. Same fix snapshots the previous
+     * `managerId` inside the same transaction so the bus event payload
+     * cannot lie about the prior state under concurrency.
      *
-     * Throws if the edit would introduce a directed cycle — i.e.,
-     * when `managerId` already transitively reports to `reportId`.
-     * Self-edges (`managerId === reportId`) are trivially cyclic
-     * and also rejected.
+     * Returns BOTH the edge id AND the previous manager id (null if
+     * the report previously had no manager edge). The IPC handler
+     * forwards `previousManagerId` straight into the `employee.managerSet`
+     * bus event payload for accurate renderer animation.
+     *
+     * Throws if the edit would introduce a directed cycle. Self-edges
+     * (`managerId === reportId`) are trivially cyclic and also rejected
+     * by the inner `wouldCycle`. The thrown error message starts with
+     * `[org-edges] setManager: would create cycle` — IPC handlers
+     * pattern-match this prefix to surface a friendlier renderer toast.
      */
-    setManager(input: SetManagerInput): string {
-      if (repo.wouldCycle(input.companyId, input.managerId, input.reportId)) {
-        throw new Error(
-          `[org-edges] setManager: would create cycle — ${input.managerId} already reports (directly or transitively) to ${input.reportId}`,
-        );
-      }
+    setManager(input: SetManagerInput): { edgeId: string; previousManagerId: string | null } {
+      return db.transaction((tx) => {
+        // Atomic cycle check inside the transaction. Re-implements
+        // `wouldCycle` against `tx` (rather than `db`) so the chain
+        // walk reads the same snapshot that the upsert below will
+        // write into.
+        if (input.managerId === input.reportId) {
+          throw new Error(
+            `[org-edges] setManager: would create cycle — ${input.managerId} cannot manage itself (self-edge)`,
+          );
+        }
+        const visited = new Set<string>();
+        let current: string = input.managerId;
+        for (let depth = 0; depth < MAX_CHAIN_DEPTH; depth++) {
+          if (current === input.reportId) {
+            throw new Error(
+              `[org-edges] setManager: would create cycle — ${input.managerId} already reports (directly or transitively) to ${input.reportId}`,
+            );
+          }
+          if (visited.has(current)) {
+            throw new Error(
+              `[org-edges] setManager: would create cycle — pre-existing cycle detected at ${current}`,
+            );
+          }
+          visited.add(current);
+          const edge = tx
+            .select()
+            .from(orgEdges)
+            .where(and(eq(orgEdges.companyId, input.companyId), eq(orgEdges.reportId, current)))
+            .get();
+          if (!edge) break;
+          current = edge.managerId;
+        }
+        if (visited.size >= MAX_CHAIN_DEPTH) {
+          throw new Error(
+            `[org-edges] setManager: would create cycle — chain exceeds MAX_CHAIN_DEPTH=${MAX_CHAIN_DEPTH}`,
+          );
+        }
 
-      const existing = repo.getByReport(input.reportId);
-      if (existing) {
-        db.update(orgEdges)
-          .set({ managerId: input.managerId })
+        // Snapshot the previous edge for the report (if any). Reading
+        // inside the transaction guarantees the snapshot reflects the
+        // exact state the upsert below will overwrite.
+        const existing = tx
+          .select()
+          .from(orgEdges)
           .where(eq(orgEdges.reportId, input.reportId))
-          .run();
-        return existing.id;
-      }
+          .get();
+        const previousManagerId = existing?.managerId ?? null;
 
-      const id = nanoid();
-      db.insert(orgEdges)
-        .values({
-          id,
-          companyId: input.companyId,
-          managerId: input.managerId,
-          reportId: input.reportId,
-          createdAt: Date.now(),
-        })
-        .run();
-      return id;
+        if (existing) {
+          tx.update(orgEdges)
+            .set({ managerId: input.managerId })
+            .where(eq(orgEdges.reportId, input.reportId))
+            .run();
+          return { edgeId: existing.id, previousManagerId };
+        }
+
+        const id = nanoid();
+        tx.insert(orgEdges)
+          .values({
+            id,
+            companyId: input.companyId,
+            managerId: input.managerId,
+            reportId: input.reportId,
+            createdAt: Date.now(),
+          })
+          .run();
+        return { edgeId: id, previousManagerId };
+      });
     },
 
     /**
-     * Remove the edge pointing at a given report (detaches them from
-     * the tree; they become a new root). No-op when no edge exists.
-     * Called by `employees.fire` before the employee row is deleted
-     * so the CASCADE FK does not surprise consumers.
+     * Atomically remove the edge pointing at a given report (detaches
+     * them from the tree; they become a new root) AND return the
+     * previous manager id snapshot so the IPC handler can populate
+     * the `employee.managerSet` bus event payload accurately.
+     *
+     * Phase 5.6 M-C step d hardening (BUG-004): wraps the snapshot
+     * read + delete in a transaction so a concurrent reassignment
+     * cannot land a different manager between the snapshot and the
+     * detach. No-op (returns `{ previousManagerId: null }`) when no
+     * edge exists.
+     *
+     * Called by `employees.fire` before the employee row is deleted so
+     * the CASCADE FK does not surprise consumers.
      */
-    removeByReport(reportId: string): void {
-      db.delete(orgEdges).where(eq(orgEdges.reportId, reportId)).run();
+    removeByReport(reportId: string): { previousManagerId: string | null } {
+      return db.transaction((tx) => {
+        const existing = tx.select().from(orgEdges).where(eq(orgEdges.reportId, reportId)).get();
+        const previousManagerId = existing?.managerId ?? null;
+        if (existing) {
+          tx.delete(orgEdges).where(eq(orgEdges.reportId, reportId)).run();
+        }
+        return { previousManagerId };
+      });
     },
 
     /**

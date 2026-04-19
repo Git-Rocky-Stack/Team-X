@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RoleSpec } from '@team-x/shared-types';
 
+import type { CompanyRow } from '../db/repos/companies.js';
 import type { EmployeeRow, PromoteEmployeeInput } from '../db/repos/employees.js';
 
-import type { IpcEmployeesRepo, IpcEventBus, IpcRoleLookup } from './handlers.js';
+import type { IpcCompaniesRepo, IpcEmployeesRepo, IpcEventBus, IpcRoleLookup } from './handlers.js';
 import { createIpcHandlers } from './handlers.js';
+
+const HUMAN_USER_ID = 'rocky';
 
 /**
  * Tests for the `employees.promote` IPC handler — Phase 5.6 M-C step d
@@ -76,6 +79,31 @@ class FakeEmployeesRepo implements IpcEmployeesRepo {
   }
 }
 
+class FakeCompaniesRepo implements IpcCompaniesRepo {
+  rows: CompanyRow[] = [];
+
+  put(row: CompanyRow): void {
+    this.rows.push(row);
+  }
+
+  list(): CompanyRow[] {
+    return this.rows;
+  }
+
+  create(): string {
+    throw new Error('FakeCompaniesRepo.create: unused by promote tests');
+  }
+
+  getById(id: string): CompanyRow | null {
+    return this.rows.find((r) => r.id === id) ?? null;
+  }
+
+  archive(id: string): void {
+    const row = this.rows.find((r) => r.id === id);
+    if (row) (row as { status: string }).status = 'archived';
+  }
+}
+
 class FakeRoleLookup implements IpcRoleLookup {
   private specs = new Map<string, RoleSpec>();
   put(spec: RoleSpec): void {
@@ -127,6 +155,20 @@ function makeBusMock() {
 // ---------------------------------------------------------------------------
 
 const COMPANY_ID = 'co-1';
+
+function makeCompanyRow(overrides: Partial<CompanyRow> & { id: string }): CompanyRow {
+  return {
+    id: overrides.id,
+    name: 'Strategia-X',
+    slug: 'strategia-x',
+    createdAt: 1_700_000_000_000,
+    settingsJson: '{}',
+    icon: null,
+    theme: 'dark',
+    status: 'running',
+    ...overrides,
+  } as CompanyRow;
+}
 
 function makeEmployeeRow(overrides: Partial<EmployeeRow> & { id: string }): EmployeeRow {
   return {
@@ -183,18 +225,24 @@ function makeRoleSpec(overrides: Partial<RoleSpec['frontmatter']> = {}): RoleSpe
 const noop: any = null;
 
 interface Fixture {
+  companies: FakeCompaniesRepo;
   employees: FakeEmployeesRepo;
   roleLookup: FakeRoleLookup;
   bus: ReturnType<typeof makeBusMock>;
   handlers: ReturnType<typeof createIpcHandlers>;
 }
 
-function buildFixture(opts?: { omitBus?: boolean }): Fixture {
+function buildFixture(opts?: { omitBus?: boolean; companyStatus?: string }): Fixture {
+  const companies = new FakeCompaniesRepo();
+  // Seed the canonical company in the running state by default. Tests
+  // exercising the archived-company guard (BUG-002) override
+  // companyStatus to 'archived'.
+  companies.put(makeCompanyRow({ id: COMPANY_ID, status: opts?.companyStatus ?? 'running' }));
   const employees = new FakeEmployeesRepo();
   const roleLookup = new FakeRoleLookup();
   const bus = makeBusMock();
   const handlers = createIpcHandlers({
-    companiesRepo: noop as never,
+    companiesRepo: companies,
     employeesRepo: employees,
     threadsRepo: noop as never,
     messagesRepo: noop as never,
@@ -221,7 +269,7 @@ function buildFixture(opts?: { omitBus?: boolean }): Fixture {
     bus: opts?.omitBus ? undefined : bus.bus,
     getHardwareProfile: () => ({}) as never,
   });
-  return { employees, roleLookup, bus, handlers };
+  return { companies, employees, roleLookup, bus, handlers };
 }
 
 // ---------------------------------------------------------------------------
@@ -275,6 +323,8 @@ describe('IPC: employees.promote — happy path', () => {
     expect(fx.bus.emitted[0]?.type).toBe('employee.promoted');
     expect(fx.bus.emitted[0]?.companyId).toBe(COMPANY_ID);
     expect(fx.bus.emitted[0]?.actorKind).toBe('user');
+    // BUG-005 hardening — actorId is HUMAN_USER_ID, not the literal 'user'.
+    expect(fx.bus.emitted[0]?.actorId).toBe(HUMAN_USER_ID);
     expect(fx.bus.emitted[0]?.payload).toMatchObject({
       employeeId: 'emp-iris',
       previousRoleId: 'senior-fullstack-engineer',
@@ -318,6 +368,9 @@ describe('IPC: employees.promote — happy path', () => {
   });
 
   it('emits with the employee.companyId (not a hard-coded one)', async () => {
+    // BUG-002 hardening: must seed co-other in companies too — the
+    // assertCompanyActive guard now refuses missing companies.
+    fx.companies.put(makeCompanyRow({ id: 'co-other', status: 'running' }));
     fx.employees.put(makeEmployeeRow({ id: 'emp-iris', companyId: 'co-other' }));
     fx.roleLookup.put(makeRoleSpec());
     await fx.handlers.employeesPromote({
@@ -493,5 +546,87 @@ describe('IPC: employees.promote — bus emit tolerance (invariant #11)', () => 
     } finally {
       process.env.NODE_ENV = prev;
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BUG-002 hardening — archived-company guard
+// ---------------------------------------------------------------------------
+
+describe('IPC: employees.promote — archived-company guard (BUG-002)', () => {
+  it('rejects promote against an archived company with a clear error', async () => {
+    const fx = buildFixture({ companyStatus: 'archived' });
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris' }));
+    fx.roleLookup.put(makeRoleSpec());
+    await expect(
+      fx.handlers.employeesPromote({ employeeId: 'emp-iris', newRoleId: 'engineering-manager' }),
+    ).rejects.toThrow(/is archived; reactivate before mutating org/);
+    // No promote call, no bus event, no row mutation.
+    expect(fx.employees.promoteCalls).toEqual([]);
+    expect(fx.bus.emitted).toEqual([]);
+  });
+
+  it('rejects promote when the employee references a missing company', async () => {
+    const fx = buildFixture();
+    // Hire an employee under a company id that is NOT seeded into companies.
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris', companyId: 'co-ghost' }));
+    fx.roleLookup.put(makeRoleSpec());
+    await expect(
+      fx.handlers.employeesPromote({ employeeId: 'emp-iris', newRoleId: 'engineering-manager' }),
+    ).rejects.toThrow(/company not found: co-ghost/);
+    expect(fx.employees.promoteCalls).toEqual([]);
+    expect(fx.bus.emitted).toEqual([]);
+  });
+
+  it('still permits promote when the company is paused (only archived blocks)', async () => {
+    const fx = buildFixture({ companyStatus: 'paused' });
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris' }));
+    fx.roleLookup.put(makeRoleSpec());
+    await expect(
+      fx.handlers.employeesPromote({ employeeId: 'emp-iris', newRoleId: 'engineering-manager' }),
+    ).resolves.toMatchObject({ employeeId: 'emp-iris' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-IPC-PROMOTE-FIRE-RACE — coverage gap for the documented no-op path
+// ---------------------------------------------------------------------------
+
+describe('IPC: employees.promote — concurrent fire race (TC-IPC-PROMOTE-FIRE-RACE)', () => {
+  it('handler completes if employee is deleted between getById and repo.promote (no-op write + bus emit fires with snapshot)', async () => {
+    // Documented behavior: the repo's `promote` is a no-op for unknown
+    // ids; the handler captures the pre-promote snapshot from getById
+    // and emits the bus event with that snapshot. The IPC succeeds
+    // (caller sees the response shape they expected), the durable
+    // write is a no-op, and the renderer reconciles via React Query
+    // refetch. This test pins that behavior so a future "fail loud
+    // on missing row" refactor cannot ship silently.
+    const fx = buildFixture();
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris' }));
+    fx.roleLookup.put(makeRoleSpec());
+
+    // Patch the fake to delete the row AFTER getById is invoked but
+    // BEFORE promote runs — simulating a concurrent employees.fire IPC.
+    const originalGetById = fx.employees.getById.bind(fx.employees);
+    fx.employees.getById = (id: string) => {
+      const row = originalGetById(id);
+      // Schedule the delete on next microtask so it lands before the
+      // handler's call to employeesRepo.promote.
+      if (row) {
+        queueMicrotask(() => {
+          fx.employees.rows = fx.employees.rows.filter((r) => r.id !== id);
+        });
+      }
+      return row;
+    };
+
+    const result = await fx.handlers.employeesPromote({
+      employeeId: 'emp-iris',
+      newRoleId: 'engineering-manager',
+    });
+    expect(result.employeeId).toBe('emp-iris');
+    // Bus event emitted with the pre-promote snapshot.
+    expect(fx.bus.emitted).toHaveLength(1);
+    expect(fx.bus.emitted[0]?.type).toBe('employee.promoted');
   });
 });

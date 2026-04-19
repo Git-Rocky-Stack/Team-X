@@ -160,7 +160,12 @@ import type {
   VaultVerifyResponse,
 } from '@team-x/shared-types';
 import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
-import { AUTO_THREAD_ID, DEFAULT_CONCURRENCY_CAPS, PRIVACY_TIER_RANK } from '@team-x/shared-types';
+import {
+  AUTO_THREAD_ID,
+  DEFAULT_CONCURRENCY_CAPS,
+  PRIVACY_TIER_RANK,
+  getLevelRank,
+} from '@team-x/shared-types';
 
 import type { RoleSpec } from '@team-x/shared-types';
 
@@ -348,17 +353,37 @@ export interface IpcOrgEdgesRepo {
   /** Look up the existing edge whose `report_id = reportId`, or null. M-C step d. */
   getByReport(reportId: string): OrgEdgeRow | null;
   /**
-   * Upsert the edge pointing at the report. Throws on directed-cycle
-   * rejection. M-C step d.
+   * Atomically upsert the edge pointing at the report (cycle-checked +
+   * snapshot-reading inside a single transaction). Returns the new edge
+   * id AND the previous manager id (null if the report had no manager).
+   * Throws on directed-cycle rejection — the IPC handler catches the
+   * `[org-edges] setManager: would create cycle` prefix and rewraps
+   * with a friendlier renderer-facing message.
+   *
+   * Phase 5.6 M-C step d hardening (BUG-003 + BUG-004): the prior
+   * implementation returned just the edge id and ran cycle-check +
+   * write in two separate statements (TOCTOU window). The hardening
+   * pass wrapped both in `db.transaction` and snapshots the previous
+   * manager id in the same atomic step.
    */
-  setManager(input: { companyId: string; managerId: string; reportId: string }): string;
-  /** Clear the edge whose `report_id = reportId`. No-op when no edge exists. M-C step d. */
-  removeByReport(reportId: string): void;
+  setManager(input: {
+    companyId: string;
+    managerId: string;
+    reportId: string;
+  }): { edgeId: string; previousManagerId: string | null };
   /**
-   * Pre-check whether making `managerId` the manager of `reportId`
-   * would close a directed cycle. Repo's `setManager` runs the same
-   * guard internally; exposed here so the IPC handler can produce a
-   * friendlier error message before invoking the SQL write. M-C step d.
+   * Atomically clear the edge whose `report_id = reportId` AND return
+   * the previous manager id snapshot. No-op (returns
+   * `{ previousManagerId: null }`) when no edge exists. M-C step d
+   * hardening (BUG-004) — wraps snapshot + delete in a transaction.
+   */
+  removeByReport(reportId: string): { previousManagerId: string | null };
+  /**
+   * Best-effort cycle pre-check exposed for diagnostic / dev-tooling
+   * use. The IPC handler does NOT call this directly anymore — the
+   * repo's `setManager` runs an atomic cycle check inside its own
+   * transaction (M-C step d hardening eliminated the handler-side
+   * pre-check that previously had a TOCTOU race with the repo write).
    */
   wouldCycle(companyId: string, managerId: string, reportId: string): boolean;
 }
@@ -1080,6 +1105,36 @@ import type {
   TicketStatus,
 } from '@team-x/shared-types';
 
+/**
+ * Refuse a write IPC against an archived company. Phase 5.6 M-C step d
+ * hardening (BUG-002) — archived companies are soft-deleted; the
+ * orchestrator dispatcher treats them as inactive and the copilot
+ * analyzer is quiesced. Allowing org mutations on a tombstoned
+ * company would emit bus events on a stale entity and create
+ * ghost-row reporting graph state. Throws with a clear, actionable
+ * error message naming the originating IPC channel.
+ *
+ * Used by `employees.promote` and `employees.setManager` today; step
+ * (e) `companies.update` will reuse the same helper. Companies that
+ * do not exist (lookup returns null) are also rejected — the IPC
+ * caller has a stale company id and the renderer should refresh.
+ */
+function assertCompanyActive(
+  companiesRepo: IpcCompaniesRepo,
+  companyId: string,
+  channel: string,
+): void {
+  const company = companiesRepo.getById(companyId);
+  if (!company) {
+    throw new Error(`[ipc] ${channel}: company not found: ${companyId}`);
+  }
+  if (company.status === 'archived') {
+    throw new Error(
+      `[ipc] ${channel}: company ${companyId} is archived; reactivate before mutating org`,
+    );
+  }
+}
+
 function rowToTicket(row: TicketRow): Ticket {
   return {
     id: row.id,
@@ -1361,7 +1416,11 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           bus.emit({
             type: 'company.created',
             companyId,
-            actorId: 'user',
+            // BUG-005 (Phase 5.6 M-C step d hardening): use the canonical
+            // HUMAN_USER_ID constant instead of the literal 'user' so audit-
+            // view actor links resolve to the seeded user row when multi-
+            // user lands.
+            actorId: HUMAN_USER_ID,
             actorKind: 'user',
             payload: {
               companyId,
@@ -1433,7 +1492,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           bus.emit({
             type: 'company.archived',
             companyId,
-            actorId: 'user',
+            // BUG-005 (Phase 5.6 M-C step d hardening): HUMAN_USER_ID,
+            // not literal 'user'. Same rationale as `companies.create`.
+            actorId: HUMAN_USER_ID,
             actorKind: 'user',
             payload: { companyId, archivedAt: Date.now() },
           });
@@ -1522,6 +1583,13 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
 
     async employeesPromote(req) {
       // Input validation — fail closed before any SQL writes.
+      //
+      // BUG-008 (Phase 5.6 M-C step d hardening): error messages
+      // intentionally include internal nanoid identifiers (e.g.
+      // "employee not found: <id>") to preserve the developer feedback
+      // loop. Public release will need an error-redaction helper that
+      // scrubs IDs in the production error formatter; tracked for
+      // M-F docs sweep.
       if (!req || typeof req !== 'object') {
         throw new Error('[ipc] employees.promote: request body is required');
       }
@@ -1548,6 +1616,14 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         );
       }
 
+      // BUG-002 (Phase 5.6 M-C step d hardening): refuse mutations
+      // against archived companies. Archived = soft-deleted, the
+      // orchestrator dispatcher already treats the company as inactive
+      // and the copilot analyzer is quiesced. Allowing org mutations
+      // would emit bus events on a tombstoned entity and create
+      // ghost-row reporting graph state.
+      assertCompanyActive(companiesRepo, employee.companyId, 'employees.promote');
+
       const spec = roleLookup.getSpec(newRoleId);
       if (!spec) {
         throw new Error(`[ipc] employees.promote: role not found: ${newRoleId}`);
@@ -1571,6 +1647,22 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       const newLevel = spec.frontmatter.level;
       const newTitle = spec.frontmatter.name;
 
+      // BUG-006 (Phase 5.6 M-C step d hardening): tools_allowed /
+      // tools_denied flow into the row's tools_*_json columns
+      // unvalidated at this layer by design. Trust-boundary chain:
+      //
+      //   1. Role-pack files signed Ed25519 (Phase 5.5 hotfix). In
+      //      packaged production builds the loader runs in `strict`
+      //      mode and refuses an unsigned or tampered pack.
+      //   2. Even with a tampered pack, the strings cannot escape
+      //      into actual tool dispatch — the MCP Host (architectural
+      //      invariant #3) enforces the `tools_allowed` / `tools_denied`
+      //      lists at the tool-call gateway. Strings that don't match
+      //      a real registered tool name are inert.
+      //
+      // The defense lives at the gateway, not here. Logged so future
+      // refactors don't accidentally remove the gateway check assuming
+      // upstream validation.
       employeesRepo.promote({
         employeeId,
         roleId: spec.frontmatter.id,
@@ -1585,13 +1677,18 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       // a bus failure cannot cascade into the IPC throw (the row is
       // already promoted by the time we get here). Mirrors the
       // `companies.archive` / `companies.create` patterns.
+      //
+      // BUG-005 (Phase 5.6 M-C step d hardening): use HUMAN_USER_ID
+      // (the canonical Phase 1 hardcoded user constant) instead of
+      // the literal 'user' string — keeps audit-view actor links
+      // resolvable to a real row id when multi-user lands.
       const promotedAt = Date.now();
       if (bus) {
         try {
           bus.emit({
             type: 'employee.promoted',
             companyId: employee.companyId,
-            actorId: 'user',
+            actorId: HUMAN_USER_ID,
             actorKind: 'user',
             payload: {
               employeeId,
@@ -1628,6 +1725,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     },
 
     async employeesSetManager(req) {
+      // BUG-008 (Phase 5.6 M-C step d hardening): error messages
+      // intentionally include internal nanoid identifiers for the
+      // developer feedback loop. See `employeesPromote` JSDoc.
       if (!req || typeof req !== 'object') {
         throw new Error('[ipc] employees.setManager: request body is required');
       }
@@ -1659,21 +1759,26 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         );
       }
 
-      // Snapshot the previous manager id for the bus event payload BEFORE
-      // we touch the edge — the repo's removeByReport is destructive and
-      // we'd lose the prior state if we read after.
-      const previousEdge = orgEdgesRepo.getByReport(employeeId);
-      const previousManagerId = previousEdge?.managerId ?? null;
+      // BUG-002 (Phase 5.6 M-C step d hardening): refuse mutations
+      // against archived companies. Same rationale as `employees.promote`.
+      assertCompanyActive(companiesRepo, employee.companyId, 'employees.setManager');
+
+      let previousManagerId: string | null;
 
       if (managerId === null) {
-        // Detach path — clear the edge. No-op when no edge exists, matches
-        // `removeByReport`'s existing semantics.
-        orgEdgesRepo.removeByReport(employeeId);
+        // Detach path — atomic snapshot + remove inside the repo's
+        // transaction. previousManagerId is null when the report was
+        // already a graph root.
+        const result = orgEdgesRepo.removeByReport(employeeId);
+        previousManagerId = result.previousManagerId;
       } else {
-        // Upsert path. Validate the manager exists, is non-system, and
-        // shares a company with the report BEFORE invoking setManager so
-        // the friendlier error message surfaces (the repo's wouldCycle is
-        // a redundant inner guard).
+        // Upsert path. Validate the manager exists, is non-system,
+        // shares a company with the report, and (M-C step d hardening
+        // BUG-001) sits at a strictly more senior level. The repo's
+        // setManager runs the cycle check inside its own transaction
+        // — the handler-side wouldCycle pre-check was removed in the
+        // M-C step d hardening pass to eliminate the TOCTOU window
+        // between handler-check and repo-write (BUG-003 + BUG-004).
         if (managerId === employeeId) {
           throw new Error(
             '[ipc] employees.setManager: managerId and employeeId must differ (self-edges are cyclic)',
@@ -1693,28 +1798,61 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
             `[ipc] employees.setManager: manager ${managerId} and report ${employeeId} must share a company`,
           );
         }
-        // Pre-flight cycle check so the renderer gets a friendlier
-        // message than the repo's raw "would create cycle" throw.
-        if (orgEdgesRepo.wouldCycle(employee.companyId, managerId, employeeId)) {
+
+        // BUG-001 (Phase 5.6 M-C step d hardening): level-inversion
+        // guard. The locked Phase 2 M9 hierarchy (officer >
+        // senior-management > management > supervisor > lead > ic)
+        // requires a manager to be at a STRICTLY more senior level
+        // than its report. Same-level and inverted relationships
+        // are rejected here. Unknown levels (e.g. a future role-pack
+        // adds a new tier) fail OPEN with a dev-mode warning so the
+        // guard does not brick the IPC on data we don't recognize.
+        const managerRank = getLevelRank(manager.level);
+        const reportRank = getLevelRank(employee.level);
+        if (managerRank === null || reportRank === null) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn(
+              `[ipc] employees.setManager: level rank unknown — manager.level=${manager.level} report.level=${employee.level}; skipping inversion guard (fail-open)`,
+            );
+          }
+        } else if (managerRank >= reportRank) {
           throw new Error(
-            `[ipc] employees.setManager: would create reporting cycle — ${managerId} already reports (directly or transitively) to ${employeeId}`,
+            `[ipc] employees.setManager: level inversion — manager (${manager.level}) must be at a strictly more senior level than report (${employee.level})`,
           );
         }
-        orgEdgesRepo.setManager({
-          companyId: employee.companyId,
-          managerId,
-          reportId: employeeId,
-        });
+
+        // Atomic upsert + snapshot inside the repo's transaction.
+        // Catches the repo's "would create cycle" throw and rewraps
+        // with a friendlier renderer-facing message — pattern-match
+        // on the `[org-edges] setManager: would create cycle` prefix
+        // the repo emits.
+        try {
+          const result = orgEdgesRepo.setManager({
+            companyId: employee.companyId,
+            managerId,
+            reportId: employeeId,
+          });
+          previousManagerId = result.previousManagerId;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes('[org-edges] setManager: would create cycle')) {
+            throw new Error(
+              `[ipc] employees.setManager: would create reporting cycle — ${managerId} already reports (directly or transitively) to ${employeeId}`,
+            );
+          }
+          throw err;
+        }
       }
 
       // Architectural invariant #11 — emit AFTER the durable write.
+      // BUG-005 (M-C step d hardening): use HUMAN_USER_ID, not 'user'.
       const setAt = Date.now();
       if (bus) {
         try {
           bus.emit({
             type: 'employee.managerSet',
             companyId: employee.companyId,
-            actorId: 'user',
+            actorId: HUMAN_USER_ID,
             actorKind: 'user',
             payload: {
               employeeId,

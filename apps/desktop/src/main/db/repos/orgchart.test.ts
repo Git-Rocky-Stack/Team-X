@@ -84,9 +84,13 @@ describe('org-edges repo', () => {
 
   describe('setManager', () => {
     it('inserts a new edge when none exists for the report', () => {
-      const id = repo.setManager({ companyId, managerId: ceoId, reportId: cooId });
-      expect(id).toBeTypeOf('string');
-      expect(id.length).toBeGreaterThan(0);
+      // M-C step d hardening (BUG-003 + BUG-004): setManager now returns
+      // { edgeId, previousManagerId } from inside an atomic transaction.
+      // previousManagerId is null when the report had no prior edge.
+      const result = repo.setManager({ companyId, managerId: ceoId, reportId: cooId });
+      expect(result.edgeId).toBeTypeOf('string');
+      expect(result.edgeId.length).toBeGreaterThan(0);
+      expect(result.previousManagerId).toBeNull();
 
       const edge = repo.getByReport(cooId);
       expect(edge).not.toBeNull();
@@ -96,13 +100,39 @@ describe('org-edges repo', () => {
     });
 
     it('updates managerId in place when an edge already exists (upsert)', () => {
-      const firstId = repo.setManager({ companyId, managerId: ceoId, reportId: vpEngId });
-      const secondId = repo.setManager({ companyId, managerId: cooId, reportId: vpEngId });
+      const first = repo.setManager({ companyId, managerId: ceoId, reportId: vpEngId });
+      const second = repo.setManager({ companyId, managerId: cooId, reportId: vpEngId });
 
       // Same row id — it was updated in place, not re-inserted.
-      expect(secondId).toBe(firstId);
+      expect(second.edgeId).toBe(first.edgeId);
+      // previousManagerId reflects the prior manager (snapshotted inside
+      // the transaction).
+      expect(first.previousManagerId).toBeNull();
+      expect(second.previousManagerId).toBe(ceoId);
       const edge = repo.getByReport(vpEngId);
       expect(edge?.managerId).toBe(cooId);
+    });
+
+    it('returns previousManagerId snapshot atomically inside the transaction (BUG-004)', () => {
+      // Pin the design contract: the snapshot read happens INSIDE the
+      // same transaction that writes the upsert. A handler-level
+      // separate getByReport snapshot would race; this test guards
+      // against a regression that re-introduces the standalone read.
+      repo.setManager({ companyId, managerId: ceoId, reportId: vpEngId });
+      const reassign = repo.setManager({ companyId, managerId: cooId, reportId: vpEngId });
+      expect(reassign.previousManagerId).toBe(ceoId);
+    });
+
+    it('removeByReport returns previousManagerId snapshot from inside the transaction', () => {
+      repo.setManager({ companyId, managerId: ceoId, reportId: cooId });
+      const detachResult = repo.removeByReport(cooId);
+      expect(detachResult.previousManagerId).toBe(ceoId);
+      expect(repo.getByReport(cooId)).toBeNull();
+    });
+
+    it('removeByReport on a root employee (no prior edge) returns previousManagerId: null', () => {
+      const result = repo.removeByReport(cooId);
+      expect(result.previousManagerId).toBeNull();
     });
 
     it('stores createdAt as a positive integer in ms on insert', () => {

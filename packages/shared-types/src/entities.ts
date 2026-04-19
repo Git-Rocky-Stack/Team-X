@@ -18,6 +18,77 @@ export type ActorKind = AuthorKind | 'orchestrator' | 'provider';
 export type EmployeeStatus = 'idle' | 'thinking' | 'blocked' | 'error';
 
 // ---------------------------------------------------------------------------
+// Employee level hierarchy (Phase 5.6 M-C step d hardening — BUG-001)
+//
+// Locked Phase 2 M9 design: real hierarchy with strict precedence:
+//
+//   officer > senior-management > management > supervisor > lead > ic
+//
+// LOWER rank number = MORE senior. The strict rule for the
+// `employees.setManager` IPC: `rank(manager) < rank(report)` — manager
+// MUST be at a strictly more senior level than the report. Same-level
+// and inverted relationships are rejected by the handler. Matrix /
+// flat-org structures would require an explicit opt-in flag in a
+// future milestone (today there is no such flag — strict mode only).
+//
+// `system` is intentionally absent — system pseudo-employees are
+// filtered out of every renderer surface and the org tree before this
+// rank ever applies; the handler-level `is_system` guard short-circuits
+// before the rank check runs.
+//
+// `getLevelRank` accepts case-insensitive input and normalizes
+// whitespace → hyphen so role-pack frontmatter ('Senior Management',
+// 'senior-management', 'SENIOR MANAGEMENT') all resolve to the same
+// rank. Unknown levels return `null`; callers fail OPEN with a dev-mode
+// warning rather than reject — keeps the guard non-fragile against
+// role-pack additions that introduce new level names.
+// ---------------------------------------------------------------------------
+
+export type EmployeeLevel =
+  | 'officer'
+  | 'senior-management'
+  | 'management'
+  | 'supervisor'
+  | 'lead'
+  | 'ic';
+
+/**
+ * Numeric rank per level. Lower = more senior. Used by the
+ * `employees.setManager` handler's level-inversion guard.
+ */
+export const LEVEL_RANK: Readonly<Record<EmployeeLevel, number>> = {
+  officer: 0,
+  'senior-management': 1,
+  management: 2,
+  supervisor: 3,
+  lead: 4,
+  ic: 5,
+};
+
+/**
+ * Normalize a free-form level string (role-pack frontmatter, DB column,
+ * UI input) to the canonical `EmployeeLevel` form. Lowercase + trim +
+ * collapse whitespace runs to single hyphens.
+ */
+export function normalizeLevel(level: string): string {
+  return level.toLowerCase().trim().replace(/\s+/g, '-');
+}
+
+/**
+ * Resolve a free-form level string to its numeric rank. Returns `null`
+ * for unrecognized levels (including `'system'` — system rows never
+ * participate in the org tree). Callers MUST treat `null` as
+ * "skip the level check" (fail-open with dev-mode warning) so a future
+ * role-pack that introduces a new level name does not brick existing
+ * `setManager` calls.
+ */
+export function getLevelRank(level: string | null | undefined): number | null {
+  if (!level) return null;
+  const normalized = normalizeLevel(level);
+  return LEVEL_RANK[normalized as EmployeeLevel] ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // Company status (Phase 3 — M16)
 // ---------------------------------------------------------------------------
 

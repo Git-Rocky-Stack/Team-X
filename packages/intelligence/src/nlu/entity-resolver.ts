@@ -347,9 +347,12 @@ function classifyFuzzy<S extends ScoredItem, T>(
 ): ResolvedEntity<T> {
   if (scored.length === 0) return { kind: 'not_found' };
   if (scored.length === 1) {
+    // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees scored[0] is defined
     return { kind: 'unique', value: unwrap(scored[0]!) };
   }
+  // biome-ignore lint/style/noNonNullAssertion: prior length checks above prove scored[0] is defined
   const best = scored[0]!;
+  // biome-ignore lint/style/noNonNullAssertion: scored.length >= 2 reached here, so scored[1] is defined
   const runner = scored[1]!;
   if (runner.score - best.score >= FUZZY_UNIQUE_MARGIN) {
     return { kind: 'unique', value: unwrap(best) };

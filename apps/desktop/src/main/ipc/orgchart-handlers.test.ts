@@ -89,13 +89,16 @@ class FakeOrgEdgesRepo implements IpcOrgEdgesRepo {
 
   // Write-side methods unused by orgchart.get tests — step d's
   // employees-set-manager-handlers.test.ts hand-rolls its own fake.
+  // Return-shape declarations match the M-C step d hardening pass:
+  // setManager + removeByReport now return previousManagerId snapshots
+  // alongside the edge id (BUG-003 + BUG-004).
   getByReport(): OrgEdgeRow | null {
     throw new Error('FakeOrgEdgesRepo.getByReport: unused by orgchart.get tests');
   }
-  setManager(): string {
+  setManager(): { edgeId: string; previousManagerId: string | null } {
     throw new Error('FakeOrgEdgesRepo.setManager: unused by orgchart.get tests');
   }
-  removeByReport(): void {
+  removeByReport(): { previousManagerId: string | null } {
     throw new Error('FakeOrgEdgesRepo.removeByReport: unused by orgchart.get tests');
   }
   wouldCycle(): boolean {

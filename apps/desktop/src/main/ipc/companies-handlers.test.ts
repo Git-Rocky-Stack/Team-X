@@ -270,7 +270,11 @@ describe('companies.create handler — Phase 5.6 M-C step b', () => {
       expect(bus.emitted[0]).toMatchObject({
         type: 'company.created',
         companyId: result.companyId,
-        actorId: 'user',
+        // BUG-005 hardening (Phase 5.6 M-C step d): actorId is the
+        // canonical HUMAN_USER_ID constant ('rocky'), not the literal
+        // 'user' string. Same sweep applied to companies.archive +
+        // employees.promote + employees.setManager.
+        actorId: 'rocky',
         actorKind: 'user',
       });
       const payload = bus.emitted[0]?.payload as {
