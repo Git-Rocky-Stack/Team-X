@@ -41,6 +41,8 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 ### Step (a) — Foundation: dropdown-menu primitive + `use-companies` hook + `WorkspaceSwitcher`
 
+> **2026-04-19 revision — step (a+b) collapse.** The 2026-04-19 ground-zero audit (`docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md`) surfaced 1 P1 (stale `activeCompanyId` after delete) + 2 P2 polish gaps (error-state retry, empty-state dead-end). Per Rocky's iron-rule directive against deferred placeholders, the disabled "Soon" Create CTA is REJECTED. Step (b) `CreateCompanyDialog` collapsed forward into the same hardening atomic. Net effect: step (a) ships steps (a) AND (b) together; the original step (b) entry below is preserved as historical context but is now an empty entry.
+
 **Goal:** Make the app render a one-of-many companies switcher in the top bar. The hardest architectural decision — where the switcher mounts (top-bar vs side-nav vs user-menu) — lands here, and everything downstream depends on it.
 
 **Files:**
@@ -65,6 +67,8 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 - WCAG AA: tab-focus visible, Enter opens menu, arrow keys navigate, Enter selects, Esc closes.
 
 ### Step (b) — `CreateCompanyDialog`
+
+> **2026-04-19 — COLLAPSED into step (a+b) hardening atomic.** Shipped as part of the post-audit remediation per Rocky's iron-rule directive. See `docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md` and the step (a) revision note above. The original scope below is preserved for historical context.
 
 **Goal:** Ship the create flow end-to-end.
 

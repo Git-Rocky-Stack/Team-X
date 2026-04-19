@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useCompanies } from '@/hooks/use-companies.js';
 import { useDashboardEvents } from '@/hooks/use-dashboard-events.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useAppStore } from '@/store/app-store.js';
@@ -52,14 +53,29 @@ export default function App() {
   const [hireOpen, setHireOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
+  // Reactive active-company selection. Replaces the previous one-shot
+  // direct preload-bridge fetch so that (a) the source of truth for
+  // the company list is a single hook (useCompanies) that the switcher
+  // and this auto-selector share, and (b) the effect re-evaluates
+  // when the list changes on bus events — closing the Phase 5.6 M-D
+  // step (a) P1 finding where a company.deleted event for the ACTIVE
+  // company left companyId pointing at a dead row with no recovery.
+  // Audit: docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md §3.1.
+  // Auto-select fires when:
+  //   (1) no active company (first launch / post-clear), OR
+  //   (2) the active company id is no longer in the list (deleted).
+  // Zero-company edge case is left to the step (b) Create workspace
+  // CTA + step (c) CompanySettings recovery flows.
+  const { data: companies } = useCompanies();
+
   useEffect(() => {
-    if (companyId !== null) return;
-    window.teamx.companies.list().then((companies) => {
-      if (companies.length > 0 && companies[0]) {
-        setCompanyId(companies[0].id);
-      }
-    });
-  }, [companyId, setCompanyId]);
+    if (companies === undefined) return; // still loading
+    const activeStillExists = companyId !== null && companies.some((c) => c.id === companyId);
+    if (activeStillExists) return;
+    if (companies.length > 0 && companies[0]) {
+      setCompanyId(companies[0].id);
+    }
+  }, [companyId, setCompanyId, companies]);
 
   // Global keybindings (mounted once at the shell root so the shortcuts
   // work from any view):

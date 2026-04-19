@@ -69,9 +69,19 @@ describe('WorkspaceSwitcher (features/workspace/workspace-switcher.tsx)', () => 
     expect(src).toMatch(/<Skeleton\s+className="h-3\.5 w-24"\s*\/>/);
   });
 
-  it('surfaces an error state with a dedicated dropdown row', () => {
+  it('surfaces an error state with an actionable Retry row (2026-04-19 P2.1 closure)', () => {
+    // The error row must be actionable — onSelect prevents default
+    // + calls refetch from useCompanies. "Failed to load — retry in a
+    // moment" passive copy is explicitly REMOVED per the audit
+    // remediation; new copy reads "Retry loading workspaces".
     expect(src).toContain('data-workspace-switcher-state="error"');
-    expect(src).toMatch(/Failed to load/);
+    expect(src).toMatch(/Retry loading workspaces/);
+    expect(src).toMatch(
+      /onSelect=\{\s*\(e\)\s*=>\s*\{[\s\S]*?e\.preventDefault\(\);[\s\S]*?refetch\(\)/,
+    );
+    // Negative assertion: the passive "in a moment" copy from the
+    // pre-remediation version must not reappear in a future refactor.
+    expect(src).not.toMatch(/retry in a moment/);
   });
 
   it('surfaces an empty state with a dedicated dropdown row', () => {
@@ -79,10 +89,28 @@ describe('WorkspaceSwitcher (features/workspace/workspace-switcher.tsx)', () => 
     expect(src).toMatch(/No workspaces yet/);
   });
 
-  it('carries a disabled step-(b) placeholder CTA with Soon label', () => {
-    expect(src).toContain('data-workspace-switcher-action="create-company-placeholder"');
-    expect(src).toMatch(/title="Available in step \(b\)"/);
-    expect(src).toMatch(/Create company…/);
+  it('opens CreateCompanyDialog via a LIVE Create CTA (no disabled Soon placeholder)', () => {
+    // The 2026-04-19 audit + Rocky's iron-rule directive closed the
+    // disabled-placeholder shortcut: the Create CTA must be live,
+    // wired to setCreateOpen(true), and open the CreateCompanyDialog.
+    expect(src).toContain('data-workspace-switcher-action="create-company"');
+    expect(src).toMatch(/Create workspace…/);
+    expect(src).toMatch(/onSelect=\{\s*\(e\)\s*=>\s*\{[\s\S]*?setCreateOpen\(true\)/);
+    // Negative assertions: the disabled placeholder attributes +
+    // "Soon" badge + step-(b) tooltip MUST NOT reappear.
+    expect(src).not.toContain('data-workspace-switcher-action="create-company-placeholder"');
+    expect(src).not.toMatch(/title="Available in step \(b\)"/);
+    expect(src).not.toMatch(/>Soon</);
+  });
+
+  it('renders the CreateCompanyDialog as a sibling of the menu', () => {
+    // Dialog is a sibling inside a fragment — always mounted so the
+    // dropdown-menu's focus-trap never conflicts with the dialog's
+    // on open.
+    expect(src).toContain('import { CreateCompanyDialog }');
+    expect(src).toMatch(
+      /<CreateCompanyDialog\s+open=\{createOpen\}\s+onOpenChange=\{setCreateOpen\}\s*\/>/,
+    );
   });
 
   it('applies hover + focus-visible brand ring on the trigger', () => {
@@ -92,8 +120,13 @@ describe('WorkspaceSwitcher (features/workspace/workspace-switcher.tsx)', () => 
 
   // Accessibility contract.
 
-  it('reflects the active company in the trigger aria-label', () => {
-    expect(src).toMatch(/aria-label=\{`Workspace switcher[\s\S]*?\$\{activeCompany[\s\S]*?\}`\}/);
+  it('reflects the active company AND the error state in the trigger aria-label (2026-04-19 P3.1 closure)', () => {
+    // aria-label must switch to an error-specific string when isError
+    // so screen readers announce what sighted users see — not stay
+    // on the pre-refetch active-company name.
+    expect(src).toMatch(/aria-label=\{triggerAriaLabel\}/);
+    expect(src).toMatch(/triggerAriaLabel\s*=\s*isError[\s\S]*?workspaces failed to load/);
+    expect(src).toMatch(/active:\s*\$\{activeCompany\.name\}/);
   });
 
   it('marks the active row with aria-current="true"', () => {
@@ -128,12 +161,14 @@ describe('WorkspaceSwitcher (features/workspace/workspace-switcher.tsx)', () => 
     expect(src).toMatch(/useMemo\(\s*\(\)\s*=>\s*companies\.find/);
   });
 
-  it('documents the step-(a) scope and step-(b)/(c) follow-ups in JSDoc', () => {
-    // The JSDoc must cite the plan doc + make the step-(b) placeholder
-    // contract explicit so a future reader understands why the CTA is
-    // disabled today.
-    expect(src).toContain('Phase 5.6 M-D step (a)');
+  it('documents the step (a+b) collapse + 2026-04-19 audit remediation in JSDoc', () => {
+    // The JSDoc must cite BOTH the plan doc AND the 2026-04-19 ground-
+    // zero audit (the forcing function behind the step-b collapse +
+    // the P1/P2/P3 closures). Future readers must see the resolution
+    // history, not the pre-closure open-gap framing.
+    expect(src).toContain('Phase 5.6 M-D step');
     expect(src).toContain('2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md');
-    expect(src).toMatch(/step \(b\)/);
+    expect(src).toContain('2026-04-19-m-d-step-a-ground-zero-audit.md');
+    expect(src).toMatch(/iron[-\s]rule/i);
   });
 });

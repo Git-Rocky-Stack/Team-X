@@ -516,6 +516,62 @@ describe('useCompanyEventSync (use-companies.ts — M-D step a)', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// App.tsx — stale-active-companyId guard (2026-04-19 audit P1.1 closure)
+//
+// Prior to the P1.1 remediation, App.tsx auto-selected the first
+// company ONLY when `companyId === null`. After `companies.delete`
+// (M-C step e) landed, a user who deleted the active workspace was
+// left with a stale companyId pointing at a row that no longer
+// existed — every downstream IPC call fetched empty data with no
+// recovery path. Guard widened to re-select when the active id is
+// no longer in the list. Source-string audit so a future refactor
+// that accidentally narrows the guard back to `companyId === null`
+// fails first, cheapest, with a clear error.
+// ---------------------------------------------------------------------------
+
+describe('App.tsx active-company selection (2026-04-19 audit P1.1 closure)', () => {
+  const appSrc = readFileSync(join(currentDirname, '..', 'App.tsx'), 'utf8');
+
+  it('uses the useCompanies hook as the single source of truth for the companies list', () => {
+    expect(appSrc).toContain("import { useCompanies } from '@/hooks/use-companies.js'");
+    expect(appSrc).toMatch(/const\s+\{\s*data:\s*companies\s*\}\s*=\s*useCompanies\(\)/);
+  });
+
+  it('auto-selects when no active company OR active company is stale (not just when null)', () => {
+    // The widened guard: checks BOTH `companyId !== null` AND
+    // `companies.some(c => c.id === companyId)`. A narrow
+    // `if (companyId !== null) return;` would reintroduce the P1.
+    expect(appSrc).toMatch(
+      /activeStillExists\s*=\s*companyId\s*!==\s*null\s*&&\s*companies\.some\(/,
+    );
+    expect(appSrc).toMatch(/if\s*\(\s*activeStillExists\s*\)\s*return/);
+  });
+
+  it('declines to fire while the companies query is still loading', () => {
+    // `data` is undefined before the first resolve. Firing auto-
+    // select against undefined would treat every boot as "zero
+    // companies" and never seed the initial selection.
+    expect(appSrc).toMatch(/if\s*\(\s*companies\s*===\s*undefined\s*\)\s*return/);
+  });
+
+  it('depends on [companyId, setCompanyId, companies] so the effect re-runs on list changes', () => {
+    expect(appSrc).toMatch(/\}\s*,\s*\[companyId,\s*setCompanyId,\s*companies\]\s*\)/);
+  });
+
+  it('does NOT call window.teamx.companies.list() directly (the hook owns that path)', () => {
+    // Negative assertion — the pre-remediation one-shot call MUST
+    // NOT reappear. Direct calls bypass the React Query cache + the
+    // bus-event invalidation, reintroducing the staleness bug.
+    expect(appSrc).not.toMatch(/window\.teamx\.companies\.list\(\)/);
+  });
+
+  it('documents the 2026-04-19 audit closure in the effect comment', () => {
+    expect(appSrc).toContain('2026-04-19-m-d-step-a-ground-zero-audit.md');
+    expect(appSrc).toMatch(/P1/);
+  });
+});
+
 describe('TopBar mounts the WorkspaceSwitcher (which mounts useCompanyEventSync)', () => {
   // The switcher owns the mount per the M-D step-(a) plan. A refactor
   // that unmounts the switcher or drops the useCompanyEventSync call
