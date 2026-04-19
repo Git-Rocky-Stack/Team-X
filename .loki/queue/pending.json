@@ -200,15 +200,15 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-C SHIPPED — all 5 sub-steps landed (a/b/c/d + step d hardening + e); step e = companies.update + companies.delete IPCs (atomic commit fd3617b)",
-    "unitTests": 1454,
-    "unitTestsNote": "Baseline 1396 (M-C step d hardening) → 1454 (+58 from 16 companies.test.ts update+delete + 22 companies-update-handlers.test.ts new + 19 companies-delete-handlers.test.ts new + 4 FakeCompaniesRepo widening stubs across four test files + 1 type import - 4 modified-not-added; ABI rebuild dance executed before vitest per CLAUDE.md Troubleshooting recipe; 115 test files green).",
+    "asOfTask": "Phase 5.6 M-C SHIPPED + step f FOLLOWUP-P1 closure — all 5 sub-steps landed (a/b/c/d + step d hardening + e) + step f main-side Invariant #11 completeness hardening (atomic commit a4dc24e)",
+    "unitTests": 1539,
+    "unitTestsNote": "Baseline 1502 (post-commit 30b1520 — renderer-side hooks + 48 source-string audit tests on top of 1454 M-C step e) → 1539 (+37 from 23 handler emit assertions in new invariant-11-emit-handlers.test.ts + 14 hook subscription assertions in event-sync-hooks.test.ts; 117 test files green).",
     "e2eSpecs": 11,
     "e2eGreenCount": 12,
     "lintErrors": 0,
     "lintWarnings": 21,
     "typecheckClean": true,
-    "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (90/5 → 92/3; both new IPCs migrated from allowlist into verified-on-disk in the same atomic per acceptance #5; M-C-exit allowlist target reached — the remaining 3 rows are all mcp.* naming-drift scheduled for M-F docs sweep)",
+    "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (preserved through step f — step f adds no new IPC channels so allowlist shape unchanged; remaining 3 rows are mcp.* naming-drift scheduled for M-F docs sweep)",
     "version": "1.1.0 (target 1.1.1 on M-G ship)"
   },
   "targets": {
