@@ -1788,17 +1788,51 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         );
       }
 
+      const trimmedName = name.trim();
       const employeeId = employeesRepo.create({
         companyId,
         rolePackId: 'strategia-official',
         roleId: spec.frontmatter.id,
         roleMdSha: spec.sha256,
         level: spec.frontmatter.level,
-        name: name.trim(),
+        name: trimmedName,
         title: spec.frontmatter.name,
         toolsAllowed: spec.frontmatter.tools_allowed ?? [],
         toolsDenied: spec.frontmatter.tools_denied ?? [],
       });
+
+      // Invariant #11 (Phase 5.6 M-C FOLLOWUP-P1-extended — closes BUG-009):
+      // emit AFTER the durable write so a bus failure cannot cascade into the
+      // IPC throw. Mirrors the `employees.promoted` / step-f pattern.
+      const hiredAt = Date.now();
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'employee.hired',
+            companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              employeeId,
+              companyId,
+              roleId: spec.frontmatter.id,
+              level: spec.frontmatter.level,
+              name: trimmedName,
+              title: spec.frontmatter.name,
+              hiredAt,
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] employees.create: bus emit failed (row still created with id ${employeeId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] employees.create: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
 
       return { employeeId };
     },
@@ -1822,7 +1856,49 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
             `(role_id=${employee.roleId})`,
         );
       }
+
+      // Snapshot-before-drop — the delete on the next line removes the row,
+      // so the bus payload captures identifying fields (roleId/level/name/
+      // title/companyId) HERE so audit-view chips + renderer optimistic
+      // removals have the identifier after the row is gone. Same rationale
+      // as `company.deleted` (step e) / `goal.deleted` / `project.deleted`
+      // (step f).
+      const snapshotCompanyId = employee.companyId;
+      const snapshotRoleId = employee.roleId;
+      const snapshotLevel = employee.level;
+      const snapshotName = employee.name;
+      const snapshotTitle = employee.title;
+
       employeesRepo.delete(employeeId);
+
+      // Invariant #11 (Phase 5.6 M-C FOLLOWUP-P1-extended — closes BUG-010):
+      // emit AFTER the durable delete. Mirrors the step-f delete-emit pattern.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'employee.fired',
+            companyId: snapshotCompanyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              employeeId,
+              companyId: snapshotCompanyId,
+              roleId: snapshotRoleId,
+              level: snapshotLevel,
+              name: snapshotName,
+              title: snapshotTitle,
+              firedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] employees.fire: bus emit failed (row still deleted, id=${employeeId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] employees.fire: bus dep unwired — renderer caches will NOT invalidate');
+      }
     },
 
     async employeesPromote(req) {
@@ -3956,7 +4032,50 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.fileId !== 'string' || req.fileId.length === 0) {
         throw new Error('[ipc] tickets.attachFile: fileId is required');
       }
+
+      // Fetch the ticket to thread companyId into the bus event + act as a
+      // phantom-ticket-id validation guard (aborts before any repo write if
+      // the ticketId does not resolve). Mirrors the `projects.linkTicket`
+      // pattern from step f.
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.attachFile: ticket not found: ${req.ticketId}`);
+      }
+
       const attachmentId = ticketAttachmentsRepo.attach(req.ticketId, req.fileId, HUMAN_USER_ID);
+      const attachedAt = Date.now();
+
+      // Invariant #11 (Phase 5.6 M-C FOLLOWUP-P1-extended — closes BUG-011).
+      // Attachment lifecycle was explicitly deferred from step f's 14-event
+      // envelope and scoped into this atomic alongside employees.hire/fire.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.attachmentAdded',
+            companyId: ticket.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              attachmentId,
+              ticketId: req.ticketId,
+              companyId: ticket.companyId,
+              fileId: req.fileId,
+              attachedBy: HUMAN_USER_ID,
+              attachedAt,
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.attachFile: bus emit failed (row still attached, id=${attachmentId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] tickets.attachFile: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+
       return { attachmentId };
     },
 
@@ -3967,7 +4086,54 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.fileId !== 'string' || req.fileId.length === 0) {
         throw new Error('[ipc] tickets.detachFile: fileId is required');
       }
+
+      // Fetch the ticket to thread companyId into the bus event + phantom-
+      // id guard. Mirrors `projects.unlinkTicket` (step f).
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.detachFile: ticket not found: ${req.ticketId}`);
+      }
+
+      // Snapshot the attachmentId BEFORE the drop so the bus event can
+      // carry the row identifier for renderer optimistic animations. If
+      // no matching (ticketId, fileId) row exists, the detach is a no-op
+      // but we still emit (empty-patch-still-emits discipline) with
+      // `attachmentId: null` so optimistic-update renderer paths can
+      // reconcile. Mirrors `companies.update` empty-patch emit (step e).
+      const existing = ticketAttachmentsRepo
+        .listByTicket(req.ticketId)
+        .find((row) => row.fileId === req.fileId);
+      const snapshotAttachmentId = existing?.id ?? null;
+
       ticketAttachmentsRepo.detachByFile(req.ticketId, req.fileId);
+
+      // Invariant #11 emit.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.attachmentRemoved',
+            companyId: ticket.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              attachmentId: snapshotAttachmentId,
+              ticketId: req.ticketId,
+              companyId: ticket.companyId,
+              fileId: req.fileId,
+              removedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.detachFile: bus emit failed (row still detached, ticketId=${req.ticketId}, fileId=${req.fileId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] tickets.detachFile: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
     },
 
     async ticketsListAttachments(req) {

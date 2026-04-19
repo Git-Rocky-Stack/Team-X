@@ -89,6 +89,10 @@ export function useAddTicketComment() {
  * - `ticket.closed` — direct lifecycle emit from `tickets.close`
  * - `ticket.reopened` — direct lifecycle emit from `tickets.reopen`
  * - `ticket.commentAdded` — direct lifecycle emit from `tickets.addComment`
+ * - `ticket.attachmentAdded` — direct lifecycle emit from `tickets.attachFile`
+ *   (FOLLOWUP-P1-extended; invalidates `['ticket-attachments', ticketId]`)
+ * - `ticket.attachmentRemoved` — direct lifecycle emit from `tickets.detachFile`
+ *   (FOLLOWUP-P1-extended; invalidates `['ticket-attachments', ticketId]`)
  * - `task.delegated` — M32 planner tool writes a new ticket
  * - `task.escalated` — M32 planner bumps a subtask up the org chart
  *
@@ -107,6 +111,12 @@ export function useAddTicketComment() {
  * gap surfaced by `docs/qa/2026-04-18-ground-zero-audit.md` §3.1 —
  * `ticket.*` lifecycle events now land on the bus and are subscribed
  * here alongside the pre-existing M32 planner events.
+ *
+ * Phase 5.6 M-C FOLLOWUP-P1-extended (2026-04-18) closed the attachment
+ * portion of the FOLLOWUP-P1 gap (BUG-011 from
+ * `docs/qa/2026-04-18-autonomous-run-report.md` §4.3) — attachment adds
+ * and removes now fire bus events and invalidate the
+ * `['ticket-attachments', ticketId]` query keyed per-ticket.
  */
 export function useTicketEventSync(companyId: string | null): void {
   const qc = useQueryClient();
@@ -121,6 +131,8 @@ export function useTicketEventSync(companyId: string | null): void {
         event.type !== 'ticket.closed' &&
         event.type !== 'ticket.reopened' &&
         event.type !== 'ticket.commentAdded' &&
+        event.type !== 'ticket.attachmentAdded' &&
+        event.type !== 'ticket.attachmentRemoved' &&
         event.type !== 'task.delegated' &&
         event.type !== 'task.escalated'
       ) {
@@ -128,6 +140,15 @@ export function useTicketEventSync(companyId: string | null): void {
       }
       qc.invalidateQueries({ queryKey: ['tickets', companyId] });
       qc.invalidateQueries({ queryKey: ['ticket-detail'] });
+      // Narrow attachment-specific invalidation — keyed per-ticket so
+      // detail panels refresh immediately without pulling the parent
+      // ticket-list query twice.
+      if (event.type === 'ticket.attachmentAdded' || event.type === 'ticket.attachmentRemoved') {
+        const payload = event.payload as { ticketId?: string } | undefined;
+        if (payload && typeof payload.ticketId === 'string' && payload.ticketId.length > 0) {
+          qc.invalidateQueries({ queryKey: ['ticket-attachments', payload.ticketId] });
+        }
+      }
     });
     return unsubscribe;
   }, [companyId, qc]);

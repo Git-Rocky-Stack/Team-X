@@ -37,12 +37,16 @@ export type EventType =
   | 'company.deleted'
   | 'employee.promoted'
   | 'employee.managerSet'
+  | 'employee.hired'
+  | 'employee.fired'
   | 'ticket.created'
   | 'ticket.updated'
   | 'ticket.assigned'
   | 'ticket.closed'
   | 'ticket.reopened'
   | 'ticket.commentAdded'
+  | 'ticket.attachmentAdded'
+  | 'ticket.attachmentRemoved'
   | 'project.created'
   | 'project.updated'
   | 'project.deleted'
@@ -591,6 +595,65 @@ export interface EmployeeManagerSetPayload {
 }
 
 // ---------------------------------------------------------------------------
+// Employee hire/fire event payloads (Phase 5.6 M-C FOLLOWUP-P1-extended —
+// closes BUG-009 + BUG-010 surfaced by docs/qa/2026-04-18-autonomous-run-
+// report.md §4.1 / §4.2)
+//
+// `employee.hired` — emitted by `employees.create` AFTER the durable repo
+// write returns the new employeeId. Carries the resolved role frontmatter
+// (level + title from the role-pack spec) so renderer caches can project
+// the hire into the org chart without a follow-up read.
+//
+// `employee.fired` — emitted by `employees.fire` AFTER the durable repo
+// delete. Carries a snapshot of `roleId` / `level` / `name` / `title` that
+// was captured BEFORE the delete (same capture-before-drop rationale as
+// `company.deleted` / `goal.deleted` / `project.deleted`), so audit-view
+// chips + renderer optimistic removals have the identifier after the row
+// is gone.
+//
+// Architectural invariant #11 — IPC channels that mutate state must emit
+// a bus event so renderer caches invalidate.
+// ---------------------------------------------------------------------------
+
+export interface EmployeeHiredPayload {
+  /** The newly-hired employee id. */
+  employeeId: string;
+  /** Companion company-scope id (matches the `companyId` on the DashboardEvent envelope). */
+  companyId: string;
+  /** The role-pack role id the hire resolved against (matches the spec frontmatter `id`). */
+  roleId: string;
+  /** The role level the hire resolved to (e.g., 'management', 'lead'). Never 'system' — the handler refuses framework-internal roles. */
+  level: string;
+  /** The employee's display name (trimmed at the IPC boundary before the write). */
+  name: string;
+  /** The role title as stored on the row (matches the role-pack spec `name` frontmatter). */
+  title: string;
+  /** Wall-clock timestamp in ms when the create handler wrote the row. */
+  hiredAt: number;
+}
+
+export interface EmployeeFiredPayload {
+  /** The fired employee id. */
+  employeeId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /**
+   * The role id the fired row held. Captured BEFORE the delete so audit-
+   * view chips can render the identifier without a follow-up read (the
+   * row no longer exists after this event fires).
+   */
+  roleId: string;
+  /** The role level the fired row held. Same capture-before-drop rationale as `roleId`. */
+  level: string;
+  /** The display name the fired row held. Same capture-before-drop rationale. */
+  name: string;
+  /** The role title the fired row held. Same capture-before-drop rationale. */
+  title: string;
+  /** Wall-clock timestamp in ms when the fire handler committed the delete. */
+  firedAt: number;
+}
+
+// ---------------------------------------------------------------------------
 // Ticket lifecycle event payloads (Phase 5.6 M-C step f — main-side
 // Invariant #11 completeness hardening)
 //
@@ -695,6 +758,72 @@ export interface TicketCommentAddedPayload {
   authorId: string;
   /** Wall-clock timestamp in ms when the comment handler wrote the message row. */
   addedAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Ticket attachment lifecycle event payloads (Phase 5.6 M-C FOLLOWUP-P1-
+// extended — closes BUG-011 surfaced by docs/qa/2026-04-18-autonomous-
+// run-report.md §4.3; known-deferred from step f per its nextStep note)
+//
+// Two events, one per state-mutating ticket-attachment IPC channel
+// (`tickets.attachFile`, `tickets.detachFile`). Attachments are keyed by
+// `(ticketId, fileId)` on the join table but also carry a row-level `id`
+// (nanoid); emits include the `attachmentId` so renderer optimistic
+// animations can target individual rows in the ticket-detail attachment
+// list without reloading the full list.
+//
+// Both payloads thread `companyId` via a ticket fetch in the handler
+// (the IPC request shapes carry only `ticketId` + `fileId`); the fetch
+// also acts as a phantom-ticket-id validation guard. Matches the
+// `projects.linkTicket` / `projects.unlinkTicket` pattern from step f.
+//
+// `ticket.attachmentRemoved` carries the `attachmentId` captured BEFORE
+// the `detachByFile` drop via `listByTicket` + `fileId` match. If no
+// matching row exists (no-op detach), `attachmentId` is `null` and the
+// handler still emits — empty-patch-still-emits discipline mirrors
+// `companies.update` / `tickets.update`.
+//
+// Architectural invariant #11.
+// ---------------------------------------------------------------------------
+
+export interface TicketAttachmentAddedPayload {
+  /** The newly-created attachment row id (nanoid from `ticketAttachmentsRepo.attach`). */
+  attachmentId: string;
+  /** The ticket the file was attached to. */
+  ticketId: string;
+  /** Companion company-scope id — threaded via `ticketsRepo.getById(ticketId)` in the handler. */
+  companyId: string;
+  /** The vault file id that was attached. */
+  fileId: string;
+  /**
+   * The employee id that performed the attach. Always `HUMAN_USER_ID`
+   * on this channel today — the IPC is invoked only from the human-
+   * driven ticket-detail panel. Agent-initiated attaches go through a
+   * different repo path and will thread their own actor in a later
+   * milestone.
+   */
+  attachedBy: string;
+  /** Wall-clock timestamp in ms when the attach handler wrote the row. */
+  attachedAt: number;
+}
+
+export interface TicketAttachmentRemovedPayload {
+  /**
+   * The attachment row id that was removed. Captured via `listByTicket`
+   * + `fileId` match BEFORE the detach so the renderer can target the
+   * removed row in its cache without a follow-up read. `null` when the
+   * detach was a no-op (no matching `(ticketId, fileId)` row existed) —
+   * the handler still emits so optimistic-update paths reconcile.
+   */
+  attachmentId: string | null;
+  /** The ticket the file was detached from. */
+  ticketId: string;
+  /** Companion company-scope id — threaded via `ticketsRepo.getById(ticketId)` in the handler. */
+  companyId: string;
+  /** The vault file id that was detached. */
+  fileId: string;
+  /** Wall-clock timestamp in ms when the detach handler committed the drop. */
+  removedAt: number;
 }
 
 // ---------------------------------------------------------------------------

@@ -95,6 +95,29 @@ describe('useTicketEventSync (use-tickets.ts)', () => {
     expect(src).toContain("'ticket.commentAdded'");
   });
 
+  // Phase 5.6 M-C FOLLOWUP-P1-extended — attachment lifecycle closure
+  // (BUG-011 from docs/qa/2026-04-18-autonomous-run-report.md §4.3).
+  // The two new subscriptions must appear on the filter list AND the
+  // attachment-specific invalidation key must target per-ticket caches
+  // so the detail panel refreshes without double-fetching the parent
+  // ticket list.
+  it('subscribes to ticket.attachmentAdded (FOLLOWUP-P1-extended — tickets.attachFile emit)', () => {
+    expect(src).toContain("'ticket.attachmentAdded'");
+  });
+
+  it('subscribes to ticket.attachmentRemoved (FOLLOWUP-P1-extended — tickets.detachFile emit)', () => {
+    expect(src).toContain("'ticket.attachmentRemoved'");
+  });
+
+  it('invalidates the ticket-attachments query keyed per-ticket on attachment events', () => {
+    expect(src).toMatch(/queryKey:\s*\['ticket-attachments',\s*payload\.ticketId\]/);
+  });
+
+  it('documents the FOLLOWUP-P1-extended attachment closure', () => {
+    expect(src).toMatch(/FOLLOWUP-P1-extended/);
+    expect(src).toContain('2026-04-18-autonomous-run-report.md');
+  });
+
   it('documents the FOLLOWUP-P1 main-side gap as closed by M-C step f', () => {
     // JSDoc must mention FOLLOWUP-P1 (historical pointer) AND the
     // step-f closure — future readers should see the resolution, not
@@ -346,9 +369,82 @@ describe('GoalsView mounts useGoalEventSync', () => {
 // Cross-hook invariants
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// useEmployeeEventSync — Phase 5.6 M-C FOLLOWUP-P1-extended
+//
+// New hook introduced by BUG-009 + BUG-010 closure. use-employees.ts
+// previously carried only the `useEmployees` query; this audit pins
+// the shape of the sync hook added alongside the main-side
+// `employee.hired` / `employee.fired` emits.
+//
+// The hook ships ready-to-mount; M-D lands the mount points in
+// HireDialog / FireDialog / OrgChartView. The audit runs today so a
+// future refactor that accidentally drops a subscription fails first,
+// cheapest, with a clear error — same discipline as the step-f hooks.
+// ---------------------------------------------------------------------------
+
+describe('useEmployeeEventSync (use-employees.ts — FOLLOWUP-P1-extended)', () => {
+  const src = readHook('use-employees');
+
+  it('is exported with the canonical signature', () => {
+    expect(src).toContain('export function useEmployeeEventSync(companyId: string | null): void');
+  });
+
+  it('subscribes via ipc.events.onDashboard', () => {
+    expect(src).toContain('ipc.events.onDashboard');
+  });
+
+  it('guards on companyId scope mismatch', () => {
+    expect(src).toMatch(/if\s*\(\s*event\.companyId\s*!==\s*companyId\s*\)\s*return/);
+  });
+
+  it('subscribes to employee.hired (FOLLOWUP-P1-extended — employees.create emit)', () => {
+    expect(src).toContain("'employee.hired'");
+  });
+
+  it('subscribes to employee.fired (FOLLOWUP-P1-extended — employees.fire emit)', () => {
+    expect(src).toContain("'employee.fired'");
+  });
+
+  it('subscribes to employee.promoted (M-C step d — employees.promote emit)', () => {
+    expect(src).toContain("'employee.promoted'");
+  });
+
+  it('subscribes to employee.managerSet (M-C step d — employees.setManager emit)', () => {
+    expect(src).toContain("'employee.managerSet'");
+  });
+
+  it('invalidates the employees list query keyed per-company', () => {
+    expect(src).toMatch(/queryKey:\s*\['employees',\s*companyId\]/);
+  });
+
+  it('invalidates the orgchart query keyed per-company', () => {
+    expect(src).toMatch(/queryKey:\s*\['orgchart',\s*companyId\]/);
+  });
+
+  it('returns the unsubscribe function from the effect', () => {
+    expect(src).toMatch(/return\s+unsubscribe;/);
+  });
+
+  it('documents the FOLLOWUP-P1-extended closure with cite-through to the autonomous run report', () => {
+    expect(src).toMatch(/FOLLOWUP-P1-extended/);
+    expect(src).toContain('2026-04-18-autonomous-run-report.md');
+    // Lineage pointer to the step-f ground-zero audit — preserves the
+    // cross-hook contract assertion below and the architectural history.
+    expect(src).toContain('2026-04-18-ground-zero-audit.md');
+  });
+});
+
 describe('Invariant #11 cross-hook contract', () => {
   it('each sync hook follows the mount-once effect pattern', () => {
-    const hooks = ['use-tickets', 'use-meetings', 'use-projects', 'use-goals'];
+    const hooks = [
+      'use-tickets',
+      'use-meetings',
+      'use-projects',
+      'use-goals',
+      // Phase 5.6 M-C FOLLOWUP-P1-extended — new hook added 2026-04-18.
+      'use-employees',
+    ];
     for (const name of hooks) {
       const src = readHook(name);
       // The effect must carry the [companyId, qc] dependency array
@@ -360,7 +456,14 @@ describe('Invariant #11 cross-hook contract', () => {
   });
 
   it('each sync hook references the ground-zero audit document', () => {
-    const hooks = ['use-tickets', 'use-meetings', 'use-projects', 'use-goals'];
+    const hooks = [
+      'use-tickets',
+      'use-meetings',
+      'use-projects',
+      'use-goals',
+      // FOLLOWUP-P1-extended hook carries the lineage pointer through.
+      'use-employees',
+    ];
     for (const name of hooks) {
       const src = readHook(name);
       expect(src, `${name}: JSDoc must cite 2026-04-18-ground-zero-audit.md §3.1`).toContain(

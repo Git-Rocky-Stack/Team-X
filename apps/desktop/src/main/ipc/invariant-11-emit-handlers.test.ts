@@ -21,11 +21,15 @@ import { createIpcHandlers } from './handlers.js';
 
 /**
  * Tests for the 14 new bus emits introduced by Phase 5.6 M-C step f
- * (main-side Invariant #11 completeness hardening). Closes the
- * FOLLOWUP-P1 gap surfaced by `docs/qa/2026-04-18-ground-zero-audit.md`
- * §3.1 — every state-mutating `tickets.*` / `projects.*` / `goals.*`
- * IPC channel now emits a bus event so renderer caches invalidate
- * without relying on `onSuccess` coupling.
+ * (main-side Invariant #11 completeness hardening) AND the 4 additional
+ * emits introduced by Phase 5.6 M-C FOLLOWUP-P1-extended (employees.
+ * hire/fire + ticket attachment lifecycle). Together they close the
+ * FOLLOWUP-P1 gaps surfaced by `docs/qa/2026-04-18-ground-zero-audit.md`
+ * §3.1 (step f) and `docs/qa/2026-04-18-autonomous-run-report.md` §4
+ * (FOLLOWUP-P1-extended: BUG-009 / BUG-010 / BUG-011) — every state-
+ * mutating `tickets.*` / `projects.*` / `goals.*` / `employees.*` IPC
+ * channel now emits a bus event so renderer caches invalidate without
+ * relying on `onSuccess` coupling.
  *
  * Coverage per handler:
  *   - happy-path bus emit assertion (type + companyId + actorId + kind + payload shape)
@@ -35,10 +39,12 @@ import { createIpcHandlers } from './handlers.js';
  * Extended coverage for the richer payloads:
  *   - patchedKeys reflects caller intent for tickets.update / projects.update / goals.update
  *   - goal.updated re-reads progressPct AFTER the write and normalizes 0..100 → 0..1
- *   - snapshot-before-drop for goal.deleted / project.deleted
+ *   - snapshot-before-drop for goal.deleted / project.deleted / employee.fired
  *   - ticket.assigned carries previousAssigneeId snapshot (captured pre-write)
  *   - tickets.create fires ticket.created always + ticket.assigned when immediate-assign succeeds
  *   - project.ticketLinked / project.ticketUnlinked thread companyId via a project fetch
+ *   - ticket.attachmentAdded / ticket.attachmentRemoved thread companyId via a ticket fetch
+ *   - ticket.attachmentRemoved captures attachmentId via listByTicket BEFORE the drop
  */
 
 // ---------------------------------------------------------------------------
@@ -213,6 +219,8 @@ class FakeGoalsRepo implements IpcGoalsRepo {
 
 class FakeEmployeesRepo implements IpcEmployeesRepo {
   rows: EmployeeRow[] = [];
+  private seq = 0;
+  nextCreateThrow: Error | null = null;
 
   seed(employeeId: string, companyId: string, name = 'Engineer'): void {
     this.rows.push({
@@ -233,6 +241,31 @@ class FakeEmployeesRepo implements IpcEmployeesRepo {
       updatedAt: Date.now(),
     } as EmployeeRow);
   }
+  /**
+   * Seed a framework-internal pseudo-employee (`isSystem=1`). Used by the
+   * FOLLOWUP-P1-extended `employees.fire` refuse-test — the IPC handler's
+   * last-line-of-defense must reject system rows even when the caller
+   * gets past the hire-dialog filter.
+   */
+  seedSystem(employeeId: string, companyId: string, roleId = 'system-agent'): void {
+    this.rows.push({
+      id: employeeId,
+      companyId,
+      roleId,
+      name: 'System Agent',
+      title: 'System Agent',
+      level: 'system',
+      modelPref: null,
+      providerPref: null,
+      status: 'idle',
+      isSystem: 1,
+      toolsAllowedJson: '[]',
+      toolsDeniedJson: '[]',
+      roleMdSha: 'deadbeef',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    } as EmployeeRow);
+  }
   listByCompany(_companyId: string): EmployeeRow[] {
     return this.rows;
   }
@@ -245,15 +278,132 @@ class FakeEmployeesRepo implements IpcEmployeesRepo {
   findSystemByRoleId(_companyId: string, _roleId: string): EmployeeRow | null {
     return null;
   }
-  create(_input: never): string {
-    throw new Error('unused by invariant-11 tests');
+  /**
+   * Working `create` for the FOLLOWUP-P1-extended `employee.hired` tests.
+   * Pushes the resolved row onto `rows` and returns a monotonically
+   * increasing id.
+   */
+  create(input: {
+    companyId: string;
+    rolePackId: string;
+    roleId: string;
+    roleMdSha: string;
+    level: string;
+    name: string;
+    title: string;
+    toolsAllowed?: string[];
+    toolsDenied?: string[];
+  }): string {
+    if (this.nextCreateThrow) {
+      const e = this.nextCreateThrow;
+      this.nextCreateThrow = null;
+      throw e;
+    }
+    this.seq += 1;
+    // Use a `hire-` prefix so FOLLOWUP-P1-extended `create` ids never
+    // collide with `emp-*` ids produced by `seed(...)` in the step-f
+    // cross-cutting sweep test.
+    const id = `hire-${this.seq}`;
+    this.rows.push({
+      id,
+      companyId: input.companyId,
+      roleId: input.roleId,
+      name: input.name,
+      title: input.title,
+      level: input.level,
+      modelPref: null,
+      providerPref: null,
+      status: 'idle',
+      isSystem: 0,
+      toolsAllowedJson: JSON.stringify(input.toolsAllowed ?? []),
+      toolsDeniedJson: JSON.stringify(input.toolsDenied ?? []),
+      roleMdSha: input.roleMdSha,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    } as EmployeeRow);
+    return id;
   }
-  delete(_id: string): void {
-    throw new Error('unused by invariant-11 tests');
+  /** Working `delete` for the FOLLOWUP-P1-extended `employee.fired` tests. */
+  delete(id: string): void {
+    this.rows = this.rows.filter((r) => r.id !== id);
   }
   promote(_input: never): void {
     throw new Error('unused by invariant-11 tests');
   }
+}
+
+/**
+ * Fake `IpcTicketAttachmentsRepo` for the FOLLOWUP-P1-extended
+ * `tickets.attachFile` / `tickets.detachFile` bus-emit tests. Mirrors
+ * the production repo's contract: `attach` returns a generated id and
+ * pushes a row; `detachByFile` removes the `(ticketId, fileId)` pair;
+ * `listByTicket` returns matching rows newest-first.
+ */
+class FakeTicketAttachmentsRepo {
+  rows: Array<{
+    id: string;
+    ticketId: string;
+    fileId: string;
+    attachedBy: string;
+    attachedAt: number;
+  }> = [];
+  private seq = 0;
+
+  attach(ticketId: string, fileId: string, attachedBy: string): string {
+    this.seq += 1;
+    const id = `att-${this.seq}`;
+    this.rows.push({ id, ticketId, fileId, attachedBy, attachedAt: Date.now() });
+    return id;
+  }
+  detachByFile(ticketId: string, fileId: string): void {
+    this.rows = this.rows.filter((r) => !(r.ticketId === ticketId && r.fileId === fileId));
+  }
+  listByTicket(ticketId: string): Array<{
+    id: string;
+    ticketId: string;
+    fileId: string;
+    attachedBy: string;
+    attachedAt: number;
+  }> {
+    return this.rows
+      .filter((r) => r.ticketId === ticketId)
+      .slice()
+      .reverse();
+  }
+}
+
+/**
+ * Fake `IpcRoleLookup` for the FOLLOWUP-P1-extended `employees.create`
+ * tests. Seeds a canned `senior-fullstack-engineer` role (level: 'ic')
+ * and a canned `system-agent` role (level: 'system') so the handler's
+ * framework-internal-role refusal path stays exercisable.
+ */
+function makeFakeRoleLookup() {
+  const specs: Record<string, unknown> = {
+    'senior-fullstack-engineer': {
+      sha256: 'deadbeef',
+      frontmatter: {
+        id: 'senior-fullstack-engineer',
+        level: 'ic',
+        name: 'Senior Fullstack Engineer',
+        tools_allowed: ['read', 'edit'],
+        tools_denied: ['shell'],
+      },
+    },
+    'system-agent': {
+      sha256: 'systemsha',
+      frontmatter: {
+        id: 'system-agent',
+        level: 'system',
+        name: 'System Agent',
+      },
+    },
+  };
+  return {
+    getSpec(roleId: string): unknown {
+      return specs[roleId] ?? null;
+    },
+  };
 }
 
 class FakeThreadsRepo implements IpcThreadsRepo {
@@ -358,6 +508,12 @@ function buildHarness(opts?: HarnessOpts) {
   const threadsRepo = new FakeThreadsRepo();
   const messagesRepo = new FakeMessagesRepo();
   const orchestrator = new FakeOrchestrator();
+  // FOLLOWUP-P1-extended — real fakes for `ticketAttachmentsRepo` + `roleLookup`
+  // replacing the step-f `noop as never` stubs so employees.create /
+  // employees.fire / tickets.attachFile / tickets.detachFile handler bodies
+  // resolve cleanly without touching production role-pack files.
+  const ticketAttachmentsRepo = new FakeTicketAttachmentsRepo();
+  const roleLookup = makeFakeRoleLookup();
   const bus = makeBusMock();
 
   const handlers = createIpcHandlers({
@@ -366,7 +522,7 @@ function buildHarness(opts?: HarnessOpts) {
     threadsRepo: threadsRepo as unknown as never,
     messagesRepo: messagesRepo as unknown as never,
     ticketsRepo: ticketsRepo as unknown as never,
-    ticketAttachmentsRepo: noop as never,
+    ticketAttachmentsRepo: ticketAttachmentsRepo as unknown as never,
     goalsRepo: goalsRepo as unknown as never,
     projectsRepo: projectsRepo as unknown as never,
     meetingsRepo: noop as never,
@@ -374,7 +530,7 @@ function buildHarness(opts?: HarnessOpts) {
     eventsRepo: noop as never,
     orchestrator: orchestrator as unknown as never,
     meetingService: noop as never,
-    roleLookup: noop as never,
+    roleLookup: roleLookup as unknown as never,
     mcpHost: noop as never,
     mcpServersRepo: noop as never,
     providersService: noop as never,
@@ -396,6 +552,7 @@ function buildHarness(opts?: HarnessOpts) {
     employeesRepo,
     threadsRepo,
     messagesRepo,
+    ticketAttachmentsRepo,
     orchestrator,
     bus,
   };
@@ -783,6 +940,331 @@ describe('Invariant #11 main-side emits — Phase 5.6 M-C step f', () => {
   });
 
   // -------------------------------------------------------------------------
+  // FOLLOWUP-P1-extended — Phase 5.6 M-C employees.hire/fire + ticket
+  // attachment emits (BUG-009 / BUG-010 / BUG-011). Same coverage discipline
+  // as the step-f tickets/projects/goals blocks above: happy-path emit +
+  // throw-swallow + dep-unwired warn, plus the lifecycle-specific snapshot
+  // guards (fire snapshot-before-drop, detach attachmentId snapshot).
+  // -------------------------------------------------------------------------
+
+  describe('employees.create (BUG-009)', () => {
+    it('emits employee.hired with employeeId + companyId + resolved role frontmatter + hiredAt', async () => {
+      const { handlers, employeesRepo, bus } = buildHarness();
+      const res = await handlers.employeesCreate({
+        companyId: COMPANY_ID,
+        roleId: 'senior-fullstack-engineer',
+        name: '  Alice Smith  ',
+      });
+      expect(employeesRepo.rows.length).toBe(1);
+      expect(employeesRepo.rows[0]?.name).toBe('Alice Smith'); // trimmed by handler
+      expect(bus.emitted.length).toBe(1);
+      const emit = bus.emitted[0];
+      expect(emit?.type).toBe('employee.hired');
+      expect(emit?.companyId).toBe(COMPANY_ID);
+      expect(emit?.actorId).toBe('rocky');
+      expect(emit?.actorKind).toBe('user');
+      const payload = emit?.payload as {
+        employeeId: string;
+        companyId: string;
+        roleId: string;
+        level: string;
+        name: string;
+        title: string;
+        hiredAt: number;
+      };
+      expect(payload.employeeId).toBe(res.employeeId);
+      expect(payload.companyId).toBe(COMPANY_ID);
+      expect(payload.roleId).toBe('senior-fullstack-engineer');
+      expect(payload.level).toBe('ic');
+      expect(payload.name).toBe('Alice Smith');
+      expect(payload.title).toBe('Senior Fullstack Engineer');
+      expect(typeof payload.hiredAt).toBe('number');
+    });
+
+    it('does NOT emit when role resolution fails (handler throws before write)', async () => {
+      const { handlers, employeesRepo, bus } = buildHarness();
+      await expect(
+        handlers.employeesCreate({
+          companyId: COMPANY_ID,
+          roleId: 'nonexistent-role',
+          name: 'Alice',
+        }),
+      ).rejects.toThrow('role not found');
+      expect(employeesRepo.rows.length).toBe(0);
+      expect(bus.emitted.length).toBe(0);
+    });
+
+    it('refuses to hire a framework-internal role (no emit, no row write)', async () => {
+      const { handlers, employeesRepo, bus } = buildHarness();
+      await expect(
+        handlers.employeesCreate({
+          companyId: COMPANY_ID,
+          roleId: 'system-agent',
+          name: 'bad-path',
+        }),
+      ).rejects.toThrow('framework-internal');
+      expect(employeesRepo.rows.length).toBe(0);
+      expect(bus.emitted.length).toBe(0);
+    });
+
+    it('swallows a bus.emit throw (durable write still happens)', async () => {
+      const { handlers, employeesRepo, bus } = buildHarness();
+      bus.setNextEmitThrow(new Error('bus down'));
+      const res = await handlers.employeesCreate({
+        companyId: COMPANY_ID,
+        roleId: 'senior-fullstack-engineer',
+        name: 'Alice',
+      });
+      expect(res.employeeId).toBeDefined();
+      expect(employeesRepo.rows.length).toBe(1); // durable write landed
+      expect(bus.emitted.length).toBe(1); // emit attempted — throw was swallowed
+    });
+
+    it('tolerates bus dep unwired (dev-mode warn)', async () => {
+      const { handlers, employeesRepo } = buildHarness({ omitBus: true });
+      const res = await handlers.employeesCreate({
+        companyId: COMPANY_ID,
+        roleId: 'senior-fullstack-engineer',
+        name: 'Alice',
+      });
+      expect(res.employeeId).toBeDefined();
+      expect(employeesRepo.rows.length).toBe(1);
+    });
+  });
+
+  describe('employees.fire (BUG-010)', () => {
+    it('emits employee.fired with snapshot fields captured BEFORE the delete', async () => {
+      const { handlers, employeesRepo, bus } = buildHarness();
+      employeesRepo.seed('emp-fire-1', COMPANY_ID, 'Bob Jones');
+      // Force a specific pre-fire snapshot
+      const row = employeesRepo.rows[0];
+      if (row) {
+        row.roleId = 'senior-fullstack-engineer';
+        row.level = 'ic';
+        row.title = 'Senior Fullstack Engineer';
+      }
+
+      await handlers.employeesFire({ employeeId: 'emp-fire-1' });
+      expect(employeesRepo.rows.length).toBe(0); // delete landed
+      expect(bus.emitted.length).toBe(1);
+      const emit = bus.emitted[0];
+      expect(emit?.type).toBe('employee.fired');
+      expect(emit?.companyId).toBe(COMPANY_ID);
+      expect(emit?.actorId).toBe('rocky');
+      expect(emit?.actorKind).toBe('user');
+      const payload = emit?.payload as {
+        employeeId: string;
+        companyId: string;
+        roleId: string;
+        level: string;
+        name: string;
+        title: string;
+        firedAt: number;
+      };
+      expect(payload.employeeId).toBe('emp-fire-1');
+      expect(payload.companyId).toBe(COMPANY_ID);
+      expect(payload.roleId).toBe('senior-fullstack-engineer');
+      expect(payload.level).toBe('ic');
+      expect(payload.name).toBe('Bob Jones'); // snapshot — row is gone now
+      expect(payload.title).toBe('Senior Fullstack Engineer');
+      expect(typeof payload.firedAt).toBe('number');
+    });
+
+    it('refuses a framework-internal (isSystem) employee — no delete, no emit', async () => {
+      const { handlers, employeesRepo, bus } = buildHarness();
+      employeesRepo.seedSystem('sys-agent-1', COMPANY_ID);
+      await expect(handlers.employeesFire({ employeeId: 'sys-agent-1' })).rejects.toThrow(
+        'framework-internal',
+      );
+      expect(employeesRepo.rows.length).toBe(1); // still there
+      expect(bus.emitted.length).toBe(0);
+    });
+
+    it('rejects phantom employeeId before any emit', async () => {
+      const { handlers, bus } = buildHarness();
+      await expect(handlers.employeesFire({ employeeId: 'phantom' })).rejects.toThrow(
+        'employee not found',
+      );
+      expect(bus.emitted.length).toBe(0);
+    });
+
+    it('swallows a bus.emit throw (row still deleted)', async () => {
+      const { handlers, employeesRepo, bus } = buildHarness();
+      employeesRepo.seed('emp-fire-2', COMPANY_ID, 'Bob');
+      bus.setNextEmitThrow(new Error('bus down'));
+      await handlers.employeesFire({ employeeId: 'emp-fire-2' });
+      expect(employeesRepo.rows.length).toBe(0);
+      expect(bus.emitted.length).toBe(1); // throw was swallowed after emit attempt
+    });
+
+    it('tolerates bus dep unwired (dev-mode warn)', async () => {
+      const { handlers, employeesRepo } = buildHarness({ omitBus: true });
+      employeesRepo.seed('emp-fire-3', COMPANY_ID, 'Bob');
+      await handlers.employeesFire({ employeeId: 'emp-fire-3' });
+      expect(employeesRepo.rows.length).toBe(0);
+    });
+  });
+
+  describe('tickets.attachFile (BUG-011)', () => {
+    it('emits ticket.attachmentAdded with companyId threaded via ticket fetch', async () => {
+      const { handlers, ticketsRepo, ticketAttachmentsRepo, bus } = buildHarness();
+      const ticketId = ticketsRepo.create({
+        companyId: COMPANY_ID,
+        title: 'T',
+        description: 'd',
+        priority: 'normal',
+        reporterId: 'rocky',
+        reporterKind: 'user',
+      });
+
+      const res = await handlers.ticketsAttachFile({ ticketId, fileId: 'vault-file-1' });
+      expect(ticketAttachmentsRepo.rows.length).toBe(1);
+      expect(bus.emitted.length).toBe(1);
+      const emit = bus.emitted[0];
+      expect(emit?.type).toBe('ticket.attachmentAdded');
+      expect(emit?.companyId).toBe(COMPANY_ID);
+      expect(emit?.actorId).toBe('rocky');
+      expect(emit?.actorKind).toBe('user');
+      const payload = emit?.payload as {
+        attachmentId: string;
+        ticketId: string;
+        companyId: string;
+        fileId: string;
+        attachedBy: string;
+        attachedAt: number;
+      };
+      expect(payload.attachmentId).toBe(res.attachmentId);
+      expect(payload.ticketId).toBe(ticketId);
+      expect(payload.companyId).toBe(COMPANY_ID);
+      expect(payload.fileId).toBe('vault-file-1');
+      expect(payload.attachedBy).toBe('rocky');
+      expect(typeof payload.attachedAt).toBe('number');
+    });
+
+    it('rejects phantom ticketId before any repo write or emit', async () => {
+      const { handlers, ticketAttachmentsRepo, bus } = buildHarness();
+      await expect(
+        handlers.ticketsAttachFile({ ticketId: 'phantom', fileId: 'vault-file-1' }),
+      ).rejects.toThrow('ticket not found');
+      expect(ticketAttachmentsRepo.rows.length).toBe(0);
+      expect(bus.emitted.length).toBe(0);
+    });
+
+    it('swallows a bus.emit throw (row still attached)', async () => {
+      const { handlers, ticketsRepo, ticketAttachmentsRepo, bus } = buildHarness();
+      const ticketId = ticketsRepo.create({
+        companyId: COMPANY_ID,
+        title: 'T',
+        description: 'd',
+        priority: 'normal',
+        reporterId: 'rocky',
+        reporterKind: 'user',
+      });
+      bus.setNextEmitThrow(new Error('bus down'));
+      const res = await handlers.ticketsAttachFile({ ticketId, fileId: 'vault-file-1' });
+      expect(res.attachmentId).toBeDefined();
+      expect(ticketAttachmentsRepo.rows.length).toBe(1);
+      expect(bus.emitted.length).toBe(1);
+    });
+
+    it('tolerates bus dep unwired (dev-mode warn)', async () => {
+      const { handlers, ticketsRepo, ticketAttachmentsRepo } = buildHarness({ omitBus: true });
+      const ticketId = ticketsRepo.create({
+        companyId: COMPANY_ID,
+        title: 'T',
+        description: 'd',
+        priority: 'normal',
+        reporterId: 'rocky',
+        reporterKind: 'user',
+      });
+      const res = await handlers.ticketsAttachFile({ ticketId, fileId: 'vault-file-1' });
+      expect(res.attachmentId).toBeDefined();
+      expect(ticketAttachmentsRepo.rows.length).toBe(1);
+    });
+  });
+
+  describe('tickets.detachFile (BUG-011)', () => {
+    it('emits ticket.attachmentRemoved with snapshot attachmentId captured BEFORE drop', async () => {
+      const { handlers, ticketsRepo, ticketAttachmentsRepo, bus } = buildHarness();
+      const ticketId = ticketsRepo.create({
+        companyId: COMPANY_ID,
+        title: 'T',
+        description: 'd',
+        priority: 'normal',
+        reporterId: 'rocky',
+        reporterKind: 'user',
+      });
+      const attach = await handlers.ticketsAttachFile({ ticketId, fileId: 'vault-file-1' });
+      // Reset emits so the detach assertion sees only the detach event.
+      bus.emitted.length = 0;
+
+      await handlers.ticketsDetachFile({ ticketId, fileId: 'vault-file-1' });
+      expect(ticketAttachmentsRepo.rows.length).toBe(0);
+      expect(bus.emitted.length).toBe(1);
+      const emit = bus.emitted[0];
+      expect(emit?.type).toBe('ticket.attachmentRemoved');
+      expect(emit?.companyId).toBe(COMPANY_ID);
+      expect(emit?.actorId).toBe('rocky');
+      expect(emit?.actorKind).toBe('user');
+      const payload = emit?.payload as {
+        attachmentId: string | null;
+        ticketId: string;
+        companyId: string;
+        fileId: string;
+        removedAt: number;
+      };
+      expect(payload.attachmentId).toBe(attach.attachmentId); // snapshot from listByTicket pre-drop
+      expect(payload.ticketId).toBe(ticketId);
+      expect(payload.companyId).toBe(COMPANY_ID);
+      expect(payload.fileId).toBe('vault-file-1');
+      expect(typeof payload.removedAt).toBe('number');
+    });
+
+    it('emits with attachmentId=null when no matching (ticketId, fileId) row exists (no-op detach)', async () => {
+      const { handlers, ticketsRepo, bus } = buildHarness();
+      const ticketId = ticketsRepo.create({
+        companyId: COMPANY_ID,
+        title: 'T',
+        description: 'd',
+        priority: 'normal',
+        reporterId: 'rocky',
+        reporterKind: 'user',
+      });
+
+      await handlers.ticketsDetachFile({ ticketId, fileId: 'phantom-file' });
+      expect(bus.emitted.length).toBe(1);
+      const payload = bus.emitted[0]?.payload as { attachmentId: string | null };
+      expect(payload.attachmentId).toBeNull();
+    });
+
+    it('rejects phantom ticketId before any repo write or emit', async () => {
+      const { handlers, ticketAttachmentsRepo, bus } = buildHarness();
+      await expect(
+        handlers.ticketsDetachFile({ ticketId: 'phantom', fileId: 'vault-file-1' }),
+      ).rejects.toThrow('ticket not found');
+      expect(ticketAttachmentsRepo.rows.length).toBe(0);
+      expect(bus.emitted.length).toBe(0);
+    });
+
+    it('swallows a bus.emit throw (row still detached)', async () => {
+      const { handlers, ticketsRepo, ticketAttachmentsRepo, bus } = buildHarness();
+      const ticketId = ticketsRepo.create({
+        companyId: COMPANY_ID,
+        title: 'T',
+        description: 'd',
+        priority: 'normal',
+        reporterId: 'rocky',
+        reporterKind: 'user',
+      });
+      await handlers.ticketsAttachFile({ ticketId, fileId: 'vault-file-1' });
+      expect(ticketAttachmentsRepo.rows.length).toBe(1);
+      bus.setNextEmitThrow(new Error('bus down'));
+      await handlers.ticketsDetachFile({ ticketId, fileId: 'vault-file-1' });
+      expect(ticketAttachmentsRepo.rows.length).toBe(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Cross-cutting invariant pins
   // -------------------------------------------------------------------------
 
@@ -808,11 +1290,28 @@ describe('Invariant #11 main-side emits — Phase 5.6 M-C step f', () => {
       await handlers.ticketsClose({ ticketId });
       await handlers.ticketsReopen({ ticketId });
       await handlers.ticketsAddComment({ ticketId, content: 'hi' });
+      // FOLLOWUP-P1-extended — include employees.hire/fire + ticket attachment
+      // emits so the HUMAN_USER_ID sweep spans ALL Phase 5.6 M-C state-
+      // mutating channels, not just step-f tickets/projects/goals.
+      const hire = await handlers.employeesCreate({
+        companyId: COMPANY_ID,
+        roleId: 'senior-fullstack-engineer',
+        name: 'Carol',
+      });
+      await handlers.employeesFire({ employeeId: hire.employeeId });
+      await handlers.ticketsAttachFile({ ticketId, fileId: 'vault-x' });
+      await handlers.ticketsDetachFile({ ticketId, fileId: 'vault-x' });
       await handlers.projectsDelete({ projectId });
       await handlers.goalsDelete({ goalId });
 
-      // Expect at least 12 emits (one per mutation + ticket.assigned fired by assign)
-      expect(bus.emitted.length).toBeGreaterThanOrEqual(12);
+      // Expect at least 16 emits (step-f baseline 12 + 4 FOLLOWUP-P1-extended).
+      expect(bus.emitted.length).toBeGreaterThanOrEqual(16);
+      // FOLLOWUP-P1-extended emits must be present and carry the contract.
+      const types = new Set(bus.emitted.map((e) => e.type));
+      expect(types.has('employee.hired')).toBe(true);
+      expect(types.has('employee.fired')).toBe(true);
+      expect(types.has('ticket.attachmentAdded')).toBe(true);
+      expect(types.has('ticket.attachmentRemoved')).toBe(true);
       for (const e of bus.emitted) {
         expect(e.actorId).toBe('rocky');
         expect(e.actorKind).toBe('user');
