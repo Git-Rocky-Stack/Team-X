@@ -435,6 +435,113 @@ describe('useEmployeeEventSync (use-employees.ts — FOLLOWUP-P1-extended)', () 
   });
 });
 
+// ---------------------------------------------------------------------------
+// useCompanyEventSync — Phase 5.6 M-D step (a)
+//
+// Global-scope sync hook — no `companyId` argument. The switcher lives
+// ABOVE the active-company selection in the top-bar and must
+// invalidate its list on every company-lifecycle event regardless of
+// which company is currently active. This architectural divergence
+// from the per-company hooks is intentional and documented in
+// `use-companies.ts` JSDoc + the `docs/plans/2026-04-19-team-x-phase-
+// 5.6-m-d-ui-backfill.md` plan.
+//
+// The cross-hook contract iterator below (§Invariant #11 cross-hook
+// contract) EXCLUDES `use-companies` because its effect dependency
+// shape is `[qc]` rather than `[companyId, qc]` and it does not
+// carry a `companyId`-scope guard. The dedicated describe block
+// below pins its alternate contract.
+// ---------------------------------------------------------------------------
+
+describe('useCompanyEventSync (use-companies.ts — M-D step a)', () => {
+  const src = readHook('use-companies');
+
+  it('is exported with the canonical global-scope signature', () => {
+    expect(src).toContain('export function useCompanyEventSync(): void');
+  });
+
+  it('subscribes via ipc.events.onDashboard', () => {
+    expect(src).toContain('ipc.events.onDashboard');
+  });
+
+  it('does NOT guard on companyId scope (global-scope hook)', () => {
+    // The per-company hooks carry `event.companyId !== companyId` —
+    // this hook MUST NOT. Catches a refactor that accidentally
+    // copy-pastes the per-company guard and silently drops
+    // company.created events for brand-new companies whose id never
+    // matches the currently-active companyId.
+    expect(src).not.toMatch(/if\s*\(\s*event\.companyId\s*!==\s*companyId\s*\)/);
+  });
+
+  it('subscribes to company.created (M-C step b — companies.create emit)', () => {
+    expect(src).toContain("'company.created'");
+  });
+
+  it('subscribes to company.updated (M-C step e — companies.update emit)', () => {
+    expect(src).toContain("'company.updated'");
+  });
+
+  it('subscribes to company.archived (pre-M-C — companies.archive emit)', () => {
+    expect(src).toContain("'company.archived'");
+  });
+
+  it('subscribes to company.deleted (M-C step e — companies.delete emit)', () => {
+    expect(src).toContain("'company.deleted'");
+  });
+
+  it('invalidates the global companies list query', () => {
+    // Global query key — NOT keyed on companyId. The switcher lives
+    // above the active-company scope.
+    expect(src).toMatch(/queryKey:\s*\['companies'\]/);
+  });
+
+  it('depends only on [qc] in the effect dep array (global-scope)', () => {
+    // Per-company hooks use `[companyId, qc]`; this hook omits the
+    // companyId arg entirely, so the dep array is `[qc]` alone.
+    expect(src).toMatch(/\}\s*,\s*\[qc\]\s*\)/);
+    // Negative: the per-company template must NOT appear — catches a
+    // refactor that accidentally adds a companyId parameter.
+    expect(src).not.toMatch(/\}\s*,\s*\[companyId,\s*qc\]\s*\)/);
+  });
+
+  it('returns the unsubscribe function from the effect', () => {
+    expect(src).toMatch(/return\s+unsubscribe;/);
+  });
+
+  it('documents the M-D step-(a) closure with cite-through to the plan', () => {
+    expect(src).toMatch(/M-D step \(a\)/);
+    expect(src).toContain('2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md');
+    // Lineage pointer to the invariant-#11 closure chain.
+    expect(src).toContain('2026-04-18-ground-zero-audit.md');
+  });
+});
+
+describe('TopBar mounts the WorkspaceSwitcher (which mounts useCompanyEventSync)', () => {
+  // The switcher owns the mount per the M-D step-(a) plan. A refactor
+  // that unmounts the switcher or drops the useCompanyEventSync call
+  // would leave the switcher stale on cross-process writes; this
+  // audit catches that first, cheapest.
+  const topBar = readFileSync(join(currentDirname, '..', 'app', 'top-bar.tsx'), 'utf8');
+  const switcher = readFileSync(join(FEATURES_DIR, 'workspace', 'workspace-switcher.tsx'), 'utf8');
+
+  it('top-bar imports the WorkspaceSwitcher', () => {
+    expect(topBar).toContain('WorkspaceSwitcher');
+    expect(topBar).toMatch(/from\s+['"]@\/features\/workspace\/workspace-switcher[^'"]*['"]/);
+  });
+
+  it('top-bar renders the WorkspaceSwitcher exactly once', () => {
+    const matches = topBar.match(/<WorkspaceSwitcher\s*\/>/g);
+    expect(matches).toBeTruthy();
+    expect(matches?.length).toBe(1);
+  });
+
+  it('switcher invokes useCompanyEventSync exactly once', () => {
+    const matches = switcher.match(/useCompanyEventSync\s*\(\s*\)/g);
+    expect(matches).toBeTruthy();
+    expect(matches?.length).toBe(1);
+  });
+});
+
 describe('Invariant #11 cross-hook contract', () => {
   it('each sync hook follows the mount-once effect pattern', () => {
     const hooks = [
@@ -444,6 +551,10 @@ describe('Invariant #11 cross-hook contract', () => {
       'use-goals',
       // Phase 5.6 M-C FOLLOWUP-P1-extended — new hook added 2026-04-18.
       'use-employees',
+      // NOTE: use-companies intentionally excluded — it is a global-
+      // scope hook with `[qc]` dep array, not `[companyId, qc]`. Its
+      // alternate contract is pinned in the dedicated describe block
+      // above.
     ];
     for (const name of hooks) {
       const src = readHook(name);
@@ -463,6 +574,9 @@ describe('Invariant #11 cross-hook contract', () => {
       'use-goals',
       // FOLLOWUP-P1-extended hook carries the lineage pointer through.
       'use-employees',
+      // M-D step (a) global-scope hook carries the lineage pointer
+      // through to preserve the architectural-history audit trail.
+      'use-companies',
     ];
     for (const name of hooks) {
       const src = readHook(name);

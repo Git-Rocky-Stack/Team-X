@@ -16,6 +16,7 @@ import {
 
 import { Badge } from '@/components/ui/badge.js';
 import { Separator } from '@/components/ui/separator.js';
+import { WorkspaceSwitcher } from '@/features/workspace/workspace-switcher.js';
 import { cn } from '@/lib/utils.js';
 import { type ActiveView, useAppStore } from '@/store/app-store.js';
 
@@ -54,6 +55,10 @@ export function TopBar() {
           Phase 5
         </Badge>
       </div>
+
+      <Separator orientation="vertical" className="mx-4 h-6" />
+
+      <WorkspaceSwitcher />
 
       <Separator orientation="vertical" className="mx-4 h-6" />
 
