@@ -36,7 +36,21 @@ export type EventType =
   | 'company.updated'
   | 'company.deleted'
   | 'employee.promoted'
-  | 'employee.managerSet';
+  | 'employee.managerSet'
+  | 'ticket.created'
+  | 'ticket.updated'
+  | 'ticket.assigned'
+  | 'ticket.closed'
+  | 'ticket.reopened'
+  | 'ticket.commentAdded'
+  | 'project.created'
+  | 'project.updated'
+  | 'project.deleted'
+  | 'project.ticketLinked'
+  | 'project.ticketUnlinked'
+  | 'goal.created'
+  | 'goal.updated'
+  | 'goal.deleted';
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -574,6 +588,254 @@ export interface EmployeeManagerSetPayload {
   previousManagerId: string | null;
   /** Wall-clock timestamp in ms when the setManager handler wrote the row. */
   setAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Ticket lifecycle event payloads (Phase 5.6 M-C step f — main-side
+// Invariant #11 completeness hardening)
+//
+// Closes the FOLLOWUP-P1 gap surfaced by `docs/qa/2026-04-18-ground-zero-
+// audit.md` §3.1. The renderer-side hooks (`useTicketEventSync` from commit
+// 30b1520) were wired awaiting these emits; now the main side matches.
+//
+// Six events, one per state-mutating ticket IPC channel (`tickets.create`,
+// `tickets.update`, `tickets.assign`, `tickets.close`, `tickets.reopen`,
+// `tickets.addComment`). All payloads carry `companyId` on the DashboardEvent
+// envelope; snapshot fields (`title`, `previousAssigneeId`) are captured
+// AFTER the durable write but BEFORE the bus emit so any repo error
+// aborts the IPC call before any event fan-out.
+//
+// Architectural invariant #11 — IPC channels that mutate state must emit
+// a bus event so renderer caches invalidate.
+// ---------------------------------------------------------------------------
+
+export interface TicketCreatedPayload {
+  /** The newly-created ticket id. */
+  ticketId: string;
+  /** Companion company-scope id (matches the `companyId` on the DashboardEvent envelope). */
+  companyId: string;
+  /** The ticket title as stored on the row. */
+  title: string;
+  /**
+   * The assignee employee id if the create included an immediate assign,
+   * else null. A subsequent `tickets.assign` call (with its own
+   * `ticket.assigned` emit) covers the late-bind flow.
+   */
+  assigneeId: string | null;
+  /** Wall-clock timestamp in ms when the create handler wrote the row. */
+  createdAt: number;
+}
+
+export interface TicketUpdatedPayload {
+  /** The updated ticket id. */
+  ticketId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /**
+   * Which patch keys landed. Subset of the mutable ticket column set.
+   * Empty only when the IPC was called with a no-op patch — the handler
+   * still emits so optimistic-update renderer paths can reconcile
+   * timestamp state. Mirrors the `companies.update` convention.
+   */
+  patchedKeys: Array<'title' | 'description' | 'status' | 'priority' | 'assigneeId'>;
+  /** Wall-clock timestamp in ms when the update handler wrote the row. */
+  updatedAt: number;
+}
+
+export interface TicketAssignedPayload {
+  /** The assigned ticket id. */
+  ticketId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** The new assignee employee id (never null — the IPC rejects null assignees). */
+  assigneeId: string;
+  /**
+   * The previous assignee id, or null if the ticket had no prior
+   * assignee. Captured BEFORE the repo write so the bus event carries
+   * the snapshot without a second read round-trip.
+   */
+  previousAssigneeId: string | null;
+  /** The ticket's DM thread id (created by the assign handler for agent-facing discussion). */
+  threadId: string;
+  /** Wall-clock timestamp in ms when the assign handler wrote the row. */
+  assignedAt: number;
+}
+
+export interface TicketClosedPayload {
+  /** The closed ticket id. */
+  ticketId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** Wall-clock timestamp in ms when the close handler wrote the row. */
+  closedAt: number;
+}
+
+export interface TicketReopenedPayload {
+  /** The reopened ticket id. */
+  ticketId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** Wall-clock timestamp in ms when the reopen handler wrote the row. */
+  reopenedAt: number;
+}
+
+export interface TicketCommentAddedPayload {
+  /** The ticket the comment was added to. */
+  ticketId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** The message row id for the new comment. */
+  messageId: string;
+  /**
+   * The authoring employee id (or `HUMAN_USER_ID` for Rocky-authored
+   * comments). Matches the `actorId` on the DashboardEvent envelope
+   * when the comment is human-authored; diverges when an agent comment
+   * is appended by the orchestrator.
+   */
+  authorId: string;
+  /** Wall-clock timestamp in ms when the comment handler wrote the message row. */
+  addedAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Project lifecycle event payloads (Phase 5.6 M-C step f)
+//
+// Five events, one per state-mutating project IPC channel (`projects.create`,
+// `projects.update`, `projects.delete`, `projects.linkTicket`,
+// `projects.unlinkTicket`). The delete payload captures `title` BEFORE the
+// row drops so audit-view chips can surface the identifier after deletion
+// (same capture-before-drop rationale as `company.deleted`).
+//
+// Architectural invariant #11.
+// ---------------------------------------------------------------------------
+
+export interface ProjectCreatedPayload {
+  /** The newly-created project id. */
+  projectId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** The project title as stored on the row. */
+  title: string;
+  /**
+   * The parent goal id, or null if the project was created standalone.
+   * A subsequent `projects.update` call can bind a goal later (with its
+   * own `project.updated` emit carrying `'goalId'` in `patchedKeys`).
+   */
+  goalId: string | null;
+  /** Wall-clock timestamp in ms when the create handler wrote the row. */
+  createdAt: number;
+}
+
+export interface ProjectUpdatedPayload {
+  /** The updated project id. */
+  projectId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /**
+   * Which patch keys landed. Subset of the mutable project column set.
+   * Empty-patch-still-emits mirrors the `companies.update` convention.
+   */
+  patchedKeys: Array<'title' | 'description' | 'status' | 'goalId' | 'leadId'>;
+  /** Wall-clock timestamp in ms when the update handler wrote the row. */
+  updatedAt: number;
+}
+
+export interface ProjectDeletedPayload {
+  /** The deleted project id. */
+  projectId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /**
+   * The project title the deleted row held. Captured BEFORE the row
+   * drops (same rationale as `company.deleted`) so audit-view chips can
+   * render the identifier without a follow-up read.
+   */
+  title: string;
+  /** Wall-clock timestamp in ms when the delete handler wrote the row. */
+  deletedAt: number;
+}
+
+export interface ProjectTicketLinkedPayload {
+  /** The project the ticket was linked to. */
+  projectId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** The ticket that was linked. */
+  ticketId: string;
+  /** Wall-clock timestamp in ms when the link handler wrote the join row. */
+  linkedAt: number;
+}
+
+export interface ProjectTicketUnlinkedPayload {
+  /** The project the ticket was unlinked from. */
+  projectId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** The ticket that was unlinked (still exists — only the join row dropped). */
+  ticketId: string;
+  /** Wall-clock timestamp in ms when the unlink handler wrote the delete. */
+  unlinkedAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Goal lifecycle event payloads (Phase 5.6 M-C step f)
+//
+// Three events, one per state-mutating goal IPC channel (`goals.create`,
+// `goals.update`, `goals.delete`). `goal.updated` additionally includes
+// the recomputed normalized progress (0..1) because goal progress is
+// derived from linked projects — the renderer cache needs the fresh
+// value on every mutation to keep progress bars honest.
+//
+// Architectural invariant #11.
+// ---------------------------------------------------------------------------
+
+export interface GoalCreatedPayload {
+  /** The newly-created goal id. */
+  goalId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** The goal title as stored on the row. */
+  title: string;
+  /** Wall-clock timestamp in ms when the create handler wrote the row. */
+  createdAt: number;
+}
+
+export interface GoalUpdatedPayload {
+  /** The updated goal id. */
+  goalId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /**
+   * Which patch keys landed. Subset of the mutable goal column set.
+   * `progress` included here as a discriminator — the `progress` field
+   * below carries the recomputed value regardless of whether the key
+   * was in the patch, because linked-project movement can shift
+   * progress without a direct goal-row patch.
+   */
+  patchedKeys: Array<'title' | 'description' | 'targetDate' | 'status' | 'progress'>;
+  /**
+   * Normalized progress (0..1) RECOMPUTED post-update from the linked
+   * projects. Included in the payload so renderer progress bars can
+   * update without a follow-up `goals.get` round-trip. The handler
+   * calls `goalsRepo.recalcProgress(goalId)` after the write.
+   */
+  progress: number;
+  /** Wall-clock timestamp in ms when the update handler wrote the row. */
+  updatedAt: number;
+}
+
+export interface GoalDeletedPayload {
+  /** The deleted goal id. */
+  goalId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /**
+   * The goal title the deleted row held. Captured BEFORE the row
+   * drops (same rationale as `project.deleted`).
+   */
+  title: string;
+  /** Wall-clock timestamp in ms when the delete handler wrote the row. */
+  deletedAt: number;
 }
 
 /**

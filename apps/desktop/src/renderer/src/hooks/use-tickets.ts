@@ -82,6 +82,13 @@ export function useAddTicketComment() {
  * for the current company.
  *
  * Subscribed events:
+ * - `ticket.created` — direct lifecycle emit from `tickets.create`
+ * - `ticket.updated` — direct lifecycle emit from `tickets.update`
+ * - `ticket.assigned` — direct lifecycle emit from `tickets.assign`
+ *   (also fires inside `tickets.create` when immediate-assign is used)
+ * - `ticket.closed` — direct lifecycle emit from `tickets.close`
+ * - `ticket.reopened` — direct lifecycle emit from `tickets.reopen`
+ * - `ticket.commentAdded` — direct lifecycle emit from `tickets.addComment`
  * - `task.delegated` — M32 planner tool writes a new ticket
  * - `task.escalated` — M32 planner bumps a subtask up the org chart
  *
@@ -96,14 +103,10 @@ export function useAddTicketComment() {
  * Mount once inside `TicketsView`; the hook scopes its filter to the
  * active `companyId` so multi-company setups don't cross-invalidate.
  *
- * FOLLOWUP-P1 (main-side Invariant #11 gap): The `tickets.create`,
- * `tickets.update`, `tickets.close`, `tickets.reopen`, `tickets.assign`,
- * `tickets.addComment` IPC handlers do NOT currently emit bus events.
- * A `ticket.closed` literal appears in JSDoc but is NOT in the
- * `EventType` union today. Once those events are added on the main
- * side this subscription list expands to include them.
- *
- * Added 2026-04-18 per `docs/qa/2026-04-18-ground-zero-audit.md` §3.1.
+ * Phase 5.6 M-C step f (2026-04-18) closed the FOLLOWUP-P1 main-side
+ * gap surfaced by `docs/qa/2026-04-18-ground-zero-audit.md` §3.1 —
+ * `ticket.*` lifecycle events now land on the bus and are subscribed
+ * here alongside the pre-existing M32 planner events.
  */
 export function useTicketEventSync(companyId: string | null): void {
   const qc = useQueryClient();
@@ -111,7 +114,16 @@ export function useTicketEventSync(companyId: string | null): void {
     if (!companyId) return;
     const unsubscribe = ipc.events.onDashboard((event) => {
       if (event.companyId !== companyId) return;
-      if (event.type !== 'task.delegated' && event.type !== 'task.escalated') {
+      if (
+        event.type !== 'ticket.created' &&
+        event.type !== 'ticket.updated' &&
+        event.type !== 'ticket.assigned' &&
+        event.type !== 'ticket.closed' &&
+        event.type !== 'ticket.reopened' &&
+        event.type !== 'ticket.commentAdded' &&
+        event.type !== 'task.delegated' &&
+        event.type !== 'task.escalated'
+      ) {
         return;
       }
       qc.invalidateQueries({ queryKey: ['tickets', companyId] });

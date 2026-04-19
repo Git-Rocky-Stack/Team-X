@@ -68,8 +68,39 @@ describe('useTicketEventSync (use-tickets.ts)', () => {
     expect(src).toContain("'task.escalated'");
   });
 
-  it('documents the main-side ticket.closed gap as FOLLOWUP-P1', () => {
+  // Phase 5.6 M-C step f — FOLLOWUP-P1 resolution: main-side emits wired.
+  // Each of the 6 ticket lifecycle events now fires from its IPC handler
+  // and must appear in the hook's filter list for cache invalidation.
+  it('subscribes to ticket.created (M-C step f — tickets.create emit)', () => {
+    expect(src).toContain("'ticket.created'");
+  });
+
+  it('subscribes to ticket.updated (M-C step f — tickets.update emit)', () => {
+    expect(src).toContain("'ticket.updated'");
+  });
+
+  it('subscribes to ticket.assigned (M-C step f — tickets.assign emit)', () => {
+    expect(src).toContain("'ticket.assigned'");
+  });
+
+  it('subscribes to ticket.closed (M-C step f — tickets.close emit)', () => {
+    expect(src).toContain("'ticket.closed'");
+  });
+
+  it('subscribes to ticket.reopened (M-C step f — tickets.reopen emit)', () => {
+    expect(src).toContain("'ticket.reopened'");
+  });
+
+  it('subscribes to ticket.commentAdded (M-C step f — tickets.addComment emit)', () => {
+    expect(src).toContain("'ticket.commentAdded'");
+  });
+
+  it('documents the FOLLOWUP-P1 main-side gap as closed by M-C step f', () => {
+    // JSDoc must mention FOLLOWUP-P1 (historical pointer) AND the
+    // step-f closure — future readers should see the resolution, not
+    // the open-gap framing the pre-closure hook shipped with.
     expect(src).toContain('FOLLOWUP-P1');
+    expect(src).toMatch(/Phase 5\.6 M-C step f/);
   });
 
   it('invalidates the tickets list query', () => {
@@ -190,6 +221,27 @@ describe('useProjectEventSync (use-projects.ts)', () => {
     expect(src).toContain("'task.delegated'");
   });
 
+  // Phase 5.6 M-C step f — 5 project lifecycle events wired on main side.
+  it('subscribes to project.created (M-C step f — projects.create emit)', () => {
+    expect(src).toContain("'project.created'");
+  });
+
+  it('subscribes to project.updated (M-C step f — projects.update emit)', () => {
+    expect(src).toContain("'project.updated'");
+  });
+
+  it('subscribes to project.deleted (M-C step f — projects.delete emit)', () => {
+    expect(src).toContain("'project.deleted'");
+  });
+
+  it('subscribes to project.ticketLinked (M-C step f — projects.linkTicket emit)', () => {
+    expect(src).toContain("'project.ticketLinked'");
+  });
+
+  it('subscribes to project.ticketUnlinked (M-C step f — projects.unlinkTicket emit)', () => {
+    expect(src).toContain("'project.ticketUnlinked'");
+  });
+
   it('invalidates the projects list query', () => {
     expect(src).toMatch(/queryKey:\s*\['projects',\s*companyId\]/);
   });
@@ -198,10 +250,9 @@ describe('useProjectEventSync (use-projects.ts)', () => {
     expect(src).toMatch(/queryKey:\s*\['project-detail'\]/);
   });
 
-  it('documents the main-side invariant #11 gap as FOLLOWUP-P1', () => {
-    // Ensures the JSDoc explicitly notes that projects.create/update/delete
-    // do not currently emit bus events — a separate follow-up finding.
+  it('documents the FOLLOWUP-P1 main-side gap as closed by M-C step f', () => {
     expect(src).toContain('FOLLOWUP-P1');
+    expect(src).toMatch(/Phase 5\.6 M-C step f/);
   });
 
   it('returns the unsubscribe function from the effect', () => {
@@ -248,6 +299,19 @@ describe('useGoalEventSync (use-goals.ts)', () => {
     expect(src).toContain("'task.delegated'");
   });
 
+  // Phase 5.6 M-C step f — 3 goal lifecycle events wired on main side.
+  it('subscribes to goal.created (M-C step f — goals.create emit)', () => {
+    expect(src).toContain("'goal.created'");
+  });
+
+  it('subscribes to goal.updated (M-C step f — goals.update emit carries progress)', () => {
+    expect(src).toContain("'goal.updated'");
+  });
+
+  it('subscribes to goal.deleted (M-C step f — goals.delete emit)', () => {
+    expect(src).toContain("'goal.deleted'");
+  });
+
   it('invalidates the goals list query', () => {
     expect(src).toMatch(/queryKey:\s*\['goals',\s*companyId\]/);
   });
@@ -256,8 +320,9 @@ describe('useGoalEventSync (use-goals.ts)', () => {
     expect(src).toMatch(/queryKey:\s*\['goal-detail'\]/);
   });
 
-  it('documents the main-side invariant #11 gap as FOLLOWUP-P1', () => {
+  it('documents the FOLLOWUP-P1 main-side gap as closed by M-C step f', () => {
     expect(src).toContain('FOLLOWUP-P1');
+    expect(src).toMatch(/Phase 5\.6 M-C step f/);
   });
 
   it('returns the unsubscribe function from the effect', () => {

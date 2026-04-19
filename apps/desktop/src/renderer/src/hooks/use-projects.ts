@@ -86,6 +86,11 @@ export function useUnlinkTicket() {
  * state lands for the current company.
  *
  * Subscribed events:
+ * - `project.created` — direct lifecycle emit from `projects.create`
+ * - `project.updated` — direct lifecycle emit from `projects.update`
+ * - `project.deleted` — direct lifecycle emit from `projects.delete`
+ * - `project.ticketLinked` — direct emit from `projects.linkTicket`
+ * - `project.ticketUnlinked` — direct emit from `projects.unlinkTicket`
  * - `plan.proposed` — M32 `decompose_project` tool outputs a plan
  * - `plan.approved` — plan gets approved (M33 prep)
  * - `task.delegated` — M32 planner links a new ticket into a project
@@ -96,13 +101,10 @@ export function useUnlinkTicket() {
  * them. Per invariant #11 the renderer listens to the append-only bus
  * for cross-process mutation signals.
  *
- * FOLLOWUP-P1: The `projects.create` / `projects.update` /
- * `projects.delete` IPC handlers currently do NOT emit bus events.
- * That is a main-side Invariant #11 gap flagged for a follow-up
- * milestone. This renderer sync hook catches the agentic flows today;
- * when the main-side gap closes the subscription set expands.
- *
- * Added 2026-04-18 per `docs/qa/2026-04-18-ground-zero-audit.md` §3.1.
+ * Phase 5.6 M-C step f (2026-04-18) closed the FOLLOWUP-P1 main-side
+ * gap surfaced by `docs/qa/2026-04-18-ground-zero-audit.md` §3.1 —
+ * `project.*` lifecycle events now land on the bus and are subscribed
+ * here alongside the pre-existing M32 planner events.
  */
 export function useProjectEventSync(companyId: string | null): void {
   const qc = useQueryClient();
@@ -111,6 +113,11 @@ export function useProjectEventSync(companyId: string | null): void {
     const unsubscribe = ipc.events.onDashboard((event) => {
       if (event.companyId !== companyId) return;
       if (
+        event.type !== 'project.created' &&
+        event.type !== 'project.updated' &&
+        event.type !== 'project.deleted' &&
+        event.type !== 'project.ticketLinked' &&
+        event.type !== 'project.ticketUnlinked' &&
         event.type !== 'plan.proposed' &&
         event.type !== 'plan.approved' &&
         event.type !== 'task.delegated'

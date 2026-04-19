@@ -2456,12 +2456,38 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.title !== 'string' || req.title.trim().length === 0) {
         throw new Error('[ipc] goals.create: title is required');
       }
+      const title = req.title.trim();
       const goalId = goalsRepo.create({
         companyId: req.companyId,
-        title: req.title.trim(),
+        title,
         description: req.description ?? '',
         targetDate: req.targetDate ?? null,
       });
+
+      // Invariant #11 (Phase 5.6 M-C step f): IPC channels that mutate
+      // state must emit a bus event so renderer caches invalidate.
+      // Inline try/catch mirrors companies.create — a bus failure never
+      // cascades into an IPC throw (the row is already durable).
+      const createdAt = Date.now();
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'goal.created',
+            companyId: req.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: { goalId, companyId: req.companyId, title, createdAt },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] goals.create: bus emit failed (row still created with id ${goalId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] goals.create: bus dep unwired — renderer caches will NOT invalidate');
+      }
+
       return { goalId };
     },
 
@@ -2473,6 +2499,20 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!goal) {
         throw new Error(`[ipc] goals.update: goal not found: ${req.goalId}`);
       }
+
+      // Compute patchedKeys from the request BEFORE the write — tracks
+      // caller intent, not post-write row state. The 'progress' slot
+      // fires only when `progressPct` was explicitly patched; linked-
+      // project status changes emit via projects.update / projects.delete
+      // (each calls goalsRepo.recalcProgress internally but does not
+      // emit a goal.updated bus event — the project event is the delta).
+      const patchedKeys: Array<'title' | 'description' | 'targetDate' | 'status' | 'progress'> = [];
+      if (req.title !== undefined) patchedKeys.push('title');
+      if (req.description !== undefined) patchedKeys.push('description');
+      if (req.targetDate !== undefined) patchedKeys.push('targetDate');
+      if (req.status !== undefined) patchedKeys.push('status');
+      if (req.progressPct !== undefined) patchedKeys.push('progress');
+
       goalsRepo.update(req.goalId, {
         title: req.title,
         description: req.description,
@@ -2480,6 +2520,38 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         progressPct: req.progressPct,
         targetDate: req.targetDate,
       });
+
+      // Re-read to capture post-write progressPct. DB column is 0..100
+      // (integer). Payload normalizes to 0..1 so renderer progress bars
+      // consume a ratio consistently across goal/project/ticket events.
+      const updated = goalsRepo.getById(req.goalId);
+      const progress = updated ? (updated.progressPct ?? 0) / 100 : 0;
+
+      // Invariant #11.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'goal.updated',
+            companyId: goal.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              goalId: req.goalId,
+              companyId: goal.companyId,
+              patchedKeys,
+              progress,
+              updatedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] goals.update: bus emit failed (row still updated, id=${req.goalId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] goals.update: bus dep unwired — renderer caches will NOT invalidate');
+      }
     },
 
     async goalsList(req) {
@@ -2509,7 +2581,39 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!goal) {
         throw new Error(`[ipc] goals.delete: goal not found: ${req.goalId}`);
       }
+
+      // Capture snapshot BEFORE drop so the bus payload can carry title
+      // (row is gone by the time the emit fires). Same capture-before-
+      // drop rationale as company.deleted + project.deleted.
+      const snapshotTitle = goal.title;
+      const snapshotCompanyId = goal.companyId;
+
       goalsRepo.delete(req.goalId);
+
+      // Invariant #11.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'goal.deleted',
+            companyId: snapshotCompanyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              goalId: req.goalId,
+              companyId: snapshotCompanyId,
+              title: snapshotTitle,
+              deletedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] goals.delete: bus emit failed (row still deleted, id=${req.goalId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] goals.delete: bus dep unwired — renderer caches will NOT invalidate');
+      }
     },
 
     // -----------------------------------------------------------------------
@@ -2523,14 +2627,40 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.title !== 'string' || req.title.trim().length === 0) {
         throw new Error('[ipc] projects.create: title is required');
       }
+      const title = req.title.trim();
+      const goalId = req.goalId ?? null;
       const projectId = projectsRepo.create({
         companyId: req.companyId,
-        goalId: req.goalId ?? null,
-        title: req.title.trim(),
+        goalId,
+        title,
         description: req.description ?? '',
         leadId: req.leadId ?? null,
         priority: req.priority ?? 'medium',
       });
+
+      // Invariant #11 (Phase 5.6 M-C step f).
+      const createdAt = Date.now();
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'project.created',
+            companyId: req.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: { projectId, companyId: req.companyId, title, goalId, createdAt },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] projects.create: bus emit failed (row still created with id ${projectId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] projects.create: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+
       return { projectId };
     },
 
@@ -2542,6 +2672,16 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!project) {
         throw new Error(`[ipc] projects.update: project not found: ${req.projectId}`);
       }
+
+      // Compute patchedKeys BEFORE the write to track caller intent.
+      // Mirrors the `companies.update` patchedKeys convention.
+      const patchedKeys: Array<'title' | 'description' | 'status' | 'goalId' | 'leadId'> = [];
+      if (req.title !== undefined) patchedKeys.push('title');
+      if (req.description !== undefined) patchedKeys.push('description');
+      if (req.status !== undefined) patchedKeys.push('status');
+      if (req.goalId !== undefined) patchedKeys.push('goalId');
+      if (req.leadId !== undefined) patchedKeys.push('leadId');
+
       projectsRepo.update(req.projectId, {
         title: req.title,
         description: req.description,
@@ -2563,6 +2703,33 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         project.goalId
       ) {
         goalsRepo.recalcProgress(project.goalId);
+      }
+
+      // Invariant #11.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'project.updated',
+            companyId: project.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              projectId: req.projectId,
+              companyId: project.companyId,
+              patchedKeys,
+              updatedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] projects.update: bus emit failed (row still updated, id=${req.projectId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] projects.update: bus dep unwired — renderer caches will NOT invalidate',
+        );
       }
     },
 
@@ -2605,10 +2772,41 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error(`[ipc] projects.delete: project not found: ${req.projectId}`);
       }
       const goalId = project.goalId;
+      // Capture snapshot BEFORE drop — see company.deleted / goal.deleted rationale.
+      const snapshotTitle = project.title;
+      const snapshotCompanyId = project.companyId;
+
       projectsRepo.delete(req.projectId);
       // Recalc parent goal progress after deleting
       if (goalId) {
         goalsRepo.recalcProgress(goalId);
+      }
+
+      // Invariant #11.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'project.deleted',
+            companyId: snapshotCompanyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              projectId: req.projectId,
+              companyId: snapshotCompanyId,
+              title: snapshotTitle,
+              deletedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] projects.delete: bus emit failed (row still deleted, id=${req.projectId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] projects.delete: bus dep unwired — renderer caches will NOT invalidate',
+        );
       }
     },
 
@@ -2619,7 +2817,41 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
         throw new Error('[ipc] projects.linkTicket: ticketId is required');
       }
+      // Fetch project to thread companyId through to the bus event
+      // (Phase 5.6 M-C step f — required by invariant #11 payload shape;
+      // doubles as a validation guard for phantom projectIds).
+      const project = projectsRepo.getById(req.projectId);
+      if (!project) {
+        throw new Error(`[ipc] projects.linkTicket: project not found: ${req.projectId}`);
+      }
       projectsRepo.linkTicket(req.projectId, req.ticketId);
+
+      // Invariant #11.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'project.ticketLinked',
+            companyId: project.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              projectId: req.projectId,
+              companyId: project.companyId,
+              ticketId: req.ticketId,
+              linkedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] projects.linkTicket: bus emit failed (link still persisted, project=${req.projectId}, ticket=${req.ticketId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] projects.linkTicket: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
     },
 
     async projectsUnlinkTicket(req) {
@@ -2629,7 +2861,38 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
         throw new Error('[ipc] projects.unlinkTicket: ticketId is required');
       }
+      const project = projectsRepo.getById(req.projectId);
+      if (!project) {
+        throw new Error(`[ipc] projects.unlinkTicket: project not found: ${req.projectId}`);
+      }
       projectsRepo.unlinkTicket(req.projectId, req.ticketId);
+
+      // Invariant #11.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'project.ticketUnlinked',
+            companyId: project.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              projectId: req.projectId,
+              companyId: project.companyId,
+              ticketId: req.ticketId,
+              unlinkedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] projects.unlinkTicket: bus emit failed (unlink still persisted, project=${req.projectId}, ticket=${req.ticketId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] projects.unlinkTicket: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
     },
 
     // -----------------------------------------------------------------------
@@ -3181,18 +3444,43 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] tickets.create: title is required');
       }
 
+      const title = req.title.trim();
+      const assigneeId = req.assigneeId ?? null;
       const ticketId = ticketsRepo.create({
         companyId: req.companyId,
-        title: req.title.trim(),
+        title,
         description: req.description ?? '',
         priority: req.priority ?? 'medium',
-        assigneeId: req.assigneeId ?? null,
+        assigneeId,
         reporterId: HUMAN_USER_ID,
         reporterKind: 'user',
         labelsJson: req.labelsJson ?? '[]',
         slaHours: req.slaHours ?? null,
         dueAt: req.dueAt ?? null,
       });
+
+      // Invariant #11 (Phase 5.6 M-C step f): emit ticket.created FIRST.
+      // If the immediate-assign flow below runs successfully, a
+      // separate ticket.assigned event fires after the thread is wired.
+      const createdAt = Date.now();
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.created',
+            companyId: req.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: { ticketId, companyId: req.companyId, title, assigneeId, createdAt },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.create: bus emit failed (row still created with id ${ticketId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] tickets.create: bus dep unwired — renderer caches will NOT invalidate');
+      }
 
       // If assigneeId was provided, trigger immediate assignment flow
       if (req.assigneeId) {
@@ -3204,7 +3492,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
             const threadId = threadsRepo.create({
               companyId: req.companyId,
               kind: 'ticket',
-              subject: req.title.trim(),
+              subject: title,
               createdBy: HUMAN_USER_ID,
             });
             threadsRepo.addMember({
@@ -3221,13 +3509,40 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
             ticketsRepo.assign(ticketId, req.assigneeId);
 
             // Post the ticket description as the first message
-            const msgContent = `**Ticket: ${req.title.trim()}**\n\n${req.description ?? '(no description)'}`;
+            const msgContent = `**Ticket: ${title}**\n\n${req.description ?? '(no description)'}`;
             const messageId = messagesRepo.append({
               threadId,
               authorId: HUMAN_USER_ID,
               authorKind: 'user',
               content: msgContent,
             });
+
+            // Invariant #11 — second emit for the immediate-assign path.
+            // previousAssigneeId is always null here because this branch
+            // fires as a side-effect of ticket creation.
+            if (bus) {
+              try {
+                bus.emit({
+                  type: 'ticket.assigned',
+                  companyId: req.companyId,
+                  actorId: HUMAN_USER_ID,
+                  actorKind: 'user',
+                  payload: {
+                    ticketId,
+                    companyId: req.companyId,
+                    assigneeId: req.assigneeId,
+                    previousAssigneeId: null,
+                    threadId,
+                    assignedAt: Date.now(),
+                  },
+                });
+              } catch (err) {
+                console.error(
+                  `[ipc] tickets.create: ticket.assigned bus emit failed (assignment still persisted, ticket=${ticketId}):`,
+                  err,
+                );
+              }
+            }
 
             // Enqueue agent work (fire-and-forget)
             orchestrator
@@ -3257,6 +3572,18 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!ticket) {
         throw new Error(`[ipc] tickets.update: ticket not found: ${req.ticketId}`);
       }
+
+      // Compute patchedKeys BEFORE the write — tracks caller intent.
+      // `assigneeId` is intentionally excluded from this handler's
+      // patch surface because tickets.update does not call assign();
+      // the dedicated tickets.assign channel emits ticket.assigned
+      // with its own payload (including previousAssigneeId snapshot).
+      const patchedKeys: Array<'title' | 'description' | 'status' | 'priority' | 'assigneeId'> = [];
+      if (req.title !== undefined) patchedKeys.push('title');
+      if (req.description !== undefined) patchedKeys.push('description');
+      if (req.status !== undefined) patchedKeys.push('status');
+      if (req.priority !== undefined) patchedKeys.push('priority');
+
       ticketsRepo.update(req.ticketId, {
         title: req.title,
         description: req.description,
@@ -3266,6 +3593,31 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         slaHours: req.slaHours,
         dueAt: req.dueAt,
       });
+
+      // Invariant #11.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.updated',
+            companyId: ticket.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              ticketId: req.ticketId,
+              companyId: ticket.companyId,
+              patchedKeys,
+              updatedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.update: bus emit failed (row still updated, id=${req.ticketId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] tickets.update: bus dep unwired — renderer caches will NOT invalidate');
+      }
     },
 
     async ticketsAssign(req) {
@@ -3284,6 +3636,10 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!employee) {
         throw new Error(`[ipc] tickets.assign: employee not found: ${req.assigneeId}`);
       }
+
+      // Capture previous assignee BEFORE the repo write — `ticket`
+      // holds the pre-assign row (fetched at the top of the handler).
+      const previousAssigneeId = ticket.assigneeId;
 
       ticketsRepo.assign(req.ticketId, req.assigneeId);
 
@@ -3366,6 +3722,34 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
             );
           });
       }
+
+      // Invariant #11 (Phase 5.6 M-C step f). `threadId` is non-null
+      // by this point — both branches of the if/else above set it.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.assigned',
+            companyId: ticket.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              ticketId: req.ticketId,
+              companyId: ticket.companyId,
+              assigneeId: req.assigneeId,
+              previousAssigneeId,
+              threadId,
+              assignedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.assign: bus emit failed (assignment still persisted, ticket=${req.ticketId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] tickets.assign: bus dep unwired — renderer caches will NOT invalidate');
+      }
     },
 
     async ticketsClose(req) {
@@ -3377,6 +3761,30 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error(`[ipc] tickets.close: ticket not found: ${req.ticketId}`);
       }
       ticketsRepo.close(req.ticketId);
+
+      // Invariant #11 (Phase 5.6 M-C step f).
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.closed',
+            companyId: ticket.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              ticketId: req.ticketId,
+              companyId: ticket.companyId,
+              closedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.close: bus emit failed (ticket still closed, id=${req.ticketId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] tickets.close: bus dep unwired — renderer caches will NOT invalidate');
+      }
     },
 
     async ticketsReopen(req) {
@@ -3388,6 +3796,30 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error(`[ipc] tickets.reopen: ticket not found: ${req.ticketId}`);
       }
       ticketsRepo.reopen(req.ticketId);
+
+      // Invariant #11.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.reopened',
+            companyId: ticket.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              ticketId: req.ticketId,
+              companyId: ticket.companyId,
+              reopenedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.reopen: bus emit failed (ticket still reopened, id=${req.ticketId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] tickets.reopen: bus dep unwired — renderer caches will NOT invalidate');
+      }
     },
 
     async ticketsAddComment(req) {
@@ -3441,6 +3873,36 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
               err,
             );
           });
+      }
+
+      // Invariant #11 (Phase 5.6 M-C step f). authorId is HUMAN_USER_ID
+      // because this IPC is the Rocky-facing channel; agent-authored
+      // replies arrive through the orchestrator's own emit pipeline.
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.commentAdded',
+            companyId: ticket.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              ticketId: req.ticketId,
+              companyId: ticket.companyId,
+              messageId,
+              authorId: HUMAN_USER_ID,
+              addedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.addComment: bus emit failed (message still persisted, id=${messageId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] tickets.addComment: bus dep unwired — renderer caches will NOT invalidate',
+        );
       }
 
       return { messageId };
