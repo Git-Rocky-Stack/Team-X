@@ -12,7 +12,7 @@
   "previousMilestoneCompletedAt": "2026-04-21T14:00:00Z",
   "previousMilestoneCommit": "52ac886 + ledger 491d862 + state refresh 93e46c3 (all pushed to origin/main 2026-04-17 per D1 along with Phase 5.5 hotfix 8d5a0db)",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-18T00:00:00Z",
+  "updatedAt": "2026-04-19T00:00:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -125,9 +125,24 @@
   "activeSubMilestone": {
     "id": "M-D",
     "name": "UI Backfill",
-    "status": "queued — head-of-queue (M-C closed 2026-04-18 by the step e atomic commit fd3617b; this pending.json and paired chore(loki) ledger seal the Loki exit-KPI)",
-    "nextSession": "Open M-D T0. Read audit §20.2 (Cluster A UI scope: WorkspaceSwitcher + CreateCompanyDialog + CompanySettings panel wired to companies.list/create/update/archive/delete) + §20.3 (Cluster B UI scope: indented-list org chart + drag-to-rearrange + Reports-to manager picker wired to orgchart.get + employees.promote + employees.setManager). Every M-D deliverable: (1) consumes the backend surface M-C just shipped, (2) subscribes to the company.* and employee.* bus events so renderer caches invalidate (invariant #11), (3) ships all 5 F10 UI states (loading/error/empty/disabled/hover), (4) passes WCAG AA, (5) includes an E2E spec exercising the user-facing flow against the test-mode provider. Allowlist shrinkage complete for M-C — M-D does not shrink allowlist further; the remaining 3 entries (mcp.add / mcp.remove / mcp.health) are naming-drift rows scheduled for M-F docs-only IPC table renames.",
-    "stepsShippedSummary": "M-C COMPLETE. All 5 M-C sub-steps landed: a (Migration 0013) + b (companies.create) + c (orgchart.get) + d (employees.promote + setManager) + step d hardening (BUG-001..008) + e (companies.update + delete). Head-of-queue advances to M-D."
+    "status": "in-progress — step (a) shipped 2026-04-19 (atomic commit 5d0c5bc); head-of-queue advances to step (b) CreateCompanyDialog",
+    "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
+    "nextSession": "Open M-D step (b) — CreateCompanyDialog. NEW features/workspace/create-company-dialog.tsx dialog form (name / slug / settings stub / icon / theme) wired to ipc.companies.create with client-side validation mirroring the M-C step b handler contract (/^[a-z0-9][a-z0-9-]{0,62}$/ slug regex + name trim ≤120 chars + auto-suggest slug from name until user manually edits). Swap the WorkspaceSwitcher disabled 'Soon' placeholder for a live 'Create company…' CTA that opens the dialog. Success → setCompanyId(result.companyId) + close + toast; error → inline field errors + keep dialog open. Companion workspace-switcher.test.tsx update narrowing the placeholder assertion. No new IPC channels (companies.create already shipped in M-C step b). Allowlist preserved at 3.",
+    "stepsShippedSummary": "M-D IN PROGRESS. 1 of 7 atomic steps landed: a (dropdown-menu primitive + use-companies hook + WorkspaceSwitcher foundation + plan doc; atomic 5d0c5bc; +31 unit tests to 1603 total). Head-of-queue advances to step b.",
+    "stepsShipped": [
+      {
+        "step": "a",
+        "shippedAt": "2026-04-19T00:00:00Z",
+        "atomicCommit": "5d0c5bc",
+        "summary": "dropdown-menu primitive + use-companies hook (useCompanies + useCompanyEventSync global-scope) + WorkspaceSwitcher foundation + plan doc",
+        "testsDelta": 31,
+        "vitestTotalAfter": 1603,
+        "auditClaimsAfter": "92/3/0",
+        "allowlistAfter": 3,
+        "e2eDelta": 0,
+        "nextStep": "b — CreateCompanyDialog"
+      }
+    ]
   },
   "previousSubMilestone": {
     "id": "M-C",
