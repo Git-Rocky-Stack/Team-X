@@ -5,20 +5,21 @@
   "verifiedBy": [
     "M-D step a — atomic commit 5d0c5bc (dropdown-menu primitive + use-companies hook + WorkspaceSwitcher foundation + plan doc + 31 unit tests)",
     "M-D step (a+b) hardening collapse — atomic commit e611cbf (App.tsx stale-active-companyId guard + WorkspaceSwitcher live Create CTA + retry row + aria-label error-state + CreateCompanyDialog full implementation + use-create-company hook + audit doc + 31 new unit tests)",
+    "M-D step (a+b) workspace-switcher pre-flight — atomic commit 1d04e77 (apps/desktop/e2e/workspace-switcher.spec.ts + created-company cache hydration fix + Radix menu close fix + app-brand selector hardening; full E2E 13/13, vitest 1655/1655)",
     "M-D step (a+b) ground-zero audit — docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md (1 P1 + 2 P2 + 3 P3 + 3 P4 findings; P1.1 + P2.1 + P3.1 closed inline by atomic e611cbf per Rocky's iron-rule directive against deferred placeholders)",
     "M-D plan doc — docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md (7 atomic steps a/b/c/d/e/f/g; revised post-audit to mark step (b) collapsed-into-step-(a) per the iron-rule directive)",
     "M-D exit KPI — vitest 1634/1634 green at step (a+b) ship (1572 step-f baseline + 62 new: step-a 31 + step-b/hardening 31 across CreateCompanyDialog + useCreateCompany + App.tsx audit + WorkspaceSwitcher revisions)",
     "M-D exit KPI — pnpm audit:claims 92 verified / 3 allowlisted / 0 UNALLOWED preserved (no allowlist movement — M-D adds no IPC channels)",
     "M-D exit KPI — pnpm typecheck clean across 6 packages (preserved)",
     "M-D exit KPI — pnpm lint 0 errors / 21 warnings (preserved from M-C step d hardening baseline; dialog theme picker refactored from <button role='radio'> to native <fieldset>+<legend>+<input type='radio'> per Biome useSemanticElements + WCAG 4.1.2 / 1.3.1 — proactive a11y improvement triggered during hardening)",
-    "M-D exit KPI — E2E baseline preserved at 11 specs / 12 Playwright cases (step g adds the renderer-surface E2E specs for Cluster A + B)"
+    "M-D current KPI — E2E advanced to 12 specs / 13 Playwright cases after workspace-switcher pre-flight; step g extends workspace-switcher coverage and adds org-chart spec"
   ],
   "verifiedByContract": "Phase 5.6 M-E S4 — verifiedBy is REQUIRED (non-empty string array) when status begins with 'shipped'. Validator: apps/desktop/src/loki-verified-by.test.ts. Schema: .loki/queue/schema.json. Set on ship by populating with concrete evidence artifact paths.",
   "phase": "Phase 5.6 — Reconciliation & Remediation",
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
   "planDocSection": "§3 Step decomposition (7 atomic steps a/b/c/d/e/f/g) + §6 DoR + §7 DoD + §8 Risks + parent plan docs/plans/2026-04-17-team-x-phase-5.6-remediation.md §6 M-D",
   "title": "Phase 5.6 M-D T0 — UI Backfill: Cluster A WorkspaceSwitcher/CreateCompanyDialog/CompanySettings + Cluster B org chart tree + drag + Cluster C chat tab enable",
-  "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf); head-of-queue advances to workspace-switcher E2E pre-flight, then step (c) CompanySettings + HireDialog manager-select",
+  "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77); head-of-queue is step (c) CompanySettings + HireDialog manager-select",
   "predecessor": "Phase 5.6 M-C (Backend Backfill) SHIPPED 2026-04-18 — atomic commits f417a18 + b858067 + c2e6c92 + 19dbd35 + c6b118a + fd3617b + a4dc24e + 582d0f0. Every Cluster A + B backend surface verified on-disk; allowlist shrunk 9 → 3 entries over the M-C run. M-C bus-event coverage is complete for every state-mutating IPC channel (companies.*/employees.*/tickets.*/projects.*/goals.*), so M-D consumes the invariant #11 surface without adding new emits.",
   "stepsShipped": [
     {
@@ -93,7 +94,26 @@
         "fragmentSiblingDialogMount": "CreateCompanyDialog mounts as a sibling of DropdownMenu inside a fragment, not nested inside the menu content. Radix's DropdownMenu focus-trap would conflict with the dialog's focus-trap on open if nested; sibling mount lets each Radix root manage its own focus independently."
       },
       "safeguardProof": "Second M-D proof at scale of the M-E safeguards. S1 satisfied — audit doc + plan doc revisions ship in same atomic per the milestone DoD template. S2 conformance gate expected GREEN on e611cbf (no IPC additions, allowlist preserved at 92/3/0). S3 pre-commit hook clean on staged diff (no CLAUDE.md edits in this atomic). S4 verifiedBy populated on this paired ledger entry per contract. The hardening commit demonstrates the iron-rule discipline: a P1 surfaced by post-ship QA gets fixed inline rather than deferred, mirroring the M-C step d hardening precedent.",
-      "nextStep": "Per Rocky's option-2 follow-on directive: write apps/desktop/e2e/workspace-switcher.spec.ts pre-flight E2E spec exercising the now-live step (a+b) surface end-to-end. After that: step (c) — CompanySettings panel + HireDialog manager-select extension. M-D progression remains on track."
+      "nextStep": "workspace-switcher E2E pre-flight spec shipped in 1d04e77; head-of-queue advances to step (c) — CompanySettings panel + HireDialog manager-select extension."
+    },
+    {
+      "step": "a+b-preflight",
+      "name": "WorkspaceSwitcher pre-flight E2E + integration hardening",
+      "shippedAt": "2026-04-19T20:40:00Z",
+      "atomicCommit": "1d04e77",
+      "verifiedBy": [
+        "apps/desktop/e2e/workspace-switcher.spec.ts (NEW — boot → switcher renders → Create workspace dialog → create workspace → new workspace active → Strategia-X still reachable)",
+        "docs/qa/2026-04-19-m-d-workspace-switcher-preflight.md (NEW — QA evidence note with findings + verification)",
+        "apps/desktop/src/renderer/src/features/workspace/create-company-dialog.tsx (MODIFIED — hydrates ['companies'] before active company flip)",
+        "apps/desktop/src/renderer/src/features/workspace/workspace-switcher.tsx (MODIFIED — lets Radix close menu before create dialog)",
+        "apps/desktop/src/renderer/src/app/top-bar.tsx (MODIFIED — stable data-testid app-brand-name for E2E boot assertions)",
+        "pnpm -F @team-x/desktop exec playwright test — 13/13 cases",
+        "pnpm test — 121 files / 1655 tests",
+        "pnpm lint — 0 errors / 21 warnings",
+        "pnpm typecheck — clean"
+      ],
+      "deliverable": "Adds a real E2E pre-flight around the live M-D step (a+b) multi-company surface and closes the integration gaps it exposed. The create flow now keeps the newly-created workspace active by hydrating/refetching the companies cache before setCompanyId, and the switcher menu closes cleanly before the create dialog lifecycle continues. Existing E2E boot assertions now use a stable brand selector so the legitimate duplicate Strategia-X text introduced by WorkspaceSwitcher no longer breaks strict-mode locators.",
+      "nextStep": "step (c) — CompanySettings panel + HireDialog manager-select extension"
     }
   ],
   "interimDoR": [
@@ -147,8 +167,8 @@
   "commitTemplate": "feat(phase-5.6-m-d): Phase 5.6 M-D step <letter> — <scope>",
   "ledgerTemplate": "chore(loki): Phase 5.6 M-D step <letter> committed (<sha>) — head-of-queue advances to step <next>",
   "verification": {
-    "unitTests": "1634 at step (a+b) hardening ship (1572 + 31 step a + 31 step (a+b)); ~1660–1690 estimated at M-D exit (step g)",
-    "e2eSpecs": "11 specs / 12 cases at step a ship (baseline preserved); 13 specs / 14+ cases at M-D exit (step g adds workspace-switcher + org-chart specs)",
+    "unitTests": "1655 at workspace-switcher pre-flight ship (121 files / 1655 tests); ~1680–1710 estimated at M-D exit",
+    "e2eSpecs": "12 specs / 13 cases after workspace-switcher pre-flight; 13 specs / 14+ cases at M-D exit after org-chart spec lands",
     "lint": "0 errors / 21 warnings (M-C step d hardening baseline preserved)",
     "typecheck": "clean across 6 packages",
     "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED preserved (M-D adds no IPC channels)",
@@ -156,7 +176,7 @@
   },
   "notes": [
     "M-D is the first sprint to run entirely on M-C's restored backend surface. Every UI component consumes a verified-on-disk IPC channel + subscribes to the invariant #11 bus events M-C wired. Zero backend additions in M-D scope.",
-    "Restoration order WITHIN M-D: (a) WorkspaceSwitcher foundation [SHIPPED]. (b) CreateCompanyDialog + step-a audit hardening [SHIPPED via step (a+b) collapse]. Next: workspace-switcher E2E pre-flight, then (c) CompanySettings + HireDialog manager-select. (d) Chat tab enable (independent — can interleave with c). (e) OrgChartView read-side (independent — can interleave). (f) Org-chart interactions (depends on e). (g) E2E spec + final verification gate.",
+    "Restoration order WITHIN M-D: (a) WorkspaceSwitcher foundation [SHIPPED]. (b) CreateCompanyDialog + step-a audit hardening [SHIPPED via step (a+b) collapse]. Workspace-switcher E2E pre-flight [SHIPPED via 1d04e77]. Next: (c) CompanySettings + HireDialog manager-select. (d) Chat tab enable (independent — can interleave with c). (e) OrgChartView read-side (independent — can interleave). (f) Org-chart interactions (depends on e). (g) E2E spec + final verification gate.",
     "Each step is its own atomic + ledger. Allowlist preserved at 3 entries throughout M-D — the remaining 3 are mcp.* naming-drift rows scheduled for M-F docs-only IPC table renames.",
     "Do NOT start M-F (Documentation Truth-Up) before M-D ships. M-F rewrites CLAUDE.md status blocks in three-bucket format which requires M-D exit-KPI as an input.",
     "The Company wire shape widening to include archive status is deferred to step (c) alongside the CompanySettings archived-companies UX. In the dev default single-company seed, this has zero visible effect at step (a).",

@@ -69,6 +69,8 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 ### Step (b) — `CreateCompanyDialog`
 
 > **2026-04-19 — COLLAPSED into step (a+b) hardening atomic.** Shipped as part of the post-audit remediation per Rocky's iron-rule directive. See `docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md` and the step (a) revision note above. The original scope below is preserved for historical context.
+>
+> **2026-04-19 — pre-flight E2E shipped.** `apps/desktop/e2e/workspace-switcher.spec.ts` landed in commit `1d04e77`, validating boot → switcher open → create workspace → active workspace flip → seeded workspace still reachable. The run surfaced and closed two M-D integration gaps: created-company cache hydration before `setCompanyId`, and Radix dropdown close behavior after opening the create dialog. Evidence: `docs/qa/2026-04-19-m-d-workspace-switcher-preflight.md`.
 
 **Goal:** Ship the create flow end-to-end.
 
@@ -82,7 +84,7 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 - **Settings stub.** The settings object (mcp_configs_json, provider_prefs_json, max_concurrent_agents) is deferred to `CompanySettings` in step (c) for edit UX; create passes a minimal default settings object matching the seed flow.
 - **Success behavior.** Switch to the new company immediately, open a toast with "Created {name}" + "Switch back to {previous}" undo-style link. No auto-open of CompanySettings — create and configure are different mental actions.
 
-**Acceptance:** dialog opens via switcher, creates a company end-to-end, new company appears in the switcher, active companyId flips to the new one.
+**Acceptance:** dialog opens via switcher, creates a company end-to-end, new company appears in the switcher, active companyId flips to the new one. Covered by `apps/desktop/e2e/workspace-switcher.spec.ts` as of commit `1d04e77`.
 
 ### Step (c) — `CompanySettings` panel + `HireDialog` manager-select
 
@@ -161,13 +163,13 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 **Goal:** Close the milestone with a real end-to-end spec and run the full verification gate.
 
 **Files:**
-- NEW `apps/desktop/e2e/workspace-switcher.spec.ts` — boot, switcher renders, create company end-to-end, switch, archive, delete; asserts the 14 M-C bus events land in Audit (`company.created / updated / archived / deleted`).
+- EXISTING `apps/desktop/e2e/workspace-switcher.spec.ts` — pre-flight already covers boot, switcher render, create company end-to-end, active switch, and switch-back. Step (g) extends this spec to archive/delete and audit-event assertions for `company.created / updated / archived / deleted`.
 - NEW `apps/desktop/e2e/org-chart.spec.ts` — boot, navigate to Org tab, assert tree renders, hire an employee, promote them, drag-rearrange, fire; asserts `employee.*` bus events land in Audit.
 - MODIFIED E2E specs that assert Chat tab disabled (if any — grep first) → flip to asserting it's enabled.
 
 **Acceptance (M-D exit KPI):**
 - vitest: baseline 1572 + new unit tests (estimate +30–60 across hooks + components).
-- E2E: 11 → 13 specs (+ workspace-switcher + org-chart).
+- E2E: 12 specs / 13 cases after the workspace-switcher pre-flight; target 13 specs / 14+ cases at M-D exit after the org-chart spec lands.
 - typecheck clean across 6 packages.
 - lint 0 errors / ≤21 warnings (baseline preserved).
 - `pnpm audit:claims`: 92 / 3 / 0 preserved — no allowlist movement expected (M-D adds no IPC channels).
