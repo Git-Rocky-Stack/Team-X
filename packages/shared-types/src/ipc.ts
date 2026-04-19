@@ -131,6 +131,55 @@ export interface CompaniesCreateResponse {
   systemCopilotEmployeeId: string;
 }
 
+/**
+ * `companies.update` request (Phase 5.6 M-C step e — restores Cluster A
+ * multi-company CRUD per audit row 10.13).
+ *
+ * Every mutable field is optional — only keys present in the request
+ * get written. The handler:
+ *
+ *   - Validates every supplied field using the same rules as
+ *     `companies.create` (non-empty trimmed name ≤120 chars, slug
+ *     matching `/^[a-z0-9][a-z0-9-]{0,62}$/`, settings plain-object,
+ *     icon/theme string).
+ *   - Refuses archived companies via `assertCompanyActive` so an
+ *     archived company cannot be mutated back to a live-looking row
+ *     without a reactivation path shipping first.
+ *   - Surfaces SQL UNIQUE on slug collisions as a friendlier
+ *     `slug "X" is already in use` message (mirrors `companies.create`).
+ *
+ * `icon` accepts `null` to clear the icon (matches the DB-nullable
+ * column contract); `theme` has no clear path because the schema
+ * defaults it to `'dark'` and the domain carries no meaningful empty
+ * state for the theme column.
+ */
+export interface CompaniesUpdateRequest {
+  companyId: string;
+  name?: string;
+  slug?: string;
+  settings?: Record<string, unknown>;
+  icon?: string | null;
+  theme?: string;
+}
+
+/**
+ * `companies.delete` request (Phase 5.6 M-C step e — restores Cluster A
+ * multi-company CRUD per audit row 10.15).
+ *
+ * Destructive sibling of `companies.archive`: the handler hard-deletes
+ * the company row AND every company-scoped child row across 15 tables
+ * in a single transaction (see `companies.delete()` repo doc for the
+ * full FK-safe order). Before the transaction fires, the handler
+ * quiesces the copilot pipeline identically to `companies.archive`
+ * (analyzer stop → event-window clear) so a mid-tick analyzer cannot
+ * observe soon-to-be-deleted rows. This operation is NOT reversible
+ * short of a backup restore — renderer surfaces should gate this
+ * behind an explicit confirmation, distinct from the archive flow.
+ */
+export interface CompaniesDeleteRequest {
+  companyId: string;
+}
+
 export interface ListEmployeesRequest {
   companyId: string;
 }
@@ -1242,6 +1291,19 @@ export interface IpcContract {
     request: CompaniesCreateRequest;
     response: CompaniesCreateResponse;
   };
+  // Cluster A multi-company CRUD write-side (Phase 5.6 M-C step e;
+  // restores audit rows 10.13 + 10.15). Both emit bus events per
+  // architectural invariant #11 (`company.updated` / `company.deleted`).
+  'companies.update': {
+    request: CompaniesUpdateRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'companies.delete': {
+    request: CompaniesDeleteRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
   'employees.list': {
     request: ListEmployeesRequest;
     response: Employee[];
@@ -1738,6 +1800,48 @@ export interface TeamXApi {
      * Closes M33 T3 follow-up F3.
      */
     archive(companyId: string): Promise<void>;
+
+    /**
+     * Update mutable fields on an existing, non-archived company. Phase
+     * 5.6 M-C step e — restores Cluster A multi-company CRUD per audit
+     * row 10.13.
+     *
+     * Every patch field is optional; only keys present in the request
+     * get written. Validation mirrors `create`: non-empty trimmed name
+     * ≤120 chars, slug matching `/^[a-z0-9][a-z0-9-]{0,62}$/`, settings
+     * plain-object, icon/theme string (icon accepts `null` to clear).
+     * Archived companies are refused via `assertCompanyActive` — reactivate
+     * first or route mutations through the archive-specific reactivation
+     * path (not yet shipped; future milestone).
+     *
+     * The handler emits a `company.updated` bus event (invariant #11)
+     * carrying the list of patched keys so renderer caches know which
+     * slices of state to invalidate.
+     */
+    update(req: CompaniesUpdateRequest): Promise<void>;
+
+    /**
+     * Hard-delete a company AND every row scoped to it across 15 tables
+     * (employees, threads, messages, tickets, projects, goals, meetings,
+     * file_vault, embeddings, command_history, copilot_insights,
+     * org_edges, mcp_servers, events, and more — see the `delete()` repo
+     * method for the full FK-safe cascade order).
+     *
+     * Phase 5.6 M-C step e — restores Cluster A multi-company CRUD per
+     * audit row 10.15. Destructive sibling of `archive`. The handler
+     * quiesces the copilot pipeline (analyzer stop → event-window clear)
+     * BEFORE the transactional sweep fires so a mid-tick analyzer cannot
+     * observe rows that are about to disappear. A single `db.transaction`
+     * wraps the sweep — either every company-scoped row loses the tie
+     * atomically or nothing does.
+     *
+     * Emits a `company.deleted` bus event (invariant #11) AFTER the
+     * transaction commits, carrying the captured-before-drop name + slug
+     * so audit-view chips can render the identifier. The operation is
+     * NOT reversible short of a backup restore; renderer surfaces MUST
+     * gate this behind an explicit confirmation distinct from archive.
+     */
+    delete(req: CompaniesDeleteRequest): Promise<void>;
   };
   employees: {
     /** Return every employee in the given company, mapped to the public Employee shape. */

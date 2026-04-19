@@ -33,6 +33,8 @@ export type EventType =
   | 'copilot.dismissed'
   | 'company.archived'
   | 'company.created'
+  | 'company.updated'
+  | 'company.deleted'
   | 'employee.promoted'
   | 'employee.managerSet';
 
@@ -463,6 +465,63 @@ export interface CompanyCreatedPayload {
   systemCopilotEmployeeId: string;
   /** Wall-clock timestamp in ms when the create handler wrote the row. */
   createdAt: number;
+}
+
+/**
+ * `company.updated` — emitted by `companies.update` AFTER the row write
+ * succeeds. Phase 5.6 M-C step e — restores Cluster A multi-company CRUD
+ * per audit row 10.13. Carries the list of patched keys (not the values —
+ * audit-view chips only need the keys to render a delta chip, and
+ * omitting the values keeps the bus event small and free of sensitive
+ * `settings` payload fragments).
+ *
+ * Architectural invariant #11 — IPC channels that mutate state must emit
+ * a bus event so renderer caches invalidate.
+ */
+export interface CompanyUpdatedPayload {
+  /** The updated company id. Duplicated in the top-level `companyId` for DashboardEvent routing. */
+  companyId: string;
+  /**
+   * Which patch keys landed. Subset of `('name' | 'slug' | 'settings' |
+   * 'icon' | 'theme')`. Empty only when the IPC was called with a
+   * no-op patch — the handler still emits so the renderer's
+   * optimistic-update paths can reconcile timestamp state.
+   */
+  patchedKeys: Array<'name' | 'slug' | 'settings' | 'icon' | 'theme'>;
+  /** Wall-clock timestamp in ms when the update handler wrote the row. */
+  updatedAt: number;
+}
+
+/**
+ * `company.deleted` — emitted by `companies.delete` AFTER the hard-delete
+ * transaction commits. Phase 5.6 M-C step e — restores Cluster A multi-
+ * company CRUD per audit row 10.15. Destructive sibling of
+ * `company.archived`.
+ *
+ * The handler quiesces the copilot pipeline (analyzer stop + event-window
+ * clear) BEFORE the transactional sweep so a mid-tick analyzer cannot
+ * observe rows that are about to disappear. By the time this event
+ * fires, every company-scoped row across 15 tables is gone (see the
+ * `companies.delete()` repo doc for the full list). Subscribers should
+ * drop any cached state keyed by this companyId — the data is NOT
+ * recoverable short of a backup restore.
+ *
+ * Architectural invariant #11 — IPC channels that mutate state must emit
+ * a bus event so renderer caches invalidate.
+ */
+export interface CompanyDeletedPayload {
+  /** The deleted company id. Duplicated in the top-level `companyId` for DashboardEvent routing. */
+  companyId: string;
+  /**
+   * The slug the deleted company held. Captured BEFORE the row drops so
+   * audit-view chips can render the identifier without a follow-up
+   * read that would now miss (the row no longer exists).
+   */
+  slug: string;
+  /** The display name the deleted company held. Same capture-before-drop rationale as `slug`. */
+  name: string;
+  /** Wall-clock timestamp in ms when the delete handler committed the transaction. */
+  deletedAt: number;
 }
 
 // ---------------------------------------------------------------------------

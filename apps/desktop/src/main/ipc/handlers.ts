@@ -62,6 +62,8 @@ import type {
   CloseTicketRequest,
   CompaniesCreateRequest,
   CompaniesCreateResponse,
+  CompaniesDeleteRequest,
+  CompaniesUpdateRequest,
   Company,
   CompanySettings,
   CreateGoalRequest,
@@ -169,7 +171,7 @@ import {
 
 import type { RoleSpec } from '@team-x/shared-types';
 
-import type { CompanyRow } from '../db/repos/companies.js';
+import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 import type {
   CreateEmployeeInput,
   EmployeeRow,
@@ -256,6 +258,24 @@ export interface IpcCompaniesRepo {
    * analyzer tick cannot observe a stale buffer after the row flips.
    */
   archive(id: string): void;
+  /**
+   * Update mutable fields — only keys present in `patch` get written;
+   * empty patch is a SQL no-op. Phase 5.6 M-C step e — backs the
+   * `companies.update` IPC handler per audit row 10.13. The handler
+   * pre-validates with `assertCompanyActive` + shape checks so this
+   * method never sees an archived or malformed-input call.
+   */
+  update(id: string, patch: UpdateCompanyInput): void;
+  /**
+   * Hard-delete a company AND every row scoped to it across 15 tables
+   * in a single transaction. Phase 5.6 M-C step e — backs the
+   * `companies.delete` IPC handler per audit row 10.15. The handler
+   * must have called `CopilotAnalyzerService.stop` + `CopilotEventWindow.clear`
+   * BEFORE this sweep so a mid-tick analyzer cannot observe rows that
+   * are about to disappear (mirrors `archive()`'s quiesce contract).
+   * No-op on unknown id.
+   */
+  delete(id: string): void;
 }
 
 export interface IpcEmployeesRepo {
@@ -726,6 +746,37 @@ export interface IpcHandlers {
    * leave a partially-bootstrapped company on the table.
    */
   companiesCreate(req: CompaniesCreateRequest): Promise<CompaniesCreateResponse>;
+
+  /**
+   * `companies.update` — update mutable fields on an existing, non-
+   * archived company. Phase 5.6 M-C step e — restores Cluster A multi-
+   * company CRUD per audit row 10.13.
+   *
+   * Validation mirrors `companies.create` for every supplied field
+   * (non-empty trimmed name ≤120 chars, slug regex, settings shape,
+   * icon/theme types). `assertCompanyActive` refuses archived rows.
+   * SQL UNIQUE on slug collision rethrown as a friendlier message.
+   * Empty patch is a no-op at the repo layer but still emits
+   * `company.updated` with an empty `patchedKeys` array so optimistic
+   * update paths reconcile.
+   */
+  companiesUpdate(req: CompaniesUpdateRequest): Promise<void>;
+
+  /**
+   * `companies.delete` — hard-delete a company AND every row scoped to
+   * it across 15 tables in a single transaction. Phase 5.6 M-C step e
+   * — restores Cluster A multi-company CRUD per audit row 10.15.
+   * Destructive sibling of `companies.archive`.
+   *
+   * The handler quiesces the copilot pipeline (`analyzer.stop` →
+   * `eventWindow.clear`) BEFORE the transactional sweep fires so a
+   * mid-tick analyzer cannot observe rows that are about to
+   * disappear. After the transaction commits, emits `company.deleted`
+   * carrying the captured-before-drop `name` + `slug` (the row is
+   * gone; subscribers can't look them up). Throws if the company does
+   * not exist — prevents silent no-ops from confusing callers.
+   */
+  companiesDelete(req: CompaniesDeleteRequest): Promise<void>;
 
   /**
    * `employees.list` — return every employee in a given company,
@@ -1504,6 +1555,199 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       } else if (process.env.NODE_ENV !== 'production') {
         console.warn(
           '[ipc] companies.archive: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+    },
+
+    async companiesUpdate(req) {
+      // --- Input shape guard ---------------------------------------
+      if (!req || typeof req !== 'object') {
+        throw new Error('[ipc] companies.update: request body is required');
+      }
+      const companyId = typeof req.companyId === 'string' ? req.companyId : '';
+      if (companyId.length === 0) {
+        throw new Error('[ipc] companies.update: companyId is required');
+      }
+
+      // --- Archived-company guard ---------------------------------
+      // Reuses the helper step (d) hardening introduced for BUG-002.
+      // An archived company is soft-deleted; mutating fields on a
+      // tombstoned row would fan out stale bus events and confuse the
+      // M-D renderer listing. The helper also throws on unknown ids.
+      assertCompanyActive(companiesRepo, companyId, 'companies.update');
+
+      // --- Per-field validation (mirror companies.create) ---------
+      const patch: UpdateCompanyInput = {};
+      const patchedKeys: Array<'name' | 'slug' | 'settings' | 'icon' | 'theme'> = [];
+      if (req.name !== undefined) {
+        if (typeof req.name !== 'string') {
+          throw new Error('[ipc] companies.update: name must be a string when provided');
+        }
+        const trimmed = req.name.trim();
+        if (trimmed.length === 0) {
+          throw new Error(
+            '[ipc] companies.update: name must be non-empty after trim when provided',
+          );
+        }
+        if (trimmed.length > 120) {
+          throw new Error('[ipc] companies.update: name exceeds 120 chars');
+        }
+        patch.name = trimmed;
+        patchedKeys.push('name');
+      }
+      if (req.slug !== undefined) {
+        if (typeof req.slug !== 'string' || !/^[a-z0-9][a-z0-9-]{0,62}$/.test(req.slug)) {
+          throw new Error(
+            `[ipc] companies.update: slug "${String(req.slug)}" must match /^[a-z0-9][a-z0-9-]{0,62}$/ (lowercase alphanumerics + hyphen, 1–63 chars, no leading hyphen)`,
+          );
+        }
+        patch.slug = req.slug;
+        patchedKeys.push('slug');
+      }
+      if (req.settings !== undefined) {
+        if (
+          req.settings === null ||
+          typeof req.settings !== 'object' ||
+          Array.isArray(req.settings)
+        ) {
+          throw new Error('[ipc] companies.update: settings must be a plain object when provided');
+        }
+        patch.settings = req.settings;
+        patchedKeys.push('settings');
+      }
+      if (req.icon !== undefined) {
+        // `null` is accepted to clear the icon — the DB column is
+        // nullable and the M-D CreateCompanyDialog / CompanySettings
+        // panel may wire a "remove icon" action that sends null.
+        if (req.icon !== null && typeof req.icon !== 'string') {
+          throw new Error('[ipc] companies.update: icon must be a string or null when provided');
+        }
+        patch.icon = req.icon;
+        patchedKeys.push('icon');
+      }
+      if (req.theme !== undefined) {
+        if (typeof req.theme !== 'string') {
+          throw new Error('[ipc] companies.update: theme must be a string when provided');
+        }
+        patch.theme = req.theme;
+        patchedKeys.push('theme');
+      }
+
+      // --- Durable write ------------------------------------------
+      // Empty patch is intentionally allowed — the repo no-ops at the
+      // SQL layer and the handler still emits `company.updated` with
+      // an empty `patchedKeys` array so the renderer's optimistic
+      // update path can reconcile the row's timestamp state even when
+      // nothing actually changed (idempotent write-through surface).
+      try {
+        companiesRepo.update(companyId, patch);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('UNIQUE') && msg.includes('slug')) {
+          throw new Error(`[ipc] companies.update: slug "${String(patch.slug)}" is already in use`);
+        }
+        throw err;
+      }
+
+      // --- Invariant #11: emit bus event --------------------------
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'company.updated',
+            companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              companyId,
+              patchedKeys,
+              updatedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error('[ipc] companies.update: bus emit failed (row still updated):', err);
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] companies.update: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+    },
+
+    async companiesDelete(req) {
+      // --- Input shape guard ---------------------------------------
+      if (!req || typeof req !== 'object') {
+        throw new Error('[ipc] companies.delete: request body is required');
+      }
+      const companyId = typeof req.companyId === 'string' ? req.companyId : '';
+      if (companyId.length === 0) {
+        throw new Error('[ipc] companies.delete: companyId is required');
+      }
+
+      // --- Existence guard (but NOT active guard) ------------------
+      // Delete explicitly allows removing archived companies — that is
+      // the user-intent "permanently remove a soft-deleted company"
+      // path. We still fail loud on a genuinely-missing id so a caller
+      // with a stale reference knows to refresh instead of silently
+      // no-opping. Snapshot read BEFORE the transaction so the bus
+      // event can carry name + slug after the row is gone.
+      const snapshot = companiesRepo.getById(companyId);
+      if (!snapshot) {
+        throw new Error(`[ipc] companies.delete: company not found: ${companyId}`);
+      }
+
+      // --- Quiesce copilot pipeline (mirrors companies.archive) ----
+      // Stop the analyzer FIRST so a mid-flight tick cannot observe a
+      // cleared event window + partially-deleted rows. Clear the window
+      // SECOND so a brief interleaving cannot rehydrate it from the
+      // events table immediately before the DELETE sweep wipes the
+      // company's events rows.
+      if (copilotAnalyzerService) {
+        copilotAnalyzerService.stop(companyId);
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] companies.delete: copilotAnalyzerService dep unwired — skipping stop()',
+        );
+      }
+      if (copilotEventWindow) {
+        copilotEventWindow.clear(companyId);
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] companies.delete: copilotEventWindow dep unwired — skipping clear()');
+      }
+
+      // --- Hard delete (transactional 15-table sweep) --------------
+      // Repo owns the FK-safe order + db.transaction. A throw inside
+      // the transaction rolls every DELETE back, so callers never see
+      // a half-deleted company. Any throw here bubbles up — we do NOT
+      // rewrap because the repo sweep has no domain-specific error
+      // shapes we'd want to map for the renderer (FK violations would
+      // surface raw sqlite text; they indicate schema drift and should
+      // fail loud for diagnosis).
+      companiesRepo.delete(companyId);
+
+      // --- Invariant #11: emit bus event --------------------------
+      // ActorKind is 'user' — same rationale as companies.archive.
+      // Name + slug come from the pre-transaction snapshot (the row
+      // is gone by now; a fresh getById would return null).
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'company.deleted',
+            companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              companyId,
+              slug: snapshot.slug,
+              name: snapshot.name,
+              deletedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error('[ipc] companies.delete: bus emit failed (row still deleted):', err);
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] companies.delete: bus dep unwired — renderer caches will NOT invalidate',
         );
       }
     },

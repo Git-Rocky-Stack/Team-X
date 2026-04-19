@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CompanyRow } from '../db/repos/companies.js';
+import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 
 import type { IpcCompaniesRepo, IpcEventBus } from './handlers.js';
 import { createIpcHandlers } from './handlers.js';
@@ -93,6 +93,17 @@ class FakeCompaniesRepo implements IpcCompaniesRepo {
 
   archive(id: string): void {
     this.archiveCalls.push(id);
+  }
+
+  // IpcCompaniesRepo was widened in Phase 5.6 M-C step e with update +
+  // delete. This test file only exercises `create`, so the widened
+  // methods throw 'unused' — a future cross-test exercising them will
+  // fail loud rather than silently no-op.
+  update(_id: string, _patch: UpdateCompanyInput): void {
+    throw new Error('unused by companies.create tests');
+  }
+  delete(_id: string): void {
+    throw new Error('unused by companies.create tests');
   }
 }
 

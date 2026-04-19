@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RoleSpec } from '@team-x/shared-types';
 
-import type { CompanyRow } from '../db/repos/companies.js';
+import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 import type { EmployeeRow, PromoteEmployeeInput } from '../db/repos/employees.js';
 
 import type { IpcCompaniesRepo, IpcEmployeesRepo, IpcEventBus, IpcRoleLookup } from './handlers.js';
@@ -101,6 +101,16 @@ class FakeCompaniesRepo implements IpcCompaniesRepo {
   archive(id: string): void {
     const row = this.rows.find((r) => r.id === id);
     if (row) (row as { status: string }).status = 'archived';
+  }
+
+  // IpcCompaniesRepo was widened in Phase 5.6 M-C step e with update +
+  // delete. This suite does not exercise those code paths; stubs throw
+  // loud so a future cross-test accidentally reaching them fails fast.
+  update(_id: string, _patch: UpdateCompanyInput): void {
+    throw new Error('FakeCompaniesRepo.update: unused by promote tests');
+  }
+  delete(_id: string): void {
+    throw new Error('FakeCompaniesRepo.delete: unused by promote tests');
   }
 }
 

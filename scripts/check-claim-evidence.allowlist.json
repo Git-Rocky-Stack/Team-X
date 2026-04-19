@@ -4,22 +4,6 @@
   "_lifecycle": "M-E ship: full allowlist as documented in audit §20. M-C restoration: backend rows deleted from this file. M-D restoration: UI rows deleted. M-G ship: file deleted (CI defaults to strict mode + workflow runs --strict). Updates require an atomic commit referencing the audit row that justifies the change.",
   "entries": [
     {
-      "claim": "companies.update",
-      "kind": "ipc",
-      "auditRow": "10.13",
-      "disposition": "restore",
-      "owner": "Phase 5.6 M-C",
-      "reason": "Cluster A multi-company CRUD."
-    },
-    {
-      "claim": "companies.delete",
-      "kind": "ipc",
-      "auditRow": "10.15",
-      "disposition": "restore",
-      "owner": "Phase 5.6 M-C",
-      "reason": "Cluster A multi-company CRUD soft-delete (alongside companies.archive which IS shipped)."
-    },
-    {
       "claim": "mcp.add",
       "kind": "ipc",
       "auditRow": "10.37",

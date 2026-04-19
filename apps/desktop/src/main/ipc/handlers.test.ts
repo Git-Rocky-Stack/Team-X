@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RoleSpec } from '@team-x/shared-types';
-import type { CompanyRow } from '../db/repos/companies.js';
+import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type {
@@ -117,6 +117,17 @@ class FakeCompaniesRepo implements IpcCompaniesRepo {
     if (row) {
       (row as { status: string }).status = 'archived';
     }
+  }
+
+  // IpcCompaniesRepo was widened in Phase 5.6 M-C step e with update +
+  // delete. This suite does not exercise those code paths, so the
+  // widened methods throw 'unused' — fails loud if a future cross-test
+  // accidentally reaches them.
+  update(_id: string, _patch: UpdateCompanyInput): void {
+    throw new Error('unused by handlers.test tests');
+  }
+  delete(_id: string): void {
+    throw new Error('unused by handlers.test tests');
   }
 }
 

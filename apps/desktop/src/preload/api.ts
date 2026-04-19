@@ -62,6 +62,8 @@ import type {
   CommandSuggestRequest,
   CompaniesCreateRequest,
   CompaniesCreateResponse,
+  CompaniesDeleteRequest,
+  CompaniesUpdateRequest,
   CopilotAskArgs,
   CopilotAskResult,
   CopilotConfigureArgs,
@@ -187,6 +189,9 @@ const CHANNELS = {
   companiesList: 'companies.list',
   companiesArchive: 'companies.archive',
   companiesCreate: 'companies.create',
+  // Multi-company CRUD write-side (Phase 5.6 M-C step e; audit rows 10.13 + 10.15)
+  companiesUpdate: 'companies.update',
+  companiesDelete: 'companies.delete',
   employeesList: 'employees.list',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
@@ -322,6 +327,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.companiesArchive, { companyId }) as ReturnType<
           TeamXApi['companies']['archive']
         >,
+      update: (req: CompaniesUpdateRequest) =>
+        ipc.invoke(CHANNELS.companiesUpdate, req) as Promise<void>,
+      delete: (req: CompaniesDeleteRequest) =>
+        ipc.invoke(CHANNELS.companiesDelete, req) as Promise<void>,
     },
     employees: {
       list: (companyId: string) =>

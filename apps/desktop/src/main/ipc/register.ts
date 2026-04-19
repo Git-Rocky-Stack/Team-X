@@ -63,6 +63,10 @@ const REQUEST_CHANNELS = [
   'companies.list',
   'companies.archive',
   'companies.create',
+  // Multi-company CRUD write-side (Phase 5.6 M-C step e; audit rows 10.13 + 10.15).
+  // Both emit bus events per architectural invariant #11.
+  'companies.update',
+  'companies.delete',
   'employees.list',
   'employees.create',
   'employees.fire',
@@ -209,6 +213,25 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'companies.create',
     async (_event, request: import('@team-x/shared-types').CompaniesCreateRequest) => {
       return handlers.companiesCreate(request);
+    },
+  );
+
+  // companies.update / companies.delete — Phase 5.6 M-C step e — restores
+  // Cluster A multi-company CRUD (audit rows 10.13 + 10.15). update:
+  // assertCompanyActive + per-field validation + `company.updated` emit.
+  // delete: quiesce copilot pipeline + 15-table transactional sweep +
+  // `company.deleted` emit (invariant #11 satisfied on both).
+  ipcMain.handle(
+    'companies.update',
+    async (_event, request: import('@team-x/shared-types').CompaniesUpdateRequest) => {
+      return handlers.companiesUpdate(request);
+    },
+  );
+
+  ipcMain.handle(
+    'companies.delete',
+    async (_event, request: import('@team-x/shared-types').CompaniesDeleteRequest) => {
+      return handlers.companiesDelete(request);
     },
   );
 
