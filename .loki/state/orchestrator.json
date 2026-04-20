@@ -451,7 +451,7 @@
     "M37-R": {
       "name": "Capability Role-Fit Reconciliation",
       "shippedAt": "2026-04-20T02:30:00Z",
-      "commit": "pending-this-reconciliation-commit",
+      "commit": "2d87f60",
       "deliverable": "Reconciled already-landed M36/M37 Phase 6 capability work from commit 26d07df after Phase 5.6 M-G shipped v1.1.1. Inventory confirmed: packages/shared-types/src/capabilities.ts exports 41 capabilities across 6 categories; role-schema parses and validates capabilities; the official Strategia pack has 57 capability-backed role files, pack.json version 1.1.0, and pack.sig present; roleLoader exposes capability-bearing specs; agentic-tools-write computes capability Jaccard role-fit when requiredCapabilities are present and falls back to the M32 keyword heuristic when absent or empty; apps/desktop/src/main/index.ts injects roleLoader as roleLookup. No new implementation scope added.",
       "filesTouched": [
         "CLAUDE.md",
