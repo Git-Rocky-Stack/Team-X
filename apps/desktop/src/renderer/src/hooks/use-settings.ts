@@ -14,6 +14,7 @@ import type {
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
   SettingsSetCopilotRequest,
+  SettingsSetCopilotWeightsRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRuntimeRequest,
@@ -133,6 +134,27 @@ export function useSetCopilot() {
     mutationFn: (req: SettingsSetCopilotRequest) => ipc.settings.setCopilot(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'copilot'] });
+    },
+  });
+}
+
+export function useCopilotWeights(companyId: string | null) {
+  return useQuery({
+    queryKey: ['settings', 'copilot-weights', companyId],
+    queryFn: () => {
+      if (!companyId) throw new Error('companyId is required to read copilot weights');
+      return ipc.settings.getCopilotWeights({ companyId });
+    },
+    enabled: !!companyId,
+  });
+}
+
+export function useSetCopilotWeights() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: SettingsSetCopilotWeightsRequest) => ipc.settings.setCopilotWeights(req),
+    onSuccess: (_result, req) => {
+      qc.invalidateQueries({ queryKey: ['settings', 'copilot-weights', req.companyId] });
     },
   });
 }

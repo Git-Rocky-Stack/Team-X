@@ -29,6 +29,7 @@ import type { ComponentType } from 'react';
 
 import type {
   CopilotCategory,
+  CopilotFeedbackSuggestion,
   CopilotInsight,
   CopilotSeverity,
   IpcIntentName,
@@ -102,12 +103,14 @@ interface CopilotInsightCardProps {
    * leaves it undefined.
    */
   onAfterDismiss?: (id: string) => void;
+  onFeedbackSuggestion?: (suggestion: CopilotFeedbackSuggestion) => void;
 }
 
 export function CopilotInsightCard({
   insight,
   variant = 'sidebar',
   onAfterDismiss,
+  onFeedbackSuggestion,
 }: CopilotInsightCardProps) {
   const dismissMutation = useDismissCopilotInsight();
   const executeMutation = useCommandExecute();
@@ -120,10 +123,13 @@ export function CopilotInsightCard({
 
   async function onDismissClick() {
     try {
-      await dismissMutation.mutateAsync({
+      const result = await dismissMutation.mutateAsync({
         id: insight.id,
         companyId: insight.companyId,
       });
+      if (result.feedbackSuggestion && onFeedbackSuggestion) {
+        onFeedbackSuggestion(result.feedbackSuggestion);
+      }
       onAfterDismiss?.(insight.id);
     } catch {
       // The mutation surfaces its own error state via React Query; we

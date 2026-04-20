@@ -11,7 +11,7 @@
  * fixtures.
  */
 
-import type { CopilotInsight, CopilotSeverity } from '@team-x/shared-types';
+import type { CopilotCategory, CopilotInsight, CopilotSeverity } from '@team-x/shared-types';
 
 // ---------------------------------------------------------------------------
 // Severity rank + sort comparator
@@ -99,4 +99,29 @@ export function pickDashboardTopN<T>(
     hasMore: total > cap,
     total,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Feedback weighting labels
+// ---------------------------------------------------------------------------
+
+const CATEGORY_LABELS: Record<CopilotCategory, string> = {
+  operational: 'Operational',
+  cost: 'Cost',
+  org: 'Org Health',
+  workflow: 'Workflow',
+  anomaly: 'Anomaly',
+};
+
+export function formatCopilotWeightLabel(weight: number): string {
+  return `${weight.toFixed(1)}x`;
+}
+
+export function formatFeedbackSuggestionPrompt(suggestion: {
+  category: CopilotCategory;
+  suggestedWeight: number;
+}): string {
+  return `Reduce ${CATEGORY_LABELS[suggestion.category]} insights to ${formatCopilotWeightLabel(
+    suggestion.suggestedWeight,
+  )}?`;
 }

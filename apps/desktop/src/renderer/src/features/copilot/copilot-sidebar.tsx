@@ -27,6 +27,8 @@
 import { Loader2, Send, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import type { CopilotFeedbackSuggestion } from '@team-x/shared-types';
+
 import { Badge } from '@/components/ui/badge.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import {
@@ -38,9 +40,10 @@ import {
 } from '@/components/ui/sheet.js';
 import { Textarea } from '@/components/ui/textarea.js';
 import { useAskCopilot, useCopilotInsights } from '@/hooks/use-copilot.js';
+import { useSetCopilotWeights } from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { sortBySeverity } from './copilot-helpers.js';
+import { formatFeedbackSuggestionPrompt, sortBySeverity } from './copilot-helpers.js';
 import { CopilotInsightCard } from './copilot-insight-card.js';
 
 // ---------------------------------------------------------------------------
@@ -52,9 +55,13 @@ export function CopilotSidebar() {
   const openThread = useAppStore((s) => s.openThread);
 
   const [askText, setAskText] = useState('');
+  const [feedbackSuggestion, setFeedbackSuggestion] = useState<CopilotFeedbackSuggestion | null>(
+    null,
+  );
 
   const { data, isLoading, isError, refetch } = useCopilotInsights(companyId);
   const askMutation = useAskCopilot();
+  const setCopilotWeights = useSetCopilotWeights();
 
   const sorted = useMemo(() => (data?.insights ? sortBySeverity(data.insights) : []), [data]);
 
@@ -90,6 +97,18 @@ export function CopilotSidebar() {
     }
   }
 
+  function applyFeedbackSuggestion() {
+    if (!companyId || !feedbackSuggestion) return;
+    setCopilotWeights.mutate(
+      { companyId, weights: { [feedbackSuggestion.category]: feedbackSuggestion.suggestedWeight } },
+      { onSuccess: () => setFeedbackSuggestion(null) },
+    );
+  }
+
+  function keepCurrentWeight() {
+    setFeedbackSuggestion(null);
+  }
+
   const activeCount = sorted.length;
 
   return (
@@ -119,6 +138,36 @@ export function CopilotSidebar() {
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full">
             <div className="px-4 py-4">
+              {feedbackSuggestion && !isLoading && !isError && (
+                <div
+                  className="mb-3 rounded-md border border-border bg-surface-50 px-3 py-2"
+                  data-copilot-feedback-suggestion=""
+                >
+                  <p className="text-xs font-medium text-foreground">
+                    {formatFeedbackSuggestionPrompt(feedbackSuggestion)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={applyFeedbackSuggestion}
+                      disabled={!companyId || setCopilotWeights.isPending}
+                      data-copilot-feedback-apply=""
+                      className="h-7 rounded-md bg-brand px-2.5 text-[11px] font-medium text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      type="button"
+                      onClick={keepCurrentWeight}
+                      disabled={setCopilotWeights.isPending}
+                      className="h-7 rounded-md border border-border px-2.5 text-[11px] font-medium text-muted-foreground hover:bg-surface-100 hover:text-foreground disabled:opacity-50"
+                    >
+                      Keep current
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {isLoading && (
                 <div className="flex items-center justify-center py-12 text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin" aria-label="Loading insights" />
@@ -158,7 +207,12 @@ export function CopilotSidebar() {
               {!isLoading && !isError && sorted.length > 0 && (
                 <ul className="flex flex-col gap-2" data-copilot-feed="">
                   {sorted.map((insight) => (
-                    <CopilotInsightCard key={insight.id} insight={insight} variant="sidebar" />
+                    <CopilotInsightCard
+                      key={insight.id}
+                      insight={insight}
+                      variant="sidebar"
+                      onFeedbackSuggestion={setFeedbackSuggestion}
+                    />
                   ))}
                 </ul>
               )}

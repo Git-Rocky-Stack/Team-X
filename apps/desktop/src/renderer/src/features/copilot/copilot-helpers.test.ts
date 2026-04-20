@@ -18,6 +18,8 @@ import type { CopilotInsight } from '@team-x/shared-types';
 import {
   DASHBOARD_CAP,
   SEVERITY_RANK,
+  formatCopilotWeightLabel,
+  formatFeedbackSuggestionPrompt,
   parseActionEntities,
   pickDashboardTopN,
   sortBySeverity,
@@ -162,5 +164,26 @@ describe('pickDashboardTopN', () => {
   it('handles empty input', () => {
     const result = pickDashboardTopN([]);
     expect(result).toEqual({ topN: [], hasMore: false, total: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Feedback weighting labels
+// ---------------------------------------------------------------------------
+
+describe('formatCopilotWeightLabel', () => {
+  it('formats the M38 weight range with one decimal and an x suffix', () => {
+    expect(formatCopilotWeightLabel(0)).toBe('0.0x');
+    expect(formatCopilotWeightLabel(0.5)).toBe('0.5x');
+    expect(formatCopilotWeightLabel(1)).toBe('1.0x');
+    expect(formatCopilotWeightLabel(2)).toBe('2.0x');
+  });
+});
+
+describe('formatFeedbackSuggestionPrompt', () => {
+  it('renders advisory suggestion copy from category and target weight', () => {
+    expect(formatFeedbackSuggestionPrompt({ category: 'cost', suggestedWeight: 0.5 })).toBe(
+      'Reduce Cost insights to 0.5x?',
+    );
   });
 });
