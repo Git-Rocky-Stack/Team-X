@@ -1,42 +1,40 @@
 {
-  "taskId": "Phase-6-M41-T6",
+  "taskId": "Phase-6-M41-T7",
   "milestone": "Phase 6 M41",
   "milestoneName": "Demo + Hardening + v1.2.0",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M41 T6 — Version Bump + Phase Badge Freeze",
-  "status": "head-of-queue — M41 T5 CHANGELOG promotion shipped; next bump package versions and freeze Phase 6 badge",
+  "title": "Phase 6 M41 T7 — Phase 6 COMPLETE Marker",
+  "status": "head-of-queue — M41 T6 version bump and Phase 6 badge freeze shipped; next mark Phase 6 complete in source and docs",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M41 T5 — CHANGELOG Promotion",
+  "predecessor": "Phase 6 M41 T6 — Version Bump + Phase Badge Freeze",
   "dor": [
-    "M41 T5 CHANGELOG promotion is committed",
-    "CHANGELOG has [1.2.0] - 2026-04-20 and v1.1.1...v1.2.0 compare link",
-    "Package files at 1.1.1 are discoverable before editing"
+    "M41 T6 version bump and Phase 6 badge freeze is committed",
+    "Seven release package.json files carry 1.2.0",
+    "Top-bar badge source renders Phase 6",
+    "Focused marker test pins Phase 6 and 1.2.0 package versions"
   ],
   "acceptance": [
-    "Follow Task 6 in docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-    "Write the failing marker/source-string test first",
-    "Modify root and workspace package.json files currently at 1.1.1",
-    "Modify lockfile if the package manager updates it",
-    "Modify apps/desktop/src/renderer/src/components/app/top-bar.tsx",
-    "Add or update a source-string test for the Phase 6 badge/version marker",
-    "Bump versions from 1.1.1 to 1.2.0",
-    "Update top-bar badge to Phase 6",
+    "Follow Task 7 in docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
+    "Modify CLAUDE.md",
+    "Modify docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+    "Add or update a source-string-audit test",
+    "Mark Phase 6 complete only after T6 evidence exists",
+    "Source-string test pins Phase 6 COMPLETE",
+    "Source-string test pins v1.2.0",
+    "Source-string test pins the current E2E count",
     "Run the focused marker test",
-    "Run pnpm typecheck",
-    "Run pnpm lint",
     "Run pnpm audit:claims -- --strict",
+    "Run pnpm lint",
     "Run git diff --check",
-    "Update Loki to advance from M41 T6 to M41 T7"
+    "Update Loki to advance from M41 T7 to M41 T8"
   ],
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-  "planDocSection": "Task 6: Version Bump + Phase Badge Freeze",
+  "planDocSection": "Task 7: Phase 6 COMPLETE Marker",
   "referenceDocs": [
-    "package.json",
-    "apps/desktop/package.json",
-    "packages/*/package.json",
-    "pnpm-lock.yaml",
-    "apps/desktop/src/renderer/src/components/app/top-bar.tsx",
-    "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md"
+    "CLAUDE.md",
+    "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+    "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
+    "apps/desktop/src/renderer/src/app/top-bar.test.tsx"
   ],
-  "nextStep": "Begin M41 T6 by discovering all package.json files still at 1.1.1, locating the existing phase badge marker test, then writing the red Phase 6 marker expectation before changing versions or top-bar copy."
+  "nextStep": "Begin M41 T7 by locating the existing Phase COMPLETE/source-string audit lineage, then write the red Phase 6 COMPLETE / v1.2.0 / 17 specs + 22 cases marker before updating CLAUDE.md and the Phase 6 design doc."
 }

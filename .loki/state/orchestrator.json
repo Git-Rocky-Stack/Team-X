@@ -2,7 +2,7 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M41",
   "milestoneName": "Demo + Hardening + v1.2.0",
-  "tasksCompleted": 6,
+  "tasksCompleted": 7,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
@@ -12,7 +12,7 @@
   "inflight": {},
   "phase": "Phase 6 — Capabilities & Evidence",
   "phaseCompletedAt": null,
-  "phaseVersionTag": "v1.2.0 (target; current v1.1.1)",
+  "phaseVersionTag": "v1.2.0 (package markers bumped; tag pending T10)",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -52,17 +52,17 @@
   },
   "current": {
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests. M39 T8 focused gate passed shared-types 1 file / 2 tests and desktop 5 files / 27 tests. M40 T1 focused shared-types verification passed 1 file / 2 tests. M40 T2 focused desktop repo verification passed 1 file / 6 tests. M40 T3 focused desktop IPC verification passed 1 file / 6 tests. M40 T4 focused renderer hook verification passed 1 file / 2 tests. M40 T5 focused sidebar renderer verification passed 1 file / 5 tests. M40 T6 focused insight export E2E verification passed 1 spec / 1 test. M41 T1 focused agentic-loop verification passed 1 file / 25 tests; integration E2E raised the surface to 17 specs / 22 Playwright cases.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests. M39 T8 focused gate passed shared-types 1 file / 2 tests and desktop 5 files / 27 tests. M40 T1 focused shared-types verification passed 1 file / 2 tests. M40 T2 focused desktop repo verification passed 1 file / 6 tests. M40 T3 focused desktop IPC verification passed 1 file / 6 tests. M40 T4 focused renderer hook verification passed 1 file / 2 tests. M40 T5 focused sidebar renderer verification passed 1 file / 5 tests. M40 T6 focused insight export E2E verification passed 1 spec / 1 test. M41 T1 focused agentic-loop verification passed 1 file / 25 tests; integration E2E raised the surface to 17 specs / 22 Playwright cases. M41 T6 focused marker verification passed 1 file / 2 tests after a valid red run.",
     "e2eSpecs": 17,
     "e2eGreenCount": 22,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M41 T5 CHANGELOG promotion shipped; M41 T6 version bump + phase badge freeze is head-of-queue.",
+    "asOfTask": "Phase 6 M41 T6 version bump and phase badge freeze shipped; M41 T7 Phase 6 COMPLETE marker is head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
-    "version": "1.1.1",
+    "version": "1.2.0",
     "phase56Complete": true
   },
   "targets": {
@@ -1637,10 +1637,37 @@
         "lint": "pnpm lint — 0 errors / 21 known warnings",
         "diffCheck": "git diff --check — clean"
       }
+    },
+    "M41-T6": {
+      "name": "Version bump and Phase badge freeze",
+      "shippedAt": "2026-04-20T15:00:00Z",
+      "commit": "pending",
+      "deliverable": "Release markers moved from v1.1.1 / Phase 5 to v1.2.0 / Phase 6. The existing top-bar source-string audit now pins the literal Phase 6 badge and all seven Team-X release package.json versions to 1.2.0, with the red run verified before the implementation.",
+      "filesTouched": [
+        "package.json",
+        "apps/desktop/package.json",
+        "packages/shared-types/package.json",
+        "packages/role-schema/package.json",
+        "packages/provider-router/package.json",
+        "packages/intelligence/package.json",
+        "packages/telemetry-core/package.json",
+        "apps/desktop/src/renderer/src/app/top-bar.tsx",
+        "apps/desktop/src/renderer/src/app/top-bar.test.tsx"
+      ],
+      "testsDelta": "marker test updated; focused gate passed 1 file / 2 tests",
+      "verificationGates": {
+        "red": "pnpm -F @team-x/desktop exec vitest run src/renderer/src/app/top-bar.test.tsx — failed on Phase 5 and 1.1.1 before implementation",
+        "marker": "pnpm -F @team-x/desktop exec vitest run src/renderer/src/app/top-bar.test.tsx — 1 file / 2 tests",
+        "typecheck": "pnpm typecheck — clean across 6 workspace packages",
+        "lint": "pnpm lint — 0 errors / 21 known warnings",
+        "claims": "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
+        "diffCheck": "git diff --check — clean"
+      }
     }
   },
   "inFlightMilestone": "Phase 6 M40 Insight Export",
   "notes": [
+    "PHASE 6 M41 T6 SHIPPED 2026-04-20 — version bump and Phase 6 badge freeze complete. Seven release package.json files now carry 1.2.0 (root, apps/desktop, shared-types, role-schema, provider-router, intelligence, telemetry-core), top-bar badge now renders Phase 6, and the source-string marker test pins Phase 6 plus all seven 1.2.0 package versions. Red test was verified first against Phase 5 / 1.1.1. Gates: focused marker test 1 file / 2 tests, typecheck clean, lint 0 errors / 21 warnings, strict claims 95/0/0, diff-check clean. Head-of-queue advances to M41 T7 Phase 6 COMPLETE marker.",
     "PHASE 6 M41 T5 SHIPPED 2026-04-20 — CHANGELOG promotion complete. CHANGELOG.md now stages [1.2.0] - 2026-04-20 under Phase 6 - Capabilities & Evidence with entries for capability role-fit reconciliation, Copilot feedback loop, telemetry kind filters, local insight export, Phase 6 integration E2E, docs reconciliation, and the agentic run-kind telemetry fix. Compare links now include [1.2.0] v1.1.1...v1.2.0 and [Unreleased] v1.2.0...HEAD. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T6 version bump + Phase 6 badge freeze.",
     "PHASE 6 M41 T4 SHIPPED 2026-04-20 — README and user-guide reconciliation sweep complete. README now reports 17 Playwright specs / 22 cases and lists phase-6-integration.spec.ts; feature text reflects capability-backed planner role-fit, Copilot feedback suggestions, telemetry kind filters, and local insight export. User guide navigation links Phase 6 docs, and stale Phase 6 autonomous/future wording was replaced with evidence/calibration scope. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T5 CHANGELOG promotion.",
     "PHASE 6 M41 T3 SHIPPED 2026-04-20 — demo walkthrough and scenario drafted with Phase 6 scope boundaries. Head-of-queue advances to M41 T4 README/user-guide sweep.",
@@ -1719,7 +1746,7 @@
       "previousPhaseCompletedAtBeforePause": "2026-04-20T13:00:00Z",
       "previousPhaseVersionTagBeforePause": "v1.1.0"
     },
-    "nextTask": "Phase 6 M41 T6 — Version Bump + Phase Badge Freeze"
+    "nextTask": "Phase 6 M41 T7 — Phase 6 COMPLETE Marker"
   },
   "previousMilestoneCommit": "this-ledger-commit"
 }
