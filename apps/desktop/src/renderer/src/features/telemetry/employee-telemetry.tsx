@@ -13,7 +13,7 @@ import { useMemo, useState } from 'react';
 import type { TelemetryKindFilter } from '@team-x/shared-types';
 
 import { useEmployees } from '@/hooks/use-employees.js';
-import { useEmployeeStats } from '@/hooks/use-telemetry.js';
+import { telemetryRequestKind, useEmployeeStats } from '@/hooks/use-telemetry.js';
 
 interface Props {
   companyId: string;
@@ -36,8 +36,9 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-export function EmployeeTelemetry({ companyId }: Props) {
-  const { data: stats, isLoading: statsLoading } = useEmployeeStats({ companyId });
+export function EmployeeTelemetry({ companyId, kindFilter }: Props) {
+  const kind = telemetryRequestKind(kindFilter);
+  const { data: stats, isLoading: statsLoading } = useEmployeeStats({ companyId, kind });
   const { data: employees, isLoading: empLoading } = useEmployees(companyId);
   const [sortKey, setSortKey] = useState<SortKey>('totalRuns');
   const [sortDir, setSortDir] = useState<SortDir>('desc');

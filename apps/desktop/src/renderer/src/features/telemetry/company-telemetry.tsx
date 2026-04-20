@@ -20,7 +20,7 @@ import {
 
 import type { TelemetryKindFilter } from '@team-x/shared-types';
 
-import { useCompanyStats, useDailyUsage } from '@/hooks/use-telemetry.js';
+import { telemetryRequestKind, useCompanyStats, useDailyUsage } from '@/hooks/use-telemetry.js';
 
 const DAY_MS = 86_400_000;
 
@@ -52,15 +52,17 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-export function CompanyTelemetry({ companyId }: Props) {
+export function CompanyTelemetry({ companyId, kindFilter }: Props) {
   const now = useMemo(() => Date.now(), []);
   const thirtyDaysAgo = now - 30 * DAY_MS;
+  const kind = telemetryRequestKind(kindFilter);
 
-  const { data: stats, isLoading: statsLoading } = useCompanyStats({ companyId });
+  const { data: stats, isLoading: statsLoading } = useCompanyStats({ companyId, kind });
   const { data: daily, isLoading: dailyLoading } = useDailyUsage({
     companyId,
     fromMs: thirtyDaysAgo,
     toMs: now,
+    kind,
   });
 
   if (statsLoading || dailyLoading) {
