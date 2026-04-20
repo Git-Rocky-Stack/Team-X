@@ -2,7 +2,7 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M41",
   "milestoneName": "Demo + Hardening + v1.2.0",
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "tasksFailed": 0,
   "totalTasks": 11,
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
@@ -59,7 +59,7 @@
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M41 T4 README/user-guide sweep shipped; M41 T5 CHANGELOG promotion is head-of-queue.",
+    "asOfTask": "Phase 6 M41 T5 CHANGELOG promotion shipped; M41 T6 version bump + phase badge freeze is head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
     "version": "1.1.1",
@@ -1624,10 +1624,24 @@
         "lint": "pnpm lint — 0 errors / 21 known warnings",
         "diffCheck": "git diff --check — clean"
       }
+    },
+    "M41-T5": {
+      "name": "CHANGELOG promotion",
+      "shippedAt": "2026-04-20T14:40:00Z",
+      "commit": "pending",
+      "deliverable": "CHANGELOG.md now has a Phase 6 - Capabilities & Evidence [1.2.0] - 2026-04-20 section. The entry records capability role-fit reconciliation, Copilot feedback loop, telemetry kind filters, local insight export, Phase 6 integration E2E, docs reconciliation, and the agentic run-kind telemetry fix. [Unreleased] now compares v1.2.0...HEAD and [1.2.0] compares v1.1.1...v1.2.0 without claiming the package version bump or tag.",
+      "filesTouched": ["CHANGELOG.md"],
+      "testsDelta": "docs-only; no test count delta",
+      "verificationGates": {
+        "claims": "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
+        "lint": "pnpm lint — 0 errors / 21 known warnings",
+        "diffCheck": "git diff --check — clean"
+      }
     }
   },
   "inFlightMilestone": "Phase 6 M40 Insight Export",
   "notes": [
+    "PHASE 6 M41 T5 SHIPPED 2026-04-20 — CHANGELOG promotion complete. CHANGELOG.md now stages [1.2.0] - 2026-04-20 under Phase 6 - Capabilities & Evidence with entries for capability role-fit reconciliation, Copilot feedback loop, telemetry kind filters, local insight export, Phase 6 integration E2E, docs reconciliation, and the agentic run-kind telemetry fix. Compare links now include [1.2.0] v1.1.1...v1.2.0 and [Unreleased] v1.2.0...HEAD. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T6 version bump + Phase 6 badge freeze.",
     "PHASE 6 M41 T4 SHIPPED 2026-04-20 — README and user-guide reconciliation sweep complete. README now reports 17 Playwright specs / 22 cases and lists phase-6-integration.spec.ts; feature text reflects capability-backed planner role-fit, Copilot feedback suggestions, telemetry kind filters, and local insight export. User guide navigation links Phase 6 docs, and stale Phase 6 autonomous/future wording was replaced with evidence/calibration scope. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T5 CHANGELOG promotion.",
     "PHASE 6 M41 T3 SHIPPED 2026-04-20 — demo walkthrough and scenario drafted with Phase 6 scope boundaries. Head-of-queue advances to M41 T4 README/user-guide sweep.",
     "PHASE 6 M41 T2 SHIPPED 2026-04-20 — retrospective drafted with locked six-section structure and no release overclaims. Head-of-queue advances to M41 T3 demo walkthrough.",
@@ -1705,7 +1719,7 @@
       "previousPhaseCompletedAtBeforePause": "2026-04-20T13:00:00Z",
       "previousPhaseVersionTagBeforePause": "v1.1.0"
     },
-    "nextTask": "Phase 6 M41 T5 — CHANGELOG Promotion"
+    "nextTask": "Phase 6 M41 T6 — Version Bump + Phase Badge Freeze"
   },
   "previousMilestoneCommit": "this-ledger-commit"
 }

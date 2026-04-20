@@ -3,7 +3,7 @@
   "milestoneName": "Demo + Hardening + v1.2.0",
   "phase": "Phase 6 — Capabilities & Evidence",
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-  "planDocSection": "M41 T5 CHANGELOG promotion",
+  "planDocSection": "M41 T6 version bump + phase badge freeze",
   "previousPhase": "Phase 5.6 — Reconciliation & Remediation",
   "previousPhaseStatus": "SHIPPED 2026-04-20 as v1.1.1",
   "previousPhaseCompletedAt": "2026-04-20T01:30:00Z",
@@ -12,7 +12,7 @@
   "previousMilestoneCompletedAt": "2026-04-20T06:00:00Z",
   "previousMilestoneCommit": "this-ledger-commit",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-20T14:20:00Z",
+  "updatedAt": "2026-04-20T14:40:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -172,10 +172,10 @@
   "activeSubMilestone": {
     "id": "M41",
     "name": "Demo + Hardening + v1.2.0",
-    "status": "in progress — M41 T4 README/user-guide sweep shipped; T5 CHANGELOG promotion is head-of-queue",
+    "status": "in progress — M41 T5 CHANGELOG promotion shipped; T6 version bump + Phase 6 badge freeze is head-of-queue",
     "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M41 T5. Scope: promote relevant [Unreleased] Phase 6 entries to [1.2.0] - 2026-04-20 in CHANGELOG.md.",
+    "nextSession": "Proceed with Phase 6 M41 T6. Scope: write the marker test first, bump 1.1.1 package versions to 1.2.0, update the top-bar badge to Phase 6, and run the focused marker test plus typecheck/lint/strict claims.",
     "dor": "M40 Insight Export exit gate closed",
     "dod": "M41 complete when the Phase 6 exit gate, retrospective, docs, changelog/version bump, COMPLETE marker, and final ledger ship",
     "verifiedBy": [
@@ -209,6 +209,12 @@
       "docs/user-guide/copilot-service.md — telemetry kind filter and copilot.weights.changed audit trail wording",
       "docs/user-guide/copilot-ui.md — feedback suggestions and local export wording",
       "docs/user-guide/demo-walkthrough.md + docs/demo/phase-5-walkthrough.md + docs/demo/scenarios/05-decompose-and-surface.md — stale autonomous/future wording reconciled",
+      "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
+      "pnpm lint — 0 errors / 21 known warnings",
+      "git diff --check — clean",
+      "M41 T5 — CHANGELOG promotion",
+      "CHANGELOG.md — [1.2.0] - 2026-04-20 Phase 6 section",
+      "CHANGELOG.md — [Unreleased] v1.2.0...HEAD and [1.2.0] v1.1.1...v1.2.0 compare links",
       "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
       "pnpm lint — 0 errors / 21 known warnings",
       "git diff --check — clean"
@@ -306,7 +312,7 @@
     "typecheckClean": true,
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "version": "1.1.1",
-    "phase6Next": "M41 T5 CHANGELOG promotion."
+    "phase6Next": "M41 T6 version bump + Phase 6 badge freeze."
   },
   "targets": {
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
@@ -322,6 +328,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M41 T5 SHIPPED 2026-04-20 — CHANGELOG promotion complete. CHANGELOG.md now stages [1.2.0] - 2026-04-20 under Phase 6 - Capabilities & Evidence with entries for capability role-fit reconciliation, Copilot feedback loop, telemetry kind filters, local insight export, Phase 6 integration E2E, docs reconciliation, and the agentic run-kind telemetry fix. Compare links now include [1.2.0] v1.1.1...v1.2.0 and [Unreleased] v1.2.0...HEAD. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T6 version bump + Phase 6 badge freeze.",
     "PHASE 6 M41 T4 SHIPPED 2026-04-20 — README and user-guide reconciliation sweep complete. README now reports 17 Playwright specs / 22 cases and lists phase-6-integration.spec.ts; feature text reflects capability-backed planner role-fit, Copilot feedback suggestions, telemetry kind filters, and local insight export. User guide navigation links Phase 6 docs, and stale Phase 6 autonomous/future wording was replaced with evidence/calibration scope. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T5 CHANGELOG promotion.",
     "PHASE 6 M41 T3 SHIPPED 2026-04-20 — Phase 6 demo walkthrough and evidence scenario drafted. New docs/demo/phase-6-walkthrough.md and docs/demo/scenarios/06-phase-6-capabilities-evidence.md script the capability role-fit outcome, explicit feedback suggestion/apply, telemetry kind filters, and local insight export while avoiding autonomous action, cloud sync, telemetry digest, and native save-dialog claims. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T4 README/user-guide sweep.",
     "PHASE 6 M41 T2 SHIPPED 2026-04-20 — Phase 6 retrospective drafted using the locked six-section M35 structure. It records M36/M37-R, M38, M39, M40, and M41 shipped lines; focused verification growth; E2E growth 13 specs / 18 cases -> 17 specs / 22 cases; +3 IPC channels; +1 bus event; +0 migrations; +1 settings key; and Phase 7 seeds as hypotheses. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T3 demo walkthrough.",
@@ -386,6 +393,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M41 T5 — CHANGELOG Promotion"
+    "nextTask": "Phase 6 M41 T6 — Version Bump + Phase Badge Freeze"
   }
 }
