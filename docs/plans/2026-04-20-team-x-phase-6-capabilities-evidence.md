@@ -1,7 +1,7 @@
 # Team-X — Phase 6 Design: Capabilities & Evidence
 
-> **Status:** Plan authored 2026-04-20 (T0). M36 and M37 are reconciled as already-landed by M37-R on 2026-04-20; M38 is the next new implementation milestone.
-> **Version target:** v1.1.1 → v1.2.0 (additive; zero breaking changes).
+> **Status:** Phase 6 COMPLETE (2026-04-20). M36-M41 shipped; v1.2.0 package markers are in place; current E2E surface is 17 Playwright specs / 22 cases; the final v1.2.0 git tag remains gated on M41 T10.
+> **Version target:** v1.2.0 (additive; zero breaking changes; package metadata bumped in M41 T6).
 > **Predecessor:** [Phase 5.6 — Reconciliation & Remediation](./2026-04-17-team-x-phase-5.6-remediation.md) (complete, v1.1.1, 2026-04-20).
 > **Retrospective:** [2026-04-19-team-x-phase-5-retrospective.md](./2026-04-19-team-x-phase-5-retrospective.md) §6 (Phase 6 seeds).
 
@@ -15,7 +15,13 @@ Phase 5.6 paused Phase 6 after M36 T0/T1, but the current branch history already
 - **M37 delivered:** capability Jaccard role-fit, provider `requiredCapabilities` parsing, role-loader capability lookup, M32 keyword fallback for generic subtasks, and regression tests for the locked 4-weight formula.
 - **M37-R verified:** 120 focused tests passed across shared-types, role-schema, desktop role-loader, and write-side planner scorer suites.
 
-The milestone breakdown below remains the Phase 6 roadmap, but rows M36 and M37 should be read as shipped/reconciled. No Phase 6 release bump happens until M41.
+The milestone breakdown below records the Phase 6 shipped surface. M36 and M37 were reconciled from already-landed branch history; M38-M41 shipped as new Phase 6 work; the release-marker bump landed in M41 T6.
+
+## 0.1 Completion Status
+
+**Phase 6 COMPLETE - v1.2.0 package markers.** The product scope is complete across M36-M41: capability-backed role-fit, Copilot feedback weighting, telemetry kind filters, local insight export, cross-milestone integration E2E, retrospective, demo/docs sweep, CHANGELOG `[1.2.0]`, seven-package version bump, and Phase 6 badge freeze.
+
+Current evidence: 17 Playwright specs / 22 cases, strict claim gate 95 verified / 0 allowlisted / 0 UNALLOWED, lint 0 errors / 21 known warnings, and focused M41 marker tests. The final v1.2.0 git tag remains gated on M41 T10 after the M41 T9 final verification gate.
 
 ---
 
@@ -63,7 +69,7 @@ Phase 6 closes all three with evidence-grade primitives (capabilities taxonomy, 
 | **Role-fit regression guards** | New unit tests pinning v1 → v2 migration: identical outputs for keyword-matched golden cases; capabilities-driven outputs for the capability-only golden cases | M32 T2 25 unit tests |
 | **`TelemetryView` per-kind filter** | Chip row above existing subviews: `All / Work / Agentic / Copilot`. All subviews respect the filter | M17 Telemetry, M33 migration 0012 |
 | **`runs.kind` backfill query** | Read-path aggregates per-kind from the existing column; no migration (0012 already landed) | M33 migration 0012 |
-| **Insight feedback loop** | `settings.copilot_category_weights` (6-key weight vector, default 1.0 each, clamp 0.0–2.0). Dismissal pattern detector: 3 dismissals of same category within 7 days → auto-propose downrank (UI-surfaced suggestion, never auto-applied) | M33 analyzer |
+| **Insight feedback loop** | `settings.copilot_category_weights` (5-key weight vector, default 1.0 each, clamp 0.0–2.0). Dismissal pattern detector: 3 dismissals of same category within 7 days → auto-propose downrank (UI-surfaced suggestion, never auto-applied) | M33 analyzer |
 | **Insight export** | `copilot.export` IPC (format: `'json' \| 'csv'`, scope: `'company' \| 'all'`), Export button in `CopilotSidebar` header, mirrors `audit.export` UX | M24 audit export, M34 sidebar |
 | **Demo + hardening** | Cross-milestone integration E2E for Phase 6 surfaces. Phase 6 retrospective. README sweep. CHANGELOG `[1.1.0]` → `[1.2.0]` promotion. Version bump. Phase 6 COMPLETE marker | M35 T0–T10 template |
 
@@ -114,7 +120,7 @@ Phase 6 is complete when all five criteria are met simultaneously.
 
 3. **Telemetry per-kind filter operational.** `TelemetryView` renders chips `All / Work / Agentic / Copilot`, every subview re-queries on filter change, and the existing aggregate view is preserved as the default `All` case (zero regression for operators who don't change the filter).
 
-4. **Insight feedback loop closed.** `settings.copilot_category_weights` is a 6-key weight vector persisted through `settings.setCopilotWeights` IPC. The analyzer multiplies draft scores by the weight vector before dedup. Dismissal pattern detector surfaces a UI suggestion after 3 same-category dismissals within 7 days — never auto-applies. `copilot.weights.changed` fires on the bus per invariant #11.
+4. **Insight feedback loop closed.** `settings.copilot_category_weights` is a 5-key weight vector persisted through `settings.setCopilotWeights` IPC. The analyzer multiplies draft scores by the weight vector before dedup. Dismissal pattern detector surfaces a UI suggestion after 3 same-category dismissals within 7 days — never auto-applies. `copilot.weights.changed` fires on the bus per invariant #11.
 
 5. **Phase exit gate green.** Cross-milestone integration E2E green. Phase 6 retrospective authored per locked six-section structure. README + user-guide reconciled. CHANGELOG `[1.1.0]` → `[1.2.0]` promoted. Version bumped 1.1.0 → 1.2.0 across 7 `package.json` files. Phase 6 COMPLETE marker source-string-audit test pinned (extending the 4-deep lineage — M35 T3 / T8 / T9 / T10 → M41 T10). v1.2.0 git tag on the final ledger commit.
 
@@ -128,10 +134,10 @@ Phase 6 is complete when all five criteria are met simultaneously.
 |---|-----------|----------------|-----|
 | **M36** | Capabilities Taxonomy + Parser | **Reconciled as shipped** — locked capability enum in `shared-types`; `role-schema` parser gains `capabilities` field + validation; 55 F10 + 2 system roles backfilled | none |
 | **M37** | Role-Fit v2 | **Reconciled as shipped** — `computeRoleFit` capabilities-driven; 4-weight signature preserved; v1 → v2 regression guards; updated `agentic-tools-write.ts` + M32 T2 test suite | M36 |
-| **M38** | Insight Feedback Loop | `copilot_category_weights` setting; analyzer weight-multiplier integration; dismissal pattern detector + UI suggestion surface; `copilot.weights.changed` bus event | M33 (existing) |
-| **M39** | Telemetry Per-Kind Filter | `TelemetryView` chip row; per-kind aggregate queries; runs.kind backfill cleanup (zero-migration, read-path only) | M33 migration 0012 (existing) |
-| **M40** | Insight Export | `copilot.export` IPC (JSON + CSV); Export button in sidebar header; mirrors M24 audit-export UX | M34 sidebar |
-| **M41** | Demo + Hardening + v1.2.0 | Cross-milestone integration E2E, retrospective, README sweep, CHANGELOG promotion, v1.2.0 bump, Phase 6 COMPLETE marker | all above |
+| **M38** | Insight Feedback Loop | **Complete** — `copilot_category_weights` setting, analyzer weight-multiplier integration, dismissal pattern detector, UI suggestion surface, and `copilot.weights.changed` bus event | M33 (existing) |
+| **M39** | Telemetry Per-Kind Filter | **Complete** — `TelemetryView` chip row, per-kind aggregate queries, and read-path runs.kind filtering with zero migration | M33 migration 0012 (existing) |
+| **M40** | Insight Export | **Complete** — `copilot.export` IPC, JSON/CSV local writes, sidebar export controls, and filter-aware export requests | M34 sidebar |
+| **M41** | Demo + Hardening + v1.2.0 | **Complete** — cross-milestone integration E2E, retrospective, README/user-guide sweep, CHANGELOG promotion, v1.2.0 bump, Phase 6 badge freeze, and Phase 6 COMPLETE marker | all above |
 
 **Authoring rule (carried from Phase 5):** Each milestone opens with its own T0 plan doc at `docs/plans/2026-0X-XX-team-x-phase-6-m<NN>-<theme>.md` mirroring the Phase 5 milestone plan shape (structure, non-goals, architectural decisions per plan doc §4.5 spec). No per-milestone T1+ breakdown materializes in this Phase 6 T0 plan doc.
 
@@ -197,10 +203,10 @@ Phase 6 ships when every criterion below is verified green in a single contiguou
 
 - **Q2 (M37): RESOLVED.** When a subtask has zero required capabilities, `computeRoleFit` falls back to the M32 keyword heuristic. This preserves role-fit signal for generic subtasks and legacy provider output.
 
-- **Q3 (M38):** Should the dismissal-pattern detector window be user-configurable (1–30 days) or locked at 7 days? Retrospective evidence favors locked defaults unless users hit the clamp (M35 T1 learning). Default locked at 7 days; add a setting if M41 evidence surfaces otherwise.
+- **Q3 (M38): RESOLVED.** The dismissal-pattern detector window is locked at 7 days for v1.2.0. M41 evidence did not surface a need for a user-configurable window.
 
-- **Q4 (M40):** Does insight export respect the current sidebar category/severity filter, or always export the full active-insights set? Recommend "export mirrors sidebar filter state" for predictability — the surface Rocky sees is the surface Rocky exports. Final call at M40 T0.
+- **Q4 (M40): RESOLVED.** Insight export mirrors the sidebar category/severity filter state. The surface Rocky sees is the surface Rocky exports.
 
 ---
 
-**End of Phase 6 T0 plan doc.** Next session opens M36 T0 (capabilities taxonomy + parser plan doc).
+**End of Phase 6 design doc.** Phase 6 COMPLETE - v1.2.0 product scope is recorded here; the final v1.2.0 git tag remains gated on the M41 release ledger.

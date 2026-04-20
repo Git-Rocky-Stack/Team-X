@@ -16,15 +16,20 @@
 >
 > **M-G Branch Hygiene + Ship SHIPPED 2026-04-20** — promoted CHANGELOG to v1.1.1, bumped 7 workspace packages to `1.1.1`, authored the Phase 5.6 retrospective, verified zero unresolved restore rows + zero claim-evidence allowlist rows, and cleared the M36 pause. `worktree-phase-2-the-org` is deletion-approved by the M-G cross-check.
 >
-> **Phase 6 is unpaused.** M37-R reconciled the earlier Phase 6 capability/parser/backfill/role-fit work from commit `26d07df`: the official pack has 57 capability-backed roles, role-schema validates capabilities, and write-side role-fit uses capability overlap with the M32 keyword fallback preserved.
+> ### Phase 6 COMPLETE - v1.2.0 (2026-04-20)
+>
+> Phase 6 (Capabilities & Evidence) is complete across M36-M41. M37-R reconciled the earlier capability/parser/backfill/role-fit work from commit `26d07df`; M38 shipped the Copilot feedback loop; M39 shipped telemetry kind filters; M40 shipped local insight export; and M41 shipped the cross-milestone integration E2E, retrospective, demo/docs sweep, CHANGELOG promotion, package version bump, and Phase 6 badge freeze.
+>
+> Current evidence: 17 Playwright specs / 22 cases, strict claim gate 95 verified / 0 allowlisted / 0 UNALLOWED, lint 0 errors / 21 known warnings, and `v1.2.0` package metadata across all seven release packages. The final v1.2.0 git tag remains gated on M41 T10 after the M41 T9 final verification gate.
 >
 > **Read before acting:**
-> - Active plan: [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](docs/plans/2026-04-17-team-x-phase-5.6-remediation.md)
-> - **M-A conformance audit:** [`docs/audits/2026-04-17-conformance-audit.md`](docs/audits/2026-04-17-conformance-audit.md) — required reading before M-B
-> - Immediate next task: Phase 6 M38 T0 — author the Insight Feedback Loop plan doc before new implementation work.
+> - Active plan: [`docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md`](docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md)
+> - Phase 6 design doc: [`docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md`](docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md)
+> - Phase 6 retrospective: [`docs/plans/2026-04-26-team-x-phase-6-retrospective.md`](docs/plans/2026-04-26-team-x-phase-6-retrospective.md)
+> - Immediate next task: Phase 6 M41 T8 — regression hardening and selector audit.
 > - Sprint framework: §14 of the plan (DoR, DoD, velocity KPI, change-control mini-gate — invoked once in M-A per scope-expansion record)
 >
-> Status blocks below are the M-G ship surface. Plan docs remain historical intent; this file records shipped / deferred / deprecated reality as of Phase 5.6 v1.1.1.
+> Status blocks below are current as of Phase 6 COMPLETE - v1.2.0 package markers. Plan docs remain historical intent where older target counts differ from the verified M41 evidence.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -60,12 +65,12 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 **Phase 5.6 remediation — complete. v1.1.1.** M-A audit, M-B triage, M-E process safeguards, M-C backend backfill, M-D UI backfill, M-F documentation truth-up, and M-G branch hygiene/release ship are complete. Exit gate: 1683 unit tests, 13 Playwright specs / 18 cases, strict claim gate 95 verified / 0 allowlisted / 0 UNALLOWED.
 
-**Phase 6 M36/M37 capability substrate — reconciled.** Commit `26d07df` already delivered the 41-capability taxonomy, role-schema capability parser/backfill validation, official 57-role capabilities backfill, pack `1.1.0` signature update, and capability-driven write-side role-fit. M37-R focused verification passed 120/120 tests across shared-types, role-schema, role-loader, and agentic-tools-write.
+**Phase 6 (Capabilities & Evidence) — complete. Phase 6 COMPLETE - v1.2.0.** M36/M37-R delivered the 41-capability taxonomy, role-schema capability parser/backfill validation, official 57-role capabilities backfill, pack `1.1.0` signature update, capability-driven write-side role-fit, and 120/120 focused verification. M38 delivered Copilot category weights and explicit feedback suggestions. M39 delivered Work / Agentic / Copilot telemetry filters. M40 delivered local JSON/CSV insight export. M41 delivered the Phase 6 integration E2E, retrospective, demo/docs sweep, README/user-guide reconciliation, CHANGELOG `[1.2.0]`, seven-package `v1.2.0` bump, and Phase 6 badge freeze. Current E2E surface: 17 Playwright specs / 22 cases.
 
 ### Deferred
 
-- Phase 6 M38 Insight Feedback Loop is next. It should open with a T0 plan doc before implementation.
-- Phase 6 seeds from the Phase 5 retrospective remain future work: insight export, cross-company rollups, proactive autonomous actions, agent-to-agent negotiation, real customer demo polish, and telemetry digest.
+- Phase 7+ candidates remain future work: cross-company rollups, proactive autonomous actions, agent-to-agent negotiation, telemetry digest from real usage, optional native export save-location UX, and customer-demo polish.
+- Final v1.2.0 git tag publication remains gated on M41 T10 after the M41 T9 final verification gate; this is release process, not unfinished Phase 6 product scope.
 - M37 intentionally changed only the `role_fit` term inside the locked M32 four-weight scoring formula; score weights remain fixed.
 
 ### Deprecated / Corrected Documentation Drift
@@ -447,7 +452,7 @@ The `*` glob also removes the `-shm` and `-wal` WAL companion files. On the next
 
 **Task Planner: amber confirmation gate never appeared even though my prompt looks write-shaped.** The `WRITE_SIDE_KEYWORDS` regex in `command-service.ts` only catches the locked verbs (*decompose* / *delegate* / *create tickets* / *assign owners* / *review*). Synonyms like "break down", "hand off", "file tickets" don't match — the prompt routes to the M31 read-side loop and runs without a gate. Either rephrase with one of the locked verbs or widen the regex (and update the M32 T5 unit tests in lockstep). The destructive structured intents (`fire`, `close`, `end-meeting`, `promote`) still get the **red** gate independently.
 
-**Task Planner: `delegate_subtask` keeps assigning everything to the same employee.** Workload scoring weights (0.4 role-fit, 0.3 inverse-load, 0.2 availability, 0.1 past-perf) are locked in `agentic-tools-write.ts` and verified in 25 unit tests. In small orgs an employee whose title matches the subtask type AND who is not in a meeting will dominate. Quick fix: archive or set-in-meeting the over-assigned employee so `availability(employee)` returns 0 and the next-highest-scoring employee wins. Long fix: add `capabilities` frontmatter to `{role-slug}.md` files in Phase 6 so role-fit becomes more granular than the current title-keyword heuristic.
+**Task Planner: `delegate_subtask` keeps assigning everything to the same employee.** Workload scoring weights (0.4 role-fit, 0.3 inverse-load, 0.2 availability, 0.1 past-perf) are locked in `agentic-tools-write.ts` and verified in 25 unit tests. Phase 6 changed only the `role_fit` input to use capability overlap with the M32 keyword fallback preserved for generic subtasks. In small orgs, an employee with the best capability overlap and availability can still dominate. Quick fix: archive or set-in-meeting the over-assigned employee so `availability(employee)` returns 0 and the next-highest-scoring employee wins. Longer fix: inspect the role capabilities or subtask `requiredCapabilities` before changing the locked score weights.
 
 **Task Planner: subtask escalated and the org chart shows a new ticket on the manager.** Three failed `delegate_subtask` attempts (or three consecutive `review_deliverable` rejects) trigger `task.escalated`. The escalation lifts the subtask one level up the org chart — the manager's `delegate_subtask` queue gets the work next. Filter the Audit tab on `task.escalated` to see the reason payload (`fallback_chain_exhausted` / `repeated_rejects`) and the original subtask. Threshold lives in `planner_escalation_threshold` (default 3, range 1–10) — bump it in Settings → Runtime → Task Planner if escalations fire too aggressively.
 
