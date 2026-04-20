@@ -12,7 +12,7 @@
   "previousMilestoneCompletedAt": "2026-04-20T02:30:00Z",
   "previousMilestoneCommit": "2d87f60",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-20T04:20:00Z",
+  "updatedAt": "2026-04-20T04:40:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -172,10 +172,10 @@
   "activeSubMilestone": {
     "id": "M38",
     "name": "Insight Feedback Loop",
-    "status": "in progress — T4 analyzer weighting shipped; T5 dismissal detector is head-of-queue",
+    "status": "in progress — T5 dismissal detector shipped; T6 renderer UI is head-of-queue",
     "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M38 T5. Scope: dismissal pattern detector only — advisory suggestion after three same-category dismissals in seven days, no auto-apply. Use TDD.",
+    "nextSession": "Proceed with Phase 6 M38 T6. Scope: renderer settings controls and feedback suggestion UI only — weight controls plus apply/keep suggestion actions. Use TDD.",
     "dor": "M37-R reconciliation closed with focused tests green and M36/M37 docs/Loki aligned to on-disk reality",
     "dod": "M38 complete when Tasks 1-8 in the M38 plan doc ship with focused tests, E2E, typecheck, lint, strict claims, and Loki ledger closed",
     "verifiedBy": null,
@@ -249,9 +249,9 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 6 M38 T4 analyzer weighting implemented and verified; M38 T5 dismissal detector is head-of-queue.",
+    "asOfTask": "Phase 6 M38 T5 dismissal detector implemented and verified; M38 T6 renderer UI is head-of-queue.",
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests.",
     "e2eSpecs": 13,
     "e2eGreenCount": 18,
     "lintErrors": 0,
@@ -264,7 +264,7 @@
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
     "phase56SurfaceArea": "Conformance audit (M-A) ~200–400 rows + triage (M-B) per-row dispositions + safeguards (M-E) 6 deliverables + backend backfill (M-C) migrations/IPC/repos for restore rows + UI backfill (M-D) components/hooks/routes for restore rows + docs truth-up (M-F) three-bucket CLAUDE.md rewrite + ship (M-G) branch deletion + version bump + retrospective",
     "phase56NonGoals": "No new features beyond restoration. No scope creep from mid-flight discoveries without change-control mini-gate (§14.3). No silent deferrals. No Phase 6 work until M-G ships. No public README/landing-site claim updates — those wait for M-F.",
-    "phase6Next": "M38 T5 dismissal pattern detector. M38 T4 analyzer category weighting is implemented."
+    "phase6Next": "M38 T6 renderer settings controls and suggestion UI. M38 T5 dismissal detector is implemented."
   },
   "sprintFramework": {
     "backlog": "M-B triage output — audit doc `disposition` column. Must-have=restore / Should-have=replace / Won't-have=deprecate (docs only)",
@@ -274,6 +274,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M38 T5 SHIPPED 2026-04-20 — advisory dismissal feedback detector implemented with TDD. Extended copilot.dismissed payload with category/title; added audit-backed seven-day same-category dismissal counting; returns CopilotFeedbackSuggestion on the third same-category dismissal; current weight 1.0 suggests 0.5 and 0.5 suggests 0.0; mixed/old dismissals do not trigger; no settings mutation occurs in dismiss. Verification: copilot-handlers tests 1 file / 13 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T6 renderer settings and suggestion UI.",
     "PHASE 6 M38 T4 SHIPPED 2026-04-20 — analyzer category weighting implemented with TDD. Added weightInsightDrafts pure helper, severity base scores, five-draft cap, zero-weight category drop, stable tie ordering, CopilotAnalyzerSettings.categoryWeights defaults, production getSettings wiring to settingsRepo.getCopilotWeights(), and tick integration that keeps insightsProposed as pre-weight model output while persisting only weighted drafts. Verification: copilot-analyzer-service tests 1 file / 19 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T5 dismissal pattern detector.",
     "PHASE 6 M38 T3 SHIPPED 2026-04-20 — copilot weight settings IPC exposed with TDD. Added settings.getCopilotWeights/settings.setCopilotWeights handler surface, companyId validation, durable repo write before bus fan-out, changedKeys diffing, best-effort copilot.weights.changed emit, bus-failure swallow, and register.ts channel wiring. Preload bridge methods already landed with T1 to satisfy TeamXApi after the contract widened. Verification: settings-copilot IPC tests 1 file / 8 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T4 analyzer weighting.",
     "PHASE 6 M38 T2 SHIPPED 2026-04-20 — settings repo copilot category weight persistence implemented with TDD. Added copilot_category_weights default seeding, getCopilotWeights fallback/clamp behavior, setCopilotWeights partial patch persistence, one-decimal rounding, 0..2 clamping, unknown-key ignore, and malformed persisted-value fallback. Verification: settings-copilot repo tests 1 file / 9 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Node better-sqlite3 ABI was rebuilt before the valid red run after the first test attempt hit NODE_MODULE_VERSION 125 vs 137. Head-of-queue advances to M38 T3 IPC wiring.",
@@ -313,6 +314,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M38 T5 — add dismissal pattern detector with TDD"
+    "nextTask": "Phase 6 M38 T6 — surface copilot feedback suggestions in renderer with TDD"
   }
 }
