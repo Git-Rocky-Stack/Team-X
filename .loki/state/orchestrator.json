@@ -2,7 +2,7 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M39",
   "milestoneName": "Telemetry Per-Kind Filter",
-  "tasksCompleted": 1,
+  "tasksCompleted": 2,
   "tasksFailed": 0,
   "totalTasks": 9,
   "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
@@ -52,14 +52,14 @@
   },
   "current": {
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests.",
     "e2eSpecs": 14,
     "e2eGreenCount": 19,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M39 T0 telemetry per-kind filter plan doc authored; M39 T1 shared-types contracts are head-of-queue.",
+    "asOfTask": "Phase 6 M39 T1 shared telemetry kind contracts shipped; M39 T2 runs repo per-kind aggregate filters are head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
     "version": "1.1.1",
@@ -246,9 +246,7 @@
       "shippedAt": "2026-04-19T23:55:00Z",
       "commit": "1108247",
       "deliverable": "NEW apps/desktop/e2e/phase-5-integration.spec.ts (495 lines). Single Playwright spec stitching the full Phase 5 stack (M28 → M29 → M30 → M31 → M32 → M33 → M34) in one session. Scenario: (1) M28/M29 chat round-trip via CEO with __ECHO_TEXT__:<marker> sentinel fires work.completed → RagIndexer embeds the reply → rag.stats embedding count grows above baseline (also asserts vault.upload still works end-to-end inside the same session). (2) M30 + M31 Cmd+K 'what is my team doing right now' → canned classifier routes complex_request → canned agentic provider scripts plan → query_employees → answer → answer card contains 'Team currently has' + system-agent thread persists ≥2 messages. (3) M32 Cmd+K 'decompose the frontend redesign into tickets' → amber write-side gate fires → Confirm dispatches second loop → decompose_project + delegate_subtask + answer; answer card contains 'Decomposed the frontend redesign'. (4) M33 copilot.configure manual tick → insightsGenerated ≥ 1. (5) M34 toolbar Sparkles toggle → sidebar mounts via data-copilot-sidebar-root → insight card via data-copilot-insight-id → dismiss X fires → card leaves DOM → copilot.dismissed event on append-only events table (invariant #11) → ask-input filled with __ECHO_AGENT__: sentinel → submit → sidebar closes → system-flagged thread count ≥1 (both system-agent from Step 2 AND system-copilot from Step 5). Regression guards inline: M30 destructive gate ABSENT across full session; M32 write-side gate fires ONLY in Step 3; Phase 5 badge verbatim. Launched with TEAM_X_RAG_TEST=1 + NODE_ENV=test. Zero production-code changes. Spec runtime 3.7s (under the ≤15s budget).",
-      "filesTouched": [
-        "apps/desktop/e2e/phase-5-integration.spec.ts (NEW, 495 lines)"
-      ],
+      "filesTouched": ["apps/desktop/e2e/phase-5-integration.spec.ts (NEW, 495 lines)"],
       "testsDelta": "+1 E2E spec (10 → 11 spec files; 11 → 12 Playwright cases)",
       "verificationGates": {
         "unitTests": "1134/1134 pass (24.41s) — unchanged from M35 T1 baseline (T2 adds E2E only)",
@@ -938,15 +936,7 @@
         },
         "gapRowsTotal": 41
       },
-      "clusterA_restoreRows": [
-        "2.1",
-        "2.2",
-        "2.3",
-        "2.4",
-        "10.12",
-        "10.13",
-        "10.15"
-      ],
+      "clusterA_restoreRows": ["2.1", "2.2", "2.3", "2.4", "10.12", "10.13", "10.15"],
       "clusterB_restoreRows": [
         "2.16",
         "2.18",
@@ -978,9 +968,7 @@
       "commit": "1f3c432",
       "ledger": "f040d11",
       "deliverable": "NEW docs/audits/2026-04-17-conformance-audit.md (414 rows). Evidence matrix per plan §4 schema covering every CLAUDE.md Phase 1–5 status-block bullet + every IPC channel in the IPC Channels table + every EventType bus event + every settings key + every test-count assertion + role-pack inventory + Drizzle tables + migrations. Per-row columns: claim / phase / milestone / evidence_type / expected_location / evidence_found / status / severity / notes / disposition (blank for M-B). Status values: shipped ✅ / partial ⚠️ / missing ❌ / unverifiable 🔍. Severity: P0 / P1 / P2 / P3. Summary tables §1.1 + §1.2 + §1.3 top-line drift headlines + §1.4 evidence types + §1.5 cross-check status. Cluster A (multi-company architecture, Rocky's locked M7 design) and Cluster B (M9 org chart) identified as the two P0 clusters, both stranded on `worktree-phase-2-the-org`. §18 M-B triage rollup + §18.5 M-F documentation-truth-up corrections enumerated inline.",
-      "filesTouched": [
-        "docs/audits/2026-04-17-conformance-audit.md (NEW, 414 rows)"
-      ],
+      "filesTouched": ["docs/audits/2026-04-17-conformance-audit.md (NEW, 414 rows)"],
       "testsDelta": 0,
       "e2eDelta": 0,
       "verificationGates": {
@@ -1034,15 +1022,7 @@
         "trigger": "First-pass authoring classified 7 multi-company CRUD rows as P1 with disposition candidate 'deprecate' (citing CLAUDE.md Troubleshooting's 'aspirational' framing)",
         "correction": "Rocky surfaced that multi-company is a LOCKED architectural decision from the original project design. Severity re-classified P1 → P0; disposition candidate changed deprecate → restore; §18.5 added enumerating the CLAUDE.md passages that must be rewritten in M-F so the 'aspirational' framing cannot resurface",
         "planReference": "Plan §14.3 change-control mini-gate — this is the first documented invocation in Phase 5.6",
-        "auditRowsAffected": [
-          "2.1",
-          "2.2",
-          "2.3",
-          "2.4",
-          "10.12",
-          "10.13",
-          "10.15"
-        ],
+        "auditRowsAffected": ["2.1", "2.2", "2.3", "2.4", "10.12", "10.13", "10.15"],
         "totalP0RowsPreCorrection": 8,
         "totalP0RowsPostCorrection": 15
       },
@@ -1131,10 +1111,33 @@
         "featureScope": "zero production code, zero IPC/runtime changes, zero migrations"
       },
       "structureCompliance": "M39 T0 current-task acceptance satisfied: milestone plan authored, read-path-only boundary locked, non-goals defined, TDD task sequence specified, and next task advanced to M39 T1 shared-types contracts."
+    },
+    "M39-T1": {
+      "name": "Shared types for telemetry kind filter",
+      "shippedAt": "2026-04-20T06:40:00Z",
+      "commit": "this-feature-commit",
+      "deliverable": "Implemented M39 shared telemetry kind contracts. Shared-types now exports TELEMETRY_RUN_KINDS, TelemetryRunKind, TELEMETRY_KIND_FILTERS, TelemetryKindFilter, and optional kind?: TelemetryRunKind on companyStats, dailyUsage, employeeStats, and costBreakdown request types. TeamXApi companyStats/employeeStats accepts string | request-object to keep existing renderer/preload callers typecheck-clean until later M39 tasks migrate behavior.",
+      "filesTouched": [
+        "packages/shared-types/src/ipc.ts",
+        "packages/shared-types/src/telemetry-kind-filter.test.ts",
+        ".loki/queue/current-task.json",
+        ".loki/queue/pending.json",
+        ".loki/state/orchestrator.json"
+      ],
+      "testsDelta": "+2 focused shared-types tests",
+      "verificationGates": {
+        "validRed": "telemetry-kind-filter.test.ts failed because TELEMETRY_RUN_KINDS was undefined after correcting an invalid missing-Vitest-globals harness error",
+        "sharedTypesFocused": "1 file / 2 tests passed",
+        "typecheck": "clean across 6 workspace packages",
+        "lint": "0 errors / 21 known warnings",
+        "auditClaimsStrict": "95 verified / 0 allowlisted / 0 UNALLOWED"
+      },
+      "structureCompliance": "M39 T1 current-task acceptance satisfied: failing shared-types test written first, telemetry kind contracts implemented, all telemetry request types widened with optional kind, workspace gates green, and next task advanced to M39 T2 runs repo filters."
     }
   },
   "inFlightMilestone": "Phase 6 M39 Telemetry Per-Kind Filter",
   "notes": [
+    "PHASE 6 M39 T1 SHIPPED 2026-04-20 — shared telemetry kind filter contracts implemented with TDD. Added TELEMETRY_RUN_KINDS, TelemetryRunKind, TELEMETRY_KIND_FILTERS, TelemetryKindFilter, and optional kind?: TelemetryRunKind fields to all four telemetry aggregate request types. TeamXApi companyStats/employeeStats now accept string | request-object for backward compatibility until the renderer is migrated in later M39 tasks. First red was invalid due missing Vitest globals import; corrected the test harness, then valid red proved missing runtime constants. Verification: shared-types focused test 1 file / 2 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T2 runs repo per-kind aggregate filters.",
     "PHASE 6 M39 T0 AUTHORED 2026-04-20 — NEW docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md. Plan-doc-only milestone for Telemetry Per-Kind Filter. Locks D21 read-path-only scope: existing runs.kind column from migration 0012 is sufficient; no migration, settings key, bus event, provider/router/MCP surface, or write-side run behavior changes. Chosen approach: optional kind?: TelemetryRunKind on the four existing telemetry requests, renderer-only all chip maps to omitted kind, main process validates only persisted kinds work/agentic/copilot, and all existing Telemetry subviews re-query on chip change. Decomposes implementation into 8 TDD tasks: shared-types contracts, runs repo aggregate filters, IPC/preload propagation, renderer hooks, filter chips, subview request wiring, E2E, and verification gate. Head-of-queue advances to M39 T1 shared-types telemetry kind contracts.",
     "PHASE 6 M38 COMPLETE 2026-04-20 — Insight Feedback Loop shipped through T8 verification gate. T8 evidence: biome checked 14 touched files with no fixes; shared-types focused gate ran 1 file / 3 tests (the plan-listed src/ipc.test.ts is absent in shared-types and Vitest selected the existing copilot-feedback test); desktop focused gate passed 6 files / 73 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known no-non-null-assertion warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED; Electron ABI restored for Playwright; feedback-loop Playwright passed 1 spec / 1 test. Scope boundaries preserved: no migrations, providers, autonomous action, or role-fit changes. M38 total remains 14 E2E specs / 19 Playwright cases. Head-of-queue advances to M39 T0 Telemetry Per-Kind Filter plan doc.",
     "PHASE 6 M38 T7 SHIPPED 2026-04-20 — feedback-loop Playwright E2E implemented with TDD. Added apps/desktop/e2e/copilot-feedback.spec.ts covering cost-only analyzer ticks, three same-category sidebar dismissals, advisory suggestion banner, Apply action, copilot.weights.changed append-only event verification, and Settings cost weight display at 0.5x. Added a cost-only canned copilot fixture keyed on 'Allowed categories: cost' before the broad strategia-x fixture so the category gate receives deterministic cost drafts. First valid red was insightsGenerated=0 before the fixture; an invalid earlier run exposed Electron better-sqlite3 ABI 137/125 mismatch and was corrected by rebuilding better-sqlite3 for Electron after killing orphan Electron processes. Verification: feedback-loop Playwright 1 spec / 1 test passed; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T8 verification gate.",

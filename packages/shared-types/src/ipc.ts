@@ -645,8 +645,15 @@ export interface MeetingDetail extends Meeting {
 // Telemetry shapes (Phase 3 — M17)
 // ---------------------------------------------------------------------------
 
+export const TELEMETRY_RUN_KINDS = ['work', 'agentic', 'copilot'] as const;
+export type TelemetryRunKind = (typeof TELEMETRY_RUN_KINDS)[number];
+
+export const TELEMETRY_KIND_FILTERS = ['all', ...TELEMETRY_RUN_KINDS] as const;
+export type TelemetryKindFilter = (typeof TELEMETRY_KIND_FILTERS)[number];
+
 export interface TelemetryCompanyStatsRequest {
   companyId: string;
+  kind?: TelemetryRunKind;
 }
 
 /** Aggregate company-level telemetry summary. */
@@ -664,6 +671,7 @@ export interface TelemetryDailyUsageRequest {
   fromMs: number;
   /** Epoch millis — end of the date range (inclusive). */
   toMs: number;
+  kind?: TelemetryRunKind;
 }
 
 export interface TelemetryDailyUsageRow {
@@ -677,6 +685,7 @@ export interface TelemetryDailyUsageRow {
 
 export interface TelemetryEmployeeStatsRequest {
   companyId: string;
+  kind?: TelemetryRunKind;
 }
 
 export interface TelemetryEmployeeStatsRow {
@@ -694,6 +703,7 @@ export interface TelemetryCostBreakdownRequest {
   fromMs?: number;
   /** Optional epoch millis — end of range. */
   toMs?: number;
+  kind?: TelemetryRunKind;
 }
 
 export interface TelemetryCostBreakdownRow {
@@ -2044,11 +2054,15 @@ export interface TeamXApi {
   };
   telemetry: {
     /** Company-level aggregate stats (total runs, tokens, cost, latency). */
-    companyStats(companyId: string): Promise<TelemetryCompanyStatsResponse>;
+    companyStats(
+      req: string | TelemetryCompanyStatsRequest,
+    ): Promise<TelemetryCompanyStatsResponse>;
     /** Daily time-series of token usage and cost within a date range. */
     dailyUsage(req: TelemetryDailyUsageRequest): Promise<TelemetryDailyUsageRow[]>;
     /** Per-employee breakdown of runs, tokens, latency, and cost. */
-    employeeStats(companyId: string): Promise<TelemetryEmployeeStatsRow[]>;
+    employeeStats(
+      req: string | TelemetryEmployeeStatsRequest,
+    ): Promise<TelemetryEmployeeStatsRow[]>;
     /** Cost breakdown by provider and model, with optional date range filter. */
     costBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
   };

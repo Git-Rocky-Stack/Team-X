@@ -1,32 +1,33 @@
 {
-  "taskId": "Phase-6-M39-T1",
+  "taskId": "Phase-6-M39-T2",
   "milestone": "Phase 6 M39",
   "milestoneName": "Telemetry Per-Kind Filter",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M39 T1 — Shared types for telemetry kind filter",
-  "status": "head-of-queue — M39 T0 plan doc authored; next implement shared telemetry kind contracts with TDD",
+  "title": "Phase 6 M39 T2 — Runs repo per-kind aggregate filters",
+  "status": "head-of-queue — M39 T1 shared contracts shipped; next filter telemetry aggregate SQL by run kind",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M39 T0 — telemetry per-kind filter plan doc authored",
+  "predecessor": "Phase 6 M39 T1 — shared telemetry kind contracts",
   "dor": [
-    "M39 plan doc exists and locks read-path-only scope",
-    "Phase 6 D21 no-migration boundary is explicit",
-    "M38 feedback loop is closed and pushed"
+    "TelemetryRunKind and TelemetryKindFilter contracts exist in shared-types",
+    "All four telemetry request types carry optional kind?: TelemetryRunKind",
+    "Workspace typecheck, lint, and strict claims are green after T1"
   ],
   "acceptance": [
-    "Follow Task 1 in docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-    "Write failing shared-types tests for TELEMETRY_RUN_KINDS and TELEMETRY_KIND_FILTERS",
-    "Add TelemetryRunKind and TelemetryKindFilter contracts",
-    "Add optional kind?: TelemetryRunKind to all telemetry request types",
-    "Update TeamXApi telemetry companyStats/employeeStats to request-object signatures",
-    "Run pnpm -F @team-x/shared-types exec vitest run src/telemetry-kind-filter.test.ts",
-    "Commit feat(m39): add telemetry kind filter contracts and ledger the task"
+    "Follow Task 2 in docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
+    "Extend runs-telemetry test seed helper with kind?: work | agentic | copilot",
+    "Write failing aggregate tests for companyStats, dailyUsage, employeeStats, and costBreakdown kind filters",
+    "Add optional kind parameter to all four runs repo aggregate methods",
+    "Apply runs.kind condition only when kind is provided; undefined preserves All behavior",
+    "Run pnpm -F @team-x/desktop exec vitest run src/main/db/repos/runs-telemetry.test.ts",
+    "Run pnpm typecheck, pnpm lint, and pnpm audit:claims -- --strict before ledgering"
   ],
   "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-  "planDocSection": "Task 1: Shared Types For Telemetry Kind Filter",
+  "planDocSection": "Task 2: Runs Repo Per-Kind Aggregate Filters",
   "referenceDocs": [
     "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-    "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+    "apps/desktop/src/main/db/repos/runs.ts",
+    "apps/desktop/src/main/db/repos/runs-telemetry.test.ts",
     "packages/shared-types/src/ipc.ts"
   ],
-  "nextStep": "Begin T1 by adding the failing shared-types telemetry-kind-filter test, then implement the contracts to make it pass."
+  "nextStep": "Begin T2 by extending runs-telemetry.test.ts with kind-aware seeded runs and writing the failing aggregate filter assertions."
 }
