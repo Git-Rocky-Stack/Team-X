@@ -11,12 +11,11 @@
  *      whole suite red on CI. This unit test fails first, cheapest,
  *      and with the clearest error.
  *
- *   2. `apps/desktop/package.json` must carry `version: "1.1.0"`.
- *      Pins the Phase 5 Intelligence Layer release marker so a wrong
- *      semver change (e.g. an accidental downgrade back to 1.0.0, or
- *      a premature 1.2.0 / 2.0.0 bump) lands with a failing CI run.
- *      Paired with the repo-wide 1.0.0 → 1.1.0 sweep also shipped in
- *      M35 T8 across all seven workspace package.json files.
+ *   2. `apps/desktop/package.json` must carry the current release
+ *      version. Pins the release marker so a wrong semver change
+ *      (e.g. an accidental downgrade, or a premature 1.2.0 / 2.0.0
+ *      bump) lands with a failing CI run. Paired with the repo-wide
+ *      version sweep across all seven workspace package.json files.
  *
  * Per the M35 T3 (`audit-event-chip.test.tsx`) convention: pure
  * source-string audit only. No jsdom, no React rendering — the per-
@@ -57,11 +56,11 @@ describe('top-bar release-marker freeze (M35 T8)', () => {
     expect(captured).toBe('Phase 5');
   });
 
-  it("pins apps/desktop/package.json version to '1.1.0'", () => {
+  it("pins apps/desktop/package.json version to '1.1.1'", () => {
     const raw = readFileSync(DESKTOP_PACKAGE_JSON_PATH, 'utf8');
     const parsed = JSON.parse(raw) as { version?: unknown };
 
     expect(typeof parsed.version, 'version must be a string').toBe('string');
-    expect(parsed.version).toBe('1.1.0');
+    expect(parsed.version).toBe('1.1.1');
   });
 });

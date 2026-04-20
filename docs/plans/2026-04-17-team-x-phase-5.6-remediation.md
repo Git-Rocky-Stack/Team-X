@@ -304,6 +304,8 @@ GitHub Actions job `claim-evidence-audit`:
 
 ### Phase 5.6 M-G — Branch Hygiene + Ship
 
+> **2026-04-20 — SHIPPED.** M-G promoted the release line to v1.1.1, authored the Phase 5.6 retrospective, verified the final claim-evidence/audit state, and cleared the explicit Phase 6 pause. The release history includes the earlier Phase 6 capabilities/role-fit branch work from the same session, so the next Phase 6 task is a reconciliation/verification pass before new capability expansion.
+
 **Output:** Stranded branch deleted; Phase 5.6 shipped to main; pack re-signed if needed
 **Scope:**
 - Verify M-C and M-D landed every "restore" row (cross-check audit doc)
@@ -316,9 +318,9 @@ GitHub Actions job `claim-evidence-audit`:
 - All 7 sub-milestones complete per their DoD
 - Branch deleted from local + origin
 - Phase 5.6 retrospective committed
-- CHANGELOG entry promoted from `[Unreleased]` to `[1.1.x]`
-- Workspace `package.json` versions bumped if appropriate
-- `pack.sig` regenerated if pack contents changed; pack version bumped if applicable
+- CHANGELOG entry promoted from `[Unreleased]` to `[1.1.1]`
+- Workspace `package.json` versions bumped from `1.1.0` to `1.1.1`
+- `pack.sig` unchanged during M-G itself; earlier Phase 6 role-pack changes were already signed in branch history
 - Push to origin
 **Estimated:** 1 working day
 **Buffer:** +0.5 day

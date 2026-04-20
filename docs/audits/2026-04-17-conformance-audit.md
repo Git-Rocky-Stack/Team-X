@@ -866,6 +866,21 @@ M-F exit evidence: CLAUDE.md now has shipped / deferred / deprecated buckets; th
 - **No `replace` dispositions today:** all 41 gap rows resolved to either `restore` (feature shipped but absent / stranded / incomplete) or `deprecate` (wording drift). No superseded design surfaced during triage. If one emerges mid-M-C / M-D (e.g. an M7 cherry-pick reveals a newer pattern in a later phase), M-B reopens under change control.
 - **Rocky's 20 % spot-check:** the §17 cross-check is Claude-authored second pass. A Rocky spot-check remains available at M-G pre-ship as an independent sign-off. If it surfaces a disposition disagreement, the row is re-triaged and the downstream milestones (M-C / M-D / M-F) adjust accordingly.
 
+### 20.8 M-G final cross-check (shipped)
+
+M-G closes the remaining release-level evidence:
+
+| Gate | Result |
+|---|---|
+| Restore rows | 0 unresolved. Cluster A, Cluster B, Cluster C, and verification-gate restore rows all carry M-C/M-D/M-E exit evidence above. |
+| Claim-evidence allowlist | 0 rows. `scripts/check-claim-evidence.allowlist.json` has an empty `entries` array. |
+| Strict claim gate | `pnpm audit:claims -- --strict` target remains 95 verified / 0 allowlisted / 0 UNALLOWED. |
+| Retrospective | `docs/plans/2026-04-20-team-x-phase-5.6-retrospective.md` follows the locked six-section structure. |
+| Version/release | `CHANGELOG.md` promoted to `[1.1.1]`; seven workspace packages bumped to `1.1.1`; v1.1.1 tag lands on the M-G ledger commit. |
+| Branch hygiene | `worktree-phase-2-the-org` deletion is approved after this cross-check. |
+
+The earlier Phase 6 capabilities/role-fit commit is intentionally present in the branch history. It is not a remaining Phase 5.6 restore row; the next Phase 6 task is a reconciliation/verification pass so Loki and Phase 6 docs match the already-landed code.
+
 ---
 
 ## 21. Cross-references

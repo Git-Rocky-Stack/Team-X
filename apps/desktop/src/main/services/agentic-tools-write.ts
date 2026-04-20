@@ -287,13 +287,11 @@ export interface ScoringContext {
 }
 
 // ---------------------------------------------------------------------------
-// Role-fit heuristic — Phase 5 §7.4 / Risk #2 option (b).
+// Role-fit heuristic — Phase 5 §7.4 plus Phase 6 capability overlap.
 //
-// The 55 stock role cards do not carry a `capabilities` frontmatter key
-// today, so we derive role-fit from a small keyword table over the
-// employee's `title` + `level`. Risk #2 option (a) — adding a
-// `capabilities: string[]` frontmatter key and backfilling all 55 roles —
-// is a deliberate M33/M34 follow-up.
+// Capability-aware subtasks use Jaccard overlap against official role
+// capabilities. Legacy/generic subtasks without required capabilities
+// keep the M32 keyword fallback over `title` + `level`.
 // ---------------------------------------------------------------------------
 
 /** Subtask-type → list of title keywords that score role-fit. */

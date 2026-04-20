@@ -1,8 +1,8 @@
-# Team-X QA Baseline Metrics — 2026-04-19
+# Team-X QA Baseline Metrics — 2026-04-20
 
-**Snapshot taken at**: Phase 5.6 M-F documentation truth-up (after M-D exit gate)
-**Codebase version**: v1.1.0 (Phase 5 exit tag) + Phase 5.6 M-A through M-F remediation on top
-**Authority**: This document supersedes the frozen 2026-04-18 M-C baseline for Phase 5.6 exit comparisons.
+**Snapshot taken at**: Phase 5.6 M-G ship gate (v1.1.1 release)
+**Codebase version**: v1.1.1 (Phase 5.6 remediation release)
+**Authority**: This document supersedes the frozen 2026-04-19 M-F baseline for Phase 5.6 exit comparisons.
 
 ---
 

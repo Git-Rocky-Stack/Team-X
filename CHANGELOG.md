@@ -23,6 +23,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## Phase 5.6 - Reconciliation & Remediation
+
+## [1.1.1] - 2026-04-20
+
+> **Status:** Phase 5.6 remediation complete. Baseline: v1.1.0 Phase 5 exit (1169 unit / 11 E2E specs / 12 Playwright cases) -> v1.1.1 remediation exit (**1683 unit tests / 13 E2E specs / 18 Playwright cases**, strict claim gate 95 verified / 0 allowlisted / 0 UNALLOWED). Patch release for restored promised surface, process safeguards, and release hygiene.
+
+### Added
+- **Phase 5.6 conformance audit + triage** - `docs/audits/2026-04-17-conformance-audit.md` captured 414 claim rows, dispositioned 41 gaps, and locked the remediation backlog: 27 restore / 14 deprecate / 0 replace.
+- **Process safeguards** - milestone DoD template, claim-evidence audit script, pre-commit claim guard, CONTRIBUTING branch policy, Loki `verifiedBy` evidence blocks, and quarterly re-audit cadence.
+- **Restored multi-company workspace surface** - `companies.create`, `companies.update`, `companies.delete`, `WorkspaceSwitcher`, `CreateCompanyDialog`, and `CompanySettings`, with lifecycle audit events and E2E coverage.
+- **Restored org-chart surface** - `org_edges`, `orgchart.get`, `employees.promote`, `employees.setManager`, Org tab, org tree, drag reassignment, promote/fire actions, and HireDialog manager selection.
+- **Phase 5.6 retrospective** - public six-section retrospective documenting shipped work, process wins, costs, deferrals, metrics, and Phase 6 carry-forward.
+- **Capability role-fit branch work included in this release line** - the earlier Phase 6 session added role capabilities to the official 57-role pack, parser validation, and capability-aware role-fit scoring. The next Phase 6 task is a reconciliation/verification pass so Loki and Phase 6 docs match the already-landed code.
+
+### Changed
+- **Documentation truth-up** - CLAUDE.md, README, user guide, demo docs, audit docs, and QA baseline counters now reflect shipped reality instead of aspirational status lines.
+- **Workspace package versions** - bumped root, desktop app, and all five workspace packages from `1.1.0` to `1.1.1`.
+- **Claim-evidence workflow** - the allowlist is intentionally empty and the ship gate is strict mode (`pnpm audit:claims -- --strict`).
+
+### Fixed
+- **Systemic docs/code drift** - the Phase 2 M7/M9 surfaces previously stranded on `worktree-phase-2-the-org` are now present on the release branch and covered by unit/E2E evidence.
+- **MCP IPC naming drift** - docs now use canonical `mcp.addServer`, `mcp.removeServer`, and `mcp.testConnection`.
+- **Historical role-file wording drift** - docs now describe official role files as `{role-slug}.md` and the full role catalog as 55 user roles plus 2 system roles.
+
+---
+
 ## Phase 5 — Intelligence Layer
 
 ## [1.1.0] — 2026-04-20
@@ -574,6 +600,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Git-Rocky-Stack/Team-X/releases/tag/v1.0.0

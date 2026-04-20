@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> ### 🚧 PHASE 5.6 IN PROGRESS — M-F DOCS TRUTH-UP SHIPPED, M-G HEAD-OF-QUEUE (2026-04-19)
+> ### ✅ PHASE 5.6 SHIPPED — v1.1.1 REMEDIATION RELEASE (2026-04-20)
 >
 > A pre-M36-T2 audit surfaced systemic drift between CLAUDE.md status blocks and on-disk reality across Phases 1–5. **Phase 5.6 is a Definition-of-Done failure repair operation, not a "fix some missing files" sprint.** Execution order is M-A (audit) → M-B (triage) → **M-E (process safeguards — ships BEFORE backfill)** → M-C (backend backfill) → M-D (UI backfill) → M-F (docs truth-up) → M-G (ship). Estimated 6–8 calendar weeks.
 >
@@ -14,15 +14,17 @@
 >
 > **M-F Documentation Truth-Up SHIPPED 2026-04-19** — rewrote the status block into shipped / deferred / deprecated buckets, removed the Cluster A "aspirational" framing, reconciled Phase 2 M7/M9 against the M-C/M-D restoration, aligned the MCP IPC table with canonical on-disk channel names, and cleared the remaining claim-evidence allowlist rows. Evidence: `pnpm audit:claims -- --strict` 95 verified / 0 allowlisted / 0 UNALLOWED.
 >
-> **Phase 6 M36 T2+ is explicitly PAUSED** until Phase 5.6 M-G ships. Do not resume capability taxonomy work until the pause is lifted in `.loki/queue/pending.json`.
+> **M-G Branch Hygiene + Ship SHIPPED 2026-04-20** — promoted CHANGELOG to v1.1.1, bumped 7 workspace packages to `1.1.1`, authored the Phase 5.6 retrospective, verified zero unresolved restore rows + zero claim-evidence allowlist rows, and cleared the M36 pause. `worktree-phase-2-the-org` is deletion-approved by the M-G cross-check.
+>
+> **Phase 6 is unpaused.** The current branch already includes the earlier Phase 6 capabilities/role-fit work from this session history, so the next task is a Phase 6 reconciliation/verification pass before adding new capability work.
 >
 > **Read before acting:**
 > - Active plan: [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](docs/plans/2026-04-17-team-x-phase-5.6-remediation.md)
 > - **M-A conformance audit:** [`docs/audits/2026-04-17-conformance-audit.md`](docs/audits/2026-04-17-conformance-audit.md) — required reading before M-B
-> - Immediate next task: Phase 5.6 M-G Branch Hygiene + Ship (see `.loki/queue/current-task.json`) — final cross-check, Phase 5.6 retrospective, branch hygiene, version/tag/release ledger, and M36 pause removal only after M-G ships.
+> - Immediate next task: Phase 6 capability/role-fit reconciliation (see `.loki/queue/current-task.json`) — verify the already-landed capabilities parser/backfill/scorer surface and align Loki/Phase 6 docs before new feature expansion.
 > - Sprint framework: §14 of the plan (DoR, DoD, velocity KPI, change-control mini-gate — invoked once in M-A per scope-expansion record)
 >
-> Status blocks below are the M-F truth-up surface. Plan docs remain historical intent; this file records shipped / deferred / deprecated reality as of Phase 5.6 M-F.
+> Status blocks below are the M-G ship surface. Plan docs remain historical intent; this file records shipped / deferred / deprecated reality as of Phase 5.6 v1.1.1.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -56,11 +58,11 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 **Phase 5.5 hotfix — complete.** Role-pack reconciliation restored the full 57-role catalog (55 user roles + 2 system roles), bumped the official pack to v1.0.0, committed `pack.sig`, and wired strict/warn/off load-time signature verification.
 
-**Phase 5.6 remediation — M-A through M-F shipped; M-G pending.** M-A audit, M-B triage, M-E process safeguards, M-C backend backfill, M-D UI backfill, and M-F documentation truth-up are complete. Phase 6 M36 T2+ stays paused until M-G ships.
+**Phase 5.6 remediation — complete. v1.1.1.** M-A audit, M-B triage, M-E process safeguards, M-C backend backfill, M-D UI backfill, M-F documentation truth-up, and M-G branch hygiene/release ship are complete. Exit gate: 1683 unit tests, 13 Playwright specs / 18 cases, strict claim gate 95 verified / 0 allowlisted / 0 UNALLOWED.
 
 ### Deferred
 
-- Phase 6 M36 T2+ capability taxonomy implementation is paused by explicit Phase 5.6 governance until M-G ships.
+- Phase 6 capability/role-fit ledger reconciliation is next because the earlier Phase 6 session already landed capabilities parser/backfill/scorer code on this branch.
 - Phase 6 seeds from the Phase 5 retrospective remain future work: insight export, cross-company rollups, proactive autonomous actions, agent-to-agent negotiation, capability-based role fit, real customer demo polish, and telemetry digest.
 - M32 role-fit still uses the locked four-weight scoring formula and title/level heuristic until Phase 6 capabilities work replaces only the role-fit term.
 
