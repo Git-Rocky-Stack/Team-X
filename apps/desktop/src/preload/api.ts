@@ -70,6 +70,8 @@ import type {
   CopilotConfigureResult,
   CopilotDismissArgs,
   CopilotDismissResult,
+  CopilotExportRequest,
+  CopilotExportResponse,
   CopilotInsightListArgs,
   CopilotInsightListResult,
   CreateGoalRequest,
@@ -318,6 +320,7 @@ const CHANNELS = {
   copilotDismiss: 'copilot.dismiss',
   copilotAsk: 'copilot.ask',
   copilotConfigure: 'copilot.configure',
+  copilotExport: 'copilot.export',
 } as const;
 
 function telemetryCompanyStatsRequest(
@@ -579,6 +582,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.copilotAsk, args) as Promise<CopilotAskResult>,
       configure: (args: CopilotConfigureArgs) =>
         ipc.invoke(CHANNELS.copilotConfigure, args) as Promise<CopilotConfigureResult>,
+      export: (args: CopilotExportRequest) =>
+        ipc.invoke(CHANNELS.copilotExport, args) as Promise<CopilotExportResponse>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

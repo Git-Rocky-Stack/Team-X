@@ -158,6 +158,7 @@ Export caps at 10,000 active insights, matching the audit export's practical cap
 
 - Modify: `packages/shared-types/src/copilot.ts`
 - Modify: `packages/shared-types/src/ipc.ts`
+- Modify: `apps/desktop/src/preload/api.ts`
 - Test: `packages/shared-types/src/copilot-export.test.ts` (new)
 
 **Step 1: Write failing shared-type tests**
@@ -220,6 +221,14 @@ In `packages/shared-types/src/ipc.ts`:
 - Add low-level `IpcContract['copilot.export']`.
 - Add `TeamXApi.copilot.export(req: CopilotExportRequest): Promise<CopilotExportResponse>`.
 
+In `apps/desktop/src/preload/api.ts`:
+
+- Import `CopilotExportRequest` and `CopilotExportResponse`.
+- Add `copilotExport: 'copilot.export'` to `CHANNELS`.
+- Add `copilot.export(req)` to satisfy the widened `TeamXApi` object.
+
+Do not register the main-process channel or implement the handler in T1. That remains T3.
+
 **Step 3: Run focused verification**
 
 ```bash
@@ -232,7 +241,7 @@ pnpm audit:claims -- --strict
 **Step 4: Commit**
 
 ```bash
-git add packages/shared-types/src/copilot.ts packages/shared-types/src/ipc.ts packages/shared-types/src/copilot-export.test.ts .loki/queue/current-task.json .loki/queue/pending.json .loki/state/orchestrator.json
+git add packages/shared-types/src/copilot.ts packages/shared-types/src/ipc.ts packages/shared-types/src/copilot-export.test.ts apps/desktop/src/preload/api.ts .loki/queue/current-task.json .loki/queue/pending.json .loki/state/orchestrator.json docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md
 git commit -m "feat(m40): add copilot export contracts"
 git push
 ```
@@ -337,7 +346,6 @@ git push
 
 - Modify: `apps/desktop/src/main/ipc/register.ts`
 - Modify: `apps/desktop/src/main/ipc/handlers.ts`
-- Modify: `apps/desktop/src/preload/api.ts`
 - Test: `apps/desktop/src/main/ipc/copilot-export-handlers.test.ts` (new)
 
 **Step 1: Write failing handler tests**
@@ -360,17 +368,12 @@ pnpm -F @team-x/desktop exec vitest run src/main/ipc/copilot-export-handlers.tes
 
 Expected: FAIL because `copilot.export` is not registered or handled.
 
-**Step 2: Register channel and bridge**
+**Step 2: Register main-process channel**
 
 In `apps/desktop/src/main/ipc/register.ts`:
 
 - Add `'copilot.export'` to the request channel list.
 - Add it to the typed registration map.
-
-In `apps/desktop/src/preload/api.ts`:
-
-- Add `copilotExport: 'copilot.export'` to `CHANNELS`.
-- Add `copilot.export(req)` to the exposed API.
 
 **Step 3: Add handler**
 
@@ -396,7 +399,7 @@ pnpm audit:claims -- --strict
 **Step 5: Commit**
 
 ```bash
-git add apps/desktop/src/main/ipc/register.ts apps/desktop/src/main/ipc/handlers.ts apps/desktop/src/preload/api.ts apps/desktop/src/main/ipc/copilot-export-handlers.test.ts .loki/queue/current-task.json .loki/queue/pending.json .loki/state/orchestrator.json
+git add apps/desktop/src/main/ipc/register.ts apps/desktop/src/main/ipc/handlers.ts apps/desktop/src/main/ipc/copilot-export-handlers.test.ts .loki/queue/current-task.json .loki/queue/pending.json .loki/state/orchestrator.json
 git commit -m "feat(m40): wire copilot export ipc"
 git push
 ```

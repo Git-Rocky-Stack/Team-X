@@ -49,6 +49,8 @@ import type {
   CopilotConfigureResult,
   CopilotDismissArgs,
   CopilotDismissResult,
+  CopilotExportRequest,
+  CopilotExportResponse,
   CopilotInsightListArgs,
   CopilotInsightListResult,
 } from './copilot.js';
@@ -1741,6 +1743,10 @@ export interface IpcContract {
     request: CopilotConfigureArgs;
     response: CopilotConfigureResult;
   };
+  'copilot.export': {
+    request: CopilotExportRequest;
+    response: CopilotExportResponse;
+  };
   // Ticket management channels
   'tickets.create': {
     request: CreateTicketRequest;
@@ -2256,6 +2262,13 @@ export interface TeamXApi {
      * 5-minute scheduled interval. Phase 5 — M33 T5.
      */
     configure(args: CopilotConfigureArgs): Promise<CopilotConfigureResult>;
+    /**
+     * Read-only local export of active Copilot insights as CSV or JSON.
+     * Company scope requires `companyId`; all-company scope applies the
+     * same optional category/severity filters globally. Emits no bus event.
+     * Phase 6 — M40.
+     */
+    export(args: CopilotExportRequest): Promise<CopilotExportResponse>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

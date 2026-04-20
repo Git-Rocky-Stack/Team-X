@@ -22,6 +22,9 @@
  *                            interval. Feature-flagged via `isTestMode()` —
  *                            production callers receive a clear error
  *                            directing them to `settings.setCopilot` (T7).
+ *   - `copilot.export`     — read-only local JSON/CSV export of active insights
+ *                            for the current company or all companies. Emits no
+ *                            bus event because it does not mutate app state.
  *
  * Wire-type discipline (M33 T5 note 4): these types are deliberately
  * DISTINCT from the Drizzle `CopilotInsightRow` shape in
@@ -74,6 +77,32 @@ export interface CopilotInsight {
   dismissedAt: number | null;
   createdAt: number;
   expiresAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// `copilot.export` — local JSON/CSV export
+// ---------------------------------------------------------------------------
+
+export const COPILOT_EXPORT_FORMATS = ['csv', 'json'] as const;
+export type CopilotExportFormat = (typeof COPILOT_EXPORT_FORMATS)[number];
+
+export const COPILOT_EXPORT_SCOPES = ['company', 'all'] as const;
+export type CopilotExportScope = (typeof COPILOT_EXPORT_SCOPES)[number];
+
+export interface CopilotExportRequest {
+  format: CopilotExportFormat;
+  scope: CopilotExportScope;
+  companyId?: string;
+  category?: CopilotCategory;
+  severity?: CopilotSeverity;
+}
+
+export interface CopilotExportResponse {
+  filePath: string;
+  rowCount: number;
+  truncated: boolean;
+  format: CopilotExportFormat;
+  scope: CopilotExportScope;
 }
 
 // ---------------------------------------------------------------------------

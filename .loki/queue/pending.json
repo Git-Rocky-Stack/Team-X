@@ -12,7 +12,7 @@
   "previousMilestoneCompletedAt": "2026-04-20T06:00:00Z",
   "previousMilestoneCommit": "this-ledger-commit",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-20T09:40:00Z",
+  "updatedAt": "2026-04-20T10:05:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -172,18 +172,17 @@
   "activeSubMilestone": {
     "id": "M40",
     "name": "Insight Export",
-    "status": "in progress — T0 plan doc authored; T1 shared export contracts are head-of-queue",
+    "status": "in progress — T1 shared export contracts shipped; T2 repo export read model is head-of-queue",
     "planDoc": "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M40 T1. Scope: shared Copilot export contracts only; no runtime IPC, repo, renderer, or E2E changes until later tasks.",
+    "nextSession": "Proceed with Phase 6 M40 T2. Scope: copilot-insights repo export projection and pure JSON/CSV serializers only; no IPC handler or renderer changes.",
     "dor": "M40 T0 plan doc closed and Q4 filter-scope decision resolved",
     "dod": "M40 complete when Tasks 1-8 ship with focused tests, E2E, typecheck, lint, strict claims, and Loki ledger closed",
     "verifiedBy": [
-      "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
-      "Q4 resolved in plan: company-scope export mirrors visible sidebar category/severity filters; all-company export applies the same filters globally and is labeled global",
-      "local-only boundary locked: no network, phone-home, automated sharing, migration, settings key, provider/router/MCP surface, or bus event",
-      "JSON validation — current-task, pending, and orchestrator JSON parse cleanly",
-      "git diff --check — clean",
+      "M40 T0 plan doc — docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
+      "M40 T1 commit pending — shared export constants/types, IpcContract entry, TeamXApi method, and typed preload bridge",
+      "Focused shared-types gate — pnpm -F @team-x/shared-types exec vitest run src/copilot-export.test.ts passed 1 file / 2 tests",
+      "pnpm typecheck — clean across 6 workspace packages",
       "pnpm lint — 0 errors / 21 known no-non-null-assertion warnings",
       "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED"
     ],
@@ -262,7 +261,7 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 6 M40 T0 Insight Export plan doc authored; M40 T1 shared export contracts are head-of-queue.",
+    "asOfTask": "Phase 6 M40 T1 shared export contracts shipped; M40 T2 copilot insight export read model is head-of-queue.",
     "unitTests": 1683,
     "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 focused gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests. M39 T8 focused gate passed shared-types 1 file / 2 tests and desktop 5 files / 27 tests.",
     "e2eSpecs": 15,
@@ -272,7 +271,7 @@
     "typecheckClean": true,
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "version": "1.1.1",
-    "phase6Next": "M40 T1 shared export contracts."
+    "phase6Next": "M40 T2 copilot insight export read model."
   },
   "targets": {
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
@@ -288,6 +287,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M40 T1 SHIPPED 2026-04-20 — shared Copilot export contracts implemented with TDD. Added packages/shared-types/src/copilot-export.test.ts; valid red proved COPILOT_EXPORT_FORMATS/COPILOT_EXPORT_SCOPES were missing. Added COPILOT_EXPORT_FORMATS, CopilotExportFormat, COPILOT_EXPORT_SCOPES, CopilotExportScope, CopilotExportRequest, and CopilotExportResponse in packages/shared-types/src/copilot.ts. Wired copilot.export into IpcContract and TeamXApi in packages/shared-types/src/ipc.ts. Typecheck surfaced that widening TeamXApi requires the typed preload object to expose the method, so apps/desktop/src/preload/api.ts now includes the copilotExport channel constant and bridge method; main-process register/handler remain scoped to T3. Plan doc updated to record that sequencing correction. Verification: focused shared-types test 1 file / 2 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M40 T2 repo export read model.",
     "PHASE 6 M40 T0 AUTHORED 2026-04-20 — NEW docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md. Plan-doc-only milestone for local Copilot insight export. Resolves Q4: company-scope export mirrors visible sidebar category/severity filters; all-company export applies the same filters globally and is labeled global. Locks local-only boundary: no network export, phone-home, automated sharing, migration, settings key, provider/router/MCP surface, or bus event. Defines JSON metadata envelope, CSV columns/escaping, 10,000-row cap with truncated flag, M24-compatible tmpdir()/team-x-exports file contract, sidebar filters/export controls, focused tests, E2E, user-guide docs, and final verification gate. Head-of-queue advances to M40 T1 shared export contracts.",
     "PHASE 6 M39 COMPLETE 2026-04-20 — Telemetry Per-Kind Filter shipped through T8 verification gate. Final evidence: biome checked 16 M39 files with no fixes; shared-types focused gate passed 1 file / 2 tests; desktop focused gate passed 5 files / 27 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED; pnpm -F @team-x/desktop build clean; telemetry-kind-filter Playwright passed 1 spec / 1 test. M39 surface: kind contracts, repo filters, IPC validation, preload propagation, renderer hooks/query keys, filter chips, subview request wiring, and E2E. Scope boundary preserved: no migrations, settings, bus events, providers, MCP surface, or write-side run behavior. Head-of-queue advances to M40 T0 Insight Export plan doc.",
     "PHASE 6 M39 T7 SHIPPED 2026-04-20 — telemetry kind filter Playwright E2E implemented with TDD. Added apps/desktop/e2e/telemetry-kind-filter.spec.ts; valid red reached Telemetry but failed because CompanyTelemetry lacked data-telemetry-stat=\"total-runs\". Added the stable selector to the Total Runs stat card. The spec now creates a work run through chat.send, creates a copilot run through copilot.configure, opens Telemetry, confirms All covers filtered buckets, then verifies Copilot and Work chip totals. Verification: pnpm -F @team-x/desktop build clean; telemetry-kind-filter Playwright 1 spec / 1 test passed; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. E2E surface now 15 specs / 20 Playwright cases. Head-of-queue advances to M39 T8 verification gate.",
@@ -341,6 +341,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M40 T1 — Shared export contracts"
+    "nextTask": "Phase 6 M40 T2 — Copilot insight export read model"
   }
 }
