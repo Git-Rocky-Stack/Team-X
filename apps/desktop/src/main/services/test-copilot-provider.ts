@@ -79,6 +79,21 @@ export const FIXTURE_COPILOT_EMPTY: Readonly<CopilotAnalyzerCompleteResult> = Ob
  * file.
  */
 export const CANNED_COPILOT_TABLE: Readonly<Record<string, string>> = Object.freeze({
+  // Phase 6 — M38 T7. Cost-only feedback-loop E2E fixture. The spec
+  // sets copilot categories to `['cost']`, which makes the analyzer
+  // prompt include `Allowed categories: cost`. This entry must appear
+  // before the broad `strategia-x` fixture below so cost-only ticks do
+  // not get an operational draft that the category gate drops.
+  'allowed categories: cost': JSON.stringify([
+    {
+      category: 'cost',
+      severity: 'warning',
+      title: 'E2E cost feedback insight',
+      body: 'Deterministic cost insight seeded by the M38 T7 E2E spec to exercise three same-category dismissals and the advisory weight downrank flow.',
+      expiresInHours: 24,
+      actionSuggestion: 'Review cost controls.',
+    },
+  ]),
   // Phase 5 — M33 T9. E2E copilot-service spec fixture. The analyzer
   // prompt always contains `Company: <name>` verbatim via
   // `buildAnalysisPrompt`, so the normalized substring `strategia-x`
