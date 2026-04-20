@@ -66,7 +66,7 @@ Every tool returns a JSON-safe envelope. `decompose_project` returns the propose
 
 ```
 score(employee, subtask) =
-  0.4 * role_fit(employee.role, subtask.type)        // 0–1, keyword heuristic over title + level
+  0.4 * role_fit(employee.role, subtask.type)        // 0–1, capability match with keyword fallback
 + 0.3 * (1 - load_ratio(employee))                   // 0–1, open tickets / max capacity
 + 0.2 * availability(employee)                        // 0 or 1, not in meeting + not archived
 + 0.1 * past_performance(employee, subtask.type)     // 0–1, completion-speed percentile
@@ -74,7 +74,7 @@ score(employee, subtask) =
 
 The weights are locked in `apps/desktop/src/main/services/agentic-tools-write.ts` and verified in 25 unit tests. Sum-to-1.0 is asserted at boot. Archived, fired, and system employees score zero across the board (so the tool never surfaces them).
 
-**Role-fit** is currently a keyword heuristic (engineer → implement, designer → design, manager → coordinate, etc.) with a baseline floor for unmatched roles. This is intentional — the design doc records it as Risk #2 option (b) — and will be replaced with `{role-slug}.md` `capabilities` frontmatter in Phase 6. **Past performance** falls back to 0.5 for employees with no completed agentic-runs of the same type, so newly hired employees aren't penalized.
+**Role-fit** is capability-backed when the employee's official role card and the subtask both expose capabilities. The scorer compares those capability sets and keeps the M32 keyword heuristic (engineer → implement, designer → design, manager → coordinate, etc.) as the fallback for generic subtasks, legacy outputs, and roles without capability metadata. **Past performance** falls back to 0.5 for employees with no completed agentic-runs of the same type, so newly hired employees aren't penalized.
 
 The scoring function is exposed in the `decompose_project` tool's projected `recommendedAssigneeId` field for each leaf subtask, so the loop can preview assignments in the plan before any ticket lands.
 
@@ -152,7 +152,7 @@ Every claim is grounded in a tool result. The bracketed citation reflects ticket
 
 **"`delegate_subtask` keeps assigning everything to the same employee."** Workload scoring weighs role-fit at 40% and availability at 20%, so an employee whose title matches the subtask type AND who is not in a meeting will dominate small orgs. Bump the load weight by lowering role-fit influence — currently the weights are locked at 0.4/0.3/0.2/0.1 and require a code change. As a quick fix, mark the over-assigned employee as in a meeting (or temporarily archive them) so `availability(employee)` returns 0 and the next-highest-scoring employee wins the round.
 
-**"All employees scored 0 in the workload-scoring trace."** Three reasons: every employee is `archived` or `fired` (check the org chart), every employee is `is_system = 1` (only the system-agent exists in this company — hire someone), or the role-fit heuristic returned 0 across the board (the subtask type doesn't match any title keyword). Check the `task.delegated { score: 0 }` payload in the Audit tab for the offending subtask.
+**"All employees scored 0 in the workload-scoring trace."** Three reasons: every employee is `archived` or `fired` (check the org chart), every employee is `is_system = 1` (only the system-agent exists in this company — hire someone), or the role-fit branch returned 0 across the board because the required capabilities did not match any role and the fallback keyword scorer found no title/type match. Check the `task.delegated { score: 0 }` payload in the Audit tab for the offending subtask.
 
 **"My `decompose_project` returned a `truncated: true` envelope."** The plan exceeded `planner_max_tickets`. Trailing subtasks were dropped before return. Either bump the setting or rephrase the prompt to ask for fewer leaves up front — the loop almost never re-queries with a higher cap on its own.
 
@@ -166,7 +166,7 @@ Every claim is grounded in a tool result. The bracketed citation reflects ticket
 
 **"How do I stop a planner run mid-decomposition?"** Same as M31 — click **Cancel** in the streaming palette state. The `command.stop` IPC channel fires the `AbortController`. Already-created tickets stay (writes are not rolled back), but no new tickets are created after the abort. The terminal step is `error { reason: 'canceled' }` and `agentic.failed { reason: 'canceled' }` fires on the bus.
 
-**"Can I write my own planner tool?"** Not yet. The three tools are main-process closures over existing repos with hard-coded level gates — intentionally built in, not plugin-loaded, so they bypass the MCP host and can't accidentally spawn external write paths. Phase 6 may revisit a tool plugin model with signed-pack semantics.
+**"Can I write my own planner tool?"** Not yet. The three tools are main-process closures over existing repos with hard-coded level gates — intentionally built in, not plugin-loaded, so they bypass the MCP host and can't accidentally spawn external write paths. Custom planner tools are not part of the Phase 6 surface.
 
 ## Privacy
 

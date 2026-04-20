@@ -100,6 +100,10 @@ stable contracts — or open an issue.
 
 ## Where to next
 
+- **Want the Phase 6 add-on tour?** See
+  [Phase 6 Walkthrough](../demo/phase-6-walkthrough.md) for
+  capability-backed role fit, Copilot feedback suggestions, telemetry
+  kind filters, and local insight export.
 - **Want to learn the command palette?** See
   [Keyboard Shortcuts](./keyboard-shortcuts.md).
 - **Want to try the copilot without reading the tour?** See
@@ -111,9 +115,10 @@ stable contracts — or open an issue.
   [CONTRIBUTING](../../CONTRIBUTING.md) for the role-spec schema and
   signing workflow.
 
-Phase 6 will take the copilot from reactive to autonomous — from
-"here is an insight" to "here is the fix, should I apply it?" The
-Phase 5 retrospective at
+The Phase 6 add-on tour keeps Copilot advisory: role-fit evidence,
+feedback weights, telemetry filters, and export make the system easier
+to inspect and calibrate without adding autonomous write-side action.
+For the planning background, see the Phase 5 retrospective at
 [`docs/plans/2026-04-19-team-x-phase-5-retrospective.md`](../plans/2026-04-19-team-x-phase-5-retrospective.md)
-§6 enumerates the seven candidate Phase 6 themes under active
-consideration.
+and the Phase 6 retrospective at
+[`docs/plans/2026-04-26-team-x-phase-6-retrospective.md`](../plans/2026-04-26-team-x-phase-6-retrospective.md).

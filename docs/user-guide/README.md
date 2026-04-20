@@ -34,8 +34,14 @@ Two shortcuts unlock most of the intelligence surface:
 10. [Copilot Service](copilot-service.md) — Periodic analyzer that surfaces operational / cost / org / workflow / anomaly insights, ask-the-copilot
 11. [Copilot UI](copilot-ui.md) — Sidebar panel + dashboard widget + `Cmd+Shift+K` shortcut for consuming copilot insights
 
+### Phase 6 — Capabilities & Evidence
+12. [Task Planner](task-planner.md) — Capability-backed role fit for planner assignments with the M32 keyword fallback preserved
+13. [Copilot Service](copilot-service.md) — Feedback category weights, repeated-dismissal suggestion audit trail, and Copilot run-kind tagging
+14. [Copilot UI](copilot-ui.md) — Feedback suggestions, category/severity filters, and local CSV/JSON insight export
+15. [Phase 6 Walkthrough](../demo/phase-6-walkthrough.md) — Release-candidate demo path for capability role fit, feedback, telemetry filters, and export
+
 ### Reference
-12. [Keyboard Shortcuts](keyboard-shortcuts.md) — Navigation, palette, sidebar, productivity shortcuts
+16. [Keyboard Shortcuts](keyboard-shortcuts.md) — Navigation, palette, sidebar, productivity shortcuts
 
 ## See also
 
@@ -44,3 +50,5 @@ Two shortcuts unlock most of the intelligence surface:
 - [CHANGELOG.md](../../CHANGELOG.md) — release notes
 - [Phase 5 retrospective](../plans/2026-04-19-team-x-phase-5-retrospective.md) — what shipped, what went well, what cost us time, what's deferred
 - [Phase 5 demo walkthrough](../demo/phase-5-walkthrough.md) — scripted ~15-minute tour of every shipped capability
+- [Phase 6 retrospective](../plans/2026-04-26-team-x-phase-6-retrospective.md) — comparable six-section retrospective for the capabilities and evidence pass
+- [Phase 6 demo walkthrough](../demo/phase-6-walkthrough.md) — scripted add-on tour for capability role fit, feedback, telemetry filters, and local export
