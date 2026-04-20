@@ -54,11 +54,13 @@ describe('runs repo — telemetry aggregates', () => {
     toolCallsCount?: number;
     status?: 'success' | 'error';
     startedAt?: number;
+    kind?: 'work' | 'agentic' | 'copilot';
   }): string {
     const id = runs.start({
       employeeId: opts.employeeId,
       provider: opts.provider,
       model: opts.model,
+      kind: opts.kind,
     });
     runs.finish(id, {
       status: opts.status ?? 'success',
@@ -542,6 +544,77 @@ describe('runs repo — telemetry aggregates', () => {
       const resultB = runs.costBreakdown(cidB);
       expect(resultB).toHaveLength(1);
       expect(resultB[0]?.provider).toBe('ollama');
+    });
+  });
+
+  describe('kind filters', () => {
+    it('filters all telemetry aggregates by persisted run kind when provided', () => {
+      const cid = seedCompany('Kind Corp');
+      const emp = seedEmployee(cid, 'swe', 'Alice');
+      const now = Date.now();
+
+      seedRun({
+        employeeId: emp,
+        provider: 'anthropic',
+        model: 'claude-work',
+        promptTokens: 10,
+        completionTokens: 5,
+        latencyMs: 100,
+        costUsd: '0.001',
+        toolCallsCount: 1,
+        startedAt: now - DAY_MS,
+        kind: 'work',
+      });
+      seedRun({
+        employeeId: emp,
+        provider: 'anthropic',
+        model: 'claude-agentic',
+        promptTokens: 100,
+        completionTokens: 50,
+        latencyMs: 200,
+        costUsd: '0.01',
+        toolCallsCount: 2,
+        startedAt: now - DAY_MS,
+        kind: 'agentic',
+      });
+      seedRun({
+        employeeId: emp,
+        provider: 'ollama',
+        model: 'llama-copilot',
+        promptTokens: 1000,
+        completionTokens: 500,
+        latencyMs: 300,
+        costUsd: '0',
+        toolCallsCount: 3,
+        startedAt: now - DAY_MS,
+        kind: 'copilot',
+      });
+
+      expect(runs.companyStats(cid).totalRuns).toBe(3);
+
+      const agenticCompany = runs.companyStats(cid, 'agentic');
+      expect(agenticCompany.totalRuns).toBe(1);
+      expect(agenticCompany.totalTokens).toBe(150);
+      expect(agenticCompany.totalToolCalls).toBe(2);
+
+      const copilotDaily = runs.dailyUsage(cid, now - 2 * DAY_MS, now, 'copilot');
+      expect(copilotDaily).toHaveLength(1);
+      expect(copilotDaily[0]?.totalRuns).toBe(1);
+      expect(copilotDaily[0]?.totalTokens).toBe(1500);
+
+      const workEmployees = runs.employeeStats(cid, 'work');
+      expect(workEmployees).toHaveLength(1);
+      expect(workEmployees[0]?.employeeId).toBe(emp);
+      expect(workEmployees[0]?.totalRuns).toBe(1);
+      expect(workEmployees[0]?.totalTokens).toBe(15);
+
+      const agenticCost = runs.costBreakdown(cid, now - 2 * DAY_MS, now, 'agentic');
+      expect(agenticCost).toHaveLength(1);
+      expect(agenticCost[0]?.provider).toBe('anthropic');
+      expect(agenticCost[0]?.model).toBe('claude-agentic');
+      expect(agenticCost[0]?.totalRuns).toBe(1);
+      expect(agenticCost[0]?.totalTokens).toBe(150);
+      expect(Number(agenticCost[0]?.costUsd)).toBeCloseTo(0.01, 4);
     });
   });
 });

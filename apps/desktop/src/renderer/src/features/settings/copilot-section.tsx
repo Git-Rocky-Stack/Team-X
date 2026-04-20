@@ -14,20 +14,43 @@ import { useEffect, useState } from 'react';
 
 import {
   COPILOT_CATEGORIES,
+  COPILOT_CATEGORY_WEIGHTS_DEFAULT,
+  COPILOT_CATEGORY_WEIGHT_CLAMP,
   COPILOT_SETTINGS_CLAMPS,
   type CopilotCategory,
+  type CopilotCategoryWeights,
   type SettingsGetCopilotResponse,
 } from '@team-x/shared-types';
 import { AlertTriangle, Loader2, Sparkles } from 'lucide-react';
 
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
-import { useCopilotSettings, useSetCopilot } from '@/hooks/use-settings.js';
+import {
+  useCopilotSettings,
+  useCopilotWeights,
+  useSetCopilot,
+  useSetCopilotWeights,
+} from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
+
+import { formatCopilotWeightLabel } from '../copilot/copilot-helpers.js';
 
 function clamp(value: number, min: number, max: number): number {
   if (Number.isNaN(value) || !Number.isFinite(value)) return min;
   return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function clampWeight(value: number): number {
+  if (Number.isNaN(value) || !Number.isFinite(value)) return COPILOT_CATEGORY_WEIGHT_CLAMP.default;
+  const clamped = Math.max(
+    COPILOT_CATEGORY_WEIGHT_CLAMP.min,
+    Math.min(COPILOT_CATEGORY_WEIGHT_CLAMP.max, value),
+  );
+  return Math.round(clamped * 10) / 10;
+}
+
+function copyWeights(weights: CopilotCategoryWeights): CopilotCategoryWeights {
+  return { ...weights };
 }
 
 /** Human-readable labels for category chips. */
@@ -42,13 +65,20 @@ const CATEGORY_LABELS: Record<CopilotCategory, string> = {
 export function CopilotSection() {
   const companyId = useAppStore((s) => s.companyId);
   const { data, isLoading, isError } = useCopilotSettings();
+  const weightsQuery = useCopilotWeights(companyId);
   const setCopilot = useSetCopilot();
+  const setCopilotWeights = useSetCopilotWeights();
 
   const [draft, setDraft] = useState<SettingsGetCopilotResponse | null>(null);
+  const [weightDraft, setWeightDraft] = useState<CopilotCategoryWeights | null>(null);
 
   useEffect(() => {
     if (data) setDraft(data);
   }, [data]);
+
+  useEffect(() => {
+    if (weightsQuery.data) setWeightDraft(copyWeights(weightsQuery.data.weights));
+  }, [weightsQuery.data]);
 
   if (isLoading || !draft) {
     return (
@@ -107,7 +137,15 @@ export function CopilotSection() {
     setCopilot.mutate({ companyId, categories: next });
   }
 
+  function commitWeight(cat: CopilotCategory, value: number) {
+    if (!weightDraft || !companyId) return;
+    const next = clampWeight(value);
+    setWeightDraft({ ...weightDraft, [cat]: next });
+    setCopilotWeights.mutate({ companyId, weights: { [cat]: next } });
+  }
+
   const { intervalMinutes } = COPILOT_SETTINGS_CLAMPS;
+  const weights = weightDraft ?? COPILOT_CATEGORY_WEIGHTS_DEFAULT;
 
   return (
     <section className="space-y-3">
@@ -117,7 +155,7 @@ export function CopilotSection() {
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Copilot
         </h4>
-        {setCopilot.isPending && (
+        {(setCopilot.isPending || setCopilotWeights.isPending) && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
       </div>
@@ -244,6 +282,66 @@ export function CopilotSection() {
             falls back to the full set.
           </p>
         </div>
+
+        {/* Category weighting */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              Category weighting
+            </span>
+            {weightsQuery.isFetching && (
+              <span className="text-[10px] font-mono text-muted-foreground/70">Loading</span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            {COPILOT_CATEGORIES.map((cat) => {
+              const value = weights[cat];
+              return (
+                <div
+                  key={cat}
+                  className="grid min-h-10 grid-cols-[minmax(6rem,1fr)_4.5rem_5rem] items-center gap-2"
+                  data-copilot-weight-category={cat}
+                >
+                  <label
+                    htmlFor={`copilot-weight-${cat}`}
+                    className="min-w-0 text-[11px] font-medium text-muted-foreground"
+                  >
+                    {CATEGORY_LABELS[cat]}
+                  </label>
+                  <span className="text-right text-[11px] font-mono text-foreground tabular-nums">
+                    {formatCopilotWeightLabel(value)}
+                  </span>
+                  <Input
+                    id={`copilot-weight-${cat}`}
+                    type="number"
+                    inputMode="decimal"
+                    min={COPILOT_CATEGORY_WEIGHT_CLAMP.min}
+                    max={COPILOT_CATEGORY_WEIGHT_CLAMP.max}
+                    step={0.1}
+                    value={value}
+                    onChange={(e) =>
+                      setWeightDraft({
+                        ...weights,
+                        [cat]: Number.parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    onBlur={() => commitWeight(cat, value)}
+                    disabled={
+                      setCopilotWeights.isPending ||
+                      weightsQuery.isLoading ||
+                      !companyId ||
+                      !weightDraft
+                    }
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground/70">
+            Lower noisy categories toward 0.0x or boost useful ones up to 2.0x.
+          </p>
+        </div>
       </div>
 
       {/* Save error banner */}
@@ -251,6 +349,15 @@ export function CopilotSection() {
         <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span className="min-w-0 truncate">Failed to save: {String(setCopilot.error)}</span>
+        </div>
+      )}
+
+      {setCopilotWeights.isError && (
+        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0 truncate">
+            Failed to save category weights: {String(setCopilotWeights.error)}
+          </span>
         </div>
       )}
     </section>

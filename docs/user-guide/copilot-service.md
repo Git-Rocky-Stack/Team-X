@@ -122,7 +122,7 @@ Expired insights are gone — they don't accumulate in a soft-deleted state. The
 
 ## Audit Trail
 
-Four new event types appear in the **Audit** tab:
+Five Copilot event types appear in the **Audit** tab:
 
 | Event | When | Payload |
 |-------|------|---------|
@@ -130,13 +130,14 @@ Four new event types appear in the **Audit** tab:
 | `copilot.insight` | Per insight inserted (not on merge) | `{ companyId, insightId, category, severity, title }` |
 | `copilot.dismissed` | When user clicks Dismiss | `{ companyId, insightId, dismissedAt }` |
 | `copilot.expired` | Per row removed by the expiry sweep | `{ companyId, insightId, category, severity, title, expiredAt }` |
+| `copilot.weights.changed` | When a repeated-dismissal feedback suggestion is applied | `{ companyId, category, previousWeight, nextWeight, dismissedCount }` |
 
-Filter the Audit tab on `copilot.*` to see the analyzer's full lifecycle. Every IPC mutation emits a bus event — invariant #11. The M34 renderer caches will invalidate without manual refetch the day they ship.
+Filter the Audit tab on `copilot.*` to see the analyzer's full lifecycle. Every IPC mutation emits a bus event — invariant #11. Renderer caches invalidate without manual refetch.
 
 ## Privacy and Runtime
 
 - **Provider router is the only LLM touch-point.** Analyzer calls go through `providerRouter.complete(...)` with `actor: 'system-copilot'`. Privacy tier + concurrency caps + cost tracking flow unchanged. With Ollama at the Local privacy tier, no analysis data leaves your machine
-- **Runs are tagged `kind: 'copilot'`** in the runs table. Telemetry tab can filter by run kind to separate copilot spend from agent loop spend (M34 will surface a Copilot row in the Telemetry view)
+- **Runs are tagged `kind: 'copilot'`** in the runs table. The Telemetry tab filters All / Work / Agentic / Copilot run buckets, so copilot spend can be separated from planner and read-side loop spend.
 - **Orchestrator is the only scheduler.** A meeting in progress pauses the analyzer's provider call; tickets and minutes are not generated behind a meeting
 - **Append-only event stream.** Every analyze, insight, dismiss, and expire surfaces on the bus
 - **Zero phone-home.** No new network surface, no external metrics, no update-check piggyback. Same posture as the rest of the app
@@ -159,7 +160,7 @@ The `copilot-service.spec.ts` E2E exercises a deterministic round-trip against t
 10. **Thread persists** — `chat.list(threadId)` returns ≥ 2 messages on the system-copilot thread. `chat.listThreads(companyId)` includes the copilot thread with `isSystemAgent: true`
 11. **Regression guards** — neither the M30 destructive (red) confirmation gate nor the M32 write-side (amber) gate is ever visible. Copilot is advisory by construction
 
-Full spec runs in 1.7 s. The whole E2E suite (10 cases across 9 spec files) takes ~27 s.
+The focused spec is part of the desktop Playwright surface, which currently covers 17 spec files / 22 cases.
 
 ## Troubleshooting
 
@@ -185,4 +186,4 @@ Full spec runs in 1.7 s. The whole E2E suite (10 cases across 9 spec files) take
 
 **"Rolling event window is empty after restart."** The window warm-starts from `events.list({ companyId, limit: 100 })` on the first `snapshot` per company. If you see `copilot.analyzed { insightsProposed: 0 }` repeatedly after a restart, the warm-start succeeded but the events table is genuinely empty (no recent activity) — perform any user action (create a ticket, open a meeting) and the next tick will have signal. If the warm-start is failing, the bus subscription is the canonical fallback — events emitted after the analyzer started will land in the deque regardless of the warm-start.
 
-**"Can I write my own Copilot tool?"** Not yet. The `query_copilot_insights` tool is a main-process closure over `CopilotInsightsRepo` with a hard-coded level gate (`SYSTEM_COPILOT_ROLE_ID` only). Phase 6 may revisit a tool plugin model with signed-pack semantics; for now the registry is closed by construction.
+**"Can I write my own Copilot tool?"** Not yet. The `query_copilot_insights` tool is a main-process closure over `CopilotInsightsRepo` with a hard-coded level gate (`SYSTEM_COPILOT_ROLE_ID` only). Custom Copilot tools are not part of the Phase 6 surface; for now the registry is closed by construction.

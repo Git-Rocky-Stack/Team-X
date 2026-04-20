@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createEventsRepo } from './events.js';
@@ -89,6 +89,40 @@ describe('events repo', () => {
       const got = events.since(0).find((e) => e.id === id);
       expect(got?.createdAt).toBeGreaterThanOrEqual(before);
       expect(got?.createdAt).toBeLessThanOrEqual(after);
+    });
+
+    it('assigns strictly increasing createdAt values when appends share a millisecond', () => {
+      const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(123_456);
+      try {
+        const first = events.append({
+          companyId: 'co-1',
+          actorId: 'x',
+          actorKind: 'system',
+          eventType: 'first',
+          payload: {},
+        });
+        const second = events.append({
+          companyId: 'co-1',
+          actorId: 'x',
+          actorKind: 'system',
+          eventType: 'second',
+          payload: {},
+        });
+        const third = events.append({
+          companyId: 'co-1',
+          actorId: 'x',
+          actorKind: 'system',
+          eventType: 'third',
+          payload: {},
+        });
+
+        expect([first.createdAt, second.createdAt, third.createdAt]).toEqual([
+          123_456, 123_457, 123_458,
+        ]);
+        expect(events.since(0).map((e) => e.eventType)).toEqual(['first', 'second', 'third']);
+      } finally {
+        nowSpy.mockRestore();
+      }
     });
 
     it('does NOT enforce a foreign key on companyId — events survive soft-deletes', () => {

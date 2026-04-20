@@ -147,6 +147,7 @@ export interface AgenticLoopRunsRepoStartInput {
   provider: string;
   model: string;
   threadId?: string;
+  kind?: 'work' | 'agentic' | 'copilot';
 }
 
 export interface AgenticLoopRunsRepoFinishInput {
@@ -647,6 +648,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       provider: resolved.provider,
       model: resolved.model,
       threadId,
+      kind: 'agentic',
     });
 
     const controller = new AbortController();

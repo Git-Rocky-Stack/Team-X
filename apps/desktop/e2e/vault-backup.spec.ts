@@ -126,8 +126,8 @@ test.describe('Team-X Phase 4 vault-backup flow', () => {
     // --- 1. App shell renders ------------------------------------------------
     await expect(window.locator('[data-testid="app-brand-name"]')).toBeVisible();
     log('Strategia-X visible');
-    await expect(window.getByText('Phase 5', { exact: true })).toBeVisible();
-    log('Phase 5 badge visible');
+    await expect(window.getByText('Phase 6', { exact: true })).toBeVisible();
+    log('Phase 6 badge visible');
     // M35 T9 stable-selector anchor — top-bar Copilot Sparkles button
     // (data-copilot-toolbar-toggle) proves the Phase 5 UI mounted.
     // Required by apps/desktop/src/e2e-regression-guards.test.ts.

@@ -162,7 +162,7 @@ Every claim is grounded in a tool result. The final answer's bracketed citation 
 
 **"Can I see every run from the past?"** Yes. Copilot Conversations is the primary surface — every run is a thread. For audit-log filtering, switch to the **Audit** tab, filter by event type `agentic.completed` or `agentic.failed`, and expand a row to see the payload (runId, finalAnswer, stepCount, tokensUsed, durationMs, or reason on failure).
 
-**"How do I write my own tool?"** You can't, yet. The six read-only tools are main-process closures over existing repos — intentionally built in, not plugin-loaded, so they bypass the MCP host and can't accidentally talk to an external service. The write-side (creating tickets, delegating work, reviewing deliverables) ships in M32 (Task Planner) and uses a separate tool set with destructive-action gates. Custom tools are not on the roadmap for Phase 5; Phase 6 may revisit.
+**"How do I write my own tool?"** You can't, yet. The six read-only tools are main-process closures over existing repos — intentionally built in, not plugin-loaded, so they bypass the MCP host and can't accidentally talk to an external service. The write-side (creating tickets, delegating work, reviewing deliverables) ships in M32 (Task Planner) and uses a separate tool set with destructive-action gates. Custom tools are not part of the Phase 6 surface.
 
 ## Privacy
 

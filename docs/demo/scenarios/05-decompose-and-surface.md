@@ -5,7 +5,7 @@ the loop to decompose a Q1 roadmap into tickets. The amber
 write-side gate fires. On Confirm, tickets land on the kanban.
 Seconds later the copilot sidebar surfaces a proactive insight
 about the new workload. This is the closer — the moment the
-viewer sees Team-X as an autonomous operator with guardrails.
+viewer sees Team-X as a guided operator with auditable guardrails.
 
 | Field | Value |
 |---|---|
@@ -155,6 +155,6 @@ viewer sees Team-X as an autonomous operator with guardrails.
 
 Narrator, closing 2 lines:
 > *"That was Phase 5 — the Intelligence Layer. Phase 6 will
-> take the copilot from reactive to autonomous: from 'here
-> is an insight' to 'here is the fix, should I apply it?'
-> Thanks for watching."*
+> take the copilot from reactive insight to evidence-backed
+> calibration: capability role-fit, feedback weights, telemetry
+> filters, and local export. Thanks for watching."*

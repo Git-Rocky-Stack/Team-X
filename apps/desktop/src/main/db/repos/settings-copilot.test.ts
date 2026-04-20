@@ -10,9 +10,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   COPILOT_CATEGORIES,
+  COPILOT_CATEGORY_WEIGHTS_DEFAULT,
+  COPILOT_CATEGORY_WEIGHT_CLAMP,
   COPILOT_ENABLED_DEFAULT,
   COPILOT_SETTINGS_CLAMPS,
   type CopilotCategory,
+  type SettingsSetCopilotWeightsRequest,
 } from '@team-x/shared-types';
 
 import * as schema from '../schema.js';
@@ -83,5 +86,71 @@ describe('setCopilot clamping', () => {
     const dirty = ['operational', 'bogus', 'anomaly', 'nope'] as unknown as CopilotCategory[];
     repo.setCopilot({ companyId: 'c1', categories: dirty });
     expect(repo.getCopilot().categories).toEqual(['operational', 'anomaly']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// copilot category weights — defaults + persistence
+// ---------------------------------------------------------------------------
+
+describe('copilot category weights', () => {
+  it('seedDefaults creates the copilot_category_weights setting', () => {
+    const repo = makeRepo();
+
+    repo.seedDefaults();
+
+    const raw = repo.getRaw('copilot_category_weights');
+    expect(raw).not.toBeNull();
+    expect(JSON.parse(raw ?? 'null')).toEqual(COPILOT_CATEGORY_WEIGHTS_DEFAULT);
+  });
+
+  it('returns five-key defaults when no weights are persisted', () => {
+    const repo = makeRepo();
+
+    expect(repo.getCopilotWeights()).toEqual({ weights: COPILOT_CATEGORY_WEIGHTS_DEFAULT });
+  });
+
+  it('patches one category without changing the others', () => {
+    const repo = makeRepo();
+
+    const result = repo.setCopilotWeights({ companyId: 'c1', weights: { cost: 0.25 } });
+
+    expect(result.weights).toEqual({
+      ...COPILOT_CATEGORY_WEIGHTS_DEFAULT,
+      cost: 0.3,
+    });
+    expect(repo.getCopilotWeights().weights).toEqual(result.weights);
+  });
+
+  it('clamps weights into the M38 category-weight range', () => {
+    const repo = makeRepo();
+
+    const result = repo.setCopilotWeights({
+      companyId: 'c1',
+      weights: { operational: -1, anomaly: 9 },
+    });
+
+    expect(result.weights.operational).toBe(COPILOT_CATEGORY_WEIGHT_CLAMP.min);
+    expect(result.weights.anomaly).toBe(COPILOT_CATEGORY_WEIGHT_CLAMP.max);
+  });
+
+  it('ignores unknown runtime keys and malformed persisted values', () => {
+    const repo = makeRepo();
+
+    const dirty = {
+      companyId: 'c1',
+      weights: { workflow: 1.5, bogus: 0 },
+    } as unknown as SettingsSetCopilotWeightsRequest;
+    repo.setCopilotWeights(dirty);
+    expect(repo.getCopilotWeights().weights).toEqual({
+      ...COPILOT_CATEGORY_WEIGHTS_DEFAULT,
+      workflow: 1.5,
+    });
+
+    repo.set('copilot_category_weights', { cost: 1.7, org: 'bad', extra: 2 });
+    expect(repo.getCopilotWeights().weights).toEqual({
+      ...COPILOT_CATEGORY_WEIGHTS_DEFAULT,
+      cost: 1.7,
+    });
   });
 });

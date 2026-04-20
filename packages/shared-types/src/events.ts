@@ -31,6 +31,7 @@ export type EventType =
   | 'copilot.analyzed'
   | 'copilot.expired'
   | 'copilot.dismissed'
+  | 'copilot.weights.changed'
   | 'company.archived'
   | 'company.created'
   | 'company.updated'
@@ -385,10 +386,14 @@ export interface ReviewCompletedPayload {
 //   - `copilot.expired` fires ONCE per row that transitioned expired in
 //     the tick's `expireStale` sweep. Per-row granularity lets the
 //     renderer animate individual card removal instead of a bulk reflow.
+//   - `copilot.weights.changed` fires after persisted feedback weights
+//     change so analyzer/UI consumers can refresh their local snapshots.
 // ---------------------------------------------------------------------------
 
 /** Authoritative category set — kept in sync with the SQL CHECK in 0011 + repo constants. */
 export type CopilotCategory = 'operational' | 'cost' | 'org' | 'workflow' | 'anomaly';
+
+export type CopilotCategoryWeights = Record<CopilotCategory, number>;
 
 /** Authoritative severity set — kept in sync with the SQL CHECK in 0011 + repo constants. */
 export type CopilotSeverity = 'critical' | 'warning' | 'info';
@@ -443,6 +448,12 @@ export interface CopilotExpiredPayload {
   runId: string;
   category: CopilotCategory;
   title: string;
+}
+
+export interface CopilotWeightsChangedPayload {
+  weights: CopilotCategoryWeights;
+  changedKeys: CopilotCategory[];
+  changedAt: number;
 }
 
 // ---------------------------------------------------------------------------

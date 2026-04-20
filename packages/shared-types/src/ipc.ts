@@ -49,6 +49,8 @@ import type {
   CopilotConfigureResult,
   CopilotDismissArgs,
   CopilotDismissResult,
+  CopilotExportRequest,
+  CopilotExportResponse,
   CopilotInsightListArgs,
   CopilotInsightListResult,
 } from './copilot.js';
@@ -64,8 +66,15 @@ import type {
   Thread,
   Ticket,
 } from './entities.js';
-import type { AgenticRunSnapshot, CopilotCategory, DashboardEvent } from './events.js';
+import type {
+  AgenticRunSnapshot,
+  CopilotCategory,
+  CopilotCategoryWeights,
+  DashboardEvent,
+} from './events.js';
 import type { PrivacyTier, ProviderConfig, ProviderKind } from './providers.js';
+
+export type { CopilotCategoryWeights } from './events.js';
 
 // ---------------------------------------------------------------------------
 // Low-level request / response shapes
@@ -638,8 +647,15 @@ export interface MeetingDetail extends Meeting {
 // Telemetry shapes (Phase 3 — M17)
 // ---------------------------------------------------------------------------
 
+export const TELEMETRY_RUN_KINDS = ['work', 'agentic', 'copilot'] as const;
+export type TelemetryRunKind = (typeof TELEMETRY_RUN_KINDS)[number];
+
+export const TELEMETRY_KIND_FILTERS = ['all', ...TELEMETRY_RUN_KINDS] as const;
+export type TelemetryKindFilter = (typeof TELEMETRY_KIND_FILTERS)[number];
+
 export interface TelemetryCompanyStatsRequest {
   companyId: string;
+  kind?: TelemetryRunKind;
 }
 
 /** Aggregate company-level telemetry summary. */
@@ -657,6 +673,7 @@ export interface TelemetryDailyUsageRequest {
   fromMs: number;
   /** Epoch millis — end of the date range (inclusive). */
   toMs: number;
+  kind?: TelemetryRunKind;
 }
 
 export interface TelemetryDailyUsageRow {
@@ -670,6 +687,7 @@ export interface TelemetryDailyUsageRow {
 
 export interface TelemetryEmployeeStatsRequest {
   companyId: string;
+  kind?: TelemetryRunKind;
 }
 
 export interface TelemetryEmployeeStatsRow {
@@ -687,6 +705,7 @@ export interface TelemetryCostBreakdownRequest {
   fromMs?: number;
   /** Optional epoch millis — end of range. */
   toMs?: number;
+  kind?: TelemetryRunKind;
 }
 
 export interface TelemetryCostBreakdownRow {
@@ -1194,6 +1213,20 @@ export const COPILOT_CATEGORIES: readonly CopilotCategory[] = [
   'anomaly',
 ] as const;
 
+export const COPILOT_CATEGORY_WEIGHT_CLAMP = {
+  min: 0,
+  max: 2,
+  default: 1,
+} as const;
+
+export const COPILOT_CATEGORY_WEIGHTS_DEFAULT: CopilotCategoryWeights = {
+  operational: 1,
+  cost: 1,
+  org: 1,
+  workflow: 1,
+  anomaly: 1,
+};
+
 /** Snapshot of the three copilot-service settings keys. */
 export interface SettingsGetCopilotResponse {
   /** Whether the analyzer runs at all. `false` short-circuits every scheduled + event-triggered tick. */
@@ -1221,6 +1254,25 @@ export interface SettingsSetCopilotRequest {
   enabled?: boolean;
   intervalMinutes?: number;
   categories?: CopilotCategory[];
+}
+
+export interface SettingsGetCopilotWeightsRequest {
+  /** Target company for future company-scoped settings; v1 stores the weights globally. */
+  companyId: string;
+}
+
+export interface SettingsGetCopilotWeightsResponse {
+  weights: CopilotCategoryWeights;
+}
+
+export interface SettingsSetCopilotWeightsRequest {
+  /** Target company for future company-scoped settings; v1 stores the weights globally. */
+  companyId: string;
+  weights: Partial<CopilotCategoryWeights>;
+}
+
+export interface SettingsSetCopilotWeightsResponse {
+  weights: CopilotCategoryWeights;
 }
 
 /** Clamp bounds + defaults for the `intervalMinutes` key. Shared by repo, handler, and UI. */
@@ -1528,6 +1580,14 @@ export interface IpcContract {
     request: SettingsSetCopilotRequest;
     response: undefined;
   };
+  'settings.getCopilotWeights': {
+    request: SettingsGetCopilotWeightsRequest;
+    response: SettingsGetCopilotWeightsResponse;
+  };
+  'settings.setCopilotWeights': {
+    request: SettingsSetCopilotWeightsRequest;
+    response: SettingsSetCopilotWeightsResponse;
+  };
   // Provider management channels (Phase 3 — M18)
   'providers.list': {
     request: Record<string, never>;
@@ -1682,6 +1742,10 @@ export interface IpcContract {
   'copilot.configure': {
     request: CopilotConfigureArgs;
     response: CopilotConfigureResult;
+  };
+  'copilot.export': {
+    request: CopilotExportRequest;
+    response: CopilotExportResponse;
   };
   // Ticket management channels
   'tickets.create': {
@@ -1996,11 +2060,15 @@ export interface TeamXApi {
   };
   telemetry: {
     /** Company-level aggregate stats (total runs, tokens, cost, latency). */
-    companyStats(companyId: string): Promise<TelemetryCompanyStatsResponse>;
+    companyStats(
+      req: string | TelemetryCompanyStatsRequest,
+    ): Promise<TelemetryCompanyStatsResponse>;
     /** Daily time-series of token usage and cost within a date range. */
     dailyUsage(req: TelemetryDailyUsageRequest): Promise<TelemetryDailyUsageRow[]>;
     /** Per-employee breakdown of runs, tokens, latency, and cost. */
-    employeeStats(companyId: string): Promise<TelemetryEmployeeStatsRow[]>;
+    employeeStats(
+      req: string | TelemetryEmployeeStatsRequest,
+    ): Promise<TelemetryEmployeeStatsRow[]>;
     /** Cost breakdown by provider and model, with optional date range filter. */
     costBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
   };
@@ -2038,6 +2106,14 @@ export interface TeamXApi {
      * new settings take effect without an app restart. Phase 5 — M33.
      */
     setCopilot(req: SettingsSetCopilotRequest): Promise<void>;
+    /** Get copilot feedback category weights. Phase 6 — M38. */
+    getCopilotWeights(
+      req: SettingsGetCopilotWeightsRequest,
+    ): Promise<SettingsGetCopilotWeightsResponse>;
+    /** Patch copilot feedback category weights. Phase 6 — M38. */
+    setCopilotWeights(
+      req: SettingsSetCopilotWeightsRequest,
+    ): Promise<SettingsSetCopilotWeightsResponse>;
   };
   providers: {
     /** List all configured providers with status. */
@@ -2186,6 +2262,13 @@ export interface TeamXApi {
      * 5-minute scheduled interval. Phase 5 — M33 T5.
      */
     configure(args: CopilotConfigureArgs): Promise<CopilotConfigureResult>;
+    /**
+     * Read-only local export of active Copilot insights as CSV or JSON.
+     * Company scope requires `companyId`; all-company scope applies the
+     * same optional category/severity filters globally. Emits no bus event.
+     * Phase 6 — M40.
+     */
+    export(args: CopilotExportRequest): Promise<CopilotExportResponse>;
   };
   tickets: {
     /** Create a new ticket. If assigneeId is provided, triggers agent assignment. */

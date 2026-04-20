@@ -168,8 +168,8 @@ test.describe('Team-X smoke', () => {
     // --- 1. App shell renders --------------------------------------------
     await expect(window.locator('[data-testid="app-brand-name"]')).toBeVisible();
     log('Strategia-X visible ✓');
-    await expect(window.getByText('Phase 5', { exact: true })).toBeVisible();
-    log('Phase 5 badge visible ✓');
+    await expect(window.getByText('Phase 6', { exact: true })).toBeVisible();
+    log('Phase 6 badge visible ✓');
     // M34 Copilot UI toolbar Sparkles button — stable-selector anchor per
     // M35 T9 regression-guard convention (see
     // apps/desktop/src/e2e-regression-guards.test.ts). Anchors the

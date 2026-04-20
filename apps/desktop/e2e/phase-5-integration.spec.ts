@@ -40,7 +40,7 @@
  *     appears across the whole session.
  *   - M32 T5 write-side gate ("Confirm write-side agentic run") fires
  *     exactly once — during Step 3 — and is absent before/after.
- *   - Top-bar phase badge reads `Phase 5` verbatim.
+ *   - Top-bar phase badge reads the current release phase verbatim.
  *
  * Zero production-code changes, zero new canned-seam entries — the
  * existing canned keys `what is my team doing right now` (M31 T8) and
@@ -188,8 +188,8 @@ test.describe('Team-X Phase 5 — M35 T2 cross-milestone integration', () => {
     log('test body entered');
 
     // --- 0. Phase badge + seeded company -----------------------------------
-    await expect(window.getByText('Phase 5', { exact: true })).toBeVisible();
-    log('Phase 5 badge visible');
+    await expect(window.getByText('Phase 6', { exact: true })).toBeVisible();
+    log('Phase 6 badge visible');
 
     const companyId = await window.evaluate(async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge

@@ -70,6 +70,8 @@ import type {
   CopilotConfigureResult,
   CopilotDismissArgs,
   CopilotDismissResult,
+  CopilotExportRequest,
+  CopilotExportResponse,
   CopilotInsightListArgs,
   CopilotInsightListResult,
   CreateGoalRequest,
@@ -116,6 +118,8 @@ import type {
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetCopilotResponse,
+  SettingsGetCopilotWeightsRequest,
+  SettingsGetCopilotWeightsResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
@@ -123,16 +127,20 @@ import type {
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
   SettingsSetCopilotRequest,
+  SettingsSetCopilotWeightsRequest,
+  SettingsSetCopilotWeightsResponse,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
   TeamXApi,
+  TelemetryCompanyStatsRequest,
   TelemetryCompanyStatsResponse,
   TelemetryCostBreakdownRequest,
   TelemetryCostBreakdownRow,
   TelemetryDailyUsageRequest,
   TelemetryDailyUsageRow,
+  TelemetryEmployeeStatsRequest,
   TelemetryEmployeeStatsRow,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
@@ -254,6 +262,8 @@ const CHANNELS = {
   settingsSetPlanner: 'settings.setPlanner',
   settingsGetCopilot: 'settings.getCopilot',
   settingsSetCopilot: 'settings.setCopilot',
+  settingsGetCopilotWeights: 'settings.getCopilotWeights',
+  settingsSetCopilotWeights: 'settings.setCopilotWeights',
   // Provider management (Phase 3 — M18)
   providersList: 'providers.list',
   providersAdd: 'providers.add',
@@ -310,7 +320,20 @@ const CHANNELS = {
   copilotDismiss: 'copilot.dismiss',
   copilotAsk: 'copilot.ask',
   copilotConfigure: 'copilot.configure',
+  copilotExport: 'copilot.export',
 } as const;
+
+function telemetryCompanyStatsRequest(
+  req: string | TelemetryCompanyStatsRequest,
+): TelemetryCompanyStatsRequest {
+  return typeof req === 'string' ? { companyId: req } : req;
+}
+
+function telemetryEmployeeStatsRequest(
+  req: string | TelemetryEmployeeStatsRequest,
+): TelemetryEmployeeStatsRequest {
+  return typeof req === 'string' ? { companyId: req } : req;
+}
 
 /**
  * Build the `TeamXApi` object the preload hands to `contextBridge`.
@@ -427,16 +450,17 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.meetingsGet, { meetingId }) as Promise<MeetingDetail>,
     },
     telemetry: {
-      companyStats: (companyId: string) =>
-        ipc.invoke(CHANNELS.telemetryCompanyStats, {
-          companyId,
-        }) as Promise<TelemetryCompanyStatsResponse>,
+      companyStats: (req: string | TelemetryCompanyStatsRequest) =>
+        ipc.invoke(
+          CHANNELS.telemetryCompanyStats,
+          telemetryCompanyStatsRequest(req),
+        ) as Promise<TelemetryCompanyStatsResponse>,
       dailyUsage: (req: TelemetryDailyUsageRequest) =>
         ipc.invoke(CHANNELS.telemetryDailyUsage, req) as Promise<TelemetryDailyUsageRow[]>,
-      employeeStats: (companyId: string) =>
-        ipc.invoke(CHANNELS.telemetryEmployeeStats, {
-          companyId,
-        }) as Promise<TelemetryEmployeeStatsRow[]>,
+      employeeStats: (req: string | TelemetryEmployeeStatsRequest) =>
+        ipc.invoke(CHANNELS.telemetryEmployeeStats, telemetryEmployeeStatsRequest(req)) as Promise<
+          TelemetryEmployeeStatsRow[]
+        >,
       costBreakdown: (req: TelemetryCostBreakdownRequest) =>
         ipc.invoke(CHANNELS.telemetryCostBreakdown, req) as Promise<TelemetryCostBreakdownRow[]>,
     },
@@ -469,6 +493,16 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.settingsGetCopilot) as Promise<SettingsGetCopilotResponse>,
       setCopilot: (req: SettingsSetCopilotRequest) =>
         ipc.invoke(CHANNELS.settingsSetCopilot, req) as Promise<void>,
+      getCopilotWeights: (req: SettingsGetCopilotWeightsRequest) =>
+        ipc.invoke(
+          CHANNELS.settingsGetCopilotWeights,
+          req,
+        ) as Promise<SettingsGetCopilotWeightsResponse>,
+      setCopilotWeights: (req: SettingsSetCopilotWeightsRequest) =>
+        ipc.invoke(
+          CHANNELS.settingsSetCopilotWeights,
+          req,
+        ) as Promise<SettingsSetCopilotWeightsResponse>,
     },
     providers: {
       list: () => ipc.invoke(CHANNELS.providersList) as Promise<ProviderConfig[]>,
@@ -548,6 +582,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.copilotAsk, args) as Promise<CopilotAskResult>,
       configure: (args: CopilotConfigureArgs) =>
         ipc.invoke(CHANNELS.copilotConfigure, args) as Promise<CopilotConfigureResult>,
+      export: (args: CopilotExportRequest) =>
+        ipc.invoke(CHANNELS.copilotExport, args) as Promise<CopilotExportResponse>,
     },
     tickets: {
       create: (req: CreateTicketRequest) =>

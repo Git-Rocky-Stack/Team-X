@@ -23,6 +23,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## Phase 6 - Capabilities & Evidence
+
+## [1.2.0] - 2026-04-20
+
+> **Status:** Phase 6 release notes staged by M41 T5. Baseline: v1.1.1 remediation exit (1683 unit tests / 13 E2E specs / 18 Playwright cases) -> Phase 6 evidence state (**1683 unit tests / 17 E2E specs / 22 Playwright cases**, strict claim gate 95 verified / 0 allowlisted / 0 UNALLOWED). Package version bump, Phase 6 badge freeze, COMPLETE marker, final release ledger, and tag are handled by the remaining M41 release tasks.
+
+### Added
+- **Capability taxonomy and role-fit reconciliation** - shared capability contracts, role-schema parser validation, official 57-role backfill, role-loader capability lookup, and capability-aware planner role-fit scoring with the M32 keyword fallback preserved for generic subtasks and legacy outputs.
+- **Copilot feedback loop** - repeated same-category dismissals can surface an advisory category-weight suggestion, applying the suggestion updates local Copilot feedback weights, and the append-only audit stream records `copilot.weights.changed`.
+- **Telemetry run-kind filter** - shared contracts, repo aggregate filters, IPC validation, preload propagation, renderer hooks, filter chips, subview request wiring, and E2E coverage for All / Work / Agentic / Copilot buckets.
+- **Local Copilot insight export** - sidebar category/severity filters, company/all-company scope, JSON and CSV serializers, local file writes under the Team-X export directory, saved-filename status copy, and focused E2E coverage. Export remains local-only: no sync, upload, sharing, or native save-dialog claim.
+- **Phase 6 integration E2E** - `apps/desktop/e2e/phase-6-integration.spec.ts` stitches capability role-fit outcome, feedback suggestion/apply, telemetry kind filters, and local JSON export in one fresh Electron boot.
+- **Phase 6 docs set** - six-section retrospective, Phase 6 walkthrough and scenario, README/user-guide reconciliation, and Phase 5 demo forward pointers updated to the evidence/calibration scope.
+
+### Changed
+- **Planner role-fit evidence** - Task Planner documentation and README now describe capability-backed role fit as the primary path when capability metadata is available, with deterministic M32 weights unchanged.
+- **Copilot UI and docs** - user-facing docs now cover feedback suggestions, category/severity filters, local export, and the advisory boundary for Copilot actions.
+- **README testing counters** - E2E surface updated to 17 Playwright specs / 22 cases and the Phase 6 integration spec is listed in the coverage table.
+
+### Fixed
+- **Agentic run-kind telemetry producer** - `AgenticLoopService` now persists `kind: 'agentic'` for agentic-loop rows so the Telemetry Agentic filter has real producer data instead of falling through to Work.
+- **Historical Phase 6 wording drift** - older Phase 5 demo text no longer frames Phase 6 as autonomous action; it points to the shipped evidence, feedback, telemetry, and export surfaces.
+
+---
+
 ## Phase 5.6 - Reconciliation & Remediation
 
 ## [1.1.1] - 2026-04-20
@@ -600,7 +625,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Git-Rocky-Stack/Team-X/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Git-Rocky-Stack/Team-X/releases/tag/v1.0.0

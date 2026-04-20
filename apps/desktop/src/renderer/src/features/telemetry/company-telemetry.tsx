@@ -18,17 +18,33 @@ import {
   YAxis,
 } from 'recharts';
 
-import { useCompanyStats, useDailyUsage } from '@/hooks/use-telemetry.js';
+import type { TelemetryKindFilter } from '@team-x/shared-types';
+
+import { telemetryRequestKind, useCompanyStats, useDailyUsage } from '@/hooks/use-telemetry.js';
 
 const DAY_MS = 86_400_000;
 
 interface Props {
   companyId: string;
+  kindFilter: TelemetryKindFilter;
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  dataTelemetryStat,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  dataTelemetryStat?: string;
+}) {
   return (
-    <div className="rounded-lg border border-border bg-surface-50 p-4">
+    <div
+      className="rounded-lg border border-border bg-surface-50 p-4"
+      data-telemetry-stat={dataTelemetryStat}
+    >
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
@@ -49,12 +65,18 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-export function CompanyTelemetry({ companyId }: Props) {
+export function CompanyTelemetry({ companyId, kindFilter }: Props) {
   const now = useMemo(() => Date.now(), []);
   const thirtyDaysAgo = now - 30 * DAY_MS;
+  const kind = telemetryRequestKind(kindFilter);
 
-  const { data: stats, isLoading: statsLoading } = useCompanyStats(companyId);
-  const { data: daily, isLoading: dailyLoading } = useDailyUsage(companyId, thirtyDaysAgo, now);
+  const { data: stats, isLoading: statsLoading } = useCompanyStats({ companyId, kind });
+  const { data: daily, isLoading: dailyLoading } = useDailyUsage({
+    companyId,
+    fromMs: thirtyDaysAgo,
+    toMs: now,
+    kind,
+  });
 
   if (statsLoading || dailyLoading) {
     return (
@@ -87,7 +109,11 @@ export function CompanyTelemetry({ companyId }: Props) {
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Runs" value={s.totalRuns.toLocaleString()} />
+        <StatCard
+          label="Total Runs"
+          value={s.totalRuns.toLocaleString()}
+          dataTelemetryStat="total-runs"
+        />
         <StatCard label="Total Tokens" value={formatTokens(s.totalTokens)} />
         <StatCard label="Total Cost" value={formatCost(s.totalCostUsd)} />
         <StatCard label="Avg Latency" value={`${s.avgLatencyMs}ms`} />

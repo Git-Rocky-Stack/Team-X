@@ -360,7 +360,7 @@ describe('createAgenticLoopService', () => {
     expect(userMsg?.content).toBe('analyze the backend');
   });
 
-  it('opens a runs row with employeeId=system-agent and resolver provider/model', async () => {
+  it('opens an agentic runs row with employeeId=system-agent and resolver provider/model', async () => {
     const fixture = buildFixture({ provider: 'anthropic', model: 'claude-sonnet-4-6' });
     const service = createAgenticLoopService(fixture.deps);
     await service.start({ companyId: fixture.companyId, userText: 'hi' });
@@ -369,6 +369,7 @@ describe('createAgenticLoopService', () => {
       employeeId: fixture.systemAgentId,
       provider: 'anthropic',
       model: 'claude-sonnet-4-6',
+      kind: 'agentic',
     });
   });
 

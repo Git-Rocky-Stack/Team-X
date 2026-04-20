@@ -67,6 +67,9 @@ import type {
   Company,
   CompanySettings,
   CompanyStatus,
+  CopilotExportRequest,
+  CopilotExportResponse,
+  CopilotWeightsChangedPayload,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -120,6 +123,8 @@ import type {
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetCopilotResponse,
+  SettingsGetCopilotWeightsRequest,
+  SettingsGetCopilotWeightsResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
@@ -127,6 +132,8 @@ import type {
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
   SettingsSetCopilotRequest,
+  SettingsSetCopilotWeightsRequest,
+  SettingsSetCopilotWeightsResponse,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -139,6 +146,7 @@ import type {
   TelemetryDailyUsageRow,
   TelemetryEmployeeStatsRequest,
   TelemetryEmployeeStatsRow,
+  TelemetryRunKind,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
   TestProviderConnectionRequest,
@@ -165,14 +173,22 @@ import type {
 import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import {
   AUTO_THREAD_ID,
+  COPILOT_CATEGORIES,
   DEFAULT_CONCURRENCY_CAPS,
   PRIVACY_TIER_RANK,
+  TELEMETRY_RUN_KINDS,
   getLevelRank,
 } from '@team-x/shared-types';
 
 import type { RoleSpec } from '@team-x/shared-types';
 
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
+import type { CopilotExportFilter, CopilotExportResult } from '../db/repos/copilot-insights.js';
+import {
+  COPILOT_SEVERITIES,
+  serializeCopilotInsightsCsv,
+  serializeCopilotInsightsJson,
+} from '../db/repos/copilot-insights.js';
 import type {
   CreateEmployeeInput,
   EmployeeRow,
@@ -444,10 +460,20 @@ export interface IpcEventsRepo {
 }
 
 export interface IpcRunsRepo {
-  companyStats(companyId: string): CompanyStats;
-  dailyUsage(companyId: string, fromMs: number, toMs: number): DailyUsageRow[];
-  employeeStats(companyId: string): EmployeeStatsRow[];
-  costBreakdown(companyId: string, fromMs?: number, toMs?: number): CostBreakdownRow[];
+  companyStats(companyId: string, kind?: TelemetryRunKind): CompanyStats;
+  dailyUsage(
+    companyId: string,
+    fromMs: number,
+    toMs: number,
+    kind?: TelemetryRunKind,
+  ): DailyUsageRow[];
+  employeeStats(companyId: string, kind?: TelemetryRunKind): EmployeeStatsRow[];
+  costBreakdown(
+    companyId: string,
+    fromMs?: number,
+    toMs?: number,
+    kind?: TelemetryRunKind,
+  ): CostBreakdownRow[];
 }
 
 export interface IpcMeetingsRepo {
@@ -537,6 +563,11 @@ export interface IpcAuditRepo {
   distinctEventTypes(companyId: string): string[];
 }
 
+/** Narrow copilot-insights repo surface the IPC export handler needs. */
+export interface IpcCopilotInsightsRepo {
+  listActiveForExport(filter: CopilotExportFilter): CopilotExportResult;
+}
+
 /** Narrow settings-repo surface the IPC handlers need. */
 export interface IpcSettingsRepo {
   get<T>(key: string, fallback: T): T;
@@ -553,6 +584,10 @@ export interface IpcSettingsRepo {
   getCopilot(): SettingsGetCopilotResponse;
   /** Copilot service settings — clamped/filtered write. Phase 5 — M33. */
   setCopilot(req: SettingsSetCopilotRequest): void;
+  /** Copilot feedback weights — snapshot read. Phase 6 — M38. */
+  getCopilotWeights(): SettingsGetCopilotWeightsResponse;
+  /** Copilot feedback weights — clamped partial write. Phase 6 — M38. */
+  setCopilotWeights(req: SettingsSetCopilotWeightsRequest): SettingsSetCopilotWeightsResponse;
 }
 
 /**
@@ -646,6 +681,8 @@ export interface IpcHandlerDeps {
   backupService: IpcBackupService;
   auditRepo: IpcAuditRepo;
   updaterService: IpcUpdaterService;
+  /** Copilot insight read model used by `copilot.export` (Phase 6 — M40). */
+  copilotInsightsRepo?: IpcCopilotInsightsRepo;
   /**
    * Copilot analyzer — restarted on `settings.setCopilot` so new
    * interval / enabled / categories take effect without an app
@@ -1026,6 +1063,10 @@ export interface IpcHandlers {
   settingsSetPlanner(req: SettingsSetPlannerRequest): Promise<void>;
   /** `settings.getCopilot` — copilot-service settings (enabled, interval in minutes, allowed categories) (Phase 5 — M33). */
   settingsGetCopilot(): Promise<SettingsGetCopilotResponse>;
+  /** `settings.getCopilotWeights` — copilot feedback category weights (Phase 6 — M38). */
+  settingsGetCopilotWeights(
+    req: SettingsGetCopilotWeightsRequest,
+  ): Promise<SettingsGetCopilotWeightsResponse>;
   /**
    * `settings.setCopilot` — patch one or more copilot-service settings with
    * clamping + category filtering, then synchronously restart the
@@ -1033,6 +1074,14 @@ export interface IpcHandlers {
    * an app restart (Phase 5 — M33).
    */
   settingsSetCopilot(req: SettingsSetCopilotRequest): Promise<void>;
+  /**
+   * `settings.setCopilotWeights` — patch copilot feedback category weights,
+   * then emit `copilot.weights.changed` so renderer/analyzer consumers can
+   * invalidate local snapshots (Phase 6 — M38).
+   */
+  settingsSetCopilotWeights(
+    req: SettingsSetCopilotWeightsRequest,
+  ): Promise<SettingsSetCopilotWeightsResponse>;
 
   // -----------------------------------------------------------------------
   // Provider management handlers (Phase 3 — M18)
@@ -1091,6 +1140,8 @@ export interface IpcHandlers {
   auditStats(req: { companyId: string }): Promise<AuditStats>;
   /** `audit.export` — export filtered events to a file. Returns saved path. */
   auditExport(req: AuditExportRequest): Promise<AuditExportResponse>;
+  /** `copilot.export` — export active copilot insights to a local JSON/CSV file. */
+  copilotExport(req: CopilotExportRequest): Promise<CopilotExportResponse>;
 
   // -----------------------------------------------------------------------
   // Ticket management handlers (Phase 2 — M12)
@@ -1185,6 +1236,52 @@ function assertCompanyActive(
       `[ipc] ${channel}: company ${companyId} is archived; reactivate before mutating org`,
     );
   }
+}
+
+function assertTelemetryRunKind(value: unknown, channel: string): TelemetryRunKind | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === 'string' && TELEMETRY_RUN_KINDS.includes(value as TelemetryRunKind)) {
+    return value as TelemetryRunKind;
+  }
+  throw new Error(`[ipc] ${channel}: kind must be work, agentic, or copilot`);
+}
+
+function assertCopilotExportRequest(req: CopilotExportRequest): CopilotExportFilter {
+  if (req.format !== 'csv' && req.format !== 'json') {
+    throw new Error('[ipc] copilot.export: format must be "csv" or "json"');
+  }
+  if (req.scope !== 'company' && req.scope !== 'all') {
+    throw new Error('[ipc] copilot.export: scope must be "company" or "all"');
+  }
+  if (
+    req.scope === 'company' &&
+    (typeof req.companyId !== 'string' || req.companyId.length === 0)
+  ) {
+    throw new Error('[ipc] copilot.export: companyId is required for company scope');
+  }
+  if (
+    req.category !== undefined &&
+    !COPILOT_CATEGORIES.includes(req.category as (typeof COPILOT_CATEGORIES)[number])
+  ) {
+    throw new Error(
+      `[ipc] copilot.export: category must be one of ${COPILOT_CATEGORIES.join(', ')}`,
+    );
+  }
+  if (
+    req.severity !== undefined &&
+    !COPILOT_SEVERITIES.includes(req.severity as (typeof COPILOT_SEVERITIES)[number])
+  ) {
+    throw new Error(
+      `[ipc] copilot.export: severity must be one of ${COPILOT_SEVERITIES.join(', ')}`,
+    );
+  }
+
+  return {
+    scope: req.scope,
+    ...(req.scope === 'company' ? { companyId: req.companyId } : {}),
+    ...(req.category !== undefined ? { category: req.category } : {}),
+    ...(req.severity !== undefined ? { severity: req.severity } : {}),
+  };
 }
 
 function rowToTicket(row: TicketRow): Ticket {
@@ -1369,6 +1466,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     backupService,
     auditRepo,
     updaterService,
+    copilotInsightsRepo,
     copilotAnalyzerService,
     copilotEventWindow,
     bus,
@@ -3058,7 +3156,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
         throw new Error('[ipc] telemetry.companyStats: companyId is required');
       }
-      return runsRepo.companyStats(req.companyId);
+      const kind = assertTelemetryRunKind(req.kind, 'telemetry.companyStats');
+      return runsRepo.companyStats(req.companyId, kind);
     },
 
     async telemetryDailyUsage(req) {
@@ -3068,21 +3167,24 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.fromMs !== 'number' || typeof req.toMs !== 'number') {
         throw new Error('[ipc] telemetry.dailyUsage: fromMs and toMs are required');
       }
-      return runsRepo.dailyUsage(req.companyId, req.fromMs, req.toMs);
+      const kind = assertTelemetryRunKind(req.kind, 'telemetry.dailyUsage');
+      return runsRepo.dailyUsage(req.companyId, req.fromMs, req.toMs, kind);
     },
 
     async telemetryEmployeeStats(req) {
       if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
         throw new Error('[ipc] telemetry.employeeStats: companyId is required');
       }
-      return runsRepo.employeeStats(req.companyId);
+      const kind = assertTelemetryRunKind(req.kind, 'telemetry.employeeStats');
+      return runsRepo.employeeStats(req.companyId, kind);
     },
 
     async telemetryCostBreakdown(req) {
       if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
         throw new Error('[ipc] telemetry.costBreakdown: companyId is required');
       }
-      return runsRepo.costBreakdown(req.companyId, req.fromMs, req.toMs);
+      const kind = assertTelemetryRunKind(req.kind, 'telemetry.costBreakdown');
+      return runsRepo.costBreakdown(req.companyId, req.fromMs, req.toMs, kind);
     },
 
     // -----------------------------------------------------------------------
@@ -3265,6 +3367,15 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       return settingsRepo.getCopilot();
     },
 
+    async settingsGetCopilotWeights(
+      req: SettingsGetCopilotWeightsRequest,
+    ): Promise<SettingsGetCopilotWeightsResponse> {
+      if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
+        throw new Error('[ipc] settings.getCopilotWeights: companyId is required');
+      }
+      return settingsRepo.getCopilotWeights();
+    },
+
     async settingsSetCopilot(req: SettingsSetCopilotRequest): Promise<void> {
       if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
         throw new Error('[ipc] settings.setCopilot: companyId is required');
@@ -3277,6 +3388,41 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (copilotAnalyzerService) {
         copilotAnalyzerService.restart(req.companyId);
       }
+    },
+
+    async settingsSetCopilotWeights(
+      req: SettingsSetCopilotWeightsRequest,
+    ): Promise<SettingsSetCopilotWeightsResponse> {
+      if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
+        throw new Error('[ipc] settings.setCopilotWeights: companyId is required');
+      }
+      const before = settingsRepo.getCopilotWeights().weights;
+      const result = settingsRepo.setCopilotWeights(req);
+      const changedKeys = COPILOT_CATEGORIES.filter(
+        (category) => before[category] !== result.weights[category],
+      );
+      if (bus) {
+        try {
+          bus.emit<CopilotWeightsChangedPayload>({
+            type: 'copilot.weights.changed',
+            companyId: req.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              weights: result.weights,
+              changedKeys,
+              changedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error('[ipc] settings.setCopilotWeights: bus emit failed (weights saved):', err);
+        }
+      } else {
+        console.warn(
+          '[ipc] settings.setCopilotWeights: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+      return result;
     },
 
     // -----------------------------------------------------------------------
@@ -3510,6 +3656,41 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       const filePath = join(exportDir, filename);
       writeFileSync(filePath, content, 'utf-8');
       return { filePath };
+    },
+
+    async copilotExport(req) {
+      const filter = assertCopilotExportRequest(req);
+      if (!copilotInsightsRepo) {
+        throw new Error('[ipc] copilot.export: copilotInsightsRepo dep unwired');
+      }
+
+      const result = copilotInsightsRepo.listActiveForExport(filter);
+      const exportedAtIso = new Date().toISOString();
+      const content =
+        req.format === 'csv'
+          ? serializeCopilotInsightsCsv(result.rows)
+          : serializeCopilotInsightsJson({
+              rows: result.rows,
+              filter,
+              exportedAtIso,
+              truncated: result.truncated,
+            });
+      const { writeFileSync, mkdirSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      const { tmpdir } = await import('node:os');
+      const exportDir = join(tmpdir(), 'team-x-exports');
+      mkdirSync(exportDir, { recursive: true });
+      const timestamp = exportedAtIso.replace(/[:.]/g, '-');
+      const filename = `copilot-insights-export-${timestamp}.${req.format}`;
+      const filePath = join(exportDir, filename);
+      writeFileSync(filePath, content, 'utf-8');
+      return {
+        filePath,
+        rowCount: result.rows.length,
+        truncated: result.truncated,
+        format: req.format,
+        scope: req.scope,
+      };
     },
 
     // -----------------------------------------------------------------------

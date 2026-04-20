@@ -14,6 +14,8 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import {
   AGENTIC_SETTINGS_CLAMPS,
   COPILOT_CATEGORIES,
+  COPILOT_CATEGORY_WEIGHTS_DEFAULT,
+  COPILOT_CATEGORY_WEIGHT_CLAMP,
   COPILOT_ENABLED_DEFAULT,
   COPILOT_SETTINGS_CLAMPS,
   type CopilotCategory,
@@ -24,9 +26,12 @@ import {
   type PlannerApprovalLevel,
   type SettingsGetAgenticResponse,
   type SettingsGetCopilotResponse,
+  type SettingsGetCopilotWeightsResponse,
   type SettingsGetPlannerResponse,
   type SettingsSetAgenticRequest,
   type SettingsSetCopilotRequest,
+  type SettingsSetCopilotWeightsRequest,
+  type SettingsSetCopilotWeightsResponse,
   type SettingsSetPlannerRequest,
 } from '@team-x/shared-types';
 
@@ -71,6 +76,7 @@ const SETTING_DEFAULTS: Array<{ key: string; value: unknown }> = [
     value: COPILOT_SETTINGS_CLAMPS.intervalMinutes.default,
   },
   { key: 'copilot_categories', value: COPILOT_CATEGORIES },
+  { key: 'copilot_category_weights', value: COPILOT_CATEGORY_WEIGHTS_DEFAULT },
 ];
 
 /**
@@ -84,6 +90,18 @@ function clampInt(value: number, min: number, max: number): number {
   if (rounded < min) return min;
   if (rounded > max) return max;
   return rounded;
+}
+
+function clampFloat(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  const rounded = Math.round(value * 10) / 10;
+  if (rounded < min) return min;
+  if (rounded > max) return max;
+  return rounded;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
@@ -301,6 +319,59 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
       const categories =
         filtered.length === 0 ? (COPILOT_CATEGORIES.slice() as CopilotCategory[]) : filtered;
       return { enabled, intervalMinutes, categories };
+    },
+
+    /**
+     * Read copilot feedback category weights as a five-key snapshot.
+     * Missing or malformed persisted data falls back per category so a
+     * partial bad write cannot disable the full analyzer weighting pass.
+     *
+     * Phase 6 — M38.
+     */
+    getCopilotWeights(): SettingsGetCopilotWeightsResponse {
+      const raw = this.get<unknown>('copilot_category_weights', COPILOT_CATEGORY_WEIGHTS_DEFAULT);
+      const weights = { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT };
+      if (isPlainRecord(raw)) {
+        for (const category of COPILOT_CATEGORIES) {
+          const value = raw[category];
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            weights[category] = clampFloat(
+              value,
+              COPILOT_CATEGORY_WEIGHT_CLAMP.min,
+              COPILOT_CATEGORY_WEIGHT_CLAMP.max,
+            );
+          }
+        }
+      }
+      return { weights };
+    },
+
+    /**
+     * Patch one or more copilot feedback category weights. Missing keys
+     * retain their current value, unknown runtime keys are ignored, and
+     * accepted values are rounded to one decimal before clamping to the
+     * M38 `[0, 2]` envelope.
+     *
+     * Note: `req.companyId` is reserved for future company-scoped
+     * settings; the current settings table stores these weights globally.
+     *
+     * Phase 6 — M38.
+     */
+    setCopilotWeights(req: SettingsSetCopilotWeightsRequest): SettingsSetCopilotWeightsResponse {
+      const weights = { ...this.getCopilotWeights().weights };
+      const patch = isPlainRecord(req.weights) ? req.weights : {};
+      for (const category of COPILOT_CATEGORIES) {
+        const value = patch[category];
+        if (typeof value === 'number') {
+          weights[category] = clampFloat(
+            value,
+            COPILOT_CATEGORY_WEIGHT_CLAMP.min,
+            COPILOT_CATEGORY_WEIGHT_CLAMP.max,
+          );
+        }
+      }
+      this.set('copilot_category_weights', weights);
+      return { weights };
     },
 
     /**

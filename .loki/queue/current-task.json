@@ -1,30 +1,40 @@
 {
-  "taskId": "Phase-6-M37-R-T0",
-  "milestone": "Phase 6 M37-R",
-  "milestoneName": "Capability Role-Fit Reconciliation",
+  "taskId": "Post-Phase-6-Handoff",
+  "milestone": "Phase 6 M41",
+  "milestoneName": "Demo + Hardening + v1.2.0",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M37-R T0 — Reconcile already-landed capability parser/backfill/role-fit work",
-  "status": "head-of-queue — Phase 5.6 M-G shipped; verify and ledger the existing Phase 6 capability/role-fit surface before new feature expansion",
-  "verifiedBy": null,
-  "predecessor": "Phase 5.6 M-G Branch Hygiene + Ship SHIPPED 2026-04-20 — atomic commit 852f6f7; v1.1.1 release docs/version/retrospective complete; tag/push follows ledger commit",
+  "title": "Phase 6 COMPLETE — v1.2.0 Release Handoff",
+  "status": "complete — final ledger commit is the v1.2.0 tag target; Phase 7 scope is not opened",
+  "verifiedBy": [
+    "M41 T10 — Release ledger + tag",
+    "M41 T9 final verification gate committed and pushed as 78acb8a",
+    "M41 and Phase 6 closed in Loki on this final ledger commit",
+    "Final verified counts: pnpm test 138 files / 1754 tests; Playwright 17 specs / 22 cases",
+    "Final gates: typecheck clean, lint 0 errors / 21 warnings, strict claims 95/0/0, desktop build clean",
+    "Windows package gate: pnpm dist:win succeeded under release/1.2.0/",
+    "Installer artifacts: Team-X-1.2.0-Setup.exe, Team-X-1.2.0-Setup-x64.exe, Team-X-1.2.0-Setup-arm64.exe",
+    "v1.2.0 tag is created on this final ledger commit after commit creation and pushed with the branch"
+  ],
+  "predecessor": "Phase 6 M41 T10 — Release Ledger + Tag",
   "dor": [
-    "Phase 5.6 M-G release atomic committed",
-    "Strict claim-evidence gate passed with 95 verified / 0 allowlisted / 0 UNALLOWED",
-    "Full unit and E2E gates passed at v1.1.1 release baseline",
-    "Earlier Phase 6 capability/role-fit commit 26d07df is intentionally present in branch history"
+    "Phase 6 M41 T10 release ledger shipped",
+    "v1.2.0 package markers and Phase 6 badge are present",
+    "Final verification gate passed in M41 T9",
+    "Windows installer artifacts exist under release/1.2.0/"
   ],
   "acceptance": [
-    "Inventory the existing capabilities parser/backfill/scorer surface from commit 26d07df",
-    "Verify official pack capabilities and signature against the v1.1.1 baseline",
-    "Run focused role-schema/shared-types/agentic-tools-write tests and record counts",
-    "Update Phase 6 docs/Loki so M36/M37 status matches on-disk reality",
-    "Decide the next implementation task after reconciliation without adding new feature scope in this pass"
+    "Do not start Phase 7 feature work from this handoff state",
+    "Await Rocky direction for the next phase or maintenance branch",
+    "If continuing release operations, verify v1.2.0 tag exists on the final ledger commit and is pushed"
   ],
-  "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
+  "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
+  "planDocSection": "Task 10: Release Ledger + Tag",
   "referenceDocs": [
-    "docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md",
+    "CLAUDE.md",
+    "CHANGELOG.md",
     "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "docs/plans/2026-04-20-team-x-phase-5.6-retrospective.md"
+    "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
+    "release/1.2.0/"
   ],
-  "nextStep": "Start with a read-only reconciliation pass over capabilities taxonomy, role-schema parsing, official role backfill, pack signature, and computeRoleFit behavior before new Phase 6 work."
+  "nextStep": "Await Rocky direction for Phase 7 scope or post-release maintenance. Phase 6 implementation is closed at v1.2.0."
 }

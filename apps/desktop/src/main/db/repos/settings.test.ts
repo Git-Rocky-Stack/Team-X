@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   AGENTIC_SETTINGS_CLAMPS,
   COPILOT_CATEGORIES,
+  COPILOT_CATEGORY_WEIGHTS_DEFAULT,
   COPILOT_ENABLED_DEFAULT,
   COPILOT_SETTINGS_CLAMPS,
   PLANNER_APPROVAL_LEVEL_DEFAULT,
@@ -76,7 +77,7 @@ describe('createSettingsRepo', () => {
   describe('seedDefaults', () => {
     it('seeds all default settings on empty DB', () => {
       const count = repo.seedDefaults();
-      expect(count).toBe(21);
+      expect(count).toBe(22);
       expect(repo.get<string>('runtime_strategy', '')).toBe('auto');
       expect(repo.get<string>('max_privacy_tier', '')).toBe('proprietary-cloud');
       expect(repo.get<number>('orchestrator_slots', 0)).toBe(6);
@@ -88,7 +89,7 @@ describe('createSettingsRepo', () => {
     it('does not overwrite existing settings', () => {
       repo.set('runtime_strategy', 'lean');
       const count = repo.seedDefaults();
-      expect(count).toBe(20); // 20 new after M33 copilot keys, runtime_strategy kept
+      expect(count).toBe(21); // 21 new after M38 copilot weights, runtime_strategy kept
       expect(repo.get<string>('runtime_strategy', '')).toBe('lean');
     });
 
@@ -236,6 +237,7 @@ describe('createSettingsRepo', () => {
       expect(cop.enabled).toBe(COPILOT_ENABLED_DEFAULT);
       expect(cop.intervalMinutes).toBe(5);
       expect(cop.categories).toEqual(Array.from(COPILOT_CATEGORIES));
+      expect(repo.getCopilotWeights().weights).toEqual(COPILOT_CATEGORY_WEIGHTS_DEFAULT);
     });
 
     it('pins clamp envelopes (min/max) unchanged from Phase 5 M31/M32/M33 baseline', () => {

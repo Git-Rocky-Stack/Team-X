@@ -78,12 +78,15 @@ meetings) and back-loads the headline Phase 5 capabilities
 ## Close (forward pointer)
 
 > *"That was Phase 5 — the Intelligence Layer. Phase 6 will take
-> the copilot from reactive to autonomous: from 'here is an
-> insight' to 'here is the fix, should I apply it?' Thanks for
-> watching."*
+> the copilot from reactive insight to evidence-backed calibration:
+> capability role-fit, feedback weights, telemetry filters, and
+> local export. Thanks for watching."*
 
-Phase 6 candidates from the [retrospective](../plans/2026-04-19-team-x-phase-5-retrospective.md)
-§6 are:
+The Phase 6 add-on walkthrough now lives at
+[`docs/demo/phase-6-walkthrough.md`](./phase-6-walkthrough.md). The
+original Phase 6 candidates from the
+[Phase 5 retrospective](../plans/2026-04-19-team-x-phase-5-retrospective.md)
+§6 were:
 
 1. Post-release telemetry digest (evidence-based default tuning).
 2. Cross-company copilot rollups.

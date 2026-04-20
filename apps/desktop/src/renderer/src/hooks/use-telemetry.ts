@@ -10,41 +10,65 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import type { TelemetryCostBreakdownRequest } from '@team-x/shared-types';
+import type {
+  TelemetryCompanyStatsRequest,
+  TelemetryCostBreakdownRequest,
+  TelemetryDailyUsageRequest,
+  TelemetryEmployeeStatsRequest,
+  TelemetryKindFilter,
+  TelemetryRunKind,
+} from '@team-x/shared-types';
 
 import { ipc } from '@/lib/ipc.js';
 
-export function useCompanyStats(companyId: string | null) {
+export function telemetryRequestKind(filter: TelemetryKindFilter): TelemetryRunKind | undefined {
+  return filter === 'all' ? undefined : filter;
+}
+
+export function useCompanyStats(req: TelemetryCompanyStatsRequest | null) {
   return useQuery({
-    queryKey: ['telemetry', 'companyStats', companyId],
+    queryKey: ['telemetry', 'companyStats', req?.companyId, req?.kind ?? 'all'],
     // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.telemetry.companyStats(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn: () => ipc.telemetry.companyStats(req!),
+    enabled: req !== null && req.companyId.length > 0,
   });
 }
 
-export function useDailyUsage(companyId: string | null, fromMs: number, toMs: number) {
+export function useDailyUsage(req: TelemetryDailyUsageRequest | null) {
   return useQuery({
-    queryKey: ['telemetry', 'dailyUsage', companyId, fromMs, toMs],
-    queryFn: () =>
-      // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-      ipc.telemetry.dailyUsage({ companyId: companyId!, fromMs, toMs }),
-    enabled: companyId !== null && companyId.length > 0,
+    queryKey: [
+      'telemetry',
+      'dailyUsage',
+      req?.companyId,
+      req?.fromMs,
+      req?.toMs,
+      req?.kind ?? 'all',
+    ],
+    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
+    queryFn: () => ipc.telemetry.dailyUsage(req!),
+    enabled: req !== null && req.companyId.length > 0,
   });
 }
 
-export function useEmployeeStats(companyId: string | null) {
+export function useEmployeeStats(req: TelemetryEmployeeStatsRequest | null) {
   return useQuery({
-    queryKey: ['telemetry', 'employeeStats', companyId],
+    queryKey: ['telemetry', 'employeeStats', req?.companyId, req?.kind ?? 'all'],
     // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.telemetry.employeeStats(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn: () => ipc.telemetry.employeeStats(req!),
+    enabled: req !== null && req.companyId.length > 0,
   });
 }
 
 export function useCostBreakdown(req: TelemetryCostBreakdownRequest | null) {
   return useQuery({
-    queryKey: ['telemetry', 'costBreakdown', req?.companyId, req?.fromMs, req?.toMs],
+    queryKey: [
+      'telemetry',
+      'costBreakdown',
+      req?.companyId,
+      req?.fromMs,
+      req?.toMs,
+      req?.kind ?? 'all',
+    ],
     // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
     queryFn: () => ipc.telemetry.costBreakdown(req!),
     enabled: req !== null && req.companyId.length > 0,

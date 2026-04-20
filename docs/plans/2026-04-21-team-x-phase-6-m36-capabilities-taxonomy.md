@@ -1,11 +1,25 @@
 # Team-X — Phase 6 M36 Plan: Capabilities Taxonomy + Parser
 
-> **Status:** Plan authored 2026-04-21 (T0). M36 implementation not yet started.
+> **Status:** Reconciled 2026-04-20 by M37-R. This document remains the M36 design authority, but the implementation is no longer future work: taxonomy, parser validation, official 57-role backfill, pack `1.1.0`, and signature update landed in commit `26d07df`.
 > **Milestone:** M36 — Capabilities Taxonomy + Parser (first Phase 6 milestone).
 > **Depends on:** Phase 5 COMPLETE (v1.1.0, 2026-04-20) + Phase 6 T0 plan doc (commit a429abf).
 > **Phase doc:** [2026-04-20-team-x-phase-6-capabilities-evidence.md](./2026-04-20-team-x-phase-6-capabilities-evidence.md) §5 (M36 row), §7 (D15 + D16), §9 (Q1).
 > **Version target:** v1.1.0 → v1.1.0 (M36 is internal — no semver bump; that lands at M41).
 > **Scope one-liner:** Lock the capability taxonomy, extend `role-schema` to parse + validate a `capabilities: string[]` frontmatter field, and backfill all 57 roles (55 F10 + 2 system) under `role-packs/strategia-official/roles/`.
+
+---
+
+## 0. M37-R Reconciliation Addendum
+
+M37-R verified that the M36 substrate already exists on disk and is covered by focused tests:
+
+- `packages/shared-types/src/capabilities.ts` exports the locked 41-capability taxonomy, 6-category map, runtime list, and `isCapability` guard.
+- `packages/role-schema/src/parse.ts` parses `capabilities`, rejects unknown / empty / non-string capability arrays, supports required-capability enforcement, and dedupes duplicates with warnings.
+- `role-packs/strategia-official/roles/` contains 57 role files (55 F10 + 2 system), all backfilled with non-empty official capabilities.
+- `role-packs/strategia-official/pack.json` is at `1.1.0`; `pack.sig` is present and verified by the existing signature tests.
+- Focused M37-R verification: shared-types taxonomy tests `20/20`, role-schema parser/backfill/signature tests `50/50`, and desktop role-loader / scorer tests `50/50`.
+
+The original sections below are preserved as historical M36 intent. Future Phase 6 work should treat M36 as reconciled/shipped, not as a pending T1/T2 implementation queue.
 
 ---
 
@@ -192,19 +206,18 @@ M36 is complete when all six conditions are met simultaneously:
 
 ---
 
-## 8. Handoff — what the next session does
+## 8. Handoff — reconciled state
 
-**M36 T1 opens here.** The next session authors the first implementation task. No task-level breakdown is pre-authored (per pending.json guidance: *M36 T0 is plan-doc-only*). M36 T1 is expected to be: **author `packages/shared-types/src/capabilities.ts` with the 41-string locked taxonomy + type guards + category map + unit tests**.
+M36 T1+ no longer opens from this document. The expected follow-up implementation was completed by the earlier Phase 6 capability/role-fit commit `26d07df` and reconciled by M37-R.
 
-Subsequent tasks expected (not pre-bound, not pre-numbered):
-- Parser extension in `packages/role-schema/` to validate the new frontmatter field.
-- Backfill of the 57 role.md files, clustered by level (Officer → IC → system).
-- Pack version bump + re-sign.
-- Source-string-audit marker test.
-- Verification sweep + M36 COMPLETE marker + ledger commit.
+Delivered surfaces:
+- Shared-types capability taxonomy + marker tests.
+- Role-schema parser validation + official-pack backfill audit.
+- Official 57-role capabilities backfill + pack version/signature update.
+- Loader/scorer consumption surface used by M37 role-fit v2.
 
 Atomic + ledger commit cadence restored at M35 T1 and held through Phase 5 exit is carried forward verbatim: one atomic `feat(m36):` / `test(m36):` / `docs(m36):` commit per task + one `chore(loki): M36 T<N> — commit ledger (<sha>)` follow-up. No squashed multi-task commits.
 
 ---
 
-*End of M36 T0 plan doc. Next session opens M36 T1 (taxonomy enum + shared-types scaffold).*
+*End of M36 plan doc. M36 is reconciled as shipped; M38 is the next new Phase 6 implementation milestone after M37-R closes.*

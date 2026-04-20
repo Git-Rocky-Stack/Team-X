@@ -732,6 +732,9 @@ app
       backupService,
       auditRepo,
       updaterService,
+      copilotInsightsRepo: {
+        listActiveForExport: (filter) => copilotInsightsRepo.listActiveForExport(filter),
+      },
       // Lazy wrapper — the CopilotAnalyzerService is instantiated later
       // in this same bootstrap block (after RAG indexer, agentic loop,
       // etc.), so we close over the module-level handle and resolve it
@@ -1249,6 +1252,7 @@ app
           enabled: snap.enabled,
           intervalMinutes: snap.intervalMinutes,
           categories: snap.categories,
+          categoryWeights: settingsRepo.getCopilotWeights().weights,
         };
       },
       resolveComplete: async ({ companyId, systemCopilotId }) => {
@@ -1546,6 +1550,8 @@ app
       copilotInsightsRepo,
       copilotAnalyzerService: copilotAnalyzerServiceInstance,
       bus,
+      auditRepo,
+      settingsRepo,
       isTestMode,
       agenticLoopStart: (req) =>
         copilotServiceInstance.ask({ companyId: req.companyId, text: req.text }),

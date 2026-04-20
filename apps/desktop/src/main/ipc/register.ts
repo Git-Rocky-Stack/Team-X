@@ -130,6 +130,8 @@ const REQUEST_CHANNELS = [
   'settings.setPlanner',
   'settings.getCopilot',
   'settings.setCopilot',
+  'settings.getCopilotWeights',
+  'settings.setCopilotWeights',
   // Provider management (Phase 3 — M18)
   'providers.list',
   'providers.add',
@@ -161,6 +163,8 @@ const REQUEST_CHANNELS = [
   'audit.list',
   'audit.stats',
   'audit.export',
+  // Copilot insight export (Phase 6 — M40)
+  'copilot.export',
   // Ticket attachments (Phase 4 — M22)
   'tickets.attachFile',
   'tickets.detachFile',
@@ -587,6 +591,20 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     },
   );
 
+  ipcMain.handle(
+    'settings.getCopilotWeights',
+    async (_event, request: import('@team-x/shared-types').SettingsGetCopilotWeightsRequest) => {
+      return handlers.settingsGetCopilotWeights(request);
+    },
+  );
+
+  ipcMain.handle(
+    'settings.setCopilotWeights',
+    async (_event, request: import('@team-x/shared-types').SettingsSetCopilotWeightsRequest) => {
+      return handlers.settingsSetCopilotWeights(request);
+    },
+  );
+
   // Provider management handlers (Phase 3 — M18)
   ipcMain.handle('providers.list', async () => {
     return handlers.providersList();
@@ -716,6 +734,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
       },
     ) => {
       return handlers.auditExport(request);
+    },
+  );
+
+  ipcMain.handle(
+    'copilot.export',
+    async (_event, request: import('@team-x/shared-types').CopilotExportRequest) => {
+      return handlers.copilotExport(request);
     },
   );
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { DashboardEvent } from '@team-x/shared-types';
+import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
+import type { AuditEvent, CopilotCategory, DashboardEvent } from '@team-x/shared-types';
 
 import {
   type CopilotHandlersDeps,
@@ -57,8 +58,36 @@ function makeDeps(overrides: Partial<CopilotHandlersDeps> = {}): CopilotHandlers
         createdAt: 100,
       })) as unknown as CopilotHandlersDeps['bus']['emit'],
     },
+    auditRepo: {
+      list: vi.fn(() => []),
+    },
+    settingsRepo: {
+      getCopilotWeights: vi.fn(() => ({ weights: COPILOT_CATEGORY_WEIGHTS_DEFAULT })),
+    },
     isTestMode: () => true,
     now: () => 5_000_000,
+    ...overrides,
+  };
+}
+
+function dismissedEvent(
+  category: CopilotCategory,
+  createdAt: number,
+  overrides: Partial<AuditEvent> = {},
+): AuditEvent {
+  return {
+    id: `evt-${category}-${createdAt}`,
+    companyId: 'c1',
+    actorId: 'rocky',
+    actorKind: 'user',
+    eventType: 'copilot.dismissed',
+    payloadJson: JSON.stringify({
+      insightId: `insight-${category}-${createdAt}`,
+      dismissedAt: createdAt,
+      category,
+      title: `${category} title`,
+    }),
+    createdAt,
     ...overrides,
   };
 }
@@ -145,12 +174,17 @@ describe('copilot.dismiss', () => {
       companyId: string;
       actorId: string;
       actorKind: string;
-      payload: { insightId: string; dismissedAt: number };
+      payload: { insightId: string; dismissedAt: number; category: string; title: string };
     };
     expect(emitted.type).toBe('copilot.dismissed');
     expect(emitted.companyId).toBe('c1');
     expect(emitted.actorKind).toBe('user');
-    expect(emitted.payload).toEqual({ insightId: 'i1', dismissedAt: 5_000_000 });
+    expect(emitted.payload).toEqual({
+      insightId: 'i1',
+      dismissedAt: 5_000_000,
+      category: 'operational',
+      title: 'Blocked tickets stacking on Alice',
+    });
 
     // Second call on the now-dismissed row — no repo mutation, no bus emit,
     // returns the prior timestamp (idempotent).
@@ -163,6 +197,126 @@ describe('copilot.dismiss', () => {
   it('throws when the insight id is unknown', async () => {
     const handlers = buildCopilotHandlers(makeDeps());
     await expect(handlers.dismiss({ id: 'nope' })).rejects.toThrow(/not found/);
+  });
+
+  it('returns no suggestion for the second same-category dismissal in seven days', async () => {
+    const deps = makeDeps({
+      now: () => 1_000_000_000,
+      copilotInsightsRepo: {
+        listActive: vi.fn(() => []),
+        getById: vi.fn(() => row({ id: 'i1', category: 'operational' })),
+        dismiss: vi.fn(),
+      },
+      auditRepo: {
+        list: vi.fn(() => [dismissedEvent('operational', 999_999_000)]),
+      },
+    });
+    const handlers = buildCopilotHandlers(deps);
+
+    const result = await handlers.dismiss({ id: 'i1' });
+
+    expect(result.feedbackSuggestion).toBeUndefined();
+  });
+
+  it('returns a suggestion on the third same-category dismissal in seven days', async () => {
+    const deps = makeDeps({
+      now: () => 1_000_000_000,
+      copilotInsightsRepo: {
+        listActive: vi.fn(() => []),
+        getById: vi.fn(() => row({ id: 'i1', category: 'operational' })),
+        dismiss: vi.fn(),
+      },
+      auditRepo: {
+        list: vi.fn(() => [
+          dismissedEvent('operational', 999_999_000),
+          dismissedEvent('operational', 999_998_000),
+        ]),
+      },
+    });
+    const handlers = buildCopilotHandlers(deps);
+
+    const result = await handlers.dismiss({ id: 'i1' });
+
+    expect(result.feedbackSuggestion).toEqual({
+      category: 'operational',
+      dismissalsInWindow: 3,
+      windowDays: 7,
+      currentWeight: 1,
+      suggestedWeight: 0.5,
+      reason: 'You dismissed 3 operational insights in the last 7 days.',
+    });
+  });
+
+  it('does not trigger on mixed categories', async () => {
+    const deps = makeDeps({
+      now: () => 1_000_000_000,
+      copilotInsightsRepo: {
+        listActive: vi.fn(() => []),
+        getById: vi.fn(() => row({ id: 'i1', category: 'operational' })),
+        dismiss: vi.fn(),
+      },
+      auditRepo: {
+        list: vi.fn(() => [
+          dismissedEvent('cost', 999_999_000),
+          dismissedEvent('org', 999_998_000),
+        ]),
+      },
+    });
+    const handlers = buildCopilotHandlers(deps);
+
+    const result = await handlers.dismiss({ id: 'i1' });
+
+    expect(result.feedbackSuggestion).toBeUndefined();
+  });
+
+  it('does not count dismissals older than seven days', async () => {
+    const deps = makeDeps({
+      now: () => 1_000_000_000,
+      copilotInsightsRepo: {
+        listActive: vi.fn(() => []),
+        getById: vi.fn(() => row({ id: 'i1', category: 'operational' })),
+        dismiss: vi.fn(),
+      },
+      auditRepo: {
+        list: vi.fn(() => [
+          dismissedEvent('operational', 1_000_000_000 - 8 * 24 * 60 * 60 * 1000),
+          dismissedEvent('operational', 999_998_000),
+        ]),
+      },
+    });
+    const handlers = buildCopilotHandlers(deps);
+
+    const result = await handlers.dismiss({ id: 'i1' });
+
+    expect(result.feedbackSuggestion).toBeUndefined();
+  });
+
+  it('suggests 0.0 when current category weight is already 0.5', async () => {
+    const deps = makeDeps({
+      now: () => 1_000_000_000,
+      copilotInsightsRepo: {
+        listActive: vi.fn(() => []),
+        getById: vi.fn(() => row({ id: 'i1', category: 'operational' })),
+        dismiss: vi.fn(),
+      },
+      auditRepo: {
+        list: vi.fn(() => [
+          dismissedEvent('operational', 999_999_000),
+          dismissedEvent('operational', 999_998_000),
+        ]),
+      },
+      settingsRepo: {
+        getCopilotWeights: vi.fn(() => ({
+          weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT, operational: 0.5 },
+        })),
+      },
+    });
+    const handlers = buildCopilotHandlers(deps);
+
+    const result = await handlers.dismiss({ id: 'i1' });
+
+    expect(result.feedbackSuggestion?.currentWeight).toBe(0.5);
+    expect(result.feedbackSuggestion?.suggestedWeight).toBe(0);
   });
 });
 
@@ -263,13 +417,18 @@ describe('copilot.configure', () => {
 
 // Compile-time only. Ensures the DashboardEvent import is referenced so
 // tsc won't drop it, and documents the wire-contract stability.
-const _typeSmoke: DashboardEvent<{ insightId: string; dismissedAt: number }> = {
+const _typeSmoke: DashboardEvent<{
+  insightId: string;
+  dismissedAt: number;
+  category: string;
+  title: string;
+}> = {
   id: 'evt',
   type: 'copilot.dismissed',
   companyId: 'c1',
   actorId: 'rocky',
   actorKind: 'user',
-  payload: { insightId: 'i1', dismissedAt: 1 },
+  payload: { insightId: 'i1', dismissedAt: 1, category: 'operational', title: 'Insight' },
   createdAt: 1,
 };
 void _typeSmoke;

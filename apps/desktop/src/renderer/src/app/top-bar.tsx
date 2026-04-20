@@ -54,7 +54,7 @@ export function TopBar() {
           Strategia-X
         </span>
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
-          Phase 5
+          Phase 6
         </Badge>
       </div>
 

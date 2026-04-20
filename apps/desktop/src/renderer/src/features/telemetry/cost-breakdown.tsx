@@ -22,12 +22,15 @@ import {
   YAxis,
 } from 'recharts';
 
-import { useCostBreakdown } from '@/hooks/use-telemetry.js';
+import type { TelemetryKindFilter } from '@team-x/shared-types';
+
+import { telemetryRequestKind, useCostBreakdown } from '@/hooks/use-telemetry.js';
 
 const DAY_MS = 86_400_000;
 
 interface Props {
   companyId: string;
+  kindFilter: TelemetryKindFilter;
 }
 
 type DateRange = '7d' | '30d' | '90d' | 'all';
@@ -64,16 +67,17 @@ function formatCost(usd: string | number): string {
   return `$${n.toFixed(2)}`;
 }
 
-export function CostBreakdown({ companyId }: Props) {
+export function CostBreakdown({ companyId, kindFilter }: Props) {
   const [range, setRange] = useState<DateRange>('30d');
 
   const now = useMemo(() => Date.now(), []);
+  const kind = telemetryRequestKind(kindFilter);
 
   const req = useMemo(() => {
-    if (range === 'all') return { companyId };
+    if (range === 'all') return { companyId, kind };
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
-    return { companyId, fromMs: now - days * DAY_MS, toMs: now };
-  }, [companyId, range, now]);
+    return { companyId, fromMs: now - days * DAY_MS, toMs: now, kind };
+  }, [companyId, kind, range, now]);
 
   const { data: rows, isLoading } = useCostBreakdown(req);
 
