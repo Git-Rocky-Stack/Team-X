@@ -1,40 +1,37 @@
 {
-  "taskId": "Phase-6-M41-T1",
+  "taskId": "Phase-6-M41-T2",
   "milestone": "Phase 6 M41",
   "milestoneName": "Demo + Hardening + v1.2.0",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M41 T1 — Cross-milestone Phase 6 integration E2E",
-  "status": "head-of-queue — M41 T0 plan doc shipped; next write the Phase 6 integration Playwright spec",
+  "title": "Phase 6 M41 T2 — Phase 6 Retrospective",
+  "status": "head-of-queue — M41 T1 integration E2E shipped; next write the Phase 6 retrospective",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M41 T0 — Demo + Hardening plan doc",
+  "predecessor": "Phase 6 M41 T1 — Cross-milestone Phase 6 integration E2E",
   "dor": [
-    "M41 T0 plan doc is committed",
-    "M40 Insight Export exit gate is closed",
-    "Existing Electron E2E harness and canned test seams are available"
+    "M41 T1 integration E2E is committed",
+    "Phase 6 M36/M37-R through M40 are closed",
+    "M35 retrospective structure is available as the locked template"
   ],
   "acceptance": [
-    "Follow Task 1 in docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-    "Create apps/desktop/e2e/phase-6-integration.spec.ts",
-    "Write the failing Playwright spec before stabilization",
-    "Launch Electron with NODE_ENV=test and a fresh user-data dir",
-    "Exercise Phase 6 surfaces in one flow: capability role-fit outcome, M38 feedback suggestion/apply, M39 telemetry kind filter, and M40 insight export",
-    "Use existing canned seams; do not add a new test seam unless the plan is amended",
-    "Stabilize selectors only if the E2E exposes a missing stable selector",
-    "Run pnpm -F @team-x/desktop build",
-    "Run pnpm -F @team-x/desktop exec playwright test e2e/phase-6-integration.spec.ts",
-    "Run pnpm typecheck",
-    "Run pnpm lint",
+    "Follow Task 2 in docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
+    "Create docs/plans/2026-04-26-team-x-phase-6-retrospective.md",
+    "Use the locked six-section M35 retrospective structure",
+    "Include one concise shipped line for M36/M37-R, M38, M39, M40, and M41",
+    "Include metrics: focused test growth, E2E spec/case growth, IPC/channel deltas, bus event deltas, migration delta, and docs/release deltas",
+    "Include Phase 7 seeds as hypotheses, not commitments",
     "Run pnpm audit:claims -- --strict",
-    "Update Loki to advance from M41 T1 to M41 T2"
+    "Run pnpm lint",
+    "Run git diff --check",
+    "Update Loki to advance from M41 T2 to M41 T3"
   ],
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-  "planDocSection": "Task 1: Phase 6 Integration E2E",
+  "planDocSection": "Task 2: Phase 6 Retrospective",
   "referenceDocs": [
     "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-    "apps/desktop/e2e/copilot-feedback.spec.ts",
-    "apps/desktop/e2e/telemetry-kind-filter.spec.ts",
-    "apps/desktop/e2e/copilot-insight-export.spec.ts",
-    "apps/desktop/e2e/task-planner.spec.ts"
+    "docs/plans/2026-04-19-team-x-phase-5-retrospective.md",
+    "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+    "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
+    ".loki/state/orchestrator.json"
   ],
-  "nextStep": "Begin M41 T1 by writing the failing Playwright integration spec, then run build and the focused spec."
+  "nextStep": "Begin M41 T2 by creating the Phase 6 retrospective with the locked M35 six-section structure."
 }
