@@ -169,6 +169,8 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 ### Step (g) — E2E spec + full verification gate
 
+> **2026-04-19 — SHIPPED.** Step (g) added company lifecycle audit assertions to `apps/desktop/e2e/workspace-switcher.spec.ts`, hardened the org-chart invalid-cycle E2E path to use the deterministic manager-select rejection flow after the valid drag persistence check, and ran the full M-D exit gate. Evidence: `docs/qa/2026-04-19-m-d-step-g-verification-gate.md`.
+
 **Goal:** Close the milestone with a real end-to-end spec and run the full verification gate.
 
 **Files:**
@@ -177,12 +179,12 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 - MODIFIED E2E specs that assert Chat tab disabled (if any — grep first) → flip to asserting it's enabled.
 
 **Acceptance (M-D exit KPI):**
-- vitest: baseline 1572 + new unit tests (estimate +30–60 across hooks + components).
-- E2E: 13 specs / 18 cases after step (f) org-chart interactions; step (g) runs the final M-D verification gate and updates the exit KPI.
+- vitest: 125 files / 1683 tests green after Node ABI rebuild.
+- E2E: 13 specs / 18 Playwright cases green after Electron ABI rebuild.
 - typecheck clean across 6 packages.
-- lint 0 errors / ≤21 warnings (baseline preserved).
-- `pnpm audit:claims`: 92 / 3 / 0 preserved — no allowlist movement expected (M-D adds no IPC channels).
-- invariant #11: every new hook subscribes to its relevant bus events (covered by `event-sync-hooks.test.ts` source-string audits).
+- lint 0 errors / 21 warnings (baseline preserved).
+- `pnpm audit:claims`: 92 / 3 / 0 preserved — no allowlist movement (M-D added no IPC channels).
+- invariant #11: every new hook subscribes to its relevant bus events (covered by `event-sync-hooks.test.ts` source-string audits), and the final E2E gate verifies company + employee lifecycle audit rows.
 
 ## 4. Sequencing + dependencies
 

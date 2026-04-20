@@ -783,15 +783,15 @@ Count reconciliation vs M-A §1.2:
 
 ### 20.2 Cluster A — Multi-company architecture (Rocky's locked M7 design) — 7 rows, ALL `restore`
 
-| Row | Surface | Disposition | Owner milestone |
-|---|---|---|---|
-| 2.1 | `companies.create` / `companies.update` / `companies.delete` IPC umbrella | restore | M-C |
-| 2.2 | `WorkspaceSwitcher` UI | restore | M-D |
-| 2.3 | `CreateCompanyDialog` UI | restore | M-D |
-| 2.4 | `CompanySettings` panel | restore | M-D |
-| 10.12 | `companies.create` channel | restore | M-C |
-| 10.13 | `companies.delete` channel | restore | M-C |
-| 10.15 | `companies.update` channel | restore | M-C |
+| Row | Surface | Disposition | Owner milestone | M-D/M-C exit evidence |
+|---|---|---|---|---|
+| 2.1 | `companies.create` / `companies.update` / `companies.delete` IPC umbrella | restore | M-C | M-C shipped commits `b858067` + `fd3617b`; verified by `pnpm audit:claims` 92 / 3 / 0 |
+| 2.2 | `WorkspaceSwitcher` UI | restore | M-D | M-D shipped `workspace-switcher.tsx`; E2E `workspace-switcher.spec.ts` 4/4; final full Playwright 18/18 |
+| 2.3 | `CreateCompanyDialog` UI | restore | M-D | M-D shipped `create-company-dialog.tsx`; E2E create workspace path; final full Playwright 18/18 |
+| 2.4 | `CompanySettings` panel | restore | M-D | M-D shipped `company-settings.tsx`; E2E update/archive/delete + company lifecycle audit assertions; final full Playwright 18/18 |
+| 10.12 | `companies.create` channel | restore | M-C | M-C shipped commit `b858067`; allowlist entry removed; `pnpm audit:claims` verified |
+| 10.13 | `companies.delete` channel | restore | M-C | M-C shipped commit `fd3617b`; allowlist entry removed; `pnpm audit:claims` verified |
+| 10.15 | `companies.update` channel | restore | M-C | M-C shipped commit `fd3617b`; allowlist entry removed; `pnpm audit:claims` verified |
 
 **Cluster-A dependencies + gotchas:**
 - Every `companies.create` path MUST run `ensureSystemAgent` + `ensureSystemCopilot` on the newly-created row (contract established by M33 F4 + documented in CLAUDE.md Troubleshooting "Companies repo lacks…" paragraph that M-F will rewrite).
@@ -801,17 +801,17 @@ Count reconciliation vs M-A §1.2:
 
 ### 20.3 Cluster B — Org chart (M9) — 8 rows, ALL `restore`
 
-| Row | Surface | Disposition | Owner milestone |
-|---|---|---|---|
-| 2.16 | `org_edges` table + cycle-detection helper | restore | M-C (new migration `0013_*.sql` — verify slot before assigning) |
-| 2.18 | `employees.promote` IPC channel | restore | M-C |
-| 2.19 | `employees.setManager` IPC channel | restore | M-C |
-| 2.20 | `orgchart.get` IPC channel | restore | M-C |
-| 2.21 | indented-list org tree UI (`renderer/src/features/org/`) | restore | M-D |
-| 2.22 | drag-to-rearrange org | restore | M-D |
-| 10.29 | `employees.promote` channel (dup of 2.18 cross-cut entry) | restore | M-C |
-| 10.30 | `employees.setManager` channel (dup of 2.19 cross-cut entry) | restore | M-C |
-| 10.47 | `orgchart.get` channel (dup of 2.20 cross-cut entry) | restore | M-C |
+| Row | Surface | Disposition | Owner milestone | M-D/M-C exit evidence |
+|---|---|---|---|---|
+| 2.16 | `org_edges` table + cycle-detection helper | restore | M-C (new migration `0013_*.sql` — verify slot before assigning) | M-C shipped commit `f417a18`; migration + repo tests included in full Vitest 1683/1683 |
+| 2.18 | `employees.promote` IPC channel | restore | M-C | M-C shipped commit `19dbd35`; allowlist entry removed; final `pnpm audit:claims` verified |
+| 2.19 | `employees.setManager` IPC channel | restore | M-C | M-C shipped commit `19dbd35`; allowlist entry removed; final `pnpm audit:claims` verified |
+| 2.20 | `orgchart.get` IPC channel | restore | M-C | M-C shipped commit `c2e6c92`; allowlist entry removed; final `pnpm audit:claims` verified |
+| 2.21 | indented-list org tree UI (`renderer/src/features/org/`) | restore | M-D | M-D shipped `features/orgchart/*`; E2E `org-chart.spec.ts` 2/2; final full Playwright 18/18 |
+| 2.22 | drag-to-rearrange org | restore | M-D | M-D shipped valid drag persistence, manager-select cycle rejection, promote/fire, and audit assertions in `org-chart.spec.ts`; final full Playwright 18/18 |
+| 10.29 | `employees.promote` channel (dup of 2.18 cross-cut entry) | restore | M-C | M-C shipped commit `19dbd35`; final `pnpm audit:claims` verified |
+| 10.30 | `employees.setManager` channel (dup of 2.19 cross-cut entry) | restore | M-C | M-C shipped commit `19dbd35`; final `pnpm audit:claims` verified |
+| 10.47 | `orgchart.get` channel (dup of 2.20 cross-cut entry) | restore | M-C | M-C shipped commit `c2e6c92`; final `pnpm audit:claims` verified |
 
 **Cluster-B dependencies + gotchas:**
 - Row 2.16 is the foundation — migration + schema + cycle-detection helper MUST land before the channels.
@@ -822,10 +822,10 @@ Count reconciliation vs M-A §1.2:
 
 ### 20.4 Cluster C — Top-bar Chat tab entry point — 2 rows, ALL `restore`
 
-| Row | Surface | Disposition | Owner milestone |
-|---|---|---|---|
-| 1.25 | top-bar app shell — `Chat` tab `disabled: true` | restore | M-D |
-| 1.26 | chat drawer entry point via top-bar tab | restore | M-D |
+| Row | Surface | Disposition | Owner milestone | M-D exit evidence |
+|---|---|---|---|---|
+| 1.25 | top-bar app shell — `Chat` tab `disabled: true` | restore | M-D | M-D shipped commit `579f730`; Chat tab enabled in `top-bar.tsx`; final full Playwright 18/18 |
+| 1.26 | chat drawer entry point via top-bar tab | restore | M-D | M-D shipped `chat-view.tsx` + ChatDrawer handoff; `workspace-switcher.spec.ts` chat case; final full Playwright 18/18 |
 
 **Notes:** chat drawer (5 files in `features/chat/`) + IPC (`chat.send` / `chat.list` / `chat.resolveThread` / `chat.listThreads`) are already shipped — this is a single `disabled: true` → `false` flip in `top-bar.tsx:35` plus a view-route wire-up to the existing drawer. Net change: ≤10 LOC + 1 renderer test.
 

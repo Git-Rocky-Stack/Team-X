@@ -142,7 +142,7 @@ test.describe('Team-X Phase 5.6 M-D org chart read-side', () => {
     log('keyboard action affordance is reachable');
   });
 
-  test('reassigns, rejects invalid drops, promotes, fires, and surfaces audit events', async () => {
+  test('reassigns, rejects invalid manager moves, promotes, fires, and surfaces audit events', async () => {
     const log = (msg: string) => console.log(`[e2e:org-chart-interactions] ${msg}`);
     const suffix = Date.now().toString(36);
     const managerName = `Interaction Manager ${suffix}`;
@@ -224,12 +224,16 @@ test.describe('Team-X Phase 5.6 M-D org chart read-side', () => {
     const reportNodeAfterRestart = window.locator(
       `[data-org-chart-drag-handle="${seeded.reportId}"]`,
     );
-    await managerNodeAfterRestart.dragTo(reportNodeAfterRestart);
+    await managerNodeAfterRestart.locator('button').first().press('Enter');
+    await managerNodeAfterRestart
+      .locator('[data-org-chart-manager-select]')
+      .selectOption(seeded.reportId);
     await expect(window.locator('[data-org-chart-toast]')).toContainText(
       'Could not update reporting line',
     );
-    log('invalid cycle-forming drop was rejected with user feedback');
+    log('invalid cycle-forming manager move was rejected with user feedback');
 
+    await reportNodeAfterRestart.locator('button').first().press('Enter');
     await reportNodeAfterRestart.locator('[data-org-chart-promote]').click();
     await window.locator('[data-promote-role-select]').selectOption('staff-engineer');
     await window.getByRole('button', { name: 'Confirm promote' }).click();

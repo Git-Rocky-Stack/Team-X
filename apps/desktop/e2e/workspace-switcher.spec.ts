@@ -5,8 +5,9 @@
  * had source-string unit guards: boot, open the WorkspaceSwitcher,
  * create a second workspace through the live dialog, verify the new
  * workspace becomes active, then switch back to the seeded Strategia-X
- * workspace from the menu. Phase 5.6 M-D step (c) extends the spec
- * over the CompanySettings panel and HireDialog manager-select.
+ * workspace from the menu. Later M-D steps extend this spec over the
+ * CompanySettings panel, HireDialog manager-select, Chat tab handoff, and
+ * step-(g) company lifecycle audit assertions.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -33,7 +34,7 @@ function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
-async function createWorkspace(window: Page, name: string): Promise<void> {
+async function createWorkspace(window: Page, name: string): Promise<string> {
   const switcher = window.locator('[data-workspace-switcher-trigger]');
   await switcher.click();
   await window.locator('[data-workspace-switcher-action="create-company"]').click();
@@ -44,6 +45,37 @@ async function createWorkspace(window: Page, name: string): Promise<void> {
   await window.locator('[data-create-company-submit]').click();
   await expect(dialog).toBeHidden();
   await expect(switcher).toContainText(name);
+  return window.evaluate(async (workspaceName) => {
+    // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
+    const companies = await (window as any).teamx.companies.list();
+    const company = companies.find((c: { name: string }) => c.name === workspaceName);
+    if (!company) throw new Error(`Created workspace not found: ${workspaceName}`);
+    return company.id as string;
+  }, name);
+}
+
+async function expectCompanyAuditEvents(
+  window: Page,
+  companyId: string,
+  eventTypes: string[],
+): Promise<void> {
+  await expect
+    .poll(async () =>
+      window.evaluate(
+        async ({ companyId, eventTypes }) => {
+          // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
+          const events = await (window as any).teamx.audit.list({
+            companyId,
+            eventTypes,
+            limit: 25,
+          });
+          const seen = new Set(events.map((event: { eventType: string }) => event.eventType));
+          return eventTypes.every((eventType) => seen.has(eventType));
+        },
+        { companyId, eventTypes },
+      ),
+    )
+    .toBe(true);
 }
 
 test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
@@ -172,7 +204,7 @@ test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
     const deleteWorkspace = `Delete Workspace ${suffix}`;
     const switcher = window.locator('[data-workspace-switcher-trigger]');
 
-    await createWorkspace(window, workspaceName);
+    const workspaceId = await createWorkspace(window, workspaceName);
     log('created settings target workspace');
 
     await switcher.click();
@@ -194,6 +226,9 @@ test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
     await expect(switcher).toContainText(renamedWorkspace);
     log('rename persisted and switcher reflected the new name');
 
+    await expectCompanyAuditEvents(window, workspaceId, ['company.created', 'company.updated']);
+    log('audit log recorded company create and update events');
+
     await switcher.click();
     await window.locator('[data-workspace-switcher-action="company-settings"]').click();
     await window.locator('[data-company-settings-archive]').click();
@@ -210,9 +245,14 @@ test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
       return companies.find((c: { name: string }) => c.name === name)?.status ?? null;
     }, renamedWorkspace);
     expect(archivedStatus).toBe('archived');
+    await expectCompanyAuditEvents(window, workspaceId, [
+      'company.created',
+      'company.updated',
+      'company.archived',
+    ]);
     log('archive hid the workspace from the switcher and marked it archived');
 
-    await createWorkspace(window, deleteWorkspace);
+    const deleteWorkspaceId = await createWorkspace(window, deleteWorkspace);
     await switcher.click();
     await window.locator('[data-workspace-switcher-action="company-settings"]').click();
     await window.getByText('Permanently delete this workspace').click();
@@ -226,6 +266,9 @@ test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
       return companies.some((c: { name: string }) => c.name === name);
     }, deleteWorkspace);
     expect(stillExists).toBe(false);
+    // `companies.delete` intentionally sweeps prior rows for that company;
+    // the post-delete audit proof is the snapshot-bearing company.deleted row.
+    await expectCompanyAuditEvents(window, deleteWorkspaceId, ['company.deleted']);
     log('delete removed the workspace end-to-end');
   });
 
