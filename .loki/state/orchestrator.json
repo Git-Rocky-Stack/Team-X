@@ -1,8 +1,8 @@
 {
   "currentPhase": "REMEDIATION",
-  "currentMilestone": "Phase 5.6 M-D",
-  "milestoneName": "UI Backfill",
-  "tasksCompleted": 6,
+  "currentMilestone": "Phase 5.6 M-F",
+  "milestoneName": "Documentation Truth-Up",
+  "tasksCompleted": 7,
   "tasksFailed": 0,
   "totalTasks": 7,
   "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
@@ -47,11 +47,11 @@
   "previousPhaseStatus": "PAUSED at M36 T2 pending Phase 5.6 M-G ship",
   "previousPhaseCompletedAt": null,
   "previousPhaseVersionTag": "v1.2.0 (target — paused)",
-  "previousMilestone": "Phase 5.6 M-C",
-  "previousMilestoneName": "Backend Backfill (all 5 sub-steps shipped: a/b/c/d + d hardening + e; atomic commits f417a18/b858067/c2e6c92/19dbd35/c6b118a/fd3617b)",
-  "previousMilestoneCompletedAt": "2026-04-18T00:00:00Z",
-  "nextMilestone": "Phase 5.6 M-F",
-  "nextMilestoneName": "Documentation Truth-Up — three-bucket CLAUDE.md rewrite (shipped/deferred/deprecated) + audit-doc cross-check shows zero remaining restore rows + docs-only IPC table renames for the remaining 3 mcp.* naming-drift allowlist entries. Blocked by M-D UI Backfill (the current head-of-queue).",
+  "previousMilestone": "Phase 5.6 M-D",
+  "previousMilestoneName": "UI Backfill (all 7 steps shipped; final step g full verification gate green)",
+  "previousMilestoneCompletedAt": "2026-04-19T18:00:00-07:00",
+  "nextMilestone": "Phase 5.6 M-G",
+  "nextMilestoneName": "Branch Hygiene + Ship — blocked by M-F Documentation Truth-Up",
   "tasksInProgress": {},
   "baseline": {
     "unitTests": 1130,
@@ -65,15 +65,15 @@
   },
   "current": {
     "unitTests": 1683,
-    "unitTestsNote": "Phase 5.6 M-D step (f) shipped in atomic 3aca4ed — 4 new OrgChartInteractions source-string contract tests. Focused renderer suite passed 5 files / 117 tests; root total inferred from 1679 step (e) baseline + 4 new tests.",
+    "unitTestsNote": "M-D exit gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild.",
     "e2eSpecs": 13,
     "e2eGreenCount": 18,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; biome --fix auto-fixed format-only errors on the step e files. 0 rule-suppressions.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 5.6 M-D step (f) Org-chart interactions shipped (atomic 3aca4ed); head-of-queue advances to M-D step (g) E2E spec + full verification gate",
-    "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (90/5 → 92/3 at step e ship; M-C-exit allowlist target reached)",
+    "asOfTask": "Phase 5.6 M-D step (g) E2E + full verification gate shipped 2026-04-19 in atomic commit 3680c96; current milestone is M-F Documentation Truth-Up.",
+    "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (remaining allowlist entries are mcp.* naming-drift scheduled for M-F)",
     "phase5Complete": true,
     "version": "1.1.0"
   },
@@ -721,9 +721,27 @@
         "auditDoc": "every gap row disposition-assigned ✓; §17 cross-check 10/10 confirmed ✓; §20 rollup landed ✓; §21 renumbered cleanly ✓"
       },
       "dispositionRollup": {
-        "restore": { "P0": 15, "P1": 2, "P2": 6, "P3": 4, "total": 27 },
-        "deprecate": { "P0": 0, "P1": 0, "P2": 2, "P3": 12, "total": 14 },
-        "replace": { "P0": 0, "P1": 0, "P2": 0, "P3": 0, "total": 0 },
+        "restore": {
+          "P0": 15,
+          "P1": 2,
+          "P2": 6,
+          "P3": 4,
+          "total": 27
+        },
+        "deprecate": {
+          "P0": 0,
+          "P1": 0,
+          "P2": 2,
+          "P3": 12,
+          "total": 14
+        },
+        "replace": {
+          "P0": 0,
+          "P1": 0,
+          "P2": 0,
+          "P3": 0,
+          "total": 0
+        },
         "gapRowsTotal": 41
       },
       "clusterA_restoreRows": ["2.1", "2.2", "2.3", "2.4", "10.12", "10.13", "10.15"],
@@ -859,8 +877,9 @@
       "followUps": []
     }
   },
-  "inFlightMilestone": null,
+  "inFlightMilestone": "Phase 5.6 M-F Documentation Truth-Up",
   "notes": [
+    "PHASE 5.6 M-D SHIPPED 2026-04-19 — final atomic commit 3680c96; step (g) full verification gate green. Evidence: docs/qa/2026-04-19-m-d-step-g-verification-gate.md; workspace-switcher E2E company lifecycle audit assertions; org-chart E2E deterministic manager-select cycle rejection after drag persistence; pnpm test 125 files / 1683 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 warnings; pnpm audit:claims 92/3/0; pnpm build clean; full Playwright 13 specs / 18 cases. Head-of-queue advances to M-F Documentation Truth-Up.",
     "PHASE 5.6 M-C STEP C SHIPPED 2026-04-18 — atomic feat(phase-5.6-m-c) commit c2e6c92 lands this session; paired chore(loki) ledger follows. Deliverable: Restores Cluster B (M9 org chart) backend READ surface per audit rows 2.16 / 2.21. Ships NEW apps/desktop/src/main/db/repos/orgchart.ts (createOrgEdgesRepo factory with listByCompany + getByReport + listReports + setManager [upsert with cycle guard] + removeByReport + removeByManager + wouldCycle [visited set + MAX_CHAIN_DEPTH=256 belt-and-suspenders]; cross-driver generic typing matching companies.ts / employees.ts archetype); NEW apps/desktop/src/main/db/repos/orgchart.test.ts (21 vitest tests seeding a real 5-employee tree — covers setManager upsert + cycle rejection [direct + transitive + self-edge] + legal re-parent + remove flows + listByCompany + listReports + wouldCycle under fresh/2-step/multi-step/legal-reparent conditions); NEW apps/desktop/src/main/ipc/orgchart-handlers.test.ts (15 vitest tests mirroring companies-handlers.test.ts pattern — happy path / rootIds computation / system + defensive filter / input validation / cross-company scoping; noop-as-never unused deps). MODIFIED packages/shared-types/src/ipc.ts adds OrgchartGetRequest + OrgchartEdge + OrgchartGetResponse types; IpcContract['orgchart.get'] entry; TeamXApi.orgchart.get namespace; response shape flat {employees[], edges[], rootIds[]} — companyId dropped from OrgchartEdge wire shape (implicit in scoped request). MODIFIED apps/desktop/src/main/ipc/handlers.ts adds IpcOrgEdgesRepo narrow interface (listByCompany only — setManager/wouldCycle ship with step d employees.setManager); orgEdgesRepo threaded into IpcHandlerDeps; orgchartGet handler with DEFENSIVE edge filter dropping edges whose manager OR report is outside listVisibleByCompany (belts-and-suspenders complement to the repo's wouldCycle write-path guard). MODIFIED apps/desktop/src/main/ipc/register.ts + apps/desktop/src/preload/api.ts + apps/desktop/src/main/index.ts wire the channel end-to-end. MODIFIED scripts/check-claim-evidence.allowlist.json deletes the orgchart.get entry in lockstep (allowlist 8 → 7). Verification gate: vitest 1311/1311 in 26.21s (1275 step b baseline → +36 new; 110 test files green); audit:claims 88 verified / 7 allowlisted / 0 UNALLOWED out of 95 (orgchart.get migrated allowlist → verified-on-disk in same atomic per acceptance #5); typecheck clean across 6 packages; lint 0 errors / 24 warnings (baseline preserved; biome --write auto-fix on 3 format-only errors in the touched files); E2E not re-run (no renderer surface in step c — channel has no UI consumer until M-D; baseline at M-C step b preserved at 11 specs / 12 cases). M-E safeguards passed third M-C proof at scale: S2 conformance gate GREEN on c2e6c92, S3 pre-commit hook clean, S4 verifiedBy populated on the paired chore(loki) ledger per contract. Step (d) — employees.setManager + employees.promote IPCs (both currently on the allowlist per audit rows 2.19 / 2.20) — is now head-of-queue within M-C T0; the repo surface (setManager / removeByManager / wouldCycle / listReports) is ready for step d to bolt the IPC channels on top with a matching allowlist shrinkage.",
     "PHASE 5.6 M-C STEP B SHIPPED 2026-04-17 — atomic feat(phase-5.6-m-c) commit b858067 lands this session; paired chore(loki) ledger follows. Deliverable: Restores Cluster A multi-company CRUD foundation per audit row 10.12 (P0; Rocky's locked M7 architectural decision — NOT aspirational). The companies.create IPC channel ships with handler + preload bridge + register wiring + 28 unit tests, atomically seeding both system pseudo-employees (system-agent from M31 + system-copilot from M33) before returning so every new company is fully usable on first observation — mirrors the seed-flow + M33 F4 post-restore invariant. Surface deltas: NEW packages/shared-types/src/events.ts company.created union member + CompanyCreatedPayload (events.ts comment block at line 425+ explicitly anticipated this — 'No company.created twin today — until companies.create lands'); MODIFIED packages/shared-types/src/ipc.ts CompaniesCreateRequest + CompaniesCreateResponse + IpcContract['companies.create'] + TeamXApi.companies.create; MODIFIED apps/desktop/src/main/ipc/handlers.ts (extends IpcCompaniesRepo with create + getById; adds optional ensureSystemForCompany dep to IpcHandlerDeps; companiesCreate handler with input validation [name trim ≤120 chars + slug regex /^[a-z0-9][a-z0-9-]{0,62}$/ + settings/icon/theme guards] + duplicate-slug rewrap as 'slug … is already in use' + system-bootstrap call + company.created bus emit per invariant #11); MODIFIED apps/desktop/src/main/index.ts (composes ensureSystemForCompany over ensureSystemAgent + ensureSystemCopilot using same db + roleLoader handles the F4 post-restore sweep uses); MODIFIED apps/desktop/src/main/ipc/register.ts ('companies.create' added to REQUEST_CHANNELS + ipcMain.handle binding); MODIFIED apps/desktop/src/preload/api.ts (CHANNELS.companiesCreate constant + companies.create method exposing the IPC); NEW apps/desktop/src/main/ipc/companies-handlers.test.ts (28 vitest unit tests covering happy path / full input-validation matrix / duplicate slug / missing-dep refusal / bus-emit-throw tolerance); MODIFIED apps/desktop/src/main/ipc/handlers.test.ts (FakeCompaniesRepo extended with create + getById + archive to satisfy widened IpcCompaniesRepo); MODIFIED scripts/check-claim-evidence.allowlist.json (companies.create entry DELETED in lockstep — allowlist 9 → 8). Verification gate: vitest 1275/1275 in 30.06s (1247 step a baseline → +28; 108 test files green); audit:claims 87 verified / 8 allowlisted / 0 UNALLOWED out of 95 (companies.create migrated allowlist → verified-on-disk in same atomic per acceptance #5); typecheck clean across 6 packages; lint 0 errors / 24 warnings (baseline preserved; biome --write auto-fixed 2 long-line format errors in handlers.ts + companies-handlers.test.ts); E2E not re-run (no renderer surface in step b — channel has no UI consumer until M-D; baseline at M-C step a preserved at 11 specs / 12 cases). M-E safeguards passed second-at-scale M-C proof: S2 conformance gate GREEN on b858067, S3 pre-commit hook clean, S4 verifiedBy populated on paired ledger per contract. Step (c) — org-edges repo (createOrgEdgesRepo with cycle-detect via wouldCycle helper) + orgchart.get IPC channel + handler + preload bridge — is now head-of-queue within M-C T0. Cluster B foundation; depends on Migration 0013 (shipped step a). Allowlist shrinkage continues — orgchart.get entry deleted from scripts/check-claim-evidence.allowlist.json in lockstep with the channel restoration.",
     "PHASE 5.6 M-C STEP A SHIPPED 2026-04-17 — atomic feat(phase-5.6-m-c) commit f417a18 lands this session; paired chore(loki) ledger follows. Deliverable: NEW apps/desktop/src/main/db/migrations/0013_org_edges.sql (hand-authored to match 0011 inline-FK convention; drizzle-kit auto-emit was discarded because the repo skips snapshots after 0002 by long-standing convention — only 0000/0001/0002 snapshots exist in meta/); MODIFIED apps/desktop/src/main/db/schema.ts (orgEdges sqliteTable with ON DELETE CASCADE on every FK + composite idx_org_edges_company_manager index for orgchart.get tree projection); MODIFIED apps/desktop/src/main/db/migrations/meta/_journal.json (idx 13 entry, timestamp 1777094400000 = 0012's + 86400000); NEW apps/desktop/src/main/db/0013-org-edges-migration.test.ts (10 unit tests pinning shape + UNIQUE on report_id + ON DELETE CASCADE on every FK + FK-enforcement rejection). Two design upgrades over the worktree-phase-2-the-org reference: (1) ON DELETE CASCADE on every FK (worktree had bare FKs, would orphan org edges on companies.delete); (2) composite (company_id, manager_id) index (worktree had only the UNIQUE on report_id, no read-path acceleration for orgchart.get). Restores Cluster B audit row 2.16 (P0). Verification gate: vitest 1247/1247 in 19.33s (1237 M-E baseline + 10 new); audit:claims 86 verified / 9 allowlisted / 0 UNALLOWED out of 95 (allowlist unchanged — step (a) doesn't restore IPC channels; shrinkage starts at step (b)); typecheck clean across 6 packages; lint 0 errors / 24 warnings (baseline preserved; surgical biome format on schema.ts after the orgEdges block landed); E2E not re-run (zero IPC / handler / renderer / orchestrator surface; baseline at M-E preserved at 11 specs / 12 cases). M-E safeguards passed first M-C proof — S2 conformance gate green on f417a18; S3 pre-commit hook ran clean; S4 verifiedBy populated on the paired chore(loki) ledger per the M-E contract. Step (b) — companies.create IPC + handler + ensureSystemAgent/Copilot bootstrap — is now head-of-queue within M-C T0. Each subsequent step is its own atomic + ledger commit per S4 contract.",
