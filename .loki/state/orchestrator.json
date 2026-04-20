@@ -2,10 +2,10 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M39",
   "milestoneName": "Telemetry Per-Kind Filter",
-  "tasksCompleted": 0,
+  "tasksCompleted": 1,
   "tasksFailed": 0,
-  "totalTasks": 1,
-  "planDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+  "totalTasks": 9,
+  "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
   "startedAt": "2026-04-20T06:00:00Z",
   "completedAt": null,
   "phaseComplete": false,
@@ -59,7 +59,7 @@
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M38 Insight Feedback Loop shipped through T8 verification; M39 T0 telemetry per-kind filter plan doc is head-of-queue.",
+    "asOfTask": "Phase 6 M39 T0 telemetry per-kind filter plan doc authored; M39 T1 shared-types contracts are head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
     "version": "1.1.1",
@@ -1111,10 +1111,31 @@
         "nativeAbi": "Node ABI restored for focused Vitest before unit gates; Electron ABI restored for Playwright before E2E"
       },
       "structureCompliance": "M38 T8 current-task acceptance satisfied: touched files formatted, focused tests and workspace gates green, feedback-loop E2E green, no migration/provider/autonomous-action/role-fit changes introduced, and head-of-queue advanced to M39 T0."
+    },
+    "M39-T0": {
+      "name": "Telemetry Per-Kind Filter plan doc",
+      "shippedAt": "2026-04-20T06:20:00Z",
+      "commit": "this-feature-commit",
+      "deliverable": "NEW docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md. Plan-doc-only M39 design and execution plan. Locks D21 read-path-only scope over existing runs.kind, chooses optional kind?: TelemetryRunKind on existing telemetry request types, keeps all renderer-only, validates only persisted work/agentic/copilot values in IPC, and defines an 8-task TDD path through shared-types, repo, IPC, renderer, E2E, and verification.",
+      "filesTouched": [
+        "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
+        ".loki/queue/current-task.json",
+        ".loki/queue/pending.json",
+        ".loki/state/orchestrator.json"
+      ],
+      "testsDelta": 0,
+      "verificationGates": {
+        "unitTests": "not run for docs-only T0",
+        "lint": "not run for docs-only T0",
+        "typecheck": "not run for docs-only T0",
+        "featureScope": "zero production code, zero IPC/runtime changes, zero migrations"
+      },
+      "structureCompliance": "M39 T0 current-task acceptance satisfied: milestone plan authored, read-path-only boundary locked, non-goals defined, TDD task sequence specified, and next task advanced to M39 T1 shared-types contracts."
     }
   },
   "inFlightMilestone": "Phase 6 M39 Telemetry Per-Kind Filter",
   "notes": [
+    "PHASE 6 M39 T0 AUTHORED 2026-04-20 — NEW docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md. Plan-doc-only milestone for Telemetry Per-Kind Filter. Locks D21 read-path-only scope: existing runs.kind column from migration 0012 is sufficient; no migration, settings key, bus event, provider/router/MCP surface, or write-side run behavior changes. Chosen approach: optional kind?: TelemetryRunKind on the four existing telemetry requests, renderer-only all chip maps to omitted kind, main process validates only persisted kinds work/agentic/copilot, and all existing Telemetry subviews re-query on chip change. Decomposes implementation into 8 TDD tasks: shared-types contracts, runs repo aggregate filters, IPC/preload propagation, renderer hooks, filter chips, subview request wiring, E2E, and verification gate. Head-of-queue advances to M39 T1 shared-types telemetry kind contracts.",
     "PHASE 6 M38 COMPLETE 2026-04-20 — Insight Feedback Loop shipped through T8 verification gate. T8 evidence: biome checked 14 touched files with no fixes; shared-types focused gate ran 1 file / 3 tests (the plan-listed src/ipc.test.ts is absent in shared-types and Vitest selected the existing copilot-feedback test); desktop focused gate passed 6 files / 73 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known no-non-null-assertion warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED; Electron ABI restored for Playwright; feedback-loop Playwright passed 1 spec / 1 test. Scope boundaries preserved: no migrations, providers, autonomous action, or role-fit changes. M38 total remains 14 E2E specs / 19 Playwright cases. Head-of-queue advances to M39 T0 Telemetry Per-Kind Filter plan doc.",
     "PHASE 6 M38 T7 SHIPPED 2026-04-20 — feedback-loop Playwright E2E implemented with TDD. Added apps/desktop/e2e/copilot-feedback.spec.ts covering cost-only analyzer ticks, three same-category sidebar dismissals, advisory suggestion banner, Apply action, copilot.weights.changed append-only event verification, and Settings cost weight display at 0.5x. Added a cost-only canned copilot fixture keyed on 'Allowed categories: cost' before the broad strategia-x fixture so the category gate receives deterministic cost drafts. First valid red was insightsGenerated=0 before the fixture; an invalid earlier run exposed Electron better-sqlite3 ABI 137/125 mismatch and was corrected by rebuilding better-sqlite3 for Electron after killing orphan Electron processes. Verification: feedback-loop Playwright 1 spec / 1 test passed; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T8 verification gate.",
     "PHASE 6 M38 T6 SHIPPED 2026-04-20 — renderer feedback weighting UI implemented with TDD. Added useCopilotWeights/useSetCopilotWeights hooks, category weight controls in CopilotSection with 0.0x..2.0x display and data-copilot-weight-category anchors, feedback suggestion prompt helpers, CopilotInsightCard callback handoff for dismiss suggestions, and CopilotSidebar advisory banner with Apply/Keep current actions. Apply calls settings.setCopilotWeights with the suggested category weight; Keep current only clears local banner state; stable E2E selectors data-copilot-feedback-suggestion and data-copilot-feedback-apply are present. Verification: renderer focused tests 2 files / 24 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T7 feedback-loop E2E.",
