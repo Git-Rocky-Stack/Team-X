@@ -1,33 +1,34 @@
 {
-  "taskId": "Phase-6-M39-T2",
+  "taskId": "Phase-6-M39-T3",
   "milestone": "Phase 6 M39",
   "milestoneName": "Telemetry Per-Kind Filter",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M39 T2 — Runs repo per-kind aggregate filters",
-  "status": "head-of-queue — M39 T1 shared contracts shipped; next filter telemetry aggregate SQL by run kind",
+  "title": "Phase 6 M39 T3 — IPC and preload kind propagation",
+  "status": "head-of-queue — M39 T2 runs repo filters shipped; next pass telemetry kind through IPC/preload",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M39 T1 — shared telemetry kind contracts",
+  "predecessor": "Phase 6 M39 T2 — runs repo per-kind aggregate filters",
   "dor": [
-    "TelemetryRunKind and TelemetryKindFilter contracts exist in shared-types",
-    "All four telemetry request types carry optional kind?: TelemetryRunKind",
-    "Workspace typecheck, lint, and strict claims are green after T1"
+    "Runs repo aggregate methods accept optional TelemetryRunKind",
+    "All aggregate methods preserve undefined/all behavior and filter work/agentic/copilot when provided",
+    "Focused repo test, typecheck, lint, and strict claims are green after T2"
   ],
   "acceptance": [
-    "Follow Task 2 in docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-    "Extend runs-telemetry test seed helper with kind?: work | agentic | copilot",
-    "Write failing aggregate tests for companyStats, dailyUsage, employeeStats, and costBreakdown kind filters",
-    "Add optional kind parameter to all four runs repo aggregate methods",
-    "Apply runs.kind condition only when kind is provided; undefined preserves All behavior",
-    "Run pnpm -F @team-x/desktop exec vitest run src/main/db/repos/runs-telemetry.test.ts",
+    "Follow Task 3 in docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
+    "Write failing IPC tests proving handlers pass kind to each runs repo aggregate method",
+    "Reject invalid runtime kind values at the IPC boundary before repo access",
+    "Propagate optional kind from telemetry.companyStats, telemetry.dailyUsage, telemetry.employeeStats, and telemetry.costBreakdown handlers",
+    "Update preload bridge signatures for request-object propagation where needed",
+    "Run pnpm -F @team-x/desktop exec vitest run src/main/ipc/telemetry-handlers.test.ts",
     "Run pnpm typecheck, pnpm lint, and pnpm audit:claims -- --strict before ledgering"
   ],
   "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-  "planDocSection": "Task 2: Runs Repo Per-Kind Aggregate Filters",
+  "planDocSection": "Task 3: IPC And Preload Kind Propagation",
   "referenceDocs": [
     "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-    "apps/desktop/src/main/db/repos/runs.ts",
-    "apps/desktop/src/main/db/repos/runs-telemetry.test.ts",
+    "apps/desktop/src/main/ipc/handlers.ts",
+    "apps/desktop/src/preload/api.ts",
+    "apps/desktop/src/main/ipc/telemetry-handlers.test.ts",
     "packages/shared-types/src/ipc.ts"
   ],
-  "nextStep": "Begin T2 by extending runs-telemetry.test.ts with kind-aware seeded runs and writing the failing aggregate filter assertions."
+  "nextStep": "Begin T3 by writing telemetry-handlers.test.ts with a fake runs repo that records kind arguments and rejects invalid runtime kind values."
 }

@@ -25,9 +25,11 @@
  * Cross-driver generic typing — same pattern as the other repos.
  */
 
-import { and, eq, gte, lte, sql } from 'drizzle-orm';
+import { type SQL, and, eq, gte, lte, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
+
+import type { TelemetryRunKind } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
 import { runs } from '../schema.js';
@@ -63,6 +65,16 @@ export interface FinishRunInput {
 }
 
 type RunsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
+
+function withRunKindCondition(
+  conditions: SQL<unknown>[],
+  kind: TelemetryRunKind | undefined,
+): SQL<unknown>[] {
+  if (kind !== undefined) {
+    conditions.push(eq(runs.kind, kind));
+  }
+  return conditions;
+}
 
 export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
   return {
@@ -128,7 +140,15 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
      * Company-level summary stats. Only counts completed runs (success/error).
      * Returns zero-value record when no runs exist.
      */
-    companyStats(companyId: string): CompanyStats {
+    companyStats(companyId: string, kind?: TelemetryRunKind): CompanyStats {
+      const conditions = withRunKindCondition(
+        [
+          sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
+          sql`${runs.status} IN ('success', 'error')`,
+        ],
+        kind,
+      );
+
       const rows = db
         .select({
           totalRuns: sql<number>`count(*)`.as('total_runs'),
@@ -147,12 +167,7 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
           ),
         })
         .from(runs)
-        .where(
-          and(
-            sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
-            sql`${runs.status} IN ('success', 'error')`,
-          ),
-        )
+        .where(and(...conditions))
         .all();
 
       const row = rows[0];
@@ -179,7 +194,22 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
      * calendar day within the date range, ordered oldest-first.
      * `fromMs` and `toMs` are epoch millis.
      */
-    dailyUsage(companyId: string, fromMs: number, toMs: number): DailyUsageRow[] {
+    dailyUsage(
+      companyId: string,
+      fromMs: number,
+      toMs: number,
+      kind?: TelemetryRunKind,
+    ): DailyUsageRow[] {
+      const conditions = withRunKindCondition(
+        [
+          sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
+          sql`${runs.status} IN ('success', 'error')`,
+          gte(runs.startedAt, fromMs),
+          lte(runs.startedAt, toMs),
+        ],
+        kind,
+      );
+
       const rows = db
         .select({
           day: sql<string>`date(${runs.startedAt} / 1000, 'unixepoch')`.as('day'),
@@ -191,14 +221,7 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
           costUsd: sql<string>`coalesce(sum(cast(${runs.costUsd} as real)), 0)`.as('cost_usd'),
         })
         .from(runs)
-        .where(
-          and(
-            sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
-            sql`${runs.status} IN ('success', 'error')`,
-            gte(runs.startedAt, fromMs),
-            lte(runs.startedAt, toMs),
-          ),
-        )
+        .where(and(...conditions))
         .groupBy(sql`day`)
         .orderBy(sql`day`)
         .all();
@@ -217,7 +240,15 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
      * Per-employee breakdown for a company. Returns one row per employee
      * who has at least one completed run.
      */
-    employeeStats(companyId: string): EmployeeStatsRow[] {
+    employeeStats(companyId: string, kind?: TelemetryRunKind): EmployeeStatsRow[] {
+      const conditions = withRunKindCondition(
+        [
+          sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
+          sql`${runs.status} IN ('success', 'error')`,
+        ],
+        kind,
+      );
+
       const rows = db
         .select({
           employeeId: runs.employeeId,
@@ -233,12 +264,7 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
           ),
         })
         .from(runs)
-        .where(
-          and(
-            sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
-            sql`${runs.status} IN ('success', 'error')`,
-          ),
-        )
+        .where(and(...conditions))
         .groupBy(runs.employeeId)
         .orderBy(sql`total_runs DESC`)
         .all();
@@ -257,13 +283,19 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
      * Cost breakdown by provider and model for a company. Supports optional
      * date range filter. Returns rows ordered by cost descending.
      */
-    costBreakdown(companyId: string, fromMs?: number, toMs?: number): CostBreakdownRow[] {
+    costBreakdown(
+      companyId: string,
+      fromMs?: number,
+      toMs?: number,
+      kind?: TelemetryRunKind,
+    ): CostBreakdownRow[] {
       const conditions = [
         sql`${runs.employeeId} IN (SELECT id FROM employees WHERE company_id = ${companyId})`,
         sql`${runs.status} IN ('success', 'error')`,
       ];
       if (fromMs !== undefined) conditions.push(gte(runs.startedAt, fromMs));
       if (toMs !== undefined) conditions.push(lte(runs.startedAt, toMs));
+      withRunKindCondition(conditions, kind);
 
       const rows = db
         .select({

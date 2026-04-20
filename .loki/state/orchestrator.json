@@ -2,7 +2,7 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M39",
   "milestoneName": "Telemetry Per-Kind Filter",
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "tasksFailed": 0,
   "totalTasks": 9,
   "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
@@ -52,14 +52,14 @@
   },
   "current": {
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests.",
     "e2eSpecs": 14,
     "e2eGreenCount": 19,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M39 T1 shared telemetry kind contracts shipped; M39 T2 runs repo per-kind aggregate filters are head-of-queue.",
+    "asOfTask": "Phase 6 M39 T2 runs repo per-kind aggregate filters shipped; M39 T3 IPC/preload kind propagation is head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
     "version": "1.1.1",
@@ -1133,10 +1133,33 @@
         "auditClaimsStrict": "95 verified / 0 allowlisted / 0 UNALLOWED"
       },
       "structureCompliance": "M39 T1 current-task acceptance satisfied: failing shared-types test written first, telemetry kind contracts implemented, all telemetry request types widened with optional kind, workspace gates green, and next task advanced to M39 T2 runs repo filters."
+    },
+    "M39-T2": {
+      "name": "Runs repo per-kind aggregate filters",
+      "shippedAt": "2026-04-20T07:00:00Z",
+      "commit": "this-feature-commit",
+      "deliverable": "Added optional TelemetryRunKind filtering to all four runs repo telemetry aggregate methods. companyStats, dailyUsage, employeeStats, and costBreakdown now apply runs.kind = kind when provided and preserve the existing all-kind aggregate when kind is undefined. The focused repo test seeds work, agentic, and copilot rows and proves every aggregate read path filters correctly.",
+      "filesTouched": [
+        "apps/desktop/src/main/db/repos/runs.ts",
+        "apps/desktop/src/main/db/repos/runs-telemetry.test.ts",
+        ".loki/queue/current-task.json",
+        ".loki/queue/pending.json",
+        ".loki/state/orchestrator.json"
+      ],
+      "testsDelta": "+1 focused runs telemetry test",
+      "verificationGates": {
+        "validRed": "runs-telemetry.test.ts failed because companyStats(cid, agentic) returned 3 rows instead of 1 before repo filtering",
+        "runsTelemetryFocused": "1 file / 16 tests passed",
+        "typecheck": "clean across 6 workspace packages",
+        "lint": "0 errors / 21 known warnings",
+        "auditClaimsStrict": "95 verified / 0 allowlisted / 0 UNALLOWED"
+      },
+      "structureCompliance": "M39 T2 current-task acceptance satisfied: failing aggregate tests written first, all four repo read paths accept/apply optional kind, undefined preserves All behavior, gates are green, and next task advanced to M39 T3 IPC/preload propagation."
     }
   },
   "inFlightMilestone": "Phase 6 M39 Telemetry Per-Kind Filter",
   "notes": [
+    "PHASE 6 M39 T2 SHIPPED 2026-04-20 — runs repo per-kind telemetry aggregate filters implemented with TDD. Extended runs-telemetry seeded runs with kind, added a valid red proving companyStats(cid, agentic) still returned all three work/agentic/copilot rows, then added optional TelemetryRunKind parameters to companyStats, dailyUsage, employeeStats, and costBreakdown. All four read paths now append runs.kind = kind only when a persisted kind is provided; undefined preserves the All aggregate. Verification: runs-telemetry focused suite 1 file / 16 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T3 IPC and preload kind propagation.",
     "PHASE 6 M39 T1 SHIPPED 2026-04-20 — shared telemetry kind filter contracts implemented with TDD. Added TELEMETRY_RUN_KINDS, TelemetryRunKind, TELEMETRY_KIND_FILTERS, TelemetryKindFilter, and optional kind?: TelemetryRunKind fields to all four telemetry aggregate request types. TeamXApi companyStats/employeeStats now accept string | request-object for backward compatibility until the renderer is migrated in later M39 tasks. First red was invalid due missing Vitest globals import; corrected the test harness, then valid red proved missing runtime constants. Verification: shared-types focused test 1 file / 2 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T2 runs repo per-kind aggregate filters.",
     "PHASE 6 M39 T0 AUTHORED 2026-04-20 — NEW docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md. Plan-doc-only milestone for Telemetry Per-Kind Filter. Locks D21 read-path-only scope: existing runs.kind column from migration 0012 is sufficient; no migration, settings key, bus event, provider/router/MCP surface, or write-side run behavior changes. Chosen approach: optional kind?: TelemetryRunKind on the four existing telemetry requests, renderer-only all chip maps to omitted kind, main process validates only persisted kinds work/agentic/copilot, and all existing Telemetry subviews re-query on chip change. Decomposes implementation into 8 TDD tasks: shared-types contracts, runs repo aggregate filters, IPC/preload propagation, renderer hooks, filter chips, subview request wiring, E2E, and verification gate. Head-of-queue advances to M39 T1 shared-types telemetry kind contracts.",
     "PHASE 6 M38 COMPLETE 2026-04-20 — Insight Feedback Loop shipped through T8 verification gate. T8 evidence: biome checked 14 touched files with no fixes; shared-types focused gate ran 1 file / 3 tests (the plan-listed src/ipc.test.ts is absent in shared-types and Vitest selected the existing copilot-feedback test); desktop focused gate passed 6 files / 73 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known no-non-null-assertion warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED; Electron ABI restored for Playwright; feedback-loop Playwright passed 1 spec / 1 test. Scope boundaries preserved: no migrations, providers, autonomous action, or role-fit changes. M38 total remains 14 E2E specs / 19 Playwright cases. Head-of-queue advances to M39 T0 Telemetry Per-Kind Filter plan doc.",
