@@ -64,8 +64,15 @@ import type {
   Thread,
   Ticket,
 } from './entities.js';
-import type { AgenticRunSnapshot, CopilotCategory, DashboardEvent } from './events.js';
+import type {
+  AgenticRunSnapshot,
+  CopilotCategory,
+  CopilotCategoryWeights,
+  DashboardEvent,
+} from './events.js';
 import type { PrivacyTier, ProviderConfig, ProviderKind } from './providers.js';
+
+export type { CopilotCategoryWeights } from './events.js';
 
 // ---------------------------------------------------------------------------
 // Low-level request / response shapes
@@ -1194,6 +1201,20 @@ export const COPILOT_CATEGORIES: readonly CopilotCategory[] = [
   'anomaly',
 ] as const;
 
+export const COPILOT_CATEGORY_WEIGHT_CLAMP = {
+  min: 0,
+  max: 2,
+  default: 1,
+} as const;
+
+export const COPILOT_CATEGORY_WEIGHTS_DEFAULT: CopilotCategoryWeights = {
+  operational: 1,
+  cost: 1,
+  org: 1,
+  workflow: 1,
+  anomaly: 1,
+};
+
 /** Snapshot of the three copilot-service settings keys. */
 export interface SettingsGetCopilotResponse {
   /** Whether the analyzer runs at all. `false` short-circuits every scheduled + event-triggered tick. */
@@ -1221,6 +1242,25 @@ export interface SettingsSetCopilotRequest {
   enabled?: boolean;
   intervalMinutes?: number;
   categories?: CopilotCategory[];
+}
+
+export interface SettingsGetCopilotWeightsRequest {
+  /** Target company for future company-scoped settings; v1 stores the weights globally. */
+  companyId: string;
+}
+
+export interface SettingsGetCopilotWeightsResponse {
+  weights: CopilotCategoryWeights;
+}
+
+export interface SettingsSetCopilotWeightsRequest {
+  /** Target company for future company-scoped settings; v1 stores the weights globally. */
+  companyId: string;
+  weights: Partial<CopilotCategoryWeights>;
+}
+
+export interface SettingsSetCopilotWeightsResponse {
+  weights: CopilotCategoryWeights;
 }
 
 /** Clamp bounds + defaults for the `intervalMinutes` key. Shared by repo, handler, and UI. */
@@ -1527,6 +1567,14 @@ export interface IpcContract {
   'settings.setCopilot': {
     request: SettingsSetCopilotRequest;
     response: undefined;
+  };
+  'settings.getCopilotWeights': {
+    request: SettingsGetCopilotWeightsRequest;
+    response: SettingsGetCopilotWeightsResponse;
+  };
+  'settings.setCopilotWeights': {
+    request: SettingsSetCopilotWeightsRequest;
+    response: SettingsSetCopilotWeightsResponse;
   };
   // Provider management channels (Phase 3 — M18)
   'providers.list': {
@@ -2038,6 +2086,14 @@ export interface TeamXApi {
      * new settings take effect without an app restart. Phase 5 — M33.
      */
     setCopilot(req: SettingsSetCopilotRequest): Promise<void>;
+    /** Get copilot feedback category weights. Phase 6 — M38. */
+    getCopilotWeights(
+      req: SettingsGetCopilotWeightsRequest,
+    ): Promise<SettingsGetCopilotWeightsResponse>;
+    /** Patch copilot feedback category weights. Phase 6 — M38. */
+    setCopilotWeights(
+      req: SettingsSetCopilotWeightsRequest,
+    ): Promise<SettingsSetCopilotWeightsResponse>;
   };
   providers: {
     /** List all configured providers with status. */

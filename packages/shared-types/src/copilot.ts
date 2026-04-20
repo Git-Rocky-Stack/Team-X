@@ -113,6 +113,15 @@ export interface CopilotDismissArgs {
   id: string;
 }
 
+export interface CopilotFeedbackSuggestion {
+  category: CopilotCategory;
+  dismissalsInWindow: number;
+  windowDays: number;
+  currentWeight: number;
+  suggestedWeight: number;
+  reason: string;
+}
+
 /**
  * Result shape for `copilot.dismiss`. Echoes the id + the server-side
  * dismissed-at timestamp so the renderer can optimistically project
@@ -121,6 +130,7 @@ export interface CopilotDismissArgs {
 export interface CopilotDismissResult {
   id: string;
   dismissedAt: number;
+  feedbackSuggestion?: CopilotFeedbackSuggestion;
 }
 
 // ---------------------------------------------------------------------------

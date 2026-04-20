@@ -116,6 +116,8 @@ import type {
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetCopilotResponse,
+  SettingsGetCopilotWeightsRequest,
+  SettingsGetCopilotWeightsResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
@@ -123,6 +125,8 @@ import type {
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
   SettingsSetCopilotRequest,
+  SettingsSetCopilotWeightsRequest,
+  SettingsSetCopilotWeightsResponse,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -254,6 +258,8 @@ const CHANNELS = {
   settingsSetPlanner: 'settings.setPlanner',
   settingsGetCopilot: 'settings.getCopilot',
   settingsSetCopilot: 'settings.setCopilot',
+  settingsGetCopilotWeights: 'settings.getCopilotWeights',
+  settingsSetCopilotWeights: 'settings.setCopilotWeights',
   // Provider management (Phase 3 — M18)
   providersList: 'providers.list',
   providersAdd: 'providers.add',
@@ -469,6 +475,16 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.settingsGetCopilot) as Promise<SettingsGetCopilotResponse>,
       setCopilot: (req: SettingsSetCopilotRequest) =>
         ipc.invoke(CHANNELS.settingsSetCopilot, req) as Promise<void>,
+      getCopilotWeights: (req: SettingsGetCopilotWeightsRequest) =>
+        ipc.invoke(
+          CHANNELS.settingsGetCopilotWeights,
+          req,
+        ) as Promise<SettingsGetCopilotWeightsResponse>,
+      setCopilotWeights: (req: SettingsSetCopilotWeightsRequest) =>
+        ipc.invoke(
+          CHANNELS.settingsSetCopilotWeights,
+          req,
+        ) as Promise<SettingsSetCopilotWeightsResponse>,
     },
     providers: {
       list: () => ipc.invoke(CHANNELS.providersList) as Promise<ProviderConfig[]>,
