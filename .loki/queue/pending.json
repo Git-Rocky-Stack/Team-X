@@ -1,6 +1,6 @@
 {
-  "milestone": "Phase 6 M39",
-  "milestoneName": "Telemetry Per-Kind Filter",
+  "milestone": "Phase 6 M40",
+  "milestoneName": "Insight Export",
   "phase": "Phase 6 — Capabilities & Evidence",
   "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
   "planDocSection": "M39 T0 plan doc",
@@ -170,35 +170,35 @@
     }
   ],
   "activeSubMilestone": {
-    "id": "M39",
-    "name": "Telemetry Per-Kind Filter",
-    "status": "in progress — T7 telemetry kind filter E2E shipped; T8 verification gate is head-of-queue",
-    "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
+    "id": "M40",
+    "name": "Insight Export",
+    "status": "head-of-queue — M39 shipped; M40 T0 plan doc is next",
+    "planDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M39 T8. Scope: final touched-file formatting, focused tests, workspace gates, focused Playwright rerun, and M39 completion ledger.",
-    "dor": "M38 Insight Feedback Loop closed through verification gate",
-    "dod": "M39 complete when Tasks 1-8 in the M39 plan doc ship with focused tests, E2E, typecheck, lint, strict claims, and Loki ledger closed",
+    "nextSession": "Proceed with Phase 6 M40 T0. Scope: plan-doc-only Insight Export milestone; no production code until the plan lands.",
+    "dor": "M39 Telemetry Per-Kind Filter closed through verification gate",
+    "dod": "M40 complete when its plan doc tasks ship with focused tests, E2E, typecheck, lint, strict claims, and Loki ledger closed",
     "verifiedBy": null,
     "blockedBy": null
   },
   "previousSubMilestone": {
-    "id": "M38",
-    "name": "Insight Feedback Loop",
-    "status": "shipped 2026-04-20 — Tasks 0-8 complete; feedback weights, dismissal suggestions, renderer UI, and E2E verification shipped",
-    "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+    "id": "M39",
+    "name": "Telemetry Per-Kind Filter",
+    "status": "shipped 2026-04-20 — Tasks 0-8 complete; per-kind telemetry contracts, repo filters, IPC/preload propagation, renderer chips, subview requests, E2E, and verification ledger shipped",
+    "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M39 T0 — Telemetry Per-Kind Filter plan doc.",
-    "dor": "M37-R reconciliation closed with focused tests green and M36/M37 docs/Loki aligned to on-disk reality",
-    "dod": "satisfied — M38 Tasks 0-8 shipped with focused tests, workspace gates, strict claims, feedback-loop E2E, and completion ledger",
+    "nextSession": "Proceed with Phase 6 M40 T0 — Insight Export plan doc.",
+    "dor": "M38 Insight Feedback Loop closed through verification gate",
+    "dod": "satisfied — M39 Tasks 0-8 shipped with focused tests, workspace gates, strict claims, telemetry-kind-filter E2E, and completion ledger",
     "verifiedBy": [
-      "biome touched-file gate — 14 M38 files checked; no fixes applied",
-      "shared-types focused gate — 1 file / 3 tests passed; plan-listed src/ipc.test.ts is absent in packages/shared-types",
-      "desktop focused gate — 6 files / 73 tests passed",
+      "biome touched-file gate — 16 M39 files checked; no fixes applied",
+      "shared-types focused gate — 1 file / 2 tests passed",
+      "desktop focused gate — 5 files / 27 tests passed",
       "pnpm typecheck — clean across 6 workspace packages",
       "pnpm lint — 0 errors / 21 known no-non-null-assertion warnings",
       "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
-      "pnpm -F @team-x/desktop exec playwright test e2e/copilot-feedback.spec.ts — 1 spec / 1 test passed after Electron ABI rebuild",
-      "better-sqlite3 ABI restored for Electron at gate exit"
+      "pnpm -F @team-x/desktop build — clean production build",
+      "pnpm -F @team-x/desktop exec playwright test e2e/telemetry-kind-filter.spec.ts — 1 spec / 1 test passed"
     ],
     "blockedBy": null
   },
@@ -254,9 +254,9 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 6 M39 T7 telemetry kind filter E2E shipped; M39 T8 verification gate is head-of-queue.",
+    "asOfTask": "Phase 6 M39 Telemetry Per-Kind Filter shipped; Phase 6 M40 T0 Insight Export plan doc is head-of-queue.",
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 focused gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 focused gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests. M39 T8 focused gate passed shared-types 1 file / 2 tests and desktop 5 files / 27 tests.",
     "e2eSpecs": 15,
     "e2eGreenCount": 20,
     "lintErrors": 0,
@@ -269,7 +269,7 @@
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
     "phase56SurfaceArea": "Conformance audit (M-A) ~200–400 rows + triage (M-B) per-row dispositions + safeguards (M-E) 6 deliverables + backend backfill (M-C) migrations/IPC/repos for restore rows + UI backfill (M-D) components/hooks/routes for restore rows + docs truth-up (M-F) three-bucket CLAUDE.md rewrite + ship (M-G) branch deletion + version bump + retrospective",
     "phase56NonGoals": "No new features beyond restoration. No scope creep from mid-flight discoveries without change-control mini-gate (§14.3). No silent deferrals. No Phase 6 work until M-G ships. No public README/landing-site claim updates — those wait for M-F.",
-    "phase6Next": "M39 T8 verification gate."
+    "phase6Next": "M40 T0 Insight Export plan doc."
   },
   "sprintFramework": {
     "backlog": "M-B triage output — audit doc `disposition` column. Must-have=restore / Should-have=replace / Won't-have=deprecate (docs only)",
@@ -279,6 +279,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M39 COMPLETE 2026-04-20 — Telemetry Per-Kind Filter shipped through T8 verification gate. Final evidence: biome checked 16 M39 files with no fixes; shared-types focused gate passed 1 file / 2 tests; desktop focused gate passed 5 files / 27 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED; pnpm -F @team-x/desktop build clean; telemetry-kind-filter Playwright passed 1 spec / 1 test. M39 surface: kind contracts, repo filters, IPC validation, preload propagation, renderer hooks/query keys, filter chips, subview request wiring, and E2E. Scope boundary preserved: no migrations, settings, bus events, providers, MCP surface, or write-side run behavior. Head-of-queue advances to M40 T0 Insight Export plan doc.",
     "PHASE 6 M39 T7 SHIPPED 2026-04-20 — telemetry kind filter Playwright E2E implemented with TDD. Added apps/desktop/e2e/telemetry-kind-filter.spec.ts; valid red reached Telemetry but failed because CompanyTelemetry lacked data-telemetry-stat=\"total-runs\". Added the stable selector to the Total Runs stat card. The spec now creates a work run through chat.send, creates a copilot run through copilot.configure, opens Telemetry, confirms All covers filtered buckets, then verifies Copilot and Work chip totals. Verification: pnpm -F @team-x/desktop build clean; telemetry-kind-filter Playwright 1 spec / 1 test passed; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. E2E surface now 15 specs / 20 Playwright cases. Head-of-queue advances to M39 T8 verification gate.",
     "PHASE 6 M39 T6 SHIPPED 2026-04-20 — telemetry subviews now apply the kind filter to aggregate requests with TDD. Added telemetry-subviews source-contract tests; valid red proved subviews accepted kindFilter but did not call telemetryRequestKind or include kind in hook requests. CompanyTelemetry now passes kind to useCompanyStats and useDailyUsage; EmployeeTelemetry passes kind to useEmployeeStats; CostBreakdown passes kind to useCostBreakdown while preserving all/7d/30d/90d date range behavior and adding kind to the memo dependency list. All maps to omitted kind through telemetryRequestKind. Verification: telemetry-subviews focused test 1 file / 3 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T7 telemetry kind filter E2E.",
     "PHASE 6 M39 T5 SHIPPED 2026-04-20 — TelemetryView kind filter chips implemented with TDD. Added telemetry-view source-contract tests; valid red proved missing filter labels, exported TelemetryKindFilterChips, default all state, data-telemetry-kind-filter selectors, and subview kindFilter props. TelemetryView now stores useState<TelemetryKindFilter>('all'), renders All/Work/Agentic/Copilot chips with aria-pressed and data selectors, and passes kindFilter to CompanyTelemetry, EmployeeTelemetry, and CostBreakdown. Subview Props were widened for the prop only; aggregate request wiring remains scoped to T6. Verification: telemetry-view focused test 1 file / 3 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T6 subview request propagation.",
@@ -330,6 +331,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M39 T8 — verification gate"
+    "nextTask": "Phase 6 M40 T0 — Insight Export plan doc"
   }
 }

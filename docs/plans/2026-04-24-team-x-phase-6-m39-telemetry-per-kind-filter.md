@@ -653,6 +653,32 @@ git commit -m "chore(loki): ledger phase 6 m39 telemetry filter"
 - Invalid runtime `kind` values are rejected at the IPC boundary.
 - No migrations, new settings, bus events, providers, or write-side run behavior changes ship in M39.
 
+## Verification Ledger
+
+M39 completed on 2026-04-20 with the read-path-only boundary preserved: no migrations, new settings, bus events, providers, or write-side run behavior changes shipped.
+
+Final T8 gate:
+
+- Touched-file Biome gate: 16 M39 files checked; no fixes applied.
+- Shared-types focused gate: `pnpm -F @team-x/shared-types exec vitest run src/telemetry-kind-filter.test.ts` passed 1 file / 2 tests.
+- Desktop focused gate: `pnpm -F @team-x/desktop exec vitest run src/main/db/repos/runs-telemetry.test.ts src/main/ipc/telemetry-handlers.test.ts src/renderer/src/hooks/use-telemetry.test.tsx src/renderer/src/features/telemetry/telemetry-view.test.tsx src/renderer/src/features/telemetry/telemetry-subviews.test.tsx` passed 5 files / 27 tests.
+- Workspace typecheck: `pnpm typecheck` clean across 6 workspace packages.
+- Lint: `pnpm lint` exited 0 with 21 known `noNonNullAssertion` warnings.
+- Strict claim evidence: `pnpm audit:claims -- --strict` passed 95 verified / 0 allowlisted / 0 UNALLOWED.
+- Production build: `pnpm -F @team-x/desktop build` passed.
+- Focused E2E: `pnpm -F @team-x/desktop exec playwright test e2e/telemetry-kind-filter.spec.ts` passed 1 spec / 1 test.
+
+M39 shipped surface:
+
+- `TelemetryRunKind` and `TelemetryKindFilter` contracts with optional `kind` on the four telemetry aggregate requests.
+- Runs repo aggregate filters for company stats, daily usage, employee stats, and cost breakdown.
+- IPC validation rejecting invalid runtime `kind` values before repo access.
+- Preload request-object support for all aggregate calls, preserving string compatibility for company/employee stats during migration.
+- Renderer hooks with request-object inputs and query keys containing `req?.kind ?? 'all'`.
+- `TelemetryView` kind chips with stable `data-telemetry-kind-filter` selectors.
+- Subviews forwarding `kind` through `telemetryRequestKind(kindFilter)` into aggregate requests.
+- Playwright coverage for All/Copilot/Work company Total Runs filtering through a real Electron session.
+
 ## Follow-Up Boundary
 
 M39 only makes existing local telemetry easier to inspect. Budget controls, telemetry digest suggestions, per-kind alerting, exported telemetry bundles, and evidence-based default tuning remain future work.
