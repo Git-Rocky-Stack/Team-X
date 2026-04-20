@@ -1,7 +1,7 @@
 /**
  * React Query hooks for the Copilot IPC surface (Phase 5 — M34).
  *
- * Exposes four hooks that wrap `window.teamx.copilot.*` via the shared
+ * Exposes five hooks that wrap `window.teamx.copilot.*` via the shared
  * `ipc` module:
  *
  *   - `useCopilotInsights(companyId, filters?)` — useQuery over
@@ -18,6 +18,9 @@
  *     `{ runId, threadId }` matching the M31 `complex_request` wire
  *     shape so the caller can hand the tuple to the chat drawer's
  *     existing step-transcript layout with zero divergence.
+ *   - `useCopilotExport()` — useMutation over `copilot.export`.
+ *     Read-only local file export; intentionally no local query
+ *     invalidation because the main process emits no bus event.
  *   - `useCopilotConfigure()` — useMutation over `copilot.configure`
  *     (test-only manual-tick; production code paths use
  *     `settings.setCopilot` from M33 T7). Intentionally exposed here
@@ -43,6 +46,8 @@ import type {
   CopilotConfigureResult,
   CopilotDismissArgs,
   CopilotDismissResult,
+  CopilotExportRequest,
+  CopilotExportResponse,
   CopilotInsight,
   CopilotInsightListArgs,
   CopilotInsightListResult,
@@ -165,6 +170,16 @@ export function useDismissCopilotInsight() {
 export function useAskCopilot() {
   return useMutation<CopilotAskResult, Error, CopilotAskArgs>({
     mutationFn: (args) => ipc.copilot.ask(args),
+  });
+}
+
+/**
+ * Export active copilot insights to a local JSON/CSV file. This is a
+ * read-only IPC; no local cache invalidation is needed.
+ */
+export function useCopilotExport() {
+  return useMutation<CopilotExportResponse, Error, CopilotExportRequest>({
+    mutationFn: (req) => ipc.copilot.export(req),
   });
 }
 

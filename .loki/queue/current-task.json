@@ -1,39 +1,43 @@
 {
-  "taskId": "Phase-6-M40-T4",
+  "taskId": "Phase-6-M40-T5",
   "milestone": "Phase 6 M40",
   "milestoneName": "Insight Export",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M40 T4 — Renderer export hook",
-  "status": "head-of-queue — M40 T3 IPC/register/handler shipped; next add renderer export hook",
+  "title": "Phase 6 M40 T5 — Sidebar filters and export controls",
+  "status": "head-of-queue — M40 T4 renderer export hook shipped; next add sidebar filters and export controls",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M40 T3 — IPC, register, handler",
+  "predecessor": "Phase 6 M40 T4 — Renderer export hook",
   "dor": [
     "M40 T1 shared contracts and typed preload bridge are committed",
     "M40 T2 copilot-insights export projection and serializers are committed",
     "M40 T3 main-process copilot.export IPC registration and handler are committed",
-    "T3 gates passed: focused handler test, typecheck, lint, strict claims, and diff-check"
+    "M40 T4 renderer useCopilotExport hook is committed",
+    "T4 gates passed: focused hook test, typecheck, lint, strict claims, and diff-check"
   ],
   "acceptance": [
-    "Follow Task 4 in docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
-    "Write failing apps/desktop/src/renderer/src/hooks/use-copilot-export.test.tsx before implementation",
-    "Export useCopilotExport from apps/desktop/src/renderer/src/hooks/use-copilot.ts",
-    "Hook must call ipc.copilot.export through React Query useMutation",
-    "Hook must accept CopilotExportRequest and return CopilotExportResponse",
-    "Do not invalidate insight queries on success because export is read-only",
-    "Run pnpm -F @team-x/desktop exec vitest run src/renderer/src/hooks/use-copilot-export.test.tsx",
+    "Follow Task 5 in docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
+    "Write failing apps/desktop/src/renderer/src/features/copilot/copilot-sidebar-export.test.tsx before implementation",
+    "Render visible category filter buttons with data-copilot-category-filter",
+    "Render visible severity filter buttons with data-copilot-severity-filter",
+    "Render export scope controls for company and all",
+    "Render CSV and JSON export buttons with data-copilot-export-format",
+    "Pass current category/severity filters into useCopilotInsights",
+    "Build export request from current category/severity/scope; include companyId only for company scope",
+    "Show success copy with row count and basename from filePath",
+    "Show truncation copy when truncated=true and error copy on failure",
+    "Run pnpm -F @team-x/desktop exec vitest run src/renderer/src/features/copilot/copilot-sidebar-export.test.tsx",
     "Run pnpm typecheck",
     "Run pnpm lint",
     "Run pnpm audit:claims -- --strict",
-    "Update Loki to advance from M40 T4 to M40 T5"
+    "Update Loki to advance from M40 T5 to M40 T6"
   ],
   "planDoc": "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
-  "planDocSection": "Task 4: Renderer Export Hook",
+  "planDocSection": "Task 5: Sidebar Filters and Export Controls",
   "referenceDocs": [
     "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
+    "apps/desktop/src/renderer/src/features/copilot/copilot-sidebar.tsx",
     "apps/desktop/src/renderer/src/hooks/use-copilot.ts",
-    "apps/desktop/src/preload/api.ts",
-    "packages/shared-types/src/copilot.ts",
-    "packages/shared-types/src/ipc.ts"
+    "packages/shared-types/src/copilot.ts"
   ],
-  "nextStep": "Begin M40 T4 with the failing renderer hook source-contract test, then add only useCopilotExport to the existing copilot hook module."
+  "nextStep": "Begin M40 T5 with the failing sidebar source-contract test, then add filter state, export scope/buttons, and export status copy to CopilotSidebar."
 }
