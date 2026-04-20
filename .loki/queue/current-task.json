@@ -1,31 +1,33 @@
 {
-  "taskId": "Phase-6-M38-T2",
+  "taskId": "Phase-6-M38-T3",
   "milestone": "Phase 6 M38",
   "milestoneName": "Insight Feedback Loop",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M38 T2 — Persist copilot category weights in settings repo",
-  "status": "head-of-queue — M38 T1 shared-types contracts implemented and verified; next add settings persistence with TDD",
+  "title": "Phase 6 M38 T3 — Expose copilot weight settings IPC",
+  "status": "head-of-queue — M38 T2 settings persistence implemented and verified; next wire IPC handlers and weights-changed bus event",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M38 T1 — shared-types copilot feedback weight contracts implemented in 1303d4a",
+  "predecessor": "Phase 6 M38 T2 — copilot category weights persisted in settings repo in eba2668",
   "dor": [
-    "M38 T0 plan doc exists and records the five-category correction",
-    "M38 T1 shared-types contracts exist: weight defaults/clamp, IPC wire types, feedback suggestion type, weights.changed payload",
-    "Focused shared-types tests, typecheck, lint, and strict claim-evidence gates are green for T1"
+    "M38 T1 shared-types contracts are shipped",
+    "M38 T2 settings repo persistence exists with default seeding, partial patch semantics, 0..2 clamping, and malformed-value fallback",
+    "Focused settings-copilot repo tests, typecheck, lint, and strict claim-evidence gates are green for T2"
   ],
   "acceptance": [
-    "Follow Task 2 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-    "Write failing settings repo tests before implementation",
-    "Persist copilot_category_weights with five-key defaults, partial patch semantics, and 0..2 clamping",
-    "Return SettingsGetCopilotWeightsResponse / SettingsSetCopilotWeightsResponse from repo methods",
-    "Run focused settings-copilot repo tests and the standard typecheck/lint gate before commit"
+    "Follow Task 3 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+    "Write failing IPC handler tests before implementation",
+    "settings.getCopilotWeights returns repo weights and requires companyId",
+    "settings.setCopilotWeights persists clamped weights, returns the resulting snapshot, and emits copilot.weights.changed with changedKeys",
+    "Bus emit failure is swallowed after durable write",
+    "Wire register.ts and preload/api.ts channels, then run focused IPC tests plus standard typecheck/lint gate"
   ],
   "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-  "planDocSection": "Task 2: Settings Repo Weight Persistence",
+  "planDocSection": "Task 3: IPC Get/Set Weights With Bus Event",
   "referenceDocs": [
     "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-    "apps/desktop/src/main/db/repos/settings.ts",
-    "apps/desktop/src/main/db/repos/settings-copilot.test.ts",
-    "packages/shared-types/src/ipc.ts"
+    "apps/desktop/src/main/ipc/handlers.ts",
+    "apps/desktop/src/main/ipc/register.ts",
+    "apps/desktop/src/preload/api.ts",
+    "apps/desktop/src/main/ipc/settings-copilot-handlers.test.ts"
   ],
-  "nextStep": "Begin T2 by adding failing settings-copilot repo tests for defaults, partial patch, clamping, and defensive malformed JSON handling."
+  "nextStep": "Begin T3 by adding failing settings-copilot IPC tests for get/set weight handlers, companyId validation, changedKeys payload, and best-effort bus failure behavior."
 }
