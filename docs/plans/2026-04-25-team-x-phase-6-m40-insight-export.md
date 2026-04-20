@@ -690,6 +690,39 @@ git push
 - Sidebar renders visible filter, scope, CSV, JSON, success, truncation, and error states.
 - Focused unit/source-contract tests, typecheck, lint, strict claims, build, and focused E2E pass.
 
+## Verification Ledger
+
+**Completed:** 2026-04-20
+
+**Commit sequence:**
+
+| Task | Commit | Summary |
+|---|---|---|
+| T0 | `c0366d8` | Authored this M40 plan doc and locked local-only export scope. |
+| T1 | `ba84318` | Added shared export contracts and typed preload bridge. |
+| T2 | `d4c1d57` | Added active-only export projection plus JSON/CSV serializers. |
+| T3 | `6ba960b` | Wired main-process `copilot.export` IPC, validation, registration, and local file write. |
+| T4 | `09ef3cd` | Added renderer `useCopilotExport` mutation hook. |
+| T5 | `2866b66` | Added sidebar category/severity filters, scope controls, CSV/JSON buttons, and status copy. |
+| T6 | `b50b720` | Added focused Playwright coverage for filtered JSON and all-scope CSV export. |
+| T7 | `d330934` | Documented local insight export and updated README E2E counters. |
+| T8 | `this-ledger-commit` | Ran final verification gates and closed M40. |
+
+**Final verification:**
+
+| Gate | Result |
+|---|---|
+| Touched-file Biome check | `pnpm exec biome check --write ...` — 14 files checked, no fixes applied. |
+| Shared-types focused tests | `pnpm -F @team-x/shared-types exec vitest run src/copilot-export.test.ts` — 1 file / 2 tests passed. |
+| Desktop focused tests | `pnpm -F @team-x/desktop exec vitest run src/main/db/repos/copilot-insights-export.test.ts src/main/ipc/copilot-export-handlers.test.ts src/renderer/src/hooks/use-copilot-export.test.tsx src/renderer/src/features/copilot/copilot-sidebar-export.test.tsx` — 4 files / 19 tests passed. |
+| Typecheck | `pnpm typecheck` — clean across 6 workspace packages. |
+| Lint | `pnpm lint` — 0 errors / 21 known no-non-null-assertion warnings. |
+| Strict claim audit | `pnpm audit:claims -- --strict` — 95 verified / 0 allowlisted / 0 UNALLOWED out of 95. |
+| Production build | `pnpm -F @team-x/desktop build` — clean. |
+| Focused E2E | `pnpm -F @team-x/desktop exec playwright test e2e/copilot-insight-export.spec.ts` — 1 spec / 1 test passed. |
+
+**Exit state:** M40 Insight Export is complete. `copilot.export` is local-only, supports JSON/CSV, excludes dismissed and expired insights, applies company/all scope plus category/severity filters, writes under `team-x-exports`, emits no bus event, and is covered by focused shared-types, repo, IPC, renderer, sidebar, and Playwright tests.
+
 ## Follow-Up Boundary
 
 M40 does not upgrade Audit export to a native save dialog and does not introduce cloud sharing. If native destination picking becomes important, handle it as a later cross-export polish that updates both `audit.export` and `copilot.export` together.
