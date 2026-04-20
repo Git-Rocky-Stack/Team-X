@@ -195,4 +195,6 @@ export interface CopilotConfigureResult {
 export interface CopilotDismissedPayload {
   insightId: string;
   dismissedAt: number;
+  category: CopilotCategory;
+  title: string;
 }

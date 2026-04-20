@@ -41,6 +41,7 @@
 
 import type {
   ActorKind,
+  AuditEvent,
   CopilotAskArgs,
   CopilotAskResult,
   CopilotCategory,
@@ -49,6 +50,7 @@ import type {
   CopilotDismissArgs,
   CopilotDismissResult,
   CopilotDismissedPayload,
+  CopilotFeedbackSuggestion,
   CopilotInsight,
   CopilotInsightListArgs,
   CopilotInsightListResult,
@@ -56,6 +58,7 @@ import type {
   DashboardEvent,
   EventType,
 } from '@team-x/shared-types';
+import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
 
 // ---------------------------------------------------------------------------
 // Dependency shapes — structurally narrow so tests pass plain fakes
@@ -134,6 +137,19 @@ export interface CopilotHandlerEventBus {
   }): DashboardEvent<T>;
 }
 
+export interface CopilotHandlerAuditRepo {
+  list(filter: {
+    companyId: string;
+    eventTypes?: string[];
+    fromMs?: number;
+    limit?: number;
+  }): Pick<AuditEvent, 'eventType' | 'payloadJson' | 'createdAt'>[];
+}
+
+export interface CopilotHandlerSettingsRepo {
+  getCopilotWeights(): { weights: Record<CopilotCategory, number> };
+}
+
 /**
  * Agentic-loop entry point — mirrors the shape `CommandService` already
  * uses for `agenticLoopStart`. T5 wires a **stub** that throws; T6
@@ -148,6 +164,8 @@ export interface CopilotHandlersDeps {
   copilotInsightsRepo: CopilotInsightsHandlerRepo;
   copilotAnalyzerService: CopilotAnalyzerHandlerLike;
   bus: CopilotHandlerEventBus;
+  auditRepo: CopilotHandlerAuditRepo;
+  settingsRepo: CopilotHandlerSettingsRepo;
   /**
    * Resolves the test-mode gate at call time (not at factory-build
    * time) so the handler observes `NODE_ENV` exactly as the provider
@@ -188,6 +206,8 @@ export interface CopilotHandlers {
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
+const DISMISSAL_FEEDBACK_WINDOW_DAYS = 7;
+const DISMISSAL_FEEDBACK_WINDOW_MS = DISMISSAL_FEEDBACK_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
 /**
  * Hard-coded actor id for bus events fired by dismissal. The human
@@ -220,6 +240,55 @@ function toWire(row: CopilotInsightHandlerRow): CopilotInsight {
     createdAt: row.createdAt,
     expiresAt: row.expiresAt,
   };
+}
+
+export function buildCopilotFeedbackSuggestion(args: {
+  category: CopilotCategory;
+  dismissalsInWindow: number;
+  currentWeight: number;
+}): CopilotFeedbackSuggestion | null {
+  if (args.dismissalsInWindow < 3) return null;
+  const suggestedWeight =
+    args.currentWeight <= 0.5 ? 0 : Math.max(0, Math.round(args.currentWeight * 5) / 10);
+  if (suggestedWeight === args.currentWeight) return null;
+  return {
+    category: args.category,
+    dismissalsInWindow: args.dismissalsInWindow,
+    windowDays: DISMISSAL_FEEDBACK_WINDOW_DAYS,
+    currentWeight: args.currentWeight,
+    suggestedWeight,
+    reason: `You dismissed ${args.dismissalsInWindow} ${args.category} insights in the last 7 days.`,
+  };
+}
+
+function readDismissedCategory(event: Pick<AuditEvent, 'payloadJson'>): CopilotCategory | null {
+  try {
+    const payload = JSON.parse(event.payloadJson) as { category?: unknown };
+    return typeof payload.category === 'string' ? (payload.category as CopilotCategory) : null;
+  } catch {
+    return null;
+  }
+}
+
+function countRecentDismissalsForCategory(args: {
+  auditRepo: CopilotHandlerAuditRepo;
+  companyId: string;
+  category: CopilotCategory;
+  now: number;
+}): number {
+  const fromMs = args.now - DISMISSAL_FEEDBACK_WINDOW_MS;
+  const rows = args.auditRepo.list({
+    companyId: args.companyId,
+    eventTypes: ['copilot.dismissed'],
+    fromMs,
+    limit: 500,
+  });
+  return rows.filter(
+    (event) =>
+      event.eventType === 'copilot.dismissed' &&
+      event.createdAt >= fromMs &&
+      readDismissedCategory(event) === args.category,
+  ).length;
 }
 
 // ---------------------------------------------------------------------------
@@ -285,7 +354,28 @@ export function buildCopilotHandlers(deps: CopilotHandlersDeps): CopilotHandlers
       const t = now();
       deps.copilotInsightsRepo.dismiss(args.id, t);
 
-      const payload: CopilotDismissedPayload = { insightId: args.id, dismissedAt: t };
+      const category = existing.category as CopilotCategory;
+      const historicalDismissals = countRecentDismissalsForCategory({
+        auditRepo: deps.auditRepo,
+        companyId: existing.companyId,
+        category,
+        now: t,
+      });
+      const currentWeight =
+        deps.settingsRepo.getCopilotWeights().weights[category] ??
+        COPILOT_CATEGORY_WEIGHTS_DEFAULT[category];
+      const feedbackSuggestion = buildCopilotFeedbackSuggestion({
+        category,
+        dismissalsInWindow: historicalDismissals + 1,
+        currentWeight,
+      });
+
+      const payload: CopilotDismissedPayload = {
+        insightId: args.id,
+        dismissedAt: t,
+        category,
+        title: existing.title,
+      };
       deps.bus.emit<CopilotDismissedPayload>({
         type: 'copilot.dismissed',
         companyId: existing.companyId,
@@ -294,7 +384,9 @@ export function buildCopilotHandlers(deps: CopilotHandlersDeps): CopilotHandlers
         payload,
       });
 
-      return { id: args.id, dismissedAt: t };
+      return feedbackSuggestion
+        ? { id: args.id, dismissedAt: t, feedbackSuggestion }
+        : { id: args.id, dismissedAt: t };
     },
 
     async ask(args: CopilotAskArgs): Promise<CopilotAskResult> {

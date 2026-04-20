@@ -1547,6 +1547,8 @@ app
       copilotInsightsRepo,
       copilotAnalyzerService: copilotAnalyzerServiceInstance,
       bus,
+      auditRepo,
+      settingsRepo,
       isTestMode,
       agenticLoopStart: (req) =>
         copilotServiceInstance.ask({ companyId: req.companyId, text: req.text }),
