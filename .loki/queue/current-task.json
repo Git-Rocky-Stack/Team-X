@@ -1,34 +1,35 @@
 {
-  "taskId": "Phase-6-M38-T6",
+  "taskId": "Phase-6-M38-T7",
   "milestone": "Phase 6 M38",
   "milestoneName": "Insight Feedback Loop",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M38 T6 — Surface copilot feedback suggestions in renderer",
-  "status": "head-of-queue — M38 T5 dismissal detector implemented and verified; next add settings controls and suggestion UI",
+  "title": "Phase 6 M38 T7 — M38 integration E2E",
+  "status": "head-of-queue — M38 T6 renderer settings and suggestion UI implemented and verified; next cover the full feedback loop in Playwright",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M38 T5 — advisory dismissal suggestion implemented in 380fbfd",
+  "predecessor": "Phase 6 M38 T6 — renderer feedback weighting implemented in b1de739",
   "dor": [
-    "M38 T1-T5 backend/contracts are shipped",
-    "Repeated dismissals now return advisory feedbackSuggestion without auto-applying weights",
-    "Dismissed bus payload includes category/title for audit-backed pattern detection",
-    "Focused copilot IPC tests, typecheck, lint, and strict claim-evidence gates are green for T5"
+    "M38 T1-T6 backend, contracts, analyzer, dismissal detector, and renderer UI are shipped",
+    "CopilotSection exposes category weight controls with data-copilot-weight-category selectors",
+    "CopilotSidebar exposes data-copilot-feedback-suggestion and data-copilot-feedback-apply selectors",
+    "Focused renderer tests, typecheck, lint, and strict claim-evidence gates are green for T6"
   ],
   "acceptance": [
-    "Follow Task 6 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-    "Write failing renderer tests before implementation",
-    "CopilotSection renders one category-weight control per COPILOT_CATEGORIES entry and displays 0.0x..2.0x values",
-    "Dismiss feedback suggestion banner can be kept/dismissed without mutating settings",
-    "Applying feedback suggestion calls settings.setCopilotWeights with the suggested category weight",
-    "Run focused renderer tests plus standard typecheck/lint gate"
+    "Follow Task 7 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+    "Write failing Playwright E2E before implementation/stabilization",
+    "Launch app in test mode and drive the canned copilot provider to produce repeated same-category insights",
+    "Dismiss three cost insights and assert the feedback suggestion banner appears",
+    "Click Apply and assert a copilot.weights.changed audit/event row exists",
+    "Reopen settings and verify the cost weight displays the suggested value",
+    "Run pnpm -F @team-x/desktop exec playwright test e2e/copilot-feedback.spec.ts"
   ],
   "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-  "planDocSection": "Task 6: Renderer Settings And Suggestion UI",
+  "planDocSection": "Task 7: M38 Integration E2E",
   "referenceDocs": [
     "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-    "apps/desktop/src/renderer/src/hooks/use-settings.ts",
-    "apps/desktop/src/renderer/src/hooks/use-copilot.ts",
-    "apps/desktop/src/renderer/src/features/settings/copilot-section.tsx",
-    "apps/desktop/src/renderer/src/features/copilot/copilot-sidebar.tsx"
+    "apps/desktop/e2e/copilot-feedback.spec.ts",
+    "apps/desktop/e2e/copilot-ui.spec.ts",
+    "apps/desktop/src/renderer/src/features/copilot/copilot-sidebar.tsx",
+    "apps/desktop/src/renderer/src/features/settings/copilot-section.tsx"
   ],
-  "nextStep": "Begin T6 by adding failing renderer tests for weight controls and feedback-suggestion apply/keep behavior."
+  "nextStep": "Begin T7 by adding a failing Playwright spec for the dismiss-suggestion-apply feedback loop."
 }

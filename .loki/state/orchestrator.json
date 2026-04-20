@@ -2,7 +2,7 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M38",
   "milestoneName": "Insight Feedback Loop",
-  "tasksCompleted": 6,
+  "tasksCompleted": 7,
   "tasksFailed": 0,
   "totalTasks": 8,
   "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
@@ -52,14 +52,14 @@
   },
   "current": {
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests.",
     "e2eSpecs": 13,
     "e2eGreenCount": 18,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M38 T5 dismissal detector implemented and verified; M38 T6 renderer UI is head-of-queue.",
+    "asOfTask": "Phase 6 M38 T6 renderer settings and suggestion UI implemented and verified; M38 T7 integration E2E is head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
     "version": "1.1.1",
@@ -581,6 +581,32 @@
       },
       "structureCompliance": "M38 T5 current-task acceptance satisfied: failing dismiss-flow tests were written before production code, third same-category dismissal returns an advisory suggestion, mixed/old dismissals do not trigger, settings are not auto-mutated, and next task advanced to M38 T6 renderer UI."
     },
+    "M38-T6": {
+      "name": "Renderer settings and suggestion UI",
+      "shippedAt": "2026-04-20T05:10:00Z",
+      "commit": "b1de739",
+      "deliverable": "Surfaced copilot feedback weighting in the renderer. Added React Query hooks for settings.getCopilotWeights/settings.setCopilotWeights, category weight controls in CopilotSection with 0.0x..2.0x labels and partial-patch persistence, pure helper formatting for weight labels and suggestion prompts, CopilotInsightCard handoff of dismiss feedback suggestions, and a CopilotSidebar advisory banner with Apply and Keep current actions. Apply calls settings.setCopilotWeights with the suggested category weight; Keep current clears only local banner state.",
+      "filesTouched": [
+        "apps/desktop/src/renderer/src/hooks/use-settings.ts",
+        "apps/desktop/src/renderer/src/features/settings/copilot-section.tsx",
+        "apps/desktop/src/renderer/src/features/settings/copilot-section.test.tsx",
+        "apps/desktop/src/renderer/src/features/copilot/copilot-helpers.ts",
+        "apps/desktop/src/renderer/src/features/copilot/copilot-helpers.test.ts",
+        "apps/desktop/src/renderer/src/features/copilot/copilot-insight-card.tsx",
+        "apps/desktop/src/renderer/src/features/copilot/copilot-sidebar.tsx",
+        ".loki/queue/current-task.json",
+        ".loki/queue/pending.json",
+        ".loki/state/orchestrator.json"
+      ],
+      "testsDelta": "+8 focused renderer tests",
+      "verificationGates": {
+        "rendererFocused": "2 files / 24 tests passed",
+        "typecheck": "clean across 6 packages",
+        "lint": "0 errors / 21 known warnings",
+        "auditClaimsStrict": "95 verified / 0 allowlisted / 0 UNALLOWED"
+      },
+      "structureCompliance": "M38 T6 current-task acceptance satisfied: failing renderer tests were written before production code, one weight control is rendered per canonical category, 0.0x..2.0x display is covered, applying suggestions mutates settings with the suggested category weight, keeping current does not mutate settings, and next task advanced to M38 T7 integration E2E."
+    },
     "M37-R": {
       "name": "Capability Role-Fit Reconciliation",
       "shippedAt": "2026-04-20T02:30:00Z",
@@ -1023,6 +1049,7 @@
   },
   "inFlightMilestone": "Phase 6 M38 Insight Feedback Loop",
   "notes": [
+    "PHASE 6 M38 T6 SHIPPED 2026-04-20 — renderer feedback weighting UI implemented with TDD. Added useCopilotWeights/useSetCopilotWeights hooks, category weight controls in CopilotSection with 0.0x..2.0x display and data-copilot-weight-category anchors, feedback suggestion prompt helpers, CopilotInsightCard callback handoff for dismiss suggestions, and CopilotSidebar advisory banner with Apply/Keep current actions. Apply calls settings.setCopilotWeights with the suggested category weight; Keep current only clears local banner state; stable E2E selectors data-copilot-feedback-suggestion and data-copilot-feedback-apply are present. Verification: renderer focused tests 2 files / 24 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T7 feedback-loop E2E.",
     "PHASE 6 M38 T5 SHIPPED 2026-04-20 — advisory dismissal feedback detector implemented with TDD. Extended copilot.dismissed payload with category/title; added audit-backed seven-day same-category dismissal counting; returns CopilotFeedbackSuggestion on the third same-category dismissal; current weight 1.0 suggests 0.5 and 0.5 suggests 0.0; mixed/old dismissals do not trigger; no settings mutation occurs in dismiss. Verification: copilot-handlers tests 1 file / 13 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T6 renderer settings and suggestion UI.",
     "PHASE 6 M38 T4 SHIPPED 2026-04-20 — analyzer category weighting implemented with TDD. Added weightInsightDrafts pure helper, severity base scores, five-draft cap, zero-weight category drop, stable tie ordering, CopilotAnalyzerSettings.categoryWeights defaults, production getSettings wiring to settingsRepo.getCopilotWeights(), and tick integration that keeps insightsProposed as pre-weight model output while persisting only weighted drafts. Verification: copilot-analyzer-service tests 1 file / 19 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T5 dismissal pattern detector.",
     "PHASE 6 M38 T3 SHIPPED 2026-04-20 — copilot weight settings IPC exposed with TDD. Added settings.getCopilotWeights/settings.setCopilotWeights handler surface, companyId validation, durable repo write before bus fan-out, changedKeys diffing, best-effort copilot.weights.changed emit, bus-failure swallow, and register.ts channel wiring. Preload bridge methods already landed with T1 to satisfy TeamXApi after the contract widened. Verification: settings-copilot IPC tests 1 file / 8 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T4 analyzer weighting.",
