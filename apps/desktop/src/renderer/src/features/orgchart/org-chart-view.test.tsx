@@ -105,7 +105,9 @@ describe('OrgChartNode read-side row', () => {
     expect(orgNodeSrc).toContain('data-org-chart-node={employee.id}');
     expect(orgNodeSrc).toContain('onKeyDown={handleKeyDown}');
     expect(orgNodeSrc).toContain("event.key === 'Enter'");
-    expect(orgNodeSrc).toContain('Actions ship in step (f)');
+    expect(orgNodeSrc).toContain('data-org-chart-promote=""');
+    expect(orgNodeSrc).toContain('data-org-chart-fire=""');
+    expect(orgNodeSrc).toContain('data-org-chart-manager-select=""');
   });
 });
 

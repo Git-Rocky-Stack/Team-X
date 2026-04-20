@@ -8,9 +8,21 @@ interface OrgChartTreeProps {
   employees: Employee[];
   edges: OrgchartEdge[];
   rootIds: string[];
+  onChat: (employeeId: string) => void;
+  onPromote: (employee: Employee) => void;
+  onFire: (employee: Employee) => void;
+  onSetManager: (employeeId: string, managerId: string | null) => void;
 }
 
-export function OrgChartTree({ employees, edges, rootIds }: OrgChartTreeProps) {
+export function OrgChartTree({
+  employees,
+  edges,
+  rootIds,
+  onChat,
+  onPromote,
+  onFire,
+  onSetManager,
+}: OrgChartTreeProps) {
   const { employeeById, childrenByManager } = useMemo(() => {
     const employeeById = new Map<string, Employee>();
     for (const employee of employees) {
@@ -41,6 +53,11 @@ export function OrgChartTree({ employees, edges, rootIds }: OrgChartTreeProps) {
         employee={employee}
         depth={depth}
         childCount={children.length}
+        managerOptions={employees}
+        onChat={onChat}
+        onPromote={onPromote}
+        onFire={onFire}
+        onSetManager={onSetManager}
       >
         {children.map((child) => renderNode(child, depth + 1))}
       </OrgChartNode>
