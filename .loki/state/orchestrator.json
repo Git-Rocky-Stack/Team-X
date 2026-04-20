@@ -2,7 +2,7 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M38",
   "milestoneName": "Insight Feedback Loop",
-  "tasksCompleted": 1,
+  "tasksCompleted": 2,
   "tasksFailed": 0,
   "totalTasks": 8,
   "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
@@ -52,14 +52,14 @@
   },
   "current": {
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests.",
     "e2eSpecs": 13,
     "e2eGreenCount": 18,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M38 T0 plan doc authored; M38 T1 shared-types feedback weight contracts are head-of-queue.",
+    "asOfTask": "Phase 6 M38 T1 shared-types feedback weight contracts implemented and verified; M38 T2 settings persistence is head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
     "version": "1.1.1",
@@ -467,6 +467,30 @@
         "featureScope": "zero production code, zero IPC/runtime changes, zero migrations"
       },
       "structureCompliance": "M38 T0 current-task acceptance satisfied: plan doc authored, M38 D19/D20 decisions resolved, non-goals defined, TDD task sequence specified, invariant #11 preserved for future settings mutation, and no implementation drift."
+    },
+    "M38-T1": {
+      "name": "Shared-types feedback weight contracts",
+      "shippedAt": "2026-04-20T03:20:00Z",
+      "commit": "1303d4a",
+      "deliverable": "Implemented Phase 6 M38 Task 1 contract surface with TDD. Shared-types now export CopilotCategoryWeights, COPILOT_CATEGORY_WEIGHTS_DEFAULT, COPILOT_CATEGORY_WEIGHT_CLAMP, settings.getCopilotWeights/settings.setCopilotWeights IPC request/response contracts, CopilotFeedbackSuggestion on CopilotDismissResult, and copilot.weights.changed EventType + payload. Preload bridge methods were added to keep the TeamXApi implementation type-complete after the contract widened.",
+      "filesTouched": [
+        "packages/shared-types/src/copilot-feedback.test.ts",
+        "packages/shared-types/src/ipc.ts",
+        "packages/shared-types/src/events.ts",
+        "packages/shared-types/src/copilot.ts",
+        "apps/desktop/src/preload/api.ts",
+        ".loki/queue/current-task.json",
+        ".loki/queue/pending.json",
+        ".loki/state/orchestrator.json"
+      ],
+      "testsDelta": "+3 focused shared-types tests",
+      "verificationGates": {
+        "sharedTypesFocused": "3 files / 23 tests passed",
+        "typecheck": "clean across 6 packages",
+        "lint": "0 errors / 21 known warnings",
+        "auditClaimsStrict": "95 verified / 0 allowlisted / 0 UNALLOWED"
+      },
+      "structureCompliance": "M38 T1 current-task acceptance satisfied: failing shared-types contract test written first, contracts implemented, no settings repo / IPC handler / analyzer / renderer UI behavior changed, and next task advanced to M38 T2 settings persistence."
     },
     "M37-R": {
       "name": "Capability Role-Fit Reconciliation",
@@ -910,6 +934,7 @@
   },
   "inFlightMilestone": "Phase 6 M38 Insight Feedback Loop",
   "notes": [
+    "PHASE 6 M38 T1 SHIPPED 2026-04-20 — shared-types feedback weight contracts implemented with TDD. Added COPILOT_CATEGORY_WEIGHTS_DEFAULT + COPILOT_CATEGORY_WEIGHT_CLAMP, CopilotCategoryWeights, settings.getCopilotWeights/settings.setCopilotWeights request/response contracts, CopilotFeedbackSuggestion on CopilotDismissResult, copilot.weights.changed EventType + payload, and preload bridge methods to satisfy TeamXApi. Verification: focused shared-types tests 3 files / 23 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T2 settings repo persistence.",
     "PHASE 6 M38 T0 AUTHORED 2026-04-20 — NEW docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md. Plan-doc-only: zero production code, zero IPC/runtime changes. Locks D20 correction that copilot weights are five-key (operational/cost/org/workflow/anomaly), not six-key; uses existing settings key-value table with no migration; keeps weights global for v1.2.0 because settings.key is the primary key; requires explicit user confirmation before settings.setCopilotWeights mutates; and decomposes implementation into 8 TDD tasks. Head-of-queue advances to M38 T1 shared-types feedback weight contracts.",
     "PHASE 6 M37-R RECONCILED 2026-04-20 — no new feature scope added. Inventory confirmed commit 26d07df already shipped the M36/M37 capability surface: shared-types 41-capability taxonomy, role-schema parser validation, official 57-role backfill, pack.json 1.1.0 + pack.sig, roleLoader capability specs, write-side capability Jaccard role-fit, provider requiredCapabilities parsing, and M32 keyword fallback for generic subtasks. Focused verification green: shared-types 2 files / 20 tests, role-schema 3 files / 50 tests, desktop role-loader/scorer 2 files / 50 tests. Phase 6 docs + Loki now mark M36/M37 as reconciled/shipped. Head-of-queue advances to Phase 6 M38 T0 — Insight Feedback Loop plan doc.",
     "PHASE 5.6 M-G SHIPPED 2026-04-20 — atomic release commit 852f6f7. CHANGELOG promoted to [1.1.1], 7 package.json files bumped, Phase 5.6 retrospective authored, audit §20.8 cross-check added, strict claims 95/0/0, typecheck clean, lint 0 errors / 21 warnings, unit 1683/1683, Playwright 18/18, build clean, diff-check clean. Phase 6 pause lifted. worktree-phase-2-the-org deletion approved by zero-unresolved-restore-row evidence. Next: Phase 6 M37-R reconciliation for already-landed capability parser/backfill/role-fit commit 26d07df.",

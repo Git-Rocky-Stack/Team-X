@@ -1,33 +1,31 @@
 {
-  "taskId": "Phase-6-M38-T1",
+  "taskId": "Phase-6-M38-T2",
   "milestone": "Phase 6 M38",
   "milestoneName": "Insight Feedback Loop",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M38 T1 — Add copilot feedback weight contracts",
-  "status": "head-of-queue — M38 T0 plan doc authored; start implementation with shared-types contracts using TDD",
+  "title": "Phase 6 M38 T2 — Persist copilot category weights in settings repo",
+  "status": "head-of-queue — M38 T1 shared-types contracts implemented and verified; next add settings persistence with TDD",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M38 T0 — Insight Feedback Loop plan doc authored at docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+  "predecessor": "Phase 6 M38 T1 — shared-types copilot feedback weight contracts implemented in 1303d4a",
   "dor": [
-    "M37-R reconciliation closed and pushed",
-    "M38 T0 plan doc exists with decisions, non-goals, task sequence, verification gates, and acceptance criteria",
-    "D20 category-count correction recorded: copilot weights are five-key, matching canonical CopilotCategory values",
-    "No production code has been changed for M38 yet"
+    "M38 T0 plan doc exists and records the five-category correction",
+    "M38 T1 shared-types contracts exist: weight defaults/clamp, IPC wire types, feedback suggestion type, weights.changed payload",
+    "Focused shared-types tests, typecheck, lint, and strict claim-evidence gates are green for T1"
   ],
   "acceptance": [
-    "Follow Task 1 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-    "Write failing shared-types tests for COPILOT_CATEGORY_WEIGHTS_DEFAULT and COPILOT_CATEGORY_WEIGHT_CLAMP before implementation",
-    "Add CopilotCategoryWeights, settings.getCopilotWeights/setCopilotWeights wire types, CopilotFeedbackSuggestion, and copilot.weights.changed payload",
-    "Run focused shared-types tests and commit atomically as feat(m38): add copilot feedback weight contracts",
-    "Do not touch settings repo, IPC handlers, analyzer service, or renderer files in T1"
+    "Follow Task 2 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+    "Write failing settings repo tests before implementation",
+    "Persist copilot_category_weights with five-key defaults, partial patch semantics, and 0..2 clamping",
+    "Return SettingsGetCopilotWeightsResponse / SettingsSetCopilotWeightsResponse from repo methods",
+    "Run focused settings-copilot repo tests and the standard typecheck/lint gate before commit"
   ],
   "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-  "planDocSection": "Task 1: Shared Types For Weights And Bus Event",
+  "planDocSection": "Task 2: Settings Repo Weight Persistence",
   "referenceDocs": [
-    "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
-    "packages/shared-types/src/events.ts",
-    "packages/shared-types/src/copilot.ts",
+    "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+    "apps/desktop/src/main/db/repos/settings.ts",
+    "apps/desktop/src/main/db/repos/settings-copilot.test.ts",
     "packages/shared-types/src/ipc.ts"
   ],
-  "nextStep": "Begin T1 with a failing shared-types test; do not write production contract code until the test fails for the expected missing symbols."
+  "nextStep": "Begin T2 by adding failing settings-copilot repo tests for defaults, partial patch, clamping, and defensive malformed JSON handling."
 }
