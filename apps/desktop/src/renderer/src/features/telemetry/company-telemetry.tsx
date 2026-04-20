@@ -53,8 +53,12 @@ export function CompanyTelemetry({ companyId }: Props) {
   const now = useMemo(() => Date.now(), []);
   const thirtyDaysAgo = now - 30 * DAY_MS;
 
-  const { data: stats, isLoading: statsLoading } = useCompanyStats(companyId);
-  const { data: daily, isLoading: dailyLoading } = useDailyUsage(companyId, thirtyDaysAgo, now);
+  const { data: stats, isLoading: statsLoading } = useCompanyStats({ companyId });
+  const { data: daily, isLoading: dailyLoading } = useDailyUsage({
+    companyId,
+    fromMs: thirtyDaysAgo,
+    toMs: now,
+  });
 
   if (statsLoading || dailyLoading) {
     return (

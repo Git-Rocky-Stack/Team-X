@@ -34,7 +34,7 @@ function formatTokens(n: number): string {
 }
 
 export function EmployeeTelemetry({ companyId }: Props) {
-  const { data: stats, isLoading: statsLoading } = useEmployeeStats(companyId);
+  const { data: stats, isLoading: statsLoading } = useEmployeeStats({ companyId });
   const { data: employees, isLoading: empLoading } = useEmployees(companyId);
   const [sortKey, setSortKey] = useState<SortKey>('totalRuns');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
