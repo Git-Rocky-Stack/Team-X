@@ -20,23 +20,12 @@ import { StreamView } from './features/dashboard/stream-view.js';
 import { TimelineView } from './features/dashboard/timeline-view.js';
 import { HireDialog } from './features/hire/hire-dialog.js';
 import { MeetingsView } from './features/meetings/meetings-view.js';
+import { OrgChartView } from './features/orgchart/org-chart-view.js';
 import { ProjectsView } from './features/projects/projects-view.js';
 import { SettingsView } from './features/settings/settings-view.js';
 import { TelemetryView } from './features/telemetry/telemetry-view.js';
 import { TicketsView } from './features/tickets/tickets-view.js';
 import { VaultView } from './features/vault/vault-view.js';
-
-/**
- * Placeholder view for tabs that will be built in later milestones.
- */
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <p className="text-lg font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm text-muted-foreground/70">Coming in a future milestone.</p>
-    </div>
-  );
-}
 
 /**
  * Root application component. Phase 3 expands routing to all top-level
@@ -172,7 +161,7 @@ export default function App() {
       case 'tickets':
         return <TicketsView companyId={companyId} employees={employees} />;
       case 'org':
-        return <ComingSoon label="Org Chart" />;
+        return <OrgChartView companyId={companyId} />;
       case 'projects':
         return <ProjectsView companyId={companyId} employees={employees} />;
       case 'meetings':

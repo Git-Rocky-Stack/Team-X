@@ -125,6 +125,8 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 ### Step (e) — Org-chart view (Cluster B, read-side)
 
+> **2026-04-19 — SHIPPED in working tree.** Step (e) enabled the Org top-bar tab, added `useOrgChart` / `useOrgChartEventSync`, rendered the `orgchart.get` flat projection through `OrgChartView` + `OrgChartTree` + `OrgChartNode`, and added `apps/desktop/e2e/org-chart.spec.ts` for the seeded CEO/SWE read-side path plus keyboard action affordance. Step (f) owns mutation actions.
+
 **Goal:** Ship the tree render. No interactions yet — those land in step (f).
 
 **Files:**
@@ -168,12 +170,12 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 **Files:**
 - EXISTING `apps/desktop/e2e/workspace-switcher.spec.ts` — pre-flight already covers boot, switcher render, create company end-to-end, active switch, and switch-back. Step (c) has already extended this spec to edit/archive/delete and hire manager-edge assertions; Step (d) adds the Chat tab/thread-selection case; Step (g) adds audit-event assertions for `company.created / updated / archived / deleted`.
-- NEW `apps/desktop/e2e/org-chart.spec.ts` — boot, navigate to Org tab, assert tree renders, hire an employee, promote them, drag-rearrange, fire; asserts `employee.*` bus events land in Audit.
+- EXISTING `apps/desktop/e2e/org-chart.spec.ts` — step (e) already covers boot → Org tab → seeded CEO/SWE tree render → keyboard action affordance. Step (g) extends this spec with hire/promote/drag/fire and `employee.*` audit-event assertions.
 - MODIFIED E2E specs that assert Chat tab disabled (if any — grep first) → flip to asserting it's enabled.
 
 **Acceptance (M-D exit KPI):**
 - vitest: baseline 1572 + new unit tests (estimate +30–60 across hooks + components).
-- E2E: 12 specs / 16 cases after the step (d) Chat tab expansion; target 13 specs / 17+ cases at M-D exit after the org-chart spec lands.
+- E2E: 13 specs / 17 cases after the step (e) org-chart read-side spec; target 13 specs / 18+ cases at M-D exit after org-chart interactions land.
 - typecheck clean across 6 packages.
 - lint 0 errors / ≤21 warnings (baseline preserved).
 - `pnpm audit:claims`: 92 / 3 / 0 preserved — no allowlist movement expected (M-D adds no IPC channels).

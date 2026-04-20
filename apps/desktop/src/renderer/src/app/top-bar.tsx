@@ -29,7 +29,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { label: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
-  { label: 'Org', icon: GitBranch, view: 'org', disabled: true },
+  { label: 'Org', icon: GitBranch, view: 'org' },
   { label: 'Projects', icon: KanbanSquare, view: 'projects' },
   { label: 'Tickets', icon: KanbanSquare, view: 'tickets' },
   { label: 'Meetings', icon: Users2, view: 'meetings' },

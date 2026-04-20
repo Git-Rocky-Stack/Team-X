@@ -58,9 +58,12 @@ describe('ChatView (features/chat/chat-view.tsx)', () => {
 });
 
 describe('Chat tab step-(d) integration', () => {
-  it('enables the top-bar Chat tab while leaving Org disabled for step (e)', () => {
-    expect(topBarSrc).toContain("{ label: 'Org', icon: GitBranch, view: 'org', disabled: true }");
+  it('keeps the top-bar Chat tab enabled after Org ships in step (e)', () => {
+    expect(topBarSrc).toContain("{ label: 'Org', icon: GitBranch, view: 'org' }");
     expect(topBarSrc).toContain("{ label: 'Chat', icon: MessageSquare, view: 'chat' }");
+    expect(topBarSrc).not.toContain(
+      "{ label: 'Org', icon: GitBranch, view: 'org', disabled: true }",
+    );
     expect(topBarSrc).not.toContain(
       "{ label: 'Chat', icon: MessageSquare, view: 'chat', disabled: true }",
     );
