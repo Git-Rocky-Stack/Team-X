@@ -22,12 +22,15 @@ import {
   YAxis,
 } from 'recharts';
 
+import type { TelemetryKindFilter } from '@team-x/shared-types';
+
 import { useCostBreakdown } from '@/hooks/use-telemetry.js';
 
 const DAY_MS = 86_400_000;
 
 interface Props {
   companyId: string;
+  kindFilter: TelemetryKindFilter;
 }
 
 type DateRange = '7d' | '30d' | '90d' | 'all';

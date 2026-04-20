@@ -1,35 +1,36 @@
 {
-  "taskId": "Phase-6-M39-T5",
+  "taskId": "Phase-6-M39-T6",
   "milestone": "Phase 6 M39",
   "milestoneName": "Telemetry Per-Kind Filter",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M39 T5 — Telemetry filter chips",
-  "status": "head-of-queue — M39 T4 renderer hooks shipped; next add TelemetryKindFilter chips in TelemetryView",
+  "title": "Phase 6 M39 T6 — Wire subviews to filtered requests",
+  "status": "head-of-queue — M39 T5 filter chips shipped; next pass kindFilter into telemetry aggregate requests",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M39 T4 — Renderer hooks and filter helpers",
+  "predecessor": "Phase 6 M39 T5 — Telemetry filter chips",
   "dor": [
-    "Telemetry hooks accept request-object inputs and include kind in all aggregate query keys",
-    "telemetryRequestKind(filter) maps all to omitted kind and preserves persisted work/agentic/copilot kinds",
-    "Focused hook source-contract tests, typecheck, lint, and strict claims are green after T4"
+    "TelemetryView owns local kindFilter state with default all",
+    "TelemetryKindFilterChips renders All, Work, Agentic, and Copilot buttons with data-telemetry-kind-filter selectors",
+    "TelemetryView passes kindFilter props to CompanyTelemetry, EmployeeTelemetry, and CostBreakdown",
+    "Focused telemetry-view tests, typecheck, lint, and strict claims are green after T5"
   ],
   "acceptance": [
-    "Follow Task 5 in docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-    "Write failing component/source-contract tests for TelemetryKindFilterChips",
-    "Render four filter buttons: All, Work, Agentic, Copilot",
-    "Default active filter is All",
-    "Clicking Copilot calls onChange('copilot')",
-    "Each button has data-telemetry-kind-filter=\"<filter>\"",
-    "Keep styling aligned with existing subtab buttons and avoid nested section cards",
-    "Run pnpm -F @team-x/desktop exec vitest run src/renderer/src/features/telemetry/telemetry-view.test.tsx",
+    "Follow Task 6 in docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
+    "Write failing telemetry-subviews source-contract tests",
+    "CompanyTelemetry passes kind into useCompanyStats and useDailyUsage",
+    "EmployeeTelemetry passes kind into useEmployeeStats",
+    "CostBreakdown passes kind into useCostBreakdown and preserves date range filters",
+    "Use telemetryRequestKind(kindFilter) so all maps to omitted kind",
+    "Run pnpm -F @team-x/desktop exec vitest run src/renderer/src/features/telemetry/telemetry-subviews.test.tsx",
     "Run pnpm typecheck, pnpm lint, and pnpm audit:claims -- --strict before ledgering"
   ],
   "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-  "planDocSection": "Task 5: Telemetry Filter Chips",
+  "planDocSection": "Task 6: Wire Subviews To Filtered Requests",
   "referenceDocs": [
     "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-    "apps/desktop/src/renderer/src/features/telemetry/telemetry-view.tsx",
-    "apps/desktop/src/renderer/src/hooks/use-telemetry.ts",
-    "packages/shared-types/src/ipc.ts"
+    "apps/desktop/src/renderer/src/features/telemetry/company-telemetry.tsx",
+    "apps/desktop/src/renderer/src/features/telemetry/employee-telemetry.tsx",
+    "apps/desktop/src/renderer/src/features/telemetry/cost-breakdown.tsx",
+    "apps/desktop/src/renderer/src/hooks/use-telemetry.ts"
   ],
-  "nextStep": "Begin T5 by writing the failing telemetry-view test that pins the kind filter chips and data-telemetry-kind-filter selectors."
+  "nextStep": "Begin T6 by writing the failing telemetry-subviews source-contract test that pins kind propagation into all aggregate hook requests."
 }

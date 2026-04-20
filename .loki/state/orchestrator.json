@@ -2,7 +2,7 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M39",
   "milestoneName": "Telemetry Per-Kind Filter",
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "tasksFailed": 0,
   "totalTasks": 9,
   "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
@@ -52,14 +52,14 @@
   },
   "current": {
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests.",
     "e2eSpecs": 14,
     "e2eGreenCount": 19,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M39 T4 renderer hooks and filter helpers shipped; M39 T5 telemetry filter chips are head-of-queue.",
+    "asOfTask": "Phase 6 M39 T5 telemetry filter chips shipped; M39 T6 subview request propagation is head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
     "version": "1.1.1",
@@ -1202,10 +1202,36 @@
         "auditClaimsStrict": "95 verified / 0 allowlisted / 0 UNALLOWED"
       },
       "structureCompliance": "M39 T4 current-task acceptance satisfied: failing source-contract tests written first, all telemetry query keys include kind with All fallback, helper maps all to undefined, gates are green, and next task advanced to M39 T5 filter chips."
+    },
+    "M39-T5": {
+      "name": "Telemetry filter chips",
+      "shippedAt": "2026-04-20T08:05:00Z",
+      "commit": "this-feature-commit",
+      "deliverable": "TelemetryView now owns local TelemetryKindFilter state defaulting to all, renders TelemetryKindFilterChips with All/Work/Agentic/Copilot buttons, exposes data-telemetry-kind-filter selectors, and passes kindFilter to each telemetry subview. Subview Props were widened to accept kindFilter so T6 can wire it into aggregate hook requests without changing the chip surface.",
+      "filesTouched": [
+        "apps/desktop/src/renderer/src/features/telemetry/telemetry-view.tsx",
+        "apps/desktop/src/renderer/src/features/telemetry/telemetry-view.test.tsx",
+        "apps/desktop/src/renderer/src/features/telemetry/company-telemetry.tsx",
+        "apps/desktop/src/renderer/src/features/telemetry/employee-telemetry.tsx",
+        "apps/desktop/src/renderer/src/features/telemetry/cost-breakdown.tsx",
+        ".loki/queue/current-task.json",
+        ".loki/queue/pending.json",
+        ".loki/state/orchestrator.json"
+      ],
+      "testsDelta": "+3 focused telemetry-view source-contract tests",
+      "verificationGates": {
+        "validRed": "telemetry-view.test.tsx failed because TelemetryKindFilterChips, default all state, selectors, and subview kindFilter props were absent",
+        "telemetryViewFocused": "1 file / 3 tests passed",
+        "typecheck": "clean across 6 workspace packages",
+        "lint": "0 errors / 21 known warnings",
+        "auditClaimsStrict": "95 verified / 0 allowlisted / 0 UNALLOWED"
+      },
+      "structureCompliance": "M39 T5 current-task acceptance satisfied: failing source-contract tests written first, four filter chips render by source contract, default All state is pinned, Copilot click wiring is pinned, selectors are present, gates are green, and next task advanced to M39 T6 subview request propagation."
     }
   },
   "inFlightMilestone": "Phase 6 M39 Telemetry Per-Kind Filter",
   "notes": [
+    "PHASE 6 M39 T5 SHIPPED 2026-04-20 — TelemetryView kind filter chips implemented with TDD. Added telemetry-view source-contract tests; valid red proved missing filter labels, exported TelemetryKindFilterChips, default all state, data-telemetry-kind-filter selectors, and subview kindFilter props. TelemetryView now stores useState<TelemetryKindFilter>('all'), renders All/Work/Agentic/Copilot chips with aria-pressed and data selectors, and passes kindFilter to CompanyTelemetry, EmployeeTelemetry, and CostBreakdown. Subview Props were widened for the prop only; aggregate request wiring remains scoped to T6. Verification: telemetry-view focused test 1 file / 3 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T6 subview request propagation.",
     "PHASE 6 M39 T4 SHIPPED 2026-04-20 — renderer telemetry hooks and filter helper implemented with TDD. Added use-telemetry source-contract tests; valid red proved missing telemetryRequestKind, request-object hook signatures, and kind-aware query keys. Hooks now accept request objects for companyStats, dailyUsage, employeeStats, and costBreakdown; each query key includes req?.kind ?? 'all'; telemetryRequestKind maps renderer-only all to undefined while preserving work/agentic/copilot. CompanyTelemetry and EmployeeTelemetry callers were mechanically adapted to the request-object hook contract; filter UI/subview kind propagation remains scoped to T5/T6. Verification: use-telemetry focused test 1 file / 3 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T5 telemetry filter chips.",
     "PHASE 6 M39 T3 SHIPPED 2026-04-20 — telemetry IPC and preload kind propagation implemented with TDD. Added telemetry-handlers focused tests with a fake runs repo; valid red proved handlers dropped kind args and accepted invalid runtime values. Handlers now validate optional kind against TELEMETRY_RUN_KINDS before repo access and pass kind through to companyStats, dailyUsage, employeeStats, and costBreakdown. Preload companyStats/employeeStats now accept string | request-object and normalize string callers to { companyId } for backward compatibility while allowing future renderer request-object calls. Verification: telemetry-handlers focused test 1 file / 2 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T4 renderer hooks and filter helpers.",
     "PHASE 6 M39 T2 SHIPPED 2026-04-20 — runs repo per-kind telemetry aggregate filters implemented with TDD. Extended runs-telemetry seeded runs with kind, added a valid red proving companyStats(cid, agentic) still returned all three work/agentic/copilot rows, then added optional TelemetryRunKind parameters to companyStats, dailyUsage, employeeStats, and costBreakdown. All four read paths now append runs.kind = kind only when a persisted kind is provided; undefined preserves the All aggregate. Verification: runs-telemetry focused suite 1 file / 16 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T3 IPC and preload kind propagation.",

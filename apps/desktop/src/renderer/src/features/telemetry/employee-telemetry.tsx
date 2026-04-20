@@ -10,11 +10,14 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import type { TelemetryKindFilter } from '@team-x/shared-types';
+
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useEmployeeStats } from '@/hooks/use-telemetry.js';
 
 interface Props {
   companyId: string;
+  kindFilter: TelemetryKindFilter;
 }
 
 type SortKey = 'name' | 'totalRuns' | 'totalTokens' | 'avgLatencyMs' | 'costUsd' | 'totalToolCalls';

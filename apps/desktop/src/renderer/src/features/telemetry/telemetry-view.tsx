@@ -8,7 +8,9 @@
 
 import { BarChart3, DollarSign, Users2 } from 'lucide-react';
 
-import type { ComponentType } from 'react';
+import { type ComponentType, useState } from 'react';
+
+import type { TelemetryKindFilter } from '@team-x/shared-types';
 
 import { type TelemetrySubview, useAppStore } from '@/store/app-store.js';
 
@@ -27,6 +29,15 @@ const SUBTABS: SubtabDef[] = [
   { label: 'Employees', icon: Users2, view: 'employees' },
   { label: 'Cost', icon: DollarSign, view: 'cost' },
 ];
+
+const KIND_FILTER_LABELS: Record<TelemetryKindFilter, string> = {
+  all: 'All',
+  work: 'Work',
+  agentic: 'Agentic',
+  copilot: 'Copilot',
+};
+
+const KIND_FILTERS = Object.keys(KIND_FILTER_LABELS) as TelemetryKindFilter[];
 
 function TelemetrySubtabs() {
   const subview = useAppStore((s) => s.telemetrySubview);
@@ -60,9 +71,44 @@ function TelemetrySubtabs() {
   );
 }
 
+interface TelemetryKindFilterChipsProps {
+  active?: TelemetryKindFilter;
+  onChange: (filter: TelemetryKindFilter) => void;
+}
+
+export function TelemetryKindFilterChips({
+  active = 'all',
+  onChange,
+}: TelemetryKindFilterChipsProps) {
+  return (
+    <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+      <span className="text-xs font-medium text-muted-foreground">Kind:</span>
+      <div className="flex items-center gap-1">
+        {KIND_FILTERS.map((filter) => (
+          <button
+            type="button"
+            key={filter}
+            data-telemetry-kind-filter={filter}
+            aria-pressed={filter === active}
+            onClick={() => onChange(filter)}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              filter === active
+                ? 'bg-brand/10 text-brand'
+                : 'text-muted-foreground hover:text-foreground hover:bg-surface-100'
+            }`}
+          >
+            {KIND_FILTER_LABELS[filter]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function TelemetryView() {
   const companyId = useAppStore((s) => s.companyId);
   const subview = useAppStore((s) => s.telemetrySubview);
+  const [kindFilter, setKindFilter] = useState<TelemetryKindFilter>('all');
 
   if (!companyId) {
     return (
@@ -77,19 +123,20 @@ export function TelemetryView() {
   function renderSubview() {
     switch (subview) {
       case 'company':
-        return <CompanyTelemetry companyId={cid} />;
+        return <CompanyTelemetry companyId={cid} kindFilter={kindFilter} />;
       case 'employees':
-        return <EmployeeTelemetry companyId={cid} />;
+        return <EmployeeTelemetry companyId={cid} kindFilter={kindFilter} />;
       case 'cost':
-        return <CostBreakdown companyId={cid} />;
+        return <CostBreakdown companyId={cid} kindFilter={kindFilter} />;
       default:
-        return <CompanyTelemetry companyId={cid} />;
+        return <CompanyTelemetry companyId={cid} kindFilter={kindFilter} />;
     }
   }
 
   return (
     <div className="flex h-full flex-col">
       <TelemetrySubtabs />
+      <TelemetryKindFilterChips active={kindFilter} onChange={setKindFilter} />
       <div className="flex-1 overflow-y-auto scrollbar-thin p-4">{renderSubview()}</div>
     </div>
   );

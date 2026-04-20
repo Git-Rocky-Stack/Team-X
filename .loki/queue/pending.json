@@ -172,10 +172,10 @@
   "activeSubMilestone": {
     "id": "M39",
     "name": "Telemetry Per-Kind Filter",
-    "status": "in progress — T4 renderer hooks shipped; T5 telemetry filter chips are head-of-queue",
+    "status": "in progress — T5 telemetry filter chips shipped; T6 subview request propagation is head-of-queue",
     "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M39 T5. Scope: TelemetryView kind filter chips/local state/selectors; subview request propagation remains T6.",
+    "nextSession": "Proceed with Phase 6 M39 T6. Scope: pass kindFilter through telemetryRequestKind into all subview aggregate requests; E2E remains T7.",
     "dor": "M38 Insight Feedback Loop closed through verification gate",
     "dod": "M39 complete when Tasks 1-8 in the M39 plan doc ship with focused tests, E2E, typecheck, lint, strict claims, and Loki ledger closed",
     "verifiedBy": null,
@@ -254,9 +254,9 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 6 M39 T4 renderer hooks and filter helpers shipped; M39 T5 telemetry filter chips are head-of-queue.",
+    "asOfTask": "Phase 6 M39 T5 telemetry filter chips shipped; M39 T6 subview request propagation is head-of-queue.",
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 focused gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 focused gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests.",
     "e2eSpecs": 14,
     "e2eGreenCount": 19,
     "lintErrors": 0,
@@ -269,7 +269,7 @@
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
     "phase56SurfaceArea": "Conformance audit (M-A) ~200–400 rows + triage (M-B) per-row dispositions + safeguards (M-E) 6 deliverables + backend backfill (M-C) migrations/IPC/repos for restore rows + UI backfill (M-D) components/hooks/routes for restore rows + docs truth-up (M-F) three-bucket CLAUDE.md rewrite + ship (M-G) branch deletion + version bump + retrospective",
     "phase56NonGoals": "No new features beyond restoration. No scope creep from mid-flight discoveries without change-control mini-gate (§14.3). No silent deferrals. No Phase 6 work until M-G ships. No public README/landing-site claim updates — those wait for M-F.",
-    "phase6Next": "M39 T5 telemetry filter chips."
+    "phase6Next": "M39 T6 subview request propagation."
   },
   "sprintFramework": {
     "backlog": "M-B triage output — audit doc `disposition` column. Must-have=restore / Should-have=replace / Won't-have=deprecate (docs only)",
@@ -279,6 +279,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M39 T5 SHIPPED 2026-04-20 — TelemetryView kind filter chips implemented with TDD. Added telemetry-view source-contract tests; valid red proved missing filter labels, exported TelemetryKindFilterChips, default all state, data-telemetry-kind-filter selectors, and subview kindFilter props. TelemetryView now stores useState<TelemetryKindFilter>('all'), renders All/Work/Agentic/Copilot chips with aria-pressed and data selectors, and passes kindFilter to CompanyTelemetry, EmployeeTelemetry, and CostBreakdown. Subview Props were widened for the prop only; aggregate request wiring remains scoped to T6. Verification: telemetry-view focused test 1 file / 3 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T6 subview request propagation.",
     "PHASE 6 M39 T4 SHIPPED 2026-04-20 — renderer telemetry hooks and filter helper implemented with TDD. Added use-telemetry source-contract tests; valid red proved missing telemetryRequestKind, request-object hook signatures, and kind-aware query keys. Hooks now accept request objects for companyStats, dailyUsage, employeeStats, and costBreakdown; each query key includes req?.kind ?? 'all'; telemetryRequestKind maps renderer-only all to undefined while preserving work/agentic/copilot. CompanyTelemetry and EmployeeTelemetry callers were mechanically adapted to the request-object hook contract; filter UI/subview kind propagation remains scoped to T5/T6. Verification: use-telemetry focused test 1 file / 3 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T5 telemetry filter chips.",
     "PHASE 6 M39 T3 SHIPPED 2026-04-20 — telemetry IPC and preload kind propagation implemented with TDD. Added telemetry-handlers focused tests with a fake runs repo; valid red proved handlers dropped kind args and accepted invalid runtime values. Handlers now validate optional kind against TELEMETRY_RUN_KINDS before repo access and pass kind through to companyStats, dailyUsage, employeeStats, and costBreakdown. Preload companyStats/employeeStats now accept string | request-object and normalize string callers to { companyId } for backward compatibility while allowing future renderer request-object calls. Verification: telemetry-handlers focused test 1 file / 2 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T4 renderer hooks and filter helpers.",
     "PHASE 6 M39 T2 SHIPPED 2026-04-20 — runs repo per-kind telemetry aggregate filters implemented with TDD. Extended runs-telemetry seeded runs with kind, added a valid red proving companyStats(cid, agentic) still returned all three work/agentic/copilot rows, then added optional TelemetryRunKind parameters to companyStats, dailyUsage, employeeStats, and costBreakdown. All four read paths now append runs.kind = kind only when a persisted kind is provided; undefined preserves the All aggregate. Verification: runs-telemetry focused suite 1 file / 16 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T3 IPC and preload kind propagation.",
@@ -327,6 +328,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M39 T5 — telemetry filter chips"
+    "nextTask": "Phase 6 M39 T6 — wire subviews to filtered requests"
   }
 }
