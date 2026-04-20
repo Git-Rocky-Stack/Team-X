@@ -150,7 +150,7 @@ All deferrals are Phase 6 candidates. None block Phase 5 release.
 | **Insight export** (CSV/JSON) | Copilot sidebar + dashboard widget | Feature-complete without it for v1.1.0; export adds a file-picker flow + format selector | Add `copilot.export` IPC that reuses the audit-view CSV/JSON export pipeline |
 | **Multi-company insight aggregation** | Copilot sidebar | Per-company insights are the MVP; a "you have 3 critical insights across 5 companies" rollup adds a new query surface | New `copilot.rollup` IPC; dashboard widget variant with company-switcher |
 | **Drag-to-reorder** | Kanban / org chart / Copilot insights | Not requested pre-release; Radix primitives support it but UX needs design | Shared drag-hook pattern with `data-draggable` selector surface |
-| **`capabilities` frontmatter on role.md** | `scoreEmployee` in `agentic-tools-write.ts` | M32 T2 shipped title-keyword heuristic for role-fit; capabilities would make scoring more granular for small orgs where title fuzzy-match dominates | Extend role-schema parser; migrate 55-role library; revise `computeRoleFit` |
+| **`capabilities` frontmatter on `{role-slug}.md` files** | `scoreEmployee` in `agentic-tools-write.ts` | M32 T2 shipped title-keyword heuristic for role-fit; capabilities would make scoring more granular for small orgs where title fuzzy-match dominates | Extend role-schema parser; migrate 57-role library; revise `computeRoleFit` |
 | **Post-launch telemetry digest** | `runs` table + real Ollama users | Need real user data to justify clamp changes — evidence-based tuning, not vibe-based | Phase 6 T0 reads local `runs` table, proposes evidence-based `agentic_max_steps` / `copilot_interval_minutes` / `rag_similarity_threshold` changes |
 | **Proactive copilot → autonomous action** | Copilot UI action button | Current design requires user to click an action to dispatch. Autonomous action needs a second-order approval surface | New `copilot.autonomousActions` setting + per-action permission tier |
 | **Agent-to-agent negotiation** | Cross-employee messaging | M11 sends messages; it does not negotiate (workload trading, deadline slipping, scope disputes) | Inter-agent protocol over existing `send_message_to_colleague` tool |
@@ -242,10 +242,10 @@ These are **hypotheses, not commitments**. The first Phase 6 session selects one
 **Architectural cost:** High. New message types (`negotiation.proposal` / `negotiation.counter` / `negotiation.accept` / `negotiation.escalate`). Bus events. Audit chips. Potentially a new settings surface for negotiation-latency budgets.
 **Risk:** High. LLM-driven negotiation can burn tokens indefinitely without guardrails. Must ship with a deterministic negotiation-step budget analogous to `agentic_max_steps`.
 
-### 6.5 `capabilities` frontmatter on role.md + scored-fit upgrade
+### 6.5 `capabilities` frontmatter on `{role-slug}.md` files + scored-fit upgrade
 
 **User value:** M32 `scoreEmployee` role-fit is a keyword heuristic over title + level. Small orgs get dominated by title fuzzy-match. Capabilities frontmatter (enumerated per role, versioned per semver) would make scoring granular and transparent.
-**Architectural cost:** Medium. Role-schema parser extension. 55-role library sweep. `computeRoleFit` rewrite.
+**Architectural cost:** Medium. Role-schema parser extension. 57-role library sweep. `computeRoleFit` rewrite.
 **Risk:** Medium. Role.md quality bar is the crown jewel — expanding the frontmatter surface means auditing all 55 cards for correctness.
 
 ### 6.6 Real customer demo (coordinated with Strategia-X marketing)

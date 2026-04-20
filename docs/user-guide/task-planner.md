@@ -74,7 +74,7 @@ score(employee, subtask) =
 
 The weights are locked in `apps/desktop/src/main/services/agentic-tools-write.ts` and verified in 25 unit tests. Sum-to-1.0 is asserted at boot. Archived, fired, and system employees score zero across the board (so the tool never surfaces them).
 
-**Role-fit** is currently a keyword heuristic (engineer → implement, designer → design, manager → coordinate, etc.) with a baseline floor for unmatched roles. This is intentional — the design doc records it as Risk #2 option (b) — and will be replaced with role.md `capabilities` frontmatter in M33 or M34. **Past performance** falls back to 0.5 for employees with no completed agentic-runs of the same type, so newly hired employees aren't penalized.
+**Role-fit** is currently a keyword heuristic (engineer → implement, designer → design, manager → coordinate, etc.) with a baseline floor for unmatched roles. This is intentional — the design doc records it as Risk #2 option (b) — and will be replaced with `{role-slug}.md` `capabilities` frontmatter in Phase 6. **Past performance** falls back to 0.5 for employees with no completed agentic-runs of the same type, so newly hired employees aren't penalized.
 
 The scoring function is exposed in the `decompose_project` tool's projected `recommendedAssigneeId` field for each leaf subtask, so the loop can preview assignments in the plan before any ticket lands.
 

@@ -843,9 +843,9 @@ These are unverifiable-this-session claims that the `pnpm test` / `pnpm lint` / 
 
 M-E exit gate: all 5 rows flip from `🔍 unverifiable` / `⚠️ partial` to `✅ shipped` with the reconciled numbers recorded inline.
 
-### 20.6 Documentation-only rollup (M-F handoff) — 14 rows, `deprecate`
+### 20.6 Documentation-only rollup (M-F shipped) — 14 rows, `deprecate`
 
-M-F rewrites wording in CLAUDE.md, removes over-specified claims, and aligns the IPC Channels table with on-disk reality. No code change.
+M-F rewrote wording in CLAUDE.md, removed over-specified claims, and aligned the IPC Channels table with on-disk reality. No code change.
 
 | Rows | CLAUDE.md location | Rewrite action |
 |---|---|---|
@@ -856,7 +856,7 @@ M-F rewrites wording in CLAUDE.md, removes over-specified claims, and aligns the
 | 5.8 | M29 "re-index messages + vault files" wording | → "re-index messages + meeting minutes on `work.completed` / `meeting.ended`; vault files retrieved via FTS5 at agent-turn time, not pre-embedded" |
 | 16.4 | M35 T10 ledger claim "1169 unit / 11 E2E / 12 cases" | preserve verbatim as historical record — v1.1.0 tag is the immutable proof |
 
-M-F exit gate: the three three-bucket rewrites from §18.5 (18.5.1 Troubleshooting "aspirational" paragraph, 18.5.2 Phase 2 M7 status block, 18.5.3 Phase 2 M9 status block) land alongside these 14 row-level rewrites in the same CLAUDE.md commit.
+M-F exit evidence: CLAUDE.md now has shipped / deferred / deprecated buckets; the Cluster A "aspirational" troubleshooting paragraph is replaced with Phase 5.6 M-C/M-D restoration evidence; the Phase 2 M7/M9 status block is reconciled against on-disk reality; the IPC table uses canonical `mcp.addServer` / `mcp.removeServer` / `mcp.testConnection`; and `scripts/check-claim-evidence.allowlist.json` is empty. `pnpm audit:claims -- --strict` is the closing gate.
 
 ### 20.7 Residual risks + escalation triggers
 

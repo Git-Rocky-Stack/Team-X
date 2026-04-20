@@ -17,7 +17,7 @@ Two shortcuts unlock most of the intelligence surface:
 1. [Getting Started](getting-started.md) — Installation, first boot, your first conversation
 
 ### Phase 2 — The Org
-2. [Hiring Employees](hiring-employees.md) — The 55-role F10 catalog, hiring from the pack, org chart management
+2. [Hiring Employees](hiring-employees.md) — The 57-role F10 catalog (55 user roles + 2 system roles), hiring from the pack, org chart management
 3. [Managing Projects](managing-projects.md) — Goals, projects, tickets, and the kanban board
 
 ### Phase 3 — The Live Cockpit

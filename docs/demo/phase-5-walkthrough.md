@@ -89,7 +89,7 @@ Phase 6 candidates from the [retrospective](../plans/2026-04-19-team-x-phase-5-r
 2. Cross-company copilot rollups.
 3. Proactive copilot → autonomous action.
 4. Agent-to-agent negotiation.
-5. Capabilities frontmatter on role.md.
+5. Capabilities frontmatter on `{role-slug}.md` files.
 6. Real customer demo (this script is the foundation).
 7. Insight export.
 

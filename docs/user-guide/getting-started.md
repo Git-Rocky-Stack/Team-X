@@ -98,7 +98,7 @@ The Dashboard has 5 views accessible via subtabs:
 
 ## Next Steps
 
-- [Hire more employees](hiring-employees.md) from the 55-role catalog
+- [Hire more employees](hiring-employees.md) from the 57-role catalog
 - [Create your first project](managing-projects.md) with goals and tickets
 - [Add cloud providers](configuring-providers.md) for more powerful models
 - [Set up backups](backup-and-restore.md) to protect your data

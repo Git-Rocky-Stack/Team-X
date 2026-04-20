@@ -1,6 +1,6 @@
 # Hiring Employees
 
-Team-X ships with 55 curated F10-quality roles across 6 hierarchy levels. This guide covers hiring, firing, promoting, and managing your org chart.
+Team-X ships with 57 curated F10-quality roles: 55 user-hireable roles across 6 hierarchy levels plus 2 hidden system roles. This guide covers hiring, firing, promoting, and managing your org chart.
 
 ## The Role Catalog
 

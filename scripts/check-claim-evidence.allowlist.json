@@ -1,31 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
-  "_doc": "Phase 5.6 M-E S2/S3 allowlist. Each entry is a CLAUDE.md claim that today lacks on-disk evidence and is cross-referenced to a row in the M-A conformance audit (docs/audits/2026-04-17-conformance-audit.md). Entries are removed by the M-C/M-D restoration commits as evidence lands. The list shrinks as Phase 5.6 progresses; M-G ships with strict mode (zero allowlisted entries). Adding a new entry mid-flight requires a paired audit-doc row + disposition + scope-expansion mini-gate (plan §14.3).",
-  "_lifecycle": "M-E ship: full allowlist as documented in audit §20. M-C restoration: backend rows deleted from this file. M-D restoration: UI rows deleted. M-G ship: file deleted (CI defaults to strict mode + workflow runs --strict). Updates require an atomic commit referencing the audit row that justifies the change.",
-  "entries": [
-    {
-      "claim": "mcp.add",
-      "kind": "ipc",
-      "auditRow": "10.37",
-      "disposition": "deprecate",
-      "owner": "Phase 5.6 M-F",
-      "reason": "Naming drift — actual handler is mcp.addServer. M-F rewrites the IPC table row."
-    },
-    {
-      "claim": "mcp.remove",
-      "kind": "ipc",
-      "auditRow": "10.39",
-      "disposition": "deprecate",
-      "owner": "Phase 5.6 M-F",
-      "reason": "Naming drift — actual handler is mcp.removeServer."
-    },
-    {
-      "claim": "mcp.health",
-      "kind": "ipc",
-      "auditRow": "10.40",
-      "disposition": "deprecate",
-      "owner": "Phase 5.6 M-F",
-      "reason": "Naming drift — actual handler is mcp.testConnection."
-    }
-  ]
+  "_doc": "Phase 5.6 M-E S2/S3 allowlist. Each entry is a CLAUDE.md claim that lacks on-disk evidence and is cross-referenced to the M-A conformance audit. M-F cleared the final three docs-only naming-drift entries by rewriting CLAUDE.md to the canonical on-disk MCP IPC channel names.",
+  "_lifecycle": "M-E ship: 9 entries. M-C restoration: backend rows deleted. M-D restoration: UI rows required no allowlist movement. M-F documentation truth-up: mcp.add/mcp.remove/mcp.health naming-drift rows deleted; allowlist is now intentionally empty. M-G runs strict mode as the ship gate.",
+  "entries": []
 }

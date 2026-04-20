@@ -108,7 +108,7 @@ stable contracts — or open an issue.
 - **Want to run the task planner yourself?** See
   [Task Planner](./task-planner.md).
 - **Building your own F10 role pack?** See
-  [CONTRIBUTING](../../CONTRIBUTING.md) for the role.md schema and
+  [CONTRIBUTING](../../CONTRIBUTING.md) for the role-spec schema and
   signing workflow.
 
 Phase 6 will take the copilot from reactive to autonomous — from

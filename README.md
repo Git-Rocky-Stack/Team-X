@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/strategia-x/team-x/actions/workflows/ci.yml/badge.svg)](https://github.com/strategia-x/team-x/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1162%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-1683%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
@@ -21,7 +21,7 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 
 ### The Org
 
-- **55 curated F10 roles** across 6 hierarchy levels (Officer, Senior Management, Management, Supervisor, Lead, IC) — hand-written role specifications, not generic templates
+- **57 curated F10 roles** — 55 user roles across 6 hierarchy levels (Officer, Senior Management, Management, Supervisor, Lead, IC) plus 2 hidden system roles, hand-written role specifications, not generic templates
 - **Multi-company workspace** — run multiple AI organizations side-by-side, each with its own employees, goals, and settings
 - **Org chart editor** — drag-to-rearrange reporting lines, promote, fire, set managers, visualize the full hierarchy with color-coded levels
 - **Hire dialog** — searchable role catalog with level filter chips, one-click hiring from the curated pack
@@ -123,10 +123,10 @@ Team-X/
                             tickets, vault
       hooks/                20+ React Query hooks
       store/                Zustand app store
-    e2e/                    11 Playwright specs
+    e2e/                    13 Playwright specs / 18 cases
   packages/
     shared-types/           IPC contract types, event types, entities
-    role-schema/            Role.md parser + template renderer
+    role-schema/            Role-spec parser + template renderer
     provider-router/        LLM provider registry + streaming adapters
     telemetry-core/         Cost calculation utilities
     intelligence/           RAG (chunker, embedding, retriever),
@@ -134,8 +134,8 @@ Team-X/
                             agentic loop (ReAct scheduler, tool registry)
   role-packs/
     strategia-official/
-      roles/                55 curated F10 roles across 6 levels
-      roles/system/         Hidden system-agent pseudo-employee role card
+      roles/                57 curated F10 roles across user + system levels
+      roles/system/         Hidden system-agent + system-copilot role cards
 ```
 
 ### Key Design Decisions
@@ -168,8 +168,8 @@ Team-X/
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |
 | Lint / format | Biome |
-| Unit tests | Vitest (1162 tests) |
-| E2E tests | Playwright (11 specs) |
+| Unit tests | Vitest (1683 tests) |
+| E2E tests | Playwright (13 specs / 18 cases) |
 | CI | GitHub Actions |
 
 ---
@@ -218,7 +218,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **1162 unit tests** across the workspace and **11 Playwright E2E specs** (12 Playwright test cases — one spec file contains two cases):
+Team-X ships with **1683 unit tests** across the workspace and **13 Playwright E2E specs** (18 Playwright test cases):
 
 | Spec | Coverage |
 |------|----------|
@@ -233,6 +233,8 @@ Team-X ships with **1162 unit tests** across the workspace and **11 Playwright E
 | `copilot-service.spec.ts` | Periodic analyzer tick, insight dedup, dismiss, ask-the-copilot, regression guards on destructive + write-side gates |
 | `copilot-ui.spec.ts` | Sparkles toolbar toggle, sidebar + insight card, dismiss optimistic update, `__ECHO_AGENT__` ask handoff, `Cmd+Shift+K` shortcut |
 | `phase-5-integration.spec.ts` | Cross-milestone stitch (M28 → M29 → M30 → M31 → M32 → M33 → M34) in one 3.7s session — RAG indexing, palette read-side round-trip, amber write-side gate, copilot tick + sidebar, invariant #11 regression guard |
+| `workspace-switcher.spec.ts` | Multi-company workspace switcher, create/settings/archive/delete lifecycle, Chat tab handoff, manager-select hire flow, company audit assertions |
+| `org-chart.spec.ts` | OrgChartView read-side, drag reporting-line reassignment, manager-select cycle rejection, promote/fire, employee audit assertions |
 
 All E2E specs run against a canned test-mode provider — no Ollama, no API keys, no network.
 

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> ### 🚧 PHASE 5.6 IN PROGRESS — M-D UI BACKFILL SHIPPED, M-F HEAD-OF-QUEUE (2026-04-19)
+> ### 🚧 PHASE 5.6 IN PROGRESS — M-F DOCS TRUTH-UP SHIPPED, M-G HEAD-OF-QUEUE (2026-04-19)
 >
 > A pre-M36-T2 audit surfaced systemic drift between CLAUDE.md status blocks and on-disk reality across Phases 1–5. **Phase 5.6 is a Definition-of-Done failure repair operation, not a "fix some missing files" sprint.** Execution order is M-A (audit) → M-B (triage) → **M-E (process safeguards — ships BEFORE backfill)** → M-C (backend backfill) → M-D (UI backfill) → M-F (docs truth-up) → M-G (ship). Estimated 6–8 calendar weeks.
 >
@@ -8,21 +8,21 @@
 > - **Cluster A — Multi-company architecture (M7, Rocky's LOCKED design — not aspirational):** `companies.create/update/delete` IPC + `WorkspaceSwitcher` + `CreateCompanyDialog` + `CompanySettings` panel. **7 P0 rows → RESTORE.**
 > - **Cluster B — M9 org chart:** `orgchart.get` IPC + `employees.promote` + `employees.setManager` + `org_edges` table + tree UI + drag-to-rearrange. **8 P0 rows → RESTORE.**
 >
-> **M-C Backend Backfill SHIPPED 2026-04-18** — restored the Cluster A/B backend surface: `companies.create/update/delete`, `orgchart.get`, `employees.promote`, `employees.setManager`, `org_edges`, and invariant #11 bus events. Evidence: `docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`, `.loki/queue/current-task.json`, and `pnpm audit:claims` 92 verified / 3 allowlisted / 0 UNALLOWED.
+> **M-C Backend Backfill SHIPPED 2026-04-18** — restored the Cluster A/B backend surface: `companies.create/update/delete`, `orgchart.get`, `employees.promote`, `employees.setManager`, `org_edges`, and invariant #11 bus events. Evidence: `docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`, `.loki/queue/current-task.json`, and `pnpm audit:claims` 92 verified / 3 allowlisted / 0 UNALLOWED at M-C/M-D handoff.
 >
 > **M-D UI Backfill SHIPPED 2026-04-19** — restored WorkspaceSwitcher, CreateCompanyDialog, CompanySettings, HireDialog manager-select, Chat tab, OrgChartView, drag reassignment, promote/fire, and company/employee lifecycle E2E audit assertions. Evidence: `docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md`, `docs/qa/2026-04-19-m-d-step-g-verification-gate.md`, full Vitest 125 files / 1683 tests, full Playwright 13 specs / 18 cases, typecheck clean, lint 0 errors / 21 warnings, and `pnpm audit:claims` 92 / 3 / 0.
 >
-> The CLAUDE.md Troubleshooting section currently frames Cluster A as "aspirational for the milestone that introduces multi-company CRUD" — **that paragraph is itself part of the drift and will be rewritten in M-F** (see audit §18.5). Multi-company CRUD is a **core Phase 2 M7 architectural decision**, not a down-stream deferral.
+> **M-F Documentation Truth-Up SHIPPED 2026-04-19** — rewrote the status block into shipped / deferred / deprecated buckets, removed the Cluster A "aspirational" framing, reconciled Phase 2 M7/M9 against the M-C/M-D restoration, aligned the MCP IPC table with canonical on-disk channel names, and cleared the remaining claim-evidence allowlist rows. Evidence: `pnpm audit:claims -- --strict` 95 verified / 0 allowlisted / 0 UNALLOWED.
 >
 > **Phase 6 M36 T2+ is explicitly PAUSED** until Phase 5.6 M-G ships. Do not resume capability taxonomy work until the pause is lifted in `.loki/queue/pending.json`.
 >
 > **Read before acting:**
 > - Active plan: [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](docs/plans/2026-04-17-team-x-phase-5.6-remediation.md)
 > - **M-A conformance audit:** [`docs/audits/2026-04-17-conformance-audit.md`](docs/audits/2026-04-17-conformance-audit.md) — required reading before M-B
-> - Immediate next task: Phase 5.6 M-F Documentation Truth-Up (see `.loki/queue/current-task.json`) — rewrite CLAUDE.md status blocks in the three-bucket format (shipped / deferred / deprecated), remove the Cluster A "aspirational" framing, align IPC channel names with on-disk reality, and preserve the M-D exit KPI evidence.
+> - Immediate next task: Phase 5.6 M-G Branch Hygiene + Ship (see `.loki/queue/current-task.json`) — final cross-check, Phase 5.6 retrospective, branch hygiene, version/tag/release ledger, and M36 pause removal only after M-G ships.
 > - Sprint framework: §14 of the plan (DoR, DoD, velocity KPI, change-control mini-gate — invoked once in M-A per scope-expansion record)
 >
-> Status blocks below reflect state as of Phase 5 exit (v1.1.0, 2026-04-20). M-A audit matrix supersedes them for claim-vs-reality questions; M-F will rewrite them in a three-bucket format (shipped / deferred / deprecated). **Treat unaudited status-block claims as `🔍 unverified` — use the M-A audit doc as the truth source until M-F rewrites ship.**
+> Status blocks below are the M-F truth-up surface. Plan docs remain historical intent; this file records shipped / deferred / deprecated reality as of Phase 5.6 M-F.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -42,15 +42,34 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 ## Status
 
-### Phase 1 (Skeleton) — complete
+### Shipped
 
-**Phase 2 (The Org) — complete.** All 13 milestones shipped.
+**Phase 1 (Skeleton) — complete.** Electron shell, SQLite bootstrap, provider router, role-loader, orchestrator, typed IPC, renderer shell, chat flow, and Playwright smoke coverage shipped.
+
+**Phase 2 (The Org) — complete after Phase 5.6 restoration.** The mainline now contains the M7/M9 surfaces that were previously stranded on `worktree-phase-2-the-org`: `companies.create`, `companies.update`, `companies.delete`, `companies.archive`, WorkspaceSwitcher, CreateCompanyDialog, CompanySettings, `org_edges`, `orgchart.get`, `employees.promote`, `employees.setManager`, OrgChartView, drag reassignment, promote/fire actions, and HireDialog manager selection. Evidence: M-C commits `f417a18` / `b858067` / `c2e6c92` / `19dbd35` / `c6b118a` / `fd3617b`; M-D final atomic `3680c96`; full M-D gate 1683 unit tests + 13 Playwright specs / 18 cases.
 
 **Phase 3 (The Live Cockpit) — complete.** All 20 milestones shipped.
 
 **Phase 4 (Ship-readiness) — complete.** All 27 milestones shipped. v1.0.0. 612 unit tests + 4 E2E specs passing.
 
-**Phase 5 (Intelligence Layer) — complete. All 8 milestones shipped (M28 → M35). v1.1.0.** 
+**Phase 5 (Intelligence Layer) — complete. All 8 milestones shipped (M28 → M35). v1.1.0.** Phase 5 exit remains the immutable release snapshot; Phase 5.6 is a remediation layer on top.
+
+**Phase 5.5 hotfix — complete.** Role-pack reconciliation restored the full 57-role catalog (55 user roles + 2 system roles), bumped the official pack to v1.0.0, committed `pack.sig`, and wired strict/warn/off load-time signature verification.
+
+**Phase 5.6 remediation — M-A through M-F shipped; M-G pending.** M-A audit, M-B triage, M-E process safeguards, M-C backend backfill, M-D UI backfill, and M-F documentation truth-up are complete. Phase 6 M36 T2+ stays paused until M-G ships.
+
+### Deferred
+
+- Phase 6 M36 T2+ capability taxonomy implementation is paused by explicit Phase 5.6 governance until M-G ships.
+- Phase 6 seeds from the Phase 5 retrospective remain future work: insight export, cross-company rollups, proactive autonomous actions, agent-to-agent negotiation, capability-based role fit, real customer demo polish, and telemetry digest.
+- M32 role-fit still uses the locked four-weight scoring formula and title/level heuristic until Phase 6 capabilities work replaces only the role-fit term.
+
+### Deprecated / Corrected Documentation Drift
+
+- The former Cluster A "aspirational multi-company CRUD" framing is deprecated. Multi-company CRUD and workspace UI were Rocky's locked M7 design, were absent from mainline due to stranded branch drift, and are now restored by Phase 5.6 M-C/M-D.
+- The old MCP table names `mcp.add`, `mcp.remove`, and `mcp.health` are deprecated. Canonical on-disk IPC channels are `mcp.addServer`, `mcp.removeServer`, and `mcp.testConnection`.
+- Generic "role file" wording that implied a literal shared filename is deprecated for the Strategia official pack. Official role files are named `{role-slug}.md`; the loader contract is Markdown-file scanning, not a single fixed filename.
+- `rag.index.*` bus events are not emitted today. M29 re-indexes chat/work and meeting-minute signals through `work.completed` and `meeting.ended`; vault files are retrieved via FTS5 at agent-turn time, not pre-embedded by a vault event subscriber.
 
 
 ## Stack (locked)
@@ -97,7 +116,7 @@ Team-X/
 ## Phase plan (locked)
 
 1. **Phase 1 — Skeleton** — Electron boot, SQLite, 1 hardcoded company, CEO + 1 SWE, AI SDK + Anthropic + Ollama, bare Cards dashboard with live token stream. Demo: *"Hire a CEO, chat with it, watch it think."*
-2. **Phase 2 — The Org** — Role pack loader + 55 roles, multi-company, org chart editor, MCP host, tickets + kanban. Demo: *"File a ticket → agent picks it up, uses an MCP, closes it."*
+2. **Phase 2 — The Org** — Role pack loader + 55 user roles (57 total including system roles), multi-company, org chart editor, MCP host, tickets + kanban. Demo: *"File a ticket → agent picks it up, uses an MCP, closes it."*
 3. **Phase 3 — The Live Cockpit** — All 5 dashboard subviews, meeting primitive, goals + projects, telemetry, runtime modes, privacy tier filter. Demo: *"One-click all-hands → minutes → action items → tickets."*
 4. **Phase 4 — Ship-readiness** — File vault, backup/restore, audit log UI, installers, landing site, public release.
 5. **Phase 5 — Intelligence Layer** — `packages/intelligence` (RAG + NLU + agentic loop), command palette, system-agent pseudo-employee, write-side task planner, in-app copilot. Demo: *"Ask `Cmd+K` — 'why is the frontend team behind?' — get a grounded multi-paragraph answer citing specific tickets, employees, and events."*
@@ -128,7 +147,7 @@ Output lands in `release/<version>/`. Playwright E2E tests are wired (T49) and r
 **Test, typecheck, lint:**
 
 ```bash
-pnpm test                       # vitest run across all workspaces (602 tests)
+pnpm test                       # vitest run across all workspaces (1683 tests at M-D exit)
 pnpm test:watch                 # vitest in watch mode
 pnpm test:coverage              # vitest with coverage report
 pnpm typecheck                  # tsc --noEmit across all workspaces
@@ -147,13 +166,14 @@ pnpm -F @team-x/desktop test:e2e
 pnpm -F @team-x/desktop test:e2e:run
 ```
 
-Three E2E specs live under `apps/desktop/e2e/`:
+Thirteen E2E specs live under `apps/desktop/e2e/` at the M-D exit gate:
 
 - `smoke.spec.ts` — Phase 1 chat round-trip (boot, render employees, send message, canned reply).
 - `ticket-flow.spec.ts` — Phase 2 ticket lifecycle (navigate to Tickets, create ticket with assignee, agent processes via test-mode provider, verify reply in detail panel).
 - `meeting-flow.spec.ts` — Phase 3 meeting lifecycle (navigate to Meetings, call meeting with attendees, Rocky interjects, end meeting, verify minutes generation).
+- Additional specs cover vault/backup, RAG, command palette, agentic loop, task planner, copilot service, copilot UI, Phase 5 integration, workspace switcher/company lifecycle, and org chart interactions.
 
-All three launch a real Electron instance against `out/main/index.js` with
+All specs launch a real Electron instance against `out/main/index.js` with
 `NODE_ENV=test`, which flips `provider-factory.isTestMode()` to `true`
 and swaps the resolver for the canned-reply `createTestModeResolveProvider`.
 No Ollama, no Anthropic key, no network — the full round-trips are
@@ -210,11 +230,11 @@ These are non-negotiable. Violating any of them requires a design-doc amendment.
 
 ## Working with role packs
 
-The curated F10 role library is the crown jewel. When creating or editing `role.md` files in `role-packs/strategia-official/`:
+The curated F10 role library is the crown jewel. When creating or editing `{role-slug}.md` files in `role-packs/strategia-official/`:
 
 - **Match the quality bar** of `~/.claude/CLAUDE.md` and Rocky's Strategia-X writing voice: executive, authoritative, direct, F10. No marketing fluff.
 - **Always include** the full frontmatter: `id`, `name`, `level`, `reports_to`, `manages`, `preferred_model_tier`, `preferred_providers`, `fallback_providers`, `tools_allowed`, `tools_denied`, `decision_authority`, `kpis`, `output_format`, `temperature`, `license`, `author`, `version`.
-- **Use template variables** (`{{company.name}}`, `{{company.mission}}`, `{{employee.name}}`, etc.) so one role.md serves many companies.
+- **Use template variables** (`{{company.name}}`, `{{company.mission}}`, `{{employee.name}}`, etc.) so one role spec serves many companies.
 - **Structure the body** with: `# Identity`, `# Mission`, `# Responsibilities`, `# Decision Framework`, `# Communication Style`, `# Escalation Rules`, `# Output Format`.
 - **Version bumps** follow semver. Breaking changes to frontmatter keys are major bumps.
 
@@ -236,9 +256,9 @@ The curated F10 role library is the crown jewel. When creating or editing `role.
 
 ## Testing expectations
 
-- **Unit tests (Vitest)** for: role.md parser, provider router logic, orchestrator scheduler math, telemetry calculations, backup/restore round-trip.
+- **Unit tests (Vitest)** for: role-spec parser, provider router logic, orchestrator scheduler math, telemetry calculations, backup/restore round-trip.
 - **Integration tests (Vitest)** for: MCP host + one real MCP, Drizzle migrations, worker lifecycle, meeting pause/resume.
-- **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow, RAG flow, command palette flow. Seven specs ship today: smoke, ticket-flow, meeting-flow, vault-backup, rag-flow, command-palette, plus the Phase 4 baseline. All run against the canned test-mode provider (and canned classifier for command-palette).
+- **E2E tests (Playwright)** for: hire flow, chat flow, ticket assign → close flow, meeting flow, backup/restore flow, RAG flow, command palette flow, agentic loop, task planner, copilot service/UI, workspace switching/company lifecycle, and org chart interactions. Thirteen specs / 18 Playwright cases are green at M-D exit. All run against canned test-mode seams where needed.
 - Every Phase-X demo must have green tests before the phase is marked shippable.
 
 ## IPC channels (Phase 2 + Phase 3 + Phase 5)
@@ -263,10 +283,10 @@ All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and 
 | | `chat.listThreads` | List all threads for company |
 | events | `events.list` | Paginated event list for timeline (M14) |
 | mcp | `mcp.list` | List MCP servers for company |
-| | `mcp.add` | Register new MCP server |
-| | `mcp.remove` | Remove MCP server |
+| | `mcp.addServer` | Register new MCP server |
+| | `mcp.removeServer` | Remove MCP server |
 | | `mcp.toggle` | Enable/disable MCP server |
-| | `mcp.health` | Check MCP server health |
+| | `mcp.testConnection` | Check MCP server health |
 | goals | `goals.create` | Create company goal (M15) |
 | | `goals.update` | Update goal fields |
 | | `goals.list` | List all goals for company |
@@ -333,7 +353,6 @@ All channels are typed via `TeamXApi` in `packages/shared-types/src/ipc.ts` and 
 
 | Event | Emitted by | Milestone | Payload shape |
 |-------|------------|-----------|---------------|
-| `rag.index.*` | `rag-indexer.ts` | M28/M29 | `{ companyId, sourceKind, sourceId, chunkCount }` and friends for on-write embedding |
 | `command.executed` | `CommandService` | M30 | `{ companyId, intent, entities, result, durationMs }` — audit-loggable |
 | `agent.step` | `AgenticLoopService` | M31 | `{ runId, threadId, step: { kind: 'plan' \| 'tool_call' \| 'tool_result' \| 'answer' \| 'error', … } }` |
 | `agentic.completed` | `AgenticLoopService` | M31 | `{ runId, threadId, finalAnswer, stepCount, tokensUsed, durationMs }` |
@@ -418,13 +437,13 @@ The `*` glob also removes the `-shm` and `-wal` WAL companion files. On the next
 
 **System-agent or system-copilot missing from a company after restore from backup.** RESOLVED in M33 F4 (2026-04-18). `backup.restore` now calls `backupService.ensurePostRestoreSystemEmployees({ ... })` after the DB + vault files land, and that sweep idempotently re-runs `ensureSystemAgent` + `ensureSystemCopilot` against every company in the restored DB. Both are no-ops for current-schema backups; pre-M31 backups get their `system-agent` rows back; pre-M33 (but post-M31) backups get their `system-copilot` rows back. Per-company failures are recorded in `BackupRestoreResponse.postRestoreSystemEmployees.skipped[]` without aborting the restore. A catastrophic throw from the sweep itself is caught inside the handler and logged — the restore returns manifest-only rather than failing outright, because the DB + vault are already swapped and a hard failure would leave users with an unusable app. If you still see a missing system row after a restore, (a) check the Audit tab for a `copilot.analyzed` cycle that runs cleanly (confirms `system-copilot` exists), (b) open the main-process console and look for `[backup] ensurePostRestoreSystemEmployees` warnings, (c) re-run the restore — the sweep is idempotent.
 
-**Companies repo lacks the `create` / `update` / `delete` IPC channels today even though the CLAUDE.md IPC table lists them.** The table is aspirational for the milestone that introduces multi-company CRUD (not yet scheduled in Phase 5). What EXISTS today: `companies.list` (Phase 1) and `companies.archive` (M33 F3). `companies.archive` is the soft-delete path — it quiesces the copilot analyzer + event window, flips `status` to `'archived'`, and emits `company.archived` on the bus. Hire / fire / promote employees, file tickets, assign projects, and every other mutation channel continues to run against the single Phase 1 company. When the multi-company CRUD milestone lands, `companies.create` MUST call `ensureSystemAgent` + `ensureSystemCopilot` (same contract as `seedIfEmpty` and F4's post-restore sweep) so the newly-created company boots with both system seats populated.
+**Company CRUD IPC / workspace UI drift.** RESOLVED in Phase 5.6 M-C/M-D. `companies.create`, `companies.update`, `companies.delete`, `companies.archive`, WorkspaceSwitcher, CreateCompanyDialog, CompanySettings, and company lifecycle audit events are now on main. This was not aspirational scope: it was Rocky's locked M7 multi-company architecture, stranded on `worktree-phase-2-the-org` and restored in the remediation sprint. `companies.create` seeds both `system-agent` and `system-copilot`; `companies.archive` is the soft-delete path; `companies.delete` is the permanent-delete path with snapshot-bearing `company.deleted` audit proof.
 
 **`agentic-loop.spec.ts` hangs with "timed out waiting for `data-step-kind='answer'`".** The canned provider seam (`test-agentic-provider.ts`) is a three-tier lookup: the `__ECHO_AGENT__:[…]` JSON sentinel first, then the canned per-prompt table, then a generic fallback. If the spec was recently extended with a new prompt that doesn't match any key in `test-agentic-provider.ts` or `test-agentic-tools.ts`, the fallback path runs and can take minutes. Add the prompt key to both seams in lockstep — the rule is any new agentic surface must ship a matching test-side swap (T8 pattern).
 
 **Task Planner: amber confirmation gate never appeared even though my prompt looks write-shaped.** The `WRITE_SIDE_KEYWORDS` regex in `command-service.ts` only catches the locked verbs (*decompose* / *delegate* / *create tickets* / *assign owners* / *review*). Synonyms like "break down", "hand off", "file tickets" don't match — the prompt routes to the M31 read-side loop and runs without a gate. Either rephrase with one of the locked verbs or widen the regex (and update the M32 T5 unit tests in lockstep). The destructive structured intents (`fire`, `close`, `end-meeting`, `promote`) still get the **red** gate independently.
 
-**Task Planner: `delegate_subtask` keeps assigning everything to the same employee.** Workload scoring weights (0.4 role-fit, 0.3 inverse-load, 0.2 availability, 0.1 past-perf) are locked in `agentic-tools-write.ts` and verified in 25 unit tests. In small orgs an employee whose title matches the subtask type AND who is not in a meeting will dominate. Quick fix: archive or set-in-meeting the over-assigned employee so `availability(employee)` returns 0 and the next-highest-scoring employee wins. Long fix: add `capabilities` frontmatter to role.md (deferred to M33/M34) so role-fit becomes more granular than the current title-keyword heuristic.
+**Task Planner: `delegate_subtask` keeps assigning everything to the same employee.** Workload scoring weights (0.4 role-fit, 0.3 inverse-load, 0.2 availability, 0.1 past-perf) are locked in `agentic-tools-write.ts` and verified in 25 unit tests. In small orgs an employee whose title matches the subtask type AND who is not in a meeting will dominate. Quick fix: archive or set-in-meeting the over-assigned employee so `availability(employee)` returns 0 and the next-highest-scoring employee wins. Long fix: add `capabilities` frontmatter to `{role-slug}.md` files in Phase 6 so role-fit becomes more granular than the current title-keyword heuristic.
 
 **Task Planner: subtask escalated and the org chart shows a new ticket on the manager.** Three failed `delegate_subtask` attempts (or three consecutive `review_deliverable` rejects) trigger `task.escalated`. The escalation lifts the subtask one level up the org chart — the manager's `delegate_subtask` queue gets the work next. Filter the Audit tab on `task.escalated` to see the reason payload (`fallback_chain_exhausted` / `repeated_rejects`) and the original subtask. Threshold lives in `planner_escalation_threshold` (default 3, range 1–10) — bump it in Settings → Runtime → Task Planner if escalations fire too aggressively.
 
@@ -487,7 +506,7 @@ This project lives under `Strategia-Enhanced-App/` and inherits rules from:
 - `~/.claude/CLAUDE.md` — Rocky's global standards (Elite Partner, execution standards, UI/UX bar, security, code quality, blog diligence, SEO/GEO diligence, zero-corner-cutting mandate).
 - `Strategia-Enhanced-App/CLAUDE.md` — workspace-level build commands and guidance.
 
-**Zero-tolerance-no-cutting-corners applies here.** Every feature built to full spec, every role.md hand-written to F10 quality, every dashboard state (loading/empty/error/disabled) implemented, every platform tested. Full fidelity. Full effort. Every time.
+**Zero-tolerance-no-cutting-corners applies here.** Every feature built to full spec, every role spec hand-written to F10 quality, every dashboard state (loading/empty/error/disabled) implemented, every platform tested. Full fidelity. Full effort. Every time.
 
 ## Design system reminders
 

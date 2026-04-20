@@ -284,6 +284,8 @@ GitHub Actions job `claim-evidence-audit`:
 
 ### Phase 5.6 M-F — Documentation Truth-Up
 
+> **2026-04-19 — SHIPPED.** M-F rewrote `CLAUDE.md` into shipped / deferred / deprecated buckets, removed the Cluster A "aspirational" drift framing, reconciled Phase 2 M7/M9 against the M-C/M-D restored surface, aligned the MCP IPC table with canonical on-disk names, emptied `scripts/check-claim-evidence.allowlist.json`, and updated baseline QA counters to the M-D exit gate.
+
 **Output:** Every documentation surface reflects shipped reality
 **Scope:**
 - `CLAUDE.md` status blocks rewritten to match actual shipped state, three-bucket format (shipped / deferred / deprecated)
@@ -294,9 +296,9 @@ GitHub Actions job `claim-evidence-audit`:
 - Phase 5 retrospective amended with the drift discovery + lessons learned
 - New retrospective: `docs/plans/2026-04-XX-team-x-phase-5.6-retrospective.md` (six-section structure per Phase 5 M35 T4 lock)
 **DoD:**
-- No claim in any doc that lacks on-disk evidence
-- Audit doc cross-checked against updated CLAUDE.md (zero divergence)
-- README badges (test counts, etc.) verified
+- No claim in CLAUDE.md's structured IPC / bus-event tables lacks on-disk evidence: `pnpm audit:claims -- --strict` → 95 verified / 0 allowlisted / 0 UNALLOWED
+- Audit doc §20.6 cross-checked against updated CLAUDE.md (zero remaining M-F allowlist rows)
+- README badges and QA baseline counters updated to 1683 unit tests and 13 Playwright specs / 18 cases
 **Estimated:** 2 working days
 **Buffer:** +1 day
 
@@ -306,7 +308,7 @@ GitHub Actions job `claim-evidence-audit`:
 **Scope:**
 - Verify M-C and M-D landed every "restore" row (cross-check audit doc)
 - Verify CI conformance check is green on main
-- Run `pnpm sign:pack` if any role.md changed during Phase 5.6 (likely no — Phase 5.6 is UI/IPC, not role content)
+- Run `pnpm sign:pack` if any official role file changed during Phase 5.6 (likely no — Phase 5.6 is UI/IPC, not role content)
 - Delete `worktree-phase-2-the-org` local + `origin/worktree-phase-2-the-org` remote (last step, only after evidence of full restoration)
 - `git tag` Phase 5.6 ship marker
 - Push main with all Phase 5.6 commits
@@ -463,7 +465,7 @@ Week 1                Week 2                Week 3                Week 4
 | R6 | Solo bandwidth / burnout — long remediation on top of day job | Medium | High | Explicit buffer per milestone. Pause-friendly between milestones. This is a marathon. No deadline pressure. | Rocky |
 | R7 | New gaps discovered mid-implementation (M-C reveals more missing IPC) | Medium | Medium | Add to audit doc; decide restore/defer at the time; defer is OK if logged in audit | Rocky |
 | R8 | Test count baseline confusion (Phase 5 claimed 1169 tests; audit may find different number) | Low | Low | Audit verifies; CLAUDE.md updates to actual count; safeguard prevents future drift | Rocky |
-| R9 | Pack signature breaks during Phase 5.6 if a role.md is touched | Low | Low | Phase 5.6 doesn't touch role.md; if it does, run `pnpm sign:pack` per dev workflow | Rocky |
+| R9 | Pack signature breaks during Phase 5.6 if an official role file is touched | Low | Low | Phase 5.6 doesn't touch role content; if it does, run `pnpm sign:pack` per dev workflow | Rocky |
 | R10 | Stranded branch deleted prematurely → reference lost | Low | High | M-G deletion gated on M-C, M-D, M-E completion + audit cross-check showing zero `restore` rows remain | Rocky |
 
 ### Communications

@@ -1,8 +1,8 @@
-# Team-X QA Baseline Metrics — 2026-04-18
+# Team-X QA Baseline Metrics — 2026-04-19
 
-**Snapshot taken at**: Phase 5.6 M-C complete (commit `f29b1be`, ledger head)
-**Codebase version**: v1.1.0 (Phase 5 exit tag) + M-C backend restoration on top
-**Authority**: This document is the frozen 2026-04-18 baseline. Future reports compare against these numbers.
+**Snapshot taken at**: Phase 5.6 M-F documentation truth-up (after M-D exit gate)
+**Codebase version**: v1.1.0 (Phase 5 exit tag) + Phase 5.6 M-A through M-F remediation on top
+**Authority**: This document supersedes the frozen 2026-04-18 M-C baseline for Phase 5.6 exit comparisons.
 
 ---
 
@@ -10,13 +10,13 @@
 
 | Metric | Baseline | Source |
 |--------|----------|--------|
-| Unit tests passing | **1454 / 1454 (100%)** | `pnpm test` at M-C step e ship |
-| Unit test files | 80 (+ 3 root: check-claim-evidence, e2e-regression-guards, loki-verified-by) | Per test-coverage audit |
-| E2E spec files | 11 (12 Playwright cases) | `apps/desktop/e2e/` |
+| Unit tests passing | **1683 / 1683 (100%)** | `pnpm test` at M-D step g exit gate |
+| Unit test files | 125 | M-D step g verification gate |
+| E2E spec files | 13 (18 Playwright cases) | `apps/desktop/e2e/` at M-D step g |
 | Skipped tests | 0 | Grep for `.skip` / `.todo` returned zero |
 | Flaky tests | 0 | M35 T9 regression guards passing |
-| Total test runtime (unit) | ~44s (M-C step e final full run) | M-C step e verifiedBy |
-| Total test runtime (E2E) | ~27s (Playwright, 11 specs) | Phase 5 M35 verified |
+| Total test runtime (unit) | Full suite green after Node ABI rebuild | M-D step g verifiedBy |
+| Total test runtime (E2E) | Full suite green after Electron ABI rebuild (13 specs / 18 cases) | M-D step g verifiedBy |
 
 ## 2. Code Coverage (Approximated)
 
@@ -42,18 +42,18 @@
 
 | Category | Count |
 |----------|-------|
-| Verified on disk | **92** |
-| Allowlisted (scheduled M-F rewrite) | 3 (`mcp.add`, `mcp.remove`, `mcp.health` — naming drift) |
+| Verified on disk | **95** |
+| Allowlisted | 0 |
 | UNALLOWED | **0** |
 | Total claims | 95 |
 | CI conformance gate | GREEN |
 
 ## 5. Bug State
 
-| Severity | Open | Shipped in M-C |
+| Severity | Open | Shipped in Phase 5.6 |
 |----------|------|---------------|
-| P0 | 0 | 0 regressions; all 15 P0 M-A rows for backend CLOSED |
-| P1 | **1** (Invariant #11 gap on 4 renderer hooks — see ground-zero audit §3.1) | 0 |
+| P0 | 0 | 0 regressions; all 15 P0 M-A restore rows CLOSED by M-C/M-D |
+| P1 | 0 | M-D event-sync hooks + E2E audit assertions closed the renderer gap |
 | P2 | 1 (a11y baseline only; 2 agent-reported P2s withdrawn as LLM false-positives on verification) | 0 |
 | P3 | 4 (magic-string events, bus payload variance, telemetry-core parametric tests, 2 tabs uncovered in E2E) | 0 |
 | P1 FOLLOWUP | 1 (main-side Invariant #11: tickets/projects/goals IPC handlers don't emit bus events — surfaced during P1 renderer fix) | 0 |
@@ -99,14 +99,14 @@
 | Events | 1 (dashboard stream) | Phase 1 M4 |
 | Backup | 3 | Phase 4 M23 |
 | Updater | 2 | Phase 4 M25 |
-| **Total** | **~100 channels** | All verified or documented allowlist |
+| **Total** | **~100 channels** | All verified; claim-evidence allowlist is empty |
 
 ## 8. Event Bus Surface
 
 - **34** typed EventType members (`work.*`, `token.*`, `message.*`, `meeting.*`, `vault.*`, `command.*`, `agent.*`, `agentic.*`, `plan.*`, `task.*`, `review.*`, `copilot.*`, `company.*`, `employee.*`)
 - **5** new EventType members added by M-C: `company.created`, `company.updated`, `company.deleted`, `employee.promoted`, `employee.managerSet`
 - **100%** emit sites verified via main-process audit
-- **3 of 8** renderer mutation hooks have corresponding bus subscriptions (Invariant #11 P1 gap; see ground-zero audit §3.1)
+- Renderer mutation hooks added during M-D carry event-sync source-string coverage, and step g adds company/employee lifecycle E2E audit assertions.
 
 ## 9. Migrations
 
@@ -125,7 +125,7 @@
 
 | Metric | Baseline |
 |--------|----------|
-| Total role.md files | **57** (5 officer + 7 senior-mgmt + 8 management + 5 supervisor + 5 lead + 25 IC + 2 system) |
+| Total role files | **57** (5 officer + 7 senior-mgmt + 8 management + 5 supervisor + 5 lead + 25 IC + 2 system) |
 | pack.json version | 1.0.0 |
 | pack.sig | Ed25519, publicKeyFingerprint present |
 | Signature verification tests | 22 |
@@ -137,11 +137,11 @@
 
 | Metric | Current | Target | Owner |
 |--------|---------|--------|-------|
-| P1 bugs open | 1 | 0 | M-D T0 (close Invariant #11 gap) |
+| P1 bugs open | 0 | 0 | Closed by M-D |
 | Renderer component coverage | < 4% | >= 60% | M-D sprint |
 | A11y baseline pass rate | 1/9 views | >= 8/9 | M-D + Phase 6 a11y sprint |
-| Audit claims allowlist | 3 | 0 | M-F docs rewrite |
-| E2E tab coverage | 6/8 | 8/8 | Phase 6 backfill |
+| Audit claims allowlist | 0 | 0 | Closed by M-F docs rewrite |
+| E2E tab coverage | 8/8 core tabs | 8/8 | M-D backfill |
 | pnpm audit blocking gate | No | Yes | Recommended before Phase 6 |
 
 ---
@@ -152,13 +152,15 @@
 - **M-A audit (2026-04-17)**: 414 rows, 15 P0 / 8 P1 / 10 P2 / 16 P3 non-shipped
 - **M-B triage (2026-04-17)**: 41 gap rows dispositions assigned; 15 P0 → RESTORE
 - **M-C step e (2026-04-18)**: 1454 unit / 11 E2E / 92 audit verified / 3 allowlisted
+- **M-D step g (2026-04-19)**: 1683 unit / 13 E2E specs / 18 cases / 92 audit verified / 3 allowlisted
+- **M-F docs truth-up (2026-04-19)**: 95 audit verified / 0 allowlisted / 0 UNALLOWED
 
-Baseline delta 2026-04-20 → 2026-04-18: **+285 unit tests** (1169 → 1454), 0 new E2E specs (M-D will add), P0 rows closed backend-side (8 of 15).
+Baseline delta Phase 5 exit → M-D exit: **+514 unit tests** (1169 → 1683), +2 E2E specs (+6 Playwright cases), and all 15 P0 restore rows closed.
 
 ---
 
 ## Sign-off
 
 **Baseline authored by**: QA Expert session, 2026-04-18
-**Approved by**: (awaiting Rocky review)
-**Next report due**: End of first M-D sprint or 2026-04-25, whichever earlier.
+**Updated by**: Phase 5.6 M-F documentation truth-up, 2026-04-19
+**Next report due**: Phase 5.6 M-G ship retrospective.
