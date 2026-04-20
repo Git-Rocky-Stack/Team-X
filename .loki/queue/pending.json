@@ -1,18 +1,18 @@
 {
-  "milestone": "Phase 5.6 M-A",
-  "milestoneName": "Conformance Audit",
-  "phase": "Phase 5.6 — Reconciliation & Remediation",
-  "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
-  "planDocSection": "§4 Conformance Audit Methodology + §13 Approval Record + §14 Sprint Execution Framework",
-  "previousPhase": "Phase 6 — Capabilities & Evidence",
-  "previousPhaseStatus": "PAUSED at M36 T2 per D8 pending Phase 5.6 M-G ship",
-  "previousPhaseCompletedAt": null,
-  "previousMilestone": "M36 T1",
-  "previousMilestoneName": "Capability taxonomy enum + shared-types scaffold",
-  "previousMilestoneCompletedAt": "2026-04-21T14:00:00Z",
-  "previousMilestoneCommit": "52ac886 + ledger 491d862 + state refresh 93e46c3 (all pushed to origin/main 2026-04-17 per D1 along with Phase 5.5 hotfix 8d5a0db)",
+  "milestone": "Phase 6 M37-R",
+  "milestoneName": "Capability Role-Fit Reconciliation",
+  "phase": "Phase 6 — Capabilities & Evidence",
+  "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
+  "planDocSection": "Reconciliation after Phase 5.6 M-G ship",
+  "previousPhase": "Phase 5.6 — Reconciliation & Remediation",
+  "previousPhaseStatus": "SHIPPED 2026-04-20 as v1.1.1",
+  "previousPhaseCompletedAt": "2026-04-20T01:30:00Z",
+  "previousMilestone": "Phase 5.6 M-G",
+  "previousMilestoneName": "Branch Hygiene + Ship",
+  "previousMilestoneCompletedAt": "2026-04-20T01:30:00Z",
+  "previousMilestoneCommit": "852f6f7 + paired M-G ledger commit",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-19T18:00:00-07:00",
+  "updatedAt": "2026-04-20T01:30:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -27,14 +27,6 @@
     "d8_m36Pause": "EXECUTED — this pending.json explicitly notes M36 T2+ paused",
     "mEReorder": "APPROVED — M-E ships BEFORE M-C/M-D (was parallel with M-D in proposal)",
     "pmpAdditions": "APPROVED — product backlog + sprint velocity KPI + change-control mini-gate + Definition of Ready per plan §14"
-  },
-  "m36PausedState": {
-    "pausedAt": "2026-04-17T00:00:00Z",
-    "pausedAtTask": "M36 T2 — role-schema parser extension (was head-of-queue)",
-    "reason": "Phase 5.6 Reconciliation & Remediation takes precedence — systemic CLAUDE.md/reality drift audit surfaced pre-M36-T2 by Rocky",
-    "resumeCondition": "Phase 5.6 M-G ships cleanly (all 7 sub-milestones DoD-complete + retrospective committed + v1.1.1 tagged + main pushed)",
-    "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
-    "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
   },
   "subMilestones": [
     {
@@ -138,12 +130,38 @@
       "id": "M-G",
       "name": "Branch Hygiene + Ship",
       "estimate": "1d + 0.5d buffer",
-      "status": "head-of-queue — M-F Loki exit-KPI closed 2026-04-19; ready for final branch hygiene + ship",
-      "dor": "satisfied by M-F exit KPI: strict claim-evidence gate 95/0/0 + CLAUDE/docs truth-up + empty allowlist",
-      "dod": "all 7 DoDs met + worktree-phase-2-the-org deleted local+origin + CHANGELOG [Unreleased] → [1.1.1] + v1.1.0 → v1.1.1 across 7 package.json + v1.1.1 git tag + main pushed + retrospective committed"
+      "status": "shipped 2026-04-20 — v1.1.1 remediation release atomic 852f6f7; retrospective/version/changelog complete; branch hygiene/tag/push handled by paired ledger",
+      "dor": "satisfied by M-F exit KPI: strict claim-evidence gate 95/0/0 + empty allowlist + docs truth-up",
+      "dod": "satisfied — all 7 sub-milestones DoD-complete, zero unresolved restore rows, zero allowlist rows, CHANGELOG [1.1.1], 7 package.json at 1.1.1, retrospective committed, v1.1.1 tag on M-G ledger, main/feature branch pushed, worktree-phase-2-the-org deletion approved/executed",
+      "verifiedBy": [
+        "atomic commit 852f6f7 (docs(phase-5.6-m-g): ship v1.1.1 remediation release)",
+        "CHANGELOG.md [1.1.1] promotion + v1.1.1 compare links",
+        "docs/plans/2026-04-20-team-x-phase-5.6-retrospective.md (locked six-section retrospective)",
+        "7 workspace package.json files bumped 1.1.0 -> 1.1.1",
+        "docs/audits/2026-04-17-conformance-audit.md §20.8 M-G final cross-check",
+        "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
+        "pnpm typecheck — clean across 6 packages",
+        "pnpm lint — 0 errors / 21 warnings",
+        "pnpm test — 125 files / 1683 tests after Node ABI rebuild",
+        "pnpm -F @team-x/desktop exec playwright test — 13 specs / 18 cases after Electron ABI rebuild",
+        "pnpm build — clean production build",
+        "git diff --check — clean"
+      ]
     }
   ],
   "activeSubMilestone": {
+    "id": "M37-R",
+    "name": "Capability Role-Fit Reconciliation",
+    "status": "head-of-queue — Phase 5.6 M-G shipped; reconcile existing Phase 6 capability/role-fit code before new feature work",
+    "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
+    "auditDoc": "docs/plans/2026-04-20-team-x-phase-5.6-retrospective.md",
+    "nextSession": "Proceed with Phase 6 M37-R. Scope: read-only inventory + focused verification of capabilities taxonomy, role-schema parser/backfill, pack signature, and role-fit scorer already present from commit 26d07df; then update Phase 6 Loki/docs to match reality.",
+    "dor": "Phase 5.6 M-G v1.1.1 ship ledger closed and tag/push complete",
+    "dod": "existing Phase 6 capability/role-fit surface inventoried, focused tests green, docs/Loki reconciled, next Phase 6 implementation task selected without hidden drift",
+    "verifiedBy": null,
+    "blockedBy": null
+  },
+  "previousSubMilestone": {
     "id": "M-G",
     "name": "Branch Hygiene + Ship",
     "status": "head-of-queue — M-F shipped 2026-04-19; final cross-check, retrospective, version/tag, branch deletion, and pause release remain",
@@ -154,25 +172,6 @@
     "dod": "all 7 DoDs met + worktree-phase-2-the-org deleted local+origin + CHANGELOG [Unreleased] → [1.1.1] + v1.1.0 → v1.1.1 across 7 package.json + v1.1.1 git tag + main pushed + retrospective committed",
     "verifiedBy": null,
     "blockedBy": null
-  },
-  "previousSubMilestone": {
-    "id": "M-C",
-    "name": "Backend Backfill",
-    "shippedAt": "2026-04-18T00:00:00Z",
-    "commit": "fd3617b (step e final atomic) + cumulative across a:f417a18 b:b858067 c:c2e6c92 d:19dbd35 d-hardening:c6b118a e:fd3617b",
-    "ledger": "pending-this-chore(loki)-phase-5.6-m-c-step-e",
-    "verifiedBy": [
-      "apps/desktop/src/main/db/migrations/0013_org_edges.sql (step a; Cluster B foundation)",
-      "apps/desktop/src/main/db/repos/companies.ts (step b/e: create + update + transactional 15-table delete)",
-      "apps/desktop/src/main/db/repos/orgchart.ts (step c: createOrgEdgesRepo with cycle detection + atomic setManager/removeByReport)",
-      "apps/desktop/src/main/ipc/handlers.ts (companies.create + update + delete + archive + employees.promote + setManager + orgchart.get + assertCompanyActive helper + HUMAN_USER_ID actor sweep)",
-      "packages/shared-types/src/events.ts + ipc.ts (company.created/updated/deleted + employee.promoted/managerSet event types + payload interfaces + IpcContract entries + TeamXApi methods)",
-      "+236 unit tests cumulative across M-C (1237 baseline → 1454 at step e ship); 115 test files",
-      "audit:claims 86/9/0 baseline → 92/3/0 after step e (6 IPC channels migrated from allowlist to verified-on-disk)",
-      "atomic commits f417a18 + b858067 + c2e6c92 + 19dbd35 + c6b118a + fd3617b + paired chore(loki) ledgers on each",
-      "M-E safeguards S2/S3/S4 green on all six atomic commits (five additive + one symmetric hardening)"
-    ],
-    "deliverable": "Cluster A multi-company CRUD backend RESTORE complete (audit rows 2.1/2.2/2.3/2.4/10.12/10.13/10.15): companies.create seeds system-agent + system-copilot atomically; companies.update mirrors create validation behind assertCompanyActive guard; companies.delete hard-deletes via transactional 15-table FK-safe cascade (indirect leaves → cross-referencing children → direct children → loose-reference rows → employees [CASCADEs org_edges] → copilot_insights → companies) with pre-transaction snapshot capture + copilot analyzer/window quiesce identical to archive. Cluster B M9 org chart backend RESTORE complete (audit rows 2.16/2.19/2.20/2.21): org_edges table via migration 0013 with CASCADE FKs on company+manager+report; createOrgEdgesRepo with wouldCycle + atomic setManager/removeByReport (TOCTOU-free after step d hardening); orgchart.get IPC with flat {employees[], edges[], rootIds[]} projection + defensive edge filter; employees.promote atomic role swap + employees.setManager upsert-with-cycle-guard + detach-via-null path. Step d hardening added LEVEL_RANK + getLevelRank to shared-types/entities, assertCompanyActive helper (reused by step e companies.update), BUG-005 HUMAN_USER_ID sweep across every handler emitting bus events, atomic transaction wraps on org-edges mutations. Allowlist shrunk from 9 entries (M-E baseline) to 3 (M-C exit; remaining 3 rows are mcp.* naming-drift scheduled for M-F docs sweep). M-E safeguards' first six-at-scale proof: every M-C commit passed CI conformance gate + pre-commit hook + verifiedBy contract without drift."
   },
   "previousPreviousSubMilestone": {
     "id": "M-E",
@@ -226,21 +225,22 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-F Documentation Truth-Up shipped 2026-04-19; head-of-queue advances to M-G Branch Hygiene + Ship.",
+    "asOfTask": "Phase 5.6 M-G Branch Hygiene + Ship shipped 2026-04-20; Phase 6 is unpaused and next task is capability/role-fit reconciliation.",
     "unitTests": 1683,
-    "unitTestsNote": "M-D exit gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild.",
     "e2eSpecs": 13,
     "e2eGreenCount": 18,
     "lintErrors": 0,
     "lintWarnings": 21,
     "typecheckClean": true,
-    "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95 (M-F cleared the final mcp.* naming-drift allowlist rows)",
-    "version": "1.1.0 (target 1.1.1 on M-G ship)"
+    "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
+    "version": "1.1.1"
   },
   "targets": {
-    "phase56Exit": "All 7 sub-milestones DoD-complete, branch deleted, retrospective committed, CHANGELOG [Unreleased] → [1.1.1], v1.1.1 tag, main pushed. Estimated 6–8 calendar weeks at Rocky's pace.",
+    "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
     "phase56SurfaceArea": "Conformance audit (M-A) ~200–400 rows + triage (M-B) per-row dispositions + safeguards (M-E) 6 deliverables + backend backfill (M-C) migrations/IPC/repos for restore rows + UI backfill (M-D) components/hooks/routes for restore rows + docs truth-up (M-F) three-bucket CLAUDE.md rewrite + ship (M-G) branch deletion + version bump + retrospective",
-    "phase56NonGoals": "No new features beyond restoration. No scope creep from mid-flight discoveries without change-control mini-gate (§14.3). No silent deferrals. No Phase 6 work until M-G ships. No public README/landing-site claim updates — those wait for M-F."
+    "phase56NonGoals": "No new features beyond restoration. No scope creep from mid-flight discoveries without change-control mini-gate (§14.3). No silent deferrals. No Phase 6 work until M-G ships. No public README/landing-site claim updates — those wait for M-F.",
+    "phase6Next": "M37-R reconciliation before new feature work because capability parser/backfill/role-fit code is already present in branch history."
   },
   "sprintFramework": {
     "backlog": "M-B triage output — audit doc `disposition` column. Must-have=restore / Should-have=replace / Won't-have=deprecate (docs only)",
@@ -250,6 +250,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 5.6 M-G SHIPPED 2026-04-20 — atomic release commit 852f6f7. v1.1.1 remediation release promoted in CHANGELOG; 7 workspace package.json files bumped to 1.1.1; Phase 5.6 retrospective authored; audit doc §20.8 records zero unresolved restore rows and zero allowlist rows. Gates: strict claims 95/0/0, typecheck clean, lint 0 errors / 21 warnings, pnpm test 125 files / 1683 tests, Playwright 13 specs / 18 cases, build clean, diff-check clean. Phase 6 pause lifted. Earlier Phase 6 capability/role-fit commit 26d07df is intentional branch history; next task is M37-R reconciliation/verification before new Phase 6 expansion.",
     "PHASE 5.6 M-F SHIPPED 2026-04-19 — atomic docs commit 185f6f1. Documentation truth-up complete. CLAUDE.md now carries shipped/deferred/deprecated buckets; the Cluster A aspirational framing is removed and replaced with M-C/M-D restoration evidence; Phase 2 M7/M9 status is reconciled to on-disk reality; the IPC table uses canonical mcp.addServer/mcp.removeServer/mcp.testConnection names; scripts/check-claim-evidence.allowlist.json is empty; README/user-guide/QA counters reflect 1683 unit tests and 13 Playwright specs / 18 cases. Gates: pnpm audit:claims 95/0/0 and pnpm audit:claims -- --strict 95/0/0. M-G Branch Hygiene + Ship is now head-of-queue.",
     "PHASE 5.6 M-D SHIPPED 2026-04-19 — final atomic commit 3680c96. Step (g) closed the UI Backfill exit gate. Added company lifecycle audit assertions to workspace-switcher E2E; hardened org-chart invalid-cycle E2E to use manager-select after valid drag persistence; full gate green: pnpm test 125 files / 1683 tests, pnpm typecheck clean across 6 packages, pnpm lint 0 errors / 21 warnings, pnpm audit:claims 92/3/0, pnpm build clean, full Playwright 13 specs / 18 cases. M-F Documentation Truth-Up is now head-of-queue.",
     "PHASE 5.6 M-C SHIPPED 2026-04-18 — atomic feat(phase-5.6-m-c) step e commit fd3617b closes M-C; paired chore(loki) ledger follows. Step e deliverable: Restores Cluster A multi-company CRUD write-side per audit rows 10.13 + 10.15. companies.update [assertCompanyActive guard from step d hardening + per-field validation mirroring create + UNIQUE rewrap + company.updated emit with patchedKeys array] + companies.delete [snapshot-before-delete + quiesce pipeline identical to archive + transactional 15-table FK-safe cascade sweep in repo via db.transaction: indirect leaves (thread_members/messages/runs/project_tickets/ticket_attachments) → cross-referencing children (meetings/tickets/projects before threads/goals/employees) → direct children (threads/goals/file_vault/embeddings/command_history) → loose-reference rows (mcp_servers scoped-only; NULL=global survives; events) → employees (CASCADEs org_edges) → copilot_insights (CASCADE explicit for audit parity) → companies]. Archived companies ARE deletable (permanent remove semantic). Empty update patch still emits for optimistic-path reconciliation. icon accepts null to clear. New shared-types: CompaniesUpdateRequest + CompaniesDeleteRequest + CompanyUpdatedPayload + CompanyDeletedPayload + EventType union extensions. FakeCompaniesRepo widened with throw-'unused' stubs across four existing test files (handlers.test.ts + companies-handlers.test.ts + employees-promote-handlers.test.ts + employees-set-manager-handlers.test.ts) so future cross-tests fail loud rather than silently no-op. Tests: +58 unit (16 companies.test.ts [10 update + 6 delete including full 15-table cascade sweep vs real sql.js] + 22 companies-update-handlers.test.ts + 19 companies-delete-handlers.test.ts - 4 widening stubs elsewhere + 1 type import - 4 modified-not-added). Verification gate: vitest 1454/1454 in 44.74s (115 test files); audit:claims 92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (90/5 → 92/3; M-C-exit allowlist target reached); typecheck clean across 6 packages; lint 0 errors / 21 warnings (3 below 24 baseline); E2E not re-run (no renderer surface; 11 specs / 12 cases preserved). M-E safeguards' sixth-at-scale M-C proof — S2 conformance gate GREEN on fd3617b with allowlist shrinkage in the same atomic (90/5 → 92/3), S3 pre-commit hook clean on staged diff, S4 verifiedBy populated on this paired ledger entry per contract. **M-C COMPLETE** — all 5 sub-steps landed (a Migration 0013 + b companies.create + c orgchart.get + d employees.promote + setManager + step d hardening BUG-001..008 + e companies.update + delete) across six atomic commits with clean safeguards throughout; head-of-queue advances to M-D (UI Backfill) — M-D ships the renderer surface consuming the M-C backend.",
@@ -267,5 +268,21 @@
     "HISTORICAL BREADCRUMB for future-you: Phase 5 (Intelligence Layer) shipped M28 → M35 with 1169/11/12 tests/specs/cases baseline at v1.1.0 (2026-04-20). Phase 6 T0 + M36 T0 + M36 T1 shipped on top (adds 18 unit tests in shared-types → 1187 baseline; no renderer/IPC/migration surface). All on origin/main as of 2026-04-17. Phase 5.6 begins from this baseline with target v1.1.1 on ship.",
     "VERIFICATION RECIPE for every Phase 5.6 sub-milestone exit (carried forward from Phase 5): (1) Node ABI rebuild for vitest. (2) pnpm test target delta meets testsDeltaEstimate. (3) pnpm typecheck clean across 6 packages. (4) pnpm lint 0 errors / ≤24 warnings (baseline preserved). (5) Electron ABI rebuild for Playwright. (6) pnpm -F @team-x/desktop test:e2e baseline + restore deltas. (7) Sub-milestone audit-doc row updates committed. (8) Loki verifiedBy block closed on ledger commit. Atomic + ledger commit cadence preserved.",
     "PHASE 5.5 HOTFIX SHIPPED + PUSHED (2026-04-17). 57/57 roles, pack.sig committed, strict load-time verification wired in role-loader.ts. Phase 5.6 M-C + M-D do NOT touch role.md content — pack signature remains valid throughout Phase 5.6 (M-G checks invariant before branch deletion)."
-  ]
+  ],
+  "phase56ShipState": {
+    "shippedAt": "2026-04-20T01:30:00Z",
+    "version": "1.1.1",
+    "atomicCommit": "852f6f7",
+    "tag": "v1.1.1 (created on paired M-G ledger commit)",
+    "m36PauseLifted": true,
+    "priorPause": {
+      "pausedAt": "2026-04-17T00:00:00Z",
+      "pausedAtTask": "M36 T2 — role-schema parser extension (was head-of-queue)",
+      "reason": "Phase 5.6 Reconciliation & Remediation takes precedence — systemic CLAUDE.md/reality drift audit surfaced pre-M36-T2 by Rocky",
+      "resumeCondition": "Phase 5.6 M-G ships cleanly (all 7 sub-milestones DoD-complete + retrospective committed + v1.1.1 tagged + main pushed)",
+      "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
+      "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
+    },
+    "nextTask": "Phase 6 M37-R — reconcile already-landed capability parser/backfill/role-fit work before new Phase 6 expansion"
+  }
 }

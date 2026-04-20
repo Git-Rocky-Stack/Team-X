@@ -1,30 +1,30 @@
 {
-  "taskId": "Phase-5.6-M-G-T0",
-  "milestone": "Phase 5.6 M-G",
-  "milestoneName": "Branch Hygiene + Ship",
-  "phase": "Phase 5.6 — Reconciliation & Remediation",
-  "title": "Phase 5.6 M-G T0 — Branch Hygiene + Ship: final cross-check, retrospective, version/tag, and pause release",
-  "status": "head-of-queue — ready to start; M-F shipped 2026-04-19 with strict claim-evidence gate green",
+  "taskId": "Phase-6-M37-R-T0",
+  "milestone": "Phase 6 M37-R",
+  "milestoneName": "Capability Role-Fit Reconciliation",
+  "phase": "Phase 6 — Capabilities & Evidence",
+  "title": "Phase 6 M37-R T0 — Reconcile already-landed capability parser/backfill/role-fit work",
+  "status": "head-of-queue — Phase 5.6 M-G shipped; verify and ledger the existing Phase 6 capability/role-fit surface before new feature expansion",
   "verifiedBy": null,
-  "predecessor": "Phase 5.6 M-F Documentation Truth-Up SHIPPED 2026-04-19 — atomic commit 185f6f1; CLAUDE.md three-bucket rewrite, Cluster A aspirational framing removed, MCP IPC names aligned, allowlist emptied, pnpm audit:claims -- --strict 95/0/0",
+  "predecessor": "Phase 5.6 M-G Branch Hygiene + Ship SHIPPED 2026-04-20 — atomic commit 852f6f7; v1.1.1 release docs/version/retrospective complete; tag/push follows ledger commit",
   "dor": [
-    "M-F Loki exit-KPI closed",
-    "CLAUDE.md status blocks rewritten into shipped / deferred / deprecated buckets",
-    "scripts/check-claim-evidence.allowlist.json entries cleared",
-    "docs/audits/2026-04-17-conformance-audit.md §20.6 amended with M-F exit evidence",
-    "pnpm audit:claims -- --strict passed with 95 verified / 0 allowlisted / 0 UNALLOWED"
+    "Phase 5.6 M-G release atomic committed",
+    "Strict claim-evidence gate passed with 95 verified / 0 allowlisted / 0 UNALLOWED",
+    "Full unit and E2E gates passed at v1.1.1 release baseline",
+    "Earlier Phase 6 capability/role-fit commit 26d07df is intentionally present in branch history"
   ],
   "acceptance": [
-    "All 7 Phase 5.6 sub-milestones DoD-complete",
-    "Audit cross-check shows zero remaining restore rows and zero claim-evidence allowlist rows",
-    "Phase 5.6 retrospective committed using the locked six-section structure",
-    "CHANGELOG [Unreleased] promoted to Phase 5.6 / v1.1.1 entry",
-    "Workspace package versions bumped from 1.1.0 to 1.1.1 if M-G confirms patch release",
-    "worktree-phase-2-the-org deleted local and origin only after final evidence review",
-    "v1.1.1 tag created and pushed",
-    "M36 pause lifted only after M-G ship commit/tag are on origin"
+    "Inventory the existing capabilities parser/backfill/scorer surface from commit 26d07df",
+    "Verify official pack capabilities and signature against the v1.1.1 baseline",
+    "Run focused role-schema/shared-types/agentic-tools-write tests and record counts",
+    "Update Phase 6 docs/Loki so M36/M37 status matches on-disk reality",
+    "Decide the next implementation task after reconciliation without adding new feature scope in this pass"
   ],
-  "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
-  "auditDoc": "docs/audits/2026-04-17-conformance-audit.md",
-  "nextStep": "Start M-G final ship checklist. Do not resume M36 until the Phase 5.6 retrospective, version/tag, branch hygiene, and main push are complete."
+  "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
+  "referenceDocs": [
+    "docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md",
+    "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+    "docs/plans/2026-04-20-team-x-phase-5.6-retrospective.md"
+  ],
+  "nextStep": "Start with a read-only reconciliation pass over capabilities taxonomy, role-schema parsing, official role backfill, pack signature, and computeRoleFit behavior before new Phase 6 work."
 }

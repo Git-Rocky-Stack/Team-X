@@ -1,31 +1,18 @@
 {
-  "currentPhase": "REMEDIATION",
-  "currentMilestone": "Phase 5.6 M-G",
-  "milestoneName": "Branch Hygiene + Ship",
-  "tasksCompleted": 7,
+  "currentPhase": "Phase 6 — Capabilities & Evidence",
+  "currentMilestone": "Phase 6 M37-R",
+  "milestoneName": "Capability Role-Fit Reconciliation",
+  "tasksCompleted": 0,
   "tasksFailed": 0,
-  "totalTasks": 7,
-  "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
-  "startedAt": "2026-04-17T00:00:00Z",
+  "totalTasks": 1,
+  "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
+  "startedAt": "2026-04-20T01:30:00Z",
   "completedAt": null,
   "phaseComplete": false,
   "inflight": {},
-  "phase": "Phase 5.6 — Reconciliation & Remediation",
+  "phase": "Phase 6 — Capabilities & Evidence",
   "phaseCompletedAt": null,
-  "phaseVersionTag": "v1.1.1 (target)",
-  "pausedPhase": {
-    "phase": "Phase 6 — Capabilities & Evidence",
-    "pausedAt": "2026-04-17T00:00:00Z",
-    "pausedAtMilestone": "M36 T2",
-    "pausedAtMilestoneName": "Role-schema parser extension (was head-of-queue pre-pause)",
-    "reason": "Phase 5.6 Reconciliation & Remediation takes precedence — systemic CLAUDE.md/reality drift audit per plan §3",
-    "resumeCondition": "Phase 5.6 M-G retrospective committed + v1.1.1 tagged + main pushed",
-    "preservedCommits": "dc8d4d3 (M36 T0 plan doc) + 52ac886 (M36 T1 capability taxonomy enum) both on origin/main",
-    "unblockOwner": "Rocky — manually revert this pausedPhase block + restore active-phase fields to Phase 6 M36 T2 when Phase 5.6 retrospective ships",
-    "previousPhaseBeforePause": "Phase 5 — Intelligence Layer",
-    "previousPhaseCompletedAtBeforePause": "2026-04-20T13:00:00Z",
-    "previousPhaseVersionTagBeforePause": "v1.1.0"
-  },
+  "phaseVersionTag": "v1.2.0 (target; current v1.1.1)",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -43,15 +30,15 @@
     "pmpAdditions": "APPROVED — product backlog + sprint velocity KPI + change-control mini-gate + Definition of Ready per plan §14",
     "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md (renamed from -proposal.md this session)"
   },
-  "previousPhase": "Phase 6 — Capabilities & Evidence",
-  "previousPhaseStatus": "PAUSED at M36 T2 pending Phase 5.6 M-G ship",
-  "previousPhaseCompletedAt": null,
-  "previousPhaseVersionTag": "v1.2.0 (target — paused)",
-  "previousMilestone": "Phase 5.6 M-F",
-  "previousMilestoneName": "Documentation Truth-Up (CLAUDE.md three-bucket rewrite + strict claim-evidence 95/0/0)",
-  "previousMilestoneCompletedAt": "2026-04-19T19:00:00-07:00",
-  "nextMilestone": "Phase 6 M36 T2",
-  "nextMilestoneName": "Role-schema parser extension — still paused until M-G ships",
+  "previousPhase": "Phase 5.6 — Reconciliation & Remediation",
+  "previousPhaseStatus": "SHIPPED as v1.1.1",
+  "previousPhaseCompletedAt": "2026-04-20T01:30:00Z",
+  "previousPhaseVersionTag": "v1.1.1",
+  "previousMilestone": "Phase 5.6 M-G",
+  "previousMilestoneName": "Branch Hygiene + Ship",
+  "previousMilestoneCompletedAt": "2026-04-20T01:30:00Z",
+  "nextMilestone": "Phase 6 M37-R",
+  "nextMilestoneName": "Capability role-fit reconciliation",
   "tasksInProgress": {},
   "baseline": {
     "unitTests": 1130,
@@ -65,17 +52,18 @@
   },
   "current": {
     "unitTests": 1683,
-    "unitTestsNote": "M-D exit gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild.",
     "e2eSpecs": 13,
     "e2eGreenCount": 18,
     "lintErrors": 0,
-    "lintErrorsNote": "Baseline preserved; biome --fix auto-fixed format-only errors on the step e files. 0 rule-suppressions.",
+    "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 5.6 M-F Documentation Truth-Up shipped 2026-04-19; current milestone is M-G Branch Hygiene + Ship.",
-    "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95 (M-F cleared the final mcp.* naming-drift allowlist rows)",
+    "asOfTask": "Phase 5.6 M-G shipped v1.1.1; Phase 6 unpaused with M37-R capability role-fit reconciliation head-of-queue.",
+    "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
-    "version": "1.1.0"
+    "version": "1.1.1",
+    "phase56Complete": true
   },
   "targets": {
     "unitTests": "~1167+ (revised up from plan estimate ~1145 after M35 T3 shipped +28 unit vs plan's +3; M35 T5 docs-only preserves baseline at 1162; further +5 expected from T8 version-bump +2 + T9 regression-hardening +2 unit tests — precise count lands at T10 verification gate)",
@@ -258,7 +246,9 @@
       "shippedAt": "2026-04-19T23:55:00Z",
       "commit": "1108247",
       "deliverable": "NEW apps/desktop/e2e/phase-5-integration.spec.ts (495 lines). Single Playwright spec stitching the full Phase 5 stack (M28 → M29 → M30 → M31 → M32 → M33 → M34) in one session. Scenario: (1) M28/M29 chat round-trip via CEO with __ECHO_TEXT__:<marker> sentinel fires work.completed → RagIndexer embeds the reply → rag.stats embedding count grows above baseline (also asserts vault.upload still works end-to-end inside the same session). (2) M30 + M31 Cmd+K 'what is my team doing right now' → canned classifier routes complex_request → canned agentic provider scripts plan → query_employees → answer → answer card contains 'Team currently has' + system-agent thread persists ≥2 messages. (3) M32 Cmd+K 'decompose the frontend redesign into tickets' → amber write-side gate fires → Confirm dispatches second loop → decompose_project + delegate_subtask + answer; answer card contains 'Decomposed the frontend redesign'. (4) M33 copilot.configure manual tick → insightsGenerated ≥ 1. (5) M34 toolbar Sparkles toggle → sidebar mounts via data-copilot-sidebar-root → insight card via data-copilot-insight-id → dismiss X fires → card leaves DOM → copilot.dismissed event on append-only events table (invariant #11) → ask-input filled with __ECHO_AGENT__: sentinel → submit → sidebar closes → system-flagged thread count ≥1 (both system-agent from Step 2 AND system-copilot from Step 5). Regression guards inline: M30 destructive gate ABSENT across full session; M32 write-side gate fires ONLY in Step 3; Phase 5 badge verbatim. Launched with TEAM_X_RAG_TEST=1 + NODE_ENV=test. Zero production-code changes. Spec runtime 3.7s (under the ≤15s budget).",
-      "filesTouched": ["apps/desktop/e2e/phase-5-integration.spec.ts (NEW, 495 lines)"],
+      "filesTouched": [
+        "apps/desktop/e2e/phase-5-integration.spec.ts (NEW, 495 lines)"
+      ],
       "testsDelta": "+1 E2E spec (10 → 11 spec files; 11 → 12 Playwright cases)",
       "verificationGates": {
         "unitTests": "1134/1134 pass (24.41s) — unchanged from M35 T1 baseline (T2 adds E2E only)",
@@ -744,7 +734,15 @@
         },
         "gapRowsTotal": 41
       },
-      "clusterA_restoreRows": ["2.1", "2.2", "2.3", "2.4", "10.12", "10.13", "10.15"],
+      "clusterA_restoreRows": [
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "10.12",
+        "10.13",
+        "10.15"
+      ],
       "clusterB_restoreRows": [
         "2.16",
         "2.18",
@@ -776,7 +774,9 @@
       "commit": "1f3c432",
       "ledger": "f040d11",
       "deliverable": "NEW docs/audits/2026-04-17-conformance-audit.md (414 rows). Evidence matrix per plan §4 schema covering every CLAUDE.md Phase 1–5 status-block bullet + every IPC channel in the IPC Channels table + every EventType bus event + every settings key + every test-count assertion + role-pack inventory + Drizzle tables + migrations. Per-row columns: claim / phase / milestone / evidence_type / expected_location / evidence_found / status / severity / notes / disposition (blank for M-B). Status values: shipped ✅ / partial ⚠️ / missing ❌ / unverifiable 🔍. Severity: P0 / P1 / P2 / P3. Summary tables §1.1 + §1.2 + §1.3 top-line drift headlines + §1.4 evidence types + §1.5 cross-check status. Cluster A (multi-company architecture, Rocky's locked M7 design) and Cluster B (M9 org chart) identified as the two P0 clusters, both stranded on `worktree-phase-2-the-org`. §18 M-B triage rollup + §18.5 M-F documentation-truth-up corrections enumerated inline.",
-      "filesTouched": ["docs/audits/2026-04-17-conformance-audit.md (NEW, 414 rows)"],
+      "filesTouched": [
+        "docs/audits/2026-04-17-conformance-audit.md (NEW, 414 rows)"
+      ],
       "testsDelta": 0,
       "e2eDelta": 0,
       "verificationGates": {
@@ -830,7 +830,15 @@
         "trigger": "First-pass authoring classified 7 multi-company CRUD rows as P1 with disposition candidate 'deprecate' (citing CLAUDE.md Troubleshooting's 'aspirational' framing)",
         "correction": "Rocky surfaced that multi-company is a LOCKED architectural decision from the original project design. Severity re-classified P1 → P0; disposition candidate changed deprecate → restore; §18.5 added enumerating the CLAUDE.md passages that must be rewritten in M-F so the 'aspirational' framing cannot resurface",
         "planReference": "Plan §14.3 change-control mini-gate — this is the first documented invocation in Phase 5.6",
-        "auditRowsAffected": ["2.1", "2.2", "2.3", "2.4", "10.12", "10.13", "10.15"],
+        "auditRowsAffected": [
+          "2.1",
+          "2.2",
+          "2.3",
+          "2.4",
+          "10.12",
+          "10.13",
+          "10.15"
+        ],
         "totalP0RowsPreCorrection": 8,
         "totalP0RowsPostCorrection": 15
       },
@@ -877,8 +885,9 @@
       "followUps": []
     }
   },
-  "inFlightMilestone": "Phase 5.6 M-G Branch Hygiene + Ship",
+  "inFlightMilestone": "Phase 6 M37-R Capability Role-Fit Reconciliation",
   "notes": [
+    "PHASE 5.6 M-G SHIPPED 2026-04-20 — atomic release commit 852f6f7. CHANGELOG promoted to [1.1.1], 7 package.json files bumped, Phase 5.6 retrospective authored, audit §20.8 cross-check added, strict claims 95/0/0, typecheck clean, lint 0 errors / 21 warnings, unit 1683/1683, Playwright 18/18, build clean, diff-check clean. Phase 6 pause lifted. worktree-phase-2-the-org deletion approved by zero-unresolved-restore-row evidence. Next: Phase 6 M37-R reconciliation for already-landed capability parser/backfill/role-fit commit 26d07df.",
     "PHASE 5.6 M-F SHIPPED 2026-04-19 — atomic docs commit 185f6f1. Documentation truth-up complete. CLAUDE.md now carries shipped/deferred/deprecated buckets; the Cluster A aspirational framing is removed and replaced with M-C/M-D restoration evidence; Phase 2 M7/M9 status is reconciled to on-disk reality; the IPC table uses canonical mcp.addServer/mcp.removeServer/mcp.testConnection names; scripts/check-claim-evidence.allowlist.json is empty; README/user-guide/QA counters reflect 1683 unit tests and 13 Playwright specs / 18 cases. Gates: pnpm audit:claims 95/0/0 and pnpm audit:claims -- --strict 95/0/0. M-G Branch Hygiene + Ship is now head-of-queue.",
     "PHASE 5.6 M-D SHIPPED 2026-04-19 — final atomic commit 3680c96; step (g) full verification gate green. Evidence: docs/qa/2026-04-19-m-d-step-g-verification-gate.md; workspace-switcher E2E company lifecycle audit assertions; org-chart E2E deterministic manager-select cycle rejection after drag persistence; pnpm test 125 files / 1683 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 warnings; pnpm audit:claims 92/3/0; pnpm build clean; full Playwright 13 specs / 18 cases. Head-of-queue advances to M-F Documentation Truth-Up.",
     "PHASE 5.6 M-C STEP C SHIPPED 2026-04-18 — atomic feat(phase-5.6-m-c) commit c2e6c92 lands this session; paired chore(loki) ledger follows. Deliverable: Restores Cluster B (M9 org chart) backend READ surface per audit rows 2.16 / 2.21. Ships NEW apps/desktop/src/main/db/repos/orgchart.ts (createOrgEdgesRepo factory with listByCompany + getByReport + listReports + setManager [upsert with cycle guard] + removeByReport + removeByManager + wouldCycle [visited set + MAX_CHAIN_DEPTH=256 belt-and-suspenders]; cross-driver generic typing matching companies.ts / employees.ts archetype); NEW apps/desktop/src/main/db/repos/orgchart.test.ts (21 vitest tests seeding a real 5-employee tree — covers setManager upsert + cycle rejection [direct + transitive + self-edge] + legal re-parent + remove flows + listByCompany + listReports + wouldCycle under fresh/2-step/multi-step/legal-reparent conditions); NEW apps/desktop/src/main/ipc/orgchart-handlers.test.ts (15 vitest tests mirroring companies-handlers.test.ts pattern — happy path / rootIds computation / system + defensive filter / input validation / cross-company scoping; noop-as-never unused deps). MODIFIED packages/shared-types/src/ipc.ts adds OrgchartGetRequest + OrgchartEdge + OrgchartGetResponse types; IpcContract['orgchart.get'] entry; TeamXApi.orgchart.get namespace; response shape flat {employees[], edges[], rootIds[]} — companyId dropped from OrgchartEdge wire shape (implicit in scoped request). MODIFIED apps/desktop/src/main/ipc/handlers.ts adds IpcOrgEdgesRepo narrow interface (listByCompany only — setManager/wouldCycle ship with step d employees.setManager); orgEdgesRepo threaded into IpcHandlerDeps; orgchartGet handler with DEFENSIVE edge filter dropping edges whose manager OR report is outside listVisibleByCompany (belts-and-suspenders complement to the repo's wouldCycle write-path guard). MODIFIED apps/desktop/src/main/ipc/register.ts + apps/desktop/src/preload/api.ts + apps/desktop/src/main/index.ts wire the channel end-to-end. MODIFIED scripts/check-claim-evidence.allowlist.json deletes the orgchart.get entry in lockstep (allowlist 8 → 7). Verification gate: vitest 1311/1311 in 26.21s (1275 step b baseline → +36 new; 110 test files green); audit:claims 88 verified / 7 allowlisted / 0 UNALLOWED out of 95 (orgchart.get migrated allowlist → verified-on-disk in same atomic per acceptance #5); typecheck clean across 6 packages; lint 0 errors / 24 warnings (baseline preserved; biome --write auto-fix on 3 format-only errors in the touched files); E2E not re-run (no renderer surface in step c — channel has no UI consumer until M-D; baseline at M-C step b preserved at 11 specs / 12 cases). M-E safeguards passed third M-C proof at scale: S2 conformance gate GREEN on c2e6c92, S3 pre-commit hook clean, S4 verifiedBy populated on the paired chore(loki) ledger per contract. Step (d) — employees.setManager + employees.promote IPCs (both currently on the allowlist per audit rows 2.19 / 2.20) — is now head-of-queue within M-C T0; the repo surface (setManager / removeByManager / wouldCycle / listReports) is ready for step d to bolt the IPC channels on top with a matching allowlist shrinkage.",
@@ -903,5 +912,25 @@
     "Head-of-queue after T10 (Phase 5 COMPLETE marker): Phase 6. Phase 6 scope not yet defined. The first Phase 6 session authors docs/plans/2026-0X-XX-team-x-phase-6-<theme>.md. Candidate themes surfaced from deferred follow-ups: cross-company copilot aggregation, proactive copilot → autonomous action, agent-to-agent negotiation, post-release telemetry digest (drives evidence-based clamp changes from real user data).",
     "Architectural seams active for M35 (unchanged from M34 handoff): three-tier canned test seam QUARTET (test-classifier + test-agentic-provider + test-agentic-tools + test-copilot-provider), {rows, truncated} envelope, data-* stable E2E selector surface (data-step-kind / data-copilot-insight-id / data-copilot-sidebar-root / data-copilot-toolbar-toggle / data-copilot-widget-list), pause-aware providerRouter.complete wrapper, AbortController stop, is_system + filter-sweep with isSystemRoleId predicate, atomic + ledger commit cadence (M34 deviated — M35 restores the per-task ledger cadence), ABI rebuild dance on verification gate, IPC-mutation-emits-bus-event invariant #11.",
     "Verification recipe for M35 T10 (unchanged from M34): (1) Node ABI: cd node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 && npm run install. (2) pnpm test → target ~1145 in ≤45s. (3) pnpm typecheck → clean. (4) pnpm lint → 0 errors (T9 may clear the M30 T2 pre-existing), ≤24 warnings. (5) Electron ABI: pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar. (6) pnpm -F @team-x/desktop test:e2e → 11 specs / 12 cases in ≤35s. (7) pnpm -F @team-x/desktop build → production bundle succeeds. (8) pnpm dist:win → v1.1.0 installer under release/1.1.0/. Smoke-launch + verify Phase 5 badge, palette, sidebar, system seats, no console errors."
-  ]
+  ],
+  "phase56ShipState": {
+    "shippedAt": "2026-04-20T01:30:00Z",
+    "version": "1.1.1",
+    "atomicCommit": "852f6f7",
+    "tag": "v1.1.1 (created on paired M-G ledger commit)",
+    "priorPausedPhase": {
+      "phase": "Phase 6 — Capabilities & Evidence",
+      "pausedAt": "2026-04-17T00:00:00Z",
+      "pausedAtMilestone": "M36 T2",
+      "pausedAtMilestoneName": "Role-schema parser extension (was head-of-queue pre-pause)",
+      "reason": "Phase 5.6 Reconciliation & Remediation takes precedence — systemic CLAUDE.md/reality drift audit per plan §3",
+      "resumeCondition": "Phase 5.6 M-G retrospective committed + v1.1.1 tagged + main pushed",
+      "preservedCommits": "dc8d4d3 (M36 T0 plan doc) + 52ac886 (M36 T1 capability taxonomy enum) both on origin/main",
+      "unblockOwner": "Rocky — manually revert this pausedPhase block + restore active-phase fields to Phase 6 M36 T2 when Phase 5.6 retrospective ships",
+      "previousPhaseBeforePause": "Phase 5 — Intelligence Layer",
+      "previousPhaseCompletedAtBeforePause": "2026-04-20T13:00:00Z",
+      "previousPhaseVersionTagBeforePause": "v1.1.0"
+    }
+  },
+  "previousMilestoneCommit": "852f6f7 + paired M-G ledger commit"
 }
