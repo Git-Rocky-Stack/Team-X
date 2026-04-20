@@ -3,7 +3,7 @@
   "milestoneName": "Demo + Hardening + v1.2.0",
   "phase": "Phase 6 — Capabilities & Evidence",
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-  "planDocSection": "M41 T3 demo walkthrough",
+  "planDocSection": "M41 T4 README + user guide sweep",
   "previousPhase": "Phase 5.6 — Reconciliation & Remediation",
   "previousPhaseStatus": "SHIPPED 2026-04-20 as v1.1.1",
   "previousPhaseCompletedAt": "2026-04-20T01:30:00Z",
@@ -12,7 +12,7 @@
   "previousMilestoneCompletedAt": "2026-04-20T06:00:00Z",
   "previousMilestoneCommit": "this-ledger-commit",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-20T13:35:00Z",
+  "updatedAt": "2026-04-20T13:55:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -172,10 +172,10 @@
   "activeSubMilestone": {
     "id": "M41",
     "name": "Demo + Hardening + v1.2.0",
-    "status": "in progress — M41 T2 retrospective drafted; T3 demo walkthrough is head-of-queue",
+    "status": "in progress — M41 T3 demo walkthrough drafted; T4 README/user-guide sweep is head-of-queue",
     "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M41 T3. Scope: write Phase 6 demo walkthrough and evidence scenario docs.",
+    "nextSession": "Proceed with Phase 6 M41 T4. Scope: reconcile README and user-guide links/counts.",
     "dor": "M40 Insight Export exit gate closed",
     "dod": "M41 complete when the Phase 6 exit gate, retrospective, docs, changelog/version bump, COMPLETE marker, and final ledger ship",
     "verifiedBy": [
@@ -193,6 +193,12 @@
       "git diff --check — clean",
       "M41 T2 — Phase 6 retrospective",
       "docs/plans/2026-04-26-team-x-phase-6-retrospective.md",
+      "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
+      "pnpm lint — 0 errors / 21 known warnings",
+      "git diff --check — clean",
+      "M41 T3 — Phase 6 demo walkthrough and scenario docs",
+      "docs/demo/phase-6-walkthrough.md",
+      "docs/demo/scenarios/06-phase-6-capabilities-evidence.md",
       "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
       "pnpm lint — 0 errors / 21 known warnings",
       "git diff --check — clean"
@@ -306,6 +312,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M41 T3 SHIPPED 2026-04-20 — Phase 6 demo walkthrough and evidence scenario drafted. New docs/demo/phase-6-walkthrough.md and docs/demo/scenarios/06-phase-6-capabilities-evidence.md script the capability role-fit outcome, explicit feedback suggestion/apply, telemetry kind filters, and local insight export while avoiding autonomous action, cloud sync, telemetry digest, and native save-dialog claims. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T4 README/user-guide sweep.",
     "PHASE 6 M41 T2 SHIPPED 2026-04-20 — Phase 6 retrospective drafted using the locked six-section M35 structure. It records M36/M37-R, M38, M39, M40, and M41 shipped lines; focused verification growth; E2E growth 13 specs / 18 cases -> 17 specs / 22 cases; +3 IPC channels; +1 bus event; +0 migrations; +1 settings key; and Phase 7 seeds as hypotheses. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T3 demo walkthrough.",
     "PHASE 6 M41 T1 SHIPPED 2026-04-20 — cross-milestone integration E2E added. The spec exercises planner/write-side role-fit outcome, M38 feedback suggestion/apply with copilot.weights.changed, M39 Telemetry kind filtering across work/agentic/copilot, and M40 local JSON insight export in one fresh Electron boot. Root-cause fix included: AgenticLoopService now writes runs.kind=agentic instead of falling through to work, pinned by focused unit coverage. Gates: focused agentic-loop unit 1 file / 25 tests, desktop build clean, focused Playwright 1 spec / 1 test, typecheck clean, lint 0 errors / 21 warnings, strict claims 95/0/0, diff-check clean. E2E surface now 17 specs / 22 cases.",
     "PHASE 6 M41 T0 SHIPPED 2026-04-20 — Demo + Hardening + v1.2.0 plan doc authored. NEW docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md defines the Phase 6 exit gate with a no-new-feature hardening boundary, cross-milestone Phase 6 integration E2E, locked six-section retrospective, demo walkthrough, README/user-guide sweep, CHANGELOG [Unreleased] to [1.2.0] promotion, version bump 1.1.1 to 1.2.0, Phase 6 COMPLETE marker, regression hardening, final verification/installer gate, and release ledger/tag task. Head-of-queue advances to M41 T1 Phase 6 integration E2E.",
@@ -368,6 +375,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M41 T3 — Demo Walkthrough and Scenario Update"
+    "nextTask": "Phase 6 M41 T4 — README + User Guide Reconciliation Sweep"
   }
 }
