@@ -67,6 +67,8 @@ import type {
   Company,
   CompanySettings,
   CompanyStatus,
+  CopilotExportRequest,
+  CopilotExportResponse,
   CopilotWeightsChangedPayload,
   CreateGoalRequest,
   CreateGoalResponse,
@@ -181,6 +183,12 @@ import {
 import type { RoleSpec } from '@team-x/shared-types';
 
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
+import type { CopilotExportFilter, CopilotExportResult } from '../db/repos/copilot-insights.js';
+import {
+  COPILOT_SEVERITIES,
+  serializeCopilotInsightsCsv,
+  serializeCopilotInsightsJson,
+} from '../db/repos/copilot-insights.js';
 import type {
   CreateEmployeeInput,
   EmployeeRow,
@@ -555,6 +563,11 @@ export interface IpcAuditRepo {
   distinctEventTypes(companyId: string): string[];
 }
 
+/** Narrow copilot-insights repo surface the IPC export handler needs. */
+export interface IpcCopilotInsightsRepo {
+  listActiveForExport(filter: CopilotExportFilter): CopilotExportResult;
+}
+
 /** Narrow settings-repo surface the IPC handlers need. */
 export interface IpcSettingsRepo {
   get<T>(key: string, fallback: T): T;
@@ -668,6 +681,8 @@ export interface IpcHandlerDeps {
   backupService: IpcBackupService;
   auditRepo: IpcAuditRepo;
   updaterService: IpcUpdaterService;
+  /** Copilot insight read model used by `copilot.export` (Phase 6 — M40). */
+  copilotInsightsRepo?: IpcCopilotInsightsRepo;
   /**
    * Copilot analyzer — restarted on `settings.setCopilot` so new
    * interval / enabled / categories take effect without an app
@@ -1125,6 +1140,8 @@ export interface IpcHandlers {
   auditStats(req: { companyId: string }): Promise<AuditStats>;
   /** `audit.export` — export filtered events to a file. Returns saved path. */
   auditExport(req: AuditExportRequest): Promise<AuditExportResponse>;
+  /** `copilot.export` — export active copilot insights to a local JSON/CSV file. */
+  copilotExport(req: CopilotExportRequest): Promise<CopilotExportResponse>;
 
   // -----------------------------------------------------------------------
   // Ticket management handlers (Phase 2 — M12)
@@ -1227,6 +1244,44 @@ function assertTelemetryRunKind(value: unknown, channel: string): TelemetryRunKi
     return value as TelemetryRunKind;
   }
   throw new Error(`[ipc] ${channel}: kind must be work, agentic, or copilot`);
+}
+
+function assertCopilotExportRequest(req: CopilotExportRequest): CopilotExportFilter {
+  if (req.format !== 'csv' && req.format !== 'json') {
+    throw new Error('[ipc] copilot.export: format must be "csv" or "json"');
+  }
+  if (req.scope !== 'company' && req.scope !== 'all') {
+    throw new Error('[ipc] copilot.export: scope must be "company" or "all"');
+  }
+  if (
+    req.scope === 'company' &&
+    (typeof req.companyId !== 'string' || req.companyId.length === 0)
+  ) {
+    throw new Error('[ipc] copilot.export: companyId is required for company scope');
+  }
+  if (
+    req.category !== undefined &&
+    !COPILOT_CATEGORIES.includes(req.category as (typeof COPILOT_CATEGORIES)[number])
+  ) {
+    throw new Error(
+      `[ipc] copilot.export: category must be one of ${COPILOT_CATEGORIES.join(', ')}`,
+    );
+  }
+  if (
+    req.severity !== undefined &&
+    !COPILOT_SEVERITIES.includes(req.severity as (typeof COPILOT_SEVERITIES)[number])
+  ) {
+    throw new Error(
+      `[ipc] copilot.export: severity must be one of ${COPILOT_SEVERITIES.join(', ')}`,
+    );
+  }
+
+  return {
+    scope: req.scope,
+    ...(req.scope === 'company' ? { companyId: req.companyId } : {}),
+    ...(req.category !== undefined ? { category: req.category } : {}),
+    ...(req.severity !== undefined ? { severity: req.severity } : {}),
+  };
 }
 
 function rowToTicket(row: TicketRow): Ticket {
@@ -1411,6 +1466,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     backupService,
     auditRepo,
     updaterService,
+    copilotInsightsRepo,
     copilotAnalyzerService,
     copilotEventWindow,
     bus,
@@ -3600,6 +3656,41 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       const filePath = join(exportDir, filename);
       writeFileSync(filePath, content, 'utf-8');
       return { filePath };
+    },
+
+    async copilotExport(req) {
+      const filter = assertCopilotExportRequest(req);
+      if (!copilotInsightsRepo) {
+        throw new Error('[ipc] copilot.export: copilotInsightsRepo dep unwired');
+      }
+
+      const result = copilotInsightsRepo.listActiveForExport(filter);
+      const exportedAtIso = new Date().toISOString();
+      const content =
+        req.format === 'csv'
+          ? serializeCopilotInsightsCsv(result.rows)
+          : serializeCopilotInsightsJson({
+              rows: result.rows,
+              filter,
+              exportedAtIso,
+              truncated: result.truncated,
+            });
+      const { writeFileSync, mkdirSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      const { tmpdir } = await import('node:os');
+      const exportDir = join(tmpdir(), 'team-x-exports');
+      mkdirSync(exportDir, { recursive: true });
+      const timestamp = exportedAtIso.replace(/[:.]/g, '-');
+      const filename = `copilot-insights-export-${timestamp}.${req.format}`;
+      const filePath = join(exportDir, filename);
+      writeFileSync(filePath, content, 'utf-8');
+      return {
+        filePath,
+        rowCount: result.rows.length,
+        truncated: result.truncated,
+        format: req.format,
+        scope: req.scope,
+      };
     },
 
     // -----------------------------------------------------------------------

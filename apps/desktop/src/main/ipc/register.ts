@@ -163,6 +163,8 @@ const REQUEST_CHANNELS = [
   'audit.list',
   'audit.stats',
   'audit.export',
+  // Copilot insight export (Phase 6 — M40)
+  'copilot.export',
   // Ticket attachments (Phase 4 — M22)
   'tickets.attachFile',
   'tickets.detachFile',
@@ -732,6 +734,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
       },
     ) => {
       return handlers.auditExport(request);
+    },
+  );
+
+  ipcMain.handle(
+    'copilot.export',
+    async (_event, request: import('@team-x/shared-types').CopilotExportRequest) => {
+      return handlers.copilotExport(request);
     },
   );
 

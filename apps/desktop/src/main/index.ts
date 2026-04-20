@@ -732,6 +732,9 @@ app
       backupService,
       auditRepo,
       updaterService,
+      copilotInsightsRepo: {
+        listActiveForExport: (filter) => copilotInsightsRepo.listActiveForExport(filter),
+      },
       // Lazy wrapper — the CopilotAnalyzerService is instantiated later
       // in this same bootstrap block (after RAG indexer, agentic loop,
       // etc.), so we close over the module-level handle and resolve it
