@@ -2,7 +2,7 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M39",
   "milestoneName": "Telemetry Per-Kind Filter",
-  "tasksCompleted": 7,
+  "tasksCompleted": 8,
   "tasksFailed": 0,
   "totalTasks": 9,
   "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
@@ -53,13 +53,13 @@
   "current": {
     "unitTests": 1683,
     "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests.",
-    "e2eSpecs": 14,
-    "e2eGreenCount": 19,
+    "e2eSpecs": 15,
+    "e2eGreenCount": 20,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M39 T6 subview request propagation shipped; M39 T7 telemetry kind filter E2E is head-of-queue.",
+    "asOfTask": "Phase 6 M39 T7 telemetry kind filter E2E shipped; M39 T8 verification gate is head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
     "version": "1.1.1",
@@ -1251,10 +1251,34 @@
         "auditClaimsStrict": "95 verified / 0 allowlisted / 0 UNALLOWED"
       },
       "structureCompliance": "M39 T6 current-task acceptance satisfied: failing source-contract tests written first, all three subviews propagate kind into aggregate requests, CostBreakdown preserves date filters, gates are green, and next task advanced to M39 T7 E2E."
+    },
+    "M39-T7": {
+      "name": "Telemetry kind filter E2E",
+      "shippedAt": "2026-04-20T08:50:00Z",
+      "commit": "this-feature-commit",
+      "deliverable": "Added a Playwright E2E spec that creates a work run through chat.send, creates a copilot run through copilot.configure, opens Telemetry, and verifies All/Copilot/Work Total Runs values through the kind filter chips. CompanyTelemetry now exposes data-telemetry-stat=\"total-runs\" on the Total Runs stat card for stable E2E reads.",
+      "filesTouched": [
+        "apps/desktop/e2e/telemetry-kind-filter.spec.ts",
+        "apps/desktop/src/renderer/src/features/telemetry/company-telemetry.tsx",
+        ".loki/queue/current-task.json",
+        ".loki/queue/pending.json",
+        ".loki/state/orchestrator.json"
+      ],
+      "testsDelta": "+1 Playwright spec / +1 Playwright case",
+      "verificationGates": {
+        "validRed": "telemetry-kind-filter.spec.ts failed because data-telemetry-stat=\"total-runs\" was absent from CompanyTelemetry",
+        "build": "pnpm -F @team-x/desktop build passed",
+        "telemetryKindFilterE2E": "1 spec / 1 test passed",
+        "typecheck": "clean across 6 workspace packages",
+        "lint": "0 errors / 21 known warnings",
+        "auditClaimsStrict": "95 verified / 0 allowlisted / 0 UNALLOWED"
+      },
+      "structureCompliance": "M39 T7 current-task acceptance satisfied: failing Playwright spec written first, stable total-runs selector added only after valid red, focused E2E and gates are green, and next task advanced to M39 T8 verification gate."
     }
   },
   "inFlightMilestone": "Phase 6 M39 Telemetry Per-Kind Filter",
   "notes": [
+    "PHASE 6 M39 T7 SHIPPED 2026-04-20 — telemetry kind filter Playwright E2E implemented with TDD. Added apps/desktop/e2e/telemetry-kind-filter.spec.ts; valid red reached Telemetry but failed because CompanyTelemetry lacked data-telemetry-stat=\"total-runs\". Added the stable selector to the Total Runs stat card. The spec now creates a work run through chat.send, creates a copilot run through copilot.configure, opens Telemetry, confirms All covers filtered buckets, then verifies Copilot and Work chip totals. Verification: pnpm -F @team-x/desktop build clean; telemetry-kind-filter Playwright 1 spec / 1 test passed; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. E2E surface now 15 specs / 20 Playwright cases. Head-of-queue advances to M39 T8 verification gate.",
     "PHASE 6 M39 T6 SHIPPED 2026-04-20 — telemetry subviews now apply the kind filter to aggregate requests with TDD. Added telemetry-subviews source-contract tests; valid red proved subviews accepted kindFilter but did not call telemetryRequestKind or include kind in hook requests. CompanyTelemetry now passes kind to useCompanyStats and useDailyUsage; EmployeeTelemetry passes kind to useEmployeeStats; CostBreakdown passes kind to useCostBreakdown while preserving all/7d/30d/90d date range behavior and adding kind to the memo dependency list. All maps to omitted kind through telemetryRequestKind. Verification: telemetry-subviews focused test 1 file / 3 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T7 telemetry kind filter E2E.",
     "PHASE 6 M39 T5 SHIPPED 2026-04-20 — TelemetryView kind filter chips implemented with TDD. Added telemetry-view source-contract tests; valid red proved missing filter labels, exported TelemetryKindFilterChips, default all state, data-telemetry-kind-filter selectors, and subview kindFilter props. TelemetryView now stores useState<TelemetryKindFilter>('all'), renders All/Work/Agentic/Copilot chips with aria-pressed and data selectors, and passes kindFilter to CompanyTelemetry, EmployeeTelemetry, and CostBreakdown. Subview Props were widened for the prop only; aggregate request wiring remains scoped to T6. Verification: telemetry-view focused test 1 file / 3 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T6 subview request propagation.",
     "PHASE 6 M39 T4 SHIPPED 2026-04-20 — renderer telemetry hooks and filter helper implemented with TDD. Added use-telemetry source-contract tests; valid red proved missing telemetryRequestKind, request-object hook signatures, and kind-aware query keys. Hooks now accept request objects for companyStats, dailyUsage, employeeStats, and costBreakdown; each query key includes req?.kind ?? 'all'; telemetryRequestKind maps renderer-only all to undefined while preserving work/agentic/copilot. CompanyTelemetry and EmployeeTelemetry callers were mechanically adapted to the request-object hook contract; filter UI/subview kind propagation remains scoped to T5/T6. Verification: use-telemetry focused test 1 file / 3 tests; pnpm typecheck clean across 6 workspace packages; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M39 T5 telemetry filter chips.",
