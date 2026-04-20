@@ -1249,6 +1249,7 @@ app
           enabled: snap.enabled,
           intervalMinutes: snap.intervalMinutes,
           categories: snap.categories,
+          categoryWeights: settingsRepo.getCopilotWeights().weights,
         };
       },
       resolveComplete: async ({ companyId, systemCopilotId }) => {

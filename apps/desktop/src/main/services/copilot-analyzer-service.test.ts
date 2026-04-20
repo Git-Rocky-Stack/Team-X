@@ -17,14 +17,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ActorKind,
   CopilotAnalyzedPayload,
+  CopilotCategory,
+  CopilotCategoryWeights,
   CopilotExpiredPayload,
   CopilotInsightPayload,
+  CopilotSeverity,
   DashboardEvent,
   EventType,
 } from '@team-x/shared-types';
+import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
 
 import type { CopilotInsightRow } from '../db/repos/copilot-insights.js';
 
+import * as analyzerModule from './copilot-analyzer-service.js';
 import {
   type CopilotAnalyzerCompaniesRepo,
   type CopilotAnalyzerCompleteFn,
@@ -36,6 +41,8 @@ import {
   type CopilotAnalyzerResolvedComplete,
   type CopilotAnalyzerRunsRepo,
   type CopilotAnalyzerServiceDeps,
+  type CopilotAnalyzerSettings,
+  type InsightDraft,
   buildAnalysisPrompt,
   createCopilotAnalyzerService,
   parseDrafts,
@@ -199,6 +206,58 @@ function validDraftsJson(count = 1): string {
   return JSON.stringify(items);
 }
 
+function draftsJson(
+  items: Array<{
+    category: CopilotCategory;
+    severity: CopilotSeverity;
+    title: string;
+    body?: string;
+  }>,
+): string {
+  return JSON.stringify(
+    items.map((item) => ({
+      ...item,
+      body: item.body ?? `${item.title} body with enough evidence to pass validation.`,
+      expiresInHours: 12,
+    })),
+  );
+}
+
+function draft(
+  category: CopilotCategory,
+  severity: CopilotSeverity,
+  title = `${category}-${severity}`,
+): InsightDraft {
+  return {
+    category,
+    severity,
+    title,
+    body: `${title} body with enough evidence to pass validation.`,
+    expiresInHours: 12,
+  };
+}
+
+function makeWeights(overrides: Partial<CopilotCategoryWeights> = {}): CopilotCategoryWeights {
+  return {
+    ...COPILOT_CATEGORY_WEIGHTS_DEFAULT,
+    ...overrides,
+  };
+}
+
+function weightInsightDrafts(
+  drafts: readonly InsightDraft[],
+  weights: CopilotCategoryWeights,
+): InsightDraft[] {
+  return (
+    analyzerModule as unknown as {
+      weightInsightDrafts: (
+        drafts: readonly InsightDraft[],
+        weights: CopilotCategoryWeights,
+      ) => InsightDraft[];
+    }
+  ).weightInsightDrafts(drafts, weights);
+}
+
 function scriptedComplete(scripts: string[]): {
   fn: CopilotAnalyzerCompleteFn;
   calls: Array<{ system: string; user: string }>;
@@ -273,6 +332,51 @@ function baseDeps(overrides: Partial<CopilotAnalyzerServiceDeps> = {}): {
 // ---------------------------------------------------------------------------
 // Test suites
 // ---------------------------------------------------------------------------
+
+describe('copilot-analyzer-service — weightInsightDrafts', () => {
+  it('drops drafts in categories weighted to zero', () => {
+    const result = weightInsightDrafts(
+      [draft('cost', 'critical'), draft('operational', 'warning')],
+      makeWeights({ cost: 0 }),
+    );
+
+    expect(result.map((x) => x.category)).toEqual(['operational']);
+  });
+
+  it('sorts critical above warning before equal weights', () => {
+    const result = weightInsightDrafts(
+      [draft('operational', 'warning'), draft('cost', 'critical')],
+      makeWeights(),
+    );
+
+    expect(result.map((x) => x.severity)).toEqual(['critical', 'warning']);
+  });
+
+  it('lets a category multiplier push warning above an unboosted critical', () => {
+    const result = weightInsightDrafts(
+      [draft('operational', 'critical'), draft('cost', 'warning')],
+      makeWeights({ cost: 2 }),
+    );
+
+    expect(result.map((x) => x.category)).toEqual(['cost', 'operational']);
+  });
+
+  it('caps weighted drafts at five per tick', () => {
+    const result = weightInsightDrafts(
+      [
+        draft('operational', 'info', 'd1'),
+        draft('cost', 'info', 'd2'),
+        draft('org', 'info', 'd3'),
+        draft('workflow', 'info', 'd4'),
+        draft('anomaly', 'info', 'd5'),
+        draft('operational', 'info', 'd6'),
+      ],
+      makeWeights(),
+    );
+
+    expect(result.map((x) => x.title)).toEqual(['d1', 'd2', 'd3', 'd4', 'd5']);
+  });
+});
 
 describe('copilot-analyzer-service — buildAnalysisPrompt determinism', () => {
   it('produces identical prompts for identical inputs', () => {
@@ -455,6 +559,32 @@ describe('copilot-analyzer-service — dedup integration', () => {
     const insightEmissions = bus.emissions.filter((e) => e.type === 'copilot.insight');
     expect(insightEmissions).toHaveLength(0);
   });
+
+  it('keeps proposed count pre-weight but skips zero-weight categories before persistence', async () => {
+    const { resolved } = resolvedFromScripts([
+      draftsJson([
+        { category: 'cost', severity: 'critical', title: 'Cost spike' },
+        { category: 'operational', severity: 'warning', title: 'Ops drift' },
+      ]),
+    ]);
+    const { deps, insightsRepo } = baseDeps({
+      resolveComplete: resolved,
+      getSettings: () =>
+        ({
+          enabled: true,
+          intervalMinutes: 5,
+          categories: ['operational', 'cost', 'org', 'workflow', 'anomaly'],
+          categoryWeights: makeWeights({ cost: 0 }),
+        }) as CopilotAnalyzerSettings,
+    });
+    const svc = createCopilotAnalyzerService(deps);
+
+    const result = await svc.tick('co-1');
+
+    expect(result.insightsProposed).toBe(2);
+    expect(result.insightsGenerated).toBe(1);
+    expect(insightsRepo.upserts.map((x) => x.category)).toEqual(['operational']);
+  });
 });
 
 describe('copilot-analyzer-service — expiry cycle', () => {
@@ -542,6 +672,7 @@ describe('copilot-analyzer-service — restart picks up new settings', () => {
         enabled: true,
         intervalMinutes: currentInterval,
         categories: ['operational', 'cost', 'org', 'workflow', 'anomaly'],
+        categoryWeights: makeWeights(),
       }),
       setInterval: ((_fn: () => void, ms: number) => {
         scheduled.push(ms);
@@ -588,6 +719,7 @@ describe('copilot-analyzer-service — restart picks up new settings', () => {
         enabled: true,
         intervalMinutes: 5,
         categories: ['operational', 'cost', 'org', 'workflow', 'anomaly'],
+        categoryWeights: makeWeights(),
       }),
       setInterval: ((_fn: () => void, ms: number) => {
         scheduled.push(ms);

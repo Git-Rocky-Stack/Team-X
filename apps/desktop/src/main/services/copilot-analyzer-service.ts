@@ -59,12 +59,14 @@ import type {
   CopilotAnalyzedPayload,
   CopilotAnalyzedReason,
   CopilotCategory,
+  CopilotCategoryWeights,
   CopilotExpiredPayload,
   CopilotInsightPayload,
   CopilotSeverity,
   DashboardEvent,
   EventType,
 } from '@team-x/shared-types';
+import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
 
 import type {
   CopilotInsightRow,
@@ -156,6 +158,8 @@ export interface CopilotAnalyzerSettings {
   intervalMinutes: number;
   /** Subset of categories the analyzer is allowed to propose. Empty = nothing emitted. */
   categories: readonly CopilotCategory[];
+  /** Feedback-derived category multipliers. Phase 6 M38, default 1.0 for every category. */
+  categoryWeights: CopilotCategoryWeights;
 }
 
 export interface CopilotAnalyzerCompleteRequest {
@@ -302,12 +306,20 @@ const DEFAULT_PAUSE_POLL_MS = 250;
 const MAX_EVENT_SUMMARY_CHARS = 2000;
 const MAX_EXPIRES_IN_HOURS = 168; // 1 week
 const MIN_EXPIRES_IN_HOURS = 1;
+const MAX_WEIGHTED_DRAFTS_PER_TICK = 5;
+
+const SEVERITY_BASE_SCORE: Record<CopilotSeverity, number> = {
+  critical: 1,
+  warning: 0.7,
+  info: 0.4,
+};
 
 function defaultSettings(): CopilotAnalyzerSettings {
   return {
     enabled: true,
     intervalMinutes: DEFAULT_INTERVAL_MINUTES,
     categories: COPILOT_CATEGORIES as readonly CopilotCategory[],
+    categoryWeights: COPILOT_CATEGORY_WEIGHTS_DEFAULT,
   };
 }
 
@@ -339,6 +351,22 @@ export function summarizeActiveInsights(rows: readonly CopilotInsightRow[]): str
     .slice(0, 20)
     .map((r) => `- [${r.category}/${r.severity}] ${r.title}`)
     .join('\n');
+}
+
+export function weightInsightDrafts(
+  drafts: readonly InsightDraft[],
+  weights: CopilotCategoryWeights,
+): InsightDraft[] {
+  return drafts
+    .map((draft, index) => ({
+      draft,
+      index,
+      score: (SEVERITY_BASE_SCORE[draft.severity] ?? 0) * (weights[draft.category] ?? 1),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, MAX_WEIGHTED_DRAFTS_PER_TICK)
+    .map((item) => item.draft);
 }
 
 /**
@@ -749,12 +777,16 @@ export function createCopilotAnalyzerService(
       }
 
       proposedCount = drafts.length;
+      const weightedDrafts = weightInsightDrafts(
+        drafts.filter((draft) => settings.categories.includes(draft.category)),
+        settings.categoryWeights,
+      );
 
       // Dedup pass — emit `copilot.insight` only for inserts (dedup
       // misses). Merges are silent per design: the card title is
       // identical (by definition — Jaccard > 0.8) so no renderer
       // update is required.
-      for (const draft of drafts) {
+      for (const draft of weightedDrafts) {
         // Category-allowlist gate — the classifier may still propose a
         // blocked category if the prompt is stretched. We silently drop.
         if (!settings.categories.includes(draft.category)) continue;
