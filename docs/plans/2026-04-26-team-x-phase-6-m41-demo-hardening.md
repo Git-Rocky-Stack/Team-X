@@ -347,6 +347,8 @@ No `v1.2.0` tag was created in T9. The release tag remains gated to Task 10.
 - Final verification evidence is recorded.
 - `v1.2.0` tag lands on the final ledger commit only after gates pass.
 
+**T10 result — 2026-04-20:** Release ledger closes M41 and Phase 6. T9 final gate was committed and pushed as `78acb8a`; this final ledger commit is the `v1.2.0` tag target. Phase 7 remains intentionally unopened until Rocky selects the next scope.
+
 ---
 
 ## 6. Final Gate Targets

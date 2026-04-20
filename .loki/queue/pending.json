@@ -3,16 +3,16 @@
   "milestoneName": "Demo + Hardening + v1.2.0",
   "phase": "Phase 6 — Capabilities & Evidence",
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-  "planDocSection": "M41 T10 release ledger + tag",
+  "planDocSection": "Phase 6 complete — v1.2.0 release handoff",
   "previousPhase": "Phase 5.6 — Reconciliation & Remediation",
   "previousPhaseStatus": "SHIPPED 2026-04-20 as v1.1.1",
   "previousPhaseCompletedAt": "2026-04-20T01:30:00Z",
-  "previousMilestone": "Phase 6 M38",
-  "previousMilestoneName": "Insight Feedback Loop",
-  "previousMilestoneCompletedAt": "2026-04-20T06:00:00Z",
-  "previousMilestoneCommit": "this-ledger-commit",
+  "previousMilestone": "Phase 6 M41",
+  "previousMilestoneName": "Demo + Hardening + v1.2.0",
+  "previousMilestoneCompletedAt": "2026-04-20T16:40:00Z",
+  "previousMilestoneCommit": "this-final-ledger-commit",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-20T16:25:00Z",
+  "updatedAt": "2026-04-20T16:40:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -170,9 +170,21 @@
     }
   ],
   "activeSubMilestone": {
+    "id": "Phase-7",
+    "name": "Scope TBD",
+    "status": "not opened — awaiting Rocky direction",
+    "planDoc": null,
+    "auditDoc": null,
+    "nextSession": "Await Rocky direction before opening Phase 7. Do not infer scope from Phase 6 retrospective seeds.",
+    "dor": "Rocky selects Phase 7 scope and authorizes a new plan doc.",
+    "dod": "Not applicable until Phase 7 is opened.",
+    "verifiedBy": [],
+    "blockedBy": "Phase 7 scope not yet selected"
+  },
+  "previousSubMilestone": {
     "id": "M41",
     "name": "Demo + Hardening + v1.2.0",
-    "status": "in progress — M41 T9 final verification gate passed; T10 release ledger + tag is head-of-queue",
+    "status": "shipped 2026-04-20 — M41 and Phase 6 complete; v1.2.0 final ledger/tag target",
     "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
     "nextSession": "Proceed with Phase 6 M41 T10. Scope: close M41 and Phase 6 in Loki, record final verification and installer evidence, create the final release ledger commit, tag v1.2.0 on that commit, and push the commit plus tag.",
@@ -271,38 +283,18 @@
       "Focused stale-badge repro: pnpm -F @team-x/desktop exec playwright test e2e/smoke.spec.ts e2e/meeting-flow.spec.ts e2e/ticket-flow.spec.ts e2e/vault-backup.spec.ts e2e/phase-5-integration.spec.ts — 5 specs / 5 tests",
       "Final full Playwright: pnpm -F @team-x/desktop exec playwright test — 17 specs / 22 cases passed",
       "pnpm dist:win — succeeded; emitted release/1.2.0/Team-X-1.2.0-Setup.exe, Team-X-1.2.0-Setup-x64.exe, Team-X-1.2.0-Setup-arm64.exe plus blockmaps/latest.yml",
-      "No v1.2.0 tag created in T9; final release ledger/tag remains gated to M41 T10"
+      "No v1.2.0 tag created in T9; final release ledger/tag remains gated to M41 T10",
+      "M41 T10 — Release ledger + tag",
+      "M41 T9 final verification gate committed and pushed as 78acb8a",
+      "M41 and Phase 6 closed in Loki on this final ledger commit",
+      "Final verified counts: pnpm test 138 files / 1754 tests; Playwright 17 specs / 22 cases",
+      "Final gates: typecheck clean, lint 0 errors / 21 warnings, strict claims 95/0/0, desktop build clean",
+      "Windows package gate: pnpm dist:win succeeded under release/1.2.0/",
+      "Installer artifacts: Team-X-1.2.0-Setup.exe, Team-X-1.2.0-Setup-x64.exe, Team-X-1.2.0-Setup-arm64.exe",
+      "v1.2.0 tag is created on this final ledger commit after commit creation and pushed with the branch"
     ],
-    "blockedBy": null
-  },
-  "previousSubMilestone": {
-    "id": "M40",
-    "name": "Insight Export",
-    "status": "shipped 2026-04-20 — local Copilot insight export complete through T8 verification gate",
-    "planDoc": "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
-    "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M41 T0 — Demo + Hardening + v1.2.0 plan doc.",
-    "dor": "M40 T0 plan doc closed and Q4 filter-scope decision resolved",
-    "dod": "satisfied — Tasks 0-8 shipped with focused tests, E2E, typecheck, lint, strict claims, build, user docs, and Loki ledger closed",
-    "verifiedBy": [
-      "M40 T0 plan doc — docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
-      "M40 T1 — shared export contracts and typed preload bridge",
-      "M40 T2 — active-only copilot-insights export projection and JSON/CSV serializers",
-      "M40 T3 — main-process copilot.export validation, registration, handler, and local file write",
-      "M40 T4 — renderer useCopilotExport hook",
-      "M40 T5 — CopilotSidebar category/severity filters, company/all scope, CSV/JSON buttons, and export status copy",
-      "M40 T6 — focused Playwright insight export E2E",
-      "M40 T7 — user-guide/README local export documentation",
-      "Touched-file Biome gate — 14 files checked, no fixes applied",
-      "Shared-types focused gate — pnpm -F @team-x/shared-types exec vitest run src/copilot-export.test.ts passed 1 file / 2 tests",
-      "Desktop focused gate — pnpm -F @team-x/desktop exec vitest run src/main/db/repos/copilot-insights-export.test.ts src/main/ipc/copilot-export-handlers.test.ts src/renderer/src/hooks/use-copilot-export.test.tsx src/renderer/src/features/copilot/copilot-sidebar-export.test.tsx passed 4 files / 19 tests",
-      "pnpm typecheck — clean across 6 workspace packages",
-      "pnpm lint — 0 errors / 21 known no-non-null-assertion warnings",
-      "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
-      "pnpm -F @team-x/desktop build — clean production build",
-      "pnpm -F @team-x/desktop exec playwright test e2e/copilot-insight-export.spec.ts — passed 1 spec / 1 test"
-    ],
-    "blockedBy": null
+    "blockedBy": null,
+    "completedAt": "2026-04-20T16:40:00Z"
   },
   "previousPreviousSubMilestone": {
     "id": "M-E",
@@ -382,6 +374,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M41 T10 SHIPPED 2026-04-20 — release ledger closes M41 and Phase 6. T9 final gate is committed/pushed as 78acb8a with 1754 unit tests, 17 specs / 22 Playwright cases, strict claims 95/0/0, lint 0 errors / 21 warnings, clean typecheck/build, and successful pnpm dist:win v1.2.0 Windows installer output under release/1.2.0. This final ledger commit is the v1.2.0 tag target. Phase 7 remains intentionally unopened; next scope requires Rocky direction.",
     "PHASE 6 M41 T9 SHIPPED 2026-04-20 — final verification gate passed after two stale-test remediations. Node ABI rebuild restored Vitest after better-sqlite3 had been compiled for Electron; settings.test.ts now accounts for the M38 copilot_category_weights default (22 seeded settings, 21 new defaults when runtime_strategy already exists) and pins COPILOT_CATEGORY_WEIGHTS_DEFAULT. Full pnpm test passed 138 files / 1754 tests. Electron ABI rebuild restored Playwright launch; first full Playwright then exposed five stale Phase 5 badge assertions in older E2E specs, corrected to Phase 6, focused repro passed 5 specs / 5 tests, final full Playwright passed 17 specs / 22 cases. Remaining gates: typecheck clean, lint 0 errors / 21 warnings, strict claims 95/0/0, desktop build clean, pnpm dist:win succeeded and emitted signed v1.2.0 Windows installers under release/1.2.0. No tag created in T9; T10 remains release ledger + v1.2.0 tag.",
     "PHASE 6 M41 T8 SHIPPED 2026-04-20 — regression hardening and selector audit complete. The existing e2e-regression-guards source-string audit now pins the Phase 6 selector families by spec: M38 feedback suggestion/apply, M39 telemetry kind/stat selectors, M40 export controls/status, and the combined M41 integration flow. Audit confirmed no E2E spec uses .waitForTimeout(N) as an arbitrary synchronization sleep; setTimeout hits are launch/test shutdown guards, not pacing sleeps. Gates: regression guard 1 file / 3 tests, desktop build clean, focused Phase 6 Playwright 4 specs / 4 tests, typecheck clean, strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Focused Playwright emitted the expected Electron dev CSP warning plus one non-failing DialogContent description warning. Head-of-queue advances to M41 T9 final verification gate.",
     "PHASE 6 M41 T7 SHIPPED 2026-04-20 — Phase 6 COMPLETE marker landed. Added apps/desktop/src/phase-6-complete-marker.test.ts with three source-string pins for Phase 6 COMPLETE, v1.2.0, 17 Playwright specs / 22 cases, M41 complete in the Phase 6 design doc, and the final-tag gating language. CLAUDE.md now records Phase 6 COMPLETE - v1.2.0 with M36-M41 evidence and T8 as next; the Phase 6 design doc now records M36-M41 complete, resolves Q3/Q4, corrects the feedback vector to five keys, and keeps the final v1.2.0 git tag gated on M41 T10. Gates: valid red marker test first, focused marker test 1 file / 3 tests, typecheck clean, strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T8 regression hardening + selector audit.",
@@ -451,6 +444,18 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M41 T10 — Release Ledger + Tag"
+    "nextTask": "Post-Phase-6 handoff — await Phase 7 scope"
+  },
+  "phase6ShipState": {
+    "shippedAt": "2026-04-20T16:40:00Z",
+    "version": "1.2.0",
+    "finalGateCommit": "78acb8a",
+    "tag": "v1.2.0 (created on final T10 ledger commit)",
+    "releaseArtifacts": [
+      "release/1.2.0/Team-X-1.2.0-Setup.exe",
+      "release/1.2.0/Team-X-1.2.0-Setup-x64.exe",
+      "release/1.2.0/Team-X-1.2.0-Setup-arm64.exe"
+    ],
+    "nextTask": "Await Rocky direction for Phase 7 scope"
   }
 }
