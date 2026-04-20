@@ -12,7 +12,7 @@
   "previousMilestoneCompletedAt": "2026-04-20T06:00:00Z",
   "previousMilestoneCommit": "this-ledger-commit",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-20T12:20:00Z",
+  "updatedAt": "2026-04-20T12:40:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -172,13 +172,16 @@
   "activeSubMilestone": {
     "id": "M41",
     "name": "Demo + Hardening + v1.2.0",
-    "status": "head-of-queue — M40 shipped; M41 T0 plan doc next",
+    "status": "in progress — M41 T0 plan doc shipped; T1 Phase 6 integration E2E is head-of-queue",
     "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M41 T0. Scope: author the Demo + Hardening + v1.2.0 milestone plan doc only.",
+    "nextSession": "Proceed with Phase 6 M41 T1. Scope: write the cross-milestone Phase 6 integration Playwright spec.",
     "dor": "M40 Insight Export exit gate closed",
     "dod": "M41 complete when the Phase 6 exit gate, retrospective, docs, changelog/version bump, COMPLETE marker, and final ledger ship",
-    "verifiedBy": [],
+    "verifiedBy": [
+      "M41 T0 — Demo + Hardening + v1.2.0 plan doc",
+      "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md"
+    ],
     "blockedBy": null
   },
   "previousSubMilestone": {
@@ -262,7 +265,7 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 6 M40 Insight Export shipped through T8 verification gate; Phase 6 M41 T0 Demo + Hardening plan doc is head-of-queue.",
+    "asOfTask": "Phase 6 M41 T0 Demo + Hardening plan doc shipped; M41 T1 Phase 6 integration E2E is head-of-queue.",
     "unitTests": 1683,
     "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 focused gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests. M39 T8 focused gate passed shared-types 1 file / 2 tests and desktop 5 files / 27 tests. M40 T1 focused shared-types verification passed 1 file / 2 tests. M40 T2 focused desktop repo verification passed 1 file / 6 tests. M40 T3 focused desktop IPC verification passed 1 file / 6 tests. M40 T4 focused renderer hook verification passed 1 file / 2 tests. M40 T5 focused sidebar renderer verification passed 1 file / 5 tests. M40 T6 focused insight export E2E verification passed 1 spec / 1 test.",
     "e2eSpecs": 16,
@@ -272,7 +275,7 @@
     "typecheckClean": true,
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "version": "1.1.1",
-    "phase6Next": "M41 T0 Demo + Hardening + v1.2.0 plan doc."
+    "phase6Next": "M41 T1 Phase 6 integration E2E."
   },
   "targets": {
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
@@ -288,6 +291,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M41 T0 SHIPPED 2026-04-20 — Demo + Hardening + v1.2.0 plan doc authored. NEW docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md defines the Phase 6 exit gate with a no-new-feature hardening boundary, cross-milestone Phase 6 integration E2E, locked six-section retrospective, demo walkthrough, README/user-guide sweep, CHANGELOG [Unreleased] to [1.2.0] promotion, version bump 1.1.1 to 1.2.0, Phase 6 COMPLETE marker, regression hardening, final verification/installer gate, and release ledger/tag task. Head-of-queue advances to M41 T1 Phase 6 integration E2E.",
     "PHASE 6 M40 COMPLETE 2026-04-20 — Insight Export shipped through T8 verification gate. Final surface: local-only copilot.export IPC supporting JSON/CSV, company/all scope, category/severity filters, active-only rows, JSON metadata, CSV escaping, tmpdir()/team-x-exports file writes, no bus events, sidebar controls/status, focused E2E, and user docs. Final gates: touched-file Biome 14 files no fixes; shared-types focused 1 file / 2 tests; desktop focused 4 files / 19 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95/0/0; pnpm -F @team-x/desktop build clean; copilot-insight-export Playwright 1 spec / 1 test. M40 total E2E surface remains 16 specs / 21 Playwright cases. Head-of-queue advances to Phase 6 M41 T0 — Demo + Hardening + v1.2.0 plan doc.",
     "PHASE 6 M40 T7 SHIPPED 2026-04-20 — local Copilot insight export documented. docs/user-guide/copilot-ui.md now explains opening the sidebar, optional category/severity filters, company versus all-company scope, CSV/JSON buttons, local file write, and saved-filename status copy without claiming cloud sync, sharing, telemetry digest, or native save-dialog behavior. README.md now reflects the user-facing Copilot export surface and the current E2E surface of 16 specs / 21 Playwright cases, including copilot-feedback, telemetry-kind-filter, and copilot-insight-export rows. CLAUDE.md was intentionally left unchanged until the final M40 verification ledger closes the milestone. Verification: pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED; pnpm lint 0 errors / 21 known warnings; git diff --check clean. Head-of-queue advances to M40 T8 verification gate.",
     "PHASE 6 M40 T6 SHIPPED 2026-04-20 — Copilot insight export Playwright E2E implemented. Added apps/desktop/e2e/copilot-insight-export.spec.ts covering fresh Electron NODE_ENV=test boot, seeded company resolution, forced analyzer tick, category-filtered sidebar view, JSON export success status with row count, all-company scope switch, CSV export success status, and sidebar persistence. Initial focused run failed because build and Playwright were incorrectly launched in parallel, so the spec exercised a stale out/ bundle without T5 controls; rerun after the completed build passed with no product or selector changes. Verification: pnpm -F @team-x/desktop build clean; focused Playwright 1 spec / 1 test passed; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED; git diff --check clean. E2E surface now 16 specs / 21 Playwright cases. Head-of-queue advances to M40 T7 user guide/status docs.",
@@ -347,6 +351,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M41 T0 — Demo + Hardening plan doc"
+    "nextTask": "Phase 6 M41 T1 — Cross-milestone Phase 6 integration E2E"
   }
 }
