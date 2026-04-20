@@ -1,32 +1,33 @@
 {
-  "taskId": "Phase-6-M38-T0",
+  "taskId": "Phase-6-M38-T1",
   "milestone": "Phase 6 M38",
   "milestoneName": "Insight Feedback Loop",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M38 T0 — Author Insight Feedback Loop plan doc",
-  "status": "head-of-queue — M37-R reconciled M36/M37 capability parser/backfill/role-fit state; author M38 plan before implementation",
+  "title": "Phase 6 M38 T1 — Add copilot feedback weight contracts",
+  "status": "head-of-queue — M38 T0 plan doc authored; start implementation with shared-types contracts using TDD",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M37-R Capability Role-Fit Reconciliation — verified 2026-04-20; 120 focused tests green across shared-types, role-schema, role-loader, and agentic-tools-write",
+  "predecessor": "Phase 6 M38 T0 — Insight Feedback Loop plan doc authored at docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
   "dor": [
-    "Phase 5.6 M-G shipped as v1.1.1",
-    "M36 capability taxonomy/parser/backfill substrate reconciled against commit 26d07df",
-    "M37 role-fit v2 scorer and planner capability threading reconciled against commit 26d07df",
-    "Focused M37-R verification passed: shared-types 20/20, role-schema 50/50, desktop role-loader/scorer 50/50",
-    "Phase 6 docs and Loki state now treat M36/M37 as shipped/reconciled"
+    "M37-R reconciliation closed and pushed",
+    "M38 T0 plan doc exists with decisions, non-goals, task sequence, verification gates, and acceptance criteria",
+    "D20 category-count correction recorded: copilot weights are five-key, matching canonical CopilotCategory values",
+    "No production code has been changed for M38 yet"
   ],
   "acceptance": [
-    "Author docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md as a T0 plan doc before implementation",
-    "Resolve M38 decisions from Phase 6 T0 D19/D20: advisory dismissal pattern detector, explicit user confirmation, and copilot_category_weights clamp [0.0, 2.0]",
-    "Define non-goals: no silent analyzer mutation, no autonomous action, no new provider surface, and no schema migration unless existing settings storage is insufficient",
-    "Specify TDD task sequence for settings persistence, analyzer weighting, dismissal-pattern detection, UI suggestion surface, bus event, and focused tests",
-    "Preserve invariant #11 for any settings mutation and keep T0 plan-doc-only with zero code changes"
+    "Follow Task 1 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+    "Write failing shared-types tests for COPILOT_CATEGORY_WEIGHTS_DEFAULT and COPILOT_CATEGORY_WEIGHT_CLAMP before implementation",
+    "Add CopilotCategoryWeights, settings.getCopilotWeights/setCopilotWeights wire types, CopilotFeedbackSuggestion, and copilot.weights.changed payload",
+    "Run focused shared-types tests and commit atomically as feat(m38): add copilot feedback weight contracts",
+    "Do not touch settings repo, IPC handlers, analyzer service, or renderer files in T1"
   ],
   "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+  "planDocSection": "Task 1: Shared Types For Weights And Bus Event",
   "referenceDocs": [
     "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
     "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
-    "docs/plans/2026-04-18-team-x-phase-5-m34-copilot-ui.md"
+    "packages/shared-types/src/events.ts",
+    "packages/shared-types/src/copilot.ts",
+    "packages/shared-types/src/ipc.ts"
   ],
-  "nextStep": "Start M38 with a plan-doc-only pass. Do not implement settings, analyzer, IPC, bus events, or UI until the M38 T0 plan is authored and reviewed against Phase 6 invariants."
+  "nextStep": "Begin T1 with a failing shared-types test; do not write production contract code until the test fails for the expected missing symbols."
 }

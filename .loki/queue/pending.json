@@ -172,12 +172,12 @@
   "activeSubMilestone": {
     "id": "M38",
     "name": "Insight Feedback Loop",
-    "status": "head-of-queue — author M38 T0 plan doc before implementation",
+    "status": "in progress — T0 plan doc authored; T1 shared-types contracts are head-of-queue",
     "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M38 T0. Scope: plan-doc-only design for copilot_category_weights, advisory dismissal-pattern detector, analyzer weighting, explicit user confirmation, and invariant #11 bus event; no code until the T0 plan is complete.",
+    "nextSession": "Proceed with Phase 6 M38 T1. Scope: shared-types contracts only — CopilotCategoryWeights, weight clamp/defaults, settings weight IPC wire types, feedback suggestion type, and copilot.weights.changed payload. Use TDD.",
     "dor": "M37-R reconciliation closed with focused tests green and M36/M37 docs/Loki aligned to on-disk reality",
-    "dod": "M38 plan doc authored with decisions, non-goals, TDD task sequence, verification gates, and no implementation drift",
+    "dod": "M38 complete when Tasks 1-8 in the M38 plan doc ship with focused tests, E2E, typecheck, lint, strict claims, and Loki ledger closed",
     "verifiedBy": null,
     "blockedBy": null
   },
@@ -249,7 +249,7 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 6 M37-R reconciled already-landed M36/M37 capability parser/backfill/role-fit work; M38 Insight Feedback Loop T0 is head-of-queue.",
+    "asOfTask": "Phase 6 M38 T0 plan doc authored; M38 T1 shared-types feedback weight contracts are head-of-queue.",
     "unitTests": 1683,
     "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites.",
     "e2eSpecs": 13,
@@ -264,7 +264,7 @@
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
     "phase56SurfaceArea": "Conformance audit (M-A) ~200–400 rows + triage (M-B) per-row dispositions + safeguards (M-E) 6 deliverables + backend backfill (M-C) migrations/IPC/repos for restore rows + UI backfill (M-D) components/hooks/routes for restore rows + docs truth-up (M-F) three-bucket CLAUDE.md rewrite + ship (M-G) branch deletion + version bump + retrospective",
     "phase56NonGoals": "No new features beyond restoration. No scope creep from mid-flight discoveries without change-control mini-gate (§14.3). No silent deferrals. No Phase 6 work until M-G ships. No public README/landing-site claim updates — those wait for M-F.",
-    "phase6Next": "M38 T0 Insight Feedback Loop plan doc. M36/M37 are reconciled as shipped from commit 26d07df."
+    "phase6Next": "M38 T1 shared-types feedback weight contracts. M36/M37 are reconciled as shipped from commit 26d07df."
   },
   "sprintFramework": {
     "backlog": "M-B triage output — audit doc `disposition` column. Must-have=restore / Should-have=replace / Won't-have=deprecate (docs only)",
@@ -274,6 +274,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M38 T0 AUTHORED 2026-04-20 — NEW docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md. Plan-doc-only: zero production code, zero IPC/runtime changes. Locks D20 correction that copilot weights are five-key (operational/cost/org/workflow/anomaly), not six-key; uses existing settings key-value table with no migration; keeps weights global for v1.2.0 because settings.key is the primary key; requires explicit user confirmation before settings.setCopilotWeights mutates; and decomposes implementation into 8 TDD tasks. Head-of-queue advances to M38 T1 shared-types feedback weight contracts.",
     "PHASE 6 M37-R RECONCILED 2026-04-20 — no new feature scope added. Inventory confirmed commit 26d07df already shipped the M36/M37 capability surface: shared-types 41-capability taxonomy, role-schema parser validation, official 57-role backfill, pack.json 1.1.0 + pack.sig, roleLoader capability specs, write-side capability Jaccard role-fit, provider requiredCapabilities parsing, and M32 keyword fallback for generic subtasks. Focused verification green: shared-types 2 files / 20 tests, role-schema 3 files / 50 tests, desktop role-loader/scorer 2 files / 50 tests. Phase 6 docs + Loki now mark M36/M37 as reconciled/shipped. Head-of-queue advances to Phase 6 M38 T0 — Insight Feedback Loop plan doc.",
     "PHASE 5.6 M-G SHIPPED 2026-04-20 — atomic release commit 852f6f7. v1.1.1 remediation release promoted in CHANGELOG; 7 workspace package.json files bumped to 1.1.1; Phase 5.6 retrospective authored; audit doc §20.8 records zero unresolved restore rows and zero allowlist rows. Gates: strict claims 95/0/0, typecheck clean, lint 0 errors / 21 warnings, pnpm test 125 files / 1683 tests, Playwright 13 specs / 18 cases, build clean, diff-check clean. Phase 6 pause lifted. Earlier Phase 6 capability/role-fit commit 26d07df is intentional branch history; next task is M37-R reconciliation/verification before new Phase 6 expansion.",
     "PHASE 5.6 M-F SHIPPED 2026-04-19 — atomic docs commit 185f6f1. Documentation truth-up complete. CLAUDE.md now carries shipped/deferred/deprecated buckets; the Cluster A aspirational framing is removed and replaced with M-C/M-D restoration evidence; Phase 2 M7/M9 status is reconciled to on-disk reality; the IPC table uses canonical mcp.addServer/mcp.removeServer/mcp.testConnection names; scripts/check-claim-evidence.allowlist.json is empty; README/user-guide/QA counters reflect 1683 unit tests and 13 Playwright specs / 18 cases. Gates: pnpm audit:claims 95/0/0 and pnpm audit:claims -- --strict 95/0/0. M-G Branch Hygiene + Ship is now head-of-queue.",
@@ -308,6 +309,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M38 T0 — author Insight Feedback Loop plan doc before implementation"
+    "nextTask": "Phase 6 M38 T1 — add copilot feedback weight contracts with TDD"
   }
 }
