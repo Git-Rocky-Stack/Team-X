@@ -73,6 +73,22 @@ otherwise.
 
 ---
 
+## Exporting insights
+
+Use the sidebar controls to save active insights locally:
+
+1. Open the Copilot sidebar.
+2. Optionally filter by **Category** or **Severity**.
+3. Choose **Company** for the current workspace, or **All companies**
+   for a global export using the same filters.
+4. Click **CSV** or **JSON**.
+
+The export writes to a local file and the sidebar displays the saved
+filename when it completes. Export does not sync, share, upload, or
+open a native save dialog.
+
+---
+
 ## Acting on an insight
 
 When you click an insight's action button the renderer fires a

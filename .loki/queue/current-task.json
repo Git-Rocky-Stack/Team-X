@@ -1,12 +1,12 @@
 {
-  "taskId": "Phase-6-M40-T7",
+  "taskId": "Phase-6-M40-T8",
   "milestone": "Phase 6 M40",
   "milestoneName": "Insight Export",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M40 T7 — User Guide and Status Docs",
-  "status": "head-of-queue — M40 T6 insight export E2E shipped; next document local insight export",
+  "title": "Phase 6 M40 T8 — Verification Gate",
+  "status": "head-of-queue — M40 T7 docs shipped; next run full M40 touched-file, focused, workspace, build, and E2E gates",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M40 T6 — Insight Export E2E",
+  "predecessor": "Phase 6 M40 T7 — User Guide and Status Docs",
   "dor": [
     "M40 T1 shared contracts and typed preload bridge are committed",
     "M40 T2 copilot-insights export projection and serializers are committed",
@@ -14,29 +14,33 @@
     "M40 T4 renderer useCopilotExport hook is committed",
     "M40 T5 sidebar filters and export controls are committed",
     "M40 T6 focused insight export E2E is committed",
-    "T6 gates passed: build, focused Playwright, typecheck, lint, strict claims, and diff-check"
+    "M40 T7 user guide/status docs are committed",
+    "T7 docs-safe gates passed: strict claims, lint, and diff-check"
   ],
   "acceptance": [
-    "Follow Task 7 in docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
-    "Update docs/user-guide/copilot-ui.md with a short local insight export section",
-    "Document opening the Copilot sidebar",
-    "Document optional category/severity filtering",
-    "Document company versus all-company export scope",
-    "Document CSV and JSON export actions",
-    "Document that export writes locally and the app displays the saved filename",
-    "Do not claim cloud sync, sharing, telemetry digest, or native save-dialog behavior",
-    "Only update README.md or CLAUDE.md if repository state actually requires it",
-    "Run pnpm audit:claims -- --strict",
+    "Follow Task 8 in docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
+    "Run touched-file Biome check/write over all M40 touched code/test files",
+    "Run pnpm -F @team-x/shared-types exec vitest run src/copilot-export.test.ts",
+    "Run focused desktop suites for repo export, IPC export, renderer hook, and sidebar source-contract tests",
+    "Run pnpm typecheck",
     "Run pnpm lint",
-    "Update Loki to advance from M40 T7 to M40 T8"
+    "Run pnpm audit:claims -- --strict",
+    "Run pnpm -F @team-x/desktop build",
+    "Run pnpm -F @team-x/desktop exec playwright test e2e/copilot-insight-export.spec.ts",
+    "Add a verification ledger section to the M40 plan doc",
+    "Close M40 in Loki",
+    "Advance head-of-queue to Phase 6 M41 T0"
   ],
   "planDoc": "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
-  "planDocSection": "Task 7: User Guide and Status Docs",
+  "planDocSection": "Task 8: Verification Gate",
   "referenceDocs": [
     "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
-    "docs/user-guide/copilot-ui.md",
-    "README.md",
-    "CLAUDE.md"
+    "packages/shared-types/src/copilot.ts",
+    "packages/shared-types/src/ipc.ts",
+    "apps/desktop/src/main/db/repos/copilot-insights.ts",
+    "apps/desktop/src/main/ipc/handlers.ts",
+    "apps/desktop/src/renderer/src/features/copilot/copilot-sidebar.tsx",
+    "apps/desktop/e2e/copilot-insight-export.spec.ts"
   ],
-  "nextStep": "Begin M40 T7 by adding the local insight export instructions to docs/user-guide/copilot-ui.md, then run the docs-safe gates."
+  "nextStep": "Run the M40 final verification gate exactly as listed in Task 8, then close the milestone ledger and advance to M41 T0."
 }
