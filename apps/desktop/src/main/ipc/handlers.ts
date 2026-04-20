@@ -67,6 +67,7 @@ import type {
   Company,
   CompanySettings,
   CompanyStatus,
+  CopilotWeightsChangedPayload,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -120,6 +121,8 @@ import type {
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetCopilotResponse,
+  SettingsGetCopilotWeightsRequest,
+  SettingsGetCopilotWeightsResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
@@ -127,6 +130,8 @@ import type {
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,
   SettingsSetCopilotRequest,
+  SettingsSetCopilotWeightsRequest,
+  SettingsSetCopilotWeightsResponse,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -165,6 +170,7 @@ import type {
 import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import {
   AUTO_THREAD_ID,
+  COPILOT_CATEGORIES,
   DEFAULT_CONCURRENCY_CAPS,
   PRIVACY_TIER_RANK,
   getLevelRank,
@@ -553,6 +559,10 @@ export interface IpcSettingsRepo {
   getCopilot(): SettingsGetCopilotResponse;
   /** Copilot service settings — clamped/filtered write. Phase 5 — M33. */
   setCopilot(req: SettingsSetCopilotRequest): void;
+  /** Copilot feedback weights — snapshot read. Phase 6 — M38. */
+  getCopilotWeights(): SettingsGetCopilotWeightsResponse;
+  /** Copilot feedback weights — clamped partial write. Phase 6 — M38. */
+  setCopilotWeights(req: SettingsSetCopilotWeightsRequest): SettingsSetCopilotWeightsResponse;
 }
 
 /**
@@ -1026,6 +1036,10 @@ export interface IpcHandlers {
   settingsSetPlanner(req: SettingsSetPlannerRequest): Promise<void>;
   /** `settings.getCopilot` — copilot-service settings (enabled, interval in minutes, allowed categories) (Phase 5 — M33). */
   settingsGetCopilot(): Promise<SettingsGetCopilotResponse>;
+  /** `settings.getCopilotWeights` — copilot feedback category weights (Phase 6 — M38). */
+  settingsGetCopilotWeights(
+    req: SettingsGetCopilotWeightsRequest,
+  ): Promise<SettingsGetCopilotWeightsResponse>;
   /**
    * `settings.setCopilot` — patch one or more copilot-service settings with
    * clamping + category filtering, then synchronously restart the
@@ -1033,6 +1047,14 @@ export interface IpcHandlers {
    * an app restart (Phase 5 — M33).
    */
   settingsSetCopilot(req: SettingsSetCopilotRequest): Promise<void>;
+  /**
+   * `settings.setCopilotWeights` — patch copilot feedback category weights,
+   * then emit `copilot.weights.changed` so renderer/analyzer consumers can
+   * invalidate local snapshots (Phase 6 — M38).
+   */
+  settingsSetCopilotWeights(
+    req: SettingsSetCopilotWeightsRequest,
+  ): Promise<SettingsSetCopilotWeightsResponse>;
 
   // -----------------------------------------------------------------------
   // Provider management handlers (Phase 3 — M18)
@@ -3265,6 +3287,15 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       return settingsRepo.getCopilot();
     },
 
+    async settingsGetCopilotWeights(
+      req: SettingsGetCopilotWeightsRequest,
+    ): Promise<SettingsGetCopilotWeightsResponse> {
+      if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
+        throw new Error('[ipc] settings.getCopilotWeights: companyId is required');
+      }
+      return settingsRepo.getCopilotWeights();
+    },
+
     async settingsSetCopilot(req: SettingsSetCopilotRequest): Promise<void> {
       if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
         throw new Error('[ipc] settings.setCopilot: companyId is required');
@@ -3277,6 +3308,41 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (copilotAnalyzerService) {
         copilotAnalyzerService.restart(req.companyId);
       }
+    },
+
+    async settingsSetCopilotWeights(
+      req: SettingsSetCopilotWeightsRequest,
+    ): Promise<SettingsSetCopilotWeightsResponse> {
+      if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
+        throw new Error('[ipc] settings.setCopilotWeights: companyId is required');
+      }
+      const before = settingsRepo.getCopilotWeights().weights;
+      const result = settingsRepo.setCopilotWeights(req);
+      const changedKeys = COPILOT_CATEGORIES.filter(
+        (category) => before[category] !== result.weights[category],
+      );
+      if (bus) {
+        try {
+          bus.emit<CopilotWeightsChangedPayload>({
+            type: 'copilot.weights.changed',
+            companyId: req.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              weights: result.weights,
+              changedKeys,
+              changedAt: Date.now(),
+            },
+          });
+        } catch (err) {
+          console.error('[ipc] settings.setCopilotWeights: bus emit failed (weights saved):', err);
+        }
+      } else {
+        console.warn(
+          '[ipc] settings.setCopilotWeights: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+      return result;
     },
 
     // -----------------------------------------------------------------------

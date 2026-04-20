@@ -130,6 +130,8 @@ const REQUEST_CHANNELS = [
   'settings.setPlanner',
   'settings.getCopilot',
   'settings.setCopilot',
+  'settings.getCopilotWeights',
+  'settings.setCopilotWeights',
   // Provider management (Phase 3 — M18)
   'providers.list',
   'providers.add',
@@ -584,6 +586,20 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'settings.setCopilot',
     async (_event, request: import('@team-x/shared-types').SettingsSetCopilotRequest) => {
       return handlers.settingsSetCopilot(request);
+    },
+  );
+
+  ipcMain.handle(
+    'settings.getCopilotWeights',
+    async (_event, request: import('@team-x/shared-types').SettingsGetCopilotWeightsRequest) => {
+      return handlers.settingsGetCopilotWeights(request);
+    },
+  );
+
+  ipcMain.handle(
+    'settings.setCopilotWeights',
+    async (_event, request: import('@team-x/shared-types').SettingsSetCopilotWeightsRequest) => {
+      return handlers.settingsSetCopilotWeights(request);
     },
   );
 
