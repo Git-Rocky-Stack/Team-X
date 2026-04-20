@@ -1,37 +1,38 @@
 {
-  "taskId": "Phase-6-M41-T2",
+  "taskId": "Phase-6-M41-T3",
   "milestone": "Phase 6 M41",
   "milestoneName": "Demo + Hardening + v1.2.0",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M41 T2 — Phase 6 Retrospective",
-  "status": "head-of-queue — M41 T1 integration E2E shipped; next write the Phase 6 retrospective",
+  "title": "Phase 6 M41 T3 — Demo Walkthrough and Scenario Update",
+  "status": "head-of-queue — M41 T2 retrospective drafted; next write Phase 6 demo walkthrough docs",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M41 T1 — Cross-milestone Phase 6 integration E2E",
+  "predecessor": "Phase 6 M41 T2 — Phase 6 Retrospective",
   "dor": [
-    "M41 T1 integration E2E is committed",
-    "Phase 6 M36/M37-R through M40 are closed",
-    "M35 retrospective structure is available as the locked template"
+    "M41 T2 retrospective is committed",
+    "M41 T1 integration E2E evidence exists",
+    "Phase 6 surfaces are documented enough to script a demo without new product work"
   ],
   "acceptance": [
-    "Follow Task 2 in docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-    "Create docs/plans/2026-04-26-team-x-phase-6-retrospective.md",
-    "Use the locked six-section M35 retrospective structure",
-    "Include one concise shipped line for M36/M37-R, M38, M39, M40, and M41",
-    "Include metrics: focused test growth, E2E spec/case growth, IPC/channel deltas, bus event deltas, migration delta, and docs/release deltas",
-    "Include Phase 7 seeds as hypotheses, not commitments",
+    "Follow Task 3 in docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
+    "Create docs/demo/phase-6-walkthrough.md",
+    "Create docs/demo/scenarios/06-phase-6-capabilities-evidence.md",
+    "Modify docs/user-guide/demo-walkthrough.md only if it should link to the Phase 6 walkthrough",
+    "Demo shows capability role-fit, feedback suggestion, telemetry kind filter, and local insight export",
+    "Demo does not claim autonomous action, cloud sync, telemetry digest, or other Phase 7+ scope",
+    "Scenario includes stable data attributes where narration depends on UI",
     "Run pnpm audit:claims -- --strict",
     "Run pnpm lint",
     "Run git diff --check",
-    "Update Loki to advance from M41 T2 to M41 T3"
+    "Update Loki to advance from M41 T3 to M41 T4"
   ],
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-  "planDocSection": "Task 2: Phase 6 Retrospective",
+  "planDocSection": "Task 3: Demo Walkthrough",
   "referenceDocs": [
     "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-    "docs/plans/2026-04-19-team-x-phase-5-retrospective.md",
-    "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
-    ".loki/state/orchestrator.json"
+    "docs/plans/2026-04-26-team-x-phase-6-retrospective.md",
+    "docs/demo/phase-5-walkthrough.md",
+    "docs/demo/scenarios/05-decompose-and-surface.md",
+    "apps/desktop/e2e/phase-6-integration.spec.ts"
   ],
-  "nextStep": "Begin M41 T2 by creating the Phase 6 retrospective with the locked M35 six-section structure."
+  "nextStep": "Begin M41 T3 by drafting the Phase 6 demo walkthrough and one evidence scenario from the M41 integration E2E."
 }
