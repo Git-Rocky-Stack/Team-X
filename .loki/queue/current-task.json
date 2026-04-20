@@ -1,33 +1,32 @@
 {
-  "taskId": "Phase-6-M38-T3",
+  "taskId": "Phase-6-M38-T4",
   "milestone": "Phase 6 M38",
   "milestoneName": "Insight Feedback Loop",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M38 T3 — Expose copilot weight settings IPC",
-  "status": "head-of-queue — M38 T2 settings persistence implemented and verified; next wire IPC handlers and weights-changed bus event",
+  "title": "Phase 6 M38 T4 — Apply copilot category weights in analyzer",
+  "status": "head-of-queue — M38 T3 IPC wiring implemented and verified; next apply category weights to analyzer drafts",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M38 T2 — copilot category weights persisted in settings repo in eba2668",
+  "predecessor": "Phase 6 M38 T3 — copilot weight settings IPC exposed in 2eee39e",
   "dor": [
     "M38 T1 shared-types contracts are shipped",
-    "M38 T2 settings repo persistence exists with default seeding, partial patch semantics, 0..2 clamping, and malformed-value fallback",
-    "Focused settings-copilot repo tests, typecheck, lint, and strict claim-evidence gates are green for T2"
+    "M38 T2 settings repo persistence is shipped",
+    "M38 T3 IPC get/set handlers and copilot.weights.changed bus emit are shipped",
+    "Focused IPC tests, typecheck, lint, and strict claim-evidence gates are green for T3"
   ],
   "acceptance": [
-    "Follow Task 3 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-    "Write failing IPC handler tests before implementation",
-    "settings.getCopilotWeights returns repo weights and requires companyId",
-    "settings.setCopilotWeights persists clamped weights, returns the resulting snapshot, and emits copilot.weights.changed with changedKeys",
-    "Bus emit failure is swallowed after durable write",
-    "Wire register.ts and preload/api.ts channels, then run focused IPC tests plus standard typecheck/lint gate"
+    "Follow Task 4 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+    "Write failing pure-helper tests for weightInsightDrafts before implementation",
+    "Drop categories with 0 weight, sort by severity score multiplied by category weight, preserve stable order for ties, and cap persisted drafts",
+    "Keep insightsProposed as the pre-weight model draft count",
+    "Add an analyzer integration test proving a zero-weight category draft does not persist",
+    "Run focused copilot-analyzer-service tests plus standard typecheck/lint gate"
   ],
   "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-  "planDocSection": "Task 3: IPC Get/Set Weights With Bus Event",
+  "planDocSection": "Task 4: Analyzer Weighting",
   "referenceDocs": [
     "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-    "apps/desktop/src/main/ipc/handlers.ts",
-    "apps/desktop/src/main/ipc/register.ts",
-    "apps/desktop/src/preload/api.ts",
-    "apps/desktop/src/main/ipc/settings-copilot-handlers.test.ts"
+    "apps/desktop/src/main/services/copilot-analyzer-service.ts",
+    "apps/desktop/src/main/services/copilot-analyzer-service.test.ts"
   ],
-  "nextStep": "Begin T3 by adding failing settings-copilot IPC tests for get/set weight handlers, companyId validation, changedKeys payload, and best-effort bus failure behavior."
+  "nextStep": "Begin T4 by adding failing weightInsightDrafts helper tests and a failing analyzer integration test for a zero-weight category."
 }
