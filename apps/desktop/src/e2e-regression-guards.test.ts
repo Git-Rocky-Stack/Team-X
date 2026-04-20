@@ -1,9 +1,9 @@
 /**
  * M35 T9 — Regression hardening for the E2E spec suite.
  *
- * Two mechanical guards that prevent the Playwright specs under
+ * Mechanical guards that prevent the Playwright specs under
  * `apps/desktop/e2e/` from silently regressing in two well-known
- * failure modes:
+ * failure modes plus the Phase 6 selector surface:
  *
  *   1. Flaky-test audit — `page.waitForTimeout(N)` (and the equivalent
  *      `window.waitForTimeout(N)` / `frame.waitForTimeout(N)`) with
@@ -24,6 +24,12 @@
  *      at least one `[data-*]` attribute locator. Text-content matchers
  *      (`getByText`, `getByRole({ name })`) are fine as secondary
  *      matchers — but each spec needs one stable anchor.
+ *
+ *   3. Phase 6 selector contract — M38/M39/M40/M41 added explicit
+ *      selector families for feedback suggestions, telemetry kind
+ *      filters/stat cards, and insight export controls. Pin those
+ *      families by spec so a future refactor cannot keep a generic
+ *      data-* anchor while dropping the specific Phase 6 contract.
  *
  * Placement rationale: this test lives under `apps/desktop/src/` (not
  * `apps/desktop/e2e/`) because the per-workspace
@@ -89,6 +95,33 @@ const DATA_ATTR_SELECTOR_RE = /\[data-[a-z][a-z0-9-]*/;
  */
 const FLAKE_FLOOR_MS = 100;
 
+const PHASE_6_SELECTOR_CONTRACTS: Record<string, string[]> = {
+  'copilot-feedback.spec.ts': [
+    '[data-copilot-feedback-suggestion]',
+    '[data-copilot-feedback-apply]',
+  ],
+  'telemetry-kind-filter.spec.ts': [
+    '[data-telemetry-stat="total-runs"]',
+    '[data-telemetry-kind-filter="copilot"]',
+    '[data-telemetry-kind-filter="work"]',
+  ],
+  'copilot-insight-export.spec.ts': [
+    '[data-copilot-export-status]',
+    '[data-copilot-export-format="json"]',
+    '[data-copilot-export-scope="all"]',
+    '[data-copilot-export-format="csv"]',
+  ],
+  'phase-6-integration.spec.ts': [
+    '[data-copilot-feedback-suggestion]',
+    '[data-copilot-feedback-apply]',
+    '[data-telemetry-stat="total-runs"]',
+    '[data-telemetry-kind-filter="copilot"]',
+    '[data-telemetry-kind-filter="agentic"]',
+    '[data-copilot-export-format="json"]',
+    '[data-copilot-export-status]',
+  ],
+};
+
 describe('E2E regression guards (M35 T9)', () => {
   test('no spec uses `waitForTimeout(N)` with N > 100 ms', () => {
     const offenders: Array<{ file: string; ms: number }> = [];
@@ -116,6 +149,20 @@ describe('E2E regression guards (M35 T9)', () => {
     expect(
       offenders,
       `E2E specs missing a [data-*] attribute locator — add a stable-selector anchor (e.g. [data-copilot-toolbar-toggle], [data-step-kind], [data-copilot-insight-id]) per the M30 / M33 / M34 convention: ${JSON.stringify(offenders, null, 2)}`,
+    ).toEqual([]);
+  });
+
+  test('Phase 6 E2E specs pin their shipped selector families', () => {
+    const missing: Array<{ file: string; selector: string }> = [];
+    for (const [file, selectors] of Object.entries(PHASE_6_SELECTOR_CONTRACTS)) {
+      const src = readSpec(file);
+      for (const selector of selectors) {
+        if (!src.includes(selector)) missing.push({ file, selector });
+      }
+    }
+    expect(
+      missing,
+      `Phase 6 E2E selector contract drift — keep M38 feedback, M39 telemetry, M40 export, and M41 integration selectors pinned in their focused specs: ${JSON.stringify(missing, null, 2)}`,
     ).toEqual([]);
   });
 });

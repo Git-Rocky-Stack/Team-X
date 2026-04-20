@@ -3,7 +3,7 @@
   "milestoneName": "Demo + Hardening + v1.2.0",
   "phase": "Phase 6 — Capabilities & Evidence",
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-  "planDocSection": "M41 T8 regression hardening + selector audit",
+  "planDocSection": "M41 T9 final verification gate",
   "previousPhase": "Phase 5.6 — Reconciliation & Remediation",
   "previousPhaseStatus": "SHIPPED 2026-04-20 as v1.1.1",
   "previousPhaseCompletedAt": "2026-04-20T01:30:00Z",
@@ -12,7 +12,7 @@
   "previousMilestoneCompletedAt": "2026-04-20T06:00:00Z",
   "previousMilestoneCommit": "this-ledger-commit",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-20T15:20:00Z",
+  "updatedAt": "2026-04-20T15:45:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -172,10 +172,10 @@
   "activeSubMilestone": {
     "id": "M41",
     "name": "Demo + Hardening + v1.2.0",
-    "status": "in progress — M41 T7 Phase 6 COMPLETE marker shipped; T8 regression hardening + selector audit is head-of-queue",
+    "status": "in progress — M41 T8 regression hardening shipped; T9 final verification gate is head-of-queue",
     "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M41 T8. Scope: audit E2E specs for arbitrary sleeps, confirm new Phase 6 selectors are present/documented in tests, add a source-string audit only if a concrete drift risk exists, and run the focused Phase 6 E2E specs plus strict claims/lint/diff-check.",
+    "nextSession": "Proceed with Phase 6 M41 T9. Scope: run the final verification gate in order (pnpm test, typecheck, lint, strict claims, desktop build, full Playwright, dist:win), record exact counts/durations and installer output or blocker, then advance to M41 T10 release ledger/tag only after the gate decision is explicit.",
     "dor": "M40 Insight Export exit gate closed",
     "dod": "M41 complete when the Phase 6 exit gate, retrospective, docs, changelog/version bump, COMPLETE marker, and final ledger ship",
     "verifiedBy": [
@@ -240,6 +240,17 @@
       "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md — Phase 6 COMPLETE status, M38-M41 complete rows, current E2E surface, resolved Q3/Q4, and final tag gate",
       "RED: pnpm -F @team-x/desktop exec vitest run src/phase-6-complete-marker.test.ts — failed on missing Phase 6 COMPLETE / M41 complete / 17 Playwright specs / 22 cases markers before docs update",
       "GREEN: pnpm -F @team-x/desktop exec vitest run src/phase-6-complete-marker.test.ts — 1 file / 3 tests",
+      "pnpm typecheck — clean across 6 workspace packages",
+      "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
+      "pnpm lint — 0 errors / 21 known warnings",
+      "git diff --check — clean",
+      "M41 T8 — Regression hardening + selector audit",
+      "apps/desktop/src/e2e-regression-guards.test.ts — now pins Phase 6 selector families by focused spec",
+      "Audit: no E2E spec uses .waitForTimeout(N) as an arbitrary synchronization sleep",
+      "Audit: setTimeout hits are launch/test shutdown guards or Playwright test timeouts, not pacing sleeps",
+      "pnpm -F @team-x/desktop exec vitest run src/e2e-regression-guards.test.ts — 1 file / 3 tests",
+      "pnpm -F @team-x/desktop build — clean production build",
+      "pnpm -F @team-x/desktop exec playwright test e2e/copilot-feedback.spec.ts e2e/telemetry-kind-filter.spec.ts e2e/copilot-insight-export.spec.ts e2e/phase-6-integration.spec.ts — 4 specs / 4 tests",
       "pnpm typecheck — clean across 6 workspace packages",
       "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
       "pnpm lint — 0 errors / 21 known warnings",
@@ -328,9 +339,9 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 6 M41 T7 Phase 6 COMPLETE marker shipped; M41 T8 regression hardening + selector audit is head-of-queue.",
+    "asOfTask": "Phase 6 M41 T8 regression hardening shipped; M41 T9 final verification gate is head-of-queue.",
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 focused gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests. M39 T8 focused gate passed shared-types 1 file / 2 tests and desktop 5 files / 27 tests. M40 T1 focused shared-types verification passed 1 file / 2 tests. M40 T2 focused desktop repo verification passed 1 file / 6 tests. M40 T3 focused desktop IPC verification passed 1 file / 6 tests. M40 T4 focused renderer hook verification passed 1 file / 2 tests. M40 T5 focused sidebar renderer verification passed 1 file / 5 tests. M40 T6 focused insight export E2E verification passed 1 spec / 1 test. M41 T1 integration E2E raised the surface to 17 specs / 22 Playwright cases. M41 T6 focused marker verification passed 1 file / 2 tests after a valid red run. M41 T7 source-string marker verification added 1 file / 3 tests after a valid red run.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 focused gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests. M39 T8 focused gate passed shared-types 1 file / 2 tests and desktop 5 files / 27 tests. M40 T1 focused shared-types verification passed 1 file / 2 tests. M40 T2 focused desktop repo verification passed 1 file / 6 tests. M40 T3 focused desktop IPC verification passed 1 file / 6 tests. M40 T4 focused renderer hook verification passed 1 file / 2 tests. M40 T5 focused sidebar renderer verification passed 1 file / 5 tests. M40 T6 focused insight export E2E verification passed 1 spec / 1 test. M41 T1 integration E2E raised the surface to 17 specs / 22 Playwright cases. M41 T6 focused marker verification passed 1 file / 2 tests after a valid red run. M41 T7 source-string marker verification added 1 file / 3 tests after a valid red run. M41 T8 widened e2e-regression-guards to 3 tests and focused Phase 6 Playwright passed 4 specs / 4 tests.",
     "e2eSpecs": 17,
     "e2eGreenCount": 22,
     "lintErrors": 0,
@@ -338,7 +349,7 @@
     "typecheckClean": true,
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "version": "1.2.0",
-    "phase6Next": "M41 T8 regression hardening + selector audit."
+    "phase6Next": "M41 T9 final verification gate."
   },
   "targets": {
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
@@ -354,6 +365,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M41 T8 SHIPPED 2026-04-20 — regression hardening and selector audit complete. The existing e2e-regression-guards source-string audit now pins the Phase 6 selector families by spec: M38 feedback suggestion/apply, M39 telemetry kind/stat selectors, M40 export controls/status, and the combined M41 integration flow. Audit confirmed no E2E spec uses .waitForTimeout(N) as an arbitrary synchronization sleep; setTimeout hits are launch/test shutdown guards, not pacing sleeps. Gates: regression guard 1 file / 3 tests, desktop build clean, focused Phase 6 Playwright 4 specs / 4 tests, typecheck clean, strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Focused Playwright emitted the expected Electron dev CSP warning plus one non-failing DialogContent description warning. Head-of-queue advances to M41 T9 final verification gate.",
     "PHASE 6 M41 T7 SHIPPED 2026-04-20 — Phase 6 COMPLETE marker landed. Added apps/desktop/src/phase-6-complete-marker.test.ts with three source-string pins for Phase 6 COMPLETE, v1.2.0, 17 Playwright specs / 22 cases, M41 complete in the Phase 6 design doc, and the final-tag gating language. CLAUDE.md now records Phase 6 COMPLETE - v1.2.0 with M36-M41 evidence and T8 as next; the Phase 6 design doc now records M36-M41 complete, resolves Q3/Q4, corrects the feedback vector to five keys, and keeps the final v1.2.0 git tag gated on M41 T10. Gates: valid red marker test first, focused marker test 1 file / 3 tests, typecheck clean, strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T8 regression hardening + selector audit.",
     "PHASE 6 M41 T6 SHIPPED 2026-04-20 — version bump and Phase 6 badge freeze complete. Seven release package.json files now carry 1.2.0 (root, apps/desktop, shared-types, role-schema, provider-router, intelligence, telemetry-core), top-bar badge now renders Phase 6, and the source-string marker test pins Phase 6 plus all seven 1.2.0 package versions. Red test was verified first against Phase 5 / 1.1.1. Gates: focused marker test 1 file / 2 tests, typecheck clean, lint 0 errors / 21 warnings, strict claims 95/0/0, diff-check clean. Head-of-queue advances to M41 T7 Phase 6 COMPLETE marker.",
     "PHASE 6 M41 T5 SHIPPED 2026-04-20 — CHANGELOG promotion complete. CHANGELOG.md now stages [1.2.0] - 2026-04-20 under Phase 6 - Capabilities & Evidence with entries for capability role-fit reconciliation, Copilot feedback loop, telemetry kind filters, local insight export, Phase 6 integration E2E, docs reconciliation, and the agentic run-kind telemetry fix. Compare links now include [1.2.0] v1.1.1...v1.2.0 and [Unreleased] v1.2.0...HEAD. Gates: strict claims 95/0/0, lint 0 errors / 21 warnings, diff-check clean. Head-of-queue advances to M41 T6 version bump + Phase 6 badge freeze.",
@@ -421,6 +433,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M41 T8 — Regression Hardening + Selector Audit"
+    "nextTask": "Phase 6 M41 T9 — Final Verification Gate"
   }
 }
