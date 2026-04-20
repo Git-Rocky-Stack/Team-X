@@ -304,6 +304,36 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     throw new Error(message);
   }
 
+  if (buffer.trim().length === 0) {
+    const latencyMs = Math.max(0, now() - startTime);
+    const message = 'provider stream completed without assistant text';
+    deps.messages.updateContent(
+      messageId,
+      "I couldn't complete that reply. Provider returned no assistant text.",
+    );
+    deps.runs.finish(runId, {
+      status: 'error',
+      promptTokens: usage.promptTokens,
+      completionTokens: usage.completionTokens,
+      latencyMs,
+      costUsd: '0',
+      error: message,
+    });
+    deps.bus.emit({
+      type: 'work.failed',
+      companyId: input.companyId,
+      actorId: 'orchestrator',
+      actorKind: 'orchestrator',
+      payload: {
+        threadId: input.threadId,
+        employeeId: input.employeeId,
+        messageId,
+        error: message,
+      },
+    });
+    throw new Error(message);
+  }
+
   const latencyMs = Math.max(0, now() - startTime);
   const costUsd = deps.calcCost({
     provider: input.providerName,

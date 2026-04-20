@@ -479,6 +479,54 @@ describe('runAgent', () => {
       expect(types).not.toContain('work.completed');
     });
 
+    it('a stream that reports usage without assistant text is treated as provider failure', async () => {
+      const provider = fakeProvider([], { promptTokens: 12, completionTokens: 49 });
+
+      await expect(
+        runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+          },
+        ),
+      ).rejects.toThrow(/without assistant text/);
+
+      const runRows = f.runs.listByEmployee(f.employeeId);
+      expect(runRows[0]?.status).toBe('error');
+      expect(runRows[0]?.promptTokens).toBe(12);
+      expect(runRows[0]?.completionTokens).toBe(49);
+      expect(runRows[0]?.error).toMatch(/without assistant text/);
+
+      const messages = f.messages.listByThread(f.threadId);
+      expect(messages[0]?.content).toMatch(/couldn't complete that reply/i);
+      expect(messages[0]?.content).toMatch(/no assistant text/i);
+
+      const events = f.bus.replaySince(0);
+      const types = events.map((e) => e.type);
+      expect(types).toEqual(['work.started', 'work.failed']);
+      expect(types).not.toContain('work.completed');
+
+      const failed = events.at(-1);
+      expect(failed?.payload).toMatchObject({
+        threadId: f.threadId,
+        messageId: messages[0]?.id,
+        error: expect.stringMatching(/without assistant text/),
+      });
+      expect(f.costCalls).toHaveLength(0);
+    });
+
     it('non-Error throws are coerced to a string in the error field', async () => {
       // biome-ignore lint/correctness/useYield: intentional — generator throws before any chunk is produced
       const provider: ProviderStreamFn = async function* () {

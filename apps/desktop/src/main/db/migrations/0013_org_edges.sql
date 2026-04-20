@@ -28,13 +28,40 @@
 --   `employees.fire` is a soft-delete (firedAt column); soft-deleted
 --   managers retain edges and the repo's tree projection filters them
 --   at read time.
-CREATE TABLE `org_edges` (
+--
+-- Upgrade note:
+-- Some pre-remediation builds created the worktree-original `org_edges`
+-- table before this numbered migration existed. Those databases have a
+-- Drizzle journal below 0013, so a plain CREATE TABLE fails at startup.
+-- This migration deliberately normalizes both states:
+--   - no `org_edges` table: create an empty source table, then rebuild it
+--     into the final shape;
+--   - legacy `org_edges` table: copy existing edges into the final shape.
+DROP TABLE IF EXISTS `org_edges_0013_rebuild`;
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `org_edges` (
   `id` text PRIMARY KEY NOT NULL,
   `company_id` text NOT NULL REFERENCES `companies`(`id`) ON DELETE CASCADE,
   `manager_id` text NOT NULL REFERENCES `employees`(`id`) ON DELETE CASCADE,
   `report_id` text NOT NULL REFERENCES `employees`(`id`) ON DELETE CASCADE,
   `created_at` integer NOT NULL
 );
+--> statement-breakpoint
+CREATE TABLE `org_edges_0013_rebuild` (
+  `id` text PRIMARY KEY NOT NULL,
+  `company_id` text NOT NULL REFERENCES `companies`(`id`) ON DELETE CASCADE,
+  `manager_id` text NOT NULL REFERENCES `employees`(`id`) ON DELETE CASCADE,
+  `report_id` text NOT NULL REFERENCES `employees`(`id`) ON DELETE CASCADE,
+  `created_at` integer NOT NULL
+);
+--> statement-breakpoint
+INSERT INTO `org_edges_0013_rebuild` (`id`, `company_id`, `manager_id`, `report_id`, `created_at`)
+SELECT `id`, `company_id`, `manager_id`, `report_id`, `created_at`
+FROM `org_edges`;
+--> statement-breakpoint
+DROP TABLE `org_edges`;
+--> statement-breakpoint
+ALTER TABLE `org_edges_0013_rebuild` RENAME TO `org_edges`;
 --> statement-breakpoint
 CREATE UNIQUE INDEX `org_edges_report_id_unique` ON `org_edges`(`report_id`);
 --> statement-breakpoint

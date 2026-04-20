@@ -20,11 +20,19 @@
  * step c.
  */
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import initSqlJs, { type Database as RawSqlJsDatabase } from 'sql.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createCompaniesRepo } from './repos/companies.js';
 import { createEmployeesRepo } from './repos/employees.js';
 import { type TestDbHandle, makeTestDb } from './test-helpers.js';
+
+const thisDir = dirname(fileURLToPath(import.meta.url));
+const migration0013Path = join(thisDir, 'migrations', '0013_org_edges.sql');
 
 interface TableInfoRow {
   cid: number;
@@ -256,5 +264,70 @@ describe('migration 0013 — org_edges', () => {
     expect(() =>
       insertEdge({ id: 'e1', companyId, managerId, reportId: 'no-such-employee' }),
     ).toThrow();
+  });
+});
+
+describe('migration 0013 — legacy org_edges compatibility', () => {
+  function runMigration0013(raw: RawSqlJsDatabase): void {
+    const sql = readFileSync(migration0013Path, 'utf8');
+    for (const stmt of sql.split('--> statement-breakpoint')) {
+      const trimmed = stmt.trim();
+      if (trimmed.length > 0) raw.run(trimmed);
+    }
+  }
+
+  it('rebuilds the pre-remediation org_edges table instead of failing on CREATE TABLE', async () => {
+    const SQL = await initSqlJs();
+    const raw = new SQL.Database();
+    raw.run('PRAGMA foreign_keys = ON');
+
+    raw.run('CREATE TABLE `companies` (`id` text PRIMARY KEY NOT NULL)');
+    raw.run('CREATE TABLE `employees` (`id` text PRIMARY KEY NOT NULL)');
+    raw.run(`
+      CREATE TABLE \`org_edges\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`company_id\` text NOT NULL,
+        \`manager_id\` text NOT NULL,
+        \`report_id\` text NOT NULL,
+        \`created_at\` integer NOT NULL,
+        FOREIGN KEY (\`company_id\`) REFERENCES \`companies\`(\`id\`) ON DELETE no action,
+        FOREIGN KEY (\`manager_id\`) REFERENCES \`employees\`(\`id\`) ON DELETE no action,
+        FOREIGN KEY (\`report_id\`) REFERENCES \`employees\`(\`id\`) ON DELETE no action
+      )
+    `);
+    raw.run('CREATE UNIQUE INDEX `org_edges_report_id_unique` ON `org_edges` (`report_id`)');
+    raw.run("INSERT INTO `companies` (`id`) VALUES ('company-1')");
+    raw.run("INSERT INTO `employees` (`id`) VALUES ('manager-1'), ('report-1')");
+    raw.run(
+      "INSERT INTO `org_edges` (`id`, `company_id`, `manager_id`, `report_id`, `created_at`) VALUES ('edge-1', 'company-1', 'manager-1', 'report-1', 123)",
+    );
+
+    runMigration0013(raw);
+
+    const fkStmt = raw.prepare("PRAGMA foreign_key_list('org_edges')");
+    const fkRows: Array<{ on_delete: string }> = [];
+    while (fkStmt.step()) fkRows.push(fkStmt.getAsObject() as { on_delete: string });
+    fkStmt.free();
+    expect(fkRows.map((row) => row.on_delete)).toEqual(['CASCADE', 'CASCADE', 'CASCADE']);
+
+    const indexStmt = raw.prepare("PRAGMA index_list('org_edges')");
+    const indexNames: string[] = [];
+    while (indexStmt.step()) {
+      const row = indexStmt.getAsObject() as { name: string };
+      indexNames.push(row.name);
+    }
+    indexStmt.free();
+    expect(indexNames).toContain('org_edges_report_id_unique');
+    expect(indexNames).toContain('idx_org_edges_company_manager');
+
+    const edgeCountBeforeDelete = raw.exec('SELECT COUNT(*) AS count FROM `org_edges`')[0]
+      ?.values[0]?.[0];
+    expect(edgeCountBeforeDelete).toBe(1);
+    raw.run("DELETE FROM `employees` WHERE `id` = 'report-1'");
+    const edgeCountAfterDelete = raw.exec('SELECT COUNT(*) AS count FROM `org_edges`')[0]
+      ?.values[0]?.[0];
+    expect(edgeCountAfterDelete).toBe(0);
+
+    raw.close();
   });
 });

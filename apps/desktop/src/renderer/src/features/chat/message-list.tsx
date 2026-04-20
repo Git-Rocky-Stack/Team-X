@@ -67,6 +67,10 @@ interface MessageBubbleProps {
 
 function MessageBubble({ message, showSenderName, senderName }: MessageBubbleProps) {
   const isUser = message.authorKind === 'user';
+  const displayContent =
+    message.authorKind !== 'user' && message.content.trim().length === 0
+      ? 'No assistant output was returned for this turn.'
+      : message.content;
   return (
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <div className="max-w-[85%]">
@@ -87,7 +91,7 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
             isUser ? 'bg-brand/15 text-foreground' : 'bg-surface-100 text-foreground',
           )}
         >
-          {renderContent(message.content)}
+          {renderContent(displayContent)}
         </div>
       </div>
     </div>

@@ -17,15 +17,10 @@
  * we use `createdAt` (integer ms) as the cursor instead. The renderer
  * calls `since(lastSeenCreatedAt)` to poll for new events.
  *
- * Known limitation: events created at the same ms can tie. `orderBy
- * createdAt ASC, id ASC` gives a deterministic intra-batch order, but
- * if the previous poll returned an event with `createdAt = T` and a
- * new event also has `createdAt = T`, the new one is SKIPPED by
- * `createdAt > T`. Phase 1 accepts this — the renderer polls every
- * 50-200 ms and the lost event is practically invisible. A later
- * phase can introduce a true monotonic `seq INTEGER` column via a
- * new migration; the cursor stays a number and the API does not
- * change.
+ * Event rows use a repo-local monotonic timestamp: if multiple appends
+ * land in the same millisecond, later rows receive `previous + 1`.
+ * That preserves the numeric cursor shape while preventing same-ms
+ * replay gaps and unstable event ordering.
  *
  * Cross-driver generic typing — same pattern as the other repos.
  */
@@ -75,6 +70,8 @@ export interface AppendEventResult {
 type EventsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export function createEventsRepo<TRunResult>(db: EventsDb<TRunResult>) {
+  let lastCreatedAt = 0;
+
   return {
     /**
      * Append a new event to the log. Returns the generated id AND the
@@ -87,7 +84,8 @@ export function createEventsRepo<TRunResult>(db: EventsDb<TRunResult>) {
      */
     append(input: AppendEventInput): AppendEventResult {
       const id = nanoid();
-      const createdAt = Date.now();
+      const createdAt = Math.max(Date.now(), lastCreatedAt + 1);
+      lastCreatedAt = createdAt;
       db.insert(events)
         .values({
           id,
