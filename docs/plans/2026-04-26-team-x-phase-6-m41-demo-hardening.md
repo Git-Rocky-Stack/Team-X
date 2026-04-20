@@ -313,6 +313,25 @@ pnpm dist:win
 
 If `pnpm dist:win` is blocked by local signing or environment setup, document the exact blocker and run the strongest available build/package substitute. Do not tag until the release gate decision is explicit.
 
+**T9 result — 2026-04-20:** Gate passed. The first unit run exposed two stale local-state issues, both resolved before the final pass:
+
+- Node ABI was rebuilt for Vitest after `better-sqlite3` had been compiled for Electron.
+- `apps/desktop/src/main/db/repos/settings.test.ts` now accounts for the M38 `copilot_category_weights` default.
+- Electron ABI was rebuilt before Playwright.
+- Five older E2E specs now assert the current `Phase 6` badge instead of stale `Phase 5` text.
+
+Final evidence:
+
+- `pnpm test` — 138 files / 1754 tests.
+- `pnpm typecheck` — clean across 6 workspace packages.
+- `pnpm lint` — 0 errors / 21 known warnings.
+- `pnpm audit:claims -- --strict` — 95 verified / 0 allowlisted / 0 UNALLOWED out of 95.
+- `pnpm -F @team-x/desktop build` — clean.
+- `pnpm -F @team-x/desktop exec playwright test` — 17 specs / 22 cases.
+- `pnpm dist:win` — succeeded; emitted `release/1.2.0/Team-X-1.2.0-Setup.exe`, `release/1.2.0/Team-X-1.2.0-Setup-x64.exe`, and `release/1.2.0/Team-X-1.2.0-Setup-arm64.exe`.
+
+No `v1.2.0` tag was created in T9. The release tag remains gated to Task 10.
+
 ### Task 10: Release Ledger + Tag
 
 **Files:**

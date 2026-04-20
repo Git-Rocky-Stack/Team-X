@@ -1,39 +1,53 @@
 {
-  "taskId": "Phase-6-M41-T9",
+  "taskId": "Phase-6-M41-T10",
   "milestone": "Phase 6 M41",
   "milestoneName": "Demo + Hardening + v1.2.0",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M41 T9 — Final Verification Gate",
-  "status": "head-of-queue — M41 T8 regression hardening shipped; next run final verification gate",
-  "verifiedBy": null,
-  "predecessor": "Phase 6 M41 T8 — Regression Hardening + Selector Audit",
+  "title": "Phase 6 M41 T10 — Release Ledger + Tag",
+  "status": "head-of-queue — M41 T9 final verification gate passed; next close M41/Phase 6 and tag v1.2.0",
+  "verifiedBy": [
+    "M41 T9 — Final verification gate",
+    "Initial pnpm test surfaced stale settings test counts after M38 added copilot_category_weights and a Node/Electron better-sqlite3 ABI mismatch; root cause documented and remediated",
+    "Node ABI rebuild — node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3 npm run install",
+    "apps/desktop/src/main/db/repos/settings.test.ts — expected setting default counts updated from 21/20 to 22/21 and copilot category weight default pinned",
+    "pnpm -F @team-x/desktop exec vitest run src/main/db/repos/settings.test.ts src/main/db/repos/settings-copilot.test.ts src/main/db/repos/settings-planner.test.ts — 3 files / 45 tests",
+    "pnpm test — 138 files / 1754 tests passed after Node ABI rebuild",
+    "pnpm typecheck — clean across 6 workspace packages",
+    "pnpm lint — 0 errors / 21 known warnings",
+    "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
+    "pnpm -F @team-x/desktop build — clean production build",
+    "Electron ABI rebuild — pnpm -F @team-x/desktop exec electron-rebuild -f -w better-sqlite3,keytar",
+    "First full Playwright run launched successfully after Electron rebuild and exposed five stale Phase 5 badge assertions in smoke/ticket/meeting/vault/phase-5-integration specs",
+    "apps/desktop/e2e/smoke.spec.ts + meeting-flow.spec.ts + ticket-flow.spec.ts + vault-backup.spec.ts + phase-5-integration.spec.ts — badge assertions updated to Phase 6",
+    "Focused stale-badge repro: pnpm -F @team-x/desktop exec playwright test e2e/smoke.spec.ts e2e/meeting-flow.spec.ts e2e/ticket-flow.spec.ts e2e/vault-backup.spec.ts e2e/phase-5-integration.spec.ts — 5 specs / 5 tests",
+    "Final full Playwright: pnpm -F @team-x/desktop exec playwright test — 17 specs / 22 cases passed",
+    "pnpm dist:win — succeeded; emitted release/1.2.0/Team-X-1.2.0-Setup.exe, Team-X-1.2.0-Setup-x64.exe, Team-X-1.2.0-Setup-arm64.exe plus blockmaps/latest.yml",
+    "No v1.2.0 tag created in T9; final release ledger/tag remains gated to M41 T10"
+  ],
+  "predecessor": "Phase 6 M41 T9 — Final Verification Gate",
   "dor": [
-    "M41 T8 regression hardening is committed",
-    "No E2E spec uses .waitForTimeout(N) for arbitrary synchronization sleeps",
-    "Phase 6 selector families are pinned by focused specs",
-    "Focused Phase 6 Playwright specs pass 4 specs / 4 tests after a fresh build"
+    "M41 T9 final verification gate is green",
+    "pnpm dist:win succeeded and emitted v1.2.0 Windows installer artifacts",
+    "No v1.2.0 tag has been created yet",
+    "Release ledger decision is explicit: proceed to final ledger/tag only"
   ],
   "acceptance": [
-    "Follow Task 9 in docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-    "Run pnpm test",
-    "Run pnpm typecheck",
-    "Run pnpm lint",
-    "Run pnpm audit:claims -- --strict",
-    "Run pnpm -F @team-x/desktop build",
-    "Run pnpm -F @team-x/desktop exec playwright test",
-    "Run pnpm dist:win",
-    "If pnpm dist:win is blocked by local signing or environment setup, document the exact blocker",
-    "Do not tag until the release gate decision is explicit",
-    "Update Loki to advance from M41 T9 to M41 T10"
+    "Follow Task 10 in docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
+    "Update .loki/queue/current-task.json, .loki/queue/pending.json, and .loki/state/orchestrator.json to close M41 and Phase 6",
+    "Record the final T9 verification evidence and installer paths",
+    "Ensure CHANGELOG/package/docs markers still reference v1.2.0 consistently",
+    "Create v1.2.0 tag on the final release ledger commit only after the ledger commit lands",
+    "Push the final ledger commit and v1.2.0 tag"
   ],
   "planDoc": "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-  "planDocSection": "Task 9: Final Verification Gate",
+  "planDocSection": "Task 10: Release Ledger + Tag",
   "referenceDocs": [
     "docs/plans/2026-04-26-team-x-phase-6-m41-demo-hardening.md",
-    "apps/desktop/e2e",
-    "package.json",
-    "apps/desktop/package.json",
-    "release/"
+    "CHANGELOG.md",
+    "CLAUDE.md",
+    ".loki/queue/pending.json",
+    ".loki/state/orchestrator.json",
+    "release/1.2.0/"
   ],
-  "nextStep": "Begin M41 T9 by running the final gate in order: pnpm test, pnpm typecheck, pnpm lint, strict claims, desktop build, full Playwright, and pnpm dist:win. Record exact counts, durations, installer path or blocker, and only then advance to release ledger/tag."
+  "nextStep": "Begin M41 T10 by committing the final release ledger, closing M41/Phase 6 in Loki, tagging v1.2.0 on that final ledger commit, and pushing the commit plus tag."
 }
