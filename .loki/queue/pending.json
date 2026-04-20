@@ -125,11 +125,11 @@
   "activeSubMilestone": {
     "id": "M-D",
     "name": "UI Backfill",
-    "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf per Rocky's iron-rule directive against deferred placeholders) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) shipped 2026-04-19 (atomic 7fac251) + step (d) shipped 2026-04-19 (atomic 579f730) + step (e) OrgChartView read-side shipped 2026-04-19 (atomic 2853d18); next: step (f) Org-chart interactions",
+    "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf per Rocky's iron-rule directive against deferred placeholders) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) shipped 2026-04-19 (atomic 7fac251) + step (d) shipped 2026-04-19 (atomic 579f730) + step (e) OrgChartView read-side shipped 2026-04-19 (atomic 2853d18) + step (f) Org-chart interactions shipped 2026-04-19 (atomic 3aca4ed); next: step (g) E2E spec + full verification gate",
     "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
     "auditDoc": "docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md",
-    "nextSession": "Proceed with M-D step (f): Org-chart interactions. Scope: hook promote/fire/setManager interactions onto the step (e) OrgChartView surface, preserve optimistic-update rollback, and extend org-chart E2E with write-side flows and audit-event assertions. No new IPC channels unless the roles read surface is proven absent and change-control approves it.",
-    "stepsShippedSummary": "M-D IN PROGRESS. 5 of 7 atomic steps effectively landed (step (b) collapsed forward into step (a) hardening atomic per iron-rule) plus the workspace-switcher pre-flight gate: atomic 5d0c5bc (step a foundation; +31 tests to 1603) + atomic e611cbf (step (a+b) collapse + ground-zero audit P1.1/P2.1/P3.1 closures + full CreateCompanyDialog ship; +31 tests to 1634) + atomic 1d04e77 (workspace-switcher E2E pre-flight + created-company cache race fix + app-brand selector hardening; vitest 1655, E2E 12 specs / 13 cases) + atomic 7fac251 step (c) CompanySettings/HireDialog manager-select (+10 source-string contract tests, desktop vitest 1335, E2E 12 specs / 15 cases) + atomic 579f730 step (d) Chat tab enable (+6 source-string contract tests, focused renderer 105/105, E2E 12 specs / 16 cases) + atomic 2853d18 step (e) OrgChartView read-side (+8 source-string contract tests, focused renderer 113/113, E2E 13 specs / 17 cases). Remaining: (f) Org-chart interactions, (g) E2E + final verification gate.",
+    "nextSession": "Proceed with M-D step (g): E2E spec + full verification gate. Scope: run the full M-D verification gate, update exit KPI, and prepare M-D handoff to M-F. Step (f) already extended org-chart.spec.ts with drag/promote/fire/audit assertions, so step (g) should focus on complete regression rather than duplicating interaction coverage.",
+    "stepsShippedSummary": "M-D IN PROGRESS. 6 of 7 atomic steps effectively landed (step (b) collapsed forward into step (a) hardening atomic per iron-rule) plus the workspace-switcher pre-flight gate: atomic 5d0c5bc (step a foundation; +31 tests to 1603) + atomic e611cbf (step (a+b) collapse + ground-zero audit P1.1/P2.1/P3.1 closures + full CreateCompanyDialog ship; +31 tests to 1634) + atomic 1d04e77 (workspace-switcher E2E pre-flight + created-company cache race fix + app-brand selector hardening; vitest 1655, E2E 12 specs / 13 cases) + atomic 7fac251 step (c) CompanySettings/HireDialog manager-select (+10 source-string contract tests, desktop vitest 1335, E2E 12 specs / 15 cases) + atomic 579f730 step (d) Chat tab enable (+6 source-string contract tests, focused renderer 105/105, E2E 12 specs / 16 cases) + atomic 2853d18 step (e) OrgChartView read-side (+8 source-string contract tests, focused renderer 113/113, E2E 13 specs / 17 cases) + atomic 3aca4ed step (f) Org-chart interactions (+4 source-string contract tests, focused renderer 117/117, E2E 13 specs / 18 cases). Remaining: (g) E2E + final verification gate.",
     "stepsShipped": [
       {
         "step": "a",
@@ -282,6 +282,38 @@
           "pnpm -F @team-x/desktop exec playwright test e2e/workspace-switcher.spec.ts — 4/4 cases"
         ],
         "nextStep": "step (f) — Org-chart interactions"
+      },
+      {
+        "step": "f",
+        "shippedAt": "2026-04-19T17:30:00-07:00",
+        "atomicCommit": "3aca4ed",
+        "summary": "Added optimistic fire/promote/setManager hooks, read-only useRoles over the 55 bundled non-system roles, PromoteDialog and FireDialog write gates, live OrgChartNode action bar, HTML drag/drop manager reassignment, invalid-drop toast rollback, and org-chart E2E coverage for drag persistence, promote, fire, and Audit tab employee-event assertions.",
+        "qaDoc": "docs/qa/2026-04-19-m-d-step-f-org-chart-interactions.md",
+        "testsDelta": 4,
+        "vitestTotalAfter": 1683,
+        "auditClaimsAfter": "92/3/0",
+        "allowlistAfter": 3,
+        "e2eDelta": 1,
+        "e2eSpecsAfter": 13,
+        "e2eGreenCasesAfter": 18,
+        "verifiedBy": [
+          "apps/desktop/src/renderer/src/hooks/use-fire-employee.ts",
+          "apps/desktop/src/renderer/src/hooks/use-promote-employee.ts",
+          "apps/desktop/src/renderer/src/hooks/use-set-manager.ts",
+          "apps/desktop/src/renderer/src/hooks/use-roles.ts",
+          "apps/desktop/src/renderer/src/features/orgchart/promote-dialog.tsx",
+          "apps/desktop/src/renderer/src/features/orgchart/fire-dialog.tsx",
+          "apps/desktop/src/renderer/src/features/orgchart/org-chart-interactions.test.tsx",
+          "apps/desktop/e2e/org-chart.spec.ts",
+          "docs/qa/2026-04-19-m-d-step-f-org-chart-interactions.md",
+          "focused renderer suite — 5 files / 117 tests",
+          "pnpm -F @team-x/desktop typecheck — clean",
+          "pnpm lint — 0 errors / 21 warnings",
+          "pnpm -F @team-x/desktop build — clean",
+          "pnpm -F @team-x/desktop exec playwright test e2e/org-chart.spec.ts — 2/2 cases",
+          "pnpm -F @team-x/desktop exec playwright test e2e/workspace-switcher.spec.ts — 4/4 cases"
+        ],
+        "nextStep": "step (g) — E2E spec + full verification gate"
       }
     ]
   },
@@ -356,11 +388,11 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-D step (e) OrgChartView read-side shipped 2026-04-19 (atomic 2853d18); head-of-queue advances to step (f) Org-chart interactions",
-    "unitTests": 1679,
-    "unitTestsNote": "M-D step (e) adds 8 OrgChartView source-string contract tests. Focused renderer suite passed 4 files / 113 tests; root total inferred from 1671 step (d) baseline + 8 new tests.",
+    "asOfTask": "Phase 5.6 M-D step (f) Org-chart interactions shipped 2026-04-19 (atomic 3aca4ed); head-of-queue advances to step (g) E2E spec + full verification gate",
+    "unitTests": 1683,
+    "unitTestsNote": "M-D step (f) adds 4 OrgChartInteractions source-string contract tests. Focused renderer suite passed 5 files / 117 tests; root total inferred from 1679 step (e) baseline + 4 new tests.",
     "e2eSpecs": 13,
-    "e2eGreenCount": 17,
+    "e2eGreenCount": 18,
     "lintErrors": 0,
     "lintWarnings": 21,
     "typecheckClean": true,

@@ -2,7 +2,7 @@
   "currentPhase": "REMEDIATION",
   "currentMilestone": "Phase 5.6 M-D",
   "milestoneName": "UI Backfill",
-  "tasksCompleted": 4,
+  "tasksCompleted": 6,
   "tasksFailed": 0,
   "totalTasks": 7,
   "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
@@ -64,15 +64,15 @@
     "asOfMilestone": "M34 complete (commit af643ec)"
   },
   "current": {
-    "unitTests": 1679,
-    "unitTestsNote": "Phase 5.6 M-D step (e) shipped in atomic 2853d18 — 8 new OrgChartView source-string contract tests. Focused renderer suite passed 4 files / 113 tests; root total inferred from 1671 step (d) baseline + 8 new tests.",
+    "unitTests": 1683,
+    "unitTestsNote": "Phase 5.6 M-D step (f) shipped in atomic 3aca4ed — 4 new OrgChartInteractions source-string contract tests. Focused renderer suite passed 5 files / 117 tests; root total inferred from 1679 step (e) baseline + 4 new tests.",
     "e2eSpecs": 13,
-    "e2eGreenCount": 17,
+    "e2eGreenCount": 18,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; biome --fix auto-fixed format-only errors on the step e files. 0 rule-suppressions.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 5.6 M-D step (e) OrgChartView read-side shipped (atomic 2853d18); head-of-queue advances to M-D step (f) Org-chart interactions",
+    "asOfTask": "Phase 5.6 M-D step (f) Org-chart interactions shipped (atomic 3aca4ed); head-of-queue advances to M-D step (g) E2E spec + full verification gate",
     "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (90/5 → 92/3 at step e ship; M-C-exit allowlist target reached)",
     "phase5Complete": true,
     "version": "1.1.0"

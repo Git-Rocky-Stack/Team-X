@@ -2,6 +2,8 @@
 
 **Scope:** Cluster B org-chart write-side UI over the already-shipped M-C IPC surface.
 
+**Result:** Implemented and verified in atomic commit `3aca4ed`.
+
 ## What Changed
 
 - Added optimistic React Query mutation hooks for `employees.fire`, `employees.promote`, and `employees.setManager`, with rollback on IPC failure and reconciliation via the existing employee bus-event invalidators.

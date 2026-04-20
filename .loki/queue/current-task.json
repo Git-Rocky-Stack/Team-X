@@ -9,20 +9,21 @@
     "M-D step (c) — atomic commit 7fac251 (CompanySettings sheet + Company status/icon/theme projection + archived filtering + HireDialog manager-select + workspace-switcher E2E expansion; desktop vitest 1335/1335, focused source audit 10/10, workspace-switcher E2E 3/3)",
     "M-D step (d) — atomic commit 579f730 (Chat tab enabled + ChatView thread-list landing + ChatDrawer handoff + workspace-switcher E2E chat-tab case; focused renderer suite 105/105, workspace-switcher E2E 4/4, typecheck/build/lint green)",
     "M-D step (e) — atomic commit 2853d18 (Org tab enabled + useOrgChart/useOrgChartEventSync + OrgChartView/Tree/Node read-side + org-chart E2E; focused renderer suite 113/113, org-chart E2E 1/1, workspace-switcher E2E 4/4, typecheck/build/lint green)",
+    "M-D step (f) — atomic commit 3aca4ed (Org-chart interactions: optimistic fire/promote/setManager hooks, 55-role useRoles catalog, PromoteDialog/FireDialog, HTML drag/drop manager reassignment, org-chart E2E interactions + audit assertions; focused renderer suite 117/117, org-chart E2E 2/2, workspace-switcher E2E 4/4, typecheck/build/lint green)",
     "M-D step (a+b) ground-zero audit — docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md (1 P1 + 2 P2 + 3 P3 + 3 P4 findings; P1.1 + P2.1 + P3.1 closed inline by atomic e611cbf per Rocky's iron-rule directive against deferred placeholders)",
     "M-D plan doc — docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md (7 atomic steps a/b/c/d/e/f/g; revised post-audit to mark step (b) collapsed-into-step-(a) per the iron-rule directive)",
     "M-D exit KPI — vitest 1634/1634 green at step (a+b) ship (1572 step-f baseline + 62 new: step-a 31 + step-b/hardening 31 across CreateCompanyDialog + useCreateCompany + App.tsx audit + WorkspaceSwitcher revisions)",
     "M-D exit KPI — pnpm audit:claims 92 verified / 3 allowlisted / 0 UNALLOWED preserved (no allowlist movement — M-D adds no IPC channels)",
     "M-D exit KPI — pnpm typecheck clean across 6 packages (preserved)",
     "M-D exit KPI — pnpm lint 0 errors / 21 warnings (preserved from M-C step d hardening baseline; dialog theme picker refactored from <button role='radio'> to native <fieldset>+<legend>+<input type='radio'> per Biome useSemanticElements + WCAG 4.1.2 / 1.3.1 — proactive a11y improvement triggered during hardening)",
-    "M-D current KPI — E2E advanced to 12 specs / 16 Playwright cases after step (d); step g adds the remaining org-chart spec"
+    "M-D current KPI — E2E advanced to 13 specs / 18 Playwright cases after step (f); step g runs the final verification gate"
   ],
   "verifiedByContract": "Phase 5.6 M-E S4 — verifiedBy is REQUIRED (non-empty string array) when status begins with 'shipped'. Validator: apps/desktop/src/loki-verified-by.test.ts. Schema: .loki/queue/schema.json. Set on ship by populating with concrete evidence artifact paths.",
   "phase": "Phase 5.6 — Reconciliation & Remediation",
   "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
   "planDocSection": "§3 Step decomposition (7 atomic steps a/b/c/d/e/f/g) + §6 DoR + §7 DoD + §8 Risks + parent plan docs/plans/2026-04-17-team-x-phase-5.6-remediation.md §6 M-D",
   "title": "Phase 5.6 M-D T0 — UI Backfill: Cluster A WorkspaceSwitcher/CreateCompanyDialog/CompanySettings + Cluster B org chart tree + drag + Cluster C chat tab enable",
-  "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) shipped 2026-04-19 (atomic 7fac251) + step (d) shipped 2026-04-19 (atomic 579f730) + step (e) OrgChartView read-side shipped 2026-04-19 (atomic 2853d18); head-of-queue is step (f) Org-chart interactions",
+  "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) shipped 2026-04-19 (atomic 7fac251) + step (d) shipped 2026-04-19 (atomic 579f730) + step (e) OrgChartView read-side shipped 2026-04-19 (atomic 2853d18) + step (f) Org-chart interactions shipped 2026-04-19 (atomic 3aca4ed); head-of-queue is step (g) E2E spec + full verification gate",
   "predecessor": "Phase 5.6 M-C (Backend Backfill) SHIPPED 2026-04-18 — atomic commits f417a18 + b858067 + c2e6c92 + 19dbd35 + c6b118a + fd3617b + a4dc24e + 582d0f0. Every Cluster A + B backend surface verified on-disk; allowlist shrunk 9 → 3 entries over the M-C run. M-C bus-event coverage is complete for every state-mutating IPC channel (companies.*/employees.*/tickets.*/projects.*/goals.*), so M-D consumes the invariant #11 surface without adding new emits.",
   "stepsShipped": [
     {
@@ -188,6 +189,31 @@
       ],
       "deliverable": "Restores the Cluster B org-chart read-side renderer surface. The top-bar Org tab is now clickable and routes to OrgChartView instead of the ComingSoon placeholder. OrgChartView consumes the M-C orgchart.get flat projection through useOrgChart, mounts useOrgChartEventSync for employee.hired/fired/promoted/managerSet invalidation, renders no-company/loading/error/empty states with stable data selectors, and passes employees/edges/rootIds into a memoized OrgChartTree. OrgChartNode renders level badges plus a keyboard-reachable step-(f) action affordance without wiring write-side mutations early. No new IPC channels, migrations, or bus events were added.",
       "nextStep": "step (f) — Org-chart interactions"
+    },
+    {
+      "step": "f",
+      "name": "Org-chart interactions",
+      "shippedAt": "2026-04-19T17:30:00-07:00",
+      "atomicCommit": "3aca4ed",
+      "verifiedBy": [
+        "apps/desktop/src/renderer/src/hooks/use-fire-employee.ts (NEW — employees.fire mutation with optimistic org-chart cache removal + rollback)",
+        "apps/desktop/src/renderer/src/hooks/use-promote-employee.ts (NEW — employees.promote mutation with optimistic role/title/level patch + response reconciliation)",
+        "apps/desktop/src/renderer/src/hooks/use-set-manager.ts (NEW — employees.setManager mutation with optimistic edge reparent/detach + rollback)",
+        "apps/desktop/src/renderer/src/hooks/use-roles.ts (NEW — 55 bundled non-system role options; system-agent/system-copilot excluded; FOLLOWUP-P2 recorded for roles.list IPC)",
+        "apps/desktop/src/renderer/src/features/orgchart/promote-dialog.tsx + fire-dialog.tsx (NEW — explicit promote/fire write gates)",
+        "apps/desktop/src/renderer/src/features/orgchart/org-chart-view.tsx/tree/node.tsx (MODIFIED — live action bar, manager select, HTML drag/drop, toast feedback, Chat handoff)",
+        "apps/desktop/src/renderer/src/features/orgchart/org-chart-interactions.test.tsx (NEW — 4 source-string contract tests; RED first, then PASS)",
+        "apps/desktop/e2e/org-chart.spec.ts (MODIFIED — 2 cases covering read-side, drag persistence across app restart, invalid-drop feedback, promote, fire, and Audit tab event assertions)",
+        "docs/qa/2026-04-19-m-d-step-f-org-chart-interactions.md (NEW — verification evidence note)",
+        "focused renderer suite — 5 files / 117 tests",
+        "pnpm -F @team-x/desktop typecheck — clean",
+        "pnpm lint — 0 errors / 21 warnings",
+        "pnpm -F @team-x/desktop build — clean",
+        "pnpm -F @team-x/desktop exec playwright test e2e/org-chart.spec.ts — 2/2 cases",
+        "pnpm -F @team-x/desktop exec playwright test e2e/workspace-switcher.spec.ts — 4/4 cases"
+      ],
+      "deliverable": "Restores the Cluster B org-chart write-side renderer surface. OrgChartView now wires optimistic React Query mutations for fire/promote/setManager, OrgChartNode exposes live Chat/Promote/Fire/Reassign manager actions plus native HTML drag/drop manager reassignment, PromoteDialog selects from the 55 bundled visible roles, FireDialog requires exact employee-name confirmation, and failed invalid/cycle-forming drops roll back and surface a toast. The org-chart E2E now verifies drag persistence across app restart, invalid-drop feedback, promote, fire, and Audit tab visibility for employee.managerSet/promoted/fired events. No new IPC channels, migrations, or bus events were added.",
+      "nextStep": "step (g) — E2E spec + full verification gate"
     }
   ],
   "interimDoR": [
@@ -234,15 +260,15 @@
     "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md (M-D T0 plan doc; shipped step a)",
     ".loki/queue/pending.json + current-task.json (UPDATED per step — activeSubMilestone step progression + stepsShipped array append)"
   ],
-  "testsDeltaEstimate": "60–100 unit across all 7 steps (step a landed +31; step (a+b) hardening/CreateCompanyDialog landed +31; step c landed +10 source-string contract tests; step d landed +6 source-string contract tests; step e landed +8 source-string contract tests; step f ~30; step g extends E2E coverage)",
+  "testsDeltaEstimate": "60–100 unit across all 7 steps (step a landed +31; step (a+b) hardening/CreateCompanyDialog landed +31; step c landed +10 source-string contract tests; step d landed +6 source-string contract tests; step e landed +8 source-string contract tests; step f landed +4 source-string contract tests; step g runs final verification)",
   "e2eDeltaEstimate": 2,
   "estimateDays": 6,
   "bufferDays": 3,
   "commitTemplate": "feat(phase-5.6-m-d): Phase 5.6 M-D step <letter> — <scope>",
   "ledgerTemplate": "chore(loki): Phase 5.6 M-D step <letter> committed (<sha>) — head-of-queue advances to step <next>",
   "verification": {
-    "unitTests": "1679 inferred after step (e): step (d) baseline 1671 + 8 OrgChartView source-string contract tests; focused renderer suite passed 4 files / 113 tests",
-    "e2eSpecs": "13 specs / 17 cases after step (e) org-chart read-side spec; 13 specs / 18+ cases at M-D exit after org-chart interactions land",
+    "unitTests": "1683 inferred after step (f): step (e) baseline 1679 + 4 OrgChartInteractions source-string contract tests; focused renderer suite passed 5 files / 117 tests",
+    "e2eSpecs": "13 specs / 18 cases after step (f) org-chart interactions; step (g) runs the final M-D verification gate",
     "lint": "0 errors / 21 warnings (M-C step d hardening baseline preserved)",
     "typecheck": "clean across 6 packages",
     "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED preserved (M-D adds no IPC channels)",
@@ -250,10 +276,11 @@
   },
   "notes": [
     "M-D is the first sprint to run entirely on M-C's restored backend surface. Every UI component consumes a verified-on-disk IPC channel + subscribes to the invariant #11 bus events M-C wired. Zero backend additions in M-D scope.",
-    "Restoration order WITHIN M-D: (a) WorkspaceSwitcher foundation [SHIPPED]. (b) CreateCompanyDialog + step-a audit hardening [SHIPPED via step (a+b) collapse]. Workspace-switcher E2E pre-flight [SHIPPED via 1d04e77]. (c) CompanySettings + HireDialog manager-select [SHIPPED via 7fac251]. (d) Chat tab enable [SHIPPED via 579f730]. (e) OrgChartView read-side [SHIPPED via 2853d18]. Next: (f) Org-chart interactions (depends on e). (g) remaining org-chart interaction E2E + final verification gate.",
+    "Restoration order WITHIN M-D: (a) WorkspaceSwitcher foundation [SHIPPED]. (b) CreateCompanyDialog + step-a audit hardening [SHIPPED via step (a+b) collapse]. Workspace-switcher E2E pre-flight [SHIPPED via 1d04e77]. (c) CompanySettings + HireDialog manager-select [SHIPPED via 7fac251]. (d) Chat tab enable [SHIPPED via 579f730]. (e) OrgChartView read-side [SHIPPED via 2853d18]. (f) Org-chart interactions [SHIPPED via 3aca4ed]. Next: (g) E2E spec + full verification gate.",
     "Each step is its own atomic + ledger. Allowlist preserved at 3 entries throughout M-D — the remaining 3 are mcp.* naming-drift rows scheduled for M-F docs-only IPC table renames.",
     "Do NOT start M-F (Documentation Truth-Up) before M-D ships. M-F rewrites CLAUDE.md status blocks in three-bucket format which requires M-D exit-KPI as an input.",
     "The Company wire shape is now widened in step (c) to include status/icon/theme. useCompanies() filters archived rows from active workspace selection; the main-side rowToCompany projection now exposes the needed fields.",
-    "The cross-hook contract iterator in event-sync-hooks.test.ts is split into two iteration lists per step (a) — per-company hooks [use-tickets / meetings / projects / goals / employees] for the [companyId, qc] mount-once pattern, and ALL hooks [+ use-companies] for the ground-zero-audit citation. A future global-scope hook (e.g., use-providers or use-settings-sync) joins use-companies on the citation iteration but not the companyId-guarded iteration."
+    "The cross-hook contract iterator in event-sync-hooks.test.ts is split into two iteration lists per step (a) — per-company hooks [use-tickets / meetings / projects / goals / employees] for the [companyId, qc] mount-once pattern, and ALL hooks [+ use-companies] for the ground-zero-audit citation. A future global-scope hook (e.g., use-providers or use-settings-sync) joins use-companies on the citation iteration but not the companyId-guarded iteration.",
+    "Step (f) intentionally preserves the no-new-IPC M-D boundary. No roles.list preload IPC exists today; useRoles() ships with the bundled 55-role non-system catalog, with FOLLOWUP-P2 recorded for a future thin read-only roles.list channel."
   ]
 }

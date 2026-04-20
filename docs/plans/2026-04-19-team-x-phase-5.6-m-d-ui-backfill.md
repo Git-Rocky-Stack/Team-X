@@ -147,6 +147,8 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 ### Step (f) — Org-chart interactions (Cluster B, write-side)
 
+> **2026-04-19 — SHIPPED in commit `3aca4ed`.** Step (f) added optimistic mutation hooks for fire/promote/setManager, exposed the 55 bundled non-system roles through `useRoles`, replaced the Org node placeholder action bar with live Chat/Promote/Fire/Reassign manager/HTML drag-drop interactions, added Promote/Fire dialogs, and extended `apps/desktop/e2e/org-chart.spec.ts` with drag persistence, invalid-drop feedback, promote, fire, and Audit tab event assertions.
+
 **Goal:** Hook up drag-to-rearrange + promote + fire. This is where invariant #11 + optimistic updates get tested end-to-end.
 
 **Files:**
@@ -161,6 +163,7 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 - **Optimistic update + rollback.** Drag fires `setManager`; cache is mutated immediately; on IPC error (e.g., cycle rejection), the cache is rolled back + a toast shows the error. Invariant #11 bus event provides reconciliation even when rollback races with another window.
 - **Cycle-guard happens main-side.** The M-C step d handler pre-flight `wouldCycle` check returns a friendlier error message. The renderer just surfaces it verbatim in the toast.
 - **`use-roles` is read-only.** No changes to the role-pack loader; the hook just exposes `roleLoader.listByLevel()` via a new thin IPC read (or reuses the existing seeded-in-memory surface if already exposed). Investigate first — if no IPC is exposed, file a FOLLOWUP-P2 for an `roles.list` read channel.
+  - **Step (f) outcome:** no `roles.list` preload IPC exists. To preserve the M-D no-new-IPC boundary, `useRoles()` ships with the bundled 55-role non-system catalog and documents FOLLOWUP-P2 for a thin read-only `roles.list` IPC.
 
 **Acceptance:** drag one employee under another, the edge persists across app restart (invariant: `orgchart.get` returns the new edge); cycle-forming drag rejected with toast; promote changes the row's level + title end-to-end; fire removes the row end-to-end; all four flows dispatch the right M-C bus events (verified by Audit tab picking them up).
 
@@ -170,12 +173,12 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 **Files:**
 - EXISTING `apps/desktop/e2e/workspace-switcher.spec.ts` — pre-flight already covers boot, switcher render, create company end-to-end, active switch, and switch-back. Step (c) has already extended this spec to edit/archive/delete and hire manager-edge assertions; Step (d) adds the Chat tab/thread-selection case; Step (g) adds audit-event assertions for `company.created / updated / archived / deleted`.
-- EXISTING `apps/desktop/e2e/org-chart.spec.ts` — step (e) already covers boot → Org tab → seeded CEO/SWE tree render → keyboard action affordance. Step (g) extends this spec with hire/promote/drag/fire and `employee.*` audit-event assertions.
+- EXISTING `apps/desktop/e2e/org-chart.spec.ts` — step (e) covered boot → Org tab → seeded CEO/SWE tree render → keyboard action affordance; step (f) now extends this spec with drag/promote/fire and `employee.*` audit-event assertions. Step (g) owns the full final verification gate rather than adding a second interaction spec.
 - MODIFIED E2E specs that assert Chat tab disabled (if any — grep first) → flip to asserting it's enabled.
 
 **Acceptance (M-D exit KPI):**
 - vitest: baseline 1572 + new unit tests (estimate +30–60 across hooks + components).
-- E2E: 13 specs / 17 cases after the step (e) org-chart read-side spec; target 13 specs / 18+ cases at M-D exit after org-chart interactions land.
+- E2E: 13 specs / 18 cases after step (f) org-chart interactions; step (g) runs the final M-D verification gate and updates the exit KPI.
 - typecheck clean across 6 packages.
 - lint 0 errors / ≤21 warnings (baseline preserved).
 - `pnpm audit:claims`: 92 / 3 / 0 preserved — no allowlist movement expected (M-D adds no IPC channels).
