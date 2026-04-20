@@ -1,12 +1,36 @@
 # Team-X Phase 6 M37 Role-Fit v2 Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **Status:** Reconciled 2026-04-20 by M37-R. The implementation described below already landed in commit `26d07df`; this document now serves as both the original M37 implementation plan and the reconciliation evidence record.
+>
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task when authoring future task plans. For this M37-R pass, execute verification/reconciliation only; do not add new feature scope.
 
 **Goal:** Replace M32's title-keyword role-fit heuristic with capability-overlap scoring while preserving the locked four-term workload score.
 
 **Architecture:** M36 made role capabilities available through role.md frontmatter. M37 threads those capabilities into the write-side planner scorer, asks decomposition outputs to declare `requiredCapabilities`, and changes only the `role_fit` term inside the existing `0.4 / 0.3 / 0.2 / 0.1` formula. If a subtask has no required capabilities, the scorer falls back to the M32 keyword heuristic to preserve existing behavior for generic or legacy decomposition outputs.
 
 **Tech Stack:** TypeScript, Vitest, Zod, `@team-x/shared-types` capability enum, `@team-x/role-schema` role specs, Electron main-process services.
+
+---
+
+## Reconciliation Evidence
+
+M37-R inventoried the shipped surface from `26d07df` and verified the acceptance criteria:
+
+- `apps/desktop/src/main/services/agentic-tools-write.ts` preserves the locked 4-weight workload score and changes only the role-fit term.
+- `computeRoleFit` returns Jaccard overlap when `requiredCapabilities` is present and falls back to the M32 keyword heuristic when it is absent or empty.
+- `parseDecomposition` reads provider `requiredCapabilities`, dedupes valid capability strings, and drops invalid provider strings before scoring.
+- `AgenticToolsWriteDeps.roleLookup` threads official role frontmatter capabilities into candidate scoring; `apps/desktop/src/main/index.ts` passes `roleLoader`.
+- No renderer surface, IPC channel, migration, setting, or bus event was added by M37.
+
+Focused verification run during M37-R:
+
+| Suite | Command | Result |
+|-------|---------|--------|
+| Shared-types taxonomy | `pnpm -F @team-x/shared-types exec vitest run src/capabilities.test.ts src/capabilities-taxonomy-marker.test.ts` | 2 files / 20 tests passed |
+| Role-schema parser/backfill/signature | `pnpm -F @team-x/role-schema exec vitest run src/parse.test.ts src/capabilities-backfill.test.ts src/pack-signature.test.ts` | 3 files / 50 tests passed |
+| Desktop role-fit + loader | `pnpm -F @team-x/desktop exec vitest run src/main/services/agentic-tools-write.test.ts src/main/services/role-loader.test.ts` | 2 files / 50 tests passed |
+
+The task sections below are retained to explain what was implemented. Treat them as historical implementation steps, not as outstanding work.
 
 ---
 
@@ -580,3 +604,7 @@ If root lint fails only for unrelated pre-existing files, record the exact resid
 ## Follow-Up Boundary
 
 M37 does not add a renderer preview or explainability UI for why an assignee won. If needed, a later milestone can surface the winning `requiredCapabilities` and overlap breakdown in the plan proposal payload, but M37 keeps the public result envelope unchanged.
+
+## M37-R Closeout
+
+M37-R closes the reconciliation gap caused by Phase 5.6 pausing M36 mid-stream and later finding the capability/parser/scorer code already present in branch history. The next new Phase 6 implementation milestone is **M38 Insight Feedback Loop**; it should open with a T0 plan doc before code changes.

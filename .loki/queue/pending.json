@@ -1,18 +1,18 @@
 {
-  "milestone": "Phase 6 M37-R",
-  "milestoneName": "Capability Role-Fit Reconciliation",
+  "milestone": "Phase 6 M38",
+  "milestoneName": "Insight Feedback Loop",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
-  "planDocSection": "Reconciliation after Phase 5.6 M-G ship",
+  "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+  "planDocSection": "M38 T0 plan doc",
   "previousPhase": "Phase 5.6 — Reconciliation & Remediation",
   "previousPhaseStatus": "SHIPPED 2026-04-20 as v1.1.1",
   "previousPhaseCompletedAt": "2026-04-20T01:30:00Z",
-  "previousMilestone": "Phase 5.6 M-G",
-  "previousMilestoneName": "Branch Hygiene + Ship",
-  "previousMilestoneCompletedAt": "2026-04-20T01:30:00Z",
-  "previousMilestoneCommit": "852f6f7 + paired M-G ledger commit",
+  "previousMilestone": "Phase 6 M37-R",
+  "previousMilestoneName": "Capability Role-Fit Reconciliation",
+  "previousMilestoneCompletedAt": "2026-04-20T02:30:00Z",
+  "previousMilestoneCommit": "pending-this-reconciliation-commit",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-20T01:30:00Z",
+  "updatedAt": "2026-04-20T02:30:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -147,30 +147,54 @@
         "pnpm build — clean production build",
         "git diff --check — clean"
       ]
+    },
+    {
+      "id": "M37-R",
+      "name": "Capability Role-Fit Reconciliation",
+      "estimate": "0.5d",
+      "status": "shipped 2026-04-20 — reconciled already-landed M36/M37 capability parser/backfill/role-fit work from commit 26d07df; no new feature scope added",
+      "dor": "satisfied by Phase 5.6 M-G v1.1.1 ship + branch history containing commit 26d07df",
+      "dod": "satisfied — capability taxonomy, role-schema parser/backfill, official pack signature/version, role-loader capability lookup, and write-side role-fit v2 inventoried; focused tests green; Phase 6 docs/Loki updated; next implementation milestone selected as M38",
+      "verifiedBy": [
+        "commit 26d07df — feat(phase-6): add capability role-fit scoring",
+        "packages/shared-types/src/capabilities.ts (41 capabilities / 6 categories / runtime guard)",
+        "packages/role-schema/src/parse.ts + packages/role-schema/src/capabilities-backfill.test.ts",
+        "role-packs/strategia-official/roles/ — 57 role markdown files with non-empty capabilities",
+        "role-packs/strategia-official/pack.json version 1.1.0 + pack.sig present",
+        "apps/desktop/src/main/services/agentic-tools-write.ts capability Jaccard role-fit + M32 fallback",
+        "apps/desktop/src/main/index.ts roleLoader injected as roleLookup",
+        "shared-types focused tests — 2 files / 20 tests passed",
+        "role-schema focused tests — 3 files / 50 tests passed",
+        "desktop role-loader/scorer focused tests — 2 files / 50 tests passed"
+      ]
     }
   ],
   "activeSubMilestone": {
-    "id": "M37-R",
-    "name": "Capability Role-Fit Reconciliation",
-    "status": "head-of-queue — Phase 5.6 M-G shipped; reconcile existing Phase 6 capability/role-fit code before new feature work",
-    "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
-    "auditDoc": "docs/plans/2026-04-20-team-x-phase-5.6-retrospective.md",
-    "nextSession": "Proceed with Phase 6 M37-R. Scope: read-only inventory + focused verification of capabilities taxonomy, role-schema parser/backfill, pack signature, and role-fit scorer already present from commit 26d07df; then update Phase 6 Loki/docs to match reality.",
-    "dor": "Phase 5.6 M-G v1.1.1 ship ledger closed and tag/push complete",
-    "dod": "existing Phase 6 capability/role-fit surface inventoried, focused tests green, docs/Loki reconciled, next Phase 6 implementation task selected without hidden drift",
+    "id": "M38",
+    "name": "Insight Feedback Loop",
+    "status": "head-of-queue — author M38 T0 plan doc before implementation",
+    "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+    "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+    "nextSession": "Proceed with Phase 6 M38 T0. Scope: plan-doc-only design for copilot_category_weights, advisory dismissal-pattern detector, analyzer weighting, explicit user confirmation, and invariant #11 bus event; no code until the T0 plan is complete.",
+    "dor": "M37-R reconciliation closed with focused tests green and M36/M37 docs/Loki aligned to on-disk reality",
+    "dod": "M38 plan doc authored with decisions, non-goals, TDD task sequence, verification gates, and no implementation drift",
     "verifiedBy": null,
     "blockedBy": null
   },
   "previousSubMilestone": {
-    "id": "M-G",
-    "name": "Branch Hygiene + Ship",
-    "status": "head-of-queue — M-F shipped 2026-04-19; final cross-check, retrospective, version/tag, branch deletion, and pause release remain",
-    "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
-    "auditDoc": "docs/audits/2026-04-17-conformance-audit.md",
-    "nextSession": "Proceed with Phase 5.6 M-G Branch Hygiene + Ship. Scope: final audit cross-check, Phase 5.6 retrospective, CHANGELOG/version bump to v1.1.1 if confirmed, delete worktree-phase-2-the-org local+origin after evidence review, tag/push, and lift M36 pause only after M-G ships.",
-    "dor": "M-F Loki exit-KPI closed",
-    "dod": "all 7 DoDs met + worktree-phase-2-the-org deleted local+origin + CHANGELOG [Unreleased] → [1.1.1] + v1.1.0 → v1.1.1 across 7 package.json + v1.1.1 git tag + main pushed + retrospective committed",
-    "verifiedBy": null,
+    "id": "M37-R",
+    "name": "Capability Role-Fit Reconciliation",
+    "status": "shipped 2026-04-20 — docs/Loki reconciled and focused tests green",
+    "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
+    "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+    "nextSession": "Proceed with Phase 6 M38 T0 Insight Feedback Loop plan doc.",
+    "dor": "Phase 5.6 M-G v1.1.1 ship ledger closed and tag/push complete",
+    "dod": "existing Phase 6 capability/role-fit surface inventoried, focused tests green, docs/Loki reconciled, next Phase 6 implementation task selected without hidden drift",
+    "verifiedBy": [
+      "shared-types focused tests — 2 files / 20 tests passed",
+      "role-schema focused tests — 3 files / 50 tests passed",
+      "desktop role-loader/scorer focused tests — 2 files / 50 tests passed"
+    ],
     "blockedBy": null
   },
   "previousPreviousSubMilestone": {
@@ -225,9 +249,9 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-G Branch Hygiene + Ship shipped 2026-04-20; Phase 6 is unpaused and next task is capability/role-fit reconciliation.",
+    "asOfTask": "Phase 6 M37-R reconciled already-landed M36/M37 capability parser/backfill/role-fit work; M38 Insight Feedback Loop T0 is head-of-queue.",
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites.",
     "e2eSpecs": 13,
     "e2eGreenCount": 18,
     "lintErrors": 0,
@@ -240,7 +264,7 @@
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
     "phase56SurfaceArea": "Conformance audit (M-A) ~200–400 rows + triage (M-B) per-row dispositions + safeguards (M-E) 6 deliverables + backend backfill (M-C) migrations/IPC/repos for restore rows + UI backfill (M-D) components/hooks/routes for restore rows + docs truth-up (M-F) three-bucket CLAUDE.md rewrite + ship (M-G) branch deletion + version bump + retrospective",
     "phase56NonGoals": "No new features beyond restoration. No scope creep from mid-flight discoveries without change-control mini-gate (§14.3). No silent deferrals. No Phase 6 work until M-G ships. No public README/landing-site claim updates — those wait for M-F.",
-    "phase6Next": "M37-R reconciliation before new feature work because capability parser/backfill/role-fit code is already present in branch history."
+    "phase6Next": "M38 T0 Insight Feedback Loop plan doc. M36/M37 are reconciled as shipped from commit 26d07df."
   },
   "sprintFramework": {
     "backlog": "M-B triage output — audit doc `disposition` column. Must-have=restore / Should-have=replace / Won't-have=deprecate (docs only)",
@@ -250,6 +274,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M37-R RECONCILED 2026-04-20 — no new feature scope added. Inventory confirmed commit 26d07df already shipped the M36/M37 capability surface: shared-types 41-capability taxonomy, role-schema parser validation, official 57-role backfill, pack.json 1.1.0 + pack.sig, roleLoader capability specs, write-side capability Jaccard role-fit, provider requiredCapabilities parsing, and M32 keyword fallback for generic subtasks. Focused verification green: shared-types 2 files / 20 tests, role-schema 3 files / 50 tests, desktop role-loader/scorer 2 files / 50 tests. Phase 6 docs + Loki now mark M36/M37 as reconciled/shipped. Head-of-queue advances to Phase 6 M38 T0 — Insight Feedback Loop plan doc.",
     "PHASE 5.6 M-G SHIPPED 2026-04-20 — atomic release commit 852f6f7. v1.1.1 remediation release promoted in CHANGELOG; 7 workspace package.json files bumped to 1.1.1; Phase 5.6 retrospective authored; audit doc §20.8 records zero unresolved restore rows and zero allowlist rows. Gates: strict claims 95/0/0, typecheck clean, lint 0 errors / 21 warnings, pnpm test 125 files / 1683 tests, Playwright 13 specs / 18 cases, build clean, diff-check clean. Phase 6 pause lifted. Earlier Phase 6 capability/role-fit commit 26d07df is intentional branch history; next task is M37-R reconciliation/verification before new Phase 6 expansion.",
     "PHASE 5.6 M-F SHIPPED 2026-04-19 — atomic docs commit 185f6f1. Documentation truth-up complete. CLAUDE.md now carries shipped/deferred/deprecated buckets; the Cluster A aspirational framing is removed and replaced with M-C/M-D restoration evidence; Phase 2 M7/M9 status is reconciled to on-disk reality; the IPC table uses canonical mcp.addServer/mcp.removeServer/mcp.testConnection names; scripts/check-claim-evidence.allowlist.json is empty; README/user-guide/QA counters reflect 1683 unit tests and 13 Playwright specs / 18 cases. Gates: pnpm audit:claims 95/0/0 and pnpm audit:claims -- --strict 95/0/0. M-G Branch Hygiene + Ship is now head-of-queue.",
     "PHASE 5.6 M-D SHIPPED 2026-04-19 — final atomic commit 3680c96. Step (g) closed the UI Backfill exit gate. Added company lifecycle audit assertions to workspace-switcher E2E; hardened org-chart invalid-cycle E2E to use manager-select after valid drag persistence; full gate green: pnpm test 125 files / 1683 tests, pnpm typecheck clean across 6 packages, pnpm lint 0 errors / 21 warnings, pnpm audit:claims 92/3/0, pnpm build clean, full Playwright 13 specs / 18 cases. M-F Documentation Truth-Up is now head-of-queue.",
@@ -283,6 +308,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M37-R — reconcile already-landed capability parser/backfill/role-fit work before new Phase 6 expansion"
+    "nextTask": "Phase 6 M38 T0 — author Insight Feedback Loop plan doc before implementation"
   }
 }

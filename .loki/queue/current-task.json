@@ -1,30 +1,32 @@
 {
-  "taskId": "Phase-6-M37-R-T0",
-  "milestone": "Phase 6 M37-R",
-  "milestoneName": "Capability Role-Fit Reconciliation",
+  "taskId": "Phase-6-M38-T0",
+  "milestone": "Phase 6 M38",
+  "milestoneName": "Insight Feedback Loop",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M37-R T0 — Reconcile already-landed capability parser/backfill/role-fit work",
-  "status": "head-of-queue — Phase 5.6 M-G shipped; verify and ledger the existing Phase 6 capability/role-fit surface before new feature expansion",
+  "title": "Phase 6 M38 T0 — Author Insight Feedback Loop plan doc",
+  "status": "head-of-queue — M37-R reconciled M36/M37 capability parser/backfill/role-fit state; author M38 plan before implementation",
   "verifiedBy": null,
-  "predecessor": "Phase 5.6 M-G Branch Hygiene + Ship SHIPPED 2026-04-20 — atomic commit 852f6f7; v1.1.1 release docs/version/retrospective complete; tag/push follows ledger commit",
+  "predecessor": "Phase 6 M37-R Capability Role-Fit Reconciliation — verified 2026-04-20; 120 focused tests green across shared-types, role-schema, role-loader, and agentic-tools-write",
   "dor": [
-    "Phase 5.6 M-G release atomic committed",
-    "Strict claim-evidence gate passed with 95 verified / 0 allowlisted / 0 UNALLOWED",
-    "Full unit and E2E gates passed at v1.1.1 release baseline",
-    "Earlier Phase 6 capability/role-fit commit 26d07df is intentionally present in branch history"
+    "Phase 5.6 M-G shipped as v1.1.1",
+    "M36 capability taxonomy/parser/backfill substrate reconciled against commit 26d07df",
+    "M37 role-fit v2 scorer and planner capability threading reconciled against commit 26d07df",
+    "Focused M37-R verification passed: shared-types 20/20, role-schema 50/50, desktop role-loader/scorer 50/50",
+    "Phase 6 docs and Loki state now treat M36/M37 as shipped/reconciled"
   ],
   "acceptance": [
-    "Inventory the existing capabilities parser/backfill/scorer surface from commit 26d07df",
-    "Verify official pack capabilities and signature against the v1.1.1 baseline",
-    "Run focused role-schema/shared-types/agentic-tools-write tests and record counts",
-    "Update Phase 6 docs/Loki so M36/M37 status matches on-disk reality",
-    "Decide the next implementation task after reconciliation without adding new feature scope in this pass"
+    "Author docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md as a T0 plan doc before implementation",
+    "Resolve M38 decisions from Phase 6 T0 D19/D20: advisory dismissal pattern detector, explicit user confirmation, and copilot_category_weights clamp [0.0, 2.0]",
+    "Define non-goals: no silent analyzer mutation, no autonomous action, no new provider surface, and no schema migration unless existing settings storage is insufficient",
+    "Specify TDD task sequence for settings persistence, analyzer weighting, dismissal-pattern detection, UI suggestion surface, bus event, and focused tests",
+    "Preserve invariant #11 for any settings mutation and keep T0 plan-doc-only with zero code changes"
   ],
-  "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
+  "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
   "referenceDocs": [
-    "docs/plans/2026-04-21-team-x-phase-6-m36-capabilities-taxonomy.md",
     "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "docs/plans/2026-04-20-team-x-phase-5.6-retrospective.md"
+    "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
+    "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
+    "docs/plans/2026-04-18-team-x-phase-5-m34-copilot-ui.md"
   ],
-  "nextStep": "Start with a read-only reconciliation pass over capabilities taxonomy, role-schema parsing, official role backfill, pack signature, and computeRoleFit behavior before new Phase 6 work."
+  "nextStep": "Start M38 with a plan-doc-only pass. Do not implement settings, analyzer, IPC, bus events, or UI until the M38 T0 plan is authored and reviewed against Phase 6 invariants."
 }

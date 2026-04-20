@@ -16,12 +16,12 @@
 >
 > **M-G Branch Hygiene + Ship SHIPPED 2026-04-20** — promoted CHANGELOG to v1.1.1, bumped 7 workspace packages to `1.1.1`, authored the Phase 5.6 retrospective, verified zero unresolved restore rows + zero claim-evidence allowlist rows, and cleared the M36 pause. `worktree-phase-2-the-org` is deletion-approved by the M-G cross-check.
 >
-> **Phase 6 is unpaused.** The current branch already includes the earlier Phase 6 capabilities/role-fit work from this session history, so the next task is a Phase 6 reconciliation/verification pass before adding new capability work.
+> **Phase 6 is unpaused.** M37-R reconciled the earlier Phase 6 capability/parser/backfill/role-fit work from commit `26d07df`: the official pack has 57 capability-backed roles, role-schema validates capabilities, and write-side role-fit uses capability overlap with the M32 keyword fallback preserved.
 >
 > **Read before acting:**
 > - Active plan: [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](docs/plans/2026-04-17-team-x-phase-5.6-remediation.md)
 > - **M-A conformance audit:** [`docs/audits/2026-04-17-conformance-audit.md`](docs/audits/2026-04-17-conformance-audit.md) — required reading before M-B
-> - Immediate next task: Phase 6 capability/role-fit reconciliation (see `.loki/queue/current-task.json`) — verify the already-landed capabilities parser/backfill/scorer surface and align Loki/Phase 6 docs before new feature expansion.
+> - Immediate next task: Phase 6 M38 T0 — author the Insight Feedback Loop plan doc before new implementation work.
 > - Sprint framework: §14 of the plan (DoR, DoD, velocity KPI, change-control mini-gate — invoked once in M-A per scope-expansion record)
 >
 > Status blocks below are the M-G ship surface. Plan docs remain historical intent; this file records shipped / deferred / deprecated reality as of Phase 5.6 v1.1.1.
@@ -60,11 +60,13 @@ The decisions log in §15 of that doc is **locked** unless explicitly revisited 
 
 **Phase 5.6 remediation — complete. v1.1.1.** M-A audit, M-B triage, M-E process safeguards, M-C backend backfill, M-D UI backfill, M-F documentation truth-up, and M-G branch hygiene/release ship are complete. Exit gate: 1683 unit tests, 13 Playwright specs / 18 cases, strict claim gate 95 verified / 0 allowlisted / 0 UNALLOWED.
 
+**Phase 6 M36/M37 capability substrate — reconciled.** Commit `26d07df` already delivered the 41-capability taxonomy, role-schema capability parser/backfill validation, official 57-role capabilities backfill, pack `1.1.0` signature update, and capability-driven write-side role-fit. M37-R focused verification passed 120/120 tests across shared-types, role-schema, role-loader, and agentic-tools-write.
+
 ### Deferred
 
-- Phase 6 capability/role-fit ledger reconciliation is next because the earlier Phase 6 session already landed capabilities parser/backfill/scorer code on this branch.
-- Phase 6 seeds from the Phase 5 retrospective remain future work: insight export, cross-company rollups, proactive autonomous actions, agent-to-agent negotiation, capability-based role fit, real customer demo polish, and telemetry digest.
-- M32 role-fit still uses the locked four-weight scoring formula and title/level heuristic until Phase 6 capabilities work replaces only the role-fit term.
+- Phase 6 M38 Insight Feedback Loop is next. It should open with a T0 plan doc before implementation.
+- Phase 6 seeds from the Phase 5 retrospective remain future work: insight export, cross-company rollups, proactive autonomous actions, agent-to-agent negotiation, real customer demo polish, and telemetry digest.
+- M37 intentionally changed only the `role_fit` term inside the locked M32 four-weight scoring formula; score weights remain fixed.
 
 ### Deprecated / Corrected Documentation Drift
 

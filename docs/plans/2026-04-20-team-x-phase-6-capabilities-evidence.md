@@ -1,9 +1,21 @@
 # Team-X — Phase 6 Design: Capabilities & Evidence
 
-> **Status:** Plan authored 2026-04-20 (T0). Milestones not yet started.
-> **Version target:** v1.1.0 → v1.2.0 (additive; zero breaking changes).
-> **Predecessor:** [Phase 5 — Intelligence Layer](./2026-04-13-team-x-phase-5-intelligence-layer.md) (complete, v1.1.0, 2026-04-20).
+> **Status:** Plan authored 2026-04-20 (T0). M36 and M37 are reconciled as already-landed by M37-R on 2026-04-20; M38 is the next new implementation milestone.
+> **Version target:** v1.1.1 → v1.2.0 (additive; zero breaking changes).
+> **Predecessor:** [Phase 5.6 — Reconciliation & Remediation](./2026-04-17-team-x-phase-5.6-remediation.md) (complete, v1.1.1, 2026-04-20).
 > **Retrospective:** [2026-04-19-team-x-phase-5-retrospective.md](./2026-04-19-team-x-phase-5-retrospective.md) §6 (Phase 6 seeds).
+
+---
+
+## 0. Reconciliation Status
+
+Phase 5.6 paused Phase 6 after M36 T0/T1, but the current branch history already includes the downstream M36/M37 capability work in commit `26d07df`. M37-R reconciles that state rather than re-implementing it:
+
+- **M36 delivered:** locked 41-capability taxonomy, parser validation, official 57-role capabilities backfill, official pack `1.1.0`, and signature update.
+- **M37 delivered:** capability Jaccard role-fit, provider `requiredCapabilities` parsing, role-loader capability lookup, M32 keyword fallback for generic subtasks, and regression tests for the locked 4-weight formula.
+- **M37-R verified:** 120 focused tests passed across shared-types, role-schema, desktop role-loader, and write-side planner scorer suites.
+
+The milestone breakdown below remains the Phase 6 roadmap, but rows M36 and M37 should be read as shipped/reconciled. No Phase 6 release bump happens until M41.
 
 ---
 
@@ -114,8 +126,8 @@ Phase 6 is complete when all five criteria are met simultaneously.
 
 | # | Milestone | One-line scope | Dep |
 |---|-----------|----------------|-----|
-| **M36** | Capabilities Taxonomy + Parser | Locked capability enum in `shared-types`; `role-schema` parser gains `capabilities` field + validation; 55 F10 + 2 system roles backfilled | none |
-| **M37** | Role-Fit v2 | `computeRoleFit` capabilities-driven; 4-weight signature preserved; v1 → v2 regression guards; updated `agentic-tools-write.ts` + M32 T2 test suite | M36 |
+| **M36** | Capabilities Taxonomy + Parser | **Reconciled as shipped** — locked capability enum in `shared-types`; `role-schema` parser gains `capabilities` field + validation; 55 F10 + 2 system roles backfilled | none |
+| **M37** | Role-Fit v2 | **Reconciled as shipped** — `computeRoleFit` capabilities-driven; 4-weight signature preserved; v1 → v2 regression guards; updated `agentic-tools-write.ts` + M32 T2 test suite | M36 |
 | **M38** | Insight Feedback Loop | `copilot_category_weights` setting; analyzer weight-multiplier integration; dismissal pattern detector + UI suggestion surface; `copilot.weights.changed` bus event | M33 (existing) |
 | **M39** | Telemetry Per-Kind Filter | `TelemetryView` chip row; per-kind aggregate queries; runs.kind backfill cleanup (zero-migration, read-path only) | M33 migration 0012 (existing) |
 | **M40** | Insight Export | `copilot.export` IPC (JSON + CSV); Export button in sidebar header; mirrors M24 audit-export UX | M34 sidebar |
@@ -181,9 +193,9 @@ Phase 6 ships when every criterion below is verified green in a single contiguou
 
 ## 9. Open questions (not blocking T0)
 
-- **Q1 (M36):** Should capabilities be case-sensitive? The M32 keyword heuristic was case-insensitive. Recommend case-sensitive enum values with lowercase-snake_case convention (`backend_engineering`, not `Backend-Engineering` or `backend_eng`) for strict equality and better IDE autocomplete. Final call at M36 T0.
+- **Q1 (M36): RESOLVED.** Capabilities are case-sensitive lowercase-snake_case enum values (`backend_engineering`, not `Backend-Engineering` or `backend_eng`).
 
-- **Q2 (M37):** What's the graceful-degradation path when a subtask has zero required-capabilities declared? Two options: (a) fall back to v1 keyword heuristic for the scoring pass, (b) treat zero-capabilities as "any capabilities satisfy" (overlap = 1.0 for every candidate). Option (b) is simpler but collapses role-fit signal for generic subtasks. Final call at M37 T0.
+- **Q2 (M37): RESOLVED.** When a subtask has zero required capabilities, `computeRoleFit` falls back to the M32 keyword heuristic. This preserves role-fit signal for generic subtasks and legacy provider output.
 
 - **Q3 (M38):** Should the dismissal-pattern detector window be user-configurable (1–30 days) or locked at 7 days? Retrospective evidence favors locked defaults unless users hit the clamp (M35 T1 learning). Default locked at 7 days; add a setting if M41 evidence surfaces otherwise.
 
