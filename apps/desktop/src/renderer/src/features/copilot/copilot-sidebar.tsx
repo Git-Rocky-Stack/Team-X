@@ -8,6 +8,8 @@
  *
  * Layout (top to bottom):
  *   - Header: title + active-count badge + close button.
+ *   - Filters + export controls: category/severity chips, company/all
+ *     scope, and local CSV/JSON export.
  *   - Feed: `<article role="listitem">` per insight, sorted
  *     critical > warning > info, then newest-first within severity.
  *   - Ask input: bordered textarea pinned to the bottom, Cmd/Ctrl+Enter
@@ -18,7 +20,7 @@
  *
  * Invariants honoured:
  *   - Renderer is a pure view (all IPC via hooks).
- *   - No new bus events, no new IPC channels.
+ *   - Export is read-only: no new bus events.
  *   - Radix Sheet handles focus trap + Esc dismissal + `role="dialog"`.
  *   - Ask input is labeled; Cmd/Ctrl+Enter mirrors the existing
  *     `features/chat/composer.tsx` keymap.
@@ -27,7 +29,17 @@
 import { Loader2, Send, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import type { CopilotFeedbackSuggestion } from '@team-x/shared-types';
+import {
+  COPILOT_CATEGORIES,
+  COPILOT_EXPORT_FORMATS,
+  COPILOT_EXPORT_SCOPES,
+  type CopilotCategory,
+  type CopilotExportFormat,
+  type CopilotExportRequest,
+  type CopilotExportScope,
+  type CopilotFeedbackSuggestion,
+  type CopilotSeverity,
+} from '@team-x/shared-types';
 
 import { Badge } from '@/components/ui/badge.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -39,7 +51,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet.js';
 import { Textarea } from '@/components/ui/textarea.js';
-import { useAskCopilot, useCopilotInsights } from '@/hooks/use-copilot.js';
+import { useAskCopilot, useCopilotExport, useCopilotInsights } from '@/hooks/use-copilot.js';
 import { useSetCopilotWeights } from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -47,6 +59,58 @@ import { formatFeedbackSuggestionPrompt, sortBySeverity } from './copilot-helper
 import { CopilotInsightCard } from './copilot-insight-card.js';
 
 // ---------------------------------------------------------------------------
+
+const FILTER_ALL = 'all';
+const COPILOT_SEVERITY_FILTERS: readonly CopilotSeverity[] = ['critical', 'warning', 'info'];
+type CategoryFilter = typeof FILTER_ALL | CopilotCategory;
+type SeverityFilter = typeof FILTER_ALL | CopilotSeverity;
+
+const CATEGORY_FILTERS: readonly CategoryFilter[] = [FILTER_ALL, ...COPILOT_CATEGORIES];
+const SEVERITY_FILTERS: readonly SeverityFilter[] = [FILTER_ALL, ...COPILOT_SEVERITY_FILTERS];
+
+function formatCategoryLabel(category: CategoryFilter): string {
+  switch (category) {
+    case 'all':
+      return 'All';
+    case 'operational':
+      return 'Operational';
+    case 'cost':
+      return 'Cost';
+    case 'org':
+      return 'Org';
+    case 'workflow':
+      return 'Workflow';
+    case 'anomaly':
+      return 'Anomaly';
+  }
+}
+
+function formatSeverityLabel(severity: SeverityFilter): string {
+  switch (severity) {
+    case 'all':
+      return 'All';
+    case 'critical':
+      return 'Critical';
+    case 'warning':
+      return 'Warning';
+    case 'info':
+      return 'Info';
+  }
+}
+
+function formatScopeLabel(scope: CopilotExportScope): string {
+  return scope === 'company' ? 'Company' : 'All companies';
+}
+
+function formatExportFileName(filePath: string): string {
+  return filePath.split(/[\\/]/).pop() ?? filePath;
+}
+
+function filterButtonClass(active: boolean): string {
+  return active
+    ? 'h-7 rounded-md bg-brand px-2.5 text-[11px] font-medium text-brand-foreground'
+    : 'h-7 rounded-md border border-border px-2.5 text-[11px] font-medium text-muted-foreground hover:bg-surface-100 hover:text-foreground';
+}
 
 export function CopilotSidebar() {
   const open = useAppStore((s) => s.copilotSidebarOpen);
@@ -58,9 +122,21 @@ export function CopilotSidebar() {
   const [feedbackSuggestion, setFeedbackSuggestion] = useState<CopilotFeedbackSuggestion | null>(
     null,
   );
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>(FILTER_ALL);
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>(FILTER_ALL);
+  const [exportScope, setExportScope] = useState<CopilotExportScope>('company');
 
-  const { data, isLoading, isError, refetch } = useCopilotInsights(companyId);
+  const insightFilters = useMemo(
+    () => ({
+      ...(categoryFilter !== FILTER_ALL ? { category: categoryFilter } : {}),
+      ...(severityFilter !== FILTER_ALL ? { severity: severityFilter } : {}),
+    }),
+    [categoryFilter, severityFilter],
+  );
+
+  const { data, isLoading, isError, refetch } = useCopilotInsights(companyId, insightFilters);
   const askMutation = useAskCopilot();
+  const exportMutation = useCopilotExport();
   const setCopilotWeights = useSetCopilotWeights();
 
   const sorted = useMemo(() => (data?.insights ? sortBySeverity(data.insights) : []), [data]);
@@ -109,6 +185,21 @@ export function CopilotSidebar() {
     setFeedbackSuggestion(null);
   }
 
+  function buildExportRequest(format: CopilotExportFormat): CopilotExportRequest {
+    return {
+      format,
+      scope: exportScope,
+      ...(exportScope === 'company' && companyId ? { companyId } : {}),
+      ...(categoryFilter !== FILTER_ALL ? { category: categoryFilter } : {}),
+      ...(severityFilter !== FILTER_ALL ? { severity: severityFilter } : {}),
+    };
+  }
+
+  function submitExport(format: CopilotExportFormat) {
+    if (exportScope === 'company' && !companyId) return;
+    exportMutation.mutate(buildExportRequest(format));
+  }
+
   const activeCount = sorted.length;
 
   return (
@@ -138,6 +229,95 @@ export function CopilotSidebar() {
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full">
             <div className="px-4 py-4">
+              <div className="mb-4 space-y-3" data-copilot-export-controls="">
+                <div>
+                  <p className="mb-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    Category
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CATEGORY_FILTERS.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setCategoryFilter(category)}
+                        aria-pressed={categoryFilter === category}
+                        data-copilot-category-filter={category}
+                        className={filterButtonClass(categoryFilter === category)}
+                      >
+                        {formatCategoryLabel(category)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    Severity
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SEVERITY_FILTERS.map((severity) => (
+                      <button
+                        key={severity}
+                        type="button"
+                        onClick={() => setSeverityFilter(severity)}
+                        aria-pressed={severityFilter === severity}
+                        data-copilot-severity-filter={severity}
+                        className={filterButtonClass(severityFilter === severity)}
+                      >
+                        {formatSeverityLabel(severity)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    Export
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {COPILOT_EXPORT_SCOPES.map((scope) => (
+                      <button
+                        key={scope}
+                        type="button"
+                        onClick={() => setExportScope(scope)}
+                        aria-pressed={exportScope === scope}
+                        data-copilot-export-scope={scope}
+                        className={filterButtonClass(exportScope === scope)}
+                      >
+                        {formatScopeLabel(scope)}
+                      </button>
+                    ))}
+                    {COPILOT_EXPORT_FORMATS.map((format) => (
+                      <button
+                        key={format}
+                        type="button"
+                        onClick={() => submitExport(format)}
+                        disabled={
+                          exportMutation.isPending || (exportScope === 'company' && !companyId)
+                        }
+                        data-copilot-export-format={format}
+                        className="h-7 rounded-md border border-brand/50 px-2.5 text-[11px] font-medium text-brand hover:bg-brand/10 disabled:opacity-50"
+                      >
+                        {format === 'csv' ? 'CSV' : 'JSON'}
+                      </button>
+                    ))}
+                  </div>
+                  {exportMutation.isSuccess && (
+                    <p className="mt-2 text-xs text-muted-foreground" data-copilot-export-status="">
+                      Exported {exportMutation.data.rowCount} insight
+                      {exportMutation.data.rowCount === 1 ? '' : 's'} to{' '}
+                      {formatExportFileName(exportMutation.data.filePath)}
+                      {exportMutation.data.truncated ? ' (truncated)' : ''}
+                    </p>
+                  )}
+                  {exportMutation.isError && (
+                    <p className="mt-2 text-xs text-destructive" data-copilot-export-error="">
+                      Export failed. Try again.
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {feedbackSuggestion && !isLoading && !isError && (
                 <div
                   className="mb-3 rounded-md border border-border bg-surface-50 px-3 py-2"
