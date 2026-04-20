@@ -125,7 +125,7 @@ M-D ships across **7 atomic steps**. Each is its own atomic commit + paired `cho
 
 ### Step (e) — Org-chart view (Cluster B, read-side)
 
-> **2026-04-19 — SHIPPED in working tree.** Step (e) enabled the Org top-bar tab, added `useOrgChart` / `useOrgChartEventSync`, rendered the `orgchart.get` flat projection through `OrgChartView` + `OrgChartTree` + `OrgChartNode`, and added `apps/desktop/e2e/org-chart.spec.ts` for the seeded CEO/SWE read-side path plus keyboard action affordance. Step (f) owns mutation actions.
+> **2026-04-19 — SHIPPED in commit `2853d18`.** Step (e) enabled the Org top-bar tab, added `useOrgChart` / `useOrgChartEventSync`, rendered the `orgchart.get` flat projection through `OrgChartView` + `OrgChartTree` + `OrgChartNode`, and added `apps/desktop/e2e/org-chart.spec.ts` for the seeded CEO/SWE read-side path plus keyboard action affordance. Step (f) owns mutation actions.
 
 **Goal:** Ship the tree render. No interactions yet — those land in step (f).
 

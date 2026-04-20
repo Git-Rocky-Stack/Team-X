@@ -24,4 +24,4 @@ Date: 2026-04-19
 
 ## Result
 
-Step (e) is implemented and verified in the working tree. No new IPC channels were added; M-D preserves the M-C exit allowlist shape.
+Step (e) is implemented and verified in atomic commit `2853d18`. No new IPC channels were added; M-D preserves the M-C exit allowlist shape.

@@ -125,11 +125,11 @@
   "activeSubMilestone": {
     "id": "M-D",
     "name": "UI Backfill",
-    "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf per Rocky's iron-rule directive against deferred placeholders) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) shipped 2026-04-19 (atomic 7fac251) + step (d) shipped 2026-04-19 (atomic 579f730) + step (e) OrgChartView read-side verified in working tree; next: step (f) Org-chart interactions",
+    "status": "in-progress — step (a) shipped 2026-04-19 (atomic 5d0c5bc) + step (a+b) hardening collapse shipped 2026-04-19 (atomic e611cbf per Rocky's iron-rule directive against deferred placeholders) + workspace-switcher pre-flight shipped 2026-04-19 (atomic 1d04e77) + step (c) shipped 2026-04-19 (atomic 7fac251) + step (d) shipped 2026-04-19 (atomic 579f730) + step (e) OrgChartView read-side shipped 2026-04-19 (atomic 2853d18); next: step (f) Org-chart interactions",
     "planDoc": "docs/plans/2026-04-19-team-x-phase-5.6-m-d-ui-backfill.md",
     "auditDoc": "docs/qa/2026-04-19-m-d-step-a-ground-zero-audit.md",
     "nextSession": "Proceed with M-D step (f): Org-chart interactions. Scope: hook promote/fire/setManager interactions onto the step (e) OrgChartView surface, preserve optimistic-update rollback, and extend org-chart E2E with write-side flows and audit-event assertions. No new IPC channels unless the roles read surface is proven absent and change-control approves it.",
-    "stepsShippedSummary": "M-D IN PROGRESS. 5 of 7 atomic steps effectively landed (step (b) collapsed forward into step (a) hardening atomic per iron-rule) plus the workspace-switcher pre-flight gate: atomic 5d0c5bc (step a foundation; +31 tests to 1603) + atomic e611cbf (step (a+b) collapse + ground-zero audit P1.1/P2.1/P3.1 closures + full CreateCompanyDialog ship; +31 tests to 1634) + atomic 1d04e77 (workspace-switcher E2E pre-flight + created-company cache race fix + app-brand selector hardening; vitest 1655, E2E 12 specs / 13 cases) + atomic 7fac251 step (c) CompanySettings/HireDialog manager-select (+10 source-string contract tests, desktop vitest 1335, E2E 12 specs / 15 cases) + atomic 579f730 step (d) Chat tab enable (+6 source-string contract tests, focused renderer 105/105, E2E 12 specs / 16 cases) + step (e) OrgChartView read-side verified in working tree (+8 source-string contract tests, focused renderer 113/113, E2E 13 specs / 17 cases). Remaining: (f) Org-chart interactions, (g) E2E + final verification gate.",
+    "stepsShippedSummary": "M-D IN PROGRESS. 5 of 7 atomic steps effectively landed (step (b) collapsed forward into step (a) hardening atomic per iron-rule) plus the workspace-switcher pre-flight gate: atomic 5d0c5bc (step a foundation; +31 tests to 1603) + atomic e611cbf (step (a+b) collapse + ground-zero audit P1.1/P2.1/P3.1 closures + full CreateCompanyDialog ship; +31 tests to 1634) + atomic 1d04e77 (workspace-switcher E2E pre-flight + created-company cache race fix + app-brand selector hardening; vitest 1655, E2E 12 specs / 13 cases) + atomic 7fac251 step (c) CompanySettings/HireDialog manager-select (+10 source-string contract tests, desktop vitest 1335, E2E 12 specs / 15 cases) + atomic 579f730 step (d) Chat tab enable (+6 source-string contract tests, focused renderer 105/105, E2E 12 specs / 16 cases) + atomic 2853d18 step (e) OrgChartView read-side (+8 source-string contract tests, focused renderer 113/113, E2E 13 specs / 17 cases). Remaining: (f) Org-chart interactions, (g) E2E + final verification gate.",
     "stepsShipped": [
       {
         "step": "a",
@@ -256,7 +256,7 @@
       {
         "step": "e",
         "shippedAt": "2026-04-20T00:10:00Z",
-        "atomicCommit": "pending-current-working-tree",
+        "atomicCommit": "2853d18",
         "summary": "Enabled the Org top-bar tab, added useOrgChart/useOrgChartEventSync, routed App.tsx org view to OrgChartView, rendered the orgchart.get flat projection through OrgChartTree/OrgChartNode, and added org-chart E2E coverage for the seeded CEO/SWE read-side path plus keyboard action affordance.",
         "qaDoc": "docs/qa/2026-04-19-m-d-step-e-org-chart-read-side.md",
         "testsDelta": 8,
@@ -356,7 +356,7 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-D step (e) OrgChartView read-side verified in working tree; head-of-queue advances to step (f) Org-chart interactions",
+    "asOfTask": "Phase 5.6 M-D step (e) OrgChartView read-side shipped 2026-04-19 (atomic 2853d18); head-of-queue advances to step (f) Org-chart interactions",
     "unitTests": 1679,
     "unitTestsNote": "M-D step (e) adds 8 OrgChartView source-string contract tests. Focused renderer suite passed 4 files / 113 tests; root total inferred from 1671 step (d) baseline + 8 new tests.",
     "e2eSpecs": 13,
