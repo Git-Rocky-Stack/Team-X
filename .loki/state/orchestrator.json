@@ -451,7 +451,7 @@
     "M38-T0": {
       "name": "Insight Feedback Loop plan doc",
       "shippedAt": "2026-04-20T03:00:00Z",
-      "commit": "pending-this-m38-t0-commit",
+      "commit": "dfde756",
       "deliverable": "NEW docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md. Plan-doc-only M38 design and execution plan. Locks the D20 correction that Copilot feedback weights are keyed by the canonical five CopilotCategory values (operational/cost/org/workflow/anomaly), not the six capability taxonomy categories. Chooses existing settings key-value storage via copilot_category_weights with no migration, global/app-level scope for v1.2.0 because settings.key is the primary key, deterministic analyzer weighting (severity base score × category weight), hard-deny at 0.0, and advisory-only dismissal suggestions after three same-category dismissals in seven days. Decomposes implementation into 8 TDD tasks: shared-types contracts, settings repo persistence, IPC + bus event, analyzer weighting, dismissal detector, renderer settings/suggestion UI, E2E, and verification gate.",
       "filesTouched": [
         "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
