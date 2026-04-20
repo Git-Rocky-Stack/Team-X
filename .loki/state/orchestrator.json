@@ -2,7 +2,7 @@
   "currentPhase": "Phase 6 — Capabilities & Evidence",
   "currentMilestone": "Phase 6 M40",
   "milestoneName": "Insight Export",
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "tasksFailed": 0,
   "totalTasks": 9,
   "planDoc": "docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md",
@@ -52,14 +52,14 @@
   },
   "current": {
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests. M39 T8 focused gate passed shared-types 1 file / 2 tests and desktop 5 files / 27 tests.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent. M39 T1 focused shared-types verification passed 1 file / 2 tests. M39 T2 focused desktop runs telemetry verification passed 1 file / 16 tests. M39 T3 focused telemetry IPC verification passed 1 file / 2 tests. M39 T4 focused renderer hook source-contract verification passed 1 file / 3 tests. M39 T5 focused telemetry-view source-contract verification passed 1 file / 3 tests. M39 T6 focused telemetry-subviews source-contract verification passed 1 file / 3 tests. M39 T8 focused gate passed shared-types 1 file / 2 tests and desktop 5 files / 27 tests. M40 T1 focused shared-types verification passed 1 file / 2 tests. M40 T2 focused desktop repo verification passed 1 file / 6 tests.",
     "e2eSpecs": 15,
     "e2eGreenCount": 20,
     "lintErrors": 0,
     "lintErrorsNote": "Baseline preserved; lint exits 0 with 21 known no-non-null-assertion warnings.",
     "lintWarnings": 21,
     "typecheckClean": true,
-    "asOfTask": "Phase 6 M40 T1 shared export contracts shipped; M40 T2 copilot insight export read model is head-of-queue.",
+    "asOfTask": "Phase 6 M40 T2 copilot insight export read model shipped; M40 T3 IPC/register/handler is head-of-queue.",
     "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
     "phase5Complete": true,
     "version": "1.1.1",
@@ -1342,10 +1342,32 @@
         "strictClaims": "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED"
       },
       "structureCompliance": "M40 T1 current-task acceptance satisfied with one documented sequencing correction: typed preload bridge moved into T1 because TeamXApi is structurally checked by apps/desktop/src/preload/api.ts. Runtime main registration and handler remain deferred to T3. Head-of-queue advances to M40 T2."
+    },
+    "M40-T2": {
+      "name": "Copilot insight export read model",
+      "shippedAt": "2026-04-20T10:25:00Z",
+      "commit": "this-commit",
+      "deliverable": "Copilot insight export repo projection and pure serializers. listActiveForExport exports active-only rows for company or all-company scope, applies optional category/severity filters, returns newest-first rows with truncation metadata, and fails closed when company scope omits companyId. JSON serializer emits metadata + rows; CSV serializer emits the locked header and escapes commas, quotes, and newlines.",
+      "filesTouched": [
+        "apps/desktop/src/main/db/repos/copilot-insights.ts",
+        "apps/desktop/src/main/db/repos/copilot-insights-export.test.ts",
+        ".loki/queue/current-task.json",
+        ".loki/queue/pending.json",
+        ".loki/state/orchestrator.json"
+      ],
+      "testsDelta": "+6 desktop tests",
+      "verificationGates": {
+        "focused": "pnpm -F @team-x/desktop exec vitest run src/main/db/repos/copilot-insights-export.test.ts — passed 1 file / 6 tests",
+        "typecheck": "pnpm typecheck — clean across 6 workspace packages",
+        "lint": "pnpm lint — 0 errors / 21 known no-non-null-assertion warnings",
+        "strictClaims": "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED"
+      },
+      "structureCompliance": "M40 T2 current-task acceptance satisfied: failing repo test written first, active-only export projection implemented, JSON/CSV serializers implemented, gates green, and head-of-queue advanced to M40 T3."
     }
   },
   "inFlightMilestone": "Phase 6 M40 Insight Export",
   "notes": [
+    "PHASE 6 M40 T2 SHIPPED 2026-04-20 — Copilot insight export read model implemented with TDD. Added apps/desktop/src/main/db/repos/copilot-insights-export.test.ts; valid red proved listActiveForExport was missing. Added CopilotExportFilter/CopilotExportResult, listActiveForExport, serializeCopilotInsightsJson, and serializeCopilotInsightsCsv in copilot-insights repo. Export projection is active-only, supports company/all scope, category/severity filters, newest-first ordering, configurable cap with truncated flag, JSON metadata envelope, stable CSV header, and quote/newline escaping. Added a fail-closed regression for company scope without companyId so repo misuse cannot widen to all companies. Verification: focused repo test 1 file / 6 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M40 T3 IPC/register/handler.",
     "PHASE 6 M40 T1 SHIPPED 2026-04-20 — shared Copilot export contracts implemented with TDD. Added packages/shared-types/src/copilot-export.test.ts; valid red proved COPILOT_EXPORT_FORMATS/COPILOT_EXPORT_SCOPES were missing. Added COPILOT_EXPORT_FORMATS, CopilotExportFormat, COPILOT_EXPORT_SCOPES, CopilotExportScope, CopilotExportRequest, and CopilotExportResponse in packages/shared-types/src/copilot.ts. Wired copilot.export into IpcContract and TeamXApi in packages/shared-types/src/ipc.ts. Typecheck surfaced that widening TeamXApi requires the typed preload object to expose the method, so apps/desktop/src/preload/api.ts now includes the copilotExport channel constant and bridge method; main-process register/handler remain scoped to T3. Plan doc updated to record that sequencing correction. Verification: focused shared-types test 1 file / 2 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M40 T2 repo export read model.",
     "PHASE 6 M40 T0 AUTHORED 2026-04-20 — NEW docs/plans/2026-04-25-team-x-phase-6-m40-insight-export.md. Plan-doc-only milestone for local Copilot insight export. Resolves Q4: company-scope export mirrors visible sidebar category/severity filters; all-company export applies the same filters globally and is labeled global. Locks local-only boundary: no network export, phone-home, automated sharing, migration, settings key, provider/router/MCP surface, or bus event. Defines JSON metadata envelope, CSV columns/escaping, 10,000-row cap with truncated flag, M24-compatible tmpdir()/team-x-exports file contract, sidebar filters/export controls, focused tests, E2E, user-guide docs, and final verification gate. Head-of-queue advances to M40 T1 shared export contracts.",
     "PHASE 6 M39 COMPLETE 2026-04-20 — Telemetry Per-Kind Filter shipped through T8 verification gate. Final evidence: biome checked 16 M39 files with no fixes; shared-types focused gate passed 1 file / 2 tests; desktop focused gate passed 5 files / 27 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED; pnpm -F @team-x/desktop build clean; telemetry-kind-filter Playwright passed 1 spec / 1 test. M39 surface: kind contracts, repo filters, IPC validation, preload propagation, renderer hooks/query keys, filter chips, subview request wiring, and E2E. Scope boundary preserved: no migrations, settings, bus events, providers, MCP surface, or write-side run behavior. Head-of-queue advances to M40 T0 Insight Export plan doc.",

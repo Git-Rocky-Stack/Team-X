@@ -104,6 +104,22 @@ export interface ListActiveFilter {
   includeDismissed?: boolean;
 }
 
+export interface CopilotExportFilter {
+  scope: 'company' | 'all';
+  companyId?: string;
+  category?: CopilotCategory;
+  severity?: CopilotSeverity;
+  /** Optional export cap. Defaults to 10,000 rows. */
+  limit?: number;
+  /** Optional clock override — defaults to `Date.now()`. Test seam. */
+  now?: number;
+}
+
+export interface CopilotExportResult {
+  rows: CopilotInsightRow[];
+  truncated: boolean;
+}
+
 export interface UpsertContext {
   /** Optional clock override — defaults to `Date.now()` (or `draft.now`). */
   now?: number;
@@ -197,6 +213,77 @@ export function shouldMerge(
   return jaccardBigrams(existing.title, draft.title) > JACCARD_MERGE_THRESHOLD;
 }
 
+function quoteCsv(value: string | number | null): string {
+  if (value === null) return '';
+  const text = String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function exportProjection(row: CopilotInsightRow) {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    category: row.category,
+    severity: row.severity,
+    title: row.title,
+    detail: row.detail,
+    actionSuggestion: row.actionSuggestion,
+    actionIntent: row.actionIntent,
+    actionEntitiesJson: row.actionEntitiesJson,
+    createdAt: row.createdAt,
+    expiresAt: row.expiresAt,
+  };
+}
+
+export function serializeCopilotInsightsJson(args: {
+  rows: CopilotInsightRow[];
+  filter: CopilotExportFilter;
+  exportedAtIso: string;
+  truncated: boolean;
+}): string {
+  const filters: { category?: CopilotCategory; severity?: CopilotSeverity } = {};
+  if (args.filter.category !== undefined) filters.category = args.filter.category;
+  if (args.filter.severity !== undefined) filters.severity = args.filter.severity;
+
+  return JSON.stringify(
+    {
+      version: 1,
+      exportedAt: args.exportedAtIso,
+      scope: args.filter.scope,
+      ...(args.filter.scope === 'company' ? { companyId: args.filter.companyId } : {}),
+      filters,
+      rowCount: args.rows.length,
+      truncated: args.truncated,
+      insights: args.rows.map(exportProjection),
+    },
+    null,
+    2,
+  );
+}
+
+export function serializeCopilotInsightsCsv(rows: CopilotInsightRow[]): string {
+  const header =
+    'id,companyId,category,severity,title,detail,actionSuggestion,actionIntent,actionEntitiesJson,createdAt,expiresAt';
+  const lines = rows.map((row) =>
+    [
+      row.id,
+      row.companyId,
+      row.category,
+      row.severity,
+      row.title,
+      row.detail,
+      row.actionSuggestion,
+      row.actionIntent,
+      row.actionEntitiesJson,
+      row.createdAt,
+      row.expiresAt,
+    ]
+      .map(quoteCsv)
+      .join(','),
+  );
+  return [header, ...lines].join('\n');
+}
+
 // ---------------------------------------------------------------------------
 // Factory.
 // ---------------------------------------------------------------------------
@@ -279,6 +366,42 @@ export function createCopilotInsightsRepo<TRunResult>(db: CopilotInsightsDb<TRun
         return rows.slice(0, filter.limit);
       }
       return rows;
+    },
+
+    /**
+     * Export projection for active insights. Company scope narrows to one
+     * company; all scope intentionally omits company filtering. Dismissed
+     * and expired rows never export.
+     */
+    listActiveForExport(filter: CopilotExportFilter): CopilotExportResult {
+      if (filter.scope === 'company' && filter.companyId === undefined) {
+        return { rows: [], truncated: false };
+      }
+      const now = filter.now ?? Date.now();
+      const limit = Math.max(0, filter.limit ?? 10_000);
+      const conds = [isNull(copilotInsights.dismissedAt), gt(copilotInsights.expiresAt, now)];
+
+      if (filter.scope === 'company' && filter.companyId !== undefined) {
+        conds.push(eq(copilotInsights.companyId, filter.companyId));
+      }
+      if (filter.category !== undefined) {
+        conds.push(eq(copilotInsights.category, filter.category));
+      }
+      if (filter.severity !== undefined) {
+        conds.push(eq(copilotInsights.severity, filter.severity));
+      }
+
+      const rows = db
+        .select()
+        .from(copilotInsights)
+        .where(and(...conds))
+        .all()
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+      return {
+        rows: rows.slice(0, limit),
+        truncated: rows.length > limit,
+      };
     },
 
     /**
