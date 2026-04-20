@@ -1,27 +1,30 @@
 {
-  "taskId": "Phase-5.6-M-F-T0",
-  "milestone": "Phase 5.6 M-F",
-  "milestoneName": "Documentation Truth-Up",
+  "taskId": "Phase-5.6-M-G-T0",
+  "milestone": "Phase 5.6 M-G",
+  "milestoneName": "Branch Hygiene + Ship",
   "phase": "Phase 5.6 — Reconciliation & Remediation",
-  "title": "Phase 5.6 M-F T0 — Documentation Truth-Up: three-bucket CLAUDE.md rewrite + audit/doc alignment",
-  "status": "head-of-queue — ready to start; M-D shipped 2026-04-19 with full exit KPI green",
+  "title": "Phase 5.6 M-G T0 — Branch Hygiene + Ship: final cross-check, retrospective, version/tag, and pause release",
+  "status": "head-of-queue — ready to start; M-F shipped 2026-04-19 with strict claim-evidence gate green",
   "verifiedBy": null,
-  "predecessor": "Phase 5.6 M-D UI Backfill SHIPPED 2026-04-19 — atomic commit 3680c96 + full gate green: Vitest 1683/1683, Playwright 18/18, typecheck clean, lint 0 errors / 21 warnings, audit:claims 92/3/0",
+  "predecessor": "Phase 5.6 M-F Documentation Truth-Up SHIPPED 2026-04-19 — atomic commit 185f6f1; CLAUDE.md three-bucket rewrite, Cluster A aspirational framing removed, MCP IPC names aligned, allowlist emptied, pnpm audit:claims -- --strict 95/0/0",
   "dor": [
-    "M-D Loki exit-KPI closed",
-    "docs/qa/2026-04-19-m-d-step-g-verification-gate.md committed in 3680c96",
-    "docs/audits/2026-04-17-conformance-audit.md §20.2/20.3/20.4 amended with M-C/M-D exit evidence",
-    "CLAUDE.md status banner carries current M-D shipped evidence"
+    "M-F Loki exit-KPI closed",
+    "CLAUDE.md status blocks rewritten into shipped / deferred / deprecated buckets",
+    "scripts/check-claim-evidence.allowlist.json entries cleared",
+    "docs/audits/2026-04-17-conformance-audit.md §20.6 amended with M-F exit evidence",
+    "pnpm audit:claims -- --strict passed with 95 verified / 0 allowlisted / 0 UNALLOWED"
   ],
   "acceptance": [
-    "CLAUDE.md rewritten in three-bucket format: shipped / deferred / deprecated",
-    "Cluster A aspirational framing removed and replaced with Phase 5.6 M-C/M-D restoration evidence",
-    "Phase 2 M7/M9 status blocks reconciled against on-disk reality",
-    "IPC Channels table aligned with on-disk names, including mcp.addServer / mcp.removeServer / mcp.testConnection",
-    "Remaining 3 audit:claims allowlist rows resolved or documented as docs-only naming-drift closures",
-    "M36 remains paused until M-G ship"
+    "All 7 Phase 5.6 sub-milestones DoD-complete",
+    "Audit cross-check shows zero remaining restore rows and zero claim-evidence allowlist rows",
+    "Phase 5.6 retrospective committed using the locked six-section structure",
+    "CHANGELOG [Unreleased] promoted to Phase 5.6 / v1.1.1 entry",
+    "Workspace package versions bumped from 1.1.0 to 1.1.1 if M-G confirms patch release",
+    "worktree-phase-2-the-org deleted local and origin only after final evidence review",
+    "v1.1.1 tag created and pushed",
+    "M36 pause lifted only after M-G ship commit/tag are on origin"
   ],
   "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
   "auditDoc": "docs/audits/2026-04-17-conformance-audit.md",
-  "nextStep": "Start M-F documentation truth-up. Do not resume M36 until Phase 5.6 M-G ships."
+  "nextStep": "Start M-G final ship checklist. Do not resume M36 until the Phase 5.6 retrospective, version/tag, branch hygiene, and main push are complete."
 }

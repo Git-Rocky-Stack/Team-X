@@ -121,28 +121,37 @@
       "id": "M-F",
       "name": "Documentation Truth-Up",
       "estimate": "2d + 1d buffer",
-      "status": "head-of-queue — M-D Loki exit-KPI closed 2026-04-19; ready for Documentation Truth-Up",
+      "status": "shipped 2026-04-19 — documentation truth-up complete in atomic commit 185f6f1: CLAUDE.md three-bucket rewrite, Cluster A aspirational framing removed, Phase 2 M7/M9 reconciled, MCP IPC table aligned, allowlist emptied, strict claim-evidence gate green",
       "dor": "satisfied by M-D exit KPI: docs/qa/2026-04-19-m-d-step-g-verification-gate.md + Loki ledger + full gate green",
-      "dod": "zero claim lacks on-disk evidence + CLAUDE.md in three-bucket format (shipped/deferred/deprecated) + Phase 5.6 retrospective drafted"
+      "dod": "satisfied — zero structured CLAUDE.md claim lacks on-disk evidence, CLAUDE.md is in shipped/deferred/deprecated format, audit doc §20.6 carries M-F exit evidence, README/user-guide/QA counters updated, and claim-evidence allowlist is empty",
+      "verifiedBy": [
+        "atomic commit 185f6f1 + this paired chore(loki) ledger",
+        "CLAUDE.md (M-F three-bucket shipped/deferred/deprecated rewrite)",
+        "scripts/check-claim-evidence.allowlist.json (entries cleared)",
+        "docs/audits/2026-04-17-conformance-audit.md §20.6 (M-F shipped evidence)",
+        "README.md + docs/user-guide/* + docs/qa/BASELINE-METRICS.md counter truth-up",
+        "pnpm audit:claims — 95 verified / 0 allowlisted / 0 UNALLOWED out of 95",
+        "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED out of 95"
+      ]
     },
     {
       "id": "M-G",
       "name": "Branch Hygiene + Ship",
       "estimate": "1d + 0.5d buffer",
-      "status": "blocked-by-M-F",
-      "dor": "M-F Loki exit-KPI closed + audit cross-check shows zero remaining restore rows",
+      "status": "head-of-queue — M-F Loki exit-KPI closed 2026-04-19; ready for final branch hygiene + ship",
+      "dor": "satisfied by M-F exit KPI: strict claim-evidence gate 95/0/0 + CLAUDE/docs truth-up + empty allowlist",
       "dod": "all 7 DoDs met + worktree-phase-2-the-org deleted local+origin + CHANGELOG [Unreleased] → [1.1.1] + v1.1.0 → v1.1.1 across 7 package.json + v1.1.1 git tag + main pushed + retrospective committed"
     }
   ],
   "activeSubMilestone": {
-    "id": "M-F",
-    "name": "Documentation Truth-Up",
-    "status": "head-of-queue — M-D shipped 2026-04-19; rewrite CLAUDE.md and audit-facing docs into the three-bucket shipped/deferred/deprecated format",
+    "id": "M-G",
+    "name": "Branch Hygiene + Ship",
+    "status": "head-of-queue — M-F shipped 2026-04-19; final cross-check, retrospective, version/tag, branch deletion, and pause release remain",
     "planDoc": "docs/plans/2026-04-17-team-x-phase-5.6-remediation.md",
     "auditDoc": "docs/audits/2026-04-17-conformance-audit.md",
-    "nextSession": "Proceed with Phase 5.6 M-F Documentation Truth-Up. Scope: remove the Cluster A \"aspirational\" framing from CLAUDE.md, reconcile Phase 2 M7/M9 status blocks against M-C/M-D shipped evidence, align the IPC Channels table with on-disk mcp.addServer/mcp.removeServer/mcp.testConnection names, preserve M-D exit KPI evidence, and leave M36 paused until M-G ships.",
-    "dor": "M-D Loki exit-KPI closed",
-    "dod": "CLAUDE.md three-bucket rewrite complete + remaining 3 audit:claims allowlist rows resolved or documented as M-F docs-only + audit cross-check shows zero remaining restore rows + Phase 5.6 retrospective drafted for M-G input",
+    "nextSession": "Proceed with Phase 5.6 M-G Branch Hygiene + Ship. Scope: final audit cross-check, Phase 5.6 retrospective, CHANGELOG/version bump to v1.1.1 if confirmed, delete worktree-phase-2-the-org local+origin after evidence review, tag/push, and lift M36 pause only after M-G ships.",
+    "dor": "M-F Loki exit-KPI closed",
+    "dod": "all 7 DoDs met + worktree-phase-2-the-org deleted local+origin + CHANGELOG [Unreleased] → [1.1.1] + v1.1.0 → v1.1.1 across 7 package.json + v1.1.1 git tag + main pushed + retrospective committed",
     "verifiedBy": null,
     "blockedBy": null
   },
@@ -217,7 +226,7 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 5.6 M-D step (g) E2E + full verification gate shipped 2026-04-19 in atomic commit 3680c96; head-of-queue advances to M-F Documentation Truth-Up.",
+    "asOfTask": "Phase 5.6 M-F Documentation Truth-Up shipped 2026-04-19; head-of-queue advances to M-G Branch Hygiene + Ship.",
     "unitTests": 1683,
     "unitTestsNote": "M-D exit gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild.",
     "e2eSpecs": 13,
@@ -225,7 +234,7 @@
     "lintErrors": 0,
     "lintWarnings": 21,
     "typecheckClean": true,
-    "auditClaims": "92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (preserved through M-D; remaining 3 are mcp.* naming-drift rows scheduled for M-F docs sweep)",
+    "auditClaims": "95 verified / 0 allowlisted / 0 UNALLOWED out of 95 (M-F cleared the final mcp.* naming-drift allowlist rows)",
     "version": "1.1.0 (target 1.1.1 on M-G ship)"
   },
   "targets": {
@@ -241,6 +250,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 5.6 M-F SHIPPED 2026-04-19 — atomic docs commit 185f6f1. Documentation truth-up complete. CLAUDE.md now carries shipped/deferred/deprecated buckets; the Cluster A aspirational framing is removed and replaced with M-C/M-D restoration evidence; Phase 2 M7/M9 status is reconciled to on-disk reality; the IPC table uses canonical mcp.addServer/mcp.removeServer/mcp.testConnection names; scripts/check-claim-evidence.allowlist.json is empty; README/user-guide/QA counters reflect 1683 unit tests and 13 Playwright specs / 18 cases. Gates: pnpm audit:claims 95/0/0 and pnpm audit:claims -- --strict 95/0/0. M-G Branch Hygiene + Ship is now head-of-queue.",
     "PHASE 5.6 M-D SHIPPED 2026-04-19 — final atomic commit 3680c96. Step (g) closed the UI Backfill exit gate. Added company lifecycle audit assertions to workspace-switcher E2E; hardened org-chart invalid-cycle E2E to use manager-select after valid drag persistence; full gate green: pnpm test 125 files / 1683 tests, pnpm typecheck clean across 6 packages, pnpm lint 0 errors / 21 warnings, pnpm audit:claims 92/3/0, pnpm build clean, full Playwright 13 specs / 18 cases. M-F Documentation Truth-Up is now head-of-queue.",
     "PHASE 5.6 M-C SHIPPED 2026-04-18 — atomic feat(phase-5.6-m-c) step e commit fd3617b closes M-C; paired chore(loki) ledger follows. Step e deliverable: Restores Cluster A multi-company CRUD write-side per audit rows 10.13 + 10.15. companies.update [assertCompanyActive guard from step d hardening + per-field validation mirroring create + UNIQUE rewrap + company.updated emit with patchedKeys array] + companies.delete [snapshot-before-delete + quiesce pipeline identical to archive + transactional 15-table FK-safe cascade sweep in repo via db.transaction: indirect leaves (thread_members/messages/runs/project_tickets/ticket_attachments) → cross-referencing children (meetings/tickets/projects before threads/goals/employees) → direct children (threads/goals/file_vault/embeddings/command_history) → loose-reference rows (mcp_servers scoped-only; NULL=global survives; events) → employees (CASCADEs org_edges) → copilot_insights (CASCADE explicit for audit parity) → companies]. Archived companies ARE deletable (permanent remove semantic). Empty update patch still emits for optimistic-path reconciliation. icon accepts null to clear. New shared-types: CompaniesUpdateRequest + CompaniesDeleteRequest + CompanyUpdatedPayload + CompanyDeletedPayload + EventType union extensions. FakeCompaniesRepo widened with throw-'unused' stubs across four existing test files (handlers.test.ts + companies-handlers.test.ts + employees-promote-handlers.test.ts + employees-set-manager-handlers.test.ts) so future cross-tests fail loud rather than silently no-op. Tests: +58 unit (16 companies.test.ts [10 update + 6 delete including full 15-table cascade sweep vs real sql.js] + 22 companies-update-handlers.test.ts + 19 companies-delete-handlers.test.ts - 4 widening stubs elsewhere + 1 type import - 4 modified-not-added). Verification gate: vitest 1454/1454 in 44.74s (115 test files); audit:claims 92 verified / 3 allowlisted / 0 UNALLOWED out of 95 (90/5 → 92/3; M-C-exit allowlist target reached); typecheck clean across 6 packages; lint 0 errors / 21 warnings (3 below 24 baseline); E2E not re-run (no renderer surface; 11 specs / 12 cases preserved). M-E safeguards' sixth-at-scale M-C proof — S2 conformance gate GREEN on fd3617b with allowlist shrinkage in the same atomic (90/5 → 92/3), S3 pre-commit hook clean on staged diff, S4 verifiedBy populated on this paired ledger entry per contract. **M-C COMPLETE** — all 5 sub-steps landed (a Migration 0013 + b companies.create + c orgchart.get + d employees.promote + setManager + step d hardening BUG-001..008 + e companies.update + delete) across six atomic commits with clean safeguards throughout; head-of-queue advances to M-D (UI Backfill) — M-D ships the renderer surface consuming the M-C backend.",
     "PHASE 5.6 M-C STEP D HARDENING SHIPPED 2026-04-18 — atomic feat(phase-5.6-m-c) commit c6b118a lands this session; paired chore(loki) ledger follows. Trigger: adversarial QA review of step (d) IPC surface (qa-expert skill, employees.promote + employees.setManager) surfaced 8 bugs (2 P2, 6 P3) + 6 coverage gaps. Iron-rule remediation per Rocky's directive — zero deferring. P2: BUG-001 level-inversion guard (LEVEL_RANK in shared-types/entities.ts; strict rank(manager) < rank(report); fail-open on unknown levels with dev-mode warning), BUG-002 archived-company write guard (NEW assertCompanyActive helper in handlers.ts, reusable for step e). P3: BUG-003 + BUG-004 atomic transaction wrap on org-edges setManager + removeByReport (eliminates TOCTOU; signatures changed to return previousManagerId snapshot from inside the transaction; handler drops standalone wouldCycle pre-check + getByReport snapshot in favor of catch-and-rewrap on the repo's `[org-edges] setManager: would create cycle` prefix), BUG-005 actorId 'user' literal → HUMAN_USER_ID constant across step (d) handlers + companies.create + companies.archive (upstream sweep), BUG-006 tools_*_json trust-boundary docs on employees.promote (signed pack + MCP host gateway enforcement), BUG-007 invariant #11 cache-staleness contract pin (test locks the documented design tradeoff), BUG-008 error-message ID disclosure docs on both handlers. Coverage gaps: NEW packages/shared-types/src/entities.test.ts (19 tests on LEVEL_RANK + normalizeLevel + getLevelRank), 4 employees-promote-handlers.test.ts new (3 archived + TC-IPC-PROMOTE-FIRE-RACE), 15 employees-set-manager-handlers.test.ts new (7 BUG-001 + 3 BUG-002 + 4 atomic repo contract pins + 1 BUG-007 explicit pin), 3 orgchart.test.ts new (atomic snapshot contract). Pre-existing entity-resolver.ts non-null-assertion error suppressed via 3 narrowly-scoped biome-ignore comments (justified in-place, addressed inline rather than deferred per iron rule). Verification gate: vitest 1396/1396 in 24.70s (+39 from 1357 step d baseline; 113 test files green); audit:claims 90 verified / 5 allowlisted / 0 UNALLOWED out of 95 (no new IPC channels — hardening only); typecheck clean across 6 packages; lint 0 errors / 21 warnings (3 below the 24 baseline; biome --fix removed format-only warnings); E2E not re-run (no IPC contract surface change; 11 specs / 12 cases preserved). M-E safeguards passed fifth-at-scale M-C proof — S2 conformance gate GREEN on c6b118a (no allowlist movement expected for symmetric/non-additive change), S3 pre-commit hook clean, S4 verifiedBy populated on the paired chore(loki) ledger. Step (d) IPCs are now PRODUCTION-READY for M-D UI wiring. Head-of-queue remains step (e) — companies.update + companies.delete (Cluster A finalization; assertCompanyActive helper from BUG-002 reused).",
