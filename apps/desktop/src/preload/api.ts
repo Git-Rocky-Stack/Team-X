@@ -132,11 +132,13 @@ import type {
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
   TeamXApi,
+  TelemetryCompanyStatsRequest,
   TelemetryCompanyStatsResponse,
   TelemetryCostBreakdownRequest,
   TelemetryCostBreakdownRow,
   TelemetryDailyUsageRequest,
   TelemetryDailyUsageRow,
+  TelemetryEmployeeStatsRequest,
   TelemetryEmployeeStatsRow,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
@@ -318,6 +320,18 @@ const CHANNELS = {
   copilotConfigure: 'copilot.configure',
 } as const;
 
+function telemetryCompanyStatsRequest(
+  req: string | TelemetryCompanyStatsRequest,
+): TelemetryCompanyStatsRequest {
+  return typeof req === 'string' ? { companyId: req } : req;
+}
+
+function telemetryEmployeeStatsRequest(
+  req: string | TelemetryEmployeeStatsRequest,
+): TelemetryEmployeeStatsRequest {
+  return typeof req === 'string' ? { companyId: req } : req;
+}
+
 /**
  * Build the `TeamXApi` object the preload hands to `contextBridge`.
  * Captures the supplied `ipc` handle in a closure so each returned
@@ -433,16 +447,17 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.meetingsGet, { meetingId }) as Promise<MeetingDetail>,
     },
     telemetry: {
-      companyStats: (companyId: string) =>
-        ipc.invoke(CHANNELS.telemetryCompanyStats, {
-          companyId,
-        }) as Promise<TelemetryCompanyStatsResponse>,
+      companyStats: (req: string | TelemetryCompanyStatsRequest) =>
+        ipc.invoke(
+          CHANNELS.telemetryCompanyStats,
+          telemetryCompanyStatsRequest(req),
+        ) as Promise<TelemetryCompanyStatsResponse>,
       dailyUsage: (req: TelemetryDailyUsageRequest) =>
         ipc.invoke(CHANNELS.telemetryDailyUsage, req) as Promise<TelemetryDailyUsageRow[]>,
-      employeeStats: (companyId: string) =>
-        ipc.invoke(CHANNELS.telemetryEmployeeStats, {
-          companyId,
-        }) as Promise<TelemetryEmployeeStatsRow[]>,
+      employeeStats: (req: string | TelemetryEmployeeStatsRequest) =>
+        ipc.invoke(CHANNELS.telemetryEmployeeStats, telemetryEmployeeStatsRequest(req)) as Promise<
+          TelemetryEmployeeStatsRow[]
+        >,
       costBreakdown: (req: TelemetryCostBreakdownRequest) =>
         ipc.invoke(CHANNELS.telemetryCostBreakdown, req) as Promise<TelemetryCostBreakdownRow[]>,
     },

@@ -144,6 +144,7 @@ import type {
   TelemetryDailyUsageRow,
   TelemetryEmployeeStatsRequest,
   TelemetryEmployeeStatsRow,
+  TelemetryRunKind,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
   TestProviderConnectionRequest,
@@ -173,6 +174,7 @@ import {
   COPILOT_CATEGORIES,
   DEFAULT_CONCURRENCY_CAPS,
   PRIVACY_TIER_RANK,
+  TELEMETRY_RUN_KINDS,
   getLevelRank,
 } from '@team-x/shared-types';
 
@@ -450,10 +452,20 @@ export interface IpcEventsRepo {
 }
 
 export interface IpcRunsRepo {
-  companyStats(companyId: string): CompanyStats;
-  dailyUsage(companyId: string, fromMs: number, toMs: number): DailyUsageRow[];
-  employeeStats(companyId: string): EmployeeStatsRow[];
-  costBreakdown(companyId: string, fromMs?: number, toMs?: number): CostBreakdownRow[];
+  companyStats(companyId: string, kind?: TelemetryRunKind): CompanyStats;
+  dailyUsage(
+    companyId: string,
+    fromMs: number,
+    toMs: number,
+    kind?: TelemetryRunKind,
+  ): DailyUsageRow[];
+  employeeStats(companyId: string, kind?: TelemetryRunKind): EmployeeStatsRow[];
+  costBreakdown(
+    companyId: string,
+    fromMs?: number,
+    toMs?: number,
+    kind?: TelemetryRunKind,
+  ): CostBreakdownRow[];
 }
 
 export interface IpcMeetingsRepo {
@@ -1207,6 +1219,14 @@ function assertCompanyActive(
       `[ipc] ${channel}: company ${companyId} is archived; reactivate before mutating org`,
     );
   }
+}
+
+function assertTelemetryRunKind(value: unknown, channel: string): TelemetryRunKind | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === 'string' && TELEMETRY_RUN_KINDS.includes(value as TelemetryRunKind)) {
+    return value as TelemetryRunKind;
+  }
+  throw new Error(`[ipc] ${channel}: kind must be work, agentic, or copilot`);
 }
 
 function rowToTicket(row: TicketRow): Ticket {
@@ -3080,7 +3100,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
         throw new Error('[ipc] telemetry.companyStats: companyId is required');
       }
-      return runsRepo.companyStats(req.companyId);
+      const kind = assertTelemetryRunKind(req.kind, 'telemetry.companyStats');
+      return runsRepo.companyStats(req.companyId, kind);
     },
 
     async telemetryDailyUsage(req) {
@@ -3090,21 +3111,24 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.fromMs !== 'number' || typeof req.toMs !== 'number') {
         throw new Error('[ipc] telemetry.dailyUsage: fromMs and toMs are required');
       }
-      return runsRepo.dailyUsage(req.companyId, req.fromMs, req.toMs);
+      const kind = assertTelemetryRunKind(req.kind, 'telemetry.dailyUsage');
+      return runsRepo.dailyUsage(req.companyId, req.fromMs, req.toMs, kind);
     },
 
     async telemetryEmployeeStats(req) {
       if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
         throw new Error('[ipc] telemetry.employeeStats: companyId is required');
       }
-      return runsRepo.employeeStats(req.companyId);
+      const kind = assertTelemetryRunKind(req.kind, 'telemetry.employeeStats');
+      return runsRepo.employeeStats(req.companyId, kind);
     },
 
     async telemetryCostBreakdown(req) {
       if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
         throw new Error('[ipc] telemetry.costBreakdown: companyId is required');
       }
-      return runsRepo.costBreakdown(req.companyId, req.fromMs, req.toMs);
+      const kind = assertTelemetryRunKind(req.kind, 'telemetry.costBreakdown');
+      return runsRepo.costBreakdown(req.companyId, req.fromMs, req.toMs, kind);
     },
 
     // -----------------------------------------------------------------------

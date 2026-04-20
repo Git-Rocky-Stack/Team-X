@@ -1,34 +1,32 @@
 {
-  "taskId": "Phase-6-M39-T3",
+  "taskId": "Phase-6-M39-T4",
   "milestone": "Phase 6 M39",
   "milestoneName": "Telemetry Per-Kind Filter",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M39 T3 — IPC and preload kind propagation",
-  "status": "head-of-queue — M39 T2 runs repo filters shipped; next pass telemetry kind through IPC/preload",
+  "title": "Phase 6 M39 T4 — Renderer hooks and filter helpers",
+  "status": "head-of-queue — M39 T3 IPC/preload propagation shipped; next include telemetry kind in renderer query keys",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M39 T2 — runs repo per-kind aggregate filters",
+  "predecessor": "Phase 6 M39 T3 — IPC and preload kind propagation",
   "dor": [
-    "Runs repo aggregate methods accept optional TelemetryRunKind",
-    "All aggregate methods preserve undefined/all behavior and filter work/agentic/copilot when provided",
-    "Focused repo test, typecheck, lint, and strict claims are green after T2"
+    "Telemetry IPC handlers validate optional kind and pass it to repo aggregates",
+    "Preload companyStats/employeeStats can accept request-object calls without breaking string callers",
+    "Focused handler tests, typecheck, lint, and strict claims are green after T3"
   ],
   "acceptance": [
-    "Follow Task 3 in docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-    "Write failing IPC tests proving handlers pass kind to each runs repo aggregate method",
-    "Reject invalid runtime kind values at the IPC boundary before repo access",
-    "Propagate optional kind from telemetry.companyStats, telemetry.dailyUsage, telemetry.employeeStats, and telemetry.costBreakdown handlers",
-    "Update preload bridge signatures for request-object propagation where needed",
-    "Run pnpm -F @team-x/desktop exec vitest run src/main/ipc/telemetry-handlers.test.ts",
+    "Follow Task 4 in docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
+    "Write failing hook/source-contract tests for kind-aware telemetry query keys",
+    "Add telemetryRequestKind(filter) helper mapping all to undefined",
+    "Change telemetry hooks to request-object inputs where needed",
+    "Ensure query keys include req?.kind ?? all for all four telemetry queries",
+    "Run pnpm -F @team-x/desktop exec vitest run src/renderer/src/hooks/use-telemetry.test.tsx",
     "Run pnpm typecheck, pnpm lint, and pnpm audit:claims -- --strict before ledgering"
   ],
   "planDoc": "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-  "planDocSection": "Task 3: IPC And Preload Kind Propagation",
+  "planDocSection": "Task 4: Renderer Hooks And Filter Helpers",
   "referenceDocs": [
     "docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
-    "apps/desktop/src/main/ipc/handlers.ts",
-    "apps/desktop/src/preload/api.ts",
-    "apps/desktop/src/main/ipc/telemetry-handlers.test.ts",
+    "apps/desktop/src/renderer/src/hooks/use-telemetry.ts",
     "packages/shared-types/src/ipc.ts"
   ],
-  "nextStep": "Begin T3 by writing telemetry-handlers.test.ts with a fake runs repo that records kind arguments and rejects invalid runtime kind values."
+  "nextStep": "Begin T4 by writing the failing use-telemetry source-contract or hook tests that pin kind-aware query keys and all-to-undefined mapping."
 }
