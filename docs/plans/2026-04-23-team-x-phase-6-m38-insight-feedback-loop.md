@@ -750,3 +750,14 @@ git commit -m "chore(loki): ledger phase 6 m38 feedback loop"
 ## Follow-Up Boundary
 
 M38 does not implement learning beyond deterministic category weights. Per-company weights, per-user profiles, multi-company rollups, and analyzer-generated self-actions are future-phase material.
+
+## Verification Ledger
+
+M38 closed on 2026-04-20 through the T8 verification gate.
+
+- Format gate: `pnpm exec biome check --write ...` checked 14 M38 touched files with no fixes applied.
+- Focused shared-types gate: `pnpm -F @team-x/shared-types exec vitest run src/copilot-feedback.test.ts src/ipc.test.ts` passed 1 file / 3 tests. The plan-listed `src/ipc.test.ts` is absent in `packages/shared-types`, so Vitest selected the existing `copilot-feedback.test.ts` suite.
+- Focused desktop gate: `pnpm -F @team-x/desktop exec vitest run ...` passed 6 files / 73 tests across settings repo, settings IPC, copilot IPC, analyzer, copilot helpers, and settings UI suites.
+- Workspace gates: `pnpm typecheck` clean; `pnpm lint` 0 errors / 21 known warnings; `pnpm audit:claims -- --strict` 95 verified / 0 allowlisted / 0 UNALLOWED.
+- E2E gate: after restoring better-sqlite3 to the Electron ABI, `pnpm -F @team-x/desktop exec playwright test e2e/copilot-feedback.spec.ts` passed 1 spec / 1 test.
+- Scope boundary held: no migrations, providers, autonomous actions, or role-fit changes shipped in M38.

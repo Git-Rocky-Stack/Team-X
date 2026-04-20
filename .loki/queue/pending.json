@@ -1,18 +1,18 @@
 {
-  "milestone": "Phase 6 M38",
-  "milestoneName": "Insight Feedback Loop",
+  "milestone": "Phase 6 M39",
+  "milestoneName": "Telemetry Per-Kind Filter",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-  "planDocSection": "M38 T0 plan doc",
+  "planDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+  "planDocSection": "M39 — Telemetry Per-Kind Filter",
   "previousPhase": "Phase 5.6 — Reconciliation & Remediation",
   "previousPhaseStatus": "SHIPPED 2026-04-20 as v1.1.1",
   "previousPhaseCompletedAt": "2026-04-20T01:30:00Z",
-  "previousMilestone": "Phase 6 M37-R",
-  "previousMilestoneName": "Capability Role-Fit Reconciliation",
-  "previousMilestoneCompletedAt": "2026-04-20T02:30:00Z",
-  "previousMilestoneCommit": "2d87f60",
+  "previousMilestone": "Phase 6 M38",
+  "previousMilestoneName": "Insight Feedback Loop",
+  "previousMilestoneCompletedAt": "2026-04-20T06:00:00Z",
+  "previousMilestoneCommit": "this-ledger-commit",
   "createdAt": "2026-04-17T00:00:00Z",
-  "updatedAt": "2026-04-20T05:35:00Z",
+  "updatedAt": "2026-04-20T06:00:00Z",
   "phase56Kickoff": {
     "approvedAt": "2026-04-17T00:00:00Z",
     "signatory": "Rocky Elsalaymeh",
@@ -170,30 +170,35 @@
     }
   ],
   "activeSubMilestone": {
-    "id": "M38",
-    "name": "Insight Feedback Loop",
-    "status": "in progress — T7 integration E2E shipped; T8 verification gate is head-of-queue",
-    "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
+    "id": "M39",
+    "name": "Telemetry Per-Kind Filter",
+    "status": "head-of-queue — T0 plan doc next",
+    "planDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M38 T8. Scope: verification gate only — format M38 touched files, run focused shared-types/desktop suites, workspace gates, feedback-loop Playwright, then ledger M38 completion.",
-    "dor": "M37-R reconciliation closed with focused tests green and M36/M37 docs/Loki aligned to on-disk reality",
-    "dod": "M38 complete when Tasks 1-8 in the M38 plan doc ship with focused tests, E2E, typecheck, lint, strict claims, and Loki ledger closed",
+    "nextSession": "Proceed with Phase 6 M39 T0. Scope: docs-only milestone plan for TelemetryView per-kind filters over existing runs.kind; no implementation in T0.",
+    "dor": "M38 Insight Feedback Loop closed through verification gate",
+    "dod": "M39 complete when TelemetryView exposes All / Work / Agentic / Copilot filters, all telemetry aggregate read paths respect the selected kind, and no migration is introduced",
     "verifiedBy": null,
     "blockedBy": null
   },
   "previousSubMilestone": {
-    "id": "M37-R",
-    "name": "Capability Role-Fit Reconciliation",
-    "status": "shipped 2026-04-20 — docs/Loki reconciled and focused tests green",
-    "planDoc": "docs/plans/2026-04-22-team-x-phase-6-m37-role-fit-v2.md",
+    "id": "M38",
+    "name": "Insight Feedback Loop",
+    "status": "shipped 2026-04-20 — Tasks 0-8 complete; feedback weights, dismissal suggestions, renderer UI, and E2E verification shipped",
+    "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
     "auditDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
-    "nextSession": "Proceed with Phase 6 M38 T0 Insight Feedback Loop plan doc.",
-    "dor": "Phase 5.6 M-G v1.1.1 ship ledger closed and tag/push complete",
-    "dod": "existing Phase 6 capability/role-fit surface inventoried, focused tests green, docs/Loki reconciled, next Phase 6 implementation task selected without hidden drift",
+    "nextSession": "Proceed with Phase 6 M39 T0 — Telemetry Per-Kind Filter plan doc.",
+    "dor": "M37-R reconciliation closed with focused tests green and M36/M37 docs/Loki aligned to on-disk reality",
+    "dod": "satisfied — M38 Tasks 0-8 shipped with focused tests, workspace gates, strict claims, feedback-loop E2E, and completion ledger",
     "verifiedBy": [
-      "shared-types focused tests — 2 files / 20 tests passed",
-      "role-schema focused tests — 3 files / 50 tests passed",
-      "desktop role-loader/scorer focused tests — 2 files / 50 tests passed"
+      "biome touched-file gate — 14 M38 files checked; no fixes applied",
+      "shared-types focused gate — 1 file / 3 tests passed; plan-listed src/ipc.test.ts is absent in packages/shared-types",
+      "desktop focused gate — 6 files / 73 tests passed",
+      "pnpm typecheck — clean across 6 workspace packages",
+      "pnpm lint — 0 errors / 21 known no-non-null-assertion warnings",
+      "pnpm audit:claims -- --strict — 95 verified / 0 allowlisted / 0 UNALLOWED",
+      "pnpm -F @team-x/desktop exec playwright test e2e/copilot-feedback.spec.ts — 1 spec / 1 test passed after Electron ABI rebuild",
+      "better-sqlite3 ABI restored for Electron at gate exit"
     ],
     "blockedBy": null
   },
@@ -249,9 +254,9 @@
     "unpushed": 0
   },
   "current": {
-    "asOfTask": "Phase 6 M38 T7 integration E2E implemented and verified; M38 T8 verification gate is head-of-queue.",
+    "asOfTask": "Phase 6 M38 Insight Feedback Loop shipped through T8 verification; M39 T0 telemetry per-kind filter plan doc is head-of-queue.",
     "unitTests": 1683,
-    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests.",
+    "unitTestsNote": "M-G release gate: pnpm test passed 125 files / 1683 tests after Node ABI rebuild. M37-R focused verification passed 120/120 across shared-types, role-schema, role-loader, and scorer suites. M38 T1 focused shared-types verification passed 3 files / 23 tests. M38 T2 focused settings-copilot repo verification passed 1 file / 9 tests. M38 T3 focused settings-copilot IPC verification passed 1 file / 8 tests. M38 T4 focused analyzer verification passed 1 file / 19 tests. M38 T5 focused copilot IPC verification passed 1 file / 13 tests. M38 T6 focused renderer verification passed 2 files / 24 tests. M38 T8 focused gate passed shared-types 1 file / 3 tests and desktop 6 files / 73 tests; the plan-listed shared-types src/ipc.test.ts is absent.",
     "e2eSpecs": 14,
     "e2eGreenCount": 19,
     "lintErrors": 0,
@@ -264,7 +269,7 @@
     "phase56Exit": "SHIPPED 2026-04-20 — all 7 sub-milestones DoD-complete, retrospective committed, CHANGELOG [1.1.1], v1.1.1 version bump, v1.1.1 tag, main/feature branch push, and worktree-phase-2-the-org deletion.",
     "phase56SurfaceArea": "Conformance audit (M-A) ~200–400 rows + triage (M-B) per-row dispositions + safeguards (M-E) 6 deliverables + backend backfill (M-C) migrations/IPC/repos for restore rows + UI backfill (M-D) components/hooks/routes for restore rows + docs truth-up (M-F) three-bucket CLAUDE.md rewrite + ship (M-G) branch deletion + version bump + retrospective",
     "phase56NonGoals": "No new features beyond restoration. No scope creep from mid-flight discoveries without change-control mini-gate (§14.3). No silent deferrals. No Phase 6 work until M-G ships. No public README/landing-site claim updates — those wait for M-F.",
-    "phase6Next": "M38 T8 verification gate. M38 T7 feedback-loop E2E is implemented."
+    "phase6Next": "M39 T0 telemetry per-kind filter plan doc. M38 feedback loop is complete."
   },
   "sprintFramework": {
     "backlog": "M-B triage output — audit doc `disposition` column. Must-have=restore / Should-have=replace / Won't-have=deprecate (docs only)",
@@ -274,6 +279,7 @@
     "dod": "Sprint exit gate: M-E.1 milestone DoD template (ships in M-E as S1). Until M-E ships, M-A and M-B use interim DoD inline with their acceptance blocks"
   },
   "notes": [
+    "PHASE 6 M38 COMPLETE 2026-04-20 — Insight Feedback Loop shipped through T8 verification gate. T8 evidence: biome checked 14 touched files with no fixes; shared-types focused gate ran 1 file / 3 tests (the plan-listed src/ipc.test.ts is absent in shared-types and Vitest selected the existing copilot-feedback test); desktop focused gate passed 6 files / 73 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known no-non-null-assertion warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED; Electron ABI restored for Playwright; feedback-loop Playwright passed 1 spec / 1 test. Scope boundaries preserved: no migrations, providers, autonomous action, or role-fit changes. M38 total remains 14 E2E specs / 19 Playwright cases. Head-of-queue advances to M39 T0 Telemetry Per-Kind Filter plan doc.",
     "PHASE 6 M38 T7 SHIPPED 2026-04-20 — feedback-loop Playwright E2E implemented with TDD. Added apps/desktop/e2e/copilot-feedback.spec.ts covering cost-only analyzer ticks, three same-category sidebar dismissals, advisory suggestion banner, Apply action, copilot.weights.changed append-only event verification, and Settings cost weight display at 0.5x. Added a cost-only canned copilot fixture keyed on 'Allowed categories: cost' before the broad strategia-x fixture so the category gate receives deterministic cost drafts. First valid red was insightsGenerated=0 before the fixture; an invalid earlier run exposed Electron better-sqlite3 ABI 137/125 mismatch and was corrected by rebuilding better-sqlite3 for Electron after killing orphan Electron processes. Verification: feedback-loop Playwright 1 spec / 1 test passed; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T8 verification gate.",
     "PHASE 6 M38 T6 SHIPPED 2026-04-20 — renderer feedback weighting UI implemented with TDD. Added useCopilotWeights/useSetCopilotWeights hooks, category weight controls in CopilotSection with 0.0x..2.0x display and data-copilot-weight-category anchors, feedback suggestion prompt helpers, CopilotInsightCard callback handoff for dismiss suggestions, and CopilotSidebar advisory banner with Apply/Keep current actions. Apply calls settings.setCopilotWeights with the suggested category weight; Keep current only clears local banner state; stable E2E selectors data-copilot-feedback-suggestion and data-copilot-feedback-apply are present. Verification: renderer focused tests 2 files / 24 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T7 feedback-loop E2E.",
     "PHASE 6 M38 T5 SHIPPED 2026-04-20 — advisory dismissal feedback detector implemented with TDD. Extended copilot.dismissed payload with category/title; added audit-backed seven-day same-category dismissal counting; returns CopilotFeedbackSuggestion on the third same-category dismissal; current weight 1.0 suggests 0.5 and 0.5 suggests 0.0; mixed/old dismissals do not trigger; no settings mutation occurs in dismiss. Verification: copilot-handlers tests 1 file / 13 tests; pnpm typecheck clean; pnpm lint 0 errors / 21 known warnings; pnpm audit:claims -- --strict 95 verified / 0 allowlisted / 0 UNALLOWED. Head-of-queue advances to M38 T6 renderer settings and suggestion UI.",
@@ -316,6 +322,6 @@
       "preservedWork": "M36 T0 plan doc (dc8d4d3) + M36 T1 capability taxonomy enum (52ac886) both on origin/main — no rollback, resume at M36 T2 when unpaused",
       "unblockOwner": "Rocky — manually remove this m36PausedState block and restore head-of-queue to M36 T2 when Phase 5.6 retrospective is committed"
     },
-    "nextTask": "Phase 6 M38 T8 — run feedback-loop verification gate"
+    "nextTask": "Phase 6 M39 T0 — author telemetry per-kind filter plan doc"
   }
 }

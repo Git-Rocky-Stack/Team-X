@@ -1,37 +1,33 @@
 {
-  "taskId": "Phase-6-M38-T8",
-  "milestone": "Phase 6 M38",
-  "milestoneName": "Insight Feedback Loop",
+  "taskId": "Phase-6-M39-T0",
+  "milestone": "Phase 6 M39",
+  "milestoneName": "Telemetry Per-Kind Filter",
   "phase": "Phase 6 — Capabilities & Evidence",
-  "title": "Phase 6 M38 T8 — Verification gate",
-  "status": "head-of-queue — M38 T7 integration E2E implemented and verified; next run the milestone verification gate",
+  "title": "Phase 6 M39 T0 — Telemetry per-kind filter plan doc",
+  "status": "head-of-queue — M38 feedback loop shipped and verified; next author the M39 plan doc",
   "verifiedBy": null,
-  "predecessor": "Phase 6 M38 T7 — feedback-loop E2E implemented in c023d0d",
+  "predecessor": "Phase 6 M38 — Insight Feedback Loop completed through T8 verification gate",
   "dor": [
-    "M38 T1-T7 contracts, persistence, IPC, analyzer, dismissal detector, renderer UI, and E2E coverage are shipped",
-    "Focused copilot feedback Playwright spec passes",
-    "Typecheck, lint, and strict claim-evidence gates are green for T7"
+    "M38 Tasks 0-8 shipped with focused tests, workspace gates, and feedback-loop E2E green",
+    "Phase 6 umbrella plan defines M39 as a read-path-only telemetry per-kind filter using the existing runs.kind column",
+    "No migration, provider, autonomous-action, or role-fit scope carries forward from M38"
   ],
   "acceptance": [
-    "Follow Task 8 in docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-    "Format all touched M38 files listed in the plan",
-    "Run focused shared-types and desktop Vitest suites listed in Task 8",
-    "Run pnpm typecheck, pnpm lint, and pnpm audit:claims -- --strict",
-    "Run pnpm -F @team-x/desktop exec playwright test e2e/copilot-feedback.spec.ts",
-    "Ledger M38 completion and preserve the no-migration/no-provider/no-autonomous-action/no-role-fit boundary"
+    "Author docs/plans/2026-04-24-team-x-phase-6-m39-telemetry-per-kind-filter.md",
+    "Mirror the Phase 6 milestone plan structure used by M36 and M38",
+    "Lock read-path-only scope: TelemetryView chips All / Work / Agentic / Copilot, existing aggregate queries respect the kind filter, and no migrations ship",
+    "Define TDD task sequence, non-goals, acceptance criteria, verification gates, and Loki ledger cadence",
+    "Do not implement T1+ production code in T0"
   ],
-  "planDoc": "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-  "planDocSection": "Task 8: Verification Gate",
+  "planDoc": "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+  "planDocSection": "M39 — Telemetry Per-Kind Filter",
   "referenceDocs": [
-    "docs/plans/2026-04-23-team-x-phase-6-m38-insight-feedback-loop.md",
-    "apps/desktop/e2e/copilot-feedback.spec.ts",
-    "packages/shared-types/src/copilot-feedback.test.ts",
-    "apps/desktop/src/main/db/repos/settings-copilot.test.ts",
-    "apps/desktop/src/main/ipc/settings-copilot-handlers.test.ts",
-    "apps/desktop/src/main/ipc/copilot-handlers.test.ts",
-    "apps/desktop/src/main/services/copilot-analyzer-service.test.ts",
-    "apps/desktop/src/renderer/src/features/copilot/copilot-helpers.test.ts",
-    "apps/desktop/src/renderer/src/features/settings/copilot-section.test.tsx"
+    "docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md",
+    "docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md",
+    "apps/desktop/src/renderer/src/features/telemetry/telemetry-view.tsx",
+    "apps/desktop/src/main/db/repos/runs.ts",
+    "apps/desktop/src/main/ipc/handlers.ts",
+    "packages/shared-types/src/ipc.ts"
   ],
-  "nextStep": "Begin T8 by formatting the full M38 touched-file set, then run the focused shared-types/desktop suites and the feedback-loop Playwright spec."
+  "nextStep": "Begin M39 T0 by authoring the telemetry per-kind filter milestone plan doc. T0 is docs-only; implementation starts in T1 after the plan lands."
 }
