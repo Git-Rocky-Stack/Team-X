@@ -48,10 +48,9 @@ export interface RagHandlersDeps {
    */
   deleteAllForCompany(companyId: string): number;
   /**
-   * Walks every message in every thread of the company and re-indexes
-   * each one through `ragService.indexSource`. Returns how many
-   * sources were scheduled. When RAG is disabled, implementation
-   * returns `0` — the caller UI then shows "RAG disabled".
+   * Rebuilds every supported source class for the company and returns
+   * how many sources were successfully scheduled. When RAG is disabled,
+   * implementation returns `0` — the caller UI then shows "RAG disabled".
    */
   rebuildSources(companyId: string): Promise<number>;
 }
@@ -68,7 +67,7 @@ export interface RagHandlers {
   }>;
   /**
    * `rag.rebuildAll` — destructive: wipes the company's embeddings
-   * then re-indexes all message/meeting sources. Returns how many
+   * then re-indexes all supported source classes. Returns how many
    * sources were scheduled for indexing.
    */
   rebuildAll(companyId: string): Promise<{ scheduled: number }>;

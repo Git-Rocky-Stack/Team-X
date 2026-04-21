@@ -4,25 +4,28 @@ import {
   type RecentMessage,
   composeSystemPromptWithRag,
 } from './system-prompt.js';
+import type { RetrievalEvidencePack } from './retrieval-orchestrator.js';
 
 function makeDeps(overrides: Partial<ComposeDeps> = {}): ComposeDeps {
   return {
     renderRoleSystemPrompt: vi.fn(async () => 'You are a CEO.'),
     isRagEnabled: () => true,
-    getRagConfig: () => ({ topK: 3, threshold: 0.3, maxTokens: 400 }),
     getRecentUserMessages: (): RecentMessage[] => [
       { id: 'u1', content: 'What is our Q3 plan?', sourceId: 'u1' },
     ],
-    retrieve: vi.fn(async () => [
-      {
-        sourceType: 'ticket',
-        sourceId: 'T-42',
-        chunkIndex: 0,
-        contentText: 'Q3 launch',
-        similarity: 0.8,
-      },
-    ]),
-    countTokens: (s: string) => s.split(/\s+/).length,
+    retrieveEvidence: vi.fn(async (): Promise<RetrievalEvidencePack> => ({
+      queries: ['What is our Q3 plan?'],
+      entries: [
+        {
+          sourceType: 'ticket',
+          sourceId: 'T-42',
+          chunkIndex: 0,
+          contentText: 'Q3 launch',
+          score: 0.8,
+          reasons: ['semantic'],
+        },
+      ],
+    })),
     ...overrides,
   };
 }
@@ -36,7 +39,7 @@ describe('composeSystemPromptWithRag', () => {
       threadId: 't1',
     });
     expect(prompt).toBe('You are a CEO.');
-    expect(deps.retrieve).not.toHaveBeenCalled();
+    expect(deps.retrieveEvidence).not.toHaveBeenCalled();
   });
 
   it('returns plain role prompt when no recent user messages', async () => {
@@ -47,7 +50,7 @@ describe('composeSystemPromptWithRag', () => {
       threadId: 't1',
     });
     expect(prompt).toBe('You are a CEO.');
-    expect(deps.retrieve).not.toHaveBeenCalled();
+    expect(deps.retrieveEvidence).not.toHaveBeenCalled();
   });
 
   it('appends a Relevant Context block when retrieval yields hits', async () => {
@@ -63,52 +66,40 @@ describe('composeSystemPromptWithRag', () => {
     expect(prompt).toContain('Q3 launch');
   });
 
-  it('enforces maxTokens by truncating the context block', async () => {
-    const long = 'word '.repeat(500);
+  it('returns plain role prompt when evidence retrieval yields no entries', async () => {
     const deps = makeDeps({
-      retrieve: vi.fn(async () => [
-        {
-          sourceType: 'ticket',
-          sourceId: 'T-1',
-          chunkIndex: 0,
-          contentText: long,
-          similarity: 0.9,
-        },
-        {
-          sourceType: 'ticket',
-          sourceId: 'T-2',
-          chunkIndex: 0,
-          contentText: long,
-          similarity: 0.85,
-        },
-      ]),
-      getRagConfig: () => ({ topK: 3, threshold: 0.3, maxTokens: 50 }),
+      retrieveEvidence: vi.fn(async (): Promise<RetrievalEvidencePack> => ({
+        queries: ['What is our Q3 plan?'],
+        entries: [],
+      })),
     });
     const prompt = await composeSystemPromptWithRag(deps, {
       employeeId: 'e1',
       companyId: 'c1',
       threadId: 't1',
     });
-    const sourceCount = (prompt.match(/\[Source:/g) ?? []).length;
-    expect(sourceCount).toBeLessThanOrEqual(1);
+    expect(prompt).toBe('You are a CEO.');
   });
 
-  it('dedups hits whose sourceId appears in excluded list', async () => {
-    const retrieve = vi.fn(async () => [
-      { sourceType: 'message', sourceId: 'm1', chunkIndex: 0, contentText: 'X', similarity: 0.9 },
-    ]);
+  it('passes recent messages through to evidence retrieval', async () => {
+    const retrieveEvidence = vi.fn(async (): Promise<RetrievalEvidencePack> => ({
+      queries: ['already in thread'],
+      entries: [],
+    }));
     const deps = makeDeps({
-      retrieve,
+      retrieveEvidence,
       getRecentUserMessages: () => [{ id: 'm1', content: 'already in thread', sourceId: 'm1' }],
     });
-    const prompt = await composeSystemPromptWithRag(deps, {
+    await composeSystemPromptWithRag(deps, {
       employeeId: 'e1',
       companyId: 'c1',
       threadId: 't1',
     });
-    expect(prompt).not.toContain('[Source: message m1]');
-    expect(retrieve).toHaveBeenCalledWith(
-      expect.objectContaining({ excludeSourceIds: expect.arrayContaining(['m1']) }),
+    expect(retrieveEvidence).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recentMessages: [{ id: 'm1', content: 'already in thread', sourceId: 'm1' }],
+        excludeSourceIds: ['m1'],
+      }),
     );
   });
 });

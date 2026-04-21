@@ -1,6 +1,6 @@
 /**
  * composeSystemPromptWithRag — wraps the existing role.md render step
- * with a retrieve-and-inject pass. Returned string is the pre-rendered
+ * with an evidence-pack retrieval pass. Returned string is the pre-rendered
  * system prompt `runAgent` expects.
  *
  * Zero regression: when RAG is disabled or retrieval is empty, returns
@@ -9,7 +9,10 @@
  * Phase 5 — M29.
  */
 
-import type { RetrievalHit } from '@team-x/intelligence';
+import {
+  formatEvidenceLine,
+  type RetrievalEvidencePack,
+} from './retrieval-orchestrator.js';
 
 export interface RecentMessage {
   id: string;
@@ -26,26 +29,13 @@ export interface ComposeInput {
 export interface ComposeDeps {
   renderRoleSystemPrompt(input: ComposeInput): Promise<string>;
   isRagEnabled(): boolean;
-  getRagConfig(): { topK: number; threshold: number; maxTokens: number };
   getRecentUserMessages(input: ComposeInput): RecentMessage[];
-  retrieve(input: {
+  retrieveEvidence(input: {
     companyId: string;
-    query: string;
-    topK: number;
-    threshold: number;
+    recentMessages: RecentMessage[];
     excludeSourceIds: string[];
-  }): Promise<RetrievalHit[]>;
-  countTokens(text: string): number;
+  }): Promise<RetrievalEvidencePack>;
 }
-
-const SOURCE_LABELS: Record<string, string> = {
-  message: 'message',
-  ticket: 'ticket',
-  meeting_minutes: 'meeting',
-  goal: 'goal',
-  project: 'project',
-  vault_file: 'vault',
-};
 
 export async function composeSystemPromptWithRag(
   deps: ComposeDeps,
@@ -58,43 +48,14 @@ export async function composeSystemPromptWithRag(
   const recent = deps.getRecentUserMessages(input);
   if (recent.length === 0) return base;
 
-  const query = recent
-    .slice(-2)
-    .map((m) => m.content)
-    .join('\n\n')
-    .trim();
-  if (!query) return base;
-
-  const { topK, threshold, maxTokens } = deps.getRagConfig();
-
   const excludeSourceIds = recent.map((m) => m.sourceId);
-  const excludeSet = new Set(excludeSourceIds);
-
-  const hits = await deps.retrieve({
+  const evidence = await deps.retrieveEvidence({
     companyId: input.companyId,
-    query,
-    topK,
-    threshold,
+    recentMessages: recent,
     excludeSourceIds,
   });
+  if (evidence.entries.length === 0) return base;
 
-  // Double-filter: in case the retrieve impl doesn't honor excludeSourceIds,
-  // drop any hit whose sourceId is in the exclude set at render time.
-  const filtered = hits.filter((h) => !excludeSet.has(h.sourceId));
-  if (filtered.length === 0) return base;
-
-  const lines: string[] = [];
-  let used = 0;
-  for (const hit of filtered) {
-    const label = SOURCE_LABELS[hit.sourceType] ?? hit.sourceType;
-    const formatted = `[Source: ${label} ${hit.sourceId}] ${hit.contentText}`;
-    const cost = deps.countTokens(formatted);
-    if (used + cost > maxTokens) break;
-    used += cost;
-    lines.push(formatted);
-  }
-
-  if (lines.length === 0) return base;
-
+  const lines = evidence.entries.map((entry) => formatEvidenceLine(entry));
   return `${base}\n\n## Relevant Context\n${lines.join('\n\n')}`;
 }

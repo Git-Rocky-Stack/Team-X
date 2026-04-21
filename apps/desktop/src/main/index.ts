@@ -143,6 +143,8 @@ import {
   isTestMode,
   makeFakeEmbedAdapter,
 } from './services/provider-factory.js';
+import { rebuildCompanyRagSources } from './services/rag-rebuild.js';
+import { createRetrievalOrchestrator } from './services/retrieval-orchestrator.js';
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRagIndexer } from './services/rag-indexer.js';
 import { createRoleLoader } from './services/role-loader.js';
@@ -510,6 +512,18 @@ app
     } else {
       console.log('[rag] disabled or unconfigured — running without RAG');
     }
+    const retrievalOrchestrator =
+      ragService === null
+        ? null
+        : createRetrievalOrchestrator({
+            vectorRetrieve: (input) => ragService.retrieve(input),
+            listTickets: (companyId) => ticketsRepo.listByCompany(companyId),
+            listGoals: (companyId) => goalsRepo.listByCompany(companyId),
+            listProjects: (companyId) => projectsRepo.listByCompany(companyId),
+            searchVault: (companyId, query) =>
+              vaultRepo.search(companyId, query).map((hit) => ({ id: hit.id, rank: hit.rank })),
+            getVaultFile: (id) => vaultRepo.getById(id),
+          });
 
     // Role loader: turns (employee, company) into a rendered system prompt.
     // Preloaded eagerly so the cost of the role-pack scan is paid during
@@ -616,7 +630,7 @@ app
         const renderPlain = (): Promise<string> =>
           roleLoader.resolveSystemPrompt({ employee, company });
 
-        if (ragService === null) return renderPlain();
+        if (retrievalOrchestrator === null) return renderPlain();
 
         const topK = settingsRepo.get<number>('rag_top_k', 5);
         const threshold = settingsRepo.get<number>('rag_threshold', 0.7);
@@ -625,20 +639,27 @@ app
         return composeSystemPromptWithRag(
           {
             renderRoleSystemPrompt: renderPlain,
-            // Already gated above — ragService !== null means enabled.
+            // Already gated above — retrieval orchestrator only exists when
+            // vector RAG is available, so this stays enabled without a second
+            // settings lookup.
             isRagEnabled: () => true,
-            getRagConfig: () => ({ topK, threshold, maxTokens }),
             getRecentUserMessages: ({ threadId: tid }) =>
               messagesRepo
                 .listByThread(tid)
                 .filter((m) => m.authorKind === 'user')
                 .slice(-2)
                 .map((m) => ({ id: m.id, content: m.content, sourceId: m.id })),
-            retrieve: (q) => ragService.retrieve(q),
-            // ~4 chars per token is the canonical OpenAI rule of thumb;
-            // good enough for a maxTokens guard that is advisory, not a
-            // hard limit the provider enforces.
-            countTokens: (text) => Math.ceil(text.length / 4),
+            retrieveEvidence: ({ companyId, recentMessages, excludeSourceIds }) =>
+              retrievalOrchestrator.retrieveEvidence({
+                companyId,
+                recentMessages,
+                excludeSourceIds,
+                config: { topK, threshold, maxTokens },
+                // ~4 chars per token is the canonical OpenAI rule of thumb;
+                // good enough for a maxTokens guard that is advisory, not a
+                // hard limit the provider enforces.
+                countTokens: (text) => Math.ceil(text.length / 4),
+              }),
           },
           { employeeId: employee.id, companyId: company.id, threadId },
         );
@@ -680,6 +701,10 @@ app
         const m = meetingsRepo.getById(id);
         return m?.minutesMd ? { id: m.id, minutesText: m.minutesMd } : null;
       },
+      getTicket: (id) => ticketsRepo.getById(id),
+      getGoal: (id) => goalsRepo.getById(id),
+      getProject: (id) => projectsRepo.getById(id),
+      getVaultFile: (id) => vaultRepo.getById(id),
       isEnabled: () => ragService !== null,
     });
     ragIndexer.start();
@@ -1457,53 +1482,37 @@ app
         return deleted;
       },
       rebuildSources: async (companyId: string) => {
-        // Walks every message in every thread of this company and re-
-        // embeds each non-empty one. If `ragService` is null (user has
-        // not configured a provider), return 0 — the Settings UI then
-        // surfaces "RAG disabled" to the user without raising.
-        //
-        // Per-source errors are isolated: a single embed-provider failure
-        // (network blip, rate limit) must not abort the entire rebuild
-        // mid-company after we've already wiped embeddings in the caller
-        // — that would leave the user with an empty index and no signal
-        // why. We log each failure, continue, and the returned count
-        // reflects successful indexes only. Settings UI can surface
-        // partial-success to the user when count < expected.
-        //
-        // TOCTOU note: while this rebuild runs, the RagIndexer is still
-        // subscribed and may fire indexSource for fresh agent replies.
-        // This is safe — RagService.indexSource is delete-then-upsert on
-        // (sourceId), so overlapping calls for different sourceIds never
-        // collide, and two calls for the same sourceId leave the latest
-        // content wins. No duplicates, no corruption.
         if (ragService === null) return 0;
-        const threads = threadsRepo.listByCompany(companyId);
-        let count = 0;
-        let failed = 0;
-        for (const t of threads) {
-          const msgs = messagesRepo.listByThread(t.id);
-          for (const m of msgs) {
-            if (!m.content.trim()) continue;
-            try {
-              await ragService.indexSource({
-                companyId,
-                sourceType: 'message',
-                sourceId: m.id,
-                content: m.content,
-              });
-              count++;
-            } catch (err) {
-              failed++;
-              console.error(`[rag] rebuild: indexSource failed for message ${m.id}:`, err);
-            }
-          }
-        }
-        if (failed > 0) {
-          console.warn(
-            `[rag] rebuild for company ${companyId}: ${count} succeeded, ${failed} failed`,
-          );
-        }
-        return count;
+        const result = await rebuildCompanyRagSources({
+          companyId,
+          service: { indexSource: (input) => ragService.indexSource(input) },
+          threadsRepo: {
+            listByCompany: (cid) => threadsRepo.listByCompany(cid),
+          },
+          messagesRepo: {
+            listByThread: (threadId) => messagesRepo.listByThread(threadId),
+          },
+          meetingsRepo: {
+            listByCompany: (cid) => meetingsRepo.listByCompany(cid),
+          },
+          ticketsRepo: {
+            listByCompany: (cid) => ticketsRepo.listByCompany(cid),
+          },
+          goalsRepo: {
+            listByCompany: (cid) => goalsRepo.listByCompany(cid),
+          },
+          projectsRepo: {
+            listByCompany: (cid) => projectsRepo.listByCompany(cid),
+          },
+          vaultRepo: {
+            listByCompany: (cid) => vaultRepo.listByCompany(cid),
+          },
+          logger: {
+            error: (msg, err) => console.error(msg, err),
+            warn: (msg) => console.warn(msg),
+          },
+        });
+        return result.scheduled;
       },
     });
     ipcMain.handle('rag.stats', (_evt, companyId: string) => ragHandlers.stats(companyId));

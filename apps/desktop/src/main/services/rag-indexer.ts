@@ -13,6 +13,17 @@
 import type { RagService } from '@team-x/intelligence';
 import type { DashboardEvent, EmbeddingSourceType } from '@team-x/shared-types';
 
+import {
+  formatGoalEmbeddingContent,
+  formatProjectEmbeddingContent,
+  formatTicketEmbeddingContent,
+  formatVaultFileEmbeddingContent,
+  type RagGoalSource,
+  type RagProjectSource,
+  type RagTicketSource,
+  type RagVaultFileSource,
+} from './rag-source-content.js';
+
 export interface RagIndexerBus {
   subscribe(listener: (event: DashboardEvent) => void): () => void;
 }
@@ -23,6 +34,10 @@ export interface RagIndexerDeps {
   getMessage(id: string): { id: string; content: string; threadId: string } | null;
   getCompanyIdForThread(threadId: string): string | null;
   getMeetingMinutes?: (id: string) => { id: string; minutesText: string } | null;
+  getTicket?: (id: string) => RagTicketSource | null;
+  getGoal?: (id: string) => RagGoalSource | null;
+  getProject?: (id: string) => RagProjectSource | null;
+  getVaultFile?: (id: string) => RagVaultFileSource | null;
   isEnabled: () => boolean;
   logger?: {
     info?: (msg: string, ...args: unknown[]) => void;
@@ -46,6 +61,10 @@ export function createRagIndexer(deps: RagIndexerDeps): RagIndexer {
       try {
         const job = toIndexJob(event, deps);
         if (!job) return;
+        if (job.kind === 'delete') {
+          deps.service.deleteBySource(job.sourceId);
+          return;
+        }
         await deps.service.indexSource(job);
       } catch (err) {
         logger.error('indexSource failed', err);
@@ -68,13 +87,21 @@ export function createRagIndexer(deps: RagIndexerDeps): RagIndexer {
 }
 
 interface IndexJob {
+  kind: 'upsert';
   companyId: string;
   sourceType: EmbeddingSourceType;
   sourceId: string;
   content: string;
 }
 
-function toIndexJob(event: DashboardEvent, deps: RagIndexerDeps): IndexJob | null {
+interface DeleteJob {
+  kind: 'delete';
+  sourceId: string;
+}
+
+type RagJob = IndexJob | DeleteJob;
+
+function toIndexJob(event: DashboardEvent, deps: RagIndexerDeps): RagJob | null {
   if (event.type === 'work.completed') {
     const payload = event.payload as { messageId?: string; threadId?: string } | null;
     if (!payload?.messageId || !payload.threadId) return null;
@@ -82,7 +109,13 @@ function toIndexJob(event: DashboardEvent, deps: RagIndexerDeps): IndexJob | nul
     if (!msg || !msg.content.trim()) return null;
     const companyId = event.companyId ?? deps.getCompanyIdForThread(payload.threadId);
     if (!companyId) return null;
-    return { companyId, sourceType: 'message', sourceId: msg.id, content: msg.content };
+    return {
+      kind: 'upsert',
+      companyId,
+      sourceType: 'message',
+      sourceId: msg.id,
+      content: msg.content,
+    };
   }
 
   if (event.type === 'meeting.ended' && deps.getMeetingMinutes) {
@@ -91,11 +124,98 @@ function toIndexJob(event: DashboardEvent, deps: RagIndexerDeps): IndexJob | nul
     const minutes = deps.getMeetingMinutes(payload.meetingId);
     if (!minutes || !minutes.minutesText.trim()) return null;
     return {
+      kind: 'upsert',
       companyId: event.companyId,
       sourceType: 'meeting_minutes',
       sourceId: minutes.id,
       content: minutes.minutesText,
     };
+  }
+
+  if (
+    (event.type === 'ticket.created' ||
+      event.type === 'ticket.updated' ||
+      event.type === 'ticket.assigned' ||
+      event.type === 'ticket.closed' ||
+      event.type === 'ticket.reopened') &&
+    deps.getTicket
+  ) {
+    const payload = event.payload as { ticketId?: string } | null;
+    if (!payload?.ticketId) return null;
+    const ticket = deps.getTicket(payload.ticketId);
+    if (!ticket) return null;
+    const content = formatTicketEmbeddingContent(ticket);
+    if (!content.trim()) return null;
+    return {
+      kind: 'upsert',
+      companyId: event.companyId,
+      sourceType: 'ticket',
+      sourceId: ticket.id,
+      content,
+    };
+  }
+
+  if ((event.type === 'goal.created' || event.type === 'goal.updated') && deps.getGoal) {
+    const payload = event.payload as { goalId?: string } | null;
+    if (!payload?.goalId) return null;
+    const goal = deps.getGoal(payload.goalId);
+    if (!goal) return null;
+    const content = formatGoalEmbeddingContent(goal);
+    if (!content.trim()) return null;
+    return {
+      kind: 'upsert',
+      companyId: event.companyId,
+      sourceType: 'goal',
+      sourceId: goal.id,
+      content,
+    };
+  }
+
+  if (event.type === 'goal.deleted') {
+    const payload = event.payload as { goalId?: string } | null;
+    return payload?.goalId ? { kind: 'delete', sourceId: payload.goalId } : null;
+  }
+
+  if ((event.type === 'project.created' || event.type === 'project.updated') && deps.getProject) {
+    const payload = event.payload as { projectId?: string } | null;
+    if (!payload?.projectId) return null;
+    const project = deps.getProject(payload.projectId);
+    if (!project) return null;
+    const content = formatProjectEmbeddingContent(project);
+    if (!content.trim()) return null;
+    return {
+      kind: 'upsert',
+      companyId: event.companyId,
+      sourceType: 'project',
+      sourceId: project.id,
+      content,
+    };
+  }
+
+  if (event.type === 'project.deleted') {
+    const payload = event.payload as { projectId?: string } | null;
+    return payload?.projectId ? { kind: 'delete', sourceId: payload.projectId } : null;
+  }
+
+  if (event.type === 'vault.file_created' && deps.getVaultFile) {
+    const payload = event.payload as { fileId?: string } | null;
+    if (!payload?.fileId) return null;
+    const file = deps.getVaultFile(payload.fileId);
+    if (!file) return null;
+    const content = formatVaultFileEmbeddingContent(file);
+    if (!content.trim()) return null;
+    return {
+      kind: 'upsert',
+      companyId: event.companyId,
+      sourceType: 'vault_file',
+      sourceId: file.id,
+      content,
+    };
+  }
+
+  if (event.type === 'vault.file_deleted') {
+    const payload = event.payload as { fileId?: string } | null;
+    return payload?.fileId ? { kind: 'delete', sourceId: payload.fileId } : null;
   }
 
   return null;
