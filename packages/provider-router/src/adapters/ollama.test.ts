@@ -37,6 +37,20 @@ interface FakeStreamResult {
 }
 let nextStreamTextResult: FakeStreamResult | null = null;
 let nextStreamTextError: Error | null = null;
+let nextStreamTextImpl:
+  | ((args: unknown) => FakeStreamResult | Promise<FakeStreamResult>)
+  | null = null;
+
+interface AdapterChunk {
+  delta?: string;
+  done?: boolean;
+  usage?: { promptTokens: number; completionTokens: number };
+  toolCall?: {
+    toolCallId: string;
+    toolName: string;
+    args: Record<string, unknown>;
+  };
+}
 
 function fakeProviderCallable(...args: unknown[]): typeof fakeModel {
   calls.providerFactory.push(args);
@@ -54,6 +68,7 @@ vi.mock('ai', () => ({
   streamText: async (...args: unknown[]) => {
     calls.streamText.push(args);
     if (nextStreamTextError !== null) throw nextStreamTextError;
+    if (nextStreamTextImpl !== null) return await nextStreamTextImpl(args[0]);
     if (nextStreamTextResult === null) {
       throw new Error(
         'test setup error: nextStreamTextResult must be assigned before calling the adapter',
@@ -69,24 +84,14 @@ async function* iterableOf(chunks: string[]): AsyncIterable<FullStreamPart> {
   for (const c of chunks) yield { type: 'text-delta', textDelta: c };
 }
 
+async function* iterableOfParts(parts: FullStreamPart[]): AsyncIterable<FullStreamPart> {
+  for (const part of parts) yield part;
+}
+
 async function drain(
-  gen: AsyncGenerator<{
-    delta?: string;
-    done?: boolean;
-    usage?: { promptTokens: number; completionTokens: number };
-  }>,
-): Promise<
-  Array<{
-    delta?: string;
-    done?: boolean;
-    usage?: { promptTokens: number; completionTokens: number };
-  }>
-> {
-  const out: Array<{
-    delta?: string;
-    done?: boolean;
-    usage?: { promptTokens: number; completionTokens: number };
-  }> = [];
+  gen: AsyncGenerator<AdapterChunk>,
+): Promise<AdapterChunk[]> {
+  const out: AdapterChunk[] = [];
   for await (const chunk of gen) out.push(chunk);
   return out;
 }
@@ -98,6 +103,7 @@ describe('makeOllamaStream', () => {
     calls.providerFactory.length = 0;
     nextStreamTextResult = null;
     nextStreamTextError = null;
+    nextStreamTextImpl = null;
   });
 
   describe('construction', () => {
@@ -200,6 +206,47 @@ describe('makeOllamaStream', () => {
       ]);
     });
 
+    it('continues streaming assistant text after a tool call', async () => {
+      nextStreamTextResult = {
+        fullStream: iterableOfParts([
+          {
+            type: 'tool-call',
+            toolCallId: 'call-1',
+            toolName: 'lookup_company',
+            args: { companyId: 'company-1' },
+          },
+          { type: 'text-delta', textDelta: 'Company ' },
+          { type: 'text-delta', textDelta: 'status ready' },
+        ]),
+        usage: Promise.resolve({ promptTokens: 11, completionTokens: 5, totalTokens: 16 }),
+      };
+      const stream = makeOllamaStream({ model: 'qwen2.5:3b' });
+      const chunks = await drain(
+        stream({
+          system: '',
+          messages: [],
+          tools: { lookup_company: {} },
+          maxSteps: 2,
+        }),
+      );
+
+      expect(chunks).toEqual([
+        {
+          toolCall: {
+            toolCallId: 'call-1',
+            toolName: 'lookup_company',
+            args: { companyId: 'company-1' },
+          },
+        },
+        { delta: 'Company ' },
+        { delta: 'status ready' },
+        {
+          done: true,
+          usage: { promptTokens: 11, completionTokens: 5 },
+        },
+      ]);
+    });
+
     it('yields a final done chunk with usage resolved from result.usage', async () => {
       nextStreamTextResult = {
         fullStream: iterableOf(['x']),
@@ -228,6 +275,59 @@ describe('makeOllamaStream', () => {
           // never reached
         }
       }).rejects.toThrow(/connection refused/);
+    });
+
+    it('passes abortSignal to streamText and stops without a done chunk when aborted', async () => {
+      const controller = new AbortController();
+      let sawAbort = false;
+
+      nextStreamTextImpl = (arg) => {
+        const abortSignal = (arg as { abortSignal?: AbortSignal }).abortSignal;
+        const abortError = Object.assign(new Error('stream aborted'), { name: 'AbortError' });
+        return {
+          fullStream: (async function* () {
+            yield { type: 'text-delta', textDelta: 'partial' };
+
+            if (!abortSignal) {
+              yield { type: 'text-delta', textDelta: 'unexpected-without-signal' };
+              return;
+            }
+
+            if (!abortSignal.aborted) {
+              await new Promise<void>((resolve) => {
+                abortSignal.addEventListener('abort', () => resolve(), { once: true });
+              });
+            }
+
+            sawAbort = abortSignal.aborted;
+            throw abortError;
+          })(),
+          usage: Promise.resolve({ promptTokens: 2, completionTokens: 2, totalTokens: 4 }),
+        };
+      };
+
+      const stream = makeOllamaStream({ model: 'qwen2.5:3b' });
+      const args = { system: '', messages: [], signal: controller.signal };
+      const gen = stream(args);
+      const chunks: AdapterChunk[] = [];
+
+      const first = await gen.next();
+      if (!first.done) {
+        chunks.push(first.value);
+      }
+
+      controller.abort();
+
+      await expect(async () => {
+        for await (const chunk of gen) {
+          chunks.push(chunk);
+        }
+      }).rejects.toMatchObject({ name: 'AbortError' });
+
+      expect(calls.streamText[0]?.[0]).toMatchObject({ abortSignal: controller.signal });
+      expect(sawAbort).toBe(true);
+      expect(chunks).toEqual([{ delta: 'partial' }]);
+      expect(chunks.some((chunk) => chunk.done)).toBe(false);
     });
   });
 });

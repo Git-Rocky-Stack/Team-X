@@ -104,6 +104,7 @@ import type {
   McpServerSummary,
   Meeting,
   MeetingDetail,
+  ListProviderModelsResponse,
   OrgchartGetResponse,
   Project,
   ProjectDetail,
@@ -115,6 +116,8 @@ import type {
   ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
+  StopChatRequest,
+  StopChatResponse,
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetCopilotResponse,
@@ -210,6 +213,7 @@ const CHANNELS = {
   orgchartGet: 'orgchart.get',
   chatSend: 'chat.send',
   chatList: 'chat.list',
+  chatStop: 'chat.stop',
   chatResolveThread: 'chat.resolveThread',
   chatListThreads: 'chat.listThreads',
   eventsDashboard: 'events.dashboard',
@@ -270,6 +274,7 @@ const CHANNELS = {
   providersUpdate: 'providers.update',
   providersRemove: 'providers.remove',
   providersTestConnection: 'providers.testConnection',
+  providersListModels: 'providers.listModels',
   // Vault management (Phase 4 — M21)
   vaultUpload: 'vault.upload',
   vaultDownload: 'vault.download',
@@ -377,6 +382,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.chatSend, req) as Promise<SendChatResponse>,
       list: (threadId: string) =>
         ipc.invoke(CHANNELS.chatList, { threadId }) as ReturnType<TeamXApi['chat']['list']>,
+      stop: (req: StopChatRequest) =>
+        ipc.invoke(CHANNELS.chatStop, req) as Promise<StopChatResponse>,
       resolveThread: (req: ResolveThreadRequest) =>
         ipc.invoke(CHANNELS.chatResolveThread, req) as Promise<ResolveThreadResponse>,
       listThreads: (companyId: string) =>
@@ -516,6 +523,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.providersTestConnection, {
           providerId,
         }) as Promise<TestProviderConnectionResponse>,
+      listModels: (providerId: string) =>
+        ipc.invoke(CHANNELS.providersListModels, { providerId }) as Promise<ListProviderModelsResponse>,
     },
     vault: {
       upload: (req: VaultUploadRequest) =>

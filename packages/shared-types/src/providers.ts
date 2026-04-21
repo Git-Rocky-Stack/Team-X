@@ -19,6 +19,8 @@ export interface ProviderConfig {
   kind: ProviderKind;
   privacyTier: PrivacyTier;
   baseUrl?: string;
+  /** Optional provider-level default model used when no employee override is set. */
+  defaultModel?: string;
   enabled: boolean;
 }
 
@@ -66,6 +68,12 @@ export const DEFAULT_CONCURRENCY_CAPS: Record<ProviderKind, number> = {
   fireworks: 6,
   'custom-openai': 4,
 };
+
+/** User-configurable runtime concurrency bounds for scheduler settings. */
+export const CONCURRENCY_SETTINGS_CLAMPS = {
+  orchestratorSlots: { min: 1, max: 32, default: 6 },
+  providerCap: { min: 1, max: 32 },
+} as const;
 
 /** Orchestrator slot count per strategy (auto resolves to one of these). */
 export const STRATEGY_SLOTS: Record<Exclude<RuntimeStrategy, 'auto'>, number> = {

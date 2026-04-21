@@ -158,6 +158,27 @@ describe('createProvidersService', () => {
       expect(service.get('missing')).toBeNull();
     });
 
+    it('surfaces defaultModel from configJson when present', () => {
+      ctx.db
+        .insert(providersTable)
+        .values({
+          id: 'ollama-custom',
+          name: 'Ollama Custom',
+          kind: 'ollama',
+          configJson: JSON.stringify({
+            baseUrl: 'http://localhost:11434/api',
+            defaultModel: 'glm-5:cloud',
+          }),
+          privacyTier: 'local',
+          enabled: true,
+        })
+        .run();
+
+      expect((service.get('ollama-custom') as { defaultModel?: string } | null)?.defaultModel).toBe(
+        'glm-5:cloud',
+      );
+    });
+
     it('returns the matching provider row mapped to ProviderConfig shape', () => {
       service.seedIfEmpty();
       const ollama = service.get(DEFAULT_OLLAMA_LOCAL_ID);
@@ -290,6 +311,22 @@ describe('createProvidersService', () => {
       service.seedIfEmpty();
       await service.remove(DEFAULT_OLLAMA_LOCAL_ID);
       expect(service.get(DEFAULT_OLLAMA_LOCAL_ID)).toBeNull();
+    });
+
+    it('still deletes the provider row when keychain cleanup throws', async () => {
+      const throwingSecrets = {
+        getApiKey: async () => null,
+        setApiKey: async () => {},
+        deleteApiKey: async () => {
+          throw new Error('keychain unavailable');
+        },
+      } as unknown as SecretsStore;
+      const throwingService = createProvidersService(ctx.db, throwingSecrets);
+
+      throwingService.seedIfEmpty();
+
+      await expect(throwingService.remove(DEFAULT_ANTHROPIC_ID)).resolves.toBeUndefined();
+      expect(throwingService.get(DEFAULT_ANTHROPIC_ID)).toBeNull();
     });
   });
 });

@@ -74,6 +74,7 @@ export type ProviderStreamFn = (args: {
   messages: StreamMessage[];
   tools?: Record<string, unknown>;
   maxSteps?: number;
+  signal?: AbortSignal;
 }) => AsyncGenerator<ProviderStreamEvent>;
 
 export interface StreamAgentArgs {
@@ -82,6 +83,7 @@ export interface StreamAgentArgs {
   messages: StreamMessage[];
   tools?: Record<string, unknown>;
   maxSteps?: number;
+  signal?: AbortSignal;
 }
 
 /**
@@ -94,6 +96,7 @@ export async function* streamAgent(args: StreamAgentArgs): AsyncGenerator<Stream
     messages: args.messages,
     tools: args.tools,
     maxSteps: args.maxSteps,
+    signal: args.signal,
   })) {
     if (evt.toolCall) {
       yield {

@@ -61,8 +61,9 @@ import { createRoleLoader } from '../src/main/services/role-loader.js';
 // ---------------------------------------------------------------------------
 
 const PROVIDER_NAME = 'ollama-local';
-const MODEL = 'qwen2.5:3b';
-const OLLAMA_BASE_URL = 'http://localhost:11434';
+const MODEL = 'kimi-k2.5:cloud';
+const OLLAMA_BASE_URL = 'http://localhost:11434/api'; // ollama-ai-provider SDK appends /chat or /embed
+const OLLAMA_HOST = 'http://localhost:11434'; // For manual API calls (Ollama API uses /api prefix)
 const ORCHESTRATOR_SLOTS = 1;
 
 const USER_MESSAGE = 'In one sentence, what is our top priority this week?';
@@ -85,7 +86,7 @@ const calcCost: CostCalculator = ({ model, promptTokens, completionTokens }) => 
 
 async function checkOllamaReachable(): Promise<void> {
   try {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
+    const res = await fetch(`${OLLAMA_HOST}/api/tags`);
     if (!res.ok) {
       throw new Error(`Ollama responded with HTTP ${res.status}`);
     }

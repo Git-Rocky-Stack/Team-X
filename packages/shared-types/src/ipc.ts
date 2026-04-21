@@ -219,6 +219,21 @@ export interface SendChatResponse {
   messageId: string;
 }
 
+/**
+ * Request to stop an in-flight direct-message turn for a thread.
+ *
+ * Thread-scoped and idempotent: unknown or already-terminal turns
+ * resolve to `{ stopped: false }` rather than throwing so the chat UI
+ * can treat stop as a best-effort control action.
+ */
+export interface StopChatRequest {
+  threadId: string;
+}
+
+export interface StopChatResponse {
+  stopped: boolean;
+}
+
 export interface HireEmployeeRequest {
   companyId: string;
   roleId: string;
@@ -794,6 +809,16 @@ export interface TestProviderConnectionRequest {
 export interface TestProviderConnectionResponse {
   ok: boolean;
   error?: string;
+  /** Optional detail message (e.g., "5 models available" for Ollama) */
+  detail?: string;
+}
+
+export interface ListProviderModelsRequest {
+  providerId: string;
+}
+
+export interface ListProviderModelsResponse {
+  models: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -1177,8 +1202,8 @@ export interface SettingsSetPlannerRequest {
 
 /** Clamp bounds + defaults for the four planner keys. Shared by repo, handler, and UI. */
 export const PLANNER_SETTINGS_CLAMPS = {
-  maxTickets: { min: 1, max: 50, default: 10 },
-  maxDepth: { min: 1, max: 4, default: 2 },
+  maxTickets: { min: 1, max: 200, default: 10 },
+  maxDepth: { min: 1, max: 32, default: 2 },
   escalationThreshold: { min: 1, max: 10, default: 3 },
 } as const;
 
@@ -1398,6 +1423,10 @@ export interface IpcContract {
     request: ListChatRequest;
     response: ChatMessage[];
   };
+  'chat.stop': {
+    request: StopChatRequest;
+    response: StopChatResponse;
+  };
   'chat.resolveThread': {
     request: ResolveThreadRequest;
     response: ResolveThreadResponse;
@@ -1608,6 +1637,10 @@ export interface IpcContract {
   'providers.testConnection': {
     request: TestProviderConnectionRequest;
     response: TestProviderConnectionResponse;
+  };
+  'providers.listModels': {
+    request: ListProviderModelsRequest;
+    response: ListProviderModelsResponse;
   };
   // Vault management channels (Phase 4 — M21)
   'vault.upload': {
@@ -1976,6 +2009,9 @@ export interface TeamXApi {
     /** Return every message in a thread, oldest-first, mapped to ChatMessage shape. */
     list(threadId: string): Promise<ChatMessage[]>;
 
+    /** Best-effort stop for the active direct-message turn on a thread. */
+    stop(req: StopChatRequest): Promise<StopChatResponse>;
+
     /**
      * Resolve (or lazily create) the user↔employee DM thread for the
      * given employee.  The drawer calls this on open so it can fetch
@@ -2126,6 +2162,8 @@ export interface TeamXApi {
     remove(providerId: string): Promise<void>;
     /** Test a provider's API key + connectivity. */
     testConnection(providerId: string): Promise<TestProviderConnectionResponse>;
+    /** List provider models or suggestions for model-capable settings UIs. */
+    listModels(providerId: string): Promise<ListProviderModelsResponse>;
   };
   vault: {
     /** Upload a file to the vault. sourcePath is an absolute path on disk. */

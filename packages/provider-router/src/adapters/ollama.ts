@@ -92,39 +92,50 @@ export function makeOllamaStream(options: OllamaAdapterOptions): ProviderStreamF
   }
   const provider = createOllama(providerOptions);
 
-  return async function* ollamaStream({ system, messages, tools, maxSteps }) {
+  return async function* ollamaStream({ system, messages, tools, maxSteps, signal }) {
     const result = await streamText({
       model: provider(options.model),
       system,
       messages: messages as CoreMessage[],
+      abortSignal: signal,
+      // Ollama's num_predict defaults to -1 (unlimited), but AI SDK requires maxTokens >= 1.
+      // Use a large number to approximate unlimited behavior.
+      maxTokens: 4096,
       ...(tools && Object.keys(tools).length > 0
         ? { tools: tools as Record<string, CoreTool>, maxSteps: maxSteps ?? 1 }
         : {}),
     });
 
     for await (const part of result.fullStream) {
-      switch (part.type) {
-        case 'text-delta':
-          yield { delta: part.textDelta };
-          break;
-        case 'tool-call':
-          yield {
-            toolCall: {
-              toolCallId: part.toolCallId,
-              toolName: part.toolName,
-              args: part.args as Record<string, unknown>,
-            },
-          };
-          break;
+      if (part.type === 'text-delta') {
+        yield { delta: part.textDelta };
+        continue;
+      }
+      if (part.type === 'tool-call') {
+        yield {
+          toolCall: {
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+            args: part.args as Record<string, unknown>,
+          },
+        };
+        continue;
       }
     }
 
     const usage = await result.usage;
+    // Ollama cloud models may not return eval_count, so provide fallback.
+    // The usage object has getter properties that return NaN when null.
+    // We must explicitly check for null/undefined/NaN and default to 0.
+    const rawPromptTokens = usage?.promptTokens;
+    const rawCompletionTokens = usage?.completionTokens;
+    const promptTokens = (rawPromptTokens == null || Number.isNaN(rawPromptTokens)) ? 0 : rawPromptTokens;
+    const completionTokens = (rawCompletionTokens == null || Number.isNaN(rawCompletionTokens)) ? 0 : rawCompletionTokens;
     yield {
       done: true,
       usage: {
-        promptTokens: usage.promptTokens,
-        completionTokens: usage.completionTokens,
+        promptTokens,
+        completionTokens,
       },
     };
   };

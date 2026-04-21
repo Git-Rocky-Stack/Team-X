@@ -4,29 +4,22 @@
  * Phase 5 — M32 T7.
  */
 
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { PLANNER_APPROVAL_LEVEL_DEFAULT, PLANNER_SETTINGS_CLAMPS } from '@team-x/shared-types';
 
-import * as schema from '../schema.js';
+import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createSettingsRepo } from './settings.js';
 
-function makeRepo() {
-  const raw = new Database(':memory:');
-  raw.exec(`
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value_json TEXT NOT NULL,
-      scope TEXT NOT NULL DEFAULT 'global',
-      scope_id TEXT,
-      updated_at INTEGER NOT NULL DEFAULT 0
-    );
-  `);
-  const db = drizzle(raw, { schema });
-  return createSettingsRepo(db);
-}
+let ctx: TestDbHandle;
+let repo: ReturnType<typeof createSettingsRepo>;
+
+beforeEach(async () => {
+  ctx = await makeTestDb();
+  repo = createSettingsRepo(ctx.db);
+});
+
+afterEach(() => ctx.close());
 
 // ---------------------------------------------------------------------------
 // getPlanner — defaults
@@ -34,7 +27,6 @@ function makeRepo() {
 
 describe('getPlanner', () => {
   it('returns defaults when no keys are persisted', () => {
-    const repo = makeRepo();
     const p = repo.getPlanner();
     expect(p.maxTickets).toBe(PLANNER_SETTINGS_CLAMPS.maxTickets.default);
     expect(p.maxDepth).toBe(PLANNER_SETTINGS_CLAMPS.maxDepth.default);
@@ -43,7 +35,6 @@ describe('getPlanner', () => {
   });
 
   it('reads persisted values', () => {
-    const repo = makeRepo();
     repo.set('planner_max_tickets', 25);
     repo.set('planner_max_depth', 3);
     repo.set('planner_approval_level', 'officer');
@@ -56,7 +47,6 @@ describe('getPlanner', () => {
   });
 
   it('falls back to default for invalid approval level', () => {
-    const repo = makeRepo();
     repo.set('planner_approval_level', 'bogus');
     expect(repo.getPlanner().approvalLevel).toBe(PLANNER_APPROVAL_LEVEL_DEFAULT);
   });
@@ -67,28 +57,25 @@ describe('getPlanner', () => {
 // ---------------------------------------------------------------------------
 
 describe('setPlanner clamping', () => {
-  it('clamps maxTickets to [1, 50]', () => {
-    const repo = makeRepo();
+  it('clamps maxTickets to [1, 200]', () => {
     repo.setPlanner({ maxTickets: 0 });
     expect(repo.getPlanner().maxTickets).toBe(1);
-    repo.setPlanner({ maxTickets: 100 });
-    expect(repo.getPlanner().maxTickets).toBe(50);
+    repo.setPlanner({ maxTickets: 500 });
+    expect(repo.getPlanner().maxTickets).toBe(200);
     repo.setPlanner({ maxTickets: 20 });
     expect(repo.getPlanner().maxTickets).toBe(20);
   });
 
-  it('clamps maxDepth to [1, 4]', () => {
-    const repo = makeRepo();
+  it('clamps maxDepth to [1, 32]', () => {
     repo.setPlanner({ maxDepth: 0 });
     expect(repo.getPlanner().maxDepth).toBe(1);
-    repo.setPlanner({ maxDepth: 10 });
-    expect(repo.getPlanner().maxDepth).toBe(4);
+    repo.setPlanner({ maxDepth: 64 });
+    expect(repo.getPlanner().maxDepth).toBe(32);
     repo.setPlanner({ maxDepth: 3 });
     expect(repo.getPlanner().maxDepth).toBe(3);
   });
 
   it('clamps escalationThreshold to [1, 10]', () => {
-    const repo = makeRepo();
     repo.setPlanner({ escalationThreshold: 0 });
     expect(repo.getPlanner().escalationThreshold).toBe(1);
     repo.setPlanner({ escalationThreshold: 99 });
@@ -98,7 +85,6 @@ describe('setPlanner clamping', () => {
   });
 
   it('validates approvalLevel against the enum', () => {
-    const repo = makeRepo();
     expect(() => repo.setPlanner({ approvalLevel: 'intern' as never })).toThrow(
       'approvalLevel must be one of',
     );
@@ -108,7 +94,6 @@ describe('setPlanner clamping', () => {
   });
 
   it('rejects non-finite numeric values', () => {
-    const repo = makeRepo();
     expect(() => repo.setPlanner({ maxTickets: Number.NaN })).toThrow('finite number');
     expect(() => repo.setPlanner({ maxDepth: Number.POSITIVE_INFINITY })).toThrow('finite number');
     expect(() => repo.setPlanner({ escalationThreshold: Number.NEGATIVE_INFINITY })).toThrow(
@@ -117,7 +102,6 @@ describe('setPlanner clamping', () => {
   });
 
   it('rounds fractional values before clamping', () => {
-    const repo = makeRepo();
     repo.setPlanner({ maxTickets: 7.8 });
     expect(repo.getPlanner().maxTickets).toBe(8);
     repo.setPlanner({ maxDepth: 2.3 });
@@ -131,7 +115,6 @@ describe('setPlanner clamping', () => {
 
 describe('seedDefaults planner keys', () => {
   it('seeds planner keys on first run', () => {
-    const repo = makeRepo();
     const count = repo.seedDefaults();
     // At least the four planner keys should be seeded
     expect(count).toBeGreaterThanOrEqual(4);
@@ -143,7 +126,6 @@ describe('seedDefaults planner keys', () => {
   });
 
   it('does not overwrite existing planner keys', () => {
-    const repo = makeRepo();
     repo.set('planner_max_tickets', 42);
     repo.seedDefaults();
     expect(repo.getPlanner().maxTickets).toBe(42);

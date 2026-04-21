@@ -7,6 +7,14 @@ import { useEffect } from 'react';
 import { ipc } from '@/lib/ipc.js';
 import { useAppStore } from '@/store/app-store.js';
 
+interface StopChatRequest {
+  threadId: string;
+}
+
+interface StopChatResponse {
+  stopped: boolean;
+}
+
 export function useChatMessages(threadId: string | null) {
   return useQuery({
     queryKey: ['chat', threadId],
@@ -30,6 +38,20 @@ export function useSendMessage() {
       // Refetch the message list so the user's message appears in the
       // chat immediately (before the assistant reply streams in).
       qc.invalidateQueries({ queryKey: ['chat', data.threadId] });
+    },
+  });
+}
+
+export function useStopChat() {
+  return useMutation<StopChatResponse, Error, StopChatRequest>({
+    mutationFn: async (req) => {
+      const chatApi = ipc.chat as typeof ipc.chat & {
+        stop?: (input: StopChatRequest) => Promise<StopChatResponse>;
+      };
+      if (typeof chatApi.stop !== 'function') {
+        return { stopped: false };
+      }
+      return chatApi.stop(req);
     },
   });
 }

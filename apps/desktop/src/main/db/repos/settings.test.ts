@@ -252,9 +252,9 @@ describe('createSettingsRepo', () => {
       expect(AGENTIC_SETTINGS_CLAMPS.timeoutMs.min).toBe(10000);
       expect(AGENTIC_SETTINGS_CLAMPS.timeoutMs.max).toBe(600000);
       expect(PLANNER_SETTINGS_CLAMPS.maxTickets.min).toBe(1);
-      expect(PLANNER_SETTINGS_CLAMPS.maxTickets.max).toBe(50);
+      expect(PLANNER_SETTINGS_CLAMPS.maxTickets.max).toBe(200);
       expect(PLANNER_SETTINGS_CLAMPS.maxDepth.min).toBe(1);
-      expect(PLANNER_SETTINGS_CLAMPS.maxDepth.max).toBe(4);
+      expect(PLANNER_SETTINGS_CLAMPS.maxDepth.max).toBe(32);
       expect(PLANNER_SETTINGS_CLAMPS.escalationThreshold.min).toBe(1);
       expect(PLANNER_SETTINGS_CLAMPS.escalationThreshold.max).toBe(10);
       expect(COPILOT_SETTINGS_CLAMPS.intervalMinutes.min).toBe(1);

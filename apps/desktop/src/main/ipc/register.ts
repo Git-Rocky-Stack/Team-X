@@ -78,6 +78,7 @@ const REQUEST_CHANNELS = [
   'orgchart.get',
   'chat.send',
   'chat.list',
+  'chat.stop',
   'chat.resolveThread',
   'chat.listThreads',
   // Events / timeline (Phase 3 — M14)
@@ -138,6 +139,7 @@ const REQUEST_CHANNELS = [
   'providers.update',
   'providers.remove',
   'providers.testConnection',
+  'providers.listModels',
   // Vault management (Phase 4 — M21)
   'vault.upload',
   'vault.download',
@@ -286,6 +288,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('chat.list', async (_event, request: { threadId: string }) => {
     return handlers.chatList(request);
+  });
+
+  ipcMain.handle('chat.stop', async (_event, request: { threadId: string }) => {
+    return handlers.chatStop(request);
   });
 
   ipcMain.handle('chat.resolveThread', async (_event, request: { employeeId: string }) => {
@@ -648,6 +654,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('providers.testConnection', async (_event, request: { providerId: string }) => {
     return handlers.providersTestConnection(request);
+  });
+
+  ipcMain.handle('providers.listModels', async (_event, request: { providerId: string }) => {
+    return handlers.providersListModels(request);
   });
 
   // Vault management handlers (Phase 4 — M21)

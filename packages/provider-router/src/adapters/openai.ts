@@ -39,11 +39,12 @@ export function makeOpenAIStream(options: OpenAIAdapterOptions): ProviderStreamF
   }
   const provider = createOpenAI(providerOptions);
 
-  return async function* openaiStream({ system, messages, tools, maxSteps }) {
+  return async function* openaiStream({ system, messages, tools, maxSteps, signal }) {
     const result = await streamText({
       model: provider(options.model),
       system,
       messages: messages as CoreMessage[],
+      abortSignal: signal,
       ...(tools && Object.keys(tools).length > 0
         ? { tools: tools as Record<string, CoreTool>, maxSteps: maxSteps ?? 1 }
         : {}),

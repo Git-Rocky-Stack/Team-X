@@ -32,6 +32,12 @@ export interface EmployeeLiveState {
   lastMessageId: string | null;
 }
 
+export interface PendingDirectChatState {
+  queuedMessages: string[];
+  isStopping: boolean;
+  awaitingReply: boolean;
+}
+
 /** Top-level view tab in the cockpit. Phase 3 enables all tabs. */
 export type ActiveView =
   | 'dashboard'
@@ -101,6 +107,8 @@ export interface AppState {
    * by all three entry points so the toggle state never drifts.
    */
   copilotSidebarOpen: boolean;
+  /** Per-employee queued direct-chat follow-ups and stop state. */
+  pendingDirectChats: Record<string, PendingDirectChatState>;
 
   setActiveView: (view: ActiveView) => void;
   setCopilotSidebarOpen: (open: boolean) => void;
@@ -118,6 +126,10 @@ export interface AppState {
   setThreadListView: (open: boolean) => void;
   setActiveTicketId: (ticketId: string | null) => void;
   setActiveMeetingId: (meetingId: string | null) => void;
+  enqueueQueuedDirectChatMessage: (employeeId: string, content: string) => void;
+  dequeueQueuedDirectChatMessage: (employeeId: string) => string | null;
+  setDirectChatStopping: (employeeId: string, isStopping: boolean) => void;
+  setDirectChatAwaitingReply: (employeeId: string, awaitingReply: boolean) => void;
   handleDashboardEvent: (event: DashboardEvent) => void;
 }
 
@@ -125,7 +137,23 @@ function defaultLive(): EmployeeLiveState {
   return { status: 'idle', currentStream: '', lastThreadId: null, lastMessageId: null };
 }
 
-export const useAppStore = create<AppState>((set) => ({
+function defaultPendingDirectChat(): PendingDirectChatState {
+  return { queuedMessages: [], isStopping: false, awaitingReply: false };
+}
+
+function upsertPendingDirectChats(
+  pendingDirectChats: Record<string, PendingDirectChatState>,
+  employeeId: string,
+  next: PendingDirectChatState,
+): Record<string, PendingDirectChatState> {
+  if (next.queuedMessages.length === 0 && !next.isStopping && !next.awaitingReply) {
+    const { [employeeId]: _removed, ...rest } = pendingDirectChats;
+    return rest;
+  }
+  return { ...pendingDirectChats, [employeeId]: next };
+}
+
+export const useAppStore = create<AppState>((set, get) => ({
   activeView: 'dashboard',
   dashboardSubview: 'cards',
   selectedEmployeeId: null,
@@ -144,6 +172,7 @@ export const useAppStore = create<AppState>((set) => ({
   activeMeetingId: null,
   telemetrySubview: 'company',
   copilotSidebarOpen: false,
+  pendingDirectChats: {},
 
   setCopilotSidebarOpen: (open) => set({ copilotSidebarOpen: open }),
 
@@ -207,6 +236,55 @@ export const useAppStore = create<AppState>((set) => ({
 
   setActiveTicketId: (ticketId) => set({ activeTicketId: ticketId }),
   setActiveMeetingId: (meetingId) => set({ activeMeetingId: meetingId }),
+
+  enqueueQueuedDirectChatMessage: (employeeId, content) =>
+    set((state) => {
+      const prev = state.pendingDirectChats[employeeId] ?? defaultPendingDirectChat();
+      return {
+        pendingDirectChats: {
+          ...state.pendingDirectChats,
+          [employeeId]: {
+            ...prev,
+            queuedMessages: [...prev.queuedMessages, content],
+          },
+        },
+      };
+    }),
+
+  dequeueQueuedDirectChatMessage: (employeeId) => {
+    const prev = get().pendingDirectChats[employeeId];
+    if (!prev || prev.queuedMessages.length === 0) return null;
+    const [nextMessage, ...rest] = prev.queuedMessages;
+    set((state) => ({
+      pendingDirectChats: upsertPendingDirectChats(state.pendingDirectChats, employeeId, {
+        ...prev,
+        queuedMessages: rest,
+      }),
+    }));
+    return nextMessage ?? null;
+  },
+
+  setDirectChatStopping: (employeeId, isStopping) =>
+    set((state) => {
+      const prev = state.pendingDirectChats[employeeId] ?? defaultPendingDirectChat();
+      return {
+        pendingDirectChats: upsertPendingDirectChats(state.pendingDirectChats, employeeId, {
+          ...prev,
+          isStopping,
+        }),
+      };
+    }),
+
+  setDirectChatAwaitingReply: (employeeId, awaitingReply) =>
+    set((state) => {
+      const prev = state.pendingDirectChats[employeeId] ?? defaultPendingDirectChat();
+      return {
+        pendingDirectChats: upsertPendingDirectChats(state.pendingDirectChats, employeeId, {
+          ...prev,
+          awaitingReply,
+        }),
+      };
+    }),
 
   setProjectsSubview: (subview) => set({ projectsSubview: subview }),
   setActiveProjectId: (projectId) => set({ activeProjectId: projectId }),

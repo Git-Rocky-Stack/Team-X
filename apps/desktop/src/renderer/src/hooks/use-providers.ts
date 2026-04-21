@@ -1,12 +1,13 @@
 /**
  * React Query hooks for the Providers settings (Phase 3 — M18).
  *
- * Five hooks matching the five providers IPC channels:
+ * Hooks matching the provider IPC channels:
  * - useProviders — list all configured providers
  * - useAddProvider — register a new provider
  * - useUpdateProvider — update config / toggle / set API key
  * - useRemoveProvider — delete a provider
  * - useTestProviderConnection — test API key + connectivity
+ * - useProviderModels — fetch provider model suggestions
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -46,7 +47,7 @@ export function useRemoveProvider() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (providerId: string) => ipc.providers.remove(providerId),
-    onSuccess: () => {
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['providers'] });
     },
   });
@@ -55,5 +56,15 @@ export function useRemoveProvider() {
 export function useTestProviderConnection() {
   return useMutation({
     mutationFn: (providerId: string) => ipc.providers.testConnection(providerId),
+  });
+}
+
+export function useProviderModels(providerId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['providers', 'models', providerId],
+    queryFn: () => ipc.providers.listModels(providerId),
+    enabled,
+    staleTime: 30_000,
+    retry: false,
   });
 }

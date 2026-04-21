@@ -40,11 +40,12 @@ export function makeFireworksStream(options: FireworksAdapterOptions): ProviderS
     baseURL: options.baseURL ?? FIREWORKS_BASE_URL,
   });
 
-  return async function* fireworksStream({ system, messages, tools, maxSteps }) {
+  return async function* fireworksStream({ system, messages, tools, maxSteps, signal }) {
     const result = await streamText({
       model: provider(options.model),
       system,
       messages: messages as CoreMessage[],
+      abortSignal: signal,
       ...(tools && Object.keys(tools).length > 0
         ? { tools: tools as Record<string, CoreTool>, maxSteps: maxSteps ?? 1 }
         : {}),

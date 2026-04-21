@@ -58,6 +58,27 @@ describe('streamAgent', () => {
     expect(receivedMessages).toEqual(messages);
   });
 
+  it('forwards an abort signal unchanged to the provider factory', async () => {
+    const controller = new AbortController();
+    let receivedSignal: AbortSignal | undefined;
+    const spy: ProviderStreamFn = async function* (input) {
+      receivedSignal = (input as { signal?: AbortSignal }).signal;
+      yield { done: true, usage: { promptTokens: 0, completionTokens: 0 } };
+    };
+
+    const args = {
+      providerFactory: spy,
+      system: 'sys-prompt',
+      messages: [{ role: 'user' as const, content: 'stop' }],
+      signal: controller.signal,
+    };
+    for await (const _ of streamAgent(args)) {
+      // drain
+    }
+
+    expect(receivedSignal).toBe(controller.signal);
+  });
+
   it('does not yield a done chunk when the provider never emits done', async () => {
     const noDone: ProviderStreamFn = async function* () {
       yield { delta: 'a' };

@@ -125,6 +125,8 @@ const DEFAULT_MODEL_BY_KIND: Partial<Record<ProviderKind, string>> = {
 export interface ResolvedProvider {
   /** Stable id from the providers table — used in telemetry / runs row. */
   providerName: string;
+  /** Provider kind from the registry — e.g. ollama, anthropic, openai. */
+  providerKind?: ProviderKind;
   /** Model id passed to the underlying SDK. */
   model: string;
   /** Bound stream function the orchestrator drives via `streamAgent`. */
@@ -326,6 +328,9 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
    */
   function defaultModelFor(provider: ProviderConfig, override?: string | null): string {
     if (typeof override === 'string' && override.length > 0) return override;
+    if (typeof provider.defaultModel === 'string' && provider.defaultModel.length > 0) {
+      return provider.defaultModel;
+    }
     const fallback = DEFAULT_MODEL_BY_KIND[provider.kind];
     if (fallback === undefined) {
       throw new Error(`[provider-factory] no default model for provider kind "${provider.kind}"`);
@@ -348,14 +353,14 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
     }
     const model = defaultModelFor(provider, args.model);
     const stream = await buildStream(provider, model);
-    return { providerName: provider.id, model, stream };
+    return { providerName: provider.id, providerKind: provider.kind, model, stream };
   }
 
   async function resolveForEmployee(employee: EmployeeRow): Promise<ResolvedProvider> {
     const provider = await pickConfigured(employee.providerPref);
     const model = defaultModelFor(provider, employee.modelPref);
     const stream = await buildStream(provider, model);
-    return { providerName: provider.id, model, stream };
+    return { providerName: provider.id, providerKind: provider.kind, model, stream };
   }
 
   return { create, resolveForEmployee };
@@ -447,7 +452,7 @@ const TEST_MODE_ECHO_TEXT = '__ECHO_TEXT__:';
  * sentinel is absent, so every existing spec is unaffected.
  */
 function testModeStream(): ProviderStreamFn {
-  return async function* testMode(args) {
+  return async function* testMode(args: Parameters<ProviderStreamFn>[0]) {
     const reply = pickTestModeReply(args.system, args.messages);
     const words = reply.split(' ');
     for (let i = 0; i < words.length; i++) {

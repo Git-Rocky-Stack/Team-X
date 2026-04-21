@@ -57,8 +57,12 @@ import {
 import type { LoopCompleteFn, LoopMessage, LoopProviderCompletion } from '@team-x/intelligence';
 import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
 import { streamAgent } from '@team-x/provider-router';
-import type { EmbeddingSourceType, Employee, Ticket } from '@team-x/shared-types';
-import { SYSTEM_COPILOT_ROLE_ID } from '@team-x/shared-types';
+import type { EmbeddingSourceType, Employee, RuntimeStrategy, Ticket } from '@team-x/shared-types';
+import {
+  CONCURRENCY_SETTINGS_CLAMPS,
+  DEFAULT_CONCURRENCY_CAPS,
+  SYSTEM_COPILOT_ROLE_ID,
+} from '@team-x/shared-types';
 import { eq } from 'drizzle-orm';
 import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
@@ -142,6 +146,8 @@ import {
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRagIndexer } from './services/rag-indexer.js';
 import { createRoleLoader } from './services/role-loader.js';
+import { pickStrategy } from './services/runtime-strategy.js';
+import { buildChatActionTools } from './services/chat-action-tools.js';
 import { SecretsStore } from './services/secrets.js';
 import { ensureSystemAgent, ensureSystemCopilot } from './services/system-agent-bootstrap.js';
 import { composeSystemPromptWithRag } from './services/system-prompt.js';
@@ -153,15 +159,6 @@ import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-
-/**
- * Phase 1 concurrency cap for the orchestrator's work queue. Two slots
- * is the safe default for a local Ollama backend (avoids stampeding
- * the GPU) and is plenty for Phase 1's "one user, one chat at a time"
- * usage. T36 will read this from a settings row so the user can tune
- * it without rebuilding.
- */
-const PHASE_1_ORCHESTRATOR_SLOTS = 2;
 
 /**
  * Resolve the absolute path to the drizzle migrations directory.
@@ -205,6 +202,24 @@ const calcCost: CostCalculator = ({ model, promptTokens, completionTokens }) => 
   const result = calcCostUsd(model, promptTokens, completionTokens);
   return result.usd.toFixed(6);
 };
+
+function clampConcurrencySlots(value: number): number {
+  const { min, max, default: fallback } = CONCURRENCY_SETTINGS_CLAMPS.orchestratorSlots;
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function normalizeConcurrencyCaps(
+  caps: Record<string, number> | undefined,
+): Record<string, number> {
+  const { min, max } = CONCURRENCY_SETTINGS_CLAMPS.providerCap;
+  const normalized: Record<string, number> = {};
+  for (const [kind, value] of Object.entries(caps ?? {})) {
+    if (!Number.isFinite(value)) continue;
+    normalized[kind] = Math.max(min, Math.min(max, Math.round(value)));
+  }
+  return normalized;
+}
 
 async function createWindow(): Promise<void> {
   const win = new BrowserWindow({
@@ -397,6 +412,20 @@ app
       resolveProvider = (employee) => providerFactory.resolveForEmployee(employee);
     }
 
+    const runtimeStrategy = settingsRepo.get<RuntimeStrategy>('runtime_strategy', 'auto');
+    const bootProfile = detectHardware();
+    const bootStrategy = pickStrategy({
+      profile: bootProfile,
+      providers: providersService.list(),
+      override: runtimeStrategy,
+    });
+    const initialSlots = clampConcurrencySlots(
+      settingsRepo.get<number>('orchestrator_slots', bootStrategy.slots),
+    );
+    const initialProviderCaps = normalizeConcurrencyCaps(
+      settingsRepo.get<Record<string, number>>('concurrency_caps', DEFAULT_CONCURRENCY_CAPS),
+    );
+
     // ---- RAG: optional, off-by-default, zero-regression when disabled ------
     //
     // Invariant #7 (zero phone-home) is preserved: if the user has not
@@ -517,10 +546,20 @@ app
       ? undefined
       : async ({ employee, company, getRunId }) => {
           const mcpTools = mcpHost.listTools(company.id);
-          if (mcpTools.length === 0) return null;
-
           const toolsAllowed: string[] = JSON.parse(employee.toolsAllowedJson ?? '[]');
           const toolsDenied: string[] = JSON.parse(employee.toolsDeniedJson ?? '[]');
+          const specs: ToolSpec[] = [
+            ...buildChatActionTools({
+              companyId: company.id,
+              actorId: employee.id,
+              actorLevel: employee.level,
+              employeesRepo,
+              roleLookup: {
+                listRoles: () => roleLoader.listRoles(),
+              },
+              bus,
+            }),
+          ];
 
           // Pre-filter at definition time so the model never sees denied tools.
           const allowedTools = mcpTools.filter((t) => {
@@ -528,31 +567,32 @@ app
             if (toolsAllowed.length > 0 && !toolsAllowed.includes(t.name)) return false;
             return true;
           });
-          if (allowedTools.length === 0) return null;
+          specs.push(
+            ...allowedTools.map((t) => ({
+              name: t.name,
+              description: t.description ?? '',
+              inputSchema: (t.inputSchema ?? { type: 'object' }) as Record<string, unknown>,
+              execute: async (args: Record<string, unknown>) => {
+                const serverId = mcpHost.findServerForTool(t.name, company.id);
+                if (!serverId) throw new Error(`No MCP server found for tool: ${t.name}`);
 
-          const specs: ToolSpec[] = allowedTools.map((t) => ({
-            name: t.name,
-            description: t.description ?? '',
-            inputSchema: (t.inputSchema ?? { type: 'object' }) as Record<string, unknown>,
-            execute: async (args: Record<string, unknown>) => {
-              const serverId = mcpHost.findServerForTool(t.name, company.id);
-              if (!serverId) throw new Error(`No MCP server found for tool: ${t.name}`);
-
-              const result = await mcpHost.callTool({
-                serverId,
-                toolName: t.name,
-                toolArgs: args,
-                runId: getRunId(),
-                employeeId: employee.id,
-                toolsAllowed,
-                toolsDenied,
-              });
-              if (!result.success) {
-                throw new Error(result.error ?? `Tool '${t.name}' failed`);
-              }
-              return result.output;
-            },
-          }));
+                const result = await mcpHost.callTool({
+                  serverId,
+                  toolName: t.name,
+                  toolArgs: args,
+                  runId: getRunId(),
+                  employeeId: employee.id,
+                  toolsAllowed,
+                  toolsDenied,
+                });
+                if (!result.success) {
+                  throw new Error(result.error ?? `Tool '${t.name}' failed`);
+                }
+                return result.output;
+              },
+            })),
+          );
+          if (specs.length === 0) return null;
 
           return {
             tools: buildProviderTools(specs),
@@ -605,7 +645,8 @@ app
       },
       resolveProvider,
       resolveTools,
-      slots: PHASE_1_ORCHESTRATOR_SLOTS,
+      slots: initialSlots,
+      providerCaps: initialProviderCaps,
     });
 
     // ---- RAG indexer: subscribes to the event bus, indexes on write --------

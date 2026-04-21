@@ -67,10 +67,6 @@ interface MessageBubbleProps {
 
 function MessageBubble({ message, showSenderName, senderName }: MessageBubbleProps) {
   const isUser = message.authorKind === 'user';
-  const displayContent =
-    message.authorKind !== 'user' && message.content.trim().length === 0
-      ? 'No assistant output was returned for this turn.'
-      : message.content;
   return (
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <div className="max-w-[85%]">
@@ -91,7 +87,7 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
             isUser ? 'bg-brand/15 text-foreground' : 'bg-surface-100 text-foreground',
           )}
         >
-          {renderContent(displayContent)}
+          {renderContent(message.content)}
         </div>
       </div>
     </div>
@@ -143,17 +139,20 @@ export function MessageList({
   employees,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const visibleMessages = messages.filter(
+    (msg) => msg.authorKind === 'user' || msg.content.trim().length > 0,
+  );
 
   // Auto-scroll to bottom when new messages arrive or streaming text updates.
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only deps
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, streamingText]);
+  }, [visibleMessages.length, streamingText]);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
       <div className="flex flex-col gap-3">
-        {messages.length === 0 && !isStreaming && (
+        {visibleMessages.length === 0 && !isStreaming && (
           <p className="py-8 text-center text-xs text-muted-foreground">
             {isAgentThread
               ? 'No messages in this conversation yet.'
@@ -161,7 +160,7 @@ export function MessageList({
           </p>
         )}
 
-        {messages.map((msg) => (
+        {visibleMessages.map((msg) => (
           <MessageBubble
             key={msg.id}
             message={msg}

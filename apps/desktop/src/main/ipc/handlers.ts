@@ -101,6 +101,8 @@ import type {
   ListEventsResponse,
   ListGoalsRequest,
   ListMeetingsRequest,
+  ListProviderModelsRequest,
+  ListProviderModelsResponse,
   ListProjectsRequest,
   ListTicketsRequest,
   McpServerSummary,
@@ -120,6 +122,8 @@ import type {
   ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
+  StopChatRequest,
+  StopChatResponse,
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetCopilotResponse,
@@ -174,8 +178,10 @@ import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import {
   AUTO_THREAD_ID,
   COPILOT_CATEGORIES,
+  CONCURRENCY_SETTINGS_CLAMPS,
   DEFAULT_CONCURRENCY_CAPS,
   PRIVACY_TIER_RANK,
+  STRATEGY_SLOTS,
   TELEMETRY_RUN_KINDS,
   getLevelRank,
 } from '@team-x/shared-types';
@@ -436,6 +442,11 @@ export interface IpcOrchestrator {
     employeeId: string;
     userMessageId: string;
   }): Promise<void>;
+  stopThread(threadId: string): boolean;
+  updateConcurrency(args: {
+    slots?: number;
+    providerCaps?: Record<string, number>;
+  }): void;
 }
 
 /**
@@ -904,6 +915,9 @@ export interface IpcHandlers {
    */
   chatList(req: { threadId: string }): Promise<ChatMessage[]>;
 
+  /** `chat.stop` — best-effort stop for the active direct-message turn on a thread. */
+  chatStop(req: StopChatRequest): Promise<StopChatResponse>;
+
   /**
    * `chat.resolveThread` — resolve (or lazily create) the user↔employee
    * DM thread for the given employee, returning only its id. Read-ish:
@@ -1099,6 +1113,8 @@ export interface IpcHandlers {
   providersTestConnection(
     req: TestProviderConnectionRequest,
   ): Promise<TestProviderConnectionResponse>;
+  /** `providers.listModels` — fetch provider model suggestions for settings UI. */
+  providersListModels(req: ListProviderModelsRequest): Promise<ListProviderModelsResponse>;
 
   // -----------------------------------------------------------------------
   // Vault management handlers (Phase 4 — M21)
@@ -1434,6 +1450,32 @@ function rowToMeeting(row: MeetingRow): Meeting {
     startedAt: row.startedAt,
     endedAt: row.endedAt,
   };
+}
+
+function clampConcurrencySlots(value: number): number {
+  const { min, max, default: fallback } = CONCURRENCY_SETTINGS_CLAMPS.orchestratorSlots;
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function normalizeConcurrencyCaps(
+  caps: Record<string, number> | undefined,
+): Record<string, number> {
+  const { min, max } = CONCURRENCY_SETTINGS_CLAMPS.providerCap;
+  const normalized: Record<string, number> = {};
+  for (const [kind, value] of Object.entries(caps ?? {})) {
+    if (!Number.isFinite(value)) continue;
+    normalized[kind] = Math.max(min, Math.min(max, Math.round(value)));
+  }
+  return normalized;
+}
+
+function isUserCancelledTurnError(err: unknown): boolean {
+  if (err instanceof DOMException) {
+    return err.name === 'AbortError';
+  }
+  if (!(err instanceof Error)) return false;
+  return err.message === 'Run canceled by user';
 }
 
 // ---------------------------------------------------------------------------
@@ -2417,6 +2459,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           userMessageId: messageId,
         })
         .catch((err: unknown) => {
+          if (isUserCancelledTurnError(err)) {
+            return;
+          }
           console.error(
             `[ipc] chat.send: orchestrator turn failed for thread=${resolvedThreadId} ` +
               `employee=${employeeId} userMessage=${messageId}:`,
@@ -2433,6 +2478,13 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       const rows = messagesRepo.listByThread(threadId);
       return rows.map(rowToChatMessage);
+    },
+
+    async chatStop({ threadId }) {
+      if (typeof threadId !== 'string' || threadId.length === 0) {
+        throw new Error('[ipc] chat.stop: threadId is required');
+      }
+      return { stopped: orchestrator.stopThread(threadId) };
     },
 
     async chatResolveThread({ employeeId }) {
@@ -3199,21 +3251,28 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       );
       const providers = providersService.list();
       const result = pickStrategy({ profile, providers, override });
+      const effectiveSlots = clampConcurrencySlots(
+        settingsRepo.get<number>('orchestrator_slots', result.slots),
+      );
       return {
         strategy: override === 'auto' ? override : result.strategy,
         hardwareProfile: profile,
-        effectiveSlots: settingsRepo.get<number>('orchestrator_slots', result.slots),
+        effectiveSlots,
         reason: result.reason,
       };
     },
 
     async settingsSetRuntime(req) {
       settingsRepo.set('runtime_strategy', req.strategy);
-      // If not 'auto', also update the effective orchestrator slots
-      if (req.strategy !== 'auto') {
-        const { STRATEGY_SLOTS } = await import('@team-x/shared-types');
-        settingsRepo.set('orchestrator_slots', STRATEGY_SLOTS[req.strategy]);
-      }
+      const profile = getHardwareProfile();
+      const providers = providersService.list();
+      const nextSlots =
+        req.strategy === 'auto'
+          ? pickStrategy({ profile, providers, override: req.strategy }).slots
+          : STRATEGY_SLOTS[req.strategy];
+      const clampedSlots = clampConcurrencySlots(nextSlots);
+      settingsRepo.set('orchestrator_slots', clampedSlots);
+      orchestrator.updateConcurrency({ slots: clampedSlots });
     },
 
     async settingsGetPrivacy() {
@@ -3238,25 +3297,39 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     },
 
     async settingsGetConcurrency() {
-      const orchestratorSlots = settingsRepo.get<number>('orchestrator_slots', 6);
-      const providerCaps = settingsRepo.get<Record<string, number>>(
-        'concurrency_caps',
-        DEFAULT_CONCURRENCY_CAPS,
+      const orchestratorSlots = clampConcurrencySlots(
+        settingsRepo.get<number>(
+          'orchestrator_slots',
+          CONCURRENCY_SETTINGS_CLAMPS.orchestratorSlots.default,
+        ),
+      );
+      const providerCaps = normalizeConcurrencyCaps(
+        settingsRepo.get<Record<string, number>>('concurrency_caps', DEFAULT_CONCURRENCY_CAPS),
       );
       return { orchestratorSlots, providerCaps };
     },
 
     async settingsSetConcurrency(req) {
+      let nextSlots: number | undefined;
       if (req.orchestratorSlots !== undefined) {
-        settingsRepo.set('orchestrator_slots', req.orchestratorSlots);
+        nextSlots = clampConcurrencySlots(req.orchestratorSlots);
+        settingsRepo.set('orchestrator_slots', nextSlots);
       }
+      let nextCaps: Record<string, number> | undefined;
       if (req.providerCaps !== undefined) {
-        const current = settingsRepo.get<Record<string, number>>(
-          'concurrency_caps',
-          DEFAULT_CONCURRENCY_CAPS,
+        const current = normalizeConcurrencyCaps(
+          settingsRepo.get<Record<string, number>>('concurrency_caps', DEFAULT_CONCURRENCY_CAPS),
         );
-        settingsRepo.set('concurrency_caps', { ...current, ...req.providerCaps });
+        nextCaps = {
+          ...current,
+          ...normalizeConcurrencyCaps(req.providerCaps),
+        };
+        settingsRepo.set('concurrency_caps', nextCaps);
       }
+      orchestrator.updateConcurrency({
+        ...(nextSlots !== undefined ? { slots: nextSlots } : {}),
+        ...(nextCaps !== undefined ? { providerCaps: nextCaps } : {}),
+      });
     },
 
     // -----------------------------------------------------------------------
@@ -3481,7 +3554,67 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!isReady) {
         return { ok: false, error: 'Provider is not configured (missing API key or disabled)' };
       }
+
+      // For Ollama, perform a real health check to verify connectivity
+      const config = providersService.get(req.providerId);
+      if (config?.kind === 'ollama') {
+        try {
+          // Extract host from baseURL (remove /api suffix if present)
+          const baseUrl = config.baseUrl ?? 'http://localhost:11434/api';
+          const healthUrl = `${baseUrl.replace(/\/api$/, '')}/api/tags`;
+          const response = await fetch(healthUrl, { method: 'GET' });
+          if (!response.ok) {
+            return { ok: false, error: `Ollama returned HTTP ${response.status}` };
+          }
+          const data = (await response.json()) as { models?: Array<{ name: string }> };
+          const modelCount = data.models?.length ?? 0;
+          return { ok: true, detail: `${modelCount} model(s) available` };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return { ok: false, error: `Cannot reach Ollama: ${msg}` };
+        }
+      }
+
       return { ok: true };
+    },
+
+    async providersListModels(req) {
+      if (typeof req.providerId !== 'string' || req.providerId.length === 0) {
+        throw new Error('[ipc] providers.listModels: providerId is required');
+      }
+
+      const config = providersService.get(req.providerId);
+      if (!config) {
+        throw new Error(`[ipc] providers.listModels: provider not found: ${req.providerId}`);
+      }
+
+      if (config.kind !== 'ollama') {
+        return { models: [] };
+      }
+
+      const baseUrl = config.baseUrl ?? 'http://localhost:11434/api';
+      const tagsUrl = `${baseUrl.replace(/\/api$/, '')}/api/tags`;
+      const response = await fetch(tagsUrl, { method: 'GET' });
+      if (!response.ok) {
+        throw new Error(`[ipc] providers.listModels: Ollama returned HTTP ${response.status}`);
+      }
+
+      const data = (await response.json()) as {
+        models?: Array<{ name?: string; model?: string }>;
+      };
+
+      const models = new Set<string>();
+      for (const row of data.models ?? []) {
+        const model = typeof row.model === 'string' && row.model.trim().length > 0 ? row.model : row.name;
+        if (typeof model === 'string' && model.trim().length > 0) {
+          models.add(model.trim());
+        }
+      }
+      if (typeof config.defaultModel === 'string' && config.defaultModel.trim().length > 0) {
+        models.add(config.defaultModel.trim());
+      }
+
+      return { models: [...models].sort((a, b) => a.localeCompare(b)) };
     },
 
     // -----------------------------------------------------------------------

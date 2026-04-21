@@ -138,6 +138,28 @@ function noDoneProvider(deltas: string[]): ProviderStreamFn {
   };
 }
 
+function abortableProvider(
+  started: { resolve: () => void },
+  captured: { signal?: AbortSignal } = {},
+): ProviderStreamFn {
+  return async function* ({ signal }) {
+    captured.signal = signal;
+    yield { delta: 'partial' };
+    started.resolve();
+    await new Promise<void>((_resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new DOMException('Aborted', 'AbortError'));
+        return;
+      }
+      const onAbort = () => {
+        signal?.removeEventListener('abort', onAbort);
+        reject(new DOMException('Aborted', 'AbortError'));
+      };
+      signal?.addEventListener('abort', onAbort, { once: true });
+    });
+  };
+}
+
 const baseHistory: StreamMessage[] = [
   { role: 'system', content: 'system goes here' },
   { role: 'user', content: 'hello' },
@@ -556,6 +578,58 @@ describe('runAgent', () => {
 
       const runRows = f.runs.listByEmployee(f.employeeId);
       expect(runRows[0]?.error).toBe('string error');
+    });
+
+    it('an aborted run is marked cancelled and emits work.failed without work.completed', async () => {
+      let startedResolve: () => void = () => {};
+      const started = new Promise<void>((resolve) => {
+        startedResolve = resolve;
+      });
+      const captured: { signal?: AbortSignal } = {};
+      const controller = new AbortController();
+      const provider = abortableProvider({ resolve: startedResolve }, captured);
+
+      const input = {
+        companyId: f.companyId,
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        system: 's',
+        messages: baseHistory,
+        provider,
+        providerName: 'p',
+        model: 'm',
+        signal: controller.signal,
+      } as Parameters<typeof runAgent>[1] & { signal: AbortSignal };
+
+      const runP = runAgent(
+        {
+          bus: f.bus,
+          messages: f.messages,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        input,
+      );
+
+      await started;
+      expect(captured.signal).toBe(controller.signal);
+
+      controller.abort();
+
+      await expect(runP).rejects.toThrow(/aborted|canceled/i);
+
+      const runRows = f.runs.listByEmployee(f.employeeId);
+      expect(runRows).toHaveLength(1);
+      expect(runRows[0]?.status).toBe('cancelled');
+      expect(runRows[0]?.error).toMatch(/canceled|aborted/i);
+
+      const events = f.bus.replaySince(0);
+      expect(events.map((e) => e.type)).toEqual(['work.started', 'token.delta', 'work.failed']);
+      expect(events.map((e) => e.type)).not.toContain('work.completed');
+
+      const messages = f.messages.listByThread(f.threadId);
+      expect(messages[0]?.content).toBe('partial');
+      expect(f.costCalls).toHaveLength(0);
     });
   });
 });

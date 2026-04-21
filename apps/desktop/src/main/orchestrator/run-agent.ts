@@ -143,6 +143,8 @@ export interface RunAgentInput {
    * callbacks that were built before `runAgent` was invoked.
    */
   onRunCreated?: (runId: string) => void;
+  /** Optional cancellation signal for user-triggered stop / shutdown flows. */
+  signal?: AbortSignal;
 }
 
 export interface RunAgentResult {
@@ -152,6 +154,16 @@ export interface RunAgentResult {
   completionTokens: number;
   latencyMs: number;
   costUsd: string;
+}
+
+function isAbortError(err: unknown): boolean {
+  if (err instanceof DOMException) {
+    return err.name === 'AbortError';
+  }
+  if (err instanceof Error) {
+    return err.name === 'AbortError' || /aborted|canceled/i.test(err.message);
+  }
+  return false;
 }
 
 export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promise<RunAgentResult> {
@@ -211,6 +223,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       messages: input.messages,
       tools: input.tools,
       maxSteps: input.maxSteps,
+      signal: input.signal,
     })) {
       if (chunk.kind === 'delta') {
         buffer += chunk.delta;
@@ -251,9 +264,14 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     //     emit work.failed (NOT work.completed), then re-throw so the
     //     work-queue caller's enqueue Promise rejects.
     const latencyMs = Math.max(0, now() - startTime);
-    const message = err instanceof Error ? err.message : String(err);
+    const aborted = input.signal?.aborted === true || isAbortError(err);
+    const message = aborted
+      ? 'Run canceled by user'
+      : err instanceof Error
+        ? err.message
+        : String(err);
     deps.runs.finish(runId, {
-      status: 'error',
+      status: aborted ? 'cancelled' : 'error',
       promptTokens: 0,
       completionTokens: 0,
       latencyMs,

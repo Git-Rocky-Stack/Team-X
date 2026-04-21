@@ -301,6 +301,19 @@ describe('createProviderFactory', () => {
       expect(resolved.model.length).toBeGreaterThan(0);
     });
 
+    it('uses provider.defaultModel before the hardcoded per-kind fallback', async () => {
+      providers.set({
+        ...OLLAMA_ROW,
+        defaultModel: 'glm-5:cloud',
+      } as unknown as ProviderConfig);
+
+      const employee = makeEmployee({ providerPref: 'ollama-local', modelPref: null });
+      const resolved = await factory.resolveForEmployee(employee);
+
+      expect(resolved.model).toBe('glm-5:cloud');
+      expect(calls.makeOllama[0]?.model).toBe('glm-5:cloud');
+    });
+
     it('forwards the Ollama provider row baseUrl into the adapter', async () => {
       providers.set({ ...OLLAMA_ROW, baseUrl: 'http://10.0.0.5:11434' });
 

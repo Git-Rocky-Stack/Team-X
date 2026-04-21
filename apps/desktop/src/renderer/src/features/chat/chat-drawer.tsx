@@ -26,7 +26,7 @@ import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet.js';
 import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
-import { useChatMessages, useSendMessage, useThreadList } from '@/hooks/use-chat.js';
+import { useChatMessages, useSendMessage, useStopChat, useThreadList } from '@/hooks/use-chat.js';
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
@@ -81,11 +81,21 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const setThreadListView = useAppStore((s) => s.setThreadListView);
   const companyId = useAppStore((s) => s.companyId);
   const lastAgentMessageAt = useAppStore((s) => s.lastAgentMessageAt);
+  const pendingDirectChat = useAppStore((s) =>
+    selectedId ? s.pendingDirectChats[selectedId] ?? null : null,
+  );
+  const enqueueQueuedDirectChatMessage = useAppStore((s) => s.enqueueQueuedDirectChatMessage);
+  const dequeueQueuedDirectChatMessage = useAppStore((s) => s.dequeueQueuedDirectChatMessage);
+  const setDirectChatStopping = useAppStore((s) => s.setDirectChatStopping);
+  const setDirectChatAwaitingReply = useAppStore((s) => s.setDirectChatAwaitingReply);
 
   const employee = employees.find((e) => e.id === selectedId) ?? null;
   const live = selectedId ? employeeLive[selectedId] : undefined;
   const displayStatus = live?.status ?? employee?.status ?? 'idle';
   const isThinking = displayStatus === 'thinking';
+  const queuedCount = pendingDirectChat?.queuedMessages.length ?? 0;
+  const isStopping = pendingDirectChat?.isStopping ?? false;
+  const awaitingReply = pendingDirectChat?.awaitingReply ?? false;
 
   // Resolve the thread id: prefer the active (already-resolved) thread,
   // fall back to the employee's last known thread from live state, else null.
@@ -94,7 +104,11 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const { data: messages = [] } = useChatMessages(effectiveThreadId);
   const { data: threads = [] } = useThreadList(companyId);
   const sendMutation = useSendMessage();
+  const stopMutation = useStopChat();
   const qc = useQueryClient();
+  const isDirectMessageBusy = isThinking || sendMutation.isPending || awaitingReply || isStopping;
+  const shouldQueueSend = isDirectMessageBusy || queuedCount > 0;
+  const canStopCurrentReply = effectiveThreadId !== null && isDirectMessageBusy;
 
   // Copilot thread: subscribe to the agentic-loop step stream. The hook
   // is a no-op when threadId is null OR the active thread is not a
@@ -199,8 +213,17 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     prevStatusRef.current = displayStatus;
     if (prev === 'thinking' && displayStatus === 'idle' && effectiveThreadId) {
       void qc.invalidateQueries({ queryKey: ['chat', effectiveThreadId] });
+      if (selectedId) {
+        setDirectChatStopping(selectedId, false);
+        setDirectChatAwaitingReply(selectedId, false);
+      }
     }
-  }, [displayStatus, effectiveThreadId, qc]);
+  }, [displayStatus, effectiveThreadId, qc, selectedId, setDirectChatAwaitingReply, setDirectChatStopping]);
+
+  useEffect(() => {
+    if (!selectedId || !isThinking || !awaitingReply) return;
+    setDirectChatAwaitingReply(selectedId, false);
+  }, [selectedId, isThinking, awaitingReply, setDirectChatAwaitingReply]);
 
   // Invalidate messages when agent-thread streaming stops.
   const prevAgentStreamRef = useRef(false);
@@ -214,15 +237,78 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     }
   }, [agentIsStreaming, viewingAgentThread, effectiveThreadId, qc]);
 
+  useEffect(() => {
+    if (!selectedId || viewingAgentThread || viewingCopilotThread) return;
+    if (queuedCount === 0) return;
+    if (isThinking || sendMutation.isPending || awaitingReply || isStopping) return;
+    const nextMessage = dequeueQueuedDirectChatMessage(selectedId);
+    if (!nextMessage) return;
+    setDirectChatAwaitingReply(selectedId, true);
+    sendMutation.mutate(
+      {
+        threadId: effectiveThreadId ?? AUTO_THREAD_ID,
+        employeeId: selectedId,
+        content: nextMessage,
+      },
+      {
+        onError: () => {
+          setDirectChatAwaitingReply(selectedId, false);
+        },
+      },
+    );
+  }, [
+    selectedId,
+    viewingAgentThread,
+    viewingCopilotThread,
+    queuedCount,
+    isThinking,
+    sendMutation,
+    awaitingReply,
+    isStopping,
+    dequeueQueuedDirectChatMessage,
+    setDirectChatAwaitingReply,
+    effectiveThreadId,
+  ]);
+
   // ── Handlers ───────────────────────────────────────────────────
 
-  function handleSend(content: string) {
+  function dispatchDirectMessage(content: string) {
     if (!selectedId) return;
-    sendMutation.mutate({
-      threadId: effectiveThreadId ?? AUTO_THREAD_ID,
-      employeeId: selectedId,
-      content,
-    });
+    setDirectChatAwaitingReply(selectedId, true);
+    sendMutation.mutate(
+      {
+        threadId: effectiveThreadId ?? AUTO_THREAD_ID,
+        employeeId: selectedId,
+        content,
+      },
+      {
+        onError: () => {
+          setDirectChatAwaitingReply(selectedId, false);
+        },
+      },
+    );
+  }
+
+  function handleSend(content: string) {
+    dispatchDirectMessage(content);
+  }
+
+  function handleQueue(content: string) {
+    if (!selectedId) return;
+    enqueueQueuedDirectChatMessage(selectedId, content);
+  }
+
+  async function handleStop() {
+    if (!selectedId || !effectiveThreadId || stopMutation.isPending) return;
+    const result = await stopMutation.mutateAsync({ threadId: effectiveThreadId });
+    if (result.stopped) {
+      if (isThinking) {
+        setDirectChatStopping(selectedId, true);
+      } else {
+        setDirectChatStopping(selectedId, false);
+        setDirectChatAwaitingReply(selectedId, false);
+      }
+    }
   }
 
   function handleSelectThread(threadId: string) {
@@ -427,7 +513,15 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
             />
 
             {/* Composer */}
-            <Composer onSend={handleSend} disabled={isThinking || sendMutation.isPending} />
+            <Composer
+              onSend={handleSend}
+              onQueue={handleQueue}
+              onStop={handleStop}
+              queuedCount={queuedCount}
+              isBusy={isDirectMessageBusy}
+              queueMode={shouldQueueSend}
+              stopPending={canStopCurrentReply && stopMutation.isPending}
+            />
           </>
         ) : null}
       </SheetContent>

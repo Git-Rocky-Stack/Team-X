@@ -319,6 +319,8 @@ class FakeMessagesRepo implements IpcMessagesRepo {
 
 class FakeOrchestrator implements IpcOrchestrator {
   enqueueCalls: Array<{ threadId: string; employeeId: string; userMessageId: string }> = [];
+  stopCalls: string[] = [];
+  updateConcurrencyCalls: Array<{ slots?: number; providerCaps?: Record<string, number> }> = [];
   /**
    * What `enqueueChat` resolves to. Tests can set this to a never-
    * resolving promise to verify the handler doesn't await it.
@@ -332,6 +334,18 @@ class FakeOrchestrator implements IpcOrchestrator {
   }): Promise<void> {
     this.enqueueCalls.push(args);
     return this.nextEnqueueResult;
+  }
+
+  stopThread(threadId: string): boolean {
+    this.stopCalls.push(threadId);
+    return true;
+  }
+
+  updateConcurrency(args: {
+    slots?: number;
+    providerCaps?: Record<string, number>;
+  }): void {
+    this.updateConcurrencyCalls.push(args);
   }
 }
 
@@ -840,6 +854,18 @@ describe('IPC: chat.send orchestrator failure handling', () => {
       expect.stringContaining('orchestrator turn failed'),
       expect.any(Error),
     );
+  });
+});
+
+describe('IPC: chat.stop', () => {
+  it('stops the active direct-message turn for a thread and returns the stop result', async () => {
+    const fx = buildFixture();
+    const result = await (fx.handlers as { chatStop(req: { threadId: string }): Promise<unknown> }).chatStop({
+      threadId: 'thread-1',
+    });
+
+    expect(result).toEqual({ stopped: true });
+    expect(fx.orchestrator.stopCalls).toEqual(['thread-1']);
   });
 });
 

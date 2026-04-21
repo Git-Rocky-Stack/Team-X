@@ -55,7 +55,6 @@ import type { FinishRunInput, StartRunInput } from '../db/repos/runs.js';
 import type { GetOrCreateEmployeeDmThreadInput, ThreadRow } from '../db/repos/threads.js';
 import { type EnqueueAgentReplyFn, buildBuiltInTools } from './built-in-tools.js';
 import type { EventBus } from './event-bus.js';
-import { type WorkQueue, createWorkQueue } from './queue.js';
 import { type CostCalculator, runAgent } from './run-agent.js';
 
 // ---------------------------------------------------------------------------
@@ -124,6 +123,7 @@ export type ResolveSystemPrompt = (args: {
  */
 export type ResolveProvider = (employee: EmployeeRow) => Promise<{
   providerName: string;
+  providerKind?: string;
   model: string;
   stream: ProviderStreamFn;
 }>;
@@ -190,6 +190,9 @@ export interface Orchestrator {
    */
   enqueueAgentReply(args: EnqueueAgentReplyArgs): Promise<void>;
 
+  /** Best-effort cancel for the active turn on a thread. */
+  stopThread(threadId: string): boolean;
+
   /** Stop dispatching new work. In-flight turns continue to completion. */
   pause(): void;
 
@@ -222,12 +225,20 @@ export interface Orchestrator {
    */
   shutdown(): Promise<void>;
 
+  /** Apply updated runtime concurrency settings to future dispatches. */
+  updateConcurrency(args: UpdateConcurrencyArgs): void;
+
   /**
    * Escape hatch for T36 / main process wiring that wants to subscribe
    * to the bus (for forwarding events to the renderer). Tests use this
    * directly too.
    */
   readonly bus: EventBus;
+}
+
+export interface UpdateConcurrencyArgs {
+  slots?: number;
+  providerCaps?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -252,6 +263,8 @@ export interface BuildOrchestratorOptions {
    * from the provider settings service.
    */
   slots: number;
+  /** Optional per-provider-kind concurrent dispatch caps. */
+  providerCaps?: Record<string, number>;
   /** Optional clock injection for tests. Passed through to runAgent. */
   now?: () => number;
 }
@@ -268,8 +281,22 @@ function authorKindToStreamRole(kind: AuthorKind): StreamMessage['role'] {
   }
 }
 
+const PROVIDER_EMPTY_ASSISTANT_TEXT =
+  "I couldn't complete that reply. Provider returned no assistant text.";
+
+function shouldIncludeInHistory(row: MessageRow): boolean {
+  const trimmed = row.content.trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+  if (row.authorKind !== 'user' && trimmed === PROVIDER_EMPTY_ASSISTANT_TEXT) {
+    return false;
+  }
+  return true;
+}
+
 function mapHistory(rows: MessageRow[]): StreamMessage[] {
-  return rows.map((row) => ({
+  return rows.filter(shouldIncludeInHistory).map((row) => ({
     role: authorKindToStreamRole(row.authorKind as AuthorKind),
     content: row.content,
   }));
@@ -282,10 +309,27 @@ function mapHistory(rows: MessageRow[]): StreamMessage[] {
  * first-person perspective regardless of who initiated.
  */
 function mapAgentHistory(rows: MessageRow[], respondingEmployeeId: string): StreamMessage[] {
-  return rows.map((row) => ({
+  return rows.filter(shouldIncludeInHistory).map((row) => ({
     role: row.authorId === respondingEmployeeId ? ('assistant' as const) : ('user' as const),
     content: row.content,
   }));
+}
+
+function normalizePositiveInt(value: number, fallback = 1): number {
+  if (!Number.isFinite(value)) return fallback;
+  const rounded = Math.round(value);
+  return rounded < 1 ? 1 : rounded;
+}
+
+function normalizeProviderCaps(
+  providerCaps: Record<string, number> | undefined,
+): Record<string, number> {
+  if (!providerCaps) return {};
+  const normalized: Record<string, number> = {};
+  for (const [kind, cap] of Object.entries(providerCaps)) {
+    normalized[kind] = normalizePositiveInt(cap, 1);
+  }
+  return normalized;
 }
 
 export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator {
@@ -301,21 +345,55 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     resolveProvider,
     resolveTools,
     slots,
+    providerCaps,
     now,
   } = opts;
 
-  const queue: WorkQueue = createWorkQueue({ slots });
+  interface ResolvedProvider {
+    providerName: string;
+    providerKind?: string;
+    model: string;
+    stream: ProviderStreamFn;
+  }
 
+  interface PendingTaskBase {
+    threadId: string;
+    employeeId: string;
+    resolve: () => void;
+    reject: (reason: unknown) => void;
+  }
+
+  interface PendingChatTask extends PendingTaskBase {
+    kind: 'chat';
+    userMessageId: string;
+  }
+
+  interface PendingAgentReplyTask extends PendingTaskBase {
+    kind: 'agent-reply';
+    triggerMessageId: string;
+  }
+
+  type PendingTask = PendingChatTask | PendingAgentReplyTask;
+
+  let currentSlots = normalizePositiveInt(slots, 1);
+  let currentProviderCaps = normalizeProviderCaps(providerCaps);
+  let paused = false;
+  let dispatching = false;
+  let activeCount = 0;
   let shuttingDown = false;
   let shutdownPromise: Promise<void> | null = null;
 
+  const pending: PendingTask[] = [];
+  const drainWaiters: Array<() => void> = [];
+  const activeByProviderKind = new Map<string, number>();
+  const activeByThread = new Set<string>();
+  const activeControllersByThread = new Map<string, AbortController>();
+
   // Per-company pause tracking for the meeting primitive.
-  // When a company is paused, new work for that company waits on a
-  // gate promise until resumeCompany() resolves it.
   const pausedCompanies = new Set<string>();
   const companyGates = new Map<string, { resolve: () => void; promise: Promise<void> }>();
-  /** Track in-flight work per company so pauseCompany can drain. */
   const companyInFlight = new Map<string, number>();
+  const companyDrainWaiters = new Map<string, Array<() => void>>();
 
   function incrementCompanyInFlight(companyId: string): void {
     companyInFlight.set(companyId, (companyInFlight.get(companyId) ?? 0) + 1);
@@ -325,10 +403,9 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     const count = (companyInFlight.get(companyId) ?? 1) - 1;
     if (count <= 0) {
       companyInFlight.delete(companyId);
-      // Notify any drain waiters for this company
-      const drainResolvers = companyDrainWaiters.get(companyId);
-      if (drainResolvers) {
-        for (const r of drainResolvers) r();
+      const waiters = companyDrainWaiters.get(companyId);
+      if (waiters) {
+        for (const resolve of waiters) resolve();
         companyDrainWaiters.delete(companyId);
       }
     } else {
@@ -336,25 +413,17 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     }
   }
 
-  const companyDrainWaiters = new Map<string, Array<() => void>>();
-
   function waitForCompanyDrain(companyId: string): Promise<void> {
     if ((companyInFlight.get(companyId) ?? 0) === 0) {
       return Promise.resolve();
     }
     return new Promise<void>((resolve) => {
-      const existing = companyDrainWaiters.get(companyId) ?? [];
-      existing.push(resolve);
-      companyDrainWaiters.set(companyId, existing);
+      const waiters = companyDrainWaiters.get(companyId) ?? [];
+      waiters.push(resolve);
+      companyDrainWaiters.set(companyId, waiters);
     });
   }
 
-  /**
-   * If the company is paused, wait until it's resumed before proceeding.
-   * This is called inside the queued task, AFTER it gets a slot but
-   * BEFORE any lookups or provider calls — so a paused company genuinely
-   * does no work.
-   */
   async function waitIfCompanyPaused(companyId: string): Promise<void> {
     const gate = companyGates.get(companyId);
     if (gate && pausedCompanies.has(companyId)) {
@@ -362,27 +431,35 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     }
   }
 
-  async function runTurn(args: EnqueueChatArgs): Promise<void> {
-    // All lookups happen inside the queued task. If the orchestrator
-    // was paused between enqueue and dispatch, these don't fire.
+  function notifyDrainIfIdle(): void {
+    if (activeCount === 0 && drainWaiters.length > 0) {
+      const waiters = drainWaiters.splice(0, drainWaiters.length);
+      for (const resolve of waiters) resolve();
+    }
+  }
+
+  function getProviderCap(providerKind: string | undefined): number {
+    if (!providerKind) return Number.POSITIVE_INFINITY;
+    const configured = currentProviderCaps[providerKind];
+    return configured === undefined ? Number.POSITIVE_INFINITY : normalizePositiveInt(configured, 1);
+  }
+
+  async function runTurn(
+    args: EnqueueChatArgs,
+    provider: ResolvedProvider,
+    signal: AbortSignal,
+  ): Promise<void> {
     const thread = threadsRepo.getById(args.threadId);
     if (!thread) {
       throw new Error(`orchestrator: thread not found: ${args.threadId}`);
     }
 
-    // Per-company pause gate: if the company is in a meeting, wait
-    // until the meeting ends before doing any work.
     await waitIfCompanyPaused(thread.companyId);
 
     const employee = employeesRepo.getById(args.employeeId);
     if (!employee) {
       throw new Error(`orchestrator: employee not found: ${args.employeeId}`);
     }
-
-    // Defensive check: the employee must belong to the thread's company.
-    // The IPC layer should never present a mismatched pair, but the
-    // orchestrator is the last line of defense before a turn runs on
-    // the wrong data.
     if (employee.companyId !== thread.companyId) {
       throw new Error(
         `orchestrator: employee ${args.employeeId} does not belong to ` +
@@ -395,21 +472,15 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       throw new Error(`orchestrator: company not found: ${thread.companyId}`);
     }
 
-    // Mutable ref — filled by runAgent's onRunCreated callback so
-    // tool execute closures can read it at call time.
     let currentRunId = '';
     const getRunId = () => currentRunId;
 
-    const [system, provider, toolConfig] = await Promise.all([
+    const [system, toolConfig] = await Promise.all([
       resolveSystemPrompt({ employee, company, threadId: args.threadId }),
-      resolveProvider(employee),
       resolveTools ? resolveTools({ employee, company, getRunId }) : Promise.resolve(null),
     ]);
 
     const history = mapHistory(messagesRepo.listByThread(args.threadId));
-
-    // Merge MCP tools with built-in tools (M11). Built-in tools are
-    // always available; MCP tools are subject to tools_allowed/denied.
     const builtInSpecs = buildBuiltInTools(
       {
         bus,
@@ -422,23 +493,17 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       company.id,
     );
 
-    // Merge: if resolveTools returned MCP tools, import and merge.
-    // Built-in tools are ToolSpec[]; MCP tools are already
-    // Record<string, CoreTool>. We need to convert built-ins via
-    // buildProviderTools then spread both records together.
     let finalTools: Record<string, unknown> | undefined;
     let finalMaxSteps = 1;
 
-    // Convert built-in specs to CoreTool records.
     const { buildProviderTools } = await import('@team-x/provider-router');
     const builtInToolsRecord = buildProviderTools(builtInSpecs);
-
     if (toolConfig) {
       finalTools = { ...builtInToolsRecord, ...toolConfig.tools };
       finalMaxSteps = toolConfig.maxSteps;
     } else if (builtInSpecs.length > 0) {
       finalTools = builtInToolsRecord;
-      finalMaxSteps = 5; // Allow multi-step for built-in tools
+      finalMaxSteps = 5;
     }
 
     await runAgent(
@@ -458,6 +523,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         provider: provider.stream,
         providerName: provider.providerName,
         model: provider.model,
+        signal,
         ...(finalTools
           ? {
               tools: finalTools,
@@ -471,24 +537,22 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     );
   }
 
-  /**
-   * Internal agent-reply turn: same as runTurn but uses
-   * role-relative history mapping for agent↔agent threads.
-   */
-  async function runAgentReplyTurn(args: EnqueueAgentReplyArgs): Promise<void> {
+  async function runAgentReplyTurn(
+    args: EnqueueAgentReplyArgs,
+    provider: ResolvedProvider,
+    signal: AbortSignal,
+  ): Promise<void> {
     const thread = threadsRepo.getById(args.threadId);
     if (!thread) {
       throw new Error(`orchestrator: thread not found: ${args.threadId}`);
     }
 
-    // Per-company pause gate (same as runTurn).
     await waitIfCompanyPaused(thread.companyId);
 
     const employee = employeesRepo.getById(args.employeeId);
     if (!employee) {
       throw new Error(`orchestrator: employee not found: ${args.employeeId}`);
     }
-
     if (employee.companyId !== thread.companyId) {
       throw new Error(
         `orchestrator: employee ${args.employeeId} does not belong to ` +
@@ -504,17 +568,12 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     let currentRunId = '';
     const getRunId = () => currentRunId;
 
-    const [system, provider, toolConfig] = await Promise.all([
+    const [system, toolConfig] = await Promise.all([
       resolveSystemPrompt({ employee, company, threadId: args.threadId }),
-      resolveProvider(employee),
       resolveTools ? resolveTools({ employee, company, getRunId }) : Promise.resolve(null),
     ]);
 
-    // Role-relative history: this employee's messages → assistant,
-    // all others → user.
     const history = mapAgentHistory(messagesRepo.listByThread(args.threadId), args.employeeId);
-
-    // Built-in tools for the recipient too.
     const builtInSpecs = buildBuiltInTools(
       {
         bus,
@@ -558,6 +617,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         provider: provider.stream,
         providerName: provider.providerName,
         model: provider.model,
+        signal,
         ...(finalTools
           ? {
               tools: finalTools,
@@ -571,60 +631,208 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     );
   }
 
-  /**
-   * Resolve the company id for an enqueued task. Used for in-flight
-   * tracking. We look up the thread to find the company — same lookup
-   * that runTurn does, but here we just need the company id for
-   * bookkeeping before the task enters the queue.
-   */
-  function resolveCompanyId(threadId: string): string | null {
-    const thread = threadsRepo.getById(threadId);
-    return thread?.companyId ?? null;
+  function settleTask(task: PendingTask, err: unknown): void {
+    task.reject(err);
   }
 
-  // Self-reference for built-in tools to call back into.
-  const enqueueAgentReplyInternal: EnqueueAgentReplyFn = (args) => {
+  function cancelPendingTasksForThread(threadId: string): boolean {
+    let canceled = false;
+    for (let i = pending.length - 1; i >= 0; i--) {
+      const task = pending[i];
+      if (!task || task.threadId !== threadId) continue;
+      pending.splice(i, 1);
+      canceled = true;
+      task.reject(new Error('Run canceled by user'));
+    }
+    return canceled;
+  }
+
+  async function selectNextDispatchable():
+    Promise<{ task: PendingTask; companyId: string; provider: ResolvedProvider } | null> {
+    for (let i = 0; i < pending.length; i++) {
+      const task = pending[i];
+      if (!task) continue;
+      if (activeByThread.has(task.threadId)) continue;
+
+      const thread = threadsRepo.getById(task.threadId);
+      if (!thread) {
+        pending.splice(i, 1);
+        settleTask(task, new Error(`orchestrator: thread not found: ${task.threadId}`));
+        i--;
+        continue;
+      }
+      if (pausedCompanies.has(thread.companyId)) continue;
+
+      const employee = employeesRepo.getById(task.employeeId);
+      if (!employee) {
+        pending.splice(i, 1);
+        settleTask(task, new Error(`orchestrator: employee not found: ${task.employeeId}`));
+        i--;
+        continue;
+      }
+      if (employee.companyId !== thread.companyId) {
+        pending.splice(i, 1);
+        settleTask(
+          task,
+          new Error(
+            `orchestrator: employee ${task.employeeId} does not belong to ` +
+              `thread ${task.threadId}'s company`,
+          ),
+        );
+        i--;
+        continue;
+      }
+
+      let provider: ResolvedProvider;
+      try {
+        provider = await resolveProvider(employee);
+      } catch (err) {
+        pending.splice(i, 1);
+        settleTask(task, err);
+        i--;
+        continue;
+      }
+
+      if (shuttingDown) return null;
+      if (activeByThread.has(task.threadId) || pausedCompanies.has(thread.companyId)) continue;
+      if (provider.providerKind) {
+        const inFlightForKind = activeByProviderKind.get(provider.providerKind) ?? 0;
+        if (inFlightForKind >= getProviderCap(provider.providerKind)) {
+          continue;
+        }
+      }
+
+      const pendingIndex = pending.indexOf(task);
+      if (pendingIndex === -1) continue;
+      pending.splice(pendingIndex, 1);
+      return { task, companyId: thread.companyId, provider };
+    }
+    return null;
+  }
+
+  function scheduleDispatch(): void {
+    if (dispatching || paused || shuttingDown) {
+      notifyDrainIfIdle();
+      return;
+    }
+    dispatching = true;
+    void (async () => {
+      try {
+        while (!paused && !shuttingDown && activeCount < currentSlots) {
+          const next = await selectNextDispatchable();
+          if (!next) break;
+          if (paused || shuttingDown || activeCount >= currentSlots) {
+            pending.unshift(next.task);
+            break;
+          }
+
+          const controller = new AbortController();
+          activeCount++;
+          activeByThread.add(next.task.threadId);
+          activeControllersByThread.set(next.task.threadId, controller);
+          if (next.provider.providerKind) {
+            activeByProviderKind.set(
+              next.provider.providerKind,
+              (activeByProviderKind.get(next.provider.providerKind) ?? 0) + 1,
+            );
+          }
+          incrementCompanyInFlight(next.companyId);
+
+          const runPromise =
+            next.task.kind === 'chat'
+              ? runTurn(next.task, next.provider, controller.signal)
+              : runAgentReplyTurn(next.task, next.provider, controller.signal);
+
+          runPromise.then(next.task.resolve, next.task.reject).finally(() => {
+            activeCount--;
+            activeByThread.delete(next.task.threadId);
+            if (activeControllersByThread.get(next.task.threadId) === controller) {
+              activeControllersByThread.delete(next.task.threadId);
+            }
+            if (next.provider.providerKind) {
+              const remaining = (activeByProviderKind.get(next.provider.providerKind) ?? 1) - 1;
+              if (remaining <= 0) {
+                activeByProviderKind.delete(next.provider.providerKind);
+              } else {
+                activeByProviderKind.set(next.provider.providerKind, remaining);
+              }
+            }
+            decrementCompanyInFlight(next.companyId);
+            notifyDrainIfIdle();
+            scheduleDispatch();
+          });
+        }
+      } finally {
+        dispatching = false;
+        if (!paused && !shuttingDown && activeCount < currentSlots && pending.length > 0) {
+          scheduleDispatch();
+        } else {
+          notifyDrainIfIdle();
+        }
+      }
+    })();
+  }
+
+  function enqueuePending(task: PendingTask): Promise<void> {
     if (shuttingDown) {
       return Promise.reject(
         new Error('orchestrator: cannot enqueue — orchestrator is shutting down'),
       );
     }
-    const cid = resolveCompanyId(args.threadId);
-    if (cid) incrementCompanyInFlight(cid);
-    return queue
-      .enqueue(() => runAgentReplyTurn(args))
-      .finally(() => {
-        if (cid) decrementCompanyInFlight(cid);
-      });
-  };
+    return new Promise<void>((resolve, reject) => {
+      pending.push({ ...task, resolve, reject });
+      scheduleDispatch();
+    });
+  }
+
+  const enqueueAgentReplyInternal: EnqueueAgentReplyFn = (args) =>
+    enqueuePending({
+      kind: 'agent-reply',
+      threadId: args.threadId,
+      employeeId: args.employeeId,
+      triggerMessageId: args.triggerMessageId,
+      resolve: () => undefined,
+      reject: () => undefined,
+    });
 
   return {
     enqueueChat(args: EnqueueChatArgs): Promise<void> {
-      if (shuttingDown) {
-        return Promise.reject(
-          new Error('orchestrator: cannot enqueue — orchestrator is shutting down'),
-        );
-      }
-      const cid = resolveCompanyId(args.threadId);
-      if (cid) incrementCompanyInFlight(cid);
-      return queue
-        .enqueue(() => runTurn(args))
-        .finally(() => {
-          if (cid) decrementCompanyInFlight(cid);
-        });
+      return enqueuePending({
+        kind: 'chat',
+        threadId: args.threadId,
+        employeeId: args.employeeId,
+        userMessageId: args.userMessageId,
+        resolve: () => undefined,
+        reject: () => undefined,
+      });
     },
 
     enqueueAgentReply(args: EnqueueAgentReplyArgs): Promise<void> {
       return enqueueAgentReplyInternal(args);
     },
 
+    stopThread(threadId: string): boolean {
+      let stopped = false;
+      const controller = activeControllersByThread.get(threadId);
+      if (controller && !controller.signal.aborted) {
+        controller.abort();
+        stopped = true;
+      }
+      if (cancelPendingTasksForThread(threadId)) {
+        stopped = true;
+        scheduleDispatch();
+      }
+      return stopped;
+    },
+
     pause(): void {
-      queue.pause();
+      paused = true;
     },
 
     resume(): void {
       if (shuttingDown) return;
-      queue.resume();
+      paused = false;
+      scheduleDispatch();
     },
 
     async pauseCompany(companyId: string): Promise<void> {
@@ -632,14 +840,12 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       pausedCompanies.add(companyId);
       companiesRepo.setStatus(companyId, 'meeting');
 
-      // Create a gate that new work for this company will await.
       let gateResolve: () => void = () => {};
-      const gatePromise = new Promise<void>((r) => {
-        gateResolve = r;
+      const gatePromise = new Promise<void>((resolve) => {
+        gateResolve = resolve;
       });
       companyGates.set(companyId, { resolve: gateResolve, promise: gatePromise });
 
-      // Wait for any in-flight work for this company to finish.
       await waitForCompanyDrain(companyId);
     },
 
@@ -648,12 +854,12 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       pausedCompanies.delete(companyId);
       companiesRepo.setStatus(companyId, 'running');
 
-      // Open the gate so any queued work for this company can proceed.
       const gate = companyGates.get(companyId);
       if (gate) {
         gate.resolve();
         companyGates.delete(companyId);
       }
+      scheduleDispatch();
     },
 
     isCompanyPaused(companyId: string): boolean {
@@ -663,9 +869,34 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     shutdown(): Promise<void> {
       if (shutdownPromise) return shutdownPromise;
       shuttingDown = true;
-      queue.pause();
-      shutdownPromise = queue.drain();
+      paused = true;
+      const err = new Error('orchestrator: pending work canceled by shutdown');
+      while (pending.length > 0) {
+        const task = pending.shift();
+        if (task) task.reject(err);
+      }
+      shutdownPromise =
+        activeCount === 0
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              drainWaiters.push(resolve);
+            });
       return shutdownPromise;
+    },
+
+    updateConcurrency(args: UpdateConcurrencyArgs): void {
+      if (args.slots !== undefined) {
+        currentSlots = normalizePositiveInt(args.slots, currentSlots);
+      }
+      if (args.providerCaps !== undefined) {
+        currentProviderCaps = {
+          ...currentProviderCaps,
+          ...normalizeProviderCaps(args.providerCaps),
+        };
+      }
+      if (!paused && !shuttingDown) {
+        scheduleDispatch();
+      }
     },
 
     get bus() {

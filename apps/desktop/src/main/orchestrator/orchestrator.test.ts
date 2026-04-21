@@ -29,6 +29,7 @@ import {
   type Orchestrator,
   type ResolveProvider,
   type ResolveSystemPrompt,
+  type ResolveTools,
   buildOrchestrator,
 } from './index.js';
 import type { CostCalculator } from './run-agent.js';
@@ -134,6 +135,7 @@ function buildDefaultOrchestrator(
     provider?: ProviderStreamFn;
     resolveSystemPrompt?: ResolveSystemPrompt;
     resolveProvider?: ResolveProvider;
+    resolveTools?: ResolveTools;
     slots?: number;
     now?: () => number;
   } = {},
@@ -170,6 +172,7 @@ function buildDefaultOrchestrator(
     calcCost: f.calcCost,
     resolveSystemPrompt: defaultResolveSystem,
     resolveProvider: defaultResolveProvider,
+    resolveTools: overrides.resolveTools,
     slots: overrides.slots ?? 2,
     now: overrides.now,
   });
@@ -290,6 +293,94 @@ describe('buildOrchestrator', () => {
         { role: 'user', content: 'tell me about phase 1' },
       ]);
     });
+
+    it('filters blank and synthetic failed assistant turns out of provider history', async () => {
+      f.messagesRepo.append({
+        threadId: f.threadId,
+        authorId: f.employeeId,
+        authorKind: 'employee',
+        content: "I couldn't complete that reply. Provider returned no assistant text.",
+      });
+      f.messagesRepo.append({
+        threadId: f.threadId,
+        authorId: f.employeeId,
+        authorKind: 'employee',
+        content: '   ',
+      });
+      f.messagesRepo.append({
+        threadId: f.threadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'try again with a short answer',
+      });
+
+      const captured: { messages?: StreamMessage[] } = {};
+      const provider = makeFakeProvider(
+        ['short answer'],
+        { promptTokens: 7, completionTokens: 2 },
+        captured,
+      );
+      const orchestrator = buildDefaultOrchestrator(f, { provider });
+
+      await orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+
+      expect(captured.messages).toEqual([
+        { role: 'user', content: 'hi iris' },
+        { role: 'user', content: 'try again with a short answer' },
+      ]);
+    });
+
+    it('passes tools to direct DM turns when the provider is ollama-local', async () => {
+      const captured: {
+        system?: string;
+        messages?: StreamMessage[];
+        tools?: Record<string, unknown>;
+        maxSteps?: number;
+      } = {};
+      const provider: ProviderStreamFn = async function* (args) {
+        captured.system = args.system;
+        captured.messages = args.messages;
+        captured.tools = args.tools;
+        captured.maxSteps = args.maxSteps;
+        yield { delta: 'hello rocky' };
+        yield { done: true, usage: { promptTokens: 3, completionTokens: 2 } };
+      };
+
+      const orchestrator = buildDefaultOrchestrator(f, {
+        provider,
+        resolveProvider: async () => ({
+          providerName: 'ollama-local',
+          model: 'llama3.1:8b',
+          stream: provider,
+        }),
+        resolveTools: async () => ({
+          tools: {
+            read_file: {
+              description: 'Read a file',
+              execute: async () => ({ ok: true }),
+            },
+          },
+          maxSteps: 7,
+        }),
+      });
+
+      await orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+
+      expect(Object.keys(captured.tools ?? {}).sort()).toEqual([
+        'list_colleagues',
+        'read_file',
+        'send_message_to_colleague',
+      ]);
+      expect(captured.maxSteps).toBe(7);
+    });
   });
 
   describe('concurrency + FIFO', () => {
@@ -348,6 +439,289 @@ describe('buildOrchestrator', () => {
 
       // The second turn must not have started until the first ended.
       expect(order).toEqual(['first-start', 'first-end', 'second-start', 'second-end']);
+    });
+
+    it('serializes turns on the same thread even when multiple global slots are free', async () => {
+      const order: string[] = [];
+      let releaseFirst: () => void = () => {};
+      const firstGate = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      const secondUserMessageId = f.messagesRepo.append({
+        threadId: f.threadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'second follow-up',
+      });
+
+      const firstProvider: ProviderStreamFn = async function* () {
+        order.push('first-start');
+        await firstGate;
+        yield { delta: 'a' };
+        order.push('first-end');
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+      const secondProvider: ProviderStreamFn = async function* () {
+        order.push('second-start');
+        yield { delta: 'b' };
+        order.push('second-end');
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+
+      let callIdx = 0;
+      const orchestrator = buildDefaultOrchestrator(f, {
+        slots: 2,
+        resolveProvider: async () => {
+          const stream = callIdx === 0 ? firstProvider : secondProvider;
+          callIdx++;
+          return { providerName: 'p', model: 'm', stream };
+        },
+      });
+
+      const first = orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+      const second = orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: secondUserMessageId,
+      });
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 15));
+        expect(order).toEqual(['first-start']);
+
+        releaseFirst();
+        await Promise.all([first, second]);
+
+        expect(order).toEqual(['first-start', 'first-end', 'second-start', 'second-end']);
+      } finally {
+        releaseFirst();
+        await Promise.race([
+          Promise.allSettled([first, second]),
+          new Promise((resolve) => setTimeout(resolve, 100)),
+        ]);
+      }
+    });
+
+    it('enforces per-provider-kind caps without blocking unrelated providers', async () => {
+      const employeeTwoId = f.employeesRepo.create({
+        companyId: f.companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'ceo',
+        roleMdSha: 'sha-two',
+        level: 'officer',
+        name: 'Mateo',
+        title: 'CTO',
+      });
+      const employeeThreeId = f.employeesRepo.create({
+        companyId: f.companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'ceo',
+        roleMdSha: 'sha-three',
+        level: 'officer',
+        name: 'Sasha',
+        title: 'COO',
+      });
+      const secondThreadId = f.threadsRepo.create({
+        companyId: f.companyId,
+        kind: 'dm',
+        createdBy: employeeTwoId,
+      });
+      const thirdThreadId = f.threadsRepo.create({
+        companyId: f.companyId,
+        kind: 'dm',
+        createdBy: employeeThreeId,
+      });
+      const secondUserMessageId = f.messagesRepo.append({
+        threadId: secondThreadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'question two',
+      });
+      const thirdUserMessageId = f.messagesRepo.append({
+        threadId: thirdThreadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'question three',
+      });
+
+      const order: string[] = [];
+      let releaseOpenAi: () => void = () => {};
+      const openAiGate = new Promise<void>((resolve) => {
+        releaseOpenAi = resolve;
+      });
+
+      const openAiOne: ProviderStreamFn = async function* () {
+        order.push('openai-1-start');
+        await openAiGate;
+        yield { delta: 'a' };
+        order.push('openai-1-end');
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+      const openAiTwo: ProviderStreamFn = async function* () {
+        order.push('openai-2-start');
+        yield { delta: 'b' };
+        order.push('openai-2-end');
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+      const anthropic: ProviderStreamFn = async function* () {
+        order.push('anthropic-start');
+        yield { delta: 'c' };
+        order.push('anthropic-end');
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+
+      const orchestrator = buildOrchestrator({
+        bus: f.bus,
+        messagesRepo: f.messagesRepo,
+        runsRepo: f.runsRepo,
+        employeesRepo: f.employeesRepo,
+        companiesRepo: f.companiesRepo,
+        threadsRepo: f.threadsRepo,
+        calcCost: f.calcCost,
+        resolveSystemPrompt: async () => 'system',
+        resolveProvider: async (employee) => {
+          if (employee.id === f.employeeId) {
+            return {
+              providerName: 'openai-1',
+              providerKind: 'openai',
+              model: 'gpt-4.1',
+              stream: openAiOne,
+            };
+          }
+          if (employee.id === employeeTwoId) {
+            return {
+              providerName: 'openai-2',
+              providerKind: 'openai',
+              model: 'gpt-4.1-mini',
+              stream: openAiTwo,
+            };
+          }
+          return {
+            providerName: 'anthropic-1',
+            providerKind: 'anthropic',
+            model: 'claude-sonnet',
+            stream: anthropic,
+          };
+        },
+        slots: 2,
+        providerCaps: { openai: 1, anthropic: 1 },
+      } as Parameters<typeof buildOrchestrator>[0] & {
+        providerCaps: Record<string, number>;
+      });
+
+      const first = orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+      const second = orchestrator.enqueueChat({
+        threadId: secondThreadId,
+        employeeId: employeeTwoId,
+        userMessageId: secondUserMessageId,
+      });
+      const third = orchestrator.enqueueChat({
+        threadId: thirdThreadId,
+        employeeId: employeeThreeId,
+        userMessageId: thirdUserMessageId,
+      });
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(order).toEqual(['openai-1-start', 'anthropic-start', 'anthropic-end']);
+
+        releaseOpenAi();
+        await Promise.all([first, second, third]);
+
+        expect(order).toEqual([
+          'openai-1-start',
+          'anthropic-start',
+          'anthropic-end',
+          'openai-1-end',
+          'openai-2-start',
+          'openai-2-end',
+        ]);
+      } finally {
+        releaseOpenAi();
+        await Promise.race([
+          Promise.allSettled([first, second, third]),
+          new Promise((resolve) => setTimeout(resolve, 100)),
+        ]);
+      }
+    });
+  });
+
+  describe('live concurrency updates', () => {
+    it('applies updated global slots without rebuilding the orchestrator', async () => {
+      const secondThreadId = f.threadsRepo.create({
+        companyId: f.companyId,
+        kind: 'dm',
+        createdBy: f.employeeId,
+      });
+      const secondUserMessageId = f.messagesRepo.append({
+        threadId: secondThreadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'second question',
+      });
+      const order: string[] = [];
+      let releaseFirst: () => void = () => {};
+      const firstGate = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+
+      const firstProvider: ProviderStreamFn = async function* () {
+        order.push('first-start');
+        await firstGate;
+        yield { delta: 'a' };
+        order.push('first-end');
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+      const secondProvider: ProviderStreamFn = async function* () {
+        order.push('second-start');
+        yield { delta: 'b' };
+        order.push('second-end');
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+
+      let callIdx = 0;
+      const orchestrator = buildDefaultOrchestrator(f, {
+        slots: 1,
+        resolveProvider: async () => {
+          const stream = callIdx === 0 ? firstProvider : secondProvider;
+          callIdx++;
+          return { providerName: 'p', model: 'm', stream };
+        },
+      });
+
+      const first = orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+      const second = orchestrator.enqueueChat({
+        threadId: secondThreadId,
+        employeeId: f.employeeId,
+        userMessageId: secondUserMessageId,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      expect(order).toEqual(['first-start']);
+
+      (
+        orchestrator as unknown as {
+          updateConcurrency(args: { slots?: number; providerCaps?: Record<string, number> }): void;
+        }
+      ).updateConcurrency({ slots: 2 });
+
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      expect(order).toEqual(['first-start', 'second-start', 'second-end']);
+
+      releaseFirst();
+      await Promise.all([first, second]);
     });
   });
 
@@ -444,6 +818,151 @@ describe('buildOrchestrator', () => {
           userMessageId: f.userMessageId,
         }),
       ).rejects.toThrow(/shutting down/);
+    });
+  });
+
+  describe('stopThread', () => {
+    it('aborts an in-flight turn and releases the slot for the next queued task', async () => {
+      const secondThreadId = f.threadsRepo.create({
+        companyId: f.companyId,
+        kind: 'dm',
+        createdBy: f.employeeId,
+      });
+      const secondUserMessageId = f.messagesRepo.append({
+        threadId: secondThreadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'second question',
+      });
+
+      const order: string[] = [];
+      let firstStartedResolve: () => void = () => {};
+      const firstStarted = new Promise<void>((resolve) => {
+        firstStartedResolve = resolve;
+      });
+
+      const abortableProvider: ProviderStreamFn = async function* ({ signal }) {
+        order.push('first-start');
+        yield { delta: 'partial' };
+        firstStartedResolve();
+        await new Promise<void>((_resolve, reject) => {
+          if (signal?.aborted) {
+            reject(new DOMException('Aborted', 'AbortError'));
+            return;
+          }
+          const onAbort = () => {
+            signal?.removeEventListener('abort', onAbort);
+            reject(new DOMException('Aborted', 'AbortError'));
+          };
+          signal?.addEventListener('abort', onAbort, { once: true });
+        });
+      };
+      const secondProvider: ProviderStreamFn = async function* () {
+        order.push('second-start');
+        yield { delta: 'done' };
+        order.push('second-end');
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+
+      let callIdx = 0;
+      const orchestrator = buildDefaultOrchestrator(f, {
+        slots: 1,
+        resolveProvider: async () => {
+          const stream = callIdx === 0 ? abortableProvider : secondProvider;
+          callIdx++;
+          return { providerName: 'p', model: 'm', stream };
+        },
+      });
+
+      const first = orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+      const second = orchestrator.enqueueChat({
+        threadId: secondThreadId,
+        employeeId: f.employeeId,
+        userMessageId: secondUserMessageId,
+      });
+
+      await firstStarted;
+      expect(order).toEqual(['first-start']);
+
+      const stopped = (
+        orchestrator as unknown as {
+          stopThread(threadId: string): boolean;
+        }
+      ).stopThread(f.threadId);
+      expect(stopped).toBe(true);
+
+      await expect(first).rejects.toThrow(/aborted|canceled/i);
+      await second;
+
+      expect(order).toEqual(['first-start', 'second-start', 'second-end']);
+    });
+
+    it('cancels a queued turn before it starts streaming', async () => {
+      const secondThreadId = f.threadsRepo.create({
+        companyId: f.companyId,
+        kind: 'dm',
+        createdBy: f.employeeId,
+      });
+      const secondUserMessageId = f.messagesRepo.append({
+        threadId: secondThreadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'queued question',
+      });
+
+      const order: string[] = [];
+      let releaseFirst: () => void = () => {};
+      const firstGate = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      const firstProvider: ProviderStreamFn = async function* () {
+        order.push('first-start');
+        yield { delta: 'holding' };
+        await firstGate;
+        order.push('first-end');
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+      const secondProvider: ProviderStreamFn = async function* () {
+        order.push('second-start');
+        yield { delta: 'should not run' };
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
+      };
+
+      let callIdx = 0;
+      const orchestrator = buildDefaultOrchestrator(f, {
+        slots: 1,
+        resolveProvider: async () => {
+          const stream = callIdx++ === 0 ? firstProvider : secondProvider;
+          return { providerName: 'p', model: 'm', stream };
+        },
+      });
+
+      const first = orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+      const second = orchestrator.enqueueChat({
+        threadId: secondThreadId,
+        employeeId: f.employeeId,
+        userMessageId: secondUserMessageId,
+      });
+
+      await new Promise((r) => setTimeout(r, 20));
+      expect(order).toEqual(['first-start']);
+
+      const stopped = orchestrator.stopThread(secondThreadId);
+      expect(stopped).toBe(true);
+
+      await expect(second).rejects.toThrow(/canceled/i);
+      releaseFirst();
+      await first;
+
+      expect(order).toEqual(['first-start', 'first-end']);
     });
   });
 
