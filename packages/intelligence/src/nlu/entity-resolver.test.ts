@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type {
   Employee as EmployeeRow,
+  Meeting as MeetingRow,
   RoleSpec as RoleDefinition,
   Ticket as TicketRow,
   VaultFile,
@@ -113,6 +114,25 @@ function makeRole(
   };
 }
 
+function makeMeeting(
+  overrides: Partial<MeetingRow> & { id: string; agenda: string },
+): MeetingRow {
+  return {
+    id: overrides.id,
+    companyId: overrides.companyId ?? 'company_test',
+    threadId: overrides.threadId ?? 'thread_1',
+    chairId: overrides.chairId ?? 'emp_1',
+    agenda: overrides.agenda,
+    mode: overrides.mode ?? 'round-robin',
+    status: overrides.status ?? 'active',
+    minutesMd: overrides.minutesMd ?? null,
+    attendees: overrides.attendees ?? ['emp_1'],
+    actionItems: overrides.actionItems ?? [],
+    startedAt: overrides.startedAt ?? 0,
+    endedAt: overrides.endedAt ?? null,
+  };
+}
+
 function stubDeps(overrides: Partial<EntityResolverDeps> = {}): EntityResolverDeps {
   return {
     listEmployees: overrides.listEmployees ?? vi.fn(async () => []),
@@ -120,6 +140,8 @@ function stubDeps(overrides: Partial<EntityResolverDeps> = {}): EntityResolverDe
     searchTickets: overrides.searchTickets ?? vi.fn(async () => []),
     searchVault: overrides.searchVault ?? vi.fn(async () => []),
     listRoles: overrides.listRoles ?? vi.fn(async () => []),
+    listMeetings: overrides.listMeetings ?? vi.fn(async () => []),
+    getActiveMeeting: overrides.getActiveMeeting ?? vi.fn(async () => null),
   };
 }
 
@@ -416,6 +438,74 @@ describe('resolveRole', () => {
   it('returns not_found when the role list is empty', async () => {
     const resolver = createEntityResolver(stubDeps({ listRoles: async () => [] }));
     const result = await resolver.resolveRole('cto');
+    expect(result.kind).toBe('not_found');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Meeting resolver
+// ---------------------------------------------------------------------------
+
+describe('resolveMeeting', () => {
+  it('matches a meeting by exact agenda', async () => {
+    const q2 = makeMeeting({ id: 'mtg-q2', agenda: 'All Hands Q2' });
+    const resolver = createEntityResolver(stubDeps({ listMeetings: async () => [q2] }));
+
+    const result = await resolver.resolveMeeting('all hands q2', 'company_test');
+    expect(result.kind).toBe('unique');
+    if (result.kind === 'unique') {
+      expect(result.value.id).toBe('mtg-q2');
+    }
+  });
+
+  it('returns ambiguous when two meetings share a matching agenda token', async () => {
+    const q2 = makeMeeting({ id: 'mtg-q2', agenda: 'All Hands Q2' });
+    const q3 = makeMeeting({ id: 'mtg-q3', agenda: 'All Hands Q3' });
+    const resolver = createEntityResolver(stubDeps({ listMeetings: async () => [q2, q3] }));
+
+    const result = await resolver.resolveMeeting('all hands', 'company_test');
+    expect(result.kind).toBe('ambiguous');
+    if (result.kind === 'ambiguous') {
+      expect(result.candidates.map((meeting) => meeting.id)).toEqual(['mtg-q2', 'mtg-q3']);
+    }
+  });
+
+  it('accepts active-meeting aliases via resolveMeeting', async () => {
+    const active = makeMeeting({ id: 'mtg-active', agenda: 'Executive Review' });
+    const resolver = createEntityResolver(
+      stubDeps({
+        listMeetings: async () => [active],
+        getActiveMeeting: async () => active,
+      }),
+    );
+
+    const result = await resolver.resolveMeeting('current meeting', 'company_test');
+    expect(result.kind).toBe('unique');
+    if (result.kind === 'unique') {
+      expect(result.value.id).toBe('mtg-active');
+    }
+  });
+});
+
+describe('resolveActiveMeeting', () => {
+  it('returns unique when an active meeting exists', async () => {
+    const active = makeMeeting({ id: 'mtg-active', agenda: 'Executive Review' });
+    const resolver = createEntityResolver(
+      stubDeps({
+        getActiveMeeting: async () => active,
+      }),
+    );
+
+    const result = await resolver.resolveActiveMeeting('company_test');
+    expect(result.kind).toBe('unique');
+    if (result.kind === 'unique') {
+      expect(result.value.id).toBe('mtg-active');
+    }
+  });
+
+  it('returns not_found when there is no active meeting', async () => {
+    const resolver = createEntityResolver(stubDeps({ getActiveMeeting: async () => null }));
+    const result = await resolver.resolveActiveMeeting('company_test');
     expect(result.kind).toBe('not_found');
   });
 });

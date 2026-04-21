@@ -37,6 +37,16 @@ export interface ComposeDeps {
   }): Promise<RetrievalEvidencePack>;
 }
 
+const EXECUTION_POLICY = [
+  '## Execution Policy',
+  '- Only say an action is completed when a tool result or current state confirms it.',
+  '- If a decision is made but no verified mutation exists yet, describe it as recorded, delegated, pending, or blocked.',
+].join('\n');
+
+export function appendExecutionPolicy(prompt: string): string {
+  return `${prompt}\n\n${EXECUTION_POLICY}`;
+}
+
 export async function composeSystemPromptWithRag(
   deps: ComposeDeps,
   input: ComposeInput,

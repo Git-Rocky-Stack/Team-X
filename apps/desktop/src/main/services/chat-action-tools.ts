@@ -113,6 +113,78 @@ function defaultHireName(): string {
   return `New Hire ${nanoid(6)}`;
 }
 
+function findRoleStaffing(args: BuildChatActionToolsArgs, roleId: string): EmployeeRow | undefined {
+  return args.employeesRepo
+    .listVisibleByCompany(args.companyId)
+    .find((employee) => employee.roleId === roleId);
+}
+
+function buildCheckRoleStaffingTool(args: BuildChatActionToolsArgs): ToolSpec {
+  return {
+    name: 'check_role_staffing',
+    description:
+      'Check whether a role is currently staffed and by whom. Use this before promising a hire, replacement, or reassignment.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        roleQuery: {
+          type: 'string',
+          description: 'Role title, role id, or alias to inspect. Example: "Chief Marketing Officer" or "CMO".',
+        },
+      },
+      required: ['roleQuery'],
+    },
+    execute: async (rawArgs: unknown): Promise<unknown> => {
+      const input = rawArgs as { roleQuery?: unknown };
+      const roleQuery = typeof input.roleQuery === 'string' ? input.roleQuery.trim() : '';
+      if (roleQuery.length === 0) {
+        return { success: false, state: 'blocked', error: 'roleQuery is required.' };
+      }
+
+      const resolved = resolveRoleSpec(args.roleLookup, roleQuery);
+      if (resolved.kind === 'ambiguous') {
+        return {
+          success: false,
+          state: 'blocked',
+          error: `Multiple roles matched "${roleQuery}". Use a more specific title or id.`,
+          candidates: (resolved.candidates ?? []).map((candidate) => ({
+            roleId: candidate.frontmatter.id,
+            title: candidate.frontmatter.name,
+          })),
+        };
+      }
+      if (resolved.kind === 'not_found' || !resolved.spec) {
+        return {
+          success: false,
+          state: 'blocked',
+          error: `No role matched "${roleQuery}".`,
+        };
+      }
+
+      const staffed = findRoleStaffing(args, resolved.spec.frontmatter.id);
+      return {
+        success: true,
+        state: 'completed',
+        staffed: staffed !== undefined,
+        roleId: resolved.spec.frontmatter.id,
+        title: resolved.spec.frontmatter.name,
+        employee: staffed
+          ? {
+              employeeId: staffed.id,
+              name: staffed.name,
+              title: staffed.title,
+              level: staffed.level,
+            }
+          : null,
+        message:
+          staffed !== undefined
+            ? `${resolved.spec.frontmatter.name} is currently staffed by ${staffed.name}.`
+            : `${resolved.spec.frontmatter.name} is currently unstaffed.`,
+      };
+    },
+  };
+}
+
 function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null {
   if (!HIRE_LEVELS.has(args.actorLevel)) {
     return null;
@@ -141,13 +213,14 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
       const input = rawArgs as { roleQuery?: unknown; name?: unknown };
       const roleQuery = typeof input.roleQuery === 'string' ? input.roleQuery.trim() : '';
       if (roleQuery.length === 0) {
-        return { success: false, error: 'roleQuery is required.' };
+        return { success: false, state: 'blocked', error: 'roleQuery is required.' };
       }
 
       const resolved = resolveRoleSpec(args.roleLookup, roleQuery);
       if (resolved.kind === 'ambiguous') {
         return {
           success: false,
+          state: 'blocked',
           error: `Multiple roles matched "${roleQuery}". Use a more specific title or id.`,
           candidates: (resolved.candidates ?? []).map((candidate) => ({
             roleId: candidate.frontmatter.id,
@@ -156,16 +229,14 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
         };
       }
       if (resolved.kind === 'not_found' || !resolved.spec) {
-        return { success: false, error: `No hireable role matched "${roleQuery}".` };
+        return { success: false, state: 'blocked', error: `No hireable role matched "${roleQuery}".` };
       }
 
-      const existing = args
-        .employeesRepo
-        .listVisibleByCompany(args.companyId)
-        .find((employee) => employee.roleId === resolved.spec?.frontmatter.id);
+      const existing = findRoleStaffing(args, resolved.spec.frontmatter.id);
       if (existing) {
         return {
           success: false,
+          state: 'blocked',
           error: `${resolved.spec.frontmatter.name} is already staffed by ${existing.name}.`,
           employeeId: existing.id,
         };
@@ -187,6 +258,19 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
         toolsDenied: resolved.spec.frontmatter.tools_denied ?? [],
       });
 
+      const created = args
+        .employeesRepo
+        .listVisibleByCompany(args.companyId)
+        .find((employee) => employee.id === employeeId);
+      if (!created) {
+        return {
+          success: false,
+          state: 'blocked',
+          error: `${resolved.spec.frontmatter.name} could not be verified after creation.`,
+          employeeId,
+        };
+      }
+
       try {
         args.bus.emit({
           type: 'employee.hired',
@@ -198,7 +282,7 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
             companyId: args.companyId,
             roleId: resolved.spec.frontmatter.id,
             level: resolved.spec.frontmatter.level,
-            name,
+            name: created.name,
             title: resolved.spec.frontmatter.name,
             hiredAt: (args.now ?? Date.now)(),
           },
@@ -209,17 +293,19 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
 
       return {
         success: true,
+        state: 'completed',
         employeeId,
-        name,
-        title: resolved.spec.frontmatter.name,
-        roleId: resolved.spec.frontmatter.id,
+        name: created.name,
+        title: created.title,
+        roleId: created.roleId,
+        message: `${resolved.spec.frontmatter.name} hired and verified in the company roster.`,
       };
     },
   };
 }
 
 export function buildChatActionTools(args: BuildChatActionToolsArgs): ToolSpec[] {
-  const tools: ToolSpec[] = [];
+  const tools: ToolSpec[] = [buildCheckRoleStaffingTool(args)];
   const hireTool = buildHireEmployeeTool(args);
   if (hireTool) {
     tools.push(hireTool);

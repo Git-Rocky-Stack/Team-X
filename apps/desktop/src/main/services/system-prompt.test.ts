@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  appendExecutionPolicy,
   type ComposeDeps,
   type RecentMessage,
   composeSystemPromptWithRag,
@@ -31,6 +32,13 @@ function makeDeps(overrides: Partial<ComposeDeps> = {}): ComposeDeps {
 }
 
 describe('composeSystemPromptWithRag', () => {
+  it('appends the execution-truthfulness policy block', () => {
+    const prompt = appendExecutionPolicy('You are a CEO.');
+    expect(prompt).toContain('## Execution Policy');
+    expect(prompt).toContain('Only say an action is completed');
+    expect(prompt).toContain('recorded, delegated, pending, or blocked');
+  });
+
   it('returns plain role prompt when RAG disabled', async () => {
     const deps = makeDeps({ isRagEnabled: () => false });
     const prompt = await composeSystemPromptWithRag(deps, {

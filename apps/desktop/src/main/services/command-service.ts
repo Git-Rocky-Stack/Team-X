@@ -266,6 +266,8 @@ export interface CommandEntityResolver {
   resolveTicket(ref: string, companyId: string): Promise<ResolvedEntity<unknown>>;
   resolveVaultFile(query: string, companyId: string): Promise<ResolvedEntity<unknown>>;
   resolveRole(query: string): Promise<ResolvedEntity<unknown>>;
+  resolveMeeting(query: string, companyId: string): Promise<ResolvedEntity<unknown>>;
+  resolveActiveMeeting(companyId: string): Promise<ResolvedEntity<unknown>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -337,6 +339,33 @@ function buildWriteSideSummary(rawText: string): string {
   const truncated = rawText.length > 120 ? `${rawText.slice(0, 120)}...` : rawText;
   return `This request may create tickets, delegate tasks, or modify project state. The agentic loop will run write-side tools to fulfill: "${truncated}"`;
 }
+
+const EMPLOYEE_QUERY_KEYS = ['employeeQuery', 'managerQuery', 'assigneeQuery'] as const;
+
+interface OptionalEntityResolutionSpec {
+  queryKey: string;
+  entityKey: string;
+  prompt: string;
+}
+
+const OPTIONAL_ENTITY_RESOLUTIONS: Partial<
+  Record<IntentName, readonly OptionalEntityResolutionSpec[]>
+> = {
+  hire_employee: [
+    {
+      queryKey: 'managerQuery',
+      entityKey: 'managerId',
+      prompt: 'Which manager should they report to?',
+    },
+  ],
+  create_ticket: [
+    {
+      queryKey: 'assigneeQuery',
+      entityKey: 'assigneeId',
+      prompt: 'Which employee should own the ticket?',
+    },
+  ],
+};
 
 /**
  * Static suggestion list — M30 ships a fixed palette. M31 can extend
@@ -411,14 +440,19 @@ export function createCommandService(deps: CommandServiceDeps): CommandService {
         };
       }
 
+      const normalizedIntentResult: IntentResult = {
+        ...intentResult,
+        entities: normalizeIntentEntities(intentResult.intent, intentResult.entities),
+      };
+
       // Complex request: skip resolver + slot filler. CommandService.execute
       // routes this to the M31 agentic-loop stub.
-      if (intentResult.intent === 'complex_request') {
+      if (normalizedIntentResult.intent === 'complex_request') {
         return {
           kind: 'ready',
           intent: 'complex_request',
-          entities: { ...intentResult.entities },
-          summary: 'Ask the Copilot Agent to handle this',
+          entities: { ...normalizedIntentResult.entities },
+          summary: 'Delegate to the Copilot Agent',
         };
       }
 
@@ -428,13 +462,15 @@ export function createCommandService(deps: CommandServiceDeps): CommandService {
       // hit SQLite / FTS5 / role-pack scans.
       const resolved: Record<string, ResolvedEntity<unknown>> = {};
       const companyId = context.companyId;
-      const ec = intentResult.entities;
+      const ec = normalizedIntentResult.entities;
 
-      const employeeQuery = ec.employeeQuery;
-      if (typeof employeeQuery === 'string' && employeeQuery.trim().length > 0) {
-        resolved.employeeQuery = await safe(() =>
-          deps.resolver.resolveEmployee(employeeQuery, companyId),
-        );
+      for (const employeeKey of EMPLOYEE_QUERY_KEYS) {
+        const query = ec[employeeKey];
+        if (typeof query === 'string' && query.trim().length > 0) {
+          resolved[employeeKey] = await safe(() =>
+            deps.resolver.resolveEmployee(query, companyId),
+          );
+        }
       }
       const ticketQuery = ec.ticketQuery;
       if (typeof ticketQuery === 'string' && ticketQuery.trim().length > 0) {
@@ -453,33 +489,77 @@ export function createCommandService(deps: CommandServiceDeps): CommandService {
       if (typeof newRoleQuery === 'string' && newRoleQuery.trim().length > 0) {
         resolved.newRoleQuery = await safe(() => deps.resolver.resolveRole(newRoleQuery));
       }
+      const meetingQuery = ec.meetingQuery;
+      if (typeof meetingQuery === 'string' && meetingQuery.trim().length > 0) {
+        resolved.meetingQuery = await safe(() =>
+          deps.resolver.resolveMeeting(meetingQuery, companyId),
+        );
+      } else if (normalizedIntentResult.intent === 'end_meeting') {
+        resolved.meetingQuery = await safe(() => deps.resolver.resolveActiveMeeting(companyId));
+      }
 
-      const fillResult = deps.slotFiller.fill(intentResult, resolved);
+      const fillResult = deps.slotFiller.fill(normalizedIntentResult, resolved);
+      const pending = pendingBase(
+        normalizedIntentResult.intent,
+        flattenPartial(normalizedIntentResult.entities),
+      );
 
       switch (fillResult.kind) {
-        case 'ready':
+        case 'ready': {
+          const optionalResolution = applyOptionalEntityResolutions({
+            intent: fillResult.intent,
+            entities: normalizedIntentResult.entities,
+            baseEntities: fillResult.entities,
+            resolved,
+          });
+          if (optionalResolution.kind === 'needs_clarification') {
+            return {
+              kind: 'needs_clarification',
+              missing: optionalResolution.missing,
+              prompt: optionalResolution.prompt,
+              options: optionalResolution.options,
+              pending,
+            };
+          }
           return {
             kind: 'ready',
             intent: fillResult.intent,
-            entities: fillResult.entities,
-            summary: buildReadySummary(fillResult.intent, fillResult.entities),
+            entities: optionalResolution.entities,
+            summary: buildReadySummary(fillResult.intent, optionalResolution.entities),
           };
+        }
         case 'needs_clarification':
           return {
             kind: 'needs_clarification',
             missing: fillResult.missing,
             prompt: fillResult.prompt,
             options: fillResult.options,
-            pending: pendingBase(intentResult.intent, flattenPartial(intentResult.entities)),
+            pending,
           };
-        case 'needs_confirmation':
+        case 'needs_confirmation': {
+          const optionalResolution = applyOptionalEntityResolutions({
+            intent: fillResult.intent,
+            entities: normalizedIntentResult.entities,
+            baseEntities: fillResult.entities,
+            resolved,
+          });
+          if (optionalResolution.kind === 'needs_clarification') {
+            return {
+              kind: 'needs_clarification',
+              missing: optionalResolution.missing,
+              prompt: optionalResolution.prompt,
+              options: optionalResolution.options,
+              pending,
+            };
+          }
           return {
             kind: 'needs_confirmation',
             intent: fillResult.intent,
-            entities: fillResult.entities,
+            entities: optionalResolution.entities,
             summary: fillResult.summary,
-            pending: pendingBase(fillResult.intent, fillResult.entities),
+            pending,
           };
+        }
         default: {
           const _exhaustive: never = fillResult;
           throw new Error(`unreachable fill result: ${String(_exhaustive)}`);
@@ -731,7 +811,7 @@ async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<Dispat
         name,
         managerId: e.managerId || undefined,
       });
-      return { resultId: res.employeeId, summary: `Hired ${name}` };
+      return { resultId: res.employeeId, summary: `Completed: hired ${name}` };
     }
 
     case 'fire_employee': {
@@ -742,7 +822,7 @@ async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<Dispat
       }
       const employeeId = need('employeeId');
       await h.employeesFire({ employeeId });
-      return { summary: `Fired employee ${employeeId}` };
+      return { summary: `Completed: fired employee ${employeeId}` };
     }
 
     case 'promote_employee': {
@@ -758,14 +838,14 @@ async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<Dispat
         roleId: e.roleId ?? newLevel,
         newLevel,
       });
-      return { summary: `Promoted employee to ${newLevel}` };
+      return { summary: `Completed: promoted employee to ${newLevel}` };
     }
 
     case 'assign_ticket': {
       const ticketId = need('ticketId');
       const employeeId = need('employeeId');
       await h.ticketsAssign({ ticketId, assigneeId: employeeId });
-      return { summary: `Assigned ticket ${ticketId}` };
+      return { summary: `Completed: assigned ticket ${ticketId}` };
     }
 
     case 'create_ticket': {
@@ -777,19 +857,19 @@ async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<Dispat
         priority: e.priority,
         assigneeId: e.assigneeId,
       });
-      return { resultId: res.ticketId, summary: `Filed ticket: ${title}` };
+      return { resultId: res.ticketId, summary: `Completed: filed ticket ${title}` };
     }
 
     case 'close_ticket': {
       const ticketId = need('ticketId');
       await h.ticketsClose({ ticketId });
-      return { summary: `Closed ticket ${ticketId}` };
+      return { summary: `Completed: closed ticket ${ticketId}` };
     }
 
     case 'reopen_ticket': {
       const ticketId = need('ticketId');
       await h.ticketsReopen({ ticketId });
-      return { summary: `Reopened ticket ${ticketId}` };
+      return { summary: `Completed: reopened ticket ${ticketId}` };
     }
 
     case 'create_project': {
@@ -799,7 +879,7 @@ async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<Dispat
         title: name,
         description: e.description,
       });
-      return { resultId: res.projectId, summary: `Started project: ${name}` };
+      return { resultId: res.projectId, summary: `Completed: started project ${name}` };
     }
 
     case 'create_goal': {
@@ -811,7 +891,7 @@ async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<Dispat
         description: e.description,
         targetDate,
       });
-      return { resultId: res.goalId, summary: `Created goal: ${title}` };
+      return { resultId: res.goalId, summary: `Completed: created goal ${title}` };
     }
 
     case 'call_meeting': {
@@ -840,13 +920,13 @@ async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<Dispat
         attendeeIds,
         agenda,
       });
-      return { resultId: res.meetingId, summary: `Called meeting: ${agenda}` };
+      return { resultId: res.meetingId, summary: `Completed: called meeting ${agenda}` };
     }
 
     case 'end_meeting': {
       const meetingId = need('meetingId');
       await h.meetingsEnd({ meetingId });
-      return { summary: `Ended meeting ${meetingId}` };
+      return { summary: `Completed: ended meeting ${meetingId}` };
     }
 
     case 'check_status': {
@@ -906,7 +986,7 @@ async function dispatch(req: ExecuteRequest, h: CommandHandlers): Promise<Dispat
         // know about the runId/threadId shape. runId/threadId are also
         // passed through explicitly below for richer renderers.
         resultId: runId,
-        summary: 'Started agentic loop — streaming steps live',
+        summary: 'Delegated: started agentic execution and the step log is streaming live',
         runId,
         threadId,
       };
@@ -1008,6 +1088,79 @@ async function writeHistoryAndEvent(args: WriteHistoryArgs): Promise<void> {
 // Shape helpers
 // ---------------------------------------------------------------------------
 
+function normalizeIntentEntities(
+  intent: IntentName,
+  entities: Record<string, string>,
+): Record<string, string> {
+  const normalized = flattenPartial(entities);
+  if (intent === 'assign_ticket' && !normalized.employeeQuery && normalized.assigneeQuery) {
+    normalized.employeeQuery = normalized.assigneeQuery;
+  }
+  return normalized;
+}
+
+function applyOptionalEntityResolutions(args: {
+  intent: IntentName;
+  entities: Record<string, string>;
+  baseEntities: Record<string, string>;
+  resolved: Record<string, ResolvedEntity<unknown>>;
+}):
+  | { kind: 'ok'; entities: Record<string, string> }
+  | { kind: 'needs_clarification'; missing: string; prompt: string; options?: string[] } {
+  const specs = OPTIONAL_ENTITY_RESOLUTIONS[args.intent] ?? [];
+  const entities = { ...args.baseEntities };
+
+  for (const spec of specs) {
+    const raw = args.entities[spec.queryKey];
+    if (typeof raw !== 'string' || raw.trim().length === 0) continue;
+
+    const resolution = args.resolved[spec.queryKey];
+    if (!resolution || resolution.kind === 'not_found') {
+      return {
+        kind: 'needs_clarification',
+        missing: spec.entityKey,
+        prompt: `I couldn't find anyone matching '${raw.trim()}'. ${spec.prompt}`,
+      };
+    }
+    if (resolution.kind === 'ambiguous') {
+      return {
+        kind: 'needs_clarification',
+        missing: spec.entityKey,
+        prompt: `Multiple matches for '${raw.trim()}'. Which one?`,
+        options: resolution.candidates.slice(0, 5).map((candidate) => stringifyEntityOption(candidate)),
+      };
+    }
+
+    entities[spec.entityKey] = entityIdFromValue(resolution.value);
+  }
+
+  return { kind: 'ok', entities };
+}
+
+function stringifyEntityOption(value: unknown): string {
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if (typeof record.name === 'string') return record.name;
+    if (typeof record.title === 'string') return record.title;
+    if (typeof record.id === 'string') return record.id;
+  }
+  return String(value);
+}
+
+function entityIdFromValue(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if (typeof record.id === 'string') return record.id;
+    const frontmatter = record.frontmatter;
+    if (frontmatter && typeof frontmatter === 'object') {
+      const fm = frontmatter as Record<string, unknown>;
+      if (typeof fm.id === 'string') return fm.id;
+    }
+  }
+  return String(value);
+}
+
 function rowToEntry(row: {
   id: string;
   companyId: string;
@@ -1066,7 +1219,7 @@ function buildReadySummary(intent: IntentName, entities: Record<string, string>)
     case 'search_vault':
       return `Search vault: ${entities.query}`;
     case 'complex_request':
-      return 'Ask the Copilot Agent';
+      return 'Delegate to the Copilot Agent';
     default:
       return intent;
   }

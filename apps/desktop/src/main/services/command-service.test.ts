@@ -56,6 +56,8 @@ function makeResolver(overrides: Partial<CommandEntityResolver> = {}): CommandEn
     resolveTicket: vi.fn(async () => notFound),
     resolveVaultFile: vi.fn(async () => notFound),
     resolveRole: vi.fn(async () => notFound),
+    resolveMeeting: vi.fn(async () => notFound),
+    resolveActiveMeeting: vi.fn(async () => notFound),
     ...overrides,
   };
 }
@@ -296,6 +298,123 @@ describe('CommandService.parse', () => {
       expect(result.pending.rawText).toBe('fire sarah');
     }
   });
+
+  it('4. normalizes assigneeQuery into employeeQuery for assign_ticket parses', async () => {
+    const { svc } = buildService({
+      classifier: makeClassifier({
+        intent: 'assign_ticket',
+        entities: { ticketQuery: '#17', assigneeQuery: 'Sarah' },
+      }),
+      resolver: makeResolver({
+        resolveTicket: vi.fn(async () => ({
+          kind: 'unique',
+          value: { id: '17', title: 'Auth bug' },
+        })),
+        resolveEmployee: vi.fn(async () => ({
+          kind: 'unique',
+          value: { id: 'emp-sarah', name: 'Sarah Chen' },
+        })),
+      }),
+      slotFiller: makeSlotFiller({
+        kind: 'ready',
+        intent: 'assign_ticket',
+        entities: { ticketId: '17', employeeId: 'emp-sarah' },
+      }),
+    });
+    const result = await svc.parse('assign ticket 17 to Sarah', CTX);
+    expect(result.kind).toBe('ready');
+    if (result.kind === 'ready') {
+      expect(result.entities.ticketId).toBe('17');
+      expect(result.entities.employeeId).toBe('emp-sarah');
+    }
+  });
+
+  it('5. resolves optional managerQuery for hire_employee', async () => {
+    const { svc } = buildService({
+      classifier: makeClassifier({
+        intent: 'hire_employee',
+        entities: { roleQuery: 'CMO', managerQuery: 'CEO' },
+      }),
+      resolver: makeResolver({
+        resolveRole: vi.fn(async () => ({
+          kind: 'unique',
+          value: { frontmatter: { id: 'chief-marketing-officer', name: 'Chief Marketing Officer' } },
+        })),
+        resolveEmployee: vi.fn(async (query: string) => {
+          if (query === 'CEO') {
+            return { kind: 'unique', value: { id: 'emp-ceo', name: 'Iris CEO' } };
+          }
+          return { kind: 'not_found' };
+        }),
+      }),
+      slotFiller: makeSlotFiller({
+        kind: 'ready',
+        intent: 'hire_employee',
+        entities: { roleId: 'chief-marketing-officer' },
+      }),
+    });
+    const result = await svc.parse('bring on a CMO reporting to the CEO', CTX);
+    expect(result.kind).toBe('ready');
+    if (result.kind === 'ready') {
+      expect(result.entities.roleId).toBe('chief-marketing-officer');
+      expect(result.entities.managerId).toBe('emp-ceo');
+    }
+  });
+
+  it('6. auto-resolves the active meeting when end_meeting has no explicit meetingQuery', async () => {
+    const { svc } = buildService({
+      classifier: makeClassifier({
+        intent: 'end_meeting',
+        entities: {},
+      }),
+      resolver: makeResolver({
+        resolveActiveMeeting: vi.fn(async () => ({
+          kind: 'unique',
+          value: { id: 'mtg-1', title: 'Executive Review' },
+        })),
+      }),
+      slotFiller: makeSlotFiller({
+        kind: 'needs_confirmation',
+        intent: 'end_meeting',
+        entities: { meetingId: 'mtg-1' },
+        summary: "End meeting 'Executive Review'?",
+      }),
+    });
+    const result = await svc.parse('end the meeting', CTX);
+    expect(result.kind).toBe('needs_confirmation');
+    if (result.kind === 'needs_confirmation') {
+      expect(result.entities.meetingId).toBe('mtg-1');
+      expect(result.summary).toBe("End meeting 'Executive Review'?");
+    }
+  });
+
+  it('7. resolves optional assigneeQuery for create_ticket', async () => {
+    const { svc } = buildService({
+      classifier: makeClassifier({
+        intent: 'create_ticket',
+        entities: { title: 'Fix login', assigneeQuery: 'Sarah' },
+      }),
+      resolver: makeResolver({
+        resolveEmployee: vi.fn(async (query: string) => {
+          if (query === 'Sarah') {
+            return { kind: 'unique', value: { id: 'emp-sarah', name: 'Sarah Chen' } };
+          }
+          return { kind: 'not_found' };
+        }),
+      }),
+      slotFiller: makeSlotFiller({
+        kind: 'ready',
+        intent: 'create_ticket',
+        entities: { title: 'Fix login' },
+      }),
+    });
+    const result = await svc.parse('file a ticket and assign it to Sarah', CTX);
+    expect(result.kind).toBe('ready');
+    if (result.kind === 'ready') {
+      expect(result.entities.title).toBe('Fix login');
+      expect(result.entities.assigneeId).toBe('emp-sarah');
+    }
+  });
 });
 
 describe('CommandService.execute', () => {
@@ -326,6 +445,41 @@ describe('CommandService.execute', () => {
     expect(payload.intent).toBe('assign_ticket');
     expect(payload.outcome).toBe('ok');
     expect(payload.entities).toEqual({ ticketId: 'tix-9', employeeId: 'emp-1' });
+  });
+
+  it('4b. hire_employee forwards resolved managerId to employeesCreate', async () => {
+    const { svc, handlers } = buildService();
+    const result = await svc.execute(
+      baseReq({
+        intent: 'hire_employee',
+        entities: { roleId: 'chief-marketing-officer', managerId: 'emp-ceo', name: 'Jordan Vale' },
+      }),
+    );
+    expect(result.kind).toBe('ok');
+    expect(handlers.employeesCreate).toHaveBeenCalledWith({
+      companyId: 'co-1',
+      roleId: 'chief-marketing-officer',
+      name: 'Jordan Vale',
+      managerId: 'emp-ceo',
+    });
+  });
+
+  it('4c. create_ticket forwards resolved assigneeId to ticketsCreate', async () => {
+    const { svc, handlers } = buildService();
+    const result = await svc.execute(
+      baseReq({
+        intent: 'create_ticket',
+        entities: { title: 'Fix login', assigneeId: 'emp-1' },
+      }),
+    );
+    expect(result.kind).toBe('ok');
+    expect(handlers.ticketsCreate).toHaveBeenCalledWith({
+      companyId: 'co-1',
+      title: 'Fix login',
+      description: undefined,
+      priority: undefined,
+      assigneeId: 'emp-1',
+    });
   });
 
   it('5. destructive without confirmed returns needs_confirmation and does NOT dispatch', async () => {
@@ -429,7 +583,7 @@ describe('CommandService.execute', () => {
       // palette history list both get a stable deep-link reference
       // without needing to understand the agentic-loop shape.
       expect(result.resultId).toBe('run-42');
-      expect(result.summary).toMatch(/agentic loop/i);
+      expect(result.summary).toMatch(/delegated|agentic execution/i);
       expect(result.intent).toBe('complex_request');
     }
     // The loop entry point must have received the rawText verbatim.

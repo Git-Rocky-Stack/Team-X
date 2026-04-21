@@ -47,6 +47,7 @@
 
 import type {
   Employee as EmployeeRow,
+  Meeting as MeetingRow,
   RoleSpec as RoleDefinition,
   Ticket as TicketRow,
   VaultFile,
@@ -66,6 +67,8 @@ export interface EntityResolver {
   resolveTicket(ref: string, companyId: string): Promise<ResolvedEntity<TicketRow>>;
   resolveVaultFile(query: string, companyId: string): Promise<ResolvedEntity<VaultFile>>;
   resolveRole(query: string): Promise<ResolvedEntity<RoleDefinition>>;
+  resolveMeeting(query: string, companyId: string): Promise<ResolvedEntity<MeetingRow>>;
+  resolveActiveMeeting(companyId: string): Promise<ResolvedEntity<MeetingRow>>;
 }
 
 /**
@@ -81,6 +84,8 @@ export interface EntityResolverDeps {
   searchTickets(query: string, companyId: string): Promise<TicketRow[]>;
   searchVault(query: string, companyId: string): Promise<VaultFileRankedLike[]>;
   listRoles(): Promise<RoleDefinition[]>;
+  listMeetings(companyId: string): Promise<MeetingRow[]>;
+  getActiveMeeting(companyId: string): Promise<MeetingRow | null>;
 }
 
 /**
@@ -134,6 +139,12 @@ export function createEntityResolver(deps: EntityResolverDeps): EntityResolver {
     },
     resolveRole(query) {
       return resolveRole(deps, query);
+    },
+    resolveMeeting(query, companyId) {
+      return resolveMeeting(deps, query, companyId);
+    },
+    resolveActiveMeeting(companyId) {
+      return resolveActiveMeeting(deps, companyId);
     },
   };
 }
@@ -323,6 +334,58 @@ async function resolveRole(
     .sort((a, b) => a.score - b.score);
 
   return classifyFuzzy(scored, (s) => s.role);
+}
+
+// ---------------------------------------------------------------------------
+// Meeting resolver
+// ---------------------------------------------------------------------------
+
+const ACTIVE_MEETING_ALIASES = new Set(['active', 'active meeting', 'current', 'current meeting']);
+
+async function resolveMeeting(
+  deps: EntityResolverDeps,
+  query: string,
+  companyId: string,
+): Promise<ResolvedEntity<MeetingRow>> {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return { kind: 'not_found' };
+  if (ACTIVE_MEETING_ALIASES.has(needle)) {
+    return resolveActiveMeeting(deps, companyId);
+  }
+
+  const meetings = await deps.listMeetings(companyId);
+  if (meetings.length === 0) return { kind: 'not_found' };
+
+  const exactMatches = meetings.filter((meeting) => {
+    const agenda = meeting.agenda.trim().toLowerCase();
+    return meeting.id.toLowerCase() === needle || agenda === needle;
+  });
+  if (exactMatches.length === 1) {
+    return { kind: 'unique', value: exactMatches[0]! };
+  }
+  if (exactMatches.length > 1) {
+    return { kind: 'ambiguous', candidates: exactMatches.slice(0, MAX_CANDIDATES) };
+  }
+
+  const scored = meetings
+    .map((meeting) => {
+      const agenda = meeting.agenda.trim().toLowerCase();
+      const agendaScore = agenda.length > 0 ? bestTokenDistance(needle, agenda) : 1;
+      const idScore = normalizedLevenshtein(needle, meeting.id.toLowerCase());
+      return { meeting, score: Math.min(agendaScore, idScore) };
+    })
+    .filter((s) => s.score <= FUZZY_THRESHOLD)
+    .sort((a, b) => a.score - b.score);
+
+  return classifyFuzzy(scored, (s) => s.meeting);
+}
+
+async function resolveActiveMeeting(
+  deps: EntityResolverDeps,
+  companyId: string,
+): Promise<ResolvedEntity<MeetingRow>> {
+  const meeting = await deps.getActiveMeeting(companyId);
+  return meeting ? { kind: 'unique', value: meeting } : { kind: 'not_found' };
 }
 
 // ---------------------------------------------------------------------------

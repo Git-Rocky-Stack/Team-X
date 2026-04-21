@@ -57,7 +57,7 @@ import {
 import type { LoopCompleteFn, LoopMessage, LoopProviderCompletion } from '@team-x/intelligence';
 import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
 import { streamAgent } from '@team-x/provider-router';
-import type { EmbeddingSourceType, Employee, RuntimeStrategy, Ticket } from '@team-x/shared-types';
+import type { EmbeddingSourceType, Employee, Meeting, RuntimeStrategy, Ticket } from '@team-x/shared-types';
 import {
   CONCURRENCY_SETTINGS_CLAMPS,
   DEFAULT_CONCURRENCY_CAPS,
@@ -152,7 +152,7 @@ import { pickStrategy } from './services/runtime-strategy.js';
 import { buildChatActionTools } from './services/chat-action-tools.js';
 import { SecretsStore } from './services/secrets.js';
 import { ensureSystemAgent, ensureSystemCopilot } from './services/system-agent-bootstrap.js';
-import { composeSystemPromptWithRag } from './services/system-prompt.js';
+import { appendExecutionPolicy, composeSystemPromptWithRag } from './services/system-prompt.js';
 import { createTestAgenticCompleteFn } from './services/test-agentic-provider.js';
 import { createTestToolsForEmployee } from './services/test-agentic-tools.js';
 import { createTestClassifier } from './services/test-classifier.js';
@@ -627,8 +627,8 @@ app
         // wrapper as its `renderRoleSystemPrompt` dep, AND used as the
         // direct return when RAG is off so the non-RAG code path is
         // literally byte-identical to the pre-M29 behaviour.
-        const renderPlain = (): Promise<string> =>
-          roleLoader.resolveSystemPrompt({ employee, company });
+        const renderPlain = async (): Promise<string> =>
+          appendExecutionPolicy(await roleLoader.resolveSystemPrompt({ employee, company }));
 
         if (retrievalOrchestrator === null) return renderPlain();
 
@@ -956,6 +956,10 @@ app
           );
       },
       listRoles: async () => roleLoader.listRoles(),
+      listMeetings: async (companyId: string) =>
+        meetingsRepo.listByCompany(companyId) as unknown as Meeting[],
+      getActiveMeeting: async (companyId: string) =>
+        (meetingsRepo.getActive(companyId) as unknown as Meeting | null),
     });
     const commandSlotFiller = createSlotFiller();
 

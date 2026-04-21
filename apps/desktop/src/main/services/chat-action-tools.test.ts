@@ -43,7 +43,53 @@ function makeRoleSpec(overrides: Partial<RoleSpec['frontmatter']> & { sourcePath
 
 describe('buildChatActionTools', () => {
   it('exposes hire_employee to officers and resolves alias-based role queries', async () => {
-    const create = vi.fn(() => 'emp-cmo');
+    const employees: Array<{
+      id: string;
+      companyId: string;
+      rolePackId: string;
+      roleId: string;
+      roleMdSha: string;
+      level: string;
+      name: string;
+      title: string;
+      status: string;
+      modelPref: null;
+      providerPref: null;
+      toolsAllowedJson: string;
+      toolsDeniedJson: string;
+      avatar: null;
+      isSystem: boolean;
+      createdAt: number;
+    }> = [];
+    const create = vi.fn((input: {
+      companyId: string;
+      rolePackId: string;
+      roleId: string;
+      roleMdSha: string;
+      level: string;
+      name: string;
+      title: string;
+    }) => {
+      employees.push({
+        id: 'emp-cmo',
+        companyId: input.companyId,
+        rolePackId: input.rolePackId,
+        roleId: input.roleId,
+        roleMdSha: input.roleMdSha,
+        level: input.level,
+        name: input.name,
+        title: input.title,
+        status: 'idle',
+        modelPref: null,
+        providerPref: null,
+        toolsAllowedJson: '[]',
+        toolsDeniedJson: '[]',
+        avatar: null,
+        isSystem: false,
+        createdAt: 123,
+      });
+      return 'emp-cmo';
+    });
     const emit = vi.fn();
     const tools = buildChatActionTools({
       companyId: 'co-1',
@@ -51,7 +97,7 @@ describe('buildChatActionTools', () => {
       actorLevel: 'officer',
       employeesRepo: {
         create,
-        listVisibleByCompany: () => [],
+        listVisibleByCompany: () => employees,
       },
       roleLookup: {
         listRoles: () => [makeRoleSpec()],
@@ -60,6 +106,7 @@ describe('buildChatActionTools', () => {
       now: () => 123,
     });
 
+    expect(tools.map((tool) => tool.name)).toContain('check_role_staffing');
     expect(tools.map((tool) => tool.name)).toContain('hire_employee');
     const hireTool = tools.find((tool) => tool.name === 'hire_employee');
     expect(hireTool).toBeDefined();
@@ -67,10 +114,12 @@ describe('buildChatActionTools', () => {
     const result = await hireTool?.execute?.({ roleQuery: 'CMO' });
     expect(result).toEqual({
       success: true,
+      state: 'completed',
       employeeId: 'emp-cmo',
       name: expect.stringMatching(/^New Hire /),
       title: 'Chief Marketing Officer',
       roleId: 'chief-marketing-officer',
+      message: 'Chief Marketing Officer hired and verified in the company roster.',
     });
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -125,8 +174,60 @@ describe('buildChatActionTools', () => {
     const result = await hireTool?.execute?.({ roleQuery: 'Chief Marketing Officer' });
     expect(result).toEqual({
       success: false,
+      state: 'blocked',
       error: 'Chief Marketing Officer is already staffed by Jordan Vale.',
       employeeId: 'emp-existing-cmo',
+    });
+  });
+
+  it('exposes check_role_staffing and reports staffed roles with employee details', async () => {
+    const staffingTool = buildChatActionTools({
+      companyId: 'co-1',
+      actorId: 'emp-ceo',
+      actorLevel: 'officer',
+      employeesRepo: {
+        create: vi.fn(() => 'unused'),
+        listVisibleByCompany: () => [
+          {
+            id: 'emp-existing-cmo',
+            companyId: 'co-1',
+            rolePackId: 'strategia-official',
+            roleId: 'chief-marketing-officer',
+            roleMdSha: 'sha-chief-marketing-officer',
+            level: 'officer',
+            name: 'Jordan Vale',
+            title: 'Chief Marketing Officer',
+            status: 'idle',
+            modelPref: null,
+            providerPref: null,
+            toolsAllowedJson: '[]',
+            toolsDeniedJson: '[]',
+            avatar: null,
+            isSystem: false,
+            createdAt: 1,
+          },
+        ],
+      },
+      roleLookup: {
+        listRoles: () => [makeRoleSpec()],
+      },
+      bus: { emit: vi.fn() },
+    }).find((tool) => tool.name === 'check_role_staffing');
+
+    const result = await staffingTool?.execute?.({ roleQuery: 'CMO' });
+    expect(result).toEqual({
+      success: true,
+      state: 'completed',
+      staffed: true,
+      roleId: 'chief-marketing-officer',
+      title: 'Chief Marketing Officer',
+      employee: {
+        employeeId: 'emp-existing-cmo',
+        name: 'Jordan Vale',
+        title: 'Chief Marketing Officer',
+        level: 'officer',
+      },
+      message: 'Chief Marketing Officer is currently staffed by Jordan Vale.',
     });
   });
 
@@ -145,6 +246,6 @@ describe('buildChatActionTools', () => {
       bus: { emit: vi.fn() },
     });
 
-    expect(tools).toEqual([]);
+    expect(tools.map((tool) => tool.name)).toEqual(['check_role_staffing']);
   });
 });
