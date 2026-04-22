@@ -39,7 +39,17 @@
  *   downstream cost-calculation path on the happy line.
  */
 
-import { type CoreMessage, type CoreTool, streamText } from 'ai';
+import { randomUUID } from 'node:crypto';
+import {
+  type CallWarning,
+  type CoreMessage,
+  type CoreTool,
+  type FinishReason,
+  type LanguageModelV1,
+  type LanguageModelV1CallOptions,
+  type LanguageModelV1StreamPart,
+  streamText,
+} from 'ai';
 import { createOllama } from 'ollama-ai-provider';
 
 import type { ProviderStreamFn } from '../stream.js';
@@ -68,6 +78,348 @@ export interface OllamaAdapterOptions {
   headers?: Record<string, string>;
 }
 
+interface OllamaLanguageModelWithArgs extends LanguageModelV1 {
+  getArguments(options: LanguageModelV1CallOptions): {
+    args: Record<string, unknown>;
+    warnings?: CallWarning[];
+  };
+}
+
+interface OllamaRawToolCall {
+  id?: string;
+  function?: {
+    name?: string;
+    arguments?: unknown;
+  };
+}
+
+interface OllamaRawChunk {
+  model?: string;
+  created_at?: string;
+  done?: boolean;
+  done_reason?: string | null;
+  eval_count?: number | null;
+  prompt_eval_count?: number | null;
+  message?: {
+    role?: string;
+    content?: string | null;
+    tool_calls?: OllamaRawToolCall[] | null;
+  };
+}
+
+interface OllamaPatchedToolCall {
+  toolCallType: 'function';
+  toolCallId: string;
+  toolName: string;
+  args: string;
+}
+
+function responseHeadersToObject(headers: Headers): Record<string, string> {
+  return Object.fromEntries(headers.entries());
+}
+
+function mergeFetchHeaders(
+  ...groups: Array<Record<string, string | undefined> | undefined>
+): Record<string, string> {
+  const merged: Record<string, string> = { 'content-type': 'application/json' };
+  for (const group of groups) {
+    if (!group) continue;
+    for (const [key, value] of Object.entries(group)) {
+      if (typeof value === 'string' && value.length > 0) {
+        merged[key] = value;
+      }
+    }
+  }
+  return merged;
+}
+
+function toUsage(chunk: OllamaRawChunk): { promptTokens: number; completionTokens: number } {
+  return {
+    promptTokens:
+      typeof chunk.prompt_eval_count === 'number' && Number.isFinite(chunk.prompt_eval_count)
+        ? chunk.prompt_eval_count
+        : 0,
+    completionTokens:
+      typeof chunk.eval_count === 'number' && Number.isFinite(chunk.eval_count) ? chunk.eval_count : 0,
+  };
+}
+
+function mapOllamaFinishReason(
+  doneReason: string | null | undefined,
+  hasToolCalls: boolean,
+): FinishReason {
+  switch (doneReason) {
+    case 'stop':
+      return hasToolCalls ? 'tool-calls' : 'stop';
+    default:
+      return 'other';
+  }
+}
+
+function extractToolCalls(chunk: OllamaRawChunk): OllamaPatchedToolCall[] {
+  const toolCalls = chunk.message?.tool_calls;
+  if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
+    return [];
+  }
+
+  const parsed: OllamaPatchedToolCall[] = [];
+  for (const toolCall of toolCalls) {
+    const toolName = toolCall.function?.name;
+    if (typeof toolName !== 'string' || toolName.trim().length === 0) {
+      continue;
+    }
+    parsed.push({
+      toolCallId:
+        typeof toolCall.id === 'string' && toolCall.id.trim().length > 0
+          ? toolCall.id
+          : randomUUID(),
+      toolCallType: 'function',
+      toolName,
+      args: JSON.stringify(toolCall.function?.arguments ?? {}),
+    });
+  }
+  return parsed;
+}
+
+function isCloudOllamaModel(modelId: string): boolean {
+  return /cloud/i.test(modelId);
+}
+
+async function postOllamaChat(args: {
+  url: string;
+  body: Record<string, unknown>;
+  signal?: AbortSignal;
+  headers?: Record<string, string>;
+  fetchHeaders?: Record<string, string | undefined>;
+  fetchImpl?: typeof fetch;
+}): Promise<Response> {
+  const response = await (args.fetchImpl ?? fetch)(args.url, {
+    method: 'POST',
+    signal: args.signal,
+    headers: mergeFetchHeaders(args.headers, args.fetchHeaders),
+    body: JSON.stringify(args.body),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    const suffix = detail.trim().length > 0 ? `: ${detail.trim().slice(0, 500)}` : '';
+    throw new Error(`[provider-router/ollama] Ollama returned HTTP ${response.status}${suffix}`);
+  }
+
+  return response;
+}
+
+async function parseOllamaJsonResponse(response: Response): Promise<OllamaRawChunk> {
+  const payload = (await response.json()) as unknown;
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('[provider-router/ollama] Ollama returned a non-object chat payload');
+  }
+  return payload as OllamaRawChunk;
+}
+
+function createOllamaLineStream(
+  response: Response,
+  onChunk: (chunk: OllamaRawChunk) => boolean,
+): ReadableStream<Uint8Array> | null {
+  if (response.body === null) {
+    return null;
+  }
+
+  const source = response.body;
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = source.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const processLine = (line: string): boolean => {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) return false;
+        const chunk = JSON.parse(trimmed) as OllamaRawChunk;
+        return onChunk(chunk);
+      };
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          while (true) {
+            const newlineIndex = buffer.indexOf('\n');
+            if (newlineIndex === -1) break;
+            const line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
+            if (processLine(line)) {
+              controller.close();
+              return;
+            }
+          }
+        }
+
+        buffer += decoder.decode();
+        if (processLine(buffer)) {
+          controller.close();
+          return;
+        }
+        controller.error(new Error('[provider-router/ollama] stream ended without a done chunk'));
+      } catch (error) {
+        controller.error(error);
+      } finally {
+        reader.releaseLock();
+      }
+    },
+  });
+}
+
+export function makePatchedOllamaCloudLanguageModel(args: {
+  baseModel: OllamaLanguageModelWithArgs;
+  baseURL?: string;
+  headers?: Record<string, string>;
+  fetchImpl?: typeof fetch;
+}): LanguageModelV1 {
+  const chatUrl = `${(args.baseURL ?? 'http://localhost:11434/api').replace(/\/$/, '')}/chat`;
+
+  return {
+    specificationVersion: args.baseModel.specificationVersion,
+    provider: args.baseModel.provider,
+    modelId: args.baseModel.modelId,
+    defaultObjectGenerationMode: args.baseModel.defaultObjectGenerationMode,
+    supportsImageUrls: args.baseModel.supportsImageUrls,
+    supportsStructuredOutputs: args.baseModel.supportsStructuredOutputs,
+
+    async doGenerate(options) {
+      const { args: requestArgs, warnings = [] } = args.baseModel.getArguments(options);
+      const { messages: rawPrompt, ...rawSettings } = requestArgs;
+      const response = await postOllamaChat({
+        url: chatUrl,
+        body: { ...requestArgs, stream: false },
+        signal: options.abortSignal,
+        headers: args.headers,
+        fetchHeaders: options.headers,
+        fetchImpl: args.fetchImpl,
+      });
+      const payload = await parseOllamaJsonResponse(response);
+      const toolCalls = extractToolCalls(payload);
+
+      return {
+        text:
+          typeof payload.message?.content === 'string' && payload.message.content.length > 0
+            ? payload.message.content
+            : undefined,
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+        finishReason: mapOllamaFinishReason(payload.done_reason, toolCalls.length > 0),
+        usage: toUsage(payload),
+        rawCall: {
+          rawPrompt,
+          rawSettings,
+        },
+        rawResponse: {
+          headers: responseHeadersToObject(response.headers),
+        },
+        response: {
+          modelId: typeof payload.model === 'string' ? payload.model : args.baseModel.modelId,
+          timestamp: typeof payload.created_at === 'string' ? new Date(payload.created_at) : undefined,
+        },
+        warnings,
+      };
+    },
+
+    async doStream(options) {
+      const { args: requestArgs, warnings = [] } = args.baseModel.getArguments(options);
+      const { messages: rawPrompt, ...rawSettings } = requestArgs;
+      const response = await postOllamaChat({
+        url: chatUrl,
+        body: { ...requestArgs, stream: true },
+        signal: options.abortSignal,
+        headers: args.headers,
+        fetchHeaders: options.headers,
+        fetchImpl: args.fetchImpl,
+      });
+
+      const responseHeaders = responseHeadersToObject(response.headers);
+      const lowLevelStream = new ReadableStream<LanguageModelV1StreamPart>({
+        start(controller) {
+          let emittedResponseMetadata = false;
+          let sawToolCalls = false;
+
+          const lineStream = createOllamaLineStream(response, (chunk) => {
+            if (!emittedResponseMetadata) {
+              controller.enqueue({
+                type: 'response-metadata',
+                modelId: typeof chunk.model === 'string' ? chunk.model : args.baseModel.modelId,
+                timestamp: typeof chunk.created_at === 'string' ? new Date(chunk.created_at) : undefined,
+              });
+              emittedResponseMetadata = true;
+            }
+
+            const toolCalls = extractToolCalls(chunk);
+            if (toolCalls.length > 0) {
+              sawToolCalls = true;
+              for (const toolCall of toolCalls) {
+                controller.enqueue({
+                  type: 'tool-call',
+                  ...toolCall,
+                });
+              }
+            }
+
+            const text = chunk.message?.content;
+            if (typeof text === 'string' && text.length > 0) {
+              controller.enqueue({
+                type: 'text-delta',
+                textDelta: text,
+              });
+            }
+
+            if (chunk.done === true) {
+              controller.enqueue({
+                type: 'finish',
+                finishReason: mapOllamaFinishReason(chunk.done_reason, sawToolCalls),
+                usage: toUsage(chunk),
+              });
+              return true;
+            }
+
+            return false;
+          });
+
+          if (lineStream === null) {
+            controller.error(new Error('[provider-router/ollama] empty response body'));
+            return;
+          }
+
+          lineStream.pipeTo(
+            new WritableStream<Uint8Array>({
+              write() {
+                // No-op. createOllamaLineStream routes parsed chunks into controller directly.
+              },
+            }),
+          )
+            .then(() => {
+              controller.close();
+            })
+            .catch((error) => {
+              controller.error(error);
+            });
+        },
+      });
+
+      return {
+        stream: lowLevelStream,
+        rawCall: {
+          rawPrompt,
+          rawSettings,
+        },
+        rawResponse: {
+          headers: responseHeaders,
+        },
+        warnings,
+      };
+    },
+  };
+}
+
 /**
  * Build a `ProviderStreamFn` bound to a specific Ollama model and
  * (optional) base URL. The captured provider object reuses HTTP
@@ -91,10 +443,18 @@ export function makeOllamaStream(options: OllamaAdapterOptions): ProviderStreamF
     providerOptions.headers = options.headers;
   }
   const provider = createOllama(providerOptions);
+  const baseModel = provider(options.model) as OllamaLanguageModelWithArgs;
+  const model = isCloudOllamaModel(options.model)
+    ? makePatchedOllamaCloudLanguageModel({
+        baseModel,
+        baseURL: providerOptions.baseURL,
+        headers: providerOptions.headers,
+      })
+    : baseModel;
 
   return async function* ollamaStream({ system, messages, tools, maxSteps, signal }) {
     const result = await streamText({
-      model: provider(options.model),
+      model,
       system,
       messages: messages as CoreMessage[],
       abortSignal: signal,
@@ -110,6 +470,15 @@ export function makeOllamaStream(options: OllamaAdapterOptions): ProviderStreamF
       if (part.type === 'text-delta') {
         yield { delta: part.textDelta };
         continue;
+      }
+      if (part.type === 'error') {
+        throw part.error instanceof Error
+          ? part.error
+          : new Error(
+              typeof part.error === 'string'
+                ? part.error
+                : '[provider-router/ollama] provider stream emitted an unknown error',
+            );
       }
       if (part.type === 'tool-call') {
         yield {

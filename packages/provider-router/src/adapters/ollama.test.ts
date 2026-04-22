@@ -29,6 +29,7 @@ interface FullStreamPart {
   toolCallId?: string;
   toolName?: string;
   args?: unknown;
+  error?: unknown;
 }
 
 interface FakeStreamResult {
@@ -78,7 +79,7 @@ vi.mock('ai', () => ({
   },
 }));
 
-import { makeOllamaStream } from './ollama.js';
+import { makeOllamaStream, makePatchedOllamaCloudLanguageModel } from './ollama.js';
 
 async function* iterableOf(chunks: string[]): AsyncIterable<FullStreamPart> {
   for (const c of chunks) yield { type: 'text-delta', textDelta: c };
@@ -94,6 +95,17 @@ async function drain(
   const out: AdapterChunk[] = [];
   for await (const chunk of gen) out.push(chunk);
   return out;
+}
+
+async function drainReadableStream(stream: ReadableStream<unknown>): Promise<unknown[]> {
+  const reader = stream.getReader();
+  const parts: unknown[] = [];
+  while (true) {
+    const next = await reader.read();
+    if (next.done) break;
+    parts.push(next.value);
+  }
+  return parts;
 }
 
 describe('makeOllamaStream', () => {
@@ -328,6 +340,118 @@ describe('makeOllamaStream', () => {
       expect(sawAbort).toBe(true);
       expect(chunks).toEqual([{ delta: 'partial' }]);
       expect(chunks.some((chunk) => chunk.done)).toBe(false);
+    });
+
+    it('propagates explicit error parts from the SDK stream instead of swallowing them', async () => {
+      nextStreamTextResult = {
+        fullStream: iterableOfParts([
+          { type: 'error', error: new Error('cloud schema mismatch') },
+        ]),
+        usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
+      };
+
+      const stream = makeOllamaStream({ model: 'gemma4:31b-cloud' });
+      await expect(drain(stream({ system: '', messages: [] }))).rejects.toThrow(
+        /cloud schema mismatch/,
+      );
+    });
+  });
+
+  describe('cloud patch', () => {
+    it('parses Ollama cloud stream chunks with structured tool calls and no eval_duration', async () => {
+      const baseModel = {
+        specificationVersion: 'v1' as const,
+        provider: 'ollama.chat',
+        modelId: 'gemma4:31b-cloud',
+        defaultObjectGenerationMode: 'json' as const,
+        supportsImageUrls: false,
+        getArguments: () => ({
+          args: {
+            model: 'gemma4:31b-cloud',
+            messages: [{ role: 'user', content: 'hello' }],
+            tools: [],
+          },
+          warnings: [],
+        }),
+        doGenerate: vi.fn(),
+        doStream: vi.fn(),
+      };
+
+      const responseBody = [
+        JSON.stringify({
+          model: 'gemma4:31b',
+          created_at: '2026-04-22T08:53:26.784991177Z',
+          message: {
+            role: 'assistant',
+            content: '',
+            tool_calls: [
+              {
+                id: 'call_sj44k4ir',
+                function: {
+                  name: 'list_colleagues',
+                  arguments: {},
+                },
+              },
+            ],
+          },
+          done: false,
+        }),
+        JSON.stringify({
+          model: 'gemma4:31b',
+          created_at: '2026-04-22T08:53:26.80525595Z',
+          message: { role: 'assistant', content: 'OK' },
+          done: false,
+        }),
+        JSON.stringify({
+          model: 'gemma4:31b',
+          created_at: '2026-04-22T08:53:27.035578125Z',
+          message: { role: 'assistant', content: '' },
+          done: true,
+          done_reason: 'stop',
+          total_duration: 597195448,
+          prompt_eval_count: 53,
+          eval_count: 15,
+        }),
+      ].join('\n');
+
+      const model = makePatchedOllamaCloudLanguageModel({
+        baseModel,
+        baseURL: 'http://localhost:11434/api',
+        fetchImpl: vi.fn(async () => new Response(responseBody)),
+      });
+
+      const result = await model.doStream({
+        prompt: [],
+        mode: { type: 'regular' },
+      } as never);
+      const parts = await drainReadableStream(result.stream);
+
+      expect(parts).toEqual([
+        {
+          type: 'response-metadata',
+          modelId: 'gemma4:31b',
+          timestamp: new Date('2026-04-22T08:53:26.784991177Z'),
+        },
+        {
+          type: 'tool-call',
+          toolCallId: 'call_sj44k4ir',
+          toolCallType: 'function',
+          toolName: 'list_colleagues',
+          args: '{}',
+        },
+        {
+          type: 'text-delta',
+          textDelta: 'OK',
+        },
+        {
+          type: 'finish',
+          finishReason: 'tool-calls',
+          usage: {
+            promptTokens: 53,
+            completionTokens: 15,
+          },
+        },
+      ]);
     });
   });
 });

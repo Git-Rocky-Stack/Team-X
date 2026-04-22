@@ -145,6 +145,16 @@ export interface RunAgentInput {
   onRunCreated?: (runId: string) => void;
   /** Optional cancellation signal for user-triggered stop / shutdown flows. */
   signal?: AbortSignal;
+  /**
+   * Wall-clock cap for one turn. Defaults to 120s so a wedged provider
+   * cannot leave the chat UI spinning forever.
+   */
+  timeoutMs?: number;
+  /**
+   * Abort when the provider goes silent for too long mid-turn. Defaults
+   * to 45s and resets on every stream event.
+   */
+  idleTimeoutMs?: number;
 }
 
 export interface RunAgentResult {
@@ -166,8 +176,42 @@ function isAbortError(err: unknown): boolean {
   return false;
 }
 
+const DEFAULT_RUN_TIMEOUT_MS = 120_000;
+const DEFAULT_RUN_IDLE_TIMEOUT_MS = 45_000;
+const PROVIDER_TIMED_OUT_MESSAGE = 'provider timed out before completing reply';
+const PROVIDER_STALLED_MESSAGE = 'provider stream stalled before completing reply';
+
+function normalizeTimeoutMs(value: number | undefined, fallback: number): number {
+  if (!Number.isFinite(value) || value === undefined) return fallback;
+  return Math.max(1, Math.round(value));
+}
+
+function buildInterruptedReplyContent(
+  buffer: string,
+  reason: 'stalled' | 'timed out',
+): string {
+  const trimmed = buffer.trimEnd();
+  const notice =
+    reason === 'stalled'
+      ? "I couldn't finish that reply because the provider stalled. Please retry."
+      : "I couldn't finish that reply because the provider timed out. Please retry.";
+
+  if (trimmed.length > 0) {
+    return `${trimmed}\n\n${notice}`;
+  }
+
+  return reason === 'stalled'
+    ? "I couldn't complete that reply because the provider stalled."
+    : "I couldn't complete that reply because the provider timed out.";
+}
+
 export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promise<RunAgentResult> {
   const now = deps.now ?? Date.now;
+  const timeoutMs = normalizeTimeoutMs(input.timeoutMs, DEFAULT_RUN_TIMEOUT_MS);
+  const idleTimeoutMs = normalizeTimeoutMs(
+    input.idleTimeoutMs,
+    Math.min(DEFAULT_RUN_IDLE_TIMEOUT_MS, timeoutMs),
+  );
 
   // 1. Open the run row first. If telemetry persistence fails the
   //    caller learns about it before any provider call burns tokens.
@@ -212,6 +256,51 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
   const startTime = now();
   let buffer = '';
   let usage: StreamUsage | null = null;
+  let abortKind: 'external' | 'timeout' | 'idle-timeout' | null = null;
+  const streamController = new AbortController();
+
+  const abortWithKind = (kind: 'external' | 'timeout' | 'idle-timeout') => {
+    if (streamController.signal.aborted) return;
+    abortKind = kind;
+    streamController.abort();
+  };
+
+  const externalAbortListener = () => {
+    abortWithKind('external');
+  };
+  if (input.signal) {
+    if (input.signal.aborted) {
+      abortWithKind('external');
+    } else {
+      input.signal.addEventListener('abort', externalAbortListener, { once: true });
+    }
+  }
+
+  let totalTimer: ReturnType<typeof setTimeout> | null = null;
+  let idleTimer: ReturnType<typeof setTimeout> | null = null;
+  const clearTimers = () => {
+    if (totalTimer !== null) {
+      clearTimeout(totalTimer);
+      totalTimer = null;
+    }
+    if (idleTimer !== null) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
+    }
+  };
+  const resetIdleTimer = () => {
+    if (idleTimer !== null) {
+      clearTimeout(idleTimer);
+    }
+    idleTimer = setTimeout(() => {
+      abortWithKind('idle-timeout');
+    }, idleTimeoutMs);
+  };
+
+  totalTimer = setTimeout(() => {
+    abortWithKind('timeout');
+  }, timeoutMs);
+  resetIdleTimer();
 
   try {
     // 4. Drain the provider stream. `streamAgent` normalizes the
@@ -223,8 +312,9 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       messages: input.messages,
       tools: input.tools,
       maxSteps: input.maxSteps,
-      signal: input.signal,
+      signal: streamController.signal,
     })) {
+      resetIdleTimer();
       if (chunk.kind === 'delta') {
         buffer += chunk.delta;
         deps.messages.updateContent(messageId, buffer);
@@ -264,12 +354,29 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     //     emit work.failed (NOT work.completed), then re-throw so the
     //     work-queue caller's enqueue Promise rejects.
     const latencyMs = Math.max(0, now() - startTime);
-    const aborted = input.signal?.aborted === true || isAbortError(err);
-    const message = aborted
-      ? 'Run canceled by user'
-      : err instanceof Error
-        ? err.message
-        : String(err);
+    const timedOut = abortKind === 'timeout' || abortKind === 'idle-timeout';
+    const aborted =
+      abortKind === 'external' || (!timedOut && (input.signal?.aborted === true || isAbortError(err)));
+    const message = timedOut
+      ? abortKind === 'idle-timeout'
+        ? PROVIDER_STALLED_MESSAGE
+        : PROVIDER_TIMED_OUT_MESSAGE
+      : aborted
+        ? 'Run canceled by user'
+        : err instanceof Error
+          ? err.message
+          : String(err);
+
+    if (timedOut) {
+      deps.messages.updateContent(
+        messageId,
+        buildInterruptedReplyContent(
+          buffer,
+          abortKind === 'idle-timeout' ? 'stalled' : 'timed out',
+        ),
+      );
+    }
+
     deps.runs.finish(runId, {
       status: aborted ? 'cancelled' : 'error',
       promptTokens: 0,
@@ -290,7 +397,12 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         error: message,
       },
     });
-    throw err;
+    throw timedOut ? new Error(message) : err;
+  } finally {
+    clearTimers();
+    if (input.signal) {
+      input.signal.removeEventListener('abort', externalAbortListener);
+    }
   }
 
   // 5b. Success path. A provider that closes the stream without ever

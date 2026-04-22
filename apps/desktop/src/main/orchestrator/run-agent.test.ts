@@ -612,7 +612,8 @@ describe('runAgent', () => {
       );
 
       await started;
-      expect(captured.signal).toBe(controller.signal);
+      expect(captured.signal).toBeDefined();
+      expect(captured.signal?.aborted).toBe(false);
 
       controller.abort();
 
@@ -629,6 +630,54 @@ describe('runAgent', () => {
 
       const messages = f.messages.listByThread(f.threadId);
       expect(messages[0]?.content).toBe('partial');
+      expect(f.costCalls).toHaveLength(0);
+    });
+
+    it('a stalled provider stream is aborted, closes the run, and preserves partial text with a retry note', async () => {
+      let startedResolve: () => void = () => {};
+      const started = new Promise<void>((resolve) => {
+        startedResolve = resolve;
+      });
+
+      const provider = abortableProvider({ resolve: startedResolve });
+
+      const runP = runAgent(
+        {
+          bus: f.bus,
+          messages: f.messages,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider,
+          providerName: 'p',
+          model: 'm',
+          idleTimeoutMs: 25,
+          timeoutMs: 1_000,
+        },
+      );
+
+      await started;
+      await expect(runP).rejects.toThrow(/stalled/i);
+
+      const runRows = f.runs.listByEmployee(f.employeeId);
+      expect(runRows).toHaveLength(1);
+      expect(runRows[0]?.status).toBe('error');
+      expect(runRows[0]?.error).toMatch(/stalled/i);
+
+      const messages = f.messages.listByThread(f.threadId);
+      expect(messages[0]?.content).toContain('partial');
+      expect(messages[0]?.content).toMatch(/provider stalled/i);
+      expect(messages[0]?.content).toMatch(/please retry/i);
+
+      const events = f.bus.replaySince(0);
+      expect(events.map((e) => e.type)).toEqual(['work.started', 'token.delta', 'work.failed']);
+      expect(events.map((e) => e.type)).not.toContain('work.completed');
       expect(f.costCalls).toHaveLength(0);
     });
   });
