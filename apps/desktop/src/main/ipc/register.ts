@@ -113,6 +113,7 @@ const REQUEST_CHANNELS = [
   'telemetry.companyStats',
   'telemetry.dailyUsage',
   'telemetry.employeeStats',
+  'telemetry.recentRuns',
   'telemetry.costBreakdown',
   // Settings (Phase 3 — M19)
   'settings.getRuntime',
@@ -506,6 +507,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('telemetry.employeeStats', async (_event, request: { companyId: string }) => {
     return handlers.telemetryEmployeeStats(request);
   });
+
+  ipcMain.handle(
+    'telemetry.recentRuns',
+    async (_event, request: import('@team-x/shared-types').TelemetryRecentRunsRequest) => {
+      return handlers.telemetryRecentRuns(request);
+    },
+  );
 
   ipcMain.handle(
     'telemetry.costBreakdown',

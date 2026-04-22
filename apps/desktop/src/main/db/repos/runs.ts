@@ -25,14 +25,14 @@
  * Cross-driver generic typing — same pattern as the other repos.
  */
 
-import { type SQL, and, eq, gte, lte, sql } from 'drizzle-orm';
+import { type SQL, and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 import type { TelemetryRunKind } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
-import { runs } from '../schema.js';
+import { employees, runs, threads } from '../schema.js';
 
 export type RunRow = typeof runs.$inferSelect;
 
@@ -62,6 +62,25 @@ export interface FinishRunInput {
   costUsd: string;
   toolCallsCount?: number;
   error?: string;
+}
+
+export interface RecentRunRow {
+  runId: string;
+  threadId: string | null;
+  threadSubject: string | null;
+  employeeId: string;
+  employeeName: string;
+  employeeTitle: string;
+  provider: string;
+  model: string;
+  status: RunStatus;
+  error: string | null;
+  promptTokens: number;
+  completionTokens: number;
+  costUsd: string;
+  toolCallsCount: number;
+  startedAt: number;
+  endedAt: number | null;
 }
 
 type RunsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -130,6 +149,47 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
     /** Return every run row for a given employee. Phase 1 does not paginate. */
     listByEmployee(employeeId: string): RunRow[] {
       return db.select().from(runs).where(eq(runs.employeeId, employeeId)).all();
+    },
+
+    /**
+     * Newest-first recent run summaries for one company. Joins
+     * employees + threads so dashboard callers can render a durable
+     * run card without follow-up lookups.
+     */
+    recentRuns(companyId: string, limit: number, kind?: TelemetryRunKind): RecentRunRow[] {
+      const conditions = withRunKindCondition([eq(employees.companyId, companyId)], kind);
+
+      const rows = db
+        .select({
+          runId: runs.id,
+          threadId: runs.threadId,
+          threadSubject: threads.subject,
+          employeeId: employees.id,
+          employeeName: employees.name,
+          employeeTitle: employees.title,
+          provider: runs.provider,
+          model: runs.model,
+          status: runs.status,
+          error: runs.error,
+          promptTokens: runs.promptTokens,
+          completionTokens: runs.completionTokens,
+          costUsd: runs.costUsd,
+          toolCallsCount: runs.toolCallsCount,
+          startedAt: runs.startedAt,
+          endedAt: runs.endedAt,
+        })
+        .from(runs)
+        .innerJoin(employees, eq(runs.employeeId, employees.id))
+        .leftJoin(threads, eq(runs.threadId, threads.id))
+        .where(and(...conditions))
+        .orderBy(desc(sql`coalesce(${runs.endedAt}, ${runs.startedAt})`), desc(runs.startedAt))
+        .limit(limit)
+        .all();
+
+      return rows.map((row) => ({
+        ...row,
+        status: row.status as RunStatus,
+      }));
     },
 
     // ------------------------------------------------------------------

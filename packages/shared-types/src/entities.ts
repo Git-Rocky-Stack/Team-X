@@ -216,10 +216,17 @@ export interface Company {
   settings: CompanySettings;
 }
 
+export interface CompanyDashboardLayoutSettings {
+  version: 1;
+  showAgentRuns: boolean;
+  showEmployeeQueues: boolean;
+}
+
 export interface CompanySettings {
   mission?: string;
   values?: string[];
   theme?: 'dark' | 'light';
+  dashboardLayout?: CompanyDashboardLayoutSettings;
 }
 
 export interface Employee {

@@ -145,6 +145,8 @@ import type {
   TelemetryDailyUsageRow,
   TelemetryEmployeeStatsRequest,
   TelemetryEmployeeStatsRow,
+  TelemetryRecentRunRow,
+  TelemetryRecentRunsRequest,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
   TestProviderConnectionResponse,
@@ -248,6 +250,7 @@ const CHANNELS = {
   telemetryCompanyStats: 'telemetry.companyStats',
   telemetryDailyUsage: 'telemetry.dailyUsage',
   telemetryEmployeeStats: 'telemetry.employeeStats',
+  telemetryRecentRuns: 'telemetry.recentRuns',
   telemetryCostBreakdown: 'telemetry.costBreakdown',
   // Settings (Phase 3 — M19)
   settingsGetRuntime: 'settings.getRuntime',
@@ -468,6 +471,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.telemetryEmployeeStats, telemetryEmployeeStatsRequest(req)) as Promise<
           TelemetryEmployeeStatsRow[]
         >,
+      recentRuns: (req: TelemetryRecentRunsRequest) =>
+        ipc.invoke(CHANNELS.telemetryRecentRuns, req) as Promise<TelemetryRecentRunRow[]>,
       costBreakdown: (req: TelemetryCostBreakdownRequest) =>
         ipc.invoke(CHANNELS.telemetryCostBreakdown, req) as Promise<TelemetryCostBreakdownRow[]>,
     },

@@ -18,6 +18,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
       (_companyId: string, _fromMs: number, _toMs: number, _kind?: TelemetryRunKind) => [],
     ),
     employeeStats: vi.fn((_companyId: string, _kind?: TelemetryRunKind) => []),
+    recentRuns: vi.fn((_companyId: string, _limit: number, _kind?: TelemetryRunKind) => []),
     costBreakdown: vi.fn(
       (_companyId: string, _fromMs?: number, _toMs?: number, _kind?: TelemetryRunKind) => [],
     ),
@@ -68,6 +69,7 @@ describe('telemetry IPC handlers', () => {
       kind: 'copilot',
     });
     await handlers.telemetryEmployeeStats({ companyId: 'company-1', kind: 'work' });
+    await handlers.telemetryRecentRuns({ companyId: 'company-1', kind: 'agentic', limit: 6 });
     await handlers.telemetryCostBreakdown({
       companyId: 'company-1',
       fromMs: 30,
@@ -78,6 +80,7 @@ describe('telemetry IPC handlers', () => {
     expect(runsRepo.companyStats).toHaveBeenCalledWith('company-1', 'agentic');
     expect(runsRepo.dailyUsage).toHaveBeenCalledWith('company-1', 10, 20, 'copilot');
     expect(runsRepo.employeeStats).toHaveBeenCalledWith('company-1', 'work');
+    expect(runsRepo.recentRuns).toHaveBeenCalledWith('company-1', 6, 'agentic');
     expect(runsRepo.costBreakdown).toHaveBeenCalledWith('company-1', 30, 40, 'agentic');
   });
 
@@ -93,5 +96,20 @@ describe('telemetry IPC handlers', () => {
     ).rejects.toThrow(/telemetry\.companyStats: kind must be work, agentic, or copilot/);
 
     expect(runsRepo.companyStats).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid recent-runs limits before repo access', async () => {
+    const runsRepo = makeDeps().runsRepo;
+    const handlers = createIpcHandlers(makeDeps({ runsRepo }));
+
+    await expect(
+      handlers.telemetryRecentRuns({
+        companyId: 'company-1',
+        kind: 'agentic',
+        limit: 0,
+      }),
+    ).rejects.toThrow(/telemetry\.recentRuns: limit must be between 1 and 12/);
+
+    expect(runsRepo.recentRuns).not.toHaveBeenCalled();
   });
 });

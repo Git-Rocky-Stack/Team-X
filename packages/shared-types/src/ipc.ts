@@ -714,6 +714,31 @@ export interface TelemetryEmployeeStatsRow {
   totalToolCalls: number;
 }
 
+export interface TelemetryRecentRunsRequest {
+  companyId: string;
+  kind?: TelemetryRunKind;
+  limit?: number;
+}
+
+export interface TelemetryRecentRunRow {
+  runId: string;
+  threadId: string | null;
+  threadSubject: string | null;
+  employeeId: string;
+  employeeName: string;
+  employeeTitle: string;
+  provider: string;
+  model: string;
+  status: 'running' | 'success' | 'error' | 'cancelled';
+  error: string | null;
+  promptTokens: number;
+  completionTokens: number;
+  costUsd: string;
+  toolCallsCount: number;
+  startedAt: number;
+  endedAt: number | null;
+}
+
 export interface TelemetryCostBreakdownRequest {
   companyId: string;
   /** Optional epoch millis — start of range. */
@@ -1545,6 +1570,10 @@ export interface IpcContract {
     request: TelemetryEmployeeStatsRequest;
     response: TelemetryEmployeeStatsRow[];
   };
+  'telemetry.recentRuns': {
+    request: TelemetryRecentRunsRequest;
+    response: TelemetryRecentRunRow[];
+  };
   'telemetry.costBreakdown': {
     request: TelemetryCostBreakdownRequest;
     response: TelemetryCostBreakdownRow[];
@@ -2105,6 +2134,8 @@ export interface TeamXApi {
     employeeStats(
       req: string | TelemetryEmployeeStatsRequest,
     ): Promise<TelemetryEmployeeStatsRow[]>;
+    /** Newest-first persisted run summaries for dashboard backfill. */
+    recentRuns(req: TelemetryRecentRunsRequest): Promise<TelemetryRecentRunRow[]>;
     /** Cost breakdown by provider and model, with optional date range filter. */
     costBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
   };

@@ -11,7 +11,7 @@ interface SubtabDef {
 }
 
 const SUBTABS: SubtabDef[] = [
-  { label: 'Cards', icon: LayoutGrid, subview: 'cards' },
+  { label: 'Mission Control', icon: LayoutGrid, subview: 'cards' },
   { label: 'Timeline', icon: ScrollText, subview: 'timeline' },
   { label: 'Stream', icon: Radio, subview: 'stream' },
   { label: 'Floor', icon: Grid3X3, subview: 'floor' },
@@ -23,7 +23,7 @@ export function DashboardSubtabs() {
   const setSubview = useAppStore((s) => s.setDashboardSubview);
 
   return (
-    <div className="flex items-center gap-1 border-b border-border bg-surface-50 px-6 py-1.5">
+    <div className="flex items-center gap-1 border-b border-border/70 bg-background/80 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       {SUBTABS.map((tab) => {
         const isActive = tab.subview === activeSubview;
         const Icon = tab.icon;
@@ -33,11 +33,11 @@ export function DashboardSubtabs() {
             key={tab.subview}
             onClick={() => setSubview(tab.subview)}
             className={`
-              flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors
+              flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors
               ${
                 isActive
-                  ? 'bg-brand/10 text-brand'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-surface-100'
+                  ? 'border border-brand/25 bg-brand/10 text-brand'
+                  : 'border border-transparent text-muted-foreground hover:border-white/10 hover:bg-white/5 hover:text-foreground'
               }
             `}
           >

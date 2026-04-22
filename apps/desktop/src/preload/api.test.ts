@@ -200,6 +200,19 @@ describe('buildTeamXApi', () => {
     });
   });
 
+  describe('telemetry.recentRuns', () => {
+    it('invokes telemetry.recentRuns with the request object verbatim', async () => {
+      fake.setNextInvokeResult([]);
+      await api.telemetry.recentRuns({ companyId: 'co-1', kind: 'agentic', limit: 6 });
+      expect(fake.invokeCalls).toEqual([
+        {
+          channel: PRELOAD_CHANNELS.telemetryRecentRuns,
+          args: [{ companyId: 'co-1', kind: 'agentic', limit: 6 }],
+        },
+      ]);
+    });
+  });
+
   describe('events.onDashboard', () => {
     it('attaches a listener to events.dashboard', () => {
       const cb = vi.fn();
@@ -281,6 +294,7 @@ describe('buildTeamXApi', () => {
       expect(channels.chatStop).toBe('chat.stop');
       expect(PRELOAD_CHANNELS.chatResolveThread).toBe('chat.resolveThread');
       expect(PRELOAD_CHANNELS.eventsDashboard).toBe('events.dashboard');
+      expect(channels.telemetryRecentRuns).toBe('telemetry.recentRuns');
       expect(PRELOAD_CHANNELS.providersListModels).toBe('providers.listModels');
     });
   });

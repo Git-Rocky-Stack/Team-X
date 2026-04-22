@@ -1,14 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
+import { createCompaniesRepo } from './companies.js';
+import { createEmployeesRepo } from './employees.js';
 import { createRunsRepo } from './runs.js';
+import { createThreadsRepo } from './threads.js';
 
 describe('runs repo', () => {
   let ctx: TestDbHandle;
   let runs: ReturnType<typeof createRunsRepo>;
+  let companies: ReturnType<typeof createCompaniesRepo>;
+  let employees: ReturnType<typeof createEmployeesRepo>;
+  let threads: ReturnType<typeof createThreadsRepo>;
 
   beforeEach(async () => {
     ctx = await makeTestDb();
+    companies = createCompaniesRepo(ctx.db);
+    employees = createEmployeesRepo(ctx.db);
+    threads = createThreadsRepo(ctx.db);
     runs = createRunsRepo(ctx.db);
   });
 
@@ -173,6 +182,124 @@ describe('runs repo', () => {
       expect(runs.listByEmployee('emp-a')).toHaveLength(2);
       expect(runs.listByEmployee('emp-b')).toHaveLength(1);
       expect(runs.listByEmployee('emp-c')).toHaveLength(0);
+    });
+  });
+
+  describe('recentRuns', () => {
+    it('returns newest-first joined run summaries for a company', async () => {
+      const companyId = companies.create({ name: 'Acme', slug: 'acme' });
+      const otherCompanyId = companies.create({ name: 'Beta', slug: 'beta' });
+      const employeeId = employees.create({
+        companyId,
+        rolePackId: 'pack',
+        roleId: 'ops',
+        roleMdSha: 'sha',
+        level: 'lead',
+        name: 'Iris',
+        title: 'Operations Lead',
+      });
+      const otherEmployeeId = employees.create({
+        companyId: otherCompanyId,
+        rolePackId: 'pack',
+        roleId: 'ops',
+        roleMdSha: 'sha',
+        level: 'lead',
+        name: 'Mina',
+        title: 'Ops',
+      });
+      const threadId = threads.create({
+        companyId,
+        kind: 'group',
+        createdBy: 'rocky',
+        subject: 'Quarterly release review',
+      });
+
+      const olderRunId = runs.start({
+        employeeId,
+        provider: 'openai',
+        model: 'gpt-5.4',
+        threadId,
+        kind: 'agentic',
+      });
+      await new Promise((resolve) => setTimeout(resolve, 3));
+      runs.finish(olderRunId, {
+        status: 'success',
+        promptTokens: 10,
+        completionTokens: 20,
+        latencyMs: 100,
+        costUsd: '0.01',
+      });
+
+      const newerRunId = runs.start({
+        employeeId,
+        provider: 'openai',
+        model: 'gpt-5.4-mini',
+        threadId,
+        kind: 'agentic',
+      });
+
+      const otherRunId = runs.start({
+        employeeId: otherEmployeeId,
+        provider: 'anthropic',
+        model: 'claude',
+        kind: 'agentic',
+      });
+      runs.finish(otherRunId, {
+        status: 'error',
+        promptTokens: 1,
+        completionTokens: 1,
+        latencyMs: 10,
+        costUsd: '0.001',
+        error: 'ignore me',
+      });
+
+      const recent = runs.recentRuns(companyId, 5, 'agentic');
+
+      expect(recent).toHaveLength(2);
+      expect(recent[0]?.runId).toBe(newerRunId);
+      expect(recent[0]?.employeeName).toBe('Iris');
+      expect(recent[0]?.threadSubject).toBe('Quarterly release review');
+      expect(recent[1]?.runId).toBe(olderRunId);
+    });
+
+    it('respects the limit and kind filter', () => {
+      const companyId = companies.create({ name: 'Gamma', slug: 'gamma' });
+      const employeeId = employees.create({
+        companyId,
+        rolePackId: 'pack',
+        roleId: 'eng',
+        roleMdSha: 'sha',
+        level: 'ic',
+        name: 'Tao',
+        title: 'Engineer',
+      });
+
+      const workRunId = runs.start({
+        employeeId,
+        provider: 'openai',
+        model: 'gpt-5.4',
+        kind: 'work',
+      });
+      runs.finish(workRunId, {
+        status: 'success',
+        promptTokens: 3,
+        completionTokens: 5,
+        latencyMs: 9,
+        costUsd: '0.002',
+      });
+
+      runs.start({
+        employeeId,
+        provider: 'openai',
+        model: 'gpt-5.4-mini',
+        kind: 'agentic',
+      });
+
+      const recent = runs.recentRuns(companyId, 1, 'agentic');
+
+      expect(recent).toHaveLength(1);
+      expect(recent[0]?.status).toBe('running');
+      expect(recent[0]?.model).toBe('gpt-5.4-mini');
     });
   });
 });

@@ -16,6 +16,7 @@ import type {
   TelemetryDailyUsageRequest,
   TelemetryEmployeeStatsRequest,
   TelemetryKindFilter,
+  TelemetryRecentRunsRequest,
   TelemetryRunKind,
 } from '@team-x/shared-types';
 
@@ -56,6 +57,16 @@ export function useEmployeeStats(req: TelemetryEmployeeStatsRequest | null) {
     // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
     queryFn: () => ipc.telemetry.employeeStats(req!),
     enabled: req !== null && req.companyId.length > 0,
+  });
+}
+
+export function useRecentRuns(req: TelemetryRecentRunsRequest | null) {
+  return useQuery({
+    queryKey: ['telemetry', 'recentRuns', req?.companyId, req?.limit ?? 6, req?.kind ?? 'all'],
+    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
+    queryFn: () => ipc.telemetry.recentRuns(req!),
+    enabled: req !== null && req.companyId.length > 0,
+    staleTime: 15_000,
   });
 }
 

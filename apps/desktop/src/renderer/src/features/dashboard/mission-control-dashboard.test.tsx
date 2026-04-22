@@ -1,0 +1,80 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+const currentDirname = dirname(fileURLToPath(import.meta.url));
+const rendererRoot = resolve(currentDirname, '..', '..');
+const repoRoot = resolve(currentDirname, '../../../../../../..');
+const missionControlSrc = readFileSync(join(currentDirname, 'mission-control-dashboard.tsx'), 'utf8');
+const layoutHookSrc = readFileSync(
+  join(currentDirname, 'use-dashboard-layout-preferences.ts'),
+  'utf8',
+);
+const appSrc = readFileSync(join(rendererRoot, 'App.tsx'), 'utf8');
+const subtabsSrc = readFileSync(join(currentDirname, 'dashboard-subtabs.tsx'), 'utf8');
+const entitiesSrc = readFileSync(
+  join(repoRoot, 'packages', 'shared-types', 'src', 'entities.ts'),
+  'utf8',
+);
+
+describe('MissionControlDashboard renderer shell', () => {
+  it('defines the mission-control shell with hero toggles and primary panels', () => {
+    expect(missionControlSrc).toContain('data-dashboard-mission-control=""');
+    expect(missionControlSrc).toContain('data-dashboard-hero-toggle="agent-runs"');
+    expect(missionControlSrc).toContain('data-dashboard-hero-toggle="employee-queues"');
+    expect(missionControlSrc).toContain('data-dashboard-reset-layout=""');
+    expect(missionControlSrc).toContain('dataPanel="agent-runs"');
+    expect(missionControlSrc).toContain('dataPanel="employee-queues"');
+    expect(missionControlSrc).toContain('data-dashboard-recent-commands=""');
+    expect(missionControlSrc).toContain('data-dashboard-telemetry-snapshot=""');
+  });
+
+  it('wires the live mission-control data sources', () => {
+    expect(missionControlSrc).toContain('useDashboardAgentRuns(companyId)');
+    expect(missionControlSrc).toContain('useTickets(companyId)');
+    expect(missionControlSrc).toContain('useCommandHistory(companyId, 5)');
+    expect(missionControlSrc).toContain('useCompanyStats(companyId ? { companyId } : null)');
+    expect(missionControlSrc).toContain('useDailyUsage(');
+    expect(missionControlSrc).toContain('CopilotDashboardWidget');
+  });
+
+  it('isolates panel-local empty and error states with retry hooks', () => {
+    expect(missionControlSrc).toContain('dataState="agent-runs-unselected"');
+    expect(missionControlSrc).toContain('dataState="agent-runs-error"');
+    expect(missionControlSrc).toContain('dataState="employee-queues-error"');
+    expect(missionControlSrc).toContain('dataState="recent-commands-error"');
+    expect(missionControlSrc).toContain('dataState="telemetry-snapshot-error"');
+    expect(missionControlSrc).toContain('ticketsQuery.isLoading');
+    expect(missionControlSrc).toContain('ticketsQuery.isError');
+    expect(missionControlSrc).toContain('void agentRunsQuery.retry()');
+    expect(missionControlSrc).toContain('void ticketsQuery.refetch()');
+    expect(missionControlSrc).toContain('void commandHistoryQuery.refetch()');
+    expect(missionControlSrc).toContain('void telemetryStatsQuery.refetch()');
+    expect(missionControlSrc).toContain('void telemetryDailyQuery.refetch()');
+  });
+});
+
+describe('Dashboard integration wiring', () => {
+  it('renders MissionControlDashboard from App cards mode', () => {
+    expect(appSrc).toContain('MissionControlDashboard');
+    expect(appSrc).toContain('company={activeCompany}');
+    expect(appSrc).toContain('isLoading={isLoading}');
+    expect(appSrc).toContain('isError={isError}');
+  });
+
+  it('persists workspace-scoped dashboard layout through company settings', () => {
+    expect(entitiesSrc).toContain('export interface CompanyDashboardLayoutSettings {');
+    expect(entitiesSrc).toContain('dashboardLayout?: CompanyDashboardLayoutSettings;');
+    expect(layoutHookSrc).toContain('ipc.companies.update');
+    expect(layoutHookSrc).toContain("queryClient.setQueryData<Company[]>(['companies']");
+    expect(layoutHookSrc).toContain("invalidateQueries({ queryKey: ['companies'] })");
+    expect(missionControlSrc).toContain('useDashboardLayoutPreferences(company)');
+    expect(missionControlSrc).toContain('data-dashboard-layout-error=""');
+  });
+
+  it('renames the default cards tab to Mission Control', () => {
+    expect(subtabsSrc).toContain("{ label: 'Mission Control', icon: LayoutGrid, subview: 'cards' }");
+  });
+});

@@ -10,12 +10,11 @@ import { AuditView } from './features/audit/audit-view.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
 import { ChatView } from './features/chat/chat-view.js';
 import { CommandPalette } from './features/command/command-palette.js';
-import { CopilotDashboardWidget } from './features/copilot/copilot-dashboard-widget.js';
 import { CopilotSidebar } from './features/copilot/copilot-sidebar.js';
-import { CardsView } from './features/dashboard/cards-view.js';
 import { CommandsView } from './features/dashboard/commands-view.js';
 import { DashboardSubtabs } from './features/dashboard/dashboard-subtabs.js';
 import { FloorView } from './features/dashboard/floor-view.js';
+import { MissionControlDashboard } from './features/dashboard/mission-control-dashboard.js';
 import { StreamView } from './features/dashboard/stream-view.js';
 import { TimelineView } from './features/dashboard/timeline-view.js';
 import { HireDialog } from './features/hire/hire-dialog.js';
@@ -108,6 +107,7 @@ export default function App() {
   }, [copilotSidebarOpen, setCopilotSidebarOpen]);
 
   const { data: employees = [], isLoading, isError, refetch } = useEmployees(companyId);
+  const activeCompany = companies?.find((candidate) => candidate.id === companyId) ?? null;
 
   function renderDashboard() {
     // Commands subview bypasses the loading/empty-state guards — it
@@ -115,19 +115,6 @@ export default function App() {
     // the first employee is hired, and has its own loading/empty UI.
     if (dashboardSubview === 'commands') {
       return <CommandsView companyId={companyId} />;
-    }
-
-    if (isLoading) return <CardsView employees={[]} isLoading />;
-    if (isError) return <CardsView employees={[]} isError onRetry={() => refetch()} />;
-    if (employees.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-lg font-medium text-muted-foreground">No employees yet</p>
-          <p className="mt-1 text-sm text-muted-foreground/70">
-            Click + Hire in the sidebar to get started.
-          </p>
-        </div>
-      );
     }
 
     switch (dashboardSubview) {
@@ -139,12 +126,14 @@ export default function App() {
         return <FloorView employees={employees} />;
       default:
         return (
-          <div className="flex flex-col gap-4">
-            <div className="px-4 pt-4">
-              <CopilotDashboardWidget />
-            </div>
-            <CardsView employees={employees} />
-          </div>
+          <MissionControlDashboard
+            companyId={companyId}
+            company={activeCompany}
+            employees={employees}
+            isLoading={isLoading}
+            isError={isError}
+            onRetry={() => refetch()}
+          />
         );
     }
   }

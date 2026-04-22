@@ -150,6 +150,8 @@ import type {
   TelemetryDailyUsageRow,
   TelemetryEmployeeStatsRequest,
   TelemetryEmployeeStatsRow,
+  TelemetryRecentRunRow,
+  TelemetryRecentRunsRequest,
   TelemetryRunKind,
   TestMcpConnectionRequest,
   TestMcpConnectionResponse,
@@ -210,6 +212,7 @@ import type {
   CostBreakdownRow,
   DailyUsageRow,
   EmployeeStatsRow,
+  RecentRunRow,
 } from '../db/repos/runs.js';
 import type {
   AddThreadMemberInput,
@@ -479,6 +482,7 @@ export interface IpcRunsRepo {
     kind?: TelemetryRunKind,
   ): DailyUsageRow[];
   employeeStats(companyId: string, kind?: TelemetryRunKind): EmployeeStatsRow[];
+  recentRuns(companyId: string, limit: number, kind?: TelemetryRunKind): RecentRunRow[];
   costBreakdown(
     companyId: string,
     fromMs?: number,
@@ -1044,6 +1048,8 @@ export interface IpcHandlers {
   telemetryDailyUsage(req: TelemetryDailyUsageRequest): Promise<TelemetryDailyUsageRow[]>;
   /** `telemetry.employeeStats` — per-employee breakdown. */
   telemetryEmployeeStats(req: TelemetryEmployeeStatsRequest): Promise<TelemetryEmployeeStatsRow[]>;
+  /** `telemetry.recentRuns` — newest-first persisted run summaries for dashboard backfill. */
+  telemetryRecentRuns(req: TelemetryRecentRunsRequest): Promise<TelemetryRecentRunRow[]>;
   /** `telemetry.costBreakdown` — cost by provider/model with optional date range. */
   telemetryCostBreakdown(req: TelemetryCostBreakdownRequest): Promise<TelemetryCostBreakdownRow[]>;
 
@@ -1260,6 +1266,17 @@ function assertTelemetryRunKind(value: unknown, channel: string): TelemetryRunKi
     return value as TelemetryRunKind;
   }
   throw new Error(`[ipc] ${channel}: kind must be work, agentic, or copilot`);
+}
+
+function assertTelemetryRecentRunsLimit(value: unknown): number {
+  if (value === undefined) return 6;
+  if (typeof value !== 'number' || !Number.isInteger(value)) {
+    throw new Error('[ipc] telemetry.recentRuns: limit must be an integer');
+  }
+  if (value < 1 || value > 12) {
+    throw new Error('[ipc] telemetry.recentRuns: limit must be between 1 and 12');
+  }
+  return value;
 }
 
 function assertCopilotExportRequest(req: CopilotExportRequest): CopilotExportFilter {
@@ -3229,6 +3246,15 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       const kind = assertTelemetryRunKind(req.kind, 'telemetry.employeeStats');
       return runsRepo.employeeStats(req.companyId, kind);
+    },
+
+    async telemetryRecentRuns(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] telemetry.recentRuns: companyId is required');
+      }
+      const kind = assertTelemetryRunKind(req.kind, 'telemetry.recentRuns');
+      const limit = assertTelemetryRecentRunsLimit(req.limit);
+      return runsRepo.recentRuns(req.companyId, limit, kind);
     },
 
     async telemetryCostBreakdown(req) {
