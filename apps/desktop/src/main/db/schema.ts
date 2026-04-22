@@ -199,6 +199,117 @@ export const settings = sqliteTable('settings', {
   updatedAt: integer('updated_at').notNull(),
 });
 
+/** Installed skills and extension metadata. */
+export const extensions = sqliteTable(
+  'extensions',
+  {
+    id: text('id').primaryKey(),
+    /** Null = global extension visible to every company. */
+    companyId: text('company_id').references(() => companies.id, { onDelete: 'cascade' }),
+    /** skill | mcp */
+    kind: text('kind').notNull(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    /** local | github | marketplace | template */
+    sourceKind: text('source_kind').notNull(),
+    sourceRef: text('source_ref').notNull(),
+    version: text('version'),
+    updateChannel: text('update_channel'),
+    manifestJson: text('manifest_json'),
+    requestedCapabilitiesJson: text('requested_capabilities_json').notNull().default('[]'),
+    requestedPathsJson: text('requested_paths_json').notNull().default('[]'),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    /** trusted | pending-review | denied */
+    trustState: text('trust_state').notNull().default('pending-review'),
+    /** Optional pointer to execution-native row (for MCP bridge). */
+    runtimeRefId: text('runtime_ref_id'),
+    installedAt: integer('installed_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyKindIdx: index('idx_extensions_company_kind').on(table.companyId, table.kind),
+    slugIdx: index('idx_extensions_slug').on(table.slug),
+  }),
+);
+
+/** Workspace-level or employee-level skill enablement overlays. */
+export const skillAssignments = sqliteTable(
+  'skill_assignments',
+  {
+    id: text('id').primaryKey(),
+    extensionId: text('extension_id')
+      .notNull()
+      .references(() => extensions.id, { onDelete: 'cascade' }),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    employeeId: text('employee_id').references(() => employees.id, { onDelete: 'cascade' }),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    /** workspace-default | employee-override */
+    source: text('source').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyEmployeeIdx: index('idx_skill_assignments_company_employee').on(
+      table.companyId,
+      table.employeeId,
+    ),
+    extensionIdx: index('idx_skill_assignments_extension').on(table.extensionId),
+  }),
+);
+
+/** Unified authority matrix for capability and path grants. */
+export const authorityGrants = sqliteTable(
+  'authority_grants',
+  {
+    id: text('id').primaryKey(),
+    /** company | employee | extension */
+    scopeKind: text('scope_kind').notNull(),
+    scopeId: text('scope_id').notNull(),
+    /** capability | path */
+    resourceKind: text('resource_kind').notNull(),
+    resourceId: text('resource_id').notNull(),
+    /** allow | deny | prompt */
+    permission: text('permission').notNull(),
+    metadataJson: text('metadata_json'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    scopeIdx: index('idx_authority_grants_scope').on(table.scopeKind, table.scopeId),
+    resourceIdx: index('idx_authority_grants_resource').on(table.resourceKind, table.resourceId),
+  }),
+);
+
+/** Requested-but-not-yet-approved authority expansions. */
+export const authorityRequests = sqliteTable(
+  'authority_requests',
+  {
+    id: text('id').primaryKey(),
+    extensionId: text('extension_id')
+      .notNull()
+      .references(() => extensions.id, { onDelete: 'cascade' }),
+    employeeId: text('employee_id').references(() => employees.id, { onDelete: 'cascade' }),
+    /** capability | path */
+    resourceKind: text('resource_kind').notNull(),
+    resourceId: text('resource_id').notNull(),
+    /** allow | deny | prompt */
+    requestedPermission: text('requested_permission').notNull(),
+    /** pending | approved | denied */
+    status: text('status').notNull().default('pending'),
+    reason: text('reason'),
+    createdAt: integer('created_at').notNull(),
+    reviewedAt: integer('reviewed_at'),
+  },
+  (table) => ({
+    extensionStatusIdx: index('idx_authority_requests_extension_status').on(
+      table.extensionId,
+      table.status,
+    ),
+  }),
+);
+
 /**
  * MCP server configurations. Global servers (company_id=null) are available
  * to all companies; per-company servers override or extend globals.

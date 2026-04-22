@@ -77,7 +77,7 @@ describe('createSettingsRepo', () => {
   describe('seedDefaults', () => {
     it('seeds all default settings on empty DB', () => {
       const count = repo.seedDefaults();
-      expect(count).toBe(22);
+      expect(count).toBe(23);
       expect(repo.get<string>('runtime_strategy', '')).toBe('auto');
       expect(repo.get<string>('max_privacy_tier', '')).toBe('proprietary-cloud');
       expect(repo.get<number>('orchestrator_slots', 0)).toBe(6);
@@ -89,7 +89,7 @@ describe('createSettingsRepo', () => {
     it('does not overwrite existing settings', () => {
       repo.set('runtime_strategy', 'lean');
       const count = repo.seedDefaults();
-      expect(count).toBe(21); // 21 new after M38 copilot weights, runtime_strategy kept
+      expect(count).toBe(22); // 22 new after extensions autonomy + M38 copilot weights
       expect(repo.get<string>('runtime_strategy', '')).toBe('lean');
     });
 
@@ -193,6 +193,23 @@ describe('createSettingsRepo', () => {
       repo.setAgentic({ maxSteps: 16, maxTokens: 2000, timeoutMs: 45000 });
       expect(repo.get('concurrency_caps', {})).toEqual(capsBefore);
       expect(repo.get('orchestrator_slots', 0)).toBe(slotsBefore);
+    });
+  });
+
+  describe('extensions autonomy', () => {
+    it('defaults to balanced on empty DB', () => {
+      expect(repo.getExtensions()).toEqual({ autonomyMode: 'balanced' });
+    });
+
+    it('persists the selected autonomy mode', () => {
+      repo.setExtensions({ autonomyMode: 'autonomous' });
+      expect(repo.getExtensions()).toEqual({ autonomyMode: 'autonomous' });
+    });
+
+    it('rejects invalid autonomy modes', () => {
+      expect(() =>
+        repo.setExtensions({ autonomyMode: 'wild-west' as 'balanced' }),
+      ).toThrow(/autonomyMode must be one of/);
     });
   });
 

@@ -229,6 +229,93 @@ export interface CompanySettings {
   dashboardLayout?: CompanyDashboardLayoutSettings;
 }
 
+export const EXTENSIONS_AUTONOMY_MODES = [
+  'balanced',
+  'conservative',
+  'autonomous',
+] as const;
+export type ExtensionsAutonomyMode = (typeof EXTENSIONS_AUTONOMY_MODES)[number];
+
+export const EXTENSION_KINDS = ['skill', 'mcp'] as const;
+export type ExtensionKind = (typeof EXTENSION_KINDS)[number];
+
+export const EXTENSION_SOURCE_KINDS = ['local', 'github', 'marketplace', 'template'] as const;
+export type ExtensionSourceKind = (typeof EXTENSION_SOURCE_KINDS)[number];
+
+export const EXTENSION_TRUST_STATES = ['trusted', 'pending-review', 'denied'] as const;
+export type ExtensionTrustState = (typeof EXTENSION_TRUST_STATES)[number];
+
+export const SKILL_ASSIGNMENT_SOURCES = ['workspace-default', 'employee-override'] as const;
+export type SkillAssignmentSource = (typeof SKILL_ASSIGNMENT_SOURCES)[number];
+
+export const AUTHORITY_SCOPE_KINDS = ['company', 'employee', 'extension'] as const;
+export type AuthorityScopeKind = (typeof AUTHORITY_SCOPE_KINDS)[number];
+
+export const AUTHORITY_RESOURCE_KINDS = ['capability', 'path'] as const;
+export type AuthorityResourceKind = (typeof AUTHORITY_RESOURCE_KINDS)[number];
+
+export const AUTHORITY_PERMISSIONS = ['allow', 'deny', 'prompt'] as const;
+export type AuthorityPermission = (typeof AUTHORITY_PERMISSIONS)[number];
+
+export const AUTHORITY_REQUEST_STATUSES = ['pending', 'approved', 'denied'] as const;
+export type AuthorityRequestStatus = (typeof AUTHORITY_REQUEST_STATUSES)[number];
+
+export interface ExtensionSummary {
+  id: string;
+  kind: ExtensionKind;
+  companyId: string | null;
+  name: string;
+  slug: string;
+  sourceKind: ExtensionSourceKind;
+  sourceRef: string;
+  version: string | null;
+  updateChannel: string | null;
+  manifest: Record<string, unknown> | null;
+  requestedCapabilities: string[];
+  requestedPaths: string[];
+  enabled: boolean;
+  trustState: ExtensionTrustState;
+  runtimeRefId: string | null;
+  installedAt: number;
+  updatedAt: number;
+}
+
+export interface SkillAssignment {
+  id: string;
+  extensionId: string;
+  companyId: string;
+  employeeId: string | null;
+  enabled: boolean;
+  source: SkillAssignmentSource;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface AuthorityGrant {
+  id: string;
+  scopeKind: AuthorityScopeKind;
+  scopeId: string;
+  resourceKind: AuthorityResourceKind;
+  resourceId: string;
+  permission: AuthorityPermission;
+  metadata: Record<string, unknown> | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface AuthorityRequest {
+  id: string;
+  extensionId: string;
+  employeeId: string | null;
+  resourceKind: AuthorityResourceKind;
+  resourceId: string;
+  requestedPermission: AuthorityPermission;
+  status: AuthorityRequestStatus;
+  reason: string | null;
+  createdAt: number;
+  reviewedAt: number | null;
+}
+
 export interface Employee {
   id: string;
   companyId: string;

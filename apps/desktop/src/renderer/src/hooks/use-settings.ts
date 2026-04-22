@@ -15,6 +15,7 @@ import type {
   SettingsSetConcurrencyRequest,
   SettingsSetCopilotRequest,
   SettingsSetCopilotWeightsRequest,
+  SettingsSetExtensionsRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRuntimeRequest,
@@ -71,6 +72,23 @@ export function useSetConcurrency() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'concurrency'] });
       qc.invalidateQueries({ queryKey: ['settings', 'runtime'] });
+    },
+  });
+}
+
+export function useExtensionsSettings() {
+  return useQuery({
+    queryKey: ['settings', 'extensions'],
+    queryFn: () => ipc.settings.getExtensions(),
+  });
+}
+
+export function useSetExtensionsSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: SettingsSetExtensionsRequest) => ipc.settings.setExtensions(req),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'extensions'] });
     },
   });
 }

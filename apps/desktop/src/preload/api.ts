@@ -43,6 +43,7 @@ import type {
   AgenticRunSnapshot,
   AttachFileRequest,
   AttachFileResponse,
+  AuthorityGrant,
   AuditEvent,
   AuditExportRequest,
   AuditExportResponse,
@@ -99,6 +100,7 @@ import type {
   IpcExecuteResult,
   IpcParseResult,
   IpcSuggestItem,
+  ListAuthorityGrantsRequest,
   ListEventsRequest,
   ListEventsResponse,
   McpServerSummary,
@@ -123,6 +125,7 @@ import type {
   SettingsGetCopilotResponse,
   SettingsGetCopilotWeightsRequest,
   SettingsGetCopilotWeightsResponse,
+  SettingsGetExtensionsResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
@@ -132,6 +135,7 @@ import type {
   SettingsSetCopilotRequest,
   SettingsSetCopilotWeightsRequest,
   SettingsSetCopilotWeightsResponse,
+  SettingsSetExtensionsRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -154,6 +158,7 @@ import type {
   Ticket,
   TicketAttachment,
   TicketDetail,
+  ExtensionSummary,
   UnsubscribeFn,
   UpdateCheckResult,
   UpdateGoalRequest,
@@ -226,6 +231,8 @@ const CHANNELS = {
   mcpAddServer: 'mcp.addServer',
   mcpRemoveServer: 'mcp.removeServer',
   mcpTestConnection: 'mcp.testConnection',
+  extensionsList: 'extensions.list',
+  authorityList: 'authority.list',
   // Goals management (Phase 3 — M15)
   goalsCreate: 'goals.create',
   goalsUpdate: 'goals.update',
@@ -259,6 +266,8 @@ const CHANNELS = {
   settingsSetPrivacy: 'settings.setPrivacy',
   settingsGetConcurrency: 'settings.getConcurrency',
   settingsSetConcurrency: 'settings.setConcurrency',
+  settingsGetExtensions: 'settings.getExtensions',
+  settingsSetExtensions: 'settings.setExtensions',
   settingsGetRagConfig: 'settings.getRagConfig',
   settingsSetRagConfig: 'settings.setRagConfig',
   // Agentic loop (Phase 5 — M31)
@@ -423,6 +432,14 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       testConnection: (req: TestMcpConnectionRequest) =>
         ipc.invoke(CHANNELS.mcpTestConnection, req) as Promise<TestMcpConnectionResponse>,
     },
+    extensions: {
+      list: (companyId: string) =>
+        ipc.invoke(CHANNELS.extensionsList, { companyId }) as Promise<ExtensionSummary[]>,
+    },
+    authority: {
+      list: (req: ListAuthorityGrantsRequest) =>
+        ipc.invoke(CHANNELS.authorityList, req) as Promise<AuthorityGrant[]>,
+    },
     goals: {
       create: (req: CreateGoalRequest) =>
         ipc.invoke(CHANNELS.goalsCreate, req) as Promise<CreateGoalResponse>,
@@ -489,6 +506,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.settingsGetConcurrency) as Promise<SettingsGetConcurrencyResponse>,
       setConcurrency: (req: SettingsSetConcurrencyRequest) =>
         ipc.invoke(CHANNELS.settingsSetConcurrency, req) as Promise<void>,
+      getExtensions: () =>
+        ipc.invoke(CHANNELS.settingsGetExtensions) as Promise<SettingsGetExtensionsResponse>,
+      setExtensions: (req: SettingsSetExtensionsRequest) =>
+        ipc.invoke(CHANNELS.settingsSetExtensions, req) as Promise<void>,
       getRagConfig: () =>
         ipc.invoke(CHANNELS.settingsGetRagConfig) as Promise<SettingsGetRagConfigResponse>,
       setRagConfig: (req: SettingsSetRagConfigRequest) =>

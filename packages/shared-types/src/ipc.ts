@@ -55,9 +55,12 @@ import type {
   CopilotInsightListResult,
 } from './copilot.js';
 import type {
+  AuthorityGrant,
   ChatMessage,
   Company,
   Employee,
+  ExtensionSummary,
+  ExtensionsAutonomyMode,
   Goal,
   Meeting,
   MeetingActionItem,
@@ -798,6 +801,19 @@ export interface TestMcpConnectionResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Extensions & authority shapes (Phase 6+ foundation)
+// ---------------------------------------------------------------------------
+
+export interface ListExtensionsRequest {
+  companyId: string;
+}
+
+export interface ListAuthorityGrantsRequest {
+  companyId: string;
+  employeeId?: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // Provider management request/response shapes (Phase 3 — M18)
 // ---------------------------------------------------------------------------
 
@@ -1143,6 +1159,14 @@ export interface SettingsSetConcurrencyRequest {
   providerCaps?: Record<string, number>;
 }
 
+export interface SettingsGetExtensionsResponse {
+  autonomyMode: ExtensionsAutonomyMode;
+}
+
+export interface SettingsSetExtensionsRequest {
+  autonomyMode: ExtensionsAutonomyMode;
+}
+
 // ---------------------------------------------------------------------------
 // Agentic loop settings (Phase 5 — M31)
 // ---------------------------------------------------------------------------
@@ -1486,6 +1510,14 @@ export interface IpcContract {
     request: TestMcpConnectionRequest;
     response: TestMcpConnectionResponse;
   };
+  'extensions.list': {
+    request: ListExtensionsRequest;
+    response: ExtensionSummary[];
+  };
+  'authority.list': {
+    request: ListAuthorityGrantsRequest;
+    response: AuthorityGrant[];
+  };
   // Goals management channels (Phase 3 — M15)
   'goals.create': {
     request: CreateGoalRequest;
@@ -1601,6 +1633,14 @@ export interface IpcContract {
   };
   'settings.setConcurrency': {
     request: SettingsSetConcurrencyRequest;
+    response: undefined;
+  };
+  'settings.getExtensions': {
+    request: Record<string, never>;
+    response: SettingsGetExtensionsResponse;
+  };
+  'settings.setExtensions': {
+    request: SettingsSetExtensionsRequest;
     response: undefined;
   };
   'settings.getRagConfig': {
@@ -2083,6 +2123,14 @@ export interface TeamXApi {
     /** Test an MCP connection without persisting. */
     testConnection(req: TestMcpConnectionRequest): Promise<TestMcpConnectionResponse>;
   };
+  extensions: {
+    /** List installed skill/extension metadata visible to a company. */
+    list(companyId: string): Promise<ExtensionSummary[]>;
+  };
+  authority: {
+    /** List authority grants relevant to a company, optionally narrowed to one employee. */
+    list(req: ListAuthorityGrantsRequest): Promise<AuthorityGrant[]>;
+  };
   goals: {
     /** Create a new goal. */
     create(req: CreateGoalRequest): Promise<CreateGoalResponse>;
@@ -2152,6 +2200,10 @@ export interface TeamXApi {
     getConcurrency(): Promise<SettingsGetConcurrencyResponse>;
     /** Set concurrency settings. */
     setConcurrency(req: SettingsSetConcurrencyRequest): Promise<void>;
+    /** Get Extensions & Authority settings. */
+    getExtensions(): Promise<SettingsGetExtensionsResponse>;
+    /** Patch Extensions & Authority settings. */
+    setExtensions(req: SettingsSetExtensionsRequest): Promise<void>;
     /** Get full RAG configuration snapshot (enabled, top-K, threshold, max-tokens, embedding provider/model/dimension). */
     getRagConfig(): Promise<SettingsGetRagConfigResponse>;
     /** Patch one or more RAG configuration keys. Missing keys retain their current value. */

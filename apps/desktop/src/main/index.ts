@@ -74,6 +74,7 @@ import { createCompaniesRepo } from './db/repos/companies.js';
 import { createCopilotInsightsRepo } from './db/repos/copilot-insights.js';
 import { createEmbeddingsRepo } from './db/repos/embeddings.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
+import { createAuthorityRepo, createExtensionsRepo } from './db/repos/extensions.js';
 import { createEventsRepo } from './db/repos/events.js';
 import { createGoalsRepo } from './db/repos/goals.js';
 import {
@@ -339,6 +340,8 @@ app
     const eventsRepo = createEventsRepo(db);
     const auditRepo = createAuditRepo(db);
     const mcpServersRepo = createMcpServersRepo(db);
+    const extensionsRepo = createExtensionsRepo(db);
+    const authorityRepo = createAuthorityRepo(db);
     const toolCallsRepo = createToolCallsRepo(db);
     const ticketsRepo = createTicketsRepo(db);
     const goalsRepo = createGoalsRepo(db);
@@ -791,6 +794,8 @@ app
       roleLookup: roleLoader,
       mcpHost,
       mcpServersRepo,
+      extensionsRepo,
+      authorityRepo,
       providersService,
       secretsStore,
       settingsRepo,

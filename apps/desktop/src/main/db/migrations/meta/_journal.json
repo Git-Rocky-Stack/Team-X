@@ -99,6 +99,13 @@
       "when": 1777094400000,
       "tag": "0013_org_edges",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1777180800000,
+      "tag": "0014_extensions_authority",
+      "breakpoints": true
     }
   ]
 }

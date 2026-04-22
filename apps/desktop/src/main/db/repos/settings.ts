@@ -18,6 +18,7 @@ import {
   COPILOT_CATEGORY_WEIGHT_CLAMP,
   COPILOT_ENABLED_DEFAULT,
   COPILOT_SETTINGS_CLAMPS,
+  EXTENSIONS_AUTONOMY_MODES,
   type CopilotCategory,
   DEFAULT_CONCURRENCY_CAPS,
   PLANNER_APPROVAL_LEVELS,
@@ -27,11 +28,13 @@ import {
   type SettingsGetAgenticResponse,
   type SettingsGetCopilotResponse,
   type SettingsGetCopilotWeightsResponse,
+  type SettingsGetExtensionsResponse,
   type SettingsGetPlannerResponse,
   type SettingsSetAgenticRequest,
   type SettingsSetCopilotRequest,
   type SettingsSetCopilotWeightsRequest,
   type SettingsSetCopilotWeightsResponse,
+  type SettingsSetExtensionsRequest,
   type SettingsSetPlannerRequest,
 } from '@team-x/shared-types';
 
@@ -67,6 +70,7 @@ const SETTING_DEFAULTS: Array<{ key: string; value: unknown }> = [
     key: 'planner_escalation_threshold',
     value: PLANNER_SETTINGS_CLAMPS.escalationThreshold.default,
   },
+  { key: 'extensions_autonomy_mode', value: 'balanced' },
   // Copilot service (Phase 5 — M33). Clamps live in COPILOT_SETTINGS_CLAMPS; categories
   // default to the full COPILOT_CATEGORIES set — a conservative default that never
   // leaves the user with a silently-disabled analyzer through a bad save.
@@ -284,6 +288,30 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
         const c = PLANNER_SETTINGS_CLAMPS.escalationThreshold;
         this.set('planner_escalation_threshold', clampInt(req.escalationThreshold, c.min, c.max));
       }
+    },
+
+    /**
+     * Read the global Extensions & Authority autonomy policy.
+     * Invalid persisted values fall back to `balanced`.
+     */
+    getExtensions(): SettingsGetExtensionsResponse {
+      const rawMode = this.get<string>('extensions_autonomy_mode', 'balanced');
+      const autonomyMode = (EXTENSIONS_AUTONOMY_MODES as readonly string[]).includes(rawMode)
+        ? (rawMode as SettingsGetExtensionsResponse['autonomyMode'])
+        : 'balanced';
+      return { autonomyMode };
+    },
+
+    /**
+     * Persist the global Extensions & Authority autonomy policy.
+     */
+    setExtensions(req: SettingsSetExtensionsRequest): void {
+      if (!(EXTENSIONS_AUTONOMY_MODES as readonly string[]).includes(req.autonomyMode)) {
+        throw new Error(
+          `[settings] setExtensions: autonomyMode must be one of ${EXTENSIONS_AUTONOMY_MODES.join(', ')}`,
+        );
+      }
+      this.set('extensions_autonomy_mode', req.autonomyMode);
     },
 
     /**

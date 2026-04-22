@@ -42,6 +42,7 @@ import type {
   AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
+  AuthorityGrant,
   ArchiveCompanyRequest,
   AssignTicketRequest,
   AttachFileRequest,
@@ -95,8 +96,11 @@ import type {
   HireEmployeeResponse,
   InterjectMeetingRequest,
   InterjectMeetingResponse,
+  ExtensionSummary,
   LinkTicketToProjectRequest,
+  ListAuthorityGrantsRequest,
   ListAttachmentsRequest,
+  ListExtensionsRequest,
   ListEventsRequest,
   ListEventsResponse,
   ListGoalsRequest,
@@ -129,6 +133,7 @@ import type {
   SettingsGetCopilotResponse,
   SettingsGetCopilotWeightsRequest,
   SettingsGetCopilotWeightsResponse,
+  SettingsGetExtensionsResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
@@ -138,6 +143,7 @@ import type {
   SettingsSetCopilotRequest,
   SettingsSetCopilotWeightsRequest,
   SettingsSetCopilotWeightsResponse,
+  SettingsSetExtensionsRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -207,6 +213,7 @@ import type { MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { OrgEdgeRow } from '../db/repos/orgchart.js';
 import type { CreateProjectInput, ProjectRow, UpdateProjectInput } from '../db/repos/projects.js';
+import type { AuthorityGrantRow, ExtensionRow } from '../db/repos/extensions.js';
 import type {
   CompanyStats,
   CostBreakdownRow,
@@ -491,6 +498,15 @@ export interface IpcRunsRepo {
   ): CostBreakdownRow[];
 }
 
+export interface IpcExtensionsRepo {
+  listByCompany(companyId: string): ExtensionRow[];
+}
+
+export interface IpcAuthorityRepo {
+  listByCompany(companyId: string): AuthorityGrantRow[];
+  listForEmployee(companyId: string, employeeId: string): AuthorityGrantRow[];
+}
+
 export interface IpcMeetingsRepo {
   getById(id: string): MeetingRow | null;
   listByCompany(companyId: string): MeetingRow[];
@@ -595,6 +611,10 @@ export interface IpcSettingsRepo {
   getPlanner(): SettingsGetPlannerResponse;
   /** Task planner guardrails — clamped/validated write. Phase 5 — M32. */
   setPlanner(req: SettingsSetPlannerRequest): void;
+  /** Extensions & Authority autonomy policy. */
+  getExtensions?(): SettingsGetExtensionsResponse;
+  /** Extensions & Authority autonomy policy write. */
+  setExtensions?(req: SettingsSetExtensionsRequest): void;
   /** Copilot service settings — snapshot read (clamped). Phase 5 — M33. */
   getCopilot(): SettingsGetCopilotResponse;
   /** Copilot service settings — clamped/filtered write. Phase 5 — M33. */
@@ -689,6 +709,8 @@ export interface IpcHandlerDeps {
   roleLookup: IpcRoleLookup;
   mcpHost: McpHost;
   mcpServersRepo: McpServersRepo;
+  extensionsRepo?: IpcExtensionsRepo;
+  authorityRepo?: IpcAuthorityRepo;
   providersService: IpcProvidersService;
   secretsStore: IpcSecretsStore;
   settingsRepo: IpcSettingsRepo;
@@ -989,6 +1011,12 @@ export interface IpcHandlers {
    */
   mcpTestConnection(req: TestMcpConnectionRequest): Promise<TestMcpConnectionResponse>;
 
+  /** `extensions.list` — installed extension metadata visible to a company. */
+  extensionsList(req: ListExtensionsRequest): Promise<ExtensionSummary[]>;
+
+  /** `authority.list` — authority grants relevant to a company or one employee. */
+  authorityList(req: ListAuthorityGrantsRequest): Promise<AuthorityGrant[]>;
+
   // -----------------------------------------------------------------------
   // Goals management handlers (Phase 3 — M15)
   // -----------------------------------------------------------------------
@@ -1069,6 +1097,10 @@ export interface IpcHandlers {
   settingsGetConcurrency(): Promise<SettingsGetConcurrencyResponse>;
   /** `settings.setConcurrency` — update orchestrator slots + per-provider caps. */
   settingsSetConcurrency(req: SettingsSetConcurrencyRequest): Promise<void>;
+  /** `settings.getExtensions` — extensions autonomy mode. */
+  settingsGetExtensions(): Promise<SettingsGetExtensionsResponse>;
+  /** `settings.setExtensions` — update extensions autonomy mode. */
+  settingsSetExtensions(req: SettingsSetExtensionsRequest): Promise<void>;
   /** `settings.getRagConfig` — full RAG configuration snapshot (Phase 5 — M29). */
   settingsGetRagConfig(): Promise<SettingsGetRagConfigResponse>;
   /** `settings.setRagConfig` — patch one or more RAG configuration keys (Phase 5 — M29). */
@@ -1359,6 +1391,82 @@ function rowToCompany(row: CompanyRow): Company {
   };
 }
 
+function rowToExtensionSummary(row: ExtensionRow): ExtensionSummary {
+  let manifest: Record<string, unknown> | null = null;
+  let requestedCapabilities: string[] = [];
+  let requestedPaths: string[] = [];
+  try {
+    if (row.manifestJson) {
+      const parsed = JSON.parse(row.manifestJson);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        manifest = parsed as Record<string, unknown>;
+      }
+    }
+  } catch {
+    manifest = null;
+  }
+  try {
+    const parsed = JSON.parse(row.requestedCapabilitiesJson);
+    if (Array.isArray(parsed)) {
+      requestedCapabilities = parsed.filter((value): value is string => typeof value === 'string');
+    }
+  } catch {
+    requestedCapabilities = [];
+  }
+  try {
+    const parsed = JSON.parse(row.requestedPathsJson);
+    if (Array.isArray(parsed)) {
+      requestedPaths = parsed.filter((value): value is string => typeof value === 'string');
+    }
+  } catch {
+    requestedPaths = [];
+  }
+  return {
+    id: row.id,
+    kind: row.kind as ExtensionSummary['kind'],
+    companyId: row.companyId,
+    name: row.name,
+    slug: row.slug,
+    sourceKind: row.sourceKind as ExtensionSummary['sourceKind'],
+    sourceRef: row.sourceRef,
+    version: row.version,
+    updateChannel: row.updateChannel,
+    manifest,
+    requestedCapabilities,
+    requestedPaths,
+    enabled: row.enabled,
+    trustState: row.trustState as ExtensionSummary['trustState'],
+    runtimeRefId: row.runtimeRefId,
+    installedAt: row.installedAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function rowToAuthorityGrant(row: AuthorityGrantRow): AuthorityGrant {
+  let metadata: Record<string, unknown> | null = null;
+  try {
+    if (row.metadataJson) {
+      const parsed = JSON.parse(row.metadataJson);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        metadata = parsed as Record<string, unknown>;
+      }
+    }
+  } catch {
+    metadata = null;
+  }
+  return {
+    id: row.id,
+    scopeKind: row.scopeKind as AuthorityGrant['scopeKind'],
+    scopeId: row.scopeId,
+    resourceKind: row.resourceKind as AuthorityGrant['resourceKind'],
+    resourceId: row.resourceId,
+    permission: row.permission as AuthorityGrant['permission'],
+    metadata,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function rowToEmployee(row: EmployeeRow): Employee {
   // Strip the rolePackId, toolsAllowed/Denied JSON columns — they are
   // internal to the agent runtime and not part of the renderer
@@ -1518,6 +1626,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     roleLookup,
     mcpHost,
     mcpServersRepo,
+    extensionsRepo,
+    authorityRepo,
     providersService,
     secretsStore,
     settingsRepo,
@@ -2692,6 +2802,30 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
     },
 
+    async extensionsList({ companyId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] extensions.list: companyId is required');
+      }
+      if (!extensionsRepo) {
+        throw new Error('[ipc] extensions.list: extensionsRepo dep unwired');
+      }
+      return extensionsRepo.listByCompany(companyId).map(rowToExtensionSummary);
+    },
+
+    async authorityList({ companyId, employeeId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] authority.list: companyId is required');
+      }
+      if (!authorityRepo) {
+        throw new Error('[ipc] authority.list: authorityRepo dep unwired');
+      }
+      const rows =
+        typeof employeeId === 'string' && employeeId.length > 0
+          ? authorityRepo.listForEmployee(companyId, employeeId)
+          : authorityRepo.listByCompany(companyId);
+      return rows.map(rowToAuthorityGrant);
+    },
+
     // -----------------------------------------------------------------------
     // Goals management handlers (Phase 3 — M15)
     // -----------------------------------------------------------------------
@@ -3356,6 +3490,18 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         ...(nextSlots !== undefined ? { slots: nextSlots } : {}),
         ...(nextCaps !== undefined ? { providerCaps: nextCaps } : {}),
       });
+    },
+
+    async settingsGetExtensions() {
+      return settingsRepo.getExtensions?.() ?? { autonomyMode: 'balanced' };
+    },
+
+    async settingsSetExtensions(req) {
+      if (settingsRepo.setExtensions) {
+        settingsRepo.setExtensions(req);
+      } else {
+        settingsRepo.set('extensions_autonomy_mode', req.autonomyMode);
+      }
     },
 
     // -----------------------------------------------------------------------

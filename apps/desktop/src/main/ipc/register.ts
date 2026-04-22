@@ -89,6 +89,8 @@ const REQUEST_CHANNELS = [
   'mcp.addServer',
   'mcp.removeServer',
   'mcp.testConnection',
+  'extensions.list',
+  'authority.list',
   // Goals management (Phase 3 — M15)
   'goals.create',
   'goals.update',
@@ -122,6 +124,8 @@ const REQUEST_CHANNELS = [
   'settings.setPrivacy',
   'settings.getConcurrency',
   'settings.setConcurrency',
+  'settings.getExtensions',
+  'settings.setExtensions',
   'settings.getRagConfig',
   'settings.setRagConfig',
   // Agentic loop (Phase 5 — M31)
@@ -346,6 +350,17 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     },
   );
 
+  ipcMain.handle('extensions.list', async (_event, request: { companyId: string }) => {
+    return handlers.extensionsList(request);
+  });
+
+  ipcMain.handle(
+    'authority.list',
+    async (_event, request: { companyId: string; employeeId?: string | null }) => {
+      return handlers.authorityList(request);
+    },
+  );
+
   // Goals management handlers (Phase 3 — M15)
   ipcMain.handle(
     'goals.create',
@@ -554,6 +569,17 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
       request: { orchestratorSlots?: number; providerCaps?: Record<string, number> },
     ) => {
       return handlers.settingsSetConcurrency(request);
+    },
+  );
+
+  ipcMain.handle('settings.getExtensions', async () => {
+    return handlers.settingsGetExtensions();
+  });
+
+  ipcMain.handle(
+    'settings.setExtensions',
+    async (_event, request: import('@team-x/shared-types').SettingsSetExtensionsRequest) => {
+      return handlers.settingsSetExtensions(request);
     },
   );
 
