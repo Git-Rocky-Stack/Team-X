@@ -7,11 +7,36 @@ import { useAppStore } from '@/store/app-store.js';
 
 import { TicketCard } from './ticket-card.js';
 
-const COLUMNS: { status: TicketStatus; label: string; accent: string }[] = [
-  { status: 'open', label: 'Open', accent: 'border-t-blue-500' },
-  { status: 'in-progress', label: 'In Progress', accent: 'border-t-yellow-500' },
-  { status: 'blocked', label: 'Blocked', accent: 'border-t-red-500' },
-  { status: 'done', label: 'Done', accent: 'border-t-green-500' },
+const COLUMNS: {
+  status: TicketStatus;
+  label: string;
+  accentClassName: string;
+  badgeClassName: string;
+}[] = [
+  {
+    status: 'open',
+    label: 'Open',
+    accentClassName: 'border-sky-500/30',
+    badgeClassName: 'border-sky-500/20 bg-sky-500/10 text-sky-200',
+  },
+  {
+    status: 'in-progress',
+    label: 'In Progress',
+    accentClassName: 'border-amber-500/30',
+    badgeClassName: 'border-amber-500/20 bg-amber-500/10 text-amber-200',
+  },
+  {
+    status: 'blocked',
+    label: 'Blocked',
+    accentClassName: 'border-red-500/30',
+    badgeClassName: 'border-red-500/20 bg-red-500/10 text-red-200',
+  },
+  {
+    status: 'done',
+    label: 'Done',
+    accentClassName: 'border-emerald-500/30',
+    badgeClassName: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
+  },
 ];
 
 interface KanbanBoardProps {
@@ -38,51 +63,65 @@ export function KanbanBoard({ tickets, employees, onCreateClick }: KanbanBoardPr
     e.preventDefault();
     const ticketId = e.dataTransfer.getData('text/plain');
     if (!ticketId) return;
-    const ticket = tickets.find((t) => t.id === ticketId);
+    const ticket = tickets.find((candidate) => candidate.id === ticketId);
     if (!ticket || ticket.status === targetStatus) return;
     updateStatus.mutate({ ticketId, status: targetStatus });
   }
 
   return (
-    <div className="flex h-full gap-4 p-4 overflow-x-auto">
-      {COLUMNS.map((col) => {
-        const colTickets = tickets.filter((t) => t.status === col.status);
+    <div className="flex h-full gap-4 overflow-x-auto p-4" data-tickets-board="">
+      {COLUMNS.map((column) => {
+        const columnTickets = tickets.filter((ticket) => ticket.status === column.status);
         return (
           <div
-            key={col.status}
-            className={`flex w-72 shrink-0 flex-col rounded-lg border border-border/50 border-t-2 ${col.accent} bg-background`}
+            key={column.status}
+            className={`mission-chrome-panel flex w-[18rem] shrink-0 flex-col rounded-[24px] border bg-black/15 ${column.accentClassName}`}
+            data-tickets-column={column.status}
             onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, col.status)}
+            onDrop={(e) => handleDrop(e, column.status)}
           >
-            <div className="flex items-center justify-between px-3 py-2.5">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {col.label}
-                </h3>
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
-                  {colTickets.length}
-                </span>
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                    {column.label}
+                  </h3>
+                  <span
+                    className={`flex h-6 min-w-6 items-center justify-center rounded-full border px-1.5 text-[10px] font-semibold ${column.badgeClassName}`}
+                  >
+                    {columnTickets.length}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {column.status === 'done'
+                    ? 'Delivered work and closed follow-through.'
+                    : 'Drag work here to update operational status.'}
+                </p>
               </div>
-              {col.status === 'open' && (
+
+              {column.status === 'open' ? (
                 <button
                   type="button"
                   onClick={onCreateClick}
-                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+                  className="rounded-[14px] border border-white/10 bg-black/20 p-2 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
                   aria-label="Create ticket"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
-              )}
+              ) : null}
             </div>
 
-            <ScrollArea className="flex-1 px-2 pb-2">
-              <div className="flex flex-col gap-2">
-                {colTickets.length === 0 && (
-                  <div className="flex h-20 items-center justify-center rounded-md border border-dashed border-border/40 text-[11px] text-muted-foreground/50">
-                    {col.status === 'open' ? 'No open tickets' : 'None'}
+            <ScrollArea className="flex-1 px-3 py-3">
+              <div className="flex flex-col gap-3">
+                {columnTickets.length === 0 ? (
+                  <div className="flex h-24 items-center justify-center rounded-[18px] border border-dashed border-white/10 bg-black/10 text-center text-[11px] leading-5 text-muted-foreground/70">
+                    {column.status === 'open'
+                      ? 'No backlog yet. File the first ticket to seed this queue.'
+                      : 'No tickets in this lane right now.'}
                   </div>
-                )}
-                {colTickets.map((ticket) => (
+                ) : null}
+
+                {columnTickets.map((ticket) => (
                   <div
                     key={ticket.id}
                     draggable

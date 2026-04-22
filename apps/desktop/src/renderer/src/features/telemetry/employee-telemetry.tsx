@@ -7,11 +7,17 @@
  * Phase 3 — M17.
  */
 
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Users2 } from 'lucide-react';
+import { type ReactNode, useMemo, useState } from 'react';
 
 import type { TelemetryKindFilter } from '@team-x/shared-types';
 
+import { Button } from '@/components/ui/button.js';
+import {
+  MissionInsetSurface,
+  MissionSectionCard,
+  MissionStateBlock,
+} from '@/features/mission/mission-shell.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import { telemetryRequestKind, useEmployeeStats } from '@/hooks/use-telemetry.js';
 
@@ -24,81 +30,86 @@ type SortKey = 'name' | 'totalRuns' | 'totalTokens' | 'avgLatencyMs' | 'costUsd'
 type SortDir = 'asc' | 'desc';
 
 function formatCost(usd: string | number): string {
-  const n = typeof usd === 'string' ? Number.parseFloat(usd) : usd;
-  if (n === 0) return '$0.00';
-  if (n < 0.01) return `$${n.toFixed(4)}`;
-  return `$${n.toFixed(2)}`;
+  const value = typeof usd === 'string' ? Number.parseFloat(usd) : usd;
+  if (value === 0) return '$0.00';
+  if (value < 0.01) return `$${value.toFixed(4)}`;
+  return `$${value.toFixed(2)}`;
 }
 
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
+function formatTokens(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return String(value);
 }
 
 export function EmployeeTelemetry({ companyId, kindFilter }: Props) {
   const kind = telemetryRequestKind(kindFilter);
-  const { data: stats, isLoading: statsLoading } = useEmployeeStats({ companyId, kind });
-  const { data: employees, isLoading: empLoading } = useEmployees(companyId);
+  const statsQuery = useEmployeeStats({ companyId, kind });
+  const employeeQuery = useEmployees(companyId);
   const [sortKey, setSortKey] = useState<SortKey>('totalRuns');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
-  const empMap = useMemo(() => {
-    if (!employees) return new Map<string, { name: string; title: string }>();
-    return new Map(employees.map((e) => [e.id, { name: e.name, title: e.title }]));
-  }, [employees]);
+  const employeeMap = useMemo(() => {
+    if (!employeeQuery.data) return new Map<string, { name: string; title: string }>();
+    return new Map(
+      employeeQuery.data.map((employee) => [
+        employee.id,
+        { name: employee.name, title: employee.title },
+      ]),
+    );
+  }, [employeeQuery.data]);
 
   const rows = useMemo(() => {
-    if (!stats) return [];
-    const enriched = stats.map((s) => {
-      const emp = empMap.get(s.employeeId);
+    if (!statsQuery.data) return [];
+    const enriched = statsQuery.data.map((row) => {
+      const employee = employeeMap.get(row.employeeId);
       return {
-        ...s,
-        name: emp?.name ?? s.employeeId,
-        title: emp?.title ?? '',
-        costNum: Number.parseFloat(s.costUsd),
+        ...row,
+        name: employee?.name ?? row.employeeId,
+        title: employee?.title ?? '',
+        costNum: Number.parseFloat(row.costUsd),
       };
     });
 
     enriched.sort((a, b) => {
-      let cmp = 0;
+      let comparison = 0;
       switch (sortKey) {
         case 'name':
-          cmp = a.name.localeCompare(b.name);
+          comparison = a.name.localeCompare(b.name);
           break;
         case 'totalRuns':
-          cmp = a.totalRuns - b.totalRuns;
+          comparison = a.totalRuns - b.totalRuns;
           break;
         case 'totalTokens':
-          cmp = a.totalTokens - b.totalTokens;
+          comparison = a.totalTokens - b.totalTokens;
           break;
         case 'avgLatencyMs':
-          cmp = a.avgLatencyMs - b.avgLatencyMs;
+          comparison = a.avgLatencyMs - b.avgLatencyMs;
           break;
         case 'costUsd':
-          cmp = a.costNum - b.costNum;
+          comparison = a.costNum - b.costNum;
           break;
         case 'totalToolCalls':
-          cmp = a.totalToolCalls - b.totalToolCalls;
+          comparison = a.totalToolCalls - b.totalToolCalls;
           break;
       }
-      return sortDir === 'asc' ? cmp : -cmp;
+      return sortDir === 'asc' ? comparison : -comparison;
     });
 
     return enriched;
-  }, [stats, empMap, sortKey, sortDir]);
+  }, [employeeMap, sortDir, sortKey, statsQuery.data]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('desc');
+      setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
     }
+    setSortKey(key);
+    setSortDir('desc');
   }
 
-  function SortIcon({ col }: { col: SortKey }) {
-    if (sortKey !== col) return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-40" />;
+  function SortIcon({ column }: { column: SortKey }) {
+    if (sortKey !== column) return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-40" />;
     return sortDir === 'asc' ? (
       <ArrowUp className="ml-1 inline h-3 w-3" />
     ) : (
@@ -106,71 +117,121 @@ export function EmployeeTelemetry({ companyId, kindFilter }: Props) {
     );
   }
 
-  if (statsLoading || empLoading) {
+  if (statsQuery.isLoading || employeeQuery.isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        Loading employee telemetry...
-      </div>
+      <MissionSectionCard
+        title="Employee breakdown"
+        description="Loading per-employee analytics for the current telemetry filter."
+      >
+        <MissionStateBlock
+          title="Loading employee telemetry"
+          description="Operator output, latency, and tool-call analytics are syncing for this workspace."
+          icon={Users2}
+          data-telemetry-employees-state="loading"
+        />
+      </MissionSectionCard>
+    );
+  }
+
+  if (statsQuery.isError || employeeQuery.isError) {
+    return (
+      <MissionSectionCard
+        title="Employee breakdown"
+        description="The employee analytics queries failed for the current telemetry slice."
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            className="border-white/10 bg-black/10 text-foreground hover:bg-black/20"
+            onClick={() => {
+              statsQuery.refetch();
+              employeeQuery.refetch();
+            }}
+          >
+            Retry
+          </Button>
+        }
+      >
+        <MissionStateBlock
+          title="Employee telemetry could not load"
+          description="Retry the employee stats and roster queries to restore the comparison table."
+          icon={Users2}
+          tone="danger"
+          data-telemetry-employees-state="error"
+        />
+      </MissionSectionCard>
     );
   }
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-surface-50 p-12 text-center">
-        <p className="text-sm text-muted-foreground">
-          No completed runs yet. Employees will appear here once they process tasks.
-        </p>
-      </div>
+      <MissionSectionCard
+        title="Employee breakdown"
+        description="No employee run history exists for the current telemetry filter."
+      >
+        <MissionStateBlock
+          title="No employee telemetry yet"
+          description="Employees will appear here once they process work and generate completed runs."
+          icon={Users2}
+          data-telemetry-employees-state="empty"
+        />
+      </MissionSectionCard>
     );
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface-50 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border bg-surface-100/50">
-            <Th col="name" label="Employee" onClick={toggleSort}>
-              <SortIcon col="name" />
-            </Th>
-            <Th col="totalRuns" label="Runs" onClick={toggleSort} right>
-              <SortIcon col="totalRuns" />
-            </Th>
-            <Th col="totalTokens" label="Tokens" onClick={toggleSort} right>
-              <SortIcon col="totalTokens" />
-            </Th>
-            <Th col="avgLatencyMs" label="Avg Latency" onClick={toggleSort} right>
-              <SortIcon col="avgLatencyMs" />
-            </Th>
-            <Th col="costUsd" label="Cost" onClick={toggleSort} right>
-              <SortIcon col="costUsd" />
-            </Th>
-            <Th col="totalToolCalls" label="Tool Calls" onClick={toggleSort} right>
-              <SortIcon col="totalToolCalls" />
-            </Th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.employeeId}
-              className="border-b border-border/50 transition-colors hover:bg-surface-100/30"
-            >
-              <td className="px-3 py-2.5">
-                <div className="font-medium text-foreground">{row.name}</div>
-                <div className="text-xs text-muted-foreground">{row.title}</div>
-              </td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{row.totalRuns}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">
-                {formatTokens(row.totalTokens)}
-              </td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{row.avgLatencyMs}ms</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{formatCost(row.costUsd)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{row.totalToolCalls}</td>
+    <MissionSectionCard
+      title="Employee breakdown"
+      description="Sortable run, token, latency, cost, and tool-call analytics per operator."
+      className="overflow-hidden"
+    >
+      <MissionInsetSurface className="overflow-hidden rounded-[20px] bg-black/15">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-white/10 bg-black/20">
+              <Th col="name" label="Employee" onClick={toggleSort}>
+                <SortIcon column="name" />
+              </Th>
+              <Th col="totalRuns" label="Runs" onClick={toggleSort} right>
+                <SortIcon column="totalRuns" />
+              </Th>
+              <Th col="totalTokens" label="Tokens" onClick={toggleSort} right>
+                <SortIcon column="totalTokens" />
+              </Th>
+              <Th col="avgLatencyMs" label="Avg Latency" onClick={toggleSort} right>
+                <SortIcon column="avgLatencyMs" />
+              </Th>
+              <Th col="costUsd" label="Cost" onClick={toggleSort} right>
+                <SortIcon column="costUsd" />
+              </Th>
+              <Th col="totalToolCalls" label="Tool Calls" onClick={toggleSort} right>
+                <SortIcon column="totalToolCalls" />
+              </Th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={row.employeeId}
+                className="border-b border-white/10 transition-colors last:border-b-0 hover:bg-surface-100/20"
+              >
+                <td className="px-4 py-3">
+                  <div className="font-medium text-foreground">{row.name}</div>
+                  <div className="text-xs text-muted-foreground">{row.title}</div>
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">{row.totalRuns}</td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {formatTokens(row.totalTokens)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">{row.avgLatencyMs}ms</td>
+                <td className="px-4 py-3 text-right tabular-nums">{formatCost(row.costUsd)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{row.totalToolCalls}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </MissionInsetSurface>
+    </MissionSectionCard>
   );
 }
 
@@ -185,20 +246,20 @@ function Th({
   label: string;
   onClick: (key: SortKey) => void;
   right?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <th
-      className={`cursor-pointer select-none px-3 py-2.5 text-xs font-medium text-muted-foreground ${
-        right ? 'text-right' : 'text-left'
-      }`}
-      onClick={() => onClick(col)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onClick(col);
-      }}
-    >
-      {label}
-      {children}
+    <th className={`px-4 py-3 text-xs font-medium ${right ? 'text-right' : 'text-left'}`}>
+      <button
+        type="button"
+        className={`inline-flex items-center text-muted-foreground transition-colors hover:text-foreground ${
+          right ? 'justify-end' : 'justify-start'
+        }`}
+        onClick={() => onClick(col)}
+      >
+        {label}
+        {children}
+      </button>
     </th>
   );
 }

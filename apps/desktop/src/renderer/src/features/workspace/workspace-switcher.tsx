@@ -49,9 +49,9 @@ import { CreateCompanyDialog } from './create-company-dialog.js';
  *   see (2026-04-19 audit P3.1 closure).
  * - Active-company row carries `aria-current="true"` so screen readers
  *   announce it as the selected workspace.
- * - All touch targets ≥36px height (trigger 32px with 4px padding ring,
- *   menu items 32px) — within the Fortune-10 40–44px target band for
- *   desktop-first.
+ * - Trigger and menu items stay inside the desktop-safe 40–44px target
+ *   band after the mission-shell carry-forward widened the trigger into
+ *   a two-line control block.
  *
  * F10 states:
  * - loading → `<Skeleton />` in the trigger's name slot.
@@ -101,7 +101,7 @@ export function WorkspaceSwitcher() {
           aria-label={triggerAriaLabel}
           data-workspace-switcher-trigger=""
           className={cn(
-            'flex h-8 items-center gap-2 rounded-md border border-transparent px-2 text-xs font-medium transition-colors',
+            'mission-workspace-trigger flex h-auto w-full items-center justify-between gap-3 rounded-[24px] border border-white/10 px-3 py-2.5 text-left transition-all backdrop-blur-sm',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
             'data-[state=open]:bg-surface-100 data-[state=open]:border-border',
             isError
@@ -110,22 +110,45 @@ export function WorkspaceSwitcher() {
             isLoading && 'cursor-wait opacity-70',
           )}
         >
-          <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          {triggerLabel === null ? (
-            <Skeleton className="h-3.5 w-24" />
-          ) : (
-            <span className="max-w-[180px] truncate">{triggerLabel}</span>
-          )}
-          <ChevronsUpDown className="h-3 w-3 shrink-0 text-muted-foreground" />
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black/25 text-brand">
+              <Building2 className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Workspace
+              </span>
+              {triggerLabel === null ? (
+                <Skeleton className="h-3.5 w-24" />
+              ) : (
+                <span className="mt-1 block max-w-[220px] truncate text-sm font-semibold text-foreground">
+                  {triggerLabel}
+                </span>
+              )}
+              <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                {isError
+                  ? 'Reload workspace controls'
+                  : activeCompany
+                    ? 'Switch active company or open settings'
+                    : 'Choose the active operating company'}
+              </span>
+            </span>
+          </span>
+          <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
           align="start"
-          className="min-w-[220px]"
+          className="min-w-[280px] rounded-[24px] border-white/10 bg-background/95 p-2 shadow-2xl backdrop-blur-xl"
           data-workspace-switcher-content=""
         >
-          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="px-3 py-2">
+            <span className="block text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+              Mission scope
+            </span>
+            <span className="mt-1 block text-sm font-semibold text-foreground">Workspaces</span>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator className="bg-white/10" />
 
           {isError ? (
             <DropdownMenuItem
@@ -133,14 +156,18 @@ export function WorkspaceSwitcher() {
                 e.preventDefault();
                 refetch();
               }}
-              className="text-destructive"
+              className="rounded-[18px] px-3 py-2.5 text-destructive"
               data-workspace-switcher-state="error"
             >
               <RefreshCw className="mr-2 h-3.5 w-3.5" />
               Retry loading workspaces
             </DropdownMenuItem>
           ) : companies.length === 0 ? (
-            <DropdownMenuItem disabled data-workspace-switcher-state="empty">
+            <DropdownMenuItem
+              disabled
+              className="rounded-[18px] px-3 py-2.5 text-muted-foreground"
+              data-workspace-switcher-state="empty"
+            >
               No workspaces yet
             </DropdownMenuItem>
           ) : (
@@ -152,7 +179,10 @@ export function WorkspaceSwitcher() {
                   onSelect={() => setCompanyId(company.id)}
                   aria-current={isActive ? 'true' : undefined}
                   data-workspace-switcher-item={company.id}
-                  className={cn(isActive && 'bg-brand/5 font-semibold text-brand')}
+                  className={cn(
+                    'rounded-[18px] px-3 py-2.5',
+                    isActive && 'bg-brand/5 font-semibold text-brand',
+                  )}
                 >
                   <Building2 className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                   <span className="flex-1 truncate">{company.name}</span>
@@ -162,7 +192,7 @@ export function WorkspaceSwitcher() {
             })
           )}
 
-          <DropdownMenuSeparator />
+          <DropdownMenuSeparator className="bg-white/10" />
 
           {/*
            * Create-workspace CTA — LIVE as of the step (a+b) collapse.
@@ -171,6 +201,7 @@ export function WorkspaceSwitcher() {
            */}
           <DropdownMenuItem
             onSelect={() => setCreateOpen(true)}
+            className="rounded-[18px] px-3 py-2.5"
             data-workspace-switcher-action="create-company"
           >
             <Plus className="mr-2 h-3.5 w-3.5" />
@@ -179,6 +210,7 @@ export function WorkspaceSwitcher() {
           <DropdownMenuItem
             onSelect={() => setSettingsOpen(true)}
             disabled={!activeCompany || isError}
+            className="rounded-[18px] px-3 py-2.5"
             data-workspace-switcher-action="company-settings"
           >
             <Settings className="mr-2 h-3.5 w-3.5" />

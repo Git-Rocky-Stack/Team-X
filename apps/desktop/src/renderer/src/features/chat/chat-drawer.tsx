@@ -25,6 +25,12 @@ import type { Employee } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet.js';
+import {
+  MissionIconButton,
+  MissionInsetSurface,
+  MissionPill,
+  MissionSheetHeader,
+} from '@/features/mission/mission-shell.js';
 import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
 import { useChatMessages, useSendMessage, useStopChat, useThreadList } from '@/hooks/use-chat.js';
 import { ipc } from '@/lib/ipc.js';
@@ -82,7 +88,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const companyId = useAppStore((s) => s.companyId);
   const lastAgentMessageAt = useAppStore((s) => s.lastAgentMessageAt);
   const pendingDirectChat = useAppStore((s) =>
-    selectedId ? s.pendingDirectChats[selectedId] ?? null : null,
+    selectedId ? (s.pendingDirectChats[selectedId] ?? null) : null,
   );
   const enqueueQueuedDirectChatMessage = useAppStore((s) => s.enqueueQueuedDirectChatMessage);
   const dequeueQueuedDirectChatMessage = useAppStore((s) => s.dequeueQueuedDirectChatMessage);
@@ -218,7 +224,14 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
         setDirectChatAwaitingReply(selectedId, false);
       }
     }
-  }, [displayStatus, effectiveThreadId, qc, selectedId, setDirectChatAwaitingReply, setDirectChatStopping]);
+  }, [
+    displayStatus,
+    effectiveThreadId,
+    qc,
+    selectedId,
+    setDirectChatAwaitingReply,
+    setDirectChatStopping,
+  ]);
 
   useEffect(() => {
     if (!selectedId || !isThinking || !awaitingReply) return;
@@ -348,182 +361,199 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     <Sheet open={chatOpen} onOpenChange={setChatOpen}>
       <SheetContent
         side="right"
-        className="flex w-[480px] max-w-full flex-col gap-0 p-0 sm:max-w-[480px]"
+        className="mission-shell flex w-[520px] max-w-full flex-col gap-0 overflow-hidden border-l border-white/10 bg-background/95 p-0 sm:max-w-[520px]"
       >
-        {threadListView ? (
-          /* ── Thread list view ─────────────────────────────── */
-          <>
-            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-              <SheetTitle className="flex-1 text-sm font-semibold">Threads</SheetTitle>
-            </div>
-            <ThreadList
-              threads={threads}
-              employees={employees}
-              activeThreadId={effectiveThreadId}
-              onSelectThread={handleSelectThread}
-            />
-          </>
-        ) : viewingCopilotThread && effectiveThreadId ? (
-          /* ── Copilot thread view (read-only, M31 T5) ─────── */
-          <>
-            {/* Header */}
-            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setThreadListView(true)}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
-                aria-label="Back to threads"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand">
-                <Sparkles className="h-4 w-4" aria-hidden="true" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
-                  <span className="truncate">
-                    {activeThread?.subject ?? 'Copilot conversation'}
-                  </span>
-                  <SystemAgentBadge size="sm" />
-                </SheetTitle>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {copilotRunning
-                    ? `Thinking — ${copilotSteps.length} step${copilotSteps.length === 1 ? '' : 's'}`
+        <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
+        <div className="relative flex h-full flex-col">
+          {threadListView ? (
+            <>
+              <MissionSheetHeader
+                eyebrow="Communication index"
+                icon={List}
+                title={<SheetTitle className="text-base font-semibold">Threads</SheetTitle>}
+                badge={
+                  <MissionPill className="text-[10px]" mono>
+                    {threads.length} threads
+                  </MissionPill>
+                }
+                description="Open direct messages, agent transcripts, and copilot sessions from one communication roster."
+              />
+              <ThreadList
+                threads={threads}
+                employees={employees}
+                activeThreadId={effectiveThreadId}
+                onSelectThread={handleSelectThread}
+              />
+            </>
+          ) : viewingCopilotThread && effectiveThreadId ? (
+            <>
+              <MissionSheetHeader
+                eyebrow="Copilot transcript"
+                icon={Sparkles}
+                title={
+                  <SheetTitle className="flex items-center gap-2 text-base font-semibold">
+                    <span className="truncate">
+                      {activeThread?.subject ?? 'Copilot conversation'}
+                    </span>
+                    <SystemAgentBadge size="sm" />
+                  </SheetTitle>
+                }
+                description={
+                  copilotRunning
+                    ? `Thinking — ${copilotSteps.length} step${copilotSteps.length === 1 ? '' : 's'} live in the transcript.`
                     : copilotResult?.kind === 'completed'
-                      ? `Completed in ${copilotResult.payload.totalSteps} step${copilotResult.payload.totalSteps === 1 ? '' : 's'}`
+                      ? `Completed in ${copilotResult.payload.totalSteps} step${copilotResult.payload.totalSteps === 1 ? '' : 's'}.`
                       : copilotResult?.kind === 'failed'
                         ? `Failed — ${copilotResult.payload.reason}`
-                        : 'Ready'}
-                </p>
+                        : 'Ready for transcript review.'
+                }
+                leadingAction={
+                  <MissionIconButton
+                    onClick={() => setThreadListView(true)}
+                    aria-label="Back to threads"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </MissionIconButton>
+                }
+              />
+
+              <MessageList
+                messages={messages}
+                streamingText=""
+                isStreaming={false}
+                employeeName="Copilot"
+                isAgentThread
+                employees={employees}
+              />
+
+              <div className="border-t border-white/10 bg-black/20 px-4 py-3">
+                <MissionInsetSurface className="flex items-center gap-2 px-3 py-3">
+                  {copilotRunning ? (
+                    <>
+                      <Loader2
+                        className="h-4 w-4 shrink-0 animate-spin text-brand"
+                        aria-hidden="true"
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        Copilot is reasoning. The persisted transcript refreshes as each step lands.
+                      </span>
+                    </>
+                  ) : copilotResult?.kind === 'failed' ? (
+                    <>
+                      <Sparkles className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
+                      <span className="text-xs text-red-300">{copilotResult.payload.message}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      <span className="text-xs text-muted-foreground">
+                        Copilot transcript is read only in the drawer.
+                      </span>
+                    </>
+                  )}
+                </MissionInsetSurface>
               </div>
-            </div>
+            </>
+          ) : viewingAgentThread && effectiveThreadId ? (
+            <>
+              <MissionSheetHeader
+                eyebrow="Autonomous exchange"
+                icon={Bot}
+                iconClassName="border-amber-500/20 bg-amber-500/10 text-amber-300"
+                title={
+                  <SheetTitle className="text-base font-semibold">{agentThreadNames}</SheetTitle>
+                }
+                description="Observe the employee-to-employee thread without interrupting the active exchange."
+                leadingAction={
+                  <MissionIconButton
+                    onClick={() => setThreadListView(true)}
+                    aria-label="Back to threads"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </MissionIconButton>
+                }
+              />
 
-            {/* Messages — the agentic loop persists every step as a
-                message on this thread, so MessageList renders the full
-                step transcript (plan → tool_call → tool_result → answer)
-                without any extra client-side state. The live step stream
-                drives cache invalidation above so new steps land as soon
-                as they're emitted. */}
-            <MessageList
-              messages={messages}
-              streamingText=""
-              isStreaming={false}
-              employeeName="Copilot"
-              isAgentThread
-              employees={employees}
-            />
+              <MessageList
+                messages={messages}
+                streamingText={agentStreamText}
+                isStreaming={agentIsStreaming}
+                employeeName={agentStreamName}
+                isAgentThread
+                employees={employees}
+              />
 
-            {/* Running indicator + read-only banner */}
-            <div className="flex items-center gap-2 border-t border-border px-4 py-3">
-              {copilotRunning ? (
-                <>
-                  <Loader2
-                    className="h-4 w-4 shrink-0 animate-spin text-brand"
-                    aria-hidden="true"
-                  />
+              <div className="border-t border-white/10 bg-black/20 px-4 py-3">
+                <MissionInsetSurface className="flex items-center gap-2 px-3 py-3">
+                  <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    Copilot is reasoning — transcript updates live
+                    Observing agent conversation. This transcript is read only.
                   </span>
-                </>
-              ) : copilotResult?.kind === 'failed' ? (
-                <span className="text-xs text-red-400">{copilotResult.payload.message}</span>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  <span className="text-xs text-muted-foreground">
-                    Copilot transcript — read only
-                  </span>
-                </>
-              )}
-            </div>
-          </>
-        ) : viewingAgentThread && effectiveThreadId ? (
-          /* ── Agent thread view (read-only) ────────────────── */
-          <>
-            {/* Header */}
-            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setThreadListView(true)}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
-                aria-label="Back to threads"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <div className="min-w-0 flex-1">
-                <SheetTitle className="text-sm font-semibold">{agentThreadNames}</SheetTitle>
-                <div className="mt-0.5 flex items-center gap-1">
-                  <Bot className="h-3 w-3 text-amber-500" />
-                  <span className="text-[11px] text-amber-500">Agent conversation</span>
-                </div>
+                </MissionInsetSurface>
               </div>
-            </div>
+            </>
+          ) : employee ? (
+            <>
+              <MissionSheetHeader
+                eyebrow="Direct line"
+                title={
+                  <SheetTitle className="flex items-center gap-2 text-base font-semibold">
+                    {employee.name}
+                    <span
+                      className={cn(
+                        'h-2.5 w-2.5 shrink-0 rounded-full',
+                        statusColor(displayStatus),
+                      )}
+                    />
+                  </SheetTitle>
+                }
+                description={<span className="truncate">{employee.title}</span>}
+                leadingAction={
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black/20 text-xs font-semibold text-foreground/80">
+                    {initials(employee.name)}
+                  </div>
+                }
+                trailingAction={
+                  <MissionIconButton
+                    onClick={() => setThreadListView(true)}
+                    aria-label="View all threads"
+                  >
+                    <List className="h-4 w-4" />
+                  </MissionIconButton>
+                }
+                badge={
+                  <div className="flex flex-wrap gap-2">
+                    <MissionPill className="px-2.5 py-1 text-[10px]" mono>
+                      {displayStatus}
+                    </MissionPill>
+                    {queuedCount > 0 ? (
+                      <MissionPill className="px-2.5 py-1 text-[10px]" mono>
+                        {queuedCount} queued
+                      </MissionPill>
+                    ) : null}
+                  </div>
+                }
+              />
 
-            {/* Messages */}
-            <MessageList
-              messages={messages}
-              streamingText={agentStreamText}
-              isStreaming={agentIsStreaming}
-              employeeName={agentStreamName}
-              isAgentThread
-              employees={employees}
-            />
+              <MessageList
+                messages={messages}
+                streamingText={live?.currentStream ?? ''}
+                isStreaming={isThinking}
+                employeeName={employee.name}
+              />
 
-            {/* Read-only banner */}
-            <div className="flex items-center gap-2 border-t border-border px-4 py-3">
-              <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">
-                Observing agent conversation — read only
-              </span>
-            </div>
-          </>
-        ) : employee ? (
-          /* ── Employee DM view (existing) ──────────────────── */
-          <>
-            {/* Header */}
-            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-200 text-xs font-semibold text-foreground/80">
-                {initials(employee.name)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
-                  {employee.name}
-                  <span
-                    className={cn('h-2 w-2 shrink-0 rounded-full', statusColor(displayStatus))}
-                  />
-                </SheetTitle>
-                <p className="truncate text-xs text-muted-foreground">{employee.title}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setThreadListView(true)}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
-                aria-label="View all threads"
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Messages */}
-            <MessageList
-              messages={messages}
-              streamingText={live?.currentStream ?? ''}
-              isStreaming={isThinking}
-              employeeName={employee.name}
-            />
-
-            {/* Composer */}
-            <Composer
-              onSend={handleSend}
-              onQueue={handleQueue}
-              onStop={handleStop}
-              queuedCount={queuedCount}
-              isBusy={isDirectMessageBusy}
-              queueMode={shouldQueueSend}
-              stopPending={canStopCurrentReply && stopMutation.isPending}
-            />
-          </>
-        ) : null}
+              <Composer
+                onSend={handleSend}
+                onQueue={handleQueue}
+                onStop={handleStop}
+                queuedCount={queuedCount}
+                isBusy={isDirectMessageBusy}
+                queueMode={shouldQueueSend}
+                stopPending={canStopCurrentReply && stopMutation.isPending}
+              />
+            </>
+          ) : null}
+        </div>
       </SheetContent>
     </Sheet>
   );

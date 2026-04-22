@@ -5,10 +5,30 @@ import { Badge } from '@/components/ui/badge.js';
 import { Card } from '@/components/ui/card.js';
 
 const PRIORITY_CONFIG = {
-  critical: { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Critical' },
-  high: { icon: ArrowUpCircle, color: 'text-orange-400', bg: 'bg-orange-500/10', label: 'High' },
-  medium: { icon: Minus, color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'Medium' },
-  low: { icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted/50', label: 'Low' },
+  critical: {
+    icon: AlertTriangle,
+    color: 'text-red-300',
+    background: 'border-red-500/20 bg-red-500/10',
+    label: 'Critical',
+  },
+  high: {
+    icon: ArrowUpCircle,
+    color: 'text-orange-300',
+    background: 'border-orange-500/20 bg-orange-500/10',
+    label: 'High',
+  },
+  medium: {
+    icon: Minus,
+    color: 'text-yellow-200',
+    background: 'border-yellow-500/20 bg-yellow-500/10',
+    label: 'Medium',
+  },
+  low: {
+    icon: Minus,
+    color: 'text-muted-foreground',
+    background: 'border-white/10 bg-black/20',
+    label: 'Low',
+  },
 } as const;
 
 interface TicketCardProps {
@@ -20,7 +40,9 @@ interface TicketCardProps {
 export function TicketCard({ ticket, employees, onClick }: TicketCardProps) {
   const priority = PRIORITY_CONFIG[ticket.priority] ?? PRIORITY_CONFIG.medium;
   const PriorityIcon = priority.icon;
-  const assignee = ticket.assigneeId ? employees.find((e) => e.id === ticket.assigneeId) : null;
+  const assignee = ticket.assigneeId
+    ? employees.find((employee) => employee.id === ticket.assigneeId)
+    : null;
 
   const labels: string[] = (() => {
     try {
@@ -34,52 +56,61 @@ export function TicketCard({ ticket, employees, onClick }: TicketCardProps) {
   const isOverdue = ticket.dueAt !== null && ticket.dueAt > 0 && Date.now() > ticket.dueAt;
 
   return (
-    <button type="button" onClick={onClick} className="w-full text-left">
-      <Card className="group cursor-pointer border-border/50 bg-surface-50 p-3 transition-all hover:border-border hover:shadow-md">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left"
+      data-ticket-card={ticket.id}
+    >
+      <Card className="mission-chrome-panel group cursor-pointer rounded-[20px] border border-white/10 bg-black/10 p-3.5 transition-all hover:-translate-y-0.5 hover:border-brand/20 hover:shadow-[0_24px_60px_-42px_hsl(var(--mission-red)/0.85)]">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="text-sm font-medium leading-snug text-foreground line-clamp-2">
+          <h4 className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
             {ticket.title}
           </h4>
           <Badge
             variant="outline"
-            className={`shrink-0 gap-1 text-[10px] ${priority.bg} ${priority.color} border-0`}
+            className={`shrink-0 gap-1 border text-[10px] ${priority.background} ${priority.color}`}
           >
             <PriorityIcon className="h-3 w-3" />
             {priority.label}
           </Badge>
         </div>
 
-        {ticket.description && (
-          <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">{ticket.description}</p>
-        )}
+        {ticket.description ? (
+          <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
+            {ticket.description}
+          </p>
+        ) : null}
 
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {assignee && (
-              <div className="flex items-center gap-1.5">
-                <div className="h-5 w-5 rounded-full bg-brand/20 flex items-center justify-center text-[10px] font-medium text-brand">
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            {assignee ? (
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-brand/10 text-[10px] font-semibold text-brand">
                   {assignee.name.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-[11px] text-muted-foreground">{assignee.name}</span>
+                <span className="truncate text-[11px] text-muted-foreground">{assignee.name}</span>
               </div>
-            )}
-            {!assignee && (
-              <span className="text-[11px] text-muted-foreground/60 italic">Unassigned</span>
+            ) : (
+              <span className="text-[11px] italic text-muted-foreground/70">Unassigned</span>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            {labels.length > 0 && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0">
+          <div className="flex shrink-0 items-center gap-2">
+            {labels.length > 0 ? (
+              <Badge
+                variant="outline"
+                className="border-white/10 bg-black/20 px-1.5 py-0 text-[9px] text-muted-foreground"
+              >
                 {labels[0]}
-                {labels.length > 1 && ` +${labels.length - 1}`}
+                {labels.length > 1 ? ` +${labels.length - 1}` : ''}
               </Badge>
-            )}
-            {(hasSla || isOverdue) && (
+            ) : null}
+            {hasSla || isOverdue ? (
               <Clock
-                className={`h-3 w-3 ${isOverdue ? 'text-red-400' : 'text-muted-foreground/50'}`}
+                className={`h-3.5 w-3.5 ${isOverdue ? 'text-red-300' : 'text-muted-foreground/60'}`}
               />
-            )}
+            ) : null}
           </div>
         </div>
       </Card>

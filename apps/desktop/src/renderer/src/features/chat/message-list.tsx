@@ -69,12 +69,14 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
   const isUser = message.authorKind === 'user';
   return (
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
-      <div className="max-w-[85%]">
+      <div className="max-w-[88%]">
         {showSenderName && senderName && (
-          <div className="mb-0.5 flex items-center gap-1.5 px-1">
-            <span className="text-[11px] font-medium text-muted-foreground">{senderName}</span>
+          <div className="mb-1 flex items-center gap-1.5 px-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {senderName}
+            </span>
             {message.isAgentInitiated && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/10 px-1 py-px text-[9px] font-medium text-amber-500">
+              <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-amber-500">
                 <Bot className="h-2.5 w-2.5" />
                 AI
               </span>
@@ -83,8 +85,10 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
         )}
         <div
           className={cn(
-            'rounded-xl px-3.5 py-2.5 text-sm leading-relaxed',
-            isUser ? 'bg-brand/15 text-foreground' : 'bg-surface-100 text-foreground',
+            'mission-chrome-panel rounded-[22px] border px-4 py-3 text-sm leading-7 shadow-none',
+            isUser
+              ? 'border-brand/20 bg-brand/10 text-foreground'
+              : 'border-white/10 bg-black/20 text-foreground',
           )}
         >
           {renderContent(message.content)}
@@ -102,9 +106,13 @@ interface StreamingBubbleProps {
 function StreamingBubble({ text, employeeName }: StreamingBubbleProps) {
   return (
     <div className="flex justify-start">
-      <div className="max-w-[85%] rounded-xl bg-surface-100 px-3.5 py-2.5 text-sm leading-relaxed text-foreground">
+      <div className="mission-chrome-panel max-w-[88%] rounded-[22px] border border-white/10 bg-black/20 px-4 py-3 text-sm leading-7 text-foreground">
         {text.length > 0 ? (
           <>
+            <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
+              Live stream
+            </div>
             {renderContent(text)}
             <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-brand align-text-bottom" />
           </>
@@ -151,13 +159,18 @@ export function MessageList({
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {visibleMessages.length === 0 && !isStreaming && (
-          <p className="py-8 text-center text-xs text-muted-foreground">
-            {isAgentThread
-              ? 'No messages in this conversation yet.'
-              : `Start a conversation with ${employeeName}.`}
-          </p>
+          <div className="mission-state-block rounded-[24px] border border-dashed border-white/10 px-6 py-10 text-center">
+            <p className="text-sm font-medium text-foreground">
+              {isAgentThread
+                ? 'No messages in this conversation yet.'
+                : `Start a conversation with ${employeeName}.`}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              New messages will appear here in the live transcript as soon as the thread updates.
+            </p>
+          </div>
         )}
 
         {visibleMessages.map((msg) => (

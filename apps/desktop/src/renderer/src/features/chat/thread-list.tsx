@@ -20,6 +20,7 @@ import type { Employee, Thread } from '@team-x/shared-types';
 
 import { Bot, MessageSquare, Sparkles } from 'lucide-react';
 
+import { MissionPill } from '@/features/mission/mission-shell.js';
 import { cn } from '@/lib/utils.js';
 
 import { SystemAgentBadge } from './system-agent-badge.js';
@@ -78,7 +79,7 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
       ? 'bg-brand/15 text-brand'
       : kind === 'agent'
         ? 'bg-amber-500/15 text-amber-500'
-        : 'bg-brand/15 text-brand';
+        : 'bg-white/10 text-foreground';
 
   const Icon = kind === 'copilot' ? Sparkles : kind === 'agent' ? Bot : MessageSquare;
 
@@ -88,31 +89,39 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
       type="button"
       onClick={() => onSelect(thread.id)}
       className={cn(
-        'flex w-full items-start gap-3 border-b border-border/50 px-4 py-3 text-left transition-colors hover:bg-surface-100',
-        active && 'bg-surface-100',
+        'mission-chrome-panel flex w-full items-start gap-3 rounded-[20px] border border-white/10 px-4 py-4 text-left transition-all hover:border-white/15 hover:bg-black/20',
+        active && 'border-brand/30 bg-brand/10',
       )}
     >
-      {/* Kind icon */}
-      <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full', iconBg)}>
+      <div
+        className={cn(
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border border-white/10',
+          iconBg,
+        )}
+      >
         <Icon className="h-4 w-4" />
       </div>
 
-      {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-sm font-medium text-foreground">
             {threadDisplayName(thread, employees)}
           </span>
-          <span className="shrink-0 text-[10px] text-muted-foreground">
+          <MissionPill className="shrink-0 px-2 py-1 text-[10px]" mono>
             {formatTimestamp(thread.lastMessageAt)}
-          </span>
+          </MissionPill>
         </div>
-        {kind === 'copilot' && <SystemAgentBadge size="sm" className="mt-0.5" />}
+        {kind === 'copilot' && <SystemAgentBadge size="sm" className="mt-2" />}
         {kind === 'agent' && (
-          <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-500">
+          <MissionPill tone="warning" className="mt-2 px-2 py-1 text-[10px]">
             <Bot className="h-2.5 w-2.5" />
             Agent conversation
-          </span>
+          </MissionPill>
+        )}
+        {kind === 'regular' && (
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            Direct thread ready to open in the communication drawer.
+          </p>
         )}
       </div>
     </button>
@@ -126,13 +135,13 @@ interface SectionHeaderProps {
 
 function SectionHeader({ title, count }: SectionHeaderProps) {
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-surface-50/95 px-4 py-2 backdrop-blur-sm">
-      <h4 className="flex-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="flex items-center gap-2 px-1 pb-1">
+      <h4 className="flex-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
         {title}
       </h4>
-      <span className="rounded-full bg-surface-100 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">
+      <MissionPill className="px-2 py-1 text-[10px] tabular-nums" mono>
         {count}
-      </span>
+      </MissionPill>
     </div>
   );
 }
@@ -152,8 +161,8 @@ export function ThreadList({
 }: ThreadListProps) {
   if (threads.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center px-4">
-        <p className="text-center text-xs text-muted-foreground">
+      <div className="flex flex-1 items-center justify-center px-4 py-12">
+        <p className="max-w-sm text-center text-sm leading-6 text-muted-foreground">
           No threads yet. Start a conversation with an employee.
         </p>
       </div>
@@ -171,52 +180,58 @@ export function ThreadList({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto scrollbar-thin">
+    <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
       {copilot.length > 0 && (
-        <section aria-label="Copilot Conversations">
+        <section aria-label="Copilot Conversations" className="mb-4 space-y-3 last:mb-0">
           <SectionHeader title="Copilot Conversations" count={copilot.length} />
-          {copilot.map((thread) => (
-            <ThreadRow
-              key={thread.id}
-              thread={thread}
-              employees={employees}
-              active={thread.id === activeThreadId}
-              kind="copilot"
-              onSelect={onSelectThread}
-            />
-          ))}
+          <div className="space-y-2">
+            {copilot.map((thread) => (
+              <ThreadRow
+                key={thread.id}
+                thread={thread}
+                employees={employees}
+                active={thread.id === activeThreadId}
+                kind="copilot"
+                onSelect={onSelectThread}
+              />
+            ))}
+          </div>
         </section>
       )}
 
       {agent.length > 0 && (
-        <section aria-label="Agent Conversations">
+        <section aria-label="Agent Conversations" className="mb-4 space-y-3 last:mb-0">
           <SectionHeader title="Agent Conversations" count={agent.length} />
-          {agent.map((thread) => (
-            <ThreadRow
-              key={thread.id}
-              thread={thread}
-              employees={employees}
-              active={thread.id === activeThreadId}
-              kind="agent"
-              onSelect={onSelectThread}
-            />
-          ))}
+          <div className="space-y-2">
+            {agent.map((thread) => (
+              <ThreadRow
+                key={thread.id}
+                thread={thread}
+                employees={employees}
+                active={thread.id === activeThreadId}
+                kind="agent"
+                onSelect={onSelectThread}
+              />
+            ))}
+          </div>
         </section>
       )}
 
       {regular.length > 0 && (
-        <section aria-label="Conversations">
+        <section aria-label="Conversations" className="space-y-3">
           <SectionHeader title="Conversations" count={regular.length} />
-          {regular.map((thread) => (
-            <ThreadRow
-              key={thread.id}
-              thread={thread}
-              employees={employees}
-              active={thread.id === activeThreadId}
-              kind="regular"
-              onSelect={onSelectThread}
-            />
-          ))}
+          <div className="space-y-2">
+            {regular.map((thread) => (
+              <ThreadRow
+                key={thread.id}
+                thread={thread}
+                employees={employees}
+                active={thread.id === activeThreadId}
+                kind="regular"
+                onSelect={onSelectThread}
+              />
+            ))}
+          </div>
         </section>
       )}
     </div>

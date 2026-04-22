@@ -13,11 +13,14 @@ interface AppLayoutProps {
 
 export function AppLayout({ employees, onHireClick, children }: AppLayoutProps) {
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
+    <div className="mission-app-shell relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
+      <div className="mission-grid pointer-events-none absolute inset-0 opacity-[0.16]" />
       <TopBar />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1 gap-3 overflow-hidden px-3 pb-3">
         <Sidenav employees={employees} onHireClick={onHireClick} />
-        <main className="flex-1 overflow-y-auto scrollbar-thin">{children}</main>
+        <main className="mission-chrome-panel flex-1 overflow-y-auto rounded-[30px] border border-white/10 bg-black/10 scrollbar-thin">
+          {children}
+        </main>
       </div>
     </div>
   );

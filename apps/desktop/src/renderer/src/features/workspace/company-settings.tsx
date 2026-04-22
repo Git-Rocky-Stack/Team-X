@@ -6,13 +6,8 @@ import type { CompaniesUpdateRequest, Company } from '@team-x/shared-types';
 
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet.js';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet.js';
+import { MissionInsetSurface, MissionSheetHeader } from '@/features/mission/mission-shell.js';
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
@@ -204,208 +199,222 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col p-0 sm:max-w-md"
+        className="mission-shell flex w-full flex-col overflow-hidden border-l border-white/10 bg-background/95 p-0 sm:max-w-md"
         data-company-settings-panel=""
       >
-        <SheetHeader className="border-b border-border px-6 py-4 text-left">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-brand" aria-hidden="true" />
-            <SheetTitle className="text-base">Company settings</SheetTitle>
-          </div>
-          <SheetDescription className="text-xs">
-            Keep workspace details current and manage its lifecycle.
-          </SheetDescription>
-        </SheetHeader>
+        <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
+        <div className="relative flex h-full flex-col">
+          <MissionSheetHeader
+            eyebrow="Workspace control"
+            icon={Building2}
+            title={<SheetTitle className="text-base">Company settings</SheetTitle>}
+            description={
+              <SheetDescription className="m-0 text-sm leading-6">
+                Keep workspace identity current, tune the visible theme, and manage lifecycle
+                actions from one control sheet.
+              </SheetDescription>
+            }
+          />
 
-        {!company ? (
-          <div className="px-6 py-8 text-sm text-muted-foreground">No workspace selected.</div>
-        ) : (
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            <section className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">General</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Name, slug, icon, and theme apply to this workspace.
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="company-settings-name"
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  Workspace name
-                </label>
-                <Input
-                  id="company-settings-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={MAX_NAME_LENGTH + 20}
-                  aria-invalid={nameError !== null}
-                  aria-describedby={nameError ? 'company-settings-name-error' : undefined}
-                  data-company-settings-field="name"
-                />
-                {nameError ? (
-                  <p
-                    id="company-settings-name-error"
-                    className="text-xs text-destructive"
-                    data-company-settings-error="name"
-                  >
-                    {nameError}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="company-settings-slug"
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  Slug
-                </label>
-                <Input
-                  id="company-settings-slug"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  maxLength={80}
-                  aria-invalid={slugError !== null}
-                  aria-describedby={slugError ? 'company-settings-slug-error' : undefined}
-                  data-company-settings-field="slug"
-                />
-                {slugError ? (
-                  <p
-                    id="company-settings-slug-error"
-                    className="text-xs text-destructive"
-                    data-company-settings-error="slug"
-                  >
-                    {slugError}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="company-settings-icon"
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  Icon
-                </label>
-                <Input
-                  id="company-settings-icon"
-                  value={icon}
-                  onChange={(e) => setIcon(e.target.value)}
-                  placeholder="Optional"
-                  maxLength={16}
-                  data-company-settings-field="icon"
-                />
-              </div>
-
-              <fieldset className="space-y-1.5 border-0 p-0">
-                <legend className="text-xs font-medium text-muted-foreground">Theme</legend>
-                <div className="flex gap-2">
-                  {(['dark', 'light'] as ThemeChoice[]).map((choice) => {
-                    const isSelected = theme === choice;
-                    return (
-                      <label
-                        key={choice}
-                        data-company-settings-theme={choice}
-                        className={cn(
-                          'flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-xs font-medium capitalize transition-colors',
-                          'focus-within:outline-none focus-within:ring-2 focus-within:ring-brand',
-                          isSelected
-                            ? 'border-brand/40 bg-brand/5 text-brand'
-                            : 'border-border bg-surface-50 text-muted-foreground hover:bg-surface-100',
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          name="company-settings-theme"
-                          value={choice}
-                          checked={isSelected}
-                          onChange={() => setTheme(choice)}
-                          className="sr-only"
-                        />
-                        <span>{choice}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </fieldset>
-
-              <Button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={isBusy || name.trim().length === 0 || slug.length === 0}
-                data-company-settings-save=""
-                className="w-full bg-brand text-white hover:bg-brand/90"
-              >
-                <Save className="h-4 w-4" />
-                {updateMutation.isPending ? 'Saving...' : 'Save changes'}
-              </Button>
-            </section>
-
-            <section className="mt-8 border-t border-border pt-5">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="mt-0.5 h-4 w-4 text-destructive" aria-hidden="true" />
+          {!company ? (
+            <div className="px-5 py-8 text-sm text-muted-foreground">No workspace selected.</div>
+          ) : (
+            <div className="flex-1 overflow-y-auto px-5 py-5">
+              <MissionInsetSurface className="p-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">Danger zone</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Archive removes this workspace from active use. Delete is permanent.
+                  <h3 className="text-sm font-semibold text-foreground">General</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Name, slug, icon, and theme apply to this workspace.
                   </p>
                 </div>
-              </div>
 
-              <div className="mt-4 space-y-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => void handleArchive()}
-                  disabled={isBusy}
-                  data-company-settings-archive=""
-                  className="w-full justify-start"
-                >
-                  <Archive className="h-4 w-4" />
-                  {archiveMutation.isPending ? 'Archiving...' : 'Archive workspace'}
-                </Button>
-
-                <details className="rounded-md border border-destructive/25 bg-destructive/5 p-3">
-                  <summary className="cursor-pointer text-xs font-medium text-destructive">
-                    Permanently delete this workspace
-                  </summary>
-                  <div className="mt-3 space-y-3">
-                    <p className="text-xs text-muted-foreground">
-                      Type <span className="font-semibold text-foreground">{company.name}</span> to
-                      confirm.
-                    </p>
-                    <Input
-                      value={deleteConfirm}
-                      onChange={(e) => setDeleteConfirm(e.target.value)}
-                      placeholder={company.name}
-                      data-company-settings-delete-confirm=""
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => void handleDelete()}
-                      disabled={!deleteEnabled}
-                      data-company-settings-delete=""
-                      className="w-full justify-start"
+                <div className="mt-4 space-y-4">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="company-settings-name"
+                      className="text-xs font-medium text-muted-foreground"
                     >
-                      <Trash2 className="h-4 w-4" />
-                      {deleteMutation.isPending ? 'Deleting...' : 'Delete workspace'}
-                    </Button>
+                      Workspace name
+                    </label>
+                    <Input
+                      id="company-settings-name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      maxLength={MAX_NAME_LENGTH + 20}
+                      aria-invalid={nameError !== null}
+                      aria-describedby={nameError ? 'company-settings-name-error' : undefined}
+                      data-company-settings-field="name"
+                      className="border-white/10 bg-black/20"
+                    />
+                    {nameError ? (
+                      <p
+                        id="company-settings-name-error"
+                        className="text-xs text-destructive"
+                        data-company-settings-error="name"
+                      >
+                        {nameError}
+                      </p>
+                    ) : null}
                   </div>
-                </details>
-              </div>
-            </section>
 
-            {submitError ? (
-              <p className="mt-4 text-xs text-destructive" data-company-settings-error="submit">
-                {submitError}
-              </p>
-            ) : null}
-          </div>
-        )}
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="company-settings-slug"
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Slug
+                    </label>
+                    <Input
+                      id="company-settings-slug"
+                      value={slug}
+                      onChange={(e) => setSlug(e.target.value)}
+                      maxLength={80}
+                      aria-invalid={slugError !== null}
+                      aria-describedby={slugError ? 'company-settings-slug-error' : undefined}
+                      data-company-settings-field="slug"
+                      className="border-white/10 bg-black/20"
+                    />
+                    {slugError ? (
+                      <p
+                        id="company-settings-slug-error"
+                        className="text-xs text-destructive"
+                        data-company-settings-error="slug"
+                      >
+                        {slugError}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="company-settings-icon"
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Icon
+                    </label>
+                    <Input
+                      id="company-settings-icon"
+                      value={icon}
+                      onChange={(e) => setIcon(e.target.value)}
+                      placeholder="Optional"
+                      maxLength={16}
+                      data-company-settings-field="icon"
+                      className="border-white/10 bg-black/20"
+                    />
+                  </div>
+
+                  <fieldset className="space-y-2 border-0 p-0">
+                    <legend className="text-xs font-medium text-muted-foreground">Theme</legend>
+                    <div className="flex gap-2">
+                      {(['dark', 'light'] as ThemeChoice[]).map((choice) => {
+                        const isSelected = theme === choice;
+                        return (
+                          <label
+                            key={choice}
+                            data-company-settings-theme={choice}
+                            className={cn(
+                              'flex-1 cursor-pointer rounded-[18px] border px-3 py-3 text-center text-xs font-semibold capitalize transition-colors',
+                              'focus-within:outline-none focus-within:ring-2 focus-within:ring-brand',
+                              isSelected
+                                ? 'border-brand/20 bg-brand/10 text-brand'
+                                : 'border-white/10 bg-black/10 text-muted-foreground hover:bg-black/20',
+                            )}
+                          >
+                            <input
+                              type="radio"
+                              name="company-settings-theme"
+                              value={choice}
+                              checked={isSelected}
+                              onChange={() => setTheme(choice)}
+                              className="sr-only"
+                            />
+                            <span>{choice}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  <Button
+                    type="button"
+                    onClick={() => void handleSave()}
+                    disabled={isBusy || name.trim().length === 0 || slug.length === 0}
+                    data-company-settings-save=""
+                    className="w-full rounded-[18px] bg-brand text-white hover:bg-brand/90"
+                  >
+                    <Save className="h-4 w-4" />
+                    {updateMutation.isPending ? 'Saving...' : 'Save changes'}
+                  </Button>
+                </div>
+              </MissionInsetSurface>
+
+              <MissionInsetSurface
+                tone="danger"
+                className="mt-4 border-destructive/25 bg-destructive/5 p-4"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 text-destructive" aria-hidden="true" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">Danger zone</h3>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      Archive removes this workspace from active use. Delete is permanent.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void handleArchive()}
+                    disabled={isBusy}
+                    data-company-settings-archive=""
+                    className="w-full justify-start rounded-[18px] border-white/10 bg-black/10 text-foreground hover:bg-black/20"
+                  >
+                    <Archive className="h-4 w-4" />
+                    {archiveMutation.isPending ? 'Archiving...' : 'Archive workspace'}
+                  </Button>
+
+                  <details className="rounded-[20px] border border-destructive/25 bg-black/20 p-3">
+                    <summary className="cursor-pointer text-xs font-medium text-destructive">
+                      Permanently delete this workspace
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <p className="text-xs text-muted-foreground">
+                        Type <span className="font-semibold text-foreground">{company.name}</span>{' '}
+                        to confirm.
+                      </p>
+                      <Input
+                        value={deleteConfirm}
+                        onChange={(e) => setDeleteConfirm(e.target.value)}
+                        placeholder={company.name}
+                        data-company-settings-delete-confirm=""
+                        className="border-white/10 bg-black/20"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => void handleDelete()}
+                        disabled={!deleteEnabled}
+                        data-company-settings-delete=""
+                        className="w-full justify-start rounded-[18px]"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deleteMutation.isPending ? 'Deleting...' : 'Delete workspace'}
+                      </Button>
+                    </div>
+                  </details>
+                </div>
+              </MissionInsetSurface>
+
+              {submitError ? (
+                <p className="mt-4 text-xs text-destructive" data-company-settings-error="submit">
+                  {submitError}
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   );

@@ -167,7 +167,7 @@ export function CopilotInsightCard({
       data-copilot-category={insight.category}
       data-copilot-severity={insight.severity}
       className={cn(
-        'relative overflow-hidden rounded-md border border-border bg-surface-50 transition-colors hover:border-border-strong',
+        'mission-chrome-panel relative overflow-hidden rounded-[24px] border border-white/10 transition-colors hover:border-white/15',
         isDashboard ? 'p-3' : 'p-4',
       )}
     >
@@ -180,7 +180,7 @@ export function CopilotInsightCard({
       <div className={cn('flex items-start gap-3', isDashboard ? 'pl-2' : 'pl-3')}>
         <div
           className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] border border-white/10',
             severityMeta.badgeBg,
           )}
           aria-label={`${categoryMeta.label} insight`}
@@ -193,7 +193,7 @@ export function CopilotInsightCard({
             <Badge
               variant="outline"
               className={cn(
-                'h-5 text-[10px] font-mono uppercase tracking-wider px-1.5',
+                'h-6 rounded-full px-2 text-[10px] font-mono uppercase tracking-wider',
                 severityMeta.badgeBg,
                 severityMeta.badgeText,
                 'border-transparent',
@@ -201,7 +201,10 @@ export function CopilotInsightCard({
             >
               {severityMeta.label}
             </Badge>
-            <Badge variant="outline" className="h-5 text-[10px] font-mono px-1.5">
+            <Badge
+              variant="outline"
+              className="h-6 rounded-full border-white/10 bg-black/20 px-2 text-[10px] font-mono text-muted-foreground"
+            >
               {categoryMeta.label}
             </Badge>
           </div>
@@ -232,7 +235,7 @@ export function CopilotInsightCard({
                 variant="outline"
                 disabled={executeMutation.isPending}
                 onClick={onActionClick}
-                className="h-8 text-xs"
+                className="h-8 rounded-[16px] border-white/10 bg-black/10 text-xs text-foreground hover:bg-black/20"
               >
                 {insight.actionSuggestion}
               </Button>
@@ -246,8 +249,8 @@ export function CopilotInsightCard({
           disabled={dismissMutation.isPending}
           aria-label={`Dismiss insight: ${insight.title}`}
           className={cn(
-            'shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors',
-            'hover:bg-surface-100 hover:text-foreground',
+            'shrink-0 rounded-[14px] p-1.5 text-muted-foreground transition-colors',
+            'hover:bg-black/20 hover:text-foreground',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
             'disabled:opacity-50',
           )}

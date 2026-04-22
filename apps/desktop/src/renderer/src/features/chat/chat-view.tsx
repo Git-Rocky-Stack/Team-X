@@ -1,7 +1,19 @@
 import type { Employee } from '@team-x/shared-types';
 
-import { AlertCircle, Loader2, MessageSquare } from 'lucide-react';
+import { AlertCircle, Bot, Loader2, MessageSquare, Sparkles, Users2 } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge.js';
+import { Button } from '@/components/ui/button.js';
+import {
+  MissionControlRow,
+  MissionHero,
+  MissionInsetSurface,
+  MissionMetricTile,
+  MissionPageShell,
+  MissionPill,
+  MissionSectionCard,
+  MissionStateBlock,
+} from '@/features/mission/mission-shell.js';
 import { useThreadList } from '@/hooks/use-chat.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -46,76 +58,185 @@ export function ChatView({ companyId, employees }: ChatViewProps) {
 
   if (companyId === null) {
     return (
-      <section
-        className="flex h-full flex-col items-center justify-center px-6 text-center"
-        data-chat-view=""
-        data-chat-view-state="no-company"
-      >
-        <MessageSquare className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-        <h2 className="mt-4 text-lg font-semibold text-foreground">No workspace selected</h2>
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-          Choose or create a workspace to view conversations.
-        </p>
-      </section>
+      <MissionPageShell data-chat-view="">
+        <MissionHero
+          eyebrow="Communication command"
+          title="Conversations"
+          description="Open a workspace to inspect live employee chats, agent transcripts, and copilot sessions from one communication surface."
+          icon={MessageSquare}
+        />
+        <MissionSectionCard
+          title="Conversation roster"
+          description="A workspace is required before the thread system can load."
+        >
+          <MissionStateBlock
+            title="No workspace selected"
+            description="Choose or create a workspace to review direct messages, agent conversations, and copilot transcripts."
+            icon={MessageSquare}
+            data-chat-view-state="no-company"
+          />
+        </MissionSectionCard>
+      </MissionPageShell>
     );
   }
 
   if (isLoading) {
     return (
-      <section
-        className="flex h-full flex-col items-center justify-center px-6 text-center"
-        data-chat-view=""
-        data-chat-view-state="loading"
-      >
-        <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden="true" />
-        <p className="mt-3 text-sm text-muted-foreground">Loading conversations...</p>
-      </section>
+      <MissionPageShell data-chat-view="">
+        <MissionHero
+          eyebrow="Communication command"
+          title="Conversations"
+          description="Syncing the latest thread history and thread ownership for this workspace."
+          icon={MessageSquare}
+          badge={
+            <Badge
+              variant="outline"
+              className="border-white/10 bg-black/20 text-[10px] font-mono text-muted-foreground"
+            >
+              Live thread sync
+            </Badge>
+          }
+        />
+        <MissionSectionCard
+          title="Conversation roster"
+          description="Thread history is loading for the active workspace."
+        >
+          <MissionStateBlock
+            title="Loading conversations"
+            description="The communication roster is pulling the latest direct messages, agent threads, and copilot transcripts."
+            icon={Loader2}
+            data-chat-view-state="loading"
+          />
+        </MissionSectionCard>
+      </MissionPageShell>
     );
   }
 
   if (isError) {
     return (
-      <section
-        className="flex h-full flex-col items-center justify-center px-6 text-center"
-        data-chat-view=""
-        data-chat-view-state="error"
-      >
-        <AlertCircle className="h-8 w-8 text-red-400" aria-hidden="true" />
-        <h2 className="mt-4 text-lg font-semibold text-foreground">Conversations could not load</h2>
-        <button
-          type="button"
-          className="mt-4 rounded-md border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-surface-100"
-          data-chat-view-retry=""
-          onClick={() => refetch()}
+      <MissionPageShell data-chat-view="">
+        <MissionHero
+          eyebrow="Communication command"
+          title="Conversations"
+          description="The communication shell is ready, but the thread query failed for this workspace."
+          icon={MessageSquare}
+        />
+        <MissionSectionCard
+          title="Conversation roster"
+          description="Retry the thread query to restore the communication queue."
+          actions={
+            <Button
+              type="button"
+              variant="outline"
+              className="border-white/10 bg-black/10 text-foreground hover:bg-black/20"
+              data-chat-view-retry=""
+              onClick={() => refetch()}
+            >
+              Retry
+            </Button>
+          }
         >
-          Retry
-        </button>
-      </section>
+          <MissionStateBlock
+            title="Conversations could not load"
+            description="Retry the thread query to restore employee chats, agent transcripts, and copilot sessions."
+            icon={AlertCircle}
+            tone="danger"
+            data-chat-view-state="error"
+          />
+        </MissionSectionCard>
+      </MissionPageShell>
     );
   }
 
-  return (
-    <section className="flex h-full flex-col" data-chat-view="">
-      <header className="border-b border-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand">
-            <MessageSquare className="h-4 w-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-foreground">Conversations</h2>
-            <p className="text-xs text-muted-foreground">
-              Select a thread to open it in the chat drawer.
-            </p>
-          </div>
-        </div>
-      </header>
+  const copilotCount = threads.filter((thread) => isCopilotThread(thread)).length;
+  const agentCount = threads.filter((thread) => isAgentThread(thread)).length;
+  const directCount = threads.filter(
+    (thread) => !isCopilotThread(thread) && !isAgentThread(thread),
+  ).length;
 
-      <ThreadList
-        threads={threads}
-        employees={employees}
-        activeThreadId={activeThreadId}
-        onSelectThread={handleSelectThread}
-      />
-    </section>
+  return (
+    <MissionPageShell data-chat-view="">
+      <MissionHero
+        eyebrow="Communication command"
+        title="Conversations"
+        description="Track operator direct messages, autonomous agent exchanges, and copilot sessions from one shared communication roster."
+        icon={MessageSquare}
+        badge={
+          <Badge
+            variant="outline"
+            className="border-white/10 bg-black/20 text-[10px] font-mono text-muted-foreground"
+          >
+            Drawer-backed threads
+          </Badge>
+        }
+        meta={
+          <MissionControlRow density="compact" className="gap-2 px-3 py-2">
+            <MissionPill uppercase>{threads.length} visible threads</MissionPill>
+            <MissionPill mono>{employees.length} employees</MissionPill>
+            <MissionPill mono>
+              {activeThreadId ? 'Drawer locked on active thread' : 'Select any row to open drawer'}
+            </MissionPill>
+          </MissionControlRow>
+        }
+      >
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <MissionMetricTile
+            label="All threads"
+            value={`${threads.length}`}
+            hint="Every conversation currently visible in the active workspace."
+            icon={MessageSquare}
+          />
+          <MissionMetricTile
+            label="Direct chats"
+            value={`${directCount}`}
+            hint="User-facing conversations with employees and mixed-participant threads."
+            icon={Users2}
+          />
+          <MissionMetricTile
+            label="Agent threads"
+            value={`${agentCount}`}
+            hint="Read-only employee-to-employee conversations and autonomous loops."
+            icon={Bot}
+          />
+          <MissionMetricTile
+            label="Copilot runs"
+            value={`${copilotCount}`}
+            hint="System-copilot transcripts routed through the existing drawer flow."
+            icon={Sparkles}
+          />
+        </div>
+      </MissionHero>
+
+      <MissionSectionCard
+        title="Conversation roster"
+        description="Select a thread to open it in the existing chat drawer without leaving the communication surface."
+        badge={
+          <Badge
+            variant="outline"
+            className="border-white/10 bg-black/20 text-[10px] font-mono text-muted-foreground"
+          >
+            Thread index
+          </Badge>
+        }
+      >
+        {threads.length === 0 ? (
+          <MissionStateBlock
+            title="No conversations yet"
+            description="Open a direct message, agent run, or copilot request to seed the communication roster."
+            icon={MessageSquare}
+            data-chat-view-state="empty"
+          />
+        ) : (
+          <MissionInsetSurface className="overflow-hidden p-0">
+            <ThreadList
+              threads={threads}
+              employees={employees}
+              activeThreadId={activeThreadId}
+              onSelectThread={handleSelectThread}
+            />
+          </MissionInsetSurface>
+        )}
+      </MissionSectionCard>
+    </MissionPageShell>
   );
 }

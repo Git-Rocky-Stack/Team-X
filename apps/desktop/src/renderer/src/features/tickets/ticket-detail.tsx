@@ -16,17 +16,17 @@ import { useVaultFiles } from '@/hooks/use-vault.js';
 import { useAppStore } from '@/store/app-store.js';
 
 const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-blue-500/10 text-blue-400',
-  'in-progress': 'bg-yellow-500/10 text-yellow-400',
-  blocked: 'bg-red-500/10 text-red-400',
-  done: 'bg-green-500/10 text-green-400',
+  open: 'border-sky-500/20 bg-sky-500/10 text-sky-200',
+  'in-progress': 'border-amber-500/20 bg-amber-500/10 text-amber-200',
+  blocked: 'border-red-500/20 bg-red-500/10 text-red-200',
+  done: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  critical: 'bg-red-500/10 text-red-400',
-  high: 'bg-orange-500/10 text-orange-400',
-  medium: 'bg-yellow-500/10 text-yellow-400',
-  low: 'bg-muted text-muted-foreground',
+  critical: 'border-red-500/20 bg-red-500/10 text-red-300',
+  high: 'border-orange-500/20 bg-orange-500/10 text-orange-300',
+  medium: 'border-yellow-500/20 bg-yellow-500/10 text-yellow-200',
+  low: 'border-white/10 bg-black/20 text-muted-foreground',
 };
 
 interface TicketDetailPanelProps {
@@ -49,8 +49,11 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
 
   if (isLoading || !detail) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Loading ticket...
+      <div
+        className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground"
+        data-ticket-detail-state="loading"
+      >
+        Loading ticket detail...
       </div>
     );
   }
@@ -59,6 +62,7 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
     if (!comment.trim()) return;
     addComment.mutate({ ticketId, content: comment.trim() });
     setComment('');
+    textareaRef.current?.focus();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -71,123 +75,134 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
   const assignee = detail.assignee;
 
   return (
-    <div className="flex h-full flex-col border-l border-border bg-surface-50">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+    <div className="flex h-full flex-col bg-transparent" data-ticket-detail="">
+      <div className="flex items-start gap-3 border-b border-white/10 px-5 py-4">
         <button
           type="button"
           onClick={() => setActiveTicketId(null)}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+          className="rounded-[14px] border border-white/10 bg-black/20 p-2 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground xl:hidden"
           aria-label="Close detail"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold leading-snug text-foreground truncate">
-            {detail.title}
-          </h2>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Detail rail
+            </span>
+            <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+              {detail.id.slice(0, 8)}
+            </span>
+          </div>
+          <h2 className="mt-2 truncate text-base font-semibold text-foreground">{detail.title}</h2>
         </div>
+
         <button
           type="button"
           onClick={() => setActiveTicketId(null)}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-100"
+          className="rounded-[14px] border border-white/10 bg-black/20 p-2 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
           aria-label="Close"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Metadata */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/50 px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-5 py-3">
         <Badge
           variant="outline"
-          className={`text-[10px] border-0 ${STATUS_COLORS[detail.status] ?? ''}`}
+          className={`border text-[10px] ${STATUS_COLORS[detail.status] ?? ''}`}
         >
           {detail.status}
         </Badge>
         <Badge
           variant="outline"
-          className={`text-[10px] border-0 ${PRIORITY_COLORS[detail.priority] ?? ''}`}
+          className={`border text-[10px] ${PRIORITY_COLORS[detail.priority] ?? ''}`}
         >
           {detail.priority}
         </Badge>
-        {assignee && (
-          <div className="flex items-center gap-1.5 ml-auto">
-            <div className="h-5 w-5 rounded-full bg-brand/20 flex items-center justify-center text-[10px] font-medium text-brand">
+        {assignee ? (
+          <div className="ml-auto flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1">
+            <div className="flex h-6 w-6 items-center justify-center rounded-[10px] border border-white/10 bg-brand/10 text-[10px] font-semibold text-brand">
               {assignee.name.charAt(0).toUpperCase()}
             </div>
             <span className="text-[11px] text-muted-foreground">{assignee.name}</span>
           </div>
-        )}
-        {!assignee && (
-          <span className="text-[11px] text-muted-foreground/60 italic ml-auto">Unassigned</span>
+        ) : (
+          <span className="ml-auto text-[11px] italic text-muted-foreground/70">Unassigned</span>
         )}
       </div>
 
-      {/* Description */}
-      {detail.description && (
-        <div className="border-b border-border/50 px-4 py-3">
-          <p className="text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap">
+      {detail.description ? (
+        <div className="border-b border-white/10 px-5 py-4">
+          <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
             {detail.description}
           </p>
         </div>
-      )}
+      ) : null}
 
-      {/* Attachments */}
-      <div className="border-b border-border/50 px-4 py-2.5">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+      <div className="border-b border-white/10 px-5 py-3">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
             Attachments ({attachments.length})
           </span>
           <Button
             size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-[10px]"
+            variant="outline"
+            className="h-7 border-white/10 bg-black/10 px-2.5 text-[10px] text-foreground hover:bg-black/20"
             onClick={() => setShowAttachPicker(!showAttachPicker)}
           >
             <Paperclip className="mr-1 h-3 w-3" />
             Attach
           </Button>
         </div>
-        {showAttachPicker && vaultFiles.length > 0 && (
-          <div className="mb-2 max-h-24 overflow-y-auto rounded border border-border bg-surface-100 p-1.5">
+
+        {showAttachPicker && vaultFiles.length > 0 ? (
+          <div className="mb-3 max-h-24 overflow-y-auto rounded-[16px] border border-white/10 bg-black/15 p-1.5">
             {vaultFiles
-              .filter((vf) => !attachments.some((a) => a.fileId === vf.id))
-              .map((vf) => (
+              .filter(
+                (vaultFile) =>
+                  !attachments.some((attachment) => attachment.fileId === vaultFile.id),
+              )
+              .map((vaultFile) => (
                 <button
                   type="button"
-                  key={vf.id}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1 text-[11px] hover:bg-surface-200 transition-colors"
+                  key={vaultFile.id}
+                  className="flex w-full items-center gap-2 rounded-[12px] px-2 py-1.5 text-[11px] transition-colors hover:bg-surface-100"
                   onClick={() => {
-                    attachFile.mutate({ ticketId, fileId: vf.id });
+                    attachFile.mutate({ ticketId, fileId: vaultFile.id });
                     setShowAttachPicker(false);
                   }}
                 >
                   <FileText className="h-3 w-3 text-muted-foreground" />
-                  <span className="truncate">{vf.originalName}</span>
+                  <span className="truncate">{vaultFile.originalName}</span>
                 </button>
               ))}
-            {vaultFiles.filter((vf) => !attachments.some((a) => a.fileId === vf.id)).length ===
-              0 && (
-              <p className="px-2 py-1 text-[10px] text-muted-foreground/60 italic">
-                All vault files already attached
+            {vaultFiles.filter(
+              (vaultFile) => !attachments.some((attachment) => attachment.fileId === vaultFile.id),
+            ).length === 0 ? (
+              <p className="px-2 py-1 text-[10px] italic text-muted-foreground/70">
+                All vault files are already attached.
               </p>
-            )}
+            ) : null}
           </div>
-        )}
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {attachments.map((att) => (
+        ) : null}
+
+        {attachments.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {attachments.map((attachment) => (
               <div
-                key={att.id}
-                className="flex items-center gap-1.5 rounded-md bg-surface-100 border border-border/30 px-2 py-1"
+                key={attachment.id}
+                className="flex items-center gap-1.5 rounded-[14px] border border-white/10 bg-black/15 px-2.5 py-1.5"
               >
                 <FileText className="h-3 w-3 text-muted-foreground/70" />
-                <span className="text-[11px] truncate max-w-[120px]">{att.fileName ?? 'File'}</span>
+                <span className="max-w-[140px] truncate text-[11px]">
+                  {attachment.fileName ?? 'File'}
+                </span>
                 <button
                   type="button"
-                  onClick={() => detachFile.mutate({ ticketId, fileId: att.fileId })}
-                  className="ml-0.5 rounded p-0.5 text-muted-foreground/50 hover:text-red-400 transition-colors"
+                  onClick={() => detachFile.mutate({ ticketId, fileId: attachment.fileId })}
+                  className="rounded p-0.5 text-muted-foreground/50 transition-colors hover:text-red-300"
                   aria-label="Remove attachment"
                 >
                   <X className="h-2.5 w-2.5" />
@@ -195,40 +210,40 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Messages thread */}
-      <ScrollArea className="flex-1 px-4 py-3">
+      <ScrollArea className="flex-1 px-5 py-4">
         {detail.messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <MessageSquare className="h-8 w-8 text-muted-foreground/30" />
-            <p className="mt-2 text-xs text-muted-foreground/50">No discussion yet</p>
+          <div className="flex flex-col items-center justify-center rounded-[22px] border border-dashed border-white/10 bg-black/10 py-12 text-center">
+            <MessageSquare className="h-8 w-8 text-muted-foreground/40" />
+            <p className="mt-3 text-sm text-muted-foreground">No discussion yet.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {detail.messages.map((msg) => {
-              const isUser = msg.authorKind === 'user';
-              const isSystem = msg.authorKind === 'system';
+            {detail.messages.map((message) => {
+              const isUser = message.authorKind === 'user';
+              const isSystem = message.authorKind === 'system';
+              const authorName =
+                employees.find((employee) => employee.id === message.authorId)?.name ?? 'Agent';
+
               return (
                 <div
-                  key={msg.id}
-                  className={`rounded-lg px-3 py-2 text-xs leading-relaxed ${
+                  key={message.id}
+                  className={`rounded-[18px] border px-3.5 py-3 text-xs leading-6 ${
                     isSystem
-                      ? 'bg-muted/30 text-muted-foreground italic text-center'
+                      ? 'border-white/10 bg-black/10 text-center italic text-muted-foreground'
                       : isUser
-                        ? 'bg-brand/5 text-foreground border border-brand/10'
-                        : 'bg-surface-100 text-foreground border border-border/30'
+                        ? 'border-brand/15 bg-brand/10 text-foreground'
+                        : 'border-white/10 bg-black/15 text-foreground'
                   }`}
                 >
-                  {!isSystem && (
-                    <div className="mb-1 text-[10px] font-medium text-muted-foreground">
-                      {isUser
-                        ? 'You'
-                        : (employees.find((e) => e.id === msg.authorId)?.name ?? 'Agent')}
+                  {isSystem ? null : (
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      {isUser ? 'You' : authorName}
                     </div>
                   )}
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  <div className="whitespace-pre-wrap">{message.content}</div>
                 </div>
               );
             })}
@@ -236,25 +251,22 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
         )}
       </ScrollArea>
 
-      {/* Composer + actions */}
-      <div className="border-t border-border px-4 py-3">
+      <div className="border-t border-white/10 px-5 py-4">
         {detail.status !== 'done' ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <Textarea
-                ref={textareaRef}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Add a comment..."
-                className="min-h-[60px] resize-none text-xs"
-              />
-            </div>
-            <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3">
+            <Textarea
+              ref={textareaRef}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Add a comment..."
+              className="min-h-[72px] resize-none border-white/10 bg-black/15 text-sm"
+            />
+            <div className="flex items-center justify-between gap-3">
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs"
+                className="border-white/10 bg-black/10 text-foreground hover:bg-black/20"
                 onClick={() => closeTicket.mutate(ticketId)}
                 disabled={closeTicket.isPending}
               >
@@ -263,7 +275,7 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
               </Button>
               <Button
                 size="sm"
-                className="text-xs"
+                className="bg-brand text-white hover:bg-brand/90"
                 onClick={handleSendComment}
                 disabled={!comment.trim() || addComment.isPending}
               >
@@ -273,9 +285,11 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
             </div>
           </div>
         ) : (
-          <div className="text-center text-xs text-muted-foreground/60">
+          <div className="text-center text-xs text-muted-foreground/70">
             Ticket closed
-            {detail.closedAt && <span> on {new Date(detail.closedAt).toLocaleDateString()}</span>}
+            {detail.closedAt ? (
+              <span> on {new Date(detail.closedAt).toLocaleDateString()}</span>
+            ) : null}
           </div>
         )}
       </div>
