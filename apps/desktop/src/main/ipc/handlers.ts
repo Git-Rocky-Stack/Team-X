@@ -86,7 +86,9 @@ import type {
   EmployeesPromoteResponse,
   EmployeesSetManagerRequest,
   EndMeetingResponse,
+  EffectiveAuthoritySnapshot,
   GetGoalRequest,
+  GetEffectiveAuthorityRequest,
   GetMeetingRequest,
   GetProjectRequest,
   GetTicketRequest,
@@ -96,8 +98,10 @@ import type {
   HireEmployeeResponse,
   InterjectMeetingRequest,
   InterjectMeetingResponse,
+  DeleteAuthorityGrantRequest,
   ExtensionSummary,
   LinkTicketToProjectRequest,
+  CreateAuthorityGrantRequest,
   ListAuthorityGrantsRequest,
   ListAttachmentsRequest,
   ListExtensionsRequest,
@@ -474,6 +478,8 @@ export interface IpcRoleLookup {
 import type { EventRow } from '../db/repos/events.js';
 import type { McpServersRepo } from '../db/repos/mcp-servers.js';
 import type { McpHost } from '../services/mcp-host.js';
+import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
+import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
 import { pickStrategy } from '../services/runtime-strategy.js';
 
 export interface IpcEventsRepo {
@@ -498,13 +504,19 @@ export interface IpcRunsRepo {
   ): CostBreakdownRow[];
 }
 
-export interface IpcExtensionsRepo {
-  listByCompany(companyId: string): ExtensionRow[];
-}
-
 export interface IpcAuthorityRepo {
+  createGrant(input: {
+    scopeKind: 'company' | 'employee' | 'extension';
+    scopeId: string;
+    resourceKind: 'capability' | 'path';
+    resourceId: string;
+    permission: 'allow' | 'deny' | 'prompt';
+    metadataJson?: string | null;
+  }): string;
+  getGrantById(id: string): AuthorityGrantRow | null;
   listByCompany(companyId: string): AuthorityGrantRow[];
   listForEmployee(companyId: string, employeeId: string): AuthorityGrantRow[];
+  deleteGrant(id: string): void;
 }
 
 export interface IpcMeetingsRepo {
@@ -709,8 +721,9 @@ export interface IpcHandlerDeps {
   roleLookup: IpcRoleLookup;
   mcpHost: McpHost;
   mcpServersRepo: McpServersRepo;
-  extensionsRepo?: IpcExtensionsRepo;
+  extensionsRegistry?: ExtensionsRegistryService;
   authorityRepo?: IpcAuthorityRepo;
+  authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
   secretsStore: IpcSecretsStore;
   settingsRepo: IpcSettingsRepo;
@@ -1016,6 +1029,15 @@ export interface IpcHandlers {
 
   /** `authority.list` — authority grants relevant to a company or one employee. */
   authorityList(req: ListAuthorityGrantsRequest): Promise<AuthorityGrant[]>;
+
+  /** `authority.create` — create a company-default or employee-override authority grant. */
+  authorityCreate(req: CreateAuthorityGrantRequest): Promise<{ grantId: string }>;
+
+  /** `authority.delete` — delete one persisted authority grant. */
+  authorityDelete(req: DeleteAuthorityGrantRequest): Promise<void>;
+
+  /** `authority.getEffective` — resolve effective authority for one employee. */
+  authorityGetEffective(req: GetEffectiveAuthorityRequest): Promise<EffectiveAuthoritySnapshot>;
 
   // -----------------------------------------------------------------------
   // Goals management handlers (Phase 3 — M15)
@@ -1626,8 +1648,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     roleLookup,
     mcpHost,
     mcpServersRepo,
-    extensionsRepo,
+    extensionsRegistry,
     authorityRepo,
+    authorityResolver,
     providersService,
     secretsStore,
     settingsRepo,
@@ -2694,30 +2717,34 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     // -----------------------------------------------------------------------
 
     async mcpList({ companyId: _companyId }) {
-      const servers = mcpHost.listServers();
-      return servers.map((server) => ({
-        id: server.id,
-        companyId: server.companyId,
-        name: server.name,
-        transport: server.transport,
-        enabled: server.enabled,
-        lastHealth: server.lastHealth,
-        toolCount: server.tools.length,
-      }));
+      const companyId = _companyId;
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] mcp.list: companyId is required');
+      }
+      const servers = mcpServersRepo.listByCompany(companyId);
+      return servers.map((server) => {
+        const connected = mcpHost.getServer(server.id);
+        return {
+          id: server.id,
+          companyId: server.companyId,
+          name: server.name,
+          transport: server.transport as 'stdio' | 'sse',
+          enabled: server.enabled,
+          lastHealth: server.lastHealth,
+          toolCount: connected?.tools.length ?? 0,
+        };
+      });
     },
 
     async mcpToggle({ serverId, enabled }) {
-      const server = mcpHost.getServer(serverId);
-      if (!server) {
-        throw new Error(`[ipc] mcp.toggle: server not found: ${serverId}`);
+      const config = mcpServersRepo.getById(serverId);
+      if (!config) {
+        throw new Error(`[ipc] mcp.toggle: server config not found: ${serverId}`);
       }
+      const server = mcpHost.getServer(serverId);
 
-      if (enabled && !server.connected) {
+      if (enabled && !server?.connected) {
         // Reconnect
-        const config = mcpServersRepo.getById(serverId);
-        if (!config) {
-          throw new Error(`[ipc] mcp.toggle: server config not found: ${serverId}`);
-        }
         await mcpHost.connectToServer({
           id: config.id,
           companyId: config.companyId,
@@ -2727,12 +2754,13 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           enabled: config.enabled,
           lastHealth: config.lastHealth,
         });
-      } else if (!enabled && server.connected) {
+      } else if (!enabled && server?.connected) {
         // Disconnect
         await mcpHost.disconnectServer(serverId);
       }
 
       mcpServersRepo.updateEnabled(serverId, enabled);
+      extensionsRegistry?.syncMcpServer(serverId);
     },
 
     async mcpAddServer({ companyId, name, transport, configJson }) {
@@ -2761,12 +2789,15 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           });
       }
 
+      extensionsRegistry?.syncMcpServer(serverId);
+
       return { serverId };
     },
 
     async mcpRemoveServer({ serverId }) {
       await mcpHost.disconnectServer(serverId);
       mcpServersRepo.delete(serverId);
+      extensionsRegistry?.removeMcpServer(serverId);
     },
 
     async mcpTestConnection({ transport, configJson }) {
@@ -2806,10 +2837,10 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof companyId !== 'string' || companyId.length === 0) {
         throw new Error('[ipc] extensions.list: companyId is required');
       }
-      if (!extensionsRepo) {
-        throw new Error('[ipc] extensions.list: extensionsRepo dep unwired');
+      if (!extensionsRegistry) {
+        throw new Error('[ipc] extensions.list: extensionsRegistry dep unwired');
       }
-      return extensionsRepo.listByCompany(companyId).map(rowToExtensionSummary);
+      return extensionsRegistry.listByCompany(companyId).map(rowToExtensionSummary);
     },
 
     async authorityList({ companyId, employeeId }) {
@@ -2824,6 +2855,82 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           ? authorityRepo.listForEmployee(companyId, employeeId)
           : authorityRepo.listByCompany(companyId);
       return rows.map(rowToAuthorityGrant);
+    },
+
+    async authorityCreate(req) {
+      if (!authorityRepo) {
+        throw new Error('[ipc] authority.create: authorityRepo dep unwired');
+      }
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] authority.create: companyId is required');
+      }
+      if (!req || (req.scopeKind !== 'company' && req.scopeKind !== 'employee')) {
+        throw new Error('[ipc] authority.create: scopeKind must be company or employee');
+      }
+      if (typeof req.scopeId !== 'string' || req.scopeId.length === 0) {
+        throw new Error('[ipc] authority.create: scopeId is required');
+      }
+      if (req.resourceKind !== 'capability' && req.resourceKind !== 'path') {
+        throw new Error('[ipc] authority.create: resourceKind must be capability or path');
+      }
+      if (typeof req.resourceId !== 'string' || req.resourceId.trim().length === 0) {
+        throw new Error('[ipc] authority.create: resourceId is required');
+      }
+      if (!['allow', 'deny', 'prompt'].includes(req.permission)) {
+        throw new Error('[ipc] authority.create: permission must be allow, deny, or prompt');
+      }
+      if (req.scopeKind === 'company' && req.scopeId !== req.companyId) {
+        throw new Error('[ipc] authority.create: company scopeId must match companyId');
+      }
+      if (req.scopeKind === 'employee') {
+        const employee = employeesRepo.getById(req.scopeId);
+        if (!employee) {
+          throw new Error(`[ipc] authority.create: employee not found: ${req.scopeId}`);
+        }
+        if (employee.companyId !== req.companyId) {
+          throw new Error(
+            `[ipc] authority.create: employee ${req.scopeId} does not belong to company ${req.companyId}`,
+          );
+        }
+      }
+      const metadataJson =
+        req.metadata && typeof req.metadata === 'object' ? JSON.stringify(req.metadata) : null;
+      const grantId = authorityRepo.createGrant({
+        scopeKind: req.scopeKind,
+        scopeId: req.scopeId,
+        resourceKind: req.resourceKind,
+        resourceId: req.resourceId.trim(),
+        permission: req.permission,
+        metadataJson,
+      });
+      return { grantId };
+    },
+
+    async authorityDelete({ grantId }) {
+      if (!authorityRepo) {
+        throw new Error('[ipc] authority.delete: authorityRepo dep unwired');
+      }
+      if (typeof grantId !== 'string' || grantId.length === 0) {
+        throw new Error('[ipc] authority.delete: grantId is required');
+      }
+      const existing = authorityRepo.getGrantById(grantId);
+      if (!existing) {
+        throw new Error(`[ipc] authority.delete: grant not found: ${grantId}`);
+      }
+      authorityRepo.deleteGrant(grantId);
+    },
+
+    async authorityGetEffective({ companyId, employeeId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] authority.getEffective: companyId is required');
+      }
+      if (typeof employeeId !== 'string' || employeeId.length === 0) {
+        throw new Error('[ipc] authority.getEffective: employeeId is required');
+      }
+      if (!authorityResolver) {
+        throw new Error('[ipc] authority.getEffective: authorityResolver dep unwired');
+      }
+      return authorityResolver.resolveEmployee(companyId, employeeId);
     },
 
     // -----------------------------------------------------------------------

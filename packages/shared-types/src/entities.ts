@@ -316,6 +316,24 @@ export interface AuthorityRequest {
   reviewedAt: number | null;
 }
 
+export type EffectiveAuthoritySourceKind = 'role-default' | 'extension' | 'company' | 'employee' | 'hard-deny';
+
+export interface EffectiveAuthorityEntry {
+  resourceKind: AuthorityResourceKind;
+  resourceId: string;
+  permission: AuthorityPermission;
+  sourceKind: EffectiveAuthoritySourceKind;
+  sourceId: string;
+}
+
+export interface EffectiveAuthoritySnapshot {
+  companyId: string;
+  employeeId: string;
+  entries: EffectiveAuthorityEntry[];
+  toolsAllowed: string[];
+  toolsDenied: string[];
+}
+
 export interface Employee {
   id: string;
   companyId: string;

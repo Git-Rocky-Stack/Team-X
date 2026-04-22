@@ -86,6 +86,7 @@ import type {
   DetachFileRequest,
   EmployeesPromoteRequest,
   EmployeesPromoteResponse,
+  EffectiveAuthoritySnapshot,
   EmployeesSetManagerRequest,
   EndMeetingResponse,
   FireEmployeeRequest,
@@ -100,9 +101,11 @@ import type {
   IpcExecuteResult,
   IpcParseResult,
   IpcSuggestItem,
+  GetEffectiveAuthorityRequest,
   ListAuthorityGrantsRequest,
   ListEventsRequest,
   ListEventsResponse,
+  CreateAuthorityGrantRequest,
   McpServerSummary,
   Meeting,
   MeetingDetail,
@@ -233,6 +236,9 @@ const CHANNELS = {
   mcpTestConnection: 'mcp.testConnection',
   extensionsList: 'extensions.list',
   authorityList: 'authority.list',
+  authorityCreate: 'authority.create',
+  authorityDelete: 'authority.delete',
+  authorityGetEffective: 'authority.getEffective',
   // Goals management (Phase 3 — M15)
   goalsCreate: 'goals.create',
   goalsUpdate: 'goals.update',
@@ -439,6 +445,12 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     authority: {
       list: (req: ListAuthorityGrantsRequest) =>
         ipc.invoke(CHANNELS.authorityList, req) as Promise<AuthorityGrant[]>,
+      create: (req: CreateAuthorityGrantRequest) =>
+        ipc.invoke(CHANNELS.authorityCreate, req) as Promise<{ grantId: string }>,
+      delete: (grantId: string) =>
+        ipc.invoke(CHANNELS.authorityDelete, { grantId }) as Promise<void>,
+      getEffective: (req: GetEffectiveAuthorityRequest) =>
+        ipc.invoke(CHANNELS.authorityGetEffective, req) as Promise<EffectiveAuthoritySnapshot>,
     },
     goals: {
       create: (req: CreateGoalRequest) =>

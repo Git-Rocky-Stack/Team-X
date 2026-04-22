@@ -112,6 +112,8 @@ import {
   type AgenticLoopService,
   createAgenticLoopService,
 } from './services/agentic-loop-service.js';
+import { createAuthorityResolverService } from './services/authority-resolver-service.js';
+import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { buildCopilotToolRegistry } from './services/agentic-tools-copilot.js';
 import {
   type WriteSideCompleteFn,
@@ -342,6 +344,14 @@ app
     const mcpServersRepo = createMcpServersRepo(db);
     const extensionsRepo = createExtensionsRepo(db);
     const authorityRepo = createAuthorityRepo(db);
+    const authorityResolver = createAuthorityResolverService({
+      employeesRepo,
+      authorityRepo,
+    });
+    const extensionsRegistry = createExtensionsRegistryService({
+      extensionsRepo,
+      mcpServersRepo,
+    });
     const toolCallsRepo = createToolCallsRepo(db);
     const ticketsRepo = createTicketsRepo(db);
     const goalsRepo = createGoalsRepo(db);
@@ -563,8 +573,18 @@ app
       ? undefined
       : async ({ employee, company, getRunId }) => {
           const mcpTools = mcpHost.listTools(company.id);
-          const toolsAllowed: string[] = JSON.parse(employee.toolsAllowedJson ?? '[]');
-          const toolsDenied: string[] = JSON.parse(employee.toolsDeniedJson ?? '[]');
+          let toolsAllowed: string[] = JSON.parse(employee.toolsAllowedJson ?? '[]');
+          let toolsDenied: string[] = JSON.parse(employee.toolsDeniedJson ?? '[]');
+          try {
+            const effectiveAuthority = authorityResolver.resolveEmployee(company.id, employee.id);
+            toolsAllowed = effectiveAuthority.toolsAllowed;
+            toolsDenied = effectiveAuthority.toolsDenied;
+          } catch (err) {
+            console.error(
+              `[main] failed to resolve effective authority for ${employee.id}; falling back to role defaults:`,
+              err,
+            );
+          }
           const specs: ToolSpec[] = [
             ...buildChatActionTools({
               companyId: company.id,
@@ -794,8 +814,9 @@ app
       roleLookup: roleLoader,
       mcpHost,
       mcpServersRepo,
-      extensionsRepo,
+      extensionsRegistry,
       authorityRepo,
+      authorityResolver,
       providersService,
       secretsStore,
       settingsRepo,

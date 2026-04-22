@@ -59,6 +59,7 @@ import type {
   ChatMessage,
   Company,
   Employee,
+  EffectiveAuthoritySnapshot,
   ExtensionSummary,
   ExtensionsAutonomyMode,
   Goal,
@@ -813,6 +814,25 @@ export interface ListAuthorityGrantsRequest {
   employeeId?: string | null;
 }
 
+export interface CreateAuthorityGrantRequest {
+  companyId: string;
+  scopeKind: 'company' | 'employee';
+  scopeId: string;
+  resourceKind: 'capability' | 'path';
+  resourceId: string;
+  permission: 'allow' | 'deny' | 'prompt';
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface DeleteAuthorityGrantRequest {
+  grantId: string;
+}
+
+export interface GetEffectiveAuthorityRequest {
+  companyId: string;
+  employeeId: string;
+}
+
 // ---------------------------------------------------------------------------
 // Provider management request/response shapes (Phase 3 — M18)
 // ---------------------------------------------------------------------------
@@ -1518,6 +1538,18 @@ export interface IpcContract {
     request: ListAuthorityGrantsRequest;
     response: AuthorityGrant[];
   };
+  'authority.create': {
+    request: CreateAuthorityGrantRequest;
+    response: { grantId: string };
+  };
+  'authority.delete': {
+    request: DeleteAuthorityGrantRequest;
+    response: undefined;
+  };
+  'authority.getEffective': {
+    request: GetEffectiveAuthorityRequest;
+    response: EffectiveAuthoritySnapshot;
+  };
   // Goals management channels (Phase 3 — M15)
   'goals.create': {
     request: CreateGoalRequest;
@@ -2130,6 +2162,12 @@ export interface TeamXApi {
   authority: {
     /** List authority grants relevant to a company, optionally narrowed to one employee. */
     list(req: ListAuthorityGrantsRequest): Promise<AuthorityGrant[]>;
+    /** Create a company-default or employee-override authority grant. */
+    create(req: CreateAuthorityGrantRequest): Promise<{ grantId: string }>;
+    /** Delete one persisted authority grant. */
+    delete(grantId: string): Promise<void>;
+    /** Resolve effective authority for one employee. */
+    getEffective(req: GetEffectiveAuthorityRequest): Promise<EffectiveAuthoritySnapshot>;
   };
   goals: {
     /** Create a new goal. */

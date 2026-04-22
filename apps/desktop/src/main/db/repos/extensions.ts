@@ -1,6 +1,8 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
+import type { AuthorityGrant } from '@team-x/shared-types';
+
 import type { getDb } from '../client.js';
 import {
   authorityGrants,
@@ -14,7 +16,14 @@ type DB = ReturnType<typeof getDb>;
 
 export type ExtensionRow = typeof extensions.$inferSelect;
 export type SkillAssignmentRow = typeof skillAssignments.$inferSelect;
-export type AuthorityGrantRow = typeof authorityGrants.$inferSelect;
+export type AuthorityGrantRow = Omit<
+  typeof authorityGrants.$inferSelect,
+  'scopeKind' | 'resourceKind' | 'permission'
+> & {
+  scopeKind: AuthorityGrant['scopeKind'];
+  resourceKind: AuthorityGrant['resourceKind'];
+  permission: AuthorityGrant['permission'];
+};
 export type AuthorityRequestRow = typeof authorityRequests.$inferSelect;
 
 export interface CreateExtensionInput {
@@ -24,6 +33,22 @@ export interface CreateExtensionInput {
   slug: string;
   sourceKind: 'local' | 'github' | 'marketplace' | 'template';
   sourceRef: string;
+  version?: string | null;
+  updateChannel?: string | null;
+  manifestJson?: string | null;
+  requestedCapabilitiesJson?: string;
+  requestedPathsJson?: string;
+  enabled?: boolean;
+  trustState?: 'trusted' | 'pending-review' | 'denied';
+  runtimeRefId?: string | null;
+}
+
+export interface UpdateExtensionInput {
+  companyId?: string | null;
+  name?: string;
+  slug?: string;
+  sourceKind?: 'local' | 'github' | 'marketplace' | 'template';
+  sourceRef?: string;
   version?: string | null;
   updateChannel?: string | null;
   manifestJson?: string | null;
@@ -116,6 +141,12 @@ export function createExtensionsRepo(db: DB) {
       return db.select().from(extensions).where(eq(extensions.id, id)).get() ?? null;
     },
 
+    findByRuntimeRefId(runtimeRefId: string): ExtensionRow | null {
+      return (
+        db.select().from(extensions).where(eq(extensions.runtimeRefId, runtimeRefId)).get() ?? null
+      );
+    },
+
     listByCompany(companyId: string): ExtensionRow[] {
       return db
         .select()
@@ -139,6 +170,35 @@ export function createExtensionsRepo(db: DB) {
 
     updateEnabled(id: string, enabled: boolean): void {
       db.update(extensions).set({ enabled, updatedAt: Date.now() }).where(eq(extensions.id, id)).run();
+    },
+
+    update(id: string, patch: UpdateExtensionInput): void {
+      const next: Record<string, unknown> = {
+        updatedAt: Date.now(),
+      };
+      if (patch.companyId !== undefined) next.companyId = patch.companyId;
+      if (patch.name !== undefined) next.name = patch.name;
+      if (patch.slug !== undefined) next.slug = patch.slug;
+      if (patch.sourceKind !== undefined) next.sourceKind = patch.sourceKind;
+      if (patch.sourceRef !== undefined) next.sourceRef = patch.sourceRef;
+      if (patch.version !== undefined) next.version = patch.version;
+      if (patch.updateChannel !== undefined) next.updateChannel = patch.updateChannel;
+      if (patch.manifestJson !== undefined) next.manifestJson = patch.manifestJson;
+      if (patch.requestedCapabilitiesJson !== undefined) {
+        next.requestedCapabilitiesJson = patch.requestedCapabilitiesJson;
+      }
+      if (patch.requestedPathsJson !== undefined) {
+        next.requestedPathsJson = patch.requestedPathsJson;
+      }
+      if (patch.enabled !== undefined) next.enabled = patch.enabled;
+      if (patch.trustState !== undefined) next.trustState = patch.trustState;
+      if (patch.runtimeRefId !== undefined) next.runtimeRefId = patch.runtimeRefId;
+
+      db.update(extensions).set(next).where(eq(extensions.id, id)).run();
+    },
+
+    delete(id: string): void {
+      db.delete(extensions).where(eq(extensions.id, id)).run();
     },
   };
 }
@@ -191,6 +251,15 @@ export function createSkillAssignmentsRepo(db: DB) {
 export type SkillAssignmentsRepo = ReturnType<typeof createSkillAssignmentsRepo>;
 
 export function createAuthorityRepo(db: DB) {
+  function toAuthorityGrantRow(row: typeof authorityGrants.$inferSelect): AuthorityGrantRow {
+    return {
+      ...row,
+      scopeKind: row.scopeKind as AuthorityGrant['scopeKind'],
+      resourceKind: row.resourceKind as AuthorityGrant['resourceKind'],
+      permission: row.permission as AuthorityGrant['permission'],
+    };
+  }
+
   return {
     createGrant(input: CreateAuthorityGrantInput): string {
       const id = nanoid();
@@ -211,6 +280,11 @@ export function createAuthorityRepo(db: DB) {
       return id;
     },
 
+    getGrantById(id: string): AuthorityGrantRow | null {
+      const row = db.select().from(authorityGrants).where(eq(authorityGrants.id, id)).get();
+      return row ? toAuthorityGrantRow(row) : null;
+    },
+
     listByCompany(companyId: string): AuthorityGrantRow[] {
       const employeeIds = listEmployeeIdsForCompany(db, companyId);
       const extensionIds = listExtensionIdsForCompany(db, companyId);
@@ -218,6 +292,7 @@ export function createAuthorityRepo(db: DB) {
         .select()
         .from(authorityGrants)
         .all()
+        .map(toAuthorityGrantRow)
         .filter((row) => {
           if (row.scopeKind === 'company') return row.scopeId === companyId;
           if (row.scopeKind === 'employee') return employeeIds.has(row.scopeId);
@@ -232,12 +307,17 @@ export function createAuthorityRepo(db: DB) {
         .select()
         .from(authorityGrants)
         .all()
+        .map(toAuthorityGrantRow)
         .filter((row) => {
           if (row.scopeKind === 'company') return row.scopeId === companyId;
           if (row.scopeKind === 'employee') return row.scopeId === employeeId;
           if (row.scopeKind === 'extension') return extensionIds.has(row.scopeId);
           return false;
         });
+    },
+
+    deleteGrant(id: string): void {
+      db.delete(authorityGrants).where(eq(authorityGrants.id, id)).run();
     },
 
     createRequest(input: CreateAuthorityRequestInput): string {
