@@ -41,6 +41,7 @@ import type {
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   AgenticRunSnapshot,
+  ArtifactRecord,
   AttachFileRequest,
   AttachFileResponse,
   AuthorityGrant,
@@ -112,6 +113,7 @@ import type {
   IpcSuggestItem,
   GetEffectiveAuthorityRequest,
   InstallMcpTemplateRequest,
+  ListArtifactsRequest,
   ListAuthorityGrantsRequest,
   ListEventsRequest,
   ListEventsResponse,
@@ -269,6 +271,7 @@ const CHANNELS = {
   budgetsListApprovals: 'budgets.listApprovals',
   approvalsList: 'approvals.list',
   approvalsReview: 'approvals.review',
+  artifactsList: 'artifacts.list',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
@@ -500,6 +503,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.approvalsList, req) as Promise<ApprovalItem[]>,
       review: (req: ReviewApprovalItemRequest) =>
         ipc.invoke(CHANNELS.approvalsReview, req) as Promise<{ grantId: string | null }>,
+    },
+    artifacts: {
+      list: (req: ListArtifactsRequest) =>
+        ipc.invoke(CHANNELS.artifactsList, req) as Promise<ArtifactRecord[]>,
     },
     employees: {
       list: (companyId: string) =>

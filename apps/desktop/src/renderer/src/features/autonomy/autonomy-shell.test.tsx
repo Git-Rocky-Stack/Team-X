@@ -14,11 +14,13 @@ const RUNTIME_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-runtime
 const ROUTINES_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-routines.ts');
 const BUDGETS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-budgets.ts');
 const APPROVALS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-approvals.ts');
+const ARTIFACTS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-artifacts.ts');
 const VIEW_PATH = join(currentDirname, 'autonomy-view.tsx');
 const RUNTIME_PANEL_PATH = join(currentDirname, 'runtime-profiles-panel.tsx');
 const ROUTINES_PANEL_PATH = join(currentDirname, 'routines-panel.tsx');
 const BUDGETS_PANEL_PATH = join(currentDirname, 'budgets-panel.tsx');
 const APPROVALS_PANEL_PATH = join(currentDirname, 'approvals-panel.tsx');
+const ARTIFACTS_PANEL_PATH = join(currentDirname, 'artifacts-panel.tsx');
 
 const appSrc = readFileSync(APP_PATH, 'utf8');
 const storeSrc = readFileSync(STORE_PATH, 'utf8');
@@ -29,11 +31,13 @@ const runtimeHookSrc = readFileSync(RUNTIME_HOOK_PATH, 'utf8');
 const routinesHookSrc = readFileSync(ROUTINES_HOOK_PATH, 'utf8');
 const budgetsHookSrc = readFileSync(BUDGETS_HOOK_PATH, 'utf8');
 const approvalsHookSrc = readFileSync(APPROVALS_HOOK_PATH, 'utf8');
+const artifactsHookSrc = readFileSync(ARTIFACTS_HOOK_PATH, 'utf8');
 const viewSrc = readFileSync(VIEW_PATH, 'utf8');
 const runtimePanelSrc = readFileSync(RUNTIME_PANEL_PATH, 'utf8');
 const routinesPanelSrc = readFileSync(ROUTINES_PANEL_PATH, 'utf8');
 const budgetsPanelSrc = readFileSync(BUDGETS_PANEL_PATH, 'utf8');
 const approvalsPanelSrc = readFileSync(APPROVALS_PANEL_PATH, 'utf8');
+const artifactsPanelSrc = readFileSync(ARTIFACTS_PANEL_PATH, 'utf8');
 
 describe('Autonomy shell wiring', () => {
   it('adds autonomy as a top-level app destination', () => {
@@ -67,6 +71,8 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('<BudgetsPanel companyId={companyId} company={company} />');
     expect(viewSrc).toContain("import { ApprovalsPanel } from './approvals-panel.js';");
     expect(viewSrc).toContain('<ApprovalsPanel companyId={companyId} />');
+    expect(viewSrc).toContain("import { ArtifactsPanel } from './artifacts-panel.js';");
+    expect(viewSrc).toContain('<ArtifactsPanel companyId={companyId} />');
   });
 
   it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {
@@ -131,5 +137,18 @@ describe('Autonomy shell wiring', () => {
     expect(approvalsPanelSrc).toContain('Approve');
     expect(approvalsPanelSrc).toContain('Deny');
     expect(approvalsPanelSrc).toContain('Latest rationale:');
+  });
+
+  it('adds artifact hooks and a real artifacts panel with preview and jump actions', () => {
+    expect(artifactsHookSrc).toContain("queryKey: ['artifacts', companyId, limit]");
+    expect(artifactsHookSrc).toContain('ipc.artifacts.list');
+    expect(artifactsHookSrc).toContain("event.type !== 'routine.runCompleted'");
+    expect(artifactsHookSrc).toContain("event.type !== 'approval.reviewed'");
+    expect(artifactsHookSrc).toContain("event.type !== 'vault.file_created'");
+    expect(artifactsPanelSrc).toContain('data-artifacts-panel=""');
+    expect(artifactsPanelSrc).toContain('data-artifact-card={artifact.id}');
+    expect(artifactsPanelSrc).toContain('Hide preview');
+    expect(artifactsPanelSrc).toContain('Open ticket');
+    expect(artifactsPanelSrc).toContain('Open files');
   });
 });

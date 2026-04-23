@@ -26,6 +26,7 @@ import {
   MissionStateBlock,
 } from '../mission/mission-shell.js';
 import { ApprovalsPanel } from './approvals-panel.js';
+import { ArtifactsPanel } from './artifacts-panel.js';
 import { BudgetsPanel } from './budgets-panel.js';
 import { RoutinesPanel } from './routines-panel.js';
 import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
@@ -317,6 +318,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             <BudgetsPanel companyId={companyId} company={company} />
           ) : activeSubview === 'approvals' ? (
             <ApprovalsPanel companyId={companyId} />
+          ) : activeSubview === 'artifacts' ? (
+            <ArtifactsPanel companyId={companyId} />
           ) : (
             <MissionStateBlock
               title={activeCopy.emptyTitle}
@@ -359,7 +362,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             <MissionInsetSurface className="space-y-3 p-4 text-sm leading-6 text-muted-foreground">
               <p>Runtime profiles will let operators bind employees to named internal, local, and external execution posture.</p>
               <p>Routines will turn recurring operating loops into explicit work objects instead of silent background automation.</p>
-              <p>Budgets and approvals are now live; the next slice attaches concrete artifacts and outcomes to the resulting reviewed work.</p>
+              <p>Budgets, approvals, and artifacts are now live; the remaining autonomy work is shared-cloud hardening and broader dashboard integration.</p>
             </MissionInsetSurface>
           </MissionRailCard>
         </div>

@@ -491,6 +491,7 @@ app
     approvalInboxServiceInstance = createApprovalInboxService({
       budgetsRepo,
       authorityRepo,
+      artifactService,
       operatorId: operatorAccessService.getLocalOwnerId(),
     });
     let routineTicketCreator: ((input: RoutineServiceCreateTicketInput) => Promise<{ ticketId: string }>) | null =
@@ -501,6 +502,7 @@ app
       employeesRepo,
       bus,
       budgetGovernance: budgetGovernanceServiceInstance,
+      artifactService,
       createTicket: async (input) => {
         if (!routineTicketCreator) {
           throw new Error('[main] routine ticket creator is not wired yet');
@@ -855,6 +857,7 @@ app
 
     const vaultService = createVaultService({
       vaultRepo,
+      artifactService,
       companiesBasePath: join(app.getPath('userData'), 'companies'),
       getCompanySlug: (companyId: string) => {
         const company = companiesRepo.list().find((c) => c.id === companyId);
@@ -924,6 +927,7 @@ app
       routineService: routineServiceInstance,
       budgetGovernanceService: budgetGovernanceServiceInstance,
       approvalInboxService: approvalInboxServiceInstance,
+      artifactService,
       authorityRepo,
       authorityResolver,
       providersService,

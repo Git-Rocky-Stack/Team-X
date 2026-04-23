@@ -44,6 +44,7 @@ import type {
   AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
+  ArtifactRecord,
   AuthorityGrant,
   AuthorityRequest,
   ArchiveCompanyRequest,
@@ -114,6 +115,7 @@ import type {
   ExtensionSummary,
   LinkTicketToProjectRequest,
   CreateAuthorityGrantRequest,
+  ListArtifactsRequest,
   ListAuthorityGrantsRequest,
   ListAuthorityRequestsRequest,
   ListAttachmentsRequest,
@@ -820,6 +822,10 @@ export interface IpcApprovalInboxService {
   reviewItem(input: ReviewApprovalItemRequest): { item: ApprovalItem; grantId: string | null };
 }
 
+export interface IpcArtifactService {
+  list(input: ListArtifactsRequest): ArtifactRecord[];
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -845,6 +851,7 @@ export interface IpcHandlerDeps {
   routineService?: IpcRoutineService;
   budgetGovernanceService?: IpcBudgetGovernanceService;
   approvalInboxService?: IpcApprovalInboxService;
+  artifactService?: IpcArtifactService;
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
@@ -1042,6 +1049,8 @@ export interface IpcHandlers {
   approvalsList(req: ListApprovalItemsRequest): Promise<ApprovalItem[]>;
   /** `approvals.review` — approve, deny, or dismiss one inbox item. */
   approvalsReview(req: ReviewApprovalItemRequest): Promise<{ grantId: string | null }>;
+  /** `artifacts.list` — recent artifact and outcome records. */
+  artifactsList(req: ListArtifactsRequest): Promise<ArtifactRecord[]>;
 
   /**
    * `employees.create` — hire a new employee from a role-pack role.
@@ -1880,6 +1889,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     routineService,
     budgetGovernanceService,
     approvalInboxService,
+    artifactService,
     authorityRepo,
     authorityResolver,
     providersService,
@@ -2313,6 +2323,25 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       });
       emitApprovalReviewAudit(req.companyId, result.item, result.grantId);
       return { grantId: result.grantId };
+    },
+
+    async artifactsList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] artifacts.list: companyId is required');
+      }
+      if (req.limit !== undefined && (!Number.isInteger(req.limit) || req.limit < 1 || req.limit > 200)) {
+        throw new Error('[ipc] artifacts.list: limit must be an integer between 1 and 200');
+      }
+      if (!artifactService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ipc] artifacts.list: artifactService dep unwired — returning empty artifact set');
+        }
+        return [];
+      }
+      return artifactService.list({
+        companyId: req.companyId,
+        limit: req.limit,
+      });
     },
 
     async companiesCreate(req) {

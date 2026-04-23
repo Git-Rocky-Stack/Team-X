@@ -140,7 +140,7 @@ export function createArtifactService({ artifactsRepo }: { artifactsRepo: Artifa
         kind: 'vault-file',
         outcomeKind: 'artifact-created',
         title: input.originalName,
-        summary: `${input.mimeType} • ${input.sizeBytes.toLocaleString()} bytes`,
+        summary: `${input.mimeType} • ${input.sizeBytes} bytes`,
         sourceKind: 'vault-file',
         sourceRefId: input.fileId,
         fileId: input.fileId,
