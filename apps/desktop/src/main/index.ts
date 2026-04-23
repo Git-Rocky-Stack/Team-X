@@ -160,6 +160,7 @@ import { detectHardware } from './services/profiler.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
 import { createRunCheckpointService } from './services/run-checkpoint-service.js';
 import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
+import { createRuntimeProfileProviderService } from './services/runtime-profile-provider-service.js';
 import {
   type RoutineService,
   type RoutineServiceCreateTicketInput,
@@ -181,6 +182,7 @@ import { createRoleLoader } from './services/role-loader.js';
 import { createSkillsService } from './services/skills-service.js';
 import { pickStrategy } from './services/runtime-strategy.js';
 import { buildChatActionTools } from './services/chat-action-tools.js';
+import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
 import { SecretsStore } from './services/secrets.js';
 import { ensureSystemAgent, ensureSystemCopilot } from './services/system-agent-bootstrap.js';
 import { appendExecutionPolicy } from './services/system-prompt.js';
@@ -488,6 +490,7 @@ app
       employeesRepo,
       providersService,
     });
+    const externalRuntimeAdapters = createExternalRuntimeAdapters();
     budgetGovernanceServiceInstance = createBudgetGovernanceService({
       budgetsRepo,
       employeesRepo,
@@ -532,7 +535,12 @@ app
       console.log('[main] test-mode provider active — canned responses, no LLM calls');
     } else {
       const providerFactory = createProviderFactory({ providersService, secretsStore });
-      resolveProvider = (employee) => providerFactory.resolveForEmployee(employee);
+      const runtimeProfileProviderService = createRuntimeProfileProviderService({
+        runtimeProfilesService,
+        providerFactory,
+        externalRuntimeAdapters,
+      });
+      resolveProvider = (employee) => runtimeProfileProviderService.resolveForEmployee(employee);
     }
 
     const runtimeStrategy = settingsRepo.get<RuntimeStrategy>('runtime_strategy', 'auto');

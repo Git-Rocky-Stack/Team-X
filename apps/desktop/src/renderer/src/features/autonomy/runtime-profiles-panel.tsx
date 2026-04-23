@@ -41,12 +41,12 @@ const KIND_OPTIONS: Array<{ value: RuntimeProfileKind; label: string; descriptio
   {
     value: 'bash',
     label: 'Bash Launcher',
-    description: 'Record a local command path and working directory for an external runner.',
+    description: 'Execution-backed today through a local launcher command and working directory.',
   },
   {
     value: 'http',
     label: 'HTTP Adapter',
-    description: 'Track a remote runtime endpoint and health URL.',
+    description: 'Execution-backed today through a remote runtime endpoint and health probe.',
   },
   {
     value: 'codex',
@@ -353,7 +353,7 @@ function RuntimeProfileCard({
           value={profile.executionMode}
           hint={
             profile.executionMode === 'native'
-              ? 'Backed by Team-X today'
+              ? 'Execution-backed today'
               : 'Modeled for later runner wiring'
           }
           icon={Link2}
@@ -528,7 +528,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
           <div>
             <div className="text-sm font-semibold text-foreground">Create Runtime Profile</div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Team-X internal is execution-backed in this slice. External adapters are modeled and health-checked so operators can bind posture now and wire runners later.
+              Team-X Internal, Bash Launcher, and HTTP Adapter are execution-backed in this slice. Codex, Claude Code, and Cursor remain modeled posture until their dedicated runner contracts land.
             </p>
           </div>
           <MissionPill tone="accent">BYO agent posture</MissionPill>

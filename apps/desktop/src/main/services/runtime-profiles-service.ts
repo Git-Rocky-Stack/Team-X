@@ -115,8 +115,16 @@ function getOptionalString(
   return next.length > 0 ? next : null;
 }
 
-function getExecutionMode(kind: RuntimeProfileKind): RuntimeProfileExecutionMode {
-  return kind === 'teamx-internal' ? 'native' : 'planned';
+function getExecutionMode(
+  kind: RuntimeProfileKind,
+  config: Record<string, unknown> | null,
+): RuntimeProfileExecutionMode {
+  if (kind === 'teamx-internal' || kind === 'bash' || kind === 'http') {
+    return 'native';
+  }
+  const command = getOptionalString(config ?? {}, 'command');
+  const endpointUrl = getOptionalString(config ?? {}, 'endpointUrl');
+  return command || endpointUrl ? 'native' : 'planned';
 }
 
 function rowToRuntimeProfile(row: RuntimeProfileRow): RuntimeProfile {
@@ -329,8 +337,8 @@ export function createRuntimeProfilesService(
         {
           profileId: profile.id,
           status: 'healthy',
-          message: 'Local launcher path and working directory resolved successfully.',
-          supportsExecution: false,
+          message: 'Local launcher path and working directory resolved successfully for execution.',
+          supportsExecution: true,
           details: { command, workingDirectory },
         },
         checkedAt,
@@ -401,7 +409,7 @@ export function createRuntimeProfilesService(
           message: response.ok
             ? `HTTP runtime responded successfully from ${targetUrl}.`
             : `HTTP runtime returned ${response.status} from ${targetUrl}.`,
-          supportsExecution: false,
+          supportsExecution: true,
           details: { baseUrl, healthPath, targetUrl, status: response.status },
         },
         checkedAt,
@@ -425,7 +433,7 @@ export function createRuntimeProfilesService(
     }
   }
 
-  async function validatePlaceholderProfile(
+  async function validateLauncherOrEndpointProfile(
     profile: RuntimeProfile,
     checkedAt: number,
   ): Promise<RuntimeProfileValidation> {
@@ -437,7 +445,7 @@ export function createRuntimeProfilesService(
         {
           profileId: profile.id,
           status: 'error',
-          message: 'Adapter placeholders need either a command or an endpoint URL.',
+          message: 'Adapter-backed profiles need either a launcher command or an endpoint URL.',
           supportsExecution: false,
           details: null,
         },
@@ -445,13 +453,32 @@ export function createRuntimeProfilesService(
       );
     }
 
+    if (endpointUrl) {
+      try {
+        new URL(endpointUrl);
+      } catch {
+        return makeValidation(
+          {
+            profileId: profile.id,
+            status: 'error',
+            message: `Endpoint URL is not valid: ${endpointUrl}`,
+            supportsExecution: true,
+            details: { command, endpointUrl, kind: profile.kind },
+          },
+          checkedAt,
+        );
+      }
+    }
+
     return makeValidation(
       {
         profileId: profile.id,
-        status: 'warning',
+        status: endpointUrl ? 'healthy' : 'warning',
         message:
-          'Adapter posture is recorded and assignable, but direct execution wiring lands in a later slice.',
-        supportsExecution: false,
+          endpointUrl
+            ? 'Adapter endpoint is configured and ready for execution-backed launches.'
+            : 'Launcher command is recorded; first launch will confirm CLI availability on this host.',
+        supportsExecution: true,
         details: {
           command,
           endpointUrl,
@@ -476,7 +503,7 @@ export function createRuntimeProfilesService(
       case 'codex':
       case 'claude-code':
       case 'cursor':
-        return validatePlaceholderProfile(profile, checkedAt);
+        return validateLauncherOrEndpointProfile(profile, checkedAt);
     }
   }
 
@@ -493,7 +520,7 @@ export function createRuntimeProfilesService(
       const boundEmployeeIds = employeesByProfile.get(profile.id) ?? [];
       return {
         ...profile,
-        executionMode: getExecutionMode(profile.kind),
+        executionMode: getExecutionMode(profile.kind, profile.config),
         boundEmployeeIds,
         boundEmployeeCount: boundEmployeeIds.length,
       };

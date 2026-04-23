@@ -107,7 +107,9 @@ describe('Autonomy shell wiring', () => {
     expect(runtimePanelSrc).toContain('data-runtime-profile-card={profile.id}');
     expect(runtimePanelSrc).toContain('data-runtime-employee-binding={employee.id}');
     expect(runtimePanelSrc).toContain('lastHealthStatus');
-    expect(runtimePanelSrc).toContain('Team-X internal is execution-backed in this slice.');
+    expect(runtimePanelSrc).toContain(
+      'Team-X Internal, Bash Launcher, and HTTP Adapter are execution-backed in this slice.',
+    );
   });
 
   it('adds routine hooks and a routine panel with cadence and run history', () => {

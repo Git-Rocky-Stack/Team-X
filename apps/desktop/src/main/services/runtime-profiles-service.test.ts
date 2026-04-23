@@ -189,7 +189,8 @@ describe('runtime profiles service', () => {
     });
 
     expect(result.status).toBe('healthy');
-    expect(result.supportsExecution).toBe(false);
+    expect(result.supportsExecution).toBe(true);
+    expect(service.list('company-1')[0]?.executionMode).toBe('native');
   });
 
   it('validates http runtime profiles through the injected fetch', async () => {
@@ -209,6 +210,8 @@ describe('runtime profiles service', () => {
 
     expect(fetchFn).toHaveBeenCalled();
     expect(result.status).toBe('healthy');
+    expect(result.supportsExecution).toBe(true);
     expect(result.message).toMatch(/responded successfully/i);
+    expect(service.list('company-1')[0]?.executionMode).toBe('native');
   });
 });
