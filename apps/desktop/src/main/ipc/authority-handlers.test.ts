@@ -20,6 +20,38 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
       updatedAt: 1,
     })),
     listByCompany: vi.fn(() => []),
+    createRequest: vi.fn(),
+    getRequestById: vi.fn((id: string) =>
+      id === 'request-1'
+        ? {
+            id: 'request-1',
+            extensionId: 'skill-1',
+            employeeId: null,
+            resourceKind: 'path',
+            resourceId: 'C:/Projects/Alpha',
+            requestedPermission: 'allow',
+            status: 'pending',
+            reason: 'Requested by installed skill manifest',
+            createdAt: 1,
+            reviewedAt: null,
+          }
+        : null,
+    ),
+    listRequestsByCompany: vi.fn(() => [
+      {
+        id: 'request-1',
+        extensionId: 'skill-1',
+        employeeId: null,
+        resourceKind: 'path',
+        resourceId: 'C:/Projects/Alpha',
+        requestedPermission: 'allow',
+        status: 'pending',
+        reason: 'Requested by installed skill manifest',
+        createdAt: 1,
+        reviewedAt: null,
+      },
+    ]),
+    reviewRequest: vi.fn(),
     listForEmployee: vi.fn(() => []),
     deleteGrant: vi.fn(),
   } as unknown as IpcHandlerDeps['authorityRepo'];
@@ -189,5 +221,35 @@ describe('authority IPC handlers', () => {
     await handlers.authorityDelete({ grantId: 'grant-1' });
 
     expect(deps.authorityRepo?.deleteGrant).toHaveBeenCalledWith('grant-1');
+  });
+
+  it('reviews a pending extension authority request and creates an extension-scoped grant on approval', async () => {
+    const deps = makeDeps();
+    const handlers = createIpcHandlers(deps);
+
+    const result = await handlers.authorityReviewRequest({
+      companyId: 'company-1',
+      requestId: 'request-1',
+      decision: 'approved',
+    });
+
+    expect(deps.authorityRepo?.createGrant).toHaveBeenCalledWith({
+      scopeKind: 'extension',
+      scopeId: 'skill-1',
+      resourceKind: 'path',
+      resourceId: 'C:/Projects/Alpha',
+      permission: 'allow',
+      metadataJson: JSON.stringify({
+        source: 'authority-request',
+        requestId: 'request-1',
+      }),
+    });
+    expect(deps.authorityRepo?.reviewRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: 'request-1',
+        status: 'approved',
+      }),
+    );
+    expect(result).toEqual({ grantId: 'grant-1' });
   });
 });

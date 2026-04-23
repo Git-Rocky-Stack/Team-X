@@ -49,6 +49,13 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   'meeting.ended': 'bg-purple-600/20 text-purple-400',
   'mcp.added': 'bg-orange-600/20 text-orange-400',
   'mcp.removed': 'bg-orange-600/20 text-orange-400',
+  'mcp.toggled': 'bg-orange-600/20 text-orange-400',
+  'extension.installed': 'bg-emerald-600/20 text-emerald-400',
+  'skill.assignmentUpdated': 'bg-sky-600/20 text-sky-400',
+  'authority.grant.created': 'bg-emerald-600/20 text-emerald-400',
+  'authority.grant.deleted': 'bg-rose-600/20 text-rose-400',
+  'authority.request.reviewed': 'bg-amber-600/20 text-amber-400',
+  'authority.violation': 'bg-rose-600/20 text-rose-400',
   'chat.sent': 'bg-slate-600/20 text-slate-400',
   'backup.created': 'bg-indigo-600/20 text-indigo-400',
   'backup.restored': 'bg-indigo-600/20 text-indigo-400',
@@ -92,6 +99,15 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
 /** Hand-tuned display labels where the auto-title-cased fallback reads
  * awkwardly ("Rag Index Indexed" → "RAG Indexed"). Keep this list tight. */
 export const EVENT_TYPE_LABELS: Record<string, string> = {
+  'mcp.added': 'MCP Added',
+  'mcp.removed': 'MCP Removed',
+  'mcp.toggled': 'MCP Toggled',
+  'extension.installed': 'Extension Installed',
+  'skill.assignmentUpdated': 'Skill Assignment',
+  'authority.grant.created': 'Authority Grant Added',
+  'authority.grant.deleted': 'Authority Grant Removed',
+  'authority.request.reviewed': 'Authority Review',
+  'authority.violation': 'Authority Violation',
   'command.executed': 'Command',
   'plan.proposed': 'Plan Proposed',
   'plan.approved': 'Plan Approved',
@@ -159,6 +175,15 @@ function tryParsePayload(json: string): Record<string, unknown> | null {
 
 /** Event types that opt into a payload-aware row summary in the collapsed row. */
 export const SUMMARIZABLE_TYPES: ReadonlySet<string> = new Set([
+  'mcp.added',
+  'mcp.removed',
+  'mcp.toggled',
+  'extension.installed',
+  'skill.assignmentUpdated',
+  'authority.grant.created',
+  'authority.grant.deleted',
+  'authority.request.reviewed',
+  'authority.violation',
   'command.executed',
   'plan.proposed',
   'plan.approved',
@@ -200,6 +225,68 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
   const parts: string[] = [];
 
   switch (eventType) {
+    case 'mcp.added':
+    case 'mcp.removed': {
+      if (typeof payload.name === 'string') parts.push(payload.name);
+      if (typeof payload.transport === 'string') parts.push(payload.transport);
+      if (typeof payload.sourceKind === 'string') parts.push(payload.sourceKind);
+      break;
+    }
+    case 'mcp.toggled': {
+      if (typeof payload.name === 'string') parts.push(payload.name);
+      if (payload.enabled === true) parts.push('enabled');
+      if (payload.enabled === false) parts.push('disabled');
+      if (typeof payload.transport === 'string') parts.push(payload.transport);
+      break;
+    }
+    case 'extension.installed': {
+      if (typeof payload.sourceKind === 'string') parts.push(payload.sourceKind);
+      if (typeof payload.sourceRef === 'string' && payload.sourceRef.length > 0) {
+        const truncated =
+          payload.sourceRef.length > 48 ? `${payload.sourceRef.slice(0, 45)}...` : payload.sourceRef;
+        parts.push(truncated);
+      }
+      if (typeof payload.extensionId === 'string') parts.push(payload.extensionId.slice(0, 8));
+      break;
+    }
+    case 'skill.assignmentUpdated': {
+      if (typeof payload.employeeId === 'string' && payload.employeeId.length > 0) {
+        parts.push(payload.employeeId.slice(0, 8));
+      } else {
+        parts.push('workspace');
+      }
+      parts.push(payload.enabled === true ? 'enabled' : 'disabled');
+      if (typeof payload.extensionId === 'string') parts.push(payload.extensionId.slice(0, 8));
+      break;
+    }
+    case 'authority.grant.created':
+    case 'authority.grant.deleted': {
+      if (typeof payload.permission === 'string') parts.push(payload.permission);
+      if (typeof payload.resourceKind === 'string') parts.push(payload.resourceKind);
+      if (typeof payload.resourceId === 'string') {
+        const truncated =
+          payload.resourceId.length > 48 ? `${payload.resourceId.slice(0, 45)}...` : payload.resourceId;
+        parts.push(truncated);
+      }
+      break;
+    }
+    case 'authority.request.reviewed': {
+      if (typeof payload.decision === 'string') parts.push(payload.decision);
+      if (typeof payload.resourceKind === 'string') parts.push(payload.resourceKind);
+      if (typeof payload.resourceId === 'string') {
+        const truncated =
+          payload.resourceId.length > 48 ? `${payload.resourceId.slice(0, 45)}...` : payload.resourceId;
+        parts.push(truncated);
+      }
+      break;
+    }
+    case 'authority.violation': {
+      if (typeof payload.resourceKind === 'string') parts.push(payload.resourceKind);
+      if (typeof payload.resourceId === 'string') parts.push(payload.resourceId);
+      if (typeof payload.reason === 'string') parts.push(payload.reason);
+      break;
+    }
+
     case 'command.executed': {
       const intent = typeof payload.intent === 'string' ? payload.intent : '';
       const rawText = typeof payload.rawText === 'string' ? payload.rawText : '';

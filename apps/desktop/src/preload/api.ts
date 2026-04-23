@@ -44,6 +44,7 @@ import type {
   AttachFileRequest,
   AttachFileResponse,
   AuthorityGrant,
+  AuthorityRequest,
   AuditEvent,
   AuditExportRequest,
   AuditExportResponse,
@@ -250,8 +251,10 @@ const CHANNELS = {
   extensionsUpsertSkillAssignment: 'extensions.upsertSkillAssignment',
   extensionsDeleteSkillAssignment: 'extensions.deleteSkillAssignment',
   authorityList: 'authority.list',
+  authorityListRequests: 'authority.listRequests',
   authorityCreate: 'authority.create',
   authorityDelete: 'authority.delete',
+  authorityReviewRequest: 'authority.reviewRequest',
   authorityGetEffective: 'authority.getEffective',
   // Goals management (Phase 3 — M15)
   goalsCreate: 'goals.create',
@@ -478,10 +481,14 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     authority: {
       list: (req: ListAuthorityGrantsRequest) =>
         ipc.invoke(CHANNELS.authorityList, req) as Promise<AuthorityGrant[]>,
+      listRequests: (req) =>
+        ipc.invoke(CHANNELS.authorityListRequests, req) as Promise<AuthorityRequest[]>,
       create: (req: CreateAuthorityGrantRequest) =>
         ipc.invoke(CHANNELS.authorityCreate, req) as Promise<{ grantId: string }>,
       delete: (grantId: string) =>
         ipc.invoke(CHANNELS.authorityDelete, { grantId }) as Promise<void>,
+      reviewRequest: (req) =>
+        ipc.invoke(CHANNELS.authorityReviewRequest, req) as Promise<{ grantId: string | null }>,
       getEffective: (req: GetEffectiveAuthorityRequest) =>
         ipc.invoke(CHANNELS.authorityGetEffective, req) as Promise<EffectiveAuthoritySnapshot>,
     },

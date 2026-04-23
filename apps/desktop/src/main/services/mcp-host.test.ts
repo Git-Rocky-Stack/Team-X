@@ -259,6 +259,7 @@ describe('McpHost', () => {
       const { host, repos } = await setupHostWithTool();
 
       const result = await host.callTool({
+        companyId: 'company-1',
         serverId: 'srv-1',
         toolName: 'read_file',
         toolArgs: { path: '/etc/passwd' },
@@ -275,10 +276,46 @@ describe('McpHost', () => {
       expect(repos.toolCallsRepo.create).toHaveBeenCalledTimes(1);
     });
 
+    it('emits authority.violation when a tool call is denied by authority', async () => {
+      const repos = makeFakeRepos();
+      const bus = makeFakeBus();
+      mockListTools.mockResolvedValueOnce({
+        tools: [{ name: 'read_file', description: 'Read', inputSchema: {} }],
+      });
+
+      const host = createMcpHost({
+        mcpServersRepo: repos.mcpServersRepo,
+        toolCallsRepo: repos.toolCallsRepo,
+        bus,
+        now: () => 1000,
+      });
+      await host.connectToServer(SERVER_CONFIG);
+
+      await host.callTool({
+        companyId: 'company-1',
+        serverId: 'srv-1',
+        toolName: 'read_file',
+        toolArgs: {},
+        runId: 'run-1',
+        employeeId: 'emp-1',
+        toolsAllowed: [],
+        toolsDenied: ['read_file'],
+      });
+
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'authority.violation',
+          companyId: 'company-1',
+          actorId: 'emp-1',
+        }),
+      );
+    });
+
     it('denies a tool not in tools_allowed when the list is non-empty', async () => {
       const { host } = await setupHostWithTool();
 
       const result = await host.callTool({
+        companyId: 'company-1',
         serverId: 'srv-1',
         toolName: 'read_file',
         toolArgs: {},
@@ -298,6 +335,7 @@ describe('McpHost', () => {
       mockCallTool.mockResolvedValueOnce({ content: [{ type: 'text', text: 'file contents' }] });
 
       const result = await host.callTool({
+        companyId: 'company-1',
         serverId: 'srv-1',
         toolName: 'read_file',
         toolArgs: { path: '/readme.md' },
@@ -316,6 +354,7 @@ describe('McpHost', () => {
       mockCallTool.mockResolvedValueOnce({ content: [{ type: 'text', text: 'ok' }] });
 
       const result = await host.callTool({
+        companyId: 'company-1',
         serverId: 'srv-1',
         toolName: 'read_file',
         toolArgs: {},
@@ -333,6 +372,7 @@ describe('McpHost', () => {
       const { host } = await setupHostWithTool();
 
       const result = await host.callTool({
+        companyId: 'company-1',
         serverId: 'srv-1',
         toolName: 'read_file',
         toolArgs: {},
@@ -350,6 +390,7 @@ describe('McpHost', () => {
       const { host } = await setupHostWithTool();
 
       const result = await host.callTool({
+        companyId: 'company-1',
         serverId: 'srv-nonexistent',
         toolName: 'read_file',
         toolArgs: {},
@@ -369,6 +410,7 @@ describe('McpHost', () => {
       mockCallTool.mockResolvedValueOnce({ content: [{ type: 'text', text: 'data' }] });
 
       await host.callTool({
+        companyId: 'company-1',
         serverId: 'srv-1',
         toolName: 'read_file',
         toolArgs: { path: '/test' },
@@ -406,6 +448,7 @@ describe('McpHost', () => {
       await host.connectToServer({ ...SERVER_CONFIG, id: 'srv-slow' });
 
       const result = await host.callTool({
+        companyId: 'company-1',
         serverId: 'srv-slow',
         toolName: 'slow_tool',
         toolArgs: {},

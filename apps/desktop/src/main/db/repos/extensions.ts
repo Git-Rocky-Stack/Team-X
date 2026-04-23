@@ -87,6 +87,13 @@ export interface CreateAuthorityRequestInput {
   reviewedAt?: number | null;
 }
 
+export interface ReviewAuthorityRequestInput {
+  requestId: string;
+  status: 'approved' | 'denied';
+  reason?: string | null;
+  reviewedAt?: number | null;
+}
+
 function listExtensionIdsForCompany(db: DB, companyId: string): Set<string> {
   const rows = db
     .select({ id: extensions.id })
@@ -380,7 +387,14 @@ export function createAuthorityRepo(db: DB) {
       return id;
     },
 
-    listPendingByCompany(companyId: string): AuthorityRequestRow[] {
+    getRequestById(id: string): AuthorityRequestRow | null {
+      return db.select().from(authorityRequests).where(eq(authorityRequests.id, id)).get() ?? null;
+    },
+
+    listRequestsByCompany(
+      companyId: string,
+      status?: 'pending' | 'approved' | 'denied',
+    ): AuthorityRequestRow[] {
       const employeeIds = listEmployeeIdsForCompany(db, companyId);
       const extensionIds = listExtensionIdsForCompany(db, companyId);
       return db
@@ -388,10 +402,26 @@ export function createAuthorityRepo(db: DB) {
         .from(authorityRequests)
         .all()
         .filter((row) => {
-          if (row.status !== 'pending') return false;
+          if (status && row.status !== status) return false;
           if (employeeIds.has(row.employeeId ?? '')) return true;
           return extensionIds.has(row.extensionId);
-        });
+        })
+        .sort((a, b) => b.createdAt - a.createdAt);
+    },
+
+    listPendingByCompany(companyId: string): AuthorityRequestRow[] {
+      return this.listRequestsByCompany(companyId, 'pending');
+    },
+
+    reviewRequest(input: ReviewAuthorityRequestInput): void {
+      db.update(authorityRequests)
+        .set({
+          status: input.status,
+          reason: input.reason ?? null,
+          reviewedAt: input.reviewedAt ?? Date.now(),
+        })
+        .where(eq(authorityRequests.id, input.requestId))
+        .run();
     },
   };
 }

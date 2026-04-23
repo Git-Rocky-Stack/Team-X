@@ -46,6 +46,7 @@ export interface McpServer extends McpServerConfig {
 }
 
 export interface CallToolArgs {
+  companyId: string;
   serverId: string;
   toolName: string;
   toolArgs: Record<string, unknown>;
@@ -80,6 +81,26 @@ export function createMcpHost(deps: McpHostDeps) {
   const servers = new Map<string, McpServer>();
 
   const now = deps.now ?? Date.now;
+
+  function emitAuthorityViolation(args: CallToolArgs, reason: 'explicit-deny' | 'not-allowlisted') {
+    try {
+      deps.bus.emit({
+        type: 'authority.violation',
+        companyId: args.companyId,
+        actorId: args.employeeId,
+        actorKind: 'employee',
+        payload: {
+          resourceKind: 'capability',
+          resourceId: args.toolName,
+          serverId: args.serverId,
+          runId: args.runId,
+          reason,
+        },
+      });
+    } catch (err) {
+      console.error(`[mcp] failed to emit authority.violation for ${args.toolName}:`, err);
+    }
+  }
 
   /**
    * Load all enabled servers from DB and connect to them.
@@ -190,6 +211,7 @@ export function createMcpHost(deps: McpHostDeps) {
 
     // 1. Check tools_denied first (explicit denial wins)
     if (args.toolsDenied.includes(args.toolName)) {
+      emitAuthorityViolation(args, 'explicit-deny');
       const result: CallToolResult = {
         success: false,
         error: `Tool '${args.toolName}' is denied for your role`,
@@ -202,6 +224,7 @@ export function createMcpHost(deps: McpHostDeps) {
 
     // 2. If tools_allowed is non-empty, tool must be in the list
     if (args.toolsAllowed.length > 0 && !args.toolsAllowed.includes(args.toolName)) {
+      emitAuthorityViolation(args, 'not-allowlisted');
       const result: CallToolResult = {
         success: false,
         error: `Tool '${args.toolName}' is not allowed for your role. Allowed: ${args.toolsAllowed.join(', ')}`,

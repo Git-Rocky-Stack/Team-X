@@ -91,8 +91,10 @@ const REQUEST_CHANNELS = [
   'mcp.testConnection',
   'extensions.list',
   'authority.list',
+  'authority.listRequests',
   'authority.create',
   'authority.delete',
+  'authority.reviewRequest',
   'authority.getEffective',
   // Goals management (Phase 3 — M15)
   'goals.create',
@@ -416,6 +418,16 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   );
 
   ipcMain.handle(
+    'authority.listRequests',
+    async (
+      _event,
+      request: import('@team-x/shared-types').ListAuthorityRequestsRequest,
+    ) => {
+      return handlers.authorityListRequests(request);
+    },
+  );
+
+  ipcMain.handle(
     'authority.create',
     async (
       _event,
@@ -428,6 +440,16 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('authority.delete', async (_event, request: { grantId: string }) => {
     return handlers.authorityDelete(request);
   });
+
+  ipcMain.handle(
+    'authority.reviewRequest',
+    async (
+      _event,
+      request: import('@team-x/shared-types').ReviewAuthorityRequestRequest,
+    ) => {
+      return handlers.authorityReviewRequest(request);
+    },
+  );
 
   ipcMain.handle(
     'authority.getEffective',

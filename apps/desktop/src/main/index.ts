@@ -631,6 +631,7 @@ app
                 if (!serverId) throw new Error(`No MCP server found for tool: ${t.name}`);
 
                 const result = await mcpHost.callTool({
+                  companyId: company.id,
                   serverId,
                   toolName: t.name,
                   toolArgs: args,

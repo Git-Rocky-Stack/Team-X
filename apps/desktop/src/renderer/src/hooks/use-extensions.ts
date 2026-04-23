@@ -26,12 +26,25 @@ export function useAuthorityGrants(companyId: string | null, employeeId?: string
   });
 }
 
+export function useAuthorityRequests(
+  companyId: string | null,
+  status: 'pending' | 'approved' | 'denied' = 'pending',
+) {
+  return useQuery({
+    queryKey: ['authority-requests', companyId, status],
+    queryFn: () => ipc.authority.listRequests({ companyId: companyId!, status }),
+    enabled: companyId !== null && companyId.length > 0,
+  });
+}
+
 export function useCreateAuthorityGrant() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ipc.authority.create,
     onSuccess: (_result, req) => {
       qc.invalidateQueries({ queryKey: ['authority', req.companyId] });
+      qc.invalidateQueries({ queryKey: ['authority-requests', req.companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
       qc.invalidateQueries({ queryKey: ['employees', req.companyId] });
       qc.invalidateQueries({ queryKey: ['effective-authority', req.companyId] });
     },
@@ -45,7 +58,24 @@ export function useDeleteAuthorityGrant(companyId: string | null) {
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['authority', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority-requests', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
       qc.invalidateQueries({ queryKey: ['effective-authority', companyId] });
+    },
+  });
+}
+
+export function useReviewAuthorityRequest(companyId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ipc.authority.reviewRequest,
+    onSuccess: () => {
+      if (!companyId) return;
+      qc.invalidateQueries({ queryKey: ['authority', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority-requests', companyId] });
+      qc.invalidateQueries({ queryKey: ['effective-authority', companyId] });
+      qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
 }
@@ -74,6 +104,8 @@ export function useInstallLocalSkill(companyId: string | null) {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
       qc.invalidateQueries({ queryKey: ['skill-assignments', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority-requests', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
 }
@@ -86,6 +118,8 @@ export function useInstallGithubSkill(companyId: string | null) {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
       qc.invalidateQueries({ queryKey: ['skill-assignments', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority-requests', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
 }
@@ -97,6 +131,7 @@ export function useUpsertSkillAssignment(companyId: string | null) {
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['skill-assignments', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
 }
@@ -108,6 +143,7 @@ export function useDeleteSkillAssignment(companyId: string | null) {
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['skill-assignments', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
 }
@@ -129,6 +165,7 @@ export function useAddMcpServer(companyId: string | null) {
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
       qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
 }
@@ -142,6 +179,7 @@ export function useInstallMcpTemplate(companyId: string | null) {
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
       qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
 }
@@ -156,6 +194,7 @@ export function useToggleMcpServer(companyId: string | null) {
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
       qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
 }
@@ -169,6 +208,7 @@ export function useRemoveMcpServer(companyId: string | null) {
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
       qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
 }

@@ -232,6 +232,16 @@ describe('skills-service', () => {
     expect(extensionsRepo.listByCompany(COMPANY_ID)).toEqual([]);
   });
 
+  it('surfaces a clear error when the local skill folder does not exist', async () => {
+    const { service, extensionsRepo } = createService();
+
+    await expect(
+      service.installLocal({ companyId: COMPANY_ID, folderPath: join(tempRoot, 'missing-skill') }),
+    ).rejects.toThrow(/\[skills\] local skill folder not found/i);
+
+    expect(extensionsRepo.listByCompany(COMPANY_ID)).toEqual([]);
+  });
+
   it('applies employee overrides over workspace defaults during prompt materialization', async () => {
     const skillDir = join(tempRoot, 'manual-skill');
     await mkdir(skillDir, { recursive: true });

@@ -241,4 +241,53 @@ describe('extensions repos', () => {
 
     expect(rows.map((row) => row.id)).toEqual([pendingId]);
   });
+
+  it('lists and reviews authority requests with company scoping preserved', () => {
+    const extensionId = extensionsRepo.create({
+      companyId: COMPANY_ID,
+      kind: 'skill',
+      name: 'Scoped Skill',
+      slug: 'scoped-skill',
+      sourceKind: 'local',
+      sourceRef: 'C:/skills/scoped',
+    });
+
+    const requestId = authorityRepo.createRequest({
+      extensionId,
+      resourceKind: 'capability',
+      resourceId: 'shell',
+      requestedPermission: 'allow',
+      reason: 'Requested by install',
+    });
+
+    expect(authorityRepo.listRequestsByCompany(COMPANY_ID)).toEqual([
+      expect.objectContaining({
+        id: requestId,
+        status: 'pending',
+      }),
+    ]);
+
+    authorityRepo.reviewRequest({
+      requestId,
+      status: 'approved',
+      reason: 'Approved for this workspace',
+      reviewedAt: 99,
+    });
+
+    expect(authorityRepo.getRequestById(requestId)).toEqual(
+      expect.objectContaining({
+        id: requestId,
+        status: 'approved',
+        reason: 'Approved for this workspace',
+        reviewedAt: 99,
+      }),
+    );
+    expect(authorityRepo.listPendingByCompany(COMPANY_ID)).toEqual([]);
+    expect(authorityRepo.listRequestsByCompany(COMPANY_ID, 'approved')).toEqual([
+      expect.objectContaining({
+        id: requestId,
+        status: 'approved',
+      }),
+    ]);
+  });
 });

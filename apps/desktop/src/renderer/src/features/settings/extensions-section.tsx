@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton.js';
 import {
   useAuthorityGrants,
+  useAuthorityRequests,
   useDeleteSkillAssignment,
   useDeleteAuthorityGrant,
   useEffectiveAuthority,
@@ -17,6 +18,7 @@ import {
   useMcpTemplates,
   useMcpServers,
   useRemoveMcpServer,
+  useReviewAuthorityRequest,
   useToggleMcpServer,
   useUpsertSkillAssignment,
 } from '@/hooks/use-extensions.js';
@@ -49,8 +51,10 @@ export function ExtensionsSection() {
   const mcpQuery = useMcpServers(companyId);
   const mcpTemplatesQuery = useMcpTemplates(companyId);
   const authorityQuery = useAuthorityGrants(companyId);
+  const authorityRequestsQuery = useAuthorityRequests(companyId, 'pending');
   const employeesQuery = useEmployees(companyId);
   const deleteGrant = useDeleteAuthorityGrant(companyId);
+  const reviewAuthorityRequest = useReviewAuthorityRequest(companyId);
   const upsertSkillAssignment = useUpsertSkillAssignment(companyId);
   const deleteSkillAssignment = useDeleteSkillAssignment(companyId);
   const toggleMcpServer = useToggleMcpServer(companyId);
@@ -61,6 +65,7 @@ export function ExtensionsSection() {
   const [previewEmployeeId, setPreviewEmployeeId] = useState<string | null>(null);
 
   const extensions = extensionsQuery.data ?? [];
+  const pendingAuthorityRequests = authorityRequestsQuery.data ?? [];
   const skillAssignments = skillAssignmentsQuery.data ?? [];
   const employees = employeesQuery.data ?? [];
   const mcpExtensionsByRuntimeRefId = new Map(
@@ -242,6 +247,9 @@ export function ExtensionsSection() {
                 {skillExtensions.map((extension) => {
                   const workspaceAssignment = workspaceSkillAssignments.get(extension.id);
                   const workspaceEnabled = workspaceAssignment?.enabled ?? false;
+                  const pendingReviewCount = pendingAuthorityRequests.filter(
+                    (request) => request.extensionId === extension.id,
+                  ).length;
                   const healthStatus =
                     typeof extension.manifest?.healthStatus === 'string'
                       ? extension.manifest.healthStatus
@@ -269,6 +277,9 @@ export function ExtensionsSection() {
                         <span>{extension.requestedPaths.length} paths</span>
                         <span>{extension.version ?? 'unversioned'}</span>
                         <span>{workspaceEnabled ? 'workspace enabled' : 'workspace disabled'}</span>
+                        {pendingReviewCount > 0 && (
+                          <span>{pendingReviewCount} pending authority review</span>
+                        )}
                       </div>
 
                       <div className="mt-4 rounded-lg border border-border/70 bg-background/70 px-3 py-3">
@@ -503,6 +514,7 @@ export function ExtensionsSection() {
                         <p className="text-xs font-medium text-foreground">Effective preview</p>
                         <p className="text-[11px] text-muted-foreground">
                           Resolver-backed preview using role defaults plus company, extension, and employee layers.
+                          Path grants are Windows-safe, case-insensitive, and directory-prefix matched.
                         </p>
                       </div>
                       <div className="w-56">
@@ -544,17 +556,111 @@ export function ExtensionsSection() {
                             ))}
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            {effectiveAuthorityQuery.data.entries
-                              .filter((entry) => entry.resourceKind === 'path')
-                              .map((entry) => (
-                                <Badge
-                                  key={`${entry.resourceKind}:${entry.resourceId}`}
-                                  variant={permissionVariant(entry.permission)}
-                                >
-                                  {entry.permission} {entry.resourceId}
-                                </Badge>
-                              ))}
+                            {effectiveAuthorityQuery.data.entries.filter((entry) => entry.resourceKind === 'path')
+                              .length > 0 ? (
+                              effectiveAuthorityQuery.data.entries
+                                .filter((entry) => entry.resourceKind === 'path')
+                                .map((entry) => (
+                                  <Badge
+                                    key={`${entry.resourceKind}:${entry.resourceId}:${entry.sourceKind}:${entry.sourceId}`}
+                                    variant={permissionVariant(entry.permission)}
+                                  >
+                                    {entry.permission} {entry.resourceId}
+                                  </Badge>
+                                ))
+                            ) : (
+                              <Badge variant="outline">no explicit path grants</Badge>
+                            )}
                           </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {authorityRequestsQuery.isLoading ? (
+                  <Skeleton className="h-24 rounded-lg" />
+                ) : authorityRequestsQuery.isError ? (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+                    Failed to load pending authority requests.
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-medium text-foreground">Pending reviews</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Skills requesting sensitive capabilities or paths stop here until you approve or deny them.
+                        </p>
+                      </div>
+                      <Badge variant="outline">{pendingAuthorityRequests.length}</Badge>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {pendingAuthorityRequests.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          No pending extension authority requests.
+                        </p>
+                      ) : (
+                        pendingAuthorityRequests.map((request) => (
+                          <div
+                            key={request.id}
+                            className="rounded-md border border-border/60 bg-background/50 px-3 py-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-medium text-foreground">
+                                  {extensionNameById.get(request.extensionId) ?? request.extensionId}
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                                  <span>{request.resourceKind}</span>
+                                  <span>{request.requestedPermission}</span>
+                                  <span className="truncate">{request.resourceId}</span>
+                                </div>
+                                {request.reason && (
+                                  <p className="mt-2 text-[11px] text-muted-foreground">
+                                    {request.reason}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8"
+                                  onClick={() =>
+                                    reviewAuthorityRequest.mutate({
+                                      companyId: companyId!,
+                                      requestId: request.id,
+                                      decision: 'denied',
+                                    })
+                                  }
+                                  disabled={reviewAuthorityRequest.isPending}
+                                >
+                                  Deny
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-8"
+                                  onClick={() =>
+                                    reviewAuthorityRequest.mutate({
+                                      companyId: companyId!,
+                                      requestId: request.id,
+                                      decision: 'approved',
+                                    })
+                                  }
+                                  disabled={reviewAuthorityRequest.isPending}
+                                >
+                                  Approve
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                      {reviewAuthorityRequest.isError && (
+                        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                          Failed to review the selected authority request.
                         </div>
                       )}
                     </div>

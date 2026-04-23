@@ -43,6 +43,7 @@ import type {
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   AuthorityGrant,
+  AuthorityRequest,
   ArchiveCompanyRequest,
   AssignTicketRequest,
   AttachFileRequest,
@@ -106,6 +107,7 @@ import type {
   LinkTicketToProjectRequest,
   CreateAuthorityGrantRequest,
   ListAuthorityGrantsRequest,
+  ListAuthorityRequestsRequest,
   ListAttachmentsRequest,
   ListExtensionsRequest,
   ListSkillAssignmentsRequest,
@@ -132,6 +134,7 @@ import type {
   ProjectDetail,
   RemoveProviderRequest,
   ReopenTicketRequest,
+  ReviewAuthorityRequestRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
   SendChatRequest,
@@ -225,7 +228,7 @@ import type { MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { OrgEdgeRow } from '../db/repos/orgchart.js';
 import type { CreateProjectInput, ProjectRow, UpdateProjectInput } from '../db/repos/projects.js';
-import type { AuthorityGrantRow, ExtensionRow } from '../db/repos/extensions.js';
+import type { AuthorityGrantRow, AuthorityRequestRow, ExtensionRow } from '../db/repos/extensions.js';
 import type {
   CompanyStats,
   CostBreakdownRow,
@@ -525,6 +528,27 @@ export interface IpcAuthorityRepo {
   listByCompany(companyId: string): AuthorityGrantRow[];
   listForEmployee(companyId: string, employeeId: string): AuthorityGrantRow[];
   deleteGrant(id: string): void;
+  createRequest(input: {
+    extensionId: string;
+    employeeId?: string | null;
+    resourceKind: 'capability' | 'path';
+    resourceId: string;
+    requestedPermission: 'allow' | 'deny' | 'prompt';
+    status?: 'pending' | 'approved' | 'denied';
+    reason?: string | null;
+    reviewedAt?: number | null;
+  }): string;
+  getRequestById(id: string): AuthorityRequestRow | null;
+  listRequestsByCompany(
+    companyId: string,
+    status?: 'pending' | 'approved' | 'denied',
+  ): AuthorityRequestRow[];
+  reviewRequest(input: {
+    requestId: string;
+    status: 'approved' | 'denied';
+    reason?: string | null;
+    reviewedAt?: number | null;
+  }): void;
 }
 
 export interface IpcMeetingsRepo {
@@ -1075,11 +1099,17 @@ export interface IpcHandlers {
   /** `authority.list` — authority grants relevant to a company or one employee. */
   authorityList(req: ListAuthorityGrantsRequest): Promise<AuthorityGrant[]>;
 
+  /** `authority.listRequests` — list extension authority requests for a company. */
+  authorityListRequests(req: ListAuthorityRequestsRequest): Promise<AuthorityRequest[]>;
+
   /** `authority.create` — create a company-default or employee-override authority grant. */
   authorityCreate(req: CreateAuthorityGrantRequest): Promise<{ grantId: string }>;
 
   /** `authority.delete` — delete one persisted authority grant. */
   authorityDelete(req: DeleteAuthorityGrantRequest): Promise<void>;
+
+  /** `authority.reviewRequest` — approve or deny one extension authority request. */
+  authorityReviewRequest(req: ReviewAuthorityRequestRequest): Promise<{ grantId: string | null }>;
 
   /** `authority.getEffective` — resolve effective authority for one employee. */
   authorityGetEffective(req: GetEffectiveAuthorityRequest): Promise<EffectiveAuthoritySnapshot>;
@@ -1542,6 +1572,21 @@ function rowToAuthorityGrant(row: AuthorityGrantRow): AuthorityGrant {
   };
 }
 
+function rowToAuthorityRequest(row: AuthorityRequestRow): AuthorityRequest {
+  return {
+    id: row.id,
+    extensionId: row.extensionId,
+    employeeId: row.employeeId,
+    resourceKind: row.resourceKind as AuthorityRequest['resourceKind'],
+    resourceId: row.resourceId,
+    requestedPermission: row.requestedPermission as AuthorityRequest['requestedPermission'],
+    status: row.status as AuthorityRequest['status'],
+    reason: row.reason,
+    createdAt: row.createdAt,
+    reviewedAt: row.reviewedAt,
+  };
+}
+
 function rowToEmployee(row: EmployeeRow): Employee {
   // Strip the rolePackId, toolsAllowed/Denied JSON columns — they are
   // internal to the agent runtime and not part of the renderer
@@ -1720,6 +1765,32 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     ensureSystemForCompany,
     getHardwareProfile,
   } = deps;
+
+  function emitUserAuditEvent<T>(
+    type: EventType,
+    companyId: string,
+    payload: T,
+    actorId = HUMAN_USER_ID,
+    actorKind: ActorKind = 'user',
+  ): void {
+    if (!bus) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[ipc] ${type}: bus dep unwired — audit log will NOT capture this mutation`);
+      }
+      return;
+    }
+    try {
+      bus.emit({
+        type,
+        companyId,
+        actorId,
+        actorKind,
+        payload,
+      });
+    } catch (err) {
+      console.error(`[ipc] ${type}: bus emit failed (mutation already persisted):`, err);
+    }
+  }
 
   return {
     async companiesList() {
@@ -2856,6 +2927,14 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
 
       mcpServersRepo.updateEnabled(serverId, enabled);
       extensionsRegistry?.syncMcpServer(serverId);
+      if (config.companyId) {
+        emitUserAuditEvent('mcp.toggled', config.companyId, {
+          serverId: config.id,
+          name: config.name,
+          enabled,
+          transport: config.transport,
+        });
+      }
     },
 
     async mcpAddServer({ companyId, name, transport, configJson }) {
@@ -2885,6 +2964,14 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
 
       extensionsRegistry?.syncMcpServer(serverId);
+      if (companyId) {
+        emitUserAuditEvent('mcp.added', companyId, {
+          serverId,
+          name,
+          transport,
+          sourceKind: 'manual',
+        });
+      }
 
       return { serverId };
     },
@@ -2958,14 +3045,29 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           templateTransport: template.transport,
         },
       });
+      emitUserAuditEvent('mcp.added', companyId, {
+        serverId,
+        name: template.name,
+        transport: template.transport,
+        sourceKind: 'template',
+        templateId,
+      });
 
       return { serverId };
     },
 
     async mcpRemoveServer({ serverId }) {
+      const existing = mcpServersRepo.getById(serverId);
       await mcpHost.disconnectServer(serverId);
       mcpServersRepo.delete(serverId);
       extensionsRegistry?.removeMcpServer(serverId);
+      if (existing?.companyId) {
+        emitUserAuditEvent('mcp.removed', existing.companyId, {
+          serverId: existing.id,
+          name: existing.name,
+          transport: existing.transport,
+        });
+      }
     },
 
     async mcpTestConnection({ transport, configJson }) {
@@ -3022,10 +3124,16 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] extensions.installLocalSkill: folderPath is required');
       }
       assertCompanyActive(companiesRepo, companyId, 'extensions.installLocalSkill');
-      return skillsService.installLocal({
+      const result = await skillsService.installLocal({
         companyId,
         folderPath: folderPath.trim(),
       });
+      emitUserAuditEvent('extension.installed', companyId, {
+        extensionId: result.extensionId,
+        sourceKind: 'local',
+        sourceRef: folderPath.trim(),
+      });
+      return result;
     },
 
     async extensionsInstallGithubSkill({ companyId, sourceUrl }) {
@@ -3039,10 +3147,16 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] extensions.installGithubSkill: sourceUrl is required');
       }
       assertCompanyActive(companiesRepo, companyId, 'extensions.installGithubSkill');
-      return skillsService.installGithub({
+      const result = await skillsService.installGithub({
         companyId,
         sourceUrl: sourceUrl.trim(),
       });
+      emitUserAuditEvent('extension.installed', companyId, {
+        extensionId: result.extensionId,
+        sourceKind: 'github',
+        sourceRef: sourceUrl.trim(),
+      });
+      return result;
     },
 
     async extensionsListSkillAssignments({ companyId }) {
@@ -3113,6 +3227,12 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         employeeId: normalizedEmployeeId,
         enabled,
       });
+      emitUserAuditEvent('skill.assignmentUpdated', companyId, {
+        assignmentId,
+        extensionId,
+        employeeId: normalizedEmployeeId,
+        enabled,
+      });
       return { assignmentId };
     },
 
@@ -3138,6 +3258,18 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           ? authorityRepo.listForEmployee(companyId, employeeId)
           : authorityRepo.listByCompany(companyId);
       return rows.map(rowToAuthorityGrant);
+    },
+
+    async authorityListRequests({ companyId, status }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] authority.listRequests: companyId is required');
+      }
+      if (!authorityRepo) {
+        throw new Error('[ipc] authority.listRequests: authorityRepo dep unwired');
+      }
+      const normalizedStatus =
+        status === 'pending' || status === 'approved' || status === 'denied' ? status : undefined;
+      return authorityRepo.listRequestsByCompany(companyId, normalizedStatus).map(rowToAuthorityRequest);
     },
 
     async authorityCreate(req) {
@@ -3186,6 +3318,14 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         permission: req.permission,
         metadataJson,
       });
+      emitUserAuditEvent('authority.grant.created', req.companyId, {
+        grantId,
+        scopeKind: req.scopeKind,
+        scopeId: req.scopeId,
+        resourceKind: req.resourceKind,
+        resourceId: req.resourceId.trim(),
+        permission: req.permission,
+      });
       return { grantId };
     },
 
@@ -3201,6 +3341,118 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error(`[ipc] authority.delete: grant not found: ${grantId}`);
       }
       authorityRepo.deleteGrant(grantId);
+      if (existing.scopeKind === 'company') {
+        emitUserAuditEvent('authority.grant.deleted', existing.scopeId, {
+          grantId,
+          scopeKind: existing.scopeKind,
+          scopeId: existing.scopeId,
+          resourceKind: existing.resourceKind,
+          resourceId: existing.resourceId,
+          permission: existing.permission,
+        });
+      } else if (existing.scopeKind === 'employee') {
+        const employee = employeesRepo.getById(existing.scopeId);
+        if (employee) {
+          emitUserAuditEvent('authority.grant.deleted', employee.companyId, {
+            grantId,
+            scopeKind: existing.scopeKind,
+            scopeId: existing.scopeId,
+            resourceKind: existing.resourceKind,
+            resourceId: existing.resourceId,
+            permission: existing.permission,
+          });
+        }
+      } else if (existing.scopeKind === 'extension' && extensionsRegistry) {
+        for (const company of companiesRepo.list()) {
+          const extension = extensionsRegistry.listByCompany(company.id).find((row) => row.id === existing.scopeId);
+          if (!extension) continue;
+          emitUserAuditEvent('authority.grant.deleted', company.id, {
+            grantId,
+            scopeKind: existing.scopeKind,
+            scopeId: existing.scopeId,
+            resourceKind: existing.resourceKind,
+            resourceId: existing.resourceId,
+            permission: existing.permission,
+          });
+          break;
+        }
+      }
+    },
+
+    async authorityReviewRequest({ companyId, requestId, decision, reason }) {
+      if (!authorityRepo) {
+        throw new Error('[ipc] authority.reviewRequest: authorityRepo dep unwired');
+      }
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] authority.reviewRequest: companyId is required');
+      }
+      if (typeof requestId !== 'string' || requestId.length === 0) {
+        throw new Error('[ipc] authority.reviewRequest: requestId is required');
+      }
+      if (decision !== 'approved' && decision !== 'denied') {
+        throw new Error('[ipc] authority.reviewRequest: decision must be approved or denied');
+      }
+
+      const request = authorityRepo.getRequestById(requestId);
+      if (!request) {
+        throw new Error(`[ipc] authority.reviewRequest: request not found: ${requestId}`);
+      }
+
+      const visibleRequestIds = new Set(
+        authorityRepo.listRequestsByCompany(companyId).map((row) => row.id),
+      );
+      if (!visibleRequestIds.has(requestId)) {
+        throw new Error(
+          `[ipc] authority.reviewRequest: request ${requestId} does not belong to company ${companyId}`,
+        );
+      }
+      if (request.status !== 'pending') {
+        throw new Error(
+          `[ipc] authority.reviewRequest: request ${requestId} is already ${request.status}`,
+        );
+      }
+
+      const reviewedAt = Date.now();
+      let grantId: string | null = null;
+      if (decision === 'approved') {
+        grantId = authorityRepo.createGrant({
+          scopeKind: 'extension',
+          scopeId: request.extensionId,
+          resourceKind: request.resourceKind as 'capability' | 'path',
+          resourceId: request.resourceId,
+          permission: request.requestedPermission as 'allow' | 'deny' | 'prompt',
+          metadataJson: JSON.stringify({
+            source: 'authority-request',
+            requestId,
+          }),
+        });
+        emitUserAuditEvent('authority.grant.created', companyId, {
+          grantId,
+          scopeKind: 'extension',
+          scopeId: request.extensionId,
+          resourceKind: request.resourceKind,
+          resourceId: request.resourceId,
+          permission: request.requestedPermission,
+          requestId,
+        });
+      }
+
+      authorityRepo.reviewRequest({
+        requestId,
+        status: decision,
+        reason: reason?.trim() || null,
+        reviewedAt,
+      });
+      emitUserAuditEvent('authority.request.reviewed', companyId, {
+        requestId,
+        extensionId: request.extensionId,
+        resourceKind: request.resourceKind,
+        resourceId: request.resourceId,
+        requestedPermission: request.requestedPermission,
+        decision,
+        grantId,
+      });
+      return { grantId };
     },
 
     async authorityGetEffective({ companyId, employeeId }) {

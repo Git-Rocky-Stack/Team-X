@@ -1,3 +1,5 @@
+import { win32 as pathWin32 } from 'node:path';
+
 import type {
   AuthorityGrant,
   EffectiveAuthorityEntry,
@@ -38,6 +40,11 @@ export interface AuthorityResolverServiceDeps {
 
 export interface AuthorityResolverService {
   resolveEmployee(companyId: string, employeeId: string): EffectiveAuthoritySnapshot;
+  evaluatePath(
+    companyId: string,
+    employeeId: string,
+    candidatePath: string,
+  ): PathAuthorityDecision;
 }
 
 type ResolverSourceKind = EffectiveAuthorityEntry['sourceKind'];
@@ -46,12 +53,29 @@ interface LayeredEntry extends EffectiveAuthorityEntry {
   precedence: number;
 }
 
+interface MatchedPathEntry {
+  entry: EffectiveAuthorityEntry;
+  normalizedGrantPath: string;
+}
+
+export interface PathAuthorityDecision {
+  normalizedPath: string;
+  permission: AuthorityGrant['permission'] | 'inherit';
+  matchedEntry: EffectiveAuthorityEntry | null;
+}
+
 const PRECEDENCE: Record<ResolverSourceKind, number> = {
   'role-default': 0,
   extension: 1,
   company: 2,
   employee: 3,
   'hard-deny': 4,
+};
+
+const PERMISSION_WEIGHT: Record<AuthorityGrant['permission'], number> = {
+  allow: 0,
+  prompt: 1,
+  deny: 2,
 };
 
 function parseStringArray(json: string | null | undefined): string[] {
@@ -90,6 +114,40 @@ function parseMetadata(json: string | null): Record<string, unknown> | null {
 function sortEntries(a: EffectiveAuthorityEntry, b: EffectiveAuthorityEntry): number {
   if (a.resourceKind !== b.resourceKind) return a.resourceKind.localeCompare(b.resourceKind);
   return a.resourceId.localeCompare(b.resourceId);
+}
+
+function normalizeAuthorityPath(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    throw new Error('[authority] path is required');
+  }
+
+  const normalized = pathWin32.normalize(trimmed.replace(/\//g, '\\')).replace(/\\/g, '/').toLowerCase();
+  if (/^[a-z]:$/.test(normalized)) {
+    return `${normalized}/`;
+  }
+  if (normalized.length > 1 && normalized.endsWith('/')) {
+    if (/^[a-z]:\/$/.test(normalized)) return normalized;
+    return normalized.replace(/\/+$/g, '');
+  }
+  return normalized;
+}
+
+function pathGrantMatches(grantPath: string, candidatePath: string): boolean {
+  if (grantPath === candidatePath) return true;
+  if (/^[a-z]:\/$/.test(grantPath)) {
+    return candidatePath.startsWith(grantPath);
+  }
+  return candidatePath.startsWith(`${grantPath}/`);
+}
+
+function compareMatchedPathEntries(a: MatchedPathEntry, b: MatchedPathEntry): number {
+  if (a.normalizedGrantPath.length !== b.normalizedGrantPath.length) {
+    return b.normalizedGrantPath.length - a.normalizedGrantPath.length;
+  }
+  const precedenceDiff = PRECEDENCE[b.entry.sourceKind] - PRECEDENCE[a.entry.sourceKind];
+  if (precedenceDiff !== 0) return precedenceDiff;
+  return PERMISSION_WEIGHT[b.entry.permission] - PERMISSION_WEIGHT[a.entry.permission];
 }
 
 export function createAuthorityResolverService(
@@ -196,7 +254,32 @@ export function createAuthorityResolverService(
     };
   }
 
+  function evaluatePath(
+    companyId: string,
+    employeeId: string,
+    candidatePath: string,
+  ): PathAuthorityDecision {
+    const snapshot = resolveEmployee(companyId, employeeId);
+    const normalizedPath = normalizeAuthorityPath(candidatePath);
+    const matches = snapshot.entries
+      .filter((entry) => entry.resourceKind === 'path')
+      .map((entry): MatchedPathEntry => ({
+        entry,
+        normalizedGrantPath: normalizeAuthorityPath(entry.resourceId),
+      }))
+      .filter((entry) => pathGrantMatches(entry.normalizedGrantPath, normalizedPath))
+      .sort(compareMatchedPathEntries);
+
+    const matched = matches[0]?.entry ?? null;
+    return {
+      normalizedPath,
+      permission: matched?.permission ?? 'inherit',
+      matchedEntry: matched,
+    };
+  }
+
   return {
     resolveEmployee,
+    evaluatePath,
   };
 }

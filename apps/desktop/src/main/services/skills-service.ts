@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile, copyFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 
 import type { ExtensionsAutonomyMode, SkillAssignment } from '@team-x/shared-types';
@@ -201,6 +201,18 @@ async function ensureDirectory(path: string): Promise<void> {
 
 async function loadLocalSkillSource(folderPath: string): Promise<LoadedSkillSource> {
   const root = resolve(folderPath);
+  let sourceStats;
+  try {
+    sourceStats = await stat(root);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') {
+      throw new Error(`[skills] local skill folder not found: ${root}`);
+    }
+    throw err;
+  }
+  if (!sourceStats.isDirectory()) {
+    throw new Error(`[skills] local skill path must be a directory: ${root}`);
+  }
   let manifestPath: string | null = null;
   let manifestFileName: string = MANIFEST_FILE_CANDIDATES[0];
 
@@ -227,7 +239,14 @@ async function loadLocalSkillSource(folderPath: string): Promise<LoadedSkillSour
   for (const relativePath of fileList) {
     const absolutePath = resolve(root, relativePath);
     assertWithinRoot(root, absolutePath, relativePath);
-    await readFile(absolutePath, 'utf8');
+    try {
+      await readFile(absolutePath, 'utf8');
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') {
+        throw new Error(`[skills] missing referenced file: ${relativePath}`);
+      }
+      throw err;
+    }
   }
 
   return {
@@ -346,6 +365,9 @@ async function loadGitHubSkillSource(
   async function fetchJson<T>(url: string): Promise<T> {
     const response = await fetchFn(url, { headers });
     if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`[skills] GitHub resource not found: ${url}`);
+      }
       throw new Error(`[skills] GitHub request failed (${response.status}) for ${url}`);
     }
     return (await response.json()) as T;
@@ -353,7 +375,12 @@ async function loadGitHubSkillSource(
 
   const repoInfo = await fetchJson<{ default_branch: string }>(
     `https://api.github.com/repos/${parsed.owner}/${parsed.repo}`,
-  );
+  ).catch((err) => {
+    if (err instanceof Error && err.message.includes('GitHub resource not found')) {
+      throw new Error(`[skills] GitHub repository not found: ${parsed.owner}/${parsed.repo}`);
+    }
+    throw err;
+  });
   const resolvedRef = parsed.ref ?? repoInfo.default_branch;
   const commit = await fetchJson<{ sha: string }>(
     `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/commits/${encodeURIComponent(resolvedRef)}`,
@@ -363,7 +390,12 @@ async function loadGitHubSkillSource(
     const nextPath = path.replace(/^\/+/, '');
     const response = await fetchJson<{ type: string; content?: string; encoding?: string }>(
       `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/contents/${nextPath}?ref=${encodeURIComponent(resolvedRef)}`,
-    );
+    ).catch((err) => {
+      if (err instanceof Error && err.message.includes('GitHub resource not found')) {
+        throw new Error(`[skills] GitHub skill file not found: ${nextPath}`);
+      }
+      throw err;
+    });
     if (response.type !== 'file' || typeof response.content !== 'string') {
       throw new Error(`[skills] GitHub path is not a file: ${nextPath}`);
     }

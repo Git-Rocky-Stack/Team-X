@@ -49,6 +49,8 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsHooksSrc).toContain('ipc.extensions.deleteSkillAssignment(assignmentId)');
     expect(extensionsHooksSrc).toContain('export function useAuthorityGrants(companyId: string | null, employeeId?: string | null)');
     expect(extensionsHooksSrc).toContain("queryKey: ['authority', companyId, employeeId ?? null]");
+    expect(extensionsHooksSrc).toContain("export function useAuthorityRequests(");
+    expect(extensionsHooksSrc).toContain("queryKey: ['authority-requests', companyId, status]");
     expect(extensionsHooksSrc).toContain("queryKey: ['mcp', companyId]");
     expect(extensionsHooksSrc).toContain('export function useMcpTemplates(companyId: string | null)');
     expect(extensionsHooksSrc).toContain("queryKey: ['mcp-templates', companyId]");
@@ -56,6 +58,8 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsHooksSrc).toContain('ipc.authority.create');
     expect(extensionsHooksSrc).toContain('export function useDeleteAuthorityGrant(companyId: string | null)');
     expect(extensionsHooksSrc).toContain('ipc.authority.delete(grantId)');
+    expect(extensionsHooksSrc).toContain('export function useReviewAuthorityRequest(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain('ipc.authority.reviewRequest');
     expect(extensionsHooksSrc).toContain('export function useEffectiveAuthority(companyId: string | null, employeeId: string | null)');
     expect(extensionsHooksSrc).toContain('ipc.authority.getEffective({ companyId: companyId!, employeeId: employeeId! })');
     expect(extensionsHooksSrc).toContain('export function useAddMcpServer(companyId: string | null)');
@@ -78,11 +82,17 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('Install Skill');
     expect(extensionsSectionSrc).toContain('Import MCP');
     expect(extensionsSectionSrc).toContain('Grant Path');
+    expect(extensionsSectionSrc).toContain('Pending reviews');
     expect(extensionsSectionSrc).toContain('Workspace assignment');
     expect(extensionsSectionSrc).toContain('Employee overrides');
     expect(extensionsSectionSrc).toContain('EXTENSIONS_AUTONOMY_MODES.map');
     expect(extensionsSectionSrc).toContain('Effective preview');
     expect(extensionsSectionSrc).toContain('Authority preview employee');
+    expect(extensionsSectionSrc).toContain('Path grants are Windows-safe, case-insensitive, and directory-prefix matched.');
+    expect(extensionsSectionSrc).toContain("useAuthorityRequests(companyId, 'pending')");
+    expect(extensionsSectionSrc).toContain('useReviewAuthorityRequest(companyId)');
+    expect(extensionsSectionSrc).toContain('Approve');
+    expect(extensionsSectionSrc).toContain('Deny');
     expect(extensionsSectionSrc).toContain('Remove');
     expect(extensionsSectionSrc).toContain('Disable');
     expect(extensionsSectionSrc).toContain('useSkillAssignments(companyId)');

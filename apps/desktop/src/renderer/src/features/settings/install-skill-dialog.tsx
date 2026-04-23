@@ -23,6 +23,29 @@ type SkillInstallSource = 'local' | 'github';
 const selectClass =
   'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
+function formatInstallError(message: string | null): string | null {
+  if (!message) return null;
+  if (message.includes('local skill folder not found')) {
+    return 'The selected local folder does not exist.';
+  }
+  if (message.includes('local skill path must be a directory')) {
+    return 'The selected local path must point to a folder.';
+  }
+  if (message.includes('missing teamx-skill.json') || message.includes('missing team-x-skill.json')) {
+    return 'That folder or repo is missing `teamx-skill.json` or `team-x-skill.json`.';
+  }
+  if (message.includes('missing referenced file')) {
+    return 'The skill manifest references a prompt or instruction file that is missing.';
+  }
+  if (message.includes('GitHub repository not found')) {
+    return 'The GitHub repository could not be found or is not publicly reachable.';
+  }
+  if (message.includes('GitHub skill file not found')) {
+    return 'The GitHub source does not contain the referenced skill manifest or prompt files.';
+  }
+  return message;
+}
+
 export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSkillDialogProps) {
   const installLocal = useInstallLocalSkill(companyId);
   const installGithub = useInstallGithubSkill(companyId);
@@ -67,7 +90,9 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
   }
 
   const activeMutationError = source === 'local' ? installLocal.error : installGithub.error;
-  const activeError = activeMutationError instanceof Error ? activeMutationError.message : null;
+  const activeError = formatInstallError(
+    activeMutationError instanceof Error ? activeMutationError.message : null,
+  );
   const isPending = installLocal.isPending || installGithub.isPending;
 
   return (

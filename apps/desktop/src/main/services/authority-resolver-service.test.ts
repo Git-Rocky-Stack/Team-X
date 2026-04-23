@@ -170,6 +170,84 @@ describe('createAuthorityResolverService', () => {
     );
   });
 
+  it('matches Windows paths case-insensitively and prefers the most specific matching grant', () => {
+    const service = createAuthorityResolverService({
+      employeesRepo: {
+        getById: () => makeEmployee(),
+      },
+      authorityRepo: {
+        listForEmployee: () => [
+          makeGrant({
+            id: 'company-allow',
+            scopeKind: 'company',
+            scopeId: 'company-1',
+            resourceKind: 'path',
+            resourceId: 'C:/Projects/Alpha',
+            permission: 'allow',
+          }),
+          makeGrant({
+            id: 'employee-deny',
+            scopeKind: 'employee',
+            scopeId: 'employee-1',
+            resourceKind: 'path',
+            resourceId: 'C:\\Projects\\Alpha\\Secret',
+            permission: 'deny',
+          }),
+        ],
+      },
+    });
+
+    const denied = service.evaluatePath(
+      'company-1',
+      'employee-1',
+      'c:\\projects\\ALPHA\\secret\\runbook.md',
+    );
+    const allowed = service.evaluatePath(
+      'company-1',
+      'employee-1',
+      'C:/Projects/Alpha/Public/brief.md',
+    );
+
+    expect(denied.normalizedPath).toBe('c:/projects/alpha/secret/runbook.md');
+    expect(denied.permission).toBe('deny');
+    expect(denied.matchedEntry).toEqual(
+      expect.objectContaining({
+        resourceId: 'C:\\Projects\\Alpha\\Secret',
+        permission: 'deny',
+        sourceKind: 'employee',
+      }),
+    );
+    expect(allowed.permission).toBe('allow');
+    expect(allowed.matchedEntry).toEqual(
+      expect.objectContaining({
+        resourceId: 'C:/Projects/Alpha',
+        permission: 'allow',
+      }),
+    );
+  });
+
+  it('returns inherit when no path grant matches the requested location', () => {
+    const service = createAuthorityResolverService({
+      employeesRepo: {
+        getById: () => makeEmployee(),
+      },
+      authorityRepo: {
+        listForEmployee: () => [
+          makeGrant({
+            resourceKind: 'path',
+            resourceId: 'C:/Projects/Alpha',
+            permission: 'allow',
+          }),
+        ],
+      },
+    });
+
+    const result = service.evaluatePath('company-1', 'employee-1', 'D:/Elsewhere/notes.md');
+
+    expect(result.permission).toBe('inherit');
+    expect(result.matchedEntry).toBeNull();
+  });
+
   it('enforces hard platform denies last', () => {
     const service = createAuthorityResolverService({
       employeesRepo: {

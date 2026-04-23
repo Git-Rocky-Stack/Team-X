@@ -225,6 +225,43 @@ describe('audit-event-chip: copilot.analyzed', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Extensions & Authority hardening events
+// ---------------------------------------------------------------------------
+
+describe('audit-event-chip: extension.installed + authority.violation', () => {
+  it('maps the new extension install and authority violation events to stable labels and colors', () => {
+    expect(getEventTypeColor('extension.installed')).toBe('bg-emerald-600/20 text-emerald-400');
+    expect(getEventTypeLabel('extension.installed')).toBe('Extension Installed');
+    expect(getEventTypeColor('authority.violation')).toBe('bg-rose-600/20 text-rose-400');
+    expect(getEventTypeLabel('authority.violation')).toBe('Authority Violation');
+  });
+
+  it('summarizes extension installs with source metadata and authority violations with the denied resource', () => {
+    expect(
+      buildRowSummary(
+        'extension.installed',
+        JSON.stringify({
+          extensionId: 'ext-abcdef12',
+          sourceKind: 'github',
+          sourceRef: 'https://github.com/acme/team-x-skills/tree/main/ops-briefing',
+        }),
+      ),
+    ).toBe('github · https://github.com/acme/team-x-skills/tree/ma... · ext-abcd');
+
+    expect(
+      buildRowSummary(
+        'authority.violation',
+        JSON.stringify({
+          resourceKind: 'capability',
+          resourceId: 'read_file',
+          reason: 'explicit-deny',
+        }),
+      ),
+    ).toBe('capability · read_file · explicit-deny');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Regression guard — M32 T6 planner chips must still render
 // ---------------------------------------------------------------------------
 

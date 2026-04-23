@@ -56,6 +56,7 @@ import type {
 } from './copilot.js';
 import type {
   AuthorityGrant,
+  AuthorityRequest,
   ChatMessage,
   Company,
   Employee,
@@ -860,6 +861,11 @@ export interface ListAuthorityGrantsRequest {
   employeeId?: string | null;
 }
 
+export interface ListAuthorityRequestsRequest {
+  companyId: string;
+  status?: 'pending' | 'approved' | 'denied';
+}
+
 export interface CreateAuthorityGrantRequest {
   companyId: string;
   scopeKind: 'company' | 'employee';
@@ -872,6 +878,13 @@ export interface CreateAuthorityGrantRequest {
 
 export interface DeleteAuthorityGrantRequest {
   grantId: string;
+}
+
+export interface ReviewAuthorityRequestRequest {
+  companyId: string;
+  requestId: string;
+  decision: 'approved' | 'denied';
+  reason?: string | null;
 }
 
 export interface GetEffectiveAuthorityRequest {
@@ -1612,6 +1625,10 @@ export interface IpcContract {
     request: ListAuthorityGrantsRequest;
     response: AuthorityGrant[];
   };
+  'authority.listRequests': {
+    request: ListAuthorityRequestsRequest;
+    response: AuthorityRequest[];
+  };
   'authority.create': {
     request: CreateAuthorityGrantRequest;
     response: { grantId: string };
@@ -1619,6 +1636,10 @@ export interface IpcContract {
   'authority.delete': {
     request: DeleteAuthorityGrantRequest;
     response: undefined;
+  };
+  'authority.reviewRequest': {
+    request: ReviewAuthorityRequestRequest;
+    response: { grantId: string | null };
   };
   'authority.getEffective': {
     request: GetEffectiveAuthorityRequest;
@@ -2250,10 +2271,14 @@ export interface TeamXApi {
   authority: {
     /** List authority grants relevant to a company, optionally narrowed to one employee. */
     list(req: ListAuthorityGrantsRequest): Promise<AuthorityGrant[]>;
+    /** List extension authority requests for a company, typically pending review only. */
+    listRequests(req: ListAuthorityRequestsRequest): Promise<AuthorityRequest[]>;
     /** Create a company-default or employee-override authority grant. */
     create(req: CreateAuthorityGrantRequest): Promise<{ grantId: string }>;
     /** Delete one persisted authority grant. */
     delete(grantId: string): Promise<void>;
+    /** Approve or deny one pending extension authority request. */
+    reviewRequest(req: ReviewAuthorityRequestRequest): Promise<{ grantId: string | null }>;
     /** Resolve effective authority for one employee. */
     getEffective(req: GetEffectiveAuthorityRequest): Promise<EffectiveAuthoritySnapshot>;
   };
