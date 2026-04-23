@@ -98,6 +98,7 @@ import type {
   EndMeetingResponse,
   EffectiveAuthoritySnapshot,
   GetGoalRequest,
+  GetThreadDigestRequest,
   GetEffectiveAuthorityRequest,
   GetMeetingRequest,
   GetProjectRequest,
@@ -130,6 +131,7 @@ import type {
   ListProviderModelsRequest,
   ListProviderModelsResponse,
   ListProjectsRequest,
+  ListRunCheckpointsRequest,
   ListRuntimeProfilesRequest,
   ListRoutinesRequest,
   ListRoutineRunsRequest,
@@ -152,6 +154,7 @@ import type {
   ReviewAuthorityRequestRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
+  RunCheckpoint,
   Routine,
   RoutineRun,
   RuntimeProfileSummary,
@@ -165,6 +168,7 @@ import type {
   SkillAssignment,
   StopChatRequest,
   StopChatResponse,
+  ThreadDigest,
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetCopilotResponse,
@@ -829,6 +833,14 @@ export interface IpcArtifactService {
   list(input: ListArtifactsRequest): ArtifactRecord[];
 }
 
+export interface IpcThreadDigestService {
+  getLatest(input: GetThreadDigestRequest): ThreadDigest | null;
+}
+
+export interface IpcRunCheckpointService {
+  listByThread(input: ListRunCheckpointsRequest): RunCheckpoint[];
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -855,6 +867,8 @@ export interface IpcHandlerDeps {
   budgetGovernanceService?: IpcBudgetGovernanceService;
   approvalInboxService?: IpcApprovalInboxService;
   artifactService?: IpcArtifactService;
+  threadDigestService?: IpcThreadDigestService;
+  runCheckpointService?: IpcRunCheckpointService;
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
@@ -1054,6 +1068,10 @@ export interface IpcHandlers {
   approvalsReview(req: ReviewApprovalItemRequest): Promise<{ grantId: string | null }>;
   /** `artifacts.list` — recent artifact and outcome records. */
   artifactsList(req: ListArtifactsRequest): Promise<ArtifactRecord[]>;
+  /** `memory.getThreadDigest` — latest durable digest for one thread. */
+  memoryGetThreadDigest(req: GetThreadDigestRequest): Promise<ThreadDigest | null>;
+  /** `memory.listRunCheckpoints` — recent checkpoints for one thread, newest first. */
+  memoryListRunCheckpoints(req: ListRunCheckpointsRequest): Promise<RunCheckpoint[]>;
 
   /**
    * `employees.create` — hire a new employee from a role-pack role.
@@ -1893,6 +1911,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     budgetGovernanceService,
     approvalInboxService,
     artifactService,
+    threadDigestService,
+    runCheckpointService,
     authorityRepo,
     authorityResolver,
     providersService,
@@ -2351,6 +2371,53 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         companyId: req.companyId,
         limit: req.limit,
       });
+    },
+
+    async memoryGetThreadDigest(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] memory.getThreadDigest: companyId is required');
+      }
+      if (typeof req.threadId !== 'string' || req.threadId.length === 0) {
+        throw new Error('[ipc] memory.getThreadDigest: threadId is required');
+      }
+      const thread = threadsRepo.getById(req.threadId);
+      if (!thread || thread.companyId !== req.companyId) {
+        throw new Error('[ipc] memory.getThreadDigest: thread does not belong to company');
+      }
+      if (!threadDigestService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '[ipc] memory.getThreadDigest: threadDigestService dep unwired — returning null',
+          );
+        }
+        return null;
+      }
+      return threadDigestService.getLatest(req);
+    },
+
+    async memoryListRunCheckpoints(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] memory.listRunCheckpoints: companyId is required');
+      }
+      if (typeof req.threadId !== 'string' || req.threadId.length === 0) {
+        throw new Error('[ipc] memory.listRunCheckpoints: threadId is required');
+      }
+      const thread = threadsRepo.getById(req.threadId);
+      if (!thread || thread.companyId !== req.companyId) {
+        throw new Error('[ipc] memory.listRunCheckpoints: thread does not belong to company');
+      }
+      if (req.limit !== undefined && (!Number.isInteger(req.limit) || req.limit < 1 || req.limit > 100)) {
+        throw new Error('[ipc] memory.listRunCheckpoints: limit must be an integer between 1 and 100');
+      }
+      if (!runCheckpointService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '[ipc] memory.listRunCheckpoints: runCheckpointService dep unwired — returning empty set',
+          );
+        }
+        return [];
+      }
+      return runCheckpointService.listByThread(req);
     },
 
     async companiesCreate(req) {

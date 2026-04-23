@@ -95,10 +95,12 @@ import { createMessagesRepo } from './db/repos/messages.js';
 import { createOrgEdgesRepo } from './db/repos/orgchart.js';
 import { createOperatorsRepo } from './db/repos/operators.js';
 import { createProjectsRepo } from './db/repos/projects.js';
+import { createRunCheckpointsRepo } from './db/repos/run-checkpoints.js';
 import { createRuntimeProfilesRepo } from './db/repos/runtime-profiles.js';
 import { createRoutinesRepo } from './db/repos/routines.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createSettingsRepo } from './db/repos/settings.js';
+import { createThreadDigestsRepo } from './db/repos/thread-digests.js';
 import { createThreadsRepo } from './db/repos/threads.js';
 import { createTicketAttachmentsRepo } from './db/repos/ticket-attachments.js';
 import { createTicketsRepo } from './db/repos/tickets.js';
@@ -154,12 +156,14 @@ import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import { detectHardware } from './services/profiler.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
+import { createRunCheckpointService } from './services/run-checkpoint-service.js';
 import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
 import {
   type RoutineService,
   type RoutineServiceCreateTicketInput,
   createRoutineService,
 } from './services/routine-service.js';
+import { createThreadDigestService } from './services/thread-digest-service.js';
 import {
   buildEmbedAdapter,
   createProviderFactory,
@@ -395,6 +399,8 @@ app
     const vaultRepo = createVaultRepo(db);
     const ticketAttachmentsRepo = createTicketAttachmentsRepo(db);
     const settingsRepo = createSettingsRepo(db);
+    const threadDigestsRepo = createThreadDigestsRepo(db);
+    const runCheckpointsRepo = createRunCheckpointsRepo(db);
     const embeddingsRepo = createEmbeddingsRepo(db);
     const commandHistoryRepo = createCommandHistoryRepo(db);
     // M33 T4 — copilot-insights repo consumed by the CopilotAnalyzerService
@@ -407,6 +413,13 @@ app
     });
     const artifactService = createArtifactService({
       artifactsRepo,
+    });
+    const threadDigestService = createThreadDigestService({
+      threadDigestsRepo,
+      messagesRepo,
+    });
+    const runCheckpointService = createRunCheckpointService({
+      runCheckpointsRepo,
     });
 
     // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
@@ -927,6 +940,8 @@ app
       budgetGovernanceService: budgetGovernanceServiceInstance,
       approvalInboxService: approvalInboxServiceInstance,
       artifactService,
+      threadDigestService,
+      runCheckpointService,
       authorityRepo,
       authorityResolver,
       providersService,

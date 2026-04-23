@@ -100,6 +100,7 @@ import type {
   FireEmployeeRequest,
   Goal,
   GoalDetail,
+  GetThreadDigestRequest,
   HireEmployeeRequest,
   HireEmployeeResponse,
   InstallGithubSkillRequest,
@@ -118,6 +119,7 @@ import type {
   ListEventsRequest,
   ListEventsResponse,
   ListMcpTemplatesRequest,
+  ListRunCheckpointsRequest,
   ListRoutineRunsRequest,
   ListSkillAssignmentsRequest,
   CreateAuthorityGrantRequest,
@@ -135,6 +137,7 @@ import type {
   OperatorAccessEntry,
   Project,
   ProjectDetail,
+  RunCheckpoint,
   Routine,
   RoutineRun,
   RuntimeProfileSummary,
@@ -185,6 +188,7 @@ import type {
   TestMcpConnectionResponse,
   TestProviderConnectionResponse,
   Thread,
+  ThreadDigest,
   Ticket,
   TicketAttachment,
   TicketDetail,
@@ -272,6 +276,8 @@ const CHANNELS = {
   approvalsList: 'approvals.list',
   approvalsReview: 'approvals.review',
   artifactsList: 'artifacts.list',
+  memoryGetThreadDigest: 'memory.getThreadDigest',
+  memoryListRunCheckpoints: 'memory.listRunCheckpoints',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
@@ -507,6 +513,12 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     artifacts: {
       list: (req: ListArtifactsRequest) =>
         ipc.invoke(CHANNELS.artifactsList, req) as Promise<ArtifactRecord[]>,
+    },
+    memory: {
+      getThreadDigest: (req: GetThreadDigestRequest) =>
+        ipc.invoke(CHANNELS.memoryGetThreadDigest, req) as Promise<ThreadDigest | null>,
+      listRunCheckpoints: (req: ListRunCheckpointsRequest) =>
+        ipc.invoke(CHANNELS.memoryListRunCheckpoints, req) as Promise<RunCheckpoint[]>,
     },
     employees: {
       list: (companyId: string) =>

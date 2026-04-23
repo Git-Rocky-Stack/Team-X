@@ -578,6 +578,72 @@ export interface ArtifactRecord {
   updatedAt: number;
 }
 
+export const THREAD_DIGEST_FRESHNESS_STATES = ['fresh', 'stale', 'degraded'] as const;
+export type ThreadDigestFreshnessState = (typeof THREAD_DIGEST_FRESHNESS_STATES)[number];
+
+export interface ThreadDigestPinnedFact {
+  id: string;
+  fact: string;
+  sourceMessageId: string | null;
+}
+
+export interface ThreadDigest {
+  id: string;
+  companyId: string;
+  threadId: string;
+  summary: string;
+  pinnedFacts: ThreadDigestPinnedFact[];
+  lastSummarizedMessageId: string | null;
+  estimatedTokens: number;
+  freshness: ThreadDigestFreshnessState;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export const RUN_CHECKPOINT_KINDS = [
+  'manual',
+  'completion',
+  'stopped',
+  'timeout',
+  'approval-blocked',
+  'budget-blocked',
+  'routine-completed',
+] as const;
+export type RunCheckpointKind = (typeof RUN_CHECKPOINT_KINDS)[number];
+
+export const RUN_CHECKPOINT_BLOCKER_KINDS = [
+  'approval',
+  'budget',
+  'authority',
+  'provider',
+  'dependency',
+  'operator',
+  'other',
+] as const;
+export type RunCheckpointBlockerKind = (typeof RUN_CHECKPOINT_BLOCKER_KINDS)[number];
+
+export interface RunCheckpointBlocker {
+  kind: RunCheckpointBlockerKind;
+  refId: string | null;
+  summary: string;
+}
+
+export interface RunCheckpoint {
+  id: string;
+  companyId: string;
+  threadId: string;
+  runId: string | null;
+  employeeId: string | null;
+  checkpointKind: RunCheckpointKind;
+  objective: string | null;
+  progressSummary: string;
+  blockers: RunCheckpointBlocker[];
+  nextAction: string | null;
+  activeArtifactRefs: string[];
+  unresolvedApprovalRefs: string[];
+  createdAt: number;
+}
+
 export const EXTENSIONS_AUTONOMY_MODES = [
   'balanced',
   'conservative',

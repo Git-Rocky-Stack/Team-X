@@ -84,10 +84,12 @@ import type {
   RoutineRun,
   RoutineSchedule,
   RoutineTicketWorkConfig,
+  RunCheckpoint,
   RuntimeProfileKind,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
   SkillAssignment,
+  ThreadDigest,
   Thread,
   Ticket,
 } from './entities.js';
@@ -348,6 +350,17 @@ export interface ReviewApprovalItemRequest {
 
 export interface ListArtifactsRequest {
   companyId: string;
+  limit?: number;
+}
+
+export interface GetThreadDigestRequest {
+  companyId: string;
+  threadId: string;
+}
+
+export interface ListRunCheckpointsRequest {
+  companyId: string;
+  threadId: string;
   limit?: number;
 }
 
@@ -1760,13 +1773,21 @@ export interface IpcContract {
       request: ReviewApprovalItemRequest;
       response: { grantId: string | null };
     };
-    'artifacts.list': {
-      request: ListArtifactsRequest;
-      response: ArtifactRecord[];
-    };
-    'employees.create': {
-      request: HireEmployeeRequest;
-      response: HireEmployeeResponse;
+  'artifacts.list': {
+    request: ListArtifactsRequest;
+    response: ArtifactRecord[];
+  };
+  'memory.getThreadDigest': {
+    request: GetThreadDigestRequest;
+    response: ThreadDigest | null;
+  };
+  'memory.listRunCheckpoints': {
+    request: ListRunCheckpointsRequest;
+    response: RunCheckpoint[];
+  };
+  'employees.create': {
+    request: HireEmployeeRequest;
+    response: HireEmployeeResponse;
     };
   'employees.fire': {
     request: FireEmployeeRequest;
@@ -2488,6 +2509,12 @@ export interface TeamXApi {
   artifacts: {
     /** List recent artifact and outcome records for one workspace. */
     list(req: ListArtifactsRequest): Promise<ArtifactRecord[]>;
+  };
+  memory: {
+    /** Return the latest durable digest for one thread, if Team-X has condensed it yet. */
+    getThreadDigest(req: GetThreadDigestRequest): Promise<ThreadDigest | null>;
+    /** Return recent resumable checkpoints for one thread, newest first. */
+    listRunCheckpoints(req: ListRunCheckpointsRequest): Promise<RunCheckpoint[]>;
   };
   orgchart: {
     /**

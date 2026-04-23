@@ -553,6 +553,70 @@ export const runs = sqliteTable('runs', {
 /** Narrow union matching the `runs.kind` values any writer is allowed to emit. */
 export type RunKind = 'work' | 'agentic' | 'copilot';
 
+/** Durable rolling digest for one thread. One current digest row per thread. */
+export const threadDigests = sqliteTable(
+  'thread_digests',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    threadId: text('thread_id')
+      .notNull()
+      .references(() => threads.id, { onDelete: 'cascade' }),
+    summary: text('summary').notNull(),
+    pinnedFactsJson: text('pinned_facts_json').notNull().default('[]'),
+    lastSummarizedMessageId: text('last_summarized_message_id').references(() => messages.id, {
+      onDelete: 'set null',
+    }),
+    estimatedTokens: integer('estimated_tokens').notNull().default(0),
+    /** fresh | stale | degraded */
+    freshness: text('freshness').notNull().default('stale'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_thread_digests_company').on(table.companyId),
+    threadIdx: index('idx_thread_digests_thread').on(table.threadId),
+    threadUniqueIdx: uniqueIndex('ux_thread_digests_thread').on(table.threadId),
+  }),
+);
+
+/** Resumable run boundary snapshots for stop, timeout, approval, and budget flows. */
+export const runCheckpoints = sqliteTable(
+  'run_checkpoints',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    threadId: text('thread_id')
+      .notNull()
+      .references(() => threads.id, { onDelete: 'cascade' }),
+    runId: text('run_id').references(() => runs.id, { onDelete: 'set null' }),
+    employeeId: text('employee_id').references(() => employees.id, { onDelete: 'set null' }),
+    /** manual | completion | stopped | timeout | approval-blocked | budget-blocked | routine-completed */
+    checkpointKind: text('checkpoint_kind').notNull(),
+    objective: text('objective'),
+    progressSummary: text('progress_summary').notNull(),
+    blockersJson: text('blockers_json').notNull().default('[]'),
+    nextAction: text('next_action'),
+    activeArtifactRefsJson: text('active_artifact_refs_json').notNull().default('[]'),
+    unresolvedApprovalRefsJson: text('unresolved_approval_refs_json').notNull().default('[]'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_run_checkpoints_company').on(table.companyId),
+    threadIdx: index('idx_run_checkpoints_thread').on(table.threadId),
+    threadCreatedIdx: index('idx_run_checkpoints_thread_created').on(
+      table.threadId,
+      table.createdAt,
+    ),
+    runIdx: index('idx_run_checkpoints_run').on(table.runId),
+    employeeIdx: index('idx_run_checkpoints_employee').on(table.employeeId),
+  }),
+);
+
 /**
  * Installed LLM providers. API keys live in the OS keychain (keytar);
  * configJson holds non-secret config only (base URL, org id, etc.).
