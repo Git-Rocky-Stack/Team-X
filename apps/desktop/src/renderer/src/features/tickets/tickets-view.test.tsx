@@ -37,5 +37,11 @@ describe('Tickets mission-language carry-forward', () => {
     expect(boardSrc).toContain('data-tickets-column={column.status}');
     expect(detailSrc).toContain('data-ticket-detail=""');
     expect(detailSrc).toContain('data-ticket-detail-state="loading"');
+    expect(detailSrc).toContain(
+      "import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';",
+    );
+    expect(detailSrc).toContain('<ThreadMemoryCard');
+    expect(detailSrc).toContain('detail.threadId');
+    expect(detailSrc).toContain('title="Ticket memory"');
   });
 });

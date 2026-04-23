@@ -31,6 +31,7 @@ import {
   MissionPill,
   MissionSheetHeader,
 } from '@/features/mission/mission-shell.js';
+import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';
 import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
 import { useChatMessages, useSendMessage, useStopChat, useThreadList } from '@/hooks/use-chat.js';
 import { ipc } from '@/lib/ipc.js';
@@ -417,6 +418,16 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 }
               />
 
+              <div className="border-b border-white/10 px-4 py-3">
+                <ThreadMemoryCard
+                  companyId={companyId}
+                  threadId={effectiveThreadId}
+                  title="Copilot memory"
+                  description="Inspect the latest digest and checkpoint trail behind this copilot run before jumping into the full memory surface."
+                  compact
+                />
+              </div>
+
               <MessageList
                 messages={messages}
                 streamingText=""
@@ -473,6 +484,16 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                   </MissionIconButton>
                 }
               />
+
+              <div className="border-b border-white/10 px-4 py-3">
+                <ThreadMemoryCard
+                  companyId={companyId}
+                  threadId={effectiveThreadId}
+                  title="Autonomous memory"
+                  description="Inspect the condensed handoff for this employee-to-employee exchange without leaving the transcript blind."
+                  compact
+                />
+              </div>
 
               <MessageList
                 messages={messages}
@@ -534,6 +555,16 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                   </div>
                 }
               />
+
+              <div className="border-b border-white/10 px-4 py-3">
+                <ThreadMemoryCard
+                  companyId={companyId}
+                  threadId={effectiveThreadId}
+                  title="Conversation memory"
+                  description="Inspect the latest digest and resumable checkpoint trail for this direct thread."
+                  compact
+                />
+              </div>
 
               <MessageList
                 messages={messages}

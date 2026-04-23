@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { Textarea } from '@/components/ui/textarea.js';
+import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';
 import {
   useAttachFile,
   useDetachFile,
@@ -138,6 +139,18 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
           <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
             {detail.description}
           </p>
+        </div>
+      ) : null}
+
+      {detail.threadId ? (
+        <div className="border-b border-white/10 px-5 py-4">
+          <ThreadMemoryCard
+            companyId={detail.companyId}
+            threadId={detail.threadId}
+            title="Ticket memory"
+            description="Inspect the latest digest and resumable checkpoint trail behind this ticket thread."
+            compact
+          />
         </div>
       ) : null}
 

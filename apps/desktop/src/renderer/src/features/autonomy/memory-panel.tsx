@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { RunCheckpoint, Thread, ThreadDigest } from '@team-x/shared-types';
+import type { Thread } from '@team-x/shared-types';
 import { BrainCircuit, Clock3, MessageSquareText, RefreshCw, ShieldCheck, Waypoints } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
@@ -8,6 +8,13 @@ import { useThreadList } from '@/hooks/use-chat.js';
 import { usePackedThreadContext, useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
 import { useAppStore } from '@/store/app-store.js';
 
+import { isAgentThread as checkAgentThread, isCopilotThread as checkCopilotThread } from '../chat/thread-list.js';
+import {
+  checkpointLabel,
+  checkpointTone,
+  formatMemoryTimestamp,
+  freshnessTone,
+} from '../memory/memory-formatters.js';
 import {
   MissionControlRow,
   MissionInsetSurface,
@@ -20,11 +27,6 @@ import {
 const TOKEN_BUDGETS = [2048, 4096, 8192] as const;
 const RECENT_TURN_LIMIT = 12;
 
-function formatTimestamp(value: number | null | undefined): string {
-  if (!value) return 'Not captured yet';
-  return new Date(value).toLocaleString();
-}
-
 function threadLabel(thread: Thread): string {
   if (thread.subject?.trim()) return thread.subject.trim();
   if (thread.kind === 'ticket') return `Ticket thread ${thread.id.slice(0, 8)}`;
@@ -32,36 +34,14 @@ function threadLabel(thread: Thread): string {
   return `${thread.kind.toUpperCase()} thread ${thread.id.slice(0, 8)}`;
 }
 
-function checkpointLabel(kind: RunCheckpoint['checkpointKind']): string {
-  if (kind === 'approval-blocked') return 'Approval blocked';
-  if (kind === 'budget-blocked') return 'Budget blocked';
-  if (kind === 'routine-completed') return 'Routine completed';
-  return kind;
-}
-
-function checkpointTone(kind: RunCheckpoint['checkpointKind']): 'default' | 'accent' | 'warning' | 'danger' {
-  if (kind === 'completion' || kind === 'routine-completed') return 'accent';
-  if (kind === 'stopped') return 'warning';
-  if (kind === 'timeout' || kind === 'approval-blocked' || kind === 'budget-blocked') return 'danger';
-  return 'default';
-}
-
-function freshnessTone(
-  freshness: ThreadDigest['freshness'] | null | undefined,
-): 'default' | 'accent' | 'warning' | 'danger' {
-  if (freshness === 'fresh') return 'accent';
-  if (freshness === 'stale') return 'warning';
-  if (freshness === 'degraded') return 'danger';
-  return 'default';
-}
-
 export function MemoryPanel({ companyId }: { companyId: string }) {
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [targetTokenBudget, setTargetTokenBudget] =
     useState<(typeof TOKEN_BUDGETS)[number]>(TOKEN_BUDGETS[1]);
 
   const threadsQuery = useThreadList(companyId);
   const threads = threadsQuery.data ?? [];
+  const selectedThreadId = useAppStore((state) => state.autonomyMemoryThreadId);
+  const setSelectedThreadId = useAppStore((state) => state.setAutonomyMemoryThreadId);
   const selectedThread = useMemo(
     () => threads.find((thread) => thread.id === selectedThreadId) ?? null,
     [selectedThreadId, threads],
@@ -85,8 +65,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
   });
 
   const setActiveView = useAppStore((state) => state.setActiveView);
-  const setActiveThreadId = useAppStore((state) => state.setActiveThreadId);
-  const setChatOpen = useAppStore((state) => state.setChatOpen);
+  const openThread = useAppStore((state) => state.openThread);
 
   const checkpoints = checkpointsQuery.data ?? [];
   const digest = digestQuery.data;
@@ -102,10 +81,16 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
   }
 
   function openChatThread() {
-    if (!selectedThreadId) return;
+    if (!selectedThread) return;
+    const primaryEmployeeId =
+      selectedThread.members.find((member) => member.memberKind === 'employee')?.memberId ?? null;
     setActiveView('chat');
-    setActiveThreadId(selectedThreadId);
-    setChatOpen(true);
+    openThread({
+      threadId: selectedThread.id,
+      isAgentThread: checkAgentThread(selectedThread),
+      isCopilotThread: checkCopilotThread(selectedThread),
+      employeeId: primaryEmployeeId,
+    });
   }
 
   if (threadsQuery.isLoading) {
@@ -248,7 +233,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
               <div>
                 <div className="text-sm font-semibold text-foreground">Latest Digest</div>
                 <div className="text-xs text-muted-foreground">
-                  Updated {formatTimestamp(digest?.updatedAt ?? null)}
+                  Updated {formatMemoryTimestamp(digest?.updatedAt ?? null)}
                 </div>
               </div>
               <MissionPill tone={freshnessTone(digest?.freshness)}>{digest?.freshness ?? 'none'}</MissionPill>
@@ -436,7 +421,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                       ) : null}
                     </div>
                     <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                      {formatTimestamp(checkpoint.createdAt)}
+                      {formatMemoryTimestamp(checkpoint.createdAt)}
                     </span>
                   </div>
                   <div className="text-sm leading-6 text-foreground/90">{checkpoint.progressSummary}</div>

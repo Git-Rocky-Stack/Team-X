@@ -116,6 +116,8 @@ export interface AppState {
   telemetrySubview: TelemetrySubview;
   /** Which autonomy subview is showing (Runtimes / Routines / Budgets / Approvals / Artifacts / Access). */
   autonomySubview: AutonomySubview;
+  /** Optional thread focus for the Autonomy > Memory subview. */
+  autonomyMemoryThreadId: string | null;
   /**
    * Whether the Copilot sidebar panel is open (Phase 5 — M34).
    * Toggled by `Cmd+Shift+K`, the Sparkles toolbar button, and the
@@ -136,6 +138,8 @@ export interface AppState {
   setProjectsSubview: (subview: ProjectsSubview) => void;
   setTelemetrySubview: (subview: TelemetrySubview) => void;
   setAutonomySubview: (subview: AutonomySubview) => void;
+  setAutonomyMemoryThreadId: (threadId: string | null) => void;
+  openAutonomyMemory: (threadId: string | null) => void;
   setActiveProjectId: (projectId: string | null) => void;
   setActiveGoalId: (goalId: string | null) => void;
   setSelectedEmployee: (id: string | null) => void;
@@ -196,6 +200,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeMeetingId: null,
   telemetrySubview: 'company',
   autonomySubview: 'access',
+  autonomyMemoryThreadId: null,
   copilotSidebarOpen: false,
   pendingDirectChats: {},
   settingsFocusSection: null,
@@ -215,6 +220,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   setDashboardSubview: (subview) => set({ dashboardSubview: subview }),
   setTelemetrySubview: (subview) => set({ telemetrySubview: subview }),
   setAutonomySubview: (subview) => set({ autonomySubview: subview }),
+  setAutonomyMemoryThreadId: (threadId) => set({ autonomyMemoryThreadId: threadId }),
+  openAutonomyMemory: (threadId) =>
+    set({
+      activeView: 'autonomy',
+      autonomySubview: 'memory',
+      autonomyMemoryThreadId: threadId,
+      chatOpen: false,
+      selectedEmployeeId: null,
+      activeThreadId: null,
+      threadListView: false,
+      viewingAgentThread: false,
+      viewingCopilotThread: false,
+      activeTicketId: null,
+      activeProjectId: null,
+      activeGoalId: null,
+      activeMeetingId: null,
+    }),
 
   setSelectedEmployee: (id) =>
     set({
@@ -238,7 +260,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setActiveThreadId: (threadId) => set({ activeThreadId: threadId }),
 
-  setCompanyId: (id) => set({ companyId: id }),
+  setCompanyId: (id) => set({ companyId: id, autonomyMemoryThreadId: null }),
 
   openThreadList: () =>
     set({

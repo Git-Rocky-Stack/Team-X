@@ -64,7 +64,10 @@ describe('Autonomy shell wiring', () => {
     expect(hookSrc).toContain("queryKey: ['operators', companyId]");
     expect(hookSrc).toContain('autonomyClient.operators.list(companyId!)');
     expect(storeSrc).toContain("autonomySubview: 'access'");
+    expect(storeSrc).toContain('autonomyMemoryThreadId: string | null;');
     expect(storeSrc).toContain('setAutonomySubview: (subview: AutonomySubview) => void;');
+    expect(storeSrc).toContain('setAutonomyMemoryThreadId: (threadId: string | null) => void;');
+    expect(storeSrc).toContain('openAutonomyMemory: (threadId: string | null) => void;');
     expect(viewSrc).toContain('const activeSubview = useAppStore((state) => state.autonomySubview);');
     expect(viewSrc).toContain('const setActiveSubview = useAppStore((state) => state.setAutonomySubview);');
     expect(viewSrc).toContain('AUTONOMY_SUBVIEWS');
@@ -183,6 +186,12 @@ describe('Autonomy shell wiring', () => {
     expect(memoryHookSrc).toContain('autonomyClient.memory.listRunCheckpoints');
     expect(memoryHookSrc).toContain('autonomyClient.memory.packThreadContext');
     expect(memoryPanelSrc).toContain('data-memory-panel=""');
+    expect(memoryPanelSrc).toContain(
+      'const selectedThreadId = useAppStore((state) => state.autonomyMemoryThreadId);',
+    );
+    expect(memoryPanelSrc).toContain(
+      'const setSelectedThreadId = useAppStore((state) => state.setAutonomyMemoryThreadId);',
+    );
     expect(memoryPanelSrc).toContain('data-memory-thread-select=""');
     expect(memoryPanelSrc).toContain('Refresh memory');
     expect(memoryPanelSrc).toContain('Open chat');

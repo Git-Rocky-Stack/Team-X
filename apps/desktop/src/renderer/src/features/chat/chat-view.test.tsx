@@ -14,11 +14,13 @@ import { describe, expect, it } from 'vitest';
 
 const currentDirname = dirname(fileURLToPath(import.meta.url));
 const CHAT_VIEW_PATH = join(currentDirname, 'chat-view.tsx');
+const CHAT_DRAWER_PATH = join(currentDirname, 'chat-drawer.tsx');
 const APP_PATH = join(currentDirname, '..', '..', 'App.tsx');
 const TOP_BAR_PATH = join(currentDirname, '..', '..', 'app', 'top-bar.tsx');
 
 const chatViewExists = existsSync(CHAT_VIEW_PATH);
 const chatViewSrc = chatViewExists ? readFileSync(CHAT_VIEW_PATH, 'utf8') : '';
+const chatDrawerSrc = readFileSync(CHAT_DRAWER_PATH, 'utf8');
 const appSrc = readFileSync(APP_PATH, 'utf8');
 const topBarSrc = readFileSync(TOP_BAR_PATH, 'utf8');
 
@@ -46,6 +48,17 @@ describe('ChatView (features/chat/chat-view.tsx)', () => {
     expect(chatViewSrc).toContain('isCopilotThread');
     expect(chatViewSrc).toMatch(/openThread\(\{[\s\S]*threadId/);
     expect(chatViewSrc).toContain('isCopilotThread: true');
+  });
+
+  it('adds compact thread-memory inspection to the drawer surfaces', () => {
+    expect(chatDrawerSrc).toContain(
+      "import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';",
+    );
+    expect(chatDrawerSrc).toContain('<ThreadMemoryCard');
+    expect(chatDrawerSrc).toContain('title="Copilot memory"');
+    expect(chatDrawerSrc).toContain('title="Autonomous memory"');
+    expect(chatDrawerSrc).toContain('title="Conversation memory"');
+    expect(chatDrawerSrc).toContain('compact');
   });
 
   it('covers loading, error, and no-company states with stable selectors', () => {
