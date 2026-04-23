@@ -65,13 +65,13 @@ describe('top-bar release-marker freeze (M41 T6)', () => {
     expect(captured).toBe('Phase 6');
   });
 
-  it("pins all release package.json versions to '1.2.0'", () => {
+  it("pins all release package.json versions to '1.2.1'", () => {
     for (const packageJsonPath of RELEASE_PACKAGE_JSON_PATHS) {
       const raw = readFileSync(packageJsonPath, 'utf8');
       const parsed = JSON.parse(raw) as { version?: unknown };
 
       expect(typeof parsed.version, `${packageJsonPath} version must be a string`).toBe('string');
-      expect(parsed.version, `${packageJsonPath} version`).toBe('1.2.0');
+      expect(parsed.version, `${packageJsonPath} version`).toBe('1.2.1');
     }
   });
 });
