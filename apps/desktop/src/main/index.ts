@@ -127,6 +127,8 @@ import {
 } from './services/agentic-loop-service.js';
 import { createArtifactService } from './services/artifact-service.js';
 import { createAuthorityResolverService } from './services/authority-resolver-service.js';
+import { createContextAssemblerService } from './services/context-assembler-service.js';
+import { createContextPackerService } from './services/context-packer-service.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { buildCopilotToolRegistry } from './services/agentic-tools-copilot.js';
 import {
@@ -643,6 +645,35 @@ app
             getVaultFile: (id) => vaultRepo.getById(id),
           });
 
+    const contextAssemblerService = createContextAssemblerService({
+      companiesRepo,
+      threadsRepo,
+      messagesRepo,
+      ticketsRepo,
+      projectsRepo,
+      goalsRepo,
+      threadDigestService,
+      runCheckpointService,
+      approvalInboxService: approvalInboxServiceInstance ?? undefined,
+      routineService: routineServiceInstance ?? undefined,
+      artifactService,
+      retrieveEvidence:
+        retrievalOrchestrator === null
+          ? undefined
+          : (input) => retrievalOrchestrator.retrieveEvidence(input),
+      getRetrievalConfig: () => ({
+        topK: settingsRepo.get<number>('rag_top_k', 5),
+        threshold: settingsRepo.get<number>('rag_threshold', 0.7),
+        maxTokens: settingsRepo.get<number>('rag_max_tokens', 2000),
+        maxQueries: 3,
+        maxPerSourceType: 2,
+      }),
+      countTokens: (text) => Math.ceil(text.length / 4),
+    });
+    const contextPackerService = createContextPackerService({
+      countTokens: (text) => Math.ceil(text.length / 4),
+    });
+
     // Role loader: turns (employee, company) into a rendered system prompt.
     // Preloaded eagerly so the cost of the role-pack scan is paid during
     // boot rather than on the first user message.
@@ -942,6 +973,8 @@ app
       artifactService,
       threadDigestService,
       runCheckpointService,
+      contextAssemblerService,
+      contextPackerService,
       authorityRepo,
       authorityResolver,
       providersService,

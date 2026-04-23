@@ -93,6 +93,7 @@ const REQUEST_CHANNELS = [
   'artifacts.list',
   'memory.getThreadDigest',
   'memory.listRunCheckpoints',
+  'memory.packThreadContext',
   'employees.create',
   'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d
@@ -437,6 +438,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'memory.listRunCheckpoints',
     async (_event, request: import('@team-x/shared-types').ListRunCheckpointsRequest) => {
       return handlers.memoryListRunCheckpoints(request);
+    },
+  );
+
+  ipcMain.handle(
+    'memory.packThreadContext',
+    async (_event, request: import('@team-x/shared-types').PackThreadContextRequest) => {
+      return handlers.memoryPackThreadContext(request);
     },
   );
 

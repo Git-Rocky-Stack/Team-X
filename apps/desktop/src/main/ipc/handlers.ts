@@ -48,6 +48,7 @@ import type {
   AuthorityGrant,
   AuthorityRequest,
   ArchiveCompanyRequest,
+  AssembledThreadContext,
   AssignTicketRequest,
   AttachFileRequest,
   AttachFileResponse,
@@ -147,6 +148,8 @@ import type {
   OrgchartEdge,
   OrgchartGetRequest,
   OrgchartGetResponse,
+  PackThreadContextRequest,
+  PackedThreadContext,
   Project,
   ProjectDetail,
   RemoveProviderRequest,
@@ -841,6 +844,21 @@ export interface IpcRunCheckpointService {
   listByThread(input: ListRunCheckpointsRequest): RunCheckpoint[];
 }
 
+export interface IpcContextAssemblerService {
+  assembleThreadContext(input: {
+    companyId: string;
+    threadId: string;
+    recentTurnLimit?: number;
+  }): Promise<AssembledThreadContext>;
+}
+
+export interface IpcContextPackerService {
+  packContext(input: {
+    context: AssembledThreadContext;
+    targetTokenBudget?: number;
+  }): PackedThreadContext;
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -869,6 +887,8 @@ export interface IpcHandlerDeps {
   artifactService?: IpcArtifactService;
   threadDigestService?: IpcThreadDigestService;
   runCheckpointService?: IpcRunCheckpointService;
+  contextAssemblerService?: IpcContextAssemblerService;
+  contextPackerService?: IpcContextPackerService;
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
@@ -1072,6 +1092,8 @@ export interface IpcHandlers {
   memoryGetThreadDigest(req: GetThreadDigestRequest): Promise<ThreadDigest | null>;
   /** `memory.listRunCheckpoints` — recent checkpoints for one thread, newest first. */
   memoryListRunCheckpoints(req: ListRunCheckpointsRequest): Promise<RunCheckpoint[]>;
+  /** `memory.packThreadContext` — assemble and bound one thread's context. */
+  memoryPackThreadContext(req: PackThreadContextRequest): Promise<PackedThreadContext>;
 
   /**
    * `employees.create` — hire a new employee from a role-pack role.
@@ -1913,6 +1935,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     artifactService,
     threadDigestService,
     runCheckpointService,
+    contextAssemblerService,
+    contextPackerService,
     authorityRepo,
     authorityResolver,
     providersService,
@@ -2418,6 +2442,47 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         return [];
       }
       return runCheckpointService.listByThread(req);
+    },
+
+    async memoryPackThreadContext(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] memory.packThreadContext: companyId is required');
+      }
+      if (typeof req.threadId !== 'string' || req.threadId.length === 0) {
+        throw new Error('[ipc] memory.packThreadContext: threadId is required');
+      }
+      const thread = threadsRepo.getById(req.threadId);
+      if (!thread || thread.companyId !== req.companyId) {
+        throw new Error('[ipc] memory.packThreadContext: thread does not belong to company');
+      }
+      if (
+        req.targetTokenBudget !== undefined &&
+        (!Number.isInteger(req.targetTokenBudget) || req.targetTokenBudget < 128 || req.targetTokenBudget > 64000)
+      ) {
+        throw new Error(
+          '[ipc] memory.packThreadContext: targetTokenBudget must be an integer between 128 and 64000',
+        );
+      }
+      if (
+        req.recentTurnLimit !== undefined &&
+        (!Number.isInteger(req.recentTurnLimit) || req.recentTurnLimit < 1 || req.recentTurnLimit > 100)
+      ) {
+        throw new Error(
+          '[ipc] memory.packThreadContext: recentTurnLimit must be an integer between 1 and 100',
+        );
+      }
+      if (!contextAssemblerService || !contextPackerService) {
+        throw new Error('[ipc] memory.packThreadContext: context services are required');
+      }
+      const context = await contextAssemblerService.assembleThreadContext({
+        companyId: req.companyId,
+        threadId: req.threadId,
+        recentTurnLimit: req.recentTurnLimit,
+      });
+      return contextPackerService.packContext({
+        context,
+        targetTokenBudget: req.targetTokenBudget,
+      });
     },
 
     async companiesCreate(req) {

@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { RunCheckpoint, ThreadDigest } from '@team-x/shared-types';
+import type {
+  AssembledThreadContext,
+  PackedThreadContext,
+  RunCheckpoint,
+  ThreadDigest,
+} from '@team-x/shared-types';
 
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 
@@ -134,6 +139,59 @@ describe('memory IPC handlers', () => {
       limit: 5,
     });
     expect(result).toEqual(checkpoints);
+  });
+
+  it('assembles and packs one thread context through memory.packThreadContext', async () => {
+    const assembled: AssembledThreadContext = {
+      companyId: 'company-1',
+      threadId: 'thread-1',
+      generatedAt: 10,
+      retrievalQueries: ['launch plan'],
+      recentTurns: [],
+      blocks: [],
+    };
+    const packed: PackedThreadContext = {
+      companyId: 'company-1',
+      threadId: 'thread-1',
+      generatedAt: 10,
+      targetTokenBudget: 512,
+      usedTokens: 0,
+      recentTurnTokens: 0,
+      blockTokens: 0,
+      retrievalTokens: 0,
+      packedTurns: [],
+      systemAddendum: '',
+      includedBlocks: [],
+      droppedBlocks: [],
+      retrievalQueries: ['launch plan'],
+    };
+    const deps = makeDeps({
+      contextAssemblerService: {
+        assembleThreadContext: vi.fn(async () => assembled),
+      },
+      contextPackerService: {
+        packContext: vi.fn(() => packed),
+      },
+    });
+    const handlers = createIpcHandlers(deps);
+
+    const result = await handlers.memoryPackThreadContext({
+      companyId: 'company-1',
+      threadId: 'thread-1',
+      targetTokenBudget: 512,
+      recentTurnLimit: 8,
+    });
+
+    expect(deps.contextAssemblerService?.assembleThreadContext).toHaveBeenCalledWith({
+      companyId: 'company-1',
+      threadId: 'thread-1',
+      recentTurnLimit: 8,
+    });
+    expect(deps.contextPackerService?.packContext).toHaveBeenCalledWith({
+      context: assembled,
+      targetTokenBudget: 512,
+    });
+    expect(result).toEqual(packed);
   });
 
   it('rejects cross-company thread access for memory reads', async () => {

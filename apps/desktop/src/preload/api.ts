@@ -113,6 +113,7 @@ import type {
   IpcParseResult,
   IpcSuggestItem,
   GetEffectiveAuthorityRequest,
+  PackThreadContextRequest,
   InstallMcpTemplateRequest,
   ListArtifactsRequest,
   ListAuthorityGrantsRequest,
@@ -137,6 +138,7 @@ import type {
   OperatorAccessEntry,
   Project,
   ProjectDetail,
+  PackedThreadContext,
   RunCheckpoint,
   Routine,
   RoutineRun,
@@ -278,6 +280,7 @@ const CHANNELS = {
   artifactsList: 'artifacts.list',
   memoryGetThreadDigest: 'memory.getThreadDigest',
   memoryListRunCheckpoints: 'memory.listRunCheckpoints',
+  memoryPackThreadContext: 'memory.packThreadContext',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
@@ -519,6 +522,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.memoryGetThreadDigest, req) as Promise<ThreadDigest | null>,
       listRunCheckpoints: (req: ListRunCheckpointsRequest) =>
         ipc.invoke(CHANNELS.memoryListRunCheckpoints, req) as Promise<RunCheckpoint[]>,
+      packThreadContext: (req: PackThreadContextRequest) =>
+        ipc.invoke(CHANNELS.memoryPackThreadContext, req) as Promise<PackedThreadContext>,
     },
     employees: {
       list: (companyId: string) =>

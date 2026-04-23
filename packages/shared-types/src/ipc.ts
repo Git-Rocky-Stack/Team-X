@@ -79,6 +79,7 @@ import type {
   MeetingActionItem,
   MeetingMode,
   OperatorAccessEntry,
+  PackedThreadContext,
   Project,
   Routine,
   RoutineRun,
@@ -362,6 +363,13 @@ export interface ListRunCheckpointsRequest {
   companyId: string;
   threadId: string;
   limit?: number;
+}
+
+export interface PackThreadContextRequest {
+  companyId: string;
+  threadId: string;
+  targetTokenBudget?: number;
+  recentTurnLimit?: number;
 }
 
 export interface SendChatRequest {
@@ -1785,6 +1793,10 @@ export interface IpcContract {
     request: ListRunCheckpointsRequest;
     response: RunCheckpoint[];
   };
+  'memory.packThreadContext': {
+    request: PackThreadContextRequest;
+    response: PackedThreadContext;
+  };
   'employees.create': {
     request: HireEmployeeRequest;
     response: HireEmployeeResponse;
@@ -2515,6 +2527,8 @@ export interface TeamXApi {
     getThreadDigest(req: GetThreadDigestRequest): Promise<ThreadDigest | null>;
     /** Return recent resumable checkpoints for one thread, newest first. */
     listRunCheckpoints(req: ListRunCheckpointsRequest): Promise<RunCheckpoint[]>;
+    /** Assemble and bound one thread's context into the next runtime-ready pack. */
+    packThreadContext(req: PackThreadContextRequest): Promise<PackedThreadContext>;
   };
   orgchart: {
     /**

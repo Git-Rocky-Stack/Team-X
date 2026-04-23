@@ -644,6 +644,94 @@ export interface RunCheckpoint {
   createdAt: number;
 }
 
+export const CONTEXT_TURN_ROLES = ['system', 'user', 'assistant'] as const;
+export type ContextTurnRole = (typeof CONTEXT_TURN_ROLES)[number];
+
+export interface ContextTurn {
+  messageId: string | null;
+  role: ContextTurnRole;
+  authorId: string;
+  authorKind: AuthorKind;
+  content: string;
+  createdAt: number;
+  estimatedTokens: number;
+}
+
+export const CONTEXT_BLOCK_KINDS = [
+  'ticket',
+  'digest',
+  'checkpoint',
+  'project',
+  'goal',
+  'approval',
+  'company',
+  'routine',
+  'artifact',
+  'retrieval',
+] as const;
+export type ContextBlockKind = (typeof CONTEXT_BLOCK_KINDS)[number];
+
+export const CONTEXT_BLOCK_PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
+export type ContextBlockPriority = (typeof CONTEXT_BLOCK_PRIORITIES)[number];
+
+export interface AssembledContextBlock {
+  id: string;
+  kind: ContextBlockKind;
+  priority: ContextBlockPriority;
+  title: string;
+  body: string;
+  estimatedTokens: number;
+  sourceRefId: string | null;
+  sourceLabel: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface AssembledThreadContext {
+  companyId: string;
+  threadId: string;
+  generatedAt: number;
+  recentTurns: ContextTurn[];
+  blocks: AssembledContextBlock[];
+  retrievalQueries: string[];
+}
+
+export interface PackedContextTurn extends ContextTurn {
+  truncated: boolean;
+}
+
+export interface PackedContextBlock extends AssembledContextBlock {
+  renderedText: string;
+  tokenCount: number;
+  truncated: boolean;
+}
+
+export const CONTEXT_DROP_REASONS = ['budget', 'category-cap'] as const;
+export type ContextDropReason = (typeof CONTEXT_DROP_REASONS)[number];
+
+export interface ContextDrop {
+  blockId: string;
+  kind: ContextBlockKind;
+  priority: ContextBlockPriority;
+  estimatedTokens: number;
+  reason: ContextDropReason;
+}
+
+export interface PackedThreadContext {
+  companyId: string;
+  threadId: string;
+  generatedAt: number;
+  targetTokenBudget: number;
+  usedTokens: number;
+  recentTurnTokens: number;
+  blockTokens: number;
+  retrievalTokens: number;
+  packedTurns: PackedContextTurn[];
+  systemAddendum: string;
+  includedBlocks: PackedContextBlock[];
+  droppedBlocks: ContextDrop[];
+  retrievalQueries: string[];
+}
+
 export const EXTENSIONS_AUTONOMY_MODES = [
   'balanced',
   'conservative',
