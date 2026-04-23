@@ -146,6 +146,7 @@ function buildDefaultOrchestrator(
     resolveSystemPrompt?: ResolveSystemPrompt;
     resolveProvider?: ResolveProvider;
     resolveTools?: ResolveTools;
+    budgetGovernance?: Parameters<typeof buildOrchestrator>[0]['budgetGovernance'];
     contextAssemblerService?: Parameters<typeof buildOrchestrator>[0]['contextAssemblerService'];
     contextPackerService?: Parameters<typeof buildOrchestrator>[0]['contextPackerService'];
     threadDigestService?: Parameters<typeof buildOrchestrator>[0]['threadDigestService'];
@@ -182,6 +183,7 @@ function buildDefaultOrchestrator(
     bus: f.bus,
     messagesRepo: f.messagesRepo,
     runsRepo: f.runsRepo,
+    budgetGovernance: overrides.budgetGovernance,
     employeesRepo: f.employeesRepo,
     companiesRepo: f.companiesRepo,
     threadsRepo: f.threadsRepo,
@@ -1131,6 +1133,110 @@ describe('buildOrchestrator', () => {
   });
 
   describe('checkpointed interruptions', () => {
+    it('writes a budget-blocked checkpoint before provider execution starts', async () => {
+      const runCheckpointService = createRunCheckpointService({
+        runCheckpointsRepo: f.runCheckpointsRepo,
+      });
+      const orchestrator = buildDefaultOrchestrator(f, {
+        runCheckpointService,
+        budgetGovernance: {
+          assertExecutionAllowed: async () => ({
+            allowed: false,
+            policy: { id: 'budget-policy-1' },
+            reason: 'Budget cap reached for company scope company-1.',
+            approvalItem: null,
+          }),
+          recordRunSpend: async () => {},
+        },
+        resolveProvider: async () => {
+          throw new Error('provider should not run');
+        },
+      });
+
+      await expect(
+        orchestrator.enqueueChat({
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          userMessageId: f.userMessageId,
+        }),
+      ).rejects.toThrow(/Budget cap reached/i);
+
+      expect(f.systemPromptCalls).toHaveLength(0);
+      expect(f.providerCalls).toHaveLength(0);
+      expect(f.runsRepo.listByEmployee(f.employeeId)).toEqual([]);
+
+      const checkpoints = runCheckpointService.listByThread({
+        companyId: f.companyId,
+        threadId: f.threadId,
+      });
+      expect(checkpoints[0]).toEqual(
+        expect.objectContaining({
+          checkpointKind: 'budget-blocked',
+          blockers: [
+            expect.objectContaining({
+              kind: 'budget',
+              refId: 'budget-policy-1',
+            }),
+          ],
+        }),
+      );
+      expect(checkpoints[0]?.nextAction).toMatch(/Adjust the budget policy/i);
+    });
+
+    it('writes an approval-blocked checkpoint when budget approval is pending', async () => {
+      const runCheckpointService = createRunCheckpointService({
+        runCheckpointsRepo: f.runCheckpointsRepo,
+      });
+      const orchestrator = buildDefaultOrchestrator(f, {
+        runCheckpointService,
+        budgetGovernance: {
+          assertExecutionAllowed: async () => ({
+            allowed: false,
+            policy: { id: 'budget-policy-1' },
+            reason: 'Budget approval required for company scope company-1.',
+            approvalItem: {
+              id: 'approval-1',
+              status: 'pending',
+            },
+          }),
+          recordRunSpend: async () => {},
+        },
+        resolveProvider: async () => {
+          throw new Error('provider should not run');
+        },
+      });
+
+      await expect(
+        orchestrator.enqueueChat({
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          userMessageId: f.userMessageId,
+        }),
+      ).rejects.toThrow(/Budget approval required/i);
+
+      expect(f.systemPromptCalls).toHaveLength(0);
+      expect(f.providerCalls).toHaveLength(0);
+      expect(f.runsRepo.listByEmployee(f.employeeId)).toEqual([]);
+
+      const checkpoints = runCheckpointService.listByThread({
+        companyId: f.companyId,
+        threadId: f.threadId,
+      });
+      expect(checkpoints[0]).toEqual(
+        expect.objectContaining({
+          checkpointKind: 'approval-blocked',
+          unresolvedApprovalRefs: ['approval-1'],
+          blockers: [
+            expect.objectContaining({
+              kind: 'approval',
+              refId: 'approval-1',
+            }),
+          ],
+        }),
+      );
+      expect(checkpoints[0]?.nextAction).toMatch(/pending budget approval/i);
+    });
+
     it('writes a timeout checkpoint when the provider stalls mid-turn', async () => {
       const runCheckpointService = createRunCheckpointService({
         runCheckpointsRepo: f.runCheckpointsRepo,

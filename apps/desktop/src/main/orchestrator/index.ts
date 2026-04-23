@@ -250,6 +250,20 @@ export interface BuildOrchestratorOptions {
   messagesRepo: OrchestratorMessagesRepo;
   runsRepo: OrchestratorRunsRepo;
   budgetGovernance?: {
+    assertExecutionAllowed?(input: {
+      companyId: string;
+      employeeId?: string | null;
+      routineId?: string | null;
+      executionKind: 'routine' | 'agentic' | 'copilot';
+    }): Promise<{
+      allowed: boolean;
+      policy: { id: string } | null;
+      reason: string | null;
+      approvalItem: {
+        id: string;
+        status: 'pending' | 'approved' | 'denied' | 'dismissed';
+      } | null;
+    }>;
     recordRunSpend(runId: string): Promise<void>;
   };
   employeesRepo: OrchestratorEmployeesRepo;
@@ -793,7 +807,12 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         }
       | null;
     runId?: string | null;
-    checkpointKind: 'completion' | 'stopped' | 'timeout';
+    checkpointKind:
+      | 'completion'
+      | 'stopped'
+      | 'timeout'
+      | 'approval-blocked'
+      | 'budget-blocked';
     progressSummary: string;
     blockers?: Array<{
       kind: 'approval' | 'budget' | 'authority' | 'provider' | 'dependency' | 'operator' | 'other';
@@ -801,9 +820,19 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       summary: string;
     }>;
     nextAction?: string | null;
+    activeArtifactRefs?: string[];
+    unresolvedApprovalRefs?: string[];
   }): void {
     if (!runCheckpointService) return;
     try {
+      const activeArtifactRefs = new Set(args.activeArtifactRefs ?? []);
+      for (const ref of collectPackedRefs(args.packedContext, 'artifact')) {
+        activeArtifactRefs.add(ref);
+      }
+      const unresolvedApprovalRefs = new Set(args.unresolvedApprovalRefs ?? []);
+      for (const ref of collectPackedRefs(args.packedContext, 'approval')) {
+        unresolvedApprovalRefs.add(ref);
+      }
       runCheckpointService.createCheckpoint({
         companyId: args.companyId,
         threadId: args.threadId,
@@ -814,8 +843,8 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         progressSummary: args.progressSummary,
         blockers: args.blockers ?? [],
         nextAction: args.nextAction ?? null,
-        activeArtifactRefs: collectPackedRefs(args.packedContext, 'artifact'),
-        unresolvedApprovalRefs: collectPackedRefs(args.packedContext, 'approval'),
+        activeArtifactRefs: [...activeArtifactRefs],
+        unresolvedApprovalRefs: [...unresolvedApprovalRefs],
         createdAt: now?.() ?? Date.now(),
       });
     } catch (err) {
@@ -905,6 +934,58 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     if (!providerKind) return Number.POSITIVE_INFINITY;
     const configured = currentProviderCaps[providerKind];
     return configured === undefined ? Number.POSITIVE_INFINITY : normalizePositiveInt(configured, 1);
+  }
+
+  async function assertTurnBudgetAllowed(args: {
+    companyId: string;
+    threadId: string;
+    employeeId: string;
+    respondingEmployeeId: string;
+    rows: MessageRow[];
+  }): Promise<void> {
+    if (!budgetGovernance?.assertExecutionAllowed) return;
+
+    const admission = await budgetGovernance.assertExecutionAllowed({
+      companyId: args.companyId,
+      employeeId: args.employeeId,
+      executionKind: 'agentic',
+    });
+    if (admission.allowed) return;
+
+    const pendingApproval = admission.approvalItem?.status === 'pending';
+    const reason =
+      admission.reason ??
+      (pendingApproval
+        ? 'Execution is waiting on budget approval before the run can start.'
+        : 'Execution is blocked by budget policy before the run can start.');
+
+    recordRunCheckpoint({
+      companyId: args.companyId,
+      threadId: args.threadId,
+      employeeId: args.employeeId,
+      respondingEmployeeId: args.respondingEmployeeId,
+      rows: args.rows,
+      packedContext: null,
+      checkpointKind: pendingApproval ? 'approval-blocked' : 'budget-blocked',
+      progressSummary: pendingApproval
+        ? 'Run could not start because budget approval is still pending.'
+        : 'Run could not start because budget policy blocked execution.',
+      blockers: [
+        {
+          kind: pendingApproval ? 'approval' : 'budget',
+          refId: pendingApproval
+            ? admission.approvalItem?.id ?? null
+            : admission.policy?.id ?? admission.approvalItem?.id ?? null,
+          summary: reason,
+        },
+      ],
+      nextAction: pendingApproval
+        ? 'Review the pending budget approval, then retry from the latest checkpoint.'
+        : 'Adjust the budget policy or approval state, then retry from the latest checkpoint.',
+      unresolvedApprovalRefs: pendingApproval && admission.approvalItem ? [admission.approvalItem.id] : [],
+    });
+
+    throw new Error(reason);
   }
 
   async function runTurn(
@@ -1258,6 +1339,21 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
               `thread ${task.threadId}'s company`,
           ),
         );
+        i--;
+        continue;
+      }
+
+      try {
+        await assertTurnBudgetAllowed({
+          companyId: thread.companyId,
+          threadId: task.threadId,
+          employeeId: task.employeeId,
+          respondingEmployeeId: task.employeeId,
+          rows: messagesRepo.listByThread(task.threadId),
+        });
+      } catch (err) {
+        pending.splice(i, 1);
+        settleTask(task, err);
         i--;
         continue;
       }
