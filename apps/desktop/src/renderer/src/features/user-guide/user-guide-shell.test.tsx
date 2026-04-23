@@ -22,7 +22,7 @@ const guideHookSrc = readFileSync(GUIDE_HOOK_PATH, 'utf8');
 describe('User Guide shell wiring', () => {
   it('adds a dedicated user-guide top-level view plus guide utility actions in the store', () => {
     expect(storeSrc).toContain("| 'user-guide'");
-    expect(storeSrc).toContain("export type SettingsSectionFocus = 'providers' | 'extensions';");
+    expect(storeSrc).toContain("export type SettingsSectionFocus = 'providers' | 'extensions' | 'memory';");
     expect(storeSrc).toContain('hireDialogRequestNonce');
     expect(storeSrc).toContain("autonomySubview: 'access'");
     expect(storeSrc).toContain('openSettingsSection: (section: SettingsSectionFocus) => void;');
@@ -48,16 +48,20 @@ describe('User Guide shell wiring', () => {
 
   it('supports guide-driven settings section focus', () => {
     expect(settingsViewSrc).toContain('data-settings-section="extensions"');
+    expect(settingsViewSrc).toContain('data-settings-section="memory"');
     expect(settingsViewSrc).toContain('data-settings-section="providers"');
     expect(settingsViewSrc).toContain("document.querySelector<HTMLElement>(");
     expect(settingsViewSrc).toContain('scrollIntoView({ behavior: \'smooth\', block: \'start\' })');
   });
 
   it('adds autonomy guide actions with subview deep links through the shared app store', () => {
+    expect(guideContentSrc).toContain("id: 'open-settings-memory'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-access'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-runtimes'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-approvals'");
+    expect(guideContentSrc).toContain("id: 'open-autonomy-memory'");
     expect(guideContentSrc).toContain("id: 'autonomy-control-plane'");
+    expect(guideContentSrc).toContain("id: 'long-run-memory'");
     expect(guideHookSrc).toContain("if (action.view === 'autonomy' && action.autonomySubview) {");
     expect(guideHookSrc).toContain('setAutonomySubview(action.autonomySubview);');
   });

@@ -611,6 +611,14 @@ export const RUN_CHECKPOINT_KINDS = [
 ] as const;
 export type RunCheckpointKind = (typeof RUN_CHECKPOINT_KINDS)[number];
 
+export const RUN_CHECKPOINT_RESUMABLE_KINDS = [
+  'stopped',
+  'timeout',
+  'approval-blocked',
+  'budget-blocked',
+] as const satisfies readonly RunCheckpointKind[];
+export type RunCheckpointResumableKind = (typeof RUN_CHECKPOINT_RESUMABLE_KINDS)[number];
+
 export const RUN_CHECKPOINT_BLOCKER_KINDS = [
   'approval',
   'budget',
@@ -628,6 +636,12 @@ export interface RunCheckpointBlocker {
   summary: string;
 }
 
+export interface RunCheckpointResumeOrigin {
+  checkpointId: string;
+  checkpointKind: RunCheckpointResumableKind;
+  createdAt: number | null;
+}
+
 export interface RunCheckpoint {
   id: string;
   companyId: string;
@@ -641,6 +655,7 @@ export interface RunCheckpoint {
   nextAction: string | null;
   activeArtifactRefs: string[];
   unresolvedApprovalRefs: string[];
+  resumeOrigin: RunCheckpointResumeOrigin | null;
   createdAt: number;
 }
 
@@ -730,6 +745,7 @@ export interface PackedThreadContext {
   includedBlocks: PackedContextBlock[];
   droppedBlocks: ContextDrop[];
   retrievalQueries: string[];
+  resumeOrigin: RunCheckpointResumeOrigin | null;
 }
 
 export const EXTENSIONS_AUTONOMY_MODES = [

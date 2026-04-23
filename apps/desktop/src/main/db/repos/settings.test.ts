@@ -6,6 +6,8 @@ import {
   COPILOT_CATEGORY_WEIGHTS_DEFAULT,
   COPILOT_ENABLED_DEFAULT,
   COPILOT_SETTINGS_CLAMPS,
+  MEMORY_SETTINGS_CLAMPS,
+  MEMORY_TARGET_TOKEN_BUDGET_OPTIONS,
   PLANNER_APPROVAL_LEVEL_DEFAULT,
   PLANNER_SETTINGS_CLAMPS,
 } from '@team-x/shared-types';
@@ -77,7 +79,7 @@ describe('createSettingsRepo', () => {
   describe('seedDefaults', () => {
     it('seeds all default settings on empty DB', () => {
       const count = repo.seedDefaults();
-      expect(count).toBe(23);
+      expect(count).toBe(26);
       expect(repo.get<string>('runtime_strategy', '')).toBe('auto');
       expect(repo.get<string>('max_privacy_tier', '')).toBe('proprietary-cloud');
       expect(repo.get<number>('orchestrator_slots', 0)).toBe(6);
@@ -89,7 +91,7 @@ describe('createSettingsRepo', () => {
     it('does not overwrite existing settings', () => {
       repo.set('runtime_strategy', 'lean');
       const count = repo.seedDefaults();
-      expect(count).toBe(22); // 22 new after extensions autonomy + M38 copilot weights
+      expect(count).toBe(25);
       expect(repo.get<string>('runtime_strategy', '')).toBe('lean');
     });
 
@@ -210,6 +212,65 @@ describe('createSettingsRepo', () => {
       expect(() =>
         repo.setExtensions({ autonomyMode: 'wild-west' as 'balanced' }),
       ).toThrow(/autonomyMode must be one of/);
+    });
+  });
+
+  describe('long-run memory defaults', () => {
+    it('returns safe defaults on empty DB', () => {
+      expect(repo.getMemory()).toEqual({
+        defaultTargetTokenBudget: MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1],
+        recentTurnLimit: MEMORY_SETTINGS_CLAMPS.recentTurnLimit.default,
+        checkpointHistoryLimit: MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit.default,
+      });
+    });
+
+    it('persists and reads the selected memory defaults', () => {
+      repo.setMemory({
+        defaultTargetTokenBudget: MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[2],
+        recentTurnLimit: 18,
+        checkpointHistoryLimit: 9,
+      });
+      expect(repo.getMemory()).toEqual({
+        defaultTargetTokenBudget: MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[2],
+        recentTurnLimit: 18,
+        checkpointHistoryLimit: 9,
+      });
+    });
+
+    it('supports partial patches', () => {
+      repo.setMemory({
+        defaultTargetTokenBudget: MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[0],
+        recentTurnLimit: 10,
+        checkpointHistoryLimit: 5,
+      });
+      repo.setMemory({ recentTurnLimit: 14 });
+      expect(repo.getMemory()).toEqual({
+        defaultTargetTokenBudget: MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[0],
+        recentTurnLimit: 14,
+        checkpointHistoryLimit: 5,
+      });
+    });
+
+    it('clamps numeric memory fields and rejects invalid budget presets', () => {
+      repo.setMemory({
+        recentTurnLimit: -100,
+        checkpointHistoryLimit: 999,
+      });
+      expect(repo.getMemory()).toEqual({
+        defaultTargetTokenBudget: MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1],
+        recentTurnLimit: MEMORY_SETTINGS_CLAMPS.recentTurnLimit.min,
+        checkpointHistoryLimit: MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit.max,
+      });
+      expect(() =>
+        repo.setMemory({ defaultTargetTokenBudget: 1234 as (typeof MEMORY_TARGET_TOKEN_BUDGET_OPTIONS)[number] }),
+      ).toThrow(/defaultTargetTokenBudget must be one of/);
+    });
+
+    it('rejects non-finite numeric memory values', () => {
+      expect(() => repo.setMemory({ recentTurnLimit: Number.NaN })).toThrow(/finite number/);
+      expect(() => repo.setMemory({ checkpointHistoryLimit: Number.POSITIVE_INFINITY })).toThrow(
+        /finite number/,
+      );
     });
   });
 

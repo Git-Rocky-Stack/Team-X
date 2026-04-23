@@ -21,6 +21,13 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     section: 'extensions',
   },
   {
+    id: 'open-settings-memory',
+    label: 'Open Memory Settings',
+    description: 'Set the default pack budget, recent-turn window, and checkpoint depth.',
+    kind: 'settings',
+    section: 'memory',
+  },
+  {
     id: 'open-mission-control',
     label: 'Open Mission Control',
     description: 'Review live operations, queues, runs, and telemetry from the main dashboard.',
@@ -67,6 +74,14 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     kind: 'view',
     view: 'autonomy',
     autonomySubview: 'approvals',
+  },
+  {
+    id: 'open-autonomy-memory',
+    label: 'Open Memory',
+    description: 'Inspect digests, checkpoints, and packed-context posture for long-running threads.',
+    kind: 'view',
+    view: 'autonomy',
+    autonomySubview: 'memory',
   },
   {
     id: 'open-chat',
@@ -199,6 +214,15 @@ export const GUIDE_TASKS: GuideTask[] = [
     priority: 'advanced',
     kind: 'jump',
     actionId: 'open-autonomy-approvals',
+  },
+  {
+    id: 'memory-engine-reviewed',
+    title: 'Review long-run memory posture',
+    description: 'Inspect digests, checkpoints, and the default pack settings that bound long-running context.',
+    roles: OWNER_AND_BUILDER,
+    priority: 'advanced',
+    kind: 'jump',
+    actionId: 'open-autonomy-memory',
   },
   {
     id: 'telemetry-reviewed',
@@ -370,6 +394,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'Use Access to verify whether the workspace is still local-only or already modeled for shared operators.',
           'Use Runtimes and Routines to understand how work is produced, not just who is assigned to it.',
           'Use Budgets and Approvals together so cost ceilings and risky actions are visible before they silently block autonomy.',
+          'Use Memory to inspect what long-running threads retain, what was checkpointed, and how much context gets packed forward.',
         ],
       },
       {
@@ -380,7 +405,41 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
     ],
     taskIds: ['autonomy-access-reviewed', 'runtime-posture-reviewed', 'routine-governance-reviewed'],
-    actionIds: ['open-autonomy-access', 'open-autonomy-runtimes', 'open-autonomy-approvals'],
+    actionIds: [
+      'open-autonomy-access',
+      'open-autonomy-runtimes',
+      'open-autonomy-approvals',
+      'open-autonomy-memory',
+    ],
+  },
+  {
+    id: 'long-run-memory',
+    title: 'Long-Run Memory',
+    summary: 'Inspect how Team-X condenses threads, checkpoints interrupted work, and bounds context before very long runs drift.',
+    category: 'Governance',
+    roles: OWNER_AND_BUILDER,
+    blocks: [
+      {
+        kind: 'paragraph',
+        text: 'Long-run memory is the bridge between one-off conversations and durable autonomous work. Digests condense prior context, checkpoints preserve resumable state, and packed-context rules keep future turns inside a bounded envelope instead of replaying raw history forever.',
+      },
+      {
+        kind: 'bullets',
+        items: [
+          'Use Autonomy > Memory to inspect the current digest, checkpoint trail, and dropped-context posture for a thread.',
+          'Use Memory Settings to choose the default pack budget and how much recent or resumable state remains visible.',
+          'Use the thread-memory cards inside Chat and Tickets when you need a fast handoff into the full memory surface.',
+        ],
+      },
+      {
+        kind: 'callout',
+        tone: 'accent',
+        title: 'Recommended pattern',
+        text: 'If a run feels long, blocked, or context-heavy, inspect Memory before widening runtime limits. Most long-session issues are better solved with bounded context than with larger raw history replay.',
+      },
+    ],
+    taskIds: ['memory-engine-reviewed'],
+    actionIds: ['open-autonomy-memory', 'open-settings-memory'],
   },
   {
     id: 'telemetry-and-audit',

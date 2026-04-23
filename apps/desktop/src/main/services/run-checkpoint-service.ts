@@ -2,6 +2,7 @@ import type {
   RunCheckpoint,
   RunCheckpointBlocker,
   RunCheckpointKind,
+  RunCheckpointResumeOrigin,
 } from '@team-x/shared-types';
 
 import type { RunCheckpointRow, RunCheckpointsRepo } from '../db/repos/run-checkpoints.js';
@@ -27,6 +28,7 @@ export interface CreateRunCheckpointInput {
   nextAction?: string | null;
   activeArtifactRefs?: string[];
   unresolvedApprovalRefs?: string[];
+  resumeOrigin?: RunCheckpointResumeOrigin | null;
   createdAt?: number;
 }
 
@@ -70,6 +72,32 @@ function parseBlockersJson(raw: string): RunCheckpointBlocker[] {
   return [];
 }
 
+function parseResumeOriginJson(raw: string | null): RunCheckpointResumeOrigin | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    const record = parsed as Record<string, unknown>;
+    const checkpointId =
+      typeof record.checkpointId === 'string' && record.checkpointId.trim().length > 0
+        ? record.checkpointId.trim()
+        : null;
+    const checkpointKind =
+      typeof record.checkpointKind === 'string' &&
+      ['stopped', 'timeout', 'approval-blocked', 'budget-blocked'].includes(record.checkpointKind)
+        ? record.checkpointKind
+        : null;
+    if (!checkpointId || !checkpointKind) return null;
+    return {
+      checkpointId,
+      checkpointKind,
+      createdAt: typeof record.createdAt === 'number' ? record.createdAt : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function rowToCheckpoint(row: RunCheckpointRow): RunCheckpoint {
   return {
     id: row.id,
@@ -84,6 +112,7 @@ function rowToCheckpoint(row: RunCheckpointRow): RunCheckpoint {
     nextAction: row.nextAction,
     activeArtifactRefs: parseJsonArray(row.activeArtifactRefsJson),
     unresolvedApprovalRefs: parseJsonArray(row.unresolvedApprovalRefsJson),
+    resumeOrigin: parseResumeOriginJson(row.resumeOriginJson),
     createdAt: row.createdAt,
   };
 }
@@ -126,6 +155,7 @@ export function createRunCheckpointService({
         nextAction: input.nextAction?.trim() || null,
         activeArtifactRefsJson: JSON.stringify(input.activeArtifactRefs ?? []),
         unresolvedApprovalRefsJson: JSON.stringify(input.unresolvedApprovalRefs ?? []),
+        resumeOriginJson: input.resumeOrigin ? JSON.stringify(input.resumeOrigin) : null,
         createdAt: input.createdAt,
       });
       const checkpointRow = runCheckpointsRepo.getById(checkpointId);

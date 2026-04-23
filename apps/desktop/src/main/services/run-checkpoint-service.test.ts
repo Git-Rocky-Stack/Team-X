@@ -67,6 +67,11 @@ describe('run checkpoint service', () => {
       nextAction: 'Resume after approval',
       activeArtifactRefs: ['artifact-1'],
       unresolvedApprovalRefs: ['approval-1'],
+      resumeOrigin: {
+        checkpointId: 'checkpoint-0',
+        checkpointKind: 'timeout',
+        createdAt: 24,
+      },
       createdAt: 25,
     });
 
@@ -78,6 +83,11 @@ describe('run checkpoint service', () => {
         blockers: [{ kind: 'approval', refId: 'approval-1', summary: 'Pending publish approval' }],
         activeArtifactRefs: ['artifact-1'],
         unresolvedApprovalRefs: ['approval-1'],
+        resumeOrigin: {
+          checkpointId: 'checkpoint-0',
+          checkpointKind: 'timeout',
+          createdAt: 24,
+        },
       }),
     );
   });

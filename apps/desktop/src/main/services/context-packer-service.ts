@@ -6,7 +6,10 @@ import type {
   PackedContextBlock,
   PackedContextTurn,
   PackedThreadContext,
+  RunCheckpointResumeOrigin,
+  RunCheckpointResumableKind,
 } from '@team-x/shared-types';
+import { RUN_CHECKPOINT_RESUMABLE_KINDS } from '@team-x/shared-types';
 
 export const DEFAULT_CONTEXT_TOKEN_BUDGET = 2200;
 
@@ -126,6 +129,25 @@ function fitTurnToBudget(
     estimatedTokens: countTokens(fit.text),
     truncated: fit.truncated,
   };
+}
+
+function deriveResumeOrigin(blocks: PackedContextBlock[]): RunCheckpointResumeOrigin | null {
+  for (const block of blocks) {
+    if (block.kind !== 'checkpoint' || !block.sourceRefId) continue;
+    const checkpointKind = block.metadata.checkpointKind;
+    if (
+      typeof checkpointKind !== 'string' ||
+      !RUN_CHECKPOINT_RESUMABLE_KINDS.includes(checkpointKind as RunCheckpointResumableKind)
+    ) {
+      continue;
+    }
+    return {
+      checkpointId: block.sourceRefId,
+      checkpointKind: checkpointKind as RunCheckpointResumableKind,
+      createdAt: typeof block.metadata.createdAt === 'number' ? block.metadata.createdAt : null,
+    };
+  }
+  return null;
 }
 
 export function createContextPackerService(deps: ContextPackerServiceDeps = {}) {
@@ -271,6 +293,7 @@ export function createContextPackerService(deps: ContextPackerServiceDeps = {}) 
         includedBlocks,
         droppedBlocks,
         retrievalQueries: input.context.retrievalQueries,
+        resumeOrigin: deriveResumeOrigin(includedBlocks),
       };
     },
   };

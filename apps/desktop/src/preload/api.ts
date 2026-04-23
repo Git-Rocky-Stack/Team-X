@@ -160,6 +160,7 @@ import type {
   SettingsGetCopilotWeightsRequest,
   SettingsGetCopilotWeightsResponse,
   SettingsGetExtensionsResponse,
+  SettingsGetMemoryResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
@@ -170,6 +171,7 @@ import type {
   SettingsSetCopilotWeightsRequest,
   SettingsSetCopilotWeightsResponse,
   SettingsSetExtensionsRequest,
+  SettingsSetMemoryRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -350,6 +352,8 @@ const CHANNELS = {
   settingsSetConcurrency: 'settings.setConcurrency',
   settingsGetExtensions: 'settings.getExtensions',
   settingsSetExtensions: 'settings.setExtensions',
+  settingsGetMemory: 'settings.getMemory',
+  settingsSetMemory: 'settings.setMemory',
   settingsGetRagConfig: 'settings.getRagConfig',
   settingsSetRagConfig: 'settings.setRagConfig',
   // Agentic loop (Phase 5 — M31)
@@ -692,6 +696,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.settingsGetExtensions) as Promise<SettingsGetExtensionsResponse>,
       setExtensions: (req: SettingsSetExtensionsRequest) =>
         ipc.invoke(CHANNELS.settingsSetExtensions, req) as Promise<void>,
+      getMemory: () =>
+        ipc.invoke(CHANNELS.settingsGetMemory) as Promise<SettingsGetMemoryResponse>,
+      setMemory: (req: SettingsSetMemoryRequest) =>
+        ipc.invoke(CHANNELS.settingsSetMemory, req) as Promise<void>,
       getRagConfig: () =>
         ipc.invoke(CHANNELS.settingsGetRagConfig) as Promise<SettingsGetRagConfigResponse>,
       setRagConfig: (req: SettingsSetRagConfigRequest) =>

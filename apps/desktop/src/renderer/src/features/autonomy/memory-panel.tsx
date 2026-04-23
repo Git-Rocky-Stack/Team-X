@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { Thread } from '@team-x/shared-types';
+import { MEMORY_TARGET_TOKEN_BUDGET_OPTIONS, type Thread } from '@team-x/shared-types';
 import { BrainCircuit, Clock3, MessageSquareText, RefreshCw, ShieldCheck, Waypoints } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
 import { useThreadList } from '@/hooks/use-chat.js';
 import { usePackedThreadContext, useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
+import { useMemorySettings } from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { isAgentThread as checkAgentThread, isCopilotThread as checkCopilotThread } from '../chat/thread-list.js';
@@ -24,8 +25,7 @@ import {
   MissionStateBlock,
 } from '../mission/mission-shell.js';
 
-const TOKEN_BUDGETS = [2048, 4096, 8192] as const;
-const RECENT_TURN_LIMIT = 12;
+const TOKEN_BUDGETS = MEMORY_TARGET_TOKEN_BUDGET_OPTIONS;
 
 function threadLabel(thread: Thread): string {
   if (thread.subject?.trim()) return thread.subject.trim();
@@ -35,10 +35,12 @@ function threadLabel(thread: Thread): string {
 }
 
 export function MemoryPanel({ companyId }: { companyId: string }) {
-  const [targetTokenBudget, setTargetTokenBudget] =
-    useState<(typeof TOKEN_BUDGETS)[number]>(TOKEN_BUDGETS[1]);
+  const [targetTokenBudget, setTargetTokenBudget] = useState<(typeof TOKEN_BUDGETS)[number] | null>(
+    null,
+  );
 
   const threadsQuery = useThreadList(companyId);
+  const memorySettingsQuery = useMemorySettings();
   const threads = threadsQuery.data ?? [];
   const selectedThreadId = useAppStore((state) => state.autonomyMemoryThreadId);
   const setSelectedThreadId = useAppStore((state) => state.setAutonomyMemoryThreadId);
@@ -57,11 +59,20 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
     }
   }, [selectedThreadId, threads]);
 
+  useEffect(() => {
+    if (!memorySettingsQuery.data || targetTokenBudget !== null) return;
+    setTargetTokenBudget(memorySettingsQuery.data.defaultTargetTokenBudget);
+  }, [memorySettingsQuery.data, targetTokenBudget]);
+
+  const effectiveTargetTokenBudget = targetTokenBudget ?? TOKEN_BUDGETS[1];
+  const recentTurnLimit = memorySettingsQuery.data?.recentTurnLimit ?? 12;
+  const checkpointHistoryLimit = memorySettingsQuery.data?.checkpointHistoryLimit ?? 6;
+
   const digestQuery = useThreadDigest(companyId, selectedThreadId);
-  const checkpointsQuery = useRunCheckpoints(companyId, selectedThreadId, 6);
+  const checkpointsQuery = useRunCheckpoints(companyId, selectedThreadId, checkpointHistoryLimit);
   const packedContextQuery = usePackedThreadContext(companyId, selectedThreadId, {
-    targetTokenBudget,
-    recentTurnLimit: RECENT_TURN_LIMIT,
+    targetTokenBudget: effectiveTargetTokenBudget,
+    recentTurnLimit,
   });
 
   const setActiveView = useAppStore((state) => state.setActiveView);
@@ -185,13 +196,13 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
               Pack budget
             </span>
             <MissionControlRow className="gap-2">
-              {TOKEN_BUDGETS.map((budget) => (
-                <MissionSegmentedButton
-                  key={budget}
-                  active={targetTokenBudget === budget}
-                  onClick={() => setTargetTokenBudget(budget)}
-                >
-                  {budget.toLocaleString()}
+                {TOKEN_BUDGETS.map((budget) => (
+                  <MissionSegmentedButton
+                    key={budget}
+                    active={effectiveTargetTokenBudget === budget}
+                    onClick={() => setTargetTokenBudget(budget)}
+                  >
+                    {budget.toLocaleString()}
                 </MissionSegmentedButton>
               ))}
             </MissionControlRow>
@@ -214,7 +225,11 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
         />
         <MissionMetricTile
           label="Pack usage"
-          value={packedContextQuery.isLoading ? '...' : `${packedContext?.usedTokens ?? 0}/${targetTokenBudget}`}
+          value={
+            packedContextQuery.isLoading
+              ? '...'
+              : `${packedContext?.usedTokens ?? 0}/${effectiveTargetTokenBudget}`
+          }
           hint="Used tokens vs target budget"
           icon={Waypoints}
         />
@@ -283,7 +298,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
               <div>
                 <div className="text-sm font-semibold text-foreground">Packed Context</div>
                 <div className="text-xs text-muted-foreground">
-                  Budget {targetTokenBudget.toLocaleString()} with {RECENT_TURN_LIMIT} recent turns
+                  Budget {effectiveTargetTokenBudget.toLocaleString()} with {recentTurnLimit} recent turns
                 </div>
               </div>
               <MissionPill tone="accent">
@@ -369,12 +384,12 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
 
         <MissionInsetSurface className="space-y-4 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-sm font-semibold text-foreground">Run Checkpoints</div>
-              <div className="text-xs text-muted-foreground">
-                Newest first, with resumable blockers and next actions
+              <div>
+                <div className="text-sm font-semibold text-foreground">Run Checkpoints</div>
+                <div className="text-xs text-muted-foreground">
+                  Newest first, with resumable blockers and next actions ({checkpointHistoryLimit} visible)
+                </div>
               </div>
-            </div>
             {latestCheckpoint ? (
               <MissionPill tone={checkpointTone(latestCheckpoint.checkpointKind)}>
                 {checkpointLabel(latestCheckpoint.checkpointKind)}

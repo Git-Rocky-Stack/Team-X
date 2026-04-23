@@ -21,6 +21,7 @@ export interface CreateRunCheckpointInput {
   nextAction?: string | null;
   activeArtifactRefsJson?: string;
   unresolvedApprovalRefsJson?: string;
+  resumeOriginJson?: string | null;
   createdAt?: number;
 }
 
@@ -44,6 +45,7 @@ export function createRunCheckpointsRepo<TRunResult>(db: RunCheckpointsDb<TRunRe
           nextAction: input.nextAction ?? null,
           activeArtifactRefsJson: input.activeArtifactRefsJson ?? '[]',
           unresolvedApprovalRefsJson: input.unresolvedApprovalRefsJson ?? '[]',
+          resumeOriginJson: input.resumeOriginJson ?? null,
           createdAt: input.createdAt ?? Date.now(),
         })
         .run();

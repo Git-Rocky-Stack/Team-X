@@ -19,6 +19,8 @@ import {
   COPILOT_ENABLED_DEFAULT,
   COPILOT_SETTINGS_CLAMPS,
   EXTENSIONS_AUTONOMY_MODES,
+  MEMORY_SETTINGS_CLAMPS,
+  MEMORY_TARGET_TOKEN_BUDGET_OPTIONS,
   type CopilotCategory,
   DEFAULT_CONCURRENCY_CAPS,
   PLANNER_APPROVAL_LEVELS,
@@ -29,12 +31,14 @@ import {
   type SettingsGetCopilotResponse,
   type SettingsGetCopilotWeightsResponse,
   type SettingsGetExtensionsResponse,
+  type SettingsGetMemoryResponse,
   type SettingsGetPlannerResponse,
   type SettingsSetAgenticRequest,
   type SettingsSetCopilotRequest,
   type SettingsSetCopilotWeightsRequest,
   type SettingsSetCopilotWeightsResponse,
   type SettingsSetExtensionsRequest,
+  type SettingsSetMemoryRequest,
   type SettingsSetPlannerRequest,
 } from '@team-x/shared-types';
 
@@ -71,6 +75,12 @@ const SETTING_DEFAULTS: Array<{ key: string; value: unknown }> = [
     value: PLANNER_SETTINGS_CLAMPS.escalationThreshold.default,
   },
   { key: 'extensions_autonomy_mode', value: 'balanced' },
+  { key: 'memory_default_target_token_budget', value: MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1] },
+  { key: 'memory_recent_turn_limit', value: MEMORY_SETTINGS_CLAMPS.recentTurnLimit.default },
+  {
+    key: 'memory_checkpoint_history_limit',
+    value: MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit.default,
+  },
   // Copilot service (Phase 5 — M33). Clamps live in COPILOT_SETTINGS_CLAMPS; categories
   // default to the full COPILOT_CATEGORIES set — a conservative default that never
   // leaves the user with a silently-disabled analyzer through a bad save.
@@ -312,6 +322,65 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
         );
       }
       this.set('extensions_autonomy_mode', req.autonomyMode);
+    },
+
+    /**
+     * Read the long-run memory defaults as a single typed snapshot.
+     * Invalid persisted values fall back to the shared defaults.
+     */
+    getMemory(): SettingsGetMemoryResponse {
+      const rawBudget = this.get<number>(
+        'memory_default_target_token_budget',
+        MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1],
+      );
+      const defaultTargetTokenBudget = MEMORY_TARGET_TOKEN_BUDGET_OPTIONS.includes(
+        rawBudget as (typeof MEMORY_TARGET_TOKEN_BUDGET_OPTIONS)[number],
+      )
+        ? (rawBudget as SettingsGetMemoryResponse['defaultTargetTokenBudget'])
+        : MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1];
+      return {
+        defaultTargetTokenBudget,
+        recentTurnLimit: this.get<number>(
+          'memory_recent_turn_limit',
+          MEMORY_SETTINGS_CLAMPS.recentTurnLimit.default,
+        ),
+        checkpointHistoryLimit: this.get<number>(
+          'memory_checkpoint_history_limit',
+          MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit.default,
+        ),
+      };
+    },
+
+    /**
+     * Patch one or more long-run memory defaults. Budget must be one of the
+     * supported presets; numeric fields are rounded and clamped.
+     */
+    setMemory(req: SettingsSetMemoryRequest): void {
+      if (req.defaultTargetTokenBudget !== undefined) {
+        if (!MEMORY_TARGET_TOKEN_BUDGET_OPTIONS.includes(req.defaultTargetTokenBudget)) {
+          throw new Error(
+            `[settings] setMemory: defaultTargetTokenBudget must be one of ${MEMORY_TARGET_TOKEN_BUDGET_OPTIONS.join(', ')}`,
+          );
+        }
+        this.set('memory_default_target_token_budget', req.defaultTargetTokenBudget);
+      }
+      if (req.recentTurnLimit !== undefined) {
+        if (!Number.isFinite(req.recentTurnLimit)) {
+          throw new Error('[settings] setMemory: recentTurnLimit must be a finite number');
+        }
+        const c = MEMORY_SETTINGS_CLAMPS.recentTurnLimit;
+        this.set('memory_recent_turn_limit', clampInt(req.recentTurnLimit, c.min, c.max));
+      }
+      if (req.checkpointHistoryLimit !== undefined) {
+        if (!Number.isFinite(req.checkpointHistoryLimit)) {
+          throw new Error('[settings] setMemory: checkpointHistoryLimit must be a finite number');
+        }
+        const c = MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit;
+        this.set(
+          'memory_checkpoint_history_limit',
+          clampInt(req.checkpointHistoryLimit, c.min, c.max),
+        );
+      }
     },
 
     /**

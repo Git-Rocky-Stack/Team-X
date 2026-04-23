@@ -16,6 +16,7 @@ import type {
   SettingsSetCopilotRequest,
   SettingsSetCopilotWeightsRequest,
   SettingsSetExtensionsRequest,
+  SettingsSetMemoryRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRuntimeRequest,
@@ -89,6 +90,23 @@ export function useSetExtensionsSettings() {
     mutationFn: (req: SettingsSetExtensionsRequest) => ipc.settings.setExtensions(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['settings', 'extensions'] });
+    },
+  });
+}
+
+export function useMemorySettings() {
+  return useQuery({
+    queryKey: ['settings', 'memory'],
+    queryFn: () => ipc.settings.getMemory(),
+  });
+}
+
+export function useSetMemorySettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: SettingsSetMemoryRequest) => ipc.settings.setMemory(req),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings', 'memory'] });
     },
   });
 }

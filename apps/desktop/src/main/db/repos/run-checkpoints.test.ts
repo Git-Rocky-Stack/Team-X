@@ -96,6 +96,7 @@ describe('run checkpoints repo', () => {
       employeeId: 'employee-1',
       checkpointKind: 'completion',
       progressSummary: 'Completed the requested work.',
+      resumeOriginJson: '{"checkpointId":"checkpoint-0","checkpointKind":"stopped","createdAt":9}',
       createdAt: 10,
     });
     repo.create({
@@ -112,6 +113,12 @@ describe('run checkpoints repo', () => {
       expect.objectContaining({
         checkpointKind: 'approval-blocked',
         progressSummary: 'Waiting for operator approval.',
+      }),
+    );
+
+    expect(repo.getById(repo.listByCompanyThread('company-1', 'thread-1', 10)[1]!.id)).toEqual(
+      expect.objectContaining({
+        resumeOriginJson: '{"checkpointId":"checkpoint-0","checkpointKind":"stopped","createdAt":9}',
       }),
     );
   });

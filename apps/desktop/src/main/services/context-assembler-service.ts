@@ -388,13 +388,14 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
           body: formatCheckpointBlock(checkpoint),
           sourceRefId: checkpoint.id,
           sourceLabel: checkpoint.checkpointKind,
-          metadata: {
-            checkpointKind: checkpoint.checkpointKind,
-            runId: checkpoint.runId,
-            employeeId: checkpoint.employeeId,
-          },
-        });
-      }
+            metadata: {
+              checkpointKind: checkpoint.checkpointKind,
+              runId: checkpoint.runId,
+              employeeId: checkpoint.employeeId,
+              createdAt: checkpoint.createdAt,
+            },
+          });
+        }
 
       pushBlock(blocks, countTokens, {
         id: `company:${company.id}`,

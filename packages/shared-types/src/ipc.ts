@@ -1420,6 +1420,25 @@ export interface SettingsSetExtensionsRequest {
   autonomyMode: ExtensionsAutonomyMode;
 }
 
+export const MEMORY_TARGET_TOKEN_BUDGET_OPTIONS = [2048, 4096, 8192] as const;
+
+export interface SettingsGetMemoryResponse {
+  defaultTargetTokenBudget: (typeof MEMORY_TARGET_TOKEN_BUDGET_OPTIONS)[number];
+  recentTurnLimit: number;
+  checkpointHistoryLimit: number;
+}
+
+export interface SettingsSetMemoryRequest {
+  defaultTargetTokenBudget?: (typeof MEMORY_TARGET_TOKEN_BUDGET_OPTIONS)[number];
+  recentTurnLimit?: number;
+  checkpointHistoryLimit?: number;
+}
+
+export const MEMORY_SETTINGS_CLAMPS = {
+  recentTurnLimit: { min: 2, max: 50, default: 12 },
+  checkpointHistoryLimit: { min: 1, max: 20, default: 6 },
+} as const;
+
 // ---------------------------------------------------------------------------
 // Agentic loop settings (Phase 5 — M31)
 // ---------------------------------------------------------------------------
@@ -2052,6 +2071,14 @@ export interface IpcContract {
   };
   'settings.setExtensions': {
     request: SettingsSetExtensionsRequest;
+    response: undefined;
+  };
+  'settings.getMemory': {
+    request: Record<string, never>;
+    response: SettingsGetMemoryResponse;
+  };
+  'settings.setMemory': {
+    request: SettingsSetMemoryRequest;
     response: undefined;
   };
   'settings.getRagConfig': {
@@ -2707,6 +2734,10 @@ export interface TeamXApi {
     getExtensions(): Promise<SettingsGetExtensionsResponse>;
     /** Patch Extensions & Authority settings. */
     setExtensions(req: SettingsSetExtensionsRequest): Promise<void>;
+    /** Get long-run memory defaults (pack budget, recent-turn window, checkpoint depth). */
+    getMemory(): Promise<SettingsGetMemoryResponse>;
+    /** Patch one or more long-run memory defaults. */
+    setMemory(req: SettingsSetMemoryRequest): Promise<void>;
     /** Get full RAG configuration snapshot (enabled, top-K, threshold, max-tokens, embedding provider/model/dimension). */
     getRagConfig(): Promise<SettingsGetRagConfigResponse>;
     /** Patch one or more RAG configuration keys. Missing keys retain their current value. */

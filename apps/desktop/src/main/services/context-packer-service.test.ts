@@ -113,4 +113,56 @@ describe('context packer service', () => {
     expect(result.includedBlocks[0]?.truncated).toBe(true);
     expect(result.usedTokens).toBeLessThanOrEqual(128);
   });
+
+  it('derives resume origin from included resumable checkpoints only', () => {
+    const service = createContextPackerService();
+    const context: AssembledThreadContext = {
+      companyId: 'company-1',
+      threadId: 'thread-1',
+      generatedAt: 3,
+      retrievalQueries: [],
+      recentTurns: [],
+      blocks: [
+        {
+          id: 'checkpoint-1',
+          kind: 'checkpoint',
+          priority: 'high',
+          title: 'Latest Checkpoint',
+          body: 'Run timed out before the reply completed.',
+          estimatedTokens: 16,
+          sourceRefId: 'checkpoint-1',
+          sourceLabel: 'timeout',
+          metadata: {
+            checkpointKind: 'timeout',
+            createdAt: 99,
+          },
+        },
+        {
+          id: 'checkpoint-2',
+          kind: 'checkpoint',
+          priority: 'high',
+          title: 'Completed',
+          body: 'Completed reply.',
+          estimatedTokens: 12,
+          sourceRefId: 'checkpoint-2',
+          sourceLabel: 'completion',
+          metadata: {
+            checkpointKind: 'completion',
+            createdAt: 100,
+          },
+        },
+      ],
+    };
+
+    const result = service.packContext({
+      context,
+      targetTokenBudget: 256,
+    });
+
+    expect(result.resumeOrigin).toEqual({
+      checkpointId: 'checkpoint-1',
+      checkpointKind: 'timeout',
+      createdAt: 99,
+    });
+  });
 });

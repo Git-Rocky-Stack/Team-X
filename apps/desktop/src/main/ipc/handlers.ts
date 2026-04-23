@@ -178,6 +178,7 @@ import type {
   SettingsGetCopilotWeightsRequest,
   SettingsGetCopilotWeightsResponse,
   SettingsGetExtensionsResponse,
+  SettingsGetMemoryResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
   SettingsGetRagConfigResponse,
@@ -188,6 +189,7 @@ import type {
   SettingsSetCopilotWeightsRequest,
   SettingsSetCopilotWeightsResponse,
   SettingsSetExtensionsRequest,
+  SettingsSetMemoryRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
@@ -704,6 +706,10 @@ export interface IpcSettingsRepo {
   getExtensions?(): SettingsGetExtensionsResponse;
   /** Extensions & Authority autonomy policy write. */
   setExtensions?(req: SettingsSetExtensionsRequest): void;
+  /** Long-run memory defaults — snapshot read. */
+  getMemory?(): SettingsGetMemoryResponse;
+  /** Long-run memory defaults — clamped write. */
+  setMemory?(req: SettingsSetMemoryRequest): void;
   /** Copilot service settings — snapshot read (clamped). Phase 5 — M33. */
   getCopilot(): SettingsGetCopilotResponse;
   /** Copilot service settings — clamped/filtered write. Phase 5 — M33. */
@@ -1377,6 +1383,10 @@ export interface IpcHandlers {
   settingsGetExtensions(): Promise<SettingsGetExtensionsResponse>;
   /** `settings.setExtensions` — update extensions autonomy mode. */
   settingsSetExtensions(req: SettingsSetExtensionsRequest): Promise<void>;
+  /** `settings.getMemory` — long-run memory defaults for pack budget and detail depth. */
+  settingsGetMemory(): Promise<SettingsGetMemoryResponse>;
+  /** `settings.setMemory` — patch one or more long-run memory defaults. */
+  settingsSetMemory(req: SettingsSetMemoryRequest): Promise<void>;
   /** `settings.getRagConfig` — full RAG configuration snapshot (Phase 5 — M29). */
   settingsGetRagConfig(): Promise<SettingsGetRagConfigResponse>;
   /** `settings.setRagConfig` — patch one or more RAG configuration keys (Phase 5 — M29). */
@@ -4813,6 +4823,32 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         settingsRepo.setExtensions(req);
       } else {
         settingsRepo.set('extensions_autonomy_mode', req.autonomyMode);
+      }
+    },
+
+    async settingsGetMemory(): Promise<SettingsGetMemoryResponse> {
+      return (
+        settingsRepo.getMemory?.() ?? {
+          defaultTargetTokenBudget: 4096,
+          recentTurnLimit: 12,
+          checkpointHistoryLimit: 6,
+        }
+      );
+    },
+
+    async settingsSetMemory(req: SettingsSetMemoryRequest): Promise<void> {
+      if (settingsRepo.setMemory) {
+        settingsRepo.setMemory(req);
+        return;
+      }
+      if (req.defaultTargetTokenBudget !== undefined) {
+        settingsRepo.set('memory_default_target_token_budget', req.defaultTargetTokenBudget);
+      }
+      if (req.recentTurnLimit !== undefined) {
+        settingsRepo.set('memory_recent_turn_limit', req.recentTurnLimit);
+      }
+      if (req.checkpointHistoryLimit !== undefined) {
+        settingsRepo.set('memory_checkpoint_history_limit', req.checkpointHistoryLimit);
       }
     },
 

@@ -19,6 +19,7 @@ import { BackupSection } from './backup-section.js';
 import { ConcurrencySection } from './concurrency-section.js';
 import { CopilotSection } from './copilot-section.js';
 import { ExtensionsSection } from './extensions-section.js';
+import { MemorySection } from './memory-section.js';
 import { PlannerSection } from './planner-section.js';
 import { PrivacySection } from './privacy-section.js';
 import { ProvidersSection } from './providers-section.js';
@@ -59,6 +60,9 @@ export function SettingsView() {
         </section>
         <AgenticSection />
         <PlannerSection />
+        <section data-settings-section="memory">
+          <MemorySection />
+        </section>
         <CopilotSection />
         <section data-settings-section="providers">
           <ProvidersSection />
