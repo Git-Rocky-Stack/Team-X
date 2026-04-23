@@ -6,6 +6,7 @@ import { useEmployees } from '@/hooks/use-employees.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { AppLayout } from './app/layout.js';
+import { AutonomyView } from './features/autonomy/autonomy-view.js';
 import { AuditView } from './features/audit/audit-view.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
 import { ChatView } from './features/chat/chat-view.js';
@@ -165,6 +166,8 @@ export default function App() {
             <div className="flex-1 overflow-y-auto scrollbar-thin">{renderDashboard()}</div>
           </div>
         );
+      case 'autonomy':
+        return <AutonomyView company={activeCompany} companyId={companyId} />;
       case 'tickets':
         return <TicketsView companyId={companyId} employees={employees} />;
       case 'org':

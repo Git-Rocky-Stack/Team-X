@@ -40,6 +40,49 @@ export const companies = sqliteTable('companies', {
   status: text('status').notNull().default('running'),
 });
 
+/** Human supervisors who can operate one or more companies. */
+export const operators = sqliteTable('operators', {
+  id: text('id').primaryKey(),
+  displayName: text('display_name').notNull(),
+  email: text('email'),
+  /** local | invited | cloud */
+  authMode: text('auth_mode').notNull().default('local'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/** Company-scoped operator access and control permissions. */
+export const operatorMemberships = sqliteTable(
+  'operator_memberships',
+  {
+    id: text('id').primaryKey(),
+    operatorId: text('operator_id')
+      .notNull()
+      .references(() => operators.id, { onDelete: 'cascade' }),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    /** owner | admin | operator | reviewer */
+    role: text('role').notNull(),
+    canApproveBudget: integer('can_approve_budget', { mode: 'boolean' }).notNull().default(false),
+    canApproveAuthority: integer('can_approve_authority', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    canManageRoutines: integer('can_manage_routines', { mode: 'boolean' }).notNull().default(false),
+    canManageRuntimes: integer('can_manage_runtimes', { mode: 'boolean' }).notNull().default(false),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_operator_memberships_company').on(table.companyId),
+    operatorIdx: index('idx_operator_memberships_operator').on(table.operatorId),
+    operatorCompanyIdx: index('idx_operator_memberships_operator_company').on(
+      table.operatorId,
+      table.companyId,
+    ),
+  }),
+);
+
 /** Each employee is an instantiated role from a role pack (see role-packs/). */
 export const employees = sqliteTable('employees', {
   id: text('id').primaryKey(),

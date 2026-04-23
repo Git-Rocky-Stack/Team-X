@@ -240,6 +240,39 @@ export interface CompanySettings {
   userGuide?: CompanyUserGuideSettings;
 }
 
+export const OPERATOR_AUTH_MODES = ['local', 'invited', 'cloud'] as const;
+export type OperatorAuthMode = (typeof OPERATOR_AUTH_MODES)[number];
+
+export const OPERATOR_MEMBERSHIP_ROLES = ['owner', 'admin', 'operator', 'reviewer'] as const;
+export type OperatorMembershipRole = (typeof OPERATOR_MEMBERSHIP_ROLES)[number];
+
+export interface Operator {
+  id: string;
+  displayName: string;
+  email: string | null;
+  authMode: OperatorAuthMode;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OperatorMembership {
+  id: string;
+  operatorId: string;
+  companyId: string;
+  role: OperatorMembershipRole;
+  canApproveBudget: boolean;
+  canApproveAuthority: boolean;
+  canManageRoutines: boolean;
+  canManageRuntimes: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface OperatorAccessEntry {
+  operator: Operator;
+  membership: OperatorMembership;
+}
+
 export const EXTENSIONS_AUTONOMY_MODES = [
   'balanced',
   'conservative',

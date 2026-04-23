@@ -67,6 +67,7 @@ import type {
   Meeting,
   MeetingActionItem,
   MeetingMode,
+  OperatorAccessEntry,
   Project,
   SkillAssignment,
   Thread,
@@ -196,6 +197,10 @@ export interface CompaniesDeleteRequest {
 }
 
 export interface ListEmployeesRequest {
+  companyId: string;
+}
+
+export interface ListOperatorsRequest {
   companyId: string;
 }
 
@@ -1513,6 +1518,10 @@ export interface IpcContract {
     request: ListEmployeesRequest;
     response: Employee[];
   };
+  'operators.list': {
+    request: ListOperatorsRequest;
+    response: OperatorAccessEntry[];
+  };
   'employees.create': {
     request: HireEmployeeRequest;
     response: HireEmployeeResponse;
@@ -2177,6 +2186,10 @@ export interface TeamXApi {
      * Phase 5.6 M-C step d — restores Cluster B per audit row 2.20.
      */
     setManager(req: EmployeesSetManagerRequest): Promise<void>;
+  };
+  operators: {
+    /** Return every operator membership for the given company. */
+    list(companyId: string): Promise<OperatorAccessEntry[]>;
   };
   orgchart: {
     /**

@@ -41,6 +41,7 @@ export interface PendingDirectChatState {
 /** Top-level view tab in the cockpit. Phase 3 enables all tabs. */
 export type ActiveView =
   | 'dashboard'
+  | 'autonomy'
   | 'org'
   | 'projects'
   | 'tickets'

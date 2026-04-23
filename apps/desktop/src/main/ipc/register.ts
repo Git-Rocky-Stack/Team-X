@@ -68,6 +68,7 @@ const REQUEST_CHANNELS = [
   'companies.update',
   'companies.delete',
   'employees.list',
+  'operators.list',
   'employees.create',
   'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d
@@ -253,6 +254,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('employees.list', async (_event, request: { companyId: string }) => {
     return handlers.employeesList(request);
+  });
+
+  ipcMain.handle('operators.list', async (_event, request: { companyId: string }) => {
+    return handlers.operatorsList(request);
   });
 
   ipcMain.handle(

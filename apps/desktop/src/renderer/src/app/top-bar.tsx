@@ -12,6 +12,7 @@ import {
   Shield,
   Sparkles,
   Users2,
+  Workflow,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -29,6 +30,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { label: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
+  { label: 'Autonomy', icon: Workflow, view: 'autonomy' },
   { label: 'Org', icon: GitBranch, view: 'org' },
   { label: 'Projects', icon: KanbanSquare, view: 'projects' },
   { label: 'Tickets', icon: KanbanSquare, view: 'tickets' },

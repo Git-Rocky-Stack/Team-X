@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { CompanySettings } from '@team-x/shared-types';
 
 import { GUIDE_TASKS } from './guide-content.js';
+import type { GuideSection } from './guide-types.js';
 import {
   defaultGuideSectionIdForRole,
   guideCompletionSummary,
@@ -86,12 +87,12 @@ describe('guide-progress', () => {
   });
 
   it('matches section search against blocks and task copy', () => {
-    const gettingStarted = {
+    const gettingStarted: GuideSection = {
       id: 'getting-started',
       title: 'Getting Started',
       summary: 'Understand the workspace model.',
       category: 'Onboarding',
-      roles: ['owner', 'operator', 'builder'] as const,
+      roles: ['owner', 'operator', 'builder'],
       blocks: [
         { kind: 'paragraph' as const, text: 'Providers power the runtime.' },
         { kind: 'bullets' as const, items: ['Hire the first employee'] },

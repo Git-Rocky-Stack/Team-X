@@ -32,9 +32,11 @@
  *   reply id is delivered live via the `events.dashboard` channel
  *   as part of `work.started` / `token.delta` events.
  *
- *   Phase 1 hardcodes the human user as `HUMAN_USER_ID = 'rocky'`
- *   to match the seed and the orchestrator integration tests. Phase 2
- *   replaces this with a proper users table when multi-user lands.
+ *   Legacy compatibility note: Team-X's historical chat, thread, and
+ *   audit rows already use `HUMAN_USER_ID = 'rocky'`. The operator
+ *   foundation now backs that durable id with a bootstrapped local
+ *   owner operator row so existing history stays attributable while
+ *   the product moves toward a proper multi-operator model.
  */
 
 import type {
@@ -116,6 +118,7 @@ import type {
   ListGoalsRequest,
   ListMeetingsRequest,
   ListMcpTemplatesRequest,
+  ListOperatorsRequest,
   ListProviderModelsRequest,
   ListProviderModelsResponse,
   ListProjectsRequest,
@@ -127,6 +130,7 @@ import type {
   MeetingDetail,
   MeetingMode,
   MeetingStatus,
+  OperatorAccessEntry,
   OrgchartEdge,
   OrgchartGetRequest,
   OrgchartGetResponse,
@@ -744,6 +748,11 @@ export interface IpcSkillsService {
   deleteAssignment(assignmentId: string): void;
 }
 
+export interface IpcOperatorAccessService {
+  ensureLocalOwnerForCompany(companyId: string): { operatorId: string; membershipId: string };
+  listByCompany(companyId: string): OperatorAccessEntry[];
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -764,6 +773,7 @@ export interface IpcHandlerDeps {
   mcpServersRepo: McpServersRepo;
   extensionsRegistry?: ExtensionsRegistryService;
   skillsService?: IpcSkillsService;
+  operatorAccessService?: IpcOperatorAccessService;
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
@@ -915,6 +925,8 @@ export interface IpcHandlers {
    * + the chat drawer's recipient list.
    */
   employeesList(req: { companyId: string }): Promise<Employee[]>;
+  /** `operators.list` — return the operator access entries for a company. */
+  operatorsList(req: ListOperatorsRequest): Promise<OperatorAccessEntry[]>;
 
   /**
    * `employees.create` — hire a new employee from a role-pack role.
@@ -1748,6 +1760,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     mcpServersRepo,
     extensionsRegistry,
     skillsService,
+    operatorAccessService,
     authorityRepo,
     authorityResolver,
     providersService,
@@ -1795,6 +1808,21 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
   return {
     async companiesList() {
       return companiesRepo.list().map(rowToCompany);
+    },
+
+    async operatorsList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] operators.list: companyId is required');
+      }
+      if (!operatorAccessService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '[ipc] operators.list: operatorAccessService dep unwired — returning an empty operator set',
+          );
+        }
+        return [];
+      }
+      return operatorAccessService.listByCompany(req.companyId);
     },
 
     async companiesCreate(req) {
@@ -1874,6 +1902,20 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       // but unusable. Surface the throw so the caller knows to retry
       // after fixing the loader root (e.g., re-installing role-packs).
       const bootstrap = ensureSystemForCompany(companyId);
+      if (operatorAccessService) {
+        try {
+          operatorAccessService.ensureLocalOwnerForCompany(companyId);
+        } catch (err) {
+          console.error(
+            `[ipc] companies.create: local owner bootstrap failed for company ${companyId} (company remains usable, autonomy access may be incomplete):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] companies.create: operatorAccessService dep unwired — new company will not get an operator membership bootstrap until next app start',
+        );
+      }
 
       // Architectural invariant #11 — IPC channels that mutate state
       // MUST emit a bus event so renderer caches invalidate. Mirrors

@@ -89,6 +89,7 @@ import {
 import { createMeetingsRepo } from './db/repos/meetings.js';
 import { createMessagesRepo } from './db/repos/messages.js';
 import { createOrgEdgesRepo } from './db/repos/orgchart.js';
+import { createOperatorsRepo } from './db/repos/operators.js';
 import { createProjectsRepo } from './db/repos/projects.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createSettingsRepo } from './db/repos/settings.js';
@@ -143,6 +144,7 @@ import { createCopilotService } from './services/copilot-service.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import { detectHardware } from './services/profiler.js';
+import { createOperatorAccessService } from './services/operator-access-service.js';
 import {
   buildEmbedAdapter,
   createProviderFactory,
@@ -341,6 +343,7 @@ app
     const db = getDb();
     const companiesRepo = createCompaniesRepo(db);
     const employeesRepo = createEmployeesRepo(db);
+    const operatorsRepo = createOperatorsRepo(db);
     const threadsRepo = createThreadsRepo(db);
     const messagesRepo = createMessagesRepo(db);
     const runsRepo = createRunsRepo(db);
@@ -377,6 +380,9 @@ app
     // upsertWithDedup/listStale (the last one is the T4 addition; see
     // copilot-insights.ts §listStale comment block for rationale).
     const copilotInsightsRepo = createCopilotInsightsRepo(db);
+    const operatorAccessService = createOperatorAccessService({
+      operatorsRepo,
+    });
 
     // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
     const settingsSeeded = settingsRepo.seedDefaults();
@@ -400,6 +406,8 @@ app
       settingsRepo,
       skillsRoot: join(app.getPath('userData'), 'extensions', 'skills'),
     });
+    operatorAccessService.ensureLocalOwner();
+    operatorAccessService.ensureLocalOwnerForCompanies(companiesRepo.list().map((company) => company.id));
 
     const bus = createEventBus({ repo: eventsRepo });
 
@@ -844,6 +852,7 @@ app
       mcpServersRepo,
       extensionsRegistry,
       skillsService,
+      operatorAccessService,
       authorityRepo,
       authorityResolver,
       providersService,

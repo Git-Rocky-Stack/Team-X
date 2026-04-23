@@ -118,6 +118,7 @@ import type {
   MeetingDetail,
   ListProviderModelsResponse,
   OrgchartGetResponse,
+  OperatorAccessEntry,
   Project,
   ProjectDetail,
   ProviderConfig,
@@ -222,6 +223,7 @@ const CHANNELS = {
   companiesUpdate: 'companies.update',
   companiesDelete: 'companies.delete',
   employeesList: 'employees.list',
+  operatorsList: 'operators.list',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
@@ -394,6 +396,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.companiesUpdate, req) as Promise<void>,
       delete: (req: CompaniesDeleteRequest) =>
         ipc.invoke(CHANNELS.companiesDelete, req) as Promise<void>,
+    },
+    operators: {
+      list: (companyId: string) =>
+        ipc.invoke(CHANNELS.operatorsList, { companyId }) as Promise<OperatorAccessEntry[]>,
     },
     employees: {
       list: (companyId: string) =>
