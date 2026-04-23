@@ -133,6 +133,7 @@ import {
 } from './services/agentic-tools-write.js';
 import { createAgenticTools } from './services/agentic-tools.js';
 import { createBackupService } from './services/backup.js';
+import { createApprovalInboxService } from './services/approval-inbox-service.js';
 import { createBudgetGovernanceService } from './services/budget-governance-service.js';
 import { type CommandService, createCommandService } from './services/command-service.js';
 import {
@@ -326,6 +327,7 @@ let agenticLoopServiceInstance: AgenticLoopService | null = null;
 let copilotAnalyzerServiceInstance: CopilotAnalyzerService | null = null;
 let routineServiceInstance: RoutineService | null = null;
 let budgetGovernanceServiceInstance: ReturnType<typeof createBudgetGovernanceService> | null = null;
+let approvalInboxServiceInstance: ReturnType<typeof createApprovalInboxService> | null = null;
 /**
  * Copilot event trigger (M33 T4) — bus subscriber that debounces
  * meeting.ended / ticket.closed / goal.progressChanged /
@@ -479,6 +481,11 @@ app
           await orchestrator.pauseCompany(companyId);
         },
       },
+    });
+    approvalInboxServiceInstance = createApprovalInboxService({
+      budgetsRepo,
+      authorityRepo,
+      operatorId: operatorAccessService.getLocalOwnerId(),
     });
     let routineTicketCreator: ((input: RoutineServiceCreateTicketInput) => Promise<{ ticketId: string }>) | null =
       null;
@@ -910,6 +917,7 @@ app
       runtimeProfilesService,
       routineService: routineServiceInstance,
       budgetGovernanceService: budgetGovernanceServiceInstance,
+      approvalInboxService: approvalInboxServiceInstance,
       authorityRepo,
       authorityResolver,
       providersService,

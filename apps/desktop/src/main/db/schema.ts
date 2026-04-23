@@ -330,7 +330,7 @@ export const budgetLedgerEntries = sqliteTable(
   }),
 );
 
-/** Pending and resolved approval work items. Slice 5 uses budget-exception rows first. */
+/** Pending and resolved approval work items. */
 export const approvalItems = sqliteTable(
   'approval_items',
   {
@@ -338,7 +338,7 @@ export const approvalItems = sqliteTable(
     companyId: text('company_id')
       .notNull()
       .references(() => companies.id, { onDelete: 'cascade' }),
-    /** budget-exception */
+    /** authority-request | planner-request | runtime-request | routine-request | budget-exception | deliverable-review | artifact-publish */
     kind: text('kind').notNull(),
     /** pending | approved | denied | dismissed */
     status: text('status').notNull().default('pending'),
@@ -346,7 +346,7 @@ export const approvalItems = sqliteTable(
     priority: text('priority').notNull().default('medium'),
     requestedByOperatorId: text('requested_by_operator_id'),
     requestedByEmployeeId: text('requested_by_employee_id'),
-    /** budget-policy | company | employee | runtime-profile | routine */
+    /** budget-policy | extension | planner | company | employee | runtime-profile | routine | deliverable | artifact */
     subjectRefKind: text('subject_ref_kind').notNull(),
     subjectRefId: text('subject_ref_id').notNull(),
     summary: text('summary').notNull(),
@@ -363,6 +363,36 @@ export const approvalItems = sqliteTable(
       table.subjectRefKind,
       table.subjectRefId,
     ),
+  }),
+);
+
+/** Audit trail of approval decisions and rationale across the shared inbox. */
+export const approvalDecisions = sqliteTable(
+  'approval_decisions',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    /** Matches approval_items.kind and synthetic unified kinds such as authority-request. */
+    approvalKind: text('approval_kind').notNull(),
+    /** approval_items.id or the source-system request id when the item is bridged. */
+    approvalRefId: text('approval_ref_id').notNull(),
+    /** approved | denied | dismissed */
+    decision: text('decision').notNull(),
+    decidedByOperatorId: text('decided_by_operator_id'),
+    rationale: text('rationale'),
+    payloadJson: text('payload_json').notNull().default('{}'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_approval_decisions_company').on(table.companyId),
+    companyRefIdx: index('idx_approval_decisions_company_ref').on(
+      table.companyId,
+      table.approvalKind,
+      table.approvalRefId,
+    ),
+    createdIdx: index('idx_approval_decisions_created').on(table.createdAt),
   }),
 );
 

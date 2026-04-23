@@ -209,6 +209,7 @@ import type {
   ListBudgetLedgerEntriesRequest,
   GetBudgetOverviewRequest,
   ListApprovalItemsRequest,
+  ReviewApprovalItemRequest,
   UnlinkTicketFromProjectRequest,
   UpdateCheckResult,
   UpdateRuntimeProfileRequest,
@@ -814,6 +815,11 @@ export interface IpcBudgetGovernanceService {
   listApprovalItems(input: ListApprovalItemsRequest): ApprovalItem[];
 }
 
+export interface IpcApprovalInboxService {
+  listItems(input: ListApprovalItemsRequest): ApprovalItem[];
+  reviewItem(input: ReviewApprovalItemRequest): { item: ApprovalItem; grantId: string | null };
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -838,6 +844,7 @@ export interface IpcHandlerDeps {
   runtimeProfilesService?: IpcRuntimeProfilesService;
   routineService?: IpcRoutineService;
   budgetGovernanceService?: IpcBudgetGovernanceService;
+  approvalInboxService?: IpcApprovalInboxService;
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
@@ -1031,6 +1038,10 @@ export interface IpcHandlers {
   budgetsGetOverview(req: GetBudgetOverviewRequest): Promise<BudgetOverview>;
   /** `budgets.listApprovals` — return budget approval items. */
   budgetsListApprovals(req: ListApprovalItemsRequest): Promise<ApprovalItem[]>;
+  /** `approvals.list` — unified approval inbox across governance sources. */
+  approvalsList(req: ListApprovalItemsRequest): Promise<ApprovalItem[]>;
+  /** `approvals.review` — approve, deny, or dismiss one inbox item. */
+  approvalsReview(req: ReviewApprovalItemRequest): Promise<{ grantId: string | null }>;
 
   /**
    * `employees.create` — hire a new employee from a role-pack role.
@@ -1868,6 +1879,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     runtimeProfilesService,
     routineService,
     budgetGovernanceService,
+    approvalInboxService,
     authorityRepo,
     authorityResolver,
     providersService,
@@ -1910,6 +1922,53 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     } catch (err) {
       console.error(`[ipc] ${type}: bus emit failed (mutation already persisted):`, err);
     }
+  }
+
+  function emitApprovalReviewAudit(
+    companyId: string,
+    item: ApprovalItem,
+    grantId: string | null,
+  ): void {
+    emitUserAuditEvent('approval.reviewed', companyId, {
+      approvalKind: item.kind,
+      approvalRefId: item.id,
+      decision: item.status,
+      subjectRefKind: item.subjectRefKind,
+      subjectRefId: item.subjectRefId,
+      rationale: item.latestDecision?.rationale ?? null,
+    });
+
+    if (item.kind !== 'authority-request') return;
+
+    const payload = item.payload ?? {};
+    const resourceKind =
+      typeof payload.resourceKind === 'string' ? payload.resourceKind : 'path';
+    const resourceId =
+      typeof payload.resourceId === 'string' ? payload.resourceId : item.subjectRefId;
+    const requestedPermission =
+      typeof payload.requestedPermission === 'string' ? payload.requestedPermission : 'allow';
+
+    if (grantId) {
+      emitUserAuditEvent('authority.grant.created', companyId, {
+        grantId,
+        scopeKind: 'extension',
+        scopeId: item.subjectRefId,
+        resourceKind,
+        resourceId,
+        permission: requestedPermission,
+        requestId: item.id,
+      });
+    }
+
+    emitUserAuditEvent('authority.request.reviewed', companyId, {
+      requestId: item.id,
+      extensionId: item.subjectRefId,
+      resourceKind,
+      resourceId,
+      requestedPermission,
+      decision: item.status,
+      grantId,
+    });
   }
 
   return {
@@ -2203,6 +2262,13 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
         throw new Error('[ipc] budgets.listApprovals: companyId is required');
       }
+      if (approvalInboxService) {
+        return approvalInboxService.listItems({
+          companyId: req.companyId,
+          kind: 'budget-exception',
+          status: req.status,
+        });
+      }
       if (!budgetGovernanceService) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[ipc] budgets.listApprovals: budgetGovernanceService dep unwired — returning empty approval set');
@@ -2213,6 +2279,40 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         companyId: req.companyId,
         status: req.status,
       });
+    },
+
+    async approvalsList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] approvals.list: companyId is required');
+      }
+      if (!approvalInboxService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ipc] approvals.list: approvalInboxService dep unwired — returning empty approval set');
+        }
+        return [];
+      }
+      return approvalInboxService.listItems(req);
+    },
+
+    async approvalsReview(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] approvals.review: companyId is required');
+      }
+      if (typeof req.itemId !== 'string' || req.itemId.length === 0) {
+        throw new Error('[ipc] approvals.review: itemId is required');
+      }
+      if (!approvalInboxService) {
+        throw new Error('[ipc] approvals.review: approvalInboxService dep unwired');
+      }
+      const result = approvalInboxService.reviewItem({
+        companyId: req.companyId,
+        itemId: req.itemId,
+        kind: req.kind,
+        decision: req.decision,
+        rationale: req.rationale?.trim() || undefined,
+      });
+      emitApprovalReviewAudit(req.companyId, result.item, result.grantId);
+      return { grantId: result.grantId };
     },
 
     async companiesCreate(req) {
@@ -3836,9 +3936,6 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     },
 
     async authorityReviewRequest({ companyId, requestId, decision, reason }) {
-      if (!authorityRepo) {
-        throw new Error('[ipc] authority.reviewRequest: authorityRepo dep unwired');
-      }
       if (typeof companyId !== 'string' || companyId.length === 0) {
         throw new Error('[ipc] authority.reviewRequest: companyId is required');
       }
@@ -3848,67 +3945,13 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (decision !== 'approved' && decision !== 'denied') {
         throw new Error('[ipc] authority.reviewRequest: decision must be approved or denied');
       }
-
-      const request = authorityRepo.getRequestById(requestId);
-      if (!request) {
-        throw new Error(`[ipc] authority.reviewRequest: request not found: ${requestId}`);
-      }
-
-      const visibleRequestIds = new Set(
-        authorityRepo.listRequestsByCompany(companyId).map((row) => row.id),
-      );
-      if (!visibleRequestIds.has(requestId)) {
-        throw new Error(
-          `[ipc] authority.reviewRequest: request ${requestId} does not belong to company ${companyId}`,
-        );
-      }
-      if (request.status !== 'pending') {
-        throw new Error(
-          `[ipc] authority.reviewRequest: request ${requestId} is already ${request.status}`,
-        );
-      }
-
-      const reviewedAt = Date.now();
-      let grantId: string | null = null;
-      if (decision === 'approved') {
-        grantId = authorityRepo.createGrant({
-          scopeKind: 'extension',
-          scopeId: request.extensionId,
-          resourceKind: request.resourceKind as 'capability' | 'path',
-          resourceId: request.resourceId,
-          permission: request.requestedPermission as 'allow' | 'deny' | 'prompt',
-          metadataJson: JSON.stringify({
-            source: 'authority-request',
-            requestId,
-          }),
-        });
-        emitUserAuditEvent('authority.grant.created', companyId, {
-          grantId,
-          scopeKind: 'extension',
-          scopeId: request.extensionId,
-          resourceKind: request.resourceKind,
-          resourceId: request.resourceId,
-          permission: request.requestedPermission,
-          requestId,
-        });
-      }
-
-      authorityRepo.reviewRequest({
-        requestId,
-        status: decision,
-        reason: reason?.trim() || null,
-        reviewedAt,
-      });
-      emitUserAuditEvent('authority.request.reviewed', companyId, {
-        requestId,
-        extensionId: request.extensionId,
-        resourceKind: request.resourceKind,
-        resourceId: request.resourceId,
-        requestedPermission: request.requestedPermission,
+      return this.approvalsReview({
+        companyId,
+        itemId: requestId,
+        kind: 'authority-request',
         decision,
-        grantId,
+        rationale: reason ?? undefined,
       });
-      return { grantId };
     },
 
     async authorityGetEffective({ companyId, employeeId }) {

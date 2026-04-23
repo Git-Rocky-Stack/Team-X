@@ -59,7 +59,7 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsHooksSrc).toContain('export function useDeleteAuthorityGrant(companyId: string | null)');
     expect(extensionsHooksSrc).toContain('ipc.authority.delete(grantId)');
     expect(extensionsHooksSrc).toContain('export function useReviewAuthorityRequest(companyId: string | null)');
-    expect(extensionsHooksSrc).toContain('ipc.authority.reviewRequest');
+    expect(extensionsHooksSrc).toContain('ipc.approvals.review');
     expect(extensionsHooksSrc).toContain('export function useEffectiveAuthority(companyId: string | null, employeeId: string | null)');
     expect(extensionsHooksSrc).toContain('ipc.authority.getEffective({ companyId: companyId!, employeeId: employeeId! })');
     expect(extensionsHooksSrc).toContain('export function useAddMcpServer(companyId: string | null)');

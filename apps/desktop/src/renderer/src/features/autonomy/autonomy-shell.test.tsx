@@ -13,10 +13,12 @@ const HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-operators.ts');
 const RUNTIME_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-runtime-profiles.ts');
 const ROUTINES_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-routines.ts');
 const BUDGETS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-budgets.ts');
+const APPROVALS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-approvals.ts');
 const VIEW_PATH = join(currentDirname, 'autonomy-view.tsx');
 const RUNTIME_PANEL_PATH = join(currentDirname, 'runtime-profiles-panel.tsx');
 const ROUTINES_PANEL_PATH = join(currentDirname, 'routines-panel.tsx');
 const BUDGETS_PANEL_PATH = join(currentDirname, 'budgets-panel.tsx');
+const APPROVALS_PANEL_PATH = join(currentDirname, 'approvals-panel.tsx');
 
 const appSrc = readFileSync(APP_PATH, 'utf8');
 const storeSrc = readFileSync(STORE_PATH, 'utf8');
@@ -26,10 +28,12 @@ const hookSrc = readFileSync(HOOK_PATH, 'utf8');
 const runtimeHookSrc = readFileSync(RUNTIME_HOOK_PATH, 'utf8');
 const routinesHookSrc = readFileSync(ROUTINES_HOOK_PATH, 'utf8');
 const budgetsHookSrc = readFileSync(BUDGETS_HOOK_PATH, 'utf8');
+const approvalsHookSrc = readFileSync(APPROVALS_HOOK_PATH, 'utf8');
 const viewSrc = readFileSync(VIEW_PATH, 'utf8');
 const runtimePanelSrc = readFileSync(RUNTIME_PANEL_PATH, 'utf8');
 const routinesPanelSrc = readFileSync(ROUTINES_PANEL_PATH, 'utf8');
 const budgetsPanelSrc = readFileSync(BUDGETS_PANEL_PATH, 'utf8');
+const approvalsPanelSrc = readFileSync(APPROVALS_PANEL_PATH, 'utf8');
 
 describe('Autonomy shell wiring', () => {
   it('adds autonomy as a top-level app destination', () => {
@@ -61,6 +65,8 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('<RoutinesPanel companyId={companyId} />');
     expect(viewSrc).toContain("import { BudgetsPanel } from './budgets-panel.js';");
     expect(viewSrc).toContain('<BudgetsPanel companyId={companyId} company={company} />');
+    expect(viewSrc).toContain("import { ApprovalsPanel } from './approvals-panel.js';");
+    expect(viewSrc).toContain('<ApprovalsPanel companyId={companyId} />');
   });
 
   it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {
@@ -113,5 +119,17 @@ describe('Autonomy shell wiring', () => {
     expect(budgetsPanelSrc).toContain('data-budget-policy={policy.id}');
     expect(budgetsPanelSrc).toContain('data-budget-ledger={entry.id}');
     expect(budgetsPanelSrc).toContain('data-budget-approval={approval.id}');
+  });
+
+  it('adds approval hooks and a unified approvals panel with decision controls', () => {
+    expect(approvalsHookSrc).toContain("queryKey: ['approvals', companyId, kind ?? null, status ?? null]");
+    expect(approvalsHookSrc).toContain('ipc.approvals.list');
+    expect(approvalsHookSrc).toContain('ipc.approvals.review');
+    expect(approvalsPanelSrc).toContain('Unified Approval Queue');
+    expect(approvalsPanelSrc).toContain('data-approvals-panel=""');
+    expect(approvalsPanelSrc).toContain('data-approval-card={item.id}');
+    expect(approvalsPanelSrc).toContain('Approve');
+    expect(approvalsPanelSrc).toContain('Deny');
+    expect(approvalsPanelSrc).toContain('Latest rationale:');
   });
 });

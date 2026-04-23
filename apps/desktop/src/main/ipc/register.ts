@@ -88,6 +88,8 @@ const REQUEST_CHANNELS = [
   'budgets.listLedger',
   'budgets.getOverview',
   'budgets.listApprovals',
+  'approvals.list',
+  'approvals.review',
   'employees.create',
   'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d
@@ -397,6 +399,20 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'budgets.listApprovals',
     async (_event, request: import('@team-x/shared-types').ListApprovalItemsRequest) => {
       return handlers.budgetsListApprovals(request);
+    },
+  );
+
+  ipcMain.handle(
+    'approvals.list',
+    async (_event, request: import('@team-x/shared-types').ListApprovalItemsRequest) => {
+      return handlers.approvalsList(request);
+    },
+  );
+
+  ipcMain.handle(
+    'approvals.review',
+    async (_event, request: import('@team-x/shared-types').ReviewApprovalItemRequest) => {
+      return handlers.approvalsReview(request);
     },
   );
 

@@ -589,7 +589,7 @@ export function ExtensionsSection() {
                       <div>
                         <p className="text-xs font-medium text-foreground">Pending reviews</p>
                         <p className="text-[11px] text-muted-foreground">
-                          Skills requesting sensitive capabilities or paths stop here until you approve or deny them.
+                          Skills requesting sensitive capabilities or paths stop here until you approve or deny them. The same items now resolve through the shared Autonomy approvals inbox.
                         </p>
                       </div>
                       <Badge variant="outline">{pendingAuthorityRequests.length}</Badge>

@@ -201,6 +201,7 @@ import type {
   RunRoutineNowRequest,
   ListBudgetLedgerEntriesRequest,
   ListApprovalItemsRequest,
+  ReviewApprovalItemRequest,
   VaultDownloadResponse,
   VaultFile,
   VaultSearchResult,
@@ -266,6 +267,8 @@ const CHANNELS = {
   budgetsListLedger: 'budgets.listLedger',
   budgetsGetOverview: 'budgets.getOverview',
   budgetsListApprovals: 'budgets.listApprovals',
+  approvalsList: 'approvals.list',
+  approvalsReview: 'approvals.review',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
@@ -491,6 +494,12 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.budgetsGetOverview, { companyId }) as Promise<BudgetOverview>,
       listApprovals: (req: ListApprovalItemsRequest) =>
         ipc.invoke(CHANNELS.budgetsListApprovals, req) as Promise<ApprovalItem[]>,
+    },
+    approvals: {
+      list: (req: ListApprovalItemsRequest) =>
+        ipc.invoke(CHANNELS.approvalsList, req) as Promise<ApprovalItem[]>,
+      review: (req: ReviewApprovalItemRequest) =>
+        ipc.invoke(CHANNELS.approvalsReview, req) as Promise<{ grantId: string | null }>,
     },
     employees: {
       list: (companyId: string) =>

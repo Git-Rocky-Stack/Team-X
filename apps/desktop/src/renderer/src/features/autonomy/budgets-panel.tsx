@@ -476,7 +476,8 @@ export function BudgetsPanel({
                   <h3 className="text-sm font-semibold text-foreground">Pending Budget Approvals</h3>
                   <p className="text-xs leading-5 text-muted-foreground">
                     These approval items are raised automatically when spend crosses an approval
-                    gate and future autonomy should stop until an operator reviews it.
+                    gate and future autonomy should stop until an operator reviews it. The same
+                    queue is actionable from Autonomy {'>'} Approvals.
                   </p>
                 </div>
                 {approvals.length === 0 ? (

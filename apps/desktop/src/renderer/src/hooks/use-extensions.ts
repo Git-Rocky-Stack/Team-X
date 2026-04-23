@@ -68,10 +68,28 @@ export function useDeleteAuthorityGrant(companyId: string | null) {
 export function useReviewAuthorityRequest(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ipc.authority.reviewRequest,
+    mutationFn: ({
+      companyId: requestCompanyId,
+      requestId,
+      decision,
+      reason,
+    }: {
+      companyId: string;
+      requestId: string;
+      decision: 'approved' | 'denied';
+      reason?: string;
+    }) =>
+      ipc.approvals.review({
+        companyId: requestCompanyId,
+        itemId: requestId,
+        kind: 'authority-request',
+        decision,
+        rationale: reason,
+      }),
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['authority', companyId] });
+      qc.invalidateQueries({ queryKey: ['approvals', companyId] });
       qc.invalidateQueries({ queryKey: ['authority-requests', companyId] });
       qc.invalidateQueries({ queryKey: ['effective-authority', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });

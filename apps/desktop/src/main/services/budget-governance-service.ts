@@ -1,5 +1,6 @@
 import type {
   ActorKind,
+  ApprovalDecision,
   ApprovalItem,
   ApprovalItemStatus,
   BudgetAlertLevel,
@@ -21,7 +22,13 @@ import type {
   BudgetWarningPayload,
 } from '@team-x/shared-types';
 
-import type { ApprovalItemRow, BudgetLedgerEntryRow, BudgetPolicyRow, BudgetsRepo } from '../db/repos/budgets.js';
+import type {
+  ApprovalDecisionRow,
+  ApprovalItemRow,
+  BudgetLedgerEntryRow,
+  BudgetPolicyRow,
+  BudgetsRepo,
+} from '../db/repos/budgets.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { RunRow } from '../db/repos/runs.js';
 import type { TicketRow } from '../db/repos/tickets.js';
@@ -230,6 +237,20 @@ function rowToApprovalItem(row: ApprovalItemRow): ApprovalItem {
   };
 }
 
+function rowToApprovalDecision(row: ApprovalDecisionRow): ApprovalDecision {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    approvalKind: row.approvalKind as ApprovalDecision['approvalKind'],
+    approvalRefId: row.approvalRefId,
+    decision: row.decision as ApprovalDecision['decision'],
+    decidedByOperatorId: row.decidedByOperatorId,
+    rationale: row.rationale,
+    payload: parsePayloadJson(row.payloadJson),
+    createdAt: row.createdAt,
+  };
+}
+
 function summarizePolicy(
   policy: BudgetPolicy,
   currentSpendUsd: string,
@@ -304,6 +325,18 @@ export function createBudgetGovernanceService(
     return summarizePolicy(policy, currentSpendUsd);
   }
 
+  function hydrateApprovalItem(row: ApprovalItemRow): ApprovalItem {
+    const latestDecision = budgetsRepo.getLatestApprovalDecision(
+      row.companyId,
+      row.kind as ApprovalItem['kind'],
+      row.id,
+    );
+    return {
+      ...rowToApprovalItem(row),
+      latestDecision: latestDecision ? rowToApprovalDecision(latestDecision) : null,
+    };
+  }
+
   function listPolicies(companyId: string): BudgetPolicy[] {
     return budgetsRepo.listPoliciesByCompany(companyId).map(rowToBudgetPolicy);
   }
@@ -338,7 +371,25 @@ export function createBudgetGovernanceService(
   function listApprovalItems(input: ListApprovalItemsInput): ApprovalItem[] {
     return budgetsRepo
       .listApprovalItems(input.companyId, 'budget-exception', input.status)
-      .map(rowToApprovalItem);
+      .map(hydrateApprovalItem);
+  }
+
+  function getLatestBudgetResolution(
+    companyId: string,
+    policyId: string,
+    referenceMs: number,
+  ): ApprovalItem | null {
+    const window = currentMonthlyWindow(referenceMs);
+    const resolved = budgetsRepo
+      .listApprovalItemsForSubject(companyId, 'budget-exception', 'budget-policy', policyId)
+      .filter(
+        (row) =>
+          row.status !== 'pending' &&
+          row.createdAt >= window.startAt &&
+          row.createdAt <= window.endAt,
+      );
+    const latest = resolved[0];
+    return latest ? hydrateApprovalItem(latest) : null;
   }
 
   function createBudgetApproval(policy: BudgetPolicySummary, requestedByEmployeeId?: string | null): ApprovalItem {
@@ -455,9 +506,10 @@ export function createBudgetGovernanceService(
   }
 
   async function assertExecutionAllowed(input: BudgetAdmissionInput): Promise<BudgetAdmissionResult> {
+    const referenceMs = now();
     const policies = collectScopePolicies(input.companyId, input.employeeId, input.routineId)
       .filter((policy) => policy.enabled)
-      .map((policy) => getSummary(policy, now()));
+      .map((policy) => getSummary(policy, referenceMs));
 
     const exceeded = policies.find((policy) => policy.alertLevel === 'exceeded');
     if (exceeded) {
@@ -472,6 +524,27 @@ export function createBudgetGovernanceService(
 
     const approvalRequired = policies.find((policy) => policy.alertLevel === 'approval-required');
     if (approvalRequired) {
+      const latestResolution = getLatestBudgetResolution(
+        approvalRequired.companyId,
+        approvalRequired.id,
+        referenceMs,
+      );
+      if (latestResolution?.status === 'approved') {
+        return {
+          allowed: true,
+          policy: approvalRequired,
+          reason: null,
+          approvalItem: latestResolution,
+        };
+      }
+      if (latestResolution?.status === 'denied' || latestResolution?.status === 'dismissed') {
+        return {
+          allowed: false,
+          policy: approvalRequired,
+          reason: `Budget approval ${latestResolution.status} for ${approvalRequired.scopeKind} scope ${approvalRequired.scopeRefId}.`,
+          approvalItem: latestResolution,
+        };
+      }
       const approvalItem = createBudgetApproval(approvalRequired, input.employeeId);
       return {
         allowed: false,

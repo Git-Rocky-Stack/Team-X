@@ -154,4 +154,37 @@ describe('budgets repo', () => {
       }),
     );
   });
+
+  it('records approval decisions alongside approval items', () => {
+    const itemId = budgetsRepo.createApprovalItem({
+      companyId: 'company-1',
+      kind: 'budget-exception',
+      priority: 'high',
+      subjectRefKind: 'budget-policy',
+      subjectRefId: 'policy-1',
+      summary: 'Approval required for company budget',
+    });
+
+    budgetsRepo.resolveApprovalItem({ itemId, status: 'approved' });
+    budgetsRepo.createApprovalDecision({
+      companyId: 'company-1',
+      approvalKind: 'budget-exception',
+      approvalRefId: itemId,
+      decision: 'approved',
+      decidedByOperatorId: 'rocky',
+      rationale: 'Approved for the current month.',
+    });
+
+    const latest = budgetsRepo.getLatestApprovalDecision('company-1', 'budget-exception', itemId);
+    const resolved = budgetsRepo.getApprovalItemById(itemId);
+
+    expect(resolved?.status).toBe('approved');
+    expect(latest).toEqual(
+      expect.objectContaining({
+        approvalRefId: itemId,
+        decision: 'approved',
+        rationale: 'Approved for the current month.',
+      }),
+    );
+  });
 });

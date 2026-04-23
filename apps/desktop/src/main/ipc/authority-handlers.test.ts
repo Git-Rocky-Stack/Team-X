@@ -90,6 +90,43 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
       }),
     ),
   };
+  const approvalInboxService = {
+    listItems: vi.fn(() => []),
+    reviewItem: vi.fn(() => ({
+      item: {
+        id: 'request-1',
+        companyId: 'company-1',
+        kind: 'authority-request',
+        status: 'approved',
+        priority: 'high',
+        requestedByOperatorId: null,
+        requestedByEmployeeId: null,
+        subjectRefKind: 'extension',
+        subjectRefId: 'skill-1',
+        summary: 'Authority review required for path C:/Projects/Alpha.',
+        payload: {
+          extensionId: 'skill-1',
+          resourceKind: 'path',
+          resourceId: 'C:/Projects/Alpha',
+          requestedPermission: 'allow',
+        },
+        createdAt: 1,
+        resolvedAt: 2,
+        latestDecision: {
+          id: 'decision-1',
+          companyId: 'company-1',
+          approvalKind: 'authority-request',
+          approvalRefId: 'request-1',
+          decision: 'approved',
+          decidedByOperatorId: 'rocky',
+          rationale: null,
+          payload: null,
+          createdAt: 2,
+        },
+      },
+      grantId: 'grant-1',
+    })),
+  } as unknown as IpcHandlerDeps['approvalInboxService'];
 
   return {
     companiesRepo: noop,
@@ -110,6 +147,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     mcpHost: noop,
     mcpServersRepo: noop,
     extensionsRegistry: noop,
+    approvalInboxService,
     authorityRepo,
     authorityResolver,
     providersService: noop,
@@ -233,21 +271,12 @@ describe('authority IPC handlers', () => {
       decision: 'approved',
     });
 
-    expect(deps.authorityRepo?.createGrant).toHaveBeenCalledWith({
-      scopeKind: 'extension',
-      scopeId: 'skill-1',
-      resourceKind: 'path',
-      resourceId: 'C:/Projects/Alpha',
-      permission: 'allow',
-      metadataJson: JSON.stringify({
-        source: 'authority-request',
-        requestId: 'request-1',
-      }),
-    });
-    expect(deps.authorityRepo?.reviewRequest).toHaveBeenCalledWith(
+    expect(deps.approvalInboxService?.reviewItem).toHaveBeenCalledWith(
       expect.objectContaining({
-        requestId: 'request-1',
-        status: 'approved',
+        companyId: 'company-1',
+        itemId: 'request-1',
+        kind: 'authority-request',
+        decision: 'approved',
       }),
     );
     expect(result).toEqual({ grantId: 'grant-1' });

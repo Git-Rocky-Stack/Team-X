@@ -3,6 +3,7 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 import type {
+  ApprovalDecisionStatus,
   ApprovalItemKind,
   ApprovalItemStatus,
   ApprovalPriority,
@@ -12,11 +13,12 @@ import type {
 } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
-import { approvalItems, budgetLedgerEntries, budgetPolicies } from '../schema.js';
+import { approvalDecisions, approvalItems, budgetLedgerEntries, budgetPolicies } from '../schema.js';
 
 export type BudgetPolicyRow = typeof budgetPolicies.$inferSelect;
 export type BudgetLedgerEntryRow = typeof budgetLedgerEntries.$inferSelect;
 export type ApprovalItemRow = typeof approvalItems.$inferSelect;
+export type ApprovalDecisionRow = typeof approvalDecisions.$inferSelect;
 
 export interface CreateBudgetPolicyInput {
   companyId: string;
@@ -78,6 +80,16 @@ export interface CreateApprovalItemInput {
 export interface ResolveApprovalItemInput {
   itemId: string;
   status: Exclude<ApprovalItemStatus, 'pending'>;
+}
+
+export interface CreateApprovalDecisionInput {
+  companyId: string;
+  approvalKind: ApprovalItemKind;
+  approvalRefId: string;
+  decision: ApprovalDecisionStatus;
+  decidedByOperatorId?: string | null;
+  rationale?: string | null;
+  payloadJson?: string | null;
 }
 
 type BudgetsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -303,6 +315,10 @@ export function createBudgetsRepo<TRunResult>(db: BudgetsDb<TRunResult>) {
       return id;
     },
 
+    getApprovalItemById(id: string): ApprovalItemRow | null {
+      return db.select().from(approvalItems).where(eq(approvalItems.id, id)).get() ?? null;
+    },
+
     findPendingApprovalItem(
       companyId: string,
       kind: ApprovalItemKind,
@@ -324,6 +340,28 @@ export function createBudgetsRepo<TRunResult>(db: BudgetsDb<TRunResult>) {
           )
           .get() ?? null
       );
+    },
+
+    listApprovalItemsForSubject(
+      companyId: string,
+      kind: ApprovalItemKind,
+      subjectRefKind: ApprovalSubjectKind,
+      subjectRefId: string,
+      status?: ApprovalItemStatus,
+    ): ApprovalItemRow[] {
+      const conditions = [
+        eq(approvalItems.companyId, companyId),
+        eq(approvalItems.kind, kind),
+        eq(approvalItems.subjectRefKind, subjectRefKind),
+        eq(approvalItems.subjectRefId, subjectRefId),
+      ];
+      if (status !== undefined) conditions.push(eq(approvalItems.status, status));
+      return db
+        .select()
+        .from(approvalItems)
+        .where(and(...conditions))
+        .orderBy(desc(approvalItems.createdAt))
+        .all();
     },
 
     listApprovalItems(
@@ -350,6 +388,45 @@ export function createBudgetsRepo<TRunResult>(db: BudgetsDb<TRunResult>) {
         })
         .where(eq(approvalItems.id, input.itemId))
         .run();
+    },
+
+    createApprovalDecision(input: CreateApprovalDecisionInput): string {
+      const id = nanoid();
+      db.insert(approvalDecisions)
+        .values({
+          id,
+          companyId: input.companyId,
+          approvalKind: input.approvalKind,
+          approvalRefId: input.approvalRefId,
+          decision: input.decision,
+          decidedByOperatorId: input.decidedByOperatorId ?? null,
+          rationale: input.rationale ?? null,
+          payloadJson: input.payloadJson ?? '{}',
+          createdAt: Date.now(),
+        })
+        .run();
+      return id;
+    },
+
+    getLatestApprovalDecision(
+      companyId: string,
+      approvalKind: ApprovalItemKind,
+      approvalRefId: string,
+    ): ApprovalDecisionRow | null {
+      return (
+        db
+          .select()
+          .from(approvalDecisions)
+          .where(
+            and(
+              eq(approvalDecisions.companyId, companyId),
+              eq(approvalDecisions.approvalKind, approvalKind),
+              eq(approvalDecisions.approvalRefId, approvalRefId),
+            ),
+          )
+          .orderBy(desc(approvalDecisions.createdAt))
+          .get() ?? null
+      );
     },
   };
 }

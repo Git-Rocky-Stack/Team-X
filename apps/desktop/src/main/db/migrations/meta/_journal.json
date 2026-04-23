@@ -134,6 +134,13 @@
       "when": 1777526400000,
       "tag": "0018_budgets",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1777612800000,
+      "tag": "0019_approval_decisions",
+      "breakpoints": true
     }
   ]
 }

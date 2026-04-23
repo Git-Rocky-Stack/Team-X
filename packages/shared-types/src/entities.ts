@@ -414,21 +414,36 @@ export type BudgetPolicyPeriod = (typeof BUDGET_POLICY_PERIODS)[number];
 export const BUDGET_ALERT_LEVELS = ['ok', 'warning', 'approval-required', 'exceeded'] as const;
 export type BudgetAlertLevel = (typeof BUDGET_ALERT_LEVELS)[number];
 
-export const APPROVAL_ITEM_KINDS = ['budget-exception'] as const;
+export const APPROVAL_ITEM_KINDS = [
+  'authority-request',
+  'planner-request',
+  'runtime-request',
+  'routine-request',
+  'budget-exception',
+  'deliverable-review',
+  'artifact-publish',
+] as const;
 export type ApprovalItemKind = (typeof APPROVAL_ITEM_KINDS)[number];
 
 export const APPROVAL_ITEM_STATUSES = ['pending', 'approved', 'denied', 'dismissed'] as const;
 export type ApprovalItemStatus = (typeof APPROVAL_ITEM_STATUSES)[number];
+
+export const APPROVAL_DECISION_STATUSES = ['approved', 'denied', 'dismissed'] as const;
+export type ApprovalDecisionStatus = (typeof APPROVAL_DECISION_STATUSES)[number];
 
 export const APPROVAL_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
 export type ApprovalPriority = (typeof APPROVAL_PRIORITIES)[number];
 
 export const APPROVAL_SUBJECT_KINDS = [
   'budget-policy',
+  'extension',
+  'planner',
   'company',
   'employee',
   'runtime-profile',
   'routine',
+  'deliverable',
+  'artifact',
 ] as const;
 export type ApprovalSubjectKind = (typeof APPROVAL_SUBJECT_KINDS)[number];
 
@@ -480,6 +495,19 @@ export interface ApprovalItem {
   payload: Record<string, unknown> | null;
   createdAt: number;
   resolvedAt: number | null;
+  latestDecision?: ApprovalDecision | null;
+}
+
+export interface ApprovalDecision {
+  id: string;
+  companyId: string;
+  approvalKind: ApprovalItemKind;
+  approvalRefId: string;
+  decision: ApprovalDecisionStatus;
+  decidedByOperatorId: string | null;
+  rationale: string | null;
+  payload: Record<string, unknown> | null;
+  createdAt: number;
 }
 
 export interface BudgetPolicySummary extends BudgetPolicy {

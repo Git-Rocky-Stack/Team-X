@@ -53,6 +53,7 @@ export type EventType =
   | 'budget.exceeded'
   | 'budget.approvalRequested'
   | 'budget.companyPaused'
+  | 'approval.reviewed'
   | 'ticket.created'
   | 'ticket.updated'
   | 'ticket.assigned'
@@ -679,6 +680,15 @@ export interface BudgetCompanyPausedPayload {
   currentSpendUsd: number;
   hardCapUsd: number;
   reason: string;
+}
+
+export interface ApprovalReviewedPayload {
+  approvalKind: string;
+  approvalRefId: string;
+  decision: 'approved' | 'denied' | 'dismissed';
+  subjectRefKind: string;
+  subjectRefId: string;
+  rationale: string | null;
 }
 
 // ---------------------------------------------------------------------------

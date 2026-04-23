@@ -56,6 +56,7 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   'authority.grant.deleted': 'bg-rose-600/20 text-rose-400',
   'authority.request.reviewed': 'bg-amber-600/20 text-amber-400',
   'authority.violation': 'bg-rose-600/20 text-rose-400',
+  'approval.reviewed': 'bg-amber-600/20 text-amber-400',
   'chat.sent': 'bg-slate-600/20 text-slate-400',
   'backup.created': 'bg-indigo-600/20 text-indigo-400',
   'backup.restored': 'bg-indigo-600/20 text-indigo-400',
@@ -108,6 +109,7 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   'authority.grant.deleted': 'Authority Grant Removed',
   'authority.request.reviewed': 'Authority Review',
   'authority.violation': 'Authority Violation',
+  'approval.reviewed': 'Approval Review',
   'command.executed': 'Command',
   'plan.proposed': 'Plan Proposed',
   'plan.approved': 'Plan Approved',
@@ -184,6 +186,7 @@ export const SUMMARIZABLE_TYPES: ReadonlySet<string> = new Set([
   'authority.grant.deleted',
   'authority.request.reviewed',
   'authority.violation',
+  'approval.reviewed',
   'command.executed',
   'plan.proposed',
   'plan.approved',
@@ -284,6 +287,16 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
       if (typeof payload.resourceKind === 'string') parts.push(payload.resourceKind);
       if (typeof payload.resourceId === 'string') parts.push(payload.resourceId);
       if (typeof payload.reason === 'string') parts.push(payload.reason);
+      break;
+    }
+    case 'approval.reviewed': {
+      if (typeof payload.approvalKind === 'string') parts.push(payload.approvalKind);
+      if (typeof payload.decision === 'string') parts.push(payload.decision);
+      if (typeof payload.subjectRefId === 'string') {
+        const truncated =
+          payload.subjectRefId.length > 48 ? `${payload.subjectRefId.slice(0, 45)}...` : payload.subjectRefId;
+        parts.push(truncated);
+      }
       break;
     }
 

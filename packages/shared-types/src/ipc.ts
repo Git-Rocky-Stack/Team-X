@@ -56,6 +56,7 @@ import type {
 } from './copilot.js';
 import type {
   ApprovalItem,
+  ApprovalDecisionStatus,
   ApprovalItemKind,
   ApprovalItemStatus,
   BudgetLedgerEntry,
@@ -333,6 +334,14 @@ export interface ListApprovalItemsRequest {
   companyId: string;
   kind?: ApprovalItemKind;
   status?: ApprovalItemStatus;
+}
+
+export interface ReviewApprovalItemRequest {
+  companyId: string;
+  itemId: string;
+  kind: ApprovalItemKind;
+  decision: ApprovalDecisionStatus;
+  rationale?: string;
 }
 
 export interface SendChatRequest {
@@ -1735,6 +1744,14 @@ export interface IpcContract {
     request: ListApprovalItemsRequest;
     response: ApprovalItem[];
   };
+  'approvals.list': {
+    request: ListApprovalItemsRequest;
+    response: ApprovalItem[];
+  };
+  'approvals.review': {
+    request: ReviewApprovalItemRequest;
+    response: { grantId: string | null };
+  };
   'employees.create': {
     request: HireEmployeeRequest;
     response: HireEmployeeResponse;
@@ -2449,6 +2466,12 @@ export interface TeamXApi {
     getOverview(companyId: string): Promise<BudgetOverview>;
     /** List approval items currently raised by budget policy. */
     listApprovals(req: ListApprovalItemsRequest): Promise<ApprovalItem[]>;
+  };
+  approvals: {
+    /** List unified approval work across budget, authority, and future control-plane sources. */
+    list(req: ListApprovalItemsRequest): Promise<ApprovalItem[]>;
+    /** Approve, deny, or dismiss one approval item from the shared inbox. */
+    review(req: ReviewApprovalItemRequest): Promise<{ grantId: string | null }>;
   };
   orgchart: {
     /**
