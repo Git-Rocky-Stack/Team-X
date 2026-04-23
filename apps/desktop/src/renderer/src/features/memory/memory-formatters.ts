@@ -23,6 +23,17 @@ export function checkpointTone(
   return 'default';
 }
 
+export function resumeOriginLabel(origin: RunCheckpoint['resumeOrigin']): string | null {
+  if (!origin) return null;
+  return `Resumed from ${checkpointLabel(origin.checkpointKind)}`;
+}
+
+export function resumeOriginHint(origin: RunCheckpoint['resumeOrigin']): string | null {
+  if (!origin) return null;
+  const when = formatMemoryTimestamp(origin.createdAt);
+  return `${resumeOriginLabel(origin)} checkpoint captured ${when}`;
+}
+
 export function freshnessTone(
   freshness: ThreadDigest['freshness'] | null | undefined,
 ): 'default' | 'accent' | 'warning' | 'danger' {

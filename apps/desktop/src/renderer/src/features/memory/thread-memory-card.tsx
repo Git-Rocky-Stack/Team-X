@@ -11,6 +11,8 @@ import {
   checkpointTone,
   formatMemoryTimestamp,
   freshnessTone,
+  resumeOriginHint,
+  resumeOriginLabel,
 } from './memory-formatters.js';
 
 interface ThreadMemoryCardProps {
@@ -41,6 +43,8 @@ export function ThreadMemoryCard({
   const digest = digestQuery.data ?? null;
   const checkpoints = checkpointsQuery.data ?? [];
   const latestCheckpoint = checkpoints[0] ?? null;
+  const latestResumeLabel = resumeOriginLabel(latestCheckpoint?.resumeOrigin ?? null);
+  const latestResumeHint = resumeOriginHint(latestCheckpoint?.resumeOrigin ?? null);
   const previewSummary =
     digest?.summary ??
     latestCheckpoint?.progressSummary ??
@@ -63,6 +67,7 @@ export function ThreadMemoryCard({
                 {checkpointLabel(latestCheckpoint.checkpointKind)}
               </MissionPill>
             ) : null}
+            {latestResumeLabel ? <MissionPill>{latestResumeLabel}</MissionPill> : null}
           </div>
           <p className="text-xs leading-5 text-muted-foreground">{description}</p>
         </div>
@@ -92,6 +97,12 @@ export function ThreadMemoryCard({
           <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3 text-sm leading-6 text-foreground/90">
             {previewSummary}
           </div>
+
+          {latestResumeHint ? (
+            <div className="rounded-[16px] border border-white/8 bg-black/15 px-4 py-2.5 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+              {latestResumeHint}
+            </div>
+          ) : null}
 
           <div className="grid gap-2 md:grid-cols-3">
             <div className="rounded-[16px] border border-white/8 bg-black/15 px-3 py-2.5">

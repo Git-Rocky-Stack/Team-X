@@ -117,6 +117,7 @@ describe('memory IPC handlers', () => {
         nextAction: null,
         activeArtifactRefs: [],
         unresolvedApprovalRefs: [],
+        resumeOrigin: null,
         createdAt: 4,
       },
     ];
@@ -164,6 +165,7 @@ describe('memory IPC handlers', () => {
       includedBlocks: [],
       droppedBlocks: [],
       retrievalQueries: ['launch plan'],
+      resumeOrigin: null,
     };
     const deps = makeDeps({
       contextAssemblerService: {

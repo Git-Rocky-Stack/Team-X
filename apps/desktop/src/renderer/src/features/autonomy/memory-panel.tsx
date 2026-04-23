@@ -15,6 +15,8 @@ import {
   checkpointTone,
   formatMemoryTimestamp,
   freshnessTone,
+  resumeOriginHint,
+  resumeOriginLabel,
 } from '../memory/memory-formatters.js';
 import {
   MissionControlRow,
@@ -82,6 +84,8 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
   const digest = digestQuery.data;
   const packedContext = packedContextQuery.data;
   const latestCheckpoint = checkpoints[0] ?? null;
+  const packedResumeLabel = resumeOriginLabel(packedContext?.resumeOrigin ?? null);
+  const packedResumeHint = resumeOriginHint(packedContext?.resumeOrigin ?? null);
 
   function refreshMemory() {
     void Promise.all([
@@ -321,6 +325,11 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
               />
             ) : packedContext ? (
               <div className="space-y-4">
+                {packedResumeHint ? (
+                  <div className="rounded-[16px] border border-white/8 bg-black/15 px-4 py-2.5 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    {packedResumeHint}
+                  </div>
+                ) : null}
                 <div className="grid gap-3 md:grid-cols-3">
                   <MissionMetricTile
                     label="Recent turns"
@@ -331,7 +340,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                   <MissionMetricTile
                     label="Blocks"
                     value={String(packedContext.blockTokens)}
-                    hint={`${packedContext.includedBlocks.length} included`}
+                    hint={packedResumeLabel ?? `${packedContext.includedBlocks.length} included`}
                     icon={ShieldCheck}
                   />
                   <MissionMetricTile
@@ -429,6 +438,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                       <MissionPill tone={checkpointTone(checkpoint.checkpointKind)}>
                         {checkpointLabel(checkpoint.checkpointKind)}
                       </MissionPill>
+                      {checkpoint.resumeOrigin ? <MissionPill>{resumeOriginLabel(checkpoint.resumeOrigin)}</MissionPill> : null}
                       {checkpoint.unresolvedApprovalRefs.length > 0 ? (
                         <MissionPill tone="warning">
                           {checkpoint.unresolvedApprovalRefs.length} approval refs
@@ -440,6 +450,11 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                     </span>
                   </div>
                   <div className="text-sm leading-6 text-foreground/90">{checkpoint.progressSummary}</div>
+                  {checkpoint.resumeOrigin ? (
+                    <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                      {resumeOriginHint(checkpoint.resumeOrigin)}
+                    </div>
+                  ) : null}
                   {checkpoint.blockers.length > 0 ? (
                     <div className="space-y-2 text-xs text-muted-foreground">
                       {checkpoint.blockers.map((blocker, index) => (

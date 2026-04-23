@@ -46,7 +46,15 @@
  */
 
 import type { ProviderStreamFn, StreamMessage } from '@team-x/provider-router';
-import type { AuthorKind } from '@team-x/shared-types';
+import type {
+  AuthorKind,
+  RunCheckpointResumeOrigin,
+  RunCheckpointResumableKind,
+} from '@team-x/shared-types';
+import {
+  MEMORY_TARGET_TOKEN_BUDGET_OPTIONS,
+  RUN_CHECKPOINT_RESUMABLE_KINDS,
+} from '@team-x/shared-types';
 
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
@@ -382,6 +390,7 @@ export interface BuildOrchestratorOptions {
         reason: 'budget' | 'category-cap';
       }>;
       retrievalQueries: string[];
+      resumeOrigin: RunCheckpointResumeOrigin | null;
     };
   };
   threadDigestService?: {
@@ -400,6 +409,11 @@ export interface BuildOrchestratorOptions {
     }): unknown;
   };
   runCheckpointService?: {
+    getLatest(input: { companyId: string; threadId: string }): {
+      id: string;
+      checkpointKind: RunCheckpointResumableKind | 'manual' | 'completion' | 'routine-completed';
+      createdAt: number;
+    } | null;
     createCheckpoint(input: {
       companyId: string;
       threadId: string;
@@ -423,6 +437,7 @@ export interface BuildOrchestratorOptions {
       nextAction?: string | null;
       activeArtifactRefs?: string[];
       unresolvedApprovalRefs?: string[];
+      resumeOrigin?: RunCheckpointResumeOrigin | null;
       createdAt?: number;
     }): unknown;
   };
@@ -552,8 +567,11 @@ function summarizeCheckpointCompletion(
   promptTokens: number,
   completionTokens: number,
   latencyMs: number,
+  resumeOrigin?: RunCheckpointResumeOrigin | null,
 ): string {
-  return `Completed reply using ${promptTokens} prompt tokens and ${completionTokens} completion tokens in ${latencyMs} ms.`;
+  const resumePhrase = resumeOriginPhrase(resumeOrigin);
+  const prefix = resumePhrase ? `Completed reply ${resumePhrase}` : 'Completed reply';
+  return `${prefix} using ${promptTokens} prompt tokens and ${completionTokens} completion tokens in ${latencyMs} ms.`;
 }
 
 function summarizeDigest(
@@ -605,9 +623,65 @@ function collectPackedRefs(
   return [...refs];
 }
 
+function estimateMessageTokens(messages: StreamMessage[]): number {
+  let total = 0;
+  for (const message of messages) {
+    const content =
+      typeof message.content === 'string' ? message.content : JSON.stringify(message.content ?? '');
+    total += Math.max(1, Math.ceil(content.length / 4));
+  }
+  return total;
+}
+
+function isResumableCheckpointKind(kind: string): kind is RunCheckpointResumableKind {
+  return RUN_CHECKPOINT_RESUMABLE_KINDS.includes(kind as RunCheckpointResumableKind);
+}
+
+function checkpointKindLabel(kind: RunCheckpointResumableKind): string {
+  if (kind === 'approval-blocked') return 'approval-blocked';
+  if (kind === 'budget-blocked') return 'budget-blocked';
+  return kind;
+}
+
+function resumeOriginPhrase(resumeOrigin: RunCheckpointResumeOrigin | null | undefined): string | null {
+  if (!resumeOrigin) return null;
+  return `after resuming from the ${checkpointKindLabel(resumeOrigin.checkpointKind)} checkpoint`;
+}
+
+function latestResumeOrigin(
+  runCheckpointService:
+    | {
+        getLatest(input: { companyId: string; threadId: string }): {
+          id: string;
+          checkpointKind: RunCheckpointResumableKind | 'manual' | 'completion' | 'routine-completed';
+          createdAt: number;
+        } | null;
+      }
+    | undefined,
+  companyId: string,
+  threadId: string,
+): RunCheckpointResumeOrigin | null {
+  if (!runCheckpointService) return null;
+  const latest = runCheckpointService.getLatest({ companyId, threadId });
+  if (!latest || !isResumableCheckpointKind(latest.checkpointKind)) return null;
+  return {
+    checkpointId: latest.id,
+    checkpointKind: latest.checkpointKind,
+    createdAt: latest.createdAt,
+  };
+}
+
+class ContextPreparationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ContextPreparationError';
+  }
+}
+
 function classifyCheckpointFailure(
   err: unknown,
   aborted: boolean,
+  resumeOrigin?: RunCheckpointResumeOrigin | null,
 ): {
   checkpointKind: 'stopped' | 'timeout';
   progressSummary: string;
@@ -619,10 +693,13 @@ function classifyCheckpointFailure(
   nextAction: string | null;
 } | null {
   const message = err instanceof Error ? err.message : String(err);
+  const resumePhrase = resumeOriginPhrase(resumeOrigin);
   if (aborted || /aborted|canceled/i.test(message)) {
     return {
       checkpointKind: 'stopped',
-      progressSummary: 'Run stopped before the reply completed.',
+      progressSummary: resumePhrase
+        ? `Run stopped ${resumePhrase} before the reply completed.`
+        : 'Run stopped before the reply completed.',
       blockers: [],
       nextAction: 'Resume from the latest checkpoint when ready.',
     };
@@ -630,7 +707,9 @@ function classifyCheckpointFailure(
   if (/timed out|stalled/i.test(message)) {
     return {
       checkpointKind: 'timeout',
-      progressSummary: 'Run timed out before the reply completed.',
+      progressSummary: resumePhrase
+        ? `Run timed out ${resumePhrase} before the reply completed.`
+        : 'Run timed out before the reply completed.',
       blockers: [
         {
           kind: 'provider',
@@ -748,6 +827,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       | {
           usedTokens: number;
           includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
+          resumeOrigin: RunCheckpointResumeOrigin | null;
         }
       | null;
   }> {
@@ -759,6 +839,9 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       };
     }
 
+    const effectiveContextTargetTokenBudget =
+      contextTargetTokenBudget ?? MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1];
+
     try {
       const assembled = await contextAssemblerService.assembleThreadContext({
         companyId: args.companyId,
@@ -767,7 +850,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       });
       const packed = contextPackerService.packContext({
         context: assembled,
-        targetTokenBudget: contextTargetTokenBudget,
+        targetTokenBudget: effectiveContextTargetTokenBudget,
       });
       return {
         system: appendPackedContext(args.system, packed.systemAddendum),
@@ -783,9 +866,16 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
             kind: block.kind,
             sourceRefId: block.sourceRefId,
           })),
+          resumeOrigin: packed.resumeOrigin,
         },
       };
     } catch (err) {
+      const rawHistoryTokens = estimateMessageTokens(args.rawHistory);
+      if (rawHistoryTokens > effectiveContextTargetTokenBudget) {
+        throw new ContextPreparationError(
+          `[orchestrator] minimum viable packed context could not be assembled and raw history requires about ${rawHistoryTokens} tokens, exceeding the ${effectiveContextTargetTokenBudget}-token target`,
+        );
+      }
       console.warn('[orchestrator] context packing failed, falling back to raw history:', err);
       return {
         system: args.system,
@@ -804,6 +894,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     packedContext:
       | {
           includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
+          resumeOrigin: RunCheckpointResumeOrigin | null;
         }
       | null;
     runId?: string | null;
@@ -822,6 +913,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     nextAction?: string | null;
     activeArtifactRefs?: string[];
     unresolvedApprovalRefs?: string[];
+    resumeOrigin?: RunCheckpointResumeOrigin | null;
   }): void {
     if (!runCheckpointService) return;
     try {
@@ -839,14 +931,15 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         runId: args.runId ?? null,
         employeeId: args.employeeId,
         checkpointKind: args.checkpointKind,
-        objective: deriveObjectiveFromRows(args.rows, args.respondingEmployeeId),
-        progressSummary: args.progressSummary,
-        blockers: args.blockers ?? [],
-        nextAction: args.nextAction ?? null,
-        activeArtifactRefs: [...activeArtifactRefs],
-        unresolvedApprovalRefs: [...unresolvedApprovalRefs],
-        createdAt: now?.() ?? Date.now(),
-      });
+          objective: deriveObjectiveFromRows(args.rows, args.respondingEmployeeId),
+          progressSummary: args.progressSummary,
+          blockers: args.blockers ?? [],
+          nextAction: args.nextAction ?? null,
+          activeArtifactRefs: [...activeArtifactRefs],
+          unresolvedApprovalRefs: [...unresolvedApprovalRefs],
+          resumeOrigin: args.resumeOrigin ?? args.packedContext?.resumeOrigin ?? null,
+          createdAt: now?.() ?? Date.now(),
+        });
     } catch (err) {
       console.warn('[orchestrator] failed to persist run checkpoint:', err);
     }
@@ -983,6 +1076,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         ? 'Review the pending budget approval, then retry from the latest checkpoint.'
         : 'Adjust the budget policy or approval state, then retry from the latest checkpoint.',
       unresolvedApprovalRefs: pendingApproval && admission.approvalItem ? [admission.approvalItem.id] : [],
+      resumeOrigin: latestResumeOrigin(runCheckpointService, args.companyId, args.threadId),
     });
 
     throw new Error(reason);
@@ -1102,13 +1196,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
           rows: finalRows,
           packedContext: executionContext.packedContext,
           runId: result.runId,
-          checkpointKind: 'completion',
-          progressSummary: summarizeCheckpointCompletion(
-            result.promptTokens,
-            result.completionTokens,
-            result.latencyMs,
-          ),
-        });
+            checkpointKind: 'completion',
+            progressSummary: summarizeCheckpointCompletion(
+              result.promptTokens,
+              result.completionTokens,
+              result.latencyMs,
+              executionContext.packedContext?.resumeOrigin,
+            ),
+          });
         refreshThreadDigest({
           companyId: company.id,
           threadId: args.threadId,
@@ -1118,10 +1213,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
           packedContext: executionContext.packedContext,
         });
       })
-      .catch((err) => {
-        const failure = classifyCheckpointFailure(err, signal.aborted);
-        if (failure) {
-          recordRunCheckpoint({
+        .catch((err) => {
+          const failure = classifyCheckpointFailure(
+            err,
+            signal.aborted,
+            executionContext.packedContext?.resumeOrigin,
+          );
+          if (failure) {
+            recordRunCheckpoint({
             companyId: company.id,
             threadId: args.threadId,
             employeeId: args.employeeId,
@@ -1254,13 +1353,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
           rows: finalRows,
           packedContext: executionContext.packedContext,
           runId: result.runId,
-          checkpointKind: 'completion',
-          progressSummary: summarizeCheckpointCompletion(
-            result.promptTokens,
-            result.completionTokens,
-            result.latencyMs,
-          ),
-        });
+            checkpointKind: 'completion',
+            progressSummary: summarizeCheckpointCompletion(
+              result.promptTokens,
+              result.completionTokens,
+              result.latencyMs,
+              executionContext.packedContext?.resumeOrigin,
+            ),
+          });
         refreshThreadDigest({
           companyId: company.id,
           threadId: args.threadId,
@@ -1270,10 +1370,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
           packedContext: executionContext.packedContext,
         });
       })
-      .catch((err) => {
-        const failure = classifyCheckpointFailure(err, signal.aborted);
-        if (failure) {
-          recordRunCheckpoint({
+        .catch((err) => {
+          const failure = classifyCheckpointFailure(
+            err,
+            signal.aborted,
+            executionContext.packedContext?.resumeOrigin,
+          );
+          if (failure) {
+            recordRunCheckpoint({
             companyId: company.id,
             threadId: args.threadId,
             employeeId: args.employeeId,

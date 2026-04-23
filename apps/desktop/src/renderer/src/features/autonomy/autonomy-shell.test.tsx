@@ -24,6 +24,7 @@ const BUDGETS_PANEL_PATH = join(currentDirname, 'budgets-panel.tsx');
 const APPROVALS_PANEL_PATH = join(currentDirname, 'approvals-panel.tsx');
 const ARTIFACTS_PANEL_PATH = join(currentDirname, 'artifacts-panel.tsx');
 const MEMORY_PANEL_PATH = join(currentDirname, 'memory-panel.tsx');
+const MEMORY_FORMATTERS_PATH = join(currentDirname, '..', 'memory', 'memory-formatters.ts');
 
 const appSrc = readFileSync(APP_PATH, 'utf8');
 const storeSrc = readFileSync(STORE_PATH, 'utf8');
@@ -44,6 +45,7 @@ const budgetsPanelSrc = readFileSync(BUDGETS_PANEL_PATH, 'utf8');
 const approvalsPanelSrc = readFileSync(APPROVALS_PANEL_PATH, 'utf8');
 const artifactsPanelSrc = readFileSync(ARTIFACTS_PANEL_PATH, 'utf8');
 const memoryPanelSrc = readFileSync(MEMORY_PANEL_PATH, 'utf8');
+const memoryFormattersSrc = readFileSync(MEMORY_FORMATTERS_PATH, 'utf8');
 
 describe('Autonomy shell wiring', () => {
   it('adds autonomy as a top-level app destination', () => {
@@ -200,5 +202,8 @@ describe('Autonomy shell wiring', () => {
     expect(memoryPanelSrc).toContain('Run Checkpoints');
     expect(memoryPanelSrc).toContain('data-memory-checkpoint={checkpoint.id}');
     expect(memoryPanelSrc).toContain('data-memory-dropped-block={drop.blockId}');
+    expect(memoryPanelSrc).toContain('resumeOriginLabel');
+    expect(memoryPanelSrc).toContain('resumeOriginHint');
+    expect(memoryFormattersSrc).toContain('Resumed from');
   });
 });

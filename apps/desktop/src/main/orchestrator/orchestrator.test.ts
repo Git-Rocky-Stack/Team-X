@@ -155,6 +155,8 @@ function buildDefaultOrchestrator(
     now?: () => number;
     runTimeoutMs?: number;
     runIdleTimeoutMs?: number;
+    contextTargetTokenBudget?: number;
+    contextRecentTurnLimit?: number;
   } = {},
 ): Orchestrator {
   const defaultProvider =
@@ -195,10 +197,32 @@ function buildDefaultOrchestrator(
     contextPackerService: overrides.contextPackerService,
     threadDigestService: overrides.threadDigestService,
     runCheckpointService: overrides.runCheckpointService,
+    contextTargetTokenBudget: overrides.contextTargetTokenBudget,
+    contextRecentTurnLimit: overrides.contextRecentTurnLimit,
     slots: overrides.slots ?? 2,
     now: overrides.now,
     runTimeoutMs: overrides.runTimeoutMs,
     runIdleTimeoutMs: overrides.runIdleTimeoutMs,
+  });
+}
+
+function seedResumeCheckpoint(
+  runCheckpointService: ReturnType<typeof createRunCheckpointService>,
+  f: Fixture,
+  checkpointKind: 'stopped' | 'timeout' | 'budget-blocked' | 'approval-blocked' = 'timeout',
+  createdAt = 1,
+) {
+  return runCheckpointService.createCheckpoint({
+    companyId: f.companyId,
+    threadId: f.threadId,
+    runId: null,
+    employeeId: f.employeeId,
+    checkpointKind,
+    objective: 'Resume from prior work',
+    progressSummary: `Seeded ${checkpointKind} checkpoint`,
+    blockers: [],
+    nextAction: 'Resume from the latest checkpoint.',
+    createdAt,
   });
 }
 
@@ -497,6 +521,11 @@ describe('buildOrchestrator', () => {
             ],
             droppedBlocks: [],
             retrievalQueries: ['launch plan'],
+            resumeOrigin: {
+              checkpointId: 'checkpoint-timeout',
+              checkpointKind: 'timeout',
+              createdAt: 7,
+            },
           }),
         },
         threadDigestService,
@@ -523,8 +552,14 @@ describe('buildOrchestrator', () => {
           checkpointKind: 'completion',
           unresolvedApprovalRefs: ['approval-1'],
           activeArtifactRefs: ['artifact-1'],
+          resumeOrigin: {
+            checkpointId: 'checkpoint-timeout',
+            checkpointKind: 'timeout',
+            createdAt: 7,
+          },
         }),
       );
+      expect(checkpoints[0]?.progressSummary).toMatch(/after resuming from the timeout checkpoint/i);
 
       const digest = threadDigestService.getLatest({
         companyId: f.companyId,
@@ -532,6 +567,41 @@ describe('buildOrchestrator', () => {
       });
       expect(digest?.summary).toContain('Latest request: hi iris');
       expect(digest?.summary).toContain('Latest response: done');
+    });
+
+    it('fails visibly when packing collapses and raw history exceeds the target budget', async () => {
+      const oversizedUserMessageId = f.messagesRepo.append({
+        threadId: f.threadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'x'.repeat(240),
+      });
+      const orchestrator = buildDefaultOrchestrator(f, {
+        contextAssemblerService: {
+          assembleThreadContext: async () => ({
+            companyId: f.companyId,
+            threadId: f.threadId,
+            generatedAt: 1,
+            retrievalQueries: [],
+            recentTurns: [],
+            blocks: [],
+          }),
+        },
+        contextPackerService: {
+          packContext: () => {
+            throw new Error('packing failed');
+          },
+        },
+        contextTargetTokenBudget: 20,
+      });
+
+      await expect(
+        orchestrator.enqueueChat({
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          userMessageId: oversizedUserMessageId,
+        }),
+      ).rejects.toThrow(/minimum viable packed context could not be assembled/i);
     });
   });
 
@@ -1020,9 +1090,53 @@ describe('buildOrchestrator', () => {
       };
 
       let callIdx = 0;
+      const seeded = seedResumeCheckpoint(runCheckpointService, f, 'timeout', 5);
       const orchestrator = buildDefaultOrchestrator(f, {
         slots: 1,
         runCheckpointService,
+        contextAssemblerService: {
+          assembleThreadContext: async () => ({
+            companyId: f.companyId,
+            threadId: f.threadId,
+            generatedAt: 1,
+            retrievalQueries: [],
+            recentTurns: [],
+            blocks: [],
+          }),
+        },
+        contextPackerService: {
+          packContext: () => ({
+            companyId: f.companyId,
+            threadId: f.threadId,
+            generatedAt: 1,
+            targetTokenBudget: 256,
+            usedTokens: 4,
+            recentTurnTokens: 4,
+            blockTokens: 0,
+            retrievalTokens: 0,
+            packedTurns: [
+              {
+                messageId: f.userMessageId,
+                role: 'user',
+                authorId: 'rocky',
+                authorKind: 'user',
+                content: 'resume stop test',
+                createdAt: 1,
+                estimatedTokens: 4,
+                truncated: false,
+              },
+            ],
+            systemAddendum: '',
+            includedBlocks: [],
+            droppedBlocks: [],
+            retrievalQueries: [],
+            resumeOrigin: {
+              checkpointId: seeded.id,
+              checkpointKind: 'timeout',
+              createdAt: 5,
+            },
+          }),
+        },
         resolveProvider: async () => {
           const stream = callIdx === 0 ? abortableProvider : secondProvider;
           callIdx++;
@@ -1061,8 +1175,14 @@ describe('buildOrchestrator', () => {
       expect(checkpoints[0]).toEqual(
         expect.objectContaining({
           checkpointKind: 'stopped',
+          resumeOrigin: {
+            checkpointId: seeded.id,
+            checkpointKind: 'timeout',
+            createdAt: 5,
+          },
         }),
       );
+      expect(checkpoints[0]?.progressSummary).toMatch(/after resuming from the timeout checkpoint/i);
 
       expect(order).toEqual(['first-start', 'second-start', 'second-end']);
     });
@@ -1137,6 +1257,7 @@ describe('buildOrchestrator', () => {
       const runCheckpointService = createRunCheckpointService({
         runCheckpointsRepo: f.runCheckpointsRepo,
       });
+      const seeded = seedResumeCheckpoint(runCheckpointService, f, 'timeout', 6);
       const orchestrator = buildDefaultOrchestrator(f, {
         runCheckpointService,
         budgetGovernance: {
@@ -1172,6 +1293,11 @@ describe('buildOrchestrator', () => {
       expect(checkpoints[0]).toEqual(
         expect.objectContaining({
           checkpointKind: 'budget-blocked',
+          resumeOrigin: {
+            checkpointId: seeded.id,
+            checkpointKind: 'timeout',
+            createdAt: 6,
+          },
           blockers: [
             expect.objectContaining({
               kind: 'budget',
@@ -1187,6 +1313,7 @@ describe('buildOrchestrator', () => {
       const runCheckpointService = createRunCheckpointService({
         runCheckpointsRepo: f.runCheckpointsRepo,
       });
+      const seeded = seedResumeCheckpoint(runCheckpointService, f, 'stopped', 8);
       const orchestrator = buildDefaultOrchestrator(f, {
         runCheckpointService,
         budgetGovernance: {
@@ -1225,6 +1352,11 @@ describe('buildOrchestrator', () => {
       expect(checkpoints[0]).toEqual(
         expect.objectContaining({
           checkpointKind: 'approval-blocked',
+          resumeOrigin: {
+            checkpointId: seeded.id,
+            checkpointKind: 'stopped',
+            createdAt: 8,
+          },
           unresolvedApprovalRefs: ['approval-1'],
           blockers: [
             expect.objectContaining({
@@ -1241,6 +1373,7 @@ describe('buildOrchestrator', () => {
       const runCheckpointService = createRunCheckpointService({
         runCheckpointsRepo: f.runCheckpointsRepo,
       });
+      const seeded = seedResumeCheckpoint(runCheckpointService, f, 'approval-blocked', 9);
       let startedResolve: () => void = () => {};
       const started = new Promise<void>((resolve) => {
         startedResolve = resolve;
@@ -1263,6 +1396,49 @@ describe('buildOrchestrator', () => {
       const orchestrator = buildDefaultOrchestrator(f, {
         provider,
         runCheckpointService,
+        contextAssemblerService: {
+          assembleThreadContext: async () => ({
+            companyId: f.companyId,
+            threadId: f.threadId,
+            generatedAt: 1,
+            retrievalQueries: [],
+            recentTurns: [],
+            blocks: [],
+          }),
+        },
+        contextPackerService: {
+          packContext: () => ({
+            companyId: f.companyId,
+            threadId: f.threadId,
+            generatedAt: 1,
+            targetTokenBudget: 256,
+            usedTokens: 4,
+            recentTurnTokens: 4,
+            blockTokens: 0,
+            retrievalTokens: 0,
+            packedTurns: [
+              {
+                messageId: f.userMessageId,
+                role: 'user',
+                authorId: 'rocky',
+                authorKind: 'user',
+                content: 'resume timeout test',
+                createdAt: 1,
+                estimatedTokens: 4,
+                truncated: false,
+              },
+            ],
+            systemAddendum: '',
+            includedBlocks: [],
+            droppedBlocks: [],
+            retrievalQueries: [],
+            resumeOrigin: {
+              checkpointId: seeded.id,
+              checkpointKind: 'approval-blocked',
+              createdAt: 9,
+            },
+          }),
+        },
         runIdleTimeoutMs: 25,
         runTimeoutMs: 1_000,
       });
@@ -1283,9 +1459,15 @@ describe('buildOrchestrator', () => {
       expect(checkpoints[0]).toEqual(
         expect.objectContaining({
           checkpointKind: 'timeout',
+          resumeOrigin: {
+            checkpointId: seeded.id,
+            checkpointKind: 'approval-blocked',
+            createdAt: 9,
+          },
         }),
       );
       expect(checkpoints[0]?.blockers[0]?.summary).toMatch(/stalled/i);
+      expect(checkpoints[0]?.progressSummary).toMatch(/after resuming from the approval-blocked checkpoint/i);
     });
   });
 

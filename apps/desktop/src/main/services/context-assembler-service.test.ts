@@ -37,6 +37,7 @@ describe('context assembler service', () => {
       nextAction: 'Resume once the approval clears.',
       activeArtifactRefs: ['artifact-1'],
       unresolvedApprovalRefs: ['approval-1'],
+      resumeOrigin: null,
       createdAt: 12,
     };
     const approval: ApprovalItem = {

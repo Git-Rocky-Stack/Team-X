@@ -85,7 +85,7 @@ function parseResumeOriginJson(raw: string | null): RunCheckpointResumeOrigin | 
     const checkpointKind =
       typeof record.checkpointKind === 'string' &&
       ['stopped', 'timeout', 'approval-blocked', 'budget-blocked'].includes(record.checkpointKind)
-        ? record.checkpointKind
+        ? (record.checkpointKind as RunCheckpointResumeOrigin['checkpointKind'])
         : null;
     if (!checkpointId || !checkpointKind) return null;
     return {

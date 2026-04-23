@@ -155,6 +155,13 @@
       "when": 1777785600000,
       "tag": "0021_long_run_memory",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1777872000000,
+      "tag": "0022_long_run_resume_origin",
+      "breakpoints": true
     }
   ]
 }
