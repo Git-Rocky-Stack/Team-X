@@ -56,6 +56,14 @@ export const autonomyClient = {
   artifacts: {
     list: (...args: Parameters<typeof ipc.artifacts.list>) => ipc.artifacts.list(...args),
   },
+  memory: {
+    getThreadDigest: (...args: Parameters<typeof ipc.memory.getThreadDigest>) =>
+      ipc.memory.getThreadDigest(...args),
+    listRunCheckpoints: (...args: Parameters<typeof ipc.memory.listRunCheckpoints>) =>
+      ipc.memory.listRunCheckpoints(...args),
+    packThreadContext: (...args: Parameters<typeof ipc.memory.packThreadContext>) =>
+      ipc.memory.packThreadContext(...args),
+  },
 } as const;
 
 export type AutonomyClient = typeof autonomyClient;

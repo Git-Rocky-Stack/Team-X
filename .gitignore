@@ -7,6 +7,15 @@ dist/
 out/
 build/
 *.tsbuildinfo
+!apps/desktop/build/
+apps/desktop/build/*
+!apps/desktop/build/entitlements.mac.plist
+!apps/desktop/build/icon.png
+!apps/desktop/build/icon-512.png
+!apps/desktop/build/icon.ico
+!apps/desktop/build/installerIcon.ico
+!apps/desktop/build/uninstallerIcon.ico
+!apps/desktop/build/license.html
 
 # env / secrets
 .env

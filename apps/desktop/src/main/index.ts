@@ -261,6 +261,7 @@ async function createWindow(): Promise<void> {
     minWidth: 1024,
     minHeight: 720,
     backgroundColor: '#0a0a0a',
+    ...(isDev ? { icon: join(__dirname, '../../build/icon.png') } : {}),
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),

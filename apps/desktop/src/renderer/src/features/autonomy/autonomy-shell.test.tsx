@@ -15,6 +15,7 @@ const ROUTINES_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-routin
 const BUDGETS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-budgets.ts');
 const APPROVALS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-approvals.ts');
 const ARTIFACTS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-artifacts.ts');
+const MEMORY_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-memory.ts');
 const CLIENT_PATH = join(currentDirname, 'autonomy-client.ts');
 const VIEW_PATH = join(currentDirname, 'autonomy-view.tsx');
 const RUNTIME_PANEL_PATH = join(currentDirname, 'runtime-profiles-panel.tsx');
@@ -22,6 +23,7 @@ const ROUTINES_PANEL_PATH = join(currentDirname, 'routines-panel.tsx');
 const BUDGETS_PANEL_PATH = join(currentDirname, 'budgets-panel.tsx');
 const APPROVALS_PANEL_PATH = join(currentDirname, 'approvals-panel.tsx');
 const ARTIFACTS_PANEL_PATH = join(currentDirname, 'artifacts-panel.tsx');
+const MEMORY_PANEL_PATH = join(currentDirname, 'memory-panel.tsx');
 
 const appSrc = readFileSync(APP_PATH, 'utf8');
 const storeSrc = readFileSync(STORE_PATH, 'utf8');
@@ -33,6 +35,7 @@ const routinesHookSrc = readFileSync(ROUTINES_HOOK_PATH, 'utf8');
 const budgetsHookSrc = readFileSync(BUDGETS_HOOK_PATH, 'utf8');
 const approvalsHookSrc = readFileSync(APPROVALS_HOOK_PATH, 'utf8');
 const artifactsHookSrc = readFileSync(ARTIFACTS_HOOK_PATH, 'utf8');
+const memoryHookSrc = readFileSync(MEMORY_HOOK_PATH, 'utf8');
 const clientSrc = readFileSync(CLIENT_PATH, 'utf8');
 const viewSrc = readFileSync(VIEW_PATH, 'utf8');
 const runtimePanelSrc = readFileSync(RUNTIME_PANEL_PATH, 'utf8');
@@ -40,6 +43,7 @@ const routinesPanelSrc = readFileSync(ROUTINES_PANEL_PATH, 'utf8');
 const budgetsPanelSrc = readFileSync(BUDGETS_PANEL_PATH, 'utf8');
 const approvalsPanelSrc = readFileSync(APPROVALS_PANEL_PATH, 'utf8');
 const artifactsPanelSrc = readFileSync(ARTIFACTS_PANEL_PATH, 'utf8');
+const memoryPanelSrc = readFileSync(MEMORY_PANEL_PATH, 'utf8');
 
 describe('Autonomy shell wiring', () => {
   it('adds autonomy as a top-level app destination', () => {
@@ -78,6 +82,8 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('<ApprovalsPanel companyId={companyId} />');
     expect(viewSrc).toContain("import { ArtifactsPanel } from './artifacts-panel.js';");
     expect(viewSrc).toContain('<ArtifactsPanel companyId={companyId} />');
+    expect(viewSrc).toContain("import { MemoryPanel } from './memory-panel.js';");
+    expect(viewSrc).toContain('<MemoryPanel companyId={companyId} />');
   });
 
   it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {
@@ -163,5 +169,27 @@ describe('Autonomy shell wiring', () => {
     expect(artifactsPanelSrc).toContain('Open files');
     expect(viewSrc).toContain('Open approvals');
     expect(viewSrc).toContain('Open budgets');
+  });
+
+  it('adds memory hooks and a thread-focused memory panel', () => {
+    expect(clientSrc).toContain('memory: {');
+    expect(clientSrc).toContain('ipc.memory.getThreadDigest');
+    expect(clientSrc).toContain('ipc.memory.listRunCheckpoints');
+    expect(clientSrc).toContain('ipc.memory.packThreadContext');
+    expect(memoryHookSrc).toContain("queryKey: ['memory', 'digest', companyId, threadId]");
+    expect(memoryHookSrc).toContain("queryKey: ['memory', 'checkpoints', companyId, threadId, limit]");
+    expect(memoryHookSrc).toContain("queryKey: ['memory', 'packed-context', companyId, threadId, targetTokenBudget ?? null, recentTurnLimit ?? null]");
+    expect(memoryHookSrc).toContain('autonomyClient.memory.getThreadDigest');
+    expect(memoryHookSrc).toContain('autonomyClient.memory.listRunCheckpoints');
+    expect(memoryHookSrc).toContain('autonomyClient.memory.packThreadContext');
+    expect(memoryPanelSrc).toContain('data-memory-panel=""');
+    expect(memoryPanelSrc).toContain('data-memory-thread-select=""');
+    expect(memoryPanelSrc).toContain('Refresh memory');
+    expect(memoryPanelSrc).toContain('Open chat');
+    expect(memoryPanelSrc).toContain('Thread Memory');
+    expect(memoryPanelSrc).toContain('Packed Context');
+    expect(memoryPanelSrc).toContain('Run Checkpoints');
+    expect(memoryPanelSrc).toContain('data-memory-checkpoint={checkpoint.id}');
+    expect(memoryPanelSrc).toContain('data-memory-dropped-block={drop.blockId}');
   });
 });

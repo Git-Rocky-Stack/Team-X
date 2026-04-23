@@ -55,7 +55,7 @@ win:
       arch:
         - x64
         - arm64
-  icon: build/icon.png
+  icon: build/icon.ico
   artifactName: Team-X-${version}-Setup-${arch}.${ext}
 
 nsis:
@@ -65,8 +65,16 @@ nsis:
   deleteAppDataOnUninstall: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  installerIcon: build/installerIcon.ico
+  uninstallerIcon: build/uninstallerIcon.ico
+  license: build/license.html
+  menuCategory: Strategia-X
   shortcutName: Team-X
   uninstallDisplayName: Team-X
+  uninstallUrlHelp: https://github.com/Git-Rocky-Stack/
+  uninstallUrlInfoAbout: https://github.com/Git-Rocky-Stack/
+  uninstallUrlReadme: https://github.com/Git-Rocky-Stack/
+  uninstallUrlUpdateInfo: https://github.com/Git-Rocky-Stack/
 
 # ─── macOS ────────────────────────────────────────────────────────────
 mac:

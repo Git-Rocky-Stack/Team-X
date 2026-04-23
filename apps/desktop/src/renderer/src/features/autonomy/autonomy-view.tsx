@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import type { Company, OperatorAccessEntry } from '@team-x/shared-types';
 import {
   BadgeDollarSign,
+  BrainCircuit,
   Bot,
   CheckSquare2,
   Clock3,
@@ -30,10 +31,18 @@ import {
 import { ApprovalsPanel } from './approvals-panel.js';
 import { ArtifactsPanel } from './artifacts-panel.js';
 import { BudgetsPanel } from './budgets-panel.js';
+import { MemoryPanel } from './memory-panel.js';
 import { RoutinesPanel } from './routines-panel.js';
 import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
-type AutonomySubview = 'runtimes' | 'routines' | 'budgets' | 'approvals' | 'artifacts' | 'access';
+type AutonomySubview =
+  | 'runtimes'
+  | 'routines'
+  | 'budgets'
+  | 'approvals'
+  | 'artifacts'
+  | 'memory'
+  | 'access';
 
 const AUTONOMY_SUBVIEWS: Array<{
   value: AutonomySubview;
@@ -45,6 +54,7 @@ const AUTONOMY_SUBVIEWS: Array<{
   { value: 'budgets', label: 'Budgets', icon: BadgeDollarSign },
   { value: 'approvals', label: 'Approvals', icon: CheckSquare2 },
   { value: 'artifacts', label: 'Artifacts', icon: FolderKanban },
+  { value: 'memory', label: 'Memory', icon: BrainCircuit },
   { value: 'access', label: 'Access', icon: ShieldCheck },
 ];
 
@@ -96,6 +106,14 @@ const SUBVIEW_COPY: Record<
     emptyTitle: 'Artifacts will become the outcome layer',
     emptyDescription:
       'The artifact slice will attach concrete outputs to routines, approvals, reviews, and generated work so operators can supervise results, not only process.',
+  },
+  memory: {
+    title: 'Long-Run Memory',
+    description:
+      'Inspect condensed thread digests, resumable checkpoints, and packed-context posture before long sessions drift into raw unbounded history.',
+    emptyTitle: 'No memory surface is ready yet',
+    emptyDescription:
+      'Pick a thread with recent work so Team-X can show the current digest, checkpoint trail, and bounded context pack for that conversation.',
   },
   access: {
     title: 'Operators And Access',
@@ -358,6 +376,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             <ApprovalsPanel companyId={companyId} />
           ) : activeSubview === 'artifacts' ? (
             <ArtifactsPanel companyId={companyId} />
+          ) : activeSubview === 'memory' ? (
+            <MemoryPanel companyId={companyId} />
           ) : (
             <MissionStateBlock
               title={activeCopy.emptyTitle}
@@ -425,7 +445,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
           >
             <MissionInsetSurface className="space-y-3 p-4 text-sm leading-6 text-muted-foreground">
               <p>Runtime profiles, routines, budgets, approvals, and artifacts are now active slices of the control plane.</p>
-              <p>The remaining hardening work is about shared transport seams, richer operator membership flows, and propagating autonomy signals into the rest of the mission shell.</p>
+              <p>Memory inspection now makes digests, checkpoints, and packed context visible. The remaining hardening work is about richer operator membership flows, thread-level actions, and resume indicators across the rest of the mission shell.</p>
               <p>Use the User Guide and Mission Control links to keep autonomy visible instead of burying governance behind one isolated tab.</p>
             </MissionInsetSurface>
           </MissionRailCard>

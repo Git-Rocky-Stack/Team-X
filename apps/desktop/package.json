@@ -3,6 +3,14 @@
   "version": "1.2.1",
   "private": true,
   "type": "module",
+  "description": "Strategia-X Team-X desktop app for operating an AI company.",
+  "license": "MIT",
+  "author": {
+    "name": "Rocky Elsalaymeh",
+    "email": "info@strategia-x.com",
+    "url": "https://github.com/Git-Rocky-Stack/"
+  },
+  "homepage": "https://github.com/Git-Rocky-Stack/",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

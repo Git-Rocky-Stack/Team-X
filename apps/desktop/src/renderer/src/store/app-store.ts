@@ -71,6 +71,7 @@ export type AutonomySubview =
   | 'budgets'
   | 'approvals'
   | 'artifacts'
+  | 'memory'
   | 'access';
 
 export interface AppState {
