@@ -146,6 +146,11 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
         .run();
     },
 
+    /** Return one run row by id, or null if it does not exist. */
+    getById(id: string): RunRow | null {
+      return db.select().from(runs).where(eq(runs.id, id)).get() ?? null;
+    },
+
     /** Return every run row for a given employee. Phase 1 does not paginate. */
     listByEmployee(employeeId: string): RunRow[] {
       return db.select().from(runs).where(eq(runs.employeeId, employeeId)).all();

@@ -119,10 +119,15 @@ import type {
   ListRoutineRunsRequest,
   ListSkillAssignmentsRequest,
   CreateAuthorityGrantRequest,
+  CreateBudgetPolicyRequest,
   McpServerSummary,
   McpTemplateSummary,
   Meeting,
   MeetingDetail,
+  ApprovalItem,
+  BudgetLedgerEntry,
+  BudgetOverview,
+  BudgetPolicy,
   ListProviderModelsResponse,
   OrgchartGetResponse,
   OperatorAccessEntry,
@@ -190,9 +195,12 @@ import type {
   UpdateProviderRequest,
   UpdateRuntimeProfileRequest,
   UpdateRoutineRequest,
+  UpdateBudgetPolicyRequest,
   UpdateTicketRequest,
   ValidateRuntimeProfileRequest,
   RunRoutineNowRequest,
+  ListBudgetLedgerEntriesRequest,
+  ListApprovalItemsRequest,
   VaultDownloadResponse,
   VaultFile,
   VaultSearchResult,
@@ -251,6 +259,13 @@ const CHANNELS = {
   routinesDelete: 'routines.delete',
   routinesListRuns: 'routines.listRuns',
   routinesRunNow: 'routines.runNow',
+  budgetsListPolicies: 'budgets.listPolicies',
+  budgetsCreatePolicy: 'budgets.createPolicy',
+  budgetsUpdatePolicy: 'budgets.updatePolicy',
+  budgetsDeletePolicy: 'budgets.deletePolicy',
+  budgetsListLedger: 'budgets.listLedger',
+  budgetsGetOverview: 'budgets.getOverview',
+  budgetsListApprovals: 'budgets.listApprovals',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
@@ -460,6 +475,22 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.routinesListRuns, req) as Promise<RoutineRun[]>,
       runNow: (req: RunRoutineNowRequest) =>
         ipc.invoke(CHANNELS.routinesRunNow, req) as Promise<RoutineRun>,
+    },
+    budgets: {
+      listPolicies: (companyId: string) =>
+        ipc.invoke(CHANNELS.budgetsListPolicies, { companyId }) as Promise<BudgetPolicy[]>,
+      createPolicy: (req: CreateBudgetPolicyRequest) =>
+        ipc.invoke(CHANNELS.budgetsCreatePolicy, req) as Promise<{ policyId: string }>,
+      updatePolicy: (req: UpdateBudgetPolicyRequest) =>
+        ipc.invoke(CHANNELS.budgetsUpdatePolicy, req) as Promise<void>,
+      deletePolicy: (policyId: string) =>
+        ipc.invoke(CHANNELS.budgetsDeletePolicy, { policyId }) as Promise<void>,
+      listLedger: (req: ListBudgetLedgerEntriesRequest) =>
+        ipc.invoke(CHANNELS.budgetsListLedger, req) as Promise<BudgetLedgerEntry[]>,
+      getOverview: (companyId: string) =>
+        ipc.invoke(CHANNELS.budgetsGetOverview, { companyId }) as Promise<BudgetOverview>,
+      listApprovals: (req: ListApprovalItemsRequest) =>
+        ipc.invoke(CHANNELS.budgetsListApprovals, req) as Promise<ApprovalItem[]>,
     },
     employees: {
       list: (companyId: string) =>

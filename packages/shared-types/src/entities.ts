@@ -405,6 +405,110 @@ export interface RoutineRun {
   errorMessage: string | null;
 }
 
+export const BUDGET_SCOPE_KINDS = ['company', 'employee', 'runtime-profile', 'routine'] as const;
+export type BudgetScopeKind = (typeof BUDGET_SCOPE_KINDS)[number];
+
+export const BUDGET_POLICY_PERIODS = ['monthly'] as const;
+export type BudgetPolicyPeriod = (typeof BUDGET_POLICY_PERIODS)[number];
+
+export const BUDGET_ALERT_LEVELS = ['ok', 'warning', 'approval-required', 'exceeded'] as const;
+export type BudgetAlertLevel = (typeof BUDGET_ALERT_LEVELS)[number];
+
+export const APPROVAL_ITEM_KINDS = ['budget-exception'] as const;
+export type ApprovalItemKind = (typeof APPROVAL_ITEM_KINDS)[number];
+
+export const APPROVAL_ITEM_STATUSES = ['pending', 'approved', 'denied', 'dismissed'] as const;
+export type ApprovalItemStatus = (typeof APPROVAL_ITEM_STATUSES)[number];
+
+export const APPROVAL_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
+export type ApprovalPriority = (typeof APPROVAL_PRIORITIES)[number];
+
+export const APPROVAL_SUBJECT_KINDS = [
+  'budget-policy',
+  'company',
+  'employee',
+  'runtime-profile',
+  'routine',
+] as const;
+export type ApprovalSubjectKind = (typeof APPROVAL_SUBJECT_KINDS)[number];
+
+export interface BudgetPolicy {
+  id: string;
+  companyId: string;
+  scopeKind: BudgetScopeKind;
+  scopeRefId: string;
+  period: BudgetPolicyPeriod;
+  hardCapUsd: string;
+  warningThresholdPct: number;
+  autoPause: boolean;
+  requireApprovalAboveUsd: string | null;
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface BudgetLedgerEntry {
+  id: string;
+  companyId: string;
+  budgetPolicyId: string | null;
+  scopeKind: BudgetScopeKind;
+  scopeRefId: string;
+  runId: string;
+  runKind: 'work' | 'agentic' | 'copilot';
+  threadId: string | null;
+  employeeId: string;
+  runtimeProfileId: string | null;
+  routineId: string | null;
+  provider: string;
+  model: string;
+  amountUsd: string;
+  occurredAt: number;
+  createdAt: number;
+}
+
+export interface ApprovalItem {
+  id: string;
+  companyId: string;
+  kind: ApprovalItemKind;
+  status: ApprovalItemStatus;
+  priority: ApprovalPriority;
+  requestedByOperatorId: string | null;
+  requestedByEmployeeId: string | null;
+  subjectRefKind: ApprovalSubjectKind;
+  subjectRefId: string;
+  summary: string;
+  payload: Record<string, unknown> | null;
+  createdAt: number;
+  resolvedAt: number | null;
+}
+
+export interface BudgetPolicySummary extends BudgetPolicy {
+  currentSpendUsd: string;
+  remainingUsd: string;
+  warningSpendUsd: string;
+  approvalSpendUsd: string | null;
+  alertLevel: BudgetAlertLevel;
+}
+
+export interface BudgetProviderMixRow {
+  provider: string;
+  amountUsd: string;
+}
+
+export interface BudgetOverview {
+  companyId: string;
+  period: BudgetPolicyPeriod;
+  periodStartAt: number;
+  periodEndAt: number;
+  companySpendUsd: string;
+  activePolicyCount: number;
+  warningCount: number;
+  exceededCount: number;
+  pendingApprovalCount: number;
+  providerMix: BudgetProviderMixRow[];
+  policySummaries: BudgetPolicySummary[];
+}
+
 export const EXTENSIONS_AUTONOMY_MODES = [
   'balanced',
   'conservative',

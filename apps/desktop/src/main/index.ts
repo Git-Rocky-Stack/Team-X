@@ -82,6 +82,9 @@ import {
 import { createEventsRepo } from './db/repos/events.js';
 import { createGoalsRepo } from './db/repos/goals.js';
 import {
+  createBudgetsRepo,
+} from './db/repos/budgets.js';
+import {
   createMcpServersRepo,
   createToolCallsRepo,
   seedDefaultMcpServers,
@@ -130,6 +133,7 @@ import {
 } from './services/agentic-tools-write.js';
 import { createAgenticTools } from './services/agentic-tools.js';
 import { createBackupService } from './services/backup.js';
+import { createBudgetGovernanceService } from './services/budget-governance-service.js';
 import { type CommandService, createCommandService } from './services/command-service.js';
 import {
   type CopilotAnalyzerCompleteFn,
@@ -321,6 +325,7 @@ let agenticLoopServiceInstance: AgenticLoopService | null = null;
  */
 let copilotAnalyzerServiceInstance: CopilotAnalyzerService | null = null;
 let routineServiceInstance: RoutineService | null = null;
+let budgetGovernanceServiceInstance: ReturnType<typeof createBudgetGovernanceService> | null = null;
 /**
  * Copilot event trigger (M33 T4) — bus subscriber that debounces
  * meeting.ended / ticket.closed / goal.progressChanged /
@@ -355,6 +360,7 @@ app
     const operatorsRepo = createOperatorsRepo(db);
     const runtimeProfilesRepo = createRuntimeProfilesRepo(db);
     const routinesRepo = createRoutinesRepo(db);
+    const budgetsRepo = createBudgetsRepo(db);
     const threadsRepo = createThreadsRepo(db);
     const messagesRepo = createMessagesRepo(db);
     const runsRepo = createRunsRepo(db);
@@ -458,6 +464,22 @@ app
       employeesRepo,
       providersService,
     });
+    budgetGovernanceServiceInstance = createBudgetGovernanceService({
+      budgetsRepo,
+      employeesRepo,
+      runsRepo,
+      ticketsRepo,
+      routinesRepo,
+      runtimeProfilesService,
+      bus,
+      operatorId: operatorAccessService.getLocalOwnerId(),
+      orchestrator: {
+        pauseCompany: async (companyId) => {
+          if (!orchestrator) return;
+          await orchestrator.pauseCompany(companyId);
+        },
+      },
+    });
     let routineTicketCreator: ((input: RoutineServiceCreateTicketInput) => Promise<{ ticketId: string }>) | null =
       null;
     routineServiceInstance = createRoutineService({
@@ -465,6 +487,7 @@ app
       companiesRepo,
       employeesRepo,
       bus,
+      budgetGovernance: budgetGovernanceServiceInstance,
       createTicket: async (input) => {
         if (!routineTicketCreator) {
           throw new Error('[main] routine ticket creator is not wired yet');
@@ -697,6 +720,7 @@ app
       bus,
       messagesRepo,
       runsRepo,
+      budgetGovernance: budgetGovernanceServiceInstance ?? undefined,
       employeesRepo,
       companiesRepo,
       threadsRepo,
@@ -885,6 +909,7 @@ app
       operatorAccessService,
       runtimeProfilesService,
       routineService: routineServiceInstance,
+      budgetGovernanceService: budgetGovernanceServiceInstance,
       authorityRepo,
       authorityResolver,
       providersService,
@@ -1152,6 +1177,7 @@ app
         start: (input) => runsRepo.start(input),
         finish: (id, input) => runsRepo.finish(id, input),
       },
+      budgetGovernance: budgetGovernanceServiceInstance,
       bus,
       orchestrator: {
         // Module-level `orchestrator` handle is nullable during the
@@ -1411,6 +1437,7 @@ app
         start: (input) => runsRepo.start(input),
         finish: (id, input) => runsRepo.finish(id, input),
       },
+      budgetGovernance: budgetGovernanceServiceInstance,
       copilotInsightsRepo: {
         listActive: (filter) => copilotInsightsRepo.listActive(filter),
         upsertWithDedup: (draft, ctx) => copilotInsightsRepo.upsertWithDedup(draft, ctx),

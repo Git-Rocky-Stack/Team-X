@@ -154,6 +154,10 @@ import type {
   RoutineRun,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
+  BudgetLedgerEntry,
+  BudgetOverview,
+  BudgetPolicy,
+  ApprovalItem,
   SendChatRequest,
   SendChatResponse,
   SkillAssignment,
@@ -198,6 +202,13 @@ import type {
   Ticket,
   TicketAttachment,
   TicketDetail,
+  ListBudgetPoliciesRequest,
+  CreateBudgetPolicyRequest,
+  UpdateBudgetPolicyRequest,
+  DeleteBudgetPolicyRequest,
+  ListBudgetLedgerEntriesRequest,
+  GetBudgetOverviewRequest,
+  ListApprovalItemsRequest,
   UnlinkTicketFromProjectRequest,
   UpdateCheckResult,
   UpdateRuntimeProfileRequest,
@@ -221,6 +232,7 @@ import type {
 import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import {
   AUTO_THREAD_ID,
+  BUDGET_SCOPE_KINDS,
   COPILOT_CATEGORIES,
   CONCURRENCY_SETTINGS_CLAMPS,
   DEFAULT_CONCURRENCY_CAPS,
@@ -792,6 +804,16 @@ export interface IpcRoutineService {
   runNow(input: RunRoutineNowRequest): Promise<RoutineRun>;
 }
 
+export interface IpcBudgetGovernanceService {
+  listPolicies(companyId: string): BudgetPolicy[];
+  createPolicy(input: CreateBudgetPolicyRequest): string;
+  updatePolicy(input: UpdateBudgetPolicyRequest): void;
+  deletePolicy(policyId: string): void;
+  listLedgerEntries(input: ListBudgetLedgerEntriesRequest): BudgetLedgerEntry[];
+  getOverview(companyId: string): BudgetOverview;
+  listApprovalItems(input: ListApprovalItemsRequest): ApprovalItem[];
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -815,6 +837,7 @@ export interface IpcHandlerDeps {
   operatorAccessService?: IpcOperatorAccessService;
   runtimeProfilesService?: IpcRuntimeProfilesService;
   routineService?: IpcRoutineService;
+  budgetGovernanceService?: IpcBudgetGovernanceService;
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
@@ -994,6 +1017,20 @@ export interface IpcHandlers {
   routinesListRuns(req: ListRoutineRunsRequest): Promise<RoutineRun[]>;
   /** `routines.runNow` — force one routine to materialize work immediately. */
   routinesRunNow(req: RunRoutineNowRequest): Promise<RoutineRun>;
+  /** `budgets.listPolicies` — return budget policies for a company. */
+  budgetsListPolicies(req: ListBudgetPoliciesRequest): Promise<BudgetPolicy[]>;
+  /** `budgets.createPolicy` — create one budget policy. */
+  budgetsCreatePolicy(req: CreateBudgetPolicyRequest): Promise<{ policyId: string }>;
+  /** `budgets.updatePolicy` — patch one budget policy. */
+  budgetsUpdatePolicy(req: UpdateBudgetPolicyRequest): Promise<void>;
+  /** `budgets.deletePolicy` — remove one budget policy. */
+  budgetsDeletePolicy(req: DeleteBudgetPolicyRequest): Promise<void>;
+  /** `budgets.listLedger` — return recent budget ledger entries. */
+  budgetsListLedger(req: ListBudgetLedgerEntriesRequest): Promise<BudgetLedgerEntry[]>;
+  /** `budgets.getOverview` — current monthly budget overview. */
+  budgetsGetOverview(req: GetBudgetOverviewRequest): Promise<BudgetOverview>;
+  /** `budgets.listApprovals` — return budget approval items. */
+  budgetsListApprovals(req: ListApprovalItemsRequest): Promise<ApprovalItem[]>;
 
   /**
    * `employees.create` — hire a new employee from a role-pack role.
@@ -1830,6 +1867,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     operatorAccessService,
     runtimeProfilesService,
     routineService,
+    budgetGovernanceService,
     authorityRepo,
     authorityResolver,
     providersService,
@@ -2078,6 +2116,103 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] routines.runNow: routineService dep is required');
       }
       return routineService.runNow(req);
+    },
+
+    async budgetsListPolicies(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] budgets.listPolicies: companyId is required');
+      }
+      if (!budgetGovernanceService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ipc] budgets.listPolicies: budgetGovernanceService dep unwired — returning empty policy set');
+        }
+        return [];
+      }
+      return budgetGovernanceService.listPolicies(req.companyId);
+    },
+
+    async budgetsCreatePolicy(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] budgets.createPolicy: companyId is required');
+      }
+      if (!BUDGET_SCOPE_KINDS.includes(req.scopeKind)) {
+        throw new Error(`[ipc] budgets.createPolicy: invalid scopeKind "${String(req.scopeKind)}"`);
+      }
+      if (
+        req.scopeKind !== 'company' &&
+        (typeof req.scopeRefId !== 'string' || req.scopeRefId.trim().length === 0)
+      ) {
+        throw new Error('[ipc] budgets.createPolicy: scopeRefId is required for non-company scopes');
+      }
+      if (typeof req.hardCapUsd !== 'string' || req.hardCapUsd.trim().length === 0) {
+        throw new Error('[ipc] budgets.createPolicy: hardCapUsd is required');
+      }
+      if (!budgetGovernanceService) {
+        throw new Error('[ipc] budgets.createPolicy: budgetGovernanceService dep is required');
+      }
+      return { policyId: budgetGovernanceService.createPolicy(req) };
+    },
+
+    async budgetsUpdatePolicy(req) {
+      if (typeof req.policyId !== 'string' || req.policyId.length === 0) {
+        throw new Error('[ipc] budgets.updatePolicy: policyId is required');
+      }
+      if (!budgetGovernanceService) {
+        throw new Error('[ipc] budgets.updatePolicy: budgetGovernanceService dep is required');
+      }
+      budgetGovernanceService.updatePolicy(req);
+    },
+
+    async budgetsDeletePolicy(req) {
+      if (typeof req.policyId !== 'string' || req.policyId.length === 0) {
+        throw new Error('[ipc] budgets.deletePolicy: policyId is required');
+      }
+      if (!budgetGovernanceService) {
+        throw new Error('[ipc] budgets.deletePolicy: budgetGovernanceService dep is required');
+      }
+      budgetGovernanceService.deletePolicy(req.policyId);
+    },
+
+    async budgetsListLedger(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] budgets.listLedger: companyId is required');
+      }
+      if (req.scopeKind !== undefined && !BUDGET_SCOPE_KINDS.includes(req.scopeKind)) {
+        throw new Error(`[ipc] budgets.listLedger: invalid scopeKind "${String(req.scopeKind)}"`);
+      }
+      if (!budgetGovernanceService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ipc] budgets.listLedger: budgetGovernanceService dep unwired — returning empty ledger');
+        }
+        return [];
+      }
+      return budgetGovernanceService.listLedgerEntries(req);
+    },
+
+    async budgetsGetOverview(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] budgets.getOverview: companyId is required');
+      }
+      if (!budgetGovernanceService) {
+        throw new Error('[ipc] budgets.getOverview: budgetGovernanceService dep is required');
+      }
+      return budgetGovernanceService.getOverview(req.companyId);
+    },
+
+    async budgetsListApprovals(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] budgets.listApprovals: companyId is required');
+      }
+      if (!budgetGovernanceService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ipc] budgets.listApprovals: budgetGovernanceService dep unwired — returning empty approval set');
+        }
+        return [];
+      }
+      return budgetGovernanceService.listApprovalItems({
+        companyId: req.companyId,
+        status: req.status,
+      });
     },
 
     async companiesCreate(req) {

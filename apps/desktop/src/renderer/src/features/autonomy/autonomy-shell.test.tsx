@@ -12,9 +12,11 @@ const TOP_BAR_PATH = join(currentDirname, '..', '..', 'app', 'top-bar.tsx');
 const HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-operators.ts');
 const RUNTIME_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-runtime-profiles.ts');
 const ROUTINES_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-routines.ts');
+const BUDGETS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-budgets.ts');
 const VIEW_PATH = join(currentDirname, 'autonomy-view.tsx');
 const RUNTIME_PANEL_PATH = join(currentDirname, 'runtime-profiles-panel.tsx');
 const ROUTINES_PANEL_PATH = join(currentDirname, 'routines-panel.tsx');
+const BUDGETS_PANEL_PATH = join(currentDirname, 'budgets-panel.tsx');
 
 const appSrc = readFileSync(APP_PATH, 'utf8');
 const storeSrc = readFileSync(STORE_PATH, 'utf8');
@@ -23,9 +25,11 @@ const topBarSrc = readFileSync(TOP_BAR_PATH, 'utf8');
 const hookSrc = readFileSync(HOOK_PATH, 'utf8');
 const runtimeHookSrc = readFileSync(RUNTIME_HOOK_PATH, 'utf8');
 const routinesHookSrc = readFileSync(ROUTINES_HOOK_PATH, 'utf8');
+const budgetsHookSrc = readFileSync(BUDGETS_HOOK_PATH, 'utf8');
 const viewSrc = readFileSync(VIEW_PATH, 'utf8');
 const runtimePanelSrc = readFileSync(RUNTIME_PANEL_PATH, 'utf8');
 const routinesPanelSrc = readFileSync(ROUTINES_PANEL_PATH, 'utf8');
+const budgetsPanelSrc = readFileSync(BUDGETS_PANEL_PATH, 'utf8');
 
 describe('Autonomy shell wiring', () => {
   it('adds autonomy as a top-level app destination', () => {
@@ -55,6 +59,8 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('<RuntimeProfilesPanel companyId={companyId} />');
     expect(viewSrc).toContain("import { RoutinesPanel } from './routines-panel.js';");
     expect(viewSrc).toContain('<RoutinesPanel companyId={companyId} />');
+    expect(viewSrc).toContain("import { BudgetsPanel } from './budgets-panel.js';");
+    expect(viewSrc).toContain('<BudgetsPanel companyId={companyId} company={company} />');
   });
 
   it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {
@@ -88,5 +94,24 @@ describe('Autonomy shell wiring', () => {
     expect(routinesPanelSrc).toContain('data-routine-card={routine.id}');
     expect(routinesPanelSrc).toContain('data-routine-run={run.id}');
     expect(routinesPanelSrc).toContain('Run Now');
+  });
+
+  it('adds budget hooks and a budget panel with policy, ledger, and approval surfaces', () => {
+    expect(budgetsHookSrc).toContain("queryKey: ['budgets', 'overview', companyId]");
+    expect(budgetsHookSrc).toContain("queryKey: ['budgets', 'policies', companyId]");
+    expect(budgetsHookSrc).toContain("queryKey: ['budgets', 'ledger', companyId, scopeKind ?? null, scopeRefId ?? null, limit]");
+    expect(budgetsHookSrc).toContain('ipc.budgets.getOverview(companyId!)');
+    expect(budgetsHookSrc).toContain('ipc.budgets.listPolicies(companyId!)');
+    expect(budgetsHookSrc).toContain('ipc.budgets.createPolicy');
+    expect(budgetsHookSrc).toContain('ipc.budgets.updatePolicy');
+    expect(budgetsHookSrc).toContain('ipc.budgets.deletePolicy');
+    expect(budgetsPanelSrc).toContain('Create Budget Policy');
+    expect(budgetsPanelSrc).toContain('Recent Spend Ledger');
+    expect(budgetsPanelSrc).toContain('Pending Budget Approvals');
+    expect(budgetsPanelSrc).toContain('Provider Mix');
+    expect(budgetsPanelSrc).toContain('data-budgets-panel=""');
+    expect(budgetsPanelSrc).toContain('data-budget-policy={policy.id}');
+    expect(budgetsPanelSrc).toContain('data-budget-ledger={entry.id}');
+    expect(budgetsPanelSrc).toContain('data-budget-approval={approval.id}');
   });
 });

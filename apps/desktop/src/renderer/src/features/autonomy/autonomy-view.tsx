@@ -25,6 +25,7 @@ import {
   MissionSegmentedButton,
   MissionStateBlock,
 } from '../mission/mission-shell.js';
+import { BudgetsPanel } from './budgets-panel.js';
 import { RoutinesPanel } from './routines-panel.js';
 import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
@@ -74,7 +75,7 @@ const SUBVIEW_COPY: Record<
       'Turn spend and usage into explicit control policy with warnings, hard stops, and escalation thresholds.',
     emptyTitle: 'Budget policy follows the runtime and routine model',
     emptyDescription:
-      'The budget slice will connect current telemetry and cost data to policy scopes for companies, employees, runtimes, and routines.',
+      'Monthly burn, pending approvals, and recent ledger entries now resolve from real run spend across company, employee, runtime, and routine scopes.',
   },
   approvals: {
     title: 'Approvals Inbox',
@@ -311,6 +312,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             <RuntimeProfilesPanel companyId={companyId} />
           ) : activeSubview === 'routines' ? (
             <RoutinesPanel companyId={companyId} />
+          ) : activeSubview === 'budgets' ? (
+            <BudgetsPanel companyId={companyId} company={company} />
           ) : (
             <MissionStateBlock
               title={activeCopy.emptyTitle}
@@ -353,7 +356,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             <MissionInsetSurface className="space-y-3 p-4 text-sm leading-6 text-muted-foreground">
               <p>Runtime profiles will let operators bind employees to named internal, local, and external execution posture.</p>
               <p>Routines will turn recurring operating loops into explicit work objects instead of silent background automation.</p>
-              <p>Budgets, approvals, and artifacts will convert governance and outcomes into first-class operator surfaces.</p>
+              <p>Budgets are now live; the next slices fold those exceptions into a unified approvals inbox and attach concrete artifacts to the resulting work.</p>
             </MissionInsetSurface>
           </MissionRailCard>
         </div>

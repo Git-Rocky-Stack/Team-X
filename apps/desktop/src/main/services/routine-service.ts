@@ -57,6 +57,14 @@ export interface RoutineServiceDeps {
     getById(id: string): EmployeeRow | null;
   };
   createTicket(input: RoutineServiceCreateTicketInput): Promise<{ ticketId: string }>;
+  budgetGovernance?: {
+    assertExecutionAllowed(input: {
+      companyId: string;
+      employeeId?: string | null;
+      routineId?: string | null;
+      executionKind: 'routine';
+    }): Promise<{ allowed: boolean; reason: string | null }>;
+  };
   bus?: {
     emit<T>(input: {
       type: import('@team-x/shared-types').EventType;
@@ -282,6 +290,7 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
     companiesRepo,
     employeesRepo,
     createTicket,
+    budgetGovernance,
     bus,
     now = () => Date.now(),
     setInterval: setIntervalImpl = setInterval,
@@ -387,6 +396,20 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
     });
 
     try {
+      if (budgetGovernance) {
+        const admission = await budgetGovernance.assertExecutionAllowed({
+          companyId: routine.companyId,
+          employeeId: routine.workConfig.assigneeId,
+          routineId: routine.id,
+          executionKind: 'routine',
+        });
+        if (!admission.allowed) {
+          throw new Error(
+            admission.reason ?? `Routine "${routine.name}" is blocked by budget policy.`,
+          );
+        }
+      }
+
       const labels = Array.from(new Set(['routine', `routine:${routine.slug}`, ...routine.workConfig.labels]));
       const ticketResult = await createTicket({
         companyId: routine.companyId,

@@ -177,6 +177,18 @@ export function createRoutinesRepo<TRunResult>(db: RoutinesDb<TRunResult>) {
       return row ?? null;
     },
 
+    getLatestRunByTicketId(ticketId: string): RoutineRunRow | null {
+      return (
+        db
+          .select()
+          .from(routineRuns)
+          .where(eq(routineRuns.ticketId, ticketId))
+          .orderBy(desc(routineRuns.startedAt))
+          .limit(1)
+          .get() ?? null
+      );
+    },
+
     listRunsByCompany(companyId: string, limit = 20): RoutineRunRow[] {
       return db
         .select()

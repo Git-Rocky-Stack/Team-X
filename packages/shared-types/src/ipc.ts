@@ -55,6 +55,14 @@ import type {
   CopilotInsightListResult,
 } from './copilot.js';
 import type {
+  ApprovalItem,
+  ApprovalItemKind,
+  ApprovalItemStatus,
+  BudgetLedgerEntry,
+  BudgetOverview,
+  BudgetPolicy,
+  BudgetPolicyPeriod,
+  BudgetScopeKind,
   AuthorityGrant,
   AuthorityRequest,
   ChatMessage,
@@ -279,6 +287,52 @@ export interface ListRoutineRunsRequest {
 
 export interface RunRoutineNowRequest {
   routineId: string;
+}
+
+export interface ListBudgetPoliciesRequest {
+  companyId: string;
+}
+
+export interface CreateBudgetPolicyRequest {
+  companyId: string;
+  scopeKind: BudgetScopeKind;
+  scopeRefId: string;
+  period?: BudgetPolicyPeriod;
+  hardCapUsd: string;
+  warningThresholdPct?: number;
+  autoPause?: boolean;
+  requireApprovalAboveUsd?: string | null;
+  enabled?: boolean;
+}
+
+export interface UpdateBudgetPolicyRequest {
+  policyId: string;
+  hardCapUsd?: string;
+  warningThresholdPct?: number;
+  autoPause?: boolean;
+  requireApprovalAboveUsd?: string | null;
+  enabled?: boolean;
+}
+
+export interface DeleteBudgetPolicyRequest {
+  policyId: string;
+}
+
+export interface ListBudgetLedgerEntriesRequest {
+  companyId: string;
+  scopeKind?: BudgetScopeKind;
+  scopeRefId?: string;
+  limit?: number;
+}
+
+export interface GetBudgetOverviewRequest {
+  companyId: string;
+}
+
+export interface ListApprovalItemsRequest {
+  companyId: string;
+  kind?: ApprovalItemKind;
+  status?: ApprovalItemStatus;
 }
 
 export interface SendChatRequest {
@@ -1651,6 +1705,36 @@ export interface IpcContract {
     request: RunRoutineNowRequest;
     response: RoutineRun;
   };
+  'budgets.listPolicies': {
+    request: ListBudgetPoliciesRequest;
+    response: BudgetPolicy[];
+  };
+  'budgets.createPolicy': {
+    request: CreateBudgetPolicyRequest;
+    response: { policyId: string };
+  };
+  'budgets.updatePolicy': {
+    request: UpdateBudgetPolicyRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'budgets.deletePolicy': {
+    request: DeleteBudgetPolicyRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'budgets.listLedger': {
+    request: ListBudgetLedgerEntriesRequest;
+    response: BudgetLedgerEntry[];
+  };
+  'budgets.getOverview': {
+    request: GetBudgetOverviewRequest;
+    response: BudgetOverview;
+  };
+  'budgets.listApprovals': {
+    request: ListApprovalItemsRequest;
+    response: ApprovalItem[];
+  };
   'employees.create': {
     request: HireEmployeeRequest;
     response: HireEmployeeResponse;
@@ -2349,6 +2433,22 @@ export interface TeamXApi {
     listRuns(req: ListRoutineRunsRequest): Promise<RoutineRun[]>;
     /** Force one routine to materialize work immediately. */
     runNow(req: RunRoutineNowRequest): Promise<RoutineRun>;
+  };
+  budgets: {
+    /** List budget policies for one workspace. */
+    listPolicies(companyId: string): Promise<BudgetPolicy[]>;
+    /** Create one budget policy inside the current workspace. */
+    createPolicy(req: CreateBudgetPolicyRequest): Promise<{ policyId: string }>;
+    /** Patch one existing budget policy. */
+    updatePolicy(req: UpdateBudgetPolicyRequest): Promise<void>;
+    /** Delete one budget policy. */
+    deletePolicy(policyId: string): Promise<void>;
+    /** List recent budget ledger entries for one workspace or scope. */
+    listLedger(req: ListBudgetLedgerEntriesRequest): Promise<BudgetLedgerEntry[]>;
+    /** Return the current monthly overview and per-policy status. */
+    getOverview(companyId: string): Promise<BudgetOverview>;
+    /** List approval items currently raised by budget policy. */
+    listApprovals(req: ListApprovalItemsRequest): Promise<ApprovalItem[]>;
   };
   orgchart: {
     /**

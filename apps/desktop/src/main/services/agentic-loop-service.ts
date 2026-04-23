@@ -201,6 +201,15 @@ export interface AgenticLoopServiceDeps {
   threadsRepo: AgenticLoopThreadsRepo;
   messagesRepo: AgenticLoopMessagesRepo;
   runsRepo: AgenticLoopRunsRepo;
+  budgetGovernance?: {
+    assertExecutionAllowed(input: {
+      companyId: string;
+      employeeId?: string | null;
+      routineId?: string | null;
+      executionKind: 'agentic';
+    }): Promise<{ allowed: boolean; reason: string | null }>;
+    recordRunSpend(runId: string): Promise<void>;
+  };
   bus: AgenticLoopEventBus;
   orchestrator: AgenticLoopOrchestratorLike;
   /**
@@ -511,6 +520,12 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       logger.warn('[agentic-loop] runs.finish failed', err);
     }
 
+    if (runStatus !== 'cancelled' && deps.budgetGovernance) {
+      void deps.budgetGovernance.recordRunSpend(state.runId).catch((err) => {
+        logger.warn('[agentic-loop] budget recordRunSpend failed', err);
+      });
+    }
+
     if (state.status === 'completed') {
       try {
         deps.bus.emit<AgenticCompletedPayload>({
@@ -593,6 +608,19 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
         );
       }
       actorEmployee = { id: sys.id, level: 'system', isSystem: true };
+    }
+
+    if (deps.budgetGovernance) {
+      const admission = await deps.budgetGovernance.assertExecutionAllowed({
+        companyId: args.companyId,
+        employeeId: actorEmployee.id,
+        executionKind: 'agentic',
+      });
+      if (!admission.allowed) {
+        throw new Error(
+          admission.reason ?? `[agentic-loop] run blocked by budget policy for company "${args.companyId}".`,
+        );
+      }
     }
 
     const threadId = deps.threadsRepo.create({

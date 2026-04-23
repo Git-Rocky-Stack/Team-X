@@ -249,6 +249,9 @@ export interface BuildOrchestratorOptions {
   bus: EventBus;
   messagesRepo: OrchestratorMessagesRepo;
   runsRepo: OrchestratorRunsRepo;
+  budgetGovernance?: {
+    recordRunSpend(runId: string): Promise<void>;
+  };
   employeesRepo: OrchestratorEmployeesRepo;
   companiesRepo: OrchestratorCompaniesRepo;
   threadsRepo: OrchestratorThreadsRepo;
@@ -337,6 +340,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     bus,
     messagesRepo,
     runsRepo,
+    budgetGovernance,
     employeesRepo,
     companiesRepo,
     threadsRepo,
@@ -511,6 +515,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         bus,
         messages: messagesRepo,
         runs: runsRepo,
+        budgetGovernance,
         calcCost,
         now,
       },
@@ -605,6 +610,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         bus,
         messages: messagesRepo,
         runs: runsRepo,
+        budgetGovernance,
         calcCost,
         now,
       },

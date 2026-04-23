@@ -81,6 +81,13 @@ const REQUEST_CHANNELS = [
   'routines.delete',
   'routines.listRuns',
   'routines.runNow',
+  'budgets.listPolicies',
+  'budgets.createPolicy',
+  'budgets.updatePolicy',
+  'budgets.deletePolicy',
+  'budgets.listLedger',
+  'budgets.getOverview',
+  'budgets.listApprovals',
   'employees.create',
   'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d
@@ -341,6 +348,55 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'routines.runNow',
     async (_event, request: import('@team-x/shared-types').RunRoutineNowRequest) => {
       return handlers.routinesRunNow(request);
+    },
+  );
+
+  ipcMain.handle(
+    'budgets.listPolicies',
+    async (_event, request: import('@team-x/shared-types').ListBudgetPoliciesRequest) => {
+      return handlers.budgetsListPolicies(request);
+    },
+  );
+
+  ipcMain.handle(
+    'budgets.createPolicy',
+    async (_event, request: import('@team-x/shared-types').CreateBudgetPolicyRequest) => {
+      return handlers.budgetsCreatePolicy(request);
+    },
+  );
+
+  ipcMain.handle(
+    'budgets.updatePolicy',
+    async (_event, request: import('@team-x/shared-types').UpdateBudgetPolicyRequest) => {
+      return handlers.budgetsUpdatePolicy(request);
+    },
+  );
+
+  ipcMain.handle(
+    'budgets.deletePolicy',
+    async (_event, request: import('@team-x/shared-types').DeleteBudgetPolicyRequest) => {
+      return handlers.budgetsDeletePolicy(request);
+    },
+  );
+
+  ipcMain.handle(
+    'budgets.listLedger',
+    async (_event, request: import('@team-x/shared-types').ListBudgetLedgerEntriesRequest) => {
+      return handlers.budgetsListLedger(request);
+    },
+  );
+
+  ipcMain.handle(
+    'budgets.getOverview',
+    async (_event, request: import('@team-x/shared-types').GetBudgetOverviewRequest) => {
+      return handlers.budgetsGetOverview(request);
+    },
+  );
+
+  ipcMain.handle(
+    'budgets.listApprovals',
+    async (_event, request: import('@team-x/shared-types').ListApprovalItemsRequest) => {
+      return handlers.budgetsListApprovals(request);
     },
   );
 

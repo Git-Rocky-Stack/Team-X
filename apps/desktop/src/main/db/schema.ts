@@ -239,6 +239,133 @@ export const routineRuns = sqliteTable(
   }),
 );
 
+/** Spend and escalation policy for one budget scope inside a workspace. */
+export const budgetPolicies = sqliteTable(
+  'budget_policies',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    /** company | employee | runtime-profile | routine */
+    scopeKind: text('scope_kind').notNull(),
+    /** For company scope, this is the company id. */
+    scopeRefId: text('scope_ref_id').notNull(),
+    /** monthly */
+    period: text('period').notNull().default('monthly'),
+    /** Decimal string to preserve sub-cent precision. */
+    hardCapUsd: text('hard_cap_usd').notNull(),
+    warningThresholdPct: integer('warning_threshold_pct').notNull().default(80),
+    autoPause: integer('auto_pause', { mode: 'boolean' }).notNull().default(false),
+    requireApprovalAboveUsd: text('require_approval_above_usd'),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_budget_policies_company').on(table.companyId),
+    companyScopeIdx: index('idx_budget_policies_company_scope').on(
+      table.companyId,
+      table.scopeKind,
+      table.scopeRefId,
+    ),
+    companyScopePeriodUniqueIdx: uniqueIndex('ux_budget_policies_company_scope_period').on(
+      table.companyId,
+      table.scopeKind,
+      table.scopeRefId,
+      table.period,
+    ),
+  }),
+);
+
+/** Ledgered spend snapshots keyed by scope so policy summaries stay stable over time. */
+export const budgetLedgerEntries = sqliteTable(
+  'budget_ledger_entries',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    budgetPolicyId: text('budget_policy_id').references(() => budgetPolicies.id, {
+      onDelete: 'set null',
+    }),
+    /** company | employee | runtime-profile | routine */
+    scopeKind: text('scope_kind').notNull(),
+    scopeRefId: text('scope_ref_id').notNull(),
+    runId: text('run_id').notNull().references(() => runs.id, { onDelete: 'cascade' }),
+    /** work | agentic | copilot */
+    runKind: text('run_kind').notNull(),
+    threadId: text('thread_id'),
+    employeeId: text('employee_id').notNull(),
+    runtimeProfileId: text('runtime_profile_id'),
+    routineId: text('routine_id'),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    /** Decimal string to preserve sub-cent precision. */
+    amountUsd: text('amount_usd').notNull(),
+    occurredAt: integer('occurred_at').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_budget_ledger_entries_company').on(table.companyId),
+    companyScopeIdx: index('idx_budget_ledger_entries_company_scope').on(
+      table.companyId,
+      table.scopeKind,
+      table.scopeRefId,
+    ),
+    runIdx: index('idx_budget_ledger_entries_run').on(table.runId),
+    companyOccurredIdx: index('idx_budget_ledger_entries_company_occurred').on(
+      table.companyId,
+      table.occurredAt,
+    ),
+    companyProviderIdx: index('idx_budget_ledger_entries_company_provider').on(
+      table.companyId,
+      table.provider,
+    ),
+    scopeRunUniqueIdx: uniqueIndex('ux_budget_ledger_entries_scope_run').on(
+      table.scopeKind,
+      table.scopeRefId,
+      table.runId,
+    ),
+  }),
+);
+
+/** Pending and resolved approval work items. Slice 5 uses budget-exception rows first. */
+export const approvalItems = sqliteTable(
+  'approval_items',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    /** budget-exception */
+    kind: text('kind').notNull(),
+    /** pending | approved | denied | dismissed */
+    status: text('status').notNull().default('pending'),
+    /** low | medium | high | critical */
+    priority: text('priority').notNull().default('medium'),
+    requestedByOperatorId: text('requested_by_operator_id'),
+    requestedByEmployeeId: text('requested_by_employee_id'),
+    /** budget-policy | company | employee | runtime-profile | routine */
+    subjectRefKind: text('subject_ref_kind').notNull(),
+    subjectRefId: text('subject_ref_id').notNull(),
+    summary: text('summary').notNull(),
+    payloadJson: text('payload_json').notNull().default('{}'),
+    createdAt: integer('created_at').notNull(),
+    resolvedAt: integer('resolved_at'),
+  },
+  (table) => ({
+    companyIdx: index('idx_approval_items_company').on(table.companyId),
+    companyStatusIdx: index('idx_approval_items_company_status').on(table.companyId, table.status),
+    companyKindIdx: index('idx_approval_items_company_kind').on(table.companyId, table.kind),
+    companySubjectIdx: index('idx_approval_items_company_subject').on(
+      table.companyId,
+      table.subjectRefKind,
+      table.subjectRefId,
+    ),
+  }),
+);
+
 /** Conversations — direct 1:1, group, meeting, ticket discussion, or broadcast. */
 export const threads = sqliteTable('threads', {
   id: text('id').primaryKey(),

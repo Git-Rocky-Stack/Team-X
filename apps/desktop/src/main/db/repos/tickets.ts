@@ -89,6 +89,12 @@ export function createTicketsRepo<TRunResult>(db: TicketsDb<TRunResult>) {
       return row ?? null;
     },
 
+    /** Return the ticket linked to one discussion thread, or null. */
+    getByThreadId(threadId: string): TicketRow | null {
+      const row = db.select().from(tickets).where(eq(tickets.threadId, threadId)).get();
+      return row ?? null;
+    },
+
     /** Return every ticket belonging to a given company, newest first. */
     listByCompany(companyId: string): TicketRow[] {
       return db

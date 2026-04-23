@@ -95,6 +95,9 @@ export interface RunAgentDeps {
   bus: EventBus;
   messages: MessagesRepoLike;
   runs: RunsRepoLike;
+  budgetGovernance?: {
+    recordRunSpend(runId: string): Promise<void>;
+  };
   calcCost: CostCalculator;
   /**
    * Optional clock injection for deterministic latency measurement
@@ -479,6 +482,12 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     latencyMs,
     costUsd,
   });
+
+  if (deps.budgetGovernance) {
+    void deps.budgetGovernance.recordRunSpend(runId).catch((err) => {
+      console.warn('[runAgent] budget recordRunSpend failed:', err);
+    });
+  }
 
   // 6. Final completion event with the full telemetry payload. The
   //    `costUsd` field on `WorkCompletedPayload` is a number (matches

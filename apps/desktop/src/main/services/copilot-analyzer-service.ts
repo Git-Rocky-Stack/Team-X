@@ -196,6 +196,15 @@ export interface CopilotAnalyzerServiceDeps {
   companiesRepo: CopilotAnalyzerCompaniesRepo;
   employeesRepo: CopilotAnalyzerEmployeesRepo;
   runsRepo: CopilotAnalyzerRunsRepo;
+  budgetGovernance?: {
+    assertExecutionAllowed(input: {
+      companyId: string;
+      employeeId?: string | null;
+      routineId?: string | null;
+      executionKind: 'copilot';
+    }): Promise<{ allowed: boolean; reason: string | null }>;
+    recordRunSpend(runId: string): Promise<void>;
+  };
   copilotInsightsRepo: CopilotAnalyzerInsightsRepo;
   copilotEventWindow: CopilotAnalyzerEventWindow;
   bus: CopilotAnalyzerEventBus;
@@ -621,6 +630,39 @@ export function createCopilotAnalyzerService(
     }
     const systemCopilotId = sys.id;
 
+    if (deps.budgetGovernance) {
+      const admission = await deps.budgetGovernance.assertExecutionAllowed({
+        companyId,
+        employeeId: systemCopilotId,
+        executionKind: 'copilot',
+      });
+      if (!admission.allowed) {
+        const payload: CopilotAnalyzedPayload = {
+          runId: tickRunId,
+          reason,
+          insightsProposed: 0,
+          insightsGenerated: 0,
+          insightsMerged: 0,
+          insightsExpired: 0,
+          tokensIn: 0,
+          tokensOut: 0,
+          costUsd: 0,
+          durationMs: 0,
+        };
+        safeEmitAnalyzed(companyId, systemCopilotId, payload);
+        return {
+          runId: tickRunId,
+          reason,
+          insightsProposed: 0,
+          insightsGenerated: 0,
+          insightsMerged: 0,
+          insightsExpired: 0,
+          status: 'error',
+          errorMessage: admission.reason ?? 'Copilot analysis blocked by budget policy.',
+        };
+      }
+    }
+
     // Pause gate — observed BEFORE anything expensive. If the company is
     // paused, the tick no-ops and the next scheduled interval picks up.
     if (deps.orchestrator.isCompanyPaused(companyId)) {
@@ -850,6 +892,13 @@ export function createCopilotAnalyzerService(
         });
       } catch (err) {
         logger.warn('[copilot-analyzer] runs.finish failed', err);
+      }
+      if (terminalStatus !== 'cancelled' && deps.budgetGovernance) {
+        try {
+          await deps.budgetGovernance.recordRunSpend(runRowId);
+        } catch (err) {
+          logger.warn('[copilot-analyzer] budget recordRunSpend failed', err);
+        }
       }
     }
 

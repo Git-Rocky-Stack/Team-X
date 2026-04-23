@@ -46,6 +46,13 @@ export type EventType =
   | 'routine.runStarted'
   | 'routine.runCompleted'
   | 'routine.runFailed'
+  | 'budget.policyCreated'
+  | 'budget.policyUpdated'
+  | 'budget.policyDeleted'
+  | 'budget.warning'
+  | 'budget.exceeded'
+  | 'budget.approvalRequested'
+  | 'budget.companyPaused'
   | 'ticket.created'
   | 'ticket.updated'
   | 'ticket.assigned'
@@ -619,6 +626,59 @@ export interface RoutineRunFailedPayload {
   errorMessage: string;
   finishedAt: number;
   nextRunAt: number | null;
+}
+
+export interface BudgetPolicyCreatedPayload {
+  budgetPolicyId: string;
+  scopeKind: string;
+  scopeRefId: string;
+  hardCapUsd: number;
+  warningThresholdPct: number;
+  requireApprovalAboveUsd: number | null;
+  autoPause: boolean;
+}
+
+export interface BudgetPolicyUpdatedPayload extends BudgetPolicyCreatedPayload {}
+
+export interface BudgetPolicyDeletedPayload {
+  budgetPolicyId: string;
+  scopeKind: string;
+  scopeRefId: string;
+}
+
+export interface BudgetWarningPayload {
+  budgetPolicyId: string;
+  scopeKind: string;
+  scopeRefId: string;
+  currentSpendUsd: number;
+  hardCapUsd: number;
+  warningThresholdPct: number;
+}
+
+export interface BudgetExceededPayload {
+  budgetPolicyId: string;
+  scopeKind: string;
+  scopeRefId: string;
+  currentSpendUsd: number;
+  hardCapUsd: number;
+}
+
+export interface BudgetApprovalRequestedPayload {
+  budgetPolicyId: string;
+  approvalItemId: string;
+  scopeKind: string;
+  scopeRefId: string;
+  currentSpendUsd: number;
+  requireApprovalAboveUsd: number;
+}
+
+export interface BudgetCompanyPausedPayload {
+  budgetPolicyId: string;
+  scopeKind: string;
+  scopeRefId: string;
+  currentSpendUsd: number;
+  hardCapUsd: number;
+  reason: string;
 }
 
 // ---------------------------------------------------------------------------
