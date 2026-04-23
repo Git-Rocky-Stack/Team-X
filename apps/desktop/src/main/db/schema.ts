@@ -23,7 +23,7 @@
  *   helper runs `PRAGMA foreign_keys = ON` (landing in Task 20).
  */
 
-import { blob, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { blob, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /** One row per AI company the user has created (multi-company is Phase 2+). */
 export const companies = sqliteTable('companies', {
@@ -118,6 +118,62 @@ export const employees = sqliteTable('employees', {
   isSystem: integer('is_system', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at').notNull(),
 });
+
+/** Named runtime posture profiles assigned to employees inside one workspace. */
+export const runtimeProfiles = sqliteTable(
+  'runtime_profiles',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    /** teamx-internal | bash | http | codex | claude-code | cursor */
+    kind: text('kind').notNull(),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    configJson: text('config_json').notNull().default('{}'),
+    /** unknown | healthy | warning | error */
+    lastHealthStatus: text('last_health_status').notNull().default('unknown'),
+    lastHealthMessage: text('last_health_message'),
+    lastValidatedAt: integer('last_validated_at'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_runtime_profiles_company').on(table.companyId),
+    companySlugIdx: index('idx_runtime_profiles_company_slug').on(table.companyId, table.slug),
+  }),
+);
+
+/** One employee → one runtime profile binding. */
+export const employeeRuntimeBindings = sqliteTable(
+  'employee_runtime_bindings',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    runtimeProfileId: text('runtime_profile_id')
+      .notNull()
+      .references(() => runtimeProfiles.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_employee_runtime_bindings_company').on(table.companyId),
+    employeeIdx: index('idx_employee_runtime_bindings_employee').on(table.employeeId),
+    profileIdx: index('idx_employee_runtime_bindings_profile').on(table.runtimeProfileId),
+    companyEmployeeIdx: index('idx_employee_runtime_bindings_company_employee').on(
+      table.companyId,
+      table.employeeId,
+    ),
+    employeeUniqueIdx: uniqueIndex('ux_employee_runtime_bindings_employee').on(table.employeeId),
+  }),
+);
 
 /** Conversations — direct 1:1, group, meeting, ticket discussion, or broadcast. */
 export const threads = sqliteTable('threads', {

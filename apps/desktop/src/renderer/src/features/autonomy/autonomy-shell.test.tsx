@@ -10,14 +10,18 @@ const STORE_PATH = join(currentDirname, '..', '..', 'store', 'app-store.ts');
 const SIDENAV_PATH = join(currentDirname, '..', '..', 'app', 'sidenav.tsx');
 const TOP_BAR_PATH = join(currentDirname, '..', '..', 'app', 'top-bar.tsx');
 const HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-operators.ts');
+const RUNTIME_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-runtime-profiles.ts');
 const VIEW_PATH = join(currentDirname, 'autonomy-view.tsx');
+const RUNTIME_PANEL_PATH = join(currentDirname, 'runtime-profiles-panel.tsx');
 
 const appSrc = readFileSync(APP_PATH, 'utf8');
 const storeSrc = readFileSync(STORE_PATH, 'utf8');
 const sidenavSrc = readFileSync(SIDENAV_PATH, 'utf8');
 const topBarSrc = readFileSync(TOP_BAR_PATH, 'utf8');
 const hookSrc = readFileSync(HOOK_PATH, 'utf8');
+const runtimeHookSrc = readFileSync(RUNTIME_HOOK_PATH, 'utf8');
 const viewSrc = readFileSync(VIEW_PATH, 'utf8');
+const runtimePanelSrc = readFileSync(RUNTIME_PANEL_PATH, 'utf8');
 
 describe('Autonomy shell wiring', () => {
   it('adds autonomy as a top-level app destination', () => {
@@ -43,6 +47,24 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('data-autonomy-subview={subview.value}');
     expect(viewSrc).toContain('Operator Control Plane');
     expect(viewSrc).toContain('Team-X stays zero-login by default.');
-    expect(viewSrc).toContain('Runtime profiles will let operators bind employees');
+    expect(viewSrc).toContain("import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';");
+    expect(viewSrc).toContain('<RuntimeProfilesPanel companyId={companyId} />');
+  });
+
+  it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {
+    expect(runtimeHookSrc).toContain("queryKey: ['runtime-profiles', companyId]");
+    expect(runtimeHookSrc).toContain('ipc.runtimeProfiles.list(companyId!)');
+    expect(runtimeHookSrc).toContain('ipc.runtimeProfiles.create');
+    expect(runtimeHookSrc).toContain('ipc.runtimeProfiles.update');
+    expect(runtimeHookSrc).toContain('ipc.runtimeProfiles.bindEmployee');
+    expect(runtimeHookSrc).toContain('ipc.runtimeProfiles.validate');
+    expect(runtimePanelSrc).toContain('Create Runtime Profile');
+    expect(runtimePanelSrc).toContain('Employee Bindings');
+    expect(runtimePanelSrc).toContain('No explicit runtime profile');
+    expect(runtimePanelSrc).toContain('data-runtime-profiles-panel=""');
+    expect(runtimePanelSrc).toContain('data-runtime-profile-card={profile.id}');
+    expect(runtimePanelSrc).toContain('data-runtime-employee-binding={employee.id}');
+    expect(runtimePanelSrc).toContain('lastHealthStatus');
+    expect(runtimePanelSrc).toContain('Team-X internal is execution-backed in this slice.');
   });
 });

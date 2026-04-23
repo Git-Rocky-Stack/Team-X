@@ -60,6 +60,7 @@ import type {
   BackupEntry,
   BackupRestoreRequest,
   BackupRestoreResponse,
+  BindEmployeeRuntimeProfileRequest,
   CallMeetingRequest,
   CallMeetingResponse,
   ChatMessage,
@@ -74,6 +75,7 @@ import type {
   CopilotExportRequest,
   CopilotExportResponse,
   CopilotWeightsChangedPayload,
+  CreateRuntimeProfileRequest,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -81,10 +83,12 @@ import type {
   CreateTicketRequest,
   CreateTicketResponse,
   DashboardEvent,
+  DeleteRuntimeProfileRequest,
   DeleteGoalRequest,
   DeleteProjectRequest,
   DetachFileRequest,
   Employee,
+  EmployeeRuntimeBinding,
   EmployeesPromoteRequest,
   EmployeesPromoteResponse,
   EmployeesSetManagerRequest,
@@ -122,6 +126,7 @@ import type {
   ListProviderModelsRequest,
   ListProviderModelsResponse,
   ListProjectsRequest,
+  ListRuntimeProfilesRequest,
   ListTicketsRequest,
   McpServerSummary,
   McpTemplateSummary,
@@ -141,6 +146,8 @@ import type {
   ReviewAuthorityRequestRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
+  RuntimeProfileSummary,
+  RuntimeProfileValidation,
   SendChatRequest,
   SendChatResponse,
   SkillAssignment,
@@ -187,11 +194,13 @@ import type {
   TicketDetail,
   UnlinkTicketFromProjectRequest,
   UpdateCheckResult,
+  UpdateRuntimeProfileRequest,
   UpdateGoalRequest,
   UpdateInstallResult,
   UpdateProjectRequest,
   UpdateProviderRequest,
   UpdateTicketRequest,
+  ValidateRuntimeProfileRequest,
   VaultDownloadResponse,
   VaultFile,
   VaultSearchResult,
@@ -208,6 +217,7 @@ import {
   CONCURRENCY_SETTINGS_CLAMPS,
   DEFAULT_CONCURRENCY_CAPS,
   PRIVACY_TIER_RANK,
+  RUNTIME_PROFILE_KINDS,
   STRATEGY_SLOTS,
   TELEMETRY_RUN_KINDS,
   getLevelRank,
@@ -753,6 +763,15 @@ export interface IpcOperatorAccessService {
   listByCompany(companyId: string): OperatorAccessEntry[];
 }
 
+export interface IpcRuntimeProfilesService {
+  list(companyId: string): RuntimeProfileSummary[];
+  create(input: CreateRuntimeProfileRequest): string;
+  update(input: UpdateRuntimeProfileRequest): void;
+  delete(profileId: string): void;
+  bindEmployee(input: BindEmployeeRuntimeProfileRequest): EmployeeRuntimeBinding | null;
+  validateProfile(input: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -774,6 +793,7 @@ export interface IpcHandlerDeps {
   extensionsRegistry?: ExtensionsRegistryService;
   skillsService?: IpcSkillsService;
   operatorAccessService?: IpcOperatorAccessService;
+  runtimeProfilesService?: IpcRuntimeProfilesService;
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
@@ -927,6 +947,20 @@ export interface IpcHandlers {
   employeesList(req: { companyId: string }): Promise<Employee[]>;
   /** `operators.list` — return the operator access entries for a company. */
   operatorsList(req: ListOperatorsRequest): Promise<OperatorAccessEntry[]>;
+  /** `runtimeProfiles.list` — return runtime profiles plus binding summaries for a company. */
+  runtimeProfilesList(req: ListRuntimeProfilesRequest): Promise<RuntimeProfileSummary[]>;
+  /** `runtimeProfiles.create` — create one named runtime profile. */
+  runtimeProfilesCreate(req: CreateRuntimeProfileRequest): Promise<{ profileId: string }>;
+  /** `runtimeProfiles.update` — patch one runtime profile. */
+  runtimeProfilesUpdate(req: UpdateRuntimeProfileRequest): Promise<void>;
+  /** `runtimeProfiles.delete` — remove one runtime profile and any bindings. */
+  runtimeProfilesDelete(req: DeleteRuntimeProfileRequest): Promise<void>;
+  /** `runtimeProfiles.bindEmployee` — bind or unbind one employee. */
+  runtimeProfilesBindEmployee(
+    req: BindEmployeeRuntimeProfileRequest,
+  ): Promise<{ binding: EmployeeRuntimeBinding | null }>;
+  /** `runtimeProfiles.validate` — run and persist the kind-specific health check. */
+  runtimeProfilesValidate(req: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
 
   /**
    * `employees.create` — hire a new employee from a role-pack role.
@@ -1761,6 +1795,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     extensionsRegistry,
     skillsService,
     operatorAccessService,
+    runtimeProfilesService,
     authorityRepo,
     authorityResolver,
     providersService,
@@ -1823,6 +1858,96 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         return [];
       }
       return operatorAccessService.listByCompany(req.companyId);
+    },
+
+    async runtimeProfilesList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] runtimeProfiles.list: companyId is required');
+      }
+      if (!runtimeProfilesService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '[ipc] runtimeProfiles.list: runtimeProfilesService dep unwired — returning an empty runtime profile set',
+          );
+        }
+        return [];
+      }
+      return runtimeProfilesService.list(req.companyId);
+    },
+
+    async runtimeProfilesCreate(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] runtimeProfiles.create: companyId is required');
+      }
+      if (typeof req.name !== 'string' || req.name.trim().length === 0) {
+        throw new Error('[ipc] runtimeProfiles.create: name is required');
+      }
+      if (!RUNTIME_PROFILE_KINDS.includes(req.kind)) {
+        throw new Error(`[ipc] runtimeProfiles.create: invalid runtime kind "${String(req.kind)}"`);
+      }
+      if (!runtimeProfilesService) {
+        throw new Error('[ipc] runtimeProfiles.create: runtimeProfilesService dep is required');
+      }
+      return { profileId: runtimeProfilesService.create(req) };
+    },
+
+    async runtimeProfilesUpdate(req) {
+      if (typeof req.profileId !== 'string' || req.profileId.length === 0) {
+        throw new Error('[ipc] runtimeProfiles.update: profileId is required');
+      }
+      if (req.name !== undefined && (typeof req.name !== 'string' || req.name.trim().length === 0)) {
+        throw new Error('[ipc] runtimeProfiles.update: name must be non-empty when provided');
+      }
+      if (req.kind !== undefined && !RUNTIME_PROFILE_KINDS.includes(req.kind)) {
+        throw new Error(`[ipc] runtimeProfiles.update: invalid runtime kind "${String(req.kind)}"`);
+      }
+      if (!runtimeProfilesService) {
+        throw new Error('[ipc] runtimeProfiles.update: runtimeProfilesService dep is required');
+      }
+      runtimeProfilesService.update(req);
+    },
+
+    async runtimeProfilesDelete(req) {
+      if (typeof req.profileId !== 'string' || req.profileId.length === 0) {
+        throw new Error('[ipc] runtimeProfiles.delete: profileId is required');
+      }
+      if (!runtimeProfilesService) {
+        throw new Error('[ipc] runtimeProfiles.delete: runtimeProfilesService dep is required');
+      }
+      runtimeProfilesService.delete(req.profileId);
+    },
+
+    async runtimeProfilesBindEmployee(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] runtimeProfiles.bindEmployee: companyId is required');
+      }
+      if (typeof req.employeeId !== 'string' || req.employeeId.length === 0) {
+        throw new Error('[ipc] runtimeProfiles.bindEmployee: employeeId is required');
+      }
+      if (req.runtimeProfileId !== null && typeof req.runtimeProfileId !== 'string') {
+        throw new Error(
+          '[ipc] runtimeProfiles.bindEmployee: runtimeProfileId must be a string or null',
+        );
+      }
+      if (!runtimeProfilesService) {
+        throw new Error('[ipc] runtimeProfiles.bindEmployee: runtimeProfilesService dep is required');
+      }
+      return {
+        binding: runtimeProfilesService.bindEmployee(req),
+      };
+    },
+
+    async runtimeProfilesValidate(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] runtimeProfiles.validate: companyId is required');
+      }
+      if (typeof req.profileId !== 'string' || req.profileId.length === 0) {
+        throw new Error('[ipc] runtimeProfiles.validate: profileId is required');
+      }
+      if (!runtimeProfilesService) {
+        throw new Error('[ipc] runtimeProfiles.validate: runtimeProfilesService dep is required');
+      }
+      return runtimeProfilesService.validateProfile(req);
     },
 
     async companiesCreate(req) {

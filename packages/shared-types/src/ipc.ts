@@ -60,6 +60,7 @@ import type {
   ChatMessage,
   Company,
   Employee,
+  EmployeeRuntimeBinding,
   EffectiveAuthoritySnapshot,
   ExtensionSummary,
   ExtensionsAutonomyMode,
@@ -69,6 +70,9 @@ import type {
   MeetingMode,
   OperatorAccessEntry,
   Project,
+  RuntimeProfileKind,
+  RuntimeProfileSummary,
+  RuntimeProfileValidation,
   SkillAssignment,
   Thread,
   Ticket,
@@ -202,6 +206,41 @@ export interface ListEmployeesRequest {
 
 export interface ListOperatorsRequest {
   companyId: string;
+}
+
+export interface ListRuntimeProfilesRequest {
+  companyId: string;
+}
+
+export interface CreateRuntimeProfileRequest {
+  companyId: string;
+  name: string;
+  kind: RuntimeProfileKind;
+  enabled?: boolean;
+  config?: Record<string, unknown> | null;
+}
+
+export interface UpdateRuntimeProfileRequest {
+  profileId: string;
+  name?: string;
+  kind?: RuntimeProfileKind;
+  enabled?: boolean;
+  config?: Record<string, unknown> | null;
+}
+
+export interface DeleteRuntimeProfileRequest {
+  profileId: string;
+}
+
+export interface BindEmployeeRuntimeProfileRequest {
+  companyId: string;
+  employeeId: string;
+  runtimeProfileId: string | null;
+}
+
+export interface ValidateRuntimeProfileRequest {
+  companyId: string;
+  profileId: string;
 }
 
 export interface SendChatRequest {
@@ -1522,6 +1561,32 @@ export interface IpcContract {
     request: ListOperatorsRequest;
     response: OperatorAccessEntry[];
   };
+  'runtimeProfiles.list': {
+    request: ListRuntimeProfilesRequest;
+    response: RuntimeProfileSummary[];
+  };
+  'runtimeProfiles.create': {
+    request: CreateRuntimeProfileRequest;
+    response: { profileId: string };
+  };
+  'runtimeProfiles.update': {
+    request: UpdateRuntimeProfileRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'runtimeProfiles.delete': {
+    request: DeleteRuntimeProfileRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'runtimeProfiles.bindEmployee': {
+    request: BindEmployeeRuntimeProfileRequest;
+    response: { binding: EmployeeRuntimeBinding | null };
+  };
+  'runtimeProfiles.validate': {
+    request: ValidateRuntimeProfileRequest;
+    response: RuntimeProfileValidation;
+  };
   'employees.create': {
     request: HireEmployeeRequest;
     response: HireEmployeeResponse;
@@ -2190,6 +2255,22 @@ export interface TeamXApi {
   operators: {
     /** Return every operator membership for the given company. */
     list(companyId: string): Promise<OperatorAccessEntry[]>;
+  };
+  runtimeProfiles: {
+    /** List runtime profiles and bound employee ids for one workspace. */
+    list(companyId: string): Promise<RuntimeProfileSummary[]>;
+    /** Create one runtime profile inside the current workspace. */
+    create(req: CreateRuntimeProfileRequest): Promise<{ profileId: string }>;
+    /** Patch one existing runtime profile. */
+    update(req: UpdateRuntimeProfileRequest): Promise<void>;
+    /** Delete one runtime profile and any attached employee bindings. */
+    delete(profileId: string): Promise<void>;
+    /** Bind or unbind one employee to a runtime profile. */
+    bindEmployee(
+      req: BindEmployeeRuntimeProfileRequest,
+    ): Promise<{ binding: EmployeeRuntimeBinding | null }>;
+    /** Run the profile-kind-specific health check and persist the result. */
+    validate(req: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
   };
   orgchart: {
     /**

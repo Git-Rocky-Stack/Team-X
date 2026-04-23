@@ -273,6 +273,61 @@ export interface OperatorAccessEntry {
   membership: OperatorMembership;
 }
 
+export const RUNTIME_PROFILE_KINDS = [
+  'teamx-internal',
+  'bash',
+  'http',
+  'codex',
+  'claude-code',
+  'cursor',
+] as const;
+export type RuntimeProfileKind = (typeof RUNTIME_PROFILE_KINDS)[number];
+
+export const RUNTIME_PROFILE_HEALTH_STATUSES = ['unknown', 'healthy', 'warning', 'error'] as const;
+export type RuntimeProfileHealthStatus = (typeof RUNTIME_PROFILE_HEALTH_STATUSES)[number];
+
+export const RUNTIME_PROFILE_EXECUTION_MODES = ['native', 'planned'] as const;
+export type RuntimeProfileExecutionMode = (typeof RUNTIME_PROFILE_EXECUTION_MODES)[number];
+
+export interface RuntimeProfile {
+  id: string;
+  companyId: string;
+  name: string;
+  slug: string;
+  kind: RuntimeProfileKind;
+  enabled: boolean;
+  config: Record<string, unknown> | null;
+  lastHealthStatus: RuntimeProfileHealthStatus;
+  lastHealthMessage: string | null;
+  lastValidatedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface EmployeeRuntimeBinding {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  runtimeProfileId: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface RuntimeProfileSummary extends RuntimeProfile {
+  executionMode: RuntimeProfileExecutionMode;
+  boundEmployeeIds: string[];
+  boundEmployeeCount: number;
+}
+
+export interface RuntimeProfileValidation {
+  profileId: string;
+  status: RuntimeProfileHealthStatus;
+  message: string;
+  checkedAt: number;
+  supportsExecution: boolean;
+  details: Record<string, unknown> | null;
+}
+
 export const EXTENSIONS_AUTONOMY_MODES = [
   'balanced',
   'conservative',

@@ -25,6 +25,7 @@ import {
   MissionSegmentedButton,
   MissionStateBlock,
 } from '../mission/mission-shell.js';
+import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
 type AutonomySubview = 'runtimes' | 'routines' | 'budgets' | 'approvals' | 'artifacts' | 'access';
 
@@ -53,10 +54,10 @@ const SUBVIEW_COPY: Record<
   runtimes: {
     title: 'Agent Runtimes',
     description:
-      'Bind employees to named runtime profiles so Team-X can distinguish internal execution, local tools, and hosted workers.',
-    emptyTitle: 'Runtime profiles land next',
+      'Bind employees to named runtime profiles so Team-X can distinguish internal execution, local launchers, and future hosted workers.',
+    emptyTitle: 'Runtime profile control plane is empty',
     emptyDescription:
-      'The first runtime slice will add profile health, employee bindings, and explicit posture across Team-X internal, local, and remote runtimes.',
+      'Create the first runtime profile, validate its health, and bind it to employees so the workspace has explicit execution posture.',
   },
   routines: {
     title: 'Recurring Routines',
@@ -305,6 +306,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             ) : (
               <AccessList entries={entries} />
             )
+          ) : activeSubview === 'runtimes' ? (
+            <RuntimeProfilesPanel companyId={companyId} />
           ) : (
             <MissionStateBlock
               title={activeCopy.emptyTitle}

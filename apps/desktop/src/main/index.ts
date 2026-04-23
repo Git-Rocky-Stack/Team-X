@@ -91,6 +91,7 @@ import { createMessagesRepo } from './db/repos/messages.js';
 import { createOrgEdgesRepo } from './db/repos/orgchart.js';
 import { createOperatorsRepo } from './db/repos/operators.js';
 import { createProjectsRepo } from './db/repos/projects.js';
+import { createRuntimeProfilesRepo } from './db/repos/runtime-profiles.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createSettingsRepo } from './db/repos/settings.js';
 import { createThreadsRepo } from './db/repos/threads.js';
@@ -145,6 +146,7 @@ import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import { detectHardware } from './services/profiler.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
+import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
 import {
   buildEmbedAdapter,
   createProviderFactory,
@@ -344,6 +346,7 @@ app
     const companiesRepo = createCompaniesRepo(db);
     const employeesRepo = createEmployeesRepo(db);
     const operatorsRepo = createOperatorsRepo(db);
+    const runtimeProfilesRepo = createRuntimeProfilesRepo(db);
     const threadsRepo = createThreadsRepo(db);
     const messagesRepo = createMessagesRepo(db);
     const runsRepo = createRunsRepo(db);
@@ -442,6 +445,11 @@ app
     const testMode = isTestMode();
     const secretsStore = new SecretsStore();
     const providersService = getProvidersService();
+    const runtimeProfilesService = createRuntimeProfilesService({
+      runtimeProfilesRepo,
+      employeesRepo,
+      providersService,
+    });
     let resolveProvider: ResolveProvider;
 
     if (testMode) {
@@ -853,6 +861,7 @@ app
       extensionsRegistry,
       skillsService,
       operatorAccessService,
+      runtimeProfilesService,
       authorityRepo,
       authorityResolver,
       providersService,

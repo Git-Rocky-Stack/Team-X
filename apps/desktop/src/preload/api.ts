@@ -55,6 +55,7 @@ import type {
   BackupEntry,
   BackupRestoreRequest,
   BackupRestoreResponse,
+  BindEmployeeRuntimeProfileRequest,
   CallMeetingRequest,
   CallMeetingResponse,
   CommandHistoryRequest,
@@ -76,6 +77,7 @@ import type {
   CopilotExportResponse,
   CopilotInsightListArgs,
   CopilotInsightListResult,
+  CreateRuntimeProfileRequest,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -84,7 +86,9 @@ import type {
   CreateTicketResponse,
   DashboardEvent,
   DashboardEventListener,
+  DeleteRuntimeProfileRequest,
   DetachFileRequest,
+  EmployeeRuntimeBinding,
   EmployeesPromoteRequest,
   EmployeesPromoteResponse,
   EffectiveAuthoritySnapshot,
@@ -121,6 +125,8 @@ import type {
   OperatorAccessEntry,
   Project,
   ProjectDetail,
+  RuntimeProfileSummary,
+  RuntimeProfileValidation,
   ProviderConfig,
   RagDeleteForCompanyResponse,
   RagRebuildAllResponse,
@@ -177,7 +183,9 @@ import type {
   UpdateInstallResult,
   UpdateProjectRequest,
   UpdateProviderRequest,
+  UpdateRuntimeProfileRequest,
   UpdateTicketRequest,
+  ValidateRuntimeProfileRequest,
   VaultDownloadResponse,
   VaultFile,
   VaultSearchResult,
@@ -224,6 +232,12 @@ const CHANNELS = {
   companiesDelete: 'companies.delete',
   employeesList: 'employees.list',
   operatorsList: 'operators.list',
+  runtimeProfilesList: 'runtimeProfiles.list',
+  runtimeProfilesCreate: 'runtimeProfiles.create',
+  runtimeProfilesUpdate: 'runtimeProfiles.update',
+  runtimeProfilesDelete: 'runtimeProfiles.delete',
+  runtimeProfilesBindEmployee: 'runtimeProfiles.bindEmployee',
+  runtimeProfilesValidate: 'runtimeProfiles.validate',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
@@ -400,6 +414,25 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     operators: {
       list: (companyId: string) =>
         ipc.invoke(CHANNELS.operatorsList, { companyId }) as Promise<OperatorAccessEntry[]>,
+    },
+    runtimeProfiles: {
+      list: (companyId: string) =>
+        ipc.invoke(CHANNELS.runtimeProfilesList, { companyId }) as Promise<RuntimeProfileSummary[]>,
+      create: (req: CreateRuntimeProfileRequest) =>
+        ipc.invoke(CHANNELS.runtimeProfilesCreate, req) as Promise<{ profileId: string }>,
+      update: (req: UpdateRuntimeProfileRequest) =>
+        ipc.invoke(CHANNELS.runtimeProfilesUpdate, req) as Promise<void>,
+      delete: (profileId: string) =>
+        ipc.invoke(
+          CHANNELS.runtimeProfilesDelete,
+          { profileId } satisfies DeleteRuntimeProfileRequest,
+        ) as Promise<void>,
+      bindEmployee: (req: BindEmployeeRuntimeProfileRequest) =>
+        ipc.invoke(CHANNELS.runtimeProfilesBindEmployee, req) as Promise<{
+          binding: EmployeeRuntimeBinding | null;
+        }>,
+      validate: (req: ValidateRuntimeProfileRequest) =>
+        ipc.invoke(CHANNELS.runtimeProfilesValidate, req) as Promise<RuntimeProfileValidation>,
     },
     employees: {
       list: (companyId: string) =>

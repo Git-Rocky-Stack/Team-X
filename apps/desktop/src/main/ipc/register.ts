@@ -69,6 +69,12 @@ const REQUEST_CHANNELS = [
   'companies.delete',
   'employees.list',
   'operators.list',
+  'runtimeProfiles.list',
+  'runtimeProfiles.create',
+  'runtimeProfiles.update',
+  'runtimeProfiles.delete',
+  'runtimeProfiles.bindEmployee',
+  'runtimeProfiles.validate',
   'employees.create',
   'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d
@@ -259,6 +265,42 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('operators.list', async (_event, request: { companyId: string }) => {
     return handlers.operatorsList(request);
   });
+
+  ipcMain.handle('runtimeProfiles.list', async (_event, request: { companyId: string }) => {
+    return handlers.runtimeProfilesList(request);
+  });
+
+  ipcMain.handle(
+    'runtimeProfiles.create',
+    async (_event, request: import('@team-x/shared-types').CreateRuntimeProfileRequest) => {
+      return handlers.runtimeProfilesCreate(request);
+    },
+  );
+
+  ipcMain.handle(
+    'runtimeProfiles.update',
+    async (_event, request: import('@team-x/shared-types').UpdateRuntimeProfileRequest) => {
+      return handlers.runtimeProfilesUpdate(request);
+    },
+  );
+
+  ipcMain.handle('runtimeProfiles.delete', async (_event, request: { profileId: string }) => {
+    return handlers.runtimeProfilesDelete(request);
+  });
+
+  ipcMain.handle(
+    'runtimeProfiles.bindEmployee',
+    async (_event, request: import('@team-x/shared-types').BindEmployeeRuntimeProfileRequest) => {
+      return handlers.runtimeProfilesBindEmployee(request);
+    },
+  );
+
+  ipcMain.handle(
+    'runtimeProfiles.validate',
+    async (_event, request: import('@team-x/shared-types').ValidateRuntimeProfileRequest) => {
+      return handlers.runtimeProfilesValidate(request);
+    },
+  );
 
   ipcMain.handle(
     'employees.create',
