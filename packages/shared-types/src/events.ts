@@ -40,6 +40,12 @@ export type EventType =
   | 'employee.managerSet'
   | 'employee.hired'
   | 'employee.fired'
+  | 'routine.created'
+  | 'routine.updated'
+  | 'routine.deleted'
+  | 'routine.runStarted'
+  | 'routine.runCompleted'
+  | 'routine.runFailed'
   | 'ticket.created'
   | 'ticket.updated'
   | 'ticket.assigned'
@@ -560,6 +566,59 @@ export interface CompanyDeletedPayload {
   name: string;
   /** Wall-clock timestamp in ms when the delete handler committed the transaction. */
   deletedAt: number;
+}
+
+export interface RoutineCreatedPayload {
+  routineId: string;
+  companyId: string;
+  name: string;
+  triggerKind: 'interval' | 'daily' | 'weekly';
+  nextRunAt: number | null;
+  createdAt: number;
+}
+
+export interface RoutineUpdatedPayload {
+  routineId: string;
+  companyId: string;
+  patchedKeys: Array<'name' | 'enabled' | 'schedule' | 'workConfig'>;
+  nextRunAt: number | null;
+  updatedAt: number;
+}
+
+export interface RoutineDeletedPayload {
+  routineId: string;
+  companyId: string;
+  name: string;
+  deletedAt: number;
+}
+
+export interface RoutineRunStartedPayload {
+  routineId: string;
+  companyId: string;
+  runId: string;
+  reason: 'scheduled' | 'manual';
+  scheduledFor: number | null;
+  startedAt: number;
+}
+
+export interface RoutineRunCompletedPayload {
+  routineId: string;
+  companyId: string;
+  runId: string;
+  reason: 'scheduled' | 'manual';
+  ticketId: string | null;
+  finishedAt: number;
+  nextRunAt: number | null;
+}
+
+export interface RoutineRunFailedPayload {
+  routineId: string;
+  companyId: string;
+  runId: string;
+  reason: 'scheduled' | 'manual';
+  errorMessage: string;
+  finishedAt: number;
+  nextRunAt: number | null;
 }
 
 // ---------------------------------------------------------------------------

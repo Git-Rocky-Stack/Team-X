@@ -11,8 +11,10 @@ const SIDENAV_PATH = join(currentDirname, '..', '..', 'app', 'sidenav.tsx');
 const TOP_BAR_PATH = join(currentDirname, '..', '..', 'app', 'top-bar.tsx');
 const HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-operators.ts');
 const RUNTIME_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-runtime-profiles.ts');
+const ROUTINES_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-routines.ts');
 const VIEW_PATH = join(currentDirname, 'autonomy-view.tsx');
 const RUNTIME_PANEL_PATH = join(currentDirname, 'runtime-profiles-panel.tsx');
+const ROUTINES_PANEL_PATH = join(currentDirname, 'routines-panel.tsx');
 
 const appSrc = readFileSync(APP_PATH, 'utf8');
 const storeSrc = readFileSync(STORE_PATH, 'utf8');
@@ -20,8 +22,10 @@ const sidenavSrc = readFileSync(SIDENAV_PATH, 'utf8');
 const topBarSrc = readFileSync(TOP_BAR_PATH, 'utf8');
 const hookSrc = readFileSync(HOOK_PATH, 'utf8');
 const runtimeHookSrc = readFileSync(RUNTIME_HOOK_PATH, 'utf8');
+const routinesHookSrc = readFileSync(ROUTINES_HOOK_PATH, 'utf8');
 const viewSrc = readFileSync(VIEW_PATH, 'utf8');
 const runtimePanelSrc = readFileSync(RUNTIME_PANEL_PATH, 'utf8');
+const routinesPanelSrc = readFileSync(ROUTINES_PANEL_PATH, 'utf8');
 
 describe('Autonomy shell wiring', () => {
   it('adds autonomy as a top-level app destination', () => {
@@ -49,6 +53,8 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('Team-X stays zero-login by default.');
     expect(viewSrc).toContain("import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';");
     expect(viewSrc).toContain('<RuntimeProfilesPanel companyId={companyId} />');
+    expect(viewSrc).toContain("import { RoutinesPanel } from './routines-panel.js';");
+    expect(viewSrc).toContain('<RoutinesPanel companyId={companyId} />');
   });
 
   it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {
@@ -66,5 +72,21 @@ describe('Autonomy shell wiring', () => {
     expect(runtimePanelSrc).toContain('data-runtime-employee-binding={employee.id}');
     expect(runtimePanelSrc).toContain('lastHealthStatus');
     expect(runtimePanelSrc).toContain('Team-X internal is execution-backed in this slice.');
+  });
+
+  it('adds routine hooks and a routine panel with cadence and run history', () => {
+    expect(routinesHookSrc).toContain("queryKey: ['routines', companyId]");
+    expect(routinesHookSrc).toContain("queryKey: ['routine-runs', companyId, routineId ?? null, limit]");
+    expect(routinesHookSrc).toContain('ipc.routines.list(companyId!)');
+    expect(routinesHookSrc).toContain('ipc.routines.create');
+    expect(routinesHookSrc).toContain('ipc.routines.update');
+    expect(routinesHookSrc).toContain('ipc.routines.runNow');
+    expect(routinesPanelSrc).toContain('Create Routine');
+    expect(routinesPanelSrc).toContain('Recent Routine Runs');
+    expect(routinesPanelSrc).toContain('Recurring Routines create visible work.');
+    expect(routinesPanelSrc).toContain('data-routines-panel=""');
+    expect(routinesPanelSrc).toContain('data-routine-card={routine.id}');
+    expect(routinesPanelSrc).toContain('data-routine-run={run.id}');
+    expect(routinesPanelSrc).toContain('Run Now');
   });
 });

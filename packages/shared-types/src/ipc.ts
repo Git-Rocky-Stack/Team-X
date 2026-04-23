@@ -70,6 +70,10 @@ import type {
   MeetingMode,
   OperatorAccessEntry,
   Project,
+  Routine,
+  RoutineRun,
+  RoutineSchedule,
+  RoutineTicketWorkConfig,
   RuntimeProfileKind,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
@@ -241,6 +245,40 @@ export interface BindEmployeeRuntimeProfileRequest {
 export interface ValidateRuntimeProfileRequest {
   companyId: string;
   profileId: string;
+}
+
+export interface ListRoutinesRequest {
+  companyId: string;
+}
+
+export interface CreateRoutineRequest {
+  companyId: string;
+  name: string;
+  enabled?: boolean;
+  schedule: RoutineSchedule;
+  workConfig: RoutineTicketWorkConfig;
+}
+
+export interface UpdateRoutineRequest {
+  routineId: string;
+  name?: string;
+  enabled?: boolean;
+  schedule?: RoutineSchedule;
+  workConfig?: RoutineTicketWorkConfig;
+}
+
+export interface DeleteRoutineRequest {
+  routineId: string;
+}
+
+export interface ListRoutineRunsRequest {
+  companyId: string;
+  routineId?: string;
+  limit?: number;
+}
+
+export interface RunRoutineNowRequest {
+  routineId: string;
 }
 
 export interface SendChatRequest {
@@ -1587,6 +1625,32 @@ export interface IpcContract {
     request: ValidateRuntimeProfileRequest;
     response: RuntimeProfileValidation;
   };
+  'routines.list': {
+    request: ListRoutinesRequest;
+    response: Routine[];
+  };
+  'routines.create': {
+    request: CreateRoutineRequest;
+    response: { routineId: string };
+  };
+  'routines.update': {
+    request: UpdateRoutineRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'routines.delete': {
+    request: DeleteRoutineRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'routines.listRuns': {
+    request: ListRoutineRunsRequest;
+    response: RoutineRun[];
+  };
+  'routines.runNow': {
+    request: RunRoutineNowRequest;
+    response: RoutineRun;
+  };
   'employees.create': {
     request: HireEmployeeRequest;
     response: HireEmployeeResponse;
@@ -2271,6 +2335,20 @@ export interface TeamXApi {
     ): Promise<{ binding: EmployeeRuntimeBinding | null }>;
     /** Run the profile-kind-specific health check and persist the result. */
     validate(req: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
+  };
+  routines: {
+    /** List routine definitions for one workspace. */
+    list(companyId: string): Promise<Routine[]>;
+    /** Create one routine definition inside the current workspace. */
+    create(req: CreateRoutineRequest): Promise<{ routineId: string }>;
+    /** Patch one existing routine definition. */
+    update(req: UpdateRoutineRequest): Promise<void>;
+    /** Delete one routine definition and its historical run rows. */
+    delete(routineId: string): Promise<void>;
+    /** List recent routine runs for a workspace or one specific routine. */
+    listRuns(req: ListRoutineRunsRequest): Promise<RoutineRun[]>;
+    /** Force one routine to materialize work immediately. */
+    runNow(req: RunRoutineNowRequest): Promise<RoutineRun>;
   };
   orgchart: {
     /**

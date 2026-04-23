@@ -78,6 +78,7 @@ import type {
   CopilotInsightListArgs,
   CopilotInsightListResult,
   CreateRuntimeProfileRequest,
+  CreateRoutineRequest,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -87,6 +88,7 @@ import type {
   DashboardEvent,
   DashboardEventListener,
   DeleteRuntimeProfileRequest,
+  DeleteRoutineRequest,
   DetachFileRequest,
   EmployeeRuntimeBinding,
   EmployeesPromoteRequest,
@@ -114,6 +116,7 @@ import type {
   ListEventsRequest,
   ListEventsResponse,
   ListMcpTemplatesRequest,
+  ListRoutineRunsRequest,
   ListSkillAssignmentsRequest,
   CreateAuthorityGrantRequest,
   McpServerSummary,
@@ -125,6 +128,8 @@ import type {
   OperatorAccessEntry,
   Project,
   ProjectDetail,
+  Routine,
+  RoutineRun,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
   ProviderConfig,
@@ -184,8 +189,10 @@ import type {
   UpdateProjectRequest,
   UpdateProviderRequest,
   UpdateRuntimeProfileRequest,
+  UpdateRoutineRequest,
   UpdateTicketRequest,
   ValidateRuntimeProfileRequest,
+  RunRoutineNowRequest,
   VaultDownloadResponse,
   VaultFile,
   VaultSearchResult,
@@ -238,6 +245,12 @@ const CHANNELS = {
   runtimeProfilesDelete: 'runtimeProfiles.delete',
   runtimeProfilesBindEmployee: 'runtimeProfiles.bindEmployee',
   runtimeProfilesValidate: 'runtimeProfiles.validate',
+  routinesList: 'routines.list',
+  routinesCreate: 'routines.create',
+  routinesUpdate: 'routines.update',
+  routinesDelete: 'routines.delete',
+  routinesListRuns: 'routines.listRuns',
+  routinesRunNow: 'routines.runNow',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
@@ -433,6 +446,20 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         }>,
       validate: (req: ValidateRuntimeProfileRequest) =>
         ipc.invoke(CHANNELS.runtimeProfilesValidate, req) as Promise<RuntimeProfileValidation>,
+    },
+    routines: {
+      list: (companyId: string) =>
+        ipc.invoke(CHANNELS.routinesList, { companyId }) as Promise<Routine[]>,
+      create: (req: CreateRoutineRequest) =>
+        ipc.invoke(CHANNELS.routinesCreate, req) as Promise<{ routineId: string }>,
+      update: (req: UpdateRoutineRequest) =>
+        ipc.invoke(CHANNELS.routinesUpdate, req) as Promise<void>,
+      delete: (routineId: string) =>
+        ipc.invoke(CHANNELS.routinesDelete, { routineId } satisfies DeleteRoutineRequest) as Promise<void>,
+      listRuns: (req: ListRoutineRunsRequest) =>
+        ipc.invoke(CHANNELS.routinesListRuns, req) as Promise<RoutineRun[]>,
+      runNow: (req: RunRoutineNowRequest) =>
+        ipc.invoke(CHANNELS.routinesRunNow, req) as Promise<RoutineRun>,
     },
     employees: {
       list: (companyId: string) =>

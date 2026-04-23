@@ -76,6 +76,7 @@ import type {
   CopilotExportResponse,
   CopilotWeightsChangedPayload,
   CreateRuntimeProfileRequest,
+  CreateRoutineRequest,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
@@ -84,6 +85,7 @@ import type {
   CreateTicketResponse,
   DashboardEvent,
   DeleteRuntimeProfileRequest,
+  DeleteRoutineRequest,
   DeleteGoalRequest,
   DeleteProjectRequest,
   DetachFileRequest,
@@ -127,6 +129,8 @@ import type {
   ListProviderModelsResponse,
   ListProjectsRequest,
   ListRuntimeProfilesRequest,
+  ListRoutinesRequest,
+  ListRoutineRunsRequest,
   ListTicketsRequest,
   McpServerSummary,
   McpTemplateSummary,
@@ -146,6 +150,8 @@ import type {
   ReviewAuthorityRequestRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
+  Routine,
+  RoutineRun,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
   SendChatRequest,
@@ -195,12 +201,14 @@ import type {
   UnlinkTicketFromProjectRequest,
   UpdateCheckResult,
   UpdateRuntimeProfileRequest,
+  UpdateRoutineRequest,
   UpdateGoalRequest,
   UpdateInstallResult,
   UpdateProjectRequest,
   UpdateProviderRequest,
   UpdateTicketRequest,
   ValidateRuntimeProfileRequest,
+  RunRoutineNowRequest,
   VaultDownloadResponse,
   VaultFile,
   VaultSearchResult,
@@ -218,6 +226,7 @@ import {
   DEFAULT_CONCURRENCY_CAPS,
   PRIVACY_TIER_RANK,
   RUNTIME_PROFILE_KINDS,
+  ROUTINE_TRIGGER_KINDS,
   STRATEGY_SLOTS,
   TELEMETRY_RUN_KINDS,
   getLevelRank,
@@ -772,6 +781,17 @@ export interface IpcRuntimeProfilesService {
   validateProfile(input: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
 }
 
+export interface IpcRoutineService {
+  start(companyId: string): void;
+  stop(companyId: string): void;
+  list(companyId: string): Routine[];
+  listRuns(input: ListRoutineRunsRequest): RoutineRun[];
+  create(input: CreateRoutineRequest): string;
+  update(input: UpdateRoutineRequest): void;
+  delete(routineId: string): void;
+  runNow(input: RunRoutineNowRequest): Promise<RoutineRun>;
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -794,6 +814,7 @@ export interface IpcHandlerDeps {
   skillsService?: IpcSkillsService;
   operatorAccessService?: IpcOperatorAccessService;
   runtimeProfilesService?: IpcRuntimeProfilesService;
+  routineService?: IpcRoutineService;
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
@@ -961,6 +982,18 @@ export interface IpcHandlers {
   ): Promise<{ binding: EmployeeRuntimeBinding | null }>;
   /** `runtimeProfiles.validate` — run and persist the kind-specific health check. */
   runtimeProfilesValidate(req: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
+  /** `routines.list` — return routine definitions for a company. */
+  routinesList(req: ListRoutinesRequest): Promise<Routine[]>;
+  /** `routines.create` — create one recurring routine definition. */
+  routinesCreate(req: CreateRoutineRequest): Promise<{ routineId: string }>;
+  /** `routines.update` — patch one routine definition. */
+  routinesUpdate(req: UpdateRoutineRequest): Promise<void>;
+  /** `routines.delete` — delete one routine definition. */
+  routinesDelete(req: DeleteRoutineRequest): Promise<void>;
+  /** `routines.listRuns` — return recent routine runs. */
+  routinesListRuns(req: ListRoutineRunsRequest): Promise<RoutineRun[]>;
+  /** `routines.runNow` — force one routine to materialize work immediately. */
+  routinesRunNow(req: RunRoutineNowRequest): Promise<RoutineRun>;
 
   /**
    * `employees.create` — hire a new employee from a role-pack role.
@@ -1796,6 +1829,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     skillsService,
     operatorAccessService,
     runtimeProfilesService,
+    routineService,
     authorityRepo,
     authorityResolver,
     providersService,
@@ -1950,6 +1984,102 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       return runtimeProfilesService.validateProfile(req);
     },
 
+    async routinesList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] routines.list: companyId is required');
+      }
+      if (!routineService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ipc] routines.list: routineService dep unwired — returning an empty routine set');
+        }
+        return [];
+      }
+      return routineService.list(req.companyId);
+    },
+
+    async routinesCreate(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] routines.create: companyId is required');
+      }
+      if (typeof req.name !== 'string' || req.name.trim().length === 0) {
+        throw new Error('[ipc] routines.create: name is required');
+      }
+      if (
+        !req.schedule ||
+        typeof req.schedule !== 'object' ||
+        !ROUTINE_TRIGGER_KINDS.includes(req.schedule.triggerKind)
+      ) {
+        throw new Error('[ipc] routines.create: schedule.triggerKind is invalid');
+      }
+      if (!req.workConfig || typeof req.workConfig !== 'object') {
+        throw new Error('[ipc] routines.create: workConfig is required');
+      }
+      if (!routineService) {
+        throw new Error('[ipc] routines.create: routineService dep is required');
+      }
+      return { routineId: routineService.create(req) };
+    },
+
+    async routinesUpdate(req) {
+      if (typeof req.routineId !== 'string' || req.routineId.length === 0) {
+        throw new Error('[ipc] routines.update: routineId is required');
+      }
+      if (req.name !== undefined && (typeof req.name !== 'string' || req.name.trim().length === 0)) {
+        throw new Error('[ipc] routines.update: name must be non-empty when provided');
+      }
+      if (
+        req.schedule !== undefined &&
+        (!req.schedule ||
+          typeof req.schedule !== 'object' ||
+          !ROUTINE_TRIGGER_KINDS.includes(req.schedule.triggerKind))
+      ) {
+        throw new Error('[ipc] routines.update: schedule.triggerKind is invalid');
+      }
+      if (req.workConfig !== undefined && (!req.workConfig || typeof req.workConfig !== 'object')) {
+        throw new Error('[ipc] routines.update: workConfig must be an object when provided');
+      }
+      if (!routineService) {
+        throw new Error('[ipc] routines.update: routineService dep is required');
+      }
+      routineService.update(req);
+    },
+
+    async routinesDelete(req) {
+      if (typeof req.routineId !== 'string' || req.routineId.length === 0) {
+        throw new Error('[ipc] routines.delete: routineId is required');
+      }
+      if (!routineService) {
+        throw new Error('[ipc] routines.delete: routineService dep is required');
+      }
+      routineService.delete(req.routineId);
+    },
+
+    async routinesListRuns(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] routines.listRuns: companyId is required');
+      }
+      if (req.routineId !== undefined && typeof req.routineId !== 'string') {
+        throw new Error('[ipc] routines.listRuns: routineId must be a string when provided');
+      }
+      if (!routineService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ipc] routines.listRuns: routineService dep unwired — returning an empty run set');
+        }
+        return [];
+      }
+      return routineService.listRuns(req);
+    },
+
+    async routinesRunNow(req) {
+      if (typeof req.routineId !== 'string' || req.routineId.length === 0) {
+        throw new Error('[ipc] routines.runNow: routineId is required');
+      }
+      if (!routineService) {
+        throw new Error('[ipc] routines.runNow: routineService dep is required');
+      }
+      return routineService.runNow(req);
+    },
+
     async companiesCreate(req) {
       // Input validation — fail closed on missing/empty fields BEFORE any
       // SQL writes so a malformed request never leaves a partial row.
@@ -2041,6 +2171,20 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           '[ipc] companies.create: operatorAccessService dep unwired — new company will not get an operator membership bootstrap until next app start',
         );
       }
+      if (routineService) {
+        try {
+          routineService.start(companyId);
+        } catch (err) {
+          console.error(
+            `[ipc] companies.create: routine scheduler start failed for company ${companyId} (company remains usable, routines may not tick until next app start):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] companies.create: routineService dep unwired — new company routines will not auto-start until next app start',
+        );
+      }
 
       // Architectural invariant #11 — IPC channels that mutate state
       // MUST emit a bus event so renderer caches invalidate. Mirrors
@@ -2115,6 +2259,11 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         copilotEventWindow.clear(companyId);
       } else if (process.env.NODE_ENV !== 'production') {
         console.warn('[ipc] companies.archive: copilotEventWindow dep unwired — skipping clear()');
+      }
+      if (routineService) {
+        routineService.stop(companyId);
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] companies.archive: routineService dep unwired — skipping stop()');
       }
       companiesRepo.archive(companyId);
 
@@ -2298,6 +2447,11 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         copilotEventWindow.clear(companyId);
       } else if (process.env.NODE_ENV !== 'production') {
         console.warn('[ipc] companies.delete: copilotEventWindow dep unwired — skipping clear()');
+      }
+      if (routineService) {
+        routineService.stop(companyId);
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn('[ipc] companies.delete: routineService dep unwired — skipping stop()');
       }
 
       // --- Hard delete (transactional 15-table sweep) --------------

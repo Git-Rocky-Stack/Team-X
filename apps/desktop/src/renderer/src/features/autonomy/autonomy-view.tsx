@@ -25,6 +25,7 @@ import {
   MissionSegmentedButton,
   MissionStateBlock,
 } from '../mission/mission-shell.js';
+import { RoutinesPanel } from './routines-panel.js';
 import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
 type AutonomySubview = 'runtimes' | 'routines' | 'budgets' | 'approvals' | 'artifacts' | 'access';
@@ -63,9 +64,9 @@ const SUBVIEW_COPY: Record<
     title: 'Recurring Routines',
     description:
       'Define recurring operating loops that become visible work instead of hidden background automation.',
-    emptyTitle: 'Routine scheduling is not wired yet',
+    emptyTitle: 'Routine control plane is empty',
     emptyDescription:
-      'This panel will host interval and scheduled routines, due-run visibility, and operator-owned cadence controls in the next slice.',
+      'Create the first cadence, bind the work template, and watch the resulting ticket runs materialize through the existing workforce path.',
   },
   budgets: {
     title: 'Budget Governance',
@@ -308,6 +309,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             )
           ) : activeSubview === 'runtimes' ? (
             <RuntimeProfilesPanel companyId={companyId} />
+          ) : activeSubview === 'routines' ? (
+            <RoutinesPanel companyId={companyId} />
           ) : (
             <MissionStateBlock
               title={activeCopy.emptyTitle}

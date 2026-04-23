@@ -175,6 +175,70 @@ export const employeeRuntimeBindings = sqliteTable(
   }),
 );
 
+/** Recurring operating loops that materialize explicit work on a schedule. */
+export const routines = sqliteTable(
+  'routines',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    /** interval | daily | weekly */
+    triggerKind: text('trigger_kind').notNull(),
+    scheduleJson: text('schedule_json').notNull().default('{}'),
+    /** ticket */
+    workKind: text('work_kind').notNull().default('ticket'),
+    workConfigJson: text('work_config_json').notNull().default('{}'),
+    /** never | running | success | error */
+    lastRunStatus: text('last_run_status').notNull().default('never'),
+    lastRunMessage: text('last_run_message'),
+    lastRunAt: integer('last_run_at'),
+    nextRunAt: integer('next_run_at'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_routines_company').on(table.companyId),
+    companySlugIdx: index('idx_routines_company_slug').on(table.companyId, table.slug),
+    companyNextRunIdx: index('idx_routines_company_next_run').on(table.companyId, table.nextRunAt),
+  }),
+);
+
+/** Historical materializations of routines into explicit work. */
+export const routineRuns = sqliteTable(
+  'routine_runs',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    routineId: text('routine_id')
+      .notNull()
+      .references(() => routines.id, { onDelete: 'cascade' }),
+    /** running | success | error */
+    status: text('status').notNull(),
+    /** scheduled | manual */
+    reason: text('reason').notNull(),
+    /** ticket */
+    workKind: text('work_kind').notNull().default('ticket'),
+    scheduledFor: integer('scheduled_for'),
+    startedAt: integer('started_at').notNull(),
+    finishedAt: integer('finished_at'),
+    ticketId: text('ticket_id'),
+    message: text('message'),
+    errorMessage: text('error_message'),
+  },
+  (table) => ({
+    companyIdx: index('idx_routine_runs_company').on(table.companyId),
+    routineIdx: index('idx_routine_runs_routine').on(table.routineId),
+    routineStartedIdx: index('idx_routine_runs_routine_started').on(table.routineId, table.startedAt),
+    companyStartedIdx: index('idx_routine_runs_company_started').on(table.companyId, table.startedAt),
+  }),
+);
+
 /** Conversations — direct 1:1, group, meeting, ticket discussion, or broadcast. */
 export const threads = sqliteTable('threads', {
   id: text('id').primaryKey(),

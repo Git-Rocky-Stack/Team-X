@@ -92,6 +92,7 @@ import { createOrgEdgesRepo } from './db/repos/orgchart.js';
 import { createOperatorsRepo } from './db/repos/operators.js';
 import { createProjectsRepo } from './db/repos/projects.js';
 import { createRuntimeProfilesRepo } from './db/repos/runtime-profiles.js';
+import { createRoutinesRepo } from './db/repos/routines.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createSettingsRepo } from './db/repos/settings.js';
 import { createThreadsRepo } from './db/repos/threads.js';
@@ -147,6 +148,11 @@ import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import { detectHardware } from './services/profiler.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
 import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
+import {
+  type RoutineService,
+  type RoutineServiceCreateTicketInput,
+  createRoutineService,
+} from './services/routine-service.js';
 import {
   buildEmbedAdapter,
   createProviderFactory,
@@ -314,6 +320,7 @@ let agenticLoopServiceInstance: AgenticLoopService | null = null;
  * on the bus.
  */
 let copilotAnalyzerServiceInstance: CopilotAnalyzerService | null = null;
+let routineServiceInstance: RoutineService | null = null;
 /**
  * Copilot event trigger (M33 T4) — bus subscriber that debounces
  * meeting.ended / ticket.closed / goal.progressChanged /
@@ -347,6 +354,7 @@ app
     const employeesRepo = createEmployeesRepo(db);
     const operatorsRepo = createOperatorsRepo(db);
     const runtimeProfilesRepo = createRuntimeProfilesRepo(db);
+    const routinesRepo = createRoutinesRepo(db);
     const threadsRepo = createThreadsRepo(db);
     const messagesRepo = createMessagesRepo(db);
     const runsRepo = createRunsRepo(db);
@@ -449,6 +457,20 @@ app
       runtimeProfilesRepo,
       employeesRepo,
       providersService,
+    });
+    let routineTicketCreator: ((input: RoutineServiceCreateTicketInput) => Promise<{ ticketId: string }>) | null =
+      null;
+    routineServiceInstance = createRoutineService({
+      routinesRepo,
+      companiesRepo,
+      employeesRepo,
+      bus,
+      createTicket: async (input) => {
+        if (!routineTicketCreator) {
+          throw new Error('[main] routine ticket creator is not wired yet');
+        }
+        return routineTicketCreator(input);
+      },
     });
     let resolveProvider: ResolveProvider;
 
@@ -862,6 +884,7 @@ app
       skillsService,
       operatorAccessService,
       runtimeProfilesService,
+      routineService: routineServiceInstance,
       authorityRepo,
       authorityResolver,
       providersService,
@@ -946,6 +969,23 @@ app
       },
       getHardwareProfile: detectHardware,
     });
+    routineTicketCreator = async (input) => {
+      const result = await ipcHandlers.ticketsCreate({
+        companyId: input.companyId,
+        title: input.title,
+        description: input.description,
+        priority: input.priority,
+        assigneeId: input.assigneeId ?? undefined,
+        labelsJson: input.labelsJson,
+      });
+      return { ticketId: result.ticketId };
+    };
+    companiesRepo
+      .list()
+      .filter((company) => company.status !== 'archived')
+      .forEach((company) => {
+        routineServiceInstance?.start(company.id);
+      });
     // ---- Command palette service (Phase 5 — M30 T4) -----------------------
     //
     // Built AFTER `ipcHandlers` so we can wire the dispatcher against the
@@ -1813,6 +1853,14 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] copilot analyzer stop failed:', err);
+    }
+    try {
+      if (routineServiceInstance !== null) {
+        routineServiceInstance.stopAll();
+        routineServiceInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] routine service stop failed:', err);
     }
     // Stop the CommandService BEFORE the orchestrator drain (M29 T6
     // learning): any in-flight `command.execute` that is mid-dispatch

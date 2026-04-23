@@ -328,6 +328,83 @@ export interface RuntimeProfileValidation {
   details: Record<string, unknown> | null;
 }
 
+export const ROUTINE_TRIGGER_KINDS = ['interval', 'daily', 'weekly'] as const;
+export type RoutineTriggerKind = (typeof ROUTINE_TRIGGER_KINDS)[number];
+
+export const ROUTINE_WORK_KINDS = ['ticket'] as const;
+export type RoutineWorkKind = (typeof ROUTINE_WORK_KINDS)[number];
+
+export const ROUTINE_LAST_RUN_STATUSES = ['never', 'running', 'success', 'error'] as const;
+export type RoutineLastRunStatus = (typeof ROUTINE_LAST_RUN_STATUSES)[number];
+
+export const ROUTINE_RUN_STATUSES = ['running', 'success', 'error'] as const;
+export type RoutineRunStatus = (typeof ROUTINE_RUN_STATUSES)[number];
+
+export const ROUTINE_RUN_REASONS = ['scheduled', 'manual'] as const;
+export type RoutineRunReason = (typeof ROUTINE_RUN_REASONS)[number];
+
+export interface RoutineIntervalSchedule {
+  triggerKind: 'interval';
+  intervalMinutes: number;
+}
+
+export interface RoutineDailySchedule {
+  triggerKind: 'daily';
+  timeOfDay: string;
+}
+
+export interface RoutineWeeklySchedule {
+  triggerKind: 'weekly';
+  dayOfWeek: number;
+  timeOfDay: string;
+}
+
+export type RoutineSchedule =
+  | RoutineIntervalSchedule
+  | RoutineDailySchedule
+  | RoutineWeeklySchedule;
+
+export interface RoutineTicketWorkConfig {
+  title: string;
+  description: string;
+  assigneeId: string | null;
+  priority: TicketPriority;
+  labels: string[];
+}
+
+export interface Routine {
+  id: string;
+  companyId: string;
+  name: string;
+  slug: string;
+  enabled: boolean;
+  triggerKind: RoutineTriggerKind;
+  schedule: RoutineSchedule;
+  workKind: RoutineWorkKind;
+  workConfig: RoutineTicketWorkConfig;
+  lastRunStatus: RoutineLastRunStatus;
+  lastRunMessage: string | null;
+  lastRunAt: number | null;
+  nextRunAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface RoutineRun {
+  id: string;
+  companyId: string;
+  routineId: string;
+  status: RoutineRunStatus;
+  reason: RoutineRunReason;
+  workKind: RoutineWorkKind;
+  scheduledFor: number | null;
+  startedAt: number;
+  finishedAt: number | null;
+  ticketId: string | null;
+  message: string | null;
+  errorMessage: string | null;
+}
+
 export const EXTENSIONS_AUTONOMY_MODES = [
   'balanced',
   'conservative',

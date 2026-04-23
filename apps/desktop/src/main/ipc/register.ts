@@ -75,6 +75,12 @@ const REQUEST_CHANNELS = [
   'runtimeProfiles.delete',
   'runtimeProfiles.bindEmployee',
   'runtimeProfiles.validate',
+  'routines.list',
+  'routines.create',
+  'routines.update',
+  'routines.delete',
+  'routines.listRuns',
+  'routines.runNow',
   'employees.create',
   'employees.fire',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d
@@ -299,6 +305,42 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'runtimeProfiles.validate',
     async (_event, request: import('@team-x/shared-types').ValidateRuntimeProfileRequest) => {
       return handlers.runtimeProfilesValidate(request);
+    },
+  );
+
+  ipcMain.handle('routines.list', async (_event, request: { companyId: string }) => {
+    return handlers.routinesList(request);
+  });
+
+  ipcMain.handle(
+    'routines.create',
+    async (_event, request: import('@team-x/shared-types').CreateRoutineRequest) => {
+      return handlers.routinesCreate(request);
+    },
+  );
+
+  ipcMain.handle(
+    'routines.update',
+    async (_event, request: import('@team-x/shared-types').UpdateRoutineRequest) => {
+      return handlers.routinesUpdate(request);
+    },
+  );
+
+  ipcMain.handle('routines.delete', async (_event, request: { routineId: string }) => {
+    return handlers.routinesDelete(request);
+  });
+
+  ipcMain.handle(
+    'routines.listRuns',
+    async (_event, request: import('@team-x/shared-types').ListRoutineRunsRequest) => {
+      return handlers.routinesListRuns(request);
+    },
+  );
+
+  ipcMain.handle(
+    'routines.runNow',
+    async (_event, request: import('@team-x/shared-types').RunRoutineNowRequest) => {
+      return handlers.routinesRunNow(request);
     },
   );
 
