@@ -46,7 +46,9 @@ export function useUserGuide({ company, employeeCount }: UseUserGuideOptions) {
   const companyId = company?.id ?? null;
   const queryClient = useQueryClient();
   const setActiveView = useAppStore((state) => state.setActiveView);
+  const setAutonomySubview = useAppStore((state) => state.setAutonomySubview);
   const setDashboardSubview = useAppStore((state) => state.setDashboardSubview);
+  const setTelemetrySubview = useAppStore((state) => state.setTelemetrySubview);
   const openSettingsSection = useAppStore((state) => state.openSettingsSection);
   const requestHireDialog = useAppStore((state) => state.requestHireDialog);
   const providersQuery = useProviders();
@@ -138,7 +140,13 @@ export function useUserGuide({ company, employeeCount }: UseUserGuideOptions) {
     }
 
     if (action.view === 'dashboard') {
-      setDashboardSubview('cards');
+      setDashboardSubview(action.dashboardSubview ?? 'cards');
+    }
+    if (action.view === 'telemetry' && action.telemetrySubview) {
+      setTelemetrySubview(action.telemetrySubview);
+    }
+    if (action.view === 'autonomy' && action.autonomySubview) {
+      setAutonomySubview(action.autonomySubview);
     }
     setActiveView(action.view);
   }

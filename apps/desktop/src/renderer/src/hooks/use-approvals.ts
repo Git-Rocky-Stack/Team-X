@@ -1,7 +1,7 @@
 import type { ApprovalItemKind, ApprovalItemStatus } from '@team-x/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { ipc } from '@/lib/ipc.js';
+import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
 
 export function useApprovals(
   companyId: string | null,
@@ -10,7 +10,7 @@ export function useApprovals(
 ) {
   return useQuery({
     queryKey: ['approvals', companyId, kind ?? null, status ?? null],
-    queryFn: () => ipc.approvals.list({ companyId: companyId!, kind, status }),
+    queryFn: () => autonomyClient.approvals.list({ companyId: companyId!, kind, status }),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -18,7 +18,7 @@ export function useApprovals(
 export function useReviewApproval(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ipc.approvals.review,
+    mutationFn: autonomyClient.approvals.review,
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['approvals', companyId] });

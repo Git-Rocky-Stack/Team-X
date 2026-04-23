@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import type { Company, OperatorAccessEntry } from '@team-x/shared-types';
 import {
@@ -11,7 +11,9 @@ import {
   Workflow,
 } from 'lucide-react';
 
+import { Button } from '@/components/ui/button.js';
 import { useOperators } from '@/hooks/use-operators.js';
+import { useAppStore } from '@/store/app-store.js';
 
 import {
   MissionControlRow,
@@ -132,16 +134,49 @@ function summarizeAccess(entries: readonly OperatorAccessEntry[]) {
   };
 }
 
+function postureLabel(summary: ReturnType<typeof summarizeAccess>): string {
+  if (summary.cloudOperators > 0) return 'shared-cloud';
+  if (summary.invitedOperators > 0) return 'shared-local';
+  return 'local-only';
+}
+
+function postureDescription(summary: ReturnType<typeof summarizeAccess>): string {
+  if (summary.cloudOperators > 0) {
+    return 'Cloud-backed operators are modeled in this workspace. Team-X still runs local-first, but the identity model is ready for hosted supervision.';
+  }
+  if (summary.invitedOperators > 0) {
+    return 'This workspace already has non-owner memberships, so the control plane is operating beyond the single-local-owner assumption.';
+  }
+  return 'This workspace is still local-only. The access model is explicit now, so invited or cloud operators can land later without rewriting the governance stack.';
+}
+
+function capabilityBadges(entry: OperatorAccessEntry): string[] {
+  return [
+    entry.membership.canApproveBudget ? 'Budget approvals' : null,
+    entry.membership.canApproveAuthority ? 'Authority approvals' : null,
+    entry.membership.canManageRoutines ? 'Routine management' : null,
+    entry.membership.canManageRuntimes ? 'Runtime management' : null,
+  ].filter((value): value is string => value !== null);
+}
+
+function authModeDescription(entry: OperatorAccessEntry): string {
+  if (entry.operator.authMode === 'cloud') {
+    return 'Cloud-backed operator identity placeholder for future hosted collaboration.';
+  }
+  if (entry.operator.authMode === 'invited') {
+    return 'Invited operator identity modeled locally so shared access can land without changing the workspace contract.';
+  }
+  if (entry.operator.id === 'rocky') {
+    return 'Bootstrapped local owner identity that keeps historical actions attributable while the app remains zero-login by default.';
+  }
+  return 'Local operator identity with no external login requirement.';
+}
+
 function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
   return (
     <div className="space-y-3">
       {entries.map((entry) => {
-        const privileges = [
-          entry.membership.canApproveBudget ? 'Budget approvals' : null,
-          entry.membership.canApproveAuthority ? 'Authority approvals' : null,
-          entry.membership.canManageRoutines ? 'Routine management' : null,
-          entry.membership.canManageRuntimes ? 'Runtime management' : null,
-        ].filter((value): value is string => value !== null);
+        const privileges = capabilityBadges(entry);
 
         return (
           <MissionInsetSurface key={entry.membership.id} className="p-4">
@@ -158,13 +193,17 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
                 <p className="text-xs leading-5 text-muted-foreground">
                   {entry.operator.email?.trim()
                     ? entry.operator.email
-                    : 'Local-first operator identity with no external login requirement.'}
+                    : authModeDescription(entry)}
                 </p>
               </div>
-              <div className="max-w-xl text-xs leading-5 text-muted-foreground">
-                {privileges.length > 0
-                  ? privileges.join(' • ')
-                  : 'No elevated governance capabilities are assigned to this membership.'}
+              <div className="flex max-w-xl flex-wrap items-center justify-end gap-2">
+                {privileges.length > 0 ? (
+                  privileges.map((privilege) => <MissionPill key={privilege}>{privilege}</MissionPill>)
+                ) : (
+                  <span className="text-xs leading-5 text-muted-foreground">
+                    No elevated governance capabilities are assigned to this membership.
+                  </span>
+                )}
               </div>
             </div>
           </MissionInsetSurface>
@@ -175,7 +214,8 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
 }
 
 export function AutonomyView({ company, companyId }: AutonomyViewProps) {
-  const [activeSubview, setActiveSubview] = useState<AutonomySubview>('access');
+  const activeSubview = useAppStore((state) => state.autonomySubview);
+  const setActiveSubview = useAppStore((state) => state.setAutonomySubview);
   const operatorsQuery = useOperators(companyId);
   const entries = operatorsQuery.data ?? [];
   const accessSummary = useMemo(() => summarizeAccess(entries), [entries]);
@@ -242,9 +282,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             value={
               operatorsQuery.isLoading
                 ? '...'
-                : accessSummary.invitedOperators + accessSummary.cloudOperators > 0
-                  ? 'mixed'
-                  : 'local'
+                : postureLabel(accessSummary)
             }
             hint="Explicit operator identity model"
             icon={Bot}
@@ -337,6 +375,12 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             <MissionInsetSurface className="p-4">
               <div className="space-y-3 text-sm text-muted-foreground">
                 <div className="flex items-center justify-between gap-3">
+                  <span>Posture</span>
+                  <span className="font-semibold uppercase tracking-[0.16em] text-foreground">
+                    {postureLabel(accessSummary)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
                   <span>Local operators</span>
                   <span className="font-semibold text-foreground">{accessSummary.localOperators}</span>
                 </div>
@@ -351,8 +395,28 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
               </div>
             </MissionInsetSurface>
             <p className="text-xs leading-5 text-muted-foreground">
-              Team-X stays zero-login by default. Multi-user and hosted seams are modeled here without forcing cloud mode into the local desktop experience.
+              {postureDescription(accessSummary)}
             </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-white/10 bg-black/10 hover:bg-black/20"
+                onClick={() => setActiveSubview('approvals')}
+              >
+                Open approvals
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-white/10 bg-black/10 hover:bg-black/20"
+                onClick={() => setActiveSubview('budgets')}
+              >
+                Open budgets
+              </Button>
+            </div>
           </MissionRailCard>
 
           <MissionRailCard
@@ -360,9 +424,9 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             description="The next autonomy slices build on this shell"
           >
             <MissionInsetSurface className="space-y-3 p-4 text-sm leading-6 text-muted-foreground">
-              <p>Runtime profiles will let operators bind employees to named internal, local, and external execution posture.</p>
-              <p>Routines will turn recurring operating loops into explicit work objects instead of silent background automation.</p>
-              <p>Budgets, approvals, and artifacts are now live; the remaining autonomy work is shared-cloud hardening and broader dashboard integration.</p>
+              <p>Runtime profiles, routines, budgets, approvals, and artifacts are now active slices of the control plane.</p>
+              <p>The remaining hardening work is about shared transport seams, richer operator membership flows, and propagating autonomy signals into the rest of the mission shell.</p>
+              <p>Use the User Guide and Mission Control links to keep autonomy visible instead of burying governance behind one isolated tab.</p>
             </MissionInsetSurface>
           </MissionRailCard>
         </div>

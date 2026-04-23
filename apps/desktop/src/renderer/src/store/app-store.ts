@@ -64,6 +64,15 @@ export type ProjectsSubview = 'kanban' | 'goals';
 /** Telemetry inner subview tabs. */
 export type TelemetrySubview = 'company' | 'employees' | 'cost';
 
+/** Autonomy inner subview tabs. */
+export type AutonomySubview =
+  | 'runtimes'
+  | 'routines'
+  | 'budgets'
+  | 'approvals'
+  | 'artifacts'
+  | 'access';
+
 export interface AppState {
   /** Which top-level view is active. */
   activeView: ActiveView;
@@ -104,6 +113,8 @@ export interface AppState {
   activeMeetingId: string | null;
   /** Which telemetry subview is showing (Company / Employees / Cost). */
   telemetrySubview: TelemetrySubview;
+  /** Which autonomy subview is showing (Runtimes / Routines / Budgets / Approvals / Artifacts / Access). */
+  autonomySubview: AutonomySubview;
   /**
    * Whether the Copilot sidebar panel is open (Phase 5 — M34).
    * Toggled by `Cmd+Shift+K`, the Sparkles toolbar button, and the
@@ -123,6 +134,7 @@ export interface AppState {
   setDashboardSubview: (subview: DashboardSubview) => void;
   setProjectsSubview: (subview: ProjectsSubview) => void;
   setTelemetrySubview: (subview: TelemetrySubview) => void;
+  setAutonomySubview: (subview: AutonomySubview) => void;
   setActiveProjectId: (projectId: string | null) => void;
   setActiveGoalId: (goalId: string | null) => void;
   setSelectedEmployee: (id: string | null) => void;
@@ -182,6 +194,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   projectsSubview: 'kanban',
   activeMeetingId: null,
   telemetrySubview: 'company',
+  autonomySubview: 'access',
   copilotSidebarOpen: false,
   pendingDirectChats: {},
   settingsFocusSection: null,
@@ -200,6 +213,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setDashboardSubview: (subview) => set({ dashboardSubview: subview }),
   setTelemetrySubview: (subview) => set({ telemetrySubview: subview }),
+  setAutonomySubview: (subview) => set({ autonomySubview: subview }),
 
   setSelectedEmployee: (id) =>
     set({

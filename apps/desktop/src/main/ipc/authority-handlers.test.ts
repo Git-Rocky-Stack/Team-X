@@ -127,6 +127,13 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
       grantId: 'grant-1',
     })),
   } as unknown as IpcHandlerDeps['approvalInboxService'];
+  const operatorAccessService = {
+    resolveOperatorIdForCompany: vi.fn((_companyId: string, preferredOperatorId?: string | null) =>
+      preferredOperatorId ?? 'rocky',
+    ),
+    listByCompany: vi.fn(() => []),
+    ensureLocalOwnerForCompany: vi.fn(() => ({ operatorId: 'rocky', membershipId: 'membership-1' })),
+  } as unknown as IpcHandlerDeps['operatorAccessService'];
 
   return {
     companiesRepo: noop,
@@ -148,6 +155,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     mcpServersRepo: noop,
     extensionsRegistry: noop,
     approvalInboxService,
+    operatorAccessService,
     authorityRepo,
     authorityResolver,
     providersService: noop,
@@ -277,8 +285,31 @@ describe('authority IPC handlers', () => {
         itemId: 'request-1',
         kind: 'authority-request',
         decision: 'approved',
+        operatorId: 'rocky',
       }),
     );
     expect(result).toEqual({ grantId: 'grant-1' });
+  });
+
+  it('forwards an explicit operator id through authority.reviewRequest', async () => {
+    const deps = makeDeps();
+    const handlers = createIpcHandlers(deps);
+
+    await handlers.authorityReviewRequest({
+      companyId: 'company-1',
+      requestId: 'request-1',
+      decision: 'approved',
+      operatorId: 'operator-9',
+    });
+
+    expect(deps.operatorAccessService?.resolveOperatorIdForCompany).toHaveBeenCalledWith(
+      'company-1',
+      'operator-9',
+    );
+    expect(deps.approvalInboxService?.reviewItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operatorId: 'operator-9',
+      }),
+    );
   });
 });

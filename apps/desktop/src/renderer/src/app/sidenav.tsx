@@ -114,23 +114,26 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
 
       <div className="px-4 pb-4">
         <div className="mission-control-row flex items-center justify-between rounded-[22px] border border-white/10 px-3 py-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
               Status
             </p>
-            <p className="mt-1 text-sm font-medium text-foreground">
-              {employees.length === 0
-                ? 'Awaiting first hire'
-                : `${employees.length} employees online`}
-            </p>
-          </div>
-          <div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-right text-[11px]">
-            {thinkingCount > 0 ? (
-              <span className="font-semibold text-brand">{thinkingCount} busy</span>
+            {employees.length === 0 ? (
+              <p className="mt-1 text-sm font-medium text-foreground">Awaiting first hire</p>
             ) : (
-              <span className="font-semibold text-foreground">All clear</span>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="text-sm font-medium text-foreground">{employees.length}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                  Employees Online
+                </span>
+              </div>
             )}
           </div>
+          {thinkingCount > 0 ? (
+            <div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-right text-[11px]">
+              <span className="font-semibold text-brand">{thinkingCount} busy</span>
+            </div>
+          ) : null}
         </div>
       </div>
 

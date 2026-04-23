@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { ipc } from '@/lib/ipc.js';
+import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
 
 export function useRuntimeProfiles(companyId: string | null) {
   return useQuery({
     queryKey: ['runtime-profiles', companyId],
-    queryFn: () => ipc.runtimeProfiles.list(companyId!),
+    queryFn: () => autonomyClient.runtimeProfiles.list(companyId!),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -13,7 +13,7 @@ export function useRuntimeProfiles(companyId: string | null) {
 export function useCreateRuntimeProfile(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ipc.runtimeProfiles.create,
+    mutationFn: autonomyClient.runtimeProfiles.create,
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['runtime-profiles', companyId] });
@@ -24,7 +24,7 @@ export function useCreateRuntimeProfile(companyId: string | null) {
 export function useUpdateRuntimeProfile(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ipc.runtimeProfiles.update,
+    mutationFn: autonomyClient.runtimeProfiles.update,
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['runtime-profiles', companyId] });
@@ -35,7 +35,7 @@ export function useUpdateRuntimeProfile(companyId: string | null) {
 export function useDeleteRuntimeProfile(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (profileId: string) => ipc.runtimeProfiles.delete(profileId),
+    mutationFn: (profileId: string) => autonomyClient.runtimeProfiles.delete(profileId),
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['runtime-profiles', companyId] });
@@ -46,7 +46,7 @@ export function useDeleteRuntimeProfile(companyId: string | null) {
 export function useBindEmployeeRuntimeProfile(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ipc.runtimeProfiles.bindEmployee,
+    mutationFn: autonomyClient.runtimeProfiles.bindEmployee,
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['runtime-profiles', companyId] });
@@ -57,7 +57,7 @@ export function useBindEmployeeRuntimeProfile(companyId: string | null) {
 export function useValidateRuntimeProfile(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ipc.runtimeProfiles.validate,
+    mutationFn: autonomyClient.runtimeProfiles.validate,
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['runtime-profiles', companyId] });

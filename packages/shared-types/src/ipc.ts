@@ -343,6 +343,7 @@ export interface ReviewApprovalItemRequest {
   kind: ApprovalItemKind;
   decision: ApprovalDecisionStatus;
   rationale?: string;
+  operatorId?: string;
 }
 
 export interface ListArtifactsRequest {
@@ -1036,6 +1037,7 @@ export interface ReviewAuthorityRequestRequest {
   requestId: string;
   decision: 'approved' | 'denied';
   reason?: string | null;
+  operatorId?: string;
 }
 
 export interface GetEffectiveAuthorityRequest {

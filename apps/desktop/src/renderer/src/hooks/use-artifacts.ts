@@ -1,12 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
+import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
 import { ipc } from '@/lib/ipc.js';
 
 export function useArtifacts(companyId: string | null, limit = 100) {
   return useQuery({
     queryKey: ['artifacts', companyId, limit],
-    queryFn: () => ipc.artifacts.list({ companyId: companyId!, limit }),
+    queryFn: () => autonomyClient.artifacts.list({ companyId: companyId!, limit }),
     enabled: companyId !== null && companyId.length > 0,
   });
 }

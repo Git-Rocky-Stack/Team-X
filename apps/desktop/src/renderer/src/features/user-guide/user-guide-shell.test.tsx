@@ -9,18 +9,24 @@ const APP_PATH = join(currentDirname, '..', '..', 'App.tsx');
 const STORE_PATH = join(currentDirname, '..', '..', 'store', 'app-store.ts');
 const SIDENAV_PATH = join(currentDirname, '..', '..', 'app', 'sidenav.tsx');
 const SETTINGS_VIEW_PATH = join(currentDirname, '..', '..', 'features', 'settings', 'settings-view.tsx');
+const GUIDE_CONTENT_PATH = join(currentDirname, 'guide-content.ts');
+const GUIDE_HOOK_PATH = join(currentDirname, 'use-user-guide.ts');
 
 const appSrc = readFileSync(APP_PATH, 'utf8');
 const storeSrc = readFileSync(STORE_PATH, 'utf8');
 const sidenavSrc = readFileSync(SIDENAV_PATH, 'utf8');
 const settingsViewSrc = readFileSync(SETTINGS_VIEW_PATH, 'utf8');
+const guideContentSrc = readFileSync(GUIDE_CONTENT_PATH, 'utf8');
+const guideHookSrc = readFileSync(GUIDE_HOOK_PATH, 'utf8');
 
 describe('User Guide shell wiring', () => {
   it('adds a dedicated user-guide top-level view plus guide utility actions in the store', () => {
     expect(storeSrc).toContain("| 'user-guide'");
     expect(storeSrc).toContain("export type SettingsSectionFocus = 'providers' | 'extensions';");
     expect(storeSrc).toContain('hireDialogRequestNonce');
+    expect(storeSrc).toContain("autonomySubview: 'access'");
     expect(storeSrc).toContain('openSettingsSection: (section: SettingsSectionFocus) => void;');
+    expect(storeSrc).toContain('setAutonomySubview: (subview: AutonomySubview) => void;');
     expect(storeSrc).toContain("requestHireDialog: () => void;");
   });
 
@@ -45,5 +51,14 @@ describe('User Guide shell wiring', () => {
     expect(settingsViewSrc).toContain('data-settings-section="providers"');
     expect(settingsViewSrc).toContain("document.querySelector<HTMLElement>(");
     expect(settingsViewSrc).toContain('scrollIntoView({ behavior: \'smooth\', block: \'start\' })');
+  });
+
+  it('adds autonomy guide actions with subview deep links through the shared app store', () => {
+    expect(guideContentSrc).toContain("id: 'open-autonomy-access'");
+    expect(guideContentSrc).toContain("id: 'open-autonomy-runtimes'");
+    expect(guideContentSrc).toContain("id: 'open-autonomy-approvals'");
+    expect(guideContentSrc).toContain("id: 'autonomy-control-plane'");
+    expect(guideHookSrc).toContain("if (action.view === 'autonomy' && action.autonomySubview) {");
+    expect(guideHookSrc).toContain('setAutonomySubview(action.autonomySubview);');
   });
 });

@@ -57,6 +57,13 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
       grantId: null,
     })),
   } as unknown as IpcHandlerDeps['approvalInboxService'];
+  const operatorAccessService = {
+    resolveOperatorIdForCompany: vi.fn((_companyId: string, preferredOperatorId?: string | null) =>
+      preferredOperatorId ?? 'rocky',
+    ),
+    listByCompany: vi.fn(() => []),
+    ensureLocalOwnerForCompany: vi.fn(() => ({ operatorId: 'rocky', membershipId: 'membership-1' })),
+  } as unknown as IpcHandlerDeps['operatorAccessService'];
 
   return {
     companiesRepo: noop,
@@ -97,6 +104,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     auditRepo: noop,
     updaterService: noop,
     approvalInboxService,
+    operatorAccessService,
     getHardwareProfile: () => ({}) as never,
     ...overrides,
   } as unknown as IpcHandlerDeps;
@@ -134,7 +142,31 @@ describe('approvals IPC handlers', () => {
       kind: 'budget-exception',
       decision: 'approved',
       rationale: 'Approved for the rest of the month.',
+      operatorId: 'rocky',
     });
     expect(result).toEqual({ grantId: null });
+  });
+
+  it('resolves an explicit workspace operator for approvals.review', async () => {
+    const deps = makeDeps();
+    const handlers = createIpcHandlers(deps);
+
+    await handlers.approvalsReview({
+      companyId: 'company-1',
+      itemId: 'approval-1',
+      kind: 'budget-exception',
+      decision: 'approved',
+      operatorId: 'operator-9',
+    });
+
+    expect(deps.operatorAccessService?.resolveOperatorIdForCompany).toHaveBeenCalledWith(
+      'company-1',
+      'operator-9',
+    );
+    expect(deps.approvalInboxService?.reviewItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operatorId: 'operator-9',
+      }),
+    );
   });
 });

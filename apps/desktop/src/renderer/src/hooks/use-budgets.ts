@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { BudgetScopeKind } from '@team-x/shared-types';
 
-import { ipc } from '@/lib/ipc.js';
+import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
 
 function invalidateBudgetQueries(qc: ReturnType<typeof useQueryClient>, companyId: string | null) {
   if (!companyId) return;
@@ -15,7 +15,7 @@ function invalidateBudgetQueries(qc: ReturnType<typeof useQueryClient>, companyI
 export function useBudgetOverview(companyId: string | null) {
   return useQuery({
     queryKey: ['budgets', 'overview', companyId],
-    queryFn: () => ipc.budgets.getOverview(companyId!),
+    queryFn: () => autonomyClient.budgets.getOverview(companyId!),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -23,7 +23,7 @@ export function useBudgetOverview(companyId: string | null) {
 export function useBudgetPolicies(companyId: string | null) {
   return useQuery({
     queryKey: ['budgets', 'policies', companyId],
-    queryFn: () => ipc.budgets.listPolicies(companyId!),
+    queryFn: () => autonomyClient.budgets.listPolicies(companyId!),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -37,7 +37,7 @@ export function useBudgetLedger(
   return useQuery({
     queryKey: ['budgets', 'ledger', companyId, scopeKind ?? null, scopeRefId ?? null, limit],
     queryFn: () =>
-      ipc.budgets.listLedger({
+      autonomyClient.budgets.listLedger({
         companyId: companyId!,
         scopeKind: scopeKind ?? undefined,
         scopeRefId: scopeRefId ?? undefined,
@@ -50,7 +50,7 @@ export function useBudgetLedger(
 export function useBudgetApprovals(companyId: string | null) {
   return useQuery({
     queryKey: ['budgets', 'approvals', companyId],
-    queryFn: () => ipc.budgets.listApprovals({ companyId: companyId!, status: 'pending' }),
+    queryFn: () => autonomyClient.budgets.listApprovals({ companyId: companyId!, status: 'pending' }),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -58,7 +58,7 @@ export function useBudgetApprovals(companyId: string | null) {
 export function useCreateBudgetPolicy(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ipc.budgets.createPolicy,
+    mutationFn: autonomyClient.budgets.createPolicy,
     onSuccess: () => invalidateBudgetQueries(qc, companyId),
   });
 }
@@ -66,7 +66,7 @@ export function useCreateBudgetPolicy(companyId: string | null) {
 export function useUpdateBudgetPolicy(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ipc.budgets.updatePolicy,
+    mutationFn: autonomyClient.budgets.updatePolicy,
     onSuccess: () => invalidateBudgetQueries(qc, companyId),
   });
 }
@@ -74,7 +74,7 @@ export function useUpdateBudgetPolicy(companyId: string | null) {
 export function useDeleteBudgetPolicy(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (policyId: string) => ipc.budgets.deletePolicy(policyId),
+    mutationFn: (policyId: string) => autonomyClient.budgets.deletePolicy(policyId),
     onSuccess: () => invalidateBudgetQueries(qc, companyId),
   });
 }

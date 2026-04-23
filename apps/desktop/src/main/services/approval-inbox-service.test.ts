@@ -137,11 +137,13 @@ describe('approval inbox service', () => {
       kind: 'authority-request',
       decision: 'approved',
       rationale: 'Approved for this workspace.',
+      operatorId: 'operator-7',
     });
 
     expect(result.grantId).toBeTruthy();
     expect(authorityRepo.getRequestById(requestId)?.status).toBe('approved');
     expect(result.item.latestDecision?.decision).toBe('approved');
     expect(result.item.latestDecision?.rationale).toBe('Approved for this workspace.');
+    expect(result.item.latestDecision?.decidedByOperatorId).toBe('operator-7');
   });
 });

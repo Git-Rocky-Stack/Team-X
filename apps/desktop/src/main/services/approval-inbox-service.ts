@@ -15,7 +15,6 @@ import type {
   ApprovalItemRow,
   BudgetsRepo,
 } from '../db/repos/budgets.js';
-import { LOCAL_OWNER_OPERATOR_ID } from './operator-access-service.js';
 
 export interface ListApprovalInboxItemsInput {
   companyId: string;
@@ -29,6 +28,7 @@ export interface ReviewApprovalInboxItemInput {
   kind: ApprovalItemKind;
   decision: ApprovalDecisionStatus;
   rationale?: string | null;
+  operatorId: string;
 }
 
 export interface ApprovalInboxReviewResult {
@@ -53,7 +53,6 @@ export interface ApprovalInboxServiceDeps {
       createdAt: number;
     }): unknown;
   };
-  operatorId?: string;
 }
 
 function parsePayloadJson(raw: string): Record<string, unknown> | null {
@@ -126,7 +125,6 @@ export function createApprovalInboxService({
   budgetsRepo,
   authorityRepo,
   artifactService,
-  operatorId = LOCAL_OWNER_OPERATOR_ID,
 }: ApprovalInboxServiceDeps) {
   function listItems(input: ListApprovalInboxItemsInput): ApprovalItem[] {
     const items: ApprovalItem[] = [];
@@ -200,7 +198,7 @@ export function createApprovalInboxService({
         approvalKind: 'budget-exception',
         approvalRefId: input.itemId,
         decision: input.decision,
-        decidedByOperatorId: operatorId,
+        decidedByOperatorId: input.operatorId,
         rationale: input.rationale ?? null,
         payloadJson: existing.payloadJson,
       });
@@ -215,7 +213,7 @@ export function createApprovalInboxService({
             subjectRefId: existing.subjectRefId,
             summary: existing.summary,
             rationale: input.rationale ?? null,
-            approvedByOperatorId: operatorId,
+            approvedByOperatorId: input.operatorId,
             createdAt,
           });
         } catch {
@@ -280,7 +278,7 @@ export function createApprovalInboxService({
         approvalKind: 'authority-request',
         approvalRefId: input.itemId,
         decision: input.decision,
-        decidedByOperatorId: operatorId,
+        decidedByOperatorId: input.operatorId,
         rationale: input.rationale ?? null,
         payloadJson: JSON.stringify({
           extensionId: request.extensionId,
@@ -300,7 +298,7 @@ export function createApprovalInboxService({
             subjectRefId: request.extensionId,
             summary: `Authority review required for ${request.resourceKind} ${request.resourceId}.`,
             rationale: input.rationale ?? null,
-            approvedByOperatorId: operatorId,
+            approvedByOperatorId: input.operatorId,
             createdAt,
           });
         } catch {

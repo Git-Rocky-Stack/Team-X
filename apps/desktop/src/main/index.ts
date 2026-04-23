@@ -492,7 +492,6 @@ app
       budgetsRepo,
       authorityRepo,
       artifactService,
-      operatorId: operatorAccessService.getLocalOwnerId(),
     });
     let routineTicketCreator: ((input: RoutineServiceCreateTicketInput) => Promise<{ ticketId: string }>) | null =
       null;

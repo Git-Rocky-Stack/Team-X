@@ -66,6 +66,27 @@ export function createOperatorAccessService({ operatorsRepo }: OperatorAccessSer
     return { operatorId: owner.id, membershipId };
   }
 
+  function resolveOperatorIdForCompany(
+    companyId: string,
+    preferredOperatorId?: string | null,
+  ): string {
+    const memberships = operatorsRepo.listMembershipsByCompany(companyId);
+
+    if (preferredOperatorId) {
+      const matchingMembership = memberships.find(
+        (membership) => membership.operatorId === preferredOperatorId,
+      );
+      if (!matchingMembership) {
+        throw new Error(
+          `[operator-access] operator ${preferredOperatorId} does not belong to company ${companyId}`,
+        );
+      }
+      return preferredOperatorId;
+    }
+
+    return ensureLocalOwnerForCompany(companyId).operatorId;
+  }
+
   return {
     getLocalOwnerId(): string {
       return LOCAL_OWNER_OPERATOR_ID;
@@ -79,6 +100,8 @@ export function createOperatorAccessService({ operatorsRepo }: OperatorAccessSer
         ensureLocalOwnerForCompany(companyId);
       }
     },
+
+    resolveOperatorIdForCompany,
 
     listByCompany(companyId: string): OperatorAccessEntry[] {
       const memberships = operatorsRepo.listMembershipsByCompany(companyId);

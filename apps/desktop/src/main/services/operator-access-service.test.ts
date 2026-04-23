@@ -90,4 +90,29 @@ describe('operator access service', () => {
       }),
     ]);
   });
+
+  it('resolves an explicit company member and rejects foreign operators', () => {
+    operatorsRepo.create({
+      id: 'operator-invited',
+      displayName: 'Invited Operator',
+      authMode: 'invited',
+    });
+    operatorsRepo.upsertMembership({
+      operatorId: 'operator-invited',
+      companyId: 'company-alpha',
+      role: 'operator',
+      canApproveBudget: true,
+      canApproveAuthority: false,
+      canManageRoutines: true,
+      canManageRuntimes: false,
+    });
+
+    expect(service.resolveOperatorIdForCompany('company-alpha', 'operator-invited')).toBe(
+      'operator-invited',
+    );
+    expect(service.resolveOperatorIdForCompany('company-beta')).toBe(LOCAL_OWNER_OPERATOR_ID);
+    expect(() =>
+      service.resolveOperatorIdForCompany('company-beta', 'operator-invited'),
+    ).toThrow(/does not belong to company company-beta/i);
+  });
 });

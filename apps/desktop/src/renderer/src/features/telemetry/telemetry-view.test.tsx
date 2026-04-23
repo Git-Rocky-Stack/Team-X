@@ -54,6 +54,7 @@ describe('Telemetry mission-language carry-forward', () => {
     expect(telemetryViewSrc).toContain('<MissionPageShell data-telemetry-view="">');
     expect(telemetryViewSrc).toContain('<MissionHero');
     expect(telemetryViewSrc).toContain('data-telemetry-controls=""');
+    expect(telemetryViewSrc).toContain('data-telemetry-governance=""');
     expect(telemetryViewSrc).toContain('data-telemetry-subtabs=""');
     expect(telemetryViewSrc).toContain('data-telemetry-kind-filter-row=""');
   });
@@ -86,5 +87,12 @@ describe('Telemetry mission-language carry-forward', () => {
     expect(employeeTelemetrySrc).toContain('<MissionSectionCard');
     expect(costBreakdownSrc).toContain('<MissionSectionCard');
     expect(costBreakdownSrc).toContain('<MissionControlRow');
+  });
+
+  it('ties telemetry to autonomy governance signals rather than cost alone', () => {
+    expect(telemetryViewSrc).toContain('Governance context');
+    expect(telemetryViewSrc).toContain('useBudgetOverview(companyId)');
+    expect(telemetryViewSrc).toContain("useApprovals(companyId, undefined, 'pending')");
+    expect(telemetryViewSrc).toContain('openAutonomy(');
   });
 });

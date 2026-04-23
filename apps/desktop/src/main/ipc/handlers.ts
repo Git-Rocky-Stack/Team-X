@@ -784,6 +784,7 @@ export interface IpcSkillsService {
 
 export interface IpcOperatorAccessService {
   ensureLocalOwnerForCompany(companyId: string): { operatorId: string; membershipId: string };
+  resolveOperatorIdForCompany(companyId: string, preferredOperatorId?: string | null): string;
   listByCompany(companyId: string): OperatorAccessEntry[];
 }
 
@@ -819,7 +820,9 @@ export interface IpcBudgetGovernanceService {
 
 export interface IpcApprovalInboxService {
   listItems(input: ListApprovalItemsRequest): ApprovalItem[];
-  reviewItem(input: ReviewApprovalItemRequest): { item: ApprovalItem; grantId: string | null };
+  reviewItem(
+    input: ReviewApprovalItemRequest & { operatorId: string },
+  ): { item: ApprovalItem; grantId: string | null };
 }
 
 export interface IpcArtifactService {
@@ -1939,6 +1942,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     item: ApprovalItem,
     grantId: string | null,
   ): void {
+    const actorId = item.latestDecision?.decidedByOperatorId ?? HUMAN_USER_ID;
+
     emitUserAuditEvent('approval.reviewed', companyId, {
       approvalKind: item.kind,
       approvalRefId: item.id,
@@ -1946,7 +1951,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       subjectRefKind: item.subjectRefKind,
       subjectRefId: item.subjectRefId,
       rationale: item.latestDecision?.rationale ?? null,
-    });
+    }, actorId);
 
     if (item.kind !== 'authority-request') return;
 
@@ -1967,7 +1972,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         resourceId,
         permission: requestedPermission,
         requestId: item.id,
-      });
+      }, actorId);
     }
 
     emitUserAuditEvent('authority.request.reviewed', companyId, {
@@ -1978,7 +1983,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       requestedPermission,
       decision: item.status,
       grantId,
-    });
+    }, actorId);
   }
 
   return {
@@ -2314,12 +2319,16 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!approvalInboxService) {
         throw new Error('[ipc] approvals.review: approvalInboxService dep unwired');
       }
+      const operatorId = operatorAccessService
+        ? operatorAccessService.resolveOperatorIdForCompany(req.companyId, req.operatorId)
+        : HUMAN_USER_ID;
       const result = approvalInboxService.reviewItem({
         companyId: req.companyId,
         itemId: req.itemId,
         kind: req.kind,
         decision: req.decision,
         rationale: req.rationale?.trim() || undefined,
+        operatorId,
       });
       emitApprovalReviewAudit(req.companyId, result.item, result.grantId);
       return { grantId: result.grantId };
@@ -3964,7 +3973,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
     },
 
-    async authorityReviewRequest({ companyId, requestId, decision, reason }) {
+    async authorityReviewRequest({ companyId, requestId, decision, reason, operatorId }) {
       if (typeof companyId !== 'string' || companyId.length === 0) {
         throw new Error('[ipc] authority.reviewRequest: companyId is required');
       }
@@ -3980,6 +3989,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         kind: 'authority-request',
         decision,
         rationale: reason ?? undefined,
+        operatorId,
       });
     },
 

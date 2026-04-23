@@ -25,6 +25,9 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('data-dashboard-hero-toggle="agent-runs"');
     expect(missionControlSrc).toContain('data-dashboard-hero-toggle="employee-queues"');
     expect(missionControlSrc).toContain('data-dashboard-reset-layout=""');
+    expect(missionControlSrc).toContain('data-dashboard-autonomy-badge="routines"');
+    expect(missionControlSrc).toContain('data-dashboard-autonomy-badge="approvals"');
+    expect(missionControlSrc).toContain('data-dashboard-autonomy-snapshot=""');
     expect(missionControlSrc).toContain('dataPanel="agent-runs"');
     expect(missionControlSrc).toContain('dataPanel="employee-queues"');
     expect(missionControlSrc).toContain('data-dashboard-recent-commands=""');
@@ -37,6 +40,10 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('useCommandHistory(companyId, 5)');
     expect(missionControlSrc).toContain('useCompanyStats(companyId ? { companyId } : null)');
     expect(missionControlSrc).toContain('useDailyUsage(');
+    expect(missionControlSrc).toContain("useApprovals(companyId, undefined, 'pending')");
+    expect(missionControlSrc).toContain('useBudgetOverview(companyId)');
+    expect(missionControlSrc).toContain('useRoutines(companyId)');
+    expect(missionControlSrc).toContain('useOperators(companyId)');
     expect(missionControlSrc).toContain('CopilotDashboardWidget');
   });
 

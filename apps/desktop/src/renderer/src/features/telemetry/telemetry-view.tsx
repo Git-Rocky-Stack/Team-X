@@ -11,6 +11,7 @@ import { type ComponentType, useMemo, useState } from 'react';
 
 import type { TelemetryKindFilter } from '@team-x/shared-types';
 
+import { Button } from '@/components/ui/button.js';
 import { Badge } from '@/components/ui/badge.js';
 import {
   MissionControlRow,
@@ -22,6 +23,9 @@ import {
   MissionSectionCard,
   MissionStateBlock,
 } from '@/features/mission/mission-shell.js';
+import { useApprovals } from '@/hooks/use-approvals.js';
+import { useBudgetOverview } from '@/hooks/use-budgets.js';
+import { useOperators } from '@/hooks/use-operators.js';
 import { telemetryRequestKind, useCompanyStats } from '@/hooks/use-telemetry.js';
 import { type TelemetrySubview, useAppStore } from '@/store/app-store.js';
 
@@ -139,10 +143,15 @@ export function TelemetryKindFilterChips({
 export function TelemetryView() {
   const companyId = useAppStore((s) => s.companyId);
   const subview = useAppStore((s) => s.telemetrySubview);
+  const setActiveView = useAppStore((s) => s.setActiveView);
+  const setAutonomySubview = useAppStore((s) => s.setAutonomySubview);
   const [kindFilter, setKindFilter] = useState<TelemetryKindFilter>('all');
 
   const kind = telemetryRequestKind(kindFilter);
   const summaryQuery = useCompanyStats(companyId ? { companyId, kind } : null);
+  const budgetOverviewQuery = useBudgetOverview(companyId);
+  const approvalsQuery = useApprovals(companyId, undefined, 'pending');
+  const operatorsQuery = useOperators(companyId);
 
   const activeSubviewCopy = SUBVIEW_COPY[subview];
   const summaryBadges = useMemo(() => {
@@ -152,6 +161,19 @@ export function TelemetryView() {
       kind: kindLabel,
     };
   }, [kindFilter, subview]);
+
+  const operatorEntries = operatorsQuery.data ?? [];
+  const operatorPosture =
+    operatorEntries.some((entry) => entry.operator.authMode === 'cloud')
+      ? 'shared-cloud'
+      : operatorEntries.some((entry) => entry.operator.authMode === 'invited')
+        ? 'shared-local'
+        : 'local-only';
+
+  function openAutonomy(subview: 'budgets' | 'approvals' | 'access') {
+    setAutonomySubview(subview);
+    setActiveView('autonomy');
+  }
 
   if (!companyId) {
     return (
@@ -259,6 +281,46 @@ export function TelemetryView() {
             </span>
             <TelemetryKindFilterChips active={kindFilter} onChange={setKindFilter} />
           </MissionControlRow>
+        </div>
+      </MissionSectionCard>
+
+      <MissionSectionCard
+        title="Governance context"
+        description="Tie telemetry to the budget, approval, and operator posture controlling the workspace."
+        data-telemetry-governance=""
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-white/10 bg-black/10 hover:bg-black/20"
+              onClick={() => openAutonomy((approvalsQuery.data?.length ?? 0) > 0 ? 'approvals' : 'budgets')}
+            >
+              Open autonomy
+            </Button>
+          </div>
+        }
+      >
+        <div className="grid gap-3 md:grid-cols-3">
+          <MissionMetricTile
+            label="Policies"
+            value={budgetOverviewQuery.isLoading ? '--' : `${budgetOverviewQuery.data?.activePolicyCount ?? 0}`}
+            hint="Active budget controls currently governing this workspace."
+            icon={DollarSign}
+          />
+          <MissionMetricTile
+            label="Pending approvals"
+            value={approvalsQuery.isLoading ? '--' : `${approvalsQuery.data?.length ?? 0}`}
+            hint="Operator decisions still blocking or reviewing autonomy activity."
+            icon={Radar}
+          />
+          <MissionMetricTile
+            label="Operator posture"
+            value={operatorsQuery.isLoading ? '--' : operatorPosture}
+            hint="Shows whether the workspace is still local-only or already modeled for shared operators."
+            icon={Users2}
+          />
         </div>
       </MissionSectionCard>
 

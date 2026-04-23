@@ -20,7 +20,11 @@ import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
 import { CopilotDashboardWidget } from '@/features/copilot/copilot-dashboard-widget.js';
+import { useApprovals } from '@/hooks/use-approvals.js';
+import { useBudgetOverview } from '@/hooks/use-budgets.js';
 import { useCommandHistory } from '@/hooks/use-command.js';
+import { useOperators } from '@/hooks/use-operators.js';
+import { useRoutines } from '@/hooks/use-routines.js';
 import { useCompanyStats, useDailyUsage } from '@/hooks/use-telemetry.js';
 import { useTicketEventSync, useTickets } from '@/hooks/use-tickets.js';
 import { ipc } from '@/lib/ipc.js';
@@ -279,6 +283,7 @@ export function MissionControlDashboard({
 }: MissionControlDashboardProps) {
   const employeeLive = useAppStore((state) => state.employeeLive);
   const setActiveView = useAppStore((state) => state.setActiveView);
+  const setAutonomySubview = useAppStore((state) => state.setAutonomySubview);
   const setDashboardSubview = useAppStore((state) => state.setDashboardSubview);
   const setSelectedEmployee = useAppStore((state) => state.setSelectedEmployee);
   const openThread = useAppStore((state) => state.openThread);
@@ -330,6 +335,10 @@ export function MissionControlDashboard({
       : null,
   );
   const agentRunsQuery = useDashboardAgentRuns(companyId);
+  const operatorsQuery = useOperators(companyId);
+  const routinesQuery = useRoutines(companyId);
+  const approvalsQuery = useApprovals(companyId, undefined, 'pending');
+  const budgetOverviewQuery = useBudgetOverview(companyId);
   const agentRuns = agentRunsQuery.runs;
   const dashboardLayout = useDashboardLayoutPreferences(company);
 
@@ -352,6 +361,16 @@ export function MissionControlDashboard({
   const blockedEmployeeCount = queueRows.filter(
     (row) => row.liveStatus === 'blocked' || row.liveStatus === 'error' || row.counts.blocked > 0,
   ).length;
+  const operatorEntries = operatorsQuery.data ?? [];
+  const operatorPosture =
+    operatorEntries.some((entry) => entry.operator.authMode === 'cloud')
+      ? 'shared-cloud'
+      : operatorEntries.some((entry) => entry.operator.authMode === 'invited')
+        ? 'shared-local'
+        : 'local-only';
+  const enabledRoutineCount = (routinesQuery.data ?? []).filter((routine) => routine.enabled).length;
+  const pendingApprovalCount = approvalsQuery.data?.length ?? 0;
+  const budgetOverview = budgetOverviewQuery.data;
   const queueDataReady = hasWorkspace && !ticketsQuery.isLoading && !ticketsQuery.isError;
   const telemetryReady =
     hasWorkspace &&
@@ -388,6 +407,11 @@ export function MissionControlDashboard({
   function handleRetryTelemetrySnapshot() {
     void telemetryStatsQuery.refetch();
     void telemetryDailyQuery.refetch();
+  }
+
+  function handleOpenAutonomy(subview: 'access' | 'approvals' | 'budgets' | 'routines') {
+    setAutonomySubview(subview);
+    setActiveView('autonomy');
   }
 
   return (
@@ -477,6 +501,26 @@ export function MissionControlDashboard({
                   <Badge variant="outline" className="border-white/10 bg-black/10 text-foreground/80">
                     {tickets.length} tracked tickets
                   </Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-white/10 bg-black/10 text-foreground/80"
+                    data-dashboard-autonomy-badge="routines"
+                  >
+                    {enabledRoutineCount} active routines
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'border-white/10 bg-black/10 text-foreground/80',
+                      pendingApprovalCount > 0 && 'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                    )}
+                    data-dashboard-autonomy-badge="approvals"
+                  >
+                    {pendingApprovalCount} pending approvals
+                  </Badge>
+                  <Badge variant="outline" className="border-white/10 bg-black/10 text-foreground/80">
+                    {operatorPosture} posture
+                  </Badge>
                   {dashboardLayout.isSaving && (
                     <Badge variant="outline" className="border-brand/25 bg-brand/10 text-brand">
                       Saving layout
@@ -501,6 +545,16 @@ export function MissionControlDashboard({
                   <Button type="button" variant="outline" size="sm" onClick={() => setActiveView('telemetry')} className="border-white/10 bg-black/10 hover:bg-black/20">
                     <Gauge className="h-4 w-4" />
                     Telemetry
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'access')}
+                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Autonomy
                   </Button>
                 </div>
               </div>
@@ -1127,6 +1181,36 @@ export function MissionControlDashboard({
                         Current window: {formatCompactNumber(todayUsage?.totalRuns ?? 0)} runs,{' '}
                         {formatCompactNumber(todayUsage?.totalTokens ?? 0)} tokens, {formatUsd(todayUsage?.costUsd)} cost.
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'budgets')}
+                        className="w-full rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition hover:border-brand/30 hover:bg-black/20"
+                        data-dashboard-autonomy-snapshot=""
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                            Autonomy snapshot
+                          </p>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'border-white/10 bg-black/10 text-[10px] text-foreground/80',
+                              pendingApprovalCount > 0 && 'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                            )}
+                          >
+                            {pendingApprovalCount} pending
+                          </Badge>
+                        </div>
+                        <p className="mt-2 text-sm text-foreground">
+                          {budgetOverview
+                            ? `${budgetOverview.activePolicyCount} active policies, ${budgetOverview.warningCount} warnings, ${budgetOverview.exceededCount} exceeded.`
+                            : 'Open autonomy to review runtime, routine, and budget posture.'}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {enabledRoutineCount} active routines shaping the queue. Operator posture is {operatorPosture}.
+                        </p>
+                      </button>
                     </>
                   )}
                 </CardContent>

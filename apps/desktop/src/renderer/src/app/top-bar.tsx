@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Settings,
   Shield,
-  Sparkles,
   Users2,
   Workflow,
 } from 'lucide-react';
@@ -121,14 +120,13 @@ export function TopBar() {
           title="Copilot (Cmd+Shift+K)"
           data-copilot-toolbar-toggle=""
           className={cn(
-            'mission-chrome-panel flex h-14 items-center gap-3 rounded-[24px] border border-white/10 bg-black/25 px-4 transition-all',
+            'mission-chrome-panel flex h-14 items-center gap-2.5 rounded-[24px] border border-white/10 bg-black/25 px-4 transition-all',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
             copilotSidebarOpen
               ? 'text-brand shadow-[0_20px_50px_-38px_hsl(var(--mission-red)/0.85)]'
               : 'text-muted-foreground hover:bg-surface-100 hover:text-foreground',
           )}
         >
-          <Sparkles className="h-4 w-4" />
           <span className="hidden text-sm font-semibold lg:inline">Copilot</span>
           <span className="hidden rounded-full border border-white/10 px-2 py-0.5 font-mono text-[10px] text-muted-foreground xl:inline">
             Cmd+Shift+K

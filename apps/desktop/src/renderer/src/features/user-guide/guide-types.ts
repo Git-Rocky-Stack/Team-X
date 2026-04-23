@@ -1,6 +1,6 @@
 import type { UserGuideRole } from '@team-x/shared-types';
 
-import type { ActiveView, SettingsSectionFocus } from '@/store/app-store.js';
+import type { ActiveView, AutonomySubview, DashboardSubview, SettingsSectionFocus, TelemetrySubview } from '@/store/app-store.js';
 
 export type GuidePriority = 'core' | 'recommended' | 'advanced';
 export type GuideTaskKind = 'auto' | 'manual' | 'jump';
@@ -41,6 +41,9 @@ export type GuideAction =
       description: string;
       kind: 'view';
       view: ActiveView;
+      dashboardSubview?: DashboardSubview;
+      telemetrySubview?: TelemetrySubview;
+      autonomySubview?: AutonomySubview;
     }
   | {
       id: string;
