@@ -222,11 +222,22 @@ export interface CompanyDashboardLayoutSettings {
   showEmployeeQueues: boolean;
 }
 
+export const USER_GUIDE_ROLES = ['owner', 'operator', 'builder'] as const;
+export type UserGuideRole = (typeof USER_GUIDE_ROLES)[number];
+
+export interface CompanyUserGuideSettings {
+  welcomeDismissedAt?: string;
+  lastViewedSectionId?: string;
+  selectedRole?: UserGuideRole;
+  completedTaskIds?: string[];
+}
+
 export interface CompanySettings {
   mission?: string;
   values?: string[];
   theme?: 'dark' | 'light';
   dashboardLayout?: CompanyDashboardLayoutSettings;
+  userGuide?: CompanyUserGuideSettings;
 }
 
 export const EXTENSIONS_AUTONOMY_MODES = [

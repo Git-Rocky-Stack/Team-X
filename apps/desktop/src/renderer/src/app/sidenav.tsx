@@ -1,9 +1,13 @@
 import type { Employee } from '@team-x/shared-types';
 
-import { MessageSquare, Plus, Users } from 'lucide-react';
+import { BookOpenText, MessageSquare, Plus, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
+import { useAuthorityGrants, useAuthorityRequests, useInstalledExtensions } from '@/hooks/use-extensions.js';
+import { useCompanies } from '@/hooks/use-companies.js';
+import { useProviders } from '@/hooks/use-providers.js';
 import { Separator } from '@/components/ui/separator.js';
+import { userGuidePreferencesFromCompanySettings, guideCompletionSummary } from '@/features/user-guide/guide-progress.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -62,10 +66,28 @@ interface SidenavProps {
 }
 
 export function Sidenav({ employees, onHireClick }: SidenavProps) {
+  const activeView = useAppStore((s) => s.activeView);
+  const setActiveView = useAppStore((s) => s.setActiveView);
+  const companyId = useAppStore((s) => s.companyId);
   const employeeLive = useAppStore((s) => s.employeeLive);
+  const { data: companies = [] } = useCompanies();
+  const providersQuery = useProviders();
+  const extensionsQuery = useInstalledExtensions(companyId);
+  const authorityQuery = useAuthorityGrants(companyId);
+  const authorityRequestsQuery = useAuthorityRequests(companyId);
+  const activeCompany = companies.find((company) => company.id === companyId) ?? null;
 
   const thinkingCount = Object.values(employeeLive).filter((e) => e.status === 'thinking').length;
   const idleCount = employees.length - thinkingCount;
+  const guidePreferences = userGuidePreferencesFromCompanySettings(activeCompany?.settings);
+  const guideSummary = guideCompletionSummary(guidePreferences.selectedRole, guidePreferences, {
+    hasEnabledProvider: (providersQuery.data ?? []).some((provider) => provider.enabled),
+    hasEmployees: employees.length > 0,
+    hasExtensions: (extensionsQuery.data ?? []).length > 0,
+    hasAuthorityActivity:
+      (authorityQuery.data ?? []).length > 0 || (authorityRequestsQuery.data ?? []).length > 0,
+  });
+  const showGuideSummary = activeCompany !== null;
 
   return (
     <aside className="mission-chrome-panel flex w-64 shrink-0 flex-col rounded-[30px] border border-white/10 bg-black/20 backdrop-blur-xl">
@@ -137,6 +159,39 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
         >
           <MessageSquare className="h-4 w-4 text-brand" />
           Threads
+        </button>
+      </div>
+
+      <Separator className="bg-white/10" />
+
+      <div className="px-2 py-2">
+        <button
+          type="button"
+          onClick={() => setActiveView('user-guide')}
+          className={cn(
+            'flex w-full items-start gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors',
+            activeView === 'user-guide'
+              ? 'border-brand/20 bg-brand/10 text-foreground'
+              : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-surface-100 hover:text-foreground',
+          )}
+          data-user-guide-nav=""
+        >
+          <BookOpenText className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">User Guide</span>
+              {showGuideSummary ? (
+                <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-muted-foreground">
+                  {guideSummary.coreRemaining > 0
+                    ? `${guideSummary.coreRemaining} left`
+                    : 'ready'}
+                </span>
+              ) : null}
+            </div>
+            <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+              Role-based onboarding, setup checklists, and deep links into the live shell.
+            </span>
+          </div>
         </button>
       </div>
 

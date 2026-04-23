@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useCompanies } from '@/hooks/use-companies.js';
 import { useDashboardEvents } from '@/hooks/use-dashboard-events.js';
@@ -24,6 +24,7 @@ import { ProjectsView } from './features/projects/projects-view.js';
 import { SettingsView } from './features/settings/settings-view.js';
 import { TelemetryView } from './features/telemetry/telemetry-view.js';
 import { TicketsView } from './features/tickets/tickets-view.js';
+import { UserGuideView } from './features/user-guide/user-guide-view.js';
 import { VaultView } from './features/vault/vault-view.js';
 
 /**
@@ -39,8 +40,11 @@ export default function App() {
   const dashboardSubview = useAppStore((s) => s.dashboardSubview);
   const copilotSidebarOpen = useAppStore((s) => s.copilotSidebarOpen);
   const setCopilotSidebarOpen = useAppStore((s) => s.setCopilotSidebarOpen);
+  const setActiveView = useAppStore((s) => s.setActiveView);
+  const hireDialogRequestNonce = useAppStore((s) => s.hireDialogRequestNonce);
   const [hireOpen, setHireOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const autoOpenedUserGuideRef = useRef<Set<string>>(new Set());
 
   // Reactive active-company selection. Replaces the previous one-shot
   // direct preload-bridge fetch so that (a) the source of truth for
@@ -109,6 +113,20 @@ export default function App() {
   const { data: employees = [], isLoading, isError, refetch } = useEmployees(companyId);
   const activeCompany = companies?.find((candidate) => candidate.id === companyId) ?? null;
 
+  useEffect(() => {
+    if (hireDialogRequestNonce <= 0) return;
+    setHireOpen(true);
+  }, [hireDialogRequestNonce]);
+
+  useEffect(() => {
+    if (!activeCompany) return;
+    const welcomeDismissedAt = activeCompany.settings?.userGuide?.welcomeDismissedAt;
+    if (typeof welcomeDismissedAt === 'string' && welcomeDismissedAt.length > 0) return;
+    if (autoOpenedUserGuideRef.current.has(activeCompany.id)) return;
+    autoOpenedUserGuideRef.current.add(activeCompany.id);
+    setActiveView('user-guide');
+  }, [activeCompany, setActiveView]);
+
   function renderDashboard() {
     // Commands subview bypasses the loading/empty-state guards — it
     // reads from `command_history` (M30) which is valuable even before
@@ -163,6 +181,8 @@ export default function App() {
         return <TelemetryView />;
       case 'audit':
         return <AuditView companyId={companyId} employees={employees} />;
+      case 'user-guide':
+        return <UserGuideView company={activeCompany} employees={employees} />;
       case 'settings':
         return <SettingsView />;
       default:

@@ -49,7 +49,10 @@ export type ActiveView =
   | 'files'
   | 'telemetry'
   | 'audit'
+  | 'user-guide'
   | 'settings';
+
+export type SettingsSectionFocus = 'providers' | 'extensions';
 
 /** Dashboard inner subview tabs. */
 export type DashboardSubview = 'cards' | 'timeline' | 'stream' | 'floor' | 'commands';
@@ -109,6 +112,10 @@ export interface AppState {
   copilotSidebarOpen: boolean;
   /** Per-employee queued direct-chat follow-ups and stop state. */
   pendingDirectChats: Record<string, PendingDirectChatState>;
+  /** Optional section to focus when Settings opens. */
+  settingsFocusSection: SettingsSectionFocus | null;
+  /** Incremented when another surface needs the Hire dialog to open. */
+  hireDialogRequestNonce: number;
 
   setActiveView: (view: ActiveView) => void;
   setCopilotSidebarOpen: (open: boolean) => void;
@@ -126,6 +133,9 @@ export interface AppState {
   setThreadListView: (open: boolean) => void;
   setActiveTicketId: (ticketId: string | null) => void;
   setActiveMeetingId: (meetingId: string | null) => void;
+  setSettingsFocusSection: (section: SettingsSectionFocus | null) => void;
+  openSettingsSection: (section: SettingsSectionFocus) => void;
+  requestHireDialog: () => void;
   enqueueQueuedDirectChatMessage: (employeeId: string, content: string) => void;
   dequeueQueuedDirectChatMessage: (employeeId: string) => string | null;
   setDirectChatStopping: (employeeId: string, isStopping: boolean) => void;
@@ -173,6 +183,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   telemetrySubview: 'company',
   copilotSidebarOpen: false,
   pendingDirectChats: {},
+  settingsFocusSection: null,
+  hireDialogRequestNonce: 0,
 
   setCopilotSidebarOpen: (open) => set({ copilotSidebarOpen: open }),
 
@@ -236,6 +248,20 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setActiveTicketId: (ticketId) => set({ activeTicketId: ticketId }),
   setActiveMeetingId: (meetingId) => set({ activeMeetingId: meetingId }),
+  setSettingsFocusSection: (section) => set({ settingsFocusSection: section }),
+  openSettingsSection: (section) =>
+    set({
+      activeView: 'settings',
+      settingsFocusSection: section,
+      activeTicketId: null,
+      activeProjectId: null,
+      activeGoalId: null,
+      activeMeetingId: null,
+    }),
+  requestHireDialog: () =>
+    set((state) => ({
+      hireDialogRequestNonce: state.hireDialogRequestNonce + 1,
+    })),
 
   enqueueQueuedDirectChatMessage: (employeeId, content) =>
     set((state) => {

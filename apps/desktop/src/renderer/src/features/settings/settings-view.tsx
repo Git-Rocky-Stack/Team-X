@@ -10,6 +10,10 @@
  * Phase 5 — M32: task planner section (guardrails).
  */
 
+import { useEffect } from 'react';
+
+import { useAppStore } from '@/store/app-store.js';
+
 import { AgenticSection } from './agentic-section.js';
 import { BackupSection } from './backup-section.js';
 import { ConcurrencySection } from './concurrency-section.js';
@@ -23,6 +27,19 @@ import { RuntimeSection } from './runtime-section.js';
 import { UpdaterSection } from './updater-section.js';
 
 export function SettingsView() {
+  const focusSection = useAppStore((state) => state.settingsFocusSection);
+  const setFocusSection = useAppStore((state) => state.setSettingsFocusSection);
+
+  useEffect(() => {
+    if (!focusSection) return;
+    const section = document.querySelector<HTMLElement>(
+      `[data-settings-section="${focusSection}"]`,
+    );
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const timer = window.setTimeout(() => setFocusSection(null), 120);
+    return () => window.clearTimeout(timer);
+  }, [focusSection, setFocusSection]);
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border px-4 py-3">
@@ -37,11 +54,15 @@ export function SettingsView() {
         <PrivacySection />
         <RagSection />
         <ConcurrencySection />
-        <ExtensionsSection />
+        <section data-settings-section="extensions">
+          <ExtensionsSection />
+        </section>
         <AgenticSection />
         <PlannerSection />
         <CopilotSection />
-        <ProvidersSection />
+        <section data-settings-section="providers">
+          <ProvidersSection />
+        </section>
         <BackupSection />
       </div>
     </div>
