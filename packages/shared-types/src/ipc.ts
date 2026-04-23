@@ -67,6 +67,7 @@ import type {
   MeetingActionItem,
   MeetingMode,
   Project,
+  SkillAssignment,
   Thread,
   Ticket,
 } from './entities.js';
@@ -778,6 +779,21 @@ export interface ListMcpServersRequest {
   companyId: string;
 }
 
+export interface McpTemplateSummary {
+  id: string;
+  name: string;
+  transport: 'stdio' | 'sse';
+  sourceRef: string;
+  lastHealth: string | null;
+  requestedCapabilities: string[];
+  installed: boolean;
+  installedServerId: string | null;
+}
+
+export interface ListMcpTemplatesRequest {
+  companyId: string;
+}
+
 export interface ToggleMcpServerRequest {
   serverId: string;
   enabled: boolean;
@@ -788,6 +804,11 @@ export interface AddMcpServerRequest {
   name: string;
   transport: 'stdio' | 'sse';
   configJson: string;
+}
+
+export interface InstallMcpTemplateRequest {
+  companyId: string;
+  templateId: string;
 }
 
 export interface TestMcpConnectionRequest {
@@ -807,6 +828,31 @@ export interface TestMcpConnectionResponse {
 
 export interface ListExtensionsRequest {
   companyId: string;
+}
+
+export interface InstallLocalSkillRequest {
+  companyId: string;
+  folderPath: string;
+}
+
+export interface InstallGithubSkillRequest {
+  companyId: string;
+  sourceUrl: string;
+}
+
+export interface ListSkillAssignmentsRequest {
+  companyId: string;
+}
+
+export interface UpsertSkillAssignmentRequest {
+  companyId: string;
+  extensionId: string;
+  employeeId?: string | null;
+  enabled: boolean;
+}
+
+export interface DeleteSkillAssignmentRequest {
+  assignmentId: string;
 }
 
 export interface ListAuthorityGrantsRequest {
@@ -1514,12 +1560,20 @@ export interface IpcContract {
     request: ListMcpServersRequest;
     response: McpServerSummary[];
   };
+  'mcp.listTemplates': {
+    request: ListMcpTemplatesRequest;
+    response: McpTemplateSummary[];
+  };
   'mcp.toggle': {
     request: ToggleMcpServerRequest;
     response: undefined;
   };
   'mcp.addServer': {
     request: AddMcpServerRequest;
+    response: { serverId: string };
+  };
+  'mcp.installTemplate': {
+    request: InstallMcpTemplateRequest;
     response: { serverId: string };
   };
   'mcp.removeServer': {
@@ -1533,6 +1587,26 @@ export interface IpcContract {
   'extensions.list': {
     request: ListExtensionsRequest;
     response: ExtensionSummary[];
+  };
+  'extensions.installLocalSkill': {
+    request: InstallLocalSkillRequest;
+    response: { extensionId: string };
+  };
+  'extensions.installGithubSkill': {
+    request: InstallGithubSkillRequest;
+    response: { extensionId: string };
+  };
+  'extensions.listSkillAssignments': {
+    request: ListSkillAssignmentsRequest;
+    response: SkillAssignment[];
+  };
+  'extensions.upsertSkillAssignment': {
+    request: UpsertSkillAssignmentRequest;
+    response: { assignmentId: string };
+  };
+  'extensions.deleteSkillAssignment': {
+    request: DeleteSkillAssignmentRequest;
+    response: undefined;
   };
   'authority.list': {
     request: ListAuthorityGrantsRequest;
@@ -2144,12 +2218,16 @@ export interface TeamXApi {
     list(req: ListEventsRequest): Promise<ListEventsResponse>;
   };
   mcp: {
-    /** List all MCP servers available to a company (global + company-specific). */
+    /** List runtime MCP servers available to a company, excluding disabled built-in templates. */
     list(companyId: string): Promise<McpServerSummary[]>;
+    /** List built-in MCP templates that can be installed into a workspace. */
+    listTemplates(companyId: string): Promise<McpTemplateSummary[]>;
     /** Enable or disable an MCP server. Connects/disconnects as needed. */
     toggle(serverId: string, enabled: boolean): Promise<void>;
     /** Register a new MCP server and attempt immediate connection. */
     addServer(req: AddMcpServerRequest): Promise<{ serverId: string }>;
+    /** Install one built-in MCP template into a workspace and attempt immediate connection. */
+    installTemplate(req: InstallMcpTemplateRequest): Promise<{ serverId: string }>;
     /** Disconnect and remove an MCP server. */
     removeServer(serverId: string): Promise<void>;
     /** Test an MCP connection without persisting. */
@@ -2158,6 +2236,16 @@ export interface TeamXApi {
   extensions: {
     /** List installed skill/extension metadata visible to a company. */
     list(companyId: string): Promise<ExtensionSummary[]>;
+    /** Install a local Team-X skill folder into the current workspace. */
+    installLocalSkill(req: InstallLocalSkillRequest): Promise<{ extensionId: string }>;
+    /** Install a public GitHub-hosted Team-X skill into the current workspace. */
+    installGithubSkill(req: InstallGithubSkillRequest): Promise<{ extensionId: string }>;
+    /** List workspace and employee assignment overlays for installed skills. */
+    listSkillAssignments(companyId: string): Promise<SkillAssignment[]>;
+    /** Upsert a workspace-default or employee-override assignment for one skill. */
+    upsertSkillAssignment(req: UpsertSkillAssignmentRequest): Promise<{ assignmentId: string }>;
+    /** Delete one persisted skill-assignment override. */
+    deleteSkillAssignment(assignmentId: string): Promise<void>;
   };
   authority: {
     /** List authority grants relevant to a company, optionally narrowed to one employee. */

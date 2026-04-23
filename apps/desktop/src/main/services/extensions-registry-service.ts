@@ -6,9 +6,18 @@ export interface ExtensionsRegistryServiceDeps {
   mcpServersRepo: McpServersRepo;
 }
 
+type BridgeSourceKind = 'local' | 'github' | 'marketplace' | 'template';
+
+export interface SyncMcpServerOptions {
+  sourceKind?: BridgeSourceKind;
+  sourceRef?: string;
+  manifestPatch?: Record<string, unknown>;
+}
+
 export interface ExtensionsRegistryService {
   listByCompany(companyId: string): ExtensionRow[];
-  syncMcpServer(serverId: string): ExtensionRow | null;
+  backfillMcpServers(): number;
+  syncMcpServer(serverId: string, options?: SyncMcpServerOptions): ExtensionRow | null;
   removeMcpServer(serverId: string): void;
 }
 
@@ -54,17 +63,73 @@ function buildRequestedCapabilities(row: McpServerRow): string[] {
   return Array.from(capabilities).sort();
 }
 
-function buildManifestJson(row: McpServerRow): string {
+function parseManifestJson(value: string | null): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Ignore malformed persisted manifest metadata.
+  }
+  return {};
+}
+
+function buildManifestJson(
+  row: McpServerRow,
+  existing: ExtensionRow | null,
+  options?: SyncMcpServerOptions,
+): string {
   return JSON.stringify({
+    ...parseManifestJson(existing?.manifestJson ?? null),
     bridgeKind: 'mcp-server',
     transport: row.transport,
     runtimeServerId: row.id,
     lastHealth: row.lastHealth,
+    ...options?.manifestPatch,
   });
 }
 
 function inferSourceKind(row: McpServerRow): 'local' | 'template' {
   return row.companyId === null ? 'template' : 'local';
+}
+
+function normalizeSourceKind(value: string | null | undefined): BridgeSourceKind | null {
+  return value === 'local' ||
+    value === 'github' ||
+    value === 'marketplace' ||
+    value === 'template'
+    ? value
+    : null;
+}
+
+function resolveSourceKind(
+  row: McpServerRow,
+  existing: ExtensionRow | null,
+  options?: SyncMcpServerOptions,
+): BridgeSourceKind {
+  if (options?.sourceKind) return options.sourceKind;
+  const inferred = inferSourceKind(row);
+  const existingSourceKind = normalizeSourceKind(existing?.sourceKind);
+  if (existingSourceKind && existingSourceKind !== inferred) {
+    return existingSourceKind;
+  }
+  return inferred;
+}
+
+function resolveSourceRef(
+  row: McpServerRow,
+  existing: ExtensionRow | null,
+  options?: SyncMcpServerOptions,
+): string {
+  if (options?.sourceRef) return options.sourceRef;
+  const inferred = inferSourceKind(row);
+  const existingSourceKind = normalizeSourceKind(existing?.sourceKind);
+  if (existing && existingSourceKind && existingSourceKind !== inferred) {
+    return existing.sourceRef;
+  }
+  return summarizeSourceRef(row);
 }
 
 function inferTrustState(
@@ -79,17 +144,19 @@ function inferTrustState(
 export function createExtensionsRegistryService(
   deps: ExtensionsRegistryServiceDeps,
 ): ExtensionsRegistryService {
-  function syncRow(row: McpServerRow): ExtensionRow {
+  function syncRow(row: McpServerRow, options?: SyncMcpServerOptions): ExtensionRow {
     const existing = deps.extensionsRepo.findByRuntimeRefId(row.id);
-    const sourceRef = summarizeSourceRef(row);
+    const sourceKind = resolveSourceKind(row, existing, options);
+    const sourceRef = resolveSourceRef(row, existing, options);
     const requestedCapabilitiesJson = JSON.stringify(buildRequestedCapabilities(row));
-    const manifestJson = buildManifestJson(row);
+    const manifestJson = buildManifestJson(row, existing, options);
     const trustState = inferTrustState(row, existing);
 
     if (existing) {
       deps.extensionsRepo.update(existing.id, {
         companyId: row.companyId,
         name: row.name,
+        sourceKind,
         sourceRef,
         manifestJson,
         requestedCapabilitiesJson,
@@ -106,7 +173,7 @@ export function createExtensionsRegistryService(
       kind: 'mcp',
       name: row.name,
       slug: `mcp-${slugify(row.name)}-${row.id.slice(0, 6)}`,
-      sourceKind: inferSourceKind(row),
+      sourceKind,
       sourceRef,
       manifestJson,
       requestedCapabilitiesJson,
@@ -126,10 +193,19 @@ export function createExtensionsRegistryService(
       return deps.extensionsRepo.listByCompany(companyId);
     },
 
-    syncMcpServer(serverId: string): ExtensionRow | null {
+    backfillMcpServers(): number {
+      let synced = 0;
+      for (const row of deps.mcpServersRepo.list()) {
+        syncRow(row);
+        synced += 1;
+      }
+      return synced;
+    },
+
+    syncMcpServer(serverId: string, options?: SyncMcpServerOptions): ExtensionRow | null {
       const row = deps.mcpServersRepo.getById(serverId);
       if (!row) return null;
-      return syncRow(row);
+      return syncRow(row, options);
     },
 
     removeMcpServer(serverId: string): void {

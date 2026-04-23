@@ -323,6 +323,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     return handlers.mcpList(request);
   });
 
+  ipcMain.handle('mcp.listTemplates', async (_event, request: { companyId: string }) => {
+    return handlers.mcpListTemplates(request);
+  });
+
   ipcMain.handle('mcp.toggle', async (_event, request: { serverId: string; enabled: boolean }) => {
     return handlers.mcpToggle(request);
   });
@@ -342,6 +346,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     },
   );
 
+  ipcMain.handle(
+    'mcp.installTemplate',
+    async (_event, request: { companyId: string; templateId: string }) => {
+      return handlers.mcpInstallTemplate(request);
+    },
+  );
+
   ipcMain.handle('mcp.removeServer', async (_event, request: { serverId: string }) => {
     return handlers.mcpRemoveServer(request);
   });
@@ -355,6 +366,46 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('extensions.list', async (_event, request: { companyId: string }) => {
     return handlers.extensionsList(request);
+  });
+
+  ipcMain.handle(
+    'extensions.installLocalSkill',
+    async (_event, request: { companyId: string; folderPath: string }) => {
+      return handlers.extensionsInstallLocalSkill(request);
+    },
+  );
+
+  ipcMain.handle(
+    'extensions.installGithubSkill',
+    async (_event, request: { companyId: string; sourceUrl: string }) => {
+      return handlers.extensionsInstallGithubSkill(request);
+    },
+  );
+
+  ipcMain.handle(
+    'extensions.listSkillAssignments',
+    async (_event, request: { companyId: string }) => {
+      return handlers.extensionsListSkillAssignments(request);
+    },
+  );
+
+  ipcMain.handle(
+    'extensions.upsertSkillAssignment',
+    async (
+      _event,
+      request: {
+        companyId: string;
+        extensionId: string;
+        employeeId?: string | null;
+        enabled: boolean;
+      },
+    ) => {
+      return handlers.extensionsUpsertSkillAssignment(request);
+    },
+  );
+
+  ipcMain.handle('extensions.deleteSkillAssignment', async (_event, request: { assignmentId: string }) => {
+    return handlers.extensionsDeleteSkillAssignment(request);
   });
 
   ipcMain.handle(

@@ -245,6 +245,47 @@ export function createSkillAssignmentsRepo(db: DB) {
         )
         .all();
     },
+
+    getByScope(
+      companyId: string,
+      extensionId: string,
+      employeeId: string | null,
+    ): SkillAssignmentRow | null {
+      const base = db
+        .select()
+        .from(skillAssignments)
+        .where(
+          and(
+            eq(skillAssignments.companyId, companyId),
+            eq(skillAssignments.extensionId, extensionId),
+            employeeId === null
+              ? isNull(skillAssignments.employeeId)
+              : eq(skillAssignments.employeeId, employeeId),
+          ),
+        )
+        .get();
+      return base ?? null;
+    },
+
+    upsert(input: CreateSkillAssignmentInput): string {
+      const existing = this.getByScope(input.companyId, input.extensionId, input.employeeId ?? null);
+      if (existing) {
+        db.update(skillAssignments)
+          .set({
+            enabled: input.enabled ?? true,
+            source: input.source,
+            updatedAt: Date.now(),
+          })
+          .where(eq(skillAssignments.id, existing.id))
+          .run();
+        return existing.id;
+      }
+      return this.create(input);
+    },
+
+    delete(id: string): void {
+      db.delete(skillAssignments).where(eq(skillAssignments.id, id)).run();
+    },
   };
 }
 

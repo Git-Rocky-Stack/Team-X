@@ -10,6 +10,14 @@ export function useInstalledExtensions(companyId: string | null) {
   });
 }
 
+export function useSkillAssignments(companyId: string | null) {
+  return useQuery({
+    queryKey: ['skill-assignments', companyId],
+    queryFn: () => ipc.extensions.listSkillAssignments(companyId!),
+    enabled: companyId !== null && companyId.length > 0,
+  });
+}
+
 export function useAuthorityGrants(companyId: string | null, employeeId?: string | null) {
   return useQuery({
     queryKey: ['authority', companyId, employeeId ?? null],
@@ -58,6 +66,60 @@ export function useMcpServers(companyId: string | null) {
   });
 }
 
+export function useInstallLocalSkill(companyId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ipc.extensions.installLocalSkill,
+    onSuccess: () => {
+      if (!companyId) return;
+      qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['skill-assignments', companyId] });
+    },
+  });
+}
+
+export function useInstallGithubSkill(companyId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ipc.extensions.installGithubSkill,
+    onSuccess: () => {
+      if (!companyId) return;
+      qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['skill-assignments', companyId] });
+    },
+  });
+}
+
+export function useUpsertSkillAssignment(companyId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ipc.extensions.upsertSkillAssignment,
+    onSuccess: () => {
+      if (!companyId) return;
+      qc.invalidateQueries({ queryKey: ['skill-assignments', companyId] });
+    },
+  });
+}
+
+export function useDeleteSkillAssignment(companyId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: string) => ipc.extensions.deleteSkillAssignment(assignmentId),
+    onSuccess: () => {
+      if (!companyId) return;
+      qc.invalidateQueries({ queryKey: ['skill-assignments', companyId] });
+    },
+  });
+}
+
+export function useMcpTemplates(companyId: string | null) {
+  return useQuery({
+    queryKey: ['mcp-templates', companyId],
+    queryFn: () => ipc.mcp.listTemplates(companyId!),
+    enabled: companyId !== null && companyId.length > 0,
+  });
+}
+
 export function useAddMcpServer(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({
@@ -65,6 +127,20 @@ export function useAddMcpServer(companyId: string | null) {
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
+      qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
+      qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+    },
+  });
+}
+
+export function useInstallMcpTemplate(companyId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ipc.mcp.installTemplate,
+    onSuccess: () => {
+      if (!companyId) return;
+      qc.invalidateQueries({ queryKey: ['mcp', companyId] });
+      qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
     },
   });
@@ -78,6 +154,7 @@ export function useToggleMcpServer(companyId: string | null) {
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
+      qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
     },
   });
@@ -90,6 +167,7 @@ export function useRemoveMcpServer(companyId: string | null) {
     onSuccess: () => {
       if (!companyId) return;
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
+      qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
     },
   });

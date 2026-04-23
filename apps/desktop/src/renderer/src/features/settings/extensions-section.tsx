@@ -9,12 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton.js';
 import {
   useAuthorityGrants,
+  useDeleteSkillAssignment,
   useDeleteAuthorityGrant,
   useEffectiveAuthority,
   useInstalledExtensions,
+  useSkillAssignments,
+  useMcpTemplates,
   useMcpServers,
   useRemoveMcpServer,
   useToggleMcpServer,
+  useUpsertSkillAssignment,
 } from '@/hooks/use-extensions.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useExtensionsSettings, useSetExtensionsSettings } from '@/hooks/use-settings.js';
@@ -22,6 +26,7 @@ import { useAppStore } from '@/store/app-store.js';
 
 import { GrantAuthorityDialog } from './grant-authority-dialog.js';
 import { ImportMcpDialog } from './import-mcp-dialog.js';
+import { InstallSkillDialog } from './install-skill-dialog.js';
 
 const AUTONOMY_COPY: Record<(typeof EXTENSIONS_AUTONOMY_MODES)[number], string> = {
   balanced: 'Auto-enable low-risk installs, but stop for sensitive capability or path expansion.',
@@ -40,17 +45,23 @@ export function ExtensionsSection() {
   const extensionsSettings = useExtensionsSettings();
   const setExtensionsSettings = useSetExtensionsSettings();
   const extensionsQuery = useInstalledExtensions(companyId);
+  const skillAssignmentsQuery = useSkillAssignments(companyId);
   const mcpQuery = useMcpServers(companyId);
+  const mcpTemplatesQuery = useMcpTemplates(companyId);
   const authorityQuery = useAuthorityGrants(companyId);
   const employeesQuery = useEmployees(companyId);
   const deleteGrant = useDeleteAuthorityGrant(companyId);
+  const upsertSkillAssignment = useUpsertSkillAssignment(companyId);
+  const deleteSkillAssignment = useDeleteSkillAssignment(companyId);
   const toggleMcpServer = useToggleMcpServer(companyId);
   const removeMcpServer = useRemoveMcpServer(companyId);
   const [grantDialogOpen, setGrantDialogOpen] = useState(false);
   const [mcpDialogOpen, setMcpDialogOpen] = useState(false);
+  const [skillDialogOpen, setSkillDialogOpen] = useState(false);
   const [previewEmployeeId, setPreviewEmployeeId] = useState<string | null>(null);
 
   const extensions = extensionsQuery.data ?? [];
+  const skillAssignments = skillAssignmentsQuery.data ?? [];
   const employees = employeesQuery.data ?? [];
   const mcpExtensionsByRuntimeRefId = new Map(
     extensions
@@ -60,6 +71,16 @@ export function ExtensionsSection() {
   const effectiveAuthorityQuery = useEffectiveAuthority(companyId, previewEmployeeId);
   const employeeNameById = new Map(employees.map((employee) => [employee.id, employee.name]));
   const extensionNameById = new Map(extensions.map((extension) => [extension.id, extension.name]));
+  const workspaceSkillAssignments = new Map(
+    skillAssignments
+      .filter((assignment) => assignment.employeeId === null)
+      .map((assignment) => [assignment.extensionId, assignment]),
+  );
+  const employeeSkillAssignments = new Map(
+    skillAssignments
+      .filter((assignment) => assignment.employeeId !== null)
+      .map((assignment) => [`${assignment.extensionId}:${assignment.employeeId}`, assignment]),
+  );
 
   useEffect(() => {
     if (employees.length === 0) {
@@ -77,6 +98,36 @@ export function ExtensionsSection() {
       return employeeNameById.get(grant.scopeId) ?? `Employee ${grant.scopeId.slice(0, 8)}`;
     }
     return extensionNameById.get(grant.scopeId) ?? `Extension ${grant.scopeId.slice(0, 8)}`;
+  }
+
+  async function handleWorkspaceSkillToggle(extensionId: string, enabled: boolean) {
+    if (!companyId) return;
+    await upsertSkillAssignment.mutateAsync({
+      companyId,
+      extensionId,
+      enabled,
+    });
+  }
+
+  async function handleEmployeeSkillAssignment(
+    extensionId: string,
+    employeeId: string,
+    nextValue: 'inherit' | 'enabled' | 'disabled',
+  ) {
+    if (!companyId) return;
+    const existing = employeeSkillAssignments.get(`${extensionId}:${employeeId}`);
+    if (nextValue === 'inherit') {
+      if (existing) {
+        await deleteSkillAssignment.mutateAsync(existing.id);
+      }
+      return;
+    }
+    await upsertSkillAssignment.mutateAsync({
+      companyId,
+      extensionId,
+      employeeId,
+      enabled: nextValue === 'enabled',
+    });
   }
 
   const skillExtensions = extensions.filter((extension) => extension.kind === 'skill');
@@ -160,7 +211,13 @@ export function ExtensionsSection() {
                   Workspace-visible skills with provenance, trust, and requested access.
                 </CardDescription>
               </div>
-              <Button type="button" variant="outline" size="sm" disabled>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!companyId}
+                onClick={() => setSkillDialogOpen(true)}
+              >
                 Install Skill
               </Button>
             </div>
@@ -170,41 +227,134 @@ export function ExtensionsSection() {
               <p className="text-sm text-muted-foreground">
                 Select a workspace to inspect installed skills.
               </p>
-            ) : extensionsQuery.isLoading ? (
+            ) : extensionsQuery.isLoading || skillAssignmentsQuery.isLoading ? (
               <Skeleton className="h-40 rounded-lg" />
-            ) : extensionsQuery.isError ? (
+            ) : extensionsQuery.isError || skillAssignmentsQuery.isError ? (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
                 Failed to load installed skills.
               </div>
             ) : skillExtensions.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No skills installed yet. Local, GitHub, and marketplace installs land here next.
+                No skills installed yet. Local folders and public GitHub installs land here first.
               </p>
             ) : (
               <div className="space-y-3">
-                {skillExtensions.map((extension) => (
-                  <div key={extension.id} className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-foreground">
-                          {extension.name}
+                {skillExtensions.map((extension) => {
+                  const workspaceAssignment = workspaceSkillAssignments.get(extension.id);
+                  const workspaceEnabled = workspaceAssignment?.enabled ?? false;
+                  const healthStatus =
+                    typeof extension.manifest?.healthStatus === 'string'
+                      ? extension.manifest.healthStatus
+                      : 'healthy';
+                  return (
+                    <div key={extension.id} className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium text-foreground">
+                            {extension.name}
+                          </div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {extension.sourceKind} · {extension.sourceRef}
+                          </div>
                         </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {extension.sourceKind} · {extension.sourceRef}
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{extension.trustState}</Badge>
+                          <Badge variant="outline">{healthStatus}</Badge>
+                          {!extension.enabled && <Badge variant="secondary">extension disabled</Badge>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{extension.trustState}</Badge>
-                        {!extension.enabled && <Badge variant="secondary">disabled</Badge>}
+
+                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                        <span>{extension.requestedCapabilities.length} capabilities</span>
+                        <span>{extension.requestedPaths.length} paths</span>
+                        <span>{extension.version ?? 'unversioned'}</span>
+                        <span>{workspaceEnabled ? 'workspace enabled' : 'workspace disabled'}</span>
+                      </div>
+
+                      <div className="mt-4 rounded-lg border border-border/70 bg-background/70 px-3 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-medium text-foreground">Workspace assignment</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Default state applied to every employee unless an override exists.
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant={workspaceEnabled ? 'outline' : 'default'}
+                            size="sm"
+                            className="h-8"
+                            disabled={
+                              upsertSkillAssignment.isPending ||
+                              deleteSkillAssignment.isPending ||
+                              !extension.enabled
+                            }
+                            onClick={() => handleWorkspaceSkillToggle(extension.id, !workspaceEnabled)}
+                          >
+                            {workspaceEnabled ? 'Disable Workspace Default' : 'Enable Workspace Default'}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 space-y-2">
+                        <div>
+                          <p className="text-xs font-medium text-foreground">Employee overrides</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            Override the workspace default per employee. Inherit removes the override.
+                          </p>
+                        </div>
+                        {employees.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            No employees available for per-person overrides yet.
+                          </p>
+                        ) : (
+                          <div className="grid gap-2">
+                            {employees.map((employee) => {
+                              const employeeAssignment = employeeSkillAssignments.get(
+                                `${extension.id}:${employee.id}`,
+                              );
+                              const value = employeeAssignment
+                                ? employeeAssignment.enabled
+                                  ? 'enabled'
+                                  : 'disabled'
+                                : 'inherit';
+                              return (
+                                <div
+                                  key={`${extension.id}:${employee.id}`}
+                                  className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/50 px-3 py-2"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="truncate text-sm text-foreground">{employee.name}</div>
+                                    <div className="truncate text-[11px] text-muted-foreground">
+                                      {employee.title}
+                                    </div>
+                                  </div>
+                                  <select
+                                    aria-label={`${extension.name} override for ${employee.name}`}
+                                    value={value}
+                                    onChange={(event) =>
+                                      void handleEmployeeSkillAssignment(
+                                        extension.id,
+                                        employee.id,
+                                        event.target.value as 'inherit' | 'enabled' | 'disabled',
+                                      )
+                                    }
+                                    className={selectClass}
+                                    disabled={upsertSkillAssignment.isPending || deleteSkillAssignment.isPending}
+                                  >
+                                    <option value="inherit">Inherit</option>
+                                    <option value="enabled">Enabled</option>
+                                    <option value="disabled">Disabled</option>
+                                  </select>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                      <span>{extension.requestedCapabilities.length} capabilities</span>
-                      <span>{extension.requestedPaths.length} paths</span>
-                      <span>{extension.version ?? 'unversioned'}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -216,7 +366,8 @@ export function ExtensionsSection() {
               <div>
                 <CardTitle className="text-base">MCP Servers</CardTitle>
                 <CardDescription>
-                  Runtime servers with provenance, trust state, and requested access from the extension registry.
+                  Runtime servers with provenance, trust state, and requested access from the extension
+                  registry. Built-in templates install through the import flow.
                 </CardDescription>
               </div>
               <Button
@@ -302,7 +453,12 @@ export function ExtensionsSection() {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No MCP servers are registered for this workspace.</p>
+              <p className="text-sm text-muted-foreground">
+                No MCP servers are registered for this workspace.
+                {mcpTemplatesQuery.data && mcpTemplatesQuery.data.length > 0
+                  ? ` ${mcpTemplatesQuery.data.length} built-in template(s) are ready in Import MCP.`
+                  : ''}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -458,6 +614,11 @@ export function ExtensionsSection() {
         onOpenChange={setGrantDialogOpen}
         companyId={companyId}
         employees={employees}
+      />
+      <InstallSkillDialog
+        open={skillDialogOpen}
+        onOpenChange={setSkillDialogOpen}
+        companyId={companyId}
       />
       <ImportMcpDialog
         open={mcpDialogOpen}

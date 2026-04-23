@@ -74,7 +74,11 @@ import { createCompaniesRepo } from './db/repos/companies.js';
 import { createCopilotInsightsRepo } from './db/repos/copilot-insights.js';
 import { createEmbeddingsRepo } from './db/repos/embeddings.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
-import { createAuthorityRepo, createExtensionsRepo } from './db/repos/extensions.js';
+import {
+  createAuthorityRepo,
+  createExtensionsRepo,
+  createSkillAssignmentsRepo,
+} from './db/repos/extensions.js';
 import { createEventsRepo } from './db/repos/events.js';
 import { createGoalsRepo } from './db/repos/goals.js';
 import {
@@ -151,6 +155,7 @@ import { createRetrievalOrchestrator } from './services/retrieval-orchestrator.j
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRagIndexer } from './services/rag-indexer.js';
 import { createRoleLoader } from './services/role-loader.js';
+import { createSkillsService } from './services/skills-service.js';
 import { pickStrategy } from './services/runtime-strategy.js';
 import { buildChatActionTools } from './services/chat-action-tools.js';
 import { SecretsStore } from './services/secrets.js';
@@ -343,6 +348,7 @@ app
     const auditRepo = createAuditRepo(db);
     const mcpServersRepo = createMcpServersRepo(db);
     const extensionsRepo = createExtensionsRepo(db);
+    const skillAssignmentsRepo = createSkillAssignmentsRepo(db);
     const authorityRepo = createAuthorityRepo(db);
     const authorityResolver = createAuthorityResolverService({
       employeesRepo,
@@ -383,6 +389,17 @@ app
     if (mcpSeeded > 0) {
       console.log(`[mcp] seeded ${mcpSeeded} default MCP server(s)`);
     }
+    const mcpBridgeBackfill = extensionsRegistry.backfillMcpServers();
+    if (mcpBridgeBackfill > 0) {
+      console.log(`[extensions] synced ${mcpBridgeBackfill} MCP bridge row(s)`);
+    }
+    const skillsService = createSkillsService({
+      extensionsRepo,
+      skillAssignmentsRepo,
+      authorityRepo,
+      settingsRepo,
+      skillsRoot: join(app.getPath('userData'), 'extensions', 'skills'),
+    });
 
     const bus = createEventBus({ repo: eventsRepo });
 
@@ -650,8 +667,18 @@ app
         // wrapper as its `renderRoleSystemPrompt` dep, AND used as the
         // direct return when RAG is off so the non-RAG code path is
         // literally byte-identical to the pre-M29 behaviour.
-        const renderPlain = async (): Promise<string> =>
-          appendExecutionPolicy(await roleLoader.resolveSystemPrompt({ employee, company }));
+        const renderPlain = async (): Promise<string> => {
+          const rolePrompt = await roleLoader.resolveSystemPrompt({ employee, company });
+          const skillBundle = await skillsService.materializePromptBundle({
+            companyId: company.id,
+            employeeId: employee.id,
+          });
+          const prompt =
+            skillBundle.trim().length > 0
+              ? `${rolePrompt}\n\n## Installed Skills\n\n${skillBundle}`
+              : rolePrompt;
+          return appendExecutionPolicy(prompt);
+        };
 
         if (retrievalOrchestrator === null) return renderPlain();
 
@@ -815,6 +842,7 @@ app
       mcpHost,
       mcpServersRepo,
       extensionsRegistry,
+      skillsService,
       authorityRepo,
       authorityResolver,
       providersService,

@@ -8,12 +8,14 @@ const currentDirname = dirname(fileURLToPath(import.meta.url));
 const SETTINGS_VIEW_PATH = join(currentDirname, 'settings-view.tsx');
 const EXTENSIONS_SECTION_PATH = join(currentDirname, 'extensions-section.tsx');
 const IMPORT_MCP_DIALOG_PATH = join(currentDirname, 'import-mcp-dialog.tsx');
+const INSTALL_SKILL_DIALOG_PATH = join(currentDirname, 'install-skill-dialog.tsx');
 const SETTINGS_HOOKS_PATH = join(currentDirname, '..', '..', 'hooks', 'use-settings.ts');
 const EXTENSIONS_HOOKS_PATH = join(currentDirname, '..', '..', 'hooks', 'use-extensions.ts');
 
 const settingsViewSrc = readFileSync(SETTINGS_VIEW_PATH, 'utf8');
 const extensionsSectionSrc = readFileSync(EXTENSIONS_SECTION_PATH, 'utf8');
 const importMcpDialogSrc = readFileSync(IMPORT_MCP_DIALOG_PATH, 'utf8');
+const installSkillDialogSrc = readFileSync(INSTALL_SKILL_DIALOG_PATH, 'utf8');
 const settingsHooksSrc = readFileSync(SETTINGS_HOOKS_PATH, 'utf8');
 const extensionsHooksSrc = readFileSync(EXTENSIONS_HOOKS_PATH, 'utf8');
 
@@ -34,9 +36,22 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsHooksSrc).toContain('export function useInstalledExtensions(companyId: string | null)');
     expect(extensionsHooksSrc).toContain("queryKey: ['extensions', companyId]");
     expect(extensionsHooksSrc).toContain('ipc.extensions.list(companyId!)');
+    expect(extensionsHooksSrc).toContain('export function useSkillAssignments(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain("queryKey: ['skill-assignments', companyId]");
+    expect(extensionsHooksSrc).toContain('ipc.extensions.listSkillAssignments(companyId!)');
+    expect(extensionsHooksSrc).toContain('export function useInstallLocalSkill(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain('ipc.extensions.installLocalSkill');
+    expect(extensionsHooksSrc).toContain('export function useInstallGithubSkill(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain('ipc.extensions.installGithubSkill');
+    expect(extensionsHooksSrc).toContain('export function useUpsertSkillAssignment(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain('ipc.extensions.upsertSkillAssignment');
+    expect(extensionsHooksSrc).toContain('export function useDeleteSkillAssignment(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain('ipc.extensions.deleteSkillAssignment(assignmentId)');
     expect(extensionsHooksSrc).toContain('export function useAuthorityGrants(companyId: string | null, employeeId?: string | null)');
     expect(extensionsHooksSrc).toContain("queryKey: ['authority', companyId, employeeId ?? null]");
     expect(extensionsHooksSrc).toContain("queryKey: ['mcp', companyId]");
+    expect(extensionsHooksSrc).toContain('export function useMcpTemplates(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain("queryKey: ['mcp-templates', companyId]");
     expect(extensionsHooksSrc).toContain('export function useCreateAuthorityGrant()');
     expect(extensionsHooksSrc).toContain('ipc.authority.create');
     expect(extensionsHooksSrc).toContain('export function useDeleteAuthorityGrant(companyId: string | null)');
@@ -45,6 +60,8 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsHooksSrc).toContain('ipc.authority.getEffective({ companyId: companyId!, employeeId: employeeId! })');
     expect(extensionsHooksSrc).toContain('export function useAddMcpServer(companyId: string | null)');
     expect(extensionsHooksSrc).toContain('ipc.mcp.addServer');
+    expect(extensionsHooksSrc).toContain('export function useInstallMcpTemplate(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain('ipc.mcp.installTemplate');
     expect(extensionsHooksSrc).toContain('export function useToggleMcpServer(companyId: string | null)');
     expect(extensionsHooksSrc).toContain('ipc.mcp.toggle(serverId, enabled)');
     expect(extensionsHooksSrc).toContain('export function useRemoveMcpServer(companyId: string | null)');
@@ -61,19 +78,38 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('Install Skill');
     expect(extensionsSectionSrc).toContain('Import MCP');
     expect(extensionsSectionSrc).toContain('Grant Path');
+    expect(extensionsSectionSrc).toContain('Workspace assignment');
+    expect(extensionsSectionSrc).toContain('Employee overrides');
     expect(extensionsSectionSrc).toContain('EXTENSIONS_AUTONOMY_MODES.map');
     expect(extensionsSectionSrc).toContain('Effective preview');
     expect(extensionsSectionSrc).toContain('Authority preview employee');
     expect(extensionsSectionSrc).toContain('Remove');
     expect(extensionsSectionSrc).toContain('Disable');
+    expect(extensionsSectionSrc).toContain('useSkillAssignments(companyId)');
+    expect(extensionsSectionSrc).toContain('useUpsertSkillAssignment(companyId)');
+    expect(extensionsSectionSrc).toContain('useDeleteSkillAssignment(companyId)');
+    expect(extensionsSectionSrc).toContain('<InstallSkillDialog');
     expect(extensionsSectionSrc).toContain('useToggleMcpServer(companyId)');
     expect(extensionsSectionSrc).toContain('<ImportMcpDialog');
   });
 
-  it('adds a manual MCP import dialog with transport-specific config fields', () => {
+  it('adds a skill install dialog for local folders and GitHub sources', () => {
+    expect(installSkillDialogSrc).toContain('Install Skill');
+    expect(installSkillDialogSrc).toContain('Local Folder');
+    expect(installSkillDialogSrc).toContain('GitHub URL');
+    expect(installSkillDialogSrc).toContain('teamx-skill.json');
+    expect(installSkillDialogSrc).toContain('Install Local Skill');
+    expect(installSkillDialogSrc).toContain('Install GitHub Skill');
+    expect(installSkillDialogSrc).toContain('useInstallLocalSkill(companyId)');
+    expect(installSkillDialogSrc).toContain('useInstallGithubSkill(companyId)');
+  });
+
+  it('adds template and manual MCP import flows with transport-specific config fields', () => {
     expect(importMcpDialogSrc).toContain('Import MCP');
+    expect(importMcpDialogSrc).toContain('Built-in Template');
+    expect(importMcpDialogSrc).toContain('Install Template');
     expect(importMcpDialogSrc).toContain('Test Connection');
-    expect(importMcpDialogSrc).toContain('Register a workspace-scoped MCP server over stdio or SSE.');
+    expect(importMcpDialogSrc).toContain('Install a built-in MCP template or register a workspace-scoped stdio/SSE server.');
     expect(importMcpDialogSrc).toContain('Environment JSON');
     expect(importMcpDialogSrc).toContain('SSE URL');
   });

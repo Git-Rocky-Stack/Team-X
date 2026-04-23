@@ -96,6 +96,9 @@ import type {
   GoalDetail,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  InstallGithubSkillRequest,
+  InstallLocalSkillRequest,
+  InstallMcpTemplateRequest,
   InterjectMeetingRequest,
   InterjectMeetingResponse,
   DeleteAuthorityGrantRequest,
@@ -105,15 +108,18 @@ import type {
   ListAuthorityGrantsRequest,
   ListAttachmentsRequest,
   ListExtensionsRequest,
+  ListSkillAssignmentsRequest,
   ListEventsRequest,
   ListEventsResponse,
   ListGoalsRequest,
   ListMeetingsRequest,
+  ListMcpTemplatesRequest,
   ListProviderModelsRequest,
   ListProviderModelsResponse,
   ListProjectsRequest,
   ListTicketsRequest,
   McpServerSummary,
+  McpTemplateSummary,
   Meeting,
   MeetingActionItem,
   MeetingDetail,
@@ -130,6 +136,7 @@ import type {
   ResolveThreadResponse,
   SendChatRequest,
   SendChatResponse,
+  SkillAssignment,
   StopChatRequest,
   StopChatResponse,
   SettingsGetAgenticResponse,
@@ -185,6 +192,7 @@ import type {
   VaultUploadRequest,
   VaultUploadResponse,
   VaultVerifyResponse,
+  UpsertSkillAssignmentRequest,
 } from '@team-x/shared-types';
 import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import {
@@ -703,6 +711,15 @@ export interface IpcUpdaterService {
   downloadAndInstall(): Promise<UpdateInstallResult>;
 }
 
+/** Narrow skills-service surface the IPC handlers need. */
+export interface IpcSkillsService {
+  installLocal(input: InstallLocalSkillRequest): Promise<{ extensionId: string }>;
+  installGithub(input: InstallGithubSkillRequest): Promise<{ extensionId: string }>;
+  listAssignments(companyId: string): SkillAssignment[];
+  upsertAssignment(input: UpsertSkillAssignmentRequest): string;
+  deleteAssignment(assignmentId: string): void;
+}
+
 export interface IpcHandlerDeps {
   companiesRepo: IpcCompaniesRepo;
   employeesRepo: IpcEmployeesRepo;
@@ -722,6 +739,7 @@ export interface IpcHandlerDeps {
   mcpHost: McpHost;
   mcpServersRepo: McpServersRepo;
   extensionsRegistry?: ExtensionsRegistryService;
+  skillsService?: IpcSkillsService;
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
@@ -995,9 +1013,14 @@ export interface IpcHandlers {
 
   /**
    * `mcp.list` — return all MCP servers available to a company.
-   * Includes global servers (companyId=null) and company-specific servers.
+   * Includes company-specific servers and any enabled global rows.
    */
   mcpList(req: { companyId: string }): Promise<McpServerSummary[]>;
+
+  /**
+   * `mcp.listTemplates` — return built-in MCP templates available for install.
+   */
+  mcpListTemplates(req: ListMcpTemplatesRequest): Promise<McpTemplateSummary[]>;
 
   /**
    * `mcp.toggle` — enable or disable an MCP server for a company.
@@ -1015,6 +1038,11 @@ export interface IpcHandlers {
   }): Promise<{ serverId: string }>;
 
   /**
+   * `mcp.installTemplate` — clone a built-in template into a workspace-scoped runtime row.
+   */
+  mcpInstallTemplate(req: InstallMcpTemplateRequest): Promise<{ serverId: string }>;
+
+  /**
    * `mcp.removeServer` — remove an MCP server.
    */
   mcpRemoveServer(req: { serverId: string }): Promise<void>;
@@ -1026,6 +1054,23 @@ export interface IpcHandlers {
 
   /** `extensions.list` — installed extension metadata visible to a company. */
   extensionsList(req: ListExtensionsRequest): Promise<ExtensionSummary[]>;
+
+  /** `extensions.installLocalSkill` — install one local skill folder into a workspace. */
+  extensionsInstallLocalSkill(req: InstallLocalSkillRequest): Promise<{ extensionId: string }>;
+
+  /** `extensions.installGithubSkill` — install one GitHub-hosted skill into a workspace. */
+  extensionsInstallGithubSkill(req: InstallGithubSkillRequest): Promise<{ extensionId: string }>;
+
+  /** `extensions.listSkillAssignments` — list workspace and employee skill overlays. */
+  extensionsListSkillAssignments(req: ListSkillAssignmentsRequest): Promise<SkillAssignment[]>;
+
+  /** `extensions.upsertSkillAssignment` — create or update a workspace/employee skill overlay. */
+  extensionsUpsertSkillAssignment(
+    req: UpsertSkillAssignmentRequest,
+  ): Promise<{ assignmentId: string }>;
+
+  /** `extensions.deleteSkillAssignment` — delete one skill-assignment override. */
+  extensionsDeleteSkillAssignment(req: { assignmentId: string }): Promise<void>;
 
   /** `authority.list` — authority grants relevant to a company or one employee. */
   authorityList(req: ListAuthorityGrantsRequest): Promise<AuthorityGrant[]>;
@@ -1464,6 +1509,14 @@ function rowToExtensionSummary(row: ExtensionRow): ExtensionSummary {
   };
 }
 
+function getManifestStringValue(
+  manifest: Record<string, unknown> | null | undefined,
+  key: string,
+): string | null {
+  const value = manifest?.[key];
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
 function rowToAuthorityGrant(row: AuthorityGrantRow): AuthorityGrant {
   let metadata: Record<string, unknown> | null = null;
   try {
@@ -1649,6 +1702,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     mcpHost,
     mcpServersRepo,
     extensionsRegistry,
+    skillsService,
     authorityRepo,
     authorityResolver,
     providersService,
@@ -2721,7 +2775,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof companyId !== 'string' || companyId.length === 0) {
         throw new Error('[ipc] mcp.list: companyId is required');
       }
-      const servers = mcpServersRepo.listByCompany(companyId);
+      const servers = mcpServersRepo.listRuntimeByCompany(companyId);
       return servers.map((server) => {
         const connected = mcpHost.getServer(server.id);
         return {
@@ -2732,6 +2786,47 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           enabled: server.enabled,
           lastHealth: server.lastHealth,
           toolCount: connected?.tools.length ?? 0,
+        };
+      });
+    },
+
+    async mcpListTemplates({ companyId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] mcp.listTemplates: companyId is required');
+      }
+
+      const extensions = extensionsRegistry
+        ? extensionsRegistry.listByCompany(companyId).map(rowToExtensionSummary)
+        : [];
+      const templateExtensionsByRuntimeRefId = new Map(
+        extensions
+          .filter((extension) => extension.kind === 'mcp' && extension.companyId === null)
+          .flatMap((extension) =>
+            extension.runtimeRefId ? [[extension.runtimeRefId, extension] as const] : [],
+          ),
+      );
+      const installedServerIdByTemplateId = new Map(
+        extensions
+          .filter((extension) => extension.kind === 'mcp' && extension.companyId === companyId)
+          .flatMap((extension) => {
+            const templateId = getManifestStringValue(extension.manifest, 'templateId');
+            const runtimeRefId = extension.runtimeRefId;
+            if (!templateId || !runtimeRefId) return [];
+            return [[templateId, runtimeRefId] as const];
+          }),
+      );
+
+      return mcpServersRepo.listTemplates().map((template) => {
+        const extension = templateExtensionsByRuntimeRefId.get(template.id);
+        return {
+          id: template.id,
+          name: template.name,
+          transport: template.transport as 'stdio' | 'sse',
+          sourceRef: extension?.sourceRef ?? template.name,
+          lastHealth: template.lastHealth,
+          requestedCapabilities: extension?.requestedCapabilities ?? [],
+          installed: installedServerIdByTemplateId.has(template.id),
+          installedServerId: installedServerIdByTemplateId.get(template.id) ?? null,
         };
       });
     },
@@ -2794,6 +2889,79 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       return { serverId };
     },
 
+    async mcpInstallTemplate({ companyId, templateId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] mcp.installTemplate: companyId is required');
+      }
+      if (typeof templateId !== 'string' || templateId.length === 0) {
+        throw new Error('[ipc] mcp.installTemplate: templateId is required');
+      }
+
+      const template = mcpServersRepo.getById(templateId);
+      if (!template || template.companyId !== null) {
+        throw new Error(`[ipc] mcp.installTemplate: template not found: ${templateId}`);
+      }
+
+      const existingInstall = extensionsRegistry
+        ?.listByCompany(companyId)
+        .map(rowToExtensionSummary)
+        .find(
+          (extension) =>
+            extension.kind === 'mcp' &&
+            extension.companyId === companyId &&
+            getManifestStringValue(extension.manifest, 'templateId') === templateId &&
+            extension.runtimeRefId,
+        );
+      if (existingInstall?.runtimeRefId) {
+        return { serverId: existingInstall.runtimeRefId };
+      }
+
+      const serverId = mcpServersRepo.create({
+        companyId,
+        name: template.name,
+        transport: template.transport as 'stdio' | 'sse',
+        configJson: template.configJson,
+      });
+
+      const config = mcpServersRepo.getById(serverId);
+      if (config) {
+        await mcpHost
+          .connectToServer({
+            id: config.id,
+            companyId: config.companyId,
+            name: config.name,
+            transport: config.transport as 'stdio' | 'sse',
+            configJson: config.configJson,
+            enabled: config.enabled,
+            lastHealth: config.lastHealth,
+          })
+          .catch((err) => {
+            console.error(
+              `[ipc] mcp.installTemplate: failed to connect template ${template.name}:`,
+              err,
+            );
+          });
+      }
+
+      const templateExtension = extensionsRegistry
+        ?.listByCompany(companyId)
+        .map(rowToExtensionSummary)
+        .find((extension) => extension.kind === 'mcp' && extension.runtimeRefId === template.id);
+
+      extensionsRegistry?.syncMcpServer(serverId, {
+        sourceKind: 'template',
+        sourceRef: `Built-in template · ${template.name}`,
+        manifestPatch: {
+          templateId: template.id,
+          templateName: template.name,
+          templateSourceRef: templateExtension?.sourceRef ?? template.name,
+          templateTransport: template.transport,
+        },
+      });
+
+      return { serverId };
+    },
+
     async mcpRemoveServer({ serverId }) {
       await mcpHost.disconnectServer(serverId);
       mcpServersRepo.delete(serverId);
@@ -2841,6 +3009,121 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] extensions.list: extensionsRegistry dep unwired');
       }
       return extensionsRegistry.listByCompany(companyId).map(rowToExtensionSummary);
+    },
+
+    async extensionsInstallLocalSkill({ companyId, folderPath }) {
+      if (!skillsService) {
+        throw new Error('[ipc] extensions.installLocalSkill: skillsService dep unwired');
+      }
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] extensions.installLocalSkill: companyId is required');
+      }
+      if (typeof folderPath !== 'string' || folderPath.trim().length === 0) {
+        throw new Error('[ipc] extensions.installLocalSkill: folderPath is required');
+      }
+      assertCompanyActive(companiesRepo, companyId, 'extensions.installLocalSkill');
+      return skillsService.installLocal({
+        companyId,
+        folderPath: folderPath.trim(),
+      });
+    },
+
+    async extensionsInstallGithubSkill({ companyId, sourceUrl }) {
+      if (!skillsService) {
+        throw new Error('[ipc] extensions.installGithubSkill: skillsService dep unwired');
+      }
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] extensions.installGithubSkill: companyId is required');
+      }
+      if (typeof sourceUrl !== 'string' || sourceUrl.trim().length === 0) {
+        throw new Error('[ipc] extensions.installGithubSkill: sourceUrl is required');
+      }
+      assertCompanyActive(companiesRepo, companyId, 'extensions.installGithubSkill');
+      return skillsService.installGithub({
+        companyId,
+        sourceUrl: sourceUrl.trim(),
+      });
+    },
+
+    async extensionsListSkillAssignments({ companyId }) {
+      if (!skillsService) {
+        throw new Error('[ipc] extensions.listSkillAssignments: skillsService dep unwired');
+      }
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] extensions.listSkillAssignments: companyId is required');
+      }
+      if (!extensionsRegistry) {
+        throw new Error('[ipc] extensions.listSkillAssignments: extensionsRegistry dep unwired');
+      }
+      assertCompanyActive(companiesRepo, companyId, 'extensions.listSkillAssignments');
+      return skillsService
+        .listAssignments(companyId)
+        .filter((assignment) =>
+          extensionsRegistry.listByCompany(companyId).some((extension) => extension.id === assignment.extensionId),
+        );
+    },
+
+    async extensionsUpsertSkillAssignment({ companyId, extensionId, employeeId, enabled }) {
+      if (!skillsService) {
+        throw new Error('[ipc] extensions.upsertSkillAssignment: skillsService dep unwired');
+      }
+      if (!extensionsRegistry) {
+        throw new Error('[ipc] extensions.upsertSkillAssignment: extensionsRegistry dep unwired');
+      }
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] extensions.upsertSkillAssignment: companyId is required');
+      }
+      if (typeof extensionId !== 'string' || extensionId.length === 0) {
+        throw new Error('[ipc] extensions.upsertSkillAssignment: extensionId is required');
+      }
+      if (typeof enabled !== 'boolean') {
+        throw new Error('[ipc] extensions.upsertSkillAssignment: enabled must be boolean');
+      }
+      assertCompanyActive(companiesRepo, companyId, 'extensions.upsertSkillAssignment');
+
+      const extension = extensionsRegistry
+        .listByCompany(companyId)
+        .find((row) => row.id === extensionId);
+      if (!extension) {
+        throw new Error(
+          `[ipc] extensions.upsertSkillAssignment: extension not found in company ${companyId}: ${extensionId}`,
+        );
+      }
+      if (extension.kind !== 'skill') {
+        throw new Error('[ipc] extensions.upsertSkillAssignment: extension must be a skill');
+      }
+
+      let normalizedEmployeeId: string | null = null;
+      if (typeof employeeId === 'string' && employeeId.length > 0) {
+        const employee = employeesRepo.getById(employeeId);
+        if (!employee) {
+          throw new Error(`[ipc] extensions.upsertSkillAssignment: employee not found: ${employeeId}`);
+        }
+        if (employee.companyId !== companyId) {
+          throw new Error(
+            `[ipc] extensions.upsertSkillAssignment: employee ${employeeId} does not belong to company ${companyId}`,
+          );
+        }
+        normalizedEmployeeId = employeeId;
+      }
+
+      const assignmentId = skillsService.upsertAssignment({
+        companyId,
+        extensionId,
+        employeeId: normalizedEmployeeId,
+        enabled,
+      });
+      return { assignmentId };
+    },
+
+    async extensionsDeleteSkillAssignment({ assignmentId }) {
+      if (!skillsService) {
+        throw new Error('[ipc] extensions.deleteSkillAssignment: skillsService dep unwired');
+      }
+      if (typeof assignmentId !== 'string' || assignmentId.length === 0) {
+        throw new Error('[ipc] extensions.deleteSkillAssignment: assignmentId is required');
+      }
+      skillsService.deleteAssignment(assignmentId);
     },
 
     async authorityList({ companyId, employeeId }) {

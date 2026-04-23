@@ -80,6 +80,26 @@ export function createMcpServersRepo(db: DB) {
         .concat(db.select().from(mcpServers).where(isNull(mcpServers.companyId)).all());
     },
 
+    listTemplates(): McpServerRow[] {
+      return db.select().from(mcpServers).where(isNull(mcpServers.companyId)).all();
+    },
+
+    listRuntimeByCompany(companyId: string): McpServerRow[] {
+      return db
+        .select()
+        .from(mcpServers)
+        .where(eq(mcpServers.companyId, companyId))
+        .all()
+        .concat(
+          db
+            .select()
+            .from(mcpServers)
+            .where(isNull(mcpServers.companyId))
+            .all()
+            .filter((row) => row.enabled),
+        );
+    },
+
     updateEnabled(id: string, enabled: boolean): void {
       db.update(mcpServers).set({ enabled }).where(eq(mcpServers.id, id)).run();
     },
@@ -161,15 +181,24 @@ const DEFAULT_MCP_SERVERS: DefaultMcpServer[] = [
 ];
 
 /**
- * Seed default MCP servers on first boot. Idempotent — only inserts
- * when the mcp_servers table is empty.
+ * Ensure default MCP templates exist as global rows. Idempotent —
+ * inserts only the missing well-known templates so upgrades can pick up
+ * new built-ins without resetting the table.
  */
 export function seedDefaultMcpServers(db: DB): number {
-  const existing = db.select().from(mcpServers).all();
-  if (existing.length > 0) return 0;
+  const existingGlobal = new Set(
+    db
+      .select({ name: mcpServers.name })
+      .from(mcpServers)
+      .where(isNull(mcpServers.companyId))
+      .all()
+      .map((row) => row.name),
+  );
 
   const now = Date.now();
+  let inserted = 0;
   for (const server of DEFAULT_MCP_SERVERS) {
+    if (existingGlobal.has(server.name)) continue;
     db.insert(mcpServers)
       .values({
         id: nanoid(),
@@ -181,6 +210,7 @@ export function seedDefaultMcpServers(db: DB): number {
         installedAt: now,
       })
       .run();
+    inserted += 1;
   }
-  return DEFAULT_MCP_SERVERS.length;
+  return inserted;
 }

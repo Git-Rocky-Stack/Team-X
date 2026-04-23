@@ -94,6 +94,8 @@ import type {
   GoalDetail,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  InstallGithubSkillRequest,
+  InstallLocalSkillRequest,
   InterjectMeetingRequest,
   InterjectMeetingResponse,
   IpcCommandHistoryEntry,
@@ -102,11 +104,15 @@ import type {
   IpcParseResult,
   IpcSuggestItem,
   GetEffectiveAuthorityRequest,
+  InstallMcpTemplateRequest,
   ListAuthorityGrantsRequest,
   ListEventsRequest,
   ListEventsResponse,
+  ListMcpTemplatesRequest,
+  ListSkillAssignmentsRequest,
   CreateAuthorityGrantRequest,
   McpServerSummary,
+  McpTemplateSummary,
   Meeting,
   MeetingDetail,
   ListProviderModelsResponse,
@@ -143,6 +149,7 @@ import type {
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
+  SkillAssignment,
   TeamXApi,
   TelemetryCompanyStatsRequest,
   TelemetryCompanyStatsResponse,
@@ -230,11 +237,18 @@ const CHANNELS = {
   eventsList: 'events.list',
   // MCP management (Phase 2 — M10)
   mcpList: 'mcp.list',
+  mcpListTemplates: 'mcp.listTemplates',
   mcpToggle: 'mcp.toggle',
   mcpAddServer: 'mcp.addServer',
+  mcpInstallTemplate: 'mcp.installTemplate',
   mcpRemoveServer: 'mcp.removeServer',
   mcpTestConnection: 'mcp.testConnection',
   extensionsList: 'extensions.list',
+  extensionsInstallLocalSkill: 'extensions.installLocalSkill',
+  extensionsInstallGithubSkill: 'extensions.installGithubSkill',
+  extensionsListSkillAssignments: 'extensions.listSkillAssignments',
+  extensionsUpsertSkillAssignment: 'extensions.upsertSkillAssignment',
+  extensionsDeleteSkillAssignment: 'extensions.deleteSkillAssignment',
   authorityList: 'authority.list',
   authorityCreate: 'authority.create',
   authorityDelete: 'authority.delete',
@@ -429,10 +443,16 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     mcp: {
       list: (companyId: string) =>
         ipc.invoke(CHANNELS.mcpList, { companyId }) as Promise<McpServerSummary[]>,
+      listTemplates: (companyId: string) =>
+        ipc.invoke(CHANNELS.mcpListTemplates, { companyId } satisfies ListMcpTemplatesRequest) as Promise<
+          McpTemplateSummary[]
+        >,
       toggle: (serverId: string, enabled: boolean) =>
         ipc.invoke(CHANNELS.mcpToggle, { serverId, enabled }) as Promise<void>,
       addServer: (req: AddMcpServerRequest) =>
         ipc.invoke(CHANNELS.mcpAddServer, req) as Promise<{ serverId: string }>,
+      installTemplate: (req: InstallMcpTemplateRequest) =>
+        ipc.invoke(CHANNELS.mcpInstallTemplate, req) as Promise<{ serverId: string }>,
       removeServer: (serverId: string) =>
         ipc.invoke(CHANNELS.mcpRemoveServer, { serverId }) as Promise<void>,
       testConnection: (req: TestMcpConnectionRequest) =>
@@ -441,6 +461,19 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     extensions: {
       list: (companyId: string) =>
         ipc.invoke(CHANNELS.extensionsList, { companyId }) as Promise<ExtensionSummary[]>,
+      installLocalSkill: (req: InstallLocalSkillRequest) =>
+        ipc.invoke(CHANNELS.extensionsInstallLocalSkill, req) as Promise<{ extensionId: string }>,
+      installGithubSkill: (req: InstallGithubSkillRequest) =>
+        ipc.invoke(CHANNELS.extensionsInstallGithubSkill, req) as Promise<{ extensionId: string }>,
+      listSkillAssignments: (companyId: string) =>
+        ipc.invoke(
+          CHANNELS.extensionsListSkillAssignments,
+          { companyId } satisfies ListSkillAssignmentsRequest,
+        ) as Promise<SkillAssignment[]>,
+      upsertSkillAssignment: (req) =>
+        ipc.invoke(CHANNELS.extensionsUpsertSkillAssignment, req) as Promise<{ assignmentId: string }>,
+      deleteSkillAssignment: (assignmentId: string) =>
+        ipc.invoke(CHANNELS.extensionsDeleteSkillAssignment, { assignmentId }) as Promise<void>,
     },
     authority: {
       list: (req: ListAuthorityGrantsRequest) =>

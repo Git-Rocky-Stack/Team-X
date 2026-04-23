@@ -138,6 +138,53 @@ describe('extensions registry service', () => {
     expect(updated?.requestedCapabilitiesJson).toContain('network');
   });
 
+  it('preserves template provenance for company-installed template bridges', () => {
+    const extensionsRepo = createExtensionsRepo(ctx.db);
+    const mcpServersRepo = createMcpServersRepo(ctx.db);
+    const registry = createExtensionsRegistryService({
+      extensionsRepo,
+      mcpServersRepo,
+    });
+
+    const serverId = mcpServersRepo.create({
+      companyId: 'company-1',
+      name: 'Context7',
+      transport: 'stdio',
+      configJson: JSON.stringify({ command: 'npx', args: ['-y', '@upstash/context7-mcp@latest'] }),
+    });
+
+    const installed = registry.syncMcpServer(serverId, {
+      sourceKind: 'template',
+      sourceRef: 'Built-in template · Context7',
+      manifestPatch: {
+        templateId: 'template-context7',
+        templateName: 'Context7',
+      },
+    });
+
+    expect(installed).toMatchObject({
+      sourceKind: 'template',
+      sourceRef: 'Built-in template · Context7',
+    });
+
+    ctx.db
+      .update(mcpServers)
+      .set({
+        lastHealth: 'error: missing package',
+      })
+      .where(eq(mcpServers.id, serverId))
+      .run();
+
+    const resynced = registry.syncMcpServer(serverId);
+
+    expect(resynced).toMatchObject({
+      sourceKind: 'template',
+      sourceRef: 'Built-in template · Context7',
+    });
+    expect(resynced?.manifestJson).toContain('template-context7');
+    expect(resynced?.manifestJson).toContain('missing package');
+  });
+
   it('removes the bridge extension when the runtime server is deleted', () => {
     const extensionsRepo = createExtensionsRepo(ctx.db);
     const mcpServersRepo = createMcpServersRepo(ctx.db);
@@ -158,5 +205,30 @@ describe('extensions registry service', () => {
     registry.removeMcpServer(serverId);
 
     expect(extensionsRepo.findByRuntimeRefId(serverId)).toBeNull();
+  });
+
+  it('backfills every existing MCP row into extension metadata at startup', () => {
+    const extensionsRepo = createExtensionsRepo(ctx.db);
+    const mcpServersRepo = createMcpServersRepo(ctx.db);
+    const registry = createExtensionsRegistryService({
+      extensionsRepo,
+      mcpServersRepo,
+    });
+
+    mcpServersRepo.create({
+      companyId: 'company-1',
+      name: 'Workspace Bridge',
+      transport: 'stdio',
+      configJson: JSON.stringify({ command: 'workspace-mcp' }),
+    });
+    mcpServersRepo.create({
+      companyId: null,
+      name: 'Context7',
+      transport: 'sse',
+      configJson: JSON.stringify({ url: 'https://mcp.context7.com/sse' }),
+    });
+
+    expect(registry.backfillMcpServers()).toBe(2);
+    expect(extensionsRepo.listByCompany('company-1').filter((row) => row.kind === 'mcp')).toHaveLength(2);
   });
 });
