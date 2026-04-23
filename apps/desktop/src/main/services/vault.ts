@@ -43,6 +43,18 @@ export interface VaultServiceDeps {
     count(companyId: string): number;
     totalSize(companyId: string): number;
   };
+  artifactService?: {
+    recordVaultFileArtifact(input: {
+      companyId: string;
+      fileId: string;
+      originalName: string;
+      mimeType: string;
+      sizeBytes: number;
+      sha256: string;
+      uploadedBy: string;
+      createdAt: number;
+    }): unknown;
+  };
   /** Base path for company data (e.g. <userData>/companies). */
   companiesBasePath: string;
   /** Resolve company slug from id. */
@@ -215,7 +227,7 @@ function rowToVaultFile(row: FileVaultRow): VaultFile {
 }
 
 export function createVaultService(deps: VaultServiceDeps) {
-  const { vaultRepo, companiesBasePath, getCompanySlug, bus } = deps;
+  const { vaultRepo, artifactService, companiesBasePath, getCompanySlug, bus } = deps;
 
   function getVaultDir(companyId: string): string {
     const slug = getCompanySlug(companyId);
@@ -275,6 +287,23 @@ export function createVaultService(deps: VaultServiceDeps) {
         tagsJson: JSON.stringify(tags ?? []),
         uploadedBy,
       });
+
+      if (artifactService) {
+        try {
+          artifactService.recordVaultFileArtifact({
+            companyId,
+            fileId: id,
+            originalName,
+            mimeType,
+            sizeBytes,
+            sha256,
+            uploadedBy,
+            createdAt: Date.now(),
+          });
+        } catch (err) {
+          console.error('[vault] failed to record artifact:', err);
+        }
+      }
 
       // Fan out AFTER the DB commit so the event-bus persistence
       // ordering guarantee applies: a subscriber that saw

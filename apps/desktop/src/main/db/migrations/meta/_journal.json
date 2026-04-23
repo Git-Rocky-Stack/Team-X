@@ -141,6 +141,13 @@
       "when": 1777612800000,
       "tag": "0019_approval_decisions",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1777699200000,
+      "tag": "0020_artifacts",
+      "breakpoints": true
     }
   ]
 }

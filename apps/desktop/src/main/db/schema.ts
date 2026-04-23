@@ -396,6 +396,65 @@ export const approvalDecisions = sqliteTable(
   }),
 );
 
+/** First-class work products and explicit execution outcomes. */
+export const artifacts = sqliteTable(
+  'artifacts',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    /** ticket-output | approval-record | vault-file */
+    kind: text('kind').notNull(),
+    /** artifact-created | approval-complete | report-generated | publish-pending | publish-complete */
+    outcomeKind: text('outcome_kind').notNull().default('artifact-created'),
+    /** ready | pending */
+    status: text('status').notNull().default('ready'),
+    title: text('title').notNull(),
+    summary: text('summary'),
+    /** routine-run | approval-decision | vault-file */
+    sourceKind: text('source_kind').notNull(),
+    sourceRefId: text('source_ref_id').notNull(),
+    ticketId: text('ticket_id').references(() => tickets.id, { onDelete: 'set null' }),
+    fileId: text('file_id').references(() => fileVault.id, { onDelete: 'set null' }),
+    approvalItemId: text('approval_item_id').references(() => approvalItems.id, {
+      onDelete: 'set null',
+    }),
+    approvalDecisionId: text('approval_decision_id').references(() => approvalDecisions.id, {
+      onDelete: 'set null',
+    }),
+    uri: text('uri'),
+    previewJson: text('preview_json').notNull().default('{}'),
+    createdByEmployeeId: text('created_by_employee_id').references(() => employees.id, {
+      onDelete: 'set null',
+    }),
+    createdByRoutineId: text('created_by_routine_id').references(() => routines.id, {
+      onDelete: 'set null',
+    }),
+    approvedByOperatorId: text('approved_by_operator_id').references(() => operators.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_artifacts_company').on(table.companyId),
+    companyCreatedIdx: index('idx_artifacts_company_created').on(table.companyId, table.createdAt),
+    companyKindIdx: index('idx_artifacts_company_kind').on(table.companyId, table.kind),
+    companySourceIdx: index('idx_artifacts_company_source').on(
+      table.companyId,
+      table.sourceKind,
+      table.sourceRefId,
+    ),
+    sourceUniqueIdx: uniqueIndex('ux_artifacts_company_kind_source').on(
+      table.companyId,
+      table.kind,
+      table.sourceKind,
+      table.sourceRefId,
+    ),
+  }),
+);
+
 /** Conversations — direct 1:1, group, meeting, ticket discussion, or broadcast. */
 export const threads = sqliteTable('threads', {
   id: text('id').primaryKey(),

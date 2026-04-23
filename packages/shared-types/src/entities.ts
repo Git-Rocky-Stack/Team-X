@@ -537,6 +537,47 @@ export interface BudgetOverview {
   policySummaries: BudgetPolicySummary[];
 }
 
+export const ARTIFACT_RECORD_KINDS = ['ticket-output', 'approval-record', 'vault-file'] as const;
+export type ArtifactRecordKind = (typeof ARTIFACT_RECORD_KINDS)[number];
+
+export const ARTIFACT_SOURCE_KINDS = ['routine-run', 'approval-decision', 'vault-file'] as const;
+export type ArtifactSourceKind = (typeof ARTIFACT_SOURCE_KINDS)[number];
+
+export const ARTIFACT_OUTCOME_KINDS = [
+  'artifact-created',
+  'approval-complete',
+  'report-generated',
+  'publish-pending',
+  'publish-complete',
+] as const;
+export type ArtifactOutcomeKind = (typeof ARTIFACT_OUTCOME_KINDS)[number];
+
+export const ARTIFACT_STATUSES = ['ready', 'pending'] as const;
+export type ArtifactStatus = (typeof ARTIFACT_STATUSES)[number];
+
+export interface ArtifactRecord {
+  id: string;
+  companyId: string;
+  kind: ArtifactRecordKind;
+  outcomeKind: ArtifactOutcomeKind;
+  status: ArtifactStatus;
+  title: string;
+  summary: string | null;
+  sourceKind: ArtifactSourceKind;
+  sourceRefId: string;
+  ticketId: string | null;
+  fileId: string | null;
+  approvalItemId: string | null;
+  approvalDecisionId: string | null;
+  uri: string | null;
+  preview: Record<string, unknown> | null;
+  createdByEmployeeId: string | null;
+  createdByRoutineId: string | null;
+  approvedByOperatorId: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export const EXTENSIONS_AUTONOMY_MODES = [
   'balanced',
   'conservative',

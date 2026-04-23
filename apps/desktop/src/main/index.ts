@@ -69,6 +69,7 @@ import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath } from './db/paths.js';
 import { createAuditRepo } from './db/repos/audit.js';
+import { createArtifactsRepo } from './db/repos/artifacts.js';
 import { createCommandHistoryRepo } from './db/repos/command-history.js';
 import { createCompaniesRepo } from './db/repos/companies.js';
 import { createCopilotInsightsRepo } from './db/repos/copilot-insights.js';
@@ -122,6 +123,7 @@ import {
   type AgenticLoopService,
   createAgenticLoopService,
 } from './services/agentic-loop-service.js';
+import { createArtifactService } from './services/artifact-service.js';
 import { createAuthorityResolverService } from './services/authority-resolver-service.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { buildCopilotToolRegistry } from './services/agentic-tools-copilot.js';
@@ -368,6 +370,7 @@ app
     const runsRepo = createRunsRepo(db);
     const eventsRepo = createEventsRepo(db);
     const auditRepo = createAuditRepo(db);
+    const artifactsRepo = createArtifactsRepo(db);
     const mcpServersRepo = createMcpServersRepo(db);
     const extensionsRepo = createExtensionsRepo(db);
     const skillAssignmentsRepo = createSkillAssignmentsRepo(db);
@@ -401,6 +404,9 @@ app
     const copilotInsightsRepo = createCopilotInsightsRepo(db);
     const operatorAccessService = createOperatorAccessService({
       operatorsRepo,
+    });
+    const artifactService = createArtifactService({
+      artifactsRepo,
     });
 
     // Seed default settings on first boot (runtime_strategy, privacy tier, caps).

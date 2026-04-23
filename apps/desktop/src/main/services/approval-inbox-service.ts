@@ -39,6 +39,20 @@ export interface ApprovalInboxReviewResult {
 export interface ApprovalInboxServiceDeps {
   budgetsRepo: BudgetsRepo;
   authorityRepo: AuthorityRepo;
+  artifactService?: {
+    recordApprovalOutcomeArtifact(input: {
+      companyId: string;
+      approvalItemId: string;
+      approvalDecisionId: string;
+      decision: 'approved' | 'denied' | 'dismissed';
+      subjectRefKind: string;
+      subjectRefId: string;
+      summary: string;
+      rationale?: string | null;
+      approvedByOperatorId?: string | null;
+      createdAt: number;
+    }): unknown;
+  };
   operatorId?: string;
 }
 
@@ -111,6 +125,7 @@ function authorityPriority(row: AuthorityRequestRow): ApprovalItem['priority'] {
 export function createApprovalInboxService({
   budgetsRepo,
   authorityRepo,
+  artifactService,
   operatorId = LOCAL_OWNER_OPERATOR_ID,
 }: ApprovalInboxServiceDeps) {
   function listItems(input: ListApprovalInboxItemsInput): ApprovalItem[] {
@@ -179,7 +194,8 @@ export function createApprovalInboxService({
         itemId: input.itemId,
         status: input.decision,
       });
-      budgetsRepo.createApprovalDecision({
+      const createdAt = Date.now();
+      const decisionId = budgetsRepo.createApprovalDecision({
         companyId: input.companyId,
         approvalKind: 'budget-exception',
         approvalRefId: input.itemId,
@@ -188,6 +204,24 @@ export function createApprovalInboxService({
         rationale: input.rationale ?? null,
         payloadJson: existing.payloadJson,
       });
+      if (artifactService) {
+        try {
+          artifactService.recordApprovalOutcomeArtifact({
+            companyId: input.companyId,
+            approvalItemId: input.itemId,
+            approvalDecisionId: decisionId,
+            decision: input.decision,
+            subjectRefKind: existing.subjectRefKind,
+            subjectRefId: existing.subjectRefId,
+            summary: existing.summary,
+            rationale: input.rationale ?? null,
+            approvedByOperatorId: operatorId,
+            createdAt,
+          });
+        } catch {
+          // Approval resolution remains durable even if the artifact mirror fails.
+        }
+      }
 
       const resolved = budgetsRepo.getApprovalItemById(input.itemId);
       if (!resolved) {
@@ -240,7 +274,8 @@ export function createApprovalInboxService({
         reason: input.rationale ?? null,
         reviewedAt: Date.now(),
       });
-      budgetsRepo.createApprovalDecision({
+      const createdAt = Date.now();
+      const decisionId = budgetsRepo.createApprovalDecision({
         companyId: input.companyId,
         approvalKind: 'authority-request',
         approvalRefId: input.itemId,
@@ -254,6 +289,24 @@ export function createApprovalInboxService({
           requestedPermission: request.requestedPermission,
         }),
       });
+      if (artifactService) {
+        try {
+          artifactService.recordApprovalOutcomeArtifact({
+            companyId: input.companyId,
+            approvalItemId: input.itemId,
+            approvalDecisionId: decisionId,
+            decision: input.decision,
+            subjectRefKind: 'extension',
+            subjectRefId: request.extensionId,
+            summary: `Authority review required for ${request.resourceKind} ${request.resourceId}.`,
+            rationale: input.rationale ?? null,
+            approvedByOperatorId: operatorId,
+            createdAt,
+          });
+        } catch {
+          // Approval resolution remains durable even if the artifact mirror fails.
+        }
+      }
 
       const updated = authorityRepo.getRequestById(input.itemId);
       if (!updated) {

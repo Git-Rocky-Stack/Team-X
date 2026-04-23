@@ -55,6 +55,7 @@ import type {
   CopilotInsightListResult,
 } from './copilot.js';
 import type {
+  ArtifactRecord,
   ApprovalItem,
   ApprovalDecisionStatus,
   ApprovalItemKind,
@@ -342,6 +343,11 @@ export interface ReviewApprovalItemRequest {
   kind: ApprovalItemKind;
   decision: ApprovalDecisionStatus;
   rationale?: string;
+}
+
+export interface ListArtifactsRequest {
+  companyId: string;
+  limit?: number;
 }
 
 export interface SendChatRequest {
@@ -1744,18 +1750,22 @@ export interface IpcContract {
     request: ListApprovalItemsRequest;
     response: ApprovalItem[];
   };
-  'approvals.list': {
-    request: ListApprovalItemsRequest;
-    response: ApprovalItem[];
-  };
-  'approvals.review': {
-    request: ReviewApprovalItemRequest;
-    response: { grantId: string | null };
-  };
-  'employees.create': {
-    request: HireEmployeeRequest;
-    response: HireEmployeeResponse;
-  };
+    'approvals.list': {
+      request: ListApprovalItemsRequest;
+      response: ApprovalItem[];
+    };
+    'approvals.review': {
+      request: ReviewApprovalItemRequest;
+      response: { grantId: string | null };
+    };
+    'artifacts.list': {
+      request: ListArtifactsRequest;
+      response: ArtifactRecord[];
+    };
+    'employees.create': {
+      request: HireEmployeeRequest;
+      response: HireEmployeeResponse;
+    };
   'employees.fire': {
     request: FireEmployeeRequest;
     // IpcContract-level response is intentionally `void` — the fire
@@ -2472,6 +2482,10 @@ export interface TeamXApi {
     list(req: ListApprovalItemsRequest): Promise<ApprovalItem[]>;
     /** Approve, deny, or dismiss one approval item from the shared inbox. */
     review(req: ReviewApprovalItemRequest): Promise<{ grantId: string | null }>;
+  };
+  artifacts: {
+    /** List recent artifact and outcome records for one workspace. */
+    list(req: ListArtifactsRequest): Promise<ArtifactRecord[]>;
   };
   orgchart: {
     /**

@@ -65,6 +65,18 @@ export interface RoutineServiceDeps {
       executionKind: 'routine';
     }): Promise<{ allowed: boolean; reason: string | null }>;
   };
+  artifactService?: {
+    recordRoutineTicketArtifact(input: {
+      companyId: string;
+      routineId: string;
+      runId: string;
+      ticketId: string;
+      title: string;
+      summary?: string | null;
+      assigneeId?: string | null;
+      createdAt: number;
+    }): unknown;
+  };
   bus?: {
     emit<T>(input: {
       type: import('@team-x/shared-types').EventType;
@@ -291,6 +303,7 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
     employeesRepo,
     createTicket,
     budgetGovernance,
+    artifactService,
     bus,
     now = () => Date.now(),
     setInterval: setIntervalImpl = setInterval,
@@ -433,6 +446,22 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
         lastRunAt: finishedAt,
         nextRunAt,
       });
+      if (artifactService) {
+        try {
+          artifactService.recordRoutineTicketArtifact({
+            companyId: routine.companyId,
+            routineId: routine.id,
+            runId,
+            ticketId: ticketResult.ticketId,
+            title: routine.workConfig.title,
+            summary: message,
+            assigneeId: routine.workConfig.assigneeId,
+            createdAt: finishedAt,
+          });
+        } catch (err) {
+          logger.warn(`[routines] artifact record failed for run ${runId}`, err);
+        }
+      }
       emit('routine.runCompleted', routine.companyId, routine.id, {
         routineId: routine.id,
         companyId: routine.companyId,
