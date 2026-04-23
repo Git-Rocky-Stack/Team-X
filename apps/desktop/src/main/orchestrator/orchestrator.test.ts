@@ -569,6 +569,173 @@ describe('buildOrchestrator', () => {
       expect(digest?.summary).toContain('Latest response: done');
     });
 
+    it('uses packed context, tools, and completion checkpoints for external runtime providers too', async () => {
+      const captured: {
+        system?: string;
+        messages?: StreamMessage[];
+        tools?: Record<string, unknown>;
+        maxSteps?: number;
+      } = {};
+      const provider: ProviderStreamFn = async function* (args) {
+        captured.system = args.system;
+        captured.messages = args.messages;
+        captured.tools = args.tools;
+        captured.maxSteps = args.maxSteps;
+        yield { delta: 'external done' };
+        yield { done: true, usage: { promptTokens: 9, completionTokens: 4 } };
+      };
+      const threadDigestService = createThreadDigestService({
+        threadDigestsRepo: f.threadDigestsRepo,
+        messagesRepo: f.messagesRepo,
+      });
+      const runCheckpointService = createRunCheckpointService({
+        runCheckpointsRepo: f.runCheckpointsRepo,
+      });
+      const orchestrator = buildDefaultOrchestrator(f, {
+        provider,
+        resolveProvider: async () => ({
+          providerName: 'runtime:codex',
+          providerKind: 'codex',
+          model: 'profile-codex',
+          stream: provider,
+        }),
+        resolveTools: async () => ({
+          tools: {
+            launch_report: {
+              description: 'Create a launch report',
+              execute: async () => ({ ok: true }),
+            },
+          },
+          maxSteps: 6,
+        }),
+        contextAssemblerService: {
+          assembleThreadContext: async () => ({
+            companyId: f.companyId,
+            threadId: f.threadId,
+            generatedAt: 2,
+            retrievalQueries: ['external launch'],
+            recentTurns: [
+              {
+                messageId: f.userMessageId,
+                role: 'user',
+                authorId: 'rocky',
+                authorKind: 'user',
+                content: 'external runtime request',
+                createdAt: 2,
+                estimatedTokens: 5,
+              },
+            ],
+            blocks: [],
+          }),
+        },
+        contextPackerService: {
+          packContext: () => ({
+            companyId: f.companyId,
+            threadId: f.threadId,
+            generatedAt: 2,
+            targetTokenBudget: 256,
+            usedTokens: 26,
+            recentTurnTokens: 5,
+            blockTokens: 21,
+            retrievalTokens: 0,
+            packedTurns: [
+              {
+                messageId: f.userMessageId,
+                role: 'user',
+                authorId: 'rocky',
+                authorKind: 'user',
+                content: 'external runtime request',
+                createdAt: 2,
+                estimatedTokens: 5,
+                truncated: false,
+              },
+            ],
+            systemAddendum: '## Runtime Context\nSource: external\nExternal runtime launch window is active.',
+            includedBlocks: [
+              {
+                id: 'approval-block',
+                kind: 'approval',
+                priority: 'high',
+                title: 'Approval',
+                body: 'Pending approval',
+                estimatedTokens: 5,
+                sourceRefId: 'approval-2',
+                sourceLabel: 'pending',
+                metadata: {},
+                renderedText: 'Approval block',
+                tokenCount: 5,
+                truncated: false,
+              },
+              {
+                id: 'artifact-block',
+                kind: 'artifact',
+                priority: 'low',
+                title: 'Artifact',
+                body: 'Artifact summary',
+                estimatedTokens: 4,
+                sourceRefId: 'artifact-2',
+                sourceLabel: 'runtime-report',
+                metadata: {},
+                renderedText: 'Artifact block',
+                tokenCount: 4,
+                truncated: false,
+              },
+            ],
+            droppedBlocks: [],
+            retrievalQueries: ['external launch'],
+            resumeOrigin: {
+              checkpointId: 'checkpoint-timeout-external',
+              checkpointKind: 'timeout',
+              createdAt: 11,
+            },
+          }),
+        },
+        threadDigestService,
+        runCheckpointService,
+      });
+
+      await orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+
+      expect(captured.messages).toEqual([{ role: 'user', content: 'external runtime request' }]);
+      expect(captured.system).toContain('You are Iris, the CEO at Strategia-X.');
+      expect(captured.system).toContain('## Runtime Context');
+      expect(captured.system).toContain('External runtime launch window is active.');
+      expect(Object.keys(captured.tools ?? {}).sort()).toEqual([
+        'launch_report',
+        'list_colleagues',
+        'send_message_to_colleague',
+      ]);
+      expect(captured.maxSteps).toBe(6);
+
+      const checkpoints = runCheckpointService.listByThread({
+        companyId: f.companyId,
+        threadId: f.threadId,
+      });
+      expect(checkpoints[0]).toEqual(
+        expect.objectContaining({
+          checkpointKind: 'completion',
+          unresolvedApprovalRefs: ['approval-2'],
+          activeArtifactRefs: ['artifact-2'],
+          resumeOrigin: {
+            checkpointId: 'checkpoint-timeout-external',
+            checkpointKind: 'timeout',
+            createdAt: 11,
+          },
+        }),
+      );
+
+      const digest = threadDigestService.getLatest({
+        companyId: f.companyId,
+        threadId: f.threadId,
+      });
+      expect(digest?.summary).toContain('Latest request: hi iris');
+      expect(digest?.summary).toContain('Latest response: external done');
+    });
+
     it('fails visibly when packing collapses and raw history exceeds the target budget', async () => {
       const oversizedUserMessageId = f.messagesRepo.append({
         threadId: f.threadId,

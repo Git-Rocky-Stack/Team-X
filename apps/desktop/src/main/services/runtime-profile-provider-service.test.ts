@@ -80,6 +80,44 @@ describe('runtime profile provider service', () => {
     expect(result.providerName).toBe('runtime:bash');
   });
 
+  it('uses configured codex-style adapters instead of falling through to the internal provider path', async () => {
+    const employee = makeEmployee();
+    const providerFactory = {
+      create: vi.fn(),
+      resolveForEmployee: vi.fn(async () => ({
+        providerName: 'anthropic',
+        providerKind: 'anthropic',
+        model: 'claude-haiku-4-5',
+        stream: vi.fn(),
+      })),
+    };
+    const externalRuntimeAdapters = {
+      createResolvedProvider: vi.fn(() => ({
+        providerName: 'runtime:codex',
+        providerKind: 'codex',
+        model: 'profile-codex',
+        stream: vi.fn(),
+      })),
+    };
+    const service = createRuntimeProfileProviderService({
+      runtimeProfilesService: {
+        getProfileForEmployee: vi.fn(() =>
+          makeProfile('codex', {
+            command: 'codex',
+          }),
+        ),
+      } as never,
+      providerFactory: providerFactory as never,
+      externalRuntimeAdapters,
+    });
+
+    const result = await service.resolveForEmployee(employee);
+
+    expect(externalRuntimeAdapters.createResolvedProvider).toHaveBeenCalled();
+    expect(providerFactory.resolveForEmployee).not.toHaveBeenCalled();
+    expect(result.providerName).toBe('runtime:codex');
+  });
+
   it('applies runtime-profile provider and model overrides for teamx-internal bindings', async () => {
     const employee = makeEmployee();
     const providerFactory = {
@@ -116,7 +154,7 @@ describe('runtime profile provider service', () => {
     expect(result.model).toBe('llama3.1:8b');
   });
 
-  it('falls back to the normal provider path for still-planned adapters', async () => {
+  it('falls back to the normal provider path when an adapter-backed profile has no executable transport', async () => {
     const employee = makeEmployee();
     const providerFactory = {
       create: vi.fn(),

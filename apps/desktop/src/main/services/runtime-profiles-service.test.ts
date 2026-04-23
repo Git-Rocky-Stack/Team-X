@@ -214,4 +214,35 @@ describe('runtime profiles service', () => {
     expect(result.message).toMatch(/responded successfully/i);
     expect(service.list('company-1')[0]?.executionMode).toBe('native');
   });
+
+  it('treats configured codex-style profiles as native execution posture', async () => {
+    const service = createService();
+    const profileId = service.create({
+      companyId: 'company-1',
+      name: 'Codex Runner',
+      kind: 'codex',
+      config: { command: 'codex' },
+    });
+
+    const result = await service.validateProfile({
+      companyId: 'company-1',
+      profileId,
+    });
+
+    expect(result.supportsExecution).toBe(true);
+    expect(result.message).toMatch(/launcher command|execution-backed/i);
+    expect(service.list('company-1')[0]?.executionMode).toBe('native');
+  });
+
+  it('leaves adapter-backed profiles as planned posture until a launcher or endpoint is configured', () => {
+    const service = createService();
+    service.create({
+      companyId: 'company-1',
+      name: 'Future Cursor',
+      kind: 'cursor',
+      config: {},
+    });
+
+    expect(service.list('company-1')[0]?.executionMode).toBe('planned');
+  });
 });

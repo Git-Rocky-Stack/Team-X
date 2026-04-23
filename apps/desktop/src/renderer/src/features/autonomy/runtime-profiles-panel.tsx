@@ -51,17 +51,17 @@ const KIND_OPTIONS: Array<{ value: RuntimeProfileKind; label: string; descriptio
   {
     value: 'codex',
     label: 'Codex Adapter',
-    description: 'Placeholder posture for a Codex-backed runtime.',
+    description: 'Execution-backed when a Codex launcher command or endpoint URL is configured.',
   },
   {
     value: 'claude-code',
     label: 'Claude Code Adapter',
-    description: 'Placeholder posture for a Claude Code-backed runtime.',
+    description: 'Execution-backed when a Claude Code launcher command or endpoint URL is configured.',
   },
   {
     value: 'cursor',
     label: 'Cursor Adapter',
-    description: 'Placeholder posture for a Cursor-backed runtime.',
+    description: 'Execution-backed when a Cursor launcher command or endpoint URL is configured.',
   },
 ];
 
@@ -512,7 +512,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
         <MissionMetricTile
           label="Planned"
           value={String(plannedCount)}
-          hint="Modeled for external adapters"
+          hint="Still missing a launcher or endpoint"
           icon={GitBranch}
         />
         <MissionMetricTile
@@ -528,7 +528,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
           <div>
             <div className="text-sm font-semibold text-foreground">Create Runtime Profile</div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Team-X Internal, Bash Launcher, and HTTP Adapter are execution-backed in this slice. Codex, Claude Code, and Cursor remain modeled posture until their dedicated runner contracts land.
+              Team-X Internal, Bash Launcher, and HTTP Adapter are execution-backed now. Codex, Claude Code, and Cursor become execution-backed too as soon as you add a launcher command or endpoint URL.
             </p>
           </div>
           <MissionPill tone="accent">BYO agent posture</MissionPill>

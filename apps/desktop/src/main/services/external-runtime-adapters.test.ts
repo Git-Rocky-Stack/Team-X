@@ -170,4 +170,107 @@ describe('external runtime adapters', () => {
       { done: true, usage: { promptTokens: 9, completionTokens: 5 } },
     ]);
   });
+
+  it('treats codex-style launcher profiles as execution-backed command adapters when configured', async () => {
+    const child = new MockChildProcess();
+    const spawnFn = vi.fn(() => {
+      queueMicrotask(() => {
+        child.stdout.write('codex adapter reply');
+        child.stdout.end();
+        child.emit('close', 0, null);
+      });
+      return child;
+    });
+    const adapters = createExternalRuntimeAdapters({ spawnFn });
+    const resolved = adapters.createResolvedProvider({
+      employee: makeEmployee(),
+      profile: makeProfile('codex', {
+        command: 'codex',
+      }),
+    });
+
+    expect(resolved).not.toBeNull();
+    expect(resolved?.providerName).toBe('runtime:codex');
+    expect(resolved?.providerKind).toBe('codex');
+
+    const chunks = [];
+    for await (const chunk of resolved!.stream({
+      system: 'You are Codex',
+      messages: [{ role: 'user', content: 'Review the diff.' }],
+    })) {
+      chunks.push(chunk);
+    }
+
+    expect(spawnFn).toHaveBeenCalledWith(
+      'codex',
+      [],
+      expect.objectContaining({
+        shell: true,
+        windowsHide: true,
+      }),
+    );
+    expect(chunks).toEqual([
+      { delta: 'codex adapter reply' },
+      {
+        done: true,
+        usage: {
+          promptTokens: expect.any(Number),
+          completionTokens: expect.any(Number),
+        },
+      },
+    ]);
+  });
+
+  it('treats cursor-style endpoint profiles as execution-backed HTTP adapters when configured', async () => {
+    const fetchFn: typeof fetch = vi.fn(async (_input, init) => {
+      const body = typeof init?.body === 'string' ? init.body : '';
+      const payload = JSON.parse(body);
+      expect(payload.runtimeKind).toBe('cursor');
+      return new Response(
+        JSON.stringify({
+          text: 'cursor endpoint reply',
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    });
+    const adapters = createExternalRuntimeAdapters({ fetchFn });
+    const resolved = adapters.createResolvedProvider({
+      employee: makeEmployee(),
+      profile: makeProfile('cursor', {
+        endpointUrl: 'http://127.0.0.1:8787/cursor',
+      }),
+    });
+
+    expect(resolved).not.toBeNull();
+    expect(resolved?.providerName).toBe('runtime:cursor');
+    expect(resolved?.providerKind).toBe('cursor');
+
+    const chunks = [];
+    for await (const chunk of resolved!.stream({
+      system: 'You are Cursor',
+      messages: [{ role: 'user', content: 'Plan the refactor.' }],
+    })) {
+      chunks.push(chunk);
+    }
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'http://127.0.0.1:8787/cursor',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
+    expect(chunks).toEqual([
+      { delta: 'cursor endpoint reply' },
+      {
+        done: true,
+        usage: {
+          promptTokens: expect.any(Number),
+          completionTokens: expect.any(Number),
+        },
+      },
+    ]);
+  });
 });

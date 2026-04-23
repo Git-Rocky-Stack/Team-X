@@ -281,6 +281,27 @@ function createBashStream(args: {
   };
 }
 
+function createCommandResolvedProvider(args: {
+  command: string;
+  workingDirectory: string | null;
+  employee: EmployeeRow;
+  profile: RuntimeProfile;
+  spawnFn: SpawnLike;
+}): ExternalRuntimeResolvedProvider {
+  return {
+    providerName: `runtime:${args.profile.kind}`,
+    providerKind: args.profile.kind,
+    model: args.profile.slug,
+    stream: createBashStream({
+      command: args.command,
+      workingDirectory: args.workingDirectory,
+      employee: args.employee,
+      profile: args.profile,
+      spawnFn: args.spawnFn,
+    }),
+  };
+}
+
 function createHttpStream(args: {
   baseUrl: string;
   employee: EmployeeRow;
@@ -320,6 +341,25 @@ function createHttpStream(args: {
   };
 }
 
+function createHttpResolvedProvider(args: {
+  baseUrl: string;
+  employee: EmployeeRow;
+  profile: RuntimeProfile;
+  fetchFn: FetchLike;
+}): ExternalRuntimeResolvedProvider {
+  return {
+    providerName: `runtime:${args.profile.kind}`,
+    providerKind: args.profile.kind,
+    model: args.profile.slug,
+    stream: createHttpStream({
+      baseUrl: args.baseUrl,
+      employee: args.employee,
+      profile: args.profile,
+      fetchFn: args.fetchFn,
+    }),
+  };
+}
+
 function getOptionalString(config: Record<string, unknown> | null | undefined, key: string): string | null {
   const value = config?.[key];
   if (typeof value !== 'string') return null;
@@ -339,35 +379,47 @@ export function createExternalRuntimeAdapters(
       const command = getOptionalString(input.profile.config, 'command');
       const workingDirectory = getOptionalString(input.profile.config, 'workingDirectory');
       const baseUrl = getOptionalString(input.profile.config, 'baseUrl');
+      const endpointUrl = getOptionalString(input.profile.config, 'endpointUrl');
 
       switch (input.profile.kind) {
         case 'bash':
           if (!command) return null;
-          return {
-            providerName: 'runtime:bash',
-            providerKind: 'bash',
-            model: input.profile.slug,
-            stream: createBashStream({
+          return createCommandResolvedProvider({
+            command,
+            workingDirectory,
+            employee: input.employee,
+            profile: input.profile,
+            spawnFn,
+          });
+        case 'http':
+          if (!baseUrl) return null;
+          return createHttpResolvedProvider({
+            baseUrl,
+            employee: input.employee,
+            profile: input.profile,
+            fetchFn,
+          });
+        case 'codex':
+        case 'claude-code':
+        case 'cursor':
+          if (command) {
+            return createCommandResolvedProvider({
               command,
               workingDirectory,
               employee: input.employee,
               profile: input.profile,
               spawnFn,
-            }),
-          };
-        case 'http':
-          if (!baseUrl) return null;
-          return {
-            providerName: 'runtime:http',
-            providerKind: 'http',
-            model: input.profile.slug,
-            stream: createHttpStream({
-              baseUrl,
+            });
+          }
+          if (endpointUrl) {
+            return createHttpResolvedProvider({
+              baseUrl: endpointUrl,
               employee: input.employee,
               profile: input.profile,
               fetchFn,
-            }),
-          };
+            });
+          }
+          return null;
         default:
           return null;
       }

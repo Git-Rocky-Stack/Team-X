@@ -108,7 +108,7 @@ describe('Autonomy shell wiring', () => {
     expect(runtimePanelSrc).toContain('data-runtime-employee-binding={employee.id}');
     expect(runtimePanelSrc).toContain('lastHealthStatus');
     expect(runtimePanelSrc).toContain(
-      'Team-X Internal, Bash Launcher, and HTTP Adapter are execution-backed in this slice.',
+      'Team-X Internal, Bash Launcher, and HTTP Adapter are execution-backed now.',
     );
   });
 
