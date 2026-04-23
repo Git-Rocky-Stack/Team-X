@@ -1673,6 +1673,8 @@ function rowToCompany(row: CompanyRow): Company {
     icon: row.icon,
     theme: row.theme,
     createdAt: row.createdAt,
+    workspaceOriginId: row.workspaceOriginId ?? row.id,
+    companyOriginId: row.companyOriginId ?? row.id,
     settings,
   };
 }

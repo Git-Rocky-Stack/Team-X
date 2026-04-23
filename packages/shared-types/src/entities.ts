@@ -213,6 +213,8 @@ export interface Company {
   icon: string | null;
   theme: string;
   createdAt: number;
+  workspaceOriginId?: string;
+  companyOriginId?: string;
   settings: CompanySettings;
 }
 
@@ -238,10 +240,22 @@ export interface CompanySettings {
   theme?: 'dark' | 'light';
   dashboardLayout?: CompanyDashboardLayoutSettings;
   userGuide?: CompanyUserGuideSettings;
+  sharing?: CompanySharingPostureSettings;
 }
 
 export const OPERATOR_AUTH_MODES = ['local', 'invited', 'cloud'] as const;
 export type OperatorAuthMode = (typeof OPERATOR_AUTH_MODES)[number];
+
+export const COMPANY_SHARING_READINESS = ['ready', 'warning', 'blocked'] as const;
+export type CompanySharingReadiness = (typeof COMPANY_SHARING_READINESS)[number];
+
+export interface CompanySharingPostureSettings {
+  mode: OperatorAuthMode;
+  readiness: CompanySharingReadiness;
+  missingRequirements?: string[];
+  lastExportedAt?: string;
+  lastExportMode?: CompanyPackageMode;
+}
 
 export const OPERATOR_MEMBERSHIP_ROLES = ['owner', 'admin', 'operator', 'reviewer'] as const;
 export type OperatorMembershipRole = (typeof OPERATOR_MEMBERSHIP_ROLES)[number];
@@ -911,4 +925,217 @@ export interface Thread {
    * Phase 5 — M31.
    */
   isSystemAgent?: boolean;
+}
+
+export const COMPANY_PACKAGE_MODES = ['workspace-export', 'template'] as const;
+export type CompanyPackageMode = (typeof COMPANY_PACKAGE_MODES)[number];
+
+export const COMPANY_PACKAGE_SECTIONS = [
+  'company',
+  'employees',
+  'org',
+  'autonomy',
+  'extensions',
+  'projects',
+  'goals',
+  'tickets',
+  'starter-assets',
+] as const;
+export type CompanyPackageSection = (typeof COMPANY_PACKAGE_SECTIONS)[number];
+
+export interface CompanyPackageManifest {
+  packageId: string;
+  packageVersion: number;
+  mode: CompanyPackageMode;
+  workspaceOriginId: string;
+  companyOriginId: string;
+  sourceAppVersion: string;
+  exportedAt: string;
+  exportedByOperatorId: string | null;
+  sharingMode: OperatorAuthMode;
+  sections: CompanyPackageSection[];
+  redactions: string[];
+  compatibility: string[];
+}
+
+export interface CompanyPackageCompanySnapshot {
+  name: string;
+  slug: string;
+  icon: string | null;
+  theme: string;
+  settings: CompanySettings;
+}
+
+export interface CompanyPackageStarterAsset {
+  id: string;
+  name: string;
+  mimeType: string | null;
+  relativePath: string;
+  sha256: string | null;
+}
+
+export interface CompanyPackageOrgEdge {
+  managerId: string;
+  reportId: string;
+}
+
+export interface CompanyPackageAutonomySnapshot {
+  runtimeProfiles?: RuntimeProfileSummary[];
+  routines?: Routine[];
+  budgetPolicies?: BudgetPolicy[];
+}
+
+export interface CompanyPackageExtensionsSnapshot {
+  extensions?: ExtensionSummary[];
+  authorityGrants?: AuthorityGrant[];
+  skillAssignments?: SkillAssignment[];
+}
+
+export interface CompanyPackage {
+  manifest: CompanyPackageManifest;
+  company: CompanyPackageCompanySnapshot;
+  employees?: Employee[];
+  orgEdges?: CompanyPackageOrgEdge[];
+  autonomy?: CompanyPackageAutonomySnapshot;
+  extensions?: CompanyPackageExtensionsSnapshot;
+  goals?: Goal[];
+  projects?: Project[];
+  tickets?: Ticket[];
+  starterAssets?: CompanyPackageStarterAsset[];
+}
+
+export interface CompanyImportPreview {
+  manifest: CompanyPackageManifest;
+  warnings: string[];
+  missingSecrets: string[];
+  suggestedCompanyName: string;
+  suggestedSlug: string;
+}
+
+export type CompanyPackageValidationResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: string };
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
+function isCompanyPackageMode(value: unknown): value is CompanyPackageMode {
+  return typeof value === 'string' && (COMPANY_PACKAGE_MODES as readonly string[]).includes(value);
+}
+
+function isCompanyPackageSectionArray(value: unknown): value is CompanyPackageSection[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        typeof entry === 'string' && (COMPANY_PACKAGE_SECTIONS as readonly string[]).includes(entry),
+    )
+  );
+}
+
+function isOperatorAuthMode(value: unknown): value is OperatorAuthMode {
+  return typeof value === 'string' && (OPERATOR_AUTH_MODES as readonly string[]).includes(value);
+}
+
+export function validateCompanyPackageManifest(
+  value: unknown,
+): CompanyPackageValidationResult<CompanyPackageManifest> {
+  if (!isPlainRecord(value)) {
+    return { ok: false, error: 'manifest must be an object' };
+  }
+  if (!isNonEmptyString(value.packageId)) {
+    return { ok: false, error: 'manifest.packageId must be a non-empty string' };
+  }
+  if (typeof value.packageVersion !== 'number' || !Number.isInteger(value.packageVersion)) {
+    return { ok: false, error: 'manifest.packageVersion must be an integer' };
+  }
+  if (!isCompanyPackageMode(value.mode)) {
+    return {
+      ok: false,
+      error: `manifest.mode must be one of ${COMPANY_PACKAGE_MODES.join(', ')}`,
+    };
+  }
+  if (!isNonEmptyString(value.workspaceOriginId)) {
+    return { ok: false, error: 'manifest.workspaceOriginId must be a non-empty string' };
+  }
+  if (!isNonEmptyString(value.companyOriginId)) {
+    return { ok: false, error: 'manifest.companyOriginId must be a non-empty string' };
+  }
+  if (!isNonEmptyString(value.sourceAppVersion)) {
+    return { ok: false, error: 'manifest.sourceAppVersion must be a non-empty string' };
+  }
+  if (!isNonEmptyString(value.exportedAt)) {
+    return { ok: false, error: 'manifest.exportedAt must be a non-empty string' };
+  }
+  if (!(value.exportedByOperatorId === null || isNonEmptyString(value.exportedByOperatorId))) {
+    return {
+      ok: false,
+      error: 'manifest.exportedByOperatorId must be null or a non-empty string',
+    };
+  }
+  if (!isOperatorAuthMode(value.sharingMode)) {
+    return {
+      ok: false,
+      error: `manifest.sharingMode must be one of ${OPERATOR_AUTH_MODES.join(', ')}`,
+    };
+  }
+  if (!isCompanyPackageSectionArray(value.sections)) {
+    return {
+      ok: false,
+      error: `manifest.sections must only contain ${COMPANY_PACKAGE_SECTIONS.join(', ')}`,
+    };
+  }
+  if (!isStringArray(value.redactions)) {
+    return { ok: false, error: 'manifest.redactions must be a string[]' };
+  }
+  if (!isStringArray(value.compatibility)) {
+    return { ok: false, error: 'manifest.compatibility must be a string[]' };
+  }
+
+  return {
+    ok: true,
+    value: value as unknown as CompanyPackageManifest,
+  };
+}
+
+export function validateCompanyPackage(
+  value: unknown,
+): CompanyPackageValidationResult<CompanyPackage> {
+  if (!isPlainRecord(value)) {
+    return { ok: false, error: 'package must be an object' };
+  }
+  const manifestResult = validateCompanyPackageManifest(value.manifest);
+  if (!manifestResult.ok) return manifestResult;
+  if (!isPlainRecord(value.company)) {
+    return { ok: false, error: 'package.company must be an object' };
+  }
+  if (!isNonEmptyString(value.company.name)) {
+    return { ok: false, error: 'package.company.name must be a non-empty string' };
+  }
+  if (!isNonEmptyString(value.company.slug)) {
+    return { ok: false, error: 'package.company.slug must be a non-empty string' };
+  }
+  if (!(value.company.icon === null || typeof value.company.icon === 'string')) {
+    return { ok: false, error: 'package.company.icon must be null or a string' };
+  }
+  if (!isNonEmptyString(value.company.theme)) {
+    return { ok: false, error: 'package.company.theme must be a non-empty string' };
+  }
+  if (!isPlainRecord(value.company.settings)) {
+    return { ok: false, error: 'package.company.settings must be an object' };
+  }
+
+  return {
+    ok: true,
+    value: value as unknown as CompanyPackage,
+  };
 }

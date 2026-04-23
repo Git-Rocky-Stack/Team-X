@@ -52,6 +52,8 @@ export interface CreateCompanyInput {
   settings?: Record<string, unknown>;
   icon?: string;
   theme?: string;
+  workspaceOriginId?: string;
+  companyOriginId?: string;
 }
 
 /**
@@ -83,6 +85,8 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
      */
     create(input: CreateCompanyInput): string {
       const id = nanoid();
+      const workspaceOriginId = input.workspaceOriginId ?? id;
+      const companyOriginId = input.companyOriginId ?? id;
       db.insert(companies)
         .values({
           id,
@@ -92,6 +96,8 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
           settingsJson: JSON.stringify(input.settings ?? {}),
           icon: input.icon ?? null,
           theme: input.theme ?? 'dark',
+          workspaceOriginId,
+          companyOriginId,
         })
         .run();
       return id;

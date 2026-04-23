@@ -69,6 +69,9 @@ import type {
   AuthorityRequest,
   ChatMessage,
   Company,
+  CompanyImportPreview,
+  CompanyPackageManifest,
+  CompanyPackageMode,
   Employee,
   EmployeeRuntimeBinding,
   EffectiveAuthoritySnapshot,
@@ -216,6 +219,22 @@ export interface CompaniesUpdateRequest {
 export interface CompaniesDeleteRequest {
   companyId: string;
 }
+
+export interface ExportCompanyPackageRequest {
+  companyId: string;
+  mode: CompanyPackageMode;
+}
+
+export interface ExportCompanyPackageResponse {
+  packagePath: string;
+  manifest: CompanyPackageManifest;
+}
+
+export interface PreviewCompanyPackageImportRequest {
+  packagePath: string;
+}
+
+export interface PreviewCompanyPackageImportResponse extends CompanyImportPreview {}
 
 export interface ListEmployeesRequest {
   companyId: string;

@@ -26,19 +26,33 @@
 import { blob, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /** One row per AI company the user has created (multi-company is Phase 2+). */
-export const companies = sqliteTable('companies', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  slug: text('slug').notNull().unique(),
-  createdAt: integer('created_at').notNull(),
-  /** Serialized company-scoped settings (mission, values, etc.). */
-  settingsJson: text('settings_json').notNull().default('{}'),
-  /** Optional emoji or short icon identifier rendered in the company switcher. */
-  icon: text('icon'),
-  theme: text('theme').notNull().default('dark'),
-  /** running | meeting | paused. Controls orchestrator dispatch for this company. */
-  status: text('status').notNull().default('running'),
-});
+export const companies = sqliteTable(
+  'companies',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull().unique(),
+    createdAt: integer('created_at').notNull(),
+    /** Serialized company-scoped settings (mission, values, etc.). */
+    settingsJson: text('settings_json').notNull().default('{}'),
+    /** Optional emoji or short icon identifier rendered in the company switcher. */
+    icon: text('icon'),
+    theme: text('theme').notNull().default('dark'),
+    /** running | meeting | paused. Controls orchestrator dispatch for this company. */
+    status: text('status').notNull().default('running'),
+    /**
+     * Stable lineage ids for portable company packages. Null only exists on
+     * pre-portability rows until the migration backfill lands or when a test
+     * seeds a company directly through the schema instead of the repo.
+     */
+    workspaceOriginId: text('workspace_origin_id'),
+    companyOriginId: text('company_origin_id'),
+  },
+  (table) => ({
+    workspaceOriginIdx: index('idx_companies_workspace_origin').on(table.workspaceOriginId),
+    companyOriginIdx: index('idx_companies_company_origin').on(table.companyOriginId),
+  }),
+);
 
 /** Human supervisors who can operate one or more companies. */
 export const operators = sqliteTable('operators', {

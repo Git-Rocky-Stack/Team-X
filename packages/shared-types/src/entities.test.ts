@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { LEVEL_RANK, getLevelRank, normalizeLevel } from './entities.js';
+import {
+  COMPANY_PACKAGE_MODES,
+  COMPANY_PACKAGE_SECTIONS,
+  LEVEL_RANK,
+  getLevelRank,
+  normalizeLevel,
+  validateCompanyPackage,
+  validateCompanyPackageManifest,
+} from './entities.js';
 
 /**
  * Unit tests for the level-rank helpers shipped in Phase 5.6 M-C step
@@ -121,5 +129,106 @@ describe('getLevelRank', () => {
     );
     // Same level fails the strict guard (>=).
     expect(getLevelRank('ic')).toBe(getLevelRank('IC'));
+  });
+});
+
+describe('company package validation', () => {
+  const manifest = {
+    packageId: 'pkg-1',
+    packageVersion: 1,
+    mode: 'workspace-export',
+    workspaceOriginId: 'workspace-origin-1',
+    companyOriginId: 'company-origin-1',
+    sourceAppVersion: '1.2.1',
+    exportedAt: '2026-04-23T12:00:00.000Z',
+    exportedByOperatorId: 'rocky',
+    sharingMode: 'local',
+    sections: ['company', 'employees', 'autonomy'],
+    redactions: ['providers.secrets'],
+    compatibility: [],
+  } as const;
+
+  it('accepts a well-formed company package manifest', () => {
+    const result = validateCompanyPackageManifest(manifest);
+    expect(result).toEqual({
+      ok: true,
+      value: manifest,
+    });
+  });
+
+  it('rejects invalid package modes and section names', () => {
+    expect(
+      validateCompanyPackageManifest({
+        ...manifest,
+        mode: 'full-backup',
+      }),
+    ).toEqual({
+      ok: false,
+      error: `manifest.mode must be one of ${COMPANY_PACKAGE_MODES.join(', ')}`,
+    });
+
+    expect(
+      validateCompanyPackageManifest({
+        ...manifest,
+        sections: [...manifest.sections, 'history-dump'],
+      }),
+    ).toEqual({
+      ok: false,
+      error: `manifest.sections must only contain ${COMPANY_PACKAGE_SECTIONS.join(', ')}`,
+    });
+  });
+
+  it('accepts a minimal well-formed company package wrapper', () => {
+    const pkg = {
+      manifest,
+      company: {
+        name: 'Strategia-X',
+        slug: 'strategia-x',
+        icon: null,
+        theme: 'dark',
+        settings: {
+          mission: 'Ship',
+        },
+      },
+    };
+
+    expect(validateCompanyPackage(pkg)).toEqual({
+      ok: true,
+      value: pkg,
+    });
+  });
+
+  it('rejects malformed company snapshots', () => {
+    expect(
+      validateCompanyPackage({
+        manifest,
+        company: {
+          name: '',
+          slug: 'strategia-x',
+          icon: null,
+          theme: 'dark',
+          settings: {},
+        },
+      }),
+    ).toEqual({
+      ok: false,
+      error: 'package.company.name must be a non-empty string',
+    });
+
+    expect(
+      validateCompanyPackage({
+        manifest,
+        company: {
+          name: 'Strategia-X',
+          slug: 'strategia-x',
+          icon: null,
+          theme: 'dark',
+          settings: 'not-an-object',
+        },
+      }),
+    ).toEqual({
+      ok: false,
+      error: 'package.company.settings must be an object',
+    });
   });
 });

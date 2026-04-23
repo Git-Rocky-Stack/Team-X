@@ -86,6 +86,25 @@ describe('companies repo', () => {
       expect(got?.createdAt).toBeLessThanOrEqual(after);
     });
 
+    it('defaults both origin ids to the generated company id', () => {
+      const id = repo.create({ name: 'Origins', slug: 'origins' });
+      const got = repo.getById(id);
+      expect(got?.workspaceOriginId).toBe(id);
+      expect(got?.companyOriginId).toBe(id);
+    });
+
+    it('persists supplied origin ids for imported or template-derived companies', () => {
+      const id = repo.create({
+        name: 'Imported',
+        slug: 'imported',
+        workspaceOriginId: 'workspace-origin-1',
+        companyOriginId: 'company-origin-1',
+      });
+      const got = repo.getById(id);
+      expect(got?.workspaceOriginId).toBe('workspace-origin-1');
+      expect(got?.companyOriginId).toBe('company-origin-1');
+    });
+
     it('enforces unique slug (throws on duplicate)', () => {
       repo.create({ name: 'One', slug: 'same-slug' });
       expect(() => repo.create({ name: 'Two', slug: 'same-slug' })).toThrow();

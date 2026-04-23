@@ -162,6 +162,13 @@
       "when": 1777872000000,
       "tag": "0022_long_run_resume_origin",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1777958400000,
+      "tag": "0023_portable_company_origins",
+      "breakpoints": true
     }
   ]
 }
