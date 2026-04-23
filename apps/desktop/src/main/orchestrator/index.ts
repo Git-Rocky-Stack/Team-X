@@ -260,6 +260,160 @@ export interface BuildOrchestratorOptions {
   resolveProvider: ResolveProvider;
   /** Optional — when absent, agents have no tool access. */
   resolveTools?: ResolveTools;
+  contextAssemblerService?: {
+    assembleThreadContext(input: {
+      companyId: string;
+      threadId: string;
+      recentTurnLimit?: number;
+    }): Promise<{
+      companyId: string;
+      threadId: string;
+      generatedAt: number;
+      recentTurns: Array<{
+        messageId: string | null;
+        role: 'system' | 'user' | 'assistant';
+        authorId: string;
+        authorKind: AuthorKind;
+        content: string;
+        createdAt: number;
+        estimatedTokens: number;
+      }>;
+      blocks: Array<{
+        id: string;
+        kind:
+          | 'ticket'
+          | 'digest'
+          | 'checkpoint'
+          | 'project'
+          | 'goal'
+          | 'approval'
+          | 'company'
+          | 'routine'
+          | 'artifact'
+          | 'retrieval';
+        priority: 'critical' | 'high' | 'medium' | 'low';
+        title: string;
+        body: string;
+        estimatedTokens: number;
+        sourceRefId: string | null;
+        sourceLabel: string | null;
+        metadata: Record<string, unknown>;
+      }>;
+      retrievalQueries: string[];
+    }>;
+  };
+  contextPackerService?: {
+    packContext(input: {
+      context: Awaited<ReturnType<NonNullable<BuildOrchestratorOptions['contextAssemblerService']>['assembleThreadContext']>>;
+      targetTokenBudget?: number;
+    }): {
+      companyId: string;
+      threadId: string;
+      generatedAt: number;
+      targetTokenBudget: number;
+      usedTokens: number;
+      recentTurnTokens: number;
+      blockTokens: number;
+      retrievalTokens: number;
+      packedTurns: Array<{
+        messageId: string | null;
+        role: 'system' | 'user' | 'assistant';
+        authorId: string;
+        authorKind: AuthorKind;
+        content: string;
+        createdAt: number;
+        estimatedTokens: number;
+        truncated: boolean;
+      }>;
+      systemAddendum: string;
+      includedBlocks: Array<{
+        id: string;
+        kind:
+          | 'ticket'
+          | 'digest'
+          | 'checkpoint'
+          | 'project'
+          | 'goal'
+          | 'approval'
+          | 'company'
+          | 'routine'
+          | 'artifact'
+          | 'retrieval';
+        priority: 'critical' | 'high' | 'medium' | 'low';
+        title: string;
+        body: string;
+        estimatedTokens: number;
+        sourceRefId: string | null;
+        sourceLabel: string | null;
+        metadata: Record<string, unknown>;
+        renderedText: string;
+        tokenCount: number;
+        truncated: boolean;
+      }>;
+      droppedBlocks: Array<{
+        blockId: string;
+        kind:
+          | 'ticket'
+          | 'digest'
+          | 'checkpoint'
+          | 'project'
+          | 'goal'
+          | 'approval'
+          | 'company'
+          | 'routine'
+          | 'artifact'
+          | 'retrieval';
+        priority: 'critical' | 'high' | 'medium' | 'low';
+        estimatedTokens: number;
+        reason: 'budget' | 'category-cap';
+      }>;
+      retrievalQueries: string[];
+    };
+  };
+  threadDigestService?: {
+    getLatest(input: { companyId: string; threadId: string }): {
+      pinnedFacts: Array<{ id: string; fact: string; sourceMessageId: string | null }>;
+    } | null;
+    shouldRefresh(input: { companyId: string; threadId: string; refreshThreshold?: number }): boolean;
+    upsertDigest(input: {
+      companyId: string;
+      threadId: string;
+      summary: string;
+      pinnedFacts?: Array<{ id: string; fact: string; sourceMessageId: string | null }>;
+      lastSummarizedMessageId?: string | null;
+      estimatedTokens?: number;
+      freshness?: 'fresh' | 'stale' | 'degraded';
+    }): unknown;
+  };
+  runCheckpointService?: {
+    createCheckpoint(input: {
+      companyId: string;
+      threadId: string;
+      runId?: string | null;
+      employeeId?: string | null;
+      checkpointKind:
+        | 'manual'
+        | 'completion'
+        | 'stopped'
+        | 'timeout'
+        | 'approval-blocked'
+        | 'budget-blocked'
+        | 'routine-completed';
+      objective?: string | null;
+      progressSummary: string;
+      blockers?: Array<{
+        kind: 'approval' | 'budget' | 'authority' | 'provider' | 'dependency' | 'operator' | 'other';
+        refId: string | null;
+        summary: string;
+      }>;
+      nextAction?: string | null;
+      activeArtifactRefs?: string[];
+      unresolvedApprovalRefs?: string[];
+      createdAt?: number;
+    }): unknown;
+  };
+  contextTargetTokenBudget?: number;
+  contextRecentTurnLimit?: number;
   /**
    * Concurrent dispatch cap. Phase 1 default is intentionally low (2)
    * so local ollama never gets stampeded; T36 reads the real number
@@ -270,6 +424,8 @@ export interface BuildOrchestratorOptions {
   providerCaps?: Record<string, number>;
   /** Optional clock injection for tests. Passed through to runAgent. */
   now?: () => number;
+  runTimeoutMs?: number;
+  runIdleTimeoutMs?: number;
 }
 
 /** Map a DB message's author kind to the provider-facing stream role. */
@@ -318,6 +474,162 @@ function mapAgentHistory(rows: MessageRow[], respondingEmployeeId: string): Stre
   }));
 }
 
+function clipText(value: string, maxLength = 220): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, Math.max(0, maxLength - 3)).trim()}...`;
+}
+
+function packedTurnToStreamMessage(
+  turn: {
+    role: 'system' | 'user' | 'assistant';
+    authorId: string;
+    authorKind: AuthorKind;
+    content: string;
+  },
+  respondingEmployeeId?: string,
+): StreamMessage {
+  if (!respondingEmployeeId) {
+    return {
+      role: turn.role,
+      content: turn.content,
+    };
+  }
+  if (turn.role === 'system') {
+    return {
+      role: 'system',
+      content: turn.content,
+    };
+  }
+  if (turn.authorKind === 'employee') {
+    return {
+      role: turn.authorId === respondingEmployeeId ? 'assistant' : 'user',
+      content: turn.content,
+    };
+  }
+  return {
+    role: 'user',
+    content: turn.content,
+  };
+}
+
+function appendPackedContext(system: string, addendum: string): string {
+  const trimmedAddendum = addendum.trim();
+  if (trimmedAddendum.length === 0) return system;
+  return `${system}\n\n## Runtime Context\n${trimmedAddendum}`;
+}
+
+function deriveObjectiveFromRows(rows: MessageRow[], respondingEmployeeId?: string): string | null {
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const row = rows[index];
+    if (!row || !shouldIncludeInHistory(row)) continue;
+    if (!respondingEmployeeId) {
+      if (row.authorKind === 'user') return clipText(row.content);
+      continue;
+    }
+    if (row.authorId !== respondingEmployeeId) {
+      return clipText(row.content);
+    }
+  }
+  return null;
+}
+
+function summarizeCheckpointCompletion(
+  promptTokens: number,
+  completionTokens: number,
+  latencyMs: number,
+): string {
+  return `Completed reply using ${promptTokens} prompt tokens and ${completionTokens} completion tokens in ${latencyMs} ms.`;
+}
+
+function summarizeDigest(
+  rows: MessageRow[],
+  respondingEmployeeId: string,
+  threadSubject: string | null,
+): string {
+  const latestExternal = deriveObjectiveFromRows(rows, respondingEmployeeId);
+  let latestResponse: string | null = null;
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const row = rows[index];
+    if (!row || !shouldIncludeInHistory(row)) continue;
+    if (row.authorId === respondingEmployeeId && row.authorKind === 'employee') {
+      latestResponse = clipText(row.content);
+      break;
+    }
+  }
+
+  const lines: string[] = [];
+  if (threadSubject && threadSubject.trim().length > 0) {
+    lines.push(`Thread focus: ${threadSubject.trim()}`);
+  }
+  if (latestExternal) {
+    lines.push(`Latest request: ${latestExternal}`);
+  }
+  if (latestResponse) {
+    lines.push(`Latest response: ${latestResponse}`);
+  }
+  if (lines.length === 0) {
+    lines.push('Thread state refreshed after a completed run.');
+  }
+  return lines.join('\n');
+}
+
+function collectPackedRefs(
+  packed:
+    | {
+        includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
+      }
+    | null,
+  kind: 'approval' | 'artifact',
+): string[] {
+  if (!packed) return [];
+  const refs = new Set<string>();
+  for (const block of packed.includedBlocks) {
+    if (block.kind !== kind || !block.sourceRefId) continue;
+    refs.add(block.sourceRefId);
+  }
+  return [...refs];
+}
+
+function classifyCheckpointFailure(
+  err: unknown,
+  aborted: boolean,
+): {
+  checkpointKind: 'stopped' | 'timeout';
+  progressSummary: string;
+  blockers: Array<{
+    kind: 'provider' | 'other';
+    refId: string | null;
+    summary: string;
+  }>;
+  nextAction: string | null;
+} | null {
+  const message = err instanceof Error ? err.message : String(err);
+  if (aborted || /aborted|canceled/i.test(message)) {
+    return {
+      checkpointKind: 'stopped',
+      progressSummary: 'Run stopped before the reply completed.',
+      blockers: [],
+      nextAction: 'Resume from the latest checkpoint when ready.',
+    };
+  }
+  if (/timed out|stalled/i.test(message)) {
+    return {
+      checkpointKind: 'timeout',
+      progressSummary: 'Run timed out before the reply completed.',
+      blockers: [
+        {
+          kind: 'provider',
+          refId: null,
+          summary: message,
+        },
+      ],
+      nextAction: 'Retry the run from the latest checkpoint.',
+    };
+  }
+  return null;
+}
+
 function normalizePositiveInt(value: number, fallback = 1): number {
   if (!Number.isFinite(value)) return fallback;
   const rounded = Math.round(value);
@@ -348,9 +660,17 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     resolveSystemPrompt,
     resolveProvider,
     resolveTools,
+    contextAssemblerService,
+    contextPackerService,
+    threadDigestService,
+    runCheckpointService,
+    contextTargetTokenBudget,
+    contextRecentTurnLimit,
     slots,
     providerCaps,
     now,
+    runTimeoutMs,
+    runIdleTimeoutMs,
   } = opts;
 
   interface ResolvedProvider {
@@ -398,6 +718,145 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
   const companyGates = new Map<string, { resolve: () => void; promise: Promise<void> }>();
   const companyInFlight = new Map<string, number>();
   const companyDrainWaiters = new Map<string, Array<() => void>>();
+
+  async function prepareExecutionContext(args: {
+    companyId: string;
+    threadId: string;
+    employeeId: string;
+    system: string;
+    rawRows: MessageRow[];
+    rawHistory: StreamMessage[];
+    mode: 'chat' | 'agent-reply';
+  }): Promise<{
+    system: string;
+    messages: StreamMessage[];
+    packedContext:
+      | {
+          usedTokens: number;
+          includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
+        }
+      | null;
+  }> {
+    if (!contextAssemblerService || !contextPackerService) {
+      return {
+        system: args.system,
+        messages: args.rawHistory,
+        packedContext: null,
+      };
+    }
+
+    try {
+      const assembled = await contextAssemblerService.assembleThreadContext({
+        companyId: args.companyId,
+        threadId: args.threadId,
+        recentTurnLimit: contextRecentTurnLimit,
+      });
+      const packed = contextPackerService.packContext({
+        context: assembled,
+        targetTokenBudget: contextTargetTokenBudget,
+      });
+      return {
+        system: appendPackedContext(args.system, packed.systemAddendum),
+        messages: packed.packedTurns.map((turn) =>
+          packedTurnToStreamMessage(
+            turn,
+            args.mode === 'agent-reply' ? args.employeeId : undefined,
+          ),
+        ),
+        packedContext: {
+          usedTokens: packed.usedTokens,
+          includedBlocks: packed.includedBlocks.map((block) => ({
+            kind: block.kind,
+            sourceRefId: block.sourceRefId,
+          })),
+        },
+      };
+    } catch (err) {
+      console.warn('[orchestrator] context packing failed, falling back to raw history:', err);
+      return {
+        system: args.system,
+        messages: args.rawHistory,
+        packedContext: null,
+      };
+    }
+  }
+
+  function recordRunCheckpoint(args: {
+    companyId: string;
+    threadId: string;
+    employeeId: string;
+    respondingEmployeeId: string;
+    rows: MessageRow[];
+    packedContext:
+      | {
+          includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
+        }
+      | null;
+    runId?: string | null;
+    checkpointKind: 'completion' | 'stopped' | 'timeout';
+    progressSummary: string;
+    blockers?: Array<{
+      kind: 'approval' | 'budget' | 'authority' | 'provider' | 'dependency' | 'operator' | 'other';
+      refId: string | null;
+      summary: string;
+    }>;
+    nextAction?: string | null;
+  }): void {
+    if (!runCheckpointService) return;
+    try {
+      runCheckpointService.createCheckpoint({
+        companyId: args.companyId,
+        threadId: args.threadId,
+        runId: args.runId ?? null,
+        employeeId: args.employeeId,
+        checkpointKind: args.checkpointKind,
+        objective: deriveObjectiveFromRows(args.rows, args.respondingEmployeeId),
+        progressSummary: args.progressSummary,
+        blockers: args.blockers ?? [],
+        nextAction: args.nextAction ?? null,
+        activeArtifactRefs: collectPackedRefs(args.packedContext, 'artifact'),
+        unresolvedApprovalRefs: collectPackedRefs(args.packedContext, 'approval'),
+        createdAt: now?.() ?? Date.now(),
+      });
+    } catch (err) {
+      console.warn('[orchestrator] failed to persist run checkpoint:', err);
+    }
+  }
+
+  function refreshThreadDigest(args: {
+    companyId: string;
+    threadId: string;
+    respondingEmployeeId: string;
+    threadSubject: string | null;
+    rows: MessageRow[];
+    packedContext:
+      | {
+          usedTokens: number;
+        }
+      | null;
+  }): void {
+    if (!threadDigestService) return;
+    try {
+      const latest = threadDigestService.getLatest({
+        companyId: args.companyId,
+        threadId: args.threadId,
+      });
+      if (latest && !threadDigestService.shouldRefresh({ companyId: args.companyId, threadId: args.threadId })) {
+        return;
+      }
+      threadDigestService.upsertDigest({
+        companyId: args.companyId,
+        threadId: args.threadId,
+        summary: summarizeDigest(args.rows, args.respondingEmployeeId, args.threadSubject),
+        pinnedFacts: latest?.pinnedFacts ?? [],
+        lastSummarizedMessageId: args.rows.at(-1)?.id ?? null,
+        estimatedTokens: args.packedContext?.usedTokens ?? 0,
+        freshness: 'fresh',
+      });
+    } catch (err) {
+      console.warn('[orchestrator] failed to refresh thread digest:', err);
+    }
+  }
 
   function incrementCompanyInFlight(companyId: string): void {
     companyInFlight.set(companyId, (companyInFlight.get(companyId) ?? 0) + 1);
@@ -479,12 +938,22 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     let currentRunId = '';
     const getRunId = () => currentRunId;
 
-    const [system, toolConfig] = await Promise.all([
+    const [baseSystem, toolConfig] = await Promise.all([
       resolveSystemPrompt({ employee, company, threadId: args.threadId }),
       resolveTools ? resolveTools({ employee, company, getRunId }) : Promise.resolve(null),
     ]);
 
-    const history = mapHistory(messagesRepo.listByThread(args.threadId));
+    const historyRows = messagesRepo.listByThread(args.threadId);
+    const rawHistory = mapHistory(historyRows);
+    const executionContext = await prepareExecutionContext({
+      companyId: company.id,
+      threadId: args.threadId,
+      employeeId: args.employeeId,
+      system: baseSystem,
+      rawRows: historyRows,
+      rawHistory,
+      mode: 'chat',
+    });
     const builtInSpecs = buildBuiltInTools(
       {
         bus,
@@ -523,12 +992,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         companyId: company.id,
         threadId: args.threadId,
         employeeId: args.employeeId,
-        system,
-        messages: history,
+        system: executionContext.system,
+        messages: executionContext.messages,
         provider: provider.stream,
         providerName: provider.providerName,
         model: provider.model,
         signal,
+        timeoutMs: runTimeoutMs,
+        idleTimeoutMs: runIdleTimeoutMs,
         ...(finalTools
           ? {
               tools: finalTools,
@@ -539,7 +1010,52 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
             }
           : {}),
       },
-    );
+    )
+      .then((result) => {
+        const finalRows = messagesRepo.listByThread(args.threadId);
+        recordRunCheckpoint({
+          companyId: company.id,
+          threadId: args.threadId,
+          employeeId: args.employeeId,
+          respondingEmployeeId: args.employeeId,
+          rows: finalRows,
+          packedContext: executionContext.packedContext,
+          runId: result.runId,
+          checkpointKind: 'completion',
+          progressSummary: summarizeCheckpointCompletion(
+            result.promptTokens,
+            result.completionTokens,
+            result.latencyMs,
+          ),
+        });
+        refreshThreadDigest({
+          companyId: company.id,
+          threadId: args.threadId,
+          respondingEmployeeId: args.employeeId,
+          threadSubject: thread.subject,
+          rows: finalRows,
+          packedContext: executionContext.packedContext,
+        });
+      })
+      .catch((err) => {
+        const failure = classifyCheckpointFailure(err, signal.aborted);
+        if (failure) {
+          recordRunCheckpoint({
+            companyId: company.id,
+            threadId: args.threadId,
+            employeeId: args.employeeId,
+            respondingEmployeeId: args.employeeId,
+            rows: messagesRepo.listByThread(args.threadId),
+            packedContext: executionContext.packedContext,
+            runId: currentRunId || null,
+            checkpointKind: failure.checkpointKind,
+            progressSummary: failure.progressSummary,
+            blockers: failure.blockers,
+            nextAction: failure.nextAction,
+          });
+        }
+        throw err;
+      });
   }
 
   async function runAgentReplyTurn(
@@ -573,12 +1089,22 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     let currentRunId = '';
     const getRunId = () => currentRunId;
 
-    const [system, toolConfig] = await Promise.all([
+    const [baseSystem, toolConfig] = await Promise.all([
       resolveSystemPrompt({ employee, company, threadId: args.threadId }),
       resolveTools ? resolveTools({ employee, company, getRunId }) : Promise.resolve(null),
     ]);
 
-    const history = mapAgentHistory(messagesRepo.listByThread(args.threadId), args.employeeId);
+    const historyRows = messagesRepo.listByThread(args.threadId);
+    const rawHistory = mapAgentHistory(historyRows, args.employeeId);
+    const executionContext = await prepareExecutionContext({
+      companyId: company.id,
+      threadId: args.threadId,
+      employeeId: args.employeeId,
+      system: baseSystem,
+      rawRows: historyRows,
+      rawHistory,
+      mode: 'agent-reply',
+    });
     const builtInSpecs = buildBuiltInTools(
       {
         bus,
@@ -618,12 +1144,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         companyId: company.id,
         threadId: args.threadId,
         employeeId: args.employeeId,
-        system,
-        messages: history,
+        system: executionContext.system,
+        messages: executionContext.messages,
         provider: provider.stream,
         providerName: provider.providerName,
         model: provider.model,
         signal,
+        timeoutMs: runTimeoutMs,
+        idleTimeoutMs: runIdleTimeoutMs,
         ...(finalTools
           ? {
               tools: finalTools,
@@ -634,7 +1162,52 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
             }
           : {}),
       },
-    );
+    )
+      .then((result) => {
+        const finalRows = messagesRepo.listByThread(args.threadId);
+        recordRunCheckpoint({
+          companyId: company.id,
+          threadId: args.threadId,
+          employeeId: args.employeeId,
+          respondingEmployeeId: args.employeeId,
+          rows: finalRows,
+          packedContext: executionContext.packedContext,
+          runId: result.runId,
+          checkpointKind: 'completion',
+          progressSummary: summarizeCheckpointCompletion(
+            result.promptTokens,
+            result.completionTokens,
+            result.latencyMs,
+          ),
+        });
+        refreshThreadDigest({
+          companyId: company.id,
+          threadId: args.threadId,
+          respondingEmployeeId: args.employeeId,
+          threadSubject: thread.subject,
+          rows: finalRows,
+          packedContext: executionContext.packedContext,
+        });
+      })
+      .catch((err) => {
+        const failure = classifyCheckpointFailure(err, signal.aborted);
+        if (failure) {
+          recordRunCheckpoint({
+            companyId: company.id,
+            threadId: args.threadId,
+            employeeId: args.employeeId,
+            respondingEmployeeId: args.employeeId,
+            rows: messagesRepo.listByThread(args.threadId),
+            packedContext: executionContext.packedContext,
+            runId: currentRunId || null,
+            checkpointKind: failure.checkpointKind,
+            progressSummary: failure.progressSummary,
+            blockers: failure.blockers,
+            nextAction: failure.nextAction,
+          });
+        }
+        throw err;
+      });
   }
 
   function settleTask(task: PendingTask, err: unknown): void {

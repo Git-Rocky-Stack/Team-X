@@ -183,7 +183,7 @@ import { pickStrategy } from './services/runtime-strategy.js';
 import { buildChatActionTools } from './services/chat-action-tools.js';
 import { SecretsStore } from './services/secrets.js';
 import { ensureSystemAgent, ensureSystemCopilot } from './services/system-agent-bootstrap.js';
-import { appendExecutionPolicy, composeSystemPromptWithRag } from './services/system-prompt.js';
+import { appendExecutionPolicy } from './services/system-prompt.js';
 import { createTestAgenticCompleteFn } from './services/test-agentic-provider.js';
 import { createTestToolsForEmployee } from './services/test-agentic-tools.js';
 import { createTestClassifier } from './services/test-classifier.js';
@@ -783,60 +783,24 @@ app
       companiesRepo,
       threadsRepo,
       calcCost,
-      resolveSystemPrompt: async ({ employee, company, threadId }) => {
-        // Base path — pure role.md render, no RAG. Called by the RAG
-        // wrapper as its `renderRoleSystemPrompt` dep, AND used as the
-        // direct return when RAG is off so the non-RAG code path is
-        // literally byte-identical to the pre-M29 behaviour.
-        const renderPlain = async (): Promise<string> => {
-          const rolePrompt = await roleLoader.resolveSystemPrompt({ employee, company });
-          const skillBundle = await skillsService.materializePromptBundle({
-            companyId: company.id,
-            employeeId: employee.id,
-          });
-          const prompt =
-            skillBundle.trim().length > 0
-              ? `${rolePrompt}\n\n## Installed Skills\n\n${skillBundle}`
-              : rolePrompt;
-          return appendExecutionPolicy(prompt);
-        };
-
-        if (retrievalOrchestrator === null) return renderPlain();
-
-        const topK = settingsRepo.get<number>('rag_top_k', 5);
-        const threshold = settingsRepo.get<number>('rag_threshold', 0.7);
-        const maxTokens = settingsRepo.get<number>('rag_max_tokens', 2000);
-
-        return composeSystemPromptWithRag(
-          {
-            renderRoleSystemPrompt: renderPlain,
-            // Already gated above — retrieval orchestrator only exists when
-            // vector RAG is available, so this stays enabled without a second
-            // settings lookup.
-            isRagEnabled: () => true,
-            getRecentUserMessages: ({ threadId: tid }) =>
-              messagesRepo
-                .listByThread(tid)
-                .filter((m) => m.authorKind === 'user')
-                .slice(-2)
-                .map((m) => ({ id: m.id, content: m.content, sourceId: m.id })),
-            retrieveEvidence: ({ companyId, recentMessages, excludeSourceIds }) =>
-              retrievalOrchestrator.retrieveEvidence({
-                companyId,
-                recentMessages,
-                excludeSourceIds,
-                config: { topK, threshold, maxTokens },
-                // ~4 chars per token is the canonical OpenAI rule of thumb;
-                // good enough for a maxTokens guard that is advisory, not a
-                // hard limit the provider enforces.
-                countTokens: (text) => Math.ceil(text.length / 4),
-              }),
-          },
-          { employeeId: employee.id, companyId: company.id, threadId },
-        );
+      resolveSystemPrompt: async ({ employee, company }) => {
+        const rolePrompt = await roleLoader.resolveSystemPrompt({ employee, company });
+        const skillBundle = await skillsService.materializePromptBundle({
+          companyId: company.id,
+          employeeId: employee.id,
+        });
+        const prompt =
+          skillBundle.trim().length > 0
+            ? `${rolePrompt}\n\n## Installed Skills\n\n${skillBundle}`
+            : rolePrompt;
+        return appendExecutionPolicy(prompt);
       },
       resolveProvider,
       resolveTools,
+      contextAssemblerService,
+      contextPackerService,
+      threadDigestService,
+      runCheckpointService,
       slots: initialSlots,
       providerCaps: initialProviderCaps,
     });

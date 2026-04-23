@@ -21,9 +21,13 @@ import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
 import { createEventsRepo } from '../db/repos/events.js';
 import { createMessagesRepo } from '../db/repos/messages.js';
+import { createRunCheckpointsRepo } from '../db/repos/run-checkpoints.js';
 import { createRunsRepo } from '../db/repos/runs.js';
+import { createThreadDigestsRepo } from '../db/repos/thread-digests.js';
 import { createThreadsRepo } from '../db/repos/threads.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+import { createRunCheckpointService } from '../services/run-checkpoint-service.js';
+import { createThreadDigestService } from '../services/thread-digest-service.js';
 import { createEventBus } from './event-bus.js';
 import {
   type Orchestrator,
@@ -38,7 +42,9 @@ interface Fixture {
   ctx: TestDbHandle;
   bus: ReturnType<typeof createEventBus>;
   messagesRepo: ReturnType<typeof createMessagesRepo>;
+  runCheckpointsRepo: ReturnType<typeof createRunCheckpointsRepo>;
   runsRepo: ReturnType<typeof createRunsRepo>;
+  threadDigestsRepo: ReturnType<typeof createThreadDigestsRepo>;
   employeesRepo: ReturnType<typeof createEmployeesRepo>;
   companiesRepo: ReturnType<typeof createCompaniesRepo>;
   threadsRepo: ReturnType<typeof createThreadsRepo>;
@@ -75,7 +81,9 @@ async function buildFixture(): Promise<Fixture> {
   const employeesRepo = createEmployeesRepo(ctx.db);
   const threadsRepo = createThreadsRepo(ctx.db);
   const messagesRepo = createMessagesRepo(ctx.db);
+  const runCheckpointsRepo = createRunCheckpointsRepo(ctx.db);
   const runsRepo = createRunsRepo(ctx.db);
+  const threadDigestsRepo = createThreadDigestsRepo(ctx.db);
   const eventsRepo = createEventsRepo(ctx.db);
   const bus = createEventBus({ repo: eventsRepo });
 
@@ -114,7 +122,9 @@ async function buildFixture(): Promise<Fixture> {
     ctx,
     bus,
     messagesRepo,
+    runCheckpointsRepo,
     runsRepo,
+    threadDigestsRepo,
     employeesRepo,
     companiesRepo,
     threadsRepo,
@@ -136,8 +146,14 @@ function buildDefaultOrchestrator(
     resolveSystemPrompt?: ResolveSystemPrompt;
     resolveProvider?: ResolveProvider;
     resolveTools?: ResolveTools;
+    contextAssemblerService?: Parameters<typeof buildOrchestrator>[0]['contextAssemblerService'];
+    contextPackerService?: Parameters<typeof buildOrchestrator>[0]['contextPackerService'];
+    threadDigestService?: Parameters<typeof buildOrchestrator>[0]['threadDigestService'];
+    runCheckpointService?: Parameters<typeof buildOrchestrator>[0]['runCheckpointService'];
     slots?: number;
     now?: () => number;
+    runTimeoutMs?: number;
+    runIdleTimeoutMs?: number;
   } = {},
 ): Orchestrator {
   const defaultProvider =
@@ -173,8 +189,14 @@ function buildDefaultOrchestrator(
     resolveSystemPrompt: defaultResolveSystem,
     resolveProvider: defaultResolveProvider,
     resolveTools: overrides.resolveTools,
+    contextAssemblerService: overrides.contextAssemblerService,
+    contextPackerService: overrides.contextPackerService,
+    threadDigestService: overrides.threadDigestService,
+    runCheckpointService: overrides.runCheckpointService,
     slots: overrides.slots ?? 2,
     now: overrides.now,
+    runTimeoutMs: overrides.runTimeoutMs,
+    runIdleTimeoutMs: overrides.runIdleTimeoutMs,
   });
 }
 
@@ -380,6 +402,134 @@ describe('buildOrchestrator', () => {
         'send_message_to_colleague',
       ]);
       expect(captured.maxSteps).toBe(7);
+    });
+
+    it('uses packed context for internal runs and persists completion memory state', async () => {
+      const captured: { system?: string; messages?: StreamMessage[] } = {};
+      const provider = makeFakeProvider(
+        ['done'],
+        { promptTokens: 7, completionTokens: 3 },
+        captured,
+      );
+      const threadDigestService = createThreadDigestService({
+        threadDigestsRepo: f.threadDigestsRepo,
+        messagesRepo: f.messagesRepo,
+      });
+      const runCheckpointService = createRunCheckpointService({
+        runCheckpointsRepo: f.runCheckpointsRepo,
+      });
+      const orchestrator = buildDefaultOrchestrator(f, {
+        provider,
+        contextAssemblerService: {
+          assembleThreadContext: async () => ({
+            companyId: f.companyId,
+            threadId: f.threadId,
+            generatedAt: 1,
+            retrievalQueries: ['launch plan'],
+            recentTurns: [
+              {
+                messageId: f.userMessageId,
+                role: 'user',
+                authorId: 'rocky',
+                authorKind: 'user',
+                content: 'packed user request',
+                createdAt: 1,
+                estimatedTokens: 4,
+              },
+            ],
+            blocks: [],
+          }),
+        },
+        contextPackerService: {
+          packContext: () => ({
+            companyId: f.companyId,
+            threadId: f.threadId,
+            generatedAt: 1,
+            targetTokenBudget: 256,
+            usedTokens: 21,
+            recentTurnTokens: 4,
+            blockTokens: 17,
+            retrievalTokens: 0,
+            packedTurns: [
+              {
+                messageId: f.userMessageId,
+                role: 'user',
+                authorId: 'rocky',
+                authorKind: 'user',
+                content: 'packed user request',
+                createdAt: 1,
+                estimatedTokens: 4,
+                truncated: false,
+              },
+            ],
+            systemAddendum: '## Ticket Launch\nSource: in_progress\nLaunch is active.',
+            includedBlocks: [
+              {
+                id: 'approval-block',
+                kind: 'approval',
+                priority: 'high',
+                title: 'Approval',
+                body: 'Pending approval',
+                estimatedTokens: 5,
+                sourceRefId: 'approval-1',
+                sourceLabel: 'pending',
+                metadata: {},
+                renderedText: 'Approval block',
+                tokenCount: 5,
+                truncated: false,
+              },
+              {
+                id: 'artifact-block',
+                kind: 'artifact',
+                priority: 'low',
+                title: 'Artifact',
+                body: 'Artifact summary',
+                estimatedTokens: 4,
+                sourceRefId: 'artifact-1',
+                sourceLabel: 'report',
+                metadata: {},
+                renderedText: 'Artifact block',
+                tokenCount: 4,
+                truncated: false,
+              },
+            ],
+            droppedBlocks: [],
+            retrievalQueries: ['launch plan'],
+          }),
+        },
+        threadDigestService,
+        runCheckpointService,
+      });
+
+      await orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+
+      expect(captured.messages).toEqual([{ role: 'user', content: 'packed user request' }]);
+      expect(captured.system).toContain('You are Iris, the CEO at Strategia-X.');
+      expect(captured.system).toContain('## Runtime Context');
+      expect(captured.system).toContain('Launch is active.');
+
+      const checkpoints = runCheckpointService.listByThread({
+        companyId: f.companyId,
+        threadId: f.threadId,
+      });
+      expect(checkpoints[0]).toEqual(
+        expect.objectContaining({
+          checkpointKind: 'completion',
+          unresolvedApprovalRefs: ['approval-1'],
+          activeArtifactRefs: ['artifact-1'],
+        }),
+      );
+
+      const digest = threadDigestService.getLatest({
+        companyId: f.companyId,
+        threadId: f.threadId,
+      });
+      expect(digest?.summary).toContain('Latest request: hi iris');
+      expect(digest?.summary).toContain('Latest response: done');
     });
   });
 
@@ -823,6 +973,9 @@ describe('buildOrchestrator', () => {
 
   describe('stopThread', () => {
     it('aborts an in-flight turn and releases the slot for the next queued task', async () => {
+      const runCheckpointService = createRunCheckpointService({
+        runCheckpointsRepo: f.runCheckpointsRepo,
+      });
       const secondThreadId = f.threadsRepo.create({
         companyId: f.companyId,
         kind: 'dm',
@@ -867,6 +1020,7 @@ describe('buildOrchestrator', () => {
       let callIdx = 0;
       const orchestrator = buildDefaultOrchestrator(f, {
         slots: 1,
+        runCheckpointService,
         resolveProvider: async () => {
           const stream = callIdx === 0 ? abortableProvider : secondProvider;
           callIdx++;
@@ -897,6 +1051,16 @@ describe('buildOrchestrator', () => {
 
       await expect(first).rejects.toThrow(/aborted|canceled/i);
       await second;
+
+      const checkpoints = runCheckpointService.listByThread({
+        companyId: f.companyId,
+        threadId: f.threadId,
+      });
+      expect(checkpoints[0]).toEqual(
+        expect.objectContaining({
+          checkpointKind: 'stopped',
+        }),
+      );
 
       expect(order).toEqual(['first-start', 'second-start', 'second-end']);
     });
@@ -963,6 +1127,59 @@ describe('buildOrchestrator', () => {
       await first;
 
       expect(order).toEqual(['first-start', 'first-end']);
+    });
+  });
+
+  describe('checkpointed interruptions', () => {
+    it('writes a timeout checkpoint when the provider stalls mid-turn', async () => {
+      const runCheckpointService = createRunCheckpointService({
+        runCheckpointsRepo: f.runCheckpointsRepo,
+      });
+      let startedResolve: () => void = () => {};
+      const started = new Promise<void>((resolve) => {
+        startedResolve = resolve;
+      });
+      const provider: ProviderStreamFn = async function* ({ signal }) {
+        yield { delta: 'partial' };
+        startedResolve();
+        await new Promise<void>((_resolve, reject) => {
+          if (signal?.aborted) {
+            reject(new DOMException('Aborted', 'AbortError'));
+            return;
+          }
+          const onAbort = () => {
+            signal?.removeEventListener('abort', onAbort);
+            reject(new DOMException('Aborted', 'AbortError'));
+          };
+          signal?.addEventListener('abort', onAbort, { once: true });
+        });
+      };
+      const orchestrator = buildDefaultOrchestrator(f, {
+        provider,
+        runCheckpointService,
+        runIdleTimeoutMs: 25,
+        runTimeoutMs: 1_000,
+      });
+
+      const runPromise = orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+
+      await started;
+      await expect(runPromise).rejects.toThrow(/stalled/i);
+
+      const checkpoints = runCheckpointService.listByThread({
+        companyId: f.companyId,
+        threadId: f.threadId,
+      });
+      expect(checkpoints[0]).toEqual(
+        expect.objectContaining({
+          checkpointKind: 'timeout',
+        }),
+      );
+      expect(checkpoints[0]?.blockers[0]?.summary).toMatch(/stalled/i);
     });
   });
 
