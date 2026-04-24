@@ -1699,6 +1699,10 @@ export interface IpcContract {
     request: Record<string, never>;
     response: Company[];
   };
+  'companies.exportPackage': {
+    request: ExportCompanyPackageRequest;
+    response: ExportCompanyPackageResponse;
+  };
   'companies.archive': {
     request: ArchiveCompanyRequest;
     // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
@@ -2377,6 +2381,9 @@ export interface TeamXApi {
   companies: {
     /** Return every company. Phase 1 + Phase 5.6 onwards may return many. */
     list(): Promise<Company[]>;
+
+    /** Export one workspace as a portable Team-X package file. */
+    exportPackage(req: ExportCompanyPackageRequest): Promise<ExportCompanyPackageResponse>;
 
     /**
      * Create a new company and seed its two system pseudo-employees

@@ -67,7 +67,7 @@ import { eq } from 'drizzle-orm';
 import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
-import { dbPath } from './db/paths.js';
+import { dbPath, userDataDir } from './db/paths.js';
 import { createAuditRepo } from './db/repos/audit.js';
 import { createArtifactsRepo } from './db/repos/artifacts.js';
 import { createCommandHistoryRepo } from './db/repos/command-history.js';
@@ -142,6 +142,7 @@ import { createBackupService } from './services/backup.js';
 import { createApprovalInboxService } from './services/approval-inbox-service.js';
 import { createBudgetGovernanceService } from './services/budget-governance-service.js';
 import { type CommandService, createCommandService } from './services/command-service.js';
+import { createCompanyPortabilityService } from './services/company-portability-service.js';
 import {
   type CopilotAnalyzerCompleteFn,
   type CopilotAnalyzerService,
@@ -527,6 +528,23 @@ app
         }
         return routineTicketCreator(input);
       },
+    });
+    const companyPortabilityService = createCompanyPortabilityService({
+      companiesRepo,
+      employeesRepo,
+      orgEdgesRepo,
+      goalsRepo,
+      projectsRepo,
+      ticketsRepo,
+      runtimeProfilesService,
+      routineService: routineServiceInstance,
+      budgetGovernanceService: budgetGovernanceServiceInstance,
+      extensionsRegistry,
+      skillsService,
+      authorityRepo,
+      operatorAccessService,
+      exportRootDir: join(userDataDir(), 'portability'),
+      appVersion: app.getVersion(),
     });
     let resolveProvider: ResolveProvider;
 
@@ -944,6 +962,7 @@ app
       budgetGovernanceService: budgetGovernanceServiceInstance,
       approvalInboxService: approvalInboxServiceInstance,
       artifactService,
+      companyPortabilityService,
       threadDigestService,
       runCheckpointService,
       contextAssemblerService,

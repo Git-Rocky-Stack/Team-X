@@ -97,6 +97,8 @@ import type {
   EffectiveAuthoritySnapshot,
   EmployeesSetManagerRequest,
   EndMeetingResponse,
+  ExportCompanyPackageRequest,
+  ExportCompanyPackageResponse,
   FireEmployeeRequest,
   Goal,
   GoalDetail,
@@ -251,6 +253,7 @@ export interface IpcRendererLike {
  */
 const CHANNELS = {
   companiesList: 'companies.list',
+  companiesExportPackage: 'companies.exportPackage',
   companiesArchive: 'companies.archive',
   companiesCreate: 'companies.create',
   // Multi-company CRUD write-side (Phase 5.6 M-C step e; audit rows 10.13 + 10.15)
@@ -447,6 +450,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
   return {
     companies: {
       list: () => ipc.invoke(CHANNELS.companiesList) as ReturnType<TeamXApi['companies']['list']>,
+      exportPackage: (req: ExportCompanyPackageRequest) =>
+        ipc.invoke(CHANNELS.companiesExportPackage, req) as Promise<ExportCompanyPackageResponse>,
       create: (req: CompaniesCreateRequest) =>
         ipc.invoke(CHANNELS.companiesCreate, req) as Promise<CompaniesCreateResponse>,
       archive: (companyId: string) =>

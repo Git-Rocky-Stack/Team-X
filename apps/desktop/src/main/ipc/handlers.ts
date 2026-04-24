@@ -98,6 +98,8 @@ import type {
   EmployeesSetManagerRequest,
   EndMeetingResponse,
   EffectiveAuthoritySnapshot,
+  ExportCompanyPackageRequest,
+  ExportCompanyPackageResponse,
   GetGoalRequest,
   GetThreadDigestRequest,
   GetEffectiveAuthorityRequest,
@@ -245,6 +247,7 @@ import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import {
   AUTO_THREAD_ID,
   BUDGET_SCOPE_KINDS,
+  COMPANY_PACKAGE_MODES,
   COPILOT_CATEGORIES,
   CONCURRENCY_SETTINGS_CLAMPS,
   DEFAULT_CONCURRENCY_CAPS,
@@ -842,6 +845,10 @@ export interface IpcArtifactService {
   list(input: ListArtifactsRequest): ArtifactRecord[];
 }
 
+export interface IpcCompanyPortabilityService {
+  exportCompany(input: ExportCompanyPackageRequest): Promise<ExportCompanyPackageResponse>;
+}
+
 export interface IpcThreadDigestService {
   getLatest(input: GetThreadDigestRequest): ThreadDigest | null;
 }
@@ -891,6 +898,7 @@ export interface IpcHandlerDeps {
   budgetGovernanceService?: IpcBudgetGovernanceService;
   approvalInboxService?: IpcApprovalInboxService;
   artifactService?: IpcArtifactService;
+  companyPortabilityService?: IpcCompanyPortabilityService;
   threadDigestService?: IpcThreadDigestService;
   runCheckpointService?: IpcRunCheckpointService;
   contextAssemblerService?: IpcContextAssemblerService;
@@ -976,6 +984,9 @@ export interface IpcHandlerDeps {
 export interface IpcHandlers {
   /** `companies.list` — return every company. Phase 1 always returns exactly one. */
   companiesList(): Promise<Company[]>;
+
+  /** `companies.exportPackage` — export one workspace as a portable Team-X package. */
+  companiesExportPackage(req: ExportCompanyPackageRequest): Promise<ExportCompanyPackageResponse>;
 
   /**
    * `companies.archive` — soft-delete a company. The handler quiesces
@@ -1945,6 +1956,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     budgetGovernanceService,
     approvalInboxService,
     artifactService,
+    companyPortabilityService,
     threadDigestService,
     runCheckpointService,
     contextAssemblerService,
@@ -2045,6 +2057,22 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
   return {
     async companiesList() {
       return companiesRepo.list().map(rowToCompany);
+    },
+
+    async companiesExportPackage(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] companies.exportPackage: companyId is required');
+      }
+      if (!COMPANY_PACKAGE_MODES.includes(req.mode)) {
+        throw new Error(
+          `[ipc] companies.exportPackage: invalid mode "${String(req.mode)}"`,
+        );
+      }
+      if (!companyPortabilityService) {
+        throw new Error('[ipc] companies.exportPackage: companyPortabilityService dep is required');
+      }
+      assertCompanyActive(companiesRepo, req.companyId, 'companies.exportPackage');
+      return companyPortabilityService.exportCompany(req);
     },
 
     async operatorsList(req) {

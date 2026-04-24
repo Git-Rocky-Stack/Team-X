@@ -61,6 +61,7 @@ import type { IpcHandlers } from './handlers.js';
  */
 const REQUEST_CHANNELS = [
   'companies.list',
+  'companies.exportPackage',
   'companies.archive',
   'companies.create',
   // Multi-company CRUD write-side (Phase 5.6 M-C step e; audit rows 10.13 + 10.15).
@@ -243,6 +244,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('companies.list', async () => {
     return handlers.companiesList();
   });
+
+  ipcMain.handle(
+    'companies.exportPackage',
+    async (_event, request: import('@team-x/shared-types').ExportCompanyPackageRequest) => {
+      return handlers.companiesExportPackage(request);
+    },
+  );
 
   ipcMain.handle('companies.archive', async (_event, request: { companyId: string }) => {
     return handlers.companiesArchive(request);
