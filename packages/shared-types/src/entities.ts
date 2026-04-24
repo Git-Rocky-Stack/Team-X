@@ -245,6 +245,8 @@ export interface CompanySettings {
 
 export const OPERATOR_AUTH_MODES = ['local', 'invited', 'cloud'] as const;
 export type OperatorAuthMode = (typeof OPERATOR_AUTH_MODES)[number];
+export const SHARED_OPERATOR_AUTH_MODES = ['invited', 'cloud'] as const;
+export type SharedOperatorAuthMode = (typeof SHARED_OPERATOR_AUTH_MODES)[number];
 
 export const COMPANY_SHARING_READINESS = ['ready', 'warning', 'blocked'] as const;
 export type CompanySharingReadiness = (typeof COMPANY_SHARING_READINESS)[number];
@@ -287,6 +289,25 @@ export interface OperatorMembership {
   canManageRuntimes: boolean;
   createdAt: number;
   updatedAt: number;
+}
+
+export const OPERATOR_INVITE_STATUSES = ['pending', 'accepted', 'revoked', 'expired'] as const;
+export type OperatorInviteStatus = (typeof OPERATOR_INVITE_STATUSES)[number];
+
+export interface OperatorInvite {
+  id: string;
+  companyId: string;
+  email: string;
+  displayName: string | null;
+  authMode: SharedOperatorAuthMode;
+  role: OperatorMembershipRole;
+  note: string | null;
+  inviteToken: string;
+  status: OperatorInviteStatus;
+  invitedByOperatorId: string;
+  createdAt: number;
+  updatedAt: number;
+  resolvedAt: number | null;
 }
 
 export interface OperatorAccessEntry {

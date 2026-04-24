@@ -84,6 +84,8 @@ import type {
   MeetingActionItem,
   MeetingMode,
   OperatorAccessEntry,
+  OperatorInvite,
+  OperatorMembershipRole,
   PackedThreadContext,
   Project,
   Routine,
@@ -94,6 +96,7 @@ import type {
   RuntimeProfileKind,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
+  SharedOperatorAuthMode,
   SkillAssignment,
   Thread,
   ThreadDigest,
@@ -276,6 +279,28 @@ export interface ListOperatorsRequest {
 
 export interface GetOperatorSharingReadinessRequest {
   companyId: string;
+}
+
+export interface ListOperatorInvitesRequest {
+  companyId: string;
+}
+
+export interface CreateOperatorInviteRequest {
+  companyId: string;
+  email: string;
+  displayName?: string;
+  authMode: SharedOperatorAuthMode;
+  role: OperatorMembershipRole;
+  note?: string;
+  invitedByOperatorId?: string;
+}
+
+export interface CreateOperatorInviteResponse {
+  invite: OperatorInvite;
+}
+
+export interface RevokeOperatorInviteRequest {
+  inviteId: string;
 }
 
 export interface ListRuntimeProfilesRequest {
@@ -1787,6 +1812,18 @@ export interface IpcContract {
     request: GetOperatorSharingReadinessRequest;
     response: CompanySharingReadinessSummary;
   };
+  'operators.listInvites': {
+    request: ListOperatorInvitesRequest;
+    response: OperatorInvite[];
+  };
+  'operators.createInvite': {
+    request: CreateOperatorInviteRequest;
+    response: CreateOperatorInviteResponse;
+  };
+  'operators.revokeInvite': {
+    request: RevokeOperatorInviteRequest;
+    response: OperatorInvite;
+  };
   'runtimeProfiles.list': {
     request: ListRuntimeProfilesRequest;
     response: RuntimeProfileSummary[];
@@ -2588,6 +2625,12 @@ export interface TeamXApi {
     list(companyId: string): Promise<OperatorAccessEntry[]>;
     /** Return sharing posture and readiness for the given company. */
     readiness(companyId: string): Promise<CompanySharingReadinessSummary>;
+    /** Return pending and historical invites for the given company. */
+    listInvites(companyId: string): Promise<OperatorInvite[]>;
+    /** Create a new invited/cloud operator placeholder invite. */
+    createInvite(req: CreateOperatorInviteRequest): Promise<CreateOperatorInviteResponse>;
+    /** Revoke one outstanding operator invite. */
+    revokeInvite(req: RevokeOperatorInviteRequest): Promise<OperatorInvite>;
   };
   runtimeProfiles: {
     /** List runtime profiles and bound employee ids for one workspace. */

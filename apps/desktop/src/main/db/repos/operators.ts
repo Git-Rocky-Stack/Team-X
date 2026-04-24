@@ -1,13 +1,19 @@
-import type { OperatorAuthMode, OperatorMembershipRole } from '@team-x/shared-types';
-import { and, eq } from 'drizzle-orm';
+import type {
+  OperatorAuthMode,
+  OperatorInviteStatus,
+  OperatorMembershipRole,
+  SharedOperatorAuthMode,
+} from '@team-x/shared-types';
+import { and, desc, eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 import type { Schema } from '../client.js';
-import { operatorMemberships, operators } from '../schema.js';
+import { operatorInvites, operatorMemberships, operators } from '../schema.js';
 
 export type OperatorRow = typeof operators.$inferSelect;
 export type OperatorMembershipRow = typeof operatorMemberships.$inferSelect;
+export type OperatorInviteRow = typeof operatorInvites.$inferSelect;
 
 export interface CreateOperatorInput {
   id?: string;
@@ -24,6 +30,17 @@ export interface UpsertOperatorMembershipInput {
   canApproveAuthority?: boolean;
   canManageRoutines?: boolean;
   canManageRuntimes?: boolean;
+}
+
+export interface CreateOperatorInviteInput {
+  companyId: string;
+  email: string;
+  displayName?: string | null;
+  authMode: SharedOperatorAuthMode;
+  role: OperatorMembershipRole;
+  note?: string | null;
+  invitedByOperatorId: string;
+  inviteToken?: string;
 }
 
 type OperatorsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -77,6 +94,61 @@ export function createOperatorsRepo<TRunResult>(db: OperatorsDb<TRunResult>) {
         .from(operatorMemberships)
         .where(eq(operatorMemberships.companyId, companyId))
         .all();
+    },
+
+    getInviteById(id: string): OperatorInviteRow | null {
+      return db.select().from(operatorInvites).where(eq(operatorInvites.id, id)).get() ?? null;
+    },
+
+    listInvitesByCompany(companyId: string): OperatorInviteRow[] {
+      return db
+        .select()
+        .from(operatorInvites)
+        .where(eq(operatorInvites.companyId, companyId))
+        .orderBy(desc(operatorInvites.createdAt))
+        .all();
+    },
+
+    createInvite(input: CreateOperatorInviteInput): OperatorInviteRow {
+      const id = nanoid();
+      const now = Date.now();
+      db.insert(operatorInvites)
+        .values({
+          id,
+          companyId: input.companyId,
+          email: input.email,
+          displayName: input.displayName ?? null,
+          authMode: input.authMode,
+          role: input.role,
+          note: input.note ?? null,
+          inviteToken: input.inviteToken ?? nanoid(24),
+          status: 'pending',
+          invitedByOperatorId: input.invitedByOperatorId,
+          createdAt: now,
+          updatedAt: now,
+          resolvedAt: null,
+        })
+        .run();
+      const created = db.select().from(operatorInvites).where(eq(operatorInvites.id, id)).get();
+      if (!created) {
+        throw new Error(`[operatorsRepo] failed to create operator invite ${id}`);
+      }
+      return created;
+    },
+
+    updateInviteStatus(id: string, status: OperatorInviteStatus): OperatorInviteRow | null {
+      const existing = db.select().from(operatorInvites).where(eq(operatorInvites.id, id)).get();
+      if (!existing) return null;
+      const now = Date.now();
+      db.update(operatorInvites)
+        .set({
+          status,
+          updatedAt: now,
+          resolvedAt: status === 'pending' ? null : now,
+        })
+        .where(eq(operatorInvites.id, id))
+        .run();
+      return db.select().from(operatorInvites).where(eq(operatorInvites.id, id)).get() ?? null;
     },
 
     upsertMembership(input: UpsertOperatorMembershipInput): string {

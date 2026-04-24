@@ -97,6 +97,38 @@ export const operatorMemberships = sqliteTable(
   }),
 );
 
+/** Pending or historical shared-workspace invites for human operators. */
+export const operatorInvites = sqliteTable(
+  'operator_invites',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    displayName: text('display_name'),
+    /** invited | cloud */
+    authMode: text('auth_mode').notNull().default('invited'),
+    /** owner | admin | operator | reviewer */
+    role: text('role').notNull().default('operator'),
+    note: text('note'),
+    inviteToken: text('invite_token').notNull(),
+    /** pending | accepted | revoked | expired */
+    status: text('status').notNull().default('pending'),
+    invitedByOperatorId: text('invited_by_operator_id')
+      .notNull()
+      .references(() => operators.id, { onDelete: 'restrict' }),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    resolvedAt: integer('resolved_at'),
+  },
+  (table) => ({
+    companyIdx: index('idx_operator_invites_company').on(table.companyId),
+    statusIdx: index('idx_operator_invites_status').on(table.status),
+    companyStatusIdx: index('idx_operator_invites_company_status').on(table.companyId, table.status),
+  }),
+);
+
 /** Each employee is an instantiated role from a role pack (see role-packs/). */
 export const employees = sqliteTable('employees', {
   id: text('id').primaryKey(),

@@ -3,13 +3,15 @@ import type {
   CompanySharingReadiness,
   CompanySharingReadinessSummary,
   CompanySettings,
+  OperatorInvite,
   OperatorAccessEntry,
   OperatorAuthMode,
   OperatorMembershipRole,
+  SharedOperatorAuthMode,
 } from '@team-x/shared-types';
 
 import type { CompanyRow } from '../db/repos/companies.js';
-import type { OperatorRow, OperatorsRepo } from '../db/repos/operators.js';
+import type { OperatorInviteRow, OperatorRow, OperatorsRepo } from '../db/repos/operators.js';
 
 /**
  * Legacy compatibility note:
@@ -22,6 +24,24 @@ import type { OperatorRow, OperatorsRepo } from '../db/repos/operators.js';
  */
 export const LOCAL_OWNER_OPERATOR_ID = 'rocky';
 export const LOCAL_OWNER_OPERATOR_NAME = 'Local Owner';
+
+function rowToOperatorInvite(row: OperatorInviteRow): OperatorInvite {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    email: row.email,
+    displayName: row.displayName,
+    authMode: row.authMode as SharedOperatorAuthMode,
+    role: row.role as OperatorMembershipRole,
+    note: row.note,
+    inviteToken: row.inviteToken,
+    status: row.status as OperatorInvite['status'],
+    invitedByOperatorId: row.invitedByOperatorId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    resolvedAt: row.resolvedAt,
+  };
+}
 
 export interface OperatorAccessServiceDeps {
   companiesRepo: {
@@ -191,6 +211,10 @@ export function createOperatorAccessService({
       .filter((entry): entry is OperatorAccessEntry => entry !== null);
   }
 
+  function listInvitesByCompany(companyId: string): OperatorInvite[] {
+    return operatorsRepo.listInvitesByCompany(companyId).map(rowToOperatorInvite);
+  }
+
   return {
     getLocalOwnerId(): string {
       return LOCAL_OWNER_OPERATOR_ID;
@@ -208,6 +232,45 @@ export function createOperatorAccessService({
     resolveOperatorIdForCompany,
 
     listByCompany,
+
+    listInvitesByCompany,
+
+    createInvite(input: {
+      companyId: string;
+      email: string;
+      displayName?: string | null;
+      authMode: SharedOperatorAuthMode;
+      role: OperatorMembershipRole;
+      note?: string | null;
+      invitedByOperatorId?: string | null;
+    }): OperatorInvite {
+      const company = companiesRepo.getById(input.companyId);
+      if (!company) {
+        throw new Error(`[operator-access] company not found: ${input.companyId}`);
+      }
+      const inviterId =
+        typeof input.invitedByOperatorId === 'string' && input.invitedByOperatorId.length > 0
+          ? resolveOperatorIdForCompany(input.companyId, input.invitedByOperatorId)
+          : ensureLocalOwnerForCompany(input.companyId).operatorId;
+      const invite = operatorsRepo.createInvite({
+        companyId: input.companyId,
+        email: input.email.trim(),
+        displayName: input.displayName?.trim() || null,
+        authMode: input.authMode,
+        role: input.role,
+        note: input.note?.trim() || null,
+        invitedByOperatorId: inviterId,
+      });
+      return rowToOperatorInvite(invite);
+    },
+
+    revokeInvite(inviteId: string): OperatorInvite {
+      const updated = operatorsRepo.updateInviteStatus(inviteId, 'revoked');
+      if (!updated) {
+        throw new Error(`[operator-access] invite not found: ${inviteId}`);
+      }
+      return rowToOperatorInvite(updated);
+    },
 
     getSharingReadiness(companyId: string): CompanySharingReadinessSummary {
       const company = companiesRepo.getById(companyId);

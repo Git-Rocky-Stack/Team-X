@@ -169,6 +169,13 @@
       "when": 1777958400000,
       "tag": "0023_portable_company_origins",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1778044800000,
+      "tag": "0024_operator_invites",
+      "breakpoints": true
     }
   ]
 }
