@@ -129,7 +129,8 @@ function buildCheckRoleStaffingTool(args: BuildChatActionToolsArgs): ToolSpec {
       properties: {
         roleQuery: {
           type: 'string',
-          description: 'Role title, role id, or alias to inspect. Example: "Chief Marketing Officer" or "CMO".',
+          description:
+            'Role title, role id, or alias to inspect. Example: "Chief Marketing Officer" or "CMO".',
         },
       },
       required: ['roleQuery'],
@@ -200,7 +201,8 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
       properties: {
         roleQuery: {
           type: 'string',
-          description: 'Role title, role id, or alias to hire. Example: "Chief Marketing Officer" or "CMO".',
+          description:
+            'Role title, role id, or alias to hire. Example: "Chief Marketing Officer" or "CMO".',
         },
         name: {
           type: 'string',
@@ -229,7 +231,11 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
         };
       }
       if (resolved.kind === 'not_found' || !resolved.spec) {
-        return { success: false, state: 'blocked', error: `No hireable role matched "${roleQuery}".` };
+        return {
+          success: false,
+          state: 'blocked',
+          error: `No hireable role matched "${roleQuery}".`,
+        };
       }
 
       const existing = findRoleStaffing(args, resolved.spec.frontmatter.id);
@@ -242,9 +248,10 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
         };
       }
 
-      const name = typeof input.name === 'string' && input.name.trim().length > 0
-        ? input.name.trim()
-        : defaultHireName();
+      const name =
+        typeof input.name === 'string' && input.name.trim().length > 0
+          ? input.name.trim()
+          : defaultHireName();
 
       const employeeId = args.employeesRepo.create({
         companyId: args.companyId,
@@ -258,8 +265,7 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
         toolsDenied: resolved.spec.frontmatter.tools_denied ?? [],
       });
 
-      const created = args
-        .employeesRepo
+      const created = args.employeesRepo
         .listVisibleByCompany(args.companyId)
         .find((employee) => employee.id === employeeId);
       if (!created) {

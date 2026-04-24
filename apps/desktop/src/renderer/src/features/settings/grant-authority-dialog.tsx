@@ -91,7 +91,10 @@ export function GrantAuthorityDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label htmlFor="authority-scope-kind" className="text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor="authority-scope-kind"
+              className="text-xs font-medium text-muted-foreground"
+            >
               Grant Scope
             </label>
             <select
@@ -107,7 +110,10 @@ export function GrantAuthorityDialog({
 
           {scopeKind === 'employee' && (
             <div className="space-y-1.5">
-              <label htmlFor="authority-employee" className="text-xs font-medium text-muted-foreground">
+              <label
+                htmlFor="authority-employee"
+                className="text-xs font-medium text-muted-foreground"
+              >
                 Employee
               </label>
               <select
@@ -126,15 +132,16 @@ export function GrantAuthorityDialog({
           )}
 
           <div className="space-y-1.5">
-            <label htmlFor="authority-permission" className="text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor="authority-permission"
+              className="text-xs font-medium text-muted-foreground"
+            >
               Permission
             </label>
             <select
               id="authority-permission"
               value={permission}
-              onChange={(event) =>
-                setPermission(event.target.value as 'allow' | 'deny' | 'prompt')
-              }
+              onChange={(event) => setPermission(event.target.value as 'allow' | 'deny' | 'prompt')}
               className={selectClass}
             >
               <option value="allow">Allow</option>

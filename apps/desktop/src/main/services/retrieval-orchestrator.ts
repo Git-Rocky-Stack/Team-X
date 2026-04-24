@@ -148,15 +148,17 @@ const DEFAULT_MAX_PER_SOURCE_TYPE = 2;
 const DEFAULT_LEXICAL_LIMIT = 4;
 
 function normalizeText(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9._:-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9._:-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function extractTerms(value: string): string[] {
   const normalized = normalizeText(value);
   if (!normalized) return [];
-  const terms = normalized
-    .split(' ')
-    .filter((term) => term.length > 1 && !STOPWORDS.has(term));
+  const terms = normalized.split(' ').filter((term) => term.length > 1 && !STOPWORDS.has(term));
   return [...new Set(terms)];
 }
 
@@ -310,7 +312,9 @@ function fitEntryToBudget(
   return null;
 }
 
-export function formatEvidenceLine(entry: Pick<RetrievalEvidenceEntry, 'sourceType' | 'sourceId' | 'contentText'>): string {
+export function formatEvidenceLine(
+  entry: Pick<RetrievalEvidenceEntry, 'sourceType' | 'sourceId' | 'contentText'>,
+): string {
   const label = SOURCE_LABELS[entry.sourceType] ?? entry.sourceType;
   return `[Source: ${label} ${entry.sourceId}] ${entry.contentText}`;
 }
@@ -458,10 +462,8 @@ export function createRetrievalOrchestrator(deps: RetrievalOrchestratorDeps) {
         candidateList.push(...buildGoalCandidates(query, deps.listGoals(input.companyId)));
         candidateList.push(...buildProjectCandidates(query, deps.listProjects(input.companyId)));
         candidateList.push(
-          ...buildVaultCandidates(
-            query,
-            deps.searchVault(input.companyId, query),
-            (id) => deps.getVaultFile(id),
+          ...buildVaultCandidates(query, deps.searchVault(input.companyId, query), (id) =>
+            deps.getVaultFile(id),
           ),
         );
       }
@@ -476,7 +478,10 @@ export function createRetrievalOrchestrator(deps: RetrievalOrchestratorDeps) {
       }
 
       const packed: RetrievalEvidenceEntry[] = [];
-      const maxPerSourceType = Math.max(1, input.config.maxPerSourceType ?? DEFAULT_MAX_PER_SOURCE_TYPE);
+      const maxPerSourceType = Math.max(
+        1,
+        input.config.maxPerSourceType ?? DEFAULT_MAX_PER_SOURCE_TYPE,
+      );
       const perType = new Map<EmbeddingSourceType, number>();
       let usedTokens = 0;
 

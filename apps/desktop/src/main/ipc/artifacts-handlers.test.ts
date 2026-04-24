@@ -92,8 +92,8 @@ describe('artifact IPC handlers', () => {
     const deps = makeDeps();
     const handlers = createIpcHandlers(deps);
 
-    await expect(
-      handlers.artifactsList({ companyId: 'company-1', limit: 0 }),
-    ).rejects.toThrow(/limit must be an integer between 1 and 200/i);
+    await expect(handlers.artifactsList({ companyId: 'company-1', limit: 0 })).rejects.toThrow(
+      /limit must be an integer between 1 and 200/i,
+    );
   });
 });

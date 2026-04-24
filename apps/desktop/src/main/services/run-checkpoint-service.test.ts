@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createRunCheckpointsRepo } from '../db/repos/run-checkpoints.js';
 import { companies, threads } from '../db/schema.js';
+import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createRunCheckpointService } from './run-checkpoint-service.js';
 
 let ctx: TestDbHandle;

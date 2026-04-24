@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { RetrievalEvidencePack } from './retrieval-orchestrator.js';
 import {
-  appendExecutionPolicy,
   type ComposeDeps,
   type RecentMessage,
+  appendExecutionPolicy,
   composeSystemPromptWithRag,
 } from './system-prompt.js';
-import type { RetrievalEvidencePack } from './retrieval-orchestrator.js';
 
 function makeDeps(overrides: Partial<ComposeDeps> = {}): ComposeDeps {
   return {
@@ -14,19 +14,21 @@ function makeDeps(overrides: Partial<ComposeDeps> = {}): ComposeDeps {
     getRecentUserMessages: (): RecentMessage[] => [
       { id: 'u1', content: 'What is our Q3 plan?', sourceId: 'u1' },
     ],
-    retrieveEvidence: vi.fn(async (): Promise<RetrievalEvidencePack> => ({
-      queries: ['What is our Q3 plan?'],
-      entries: [
-        {
-          sourceType: 'ticket',
-          sourceId: 'T-42',
-          chunkIndex: 0,
-          contentText: 'Q3 launch',
-          score: 0.8,
-          reasons: ['semantic'],
-        },
-      ],
-    })),
+    retrieveEvidence: vi.fn(
+      async (): Promise<RetrievalEvidencePack> => ({
+        queries: ['What is our Q3 plan?'],
+        entries: [
+          {
+            sourceType: 'ticket',
+            sourceId: 'T-42',
+            chunkIndex: 0,
+            contentText: 'Q3 launch',
+            score: 0.8,
+            reasons: ['semantic'],
+          },
+        ],
+      }),
+    ),
     ...overrides,
   };
 }
@@ -76,10 +78,12 @@ describe('composeSystemPromptWithRag', () => {
 
   it('returns plain role prompt when evidence retrieval yields no entries', async () => {
     const deps = makeDeps({
-      retrieveEvidence: vi.fn(async (): Promise<RetrievalEvidencePack> => ({
-        queries: ['What is our Q3 plan?'],
-        entries: [],
-      })),
+      retrieveEvidence: vi.fn(
+        async (): Promise<RetrievalEvidencePack> => ({
+          queries: ['What is our Q3 plan?'],
+          entries: [],
+        }),
+      ),
     });
     const prompt = await composeSystemPromptWithRag(deps, {
       employeeId: 'e1',
@@ -90,10 +94,12 @@ describe('composeSystemPromptWithRag', () => {
   });
 
   it('passes recent messages through to evidence retrieval', async () => {
-    const retrieveEvidence = vi.fn(async (): Promise<RetrievalEvidencePack> => ({
-      queries: ['already in thread'],
-      entries: [],
-    }));
+    const retrieveEvidence = vi.fn(
+      async (): Promise<RetrievalEvidencePack> => ({
+        queries: ['already in thread'],
+        entries: [],
+      }),
+    );
     const deps = makeDeps({
       retrieveEvidence,
       getRecentUserMessages: () => [{ id: 'm1', content: 'already in thread', sourceId: 'm1' }],

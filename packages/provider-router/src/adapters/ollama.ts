@@ -140,7 +140,9 @@ function toUsage(chunk: OllamaRawChunk): { promptTokens: number; completionToken
         ? chunk.prompt_eval_count
         : 0,
     completionTokens:
-      typeof chunk.eval_count === 'number' && Number.isFinite(chunk.eval_count) ? chunk.eval_count : 0,
+      typeof chunk.eval_count === 'number' && Number.isFinite(chunk.eval_count)
+        ? chunk.eval_count
+        : 0,
   };
 }
 
@@ -319,7 +321,8 @@ export function makePatchedOllamaCloudLanguageModel(args: {
         },
         response: {
           modelId: typeof payload.model === 'string' ? payload.model : args.baseModel.modelId,
-          timestamp: typeof payload.created_at === 'string' ? new Date(payload.created_at) : undefined,
+          timestamp:
+            typeof payload.created_at === 'string' ? new Date(payload.created_at) : undefined,
         },
         warnings,
       };
@@ -348,7 +351,8 @@ export function makePatchedOllamaCloudLanguageModel(args: {
               controller.enqueue({
                 type: 'response-metadata',
                 modelId: typeof chunk.model === 'string' ? chunk.model : args.baseModel.modelId,
-                timestamp: typeof chunk.created_at === 'string' ? new Date(chunk.created_at) : undefined,
+                timestamp:
+                  typeof chunk.created_at === 'string' ? new Date(chunk.created_at) : undefined,
               });
               emittedResponseMetadata = true;
             }
@@ -389,13 +393,14 @@ export function makePatchedOllamaCloudLanguageModel(args: {
             return;
           }
 
-          lineStream.pipeTo(
-            new WritableStream<Uint8Array>({
-              write() {
-                // No-op. createOllamaLineStream routes parsed chunks into controller directly.
-              },
-            }),
-          )
+          lineStream
+            .pipeTo(
+              new WritableStream<Uint8Array>({
+                write() {
+                  // No-op. createOllamaLineStream routes parsed chunks into controller directly.
+                },
+              }),
+            )
             .then(() => {
               controller.close();
             })
@@ -488,7 +493,6 @@ export function makeOllamaStream(options: OllamaAdapterOptions): ProviderStreamF
             args: part.args as Record<string, unknown>,
           },
         };
-        continue;
       }
     }
 
@@ -498,8 +502,10 @@ export function makeOllamaStream(options: OllamaAdapterOptions): ProviderStreamF
     // We must explicitly check for null/undefined/NaN and default to 0.
     const rawPromptTokens = usage?.promptTokens;
     const rawCompletionTokens = usage?.completionTokens;
-    const promptTokens = (rawPromptTokens == null || Number.isNaN(rawPromptTokens)) ? 0 : rawPromptTokens;
-    const completionTokens = (rawCompletionTokens == null || Number.isNaN(rawCompletionTokens)) ? 0 : rawCompletionTokens;
+    const promptTokens =
+      rawPromptTokens == null || Number.isNaN(rawPromptTokens) ? 0 : rawPromptTokens;
+    const completionTokens =
+      rawCompletionTokens == null || Number.isNaN(rawCompletionTokens) ? 0 : rawCompletionTokens;
     yield {
       done: true,
       usage: {

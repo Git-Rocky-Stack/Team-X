@@ -10,9 +10,13 @@ const mainIndexSrc = readFileSync(MAIN_INDEX_PATH, 'utf8');
 
 describe('MCP authority wiring', () => {
   it('resolves effective authority before MCP tool filtering and execution', () => {
-    expect(mainIndexSrc).toContain('const effectiveAuthority = authorityResolver.resolveEmployee(company.id, employee.id);');
+    expect(mainIndexSrc).toContain(
+      'const effectiveAuthority = authorityResolver.resolveEmployee(company.id, employee.id);',
+    );
     expect(mainIndexSrc).toContain('toolsAllowed = effectiveAuthority.toolsAllowed;');
     expect(mainIndexSrc).toContain('toolsDenied = effectiveAuthority.toolsDenied;');
-    expect(mainIndexSrc).toContain('failed to resolve effective authority for ${employee.id}; falling back to role defaults');
+    expect(mainIndexSrc).toContain(
+      'failed to resolve effective authority for ${employee.id}; falling back to role defaults',
+    );
   });
 });

@@ -4,10 +4,10 @@ import { createBudgetsRepo } from '../db/repos/budgets.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
 import { createRoutinesRepo } from '../db/repos/routines.js';
 import { createRunsRepo } from '../db/repos/runs.js';
-import { createTicketsRepo } from '../db/repos/tickets.js';
 import { createThreadsRepo } from '../db/repos/threads.js';
-import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+import { createTicketsRepo } from '../db/repos/tickets.js';
 import { companies, employees } from '../db/schema.js';
+import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createApprovalInboxService } from './approval-inbox-service.js';
 import { createBudgetGovernanceService } from './budget-governance-service.js';
 
@@ -158,18 +158,30 @@ describe('budget governance service', () => {
     const ledger = service.listLedgerEntries({ companyId: 'company-1', limit: 10 });
     expect(ledger).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ scopeKind: 'company', scopeRefId: 'company-1', amountUsd: '2.500000' }),
-        expect.objectContaining({ scopeKind: 'routine', scopeRefId: routineId, amountUsd: '2.500000' }),
+        expect.objectContaining({
+          scopeKind: 'company',
+          scopeRefId: 'company-1',
+          amountUsd: '2.500000',
+        }),
+        expect.objectContaining({
+          scopeKind: 'routine',
+          scopeRefId: routineId,
+          amountUsd: '2.500000',
+        }),
       ]),
     );
 
     const overview = service.getOverview('company-1');
-    const routineSummary = overview.policySummaries.find((policy) => policy.scopeKind === 'routine');
+    const routineSummary = overview.policySummaries.find(
+      (policy) => policy.scopeKind === 'routine',
+    );
     expect(overview.companySpendUsd).toBe('2.5');
     expect(overview.pendingApprovalCount).toBe(1);
     expect(routineSummary?.alertLevel).toBe('exceeded');
     expect(pauseCompany).toHaveBeenCalledWith('company-1');
-    expect(emit).toHaveBeenCalledWith(expect.objectContaining({ type: 'budget.approvalRequested' }));
+    expect(emit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'budget.approvalRequested' }),
+    );
     expect(emit).toHaveBeenCalledWith(expect.objectContaining({ type: 'budget.companyPaused' }));
   });
 
@@ -263,6 +275,8 @@ describe('budget governance service', () => {
     await service.recordRunSpend(runId);
 
     const pending = service.listApprovalItems({ companyId: 'company-1', status: 'pending' });
+    const pendingItem = pending[0];
+    expect(pendingItem).toBeDefined();
     const approvalService = createApprovalInboxService({
       budgetsRepo,
       authorityRepo: {
@@ -274,7 +288,7 @@ describe('budget governance service', () => {
     });
     approvalService.reviewItem({
       companyId: 'company-1',
-      itemId: pending[0]!.id,
+      itemId: pendingItem?.id ?? '',
       kind: 'budget-exception',
       decision: 'approved',
       rationale: 'Keep running this month.',

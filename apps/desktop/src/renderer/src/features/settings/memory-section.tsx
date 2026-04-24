@@ -85,8 +85,8 @@ export function MemorySection() {
 
       <p className="text-[11px] leading-snug text-muted-foreground">
         These defaults shape how Team-X condenses long threads into digests, how much recent
-        conversation it prioritizes, and how deep the checkpoint trail stays visible in the
-        operator memory surface.
+        conversation it prioritizes, and how deep the checkpoint trail stays visible in the operator
+        memory surface.
       </p>
 
       <div className="space-y-4 rounded-lg border border-border bg-surface-50 p-4">

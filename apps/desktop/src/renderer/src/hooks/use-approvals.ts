@@ -1,7 +1,8 @@
-import type { ApprovalItemKind, ApprovalItemStatus } from '@team-x/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ApprovalItemKind, ApprovalItemStatus } from '@team-x/shared-types';
 
 import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
+import { requireString } from '@/lib/required.js';
 
 export function useApprovals(
   companyId: string | null,
@@ -10,7 +11,12 @@ export function useApprovals(
 ) {
   return useQuery({
     queryKey: ['approvals', companyId, kind ?? null, status ?? null],
-    queryFn: () => autonomyClient.approvals.list({ companyId: companyId!, kind, status }),
+    queryFn: () =>
+      autonomyClient.approvals.list({
+        companyId: requireString(companyId, 'companyId'),
+        kind,
+        status,
+      }),
     enabled: companyId !== null && companyId.length > 0,
   });
 }

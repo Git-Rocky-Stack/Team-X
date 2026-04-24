@@ -6,10 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProviderConfig } from '@team-x/shared-types';
 
-import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
-import { companies, employees } from '../db/schema.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
 import { createRuntimeProfilesRepo } from '../db/repos/runtime-profiles.js';
+import { companies } from '../db/schema.js';
+import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createRuntimeProfilesService } from './runtime-profiles-service.js';
 
 let ctx: TestDbHandle;
@@ -113,7 +113,7 @@ describe('runtime profiles service', () => {
       config: { providerId: 'anthropic' },
     });
 
-    const employeeId = employeesRepo.listVisibleByCompany('company-1')[0]!.id;
+    const employeeId = employeesRepo.listVisibleByCompany('company-1')[0]?.id;
     const binding = service.bindEmployee({
       companyId: 'company-1',
       employeeId,
@@ -142,7 +142,7 @@ describe('runtime profiles service', () => {
       name: 'Beta Runtime',
       kind: 'teamx-internal',
     });
-    const employeeId = employeesRepo.listVisibleByCompany('company-1')[0]!.id;
+    const employeeId = employeesRepo.listVisibleByCompany('company-1')[0]?.id;
 
     expect(() =>
       service.bindEmployee({

@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
+import { requireString } from '@/lib/required.js';
 
 export function useRoutines(companyId: string | null) {
   return useQuery({
     queryKey: ['routines', companyId],
-    queryFn: () => autonomyClient.routines.list(companyId!),
+    queryFn: () => autonomyClient.routines.list(requireString(companyId, 'companyId')),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -15,7 +16,7 @@ export function useRoutineRuns(companyId: string | null, routineId?: string | nu
     queryKey: ['routine-runs', companyId, routineId ?? null, limit],
     queryFn: () =>
       autonomyClient.routines.listRuns({
-        companyId: companyId!,
+        companyId: requireString(companyId, 'companyId'),
         routineId: routineId ?? undefined,
         limit,
       }),

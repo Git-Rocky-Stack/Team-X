@@ -10,15 +10,19 @@ import type {
   RunCheckpoint,
   ThreadDigest,
 } from '@team-x/shared-types';
-import type { RetrievalConfig, RetrievalEvidencePack, RetrievalRecentMessage } from './retrieval-orchestrator.js';
+import type {
+  RetrievalConfig,
+  RetrievalEvidencePack,
+  RetrievalRecentMessage,
+} from './retrieval-orchestrator.js';
 import { formatEvidenceLine } from './retrieval-orchestrator.js';
 
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { GoalRow } from '../db/repos/goals.js';
 import type { MessageRow } from '../db/repos/messages.js';
 import type { ProjectRow } from '../db/repos/projects.js';
-import type { TicketRow } from '../db/repos/tickets.js';
 import type { ThreadRow } from '../db/repos/threads.js';
+import type { TicketRow } from '../db/repos/tickets.js';
 
 export const DEFAULT_CONTEXT_RECENT_TURN_LIMIT = 12;
 
@@ -53,7 +57,9 @@ function parseStringArray(raw: string | null | undefined): string[] {
   try {
     const parsed = JSON.parse(raw ?? '[]');
     if (Array.isArray(parsed)) {
-      return parsed.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+      return parsed.filter(
+        (value): value is string => typeof value === 'string' && value.trim().length > 0,
+      );
     }
   } catch {
     // Fall through.
@@ -140,11 +146,7 @@ function formatApprovalBlock(item: ApprovalItem): string {
 }
 
 function formatRoutineRunBlock(run: RoutineRun): string {
-  const lines = [
-    `Routine: ${run.routineId}`,
-    `Status: ${run.status}`,
-    `Reason: ${run.reason}`,
-  ];
+  const lines = [`Routine: ${run.routineId}`, `Status: ${run.status}`, `Reason: ${run.reason}`];
   if (run.ticketId) lines.push(`Ticket: ${run.ticketId}`);
   if (run.message?.trim()) lines.push(`Message: ${run.message.trim()}`);
   if (run.errorMessage?.trim()) lines.push(`Error: ${run.errorMessage.trim()}`);
@@ -339,14 +341,18 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
   } = deps;
 
   return {
-    async assembleThreadContext(input: AssembleThreadContextInput): Promise<AssembledThreadContext> {
+    async assembleThreadContext(
+      input: AssembleThreadContextInput,
+    ): Promise<AssembledThreadContext> {
       const company = companiesRepo.getById(input.companyId);
       if (!company) {
         throw new Error(`[context-assembler] company not found: ${input.companyId}`);
       }
       const thread = threadsRepo.getById(input.threadId);
       if (!thread || thread.companyId !== input.companyId) {
-        throw new Error(`[context-assembler] thread ${input.threadId} does not belong to company ${input.companyId}`);
+        throw new Error(
+          `[context-assembler] thread ${input.threadId} does not belong to company ${input.companyId}`,
+        );
       }
 
       const allTurns = messagesRepo.listByThread(input.threadId).filter(shouldIncludeTurn);
@@ -388,14 +394,14 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
           body: formatCheckpointBlock(checkpoint),
           sourceRefId: checkpoint.id,
           sourceLabel: checkpoint.checkpointKind,
-            metadata: {
-              checkpointKind: checkpoint.checkpointKind,
-              runId: checkpoint.runId,
-              employeeId: checkpoint.employeeId,
-              createdAt: checkpoint.createdAt,
-            },
-          });
-        }
+          metadata: {
+            checkpointKind: checkpoint.checkpointKind,
+            runId: checkpoint.runId,
+            employeeId: checkpoint.employeeId,
+            createdAt: checkpoint.createdAt,
+          },
+        });
+      }
 
       pushBlock(blocks, countTokens, {
         id: `company:${company.id}`,
@@ -411,7 +417,9 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
         },
       });
 
-      const ticket = thread.ticketId ? ticketsRepo.getById(thread.ticketId) : ticketsRepo.getByThreadId(thread.id);
+      const ticket = thread.ticketId
+        ? ticketsRepo.getById(thread.ticketId)
+        : ticketsRepo.getByThreadId(thread.id);
       if (ticket) {
         pushBlock(blocks, countTokens, {
           id: `ticket:${ticket.id}`,
@@ -472,10 +480,11 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
         });
       }
 
-      const pendingApprovals = approvalInboxService?.listItems({
-        companyId: input.companyId,
-        status: 'pending',
-      }) ?? [];
+      const pendingApprovals =
+        approvalInboxService?.listItems({
+          companyId: input.companyId,
+          status: 'pending',
+        }) ?? [];
       const relevantApprovalIds = new Set(checkpoint?.unresolvedApprovalRefs ?? []);
       const relevantApprovals = pendingApprovals
         .filter((item) => {
@@ -505,10 +514,11 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
         });
       }
 
-      const recentRoutineRuns = routineService?.listRuns({
-        companyId: input.companyId,
-        limit: 10,
-      }) ?? [];
+      const recentRoutineRuns =
+        routineService?.listRuns({
+          companyId: input.companyId,
+          limit: 10,
+        }) ?? [];
       const relevantRoutineRuns = recentRoutineRuns
         .filter((run) => (ticket ? run.ticketId === ticket.id : false))
         .slice(0, 2);
@@ -528,20 +538,23 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
         });
       }
 
-      const recentArtifacts = artifactService?.list({
-        companyId: input.companyId,
-        limit: 20,
-      }) ?? [];
+      const recentArtifacts =
+        artifactService?.list({
+          companyId: input.companyId,
+          limit: 20,
+        }) ?? [];
       const relevantArtifactIds = new Set(checkpoint?.activeArtifactRefs ?? []);
       const relevantArtifacts = recentArtifacts
         .filter((artifact) => {
           if (ticket && artifact.ticketId === ticket.id) return true;
-          if (approvalsToInclude.some((approval) => artifact.approvalItemId === approval.id)) return true;
+          if (approvalsToInclude.some((approval) => artifact.approvalItemId === approval.id))
+            return true;
           if (relevantArtifactIds.has(artifact.id)) return true;
           return false;
         })
         .slice(0, 3);
-      const artifactsToInclude = relevantArtifacts.length > 0 ? relevantArtifacts : recentArtifacts.slice(0, 1);
+      const artifactsToInclude =
+        relevantArtifacts.length > 0 ? relevantArtifacts : recentArtifacts.slice(0, 1);
 
       for (const artifact of artifactsToInclude) {
         pushBlock(blocks, countTokens, {
@@ -562,12 +575,15 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
       const retrievalQueries: string[] = [];
       if (retrieveEvidence) {
         const recentUserMessages: RetrievalRecentMessage[] = recentTurns
-          .filter((turn) => turn.role === 'user' && turn.messageId)
+          .filter(
+            (turn): turn is (typeof recentTurns)[number] & { messageId: string } =>
+              turn.role === 'user' && typeof turn.messageId === 'string',
+          )
           .slice(-2)
           .map((turn) => ({
-            id: turn.messageId!,
+            id: turn.messageId,
             content: turn.content,
-            sourceId: turn.messageId!,
+            sourceId: turn.messageId,
           }));
         if (recentUserMessages.length > 0) {
           const evidence = await retrieveEvidence({

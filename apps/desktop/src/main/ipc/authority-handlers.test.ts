@@ -128,11 +128,14 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     })),
   } as unknown as IpcHandlerDeps['approvalInboxService'];
   const operatorAccessService = {
-    resolveOperatorIdForCompany: vi.fn((_companyId: string, preferredOperatorId?: string | null) =>
-      preferredOperatorId ?? 'rocky',
+    resolveOperatorIdForCompany: vi.fn(
+      (_companyId: string, preferredOperatorId?: string | null) => preferredOperatorId ?? 'rocky',
     ),
     listByCompany: vi.fn(() => []),
-    ensureLocalOwnerForCompany: vi.fn(() => ({ operatorId: 'rocky', membershipId: 'membership-1' })),
+    ensureLocalOwnerForCompany: vi.fn(() => ({
+      operatorId: 'rocky',
+      membershipId: 'membership-1',
+    })),
   } as unknown as IpcHandlerDeps['operatorAccessService'];
 
   return {

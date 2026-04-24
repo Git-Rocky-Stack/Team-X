@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 
 import type { EmployeeLiveState } from '../../store/app-store.js';
 
-import { projectDashboardQueueRows, summarizeDashboardQueues } from './dashboard-queue-projections.js';
+import {
+  projectDashboardQueueRows,
+  summarizeDashboardQueues,
+} from './dashboard-queue-projections.js';
 
 const employees: Employee[] = [
   {
@@ -111,7 +114,9 @@ describe('dashboard-queue-projections', () => {
   });
 
   it('summarizes dashboard queue totals across every employee row', () => {
-    const summary = summarizeDashboardQueues(projectDashboardQueueRows(employees, tickets, employeeLive));
+    const summary = summarizeDashboardQueues(
+      projectDashboardQueueRows(employees, tickets, employeeLive),
+    );
 
     expect(summary).toEqual({
       open: 1,

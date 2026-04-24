@@ -13,14 +13,13 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CommandHistoryRepo, CommandHistoryRow } from '../db/repos/command-history.js';
 import { buildChatActionTools } from './chat-action-tools.js';
 import {
-  createCommandService,
   type CommandEntityResolver,
   type CommandEventBus,
   type CommandHandlers,
   type CommandService,
+  createCommandService,
 } from './command-service.js';
 import {
-  createRetrievalOrchestrator,
   type GoalRetrievalRow,
   type ProjectRetrievalRow,
   type RetrievalConfig,
@@ -29,6 +28,7 @@ import {
   type TicketRetrievalRow,
   type VaultRetrievalRow,
   type VaultSearchHit,
+  createRetrievalOrchestrator,
 } from './retrieval-orchestrator.js';
 import { composeSystemPromptWithRag } from './system-prompt.js';
 import { createTestAgenticCompleteFn } from './test-agentic-provider.js';
@@ -106,8 +106,7 @@ function makeRoleSpec(
     },
     body: '# Role',
     sourcePath:
-      overrides.sourcePath ??
-      'C:/repo/role-packs/strategia-official/roles/officer/cmo.md',
+      overrides.sourcePath ?? 'C:/repo/role-packs/strategia-official/roles/officer/cmo.md',
     sha256: `sha-${id}`,
   };
 }
@@ -207,11 +206,13 @@ function makeResolver(overrides: Partial<CommandEntityResolver> = {}): CommandEn
   };
 }
 
-function buildCommandService(options: {
-  classifier?: IntentClassifier;
-  resolver?: CommandEntityResolver;
-  handlers?: CommandHandlers;
-} = {}): CommandService {
+function buildCommandService(
+  options: {
+    classifier?: IntentClassifier;
+    resolver?: CommandEntityResolver;
+    handlers?: CommandHandlers;
+  } = {},
+): CommandService {
   let nextId = 0;
   return createCommandService({
     classifier:
@@ -243,11 +244,7 @@ function buildCommandService(options: {
 interface RetrievalEvalScenario {
   name: string;
   recentMessages: readonly RetrievalRecentMessage[];
-  vectorHits?: RetrievalOrchestratorDeps['vectorRetrieve'] extends (
-    input: any,
-  ) => Promise<infer Hits>
-    ? Hits
-    : never;
+  vectorHits?: Awaited<ReturnType<RetrievalOrchestratorDeps['vectorRetrieve']>>;
   tickets?: readonly TicketRetrievalRow[];
   goals?: readonly GoalRetrievalRow[];
   projects?: readonly ProjectRetrievalRow[];
@@ -357,7 +354,8 @@ const RETRIEVAL_EVAL_FIXTURES: readonly RetrievalEvalScenario[] = [
       {
         id: 'G-9',
         title: 'Recover Q3 launch confidence',
-        description: 'Align marketing, product, and support owners around the launch recovery plan.',
+        description:
+          'Align marketing, product, and support owners around the launch recovery plan.',
         status: 'active',
         targetDate: Date.UTC(2026, 6, 1, 0, 0, 0),
         updatedAt: Date.UTC(2026, 3, 20, 10, 0, 0),
@@ -367,7 +365,8 @@ const RETRIEVAL_EVAL_FIXTURES: readonly RetrievalEvalScenario[] = [
       {
         id: 'P-9',
         title: 'Q3 launch recovery plan',
-        description: 'Program led by the Chief Operating Officer with marketing and support dependencies.',
+        description:
+          'Program led by the Chief Operating Officer with marketing and support dependencies.',
         status: 'active',
         priority: 'high',
         goalId: 'G-9',
@@ -395,7 +394,9 @@ describe('intelligence eval harness - retrieval fixtures', () => {
         countTokens,
       });
 
-      const actualSourceKeys = result.entries.map((entry) => `${entry.sourceType}:${entry.sourceId}`);
+      const actualSourceKeys = result.entries.map(
+        (entry) => `${entry.sourceType}:${entry.sourceId}`,
+      );
       expect(actualSourceKeys).toEqual(expect.arrayContaining([...scenario.expectedSourceKeys]));
       for (const fragment of scenario.expectedFragments) {
         expect(result.entries.some((entry) => entry.contentText.includes(fragment))).toBe(true);
@@ -778,7 +779,7 @@ describe('intelligence eval harness - latency gates', () => {
       now: () => 123,
     }).find((tool) => tool.name === 'hire_employee');
 
-    const measured = await measureSynthetic(clock, () => hireTool!.execute!({ roleQuery: 'CMO' }));
+    const measured = await measureSynthetic(clock, () => hireTool?.execute?.({ roleQuery: 'CMO' }));
 
     expect(measured.result).toMatchObject({
       success: true,

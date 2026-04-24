@@ -113,7 +113,9 @@ function ArtifactCard({
                   {key}
                 </span>
                 <span className="text-right">
-                  {typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+                  {typeof value === 'string' ||
+                  typeof value === 'number' ||
+                  typeof value === 'boolean'
                     ? String(value)
                     : JSON.stringify(value)}
                 </span>
@@ -266,21 +268,29 @@ export function ArtifactsPanel({ companyId }: { companyId: string }) {
             <Workflow className="h-4 w-4" />
             Routine provenance
           </div>
-          <p>Routine outputs bind a ticket outcome back to the exact routine run that produced it.</p>
+          <p>
+            Routine outputs bind a ticket outcome back to the exact routine run that produced it.
+          </p>
         </div>
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-foreground">
             <CheckSquare2 className="h-4 w-4" />
             Governance outcomes
           </div>
-          <p>Approval decisions now leave a durable artifact trail instead of disappearing into status changes.</p>
+          <p>
+            Approval decisions now leave a durable artifact trail instead of disappearing into
+            status changes.
+          </p>
         </div>
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-foreground">
             <Ticket className="h-4 w-4" />
             Operator handoff
           </div>
-          <p>Use preview for provenance and jump into Tickets or Files when the outcome needs a deeper follow-up.</p>
+          <p>
+            Use preview for provenance and jump into Tickets or Files when the outcome needs a
+            deeper follow-up.
+          </p>
         </div>
       </MissionInsetSurface>
     </div>

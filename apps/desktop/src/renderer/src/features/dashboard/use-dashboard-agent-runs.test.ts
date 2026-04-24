@@ -13,7 +13,9 @@ describe('use-dashboard-agent-runs', () => {
     expect(hookSrc).toContain('errorMessage: string | null;');
     expect(hookSrc).toContain('retry: () => Promise<unknown>;');
     expect(hookSrc).toContain('hasHistoryWarning: recentRunsQuery.isError && runs.length > 0');
-    expect(hookSrc).toContain('errorMessage: recentRunsQuery.isError ? agentRunsErrorMessage(recentRunsQuery.error) : null');
+    expect(hookSrc).toContain(
+      'errorMessage: recentRunsQuery.isError ? agentRunsErrorMessage(recentRunsQuery.error) : null',
+    );
     expect(hookSrc).toContain('retry: () => recentRunsQuery.refetch()');
   });
 });

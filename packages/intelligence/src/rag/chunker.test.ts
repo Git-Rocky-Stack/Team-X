@@ -18,8 +18,11 @@ describe('chunkText', () => {
     expect(chunks.length).toBeGreaterThan(1);
     // Verify content continuity: last word of chunk i should appear in chunk i+1
     for (let i = 0; i < chunks.length - 1; i++) {
-      const currentChunk = chunks[i]!;
-      const nextChunk = chunks[i + 1]!;
+      const currentChunk = chunks[i];
+      const nextChunk = chunks[i + 1];
+      if (!currentChunk || !nextChunk) {
+        throw new Error('expected adjacent chunks to exist');
+      }
       const currentWords = currentChunk.split(/\s+/);
       const lastWords = currentWords.slice(-10);
       const hasOverlap = lastWords.some((w) => nextChunk.includes(w));

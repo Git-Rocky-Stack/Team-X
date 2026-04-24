@@ -6,8 +6,8 @@ import { useEmployees } from '@/hooks/use-employees.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { AppLayout } from './app/layout.js';
-import { AutonomyView } from './features/autonomy/autonomy-view.js';
 import { AuditView } from './features/audit/audit-view.js';
+import { AutonomyView } from './features/autonomy/autonomy-view.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
 import { ChatView } from './features/chat/chat-view.js';
 import { CommandPalette } from './features/command/command-palette.js';

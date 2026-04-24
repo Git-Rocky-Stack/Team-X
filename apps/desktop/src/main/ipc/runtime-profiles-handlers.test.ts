@@ -12,27 +12,25 @@ import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
   const noop = {} as never;
   const runtimeProfilesService = {
-    list: vi.fn(
-      (): RuntimeProfileSummary[] => [
-        {
-          id: 'profile-1',
-          companyId: 'company-1',
-          name: 'Mission Control Internal',
-          slug: 'mission-control-internal',
-          kind: 'teamx-internal',
-          enabled: true,
-          config: { providerId: 'anthropic' },
-          lastHealthStatus: 'healthy',
-          lastHealthMessage: 'Ready',
-          lastValidatedAt: 10,
-          createdAt: 1,
-          updatedAt: 10,
-          executionMode: 'native',
-          boundEmployeeIds: ['employee-1'],
-          boundEmployeeCount: 1,
-        },
-      ],
-    ),
+    list: vi.fn((): RuntimeProfileSummary[] => [
+      {
+        id: 'profile-1',
+        companyId: 'company-1',
+        name: 'Mission Control Internal',
+        slug: 'mission-control-internal',
+        kind: 'teamx-internal',
+        enabled: true,
+        config: { providerId: 'anthropic' },
+        lastHealthStatus: 'healthy',
+        lastHealthMessage: 'Ready',
+        lastValidatedAt: 10,
+        createdAt: 1,
+        updatedAt: 10,
+        executionMode: 'native',
+        boundEmployeeIds: ['employee-1'],
+        boundEmployeeCount: 1,
+      },
+    ]),
     create: vi.fn(() => 'profile-1'),
     update: vi.fn(),
     delete: vi.fn(),

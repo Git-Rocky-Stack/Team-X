@@ -1,3 +1,4 @@
+import type { Stats } from 'node:fs';
 import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 
@@ -110,7 +111,11 @@ function ensureNonEmptyString(value: unknown, label: string): string {
 function dedupeStrings(values: unknown): string[] {
   if (!Array.isArray(values)) return [];
   return Array.from(
-    new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)),
+    new Set(
+      values.filter(
+        (value): value is string => typeof value === 'string' && value.trim().length > 0,
+      ),
+    ),
   );
 }
 
@@ -168,9 +173,10 @@ function parseSkillManifest(raw: string): ParsedSkillManifest {
   const instructionFiles = dedupeStrings(manifest.instructionFiles).map((path) =>
     normalizeRelativeFilePath(path, 'manifest.instructionFiles'),
   );
-  const slugValue = typeof manifest.slug === 'string' && manifest.slug.trim().length > 0
-    ? manifest.slug.trim()
-    : slugify(name);
+  const slugValue =
+    typeof manifest.slug === 'string' && manifest.slug.trim().length > 0
+      ? manifest.slug.trim()
+      : slugify(name);
 
   return {
     name,
@@ -201,7 +207,7 @@ async function ensureDirectory(path: string): Promise<void> {
 
 async function loadLocalSkillSource(folderPath: string): Promise<LoadedSkillSource> {
   const root = resolve(folderPath);
-  let sourceStats;
+  let sourceStats: Stats;
   try {
     sourceStats = await stat(root);
   } catch (err) {
@@ -231,8 +237,9 @@ async function loadLocalSkillSource(folderPath: string): Promise<LoadedSkillSour
   if (!manifestPath) {
     throw new Error('[skills] local skill folder is missing teamx-skill.json or team-x-skill.json');
   }
+  const resolvedManifestPath = manifestPath;
 
-  const manifestRaw = await readFile(manifestPath, 'utf8');
+  const manifestRaw = await readFile(resolvedManifestPath, 'utf8');
   const manifest = parseSkillManifest(manifestRaw);
   const fileList = [manifest.promptFile, ...manifest.instructionFiles];
 
@@ -259,7 +266,7 @@ async function loadLocalSkillSource(folderPath: string): Promise<LoadedSkillSour
     },
     async snapshotTo(targetDir: string) {
       await ensureDirectory(targetDir);
-      await copyFile(manifestPath!, join(targetDir, manifestFileName));
+      await copyFile(resolvedManifestPath, join(targetDir, manifestFileName));
       for (const relativePath of fileList) {
         const sourcePath = resolve(root, relativePath);
         const targetPath = join(targetDir, relativePath);
@@ -296,10 +303,10 @@ function parseGitHubSourceUrl(sourceUrl: string): GitHubSourceRef {
     if (parts.length < 5) {
       throw new Error('[skills] raw GitHub skill URL must point at a manifest file');
     }
-    const owner = parts[0]!;
-    const repo = parts[1]!;
-    const ref = parts[2]!;
-    const rest = parts.slice(3);
+    const [owner, repo, ref, ...rest] = parts;
+    if (!owner || !repo || !ref) {
+      throw new Error('[skills] raw GitHub skill URL is missing owner, repo, or ref');
+    }
     return {
       owner,
       repo: repo.replace(/\.git$/i, ''),
@@ -319,11 +326,10 @@ function parseGitHubSourceUrl(sourceUrl: string): GitHubSourceRef {
     throw new Error('[skills] GitHub source must include owner and repo');
   }
 
-  const owner = parts[0]!;
-  const repoRaw = parts[1]!;
-  const mode = parts[2];
-  const ref = parts[3];
-  const rest = parts.slice(4);
+  const [owner, repoRaw, mode, ref, ...rest] = parts;
+  if (!owner || !repoRaw) {
+    throw new Error('[skills] GitHub source must include owner and repo');
+  }
   const repo = repoRaw.replace(/\.git$/i, '');
 
   if (!mode) {
@@ -427,10 +433,13 @@ async function loadGitHubSkillSource(
   }
 
   if (!manifestRaw || !manifestPath) {
-    throw new Error('[skills] GitHub skill source is missing teamx-skill.json or team-x-skill.json');
+    throw new Error(
+      '[skills] GitHub skill source is missing teamx-skill.json or team-x-skill.json',
+    );
   }
+  const resolvedManifestRaw = manifestRaw;
 
-  const manifest = parseSkillManifest(manifestRaw);
+  const manifest = parseSkillManifest(resolvedManifestRaw);
   const basePath = parsed.basePath;
   const fileMap = new Map<string, string>();
   const referencedFiles = [manifest.promptFile, ...manifest.instructionFiles];
@@ -451,7 +460,7 @@ async function loadGitHubSkillSource(
     },
     async snapshotTo(targetDir: string) {
       await ensureDirectory(targetDir);
-      await writeFile(join(targetDir, manifestFileName), manifestRaw!, 'utf8');
+      await writeFile(join(targetDir, manifestFileName), resolvedManifestRaw, 'utf8');
       for (const [relativePath, text] of fileMap.entries()) {
         const targetPath = join(targetDir, relativePath);
         await ensureDirectory(dirname(targetPath));
@@ -484,9 +493,7 @@ function rowToSkillAssignment(row: SkillAssignmentRow): SkillAssignment {
   };
 }
 
-async function buildPromptAdditionForSkill(
-  extension: ExtensionRow,
-): Promise<string> {
+async function buildPromptAdditionForSkill(extension: ExtensionRow): Promise<string> {
   if (!extension?.manifestJson) return '';
   let manifest: Record<string, unknown>;
   try {
@@ -535,7 +542,9 @@ async function buildPromptAdditionForSkill(
 
 export function createSkillsService(deps: SkillsServiceDeps): SkillsService {
   const fetchFn = deps.fetchFn ?? fetch;
-  const logger = deps.log ?? { warn: (message: string, err?: unknown) => console.warn(message, err) };
+  const logger = deps.log ?? {
+    warn: (message: string, err?: unknown) => console.warn(message, err),
+  };
 
   async function installFromSource(
     companyId: string,
@@ -579,7 +588,7 @@ export function createSkillsService(deps: SkillsServiceDeps): SkillsService {
       await source.snapshotTo(snapshotDir);
       deps.extensionsRepo.update(extensionId, {
         manifestJson: JSON.stringify({
-          ...JSON.parse(manifestJson) as Record<string, unknown>,
+          ...(JSON.parse(manifestJson) as Record<string, unknown>),
           snapshotDir,
         }),
       });

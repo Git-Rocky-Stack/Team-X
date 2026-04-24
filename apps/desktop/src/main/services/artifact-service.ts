@@ -106,7 +106,11 @@ export function createArtifactService({ artifactsRepo }: { artifactsRepo: Artifa
         createdByRoutineId: input.routineId,
         createdAt: input.createdAt,
       });
-      return rowToArtifact(artifactsRepo.getById(artifactId)!);
+      const artifact = artifactsRepo.getById(artifactId);
+      if (!artifact) {
+        throw new Error(`[artifact-service] failed to read created artifact ${artifactId}`);
+      }
+      return rowToArtifact(artifact);
     },
 
     recordApprovalOutcomeArtifact(input: RecordApprovalOutcomeArtifactInput): ArtifactRecord {
@@ -115,8 +119,9 @@ export function createArtifactService({ artifactsRepo }: { artifactsRepo: Artifa
         kind: 'approval-record',
         outcomeKind: 'approval-complete',
         title: input.summary,
-        summary:
-          input.rationale?.trim().length ? input.rationale.trim() : `Approval ${input.decision}.`,
+        summary: input.rationale?.trim().length
+          ? input.rationale.trim()
+          : `Approval ${input.decision}.`,
         sourceKind: 'approval-decision',
         sourceRefId: input.approvalDecisionId,
         approvalItemId: input.approvalItemId,
@@ -131,7 +136,11 @@ export function createArtifactService({ artifactsRepo }: { artifactsRepo: Artifa
         approvedByOperatorId: input.approvedByOperatorId ?? null,
         createdAt: input.createdAt,
       });
-      return rowToArtifact(artifactsRepo.getById(artifactId)!);
+      const artifact = artifactsRepo.getById(artifactId);
+      if (!artifact) {
+        throw new Error(`[artifact-service] failed to read created artifact ${artifactId}`);
+      }
+      return rowToArtifact(artifact);
     },
 
     recordVaultFileArtifact(input: RecordVaultFileArtifactInput): ArtifactRecord {
@@ -154,7 +163,11 @@ export function createArtifactService({ artifactsRepo }: { artifactsRepo: Artifa
         createdByEmployeeId: null,
         createdAt: input.createdAt,
       });
-      return rowToArtifact(artifactsRepo.getById(artifactId)!);
+      const artifact = artifactsRepo.getById(artifactId);
+      if (!artifact) {
+        throw new Error(`[artifact-service] failed to read created artifact ${artifactId}`);
+      }
+      return rowToArtifact(artifact);
     },
   };
 }

@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ipc } from '@/lib/ipc.js';
+import { requireString } from '@/lib/required.js';
 
 export function useInstalledExtensions(companyId: string | null) {
   return useQuery({
     queryKey: ['extensions', companyId],
-    queryFn: () => ipc.extensions.list(companyId!),
+    queryFn: () => ipc.extensions.list(requireString(companyId, 'companyId')),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -13,7 +14,7 @@ export function useInstalledExtensions(companyId: string | null) {
 export function useSkillAssignments(companyId: string | null) {
   return useQuery({
     queryKey: ['skill-assignments', companyId],
-    queryFn: () => ipc.extensions.listSkillAssignments(companyId!),
+    queryFn: () => ipc.extensions.listSkillAssignments(requireString(companyId, 'companyId')),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -21,7 +22,11 @@ export function useSkillAssignments(companyId: string | null) {
 export function useAuthorityGrants(companyId: string | null, employeeId?: string | null) {
   return useQuery({
     queryKey: ['authority', companyId, employeeId ?? null],
-    queryFn: () => ipc.authority.list({ companyId: companyId!, employeeId }),
+    queryFn: () =>
+      ipc.authority.list({
+        companyId: requireString(companyId, 'companyId'),
+        employeeId,
+      }),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -32,7 +37,11 @@ export function useAuthorityRequests(
 ) {
   return useQuery({
     queryKey: ['authority-requests', companyId, status],
-    queryFn: () => ipc.authority.listRequests({ companyId: companyId!, status }),
+    queryFn: () =>
+      ipc.authority.listRequests({
+        companyId: requireString(companyId, 'companyId'),
+        status,
+      }),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -101,15 +110,20 @@ export function useReviewAuthorityRequest(companyId: string | null) {
 export function useEffectiveAuthority(companyId: string | null, employeeId: string | null) {
   return useQuery({
     queryKey: ['effective-authority', companyId, employeeId],
-    queryFn: () => ipc.authority.getEffective({ companyId: companyId!, employeeId: employeeId! }),
-    enabled: companyId !== null && companyId.length > 0 && employeeId !== null && employeeId.length > 0,
+    queryFn: () =>
+      ipc.authority.getEffective({
+        companyId: requireString(companyId, 'companyId'),
+        employeeId: requireString(employeeId, 'employeeId'),
+      }),
+    enabled:
+      companyId !== null && companyId.length > 0 && employeeId !== null && employeeId.length > 0,
   });
 }
 
 export function useMcpServers(companyId: string | null) {
   return useQuery({
     queryKey: ['mcp', companyId],
-    queryFn: () => ipc.mcp.list(companyId!),
+    queryFn: () => ipc.mcp.list(requireString(companyId, 'companyId')),
     enabled: companyId !== null && companyId.length > 0,
   });
 }
@@ -169,7 +183,7 @@ export function useDeleteSkillAssignment(companyId: string | null) {
 export function useMcpTemplates(companyId: string | null) {
   return useQuery({
     queryKey: ['mcp-templates', companyId],
-    queryFn: () => ipc.mcp.listTemplates(companyId!),
+    queryFn: () => ipc.mcp.listTemplates(requireString(companyId, 'companyId')),
     enabled: companyId !== null && companyId.length > 0,
   });
 }

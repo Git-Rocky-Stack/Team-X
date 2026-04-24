@@ -39,7 +39,10 @@ function makeEmployee(): EmployeeRow {
   };
 }
 
-function makeProfile(kind: RuntimeProfile['kind'], config: Record<string, unknown>): RuntimeProfile {
+function makeProfile(
+  kind: RuntimeProfile['kind'],
+  config: Record<string, unknown>,
+): RuntimeProfile {
   return {
     id: `profile-${kind}`,
     companyId: 'company-1',
@@ -86,9 +89,10 @@ describe('external runtime adapters', () => {
     });
 
     expect(resolved).not.toBeNull();
+    if (!resolved) throw new Error('expected bash runtime adapter');
 
     const chunks = [];
-    for await (const chunk of resolved!.stream({
+    for await (const chunk of resolved.stream({
       system: 'System directive',
       messages: [{ role: 'user', content: 'Ship the release.' }],
       maxSteps: 3,
@@ -146,9 +150,10 @@ describe('external runtime adapters', () => {
     });
 
     expect(resolved).not.toBeNull();
+    if (!resolved) throw new Error('expected http runtime adapter');
 
     const chunks = [];
-    for await (const chunk of resolved!.stream({
+    for await (const chunk of resolved.stream({
       system: 'You are a runtime',
       messages: [{ role: 'user', content: 'Summarize the launch.' }],
     })) {
@@ -192,9 +197,10 @@ describe('external runtime adapters', () => {
     expect(resolved).not.toBeNull();
     expect(resolved?.providerName).toBe('runtime:codex');
     expect(resolved?.providerKind).toBe('codex');
+    if (!resolved) throw new Error('expected codex runtime adapter');
 
     const chunks = [];
-    for await (const chunk of resolved!.stream({
+    for await (const chunk of resolved.stream({
       system: 'You are Codex',
       messages: [{ role: 'user', content: 'Review the diff.' }],
     })) {
@@ -247,9 +253,10 @@ describe('external runtime adapters', () => {
     expect(resolved).not.toBeNull();
     expect(resolved?.providerName).toBe('runtime:cursor');
     expect(resolved?.providerKind).toBe('cursor');
+    if (!resolved) throw new Error('expected cursor runtime adapter');
 
     const chunks = [];
-    for await (const chunk of resolved!.stream({
+    for await (const chunk of resolved.stream({
       system: 'You are Cursor',
       messages: [{ role: 'user', content: 'Plan the refactor.' }],
     })) {

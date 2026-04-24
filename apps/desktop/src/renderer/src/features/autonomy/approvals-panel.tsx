@@ -1,12 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import type { ApprovalItem, ApprovalItemKind, ApprovalItemStatus } from '@team-x/shared-types';
-import {
-  BadgeDollarSign,
-  CheckSquare2,
-  FolderLock,
-  ShieldCheck,
-} from 'lucide-react';
+import { BadgeDollarSign, CheckSquare2, FolderLock, ShieldCheck } from 'lucide-react';
 
 import { useApprovals, useReviewApproval } from '@/hooks/use-approvals.js';
 import { useInstalledExtensions } from '@/hooks/use-extensions.js';
@@ -49,23 +44,23 @@ function statusTone(status: ApprovalItemStatus): 'accent' | 'warning' | 'danger'
   return 'warning';
 }
 
-function describeItem(
-  item: ApprovalItem,
-  extensionNameById: Map<string, string>,
-): string {
+function describeItem(item: ApprovalItem, extensionNameById: Map<string, string>): string {
   const payload = item.payload ?? {};
   if (item.kind === 'authority-request') {
     const extensionId =
       typeof payload.extensionId === 'string' ? payload.extensionId : item.subjectRefId;
     const extensionName = extensionNameById.get(extensionId) ?? extensionId;
-    const resourceKind = typeof payload.resourceKind === 'string' ? payload.resourceKind : 'resource';
-    const resourceId = typeof payload.resourceId === 'string' ? payload.resourceId : item.subjectRefId;
+    const resourceKind =
+      typeof payload.resourceKind === 'string' ? payload.resourceKind : 'resource';
+    const resourceId =
+      typeof payload.resourceId === 'string' ? payload.resourceId : item.subjectRefId;
     return `${extensionName} requested ${resourceKind} access to ${resourceId}.`;
   }
 
   if (item.kind === 'budget-exception') {
     const scopeKind = typeof payload.scopeKind === 'string' ? payload.scopeKind : 'budget';
-    const scopeRefId = typeof payload.scopeRefId === 'string' ? payload.scopeRefId : item.subjectRefId;
+    const scopeRefId =
+      typeof payload.scopeRefId === 'string' ? payload.scopeRefId : item.subjectRefId;
     const currentSpendUsd =
       typeof payload.currentSpendUsd === 'string' ? payload.currentSpendUsd : null;
     const approvalUsd =
@@ -207,9 +202,7 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
                   onClick={() => setStatusFilter(value)}
                   data-approval-status-filter={value}
                 >
-                  {value === 'all'
-                    ? 'All'
-                    : value.charAt(0).toUpperCase() + value.slice(1)}
+                  {value === 'all' ? 'All' : value.charAt(0).toUpperCase() + value.slice(1)}
                 </MissionSegmentedButton>
               ))}
             </MissionControlRow>
@@ -226,7 +219,11 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
       ) : (
         <div className="space-y-3">
           {filteredItems.map((item) => (
-            <MissionInsetSurface key={item.id} className="space-y-4 p-4" data-approval-card={item.id}>
+            <MissionInsetSurface
+              key={item.id}
+              className="space-y-4 p-4"
+              data-approval-card={item.id}
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">

@@ -62,6 +62,10 @@ import type { IpcHandlers } from './handlers.js';
 const REQUEST_CHANNELS = [
   'companies.list',
   'companies.exportPackage',
+  'companies.previewImportPackage',
+  'companies.importPackage',
+  'companies.listTemplates',
+  'companies.installTemplate',
   'companies.archive',
   'companies.create',
   // Multi-company CRUD write-side (Phase 5.6 M-C step e; audit rows 10.13 + 10.15).
@@ -249,6 +253,34 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'companies.exportPackage',
     async (_event, request: import('@team-x/shared-types').ExportCompanyPackageRequest) => {
       return handlers.companiesExportPackage(request);
+    },
+  );
+
+  ipcMain.handle(
+    'companies.previewImportPackage',
+    async (_event, request: import('@team-x/shared-types').PreviewCompanyPackageImportRequest) => {
+      return handlers.companiesPreviewImportPackage(request);
+    },
+  );
+
+  ipcMain.handle(
+    'companies.importPackage',
+    async (_event, request: import('@team-x/shared-types').ImportCompanyPackageRequest) => {
+      return handlers.companiesImportPackage(request);
+    },
+  );
+
+  ipcMain.handle(
+    'companies.listTemplates',
+    async (_event, request: import('@team-x/shared-types').ListCompanyTemplatesRequest) => {
+      return handlers.companiesListTemplates(request);
+    },
+  );
+
+  ipcMain.handle(
+    'companies.installTemplate',
+    async (_event, request: import('@team-x/shared-types').InstallCompanyTemplateRequest) => {
+      return handlers.companiesInstallTemplate(request);
     },
   );
 
@@ -607,9 +639,12 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     },
   );
 
-  ipcMain.handle('extensions.deleteSkillAssignment', async (_event, request: { assignmentId: string }) => {
-    return handlers.extensionsDeleteSkillAssignment(request);
-  });
+  ipcMain.handle(
+    'extensions.deleteSkillAssignment',
+    async (_event, request: { assignmentId: string }) => {
+      return handlers.extensionsDeleteSkillAssignment(request);
+    },
+  );
 
   ipcMain.handle(
     'authority.list',
@@ -620,20 +655,14 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle(
     'authority.listRequests',
-    async (
-      _event,
-      request: import('@team-x/shared-types').ListAuthorityRequestsRequest,
-    ) => {
+    async (_event, request: import('@team-x/shared-types').ListAuthorityRequestsRequest) => {
       return handlers.authorityListRequests(request);
     },
   );
 
   ipcMain.handle(
     'authority.create',
-    async (
-      _event,
-      request: import('@team-x/shared-types').CreateAuthorityGrantRequest,
-    ) => {
+    async (_event, request: import('@team-x/shared-types').CreateAuthorityGrantRequest) => {
       return handlers.authorityCreate(request);
     },
   );
@@ -644,20 +673,14 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle(
     'authority.reviewRequest',
-    async (
-      _event,
-      request: import('@team-x/shared-types').ReviewAuthorityRequestRequest,
-    ) => {
+    async (_event, request: import('@team-x/shared-types').ReviewAuthorityRequestRequest) => {
       return handlers.authorityReviewRequest(request);
     },
   );
 
   ipcMain.handle(
     'authority.getEffective',
-    async (
-      _event,
-      request: import('@team-x/shared-types').GetEffectiveAuthorityRequest,
-    ) => {
+    async (_event, request: import('@team-x/shared-types').GetEffectiveAuthorityRequest) => {
       return handlers.authorityGetEffective(request);
     },
   );

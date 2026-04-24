@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type RetrievalOrchestratorDeps,
   createRetrievalOrchestrator,
   formatEvidenceLine,
   shapeRetrievalQueries,
-  type RetrievalOrchestratorDeps,
 } from './retrieval-orchestrator.js';
 
-function makeDeps(
-  overrides: Partial<RetrievalOrchestratorDeps> = {},
-): RetrievalOrchestratorDeps {
+function makeDeps(overrides: Partial<RetrievalOrchestratorDeps> = {}): RetrievalOrchestratorDeps {
   return {
     vectorRetrieve: async () => [],
     listTickets: () => [],

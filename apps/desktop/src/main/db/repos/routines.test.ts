@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { companies, employees } from '../schema.js';
+import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createRoutinesRepo } from './routines.js';
 
 let ctx: TestDbHandle;

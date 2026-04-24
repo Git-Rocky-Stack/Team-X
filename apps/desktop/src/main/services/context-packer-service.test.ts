@@ -21,10 +21,9 @@ describe('context packer service', () => {
           kind: 'ticket',
           priority: 'critical',
           title: 'Ticket Launch Plan',
-          body:
-            'Status in_progress. Priority high. Description: finalize the launch motion with every milestone and operator note preserved. '.repeat(
-              6,
-            ),
+          body: 'Status in_progress. Priority high. Description: finalize the launch motion with every milestone and operator note preserved. '.repeat(
+            6,
+          ),
           estimatedTokens: 12,
           sourceRefId: 'ticket-1',
           sourceLabel: 'in_progress',
@@ -90,10 +89,9 @@ describe('context packer service', () => {
           kind: 'digest',
           priority: 'high',
           title: 'Thread Digest',
-          body:
-            'A long digest body that should also be compressed so the pack still returns something useful. '.repeat(
-              8,
-            ),
+          body: 'A long digest body that should also be compressed so the pack still returns something useful. '.repeat(
+            8,
+          ),
           estimatedTokens: 18,
           sourceRefId: 'digest-1',
           sourceLabel: 'thread-1',

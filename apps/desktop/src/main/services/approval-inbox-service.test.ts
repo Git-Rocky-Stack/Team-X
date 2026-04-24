@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createBudgetsRepo } from '../db/repos/budgets.js';
 import { createAuthorityRepo, createExtensionsRepo } from '../db/repos/extensions.js';
-import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { companies, employees } from '../db/schema.js';
+import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createApprovalInboxService } from './approval-inbox-service.js';
 
 let ctx: TestDbHandle;
@@ -96,7 +96,9 @@ describe('approval inbox service', () => {
     expect(items.map((item) => item.kind)).toEqual(
       expect.arrayContaining(['budget-exception', 'authority-request']),
     );
-    expect(items.find((item) => item.kind === 'budget-exception')?.summary).toMatch(/Budget approval required/i);
+    expect(items.find((item) => item.kind === 'budget-exception')?.summary).toMatch(
+      /Budget approval required/i,
+    );
     expect(items.find((item) => item.kind === 'authority-request')?.payload).toEqual(
       expect.objectContaining({
         extensionId,

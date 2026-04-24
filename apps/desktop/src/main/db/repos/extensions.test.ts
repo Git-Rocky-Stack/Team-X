@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { companies, employees } from '../schema.js';
+import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import {
   createAuthorityRepo,
   createExtensionsRepo,
@@ -24,53 +24,59 @@ beforeEach(async () => {
   skillAssignmentsRepo = createSkillAssignmentsRepo(ctx.db);
   authorityRepo = createAuthorityRepo(ctx.db);
 
-  ctx.db.insert(companies).values([
-    {
-      id: COMPANY_ID,
-      name: 'Alpha',
-      slug: 'alpha',
-      createdAt: 1,
-      settingsJson: '{}',
-      icon: null,
-      theme: 'dark',
-      status: 'running',
-    },
-    {
-      id: OTHER_COMPANY_ID,
-      name: 'Beta',
-      slug: 'beta',
-      createdAt: 2,
-      settingsJson: '{}',
-      icon: null,
-      theme: 'dark',
-      status: 'running',
-    },
-  ]).run();
+  ctx.db
+    .insert(companies)
+    .values([
+      {
+        id: COMPANY_ID,
+        name: 'Alpha',
+        slug: 'alpha',
+        createdAt: 1,
+        settingsJson: '{}',
+        icon: null,
+        theme: 'dark',
+        status: 'running',
+      },
+      {
+        id: OTHER_COMPANY_ID,
+        name: 'Beta',
+        slug: 'beta',
+        createdAt: 2,
+        settingsJson: '{}',
+        icon: null,
+        theme: 'dark',
+        status: 'running',
+      },
+    ])
+    .run();
 
-  ctx.db.insert(employees).values([
-    {
-      id: EMPLOYEE_ID,
-      companyId: COMPANY_ID,
-      rolePackId: 'strategia-official',
-      roleId: 'ceo',
-      roleMdSha: 'sha-alpha',
-      level: 'officer',
-      name: 'Alpha CEO',
-      title: 'CEO',
-      createdAt: 1,
-    },
-    {
-      id: OTHER_EMPLOYEE_ID,
-      companyId: OTHER_COMPANY_ID,
-      rolePackId: 'strategia-official',
-      roleId: 'ceo',
-      roleMdSha: 'sha-beta',
-      level: 'officer',
-      name: 'Beta CEO',
-      title: 'CEO',
-      createdAt: 2,
-    },
-  ]).run();
+  ctx.db
+    .insert(employees)
+    .values([
+      {
+        id: EMPLOYEE_ID,
+        companyId: COMPANY_ID,
+        rolePackId: 'strategia-official',
+        roleId: 'ceo',
+        roleMdSha: 'sha-alpha',
+        level: 'officer',
+        name: 'Alpha CEO',
+        title: 'CEO',
+        createdAt: 1,
+      },
+      {
+        id: OTHER_EMPLOYEE_ID,
+        companyId: OTHER_COMPANY_ID,
+        rolePackId: 'strategia-official',
+        roleId: 'ceo',
+        roleMdSha: 'sha-beta',
+        level: 'officer',
+        name: 'Beta CEO',
+        title: 'CEO',
+        createdAt: 2,
+      },
+    ])
+    .run();
 });
 
 afterEach(() => ctx.close());

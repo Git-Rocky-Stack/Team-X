@@ -13,49 +13,45 @@ import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
   const noop = {} as never;
   const budgetGovernanceService = {
-    listPolicies: vi.fn(
-      (): BudgetPolicy[] => [
-        {
-          id: 'policy-1',
-          companyId: 'company-1',
-          scopeKind: 'company',
-          scopeRefId: 'company-1',
-          period: 'monthly',
-          hardCapUsd: '10.000000',
-          warningThresholdPct: 80,
-          autoPause: false,
-          requireApprovalAboveUsd: '8.000000',
-          enabled: true,
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      ],
-    ),
+    listPolicies: vi.fn((): BudgetPolicy[] => [
+      {
+        id: 'policy-1',
+        companyId: 'company-1',
+        scopeKind: 'company',
+        scopeRefId: 'company-1',
+        period: 'monthly',
+        hardCapUsd: '10.000000',
+        warningThresholdPct: 80,
+        autoPause: false,
+        requireApprovalAboveUsd: '8.000000',
+        enabled: true,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]),
     createPolicy: vi.fn(() => 'policy-1'),
     updatePolicy: vi.fn(),
     deletePolicy: vi.fn(),
-    listLedgerEntries: vi.fn(
-      (): BudgetLedgerEntry[] => [
-        {
-          id: 'ledger-1',
-          companyId: 'company-1',
-          budgetPolicyId: 'policy-1',
-          scopeKind: 'company',
-          scopeRefId: 'company-1',
-          runId: 'run-1',
-          runKind: 'work',
-          threadId: null,
-          employeeId: 'employee-1',
-          runtimeProfileId: null,
-          routineId: null,
-          provider: 'ollama',
-          model: 'gemma',
-          amountUsd: '1.000000',
-          occurredAt: 10,
-          createdAt: 10,
-        },
-      ],
-    ),
+    listLedgerEntries: vi.fn((): BudgetLedgerEntry[] => [
+      {
+        id: 'ledger-1',
+        companyId: 'company-1',
+        budgetPolicyId: 'policy-1',
+        scopeKind: 'company',
+        scopeRefId: 'company-1',
+        runId: 'run-1',
+        runKind: 'work',
+        threadId: null,
+        employeeId: 'employee-1',
+        runtimeProfileId: null,
+        routineId: null,
+        provider: 'ollama',
+        model: 'gemma',
+        amountUsd: '1.000000',
+        occurredAt: 10,
+        createdAt: 10,
+      },
+    ]),
     getOverview: vi.fn(
       (): BudgetOverview => ({
         companyId: 'company-1',
@@ -91,25 +87,23 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
         ],
       }),
     ),
-    listApprovalItems: vi.fn(
-      (): ApprovalItem[] => [
-        {
-          id: 'approval-1',
-          companyId: 'company-1',
-          kind: 'budget-exception',
-          status: 'pending',
-          priority: 'high',
-          requestedByOperatorId: null,
-          requestedByEmployeeId: 'employee-1',
-          subjectRefKind: 'budget-policy',
-          subjectRefId: 'policy-1',
-          summary: 'Approval required',
-          payload: { budgetPolicyId: 'policy-1' },
-          createdAt: 10,
-          resolvedAt: null,
-        },
-      ],
-    ),
+    listApprovalItems: vi.fn((): ApprovalItem[] => [
+      {
+        id: 'approval-1',
+        companyId: 'company-1',
+        kind: 'budget-exception',
+        status: 'pending',
+        priority: 'high',
+        requestedByOperatorId: null,
+        requestedByEmployeeId: 'employee-1',
+        subjectRefKind: 'budget-policy',
+        subjectRefId: 'policy-1',
+        summary: 'Approval required',
+        payload: { budgetPolicyId: 'policy-1' },
+        createdAt: 10,
+        resolvedAt: null,
+      },
+    ]),
   };
 
   return {
@@ -185,7 +179,10 @@ describe('budget IPC handlers', () => {
 
     const overview = await handlers.budgetsGetOverview({ companyId: 'company-1' });
     const ledger = await handlers.budgetsListLedger({ companyId: 'company-1', limit: 5 });
-    const approvals = await handlers.budgetsListApprovals({ companyId: 'company-1', status: 'pending' });
+    const approvals = await handlers.budgetsListApprovals({
+      companyId: 'company-1',
+      status: 'pending',
+    });
 
     expect(overview.companySpendUsd).toBe('1.000000');
     expect(ledger[0]?.scopeKind).toBe('company');

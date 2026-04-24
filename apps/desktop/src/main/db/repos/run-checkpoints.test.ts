@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { companies, employees, runCheckpoints, runs, threads } from '../schema.js';
+import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createRunCheckpointsRepo } from './run-checkpoints.js';
 
 let ctx: TestDbHandle;
@@ -116,9 +116,13 @@ describe('run checkpoints repo', () => {
       }),
     );
 
-    expect(repo.getById(repo.listByCompanyThread('company-1', 'thread-1', 10)[1]!.id)).toEqual(
+    const scopedCheckpoints = repo.listByCompanyThread('company-1', 'thread-1', 10);
+    const priorCheckpoint = scopedCheckpoints[1];
+    expect(priorCheckpoint).toBeDefined();
+    expect(repo.getById(priorCheckpoint?.id)).toEqual(
       expect.objectContaining({
-        resumeOriginJson: '{"checkpointId":"checkpoint-0","checkpointKind":"stopped","createdAt":9}',
+        resumeOriginJson:
+          '{"checkpointId":"checkpoint-0","checkpointKind":"stopped","createdAt":9}',
       }),
     );
   });

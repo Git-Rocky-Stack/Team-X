@@ -3,11 +3,16 @@ import { useEffect } from 'react';
 
 import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
 import { ipc } from '@/lib/ipc.js';
+import { requireString } from '@/lib/required.js';
 
 export function useArtifacts(companyId: string | null, limit = 100) {
   return useQuery({
     queryKey: ['artifacts', companyId, limit],
-    queryFn: () => autonomyClient.artifacts.list({ companyId: companyId!, limit }),
+    queryFn: () =>
+      autonomyClient.artifacts.list({
+        companyId: requireString(companyId, 'companyId'),
+        limit,
+      }),
     enabled: companyId !== null && companyId.length > 0,
   });
 }

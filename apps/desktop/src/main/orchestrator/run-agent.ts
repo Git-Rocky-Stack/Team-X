@@ -189,10 +189,7 @@ function normalizeTimeoutMs(value: number | undefined, fallback: number): number
   return Math.max(1, Math.round(value));
 }
 
-function buildInterruptedReplyContent(
-  buffer: string,
-  reason: 'stalled' | 'timed out',
-): string {
+function buildInterruptedReplyContent(buffer: string, reason: 'stalled' | 'timed out'): string {
   const trimmed = buffer.trimEnd();
   const notice =
     reason === 'stalled'
@@ -359,7 +356,8 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     const latencyMs = Math.max(0, now() - startTime);
     const timedOut = abortKind === 'timeout' || abortKind === 'idle-timeout';
     const aborted =
-      abortKind === 'external' || (!timedOut && (input.signal?.aborted === true || isAbortError(err)));
+      abortKind === 'external' ||
+      (!timedOut && (input.signal?.aborted === true || isAbortError(err)));
     const message = timedOut
       ? abortKind === 'idle-timeout'
         ? PROVIDER_STALLED_MESSAGE

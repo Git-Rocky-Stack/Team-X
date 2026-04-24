@@ -4,7 +4,9 @@ import type { RoleSpec } from '@team-x/shared-types';
 
 import { buildChatActionTools } from './chat-action-tools.js';
 
-function makeRoleSpec(overrides: Partial<RoleSpec['frontmatter']> & { sourcePath?: string } = {}): RoleSpec {
+function makeRoleSpec(
+  overrides: Partial<RoleSpec['frontmatter']> & { sourcePath?: string } = {},
+): RoleSpec {
   const id = overrides.id ?? 'chief-marketing-officer';
   const name = overrides.name ?? 'Chief Marketing Officer';
   const level = overrides.level ?? 'officer';
@@ -35,8 +37,7 @@ function makeRoleSpec(overrides: Partial<RoleSpec['frontmatter']> & { sourcePath
     },
     body: '# Role',
     sourcePath:
-      overrides.sourcePath ??
-      'C:/repo/role-packs/strategia-official/roles/officer/cmo.md',
+      overrides.sourcePath ?? 'C:/repo/role-packs/strategia-official/roles/officer/cmo.md',
     sha256: `sha-${id}`,
   };
 }
@@ -61,35 +62,37 @@ describe('buildChatActionTools', () => {
       isSystem: boolean;
       createdAt: number;
     }> = [];
-    const create = vi.fn((input: {
-      companyId: string;
-      rolePackId: string;
-      roleId: string;
-      roleMdSha: string;
-      level: string;
-      name: string;
-      title: string;
-    }) => {
-      employees.push({
-        id: 'emp-cmo',
-        companyId: input.companyId,
-        rolePackId: input.rolePackId,
-        roleId: input.roleId,
-        roleMdSha: input.roleMdSha,
-        level: input.level,
-        name: input.name,
-        title: input.title,
-        status: 'idle',
-        modelPref: null,
-        providerPref: null,
-        toolsAllowedJson: '[]',
-        toolsDeniedJson: '[]',
-        avatar: null,
-        isSystem: false,
-        createdAt: 123,
-      });
-      return 'emp-cmo';
-    });
+    const create = vi.fn(
+      (input: {
+        companyId: string;
+        rolePackId: string;
+        roleId: string;
+        roleMdSha: string;
+        level: string;
+        name: string;
+        title: string;
+      }) => {
+        employees.push({
+          id: 'emp-cmo',
+          companyId: input.companyId,
+          rolePackId: input.rolePackId,
+          roleId: input.roleId,
+          roleMdSha: input.roleMdSha,
+          level: input.level,
+          name: input.name,
+          title: input.title,
+          status: 'idle',
+          modelPref: null,
+          providerPref: null,
+          toolsAllowedJson: '[]',
+          toolsDeniedJson: '[]',
+          avatar: null,
+          isSystem: false,
+          createdAt: 123,
+        });
+        return 'emp-cmo';
+      },
+    );
     const emit = vi.fn();
     const tools = buildChatActionTools({
       companyId: 'co-1',

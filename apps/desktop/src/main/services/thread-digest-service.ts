@@ -120,7 +120,9 @@ function resolveInspection(
     };
   }
 
-  const boundaryIndex = messages.findIndex((message) => message.id === digest.lastSummarizedMessageId);
+  const boundaryIndex = messages.findIndex(
+    (message) => message.id === digest.lastSummarizedMessageId,
+  );
   if (boundaryIndex === -1) {
     return {
       digest: {
@@ -185,9 +187,7 @@ export function createThreadDigestService(deps: ThreadDigestServiceDeps) {
         companyId: input.companyId,
         threadId: input.threadId,
       });
-      const pinnedFacts = (input.pinnedFacts ?? []).filter(
-        (fact) => fact.fact.trim().length > 0,
-      );
+      const pinnedFacts = (input.pinnedFacts ?? []).filter((fact) => fact.fact.trim().length > 0);
       const lastSummarizedMessageId =
         input.lastSummarizedMessageId === undefined
           ? inspection.latestMessageId

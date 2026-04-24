@@ -43,20 +43,27 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     listRuntimeByCompany: vi.fn(() => [runtimeServer]),
     listTemplates: vi.fn(() => [templateServer]),
     getById: vi.fn((id: string) => serverRows[id] ?? null),
-    create: vi.fn((input: { companyId: string | null; name: string; transport: 'stdio' | 'sse'; configJson: string }) => {
-      const created = {
-        id: 'server-2',
-        companyId: input.companyId,
-        name: input.name,
-        transport: input.transport,
-        configJson: input.configJson,
-        enabled: true,
-        lastHealth: null,
-        installedAt: 3,
-      };
-      serverRows[created.id] = created;
-      return created.id;
-    }),
+    create: vi.fn(
+      (input: {
+        companyId: string | null;
+        name: string;
+        transport: 'stdio' | 'sse';
+        configJson: string;
+      }) => {
+        const created = {
+          id: 'server-2',
+          companyId: input.companyId,
+          name: input.name,
+          transport: input.transport,
+          configJson: input.configJson,
+          enabled: true,
+          lastHealth: null,
+          installedAt: 3,
+        };
+        serverRows[created.id] = created;
+        return created.id;
+      },
+    ),
     updateEnabled: vi.fn(),
     delete: vi.fn(),
   } as unknown as IpcHandlerDeps['mcpServersRepo'];

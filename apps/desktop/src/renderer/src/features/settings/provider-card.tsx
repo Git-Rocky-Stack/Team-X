@@ -25,8 +25,8 @@ import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import {
-  useRemoveProvider,
   useProviderModels,
+  useRemoveProvider,
   useTestProviderConnection,
   useUpdateProvider,
 } from '@/hooks/use-providers.js';
@@ -98,7 +98,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
 
   useEffect(() => {
     setOllamaModel(provider.defaultModel ?? '');
-  }, [provider.defaultModel, provider.id]);
+  }, [provider.defaultModel]);
 
   function errorMessage(error: unknown, fallback: string): string {
     return error instanceof Error && error.message.trim().length > 0 ? error.message : fallback;

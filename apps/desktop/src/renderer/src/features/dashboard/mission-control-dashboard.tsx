@@ -31,13 +31,13 @@ import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { visiblePrimaryPanelCount } from './dashboard-layout.js';
 import { formatAgentRunPhase } from './agent-runs-projections.js';
 import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
+import { visiblePrimaryPanelCount } from './dashboard-layout.js';
 import {
+  type DashboardQueueRow,
   projectDashboardQueueRows,
   summarizeDashboardQueues,
-  type DashboardQueueRow,
 } from './dashboard-queue-projections.js';
 import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
 import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
@@ -178,7 +178,10 @@ function PrimaryPanel({
           <div className="flex items-center gap-2">
             <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
             {countLabel && (
-              <Badge variant="outline" className="border-border/80 bg-background/40 text-[10px] font-mono">
+              <Badge
+                variant="outline"
+                className="border-border/80 bg-background/40 text-[10px] font-mono"
+              >
                 {countLabel}
               </Badge>
             )}
@@ -201,13 +204,14 @@ function PanelSkeletonRows({
   heightClassName?: string;
   className?: string;
 }) {
+  const skeletonKeys = Array.from(
+    { length: rows },
+    (_value, index) => `panel-skeleton-${index + 1}`,
+  );
   return (
     <div className={cn('grid gap-3', className)} data-dashboard-panel-state="loading">
-      {Array.from({ length: rows }, (_, index) => (
-        <div
-          key={`panel-skeleton-${index}`}
-          className={cn(heightClassName, 'animate-pulse rounded-2xl bg-black/10')}
-        />
+      {skeletonKeys.map((key) => (
+        <div key={key} className={cn(heightClassName, 'animate-pulse rounded-2xl bg-black/10')} />
       ))}
     </div>
   );
@@ -240,10 +244,20 @@ function PanelMessageState({
     >
       <Icon className={cn('h-8 w-8', tone === 'danger' ? 'text-red-300' : 'text-brand')} />
       <div className="space-y-1">
-        <p className={cn('text-sm font-medium', tone === 'danger' ? 'text-red-100' : 'text-foreground')}>
+        <p
+          className={cn(
+            'text-sm font-medium',
+            tone === 'danger' ? 'text-red-100' : 'text-foreground',
+          )}
+        >
           {title}
         </p>
-        <p className={cn('max-w-md text-sm', tone === 'danger' ? 'text-red-200/85' : 'text-muted-foreground')}>
+        <p
+          className={cn(
+            'max-w-md text-sm',
+            tone === 'danger' ? 'text-red-200/85' : 'text-muted-foreground',
+          )}
+        >
           {description}
         </p>
       </div>
@@ -253,14 +267,24 @@ function PanelMessageState({
 }
 
 function MissionControlSkeleton() {
+  const heroSkeletonKeys = [
+    'hero-skeleton-1',
+    'hero-skeleton-2',
+    'hero-skeleton-3',
+    'hero-skeleton-4',
+    'hero-skeleton-5',
+  ];
   return (
-    <section className="mission-shell relative min-h-full overflow-hidden" data-dashboard-mission-control="">
+    <section
+      className="mission-shell relative min-h-full overflow-hidden"
+      data-dashboard-mission-control=""
+    >
       <div className="mission-grid pointer-events-none absolute inset-0 opacity-35" />
       <div className="relative flex flex-col gap-6 p-4 sm:p-6 xl:p-8">
         <div className="mission-hero rounded-[28px] border border-white/10 p-6">
           <div className="grid gap-4 lg:grid-cols-5">
-            {Array.from({ length: 5 }, (_, index) => (
-              <div key={`hero-skeleton-${index}`} className="h-28 animate-pulse rounded-2xl bg-black/20" />
+            {heroSkeletonKeys.map((key) => (
+              <div key={key} className="h-28 animate-pulse rounded-2xl bg-black/20" />
             ))}
           </div>
         </div>
@@ -362,13 +386,14 @@ export function MissionControlDashboard({
     (row) => row.liveStatus === 'blocked' || row.liveStatus === 'error' || row.counts.blocked > 0,
   ).length;
   const operatorEntries = operatorsQuery.data ?? [];
-  const operatorPosture =
-    operatorEntries.some((entry) => entry.operator.authMode === 'cloud')
-      ? 'shared-cloud'
-      : operatorEntries.some((entry) => entry.operator.authMode === 'invited')
-        ? 'shared-local'
-        : 'local-only';
-  const enabledRoutineCount = (routinesQuery.data ?? []).filter((routine) => routine.enabled).length;
+  const operatorPosture = operatorEntries.some((entry) => entry.operator.authMode === 'cloud')
+    ? 'shared-cloud'
+    : operatorEntries.some((entry) => entry.operator.authMode === 'invited')
+      ? 'shared-local'
+      : 'local-only';
+  const enabledRoutineCount = (routinesQuery.data ?? []).filter(
+    (routine) => routine.enabled,
+  ).length;
   const pendingApprovalCount = approvalsQuery.data?.length ?? 0;
   const budgetOverview = budgetOverviewQuery.data;
   const queueDataReady = hasWorkspace && !ticketsQuery.isLoading && !ticketsQuery.isError;
@@ -415,7 +440,10 @@ export function MissionControlDashboard({
   }
 
   return (
-    <section className="mission-shell relative min-h-full overflow-hidden" data-dashboard-mission-control="">
+    <section
+      className="mission-shell relative min-h-full overflow-hidden"
+      data-dashboard-mission-control=""
+    >
       <div className="mission-grid pointer-events-none absolute inset-0 opacity-35" />
       <div className="relative flex flex-col gap-6 p-4 sm:p-6 xl:p-8">
         <header className="mission-hero overflow-hidden rounded-[28px] border border-white/10 p-6 lg:p-7">
@@ -426,12 +454,18 @@ export function MissionControlDashboard({
                   <LayoutPanelTop className="h-4 w-4 text-brand" />
                   Mission Control
                   {company?.slug && (
-                    <Badge variant="outline" className="border-white/10 bg-black/10 font-mono text-[10px] text-foreground/80">
+                    <Badge
+                      variant="outline"
+                      className="border-white/10 bg-black/10 font-mono text-[10px] text-foreground/80"
+                    >
                       {company.slug}
                     </Badge>
                   )}
                   {company?.status && (
-                    <Badge variant="outline" className="border-brand/25 bg-brand/10 font-mono text-[10px] text-brand">
+                    <Badge
+                      variant="outline"
+                      className="border-brand/25 bg-brand/10 font-mono text-[10px] text-brand"
+                    >
                       {company.status}
                     </Badge>
                   )}
@@ -492,13 +526,22 @@ export function MissionControlDashboard({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline" className="border-white/10 bg-black/10 text-foreground/80">
+                  <Badge
+                    variant="outline"
+                    className="border-white/10 bg-black/10 text-foreground/80"
+                  >
                     {visiblePrimaryPanelCount(layout)} / 2 live panels
                   </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-black/10 text-foreground/80">
+                  <Badge
+                    variant="outline"
+                    className="border-white/10 bg-black/10 text-foreground/80"
+                  >
                     {commandRows.length} recent commands
                   </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-black/10 text-foreground/80">
+                  <Badge
+                    variant="outline"
+                    className="border-white/10 bg-black/10 text-foreground/80"
+                  >
                     {tickets.length} tracked tickets
                   </Badge>
                   <Badge
@@ -512,13 +555,17 @@ export function MissionControlDashboard({
                     variant="outline"
                     className={cn(
                       'border-white/10 bg-black/10 text-foreground/80',
-                      pendingApprovalCount > 0 && 'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                      pendingApprovalCount > 0 &&
+                        'border-amber-500/30 bg-amber-500/10 text-amber-200',
                     )}
                     data-dashboard-autonomy-badge="approvals"
                   >
                     {pendingApprovalCount} pending approvals
                   </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-black/10 text-foreground/80">
+                  <Badge
+                    variant="outline"
+                    className="border-white/10 bg-black/10 text-foreground/80"
+                  >
                     {operatorPosture} posture
                   </Badge>
                   {dashboardLayout.isSaving && (
@@ -534,15 +581,33 @@ export function MissionControlDashboard({
                 )}
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setActiveView('tickets')} className="border-white/10 bg-black/10 hover:bg-black/20">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveView('tickets')}
+                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                  >
                     <Ticket className="h-4 w-4" />
                     Open tickets
                   </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setDashboardSubview('commands')} className="border-white/10 bg-black/10 hover:bg-black/20">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDashboardSubview('commands')}
+                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                  >
                     <Radar className="h-4 w-4" />
                     Command log
                   </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setActiveView('telemetry')} className="border-white/10 bg-black/10 hover:bg-black/20">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveView('telemetry')}
+                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                  >
                     <Gauge className="h-4 w-4" />
                     Telemetry
                   </Button>
@@ -550,7 +615,9 @@ export function MissionControlDashboard({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'access')}
+                    onClick={() =>
+                      handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'access')
+                    }
                     className="border-white/10 bg-black/10 hover:bg-black/20"
                   >
                     <Sparkles className="h-4 w-4" />
@@ -563,17 +630,21 @@ export function MissionControlDashboard({
             <div className="grid gap-4 lg:grid-cols-5">
               <HeroMetric
                 label="Live runs"
-                value={!hasWorkspace || agentRunsQuery.isLoading || agentRunsQuery.isError ? '--' : `${activeRunCount}`}
+                value={
+                  !hasWorkspace || agentRunsQuery.isLoading || agentRunsQuery.isError
+                    ? '--'
+                    : `${activeRunCount}`
+                }
                 hint={
                   !hasWorkspace
                     ? 'Select a workspace to load persisted runs and live execution state.'
                     : activeRunCount > 0
-                    ? 'Agentic loops currently progressing with live step updates.'
-                    : agentRunsQuery.isLoading
-                      ? 'Loading recent agentic loops from the persisted run log.'
-                      : agentRunsQuery.isError
-                        ? 'Run history is temporarily unavailable for this workspace.'
-                      : 'No agentic loops are currently active.'
+                      ? 'Agentic loops currently progressing with live step updates.'
+                      : agentRunsQuery.isLoading
+                        ? 'Loading recent agentic loops from the persisted run log.'
+                        : agentRunsQuery.isError
+                          ? 'Run history is temporarily unavailable for this workspace.'
+                          : 'No agentic loops are currently active.'
                 }
                 icon={Bot}
                 onClick={() => setDashboardSubview('commands')}
@@ -589,7 +660,11 @@ export function MissionControlDashboard({
                       : 'No employees hired in this workspace yet.'
                 }
                 icon={Activity}
-                onClick={() => setSelectedEmployee(queueRows.find((row) => row.liveStatus === 'thinking')?.employeeId ?? null)}
+                onClick={() =>
+                  setSelectedEmployee(
+                    queueRows.find((row) => row.liveStatus === 'thinking')?.employeeId ?? null,
+                  )
+                }
               />
               <HeroMetric
                 label="Queue pressure"
@@ -636,8 +711,8 @@ export function MissionControlDashboard({
                       : telemetryStatsQuery.isError || telemetryDailyQuery.isError
                         ? 'Telemetry is temporarily unavailable for this workspace.'
                         : todayUsage
-                    ? `${formatCompactNumber(todayUsage.totalTokens)} tokens recorded in the current telemetry window.`
-                    : 'Telemetry is waiting for completed runs.'
+                          ? `${formatCompactNumber(todayUsage.totalTokens)} tokens recorded in the current telemetry window.`
+                          : 'Telemetry is waiting for completed runs.'
                 }
                 icon={Gauge}
                 onClick={() => setActiveView('telemetry')}
@@ -651,13 +726,20 @@ export function MissionControlDashboard({
             <CardContent className="flex min-h-[18rem] flex-col items-center justify-center gap-4 text-center">
               <AlertTriangle className="h-10 w-10 text-red-300" />
               <div className="space-y-1">
-                <h2 className="text-lg font-semibold text-foreground">Dashboard data could not load</h2>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Dashboard data could not load
+                </h2>
                 <p className="text-sm text-muted-foreground">
                   The mission-control shell is ready, but the employee roster query failed.
                 </p>
               </div>
               {onRetry && (
-                <Button type="button" variant="outline" onClick={onRetry} className="border-white/10 bg-black/10 hover:bg-black/20">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onRetry}
+                  className="border-white/10 bg-black/10 hover:bg-black/20"
+                >
                   <RefreshCw className="h-4 w-4" />
                   Retry
                 </Button>
@@ -666,12 +748,16 @@ export function MissionControlDashboard({
           </Card>
         ) : (
           <>
-            <div className={cn('grid gap-6', panelGridClass(layout.agentRuns, layout.employeeQueues))}>
+            <div
+              className={cn('grid gap-6', panelGridClass(layout.agentRuns, layout.employeeQueues))}
+            >
               {layout.agentRuns && (
                 <PrimaryPanel
                   title="Agent Runs"
                   description="Persisted recent agentic loops with live step updates layered on top."
-                  countLabel={hasWorkspace && agentRuns.length > 0 ? `${agentRuns.length} recent` : undefined}
+                  countLabel={
+                    hasWorkspace && agentRuns.length > 0 ? `${agentRuns.length} recent` : undefined
+                  }
                   dataPanel="agent-runs"
                   actions={
                     <Button
@@ -698,7 +784,10 @@ export function MissionControlDashboard({
                     <PanelMessageState
                       icon={AlertTriangle}
                       title="Run history could not load"
-                      description={agentRunsQuery.errorMessage ?? 'Persisted agent runs could not load for this workspace.'}
+                      description={
+                        agentRunsQuery.errorMessage ??
+                        'Persisted agent runs could not load for this workspace.'
+                      }
                       tone="danger"
                       dataState="agent-runs-error"
                       action={
@@ -760,14 +849,19 @@ export function MissionControlDashboard({
                           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div className="space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-sm font-semibold text-foreground">{truncateText(run.label, 72)}</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {truncateText(run.label, 72)}
+                                </p>
                                 <Badge
                                   variant="outline"
                                   className={cn(
                                     'text-[10px] font-mono',
-                                    run.status === 'completed' && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-                                    run.status === 'failed' && 'border-red-500/30 bg-red-500/10 text-red-300',
-                                    run.status === 'running' && 'border-brand/30 bg-brand/10 text-brand',
+                                    run.status === 'completed' &&
+                                      'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+                                    run.status === 'failed' &&
+                                      'border-red-500/30 bg-red-500/10 text-red-300',
+                                    run.status === 'running' &&
+                                      'border-brand/30 bg-brand/10 text-brand',
                                   )}
                                 >
                                   {run.status}
@@ -782,17 +876,29 @@ export function MissionControlDashboard({
                                   </>
                                 )}
                                 <span>·</span>
-                                <span>{formatCompactNumber(run.tokensIn + run.tokensOut)} tokens</span>
+                                <span>
+                                  {formatCompactNumber(run.tokensIn + run.tokensOut)} tokens
+                                </span>
                                 <span>·</span>
                                 <span>{formatUsd(run.costUsd)}</span>
                               </div>
                               {run.failureReason && (
-                                <p className="text-xs text-red-300">{truncateText(run.failureReason, 120)}</p>
+                                <p className="text-xs text-red-300">
+                                  {truncateText(run.failureReason, 120)}
+                                </p>
                               )}
                             </div>
                             <div className="flex flex-col items-start gap-2 text-xs text-muted-foreground md:items-end">
-                              <span>{run.durationMs ? `${Math.max(1, Math.round(run.durationMs / 1000))}s total` : 'In flight'}</span>
-                              <span>{run.provider && run.model ? `${run.provider} · ${run.model}` : 'Persisted run log'}</span>
+                              <span>
+                                {run.durationMs
+                                  ? `${Math.max(1, Math.round(run.durationMs / 1000))}s total`
+                                  : 'In flight'}
+                              </span>
+                              <span>
+                                {run.provider && run.model
+                                  ? `${run.provider} · ${run.model}`
+                                  : 'Persisted run log'}
+                              </span>
                               <span className="flex items-center gap-1 text-foreground/80">
                                 Open thread
                                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -810,7 +916,11 @@ export function MissionControlDashboard({
                 <PrimaryPanel
                   title="Employee Queues"
                   description="Durable backlog counts layered with live employee activity."
-                  countLabel={hasWorkspace && employees.length > 0 ? `${employees.length} employees` : undefined}
+                  countLabel={
+                    hasWorkspace && employees.length > 0
+                      ? `${employees.length} employees`
+                      : undefined
+                  }
                   dataPanel="employee-queues"
                   actions={
                     <Button
@@ -832,7 +942,10 @@ export function MissionControlDashboard({
                       dataState="employee-queues-unselected"
                     />
                   ) : ticketsQuery.isLoading ? (
-                    <PanelSkeletonRows rows={Math.max(2, Math.min(employees.length || 2, 4))} heightClassName="h-36" />
+                    <PanelSkeletonRows
+                      rows={Math.max(2, Math.min(employees.length || 2, 4))}
+                      heightClassName="h-36"
+                    />
                   ) : ticketsQuery.isError ? (
                     <PanelMessageState
                       icon={AlertTriangle}
@@ -867,7 +980,10 @@ export function MissionControlDashboard({
                     <div className="grid gap-3" data-dashboard-panel-state="employee-queues-ready">
                       {queueRows.map((row) => {
                         const totalTickets =
-                          row.counts.open + row.counts.inProgress + row.counts.blocked + row.counts.done;
+                          row.counts.open +
+                          row.counts.inProgress +
+                          row.counts.blocked +
+                          row.counts.done;
                         return (
                           <div
                             key={row.employeeId}
@@ -878,14 +994,24 @@ export function MissionControlDashboard({
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <p className="text-sm font-semibold text-foreground">{row.name}</p>
-                                    <Badge variant="outline" className={cn('text-[10px] font-mono', liveStatusClassName(row.liveStatus))}>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {row.name}
+                                    </p>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        'text-[10px] font-mono',
+                                        liveStatusClassName(row.liveStatus),
+                                      )}
+                                    >
                                       {liveStatusLabel(row.liveStatus)}
                                     </Badge>
                                   </div>
                                   <p className="text-xs text-muted-foreground">{row.title}</p>
                                   {row.liveActivity && (
-                                    <p className="text-xs text-foreground/75">{truncateText(row.liveActivity, 120)}</p>
+                                    <p className="text-xs text-foreground/75">
+                                      {truncateText(row.liveActivity, 120)}
+                                    </p>
                                   )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -917,25 +1043,33 @@ export function MissionControlDashboard({
                                       {row.counts.open > 0 && (
                                         <div
                                           className="h-full bg-slate-400/70"
-                                          style={{ width: `${(row.counts.open / totalTickets) * 100}%` }}
+                                          style={{
+                                            width: `${(row.counts.open / totalTickets) * 100}%`,
+                                          }}
                                         />
                                       )}
                                       {row.counts.inProgress > 0 && (
                                         <div
                                           className="h-full bg-brand/70"
-                                          style={{ width: `${(row.counts.inProgress / totalTickets) * 100}%` }}
+                                          style={{
+                                            width: `${(row.counts.inProgress / totalTickets) * 100}%`,
+                                          }}
                                         />
                                       )}
                                       {row.counts.blocked > 0 && (
                                         <div
                                           className="h-full bg-amber-400/80"
-                                          style={{ width: `${(row.counts.blocked / totalTickets) * 100}%` }}
+                                          style={{
+                                            width: `${(row.counts.blocked / totalTickets) * 100}%`,
+                                          }}
                                         />
                                       )}
                                       {row.counts.done > 0 && (
                                         <div
                                           className="h-full bg-emerald-400/80"
-                                          style={{ width: `${(row.counts.done / totalTickets) * 100}%` }}
+                                          style={{
+                                            width: `${(row.counts.done / totalTickets) * 100}%`,
+                                          }}
                                         />
                                       )}
                                     </div>
@@ -966,7 +1100,8 @@ export function MissionControlDashboard({
                   <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-black/10 p-8 text-center">
                     <LayoutPanelTop className="h-8 w-8 text-brand" />
                     <p className="max-w-lg text-sm text-muted-foreground">
-                      The mission-control shell is still active below, but the live board row is hidden for this workspace.
+                      The mission-control shell is still active below, but the live board row is
+                      hidden for this workspace.
                     </p>
                     <Button type="button" onClick={handleResetLayout}>
                       <TimerReset className="h-4 w-4" />
@@ -988,7 +1123,10 @@ export function MissionControlDashboard({
                     <CardTitle className="text-lg text-foreground">Secondary rail</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="rounded-2xl border border-white/10 bg-black/10 p-4" data-dashboard-secondary-panel="copilot">
+                    <div
+                      className="rounded-2xl border border-white/10 bg-black/10 p-4"
+                      data-dashboard-secondary-panel="copilot"
+                    >
                       <p className="mb-3 text-xs text-muted-foreground">
                         Keep live findings visible without letting them outrank the work boards.
                       </p>
@@ -1072,10 +1210,15 @@ export function MissionControlDashboard({
                       >
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant="outline" className="border-brand/30 bg-brand/10 text-[10px] text-brand">
+                            <Badge
+                              variant="outline"
+                              className="border-brand/30 bg-brand/10 text-[10px] text-brand"
+                            >
                               {intentLabel(entry.intent)}
                             </Badge>
-                            <span className="text-xs text-muted-foreground">{formatTimeAgo(entry.executedAt)}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatTimeAgo(entry.executedAt)}
+                            </span>
                           </div>
                           <p className="text-sm text-foreground">{truncateText(entry.text, 96)}</p>
                         </div>
@@ -1152,25 +1295,33 @@ export function MissionControlDashboard({
                     <>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Total runs</p>
+                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                            Total runs
+                          </p>
                           <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.totalRuns)}
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Total tokens</p>
+                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                            Total tokens
+                          </p>
                           <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.totalTokens)}
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Avg latency</p>
+                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                            Avg latency
+                          </p>
                           <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.avgLatencyMs)}ms
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Total cost</p>
+                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                            Total cost
+                          </p>
                           <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
                             {formatUsd(telemetryStatsQuery.data?.totalCostUsd)}
                           </p>
@@ -1179,12 +1330,15 @@ export function MissionControlDashboard({
 
                       <div className="rounded-2xl border border-white/10 bg-black/10 p-4 text-sm text-muted-foreground">
                         Current window: {formatCompactNumber(todayUsage?.totalRuns ?? 0)} runs,{' '}
-                        {formatCompactNumber(todayUsage?.totalTokens ?? 0)} tokens, {formatUsd(todayUsage?.costUsd)} cost.
+                        {formatCompactNumber(todayUsage?.totalTokens ?? 0)} tokens,{' '}
+                        {formatUsd(todayUsage?.costUsd)} cost.
                       </div>
 
                       <button
                         type="button"
-                        onClick={() => handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'budgets')}
+                        onClick={() =>
+                          handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'budgets')
+                        }
                         className="w-full rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition hover:border-brand/30 hover:bg-black/20"
                         data-dashboard-autonomy-snapshot=""
                       >
@@ -1196,7 +1350,8 @@ export function MissionControlDashboard({
                             variant="outline"
                             className={cn(
                               'border-white/10 bg-black/10 text-[10px] text-foreground/80',
-                              pendingApprovalCount > 0 && 'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                              pendingApprovalCount > 0 &&
+                                'border-amber-500/30 bg-amber-500/10 text-amber-200',
                             )}
                           >
                             {pendingApprovalCount} pending
@@ -1208,7 +1363,8 @@ export function MissionControlDashboard({
                             : 'Open autonomy to review runtime, routine, and budget posture.'}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {enabledRoutineCount} active routines shaping the queue. Operator posture is {operatorPosture}.
+                          {enabledRoutineCount} active routines shaping the queue. Operator posture
+                          is {operatorPosture}.
                         </p>
                       </button>
                     </>

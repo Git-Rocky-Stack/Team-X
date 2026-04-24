@@ -559,7 +559,9 @@ describe('buildOrchestrator', () => {
           },
         }),
       );
-      expect(checkpoints[0]?.progressSummary).toMatch(/after resuming from the timeout checkpoint/i);
+      expect(checkpoints[0]?.progressSummary).toMatch(
+        /after resuming from the timeout checkpoint/i,
+      );
 
       const digest = threadDigestService.getLatest({
         companyId: f.companyId,
@@ -650,7 +652,8 @@ describe('buildOrchestrator', () => {
                 truncated: false,
               },
             ],
-            systemAddendum: '## Runtime Context\nSource: external\nExternal runtime launch window is active.',
+            systemAddendum:
+              '## Runtime Context\nSource: external\nExternal runtime launch window is active.',
             includedBlocks: [
               {
                 id: 'approval-block',
@@ -1349,7 +1352,9 @@ describe('buildOrchestrator', () => {
           },
         }),
       );
-      expect(checkpoints[0]?.progressSummary).toMatch(/after resuming from the timeout checkpoint/i);
+      expect(checkpoints[0]?.progressSummary).toMatch(
+        /after resuming from the timeout checkpoint/i,
+      );
 
       expect(order).toEqual(['first-start', 'second-start', 'second-end']);
     });
@@ -1634,7 +1639,9 @@ describe('buildOrchestrator', () => {
         }),
       );
       expect(checkpoints[0]?.blockers[0]?.summary).toMatch(/stalled/i);
-      expect(checkpoints[0]?.progressSummary).toMatch(/after resuming from the approval-blocked checkpoint/i);
+      expect(checkpoints[0]?.progressSummary).toMatch(
+        /after resuming from the approval-blocked checkpoint/i,
+      );
     });
   });
 

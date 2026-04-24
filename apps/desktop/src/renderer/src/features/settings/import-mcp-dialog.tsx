@@ -18,6 +18,7 @@ import {
   useMcpTemplates,
   useTestMcpConnection,
 } from '@/hooks/use-extensions.js';
+import { requireString } from '@/lib/required.js';
 
 interface ImportMcpDialogProps {
   open: boolean;
@@ -115,15 +116,16 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit()) return;
+    const requiredCompanyId = requireString(companyId, 'companyId');
     try {
       if (mode === 'template' && selectedTemplate) {
         await installTemplate.mutateAsync({
-          companyId: companyId!,
+          companyId: requiredCompanyId,
           templateId: selectedTemplate.id,
         });
       } else {
         await addMcpServer.mutateAsync({
-          companyId,
+          companyId: requiredCompanyId,
           name: name.trim(),
           transport,
           configJson,
@@ -171,10 +173,7 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
           {mode === 'template' ? (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label
-                  htmlFor="mcp-template"
-                  className="text-xs font-medium text-muted-foreground"
-                >
+                <label htmlFor="mcp-template" className="text-xs font-medium text-muted-foreground">
                   Template
                 </label>
                 <select
@@ -199,15 +198,17 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
               {templatesQuery.isLoading ? (
                 <p className="text-xs text-muted-foreground">Loading built-in templates...</p>
               ) : templatesQuery.isError ? (
-                <p className="text-xs text-destructive">
-                  Failed to load built-in MCP templates.
-                </p>
+                <p className="text-xs text-destructive">Failed to load built-in MCP templates.</p>
               ) : selectedTemplate ? (
                 <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-sm font-medium text-foreground">{selectedTemplate.name}</div>
-                      <div className="text-xs text-muted-foreground">{selectedTemplate.sourceRef}</div>
+                      <div className="text-sm font-medium text-foreground">
+                        {selectedTemplate.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {selectedTemplate.sourceRef}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{selectedTemplate.transport}</Badge>
@@ -244,7 +245,10 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="mcp-transport" className="text-xs font-medium text-muted-foreground">
+                <label
+                  htmlFor="mcp-transport"
+                  className="text-xs font-medium text-muted-foreground"
+                >
                   Transport
                 </label>
                 <select
@@ -261,7 +265,10 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
               {transport === 'stdio' ? (
                 <>
                   <div className="space-y-1.5">
-                    <label htmlFor="mcp-command" className="text-xs font-medium text-muted-foreground">
+                    <label
+                      htmlFor="mcp-command"
+                      className="text-xs font-medium text-muted-foreground"
+                    >
                       Command
                     </label>
                     <Input

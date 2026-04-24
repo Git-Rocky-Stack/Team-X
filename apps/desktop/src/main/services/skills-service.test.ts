@@ -1,16 +1,16 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { companies, employees } from '../db/schema.js';
-import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import {
   createAuthorityRepo,
   createExtensionsRepo,
   createSkillAssignmentsRepo,
 } from '../db/repos/extensions.js';
+import { companies, employees } from '../db/schema.js';
+import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createSkillsService } from './skills-service.js';
 
 const COMPANY_ID = 'company-1';
@@ -25,28 +25,34 @@ beforeEach(async () => {
   tempRoot = await mkdtemp(join(tmpdir(), 'teamx-skills-'));
   skillsRoot = join(tempRoot, 'installed-skills');
 
-  ctx.db.insert(companies).values({
-    id: COMPANY_ID,
-    name: 'Alpha',
-    slug: 'alpha',
-    createdAt: 1,
-    settingsJson: '{}',
-    icon: null,
-    theme: 'dark',
-    status: 'running',
-  }).run();
+  ctx.db
+    .insert(companies)
+    .values({
+      id: COMPANY_ID,
+      name: 'Alpha',
+      slug: 'alpha',
+      createdAt: 1,
+      settingsJson: '{}',
+      icon: null,
+      theme: 'dark',
+      status: 'running',
+    })
+    .run();
 
-  ctx.db.insert(employees).values({
-    id: EMPLOYEE_ID,
-    companyId: COMPANY_ID,
-    rolePackId: 'strategia-official',
-    roleId: 'ceo',
-    roleMdSha: 'sha-alpha',
-    level: 'officer',
-    name: 'Alpha CEO',
-    title: 'CEO',
-    createdAt: 1,
-  }).run();
+  ctx.db
+    .insert(employees)
+    .values({
+      id: EMPLOYEE_ID,
+      companyId: COMPANY_ID,
+      rolePackId: 'strategia-official',
+      roleId: 'ceo',
+      roleMdSha: 'sha-alpha',
+      level: 'officer',
+      name: 'Alpha CEO',
+      title: 'CEO',
+      createdAt: 1,
+    })
+    .run();
 });
 
 afterEach(async () => {
@@ -124,7 +130,9 @@ describe('skills-service', () => {
     const manifest = JSON.parse(extension?.manifestJson ?? '{}') as Record<string, unknown>;
     const snapshotDir = String(manifest.snapshotDir ?? '');
     expect(snapshotDir).toBe(join(skillsRoot, result.extensionId));
-    await expect(readFile(join(snapshotDir, 'prompt.md'), 'utf8')).resolves.toContain('summarize blockers');
+    await expect(readFile(join(snapshotDir, 'prompt.md'), 'utf8')).resolves.toContain(
+      'summarize blockers',
+    );
     await expect(
       readFile(join(snapshotDir, 'instructions', 'checklist.md'), 'utf8'),
     ).resolves.toContain('next checkpoints');

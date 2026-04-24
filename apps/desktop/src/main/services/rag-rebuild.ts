@@ -1,14 +1,14 @@
 import type { RagService } from '@team-x/intelligence';
 
 import {
-  formatGoalEmbeddingContent,
-  formatProjectEmbeddingContent,
-  formatTicketEmbeddingContent,
-  formatVaultFileEmbeddingContent,
   type RagGoalSource,
   type RagProjectSource,
   type RagTicketSource,
   type RagVaultFileSource,
+  formatGoalEmbeddingContent,
+  formatProjectEmbeddingContent,
+  formatTicketEmbeddingContent,
+  formatVaultFileEmbeddingContent,
 } from './rag-source-content.js';
 
 export interface RagRebuildDeps {

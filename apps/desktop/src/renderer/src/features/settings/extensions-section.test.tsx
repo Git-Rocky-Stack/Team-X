@@ -21,7 +21,9 @@ const extensionsHooksSrc = readFileSync(EXTENSIONS_HOOKS_PATH, 'utf8');
 
 describe('Extensions & Authority settings shell', () => {
   it('mounts the new section inside SettingsView', () => {
-    expect(settingsViewSrc).toContain("import { ExtensionsSection } from './extensions-section.js';");
+    expect(settingsViewSrc).toContain(
+      "import { ExtensionsSection } from './extensions-section.js';",
+    );
     expect(settingsViewSrc).toContain('<ExtensionsSection />');
   });
 
@@ -33,42 +35,74 @@ describe('Extensions & Authority settings shell', () => {
   });
 
   it('adds company-scoped hooks for extensions, authority, and MCP server read models', () => {
-    expect(extensionsHooksSrc).toContain('export function useInstalledExtensions(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useInstalledExtensions(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain("queryKey: ['extensions', companyId]");
     expect(extensionsHooksSrc).toContain('ipc.extensions.list(companyId!)');
-    expect(extensionsHooksSrc).toContain('export function useSkillAssignments(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useSkillAssignments(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain("queryKey: ['skill-assignments', companyId]");
     expect(extensionsHooksSrc).toContain('ipc.extensions.listSkillAssignments(companyId!)');
-    expect(extensionsHooksSrc).toContain('export function useInstallLocalSkill(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useInstallLocalSkill(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.extensions.installLocalSkill');
-    expect(extensionsHooksSrc).toContain('export function useInstallGithubSkill(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useInstallGithubSkill(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.extensions.installGithubSkill');
-    expect(extensionsHooksSrc).toContain('export function useUpsertSkillAssignment(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useUpsertSkillAssignment(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.extensions.upsertSkillAssignment');
-    expect(extensionsHooksSrc).toContain('export function useDeleteSkillAssignment(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useDeleteSkillAssignment(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.extensions.deleteSkillAssignment(assignmentId)');
-    expect(extensionsHooksSrc).toContain('export function useAuthorityGrants(companyId: string | null, employeeId?: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useAuthorityGrants(companyId: string | null, employeeId?: string | null)',
+    );
     expect(extensionsHooksSrc).toContain("queryKey: ['authority', companyId, employeeId ?? null]");
-    expect(extensionsHooksSrc).toContain("export function useAuthorityRequests(");
+    expect(extensionsHooksSrc).toContain('export function useAuthorityRequests(');
     expect(extensionsHooksSrc).toContain("queryKey: ['authority-requests', companyId, status]");
     expect(extensionsHooksSrc).toContain("queryKey: ['mcp', companyId]");
-    expect(extensionsHooksSrc).toContain('export function useMcpTemplates(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useMcpTemplates(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain("queryKey: ['mcp-templates', companyId]");
     expect(extensionsHooksSrc).toContain('export function useCreateAuthorityGrant()');
     expect(extensionsHooksSrc).toContain('ipc.authority.create');
-    expect(extensionsHooksSrc).toContain('export function useDeleteAuthorityGrant(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useDeleteAuthorityGrant(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.authority.delete(grantId)');
-    expect(extensionsHooksSrc).toContain('export function useReviewAuthorityRequest(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useReviewAuthorityRequest(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.approvals.review');
-    expect(extensionsHooksSrc).toContain('export function useEffectiveAuthority(companyId: string | null, employeeId: string | null)');
-    expect(extensionsHooksSrc).toContain('ipc.authority.getEffective({ companyId: companyId!, employeeId: employeeId! })');
-    expect(extensionsHooksSrc).toContain('export function useAddMcpServer(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useEffectiveAuthority(companyId: string | null, employeeId: string | null)',
+    );
+    expect(extensionsHooksSrc).toContain(
+      'ipc.authority.getEffective({ companyId: companyId!, employeeId: employeeId! })',
+    );
+    expect(extensionsHooksSrc).toContain(
+      'export function useAddMcpServer(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.mcp.addServer');
-    expect(extensionsHooksSrc).toContain('export function useInstallMcpTemplate(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useInstallMcpTemplate(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.mcp.installTemplate');
-    expect(extensionsHooksSrc).toContain('export function useToggleMcpServer(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useToggleMcpServer(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.mcp.toggle(serverId, enabled)');
-    expect(extensionsHooksSrc).toContain('export function useRemoveMcpServer(companyId: string | null)');
+    expect(extensionsHooksSrc).toContain(
+      'export function useRemoveMcpServer(companyId: string | null)',
+    );
     expect(extensionsHooksSrc).toContain('ipc.mcp.removeServer(serverId)');
     expect(extensionsHooksSrc).toContain('export function useTestMcpConnection()');
     expect(extensionsHooksSrc).toContain('ipc.mcp.testConnection');
@@ -88,7 +122,9 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('EXTENSIONS_AUTONOMY_MODES.map');
     expect(extensionsSectionSrc).toContain('Effective preview');
     expect(extensionsSectionSrc).toContain('Authority preview employee');
-    expect(extensionsSectionSrc).toContain('Path grants are Windows-safe, case-insensitive, and directory-prefix matched.');
+    expect(extensionsSectionSrc).toContain(
+      'Path grants are Windows-safe, case-insensitive, and directory-prefix matched.',
+    );
     expect(extensionsSectionSrc).toContain("useAuthorityRequests(companyId, 'pending')");
     expect(extensionsSectionSrc).toContain('useReviewAuthorityRequest(companyId)');
     expect(extensionsSectionSrc).toContain('Approve');
@@ -119,7 +155,9 @@ describe('Extensions & Authority settings shell', () => {
     expect(importMcpDialogSrc).toContain('Built-in Template');
     expect(importMcpDialogSrc).toContain('Install Template');
     expect(importMcpDialogSrc).toContain('Test Connection');
-    expect(importMcpDialogSrc).toContain('Install a built-in MCP template or register a workspace-scoped stdio/SSE server.');
+    expect(importMcpDialogSrc).toContain(
+      'Install a built-in MCP template or register a workspace-scoped stdio/SSE server.',
+    );
     expect(importMcpDialogSrc).toContain('Environment JSON');
     expect(importMcpDialogSrc).toContain('SSE URL');
   });

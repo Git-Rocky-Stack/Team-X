@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
+import { requireString } from '@/lib/required.js';
 
 export function useRuntimeProfiles(companyId: string | null) {
   return useQuery({
     queryKey: ['runtime-profiles', companyId],
-    queryFn: () => autonomyClient.runtimeProfiles.list(companyId!),
+    queryFn: () => autonomyClient.runtimeProfiles.list(requireString(companyId, 'companyId')),
     enabled: companyId !== null && companyId.length > 0,
   });
 }

@@ -6,8 +6,8 @@ import type {
   PackedContextBlock,
   PackedContextTurn,
   PackedThreadContext,
-  RunCheckpointResumeOrigin,
   RunCheckpointResumableKind,
+  RunCheckpointResumeOrigin,
 } from '@team-x/shared-types';
 import { RUN_CHECKPOINT_RESUMABLE_KINDS } from '@team-x/shared-types';
 
@@ -71,7 +71,9 @@ function clampTokenBudget(value: number | undefined): number {
   return Math.max(128, Math.round(value));
 }
 
-function renderBlockText(block: Pick<AssembledContextBlock, 'title' | 'body' | 'sourceLabel'>): string {
+function renderBlockText(
+  block: Pick<AssembledContextBlock, 'title' | 'body' | 'sourceLabel'>,
+): string {
   const header = `## ${block.title}`;
   const sourceLine = block.sourceLabel ? `Source: ${block.sourceLabel}\n` : '';
   return `${header}\n${sourceLine}${block.body}`.trim();
@@ -168,7 +170,8 @@ export function createContextPackerService(deps: ContextPackerServiceDeps = {}) 
       let recentTurnTokens = 0;
       const packedTurns: PackedContextTurn[] = [];
       for (let index = input.context.recentTurns.length - 1; index >= 0; index -= 1) {
-        const turn = input.context.recentTurns[index]!;
+        const turn = input.context.recentTurns[index];
+        if (!turn) continue;
         const remaining = recentTurnBudget - recentTurnTokens;
         if (remaining <= 0) break;
         const fitted = fitTurnToBudget(turn, remaining, countTokens);
@@ -278,7 +281,10 @@ export function createContextPackerService(deps: ContextPackerServiceDeps = {}) 
         });
       }
 
-      const systemAddendum = includedBlocks.map((block) => block.renderedText).join('\n\n').trim();
+      const systemAddendum = includedBlocks
+        .map((block) => block.renderedText)
+        .join('\n\n')
+        .trim();
       return {
         companyId: input.context.companyId,
         threadId: input.context.threadId,

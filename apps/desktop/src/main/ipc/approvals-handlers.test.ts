@@ -7,26 +7,24 @@ import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
   const noop = {} as never;
   const approvalInboxService = {
-    listItems: vi.fn(
-      (): ApprovalItem[] => [
-        {
-          id: 'approval-1',
-          companyId: 'company-1',
-          kind: 'budget-exception',
-          status: 'pending',
-          priority: 'high',
-          requestedByOperatorId: null,
-          requestedByEmployeeId: 'employee-1',
-          subjectRefKind: 'budget-policy',
-          subjectRefId: 'policy-1',
-          summary: 'Budget approval required',
-          payload: { budgetPolicyId: 'policy-1' },
-          createdAt: 10,
-          resolvedAt: null,
-          latestDecision: null,
-        },
-      ],
-    ),
+    listItems: vi.fn((): ApprovalItem[] => [
+      {
+        id: 'approval-1',
+        companyId: 'company-1',
+        kind: 'budget-exception',
+        status: 'pending',
+        priority: 'high',
+        requestedByOperatorId: null,
+        requestedByEmployeeId: 'employee-1',
+        subjectRefKind: 'budget-policy',
+        subjectRefId: 'policy-1',
+        summary: 'Budget approval required',
+        payload: { budgetPolicyId: 'policy-1' },
+        createdAt: 10,
+        resolvedAt: null,
+        latestDecision: null,
+      },
+    ]),
     reviewItem: vi.fn(() => ({
       item: {
         id: 'approval-1',
@@ -58,11 +56,14 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     })),
   } as unknown as IpcHandlerDeps['approvalInboxService'];
   const operatorAccessService = {
-    resolveOperatorIdForCompany: vi.fn((_companyId: string, preferredOperatorId?: string | null) =>
-      preferredOperatorId ?? 'rocky',
+    resolveOperatorIdForCompany: vi.fn(
+      (_companyId: string, preferredOperatorId?: string | null) => preferredOperatorId ?? 'rocky',
     ),
     listByCompany: vi.fn(() => []),
-    ensureLocalOwnerForCompany: vi.fn(() => ({ operatorId: 'rocky', membershipId: 'membership-1' })),
+    ensureLocalOwnerForCompany: vi.fn(() => ({
+      operatorId: 'rocky',
+      membershipId: 'membership-1',
+    })),
   } as unknown as IpcHandlerDeps['operatorAccessService'];
 
   return {

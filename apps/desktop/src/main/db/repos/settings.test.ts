@@ -209,9 +209,9 @@ describe('createSettingsRepo', () => {
     });
 
     it('rejects invalid autonomy modes', () => {
-      expect(() =>
-        repo.setExtensions({ autonomyMode: 'wild-west' as 'balanced' }),
-      ).toThrow(/autonomyMode must be one of/);
+      expect(() => repo.setExtensions({ autonomyMode: 'wild-west' as 'balanced' })).toThrow(
+        /autonomyMode must be one of/,
+      );
     });
   });
 
@@ -262,7 +262,9 @@ describe('createSettingsRepo', () => {
         checkpointHistoryLimit: MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit.max,
       });
       expect(() =>
-        repo.setMemory({ defaultTargetTokenBudget: 1234 as (typeof MEMORY_TARGET_TOKEN_BUDGET_OPTIONS)[number] }),
+        repo.setMemory({
+          defaultTargetTokenBudget: 1234 as (typeof MEMORY_TARGET_TOKEN_BUDGET_OPTIONS)[number],
+        }),
       ).toThrow(/defaultTargetTokenBudget must be one of/);
     });
 

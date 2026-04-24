@@ -33,7 +33,9 @@ export function userGuidePreferencesFromCompanySettings(
         : null,
     selectedRole: stored?.selectedRole ?? 'owner',
     completedTaskIds: Array.isArray(stored?.completedTaskIds)
-      ? stored.completedTaskIds.filter((taskId: unknown): taskId is string => typeof taskId === 'string')
+      ? stored.completedTaskIds.filter(
+          (taskId: unknown): taskId is string => typeof taskId === 'string',
+        )
       : EMPTY_COMPLETED_TASK_IDS,
   };
 }

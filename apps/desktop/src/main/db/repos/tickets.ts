@@ -29,12 +29,16 @@ export interface CreateTicketInput {
   title: string;
   description?: string;
   priority?: string;
+  status?: string;
   assigneeId?: string | null;
   reporterId: string;
   reporterKind?: string;
   labelsJson?: string;
+  dependenciesJson?: string;
   slaHours?: number | null;
   dueAt?: number | null;
+  threadId?: string | null;
+  closedAt?: number | null;
 }
 
 export interface UpdateTicketInput {
@@ -65,19 +69,19 @@ export function createTicketsRepo<TRunResult>(db: TicketsDb<TRunResult>) {
           companyId: input.companyId,
           title: input.title,
           description: input.description ?? '',
-          status: 'open',
+          status: input.status ?? 'open',
           priority: input.priority ?? 'medium',
           assigneeId: input.assigneeId ?? null,
           reporterId: input.reporterId,
           reporterKind: input.reporterKind ?? 'user',
           labelsJson: input.labelsJson ?? '[]',
-          dependenciesJson: '[]',
+          dependenciesJson: input.dependenciesJson ?? '[]',
           slaHours: input.slaHours ?? null,
           dueAt: input.dueAt ?? null,
-          threadId: null,
+          threadId: input.threadId ?? null,
           createdAt: now,
           updatedAt: now,
-          closedAt: null,
+          closedAt: input.closedAt ?? null,
         })
         .run();
       return id;

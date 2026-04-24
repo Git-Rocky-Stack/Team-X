@@ -73,7 +73,8 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
   });
 
   const sections = visibleSections(search);
-  const selectedSection = sections.find((section) => section.id === selectedSectionId) ?? sections[0] ?? null;
+  const selectedSection =
+    sections.find((section) => section.id === selectedSectionId) ?? sections[0] ?? null;
 
   const sectionTasks = useMemo(
     () =>
@@ -86,7 +87,9 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
   const quickActions = useMemo(() => {
     const actionIds = new Set<string>([
       ...(selectedSection?.actionIds ?? []),
-      ...sectionTasks.map((task) => task.actionId).filter((actionId): actionId is string => Boolean(actionId)),
+      ...sectionTasks
+        .map((task) => task.actionId)
+        .filter((actionId): actionId is string => Boolean(actionId)),
     ]);
     return [...actionIds]
       .map((actionId) => guideActionById(actionId))
@@ -133,7 +136,12 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
         actions={
           <>
             {!preferences.welcomeDismissedAt ? (
-              <Button type="button" variant="outline" className="rounded-full" onClick={dismissWelcome}>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                onClick={dismissWelcome}
+              >
                 Dismiss welcome
               </Button>
             ) : null}
@@ -193,10 +201,19 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
           badge={<MissionPill tone="accent">First run</MissionPill>}
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" className="rounded-full" onClick={() => runAction('open-settings-providers')}>
+              <Button
+                type="button"
+                className="rounded-full"
+                onClick={() => runAction('open-settings-providers')}
+              >
                 Start with providers
               </Button>
-              <Button type="button" variant="outline" className="rounded-full" onClick={dismissWelcome}>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                onClick={dismissWelcome}
+              >
                 Dismiss for this workspace
               </Button>
             </div>
@@ -261,7 +278,8 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
           <div className="space-y-2">
             {sections.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No guide sections match the current search. Clear the filter to restore the full track.
+                No guide sections match the current search. Clear the filter to restore the full
+                track.
               </p>
             ) : (
               sections.map((section) => {
@@ -301,7 +319,10 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
               {selectedSection.blocks.map((block, index) => {
                 if (block.kind === 'paragraph') {
                   return (
-                    <p key={`${selectedSection.id}:paragraph:${index}`} className="text-sm leading-7 text-muted-foreground">
+                    <p
+                      key={`${selectedSection.id}:paragraph:${index}`}
+                      className="text-sm leading-7 text-muted-foreground"
+                    >
                       {block.text}
                     </p>
                   );
@@ -351,7 +372,11 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
           <MissionRailCard
             title="Checklist"
             description="Interactive onboarding tasks for the selected role and section."
-            badge={<MissionPill tone="accent">{summary.completed}/{summary.total}</MissionPill>}
+            badge={
+              <MissionPill tone="accent">
+                {summary.completed}/{summary.total}
+              </MissionPill>
+            }
           >
             {sectionTasks.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -465,7 +490,10 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
             </div>
           </MissionRailCard>
 
-          <MissionRailCard title="Signal health" description="Live workspace signals used for auto-detected onboarding tasks.">
+          <MissionRailCard
+            title="Signal health"
+            description="Live workspace signals used for auto-detected onboarding tasks."
+          >
             <div className="space-y-2 text-sm text-muted-foreground">
               <div className="flex items-center justify-between">
                 <span>Enabled provider</span>
@@ -488,7 +516,11 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
               <div className="flex items-center justify-between">
                 <span>Authority activity</span>
                 <MissionPill tone={signals.hasAuthorityActivity ? 'accent' : 'default'}>
-                  {authorityLoading ? 'loading' : signals.hasAuthorityActivity ? 'recorded' : 'none yet'}
+                  {authorityLoading
+                    ? 'loading'
+                    : signals.hasAuthorityActivity
+                      ? 'recorded'
+                      : 'none yet'}
                 </MissionPill>
               </div>
             </div>

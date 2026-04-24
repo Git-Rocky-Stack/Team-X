@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
+import { requireString } from '@/lib/required.js';
 
 export function useThreadDigest(companyId: string | null, threadId: string | null) {
   return useQuery({
     queryKey: ['memory', 'digest', companyId, threadId],
     queryFn: () =>
       autonomyClient.memory.getThreadDigest({
-        companyId: companyId!,
-        threadId: threadId!,
+        companyId: requireString(companyId, 'companyId'),
+        threadId: requireString(threadId, 'threadId'),
       }),
     enabled: companyId !== null && companyId.length > 0 && threadId !== null && threadId.length > 0,
   });
@@ -19,8 +20,8 @@ export function useRunCheckpoints(companyId: string | null, threadId: string | n
     queryKey: ['memory', 'checkpoints', companyId, threadId, limit],
     queryFn: () =>
       autonomyClient.memory.listRunCheckpoints({
-        companyId: companyId!,
-        threadId: threadId!,
+        companyId: requireString(companyId, 'companyId'),
+        threadId: requireString(threadId, 'threadId'),
         limit,
       }),
     enabled: companyId !== null && companyId.length > 0 && threadId !== null && threadId.length > 0,
@@ -37,11 +38,18 @@ export function usePackedThreadContext(
 ) {
   const { targetTokenBudget, recentTurnLimit } = options;
   return useQuery({
-    queryKey: ['memory', 'packed-context', companyId, threadId, targetTokenBudget ?? null, recentTurnLimit ?? null],
+    queryKey: [
+      'memory',
+      'packed-context',
+      companyId,
+      threadId,
+      targetTokenBudget ?? null,
+      recentTurnLimit ?? null,
+    ],
     queryFn: () =>
       autonomyClient.memory.packThreadContext({
-        companyId: companyId!,
-        threadId: threadId!,
+        companyId: requireString(companyId, 'companyId'),
+        threadId: requireString(threadId, 'threadId'),
         ...(targetTokenBudget ? { targetTokenBudget } : {}),
         ...(recentTurnLimit ? { recentTurnLimit } : {}),
       }),

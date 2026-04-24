@@ -9,10 +9,7 @@
  * Phase 5 — M29.
  */
 
-import {
-  formatEvidenceLine,
-  type RetrievalEvidencePack,
-} from './retrieval-orchestrator.js';
+import { type RetrievalEvidencePack, formatEvidenceLine } from './retrieval-orchestrator.js';
 
 export interface RecentMessage {
   id: string;

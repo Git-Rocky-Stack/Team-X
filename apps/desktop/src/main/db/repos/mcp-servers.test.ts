@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { companies } from '../schema.js';
+import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createMcpServersRepo, seedDefaultMcpServers } from './mcp-servers.js';
 
 let ctx: TestDbHandle;

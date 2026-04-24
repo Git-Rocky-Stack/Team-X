@@ -3,11 +3,18 @@ import type { Employee } from '@team-x/shared-types';
 import { BookOpenText, MessageSquare, Plus, Users, Workflow } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
-import { useAuthorityGrants, useAuthorityRequests, useInstalledExtensions } from '@/hooks/use-extensions.js';
-import { useCompanies } from '@/hooks/use-companies.js';
-import { useProviders } from '@/hooks/use-providers.js';
 import { Separator } from '@/components/ui/separator.js';
-import { userGuidePreferencesFromCompanySettings, guideCompletionSummary } from '@/features/user-guide/guide-progress.js';
+import {
+  guideCompletionSummary,
+  userGuidePreferencesFromCompanySettings,
+} from '@/features/user-guide/guide-progress.js';
+import { useCompanies } from '@/hooks/use-companies.js';
+import {
+  useAuthorityGrants,
+  useAuthorityRequests,
+  useInstalledExtensions,
+} from '@/hooks/use-extensions.js';
+import { useProviders } from '@/hooks/use-providers.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -205,9 +212,7 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
               <span className="text-sm font-medium">User Guide</span>
               {showGuideSummary ? (
                 <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-muted-foreground">
-                  {guideSummary.coreRemaining > 0
-                    ? `${guideSummary.coreRemaining} left`
-                    : 'ready'}
+                  {guideSummary.coreRemaining > 0 ? `${guideSummary.coreRemaining} left` : 'ready'}
                 </span>
               ) : null}
             </div>

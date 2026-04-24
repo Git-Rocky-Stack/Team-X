@@ -3,8 +3,8 @@ import { useMemo } from 'react';
 import type { Company, OperatorAccessEntry } from '@team-x/shared-types';
 import {
   BadgeDollarSign,
-  BrainCircuit,
   Bot,
+  BrainCircuit,
   CheckSquare2,
   Clock3,
   FolderKanban,
@@ -209,14 +209,14 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
                   {entry.operator.id === 'rocky' ? <MissionPill>local owner</MissionPill> : null}
                 </div>
                 <p className="text-xs leading-5 text-muted-foreground">
-                  {entry.operator.email?.trim()
-                    ? entry.operator.email
-                    : authModeDescription(entry)}
+                  {entry.operator.email?.trim() ? entry.operator.email : authModeDescription(entry)}
                 </p>
               </div>
               <div className="flex max-w-xl flex-wrap items-center justify-end gap-2">
                 {privileges.length > 0 ? (
-                  privileges.map((privilege) => <MissionPill key={privilege}>{privilege}</MissionPill>)
+                  privileges.map((privilege) => (
+                    <MissionPill key={privilege}>{privilege}</MissionPill>
+                  ))
                 ) : (
                   <span className="text-xs leading-5 text-muted-foreground">
                     No elevated governance capabilities are assigned to this membership.
@@ -297,11 +297,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
           />
           <MissionMetricTile
             label="Auth posture"
-            value={
-              operatorsQuery.isLoading
-                ? '...'
-                : postureLabel(accessSummary)
-            }
+            value={operatorsQuery.isLoading ? '...' : postureLabel(accessSummary)}
             hint="Explicit operator identity model"
             icon={Bot}
           />
@@ -338,10 +334,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
       </MissionSectionCard>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_360px]">
-        <MissionSectionCard
-          title={activeCopy.title}
-          description={activeCopy.description}
-        >
+        <MissionSectionCard title={activeCopy.title} description={activeCopy.description}>
           {activeSubview === 'access' ? (
             operatorsQuery.isLoading ? (
               <MissionStateBlock
@@ -382,7 +375,9 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             <MissionStateBlock
               title={activeCopy.emptyTitle}
               description={activeCopy.emptyDescription}
-              icon={AUTONOMY_SUBVIEWS.find((item) => item.value === activeSubview)?.icon ?? Workflow}
+              icon={
+                AUTONOMY_SUBVIEWS.find((item) => item.value === activeSubview)?.icon ?? Workflow
+              }
             />
           )}
         </MissionSectionCard>
@@ -402,15 +397,21 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Local operators</span>
-                  <span className="font-semibold text-foreground">{accessSummary.localOperators}</span>
+                  <span className="font-semibold text-foreground">
+                    {accessSummary.localOperators}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Invited operators</span>
-                  <span className="font-semibold text-foreground">{accessSummary.invitedOperators}</span>
+                  <span className="font-semibold text-foreground">
+                    {accessSummary.invitedOperators}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Cloud operators</span>
-                  <span className="font-semibold text-foreground">{accessSummary.cloudOperators}</span>
+                  <span className="font-semibold text-foreground">
+                    {accessSummary.cloudOperators}
+                  </span>
                 </div>
               </div>
             </MissionInsetSurface>
@@ -444,9 +445,19 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             description="The next autonomy slices build on this shell"
           >
             <MissionInsetSurface className="space-y-3 p-4 text-sm leading-6 text-muted-foreground">
-              <p>Runtime profiles, routines, budgets, approvals, and artifacts are now active slices of the control plane.</p>
-              <p>Memory inspection now makes digests, checkpoints, and packed context visible. The remaining hardening work is about richer operator membership flows, thread-level actions, and resume indicators across the rest of the mission shell.</p>
-              <p>Use the User Guide and Mission Control links to keep autonomy visible instead of burying governance behind one isolated tab.</p>
+              <p>
+                Runtime profiles, routines, budgets, approvals, and artifacts are now active slices
+                of the control plane.
+              </p>
+              <p>
+                Memory inspection now makes digests, checkpoints, and packed context visible. The
+                remaining hardening work is about richer operator membership flows, thread-level
+                actions, and resume indicators across the rest of the mission shell.
+              </p>
+              <p>
+                Use the User Guide and Mission Control links to keep autonomy visible instead of
+                burying governance behind one isolated tab.
+              </p>
             </MissionInsetSurface>
           </MissionRailCard>
         </div>

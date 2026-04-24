@@ -246,7 +246,9 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
       if (typeof payload.sourceKind === 'string') parts.push(payload.sourceKind);
       if (typeof payload.sourceRef === 'string' && payload.sourceRef.length > 0) {
         const truncated =
-          payload.sourceRef.length > 48 ? `${payload.sourceRef.slice(0, 45)}...` : payload.sourceRef;
+          payload.sourceRef.length > 48
+            ? `${payload.sourceRef.slice(0, 45)}...`
+            : payload.sourceRef;
         parts.push(truncated);
       }
       if (typeof payload.extensionId === 'string') parts.push(payload.extensionId.slice(0, 8));
@@ -268,7 +270,9 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
       if (typeof payload.resourceKind === 'string') parts.push(payload.resourceKind);
       if (typeof payload.resourceId === 'string') {
         const truncated =
-          payload.resourceId.length > 48 ? `${payload.resourceId.slice(0, 45)}...` : payload.resourceId;
+          payload.resourceId.length > 48
+            ? `${payload.resourceId.slice(0, 45)}...`
+            : payload.resourceId;
         parts.push(truncated);
       }
       break;
@@ -278,7 +282,9 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
       if (typeof payload.resourceKind === 'string') parts.push(payload.resourceKind);
       if (typeof payload.resourceId === 'string') {
         const truncated =
-          payload.resourceId.length > 48 ? `${payload.resourceId.slice(0, 45)}...` : payload.resourceId;
+          payload.resourceId.length > 48
+            ? `${payload.resourceId.slice(0, 45)}...`
+            : payload.resourceId;
         parts.push(truncated);
       }
       break;
@@ -294,7 +300,9 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
       if (typeof payload.decision === 'string') parts.push(payload.decision);
       if (typeof payload.subjectRefId === 'string') {
         const truncated =
-          payload.subjectRefId.length > 48 ? `${payload.subjectRefId.slice(0, 45)}...` : payload.subjectRefId;
+          payload.subjectRefId.length > 48
+            ? `${payload.subjectRefId.slice(0, 45)}...`
+            : payload.subjectRefId;
         parts.push(truncated);
       }
       break;

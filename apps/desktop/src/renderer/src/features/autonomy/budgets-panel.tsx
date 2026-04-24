@@ -11,7 +11,14 @@ import type {
 } from '@team-x/shared-types';
 import { AlertTriangle, BadgeDollarSign, Ban, Clock3, ShieldAlert, Trash2 } from 'lucide-react';
 
-import { useBudgetApprovals, useBudgetLedger, useBudgetOverview, useCreateBudgetPolicy, useDeleteBudgetPolicy, useUpdateBudgetPolicy } from '@/hooks/use-budgets.js';
+import {
+  useBudgetApprovals,
+  useBudgetLedger,
+  useBudgetOverview,
+  useCreateBudgetPolicy,
+  useDeleteBudgetPolicy,
+  useUpdateBudgetPolicy,
+} from '@/hooks/use-budgets.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useRoutines } from '@/hooks/use-routines.js';
 import { useRuntimeProfiles } from '@/hooks/use-runtime-profiles.js';
@@ -26,7 +33,8 @@ import {
 
 const FIELD_CLASSNAME =
   'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';
-const LABEL_CLASSNAME = 'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
+const LABEL_CLASSNAME =
+  'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
 
 interface BudgetPolicyDraft {
   scopeKind: BudgetScopeKind;
@@ -123,7 +131,8 @@ function PolicyCard({
             {policy.autoPause ? <MissionPill tone="warning">auto-pause</MissionPill> : null}
           </div>
           <p className="text-xs leading-5 text-muted-foreground">
-            Hard cap {formatUsd(policy.hardCapUsd)}. Current spend {formatUsd(policy.currentSpendUsd)}.
+            Hard cap {formatUsd(policy.hardCapUsd)}. Current spend{' '}
+            {formatUsd(policy.currentSpendUsd)}.
             {policy.approvalSpendUsd ? ` Approval gate ${formatUsd(policy.approvalSpendUsd)}.` : ''}
           </p>
         </div>
@@ -224,10 +233,10 @@ export function BudgetsPanel({
       scopeKind === 'company'
         ? company.id
         : scopeKind === 'employee'
-          ? employees[0]?.id ?? ''
+          ? (employees[0]?.id ?? '')
           : scopeKind === 'runtime-profile'
-            ? runtimeProfiles[0]?.id ?? ''
-            : routines[0]?.id ?? '';
+            ? (runtimeProfiles[0]?.id ?? '')
+            : (routines[0]?.id ?? '');
     setDraft((current) => ({
       ...current,
       scopeKind,
@@ -284,11 +293,15 @@ export function BudgetsPanel({
             <select
               className={FIELD_CLASSNAME}
               value={draft.scopeKind === 'company' ? company.id : draft.scopeRefId}
-              onChange={(event) => setDraft((current) => ({ ...current, scopeRefId: event.target.value }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, scopeRefId: event.target.value }))
+              }
               disabled={draft.scopeKind === 'company'}
             >
               {scopeOptions.length === 0 ? (
-                <option value="">{draft.scopeKind === 'company' ? company.name : 'No target available yet'}</option>
+                <option value="">
+                  {draft.scopeKind === 'company' ? company.name : 'No target available yet'}
+                </option>
               ) : (
                 scopeOptions.map((option) => (
                   <option key={option.id} value={option.id}>
@@ -303,7 +316,9 @@ export function BudgetsPanel({
             <input
               className={FIELD_CLASSNAME}
               value={draft.hardCapUsd}
-              onChange={(event) => setDraft((current) => ({ ...current, hardCapUsd: event.target.value }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, hardCapUsd: event.target.value }))
+              }
               placeholder="25"
             />
           </label>
@@ -335,7 +350,9 @@ export function BudgetsPanel({
             <input
               type="checkbox"
               checked={draft.autoPause}
-              onChange={(event) => setDraft((current) => ({ ...current, autoPause: event.target.checked }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, autoPause: event.target.checked }))
+              }
             />
             Pause company execution when this policy is exceeded
           </label>
@@ -448,12 +465,23 @@ export function BudgetsPanel({
               ) : (
                 <div className="space-y-2">
                   {ledger.map((entry) => (
-                    <MissionInsetSurface key={entry.id} className="p-3" data-budget-ledger={entry.id}>
+                    <MissionInsetSurface
+                      key={entry.id}
+                      className="p-3"
+                      data-budget-ledger={entry.id}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-semibold text-foreground">
-                              {buildScopeLabel(entry.scopeKind, entry.scopeRefId, company, employees, runtimeProfiles, routines)}
+                              {buildScopeLabel(
+                                entry.scopeKind,
+                                entry.scopeRefId,
+                                company,
+                                employees,
+                                runtimeProfiles,
+                                routines,
+                              )}
                             </span>
                             <MissionPill>{entry.scopeKind}</MissionPill>
                             <MissionPill>{entry.runKind}</MissionPill>
@@ -462,7 +490,9 @@ export function BudgetsPanel({
                             {entry.provider} / {entry.model} • {formatTimestamp(entry.occurredAt)}
                           </p>
                         </div>
-                        <div className="text-sm font-semibold text-foreground">{formatUsd(entry.amountUsd)}</div>
+                        <div className="text-sm font-semibold text-foreground">
+                          {formatUsd(entry.amountUsd)}
+                        </div>
                       </div>
                     </MissionInsetSurface>
                   ))}
@@ -473,7 +503,9 @@ export function BudgetsPanel({
             <div className="space-y-4">
               <MissionInsetSurface className="space-y-3 p-4">
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Pending Budget Approvals</h3>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Pending Budget Approvals
+                  </h3>
                   <p className="text-xs leading-5 text-muted-foreground">
                     These approval items are raised automatically when spend crosses an approval
                     gate and future autonomy should stop until an operator reviews it. The same
@@ -489,11 +521,17 @@ export function BudgetsPanel({
                 ) : (
                   <div className="space-y-2">
                     {approvals.map((approval) => (
-                      <MissionInsetSurface key={approval.id} className="p-3" data-budget-approval={approval.id}>
+                      <MissionInsetSurface
+                        key={approval.id}
+                        className="p-3"
+                        data-budget-approval={approval.id}
+                      >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-semibold text-foreground">{approval.summary}</span>
+                              <span className="text-sm font-semibold text-foreground">
+                                {approval.summary}
+                              </span>
                               <MissionPill tone="warning">{approval.priority}</MissionPill>
                             </div>
                             <p className="text-xs leading-5 text-muted-foreground">
@@ -518,9 +556,14 @@ export function BudgetsPanel({
                 </div>
                 {overview?.providerMix.length ? (
                   overview.providerMix.map((row) => (
-                    <div key={row.provider} className="flex items-center justify-between gap-3 text-sm">
+                    <div
+                      key={row.provider}
+                      className="flex items-center justify-between gap-3 text-sm"
+                    >
                       <span className="text-muted-foreground">{row.provider}</span>
-                      <span className="font-semibold text-foreground">{formatUsd(row.amountUsd)}</span>
+                      <span className="font-semibold text-foreground">
+                        {formatUsd(row.amountUsd)}
+                      </span>
                     </div>
                   ))
                 ) : (

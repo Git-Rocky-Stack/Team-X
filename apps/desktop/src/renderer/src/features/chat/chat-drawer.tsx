@@ -25,13 +25,13 @@ import type { Employee } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet.js';
+import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';
 import {
   MissionIconButton,
   MissionInsetSurface,
   MissionPill,
   MissionSheetHeader,
 } from '@/features/mission/mission-shell.js';
-import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';
 import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
 import { useChatMessages, useSendMessage, useStopChat, useThreadList } from '@/hooks/use-chat.js';
 import { ipc } from '@/lib/ipc.js';

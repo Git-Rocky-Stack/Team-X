@@ -18,7 +18,10 @@ export interface AuthorityResolverEmployeesRepo {
 }
 
 export interface AuthorityResolverAuthorityRepo {
-  listForEmployee(companyId: string, employeeId: string): Array<{
+  listForEmployee(
+    companyId: string,
+    employeeId: string,
+  ): Array<{
     id: string;
     scopeKind: AuthorityGrant['scopeKind'];
     scopeId: string;
@@ -40,11 +43,7 @@ export interface AuthorityResolverServiceDeps {
 
 export interface AuthorityResolverService {
   resolveEmployee(companyId: string, employeeId: string): EffectiveAuthoritySnapshot;
-  evaluatePath(
-    companyId: string,
-    employeeId: string,
-    candidatePath: string,
-  ): PathAuthorityDecision;
+  evaluatePath(companyId: string, employeeId: string, candidatePath: string): PathAuthorityDecision;
 }
 
 type ResolverSourceKind = EffectiveAuthorityEntry['sourceKind'];
@@ -122,7 +121,10 @@ function normalizeAuthorityPath(value: string): string {
     throw new Error('[authority] path is required');
   }
 
-  const normalized = pathWin32.normalize(trimmed.replace(/\//g, '\\')).replace(/\\/g, '/').toLowerCase();
+  const normalized = pathWin32
+    .normalize(trimmed.replace(/\//g, '\\'))
+    .replace(/\\/g, '/')
+    .toLowerCase();
   if (/^[a-z]:$/.test(normalized)) {
     return `${normalized}/`;
   }
@@ -263,10 +265,12 @@ export function createAuthorityResolverService(
     const normalizedPath = normalizeAuthorityPath(candidatePath);
     const matches = snapshot.entries
       .filter((entry) => entry.resourceKind === 'path')
-      .map((entry): MatchedPathEntry => ({
-        entry,
-        normalizedGrantPath: normalizeAuthorityPath(entry.resourceId),
-      }))
+      .map(
+        (entry): MatchedPathEntry => ({
+          entry,
+          normalizedGrantPath: normalizeAuthorityPath(entry.resourceId),
+        }),
+      )
       .filter((entry) => pathGrantMatches(entry.normalizedGrantPath, normalizedPath))
       .sort(compareMatchedPathEntries);
 

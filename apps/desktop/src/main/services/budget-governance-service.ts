@@ -30,9 +30,9 @@ import type {
   BudgetsRepo,
 } from '../db/repos/budgets.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
+import type { RoutineRunRow } from '../db/repos/routines.js';
 import type { RunRow } from '../db/repos/runs.js';
 import type { TicketRow } from '../db/repos/tickets.js';
-import type { RoutineRunRow } from '../db/repos/routines.js';
 
 export interface CreateBudgetPolicyInput {
   companyId: string;
@@ -154,7 +154,10 @@ function parseUsd(value: string | null | undefined, label: string): number {
   return parsed;
 }
 
-function normalizeUsdInput(value: string | null | undefined, label: string): string | null | undefined {
+function normalizeUsdInput(
+  value: string | null | undefined,
+  label: string,
+): string | null | undefined {
   if (value === null) return null;
   if (value === undefined) return undefined;
   return formatUsd(parseUsd(value, label));
@@ -251,10 +254,7 @@ function rowToApprovalDecision(row: ApprovalDecisionRow): ApprovalDecision {
   };
 }
 
-function summarizePolicy(
-  policy: BudgetPolicy,
-  currentSpendUsd: string,
-): BudgetPolicySummary {
+function summarizePolicy(policy: BudgetPolicy, currentSpendUsd: string): BudgetPolicySummary {
   const spend = Number(currentSpendUsd);
   const hardCap = Number(policy.hardCapUsd);
   const warningSpend = hardCap * (policy.warningThresholdPct / 100);
@@ -344,7 +344,9 @@ export function createBudgetGovernanceService(
   function getOverview(companyId: string): BudgetOverview {
     const referenceMs = now();
     const window = currentMonthlyWindow(referenceMs);
-    const policySummaries = listPolicies(companyId).map((policy) => getSummary(policy, referenceMs));
+    const policySummaries = listPolicies(companyId).map((policy) =>
+      getSummary(policy, referenceMs),
+    );
     const approvals = budgetsRepo.listApprovalItems(companyId, 'budget-exception', 'pending');
 
     return {
@@ -392,7 +394,10 @@ export function createBudgetGovernanceService(
     return latest ? hydrateApprovalItem(latest) : null;
   }
 
-  function createBudgetApproval(policy: BudgetPolicySummary, requestedByEmployeeId?: string | null): ApprovalItem {
+  function createBudgetApproval(
+    policy: BudgetPolicySummary,
+    requestedByEmployeeId?: string | null,
+  ): ApprovalItem {
     const existing = budgetsRepo.findPendingApprovalItem(
       policy.companyId,
       'budget-exception',
@@ -423,23 +428,26 @@ export function createBudgetGovernanceService(
       payloadJson: JSON.stringify(payload),
     });
 
-    const item = budgetsRepo.listApprovalItems(policy.companyId, 'budget-exception', 'pending')
+    const item = budgetsRepo
+      .listApprovalItems(policy.companyId, 'budget-exception', 'pending')
       .find((row) => row.id === itemId);
-    const approval = item ? rowToApprovalItem(item) : {
-      id: itemId,
-      companyId: policy.companyId,
-      kind: 'budget-exception' as const,
-      status: 'pending' as const,
-      priority: approvalPriority,
-      requestedByOperatorId: null,
-      requestedByEmployeeId: requestedByEmployeeId ?? null,
-      subjectRefKind: 'budget-policy' as const,
-      subjectRefId: policy.id,
-      summary: `Budget approval required for ${policy.scopeKind} scope ${policy.scopeRefId}.`,
-      payload,
-      createdAt: now(),
-      resolvedAt: null,
-    };
+    const approval = item
+      ? rowToApprovalItem(item)
+      : {
+          id: itemId,
+          companyId: policy.companyId,
+          kind: 'budget-exception' as const,
+          status: 'pending' as const,
+          priority: approvalPriority,
+          requestedByOperatorId: null,
+          requestedByEmployeeId: requestedByEmployeeId ?? null,
+          subjectRefKind: 'budget-policy' as const,
+          subjectRefId: policy.id,
+          summary: `Budget approval required for ${policy.scopeKind} scope ${policy.scopeRefId}.`,
+          payload,
+          createdAt: now(),
+          resolvedAt: null,
+        };
 
     emit<BudgetApprovalRequestedPayload>(
       'budget.approvalRequested',
@@ -463,14 +471,20 @@ export function createBudgetGovernanceService(
     if (!orchestrator || !policy.autoPause) return;
     try {
       await orchestrator.pauseCompany(policy.companyId);
-      emit<BudgetCompanyPausedPayload>('budget.companyPaused', policy.companyId, policy.id, 'system', {
-        budgetPolicyId: policy.id,
-        scopeKind: policy.scopeKind,
-        scopeRefId: policy.scopeRefId,
-        currentSpendUsd: Number(policy.currentSpendUsd),
-        hardCapUsd: Number(policy.hardCapUsd),
-        reason,
-      });
+      emit<BudgetCompanyPausedPayload>(
+        'budget.companyPaused',
+        policy.companyId,
+        policy.id,
+        'system',
+        {
+          budgetPolicyId: policy.id,
+          scopeKind: policy.scopeKind,
+          scopeRefId: policy.scopeRefId,
+          currentSpendUsd: Number(policy.currentSpendUsd),
+          hardCapUsd: Number(policy.hardCapUsd),
+          reason,
+        },
+      );
     } catch (err) {
       logger.warn('[budgets] pauseCompany failed', err);
     }
@@ -505,7 +519,9 @@ export function createBudgetGovernanceService(
     return policies;
   }
 
-  async function assertExecutionAllowed(input: BudgetAdmissionInput): Promise<BudgetAdmissionResult> {
+  async function assertExecutionAllowed(
+    input: BudgetAdmissionInput,
+  ): Promise<BudgetAdmissionResult> {
     const referenceMs = now();
     const policies = collectScopePolicies(input.companyId, input.employeeId, input.routineId)
       .filter((policy) => policy.enabled)
@@ -518,7 +534,9 @@ export function createBudgetGovernanceService(
         allowed: false,
         policy: exceeded,
         reason: `Budget cap reached for ${exceeded.scopeKind} scope ${exceeded.scopeRefId}.`,
-        approvalItem: exceeded.approvalSpendUsd ? createBudgetApproval(exceeded, input.employeeId) : null,
+        approvalItem: exceeded.approvalSpendUsd
+          ? createBudgetApproval(exceeded, input.employeeId)
+          : null,
       };
     }
 
@@ -612,9 +630,12 @@ export function createBudgetGovernanceService(
     const employee = employeesRepo.getById(run.employeeId);
     if (!employee) return;
 
-    const runtimeProfileId = runtimeProfilesService.getProfileForEmployee(run.employeeId)?.id ?? null;
+    const runtimeProfileId =
+      runtimeProfilesService.getProfileForEmployee(run.employeeId)?.id ?? null;
     const ticket = run.threadId ? ticketsRepo.getByThreadId(run.threadId) : null;
-    const routineId = ticket ? routinesRepo.getLatestRunByTicketId(ticket.id)?.routineId ?? null : null;
+    const routineId = ticket
+      ? (routinesRepo.getLatestRunByTicketId(ticket.id)?.routineId ?? null)
+      : null;
     const companyId = employee.companyId;
 
     const scopes: Array<{ scopeKind: BudgetScopeKind; scopeRefId: string }> = [
@@ -656,10 +677,7 @@ export function createBudgetGovernanceService(
     listPolicies,
 
     createPolicy(input: CreateBudgetPolicyInput): string {
-      const scopeRefId =
-        input.scopeKind === 'company'
-          ? input.companyId
-          : input.scopeRefId.trim();
+      const scopeRefId = input.scopeKind === 'company' ? input.companyId : input.scopeRefId.trim();
       if (scopeRefId.length === 0) {
         throw new Error('[budgets] scopeRefId is required');
       }
@@ -679,15 +697,23 @@ export function createBudgetGovernanceService(
       });
       const policy = budgetsRepo.getPolicyById(policyId);
       if (policy) {
-        emit<BudgetPolicyCreatedPayload>('budget.policyCreated', policy.companyId, operatorId, 'user', {
-          budgetPolicyId: policy.id,
-          scopeKind: policy.scopeKind,
-          scopeRefId: policy.scopeRefId,
-          hardCapUsd: Number(policy.hardCapUsd),
-          warningThresholdPct: policy.warningThresholdPct,
-          requireApprovalAboveUsd: policy.requireApprovalAboveUsd ? Number(policy.requireApprovalAboveUsd) : null,
-          autoPause: policy.autoPause,
-        });
+        emit<BudgetPolicyCreatedPayload>(
+          'budget.policyCreated',
+          policy.companyId,
+          operatorId,
+          'user',
+          {
+            budgetPolicyId: policy.id,
+            scopeKind: policy.scopeKind,
+            scopeRefId: policy.scopeRefId,
+            hardCapUsd: Number(policy.hardCapUsd),
+            warningThresholdPct: policy.warningThresholdPct,
+            requireApprovalAboveUsd: policy.requireApprovalAboveUsd
+              ? Number(policy.requireApprovalAboveUsd)
+              : null,
+            autoPause: policy.autoPause,
+          },
+        );
       }
       return policyId;
     },
@@ -699,7 +725,9 @@ export function createBudgetGovernanceService(
       }
       budgetsRepo.updatePolicy(input.policyId, {
         hardCapUsd:
-          input.hardCapUsd === undefined ? undefined : formatUsd(parseUsd(input.hardCapUsd, 'hardCapUsd')),
+          input.hardCapUsd === undefined
+            ? undefined
+            : formatUsd(parseUsd(input.hardCapUsd, 'hardCapUsd')),
         warningThresholdPct: normalizeThreshold(input.warningThresholdPct),
         autoPause: input.autoPause,
         requireApprovalAboveUsd:
@@ -710,15 +738,23 @@ export function createBudgetGovernanceService(
       });
       const after = budgetsRepo.getPolicyById(input.policyId);
       if (after) {
-        emit<BudgetPolicyUpdatedPayload>('budget.policyUpdated', after.companyId, operatorId, 'user', {
-          budgetPolicyId: after.id,
-          scopeKind: after.scopeKind,
-          scopeRefId: after.scopeRefId,
-          hardCapUsd: Number(after.hardCapUsd),
-          warningThresholdPct: after.warningThresholdPct,
-          requireApprovalAboveUsd: after.requireApprovalAboveUsd ? Number(after.requireApprovalAboveUsd) : null,
-          autoPause: after.autoPause,
-        });
+        emit<BudgetPolicyUpdatedPayload>(
+          'budget.policyUpdated',
+          after.companyId,
+          operatorId,
+          'user',
+          {
+            budgetPolicyId: after.id,
+            scopeKind: after.scopeKind,
+            scopeRefId: after.scopeRefId,
+            hardCapUsd: Number(after.hardCapUsd),
+            warningThresholdPct: after.warningThresholdPct,
+            requireApprovalAboveUsd: after.requireApprovalAboveUsd
+              ? Number(after.requireApprovalAboveUsd)
+              : null,
+            autoPause: after.autoPause,
+          },
+        );
       }
     },
 
@@ -728,11 +764,17 @@ export function createBudgetGovernanceService(
         throw new Error(`[budgets] policy not found: ${policyId}`);
       }
       budgetsRepo.deletePolicy(policyId);
-      emit<BudgetPolicyDeletedPayload>('budget.policyDeleted', policy.companyId, operatorId, 'user', {
-        budgetPolicyId: policy.id,
-        scopeKind: policy.scopeKind,
-        scopeRefId: policy.scopeRefId,
-      });
+      emit<BudgetPolicyDeletedPayload>(
+        'budget.policyDeleted',
+        policy.companyId,
+        operatorId,
+        'user',
+        {
+          budgetPolicyId: policy.id,
+          scopeKind: policy.scopeKind,
+          scopeRefId: policy.scopeRefId,
+        },
+      );
     },
 
     listLedgerEntries(input: ListBudgetLedgerEntriesInput): BudgetLedgerEntry[] {

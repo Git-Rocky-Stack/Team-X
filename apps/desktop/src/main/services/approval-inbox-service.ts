@@ -6,15 +6,8 @@ import type {
   ApprovalItemStatus,
 } from '@team-x/shared-types';
 
-import type {
-  AuthorityRepo,
-  AuthorityRequestRow,
-} from '../db/repos/extensions.js';
-import type {
-  ApprovalDecisionRow,
-  ApprovalItemRow,
-  BudgetsRepo,
-} from '../db/repos/budgets.js';
+import type { ApprovalDecisionRow, ApprovalItemRow, BudgetsRepo } from '../db/repos/budgets.js';
+import type { AuthorityRepo, AuthorityRequestRow } from '../db/repos/extensions.js';
 
 export interface ListApprovalInboxItemsInput {
   companyId: string;
@@ -81,10 +74,7 @@ function toApprovalDecision(row: ApprovalDecisionRow): ApprovalDecision {
   };
 }
 
-function withLatestDecision(
-  item: ApprovalItem,
-  budgetsRepo: BudgetsRepo,
-): ApprovalItem {
+function withLatestDecision(item: ApprovalItem, budgetsRepo: BudgetsRepo): ApprovalItem {
   const latest = budgetsRepo.getLatestApprovalDecision(item.companyId, item.kind, item.id);
   return {
     ...item,
@@ -92,10 +82,7 @@ function withLatestDecision(
   };
 }
 
-function budgetRowToApprovalItem(
-  row: ApprovalItemRow,
-  budgetsRepo: BudgetsRepo,
-): ApprovalItem {
+function budgetRowToApprovalItem(row: ApprovalItemRow, budgetsRepo: BudgetsRepo): ApprovalItem {
   return withLatestDecision(
     {
       id: row.id,
@@ -143,7 +130,9 @@ export function createApprovalInboxService({
           ...authorityRepo
             .listRequestsByCompany(
               input.companyId,
-              input.status === undefined ? undefined : (input.status as 'pending' | 'approved' | 'denied'),
+              input.status === undefined
+                ? undefined
+                : (input.status as 'pending' | 'approved' | 'denied'),
             )
             .map((row) =>
               withLatestDecision(
@@ -185,7 +174,9 @@ export function createApprovalInboxService({
         throw new Error(`[approvals] budget approval item not found: ${input.itemId}`);
       }
       if (existing.status !== 'pending') {
-        throw new Error(`[approvals] budget approval item ${input.itemId} is already ${existing.status}`);
+        throw new Error(
+          `[approvals] budget approval item ${input.itemId} is already ${existing.status}`,
+        );
       }
 
       budgetsRepo.resolveApprovalItem({
@@ -248,7 +239,9 @@ export function createApprovalInboxService({
         );
       }
       if (request.status !== 'pending') {
-        throw new Error(`[approvals] authority request ${input.itemId} is already ${request.status}`);
+        throw new Error(
+          `[approvals] authority request ${input.itemId} is already ${request.status}`,
+        );
       }
 
       let grantId: string | null = null;

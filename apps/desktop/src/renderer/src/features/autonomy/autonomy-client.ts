@@ -13,7 +13,8 @@ export const autonomyClient = {
     list: (...args: Parameters<typeof ipc.operators.list>) => ipc.operators.list(...args),
   },
   runtimeProfiles: {
-    list: (...args: Parameters<typeof ipc.runtimeProfiles.list>) => ipc.runtimeProfiles.list(...args),
+    list: (...args: Parameters<typeof ipc.runtimeProfiles.list>) =>
+      ipc.runtimeProfiles.list(...args),
     create: (...args: Parameters<typeof ipc.runtimeProfiles.create>) =>
       ipc.runtimeProfiles.create(...args),
     update: (...args: Parameters<typeof ipc.runtimeProfiles.update>) =>

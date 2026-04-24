@@ -50,7 +50,9 @@ const memoryFormattersSrc = readFileSync(MEMORY_FORMATTERS_PATH, 'utf8');
 describe('Autonomy shell wiring', () => {
   it('adds autonomy as a top-level app destination', () => {
     expect(storeSrc).toContain("| 'autonomy'");
-    expect(appSrc).toContain("import { AutonomyView } from './features/autonomy/autonomy-view.js';");
+    expect(appSrc).toContain(
+      "import { AutonomyView } from './features/autonomy/autonomy-view.js';",
+    );
     expect(appSrc).toContain("case 'autonomy':");
     expect(appSrc).toContain('<AutonomyView company={activeCompany} companyId={companyId} />');
   });
@@ -58,7 +60,9 @@ describe('Autonomy shell wiring', () => {
   it('exposes the new autonomy entry in the navigation shell', () => {
     expect(sidenavSrc).toContain('data-autonomy-nav=""');
     expect(sidenavSrc).toContain("setActiveView('autonomy')");
-    expect(sidenavSrc).toContain('Runtimes, routines, budgets, approvals, artifacts, and operator access.');
+    expect(sidenavSrc).toContain(
+      'Runtimes, routines, budgets, approvals, artifacts, and operator access.',
+    );
     expect(topBarSrc).toContain("{ label: 'Autonomy', icon: Workflow, view: 'autonomy' },");
   });
 
@@ -70,14 +74,20 @@ describe('Autonomy shell wiring', () => {
     expect(storeSrc).toContain('setAutonomySubview: (subview: AutonomySubview) => void;');
     expect(storeSrc).toContain('setAutonomyMemoryThreadId: (threadId: string | null) => void;');
     expect(storeSrc).toContain('openAutonomyMemory: (threadId: string | null) => void;');
-    expect(viewSrc).toContain('const activeSubview = useAppStore((state) => state.autonomySubview);');
-    expect(viewSrc).toContain('const setActiveSubview = useAppStore((state) => state.setAutonomySubview);');
+    expect(viewSrc).toContain(
+      'const activeSubview = useAppStore((state) => state.autonomySubview);',
+    );
+    expect(viewSrc).toContain(
+      'const setActiveSubview = useAppStore((state) => state.setAutonomySubview);',
+    );
     expect(viewSrc).toContain('AUTONOMY_SUBVIEWS');
     expect(viewSrc).toContain('data-autonomy-view=""');
     expect(viewSrc).toContain('data-autonomy-subview={subview.value}');
     expect(viewSrc).toContain('Operator Control Plane');
     expect(viewSrc).toContain('zero-login by default');
-    expect(viewSrc).toContain("import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';");
+    expect(viewSrc).toContain(
+      "import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';",
+    );
     expect(viewSrc).toContain('<RuntimeProfilesPanel companyId={companyId} />');
     expect(viewSrc).toContain("import { RoutinesPanel } from './routines-panel.js';");
     expect(viewSrc).toContain('<RoutinesPanel companyId={companyId} />');
@@ -93,7 +103,9 @@ describe('Autonomy shell wiring', () => {
 
   it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {
     expect(clientSrc).toContain('export const autonomyClient = {');
-    expect(runtimeHookSrc).toContain("import { autonomyClient } from '@/features/autonomy/autonomy-client.js';");
+    expect(runtimeHookSrc).toContain(
+      "import { autonomyClient } from '@/features/autonomy/autonomy-client.js';",
+    );
     expect(runtimeHookSrc).toContain("queryKey: ['runtime-profiles', companyId]");
     expect(runtimeHookSrc).toContain('autonomyClient.runtimeProfiles.list(companyId!)');
     expect(runtimeHookSrc).toContain('autonomyClient.runtimeProfiles.create');
@@ -113,9 +125,13 @@ describe('Autonomy shell wiring', () => {
   });
 
   it('adds routine hooks and a routine panel with cadence and run history', () => {
-    expect(routinesHookSrc).toContain("import { autonomyClient } from '@/features/autonomy/autonomy-client.js';");
+    expect(routinesHookSrc).toContain(
+      "import { autonomyClient } from '@/features/autonomy/autonomy-client.js';",
+    );
     expect(routinesHookSrc).toContain("queryKey: ['routines', companyId]");
-    expect(routinesHookSrc).toContain("queryKey: ['routine-runs', companyId, routineId ?? null, limit]");
+    expect(routinesHookSrc).toContain(
+      "queryKey: ['routine-runs', companyId, routineId ?? null, limit]",
+    );
     expect(routinesHookSrc).toContain('autonomyClient.routines.list(companyId!)');
     expect(routinesHookSrc).toContain('autonomyClient.routines.create');
     expect(routinesHookSrc).toContain('autonomyClient.routines.update');
@@ -130,10 +146,14 @@ describe('Autonomy shell wiring', () => {
   });
 
   it('adds budget hooks and a budget panel with policy, ledger, and approval surfaces', () => {
-    expect(budgetsHookSrc).toContain("import { autonomyClient } from '@/features/autonomy/autonomy-client.js';");
+    expect(budgetsHookSrc).toContain(
+      "import { autonomyClient } from '@/features/autonomy/autonomy-client.js';",
+    );
     expect(budgetsHookSrc).toContain("queryKey: ['budgets', 'overview', companyId]");
     expect(budgetsHookSrc).toContain("queryKey: ['budgets', 'policies', companyId]");
-    expect(budgetsHookSrc).toContain("queryKey: ['budgets', 'ledger', companyId, scopeKind ?? null, scopeRefId ?? null, limit]");
+    expect(budgetsHookSrc).toContain(
+      "queryKey: ['budgets', 'ledger', companyId, scopeKind ?? null, scopeRefId ?? null, limit]",
+    );
     expect(budgetsHookSrc).toContain('autonomyClient.budgets.getOverview(companyId!)');
     expect(budgetsHookSrc).toContain('autonomyClient.budgets.listPolicies(companyId!)');
     expect(budgetsHookSrc).toContain('autonomyClient.budgets.createPolicy');
@@ -150,8 +170,12 @@ describe('Autonomy shell wiring', () => {
   });
 
   it('adds approval hooks and a unified approvals panel with decision controls', () => {
-    expect(approvalsHookSrc).toContain("import { autonomyClient } from '@/features/autonomy/autonomy-client.js';");
-    expect(approvalsHookSrc).toContain("queryKey: ['approvals', companyId, kind ?? null, status ?? null]");
+    expect(approvalsHookSrc).toContain(
+      "import { autonomyClient } from '@/features/autonomy/autonomy-client.js';",
+    );
+    expect(approvalsHookSrc).toContain(
+      "queryKey: ['approvals', companyId, kind ?? null, status ?? null]",
+    );
     expect(approvalsHookSrc).toContain('autonomyClient.approvals.list');
     expect(approvalsHookSrc).toContain('autonomyClient.approvals.review');
     expect(approvalsPanelSrc).toContain('Unified Approval Queue');
@@ -163,7 +187,9 @@ describe('Autonomy shell wiring', () => {
   });
 
   it('adds artifact hooks and a real artifacts panel with preview and jump actions', () => {
-    expect(artifactsHookSrc).toContain("import { autonomyClient } from '@/features/autonomy/autonomy-client.js';");
+    expect(artifactsHookSrc).toContain(
+      "import { autonomyClient } from '@/features/autonomy/autonomy-client.js';",
+    );
     expect(artifactsHookSrc).toContain("queryKey: ['artifacts', companyId, limit]");
     expect(artifactsHookSrc).toContain('autonomyClient.artifacts.list');
     expect(artifactsHookSrc).toContain("event.type !== 'routine.runCompleted'");
@@ -184,8 +210,12 @@ describe('Autonomy shell wiring', () => {
     expect(clientSrc).toContain('ipc.memory.listRunCheckpoints');
     expect(clientSrc).toContain('ipc.memory.packThreadContext');
     expect(memoryHookSrc).toContain("queryKey: ['memory', 'digest', companyId, threadId]");
-    expect(memoryHookSrc).toContain("queryKey: ['memory', 'checkpoints', companyId, threadId, limit]");
-    expect(memoryHookSrc).toContain("queryKey: ['memory', 'packed-context', companyId, threadId, targetTokenBudget ?? null, recentTurnLimit ?? null]");
+    expect(memoryHookSrc).toContain(
+      "queryKey: ['memory', 'checkpoints', companyId, threadId, limit]",
+    );
+    expect(memoryHookSrc).toContain(
+      "queryKey: ['memory', 'packed-context', companyId, threadId, targetTokenBudget ?? null, recentTurnLimit ?? null]",
+    );
     expect(memoryHookSrc).toContain('autonomyClient.memory.getThreadDigest');
     expect(memoryHookSrc).toContain('autonomyClient.memory.listRunCheckpoints');
     expect(memoryHookSrc).toContain('autonomyClient.memory.packThreadContext');

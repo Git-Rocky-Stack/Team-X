@@ -57,7 +57,13 @@ import {
 import type { LoopCompleteFn, LoopMessage, LoopProviderCompletion } from '@team-x/intelligence';
 import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
 import { streamAgent } from '@team-x/provider-router';
-import type { EmbeddingSourceType, Employee, Meeting, RuntimeStrategy, Ticket } from '@team-x/shared-types';
+import type {
+  EmbeddingSourceType,
+  Employee,
+  Meeting,
+  RuntimeStrategy,
+  Ticket,
+} from '@team-x/shared-types';
 import {
   CONCURRENCY_SETTINGS_CLAMPS,
   DEFAULT_CONCURRENCY_CAPS,
@@ -68,23 +74,21 @@ import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath, userDataDir } from './db/paths.js';
-import { createAuditRepo } from './db/repos/audit.js';
 import { createArtifactsRepo } from './db/repos/artifacts.js';
+import { createAuditRepo } from './db/repos/audit.js';
+import { createBudgetsRepo } from './db/repos/budgets.js';
 import { createCommandHistoryRepo } from './db/repos/command-history.js';
 import { createCompaniesRepo } from './db/repos/companies.js';
 import { createCopilotInsightsRepo } from './db/repos/copilot-insights.js';
 import { createEmbeddingsRepo } from './db/repos/embeddings.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
+import { createEventsRepo } from './db/repos/events.js';
 import {
   createAuthorityRepo,
   createExtensionsRepo,
   createSkillAssignmentsRepo,
 } from './db/repos/extensions.js';
-import { createEventsRepo } from './db/repos/events.js';
 import { createGoalsRepo } from './db/repos/goals.js';
-import {
-  createBudgetsRepo,
-} from './db/repos/budgets.js';
 import {
   createMcpServersRepo,
   createToolCallsRepo,
@@ -92,13 +96,13 @@ import {
 } from './db/repos/mcp-servers.js';
 import { createMeetingsRepo } from './db/repos/meetings.js';
 import { createMessagesRepo } from './db/repos/messages.js';
-import { createOrgEdgesRepo } from './db/repos/orgchart.js';
 import { createOperatorsRepo } from './db/repos/operators.js';
+import { createOrgEdgesRepo } from './db/repos/orgchart.js';
 import { createProjectsRepo } from './db/repos/projects.js';
-import { createRunCheckpointsRepo } from './db/repos/run-checkpoints.js';
-import { createRuntimeProfilesRepo } from './db/repos/runtime-profiles.js';
 import { createRoutinesRepo } from './db/repos/routines.js';
+import { createRunCheckpointsRepo } from './db/repos/run-checkpoints.js';
 import { createRunsRepo } from './db/repos/runs.js';
+import { createRuntimeProfilesRepo } from './db/repos/runtime-profiles.js';
 import { createSettingsRepo } from './db/repos/settings.js';
 import { createThreadDigestsRepo } from './db/repos/thread-digests.js';
 import { createThreadsRepo } from './db/repos/threads.js';
@@ -125,11 +129,6 @@ import {
   type AgenticLoopService,
   createAgenticLoopService,
 } from './services/agentic-loop-service.js';
-import { createArtifactService } from './services/artifact-service.js';
-import { createAuthorityResolverService } from './services/authority-resolver-service.js';
-import { createContextAssemblerService } from './services/context-assembler-service.js';
-import { createContextPackerService } from './services/context-packer-service.js';
-import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { buildCopilotToolRegistry } from './services/agentic-tools-copilot.js';
 import {
   type WriteSideCompleteFn,
@@ -138,11 +137,16 @@ import {
   buildWriteSideTools,
 } from './services/agentic-tools-write.js';
 import { createAgenticTools } from './services/agentic-tools.js';
-import { createBackupService } from './services/backup.js';
 import { createApprovalInboxService } from './services/approval-inbox-service.js';
+import { createArtifactService } from './services/artifact-service.js';
+import { createAuthorityResolverService } from './services/authority-resolver-service.js';
+import { createBackupService } from './services/backup.js';
 import { createBudgetGovernanceService } from './services/budget-governance-service.js';
+import { buildChatActionTools } from './services/chat-action-tools.js';
 import { type CommandService, createCommandService } from './services/command-service.js';
 import { createCompanyPortabilityService } from './services/company-portability-service.js';
+import { createContextAssemblerService } from './services/context-assembler-service.js';
+import { createContextPackerService } from './services/context-packer-service.js';
 import {
   type CopilotAnalyzerCompleteFn,
   type CopilotAnalyzerService,
@@ -156,18 +160,11 @@ import { createCopilotEventWindow } from './services/copilot-event-window.js';
 import type { CopilotEventWindow } from './services/copilot-event-window.js';
 import { createCopilotService } from './services/copilot-service.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
+import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
+import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
-import { detectHardware } from './services/profiler.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
-import { createRunCheckpointService } from './services/run-checkpoint-service.js';
-import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
-import { createRuntimeProfileProviderService } from './services/runtime-profile-provider-service.js';
-import {
-  type RoutineService,
-  type RoutineServiceCreateTicketInput,
-  createRoutineService,
-} from './services/routine-service.js';
-import { createThreadDigestService } from './services/thread-digest-service.js';
+import { detectHardware } from './services/profiler.js';
 import {
   buildEmbedAdapter,
   createProviderFactory,
@@ -175,22 +172,29 @@ import {
   isTestMode,
   makeFakeEmbedAdapter,
 } from './services/provider-factory.js';
-import { rebuildCompanyRagSources } from './services/rag-rebuild.js';
-import { createRetrievalOrchestrator } from './services/retrieval-orchestrator.js';
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRagIndexer } from './services/rag-indexer.js';
+import { rebuildCompanyRagSources } from './services/rag-rebuild.js';
+import { createRetrievalOrchestrator } from './services/retrieval-orchestrator.js';
 import { createRoleLoader } from './services/role-loader.js';
-import { createSkillsService } from './services/skills-service.js';
+import {
+  type RoutineService,
+  type RoutineServiceCreateTicketInput,
+  createRoutineService,
+} from './services/routine-service.js';
+import { createRunCheckpointService } from './services/run-checkpoint-service.js';
+import { createRuntimeProfileProviderService } from './services/runtime-profile-provider-service.js';
+import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
 import { pickStrategy } from './services/runtime-strategy.js';
-import { buildChatActionTools } from './services/chat-action-tools.js';
-import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
 import { SecretsStore } from './services/secrets.js';
+import { createSkillsService } from './services/skills-service.js';
 import { ensureSystemAgent, ensureSystemCopilot } from './services/system-agent-bootstrap.js';
 import { appendExecutionPolicy } from './services/system-prompt.js';
 import { createTestAgenticCompleteFn } from './services/test-agentic-provider.js';
 import { createTestToolsForEmployee } from './services/test-agentic-tools.js';
 import { createTestClassifier } from './services/test-classifier.js';
 import { createTestCopilotComplete } from './services/test-copilot-provider.js';
+import { createThreadDigestService } from './services/thread-digest-service.js';
 import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
 
@@ -451,7 +455,9 @@ app
       skillsRoot: join(app.getPath('userData'), 'extensions', 'skills'),
     });
     operatorAccessService.ensureLocalOwner();
-    operatorAccessService.ensureLocalOwnerForCompanies(companiesRepo.list().map((company) => company.id));
+    operatorAccessService.ensureLocalOwnerForCompanies(
+      companiesRepo.list().map((company) => company.id),
+    );
 
     const bus = createEventBus({ repo: eventsRepo });
 
@@ -513,8 +519,9 @@ app
       authorityRepo,
       artifactService,
     });
-    let routineTicketCreator: ((input: RoutineServiceCreateTicketInput) => Promise<{ ticketId: string }>) | null =
-      null;
+    let routineTicketCreator:
+      | ((input: RoutineServiceCreateTicketInput) => Promise<{ ticketId: string }>)
+      | null = null;
     routineServiceInstance = createRoutineService({
       routinesRepo,
       companiesRepo,
@@ -537,12 +544,27 @@ app
       projectsRepo,
       ticketsRepo,
       runtimeProfilesService,
+      runtimeProfilesRepo,
       routineService: routineServiceInstance,
+      routinesRepo,
       budgetGovernanceService: budgetGovernanceServiceInstance,
+      budgetsRepo,
       extensionsRegistry,
+      extensionsRepo,
       skillsService,
+      skillAssignmentsRepo,
       authorityRepo,
       operatorAccessService,
+      ensureSystemForCompany: (companyId) => {
+        const agent = ensureSystemAgent({ db, companyId, roleLookup: roleLoader });
+        const copilot = ensureSystemCopilot({ db, companyId, roleLookup: roleLoader });
+        return {
+          agentEmployeeId: agent.employeeId,
+          copilotEmployeeId: copilot.employeeId,
+          agentCreated: agent.created,
+          copilotCreated: copilot.created,
+        };
+      },
       exportRootDir: join(userDataDir(), 'portability'),
       appVersion: app.getVersion(),
     });
@@ -1062,12 +1084,10 @@ app
       });
       return { ticketId: result.ticketId };
     };
-    companiesRepo
-      .list()
-      .filter((company) => company.status !== 'archived')
-      .forEach((company) => {
-        routineServiceInstance?.start(company.id);
-      });
+    for (const company of companiesRepo.list()) {
+      if (company.status === 'archived') continue;
+      routineServiceInstance?.start(company.id);
+    }
     // ---- Command palette service (Phase 5 — M30 T4) -----------------------
     //
     // Built AFTER `ipcHandlers` so we can wire the dispatcher against the
@@ -1154,7 +1174,7 @@ app
       listMeetings: async (companyId: string) =>
         meetingsRepo.listByCompany(companyId) as unknown as Meeting[],
       getActiveMeeting: async (companyId: string) =>
-        (meetingsRepo.getActive(companyId) as unknown as Meeting | null),
+        meetingsRepo.getActive(companyId) as unknown as Meeting | null,
     });
     const commandSlotFiller = createSlotFiller();
 

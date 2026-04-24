@@ -103,7 +103,9 @@ export function projectDashboardQueueRows(
     });
 }
 
-export function summarizeDashboardQueues(rows: readonly DashboardQueueRow[]): DashboardQueueSummary {
+export function summarizeDashboardQueues(
+  rows: readonly DashboardQueueRow[],
+): DashboardQueueSummary {
   return rows.reduce<DashboardQueueSummary>(
     (summary, row) => {
       summary.open += row.counts.open;

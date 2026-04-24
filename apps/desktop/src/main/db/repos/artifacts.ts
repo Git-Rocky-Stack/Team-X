@@ -67,7 +67,12 @@ export function createArtifactsRepo<TRunResult>(db: ArtifactsDb<TRunResult>) {
 
   return {
     create(input: CreateArtifactInput): string {
-      const existing = findBySource(input.companyId, input.kind, input.sourceKind, input.sourceRefId);
+      const existing = findBySource(
+        input.companyId,
+        input.kind,
+        input.sourceKind,
+        input.sourceRefId,
+      );
       if (existing) return existing.id;
 
       const id = nanoid();

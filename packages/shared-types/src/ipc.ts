@@ -55,26 +55,27 @@ import type {
   CopilotInsightListResult,
 } from './copilot.js';
 import type {
-  ArtifactRecord,
-  ApprovalItem,
   ApprovalDecisionStatus,
+  ApprovalItem,
   ApprovalItemKind,
   ApprovalItemStatus,
+  ArtifactRecord,
+  AuthorityGrant,
+  AuthorityRequest,
   BudgetLedgerEntry,
   BudgetOverview,
   BudgetPolicy,
   BudgetPolicyPeriod,
   BudgetScopeKind,
-  AuthorityGrant,
-  AuthorityRequest,
   ChatMessage,
   Company,
   CompanyImportPreview,
   CompanyPackageManifest,
   CompanyPackageMode,
+  CompanyTemplateSummary,
+  EffectiveAuthoritySnapshot,
   Employee,
   EmployeeRuntimeBinding,
-  EffectiveAuthoritySnapshot,
   ExtensionSummary,
   ExtensionsAutonomyMode,
   Goal,
@@ -93,8 +94,8 @@ import type {
   RuntimeProfileSummary,
   RuntimeProfileValidation,
   SkillAssignment,
-  ThreadDigest,
   Thread,
+  ThreadDigest,
   Ticket,
 } from './entities.js';
 import type {
@@ -235,6 +236,33 @@ export interface PreviewCompanyPackageImportRequest {
 }
 
 export interface PreviewCompanyPackageImportResponse extends CompanyImportPreview {}
+
+export interface ImportCompanyPackageRequest {
+  packagePath: string;
+  name?: string;
+  slug?: string;
+}
+
+export interface ImportCompanyPackageResponse {
+  companyId: string;
+  manifest: CompanyPackageManifest;
+}
+
+export interface ListCompanyTemplatesRequest {
+  companyId?: string;
+}
+
+export interface ListCompanyTemplatesResponse {
+  templates: CompanyTemplateSummary[];
+}
+
+export interface InstallCompanyTemplateRequest {
+  packagePath: string;
+}
+
+export interface InstallCompanyTemplateResponse {
+  template: CompanyTemplateSummary;
+}
 
 export interface ListEmployeesRequest {
   companyId: string;
@@ -1703,6 +1731,22 @@ export interface IpcContract {
     request: ExportCompanyPackageRequest;
     response: ExportCompanyPackageResponse;
   };
+  'companies.previewImportPackage': {
+    request: PreviewCompanyPackageImportRequest;
+    response: PreviewCompanyPackageImportResponse;
+  };
+  'companies.importPackage': {
+    request: ImportCompanyPackageRequest;
+    response: ImportCompanyPackageResponse;
+  };
+  'companies.listTemplates': {
+    request: ListCompanyTemplatesRequest;
+    response: ListCompanyTemplatesResponse;
+  };
+  'companies.installTemplate': {
+    request: InstallCompanyTemplateRequest;
+    response: InstallCompanyTemplateResponse;
+  };
   'companies.archive': {
     request: ArchiveCompanyRequest;
     // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
@@ -1815,14 +1859,14 @@ export interface IpcContract {
     request: ListApprovalItemsRequest;
     response: ApprovalItem[];
   };
-    'approvals.list': {
-      request: ListApprovalItemsRequest;
-      response: ApprovalItem[];
-    };
-    'approvals.review': {
-      request: ReviewApprovalItemRequest;
-      response: { grantId: string | null };
-    };
+  'approvals.list': {
+    request: ListApprovalItemsRequest;
+    response: ApprovalItem[];
+  };
+  'approvals.review': {
+    request: ReviewApprovalItemRequest;
+    response: { grantId: string | null };
+  };
   'artifacts.list': {
     request: ListArtifactsRequest;
     response: ArtifactRecord[];
@@ -1842,7 +1886,7 @@ export interface IpcContract {
   'employees.create': {
     request: HireEmployeeRequest;
     response: HireEmployeeResponse;
-    };
+  };
   'employees.fire': {
     request: FireEmployeeRequest;
     // IpcContract-level response is intentionally `void` — the fire
@@ -2384,6 +2428,20 @@ export interface TeamXApi {
 
     /** Export one workspace as a portable Team-X package file. */
     exportPackage(req: ExportCompanyPackageRequest): Promise<ExportCompanyPackageResponse>;
+
+    /** Read one Team-X package file and return a safe import preview plus local warnings. */
+    previewImportPackage(
+      req: PreviewCompanyPackageImportRequest,
+    ): Promise<PreviewCompanyPackageImportResponse>;
+
+    /** Import one Team-X package as a brand-new local workspace copy. */
+    importPackage(req: ImportCompanyPackageRequest): Promise<ImportCompanyPackageResponse>;
+
+    /** List locally installed workspace templates available for reuse. */
+    listTemplates(req?: ListCompanyTemplatesRequest): Promise<ListCompanyTemplatesResponse>;
+
+    /** Install one external Team-X template package into the local template library. */
+    installTemplate(req: InstallCompanyTemplateRequest): Promise<InstallCompanyTemplateResponse>;
 
     /**
      * Create a new company and seed its two system pseudo-employees

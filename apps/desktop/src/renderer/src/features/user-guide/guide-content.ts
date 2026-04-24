@@ -38,7 +38,8 @@ export const GUIDE_ACTIONS: GuideAction[] = [
   {
     id: 'open-autonomy-access',
     label: 'Open Autonomy Access',
-    description: 'Inspect the operator access model and local versus shared posture for this workspace.',
+    description:
+      'Inspect the operator access model and local versus shared posture for this workspace.',
     kind: 'view',
     view: 'autonomy',
     autonomySubview: 'access',
@@ -78,7 +79,8 @@ export const GUIDE_ACTIONS: GuideAction[] = [
   {
     id: 'open-autonomy-memory',
     label: 'Open Memory',
-    description: 'Inspect digests, checkpoints, and packed-context posture for long-running threads.',
+    description:
+      'Inspect digests, checkpoints, and packed-context posture for long-running threads.',
     kind: 'view',
     view: 'autonomy',
     autonomySubview: 'memory',
@@ -124,7 +126,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'provider-ready',
     title: 'Configure a provider',
-    description: 'Set up at least one enabled provider so Team-X can run employee and copilot work.',
+    description:
+      'Set up at least one enabled provider so Team-X can run employee and copilot work.',
     roles: ALL_ROLES,
     priority: 'core',
     kind: 'auto',
@@ -134,7 +137,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'employee-ready',
     title: 'Hire the first employee',
-    description: 'Create the first employee so the workspace can move from shell setup into actual work.',
+    description:
+      'Create the first employee so the workspace can move from shell setup into actual work.',
     roles: ALL_ROLES,
     priority: 'core',
     kind: 'auto',
@@ -144,7 +148,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'dashboard-reviewed',
     title: 'Review Mission Control',
-    description: 'Use the operations-first dashboard to understand runs, queues, commands, and telemetry.',
+    description:
+      'Use the operations-first dashboard to understand runs, queues, commands, and telemetry.',
     roles: ALL_ROLES,
     priority: 'core',
     kind: 'jump',
@@ -153,7 +158,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'chat-flow-reviewed',
     title: 'Run a first conversation',
-    description: 'Open Chat and understand how user-to-employee conversations differ from read-only agent transcripts.',
+    description:
+      'Open Chat and understand how user-to-employee conversations differ from read-only agent transcripts.',
     roles: ['owner', 'operator'],
     priority: 'recommended',
     kind: 'jump',
@@ -162,7 +168,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'ticket-queue-reviewed',
     title: 'Inspect the ticket queue',
-    description: 'Review how workload, assignment pressure, and ticket detail move through the workspace.',
+    description:
+      'Review how workload, assignment pressure, and ticket detail move through the workspace.',
     roles: ['owner', 'operator'],
     priority: 'recommended',
     kind: 'jump',
@@ -181,7 +188,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'authority-reviewed',
     title: 'Review authority boundaries',
-    description: 'Inspect or approve extension authority so filesystem and capability access stay explicit.',
+    description:
+      'Inspect or approve extension authority so filesystem and capability access stay explicit.',
     roles: OWNER_AND_BUILDER,
     priority: 'recommended',
     kind: 'auto',
@@ -191,7 +199,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'autonomy-access-reviewed',
     title: 'Review operator access posture',
-    description: 'Inspect who can supervise the workspace and how Team-X models local, invited, and cloud-ready operators.',
+    description:
+      'Inspect who can supervise the workspace and how Team-X models local, invited, and cloud-ready operators.',
     roles: OWNER_AND_BUILDER,
     priority: 'recommended',
     kind: 'jump',
@@ -200,7 +209,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'runtime-posture-reviewed',
     title: 'Review runtime posture',
-    description: 'Confirm how employees bind to explicit runtime profiles instead of implicit execution assumptions.',
+    description:
+      'Confirm how employees bind to explicit runtime profiles instead of implicit execution assumptions.',
     roles: OWNER_AND_BUILDER,
     priority: 'recommended',
     kind: 'jump',
@@ -209,7 +219,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'routine-governance-reviewed',
     title: 'Review routines and approvals',
-    description: 'Inspect recurring operations and the approval inbox so autonomous work stays visible and governed.',
+    description:
+      'Inspect recurring operations and the approval inbox so autonomous work stays visible and governed.',
     roles: OWNER_AND_BUILDER,
     priority: 'advanced',
     kind: 'jump',
@@ -218,7 +229,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'memory-engine-reviewed',
     title: 'Review long-run memory posture',
-    description: 'Inspect digests, checkpoints, and the default pack settings that bound long-running context.',
+    description:
+      'Inspect digests, checkpoints, and the default pack settings that bound long-running context.',
     roles: OWNER_AND_BUILDER,
     priority: 'advanced',
     kind: 'jump',
@@ -236,7 +248,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'audit-reviewed',
     title: 'Review audit evidence',
-    description: 'Inspect the audit trail so builders and owners can verify authority and automation activity.',
+    description:
+      'Inspect the audit trail so builders and owners can verify authority and automation activity.',
     roles: OWNER_AND_BUILDER,
     priority: 'advanced',
     kind: 'jump',
@@ -245,7 +258,8 @@ export const GUIDE_TASKS: GuideTask[] = [
   {
     id: 'operating-model-understood',
     title: 'Confirm the operating model',
-    description: 'Acknowledge how Team-X treats workspaces, employees, and orchestrated execution as one command surface.',
+    description:
+      'Acknowledge how Team-X treats workspaces, employees, and orchestrated execution as one command surface.',
     roles: ALL_ROLES,
     priority: 'recommended',
     kind: 'manual',
@@ -256,7 +270,8 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'getting-started',
     title: 'Getting Started',
-    summary: 'Understand the workspace model, complete core setup, and establish the first live operating loop.',
+    summary:
+      'Understand the workspace model, complete core setup, and establish the first live operating loop.',
     category: 'Onboarding',
     roles: ALL_ROLES,
     blocks: [
@@ -279,13 +294,19 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         text: 'Provider configured, one employee hired, Mission Control reviewed, and the first extension trust decision made.',
       },
     ],
-    taskIds: ['provider-ready', 'employee-ready', 'dashboard-reviewed', 'operating-model-understood'],
+    taskIds: [
+      'provider-ready',
+      'employee-ready',
+      'dashboard-reviewed',
+      'operating-model-understood',
+    ],
     actionIds: ['open-settings-providers', 'open-hire-dialog', 'open-mission-control'],
   },
   {
     id: 'mission-control',
     title: 'Mission Control',
-    summary: 'Use the dashboard as the live operating surface for runs, queues, commands, and telemetry.',
+    summary:
+      'Use the dashboard as the live operating surface for runs, queues, commands, and telemetry.',
     category: 'Operations',
     roles: ALL_ROLES,
     blocks: [
@@ -380,7 +401,8 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'autonomy-control-plane',
     title: 'Autonomy Control Plane',
-    summary: 'Supervise runtimes, routines, budgets, approvals, artifacts, and operator posture from one surface.',
+    summary:
+      'Supervise runtimes, routines, budgets, approvals, artifacts, and operator posture from one surface.',
     category: 'Governance',
     roles: OWNER_AND_BUILDER,
     blocks: [
@@ -404,7 +426,11 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         text: 'Mission Control tells you what is happening now. Autonomy tells you why that execution is allowed, how it is governed, and which recurring systems are shaping the workload.',
       },
     ],
-    taskIds: ['autonomy-access-reviewed', 'runtime-posture-reviewed', 'routine-governance-reviewed'],
+    taskIds: [
+      'autonomy-access-reviewed',
+      'runtime-posture-reviewed',
+      'routine-governance-reviewed',
+    ],
     actionIds: [
       'open-autonomy-access',
       'open-autonomy-runtimes',
@@ -415,7 +441,8 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'long-run-memory',
     title: 'Long-Run Memory',
-    summary: 'Inspect how Team-X condenses threads, checkpoints interrupted work, and bounds context before very long runs drift.',
+    summary:
+      'Inspect how Team-X condenses threads, checkpoints interrupted work, and bounds context before very long runs drift.',
     category: 'Governance',
     roles: OWNER_AND_BUILDER,
     blocks: [
@@ -466,7 +493,8 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'troubleshooting',
     title: 'Troubleshooting',
-    summary: 'Recognize the most common setup and runtime gaps before assuming the workspace is broken.',
+    summary:
+      'Recognize the most common setup and runtime gaps before assuming the workspace is broken.',
     category: 'Support',
     roles: ALL_ROLES,
     blocks: [
@@ -496,6 +524,7 @@ export const GUIDE_ROLE_LABELS: Record<UserGuideRole, string> = {
 
 export const GUIDE_ROLE_DESCRIPTIONS: Record<UserGuideRole, string> = {
   owner: 'Own setup, trust decisions, and the overall operating posture of the workspace.',
-  operator: 'Run daily work, monitor queues, and keep execution moving across tickets and conversations.',
+  operator:
+    'Run daily work, monitor queues, and keep execution moving across tickets and conversations.',
   builder: 'Extend the system with skills, MCPs, authority rules, and operational tooling.',
 };

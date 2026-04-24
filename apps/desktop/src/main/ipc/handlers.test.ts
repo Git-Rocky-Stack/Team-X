@@ -860,7 +860,9 @@ describe('IPC: chat.send orchestrator failure handling', () => {
 describe('IPC: chat.stop', () => {
   it('stops the active direct-message turn for a thread and returns the stop result', async () => {
     const fx = buildFixture();
-    const result = await (fx.handlers as { chatStop(req: { threadId: string }): Promise<unknown> }).chatStop({
+    const result = await (
+      fx.handlers as { chatStop(req: { threadId: string }): Promise<unknown> }
+    ).chatStop({
       threadId: 'thread-1',
     });
 

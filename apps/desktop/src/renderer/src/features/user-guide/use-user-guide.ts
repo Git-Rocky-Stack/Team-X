@@ -1,7 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CompaniesUpdateRequest, Company } from '@team-x/shared-types';
 
-import { useInstalledExtensions, useAuthorityGrants, useAuthorityRequests } from '@/hooks/use-extensions.js';
+import {
+  useAuthorityGrants,
+  useAuthorityRequests,
+  useInstalledExtensions,
+} from '@/hooks/use-extensions.js';
 import { useProviders } from '@/hooks/use-providers.js';
 import { ipc } from '@/lib/ipc.js';
 import { useAppStore } from '@/store/app-store.js';
@@ -10,8 +14,8 @@ import {
   defaultGuideSectionIdForRole,
   guideActionById,
   guideCompletionSummary,
-  guideTaskById,
   guideSectionsForRole,
+  guideTaskById,
   isGuideTaskCompleted,
   sectionMatchesSearch,
   userGuidePreferencesFromCompanySettings,
@@ -65,7 +69,12 @@ export function useUserGuide({ company, employeeCount }: UseUserGuideOptions) {
       (authorityQuery.data ?? []).length > 0 || (authorityRequestsQuery.data ?? []).length > 0,
   };
 
-  const mutation = useMutation<void, Error, CompaniesUpdateRequest, { previousCompanies?: Company[] }>({
+  const mutation = useMutation<
+    void,
+    Error,
+    CompaniesUpdateRequest,
+    { previousCompanies?: Company[] }
+  >({
     mutationFn: (req) => ipc.companies.update(req),
     onMutate: (req) => {
       const previousCompanies = queryClient.getQueryData<Company[]>(['companies']);
@@ -88,7 +97,10 @@ export function useUserGuide({ company, employeeCount }: UseUserGuideOptions) {
     if (!company) return;
     mutation.mutate({
       companyId: company.id,
-      settings: withUserGuideInCompanySettings(company.settings, nextPreferences) as Record<string, unknown>,
+      settings: withUserGuideInCompanySettings(company.settings, nextPreferences) as Record<
+        string,
+        unknown
+      >,
     });
   }
 

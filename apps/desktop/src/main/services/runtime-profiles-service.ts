@@ -14,8 +14,8 @@ import type {
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type {
   EmployeeRuntimeBindingRow,
-  RuntimeProfilesRepo,
   RuntimeProfileRow,
+  RuntimeProfilesRepo,
 } from '../db/repos/runtime-profiles.js';
 import type { ProvidersService } from './providers.js';
 
@@ -98,17 +98,16 @@ function parseConfigJson(raw: string): Record<string, unknown> | null {
   return null;
 }
 
-function normalizeConfig(input: Record<string, unknown> | null | undefined): Record<string, unknown> {
+function normalizeConfig(
+  input: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return {};
   }
   return { ...input };
 }
 
-function getOptionalString(
-  config: Record<string, unknown>,
-  key: string,
-): string | null {
+function getOptionalString(config: Record<string, unknown>, key: string): string | null {
   const value = config[key];
   if (typeof value !== 'string') return null;
   const next = value.trim();
@@ -349,7 +348,9 @@ export function createRuntimeProfilesService(
           profileId: profile.id,
           status: 'error',
           message:
-            err instanceof Error ? err.message : `Unable to validate local command path: ${command}`,
+            err instanceof Error
+              ? err.message
+              : `Unable to validate local command path: ${command}`,
           supportsExecution: false,
           details: { command, workingDirectory },
         },
@@ -474,10 +475,9 @@ export function createRuntimeProfilesService(
       {
         profileId: profile.id,
         status: endpointUrl ? 'healthy' : 'warning',
-        message:
-          endpointUrl
-            ? 'Adapter endpoint is configured and ready for execution-backed launches.'
-            : 'Launcher command is recorded; first launch will confirm CLI availability on this host.',
+        message: endpointUrl
+          ? 'Adapter endpoint is configured and ready for execution-backed launches.'
+          : 'Launcher command is recorded; first launch will confirm CLI availability on this host.',
         supportsExecution: true,
         details: {
           command,
@@ -551,7 +551,8 @@ export function createRuntimeProfilesService(
         throw new Error(`[runtime-profiles] profile not found: ${input.profileId}`);
       }
       const existing = rowToRuntimeProfile(existingRow);
-      const nextName = input.name !== undefined ? ensureNonEmptyString(input.name, 'name') : undefined;
+      const nextName =
+        input.name !== undefined ? ensureNonEmptyString(input.name, 'name') : undefined;
       const profiles = listProfiles(existing.companyId);
       const shouldResetHealth =
         input.kind !== undefined || input.config !== undefined || input.enabled !== undefined;

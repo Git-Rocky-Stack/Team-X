@@ -5,7 +5,10 @@ import type { ExternalRuntimeAdapters } from './external-runtime-adapters.js';
 import type { ProviderFactory } from './provider-factory.js';
 import type { RuntimeProfilesService } from './runtime-profiles-service.js';
 
-function getOptionalString(config: Record<string, unknown> | null | undefined, key: string): string | null {
+function getOptionalString(
+  config: Record<string, unknown> | null | undefined,
+  key: string,
+): string | null {
   const value = config?.[key];
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();

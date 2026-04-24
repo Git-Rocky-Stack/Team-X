@@ -21,6 +21,7 @@ import { CopilotSection } from './copilot-section.js';
 import { ExtensionsSection } from './extensions-section.js';
 import { MemorySection } from './memory-section.js';
 import { PlannerSection } from './planner-section.js';
+import { PortabilitySection } from './portability-section.js';
 import { PrivacySection } from './privacy-section.js';
 import { ProvidersSection } from './providers-section.js';
 import { RagSection } from './rag-section.js';
@@ -60,6 +61,9 @@ export function SettingsView() {
         </section>
         <AgenticSection />
         <PlannerSection />
+        <section data-settings-section="portability">
+          <PortabilitySection />
+        </section>
         <section data-settings-section="memory">
           <MemorySection />
         </section>

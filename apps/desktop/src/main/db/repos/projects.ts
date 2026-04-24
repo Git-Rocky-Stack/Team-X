@@ -32,6 +32,7 @@ export interface CreateProjectInput {
   description?: string;
   leadId?: string | null;
   priority?: string;
+  status?: string;
 }
 
 export interface UpdateProjectInput {
@@ -58,7 +59,7 @@ export function createProjectsRepo<TRunResult>(db: ProjectsDb<TRunResult>) {
           goalId: input.goalId ?? null,
           title: input.title,
           description: input.description ?? '',
-          status: 'planning',
+          status: input.status ?? 'planning',
           leadId: input.leadId ?? null,
           priority: input.priority ?? 'medium',
           createdAt: now,

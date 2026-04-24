@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
 import { useInstallGithubSkill, useInstallLocalSkill } from '@/hooks/use-extensions.js';
+import { requireString } from '@/lib/required.js';
 
 interface InstallSkillDialogProps {
   open: boolean;
@@ -31,7 +32,10 @@ function formatInstallError(message: string | null): string | null {
   if (message.includes('local skill path must be a directory')) {
     return 'The selected local path must point to a folder.';
   }
-  if (message.includes('missing teamx-skill.json') || message.includes('missing team-x-skill.json')) {
+  if (
+    message.includes('missing teamx-skill.json') ||
+    message.includes('missing team-x-skill.json')
+  ) {
     return 'That folder or repo is missing `teamx-skill.json` or `team-x-skill.json`.';
   }
   if (message.includes('missing referenced file')) {
@@ -70,15 +74,16 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit()) return;
+    const requiredCompanyId = requireString(companyId, 'companyId');
     try {
       if (source === 'local') {
         await installLocal.mutateAsync({
-          companyId: companyId!,
+          companyId: requiredCompanyId,
           folderPath: folderPath.trim(),
         });
       } else {
         await installGithub.mutateAsync({
-          companyId: companyId!,
+          companyId: requiredCompanyId,
           sourceUrl: sourceUrl.trim(),
         });
       }
@@ -114,7 +119,10 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label htmlFor="skill-install-source" className="text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor="skill-install-source"
+              className="text-xs font-medium text-muted-foreground"
+            >
               Source
             </label>
             <select
@@ -130,7 +138,10 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
 
           {source === 'local' ? (
             <div className="space-y-1.5">
-              <label htmlFor="skill-folder-path" className="text-xs font-medium text-muted-foreground">
+              <label
+                htmlFor="skill-folder-path"
+                className="text-xs font-medium text-muted-foreground"
+              >
                 Folder Path
               </label>
               <Input
@@ -147,7 +158,10 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
             </div>
           ) : (
             <div className="space-y-1.5">
-              <label htmlFor="skill-source-url" className="text-xs font-medium text-muted-foreground">
+              <label
+                htmlFor="skill-source-url"
+                className="text-xs font-medium text-muted-foreground"
+              >
                 GitHub URL
               </label>
               <Input
@@ -171,7 +185,12 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
           )}
 
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isPending}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={!canSubmit() || isPending}>

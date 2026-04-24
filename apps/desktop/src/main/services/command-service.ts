@@ -467,9 +467,7 @@ export function createCommandService(deps: CommandServiceDeps): CommandService {
       for (const employeeKey of EMPLOYEE_QUERY_KEYS) {
         const query = ec[employeeKey];
         if (typeof query === 'string' && query.trim().length > 0) {
-          resolved[employeeKey] = await safe(() =>
-            deps.resolver.resolveEmployee(query, companyId),
-          );
+          resolved[employeeKey] = await safe(() => deps.resolver.resolveEmployee(query, companyId));
         }
       }
       const ticketQuery = ec.ticketQuery;
@@ -1127,7 +1125,9 @@ function applyOptionalEntityResolutions(args: {
         kind: 'needs_clarification',
         missing: spec.entityKey,
         prompt: `Multiple matches for '${raw.trim()}'. Which one?`,
-        options: resolution.candidates.slice(0, 5).map((candidate) => stringifyEntityOption(candidate)),
+        options: resolution.candidates
+          .slice(0, 5)
+          .map((candidate) => stringifyEntityOption(candidate)),
       };
     }
 

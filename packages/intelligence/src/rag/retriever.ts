@@ -10,9 +10,12 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   let normB = 0;
 
   for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    normA += a[i]! * a[i]!;
-    normB += b[i]! * b[i]!;
+    const left = a[i];
+    const right = b[i];
+    if (left === undefined || right === undefined) continue;
+    dot += left * right;
+    normA += left * left;
+    normB += right * right;
   }
 
   const denom = Math.sqrt(normA) * Math.sqrt(normB);

@@ -38,9 +38,8 @@ interface FakeStreamResult {
 }
 let nextStreamTextResult: FakeStreamResult | null = null;
 let nextStreamTextError: Error | null = null;
-let nextStreamTextImpl:
-  | ((args: unknown) => FakeStreamResult | Promise<FakeStreamResult>)
-  | null = null;
+let nextStreamTextImpl: ((args: unknown) => FakeStreamResult | Promise<FakeStreamResult>) | null =
+  null;
 
 interface AdapterChunk {
   delta?: string;
@@ -89,9 +88,7 @@ async function* iterableOfParts(parts: FullStreamPart[]): AsyncIterable<FullStre
   for (const part of parts) yield part;
 }
 
-async function drain(
-  gen: AsyncGenerator<AdapterChunk>,
-): Promise<AdapterChunk[]> {
+async function drain(gen: AsyncGenerator<AdapterChunk>): Promise<AdapterChunk[]> {
   const out: AdapterChunk[] = [];
   for await (const chunk of gen) out.push(chunk);
   return out;
@@ -344,9 +341,7 @@ describe('makeOllamaStream', () => {
 
     it('propagates explicit error parts from the SDK stream instead of swallowing them', async () => {
       nextStreamTextResult = {
-        fullStream: iterableOfParts([
-          { type: 'error', error: new Error('cloud schema mismatch') },
-        ]),
+        fullStream: iterableOfParts([{ type: 'error', error: new Error('cloud schema mismatch') }]),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
       };
 

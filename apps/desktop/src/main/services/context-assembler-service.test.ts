@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   ApprovalItem,
   ArtifactRecord,
-  RunCheckpoint,
   RoutineRun,
+  RunCheckpoint,
   ThreadDigest,
 } from '@team-x/shared-types';
 

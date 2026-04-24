@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import type { CompanySettings } from '@team-x/shared-types';
 
 import { GUIDE_TASKS } from './guide-content.js';
-import type { GuideSection } from './guide-types.js';
 import {
   defaultGuideSectionIdForRole,
   guideCompletionSummary,
@@ -12,15 +11,19 @@ import {
   userGuidePreferencesFromCompanySettings,
   withUserGuideInCompanySettings,
 } from './guide-progress.js';
+import type { GuideSection } from './guide-types.js';
 
 describe('guide-progress', () => {
   it('round-trips user guide preferences through company settings', () => {
-    const next = withUserGuideInCompanySettings({ mission: 'Operate cleanly' }, {
-      welcomeDismissedAt: '2026-04-22T12:00:00.000Z',
-      lastViewedSectionId: 'mission-control',
-      selectedRole: 'builder',
-      completedTaskIds: ['dashboard-reviewed'],
-    });
+    const next = withUserGuideInCompanySettings(
+      { mission: 'Operate cleanly' },
+      {
+        welcomeDismissedAt: '2026-04-22T12:00:00.000Z',
+        lastViewedSectionId: 'mission-control',
+        selectedRole: 'builder',
+        completedTaskIds: ['dashboard-reviewed'],
+      },
+    );
 
     expect(next.userGuide?.selectedRole).toBe('builder');
     expect(next.userGuide?.completedTaskIds).toEqual(['dashboard-reviewed']);
@@ -38,6 +41,9 @@ describe('guide-progress', () => {
 
     expect(providerTask).toBeDefined();
     expect(manualTask).toBeDefined();
+    if (!providerTask || !manualTask) {
+      throw new Error('expected guide tasks to exist');
+    }
 
     const preferences = {
       welcomeDismissedAt: null,
@@ -47,7 +53,7 @@ describe('guide-progress', () => {
     };
 
     expect(
-      isGuideTaskCompleted(providerTask!, preferences, {
+      isGuideTaskCompleted(providerTask, preferences, {
         hasEnabledProvider: true,
         hasEmployees: false,
         hasExtensions: false,
@@ -55,7 +61,7 @@ describe('guide-progress', () => {
       }),
     ).toBe(true);
     expect(
-      isGuideTaskCompleted(manualTask!, preferences, {
+      isGuideTaskCompleted(manualTask, preferences, {
         hasEnabledProvider: false,
         hasEmployees: false,
         hasExtensions: false,

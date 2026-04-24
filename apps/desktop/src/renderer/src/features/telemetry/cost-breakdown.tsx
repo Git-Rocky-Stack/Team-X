@@ -29,8 +29,8 @@ import { Button } from '@/components/ui/button.js';
 import {
   MissionControlRow,
   MissionInsetSurface,
-  MissionSegmentedButton,
   MissionSectionCard,
+  MissionSegmentedButton,
   MissionStateBlock,
 } from '@/features/mission/mission-shell.js';
 import { telemetryRequestKind, useCostBreakdown } from '@/hooks/use-telemetry.js';

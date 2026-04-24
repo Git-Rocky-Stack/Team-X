@@ -162,7 +162,8 @@ describe('buildTeamXApi', () => {
   describe('chat.stop', () => {
     it('invokes chat.stop with the request object verbatim', async () => {
       fake.setNextInvokeResult({ stopped: true });
-      const stop = (api.chat as unknown as { stop(req: { threadId: string }): Promise<unknown> }).stop;
+      const stop = (api.chat as unknown as { stop(req: { threadId: string }): Promise<unknown> })
+        .stop;
       const channels = PRELOAD_CHANNELS as Record<string, string>;
       await stop({ threadId: 'thread-7' });
       expect(fake.invokeCalls).toEqual([
@@ -191,9 +192,9 @@ describe('buildTeamXApi', () => {
   describe('providers.listModels', () => {
     it('invokes providers.listModels with a { providerId } object', async () => {
       fake.setNextInvokeResult({ models: ['glm-5:cloud'] });
-      await (api.providers as unknown as { listModels(providerId: string): Promise<unknown> }).listModels(
-        'ollama-local',
-      );
+      await (
+        api.providers as unknown as { listModels(providerId: string): Promise<unknown> }
+      ).listModels('ollama-local');
       expect(fake.invokeCalls).toEqual([
         { channel: PRELOAD_CHANNELS.providersListModels, args: [{ providerId: 'ollama-local' }] },
       ]);

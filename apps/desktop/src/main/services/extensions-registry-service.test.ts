@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { TestDbHandle } from '../db/test-helpers.js';
-import { makeTestDb } from '../db/test-helpers.js';
-import { companies, mcpServers } from '../db/schema.js';
 import { createExtensionsRepo } from '../db/repos/extensions.js';
 import { createMcpServersRepo } from '../db/repos/mcp-servers.js';
+import { companies, mcpServers } from '../db/schema.js';
+import type { TestDbHandle } from '../db/test-helpers.js';
+import { makeTestDb } from '../db/test-helpers.js';
 
 import { createExtensionsRegistryService } from './extensions-registry-service.js';
 
@@ -229,6 +229,8 @@ describe('extensions registry service', () => {
     });
 
     expect(registry.backfillMcpServers()).toBe(2);
-    expect(extensionsRepo.listByCompany('company-1').filter((row) => row.kind === 'mcp')).toHaveLength(2);
+    expect(
+      extensionsRepo.listByCompany('company-1').filter((row) => row.kind === 'mcp'),
+    ).toHaveLength(2);
   });
 });

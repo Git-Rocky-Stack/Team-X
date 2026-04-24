@@ -1,4 +1,8 @@
-import type { OperatorAccessEntry, OperatorAuthMode, OperatorMembershipRole } from '@team-x/shared-types';
+import type {
+  OperatorAccessEntry,
+  OperatorAuthMode,
+  OperatorMembershipRole,
+} from '@team-x/shared-types';
 
 import type { OperatorRow, OperatorsRepo } from '../db/repos/operators.js';
 
@@ -58,9 +62,10 @@ export function createOperatorAccessService({ operatorsRepo }: OperatorAccessSer
     return ensureOperator(LOCAL_OWNER_OPERATOR_ID, LOCAL_OWNER_OPERATOR_NAME, 'local');
   }
 
-  function ensureLocalOwnerForCompany(
-    companyId: string,
-  ): { operatorId: string; membershipId: string } {
+  function ensureLocalOwnerForCompany(companyId: string): {
+    operatorId: string;
+    membershipId: string;
+  } {
     const owner = ensureLocalOwner();
     const membershipId = ensureMembership(owner.id, companyId, 'owner');
     return { operatorId: owner.id, membershipId };

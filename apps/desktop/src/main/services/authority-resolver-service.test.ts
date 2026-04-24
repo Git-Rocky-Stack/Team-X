@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { createAuthorityResolverService } from './authority-resolver-service.js';
 
-function makeEmployee(overrides: Partial<{
-  id: string;
-  companyId: string;
-  toolsAllowedJson: string;
-  toolsDeniedJson: string;
-}> = {}) {
+function makeEmployee(
+  overrides: Partial<{
+    id: string;
+    companyId: string;
+    toolsAllowedJson: string;
+    toolsDeniedJson: string;
+  }> = {},
+) {
   return {
     id: 'employee-1',
     companyId: 'company-1',
@@ -17,17 +19,19 @@ function makeEmployee(overrides: Partial<{
   };
 }
 
-function makeGrant(overrides: Partial<{
-  id: string;
-  scopeKind: 'company' | 'employee' | 'extension';
-  scopeId: string;
-  resourceKind: 'capability' | 'path';
-  resourceId: string;
-  permission: 'allow' | 'deny' | 'prompt';
-  metadataJson: string | null;
-  createdAt: number;
-  updatedAt: number;
-}> = {}) {
+function makeGrant(
+  overrides: Partial<{
+    id: string;
+    scopeKind: 'company' | 'employee' | 'extension';
+    scopeId: string;
+    resourceKind: 'capability' | 'path';
+    resourceId: string;
+    permission: 'allow' | 'deny' | 'prompt';
+    metadataJson: string | null;
+    createdAt: number;
+    updatedAt: number;
+  }> = {},
+) {
   return {
     id: 'grant-1',
     scopeKind: 'company' as const,
@@ -63,8 +67,16 @@ describe('createAuthorityResolverService', () => {
     expect(result.toolsDenied).toEqual(['shell']);
     expect(result.entries).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ resourceId: 'browse', permission: 'allow', sourceKind: 'role-default' }),
-        expect.objectContaining({ resourceId: 'shell', permission: 'deny', sourceKind: 'role-default' }),
+        expect.objectContaining({
+          resourceId: 'browse',
+          permission: 'allow',
+          sourceKind: 'role-default',
+        }),
+        expect.objectContaining({
+          resourceId: 'shell',
+          permission: 'deny',
+          sourceKind: 'role-default',
+        }),
       ]),
     );
   });

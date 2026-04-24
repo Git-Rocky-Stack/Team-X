@@ -149,7 +149,11 @@ function isValidTimeOfDay(value: string): boolean {
 
 function normalizeSchedule(input: RoutineSchedule): RoutineSchedule {
   if (input.triggerKind === 'interval') {
-    if (!Number.isFinite(input.intervalMinutes) || input.intervalMinutes < 1 || input.intervalMinutes > 10080) {
+    if (
+      !Number.isFinite(input.intervalMinutes) ||
+      input.intervalMinutes < 1 ||
+      input.intervalMinutes > 10080
+    ) {
       throw new Error('[routines] interval schedules require intervalMinutes between 1 and 10080');
     }
     return {
@@ -245,7 +249,9 @@ function rowToRoutineRun(row: RoutineRunRow): RoutineRun {
 
 function nextSlug(companyId: string, name: string, routines: Routine[], exceptId?: string): string {
   const base = slugify(name) || slugify(companyId) || 'routine';
-  const taken = new Set(routines.filter((routine) => routine.id !== exceptId).map((routine) => routine.slug));
+  const taken = new Set(
+    routines.filter((routine) => routine.id !== exceptId).map((routine) => routine.slug),
+  );
   if (!taken.has(base)) return base;
   let index = 2;
   while (taken.has(`${base}-${index}`)) {
@@ -320,7 +326,12 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
     return company !== null && company.status !== 'archived';
   }
 
-  function emit(type: import('@team-x/shared-types').EventType, companyId: string, routineId: string, payload: unknown) {
+  function emit(
+    type: import('@team-x/shared-types').EventType,
+    companyId: string,
+    routineId: string,
+    payload: unknown,
+  ) {
     if (!bus) return;
     try {
       bus.emit({
@@ -349,6 +360,14 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
       throw new Error(`[routines] routine not found: ${routineId}`);
     }
     return rowToRoutine(row);
+  }
+
+  function resolveRoutineRun(runId: string): RoutineRun {
+    const row = routinesRepo.getRunById(runId);
+    if (!row) {
+      throw new Error(`[routines] routine run not found: ${runId}`);
+    }
+    return rowToRoutineRun(row);
   }
 
   async function materializeRoutine(
@@ -384,7 +403,8 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
 
     routinesRepo.update(routine.id, {
       lastRunStatus: 'running',
-      lastRunMessage: reason === 'manual' ? 'Manual run in progress.' : 'Scheduled run in progress.',
+      lastRunMessage:
+        reason === 'manual' ? 'Manual run in progress.' : 'Scheduled run in progress.',
       lastRunAt: startedAt,
       nextRunAt,
     });
@@ -423,7 +443,9 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
         }
       }
 
-      const labels = Array.from(new Set(['routine', `routine:${routine.slug}`, ...routine.workConfig.labels]));
+      const labels = Array.from(
+        new Set(['routine', `routine:${routine.slug}`, ...routine.workConfig.labels]),
+      );
       const ticketResult = await createTicket({
         companyId: routine.companyId,
         title: routine.workConfig.title,
@@ -471,7 +493,7 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
         finishedAt,
         nextRunAt,
       });
-      return rowToRoutineRun(routinesRepo.getRunById(runId)!);
+      return resolveRoutineRun(runId);
     } catch (err) {
       const finishedAt = now();
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -498,7 +520,7 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
       if (throwOnError) {
         throw err instanceof Error ? err : new Error(errorMessage);
       }
-      return rowToRoutineRun(routinesRepo.getRunById(runId)!);
+      return resolveRoutineRun(runId);
     } finally {
       inFlightRoutineIds.delete(routine.id);
     }
@@ -588,13 +610,19 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
 
     update(input) {
       const current = resolveRoutine(input.routineId);
-      const name = input.name !== undefined ? ensureNonEmptyString(input.name, 'routine name') : current.name;
-      const schedule = input.schedule !== undefined ? normalizeSchedule(input.schedule) : current.schedule;
-      const workConfig = input.workConfig !== undefined ? normalizeWorkConfig(input.workConfig) : current.workConfig;
+      const name =
+        input.name !== undefined ? ensureNonEmptyString(input.name, 'routine name') : current.name;
+      const schedule =
+        input.schedule !== undefined ? normalizeSchedule(input.schedule) : current.schedule;
+      const workConfig =
+        input.workConfig !== undefined ? normalizeWorkConfig(input.workConfig) : current.workConfig;
       const enabled = input.enabled ?? current.enabled;
       assertEmployee(current.companyId, workConfig.assigneeId);
       const routines = routinesRepo.listByCompany(current.companyId).map(rowToRoutine);
-      const slug = input.name !== undefined ? nextSlug(current.companyId, name, routines, current.id) : current.slug;
+      const slug =
+        input.name !== undefined
+          ? nextSlug(current.companyId, name, routines, current.id)
+          : current.slug;
       const nextRunAt = enabled ? computeNextRunAt(schedule, now()) : null;
       const patchedKeys: Array<'name' | 'enabled' | 'schedule' | 'workConfig'> = [];
       if (input.name !== undefined) patchedKeys.push('name');

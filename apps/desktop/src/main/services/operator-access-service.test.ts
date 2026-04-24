@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
-import { companies } from '../db/schema.js';
 import { createOperatorsRepo } from '../db/repos/operators.js';
+import { companies } from '../db/schema.js';
+import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import {
   LOCAL_OWNER_OPERATOR_ID,
   LOCAL_OWNER_OPERATOR_NAME,
@@ -111,8 +111,8 @@ describe('operator access service', () => {
       'operator-invited',
     );
     expect(service.resolveOperatorIdForCompany('company-beta')).toBe(LOCAL_OWNER_OPERATOR_ID);
-    expect(() =>
-      service.resolveOperatorIdForCompany('company-beta', 'operator-invited'),
-    ).toThrow(/does not belong to company company-beta/i);
+    expect(() => service.resolveOperatorIdForCompany('company-beta', 'operator-invited')).toThrow(
+      /does not belong to company company-beta/i,
+    );
   });
 });

@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react';
 
-import type { Employee, Routine, RoutineSchedule, RoutineTicketWorkConfig, TicketPriority } from '@team-x/shared-types';
+import type {
+  Employee,
+  Routine,
+  RoutineSchedule,
+  RoutineTicketWorkConfig,
+  TicketPriority,
+} from '@team-x/shared-types';
 import { Activity, CalendarDays, Clock3, Play, RefreshCw, Trash2 } from 'lucide-react';
 
 import { useEmployees } from '@/hooks/use-employees.js';
@@ -23,7 +29,8 @@ import {
 
 const FIELD_CLASSNAME =
   'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';
-const LABEL_CLASSNAME = 'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
+const LABEL_CLASSNAME =
+  'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
 const TEXTAREA_CLASSNAME =
   'min-h-[120px] w-full rounded-[18px] border border-white/10 bg-black/20 px-3 py-3 text-sm text-foreground outline-none transition focus:border-brand/30';
 
@@ -66,10 +73,8 @@ function draftFromRoutine(routine: Routine): RoutineDraft {
     triggerKind: routine.triggerKind,
     intervalMinutes:
       routine.schedule.triggerKind === 'interval' ? String(routine.schedule.intervalMinutes) : '60',
-    timeOfDay:
-      routine.schedule.triggerKind === 'interval' ? '09:00' : routine.schedule.timeOfDay,
-    dayOfWeek:
-      routine.schedule.triggerKind === 'weekly' ? String(routine.schedule.dayOfWeek) : '1',
+    timeOfDay: routine.schedule.triggerKind === 'interval' ? '09:00' : routine.schedule.timeOfDay,
+    dayOfWeek: routine.schedule.triggerKind === 'weekly' ? String(routine.schedule.dayOfWeek) : '1',
     ticketTitle: routine.workConfig.title,
     ticketDescription: routine.workConfig.description,
     assigneeId: routine.workConfig.assigneeId ?? '',
@@ -296,19 +301,43 @@ function RoutineCard({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <MissionIconButton title="Run Now" disabled={running} onClick={() => onRunNow(routine.id)}>
+          <MissionIconButton
+            title="Run Now"
+            disabled={running}
+            onClick={() => onRunNow(routine.id)}
+          >
             <Play className="h-4 w-4" />
           </MissionIconButton>
-          <MissionIconButton tone="danger" title="Delete routine" disabled={deleting} onClick={() => onDelete(routine.id)}>
+          <MissionIconButton
+            tone="danger"
+            title="Delete routine"
+            disabled={deleting}
+            onClick={() => onDelete(routine.id)}
+          >
             <Trash2 className="h-4 w-4" />
           </MissionIconButton>
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <MissionMetricTile label="Schedule" value={formatSchedule(routine.schedule)} hint="Cadence definition" icon={Clock3} />
-        <MissionMetricTile label="Next Run" value={formatTimestamp(routine.nextRunAt)} hint="Local workstation time" icon={CalendarDays} />
-        <MissionMetricTile label="Last Run" value={formatTimestamp(routine.lastRunAt)} hint={routine.lastRunMessage ?? 'No run recorded yet'} icon={Activity} />
+        <MissionMetricTile
+          label="Schedule"
+          value={formatSchedule(routine.schedule)}
+          hint="Cadence definition"
+          icon={Clock3}
+        />
+        <MissionMetricTile
+          label="Next Run"
+          value={formatTimestamp(routine.nextRunAt)}
+          hint="Local workstation time"
+          icon={CalendarDays}
+        />
+        <MissionMetricTile
+          label="Last Run"
+          value={formatTimestamp(routine.lastRunAt)}
+          hint={routine.lastRunMessage ?? 'No run recorded yet'}
+          icon={Activity}
+        />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -325,7 +354,9 @@ function RoutineCard({
           <select
             className={FIELD_CLASSNAME}
             value={draft.enabled ? 'enabled' : 'paused'}
-            onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.value === 'enabled' }))}
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, enabled: event.target.value === 'enabled' }))
+            }
           >
             <option value="enabled">Enabled</option>
             <option value="paused">Paused</option>
@@ -379,7 +410,11 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
   const employees = employeesQuery.data ?? [];
   const runs = runsQuery.data ?? [];
   const dueCount = useMemo(
-    () => routines.filter((routine) => routine.enabled && routine.nextRunAt !== null && routine.nextRunAt <= Date.now()).length,
+    () =>
+      routines.filter(
+        (routine) =>
+          routine.enabled && routine.nextRunAt !== null && routine.nextRunAt <= Date.now(),
+      ).length,
     [routines],
   );
 
@@ -407,17 +442,38 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
   return (
     <div className="space-y-4" data-routines-panel="">
       <div className="grid gap-3 md:grid-cols-4">
-        <MissionMetricTile label="Defined" value={String(routines.length)} hint="Workspace routine definitions" icon={Clock3} />
-        <MissionMetricTile label="Enabled" value={String(routines.filter((routine) => routine.enabled).length)} hint="Scheduled and eligible to tick" icon={Activity} />
-        <MissionMetricTile label="Due Now" value={String(dueCount)} hint="Cadences that should materialize work on the next tick" icon={RefreshCw} />
-        <MissionMetricTile label="Recent Runs" value={String(runs.length)} hint="Latest visible routine materializations" icon={Play} />
+        <MissionMetricTile
+          label="Defined"
+          value={String(routines.length)}
+          hint="Workspace routine definitions"
+          icon={Clock3}
+        />
+        <MissionMetricTile
+          label="Enabled"
+          value={String(routines.filter((routine) => routine.enabled).length)}
+          hint="Scheduled and eligible to tick"
+          icon={Activity}
+        />
+        <MissionMetricTile
+          label="Due Now"
+          value={String(dueCount)}
+          hint="Cadences that should materialize work on the next tick"
+          icon={RefreshCw}
+        />
+        <MissionMetricTile
+          label="Recent Runs"
+          value={String(runs.length)}
+          hint="Latest visible routine materializations"
+          icon={Play}
+        />
       </div>
 
       <MissionInsetSurface className="space-y-4 p-4">
         <div className="space-y-1">
           <div className="text-sm font-semibold text-foreground">Create Routine</div>
           <p className="text-xs leading-5 text-muted-foreground">
-            Routines create explicit ticket work through the existing assignment and orchestrator path.
+            Routines create explicit ticket work through the existing assignment and orchestrator
+            path.
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
@@ -426,7 +482,9 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
             <input
               className={FIELD_CLASSNAME}
               value={draft.name}
-              onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, name: event.target.value }))
+              }
               placeholder="Daily queue review"
             />
           </label>
@@ -435,7 +493,9 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
             <select
               className={FIELD_CLASSNAME}
               value={draft.enabled ? 'enabled' : 'paused'}
-              onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.value === 'enabled' }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, enabled: event.target.value === 'enabled' }))
+              }
             >
               <option value="enabled">Enabled</option>
               <option value="paused">Paused</option>
@@ -443,7 +503,10 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
           </label>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <RoutineScheduleFields draft={draft} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
+          <RoutineScheduleFields
+            draft={draft}
+            onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+          />
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <RoutineWorkFields
@@ -515,7 +578,8 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
         <div className="space-y-1">
           <div className="text-sm font-semibold text-foreground">Recent Routine Runs</div>
           <p className="text-xs leading-5 text-muted-foreground">
-            Manual and scheduled routine attempts are persisted here even when materialization fails.
+            Manual and scheduled routine attempts are persisted here even when materialization
+            fails.
           </p>
         </div>
         {runs.length === 0 ? (
@@ -532,7 +596,15 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-foreground">{run.routineId}</span>
-                      <MissionPill tone={run.status === 'success' ? 'accent' : run.status === 'error' ? 'danger' : 'warning'}>
+                      <MissionPill
+                        tone={
+                          run.status === 'success'
+                            ? 'accent'
+                            : run.status === 'error'
+                              ? 'danger'
+                              : 'warning'
+                        }
+                      >
                         {run.status}
                       </MissionPill>
                       <MissionPill>{run.reason}</MissionPill>
@@ -543,7 +615,9 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
                     </p>
                   </div>
                   <div className="max-w-xl text-xs leading-5 text-muted-foreground">
-                    {run.errorMessage?.trim() || run.message?.trim() || 'Routine run recorded with no additional message.'}
+                    {run.errorMessage?.trim() ||
+                      run.message?.trim() ||
+                      'Routine run recorded with no additional message.'}
                   </div>
                 </div>
               </MissionInsetSurface>

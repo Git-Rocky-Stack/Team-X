@@ -41,22 +41,26 @@ import type {
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   AgenticRunSnapshot,
+  ApprovalItem,
   ArtifactRecord,
   AttachFileRequest,
   AttachFileResponse,
-  AuthorityGrant,
-  AuthorityRequest,
   AuditEvent,
   AuditExportRequest,
   AuditExportResponse,
   AuditFilter,
   AuditStats,
+  AuthorityGrant,
+  AuthorityRequest,
   BackupCreateRequest,
   BackupCreateResponse,
   BackupEntry,
   BackupRestoreRequest,
   BackupRestoreResponse,
   BindEmployeeRuntimeProfileRequest,
+  BudgetLedgerEntry,
+  BudgetOverview,
+  BudgetPolicy,
   CallMeetingRequest,
   CallMeetingResponse,
   CommandHistoryRequest,
@@ -78,35 +82,44 @@ import type {
   CopilotExportResponse,
   CopilotInsightListArgs,
   CopilotInsightListResult,
-  CreateRuntimeProfileRequest,
-  CreateRoutineRequest,
+  CreateAuthorityGrantRequest,
+  CreateBudgetPolicyRequest,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
   CreateProjectResponse,
+  CreateRoutineRequest,
+  CreateRuntimeProfileRequest,
   CreateTicketRequest,
   CreateTicketResponse,
   DashboardEvent,
   DashboardEventListener,
-  DeleteRuntimeProfileRequest,
   DeleteRoutineRequest,
+  DeleteRuntimeProfileRequest,
   DetachFileRequest,
+  EffectiveAuthoritySnapshot,
   EmployeeRuntimeBinding,
   EmployeesPromoteRequest,
   EmployeesPromoteResponse,
-  EffectiveAuthoritySnapshot,
   EmployeesSetManagerRequest,
   EndMeetingResponse,
   ExportCompanyPackageRequest,
   ExportCompanyPackageResponse,
+  ExtensionSummary,
   FireEmployeeRequest,
+  GetEffectiveAuthorityRequest,
+  GetThreadDigestRequest,
   Goal,
   GoalDetail,
-  GetThreadDigestRequest,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  ImportCompanyPackageRequest,
+  ImportCompanyPackageResponse,
+  InstallCompanyTemplateRequest,
+  InstallCompanyTemplateResponse,
   InstallGithubSkillRequest,
   InstallLocalSkillRequest,
+  InstallMcpTemplateRequest,
   InterjectMeetingRequest,
   InterjectMeetingResponse,
   IpcCommandHistoryEntry,
@@ -114,48 +127,46 @@ import type {
   IpcExecuteResult,
   IpcParseResult,
   IpcSuggestItem,
-  GetEffectiveAuthorityRequest,
-  PackThreadContextRequest,
-  InstallMcpTemplateRequest,
+  ListApprovalItemsRequest,
   ListArtifactsRequest,
   ListAuthorityGrantsRequest,
+  ListBudgetLedgerEntriesRequest,
+  ListCompanyTemplatesRequest,
+  ListCompanyTemplatesResponse,
   ListEventsRequest,
   ListEventsResponse,
   ListMcpTemplatesRequest,
-  ListRunCheckpointsRequest,
+  ListProviderModelsResponse,
   ListRoutineRunsRequest,
+  ListRunCheckpointsRequest,
   ListSkillAssignmentsRequest,
-  CreateAuthorityGrantRequest,
-  CreateBudgetPolicyRequest,
   McpServerSummary,
   McpTemplateSummary,
   Meeting,
   MeetingDetail,
-  ApprovalItem,
-  BudgetLedgerEntry,
-  BudgetOverview,
-  BudgetPolicy,
-  ListProviderModelsResponse,
-  OrgchartGetResponse,
   OperatorAccessEntry,
+  OrgchartGetResponse,
+  PackThreadContextRequest,
+  PackedThreadContext,
+  PreviewCompanyPackageImportRequest,
+  PreviewCompanyPackageImportResponse,
   Project,
   ProjectDetail,
-  PackedThreadContext,
-  RunCheckpoint,
-  Routine,
-  RoutineRun,
-  RuntimeProfileSummary,
-  RuntimeProfileValidation,
   ProviderConfig,
   RagDeleteForCompanyResponse,
   RagRebuildAllResponse,
   RagStatsResponse,
   ResolveThreadRequest,
   ResolveThreadResponse,
+  ReviewApprovalItemRequest,
+  Routine,
+  RoutineRun,
+  RunCheckpoint,
+  RunRoutineNowRequest,
+  RuntimeProfileSummary,
+  RuntimeProfileValidation,
   SendChatRequest,
   SendChatResponse,
-  StopChatRequest,
-  StopChatResponse,
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetCopilotResponse,
@@ -179,6 +190,8 @@ import type {
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
   SkillAssignment,
+  StopChatRequest,
+  StopChatResponse,
   TeamXApi,
   TelemetryCompanyStatsRequest,
   TelemetryCompanyStatsResponse,
@@ -198,22 +211,17 @@ import type {
   Ticket,
   TicketAttachment,
   TicketDetail,
-  ExtensionSummary,
   UnsubscribeFn,
+  UpdateBudgetPolicyRequest,
   UpdateCheckResult,
   UpdateGoalRequest,
   UpdateInstallResult,
   UpdateProjectRequest,
   UpdateProviderRequest,
-  UpdateRuntimeProfileRequest,
   UpdateRoutineRequest,
-  UpdateBudgetPolicyRequest,
+  UpdateRuntimeProfileRequest,
   UpdateTicketRequest,
   ValidateRuntimeProfileRequest,
-  RunRoutineNowRequest,
-  ListBudgetLedgerEntriesRequest,
-  ListApprovalItemsRequest,
-  ReviewApprovalItemRequest,
   VaultDownloadResponse,
   VaultFile,
   VaultSearchResult,
@@ -254,6 +262,10 @@ export interface IpcRendererLike {
 const CHANNELS = {
   companiesList: 'companies.list',
   companiesExportPackage: 'companies.exportPackage',
+  companiesPreviewImportPackage: 'companies.previewImportPackage',
+  companiesImportPackage: 'companies.importPackage',
+  companiesListTemplates: 'companies.listTemplates',
+  companiesInstallTemplate: 'companies.installTemplate',
   companiesArchive: 'companies.archive',
   companiesCreate: 'companies.create',
   // Multi-company CRUD write-side (Phase 5.6 M-C step e; audit rows 10.13 + 10.15)
@@ -452,6 +464,23 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       list: () => ipc.invoke(CHANNELS.companiesList) as ReturnType<TeamXApi['companies']['list']>,
       exportPackage: (req: ExportCompanyPackageRequest) =>
         ipc.invoke(CHANNELS.companiesExportPackage, req) as Promise<ExportCompanyPackageResponse>,
+      previewImportPackage: (req: PreviewCompanyPackageImportRequest) =>
+        ipc.invoke(
+          CHANNELS.companiesPreviewImportPackage,
+          req,
+        ) as Promise<PreviewCompanyPackageImportResponse>,
+      importPackage: (req: ImportCompanyPackageRequest) =>
+        ipc.invoke(CHANNELS.companiesImportPackage, req) as Promise<ImportCompanyPackageResponse>,
+      listTemplates: (req?: ListCompanyTemplatesRequest) =>
+        ipc.invoke(
+          CHANNELS.companiesListTemplates,
+          req ?? {},
+        ) as Promise<ListCompanyTemplatesResponse>,
+      installTemplate: (req: InstallCompanyTemplateRequest) =>
+        ipc.invoke(
+          CHANNELS.companiesInstallTemplate,
+          req,
+        ) as Promise<InstallCompanyTemplateResponse>,
       create: (req: CompaniesCreateRequest) =>
         ipc.invoke(CHANNELS.companiesCreate, req) as Promise<CompaniesCreateResponse>,
       archive: (companyId: string) =>
@@ -475,10 +504,9 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       update: (req: UpdateRuntimeProfileRequest) =>
         ipc.invoke(CHANNELS.runtimeProfilesUpdate, req) as Promise<void>,
       delete: (profileId: string) =>
-        ipc.invoke(
-          CHANNELS.runtimeProfilesDelete,
-          { profileId } satisfies DeleteRuntimeProfileRequest,
-        ) as Promise<void>,
+        ipc.invoke(CHANNELS.runtimeProfilesDelete, {
+          profileId,
+        } satisfies DeleteRuntimeProfileRequest) as Promise<void>,
       bindEmployee: (req: BindEmployeeRuntimeProfileRequest) =>
         ipc.invoke(CHANNELS.runtimeProfilesBindEmployee, req) as Promise<{
           binding: EmployeeRuntimeBinding | null;
@@ -494,7 +522,9 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       update: (req: UpdateRoutineRequest) =>
         ipc.invoke(CHANNELS.routinesUpdate, req) as Promise<void>,
       delete: (routineId: string) =>
-        ipc.invoke(CHANNELS.routinesDelete, { routineId } satisfies DeleteRoutineRequest) as Promise<void>,
+        ipc.invoke(CHANNELS.routinesDelete, {
+          routineId,
+        } satisfies DeleteRoutineRequest) as Promise<void>,
       listRuns: (req: ListRoutineRunsRequest) =>
         ipc.invoke(CHANNELS.routinesListRuns, req) as Promise<RoutineRun[]>,
       runNow: (req: RunRoutineNowRequest) =>
@@ -586,9 +616,9 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       list: (companyId: string) =>
         ipc.invoke(CHANNELS.mcpList, { companyId }) as Promise<McpServerSummary[]>,
       listTemplates: (companyId: string) =>
-        ipc.invoke(CHANNELS.mcpListTemplates, { companyId } satisfies ListMcpTemplatesRequest) as Promise<
-          McpTemplateSummary[]
-        >,
+        ipc.invoke(CHANNELS.mcpListTemplates, {
+          companyId,
+        } satisfies ListMcpTemplatesRequest) as Promise<McpTemplateSummary[]>,
       toggle: (serverId: string, enabled: boolean) =>
         ipc.invoke(CHANNELS.mcpToggle, { serverId, enabled }) as Promise<void>,
       addServer: (req: AddMcpServerRequest) =>
@@ -608,12 +638,13 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       installGithubSkill: (req: InstallGithubSkillRequest) =>
         ipc.invoke(CHANNELS.extensionsInstallGithubSkill, req) as Promise<{ extensionId: string }>,
       listSkillAssignments: (companyId: string) =>
-        ipc.invoke(
-          CHANNELS.extensionsListSkillAssignments,
-          { companyId } satisfies ListSkillAssignmentsRequest,
-        ) as Promise<SkillAssignment[]>,
+        ipc.invoke(CHANNELS.extensionsListSkillAssignments, {
+          companyId,
+        } satisfies ListSkillAssignmentsRequest) as Promise<SkillAssignment[]>,
       upsertSkillAssignment: (req) =>
-        ipc.invoke(CHANNELS.extensionsUpsertSkillAssignment, req) as Promise<{ assignmentId: string }>,
+        ipc.invoke(CHANNELS.extensionsUpsertSkillAssignment, req) as Promise<{
+          assignmentId: string;
+        }>,
       deleteSkillAssignment: (assignmentId: string) =>
         ipc.invoke(CHANNELS.extensionsDeleteSkillAssignment, { assignmentId }) as Promise<void>,
     },
@@ -701,8 +732,7 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.settingsGetExtensions) as Promise<SettingsGetExtensionsResponse>,
       setExtensions: (req: SettingsSetExtensionsRequest) =>
         ipc.invoke(CHANNELS.settingsSetExtensions, req) as Promise<void>,
-      getMemory: () =>
-        ipc.invoke(CHANNELS.settingsGetMemory) as Promise<SettingsGetMemoryResponse>,
+      getMemory: () => ipc.invoke(CHANNELS.settingsGetMemory) as Promise<SettingsGetMemoryResponse>,
       setMemory: (req: SettingsSetMemoryRequest) =>
         ipc.invoke(CHANNELS.settingsSetMemory, req) as Promise<void>,
       getRagConfig: () =>
@@ -745,7 +775,9 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
           providerId,
         }) as Promise<TestProviderConnectionResponse>,
       listModels: (providerId: string) =>
-        ipc.invoke(CHANNELS.providersListModels, { providerId }) as Promise<ListProviderModelsResponse>,
+        ipc.invoke(CHANNELS.providersListModels, {
+          providerId,
+        }) as Promise<ListProviderModelsResponse>,
     },
     vault: {
       upload: (req: VaultUploadRequest) =>

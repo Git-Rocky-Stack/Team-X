@@ -6,10 +6,10 @@ import { useRecentRuns } from '@/hooks/use-telemetry.js';
 import { ipc } from '@/lib/ipc.js';
 
 import {
+  type DashboardAgentRun,
   mergeDashboardAgentRuns,
   projectTelemetryRecentRuns,
   reduceDashboardAgentRuns,
-  type DashboardAgentRun,
 } from './agent-runs-projections.js';
 
 export interface UseDashboardAgentRunsResult {

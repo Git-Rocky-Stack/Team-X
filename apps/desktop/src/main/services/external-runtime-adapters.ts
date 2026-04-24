@@ -1,4 +1,4 @@
-import { spawn, type SpawnOptionsWithoutStdio } from 'node:child_process';
+import { type SpawnOptionsWithoutStdio, spawn } from 'node:child_process';
 
 import type { ProviderStreamFn, StreamMessage, StreamUsage } from '@team-x/provider-router';
 import type { RuntimeProfile } from '@team-x/shared-types';
@@ -76,7 +76,9 @@ function estimateTokens(text: string): number {
 }
 
 function buildPrompt(system: string, messages: StreamMessage[]): string {
-  const history = messages.map((message) => `${message.role.toUpperCase()}\n${message.content}`).join('\n\n');
+  const history = messages
+    .map((message) => `${message.role.toUpperCase()}\n${message.content}`)
+    .join('\n\n');
   return `SYSTEM\n${system}\n\nMESSAGES\n${history}`.trim();
 }
 
@@ -165,11 +167,10 @@ function parseRuntimeResponse(
     }
     return {
       text,
-      usage:
-        extractUsageFromJson(parsed) ?? {
-          promptTokens: estimateTokens(promptText),
-          completionTokens: estimateTokens(text),
-        },
+      usage: extractUsageFromJson(parsed) ?? {
+        promptTokens: estimateTokens(promptText),
+        completionTokens: estimateTokens(text),
+      },
     };
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('[external-runtime]')) {
@@ -360,7 +361,10 @@ function createHttpResolvedProvider(args: {
   };
 }
 
-function getOptionalString(config: Record<string, unknown> | null | undefined, key: string): string | null {
+function getOptionalString(
+  config: Record<string, unknown> | null | undefined,
+  key: string,
+): string | null {
   const value = config?.[key];
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();

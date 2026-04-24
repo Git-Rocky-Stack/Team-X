@@ -6,11 +6,11 @@ import { ipc } from '@/lib/ipc.js';
 
 import {
   DEFAULT_DASHBOARD_LAYOUT,
+  type DashboardLayoutState,
+  type DashboardPanelKey,
   dashboardLayoutFromCompanySettings,
   resetDashboardLayout,
   setDashboardPanelVisibility,
-  type DashboardLayoutState,
-  type DashboardPanelKey,
   withDashboardLayoutInCompanySettings,
 } from './dashboard-layout.js';
 
@@ -56,7 +56,12 @@ export function useDashboardLayoutPreferences(
     layout.agentRuns !== DEFAULT_DASHBOARD_LAYOUT.agentRuns ||
     layout.employeeQueues !== DEFAULT_DASHBOARD_LAYOUT.employeeQueues;
 
-  const mutation = useMutation<void, Error, CompaniesUpdateRequest, { previousCompanies?: Company[] }>({
+  const mutation = useMutation<
+    void,
+    Error,
+    CompaniesUpdateRequest,
+    { previousCompanies?: Company[] }
+  >({
     mutationFn: (req) => ipc.companies.update(req),
     onMutate: (req) => {
       setError(null);
@@ -85,10 +90,10 @@ export function useDashboardLayoutPreferences(
     if (!company) return;
     mutation.mutate({
       companyId: company.id,
-      settings: withDashboardLayoutInCompanySettings(
-        company.settings,
-        nextLayout,
-      ) as Record<string, unknown>,
+      settings: withDashboardLayoutInCompanySettings(company.settings, nextLayout) as Record<
+        string,
+        unknown
+      >,
     });
   }
 

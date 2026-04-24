@@ -11,16 +11,16 @@ import { type ComponentType, useMemo, useState } from 'react';
 
 import type { TelemetryKindFilter } from '@team-x/shared-types';
 
-import { Button } from '@/components/ui/button.js';
 import { Badge } from '@/components/ui/badge.js';
+import { Button } from '@/components/ui/button.js';
 import {
   MissionControlRow,
   MissionHero,
   MissionMetricTile,
   MissionPageShell,
   MissionPill,
-  MissionSegmentedButton,
   MissionSectionCard,
+  MissionSegmentedButton,
   MissionStateBlock,
 } from '@/features/mission/mission-shell.js';
 import { useApprovals } from '@/hooks/use-approvals.js';
@@ -163,12 +163,11 @@ export function TelemetryView() {
   }, [kindFilter, subview]);
 
   const operatorEntries = operatorsQuery.data ?? [];
-  const operatorPosture =
-    operatorEntries.some((entry) => entry.operator.authMode === 'cloud')
-      ? 'shared-cloud'
-      : operatorEntries.some((entry) => entry.operator.authMode === 'invited')
-        ? 'shared-local'
-        : 'local-only';
+  const operatorPosture = operatorEntries.some((entry) => entry.operator.authMode === 'cloud')
+    ? 'shared-cloud'
+    : operatorEntries.some((entry) => entry.operator.authMode === 'invited')
+      ? 'shared-local'
+      : 'local-only';
 
   function openAutonomy(subview: 'budgets' | 'approvals' | 'access') {
     setAutonomySubview(subview);
@@ -295,7 +294,9 @@ export function TelemetryView() {
               variant="outline"
               size="sm"
               className="border-white/10 bg-black/10 hover:bg-black/20"
-              onClick={() => openAutonomy((approvalsQuery.data?.length ?? 0) > 0 ? 'approvals' : 'budgets')}
+              onClick={() =>
+                openAutonomy((approvalsQuery.data?.length ?? 0) > 0 ? 'approvals' : 'budgets')
+              }
             >
               Open autonomy
             </Button>
@@ -305,7 +306,11 @@ export function TelemetryView() {
         <div className="grid gap-3 md:grid-cols-3">
           <MissionMetricTile
             label="Policies"
-            value={budgetOverviewQuery.isLoading ? '--' : `${budgetOverviewQuery.data?.activePolicyCount ?? 0}`}
+            value={
+              budgetOverviewQuery.isLoading
+                ? '--'
+                : `${budgetOverviewQuery.data?.activePolicyCount ?? 0}`
+            }
             hint="Active budget controls currently governing this workspace."
             icon={DollarSign}
           />

@@ -338,7 +338,9 @@ describe('CommandService.parse', () => {
       resolver: makeResolver({
         resolveRole: vi.fn(async () => ({
           kind: 'unique',
-          value: { frontmatter: { id: 'chief-marketing-officer', name: 'Chief Marketing Officer' } },
+          value: {
+            frontmatter: { id: 'chief-marketing-officer', name: 'Chief Marketing Officer' },
+          },
         })),
         resolveEmployee: vi.fn(async (query: string) => {
           if (query === 'CEO') {

@@ -48,8 +48,8 @@
 import type { ProviderStreamFn, StreamMessage } from '@team-x/provider-router';
 import type {
   AuthorKind,
-  RunCheckpointResumeOrigin,
   RunCheckpointResumableKind,
+  RunCheckpointResumeOrigin,
 } from '@team-x/shared-types';
 import {
   MEMORY_TARGET_TOKEN_BUDGET_OPTIONS,
@@ -326,7 +326,11 @@ export interface BuildOrchestratorOptions {
   };
   contextPackerService?: {
     packContext(input: {
-      context: Awaited<ReturnType<NonNullable<BuildOrchestratorOptions['contextAssemblerService']>['assembleThreadContext']>>;
+      context: Awaited<
+        ReturnType<
+          NonNullable<BuildOrchestratorOptions['contextAssemblerService']>['assembleThreadContext']
+        >
+      >;
       targetTokenBudget?: number;
     }): {
       companyId: string;
@@ -397,7 +401,11 @@ export interface BuildOrchestratorOptions {
     getLatest(input: { companyId: string; threadId: string }): {
       pinnedFacts: Array<{ id: string; fact: string; sourceMessageId: string | null }>;
     } | null;
-    shouldRefresh(input: { companyId: string; threadId: string; refreshThreshold?: number }): boolean;
+    shouldRefresh(input: {
+      companyId: string;
+      threadId: string;
+      refreshThreshold?: number;
+    }): boolean;
     upsertDigest(input: {
       companyId: string;
       threadId: string;
@@ -430,7 +438,14 @@ export interface BuildOrchestratorOptions {
       objective?: string | null;
       progressSummary: string;
       blockers?: Array<{
-        kind: 'approval' | 'budget' | 'authority' | 'provider' | 'dependency' | 'operator' | 'other';
+        kind:
+          | 'approval'
+          | 'budget'
+          | 'authority'
+          | 'provider'
+          | 'dependency'
+          | 'operator'
+          | 'other';
         refId: string | null;
         summary: string;
       }>;
@@ -607,11 +622,9 @@ function summarizeDigest(
 }
 
 function collectPackedRefs(
-  packed:
-    | {
-        includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
-      }
-    | null,
+  packed: {
+    includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
+  } | null,
   kind: 'approval' | 'artifact',
 ): string[] {
   if (!packed) return [];
@@ -643,7 +656,9 @@ function checkpointKindLabel(kind: RunCheckpointResumableKind): string {
   return kind;
 }
 
-function resumeOriginPhrase(resumeOrigin: RunCheckpointResumeOrigin | null | undefined): string | null {
+function resumeOriginPhrase(
+  resumeOrigin: RunCheckpointResumeOrigin | null | undefined,
+): string | null {
   if (!resumeOrigin) return null;
   return `after resuming from the ${checkpointKindLabel(resumeOrigin.checkpointKind)} checkpoint`;
 }
@@ -653,7 +668,11 @@ function latestResumeOrigin(
     | {
         getLatest(input: { companyId: string; threadId: string }): {
           id: string;
-          checkpointKind: RunCheckpointResumableKind | 'manual' | 'completion' | 'routine-completed';
+          checkpointKind:
+            | RunCheckpointResumableKind
+            | 'manual'
+            | 'completion'
+            | 'routine-completed';
           createdAt: number;
         } | null;
       }
@@ -823,13 +842,11 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
   }): Promise<{
     system: string;
     messages: StreamMessage[];
-    packedContext:
-      | {
-          usedTokens: number;
-          includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
-          resumeOrigin: RunCheckpointResumeOrigin | null;
-        }
-      | null;
+    packedContext: {
+      usedTokens: number;
+      includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
+      resumeOrigin: RunCheckpointResumeOrigin | null;
+    } | null;
   }> {
     if (!contextAssemblerService || !contextPackerService) {
       return {
@@ -891,19 +908,12 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     employeeId: string;
     respondingEmployeeId: string;
     rows: MessageRow[];
-    packedContext:
-      | {
-          includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
-          resumeOrigin: RunCheckpointResumeOrigin | null;
-        }
-      | null;
+    packedContext: {
+      includedBlocks: Array<{ kind: string; sourceRefId: string | null }>;
+      resumeOrigin: RunCheckpointResumeOrigin | null;
+    } | null;
     runId?: string | null;
-    checkpointKind:
-      | 'completion'
-      | 'stopped'
-      | 'timeout'
-      | 'approval-blocked'
-      | 'budget-blocked';
+    checkpointKind: 'completion' | 'stopped' | 'timeout' | 'approval-blocked' | 'budget-blocked';
     progressSummary: string;
     blockers?: Array<{
       kind: 'approval' | 'budget' | 'authority' | 'provider' | 'dependency' | 'operator' | 'other';
@@ -931,15 +941,15 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         runId: args.runId ?? null,
         employeeId: args.employeeId,
         checkpointKind: args.checkpointKind,
-          objective: deriveObjectiveFromRows(args.rows, args.respondingEmployeeId),
-          progressSummary: args.progressSummary,
-          blockers: args.blockers ?? [],
-          nextAction: args.nextAction ?? null,
-          activeArtifactRefs: [...activeArtifactRefs],
-          unresolvedApprovalRefs: [...unresolvedApprovalRefs],
-          resumeOrigin: args.resumeOrigin ?? args.packedContext?.resumeOrigin ?? null,
-          createdAt: now?.() ?? Date.now(),
-        });
+        objective: deriveObjectiveFromRows(args.rows, args.respondingEmployeeId),
+        progressSummary: args.progressSummary,
+        blockers: args.blockers ?? [],
+        nextAction: args.nextAction ?? null,
+        activeArtifactRefs: [...activeArtifactRefs],
+        unresolvedApprovalRefs: [...unresolvedApprovalRefs],
+        resumeOrigin: args.resumeOrigin ?? args.packedContext?.resumeOrigin ?? null,
+        createdAt: now?.() ?? Date.now(),
+      });
     } catch (err) {
       console.warn('[orchestrator] failed to persist run checkpoint:', err);
     }
@@ -951,11 +961,9 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     respondingEmployeeId: string;
     threadSubject: string | null;
     rows: MessageRow[];
-    packedContext:
-      | {
-          usedTokens: number;
-        }
-      | null;
+    packedContext: {
+      usedTokens: number;
+    } | null;
   }): void {
     if (!threadDigestService) return;
     try {
@@ -963,7 +971,10 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         companyId: args.companyId,
         threadId: args.threadId,
       });
-      if (latest && !threadDigestService.shouldRefresh({ companyId: args.companyId, threadId: args.threadId })) {
+      if (
+        latest &&
+        !threadDigestService.shouldRefresh({ companyId: args.companyId, threadId: args.threadId })
+      ) {
         return;
       }
       threadDigestService.upsertDigest({
@@ -1026,7 +1037,9 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
   function getProviderCap(providerKind: string | undefined): number {
     if (!providerKind) return Number.POSITIVE_INFINITY;
     const configured = currentProviderCaps[providerKind];
-    return configured === undefined ? Number.POSITIVE_INFINITY : normalizePositiveInt(configured, 1);
+    return configured === undefined
+      ? Number.POSITIVE_INFINITY
+      : normalizePositiveInt(configured, 1);
   }
 
   async function assertTurnBudgetAllowed(args: {
@@ -1067,15 +1080,16 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         {
           kind: pendingApproval ? 'approval' : 'budget',
           refId: pendingApproval
-            ? admission.approvalItem?.id ?? null
-            : admission.policy?.id ?? admission.approvalItem?.id ?? null,
+            ? (admission.approvalItem?.id ?? null)
+            : (admission.policy?.id ?? admission.approvalItem?.id ?? null),
           summary: reason,
         },
       ],
       nextAction: pendingApproval
         ? 'Review the pending budget approval, then retry from the latest checkpoint.'
         : 'Adjust the budget policy or approval state, then retry from the latest checkpoint.',
-      unresolvedApprovalRefs: pendingApproval && admission.approvalItem ? [admission.approvalItem.id] : [],
+      unresolvedApprovalRefs:
+        pendingApproval && admission.approvalItem ? [admission.approvalItem.id] : [],
       resumeOrigin: latestResumeOrigin(runCheckpointService, args.companyId, args.threadId),
     });
 
@@ -1196,14 +1210,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
           rows: finalRows,
           packedContext: executionContext.packedContext,
           runId: result.runId,
-            checkpointKind: 'completion',
-            progressSummary: summarizeCheckpointCompletion(
-              result.promptTokens,
-              result.completionTokens,
-              result.latencyMs,
-              executionContext.packedContext?.resumeOrigin,
-            ),
-          });
+          checkpointKind: 'completion',
+          progressSummary: summarizeCheckpointCompletion(
+            result.promptTokens,
+            result.completionTokens,
+            result.latencyMs,
+            executionContext.packedContext?.resumeOrigin,
+          ),
+        });
         refreshThreadDigest({
           companyId: company.id,
           threadId: args.threadId,
@@ -1213,14 +1227,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
           packedContext: executionContext.packedContext,
         });
       })
-        .catch((err) => {
-          const failure = classifyCheckpointFailure(
-            err,
-            signal.aborted,
-            executionContext.packedContext?.resumeOrigin,
-          );
-          if (failure) {
-            recordRunCheckpoint({
+      .catch((err) => {
+        const failure = classifyCheckpointFailure(
+          err,
+          signal.aborted,
+          executionContext.packedContext?.resumeOrigin,
+        );
+        if (failure) {
+          recordRunCheckpoint({
             companyId: company.id,
             threadId: args.threadId,
             employeeId: args.employeeId,
@@ -1353,14 +1367,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
           rows: finalRows,
           packedContext: executionContext.packedContext,
           runId: result.runId,
-            checkpointKind: 'completion',
-            progressSummary: summarizeCheckpointCompletion(
-              result.promptTokens,
-              result.completionTokens,
-              result.latencyMs,
-              executionContext.packedContext?.resumeOrigin,
-            ),
-          });
+          checkpointKind: 'completion',
+          progressSummary: summarizeCheckpointCompletion(
+            result.promptTokens,
+            result.completionTokens,
+            result.latencyMs,
+            executionContext.packedContext?.resumeOrigin,
+          ),
+        });
         refreshThreadDigest({
           companyId: company.id,
           threadId: args.threadId,
@@ -1370,14 +1384,14 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
           packedContext: executionContext.packedContext,
         });
       })
-        .catch((err) => {
-          const failure = classifyCheckpointFailure(
-            err,
-            signal.aborted,
-            executionContext.packedContext?.resumeOrigin,
-          );
-          if (failure) {
-            recordRunCheckpoint({
+      .catch((err) => {
+        const failure = classifyCheckpointFailure(
+          err,
+          signal.aborted,
+          executionContext.packedContext?.resumeOrigin,
+        );
+        if (failure) {
+          recordRunCheckpoint({
             companyId: company.id,
             threadId: args.threadId,
             employeeId: args.employeeId,
@@ -1411,8 +1425,11 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     return canceled;
   }
 
-  async function selectNextDispatchable():
-    Promise<{ task: PendingTask; companyId: string; provider: ResolvedProvider } | null> {
+  async function selectNextDispatchable(): Promise<{
+    task: PendingTask;
+    companyId: string;
+    provider: ResolvedProvider;
+  } | null> {
     for (let i = 0; i < pending.length; i++) {
       const task = pending[i];
       if (!task) continue;

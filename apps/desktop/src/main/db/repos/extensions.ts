@@ -100,7 +100,9 @@ function listExtensionIdsForCompany(db: DB, companyId: string): Set<string> {
     .from(extensions)
     .where(eq(extensions.companyId, companyId))
     .all()
-    .concat(db.select({ id: extensions.id }).from(extensions).where(isNull(extensions.companyId)).all());
+    .concat(
+      db.select({ id: extensions.id }).from(extensions).where(isNull(extensions.companyId)).all(),
+    );
   return new Set(rows.map((row) => row.id));
 }
 
@@ -176,7 +178,10 @@ export function createExtensionsRepo(db: DB) {
     },
 
     updateEnabled(id: string, enabled: boolean): void {
-      db.update(extensions).set({ enabled, updatedAt: Date.now() }).where(eq(extensions.id, id)).run();
+      db.update(extensions)
+        .set({ enabled, updatedAt: Date.now() })
+        .where(eq(extensions.id, id))
+        .run();
     },
 
     update(id: string, patch: UpdateExtensionInput): void {
@@ -275,7 +280,11 @@ export function createSkillAssignmentsRepo(db: DB) {
     },
 
     upsert(input: CreateSkillAssignmentInput): string {
-      const existing = this.getByScope(input.companyId, input.extensionId, input.employeeId ?? null);
+      const existing = this.getByScope(
+        input.companyId,
+        input.extensionId,
+        input.employeeId ?? null,
+      );
       if (existing) {
         db.update(skillAssignments)
           .set({

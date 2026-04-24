@@ -14,68 +14,66 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
   const routineService = {
     start: vi.fn(),
     stop: vi.fn(),
-    list: vi.fn(
-      (): Routine[] => [
-        {
-          id: 'routine-1',
-          companyId: 'company-1',
-          name: 'Daily Review',
-          slug: 'daily-review',
-          enabled: true,
-          triggerKind: 'daily',
-          schedule: { triggerKind: 'daily', timeOfDay: '09:00' },
-          workKind: 'ticket',
-          workConfig: {
-            title: 'Review queue',
-            description: '',
-            assigneeId: 'employee-1',
-            priority: 'high',
-            labels: ['ops'],
-          },
-          lastRunStatus: 'never',
-          lastRunMessage: null,
-          lastRunAt: null,
-          nextRunAt: 100,
-          createdAt: 1,
-          updatedAt: 1,
+    list: vi.fn((): Routine[] => [
+      {
+        id: 'routine-1',
+        companyId: 'company-1',
+        name: 'Daily Review',
+        slug: 'daily-review',
+        enabled: true,
+        triggerKind: 'daily',
+        schedule: { triggerKind: 'daily', timeOfDay: '09:00' },
+        workKind: 'ticket',
+        workConfig: {
+          title: 'Review queue',
+          description: '',
+          assigneeId: 'employee-1',
+          priority: 'high',
+          labels: ['ops'],
         },
-      ],
-    ),
-    listRuns: vi.fn(
-      (): RoutineRun[] => [
-        {
-          id: 'run-1',
-          companyId: 'company-1',
-          routineId: 'routine-1',
-          status: 'success',
-          reason: 'manual',
-          workKind: 'ticket',
-          scheduledFor: null,
-          startedAt: 10,
-          finishedAt: 20,
-          ticketId: 'ticket-1',
-          message: 'Created ticket ticket-1',
-          errorMessage: null,
-        },
-      ],
-    ),
+        lastRunStatus: 'never',
+        lastRunMessage: null,
+        lastRunAt: null,
+        nextRunAt: 100,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]),
+    listRuns: vi.fn((): RoutineRun[] => [
+      {
+        id: 'run-1',
+        companyId: 'company-1',
+        routineId: 'routine-1',
+        status: 'success',
+        reason: 'manual',
+        workKind: 'ticket',
+        scheduledFor: null,
+        startedAt: 10,
+        finishedAt: 20,
+        ticketId: 'ticket-1',
+        message: 'Created ticket ticket-1',
+        errorMessage: null,
+      },
+    ]),
     create: vi.fn(() => 'routine-1'),
     update: vi.fn(),
     delete: vi.fn(),
-    runNow: vi.fn(async (): Promise<RoutineRun> => ({
-      id: 'run-1',
-      companyId: 'company-1',
-      routineId: 'routine-1',
-      status: 'success',
-      reason: 'manual',
-      workKind: 'ticket',
-      scheduledFor: null,
-      startedAt: 10,
-      finishedAt: 20,
-      ticketId: 'ticket-1',
-      message: 'Created ticket ticket-1',
-      errorMessage: null,
-    })),
+    runNow: vi.fn(
+      async (): Promise<RoutineRun> => ({
+        id: 'run-1',
+        companyId: 'company-1',
+        routineId: 'routine-1',
+        status: 'success',
+        reason: 'manual',
+        workKind: 'ticket',
+        scheduledFor: null,
+        startedAt: 10,
+        finishedAt: 20,
+        ticketId: 'ticket-1',
+        message: 'Created ticket ticket-1',
+        errorMessage: null,
+      }),
+    ),
   };
 
   return {
@@ -178,7 +176,11 @@ describe('routine IPC handlers', () => {
   it('lists runs and supports run-now dispatch', async () => {
     const deps = makeDeps();
     const handlers = createIpcHandlers(deps);
-    const listReq: ListRoutineRunsRequest = { companyId: 'company-1', routineId: 'routine-1', limit: 5 };
+    const listReq: ListRoutineRunsRequest = {
+      companyId: 'company-1',
+      routineId: 'routine-1',
+      limit: 5,
+    };
 
     const history = await handlers.routinesListRuns(listReq);
     const run = await handlers.routinesRunNow({ routineId: 'routine-1' });

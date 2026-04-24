@@ -7,7 +7,10 @@ import { describe, expect, it } from 'vitest';
 const currentDirname = dirname(fileURLToPath(import.meta.url));
 const rendererRoot = resolve(currentDirname, '..', '..');
 const repoRoot = resolve(currentDirname, '../../../../../../..');
-const missionControlSrc = readFileSync(join(currentDirname, 'mission-control-dashboard.tsx'), 'utf8');
+const missionControlSrc = readFileSync(
+  join(currentDirname, 'mission-control-dashboard.tsx'),
+  'utf8',
+);
 const layoutHookSrc = readFileSync(
   join(currentDirname, 'use-dashboard-layout-preferences.ts'),
   'utf8',
@@ -82,6 +85,8 @@ describe('Dashboard integration wiring', () => {
   });
 
   it('renames the default cards tab to Mission Control', () => {
-    expect(subtabsSrc).toContain("{ label: 'Mission Control', icon: LayoutGrid, subview: 'cards' }");
+    expect(subtabsSrc).toContain(
+      "{ label: 'Mission Control', icon: LayoutGrid, subview: 'cards' }",
+    );
   });
 });

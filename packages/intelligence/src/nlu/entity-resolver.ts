@@ -175,7 +175,10 @@ async function resolveEmployee(
     return tokens.includes(needle);
   });
   if (exactMatches.length === 1) {
-    return { kind: 'unique', value: exactMatches[0]! };
+    const [exactMatch] = exactMatches;
+    if (exactMatch) {
+      return { kind: 'unique', value: exactMatch };
+    }
   }
   if (exactMatches.length > 1) {
     return {
@@ -216,14 +219,21 @@ async function resolveTicket(
   // `#42` or `42` → direct id lookup.
   const idMatch = trimmed.match(/^#?(\d+)$/);
   if (idMatch) {
-    const ticket = await deps.getTicketById(idMatch[1]!, companyId);
+    const ticketId = idMatch[1];
+    if (!ticketId) return { kind: 'not_found' };
+    const ticket = await deps.getTicketById(ticketId, companyId);
     return ticket ? { kind: 'unique', value: ticket } : { kind: 'not_found' };
   }
 
   // Otherwise, FTS5.
   const matches = await deps.searchTickets(trimmed, companyId);
   if (matches.length === 0) return { kind: 'not_found' };
-  if (matches.length === 1) return { kind: 'unique', value: matches[0]! };
+  if (matches.length === 1) {
+    const [match] = matches;
+    if (match) {
+      return { kind: 'unique', value: match };
+    }
+  }
   return {
     kind: 'ambiguous',
     candidates: matches.slice(0, MAX_CANDIDATES),
@@ -253,9 +263,8 @@ async function resolveVaultFile(
   // Clear rank margin → unique.
   // FTS5 BM25 rank is negative; more-negative means better. We test
   // whichever side of zero we're on by comparing absolute ratios.
-  const best = matches[0]!;
-  const runnerUp = matches[1]!;
-  if (hasClearVaultMargin(best.rank, runnerUp.rank)) {
+  const [best, runnerUp] = matches;
+  if (best && runnerUp && hasClearVaultMargin(best.rank, runnerUp.rank)) {
     return { kind: 'unique', value: best.file };
   }
 
@@ -316,7 +325,12 @@ async function resolveRole(
       fm.level.toLowerCase() === needle
     );
   });
-  if (exact.length === 1) return { kind: 'unique', value: exact[0]! };
+  if (exact.length === 1) {
+    const [exactMatch] = exact;
+    if (exactMatch) {
+      return { kind: 'unique', value: exactMatch };
+    }
+  }
   if (exact.length > 1) {
     return { kind: 'ambiguous', candidates: exact.slice(0, MAX_CANDIDATES) };
   }
@@ -361,7 +375,10 @@ async function resolveMeeting(
     return meeting.id.toLowerCase() === needle || agenda === needle;
   });
   if (exactMatches.length === 1) {
-    return { kind: 'unique', value: exactMatches[0]! };
+    const [exactMatch] = exactMatches;
+    if (exactMatch) {
+      return { kind: 'unique', value: exactMatch };
+    }
   }
   if (exactMatches.length > 1) {
     return { kind: 'ambiguous', candidates: exactMatches.slice(0, MAX_CANDIDATES) };
@@ -408,15 +425,11 @@ function classifyFuzzy<S extends ScoredItem, T>(
   scored: S[],
   unwrap: (s: S) => T,
 ): ResolvedEntity<T> {
-  if (scored.length === 0) return { kind: 'not_found' };
-  if (scored.length === 1) {
-    // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees scored[0] is defined
-    return { kind: 'unique', value: unwrap(scored[0]!) };
+  const [best, runner] = scored;
+  if (!best) return { kind: 'not_found' };
+  if (!runner) {
+    return { kind: 'unique', value: unwrap(best) };
   }
-  // biome-ignore lint/style/noNonNullAssertion: prior length checks above prove scored[0] is defined
-  const best = scored[0]!;
-  // biome-ignore lint/style/noNonNullAssertion: scored.length >= 2 reached here, so scored[1] is defined
-  const runner = scored[1]!;
   if (runner.score - best.score >= FUZZY_UNIQUE_MARGIN) {
     return { kind: 'unique', value: unwrap(best) };
   }
@@ -492,9 +505,15 @@ export function levenshtein(a: string, b: string): number {
     const c1 = s1.charCodeAt(i - 1);
     for (let j = 1; j <= n; j++) {
       const cost = c1 === s2.charCodeAt(j - 1) ? 0 : 1;
-      const del = prev[j]! + 1;
-      const ins = curr[j - 1]! + 1;
-      const sub = prev[j - 1]! + cost;
+      const delBase = prev[j];
+      const insBase = curr[j - 1];
+      const subBase = prev[j - 1];
+      if (delBase === undefined || insBase === undefined || subBase === undefined) {
+        throw new Error('[entity-resolver] invalid levenshtein state');
+      }
+      const del = delBase + 1;
+      const ins = insBase + 1;
+      const sub = subBase + cost;
       let best = del < ins ? del : ins;
       if (sub < best) best = sub;
       curr[j] = best;
@@ -504,5 +523,9 @@ export function levenshtein(a: string, b: string): number {
     curr = swap;
   }
 
-  return prev[n]!;
+  const result = prev[n];
+  if (result === undefined) {
+    throw new Error('[entity-resolver] invalid levenshtein result');
+  }
+  return result;
 }

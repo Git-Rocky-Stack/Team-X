@@ -114,9 +114,7 @@ function makeRole(
   };
 }
 
-function makeMeeting(
-  overrides: Partial<MeetingRow> & { id: string; agenda: string },
-): MeetingRow {
+function makeMeeting(overrides: Partial<MeetingRow> & { id: string; agenda: string }): MeetingRow {
   return {
     id: overrides.id,
     companyId: overrides.companyId ?? 'company_test',

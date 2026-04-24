@@ -36,6 +36,20 @@ describe('CreateCompanyDialog (features/workspace/create-company-dialog.tsx)', (
     expect(dialogSrc).toMatch(/createMutation\.mutate\(/);
   });
 
+  it('adds a template-backed create flow via the portability hooks', () => {
+    expect(dialogSrc).toContain('useCompanyTemplates');
+    expect(dialogSrc).toContain('useCompanyTemplatePreview');
+    expect(dialogSrc).toContain('useImportCompanyPackage');
+    expect(dialogSrc).toContain("type CreateCompanyMode = 'blank' | 'template';");
+    expect(dialogSrc).toContain('data-create-company-mode=""');
+    expect(dialogSrc).toContain('data-create-company-template=""');
+    expect(dialogSrc).toContain('Create from template');
+    expect(dialogSrc).toContain('Workspace source');
+    expect(dialogSrc).toContain('Blank Workspace');
+    expect(dialogSrc).toContain('From Template');
+    expect(dialogSrc).toContain('Settings &gt; Portability &amp; Templates');
+  });
+
   // Validation contract — mirrors the main-side handler contract.
 
   it('enforces the slug regex matching the main-side handler', () => {
@@ -67,7 +81,8 @@ describe('CreateCompanyDialog (features/workspace/create-company-dialog.tsx)', (
   });
 
   it('trims the name before submitting to match the handler contract', () => {
-    expect(dialogSrc).toMatch(/name:\s*name\.trim\(\)/);
+    expect(dialogSrc).toContain('const trimmedName = name.trim();');
+    expect(dialogSrc).toContain('{ name: trimmedName, slug: nextSlug, theme }');
   });
 
   // Submit / success / error paths.
@@ -77,9 +92,17 @@ describe('CreateCompanyDialog (features/workspace/create-company-dialog.tsx)', (
   });
 
   it('closes the dialog on success and resets form state', () => {
-    expect(dialogSrc).toMatch(
-      /onSuccess:\s*async\s*\(result,\s*variables\)\s*=>\s*\{[\s\S]*?finally\s*\{[\s\S]*?reset\(\)[\s\S]*?onOpenChange\(false\)/,
+    expect(dialogSrc).toContain(
+      'const onSuccess = async (result: { companyId: string }, createdCompany: Company) => {',
     );
+    expect(dialogSrc).toContain('reset();');
+    expect(dialogSrc).toContain('onOpenChange(false);');
+  });
+
+  it('hydrates imported template workspaces into the companies cache too', () => {
+    expect(dialogSrc).toContain('importMutation.mutate(');
+    expect(dialogSrc).toContain('workspaceOriginId: result.manifest.workspaceOriginId');
+    expect(dialogSrc).toContain('companyOriginId: result.manifest.companyOriginId');
   });
 
   it('hydrates the companies cache before flipping the active companyId', () => {
@@ -105,8 +128,15 @@ describe('CreateCompanyDialog (features/workspace/create-company-dialog.tsx)', (
   });
 
   it('guards against double-submit when a mutation is pending', () => {
-    expect(dialogSrc).toMatch(/if\s*\(createMutation\.isPending\)\s*return/);
+    expect(dialogSrc).toContain(
+      'if (createMutation.isPending || importMutation.isPending) return;',
+    );
     expect(dialogSrc).toMatch(/submitDisabled\s*=\s*createMutation\.isPending/);
+  });
+
+  it('disables template submission until a template is actually selected', () => {
+    expect(dialogSrc).toContain("(mode === 'template' && !selectedTemplate)");
+    expect(dialogSrc).toContain('No templates available');
   });
 
   // F10 states — stable data-* anchors for the step (g) E2E.
@@ -126,9 +156,10 @@ describe('CreateCompanyDialog (features/workspace/create-company-dialog.tsx)', (
   });
 
   it('loading state: submit label + disabled ternary on createMutation.isPending', () => {
-    expect(dialogSrc).toMatch(
-      /createMutation\.isPending\s*\?\s*'Creating\.\.\.'\s*:\s*'Create workspace'/,
-    );
+    expect(dialogSrc).toContain("'Creating from template...'");
+    expect(dialogSrc).toContain("'Creating...'");
+    expect(dialogSrc).toContain("'Create from template'");
+    expect(dialogSrc).toContain("'Create workspace'");
   });
 
   it('disabled state: submit disabled when fields empty OR mutation pending', () => {

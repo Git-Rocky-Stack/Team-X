@@ -41,7 +41,8 @@ export function chunkText(text: string, options?: ChunkOptions): string[] {
       const overlapSentences: string[] = [];
       let overlapLength = 0;
       for (let i = currentSentences.length - 1; i >= 0; i--) {
-        const s = currentSentences[i]!;
+        const s = currentSentences[i];
+        if (!s) continue;
         if (overlapLength + s.length > overlapChars) break;
         overlapSentences.unshift(s);
         overlapLength += s.length + 1;

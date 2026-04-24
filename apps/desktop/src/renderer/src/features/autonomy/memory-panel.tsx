@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { MEMORY_TARGET_TOKEN_BUDGET_OPTIONS, type Thread } from '@team-x/shared-types';
-import { BrainCircuit, Clock3, MessageSquareText, RefreshCw, ShieldCheck, Waypoints } from 'lucide-react';
+import {
+  BrainCircuit,
+  Clock3,
+  MessageSquareText,
+  RefreshCw,
+  ShieldCheck,
+  Waypoints,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
 import { useThreadList } from '@/hooks/use-chat.js';
@@ -9,7 +16,10 @@ import { usePackedThreadContext, useRunCheckpoints, useThreadDigest } from '@/ho
 import { useMemorySettings } from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { isAgentThread as checkAgentThread, isCopilotThread as checkCopilotThread } from '../chat/thread-list.js';
+import {
+  isAgentThread as checkAgentThread,
+  isCopilotThread as checkCopilotThread,
+} from '../chat/thread-list.js';
 import {
   checkpointLabel,
   checkpointTone,
@@ -59,7 +69,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
     if (!selectedThreadId || !threads.some((thread) => thread.id === selectedThreadId)) {
       setSelectedThreadId(threads[0]?.id ?? null);
     }
-  }, [selectedThreadId, threads]);
+  }, [selectedThreadId, setSelectedThreadId, threads]);
 
   useEffect(() => {
     if (!memorySettingsQuery.data || targetTokenBudget !== null) return;
@@ -150,7 +160,8 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
               {selectedThread.isSystemAgent ? <MissionPill>system agent</MissionPill> : null}
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Inspect the latest digest, resumable checkpoints, and packed-context composition for one live thread at a time.
+              Inspect the latest digest, resumable checkpoints, and packed-context composition for
+              one live thread at a time.
             </p>
           </div>
           <MissionControlRow density="compact" className="gap-2">
@@ -200,13 +211,13 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
               Pack budget
             </span>
             <MissionControlRow className="gap-2">
-                {TOKEN_BUDGETS.map((budget) => (
-                  <MissionSegmentedButton
-                    key={budget}
-                    active={effectiveTargetTokenBudget === budget}
-                    onClick={() => setTargetTokenBudget(budget)}
-                  >
-                    {budget.toLocaleString()}
+              {TOKEN_BUDGETS.map((budget) => (
+                <MissionSegmentedButton
+                  key={budget}
+                  active={effectiveTargetTokenBudget === budget}
+                  onClick={() => setTargetTokenBudget(budget)}
+                >
+                  {budget.toLocaleString()}
                 </MissionSegmentedButton>
               ))}
             </MissionControlRow>
@@ -217,14 +228,18 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MissionMetricTile
           label="Digest freshness"
-          value={digestQuery.isLoading ? '...' : digest?.freshness ?? 'none'}
+          value={digestQuery.isLoading ? '...' : (digest?.freshness ?? 'none')}
           hint={digest ? `${digest.estimatedTokens} est. tokens` : 'No digest captured yet'}
           icon={BrainCircuit}
         />
         <MissionMetricTile
           label="Checkpoints"
           value={checkpointsQuery.isLoading ? '...' : String(checkpoints.length)}
-          hint={latestCheckpoint ? checkpointLabel(latestCheckpoint.checkpointKind) : 'No resumable state yet'}
+          hint={
+            latestCheckpoint
+              ? checkpointLabel(latestCheckpoint.checkpointKind)
+              : 'No resumable state yet'
+          }
           icon={ShieldCheck}
         />
         <MissionMetricTile
@@ -239,7 +254,9 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
         />
         <MissionMetricTile
           label="Dropped blocks"
-          value={packedContextQuery.isLoading ? '...' : String(packedContext?.droppedBlocks.length ?? 0)}
+          value={
+            packedContextQuery.isLoading ? '...' : String(packedContext?.droppedBlocks.length ?? 0)
+          }
           hint="Blocks omitted by packer"
           icon={Clock3}
         />
@@ -255,7 +272,9 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                   Updated {formatMemoryTimestamp(digest?.updatedAt ?? null)}
                 </div>
               </div>
-              <MissionPill tone={freshnessTone(digest?.freshness)}>{digest?.freshness ?? 'none'}</MissionPill>
+              <MissionPill tone={freshnessTone(digest?.freshness)}>
+                {digest?.freshness ?? 'none'}
+              </MissionPill>
             </div>
 
             {digestQuery.isLoading ? (
@@ -302,7 +321,8 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
               <div>
                 <div className="text-sm font-semibold text-foreground">Packed Context</div>
                 <div className="text-xs text-muted-foreground">
-                  Budget {effectiveTargetTokenBudget.toLocaleString()} with {recentTurnLimit} recent turns
+                  Budget {effectiveTargetTokenBudget.toLocaleString()} with {recentTurnLimit} recent
+                  turns
                 </div>
               </div>
               <MissionPill tone="accent">
@@ -393,12 +413,13 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
 
         <MissionInsetSurface className="space-y-4 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div className="text-sm font-semibold text-foreground">Run Checkpoints</div>
-                <div className="text-xs text-muted-foreground">
-                  Newest first, with resumable blockers and next actions ({checkpointHistoryLimit} visible)
-                </div>
+            <div>
+              <div className="text-sm font-semibold text-foreground">Run Checkpoints</div>
+              <div className="text-xs text-muted-foreground">
+                Newest first, with resumable blockers and next actions ({checkpointHistoryLimit}{' '}
+                visible)
               </div>
+            </div>
             {latestCheckpoint ? (
               <MissionPill tone={checkpointTone(latestCheckpoint.checkpointKind)}>
                 {checkpointLabel(latestCheckpoint.checkpointKind)}
@@ -438,7 +459,9 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                       <MissionPill tone={checkpointTone(checkpoint.checkpointKind)}>
                         {checkpointLabel(checkpoint.checkpointKind)}
                       </MissionPill>
-                      {checkpoint.resumeOrigin ? <MissionPill>{resumeOriginLabel(checkpoint.resumeOrigin)}</MissionPill> : null}
+                      {checkpoint.resumeOrigin ? (
+                        <MissionPill>{resumeOriginLabel(checkpoint.resumeOrigin)}</MissionPill>
+                      ) : null}
                       {checkpoint.unresolvedApprovalRefs.length > 0 ? (
                         <MissionPill tone="warning">
                           {checkpoint.unresolvedApprovalRefs.length} approval refs
@@ -449,7 +472,9 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                       {formatMemoryTimestamp(checkpoint.createdAt)}
                     </span>
                   </div>
-                  <div className="text-sm leading-6 text-foreground/90">{checkpoint.progressSummary}</div>
+                  <div className="text-sm leading-6 text-foreground/90">
+                    {checkpoint.progressSummary}
+                  </div>
                   {checkpoint.resumeOrigin ? (
                     <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                       {resumeOriginHint(checkpoint.resumeOrigin)}
@@ -458,7 +483,10 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                   {checkpoint.blockers.length > 0 ? (
                     <div className="space-y-2 text-xs text-muted-foreground">
                       {checkpoint.blockers.map((blocker, index) => (
-                        <div key={`${checkpoint.id}-${blocker.kind}-${index}`} className="rounded-[14px] border border-white/8 bg-black/15 px-3 py-2">
+                        <div
+                          key={`${checkpoint.id}-${blocker.kind}-${index}`}
+                          className="rounded-[14px] border border-white/8 bg-black/15 px-3 py-2"
+                        >
                           <span className="font-semibold uppercase tracking-[0.14em] text-foreground/80">
                             {blocker.kind}
                           </span>

@@ -49,30 +49,28 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
   const skillsService = {
     installLocal: vi.fn(async () => ({ extensionId: 'skill-1' })),
     installGithub: vi.fn(async () => ({ extensionId: 'skill-2' })),
-    listAssignments: vi.fn(
-      (): SkillAssignment[] => [
-        {
-          id: 'assign-1',
-          extensionId: 'skill-1',
-          companyId: 'company-1',
-          employeeId: null,
-          enabled: true,
-          source: 'workspace-default',
-          createdAt: 1,
-          updatedAt: 1,
-        },
-        {
-          id: 'assign-2',
-          extensionId: 'missing-skill',
-          companyId: 'company-1',
-          employeeId: null,
-          enabled: true,
-          source: 'workspace-default',
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      ],
-    ),
+    listAssignments: vi.fn((): SkillAssignment[] => [
+      {
+        id: 'assign-1',
+        extensionId: 'skill-1',
+        companyId: 'company-1',
+        employeeId: null,
+        enabled: true,
+        source: 'workspace-default',
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      {
+        id: 'assign-2',
+        extensionId: 'missing-skill',
+        companyId: 'company-1',
+        employeeId: null,
+        enabled: true,
+        source: 'workspace-default',
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]),
     upsertAssignment: vi.fn(() => 'assign-1'),
     deleteAssignment: vi.fn(),
   } as unknown as IpcHandlerDeps['skillsService'];

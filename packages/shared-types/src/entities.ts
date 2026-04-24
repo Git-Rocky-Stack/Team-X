@@ -762,11 +762,7 @@ export interface PackedThreadContext {
   resumeOrigin: RunCheckpointResumeOrigin | null;
 }
 
-export const EXTENSIONS_AUTONOMY_MODES = [
-  'balanced',
-  'conservative',
-  'autonomous',
-] as const;
+export const EXTENSIONS_AUTONOMY_MODES = ['balanced', 'conservative', 'autonomous'] as const;
 export type ExtensionsAutonomyMode = (typeof EXTENSIONS_AUTONOMY_MODES)[number];
 
 export const EXTENSION_KINDS = ['skill', 'mcp'] as const;
@@ -849,7 +845,12 @@ export interface AuthorityRequest {
   reviewedAt: number | null;
 }
 
-export type EffectiveAuthoritySourceKind = 'role-default' | 'extension' | 'company' | 'employee' | 'hard-deny';
+export type EffectiveAuthoritySourceKind =
+  | 'role-default'
+  | 'extension'
+  | 'company'
+  | 'employee'
+  | 'hard-deny';
 
 export interface EffectiveAuthorityEntry {
   resourceKind: AuthorityResourceKind;
@@ -870,6 +871,7 @@ export interface EffectiveAuthoritySnapshot {
 export interface Employee {
   id: string;
   companyId: string;
+  rolePackId?: string;
   roleId: string;
   roleMdSha: string;
   level: string;
@@ -979,6 +981,11 @@ export interface CompanyPackageOrgEdge {
   reportId: string;
 }
 
+export interface CompanyPackageProjectTicketLink {
+  projectId: string;
+  ticketId: string;
+}
+
 export interface CompanyPackageAutonomySnapshot {
   runtimeProfiles?: RuntimeProfileSummary[];
   routines?: Routine[];
@@ -996,6 +1003,7 @@ export interface CompanyPackage {
   company: CompanyPackageCompanySnapshot;
   employees?: Employee[];
   orgEdges?: CompanyPackageOrgEdge[];
+  projectTicketLinks?: CompanyPackageProjectTicketLink[];
   autonomy?: CompanyPackageAutonomySnapshot;
   extensions?: CompanyPackageExtensionsSnapshot;
   goals?: Goal[];
@@ -1010,6 +1018,17 @@ export interface CompanyImportPreview {
   missingSecrets: string[];
   suggestedCompanyName: string;
   suggestedSlug: string;
+}
+
+export interface CompanyTemplateSummary {
+  packagePath: string;
+  manifest: CompanyPackageManifest;
+  company: CompanyPackageCompanySnapshot;
+  employeeCount: number;
+  runtimeProfileCount: number;
+  routineCount: number;
+  extensionCount: number;
+  starterAssetCount: number;
 }
 
 export type CompanyPackageValidationResult<T> =
@@ -1037,7 +1056,8 @@ function isCompanyPackageSectionArray(value: unknown): value is CompanyPackageSe
     Array.isArray(value) &&
     value.every(
       (entry) =>
-        typeof entry === 'string' && (COMPANY_PACKAGE_SECTIONS as readonly string[]).includes(entry),
+        typeof entry === 'string' &&
+        (COMPANY_PACKAGE_SECTIONS as readonly string[]).includes(entry),
     )
   );
 }

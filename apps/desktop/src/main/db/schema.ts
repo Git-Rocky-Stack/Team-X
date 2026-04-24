@@ -248,8 +248,14 @@ export const routineRuns = sqliteTable(
   (table) => ({
     companyIdx: index('idx_routine_runs_company').on(table.companyId),
     routineIdx: index('idx_routine_runs_routine').on(table.routineId),
-    routineStartedIdx: index('idx_routine_runs_routine_started').on(table.routineId, table.startedAt),
-    companyStartedIdx: index('idx_routine_runs_company_started').on(table.companyId, table.startedAt),
+    routineStartedIdx: index('idx_routine_runs_routine_started').on(
+      table.routineId,
+      table.startedAt,
+    ),
+    companyStartedIdx: index('idx_routine_runs_company_started').on(
+      table.companyId,
+      table.startedAt,
+    ),
   }),
 );
 
@@ -306,7 +312,9 @@ export const budgetLedgerEntries = sqliteTable(
     /** company | employee | runtime-profile | routine */
     scopeKind: text('scope_kind').notNull(),
     scopeRefId: text('scope_ref_id').notNull(),
-    runId: text('run_id').notNull().references(() => runs.id, { onDelete: 'cascade' }),
+    runId: text('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'cascade' }),
     /** work | agentic | copilot */
     runKind: text('run_kind').notNull(),
     threadId: text('thread_id'),
@@ -612,14 +620,14 @@ export const runCheckpoints = sqliteTable(
     /** manual | completion | stopped | timeout | approval-blocked | budget-blocked | routine-completed */
     checkpointKind: text('checkpoint_kind').notNull(),
     objective: text('objective'),
-      progressSummary: text('progress_summary').notNull(),
-      blockersJson: text('blockers_json').notNull().default('[]'),
-      nextAction: text('next_action'),
-      activeArtifactRefsJson: text('active_artifact_refs_json').notNull().default('[]'),
-      unresolvedApprovalRefsJson: text('unresolved_approval_refs_json').notNull().default('[]'),
-      resumeOriginJson: text('resume_origin_json'),
-      createdAt: integer('created_at').notNull(),
-    },
+    progressSummary: text('progress_summary').notNull(),
+    blockersJson: text('blockers_json').notNull().default('[]'),
+    nextAction: text('next_action'),
+    activeArtifactRefsJson: text('active_artifact_refs_json').notNull().default('[]'),
+    unresolvedApprovalRefsJson: text('unresolved_approval_refs_json').notNull().default('[]'),
+    resumeOriginJson: text('resume_origin_json'),
+    createdAt: integer('created_at').notNull(),
+  },
   (table) => ({
     companyIdx: index('idx_run_checkpoints_company').on(table.companyId),
     threadIdx: index('idx_run_checkpoints_thread').on(table.threadId),

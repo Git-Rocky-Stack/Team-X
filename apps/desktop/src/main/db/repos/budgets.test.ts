@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { companies, employees } from '../schema.js';
+import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createBudgetsRepo } from './budgets.js';
 import { createRunsRepo } from './runs.js';
-import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
-import { companies, employees } from '../schema.js';
 
 let ctx: TestDbHandle;
 let budgetsRepo: ReturnType<typeof createBudgetsRepo>;
@@ -79,9 +79,9 @@ describe('budgets repo', () => {
         enabled: false,
       }),
     );
-    expect(
-      budgetsRepo.findPolicy('company-1', 'company', 'company-1'),
-    ).toEqual(expect.objectContaining({ id: policyId }));
+    expect(budgetsRepo.findPolicy('company-1', 'company', 'company-1')).toEqual(
+      expect.objectContaining({ id: policyId }),
+    );
   });
 
   it('aggregates ledger spend and provider mix from scoped run entries', () => {
@@ -124,9 +124,7 @@ describe('budgets repo', () => {
       occurredAt: 10,
     });
 
-    expect(
-      budgetsRepo.sumLedgerAmount('company-1', 'company', 'company-1', 0, 1000),
-    ).toBe('1.25');
+    expect(budgetsRepo.sumLedgerAmount('company-1', 'company', 'company-1', 0, 1000)).toBe('1.25');
     expect(budgetsRepo.providerMix('company-1', 0, 1000)).toEqual([
       { provider: 'ollama', amountUsd: '1.25' },
     ]);

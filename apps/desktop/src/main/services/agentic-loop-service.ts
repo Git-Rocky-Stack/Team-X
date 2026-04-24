@@ -618,7 +618,8 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       });
       if (!admission.allowed) {
         throw new Error(
-          admission.reason ?? `[agentic-loop] run blocked by budget policy for company "${args.companyId}".`,
+          admission.reason ??
+            `[agentic-loop] run blocked by budget policy for company "${args.companyId}".`,
         );
       }
     }

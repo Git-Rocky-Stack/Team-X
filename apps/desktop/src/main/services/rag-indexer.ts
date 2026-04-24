@@ -14,14 +14,14 @@ import type { RagService } from '@team-x/intelligence';
 import type { DashboardEvent, EmbeddingSourceType } from '@team-x/shared-types';
 
 import {
-  formatGoalEmbeddingContent,
-  formatProjectEmbeddingContent,
-  formatTicketEmbeddingContent,
-  formatVaultFileEmbeddingContent,
   type RagGoalSource,
   type RagProjectSource,
   type RagTicketSource,
   type RagVaultFileSource,
+  formatGoalEmbeddingContent,
+  formatProjectEmbeddingContent,
+  formatTicketEmbeddingContent,
+  formatVaultFileEmbeddingContent,
 } from './rag-source-content.js';
 
 export interface RagIndexerBus {

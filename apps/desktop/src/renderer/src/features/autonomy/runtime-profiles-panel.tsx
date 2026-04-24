@@ -7,7 +7,17 @@ import type {
   RuntimeProfileKind,
   RuntimeProfileSummary,
 } from '@team-x/shared-types';
-import { Bot, CheckCircle2, Cpu, GitBranch, Globe, Link2, PlugZap, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  Bot,
+  CheckCircle2,
+  Cpu,
+  GitBranch,
+  Globe,
+  Link2,
+  PlugZap,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useProviders } from '@/hooks/use-providers.js';
@@ -30,7 +40,8 @@ import {
 
 const FIELD_CLASSNAME =
   'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';
-const LABEL_CLASSNAME = 'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
+const LABEL_CLASSNAME =
+  'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
 
 const KIND_OPTIONS: Array<{ value: RuntimeProfileKind; label: string; description: string }> = [
   {
@@ -56,7 +67,8 @@ const KIND_OPTIONS: Array<{ value: RuntimeProfileKind; label: string; descriptio
   {
     value: 'claude-code',
     label: 'Claude Code Adapter',
-    description: 'Execution-backed when a Claude Code launcher command or endpoint URL is configured.',
+    description:
+      'Execution-backed when a Claude Code launcher command or endpoint URL is configured.',
   },
   {
     value: 'cursor',
@@ -138,7 +150,9 @@ function buildConfig(draft: RuntimeProfileDraft): Record<string, unknown> {
   }
 }
 
-function healthTone(status: RuntimeProfileSummary['lastHealthStatus']): 'default' | 'accent' | 'warning' | 'danger' {
+function healthTone(
+  status: RuntimeProfileSummary['lastHealthStatus'],
+): 'default' | 'accent' | 'warning' | 'danger' {
   switch (status) {
     case 'healthy':
       return 'accent';
@@ -317,7 +331,9 @@ function RuntimeProfileCard({
           </div>
           <div className="flex flex-wrap gap-2">
             <MissionPill tone="accent">{profile.kind}</MissionPill>
-            <MissionPill tone={healthTone(profile.lastHealthStatus)}>{profile.lastHealthStatus}</MissionPill>
+            <MissionPill tone={healthTone(profile.lastHealthStatus)}>
+              {profile.lastHealthStatus}
+            </MissionPill>
             <MissionPill>{profile.executionMode}</MissionPill>
             <MissionPill>{profile.enabled ? 'enabled' : 'disabled'}</MissionPill>
           </div>
@@ -360,7 +376,11 @@ function RuntimeProfileCard({
         />
         <MissionMetricTile
           label="Validation"
-          value={profile.lastValidatedAt ? new Date(profile.lastValidatedAt).toLocaleTimeString() : 'never'}
+          value={
+            profile.lastValidatedAt
+              ? new Date(profile.lastValidatedAt).toLocaleTimeString()
+              : 'never'
+          }
           hint="Most recent health probe"
           icon={CheckCircle2}
         />
@@ -400,7 +420,9 @@ function RuntimeProfileCard({
             <select
               className={FIELD_CLASSNAME}
               value={draft.enabled ? 'enabled' : 'disabled'}
-              onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.value === 'enabled' }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, enabled: event.target.value === 'enabled' }))
+              }
             >
               <option value="enabled">Enabled</option>
               <option value="disabled">Disabled</option>
@@ -463,12 +485,9 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
   const plannedCount = profiles.filter((profile) => profile.executionMode === 'planned').length;
   const boundEmployeeCount = currentProfileByEmployee.size;
 
-  const createError =
-    createMutation.error instanceof Error ? createMutation.error.message : null;
-  const updateError =
-    updateMutation.error instanceof Error ? updateMutation.error.message : null;
-  const deleteError =
-    deleteMutation.error instanceof Error ? deleteMutation.error.message : null;
+  const createError = createMutation.error instanceof Error ? createMutation.error.message : null;
+  const updateError = updateMutation.error instanceof Error ? updateMutation.error.message : null;
+  const deleteError = deleteMutation.error instanceof Error ? deleteMutation.error.message : null;
   const bindError = bindMutation.error instanceof Error ? bindMutation.error.message : null;
   const validateError =
     validateMutation.error instanceof Error ? validateMutation.error.message : null;
@@ -528,7 +547,9 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
           <div>
             <div className="text-sm font-semibold text-foreground">Create Runtime Profile</div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Team-X Internal, Bash Launcher, and HTTP Adapter are execution-backed now. Codex, Claude Code, and Cursor become execution-backed too as soon as you add a launcher command or endpoint URL.
+              Team-X Internal, Bash Launcher, and HTTP Adapter are execution-backed now. Codex,
+              Claude Code, and Cursor become execution-backed too as soon as you add a launcher
+              command or endpoint URL.
             </p>
           </div>
           <MissionPill tone="accent">BYO agent posture</MissionPill>
@@ -540,7 +561,9 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
             <input
               className={FIELD_CLASSNAME}
               value={draft.name}
-              onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, name: event.target.value }))
+              }
               placeholder="Mission Control Internal"
             />
           </label>
@@ -568,7 +591,9 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
             <select
               className={FIELD_CLASSNAME}
               value={draft.enabled ? 'enabled' : 'disabled'}
-              onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.value === 'enabled' }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, enabled: event.target.value === 'enabled' }))
+              }
             >
               <option value="enabled">Enabled</option>
               <option value="disabled">Disabled</option>
@@ -584,8 +609,8 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs leading-5 text-muted-foreground">
-            {(KIND_OPTIONS.find((option) => option.value === draft.kind)?.description ??
-              'Define the runtime posture this profile should capture.')}
+            {KIND_OPTIONS.find((option) => option.value === draft.kind)?.description ??
+              'Define the runtime posture this profile should capture.'}
           </div>
           <button
             type="button"
@@ -610,9 +635,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
           </button>
         </div>
 
-        {createError ? (
-          <div className="text-xs text-red-200">{createError}</div>
-        ) : null}
+        {createError ? <div className="text-xs text-red-200">{createError}</div> : null}
       </MissionInsetSurface>
 
       {profiles.length === 0 ? (
@@ -647,8 +670,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
               saving={updateMutation.isPending}
               deleting={deleteMutation.isPending}
               validating={
-                validateMutation.isPending &&
-                validateMutation.variables?.profileId === profile.id
+                validateMutation.isPending && validateMutation.variables?.profileId === profile.id
               }
             />
           ))}
@@ -660,7 +682,8 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
           <div>
             <div className="text-sm font-semibold text-foreground">Employee Bindings</div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Use the explicit runtime profile picker for each employee. The selector is workspace-scoped and intentionally obvious.
+              Use the explicit runtime profile picker for each employee. The selector is
+              workspace-scoped and intentionally obvious.
             </p>
           </div>
           <MissionPill>{employees.length} employees</MissionPill>

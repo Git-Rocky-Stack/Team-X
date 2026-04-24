@@ -96,10 +96,7 @@ function inferSourceKind(row: McpServerRow): 'local' | 'template' {
 }
 
 function normalizeSourceKind(value: string | null | undefined): BridgeSourceKind | null {
-  return value === 'local' ||
-    value === 'github' ||
-    value === 'marketplace' ||
-    value === 'template'
+  return value === 'local' || value === 'github' || value === 'marketplace' || value === 'template'
     ? value
     : null;
 }
@@ -182,7 +179,11 @@ export function createExtensionsRegistryService(
       trustState,
       runtimeRefId: row.id,
     });
-    return deps.extensionsRepo.getById(extensionId)!;
+    const extension = deps.extensionsRepo.getById(extensionId);
+    if (!extension) {
+      throw new Error(`[extensions-registry] failed to read bridged extension ${extensionId}`);
+    }
+    return extension;
   }
 
   return {

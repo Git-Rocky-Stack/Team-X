@@ -1,29 +1,30 @@
 import { AlertTriangle, FolderLock, Loader2, Shield, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { EXTENSIONS_AUTONOMY_MODES, type AuthorityGrant } from '@team-x/shared-types';
+import { type AuthorityGrant, EXTENSIONS_AUTONOMY_MODES } from '@team-x/shared-types';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
+import { useEmployees } from '@/hooks/use-employees.js';
 import {
   useAuthorityGrants,
   useAuthorityRequests,
-  useDeleteSkillAssignment,
   useDeleteAuthorityGrant,
+  useDeleteSkillAssignment,
   useEffectiveAuthority,
   useInstalledExtensions,
-  useSkillAssignments,
-  useMcpTemplates,
   useMcpServers,
+  useMcpTemplates,
   useRemoveMcpServer,
   useReviewAuthorityRequest,
+  useSkillAssignments,
   useToggleMcpServer,
   useUpsertSkillAssignment,
 } from '@/hooks/use-extensions.js';
-import { useEmployees } from '@/hooks/use-employees.js';
 import { useExtensionsSettings, useSetExtensionsSettings } from '@/hooks/use-settings.js';
+import { requireString } from '@/lib/required.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import { GrantAuthorityDialog } from './grant-authority-dialog.js';
@@ -36,7 +37,9 @@ const AUTONOMY_COPY: Record<(typeof EXTENSIONS_AUTONOMY_MODES)[number], string> 
   autonomous: 'Auto-enable and auto-grant unless a request hits a hard platform deny.',
 };
 
-function permissionVariant(permission: AuthorityGrant['permission']): 'default' | 'secondary' | 'destructive' {
+function permissionVariant(
+  permission: AuthorityGrant['permission'],
+): 'default' | 'secondary' | 'destructive' {
   if (permission === 'deny') return 'destructive';
   if (permission === 'prompt') return 'secondary';
   return 'default';
@@ -69,9 +72,11 @@ export function ExtensionsSection() {
   const skillAssignments = skillAssignmentsQuery.data ?? [];
   const employees = employeesQuery.data ?? [];
   const mcpExtensionsByRuntimeRefId = new Map(
-    extensions
-      .filter((extension) => extension.kind === 'mcp' && extension.runtimeRefId)
-      .map((extension) => [extension.runtimeRefId!, extension]),
+    extensions.flatMap((extension) =>
+      extension.kind === 'mcp' && typeof extension.runtimeRefId === 'string'
+        ? ([[extension.runtimeRefId, extension]] as const)
+        : [],
+    ),
   );
   const effectiveAuthorityQuery = useEffectiveAuthority(companyId, previewEmployeeId);
   const employeeNameById = new Map(employees.map((employee) => [employee.id, employee.name]));
@@ -139,6 +144,7 @@ export function ExtensionsSection() {
   const selectClass =
     'flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
   const showAuthorityPreview = companyId !== null && employees.length > 0;
+  const requiredCompanyId = companyId ? requireString(companyId, 'companyId') : null;
 
   return (
     <section className="space-y-4">
@@ -255,7 +261,10 @@ export function ExtensionsSection() {
                       ? extension.manifest.healthStatus
                       : 'healthy';
                   return (
-                    <div key={extension.id} className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
+                    <div
+                      key={extension.id}
+                      className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium text-foreground">
@@ -268,7 +277,9 @@ export function ExtensionsSection() {
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">{extension.trustState}</Badge>
                           <Badge variant="outline">{healthStatus}</Badge>
-                          {!extension.enabled && <Badge variant="secondary">extension disabled</Badge>}
+                          {!extension.enabled && (
+                            <Badge variant="secondary">extension disabled</Badge>
+                          )}
                         </div>
                       </div>
 
@@ -285,7 +296,9 @@ export function ExtensionsSection() {
                       <div className="mt-4 rounded-lg border border-border/70 bg-background/70 px-3 py-3">
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <p className="text-xs font-medium text-foreground">Workspace assignment</p>
+                            <p className="text-xs font-medium text-foreground">
+                              Workspace assignment
+                            </p>
                             <p className="text-[11px] text-muted-foreground">
                               Default state applied to every employee unless an override exists.
                             </p>
@@ -300,9 +313,13 @@ export function ExtensionsSection() {
                               deleteSkillAssignment.isPending ||
                               !extension.enabled
                             }
-                            onClick={() => handleWorkspaceSkillToggle(extension.id, !workspaceEnabled)}
+                            onClick={() =>
+                              handleWorkspaceSkillToggle(extension.id, !workspaceEnabled)
+                            }
                           >
-                            {workspaceEnabled ? 'Disable Workspace Default' : 'Enable Workspace Default'}
+                            {workspaceEnabled
+                              ? 'Disable Workspace Default'
+                              : 'Enable Workspace Default'}
                           </Button>
                         </div>
                       </div>
@@ -311,7 +328,8 @@ export function ExtensionsSection() {
                         <div>
                           <p className="text-xs font-medium text-foreground">Employee overrides</p>
                           <p className="text-[11px] text-muted-foreground">
-                            Override the workspace default per employee. Inherit removes the override.
+                            Override the workspace default per employee. Inherit removes the
+                            override.
                           </p>
                         </div>
                         {employees.length === 0 ? (
@@ -335,7 +353,9 @@ export function ExtensionsSection() {
                                   className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/50 px-3 py-2"
                                 >
                                   <div className="min-w-0">
-                                    <div className="truncate text-sm text-foreground">{employee.name}</div>
+                                    <div className="truncate text-sm text-foreground">
+                                      {employee.name}
+                                    </div>
                                     <div className="truncate text-[11px] text-muted-foreground">
                                       {employee.title}
                                     </div>
@@ -351,7 +371,10 @@ export function ExtensionsSection() {
                                       )
                                     }
                                     className={selectClass}
-                                    disabled={upsertSkillAssignment.isPending || deleteSkillAssignment.isPending}
+                                    disabled={
+                                      upsertSkillAssignment.isPending ||
+                                      deleteSkillAssignment.isPending
+                                    }
                                   >
                                     <option value="inherit">Inherit</option>
                                     <option value="enabled">Enabled</option>
@@ -377,8 +400,8 @@ export function ExtensionsSection() {
               <div>
                 <CardTitle className="text-base">MCP Servers</CardTitle>
                 <CardDescription>
-                  Runtime servers with provenance, trust state, and requested access from the extension
-                  registry. Built-in templates install through the import flow.
+                  Runtime servers with provenance, trust state, and requested access from the
+                  extension registry. Built-in templates install through the import flow.
                 </CardDescription>
               </div>
               <Button
@@ -408,57 +431,66 @@ export function ExtensionsSection() {
                 {mcpQuery.data.map((server) => {
                   const extension = mcpExtensionsByRuntimeRefId.get(server.id);
                   return (
-                    <div key={server.id} className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-foreground">{server.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {extension
-                            ? `${extension.sourceKind} · ${extension.sourceRef}`
-                            : `${server.transport} runtime`}
+                    <div
+                      key={server.id}
+                      className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium text-foreground">
+                            {server.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {extension
+                              ? `${extension.sourceKind} · ${extension.sourceRef}`
+                              : `${server.transport} runtime`}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={server.enabled ? 'default' : 'secondary'}>
+                            {server.enabled ? 'enabled' : 'disabled'}
+                          </Badge>
+                          {extension && <Badge variant="outline">{extension.trustState}</Badge>}
+                          {server.lastHealth && (
+                            <Badge variant="outline">{server.lastHealth}</Badge>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={server.enabled ? 'default' : 'secondary'}>
-                          {server.enabled ? 'enabled' : 'disabled'}
-                        </Badge>
-                        {extension && <Badge variant="outline">{extension.trustState}</Badge>}
-                        {server.lastHealth && <Badge variant="outline">{server.lastHealth}</Badge>}
+                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                        <span>{server.transport}</span>
+                        <span>{server.toolCount} tools</span>
+                        {extension && (
+                          <span>{extension.requestedCapabilities.length} capabilities</span>
+                        )}
+                        {extension && <span>{extension.requestedPaths.length} paths</span>}
                       </div>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                      <span>{server.transport}</span>
-                      <span>{server.toolCount} tools</span>
-                      {extension && <span>{extension.requestedCapabilities.length} capabilities</span>}
-                      {extension && <span>{extension.requestedPaths.length} paths</span>}
-                    </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          toggleMcpServer.mutate({
-                            serverId: server.id,
-                            enabled: !server.enabled,
-                          })
-                        }
-                        disabled={toggleMcpServer.isPending || removeMcpServer.isPending}
-                      >
-                        {server.enabled ? 'Disable' : 'Enable'}
-                      </Button>
-                      {server.companyId !== null && (
+                      <div className="mt-3 flex items-center gap-2">
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => removeMcpServer.mutate(server.id)}
+                          onClick={() =>
+                            toggleMcpServer.mutate({
+                              serverId: server.id,
+                              enabled: !server.enabled,
+                            })
+                          }
                           disabled={toggleMcpServer.isPending || removeMcpServer.isPending}
                         >
-                          Remove
+                          {server.enabled ? 'Disable' : 'Enable'}
                         </Button>
-                      )}
-                    </div>
+                        {server.companyId !== null && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeMcpServer.mutate(server.id)}
+                            disabled={toggleMcpServer.isPending || removeMcpServer.isPending}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -480,7 +512,8 @@ export function ExtensionsSection() {
               <div>
                 <CardTitle className="text-base">Authority Matrix</CardTitle>
                 <CardDescription>
-                  Effective workspace grants from company defaults, employee overrides, and extension requests.
+                  Effective workspace grants from company defaults, employee overrides, and
+                  extension requests.
                 </CardDescription>
               </div>
               <Button
@@ -513,8 +546,9 @@ export function ExtensionsSection() {
                       <div>
                         <p className="text-xs font-medium text-foreground">Effective preview</p>
                         <p className="text-[11px] text-muted-foreground">
-                          Resolver-backed preview using role defaults plus company, extension, and employee layers.
-                          Path grants are Windows-safe, case-insensitive, and directory-prefix matched.
+                          Resolver-backed preview using role defaults plus company, extension, and
+                          employee layers. Path grants are Windows-safe, case-insensitive, and
+                          directory-prefix matched.
                         </p>
                       </div>
                       <div className="w-56">
@@ -536,7 +570,9 @@ export function ExtensionsSection() {
                       {effectiveAuthorityQuery.isLoading ? (
                         <Skeleton className="h-16 rounded-lg" />
                       ) : effectiveAuthorityQuery.isError || !effectiveAuthorityQuery.data ? (
-                        <p className="text-xs text-destructive">Failed to resolve effective authority.</p>
+                        <p className="text-xs text-destructive">
+                          Failed to resolve effective authority.
+                        </p>
                       ) : (
                         <div className="space-y-2">
                           <div className="flex flex-wrap gap-2">
@@ -556,8 +592,9 @@ export function ExtensionsSection() {
                             ))}
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            {effectiveAuthorityQuery.data.entries.filter((entry) => entry.resourceKind === 'path')
-                              .length > 0 ? (
+                            {effectiveAuthorityQuery.data.entries.filter(
+                              (entry) => entry.resourceKind === 'path',
+                            ).length > 0 ? (
                               effectiveAuthorityQuery.data.entries
                                 .filter((entry) => entry.resourceKind === 'path')
                                 .map((entry) => (
@@ -589,7 +626,9 @@ export function ExtensionsSection() {
                       <div>
                         <p className="text-xs font-medium text-foreground">Pending reviews</p>
                         <p className="text-[11px] text-muted-foreground">
-                          Skills requesting sensitive capabilities or paths stop here until you approve or deny them. The same items now resolve through the shared Autonomy approvals inbox.
+                          Skills requesting sensitive capabilities or paths stop here until you
+                          approve or deny them. The same items now resolve through the shared
+                          Autonomy approvals inbox.
                         </p>
                       </div>
                       <Badge variant="outline">{pendingAuthorityRequests.length}</Badge>
@@ -608,7 +647,8 @@ export function ExtensionsSection() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="truncate text-sm font-medium text-foreground">
-                                  {extensionNameById.get(request.extensionId) ?? request.extensionId}
+                                  {extensionNameById.get(request.extensionId) ??
+                                    request.extensionId}
                                 </div>
                                 <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                                   <span>{request.resourceKind}</span>
@@ -629,7 +669,7 @@ export function ExtensionsSection() {
                                   className="h-8"
                                   onClick={() =>
                                     reviewAuthorityRequest.mutate({
-                                      companyId: companyId!,
+                                      companyId: requireString(requiredCompanyId, 'companyId'),
                                       requestId: request.id,
                                       decision: 'denied',
                                     })
@@ -644,7 +684,7 @@ export function ExtensionsSection() {
                                   className="h-8"
                                   onClick={() =>
                                     reviewAuthorityRequest.mutate({
-                                      companyId: companyId!,
+                                      companyId: requireString(requiredCompanyId, 'companyId'),
                                       requestId: request.id,
                                       decision: 'approved',
                                     })
@@ -684,7 +724,9 @@ export function ExtensionsSection() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={permissionVariant(grant.permission)}>{grant.permission}</Badge>
+                          <Badge variant={permissionVariant(grant.permission)}>
+                            {grant.permission}
+                          </Badge>
                           <Button
                             type="button"
                             variant="ghost"
@@ -726,11 +768,7 @@ export function ExtensionsSection() {
         onOpenChange={setSkillDialogOpen}
         companyId={companyId}
       />
-      <ImportMcpDialog
-        open={mcpDialogOpen}
-        onOpenChange={setMcpDialogOpen}
-        companyId={companyId}
-      />
+      <ImportMcpDialog open={mcpDialogOpen} onOpenChange={setMcpDialogOpen} companyId={companyId} />
     </section>
   );
 }

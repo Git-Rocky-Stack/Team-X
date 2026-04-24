@@ -26,7 +26,10 @@ function makeEmployee(): EmployeeRow {
   };
 }
 
-function makeProfile(kind: RuntimeProfile['kind'], config: Record<string, unknown>): RuntimeProfile {
+function makeProfile(
+  kind: RuntimeProfile['kind'],
+  config: Record<string, unknown>,
+): RuntimeProfile {
   return {
     id: `profile-${kind}`,
     companyId: 'company-1',

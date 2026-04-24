@@ -44,10 +44,9 @@ import type {
   AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
-  ArtifactRecord,
-  AuthorityGrant,
-  AuthorityRequest,
+  ApprovalItem,
   ArchiveCompanyRequest,
+  ArtifactRecord,
   AssembledThreadContext,
   AssignTicketRequest,
   AttachFileRequest,
@@ -57,12 +56,17 @@ import type {
   AuditExportResponse,
   AuditFilter,
   AuditStats,
+  AuthorityGrant,
+  AuthorityRequest,
   BackupCreateRequest,
   BackupCreateResponse,
   BackupEntry,
   BackupRestoreRequest,
   BackupRestoreResponse,
   BindEmployeeRuntimeProfileRequest,
+  BudgetLedgerEntry,
+  BudgetOverview,
+  BudgetPolicy,
   CallMeetingRequest,
   CallMeetingResponse,
   ChatMessage,
@@ -77,67 +81,79 @@ import type {
   CopilotExportRequest,
   CopilotExportResponse,
   CopilotWeightsChangedPayload,
-  CreateRuntimeProfileRequest,
-  CreateRoutineRequest,
+  CreateAuthorityGrantRequest,
+  CreateBudgetPolicyRequest,
   CreateGoalRequest,
   CreateGoalResponse,
   CreateProjectRequest,
   CreateProjectResponse,
+  CreateRoutineRequest,
+  CreateRuntimeProfileRequest,
   CreateTicketRequest,
   CreateTicketResponse,
   DashboardEvent,
-  DeleteRuntimeProfileRequest,
-  DeleteRoutineRequest,
+  DeleteAuthorityGrantRequest,
+  DeleteBudgetPolicyRequest,
   DeleteGoalRequest,
   DeleteProjectRequest,
+  DeleteRoutineRequest,
+  DeleteRuntimeProfileRequest,
   DetachFileRequest,
+  EffectiveAuthoritySnapshot,
   Employee,
   EmployeeRuntimeBinding,
   EmployeesPromoteRequest,
   EmployeesPromoteResponse,
   EmployeesSetManagerRequest,
   EndMeetingResponse,
-  EffectiveAuthoritySnapshot,
   ExportCompanyPackageRequest,
   ExportCompanyPackageResponse,
-  GetGoalRequest,
-  GetThreadDigestRequest,
+  ExtensionSummary,
+  GetBudgetOverviewRequest,
   GetEffectiveAuthorityRequest,
+  GetGoalRequest,
   GetMeetingRequest,
   GetProjectRequest,
+  GetThreadDigestRequest,
   GetTicketRequest,
   Goal,
   GoalDetail,
   HireEmployeeRequest,
   HireEmployeeResponse,
+  ImportCompanyPackageRequest,
+  ImportCompanyPackageResponse,
+  InstallCompanyTemplateRequest,
+  InstallCompanyTemplateResponse,
   InstallGithubSkillRequest,
   InstallLocalSkillRequest,
   InstallMcpTemplateRequest,
   InterjectMeetingRequest,
   InterjectMeetingResponse,
-  DeleteAuthorityGrantRequest,
-  ExtensionSummary,
   LinkTicketToProjectRequest,
-  CreateAuthorityGrantRequest,
+  ListApprovalItemsRequest,
   ListArtifactsRequest,
+  ListAttachmentsRequest,
   ListAuthorityGrantsRequest,
   ListAuthorityRequestsRequest,
-  ListAttachmentsRequest,
-  ListExtensionsRequest,
-  ListSkillAssignmentsRequest,
+  ListBudgetLedgerEntriesRequest,
+  ListBudgetPoliciesRequest,
+  ListCompanyTemplatesRequest,
+  ListCompanyTemplatesResponse,
   ListEventsRequest,
   ListEventsResponse,
+  ListExtensionsRequest,
   ListGoalsRequest,
-  ListMeetingsRequest,
   ListMcpTemplatesRequest,
+  ListMeetingsRequest,
   ListOperatorsRequest,
+  ListProjectsRequest,
   ListProviderModelsRequest,
   ListProviderModelsResponse,
-  ListProjectsRequest,
+  ListRoutineRunsRequest,
+  ListRoutinesRequest,
   ListRunCheckpointsRequest,
   ListRuntimeProfilesRequest,
-  ListRoutinesRequest,
-  ListRoutineRunsRequest,
+  ListSkillAssignmentsRequest,
   ListTicketsRequest,
   McpServerSummary,
   McpTemplateSummary,
@@ -152,28 +168,24 @@ import type {
   OrgchartGetResponse,
   PackThreadContextRequest,
   PackedThreadContext,
+  PreviewCompanyPackageImportRequest,
+  PreviewCompanyPackageImportResponse,
   Project,
   ProjectDetail,
   RemoveProviderRequest,
   ReopenTicketRequest,
-  ReviewAuthorityRequestRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
-  RunCheckpoint,
+  ReviewApprovalItemRequest,
+  ReviewAuthorityRequestRequest,
   Routine,
   RoutineRun,
+  RunCheckpoint,
+  RunRoutineNowRequest,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
-  BudgetLedgerEntry,
-  BudgetOverview,
-  BudgetPolicy,
-  ApprovalItem,
   SendChatRequest,
   SendChatResponse,
-  SkillAssignment,
-  StopChatRequest,
-  StopChatResponse,
-  ThreadDigest,
   SettingsGetAgenticResponse,
   SettingsGetConcurrencyResponse,
   SettingsGetCopilotResponse,
@@ -196,6 +208,9 @@ import type {
   SettingsSetPrivacyRequest,
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
+  SkillAssignment,
+  StopChatRequest,
+  StopChatResponse,
   TelemetryCompanyStatsRequest,
   TelemetryCompanyStatsResponse,
   TelemetryCostBreakdownRequest,
@@ -212,28 +227,22 @@ import type {
   TestProviderConnectionRequest,
   TestProviderConnectionResponse,
   Thread,
+  ThreadDigest,
   Ticket,
   TicketAttachment,
   TicketDetail,
-  ListBudgetPoliciesRequest,
-  CreateBudgetPolicyRequest,
-  UpdateBudgetPolicyRequest,
-  DeleteBudgetPolicyRequest,
-  ListBudgetLedgerEntriesRequest,
-  GetBudgetOverviewRequest,
-  ListApprovalItemsRequest,
-  ReviewApprovalItemRequest,
   UnlinkTicketFromProjectRequest,
+  UpdateBudgetPolicyRequest,
   UpdateCheckResult,
-  UpdateRuntimeProfileRequest,
-  UpdateRoutineRequest,
   UpdateGoalRequest,
   UpdateInstallResult,
   UpdateProjectRequest,
   UpdateProviderRequest,
+  UpdateRoutineRequest,
+  UpdateRuntimeProfileRequest,
   UpdateTicketRequest,
+  UpsertSkillAssignmentRequest,
   ValidateRuntimeProfileRequest,
-  RunRoutineNowRequest,
   VaultDownloadResponse,
   VaultFile,
   VaultSearchResult,
@@ -241,19 +250,18 @@ import type {
   VaultUploadRequest,
   VaultUploadResponse,
   VaultVerifyResponse,
-  UpsertSkillAssignmentRequest,
 } from '@team-x/shared-types';
 import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import {
   AUTO_THREAD_ID,
   BUDGET_SCOPE_KINDS,
   COMPANY_PACKAGE_MODES,
-  COPILOT_CATEGORIES,
   CONCURRENCY_SETTINGS_CLAMPS,
+  COPILOT_CATEGORIES,
   DEFAULT_CONCURRENCY_CAPS,
   PRIVACY_TIER_RANK,
-  RUNTIME_PROFILE_KINDS,
   ROUTINE_TRIGGER_KINDS,
+  RUNTIME_PROFILE_KINDS,
   STRATEGY_SLOTS,
   TELEMETRY_RUN_KINDS,
   getLevelRank,
@@ -273,12 +281,16 @@ import type {
   EmployeeRow,
   PromoteEmployeeInput,
 } from '../db/repos/employees.js';
+import type {
+  AuthorityGrantRow,
+  AuthorityRequestRow,
+  ExtensionRow,
+} from '../db/repos/extensions.js';
 import type { CreateGoalInput, GoalRow, UpdateGoalInput } from '../db/repos/goals.js';
 import type { MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { OrgEdgeRow } from '../db/repos/orgchart.js';
 import type { CreateProjectInput, ProjectRow, UpdateProjectInput } from '../db/repos/projects.js';
-import type { AuthorityGrantRow, AuthorityRequestRow, ExtensionRow } from '../db/repos/extensions.js';
 import type {
   CompanyStats,
   CostBreakdownRow,
@@ -538,9 +550,9 @@ export interface IpcRoleLookup {
 
 import type { EventRow } from '../db/repos/events.js';
 import type { McpServersRepo } from '../db/repos/mcp-servers.js';
-import type { McpHost } from '../services/mcp-host.js';
 import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
 import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
+import type { McpHost } from '../services/mcp-host.js';
 import { pickStrategy } from '../services/runtime-strategy.js';
 
 export interface IpcEventsRepo {
@@ -836,9 +848,10 @@ export interface IpcBudgetGovernanceService {
 
 export interface IpcApprovalInboxService {
   listItems(input: ListApprovalItemsRequest): ApprovalItem[];
-  reviewItem(
-    input: ReviewApprovalItemRequest & { operatorId: string },
-  ): { item: ApprovalItem; grantId: string | null };
+  reviewItem(input: ReviewApprovalItemRequest & { operatorId: string }): {
+    item: ApprovalItem;
+    grantId: string | null;
+  };
 }
 
 export interface IpcArtifactService {
@@ -847,6 +860,14 @@ export interface IpcArtifactService {
 
 export interface IpcCompanyPortabilityService {
   exportCompany(input: ExportCompanyPackageRequest): Promise<ExportCompanyPackageResponse>;
+  previewImport(
+    input: PreviewCompanyPackageImportRequest,
+  ): Promise<PreviewCompanyPackageImportResponse>;
+  importAsNewCompany(input: ImportCompanyPackageRequest): Promise<ImportCompanyPackageResponse>;
+  listTemplates(): Promise<ListCompanyTemplatesResponse['templates']>;
+  installTemplate(input: {
+    packagePath: string;
+  }): Promise<InstallCompanyTemplateResponse['template']>;
 }
 
 export interface IpcThreadDigestService {
@@ -987,6 +1008,22 @@ export interface IpcHandlers {
 
   /** `companies.exportPackage` — export one workspace as a portable Team-X package. */
   companiesExportPackage(req: ExportCompanyPackageRequest): Promise<ExportCompanyPackageResponse>;
+
+  /** `companies.previewImportPackage` — inspect one package file before importing. */
+  companiesPreviewImportPackage(
+    req: PreviewCompanyPackageImportRequest,
+  ): Promise<PreviewCompanyPackageImportResponse>;
+
+  /** `companies.importPackage` — import one package as a brand-new company. */
+  companiesImportPackage(req: ImportCompanyPackageRequest): Promise<ImportCompanyPackageResponse>;
+
+  /** `companies.listTemplates` — list locally installed reusable workspace templates. */
+  companiesListTemplates(req: ListCompanyTemplatesRequest): Promise<ListCompanyTemplatesResponse>;
+
+  /** `companies.installTemplate` — install one external Team-X template package into the local library. */
+  companiesInstallTemplate(
+    req: InstallCompanyTemplateRequest,
+  ): Promise<InstallCompanyTemplateResponse>;
 
   /**
    * `companies.archive` — soft-delete a company. The handler quiesces
@@ -2012,46 +2049,60 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
   ): void {
     const actorId = item.latestDecision?.decidedByOperatorId ?? HUMAN_USER_ID;
 
-    emitUserAuditEvent('approval.reviewed', companyId, {
-      approvalKind: item.kind,
-      approvalRefId: item.id,
-      decision: item.status,
-      subjectRefKind: item.subjectRefKind,
-      subjectRefId: item.subjectRefId,
-      rationale: item.latestDecision?.rationale ?? null,
-    }, actorId);
+    emitUserAuditEvent(
+      'approval.reviewed',
+      companyId,
+      {
+        approvalKind: item.kind,
+        approvalRefId: item.id,
+        decision: item.status,
+        subjectRefKind: item.subjectRefKind,
+        subjectRefId: item.subjectRefId,
+        rationale: item.latestDecision?.rationale ?? null,
+      },
+      actorId,
+    );
 
     if (item.kind !== 'authority-request') return;
 
     const payload = item.payload ?? {};
-    const resourceKind =
-      typeof payload.resourceKind === 'string' ? payload.resourceKind : 'path';
+    const resourceKind = typeof payload.resourceKind === 'string' ? payload.resourceKind : 'path';
     const resourceId =
       typeof payload.resourceId === 'string' ? payload.resourceId : item.subjectRefId;
     const requestedPermission =
       typeof payload.requestedPermission === 'string' ? payload.requestedPermission : 'allow';
 
     if (grantId) {
-      emitUserAuditEvent('authority.grant.created', companyId, {
-        grantId,
-        scopeKind: 'extension',
-        scopeId: item.subjectRefId,
-        resourceKind,
-        resourceId,
-        permission: requestedPermission,
-        requestId: item.id,
-      }, actorId);
+      emitUserAuditEvent(
+        'authority.grant.created',
+        companyId,
+        {
+          grantId,
+          scopeKind: 'extension',
+          scopeId: item.subjectRefId,
+          resourceKind,
+          resourceId,
+          permission: requestedPermission,
+          requestId: item.id,
+        },
+        actorId,
+      );
     }
 
-    emitUserAuditEvent('authority.request.reviewed', companyId, {
-      requestId: item.id,
-      extensionId: item.subjectRefId,
-      resourceKind,
-      resourceId,
-      requestedPermission,
-      decision: item.status,
-      grantId,
-    }, actorId);
+    emitUserAuditEvent(
+      'authority.request.reviewed',
+      companyId,
+      {
+        requestId: item.id,
+        extensionId: item.subjectRefId,
+        resourceKind,
+        resourceId,
+        requestedPermission,
+        decision: item.status,
+        grantId,
+      },
+      actorId,
+    );
   }
 
   return {
@@ -2064,15 +2115,80 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] companies.exportPackage: companyId is required');
       }
       if (!COMPANY_PACKAGE_MODES.includes(req.mode)) {
-        throw new Error(
-          `[ipc] companies.exportPackage: invalid mode "${String(req.mode)}"`,
-        );
+        throw new Error(`[ipc] companies.exportPackage: invalid mode "${String(req.mode)}"`);
       }
       if (!companyPortabilityService) {
         throw new Error('[ipc] companies.exportPackage: companyPortabilityService dep is required');
       }
       assertCompanyActive(companiesRepo, req.companyId, 'companies.exportPackage');
       return companyPortabilityService.exportCompany(req);
+    },
+
+    async companiesPreviewImportPackage(req) {
+      if (typeof req.packagePath !== 'string' || req.packagePath.trim().length === 0) {
+        throw new Error('[ipc] companies.previewImportPackage: packagePath is required');
+      }
+      if (!companyPortabilityService) {
+        throw new Error(
+          '[ipc] companies.previewImportPackage: companyPortabilityService dep is required',
+        );
+      }
+      return companyPortabilityService.previewImport({
+        packagePath: req.packagePath.trim(),
+      });
+    },
+
+    async companiesImportPackage(req) {
+      if (typeof req.packagePath !== 'string' || req.packagePath.trim().length === 0) {
+        throw new Error('[ipc] companies.importPackage: packagePath is required');
+      }
+      if (req.name !== undefined && typeof req.name !== 'string') {
+        throw new Error('[ipc] companies.importPackage: name must be a string when provided');
+      }
+      if (req.slug !== undefined && typeof req.slug !== 'string') {
+        throw new Error('[ipc] companies.importPackage: slug must be a string when provided');
+      }
+      if (!companyPortabilityService) {
+        throw new Error('[ipc] companies.importPackage: companyPortabilityService dep is required');
+      }
+      return companyPortabilityService.importAsNewCompany({
+        packagePath: req.packagePath.trim(),
+        name: req.name,
+        slug: req.slug,
+      });
+    },
+
+    async companiesListTemplates(req) {
+      if (!companyPortabilityService) {
+        throw new Error('[ipc] companies.listTemplates: companyPortabilityService dep is required');
+      }
+      if (req?.companyId !== undefined) {
+        if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
+          throw new Error(
+            '[ipc] companies.listTemplates: companyId must be a non-empty string when provided',
+          );
+        }
+        assertCompanyActive(companiesRepo, req.companyId.trim(), 'companies.listTemplates');
+      }
+      return {
+        templates: await companyPortabilityService.listTemplates(),
+      };
+    },
+
+    async companiesInstallTemplate(req) {
+      if (typeof req.packagePath !== 'string' || req.packagePath.trim().length === 0) {
+        throw new Error('[ipc] companies.installTemplate: packagePath is required');
+      }
+      if (!companyPortabilityService) {
+        throw new Error(
+          '[ipc] companies.installTemplate: companyPortabilityService dep is required',
+        );
+      }
+      return {
+        template: await companyPortabilityService.installTemplate({
+          packagePath: req.packagePath.trim(),
+        }),
+      };
     },
 
     async operatorsList(req) {
@@ -2125,7 +2241,10 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.profileId !== 'string' || req.profileId.length === 0) {
         throw new Error('[ipc] runtimeProfiles.update: profileId is required');
       }
-      if (req.name !== undefined && (typeof req.name !== 'string' || req.name.trim().length === 0)) {
+      if (
+        req.name !== undefined &&
+        (typeof req.name !== 'string' || req.name.trim().length === 0)
+      ) {
         throw new Error('[ipc] runtimeProfiles.update: name must be non-empty when provided');
       }
       if (req.kind !== undefined && !RUNTIME_PROFILE_KINDS.includes(req.kind)) {
@@ -2160,7 +2279,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         );
       }
       if (!runtimeProfilesService) {
-        throw new Error('[ipc] runtimeProfiles.bindEmployee: runtimeProfilesService dep is required');
+        throw new Error(
+          '[ipc] runtimeProfiles.bindEmployee: runtimeProfilesService dep is required',
+        );
       }
       return {
         binding: runtimeProfilesService.bindEmployee(req),
@@ -2186,7 +2307,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       if (!routineService) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ipc] routines.list: routineService dep unwired — returning an empty routine set');
+          console.warn(
+            '[ipc] routines.list: routineService dep unwired — returning an empty routine set',
+          );
         }
         return [];
       }
@@ -2220,7 +2343,10 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.routineId !== 'string' || req.routineId.length === 0) {
         throw new Error('[ipc] routines.update: routineId is required');
       }
-      if (req.name !== undefined && (typeof req.name !== 'string' || req.name.trim().length === 0)) {
+      if (
+        req.name !== undefined &&
+        (typeof req.name !== 'string' || req.name.trim().length === 0)
+      ) {
         throw new Error('[ipc] routines.update: name must be non-empty when provided');
       }
       if (
@@ -2259,7 +2385,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       if (!routineService) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ipc] routines.listRuns: routineService dep unwired — returning an empty run set');
+          console.warn(
+            '[ipc] routines.listRuns: routineService dep unwired — returning an empty run set',
+          );
         }
         return [];
       }
@@ -2282,7 +2410,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       if (!budgetGovernanceService) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ipc] budgets.listPolicies: budgetGovernanceService dep unwired — returning empty policy set');
+          console.warn(
+            '[ipc] budgets.listPolicies: budgetGovernanceService dep unwired — returning empty policy set',
+          );
         }
         return [];
       }
@@ -2300,7 +2430,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         req.scopeKind !== 'company' &&
         (typeof req.scopeRefId !== 'string' || req.scopeRefId.trim().length === 0)
       ) {
-        throw new Error('[ipc] budgets.createPolicy: scopeRefId is required for non-company scopes');
+        throw new Error(
+          '[ipc] budgets.createPolicy: scopeRefId is required for non-company scopes',
+        );
       }
       if (typeof req.hardCapUsd !== 'string' || req.hardCapUsd.trim().length === 0) {
         throw new Error('[ipc] budgets.createPolicy: hardCapUsd is required');
@@ -2340,7 +2472,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       if (!budgetGovernanceService) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ipc] budgets.listLedger: budgetGovernanceService dep unwired — returning empty ledger');
+          console.warn(
+            '[ipc] budgets.listLedger: budgetGovernanceService dep unwired — returning empty ledger',
+          );
         }
         return [];
       }
@@ -2370,7 +2504,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       if (!budgetGovernanceService) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ipc] budgets.listApprovals: budgetGovernanceService dep unwired — returning empty approval set');
+          console.warn(
+            '[ipc] budgets.listApprovals: budgetGovernanceService dep unwired — returning empty approval set',
+          );
         }
         return [];
       }
@@ -2386,7 +2522,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       if (!approvalInboxService) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ipc] approvals.list: approvalInboxService dep unwired — returning empty approval set');
+          console.warn(
+            '[ipc] approvals.list: approvalInboxService dep unwired — returning empty approval set',
+          );
         }
         return [];
       }
@@ -2422,12 +2560,17 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
         throw new Error('[ipc] artifacts.list: companyId is required');
       }
-      if (req.limit !== undefined && (!Number.isInteger(req.limit) || req.limit < 1 || req.limit > 200)) {
+      if (
+        req.limit !== undefined &&
+        (!Number.isInteger(req.limit) || req.limit < 1 || req.limit > 200)
+      ) {
         throw new Error('[ipc] artifacts.list: limit must be an integer between 1 and 200');
       }
       if (!artifactService) {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ipc] artifacts.list: artifactService dep unwired — returning empty artifact set');
+          console.warn(
+            '[ipc] artifacts.list: artifactService dep unwired — returning empty artifact set',
+          );
         }
         return [];
       }
@@ -2470,8 +2613,13 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!thread || thread.companyId !== req.companyId) {
         throw new Error('[ipc] memory.listRunCheckpoints: thread does not belong to company');
       }
-      if (req.limit !== undefined && (!Number.isInteger(req.limit) || req.limit < 1 || req.limit > 100)) {
-        throw new Error('[ipc] memory.listRunCheckpoints: limit must be an integer between 1 and 100');
+      if (
+        req.limit !== undefined &&
+        (!Number.isInteger(req.limit) || req.limit < 1 || req.limit > 100)
+      ) {
+        throw new Error(
+          '[ipc] memory.listRunCheckpoints: limit must be an integer between 1 and 100',
+        );
       }
       if (!runCheckpointService) {
         if (process.env.NODE_ENV !== 'production') {
@@ -2497,7 +2645,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       if (
         req.targetTokenBudget !== undefined &&
-        (!Number.isInteger(req.targetTokenBudget) || req.targetTokenBudget < 128 || req.targetTokenBudget > 64000)
+        (!Number.isInteger(req.targetTokenBudget) ||
+          req.targetTokenBudget < 128 ||
+          req.targetTokenBudget > 64000)
       ) {
         throw new Error(
           '[ipc] memory.packThreadContext: targetTokenBudget must be an integer between 128 and 64000',
@@ -2505,7 +2655,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       if (
         req.recentTurnLimit !== undefined &&
-        (!Number.isInteger(req.recentTurnLimit) || req.recentTurnLimit < 1 || req.recentTurnLimit > 100)
+        (!Number.isInteger(req.recentTurnLimit) ||
+          req.recentTurnLimit < 1 ||
+          req.recentTurnLimit > 100)
       ) {
         throw new Error(
           '[ipc] memory.packThreadContext: recentTurnLimit must be an integer between 1 and 100',
@@ -3939,7 +4091,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       return skillsService
         .listAssignments(companyId)
         .filter((assignment) =>
-          extensionsRegistry.listByCompany(companyId).some((extension) => extension.id === assignment.extensionId),
+          extensionsRegistry
+            .listByCompany(companyId)
+            .some((extension) => extension.id === assignment.extensionId),
         );
     },
 
@@ -3977,7 +4131,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof employeeId === 'string' && employeeId.length > 0) {
         const employee = employeesRepo.getById(employeeId);
         if (!employee) {
-          throw new Error(`[ipc] extensions.upsertSkillAssignment: employee not found: ${employeeId}`);
+          throw new Error(
+            `[ipc] extensions.upsertSkillAssignment: employee not found: ${employeeId}`,
+          );
         }
         if (employee.companyId !== companyId) {
           throw new Error(
@@ -4035,7 +4191,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
       const normalizedStatus =
         status === 'pending' || status === 'approved' || status === 'denied' ? status : undefined;
-      return authorityRepo.listRequestsByCompany(companyId, normalizedStatus).map(rowToAuthorityRequest);
+      return authorityRepo
+        .listRequestsByCompany(companyId, normalizedStatus)
+        .map(rowToAuthorityRequest);
     },
 
     async authorityCreate(req) {
@@ -4130,7 +4288,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         }
       } else if (existing.scopeKind === 'extension' && extensionsRegistry) {
         for (const company of companiesRepo.list()) {
-          const extension = extensionsRegistry.listByCompany(company.id).find((row) => row.id === existing.scopeId);
+          const extension = extensionsRegistry
+            .listByCompany(company.id)
+            .find((row) => row.id === existing.scopeId);
           if (!extension) continue;
           emitUserAuditEvent('authority.grant.deleted', company.id, {
             grantId,
@@ -5155,7 +5315,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
 
       const models = new Set<string>();
       for (const row of data.models ?? []) {
-        const model = typeof row.model === 'string' && row.model.trim().length > 0 ? row.model : row.name;
+        const model =
+          typeof row.model === 'string' && row.model.trim().length > 0 ? row.model : row.name;
         if (typeof model === 'string' && model.trim().length > 0) {
           models.add(model.trim());
         }

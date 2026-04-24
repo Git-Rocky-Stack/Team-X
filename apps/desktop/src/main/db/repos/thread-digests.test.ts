@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { companies, messages, threads } from '../schema.js';
+import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createThreadDigestsRepo } from './thread-digests.js';
 
 let ctx: TestDbHandle;

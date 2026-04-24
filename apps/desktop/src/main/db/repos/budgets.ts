@@ -13,7 +13,12 @@ import type {
 } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
-import { approvalDecisions, approvalItems, budgetLedgerEntries, budgetPolicies } from '../schema.js';
+import {
+  approvalDecisions,
+  approvalItems,
+  budgetLedgerEntries,
+  budgetPolicies,
+} from '../schema.js';
 
 export type BudgetPolicyRow = typeof budgetPolicies.$inferSelect;
 export type BudgetLedgerEntryRow = typeof budgetLedgerEntries.$inferSelect;
@@ -170,7 +175,10 @@ export function createBudgetsRepo<TRunResult>(db: BudgetsDb<TRunResult>) {
         .from(budgetPolicies)
         .where(eq(budgetPolicies.companyId, companyId))
         .all()
-        .sort((a, b) => a.scopeKind.localeCompare(b.scopeKind) || a.scopeRefId.localeCompare(b.scopeRefId));
+        .sort(
+          (a, b) =>
+            a.scopeKind.localeCompare(b.scopeKind) || a.scopeRefId.localeCompare(b.scopeRefId),
+        );
     },
 
     updatePolicy(id: string, input: UpdateBudgetPolicyInput): void {
@@ -248,9 +256,10 @@ export function createBudgetsRepo<TRunResult>(db: BudgetsDb<TRunResult>) {
     ): string {
       const row = db
         .select({
-          amountUsd: sql<string>`coalesce(sum(cast(${budgetLedgerEntries.amountUsd} as real)), 0)`.as(
-            'amount_usd',
-          ),
+          amountUsd:
+            sql<string>`coalesce(sum(cast(${budgetLedgerEntries.amountUsd} as real)), 0)`.as(
+              'amount_usd',
+            ),
         })
         .from(budgetLedgerEntries)
         .where(
@@ -266,13 +275,18 @@ export function createBudgetsRepo<TRunResult>(db: BudgetsDb<TRunResult>) {
       return String(row?.amountUsd ?? '0');
     },
 
-    providerMix(companyId: string, fromMs: number, toMs: number): Array<{ provider: string; amountUsd: string }> {
+    providerMix(
+      companyId: string,
+      fromMs: number,
+      toMs: number,
+    ): Array<{ provider: string; amountUsd: string }> {
       const rows = db
         .select({
           provider: budgetLedgerEntries.provider,
-          amountUsd: sql<string>`coalesce(sum(cast(${budgetLedgerEntries.amountUsd} as real)), 0)`.as(
-            'amount_usd',
-          ),
+          amountUsd:
+            sql<string>`coalesce(sum(cast(${budgetLedgerEntries.amountUsd} as real)), 0)`.as(
+              'amount_usd',
+            ),
         })
         .from(budgetLedgerEntries)
         .where(

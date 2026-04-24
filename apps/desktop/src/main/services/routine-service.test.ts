@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
 import { createRoutinesRepo } from '../db/repos/routines.js';
 import { companies, employees } from '../db/schema.js';
+import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createRoutineService } from './routine-service.js';
 
 let ctx: TestDbHandle;
@@ -51,7 +51,7 @@ afterEach(() => ctx.close());
 
 describe('routine service', () => {
   it('creates routines with computed next run time and unique slugs', () => {
-    let nowMs = 1_000;
+    const nowMs = 1_000;
     const service = createRoutineService({
       routinesRepo: createRoutinesRepo(ctx.db),
       companiesRepo: createCompaniesRepo(ctx.db),

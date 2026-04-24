@@ -31,6 +31,12 @@ export interface DashboardAgentRun {
 
 const MAX_RUNS = 6;
 
+function hasThreadId(
+  row: TelemetryRecentRunRow,
+): row is TelemetryRecentRunRow & { threadId: string } {
+  return typeof row.threadId === 'string' && row.threadId.length > 0;
+}
+
 function fallbackLabel(runId: string): string {
   return `Run ${runId.slice(0, 8)}`;
 }
@@ -75,31 +81,30 @@ function mapPersistedStatus(
   }
 }
 
-export function projectTelemetryRecentRuns(rows: readonly TelemetryRecentRunRow[]): DashboardAgentRun[] {
+export function projectTelemetryRecentRuns(
+  rows: readonly TelemetryRecentRunRow[],
+): DashboardAgentRun[] {
   return sortRuns(
-    rows
-      .filter((row) => typeof row.threadId === 'string' && row.threadId.length > 0)
-      .map((row) => {
-        const status = mapPersistedStatus(row.status);
-        return {
-          runId: row.runId,
-          threadId: row.threadId!,
-          label: normalizeLabel(row.threadSubject ?? row.employeeName, row.runId),
-          latestPhase: status.latestPhase,
-          status: status.status,
-          stepCount: 0,
-          tokensIn: row.promptTokens,
-          tokensOut: row.completionTokens,
-          costUsd: Number.parseFloat(row.costUsd) || 0,
-          durationMs:
-            row.endedAt !== null ? Math.max(0, row.endedAt - row.startedAt) : null,
-          failureReason: row.error ?? status.failureReason,
-          provider: row.provider,
-          model: row.model,
-          startedAt: row.startedAt,
-          updatedAt: row.endedAt ?? row.startedAt,
-        } satisfies DashboardAgentRun;
-      }),
+    rows.filter(hasThreadId).map((row) => {
+      const status = mapPersistedStatus(row.status);
+      return {
+        runId: row.runId,
+        threadId: row.threadId,
+        label: normalizeLabel(row.threadSubject ?? row.employeeName, row.runId),
+        latestPhase: status.latestPhase,
+        status: status.status,
+        stepCount: 0,
+        tokensIn: row.promptTokens,
+        tokensOut: row.completionTokens,
+        costUsd: Number.parseFloat(row.costUsd) || 0,
+        durationMs: row.endedAt !== null ? Math.max(0, row.endedAt - row.startedAt) : null,
+        failureReason: row.error ?? status.failureReason,
+        provider: row.provider,
+        model: row.model,
+        startedAt: row.startedAt,
+        updatedAt: row.endedAt ?? row.startedAt,
+      } satisfies DashboardAgentRun;
+    }),
   );
 }
 
@@ -158,11 +163,12 @@ export function reduceDashboardAgentRuns(
   switch (event.type) {
     case 'command.executed': {
       const payload = event.payload as CommandExecutedPayload;
-      if (!payload.runId || !payload.threadId) return [...runs];
-      return upsertRun(runs, payload.runId, (existing) => ({
-        runId: payload.runId!,
-        threadId: payload.threadId!,
-        label: normalizeLabel(payload.rawText, payload.runId!),
+      const { runId, threadId } = payload;
+      if (!runId || !threadId) return [...runs];
+      return upsertRun(runs, runId, (existing) => ({
+        runId,
+        threadId,
+        label: normalizeLabel(payload.rawText, runId),
         latestPhase: existing?.latestPhase ?? 'running',
         status: existing?.status ?? 'running',
         stepCount: existing?.stepCount ?? 0,
