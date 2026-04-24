@@ -89,6 +89,10 @@ export const operatorMemberships = sqliteTable(
       .references(() => companies.id, { onDelete: 'cascade' }),
     /** owner | admin | operator | reviewer */
     role: text('role').notNull(),
+    /** local | hosted */
+    sourceKind: text('source_kind').notNull().default('local'),
+    cloudWorkspaceId: text('cloud_workspace_id'),
+    hostedInviteId: text('hosted_invite_id'),
     canApproveBudget: integer('can_approve_budget', { mode: 'boolean' }).notNull().default(false),
     canApproveAuthority: integer('can_approve_authority', { mode: 'boolean' })
       .notNull()
@@ -101,6 +105,10 @@ export const operatorMemberships = sqliteTable(
   (table) => ({
     companyIdx: index('idx_operator_memberships_company').on(table.companyId),
     operatorIdx: index('idx_operator_memberships_operator').on(table.operatorId),
+    companySourceIdx: index('idx_operator_memberships_company_source').on(
+      table.companyId,
+      table.sourceKind,
+    ),
     operatorCompanyIdx: index('idx_operator_memberships_operator_company').on(
       table.operatorId,
       table.companyId,
@@ -122,6 +130,10 @@ export const operatorInvites = sqliteTable(
     authMode: text('auth_mode').notNull().default('invited'),
     /** owner | admin | operator | reviewer */
     role: text('role').notNull().default('operator'),
+    /** local | hosted */
+    sourceKind: text('source_kind').notNull().default('local'),
+    cloudWorkspaceId: text('cloud_workspace_id'),
+    hostedInviteId: text('hosted_invite_id'),
     note: text('note'),
     inviteToken: text('invite_token').notNull(),
     /** pending | accepted | revoked | expired */
@@ -139,6 +151,7 @@ export const operatorInvites = sqliteTable(
   (table) => ({
     companyIdx: index('idx_operator_invites_company').on(table.companyId),
     statusIdx: index('idx_operator_invites_status').on(table.status),
+    companySourceIdx: index('idx_operator_invites_company_source').on(table.companyId, table.sourceKind),
     companyStatusIdx: index('idx_operator_invites_company_status').on(table.companyId, table.status),
   }),
 );

@@ -101,6 +101,9 @@ describe('operators repo', () => {
       expect.objectContaining({
         id: firstId,
         role: 'admin',
+        sourceKind: 'local',
+        cloudWorkspaceId: null,
+        hostedInviteId: null,
         canApproveBudget: true,
         canApproveAuthority: true,
         canManageRoutines: true,
@@ -168,14 +171,68 @@ describe('operators repo', () => {
     expect(accepted).toEqual(
       expect.objectContaining({
         id: invite.id,
+        sourceKind: 'local',
+        cloudWorkspaceId: null,
+        hostedInviteId: null,
         status: 'accepted',
         acceptedOperatorId: 'operator-invited',
       }),
     );
     expect(repo.getInviteById(invite.id)).toEqual(
       expect.objectContaining({
+        sourceKind: 'local',
         status: 'accepted',
         acceptedOperatorId: 'operator-invited',
+      }),
+    );
+  });
+
+  it('stores hosted invite and membership provenance when supplied', () => {
+    repo.create({
+      id: 'operator-owner',
+      displayName: 'Local Owner',
+      authMode: 'local',
+    });
+    repo.create({
+      id: 'operator-cloud',
+      displayName: 'Cloud Reviewer',
+      authMode: 'cloud',
+      email: 'cloud@strategia-x.com',
+    });
+
+    const invite = repo.createInvite({
+      companyId: COMPANY_ID,
+      email: 'cloud@strategia-x.com',
+      displayName: 'Cloud Reviewer',
+      authMode: 'cloud',
+      role: 'reviewer',
+      sourceKind: 'hosted',
+      cloudWorkspaceId: 'workspace_company-alpha',
+      hostedInviteId: 'hosted-invite-1',
+      invitedByOperatorId: 'operator-owner',
+    });
+
+    repo.upsertMembership({
+      operatorId: 'operator-cloud',
+      companyId: COMPANY_ID,
+      role: 'reviewer',
+      sourceKind: 'hosted',
+      cloudWorkspaceId: invite.cloudWorkspaceId,
+      hostedInviteId: invite.hostedInviteId,
+    });
+
+    expect(repo.getInviteById(invite.id)).toEqual(
+      expect.objectContaining({
+        sourceKind: 'hosted',
+        cloudWorkspaceId: 'workspace_company-alpha',
+        hostedInviteId: 'hosted-invite-1',
+      }),
+    );
+    expect(repo.getMembership('operator-cloud', COMPANY_ID)).toEqual(
+      expect.objectContaining({
+        sourceKind: 'hosted',
+        cloudWorkspaceId: 'workspace_company-alpha',
+        hostedInviteId: 'hosted-invite-1',
       }),
     );
   });

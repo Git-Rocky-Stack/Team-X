@@ -1,11 +1,12 @@
 import type {
+  CompanyCloudLinkStatus,
   CompanySharingModeReadiness,
   CompanySharingReadiness,
   CompanySharingReadinessSummary,
   CompanySettings,
-  OperatorInvite,
   OperatorAccessEntry,
   OperatorAuthMode,
+  OperatorInvite,
   OperatorMembershipRole,
   SharedOperatorAuthMode,
 } from '@team-x/shared-types';
@@ -34,6 +35,9 @@ function rowToOperatorInvite(row: OperatorInviteRow): OperatorInvite {
     displayName: row.displayName,
     authMode: row.authMode as SharedOperatorAuthMode,
     role: row.role as OperatorMembershipRole,
+    sourceKind: row.sourceKind as OperatorInvite['sourceKind'],
+    cloudWorkspaceId: row.cloudWorkspaceId,
+    hostedInviteId: row.hostedInviteId,
     note: row.note,
     inviteToken: row.inviteToken,
     status: row.status as OperatorInvite['status'],
@@ -48,6 +52,9 @@ function rowToOperatorInvite(row: OperatorInviteRow): OperatorInvite {
 export interface OperatorAccessServiceDeps {
   companiesRepo: {
     getById(id: string): CompanyRow | null;
+  };
+  cloudLinkService?: {
+    getWorkspaceLink(companyId: string): CompanyCloudLinkStatus;
   };
   operatorsRepo: OperatorsRepo;
 }
@@ -167,6 +174,7 @@ function summarizeModeReadiness(input: {
 
 export function createOperatorAccessService({
   companiesRepo,
+  cloudLinkService,
   operatorsRepo,
 }: OperatorAccessServiceDeps) {
   function ensureOperator(
@@ -249,6 +257,35 @@ export function createOperatorAccessService({
       .filter((entry): entry is OperatorAccessEntry => entry !== null);
   }
 
+  function resolveInviteSource(companyId: string): {
+    sourceKind: OperatorInvite['sourceKind'];
+    cloudWorkspaceId: string | null;
+    hostedInviteId: string | null;
+  } {
+    if (!cloudLinkService) {
+      return {
+        sourceKind: 'local',
+        cloudWorkspaceId: null,
+        hostedInviteId: null,
+      };
+    }
+
+    const link = cloudLinkService.getWorkspaceLink(companyId);
+    if (!link.isLinked || !link.cloudWorkspaceId) {
+      return {
+        sourceKind: 'local',
+        cloudWorkspaceId: null,
+        hostedInviteId: null,
+      };
+    }
+
+    return {
+      sourceKind: 'hosted',
+      cloudWorkspaceId: link.cloudWorkspaceId,
+      hostedInviteId: `hosted_invite_${link.cloudWorkspaceId}_${Date.now()}`,
+    };
+  }
+
   function listInvitesByCompany(companyId: string): OperatorInvite[] {
     return operatorsRepo.listInvitesByCompany(companyId).map(rowToOperatorInvite);
   }
@@ -290,12 +327,16 @@ export function createOperatorAccessService({
         typeof input.invitedByOperatorId === 'string' && input.invitedByOperatorId.length > 0
           ? resolveOperatorIdForCompany(input.companyId, input.invitedByOperatorId)
           : ensureLocalOwnerForCompany(input.companyId).operatorId;
+      const source = resolveInviteSource(input.companyId);
       const invite = operatorsRepo.createInvite({
         companyId: input.companyId,
         email: normalizeEmail(input.email),
         displayName: input.displayName?.trim() || null,
         authMode: input.authMode,
         role: input.role,
+        sourceKind: source.sourceKind,
+        cloudWorkspaceId: source.cloudWorkspaceId,
+        hostedInviteId: source.hostedInviteId,
         note: input.note?.trim() || null,
         invitedByOperatorId: inviterId,
       });
@@ -320,6 +361,9 @@ export function createOperatorAccessService({
         throw new Error(
           `[operator-access] invite ${inviteId} is ${invite.status}; only pending invites can be accepted`,
         );
+      }
+      if (invite.role === 'owner') {
+        throw new Error('[operator-access] owner invite acceptance is not supported yet');
       }
       const company = companiesRepo.getById(invite.companyId);
       if (!company) {
@@ -356,6 +400,9 @@ export function createOperatorAccessService({
         operatorId,
         companyId: invite.companyId,
         role: invite.role,
+        sourceKind: invite.sourceKind === 'hosted' ? 'hosted' : 'local',
+        cloudWorkspaceId: invite.sourceKind === 'hosted' ? invite.cloudWorkspaceId : null,
+        hostedInviteId: invite.sourceKind === 'hosted' ? invite.hostedInviteId : null,
         ...membershipCapabilitiesForRole(invite.role),
       });
       const accepted = operatorsRepo.acceptInvite(inviteId, operatorId);

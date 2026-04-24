@@ -190,6 +190,13 @@
       "when": 1778217600000,
       "tag": "0026_shared_cloud_linkage",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1778304000000,
+      "tag": "0027_hosted_operator_bridge",
+      "breakpoints": true
     }
   ]
 }

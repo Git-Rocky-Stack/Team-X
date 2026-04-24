@@ -1,7 +1,9 @@
 import type {
   OperatorAuthMode,
   OperatorInviteStatus,
+  OperatorInviteSourceKind,
   OperatorMembershipRole,
+  OperatorMembershipSourceKind,
   SharedOperatorAuthMode,
 } from '@team-x/shared-types';
 import { and, desc, eq } from 'drizzle-orm';
@@ -32,6 +34,9 @@ export interface UpsertOperatorMembershipInput {
   operatorId: string;
   companyId: string;
   role: OperatorMembershipRole;
+  sourceKind?: OperatorMembershipSourceKind;
+  cloudWorkspaceId?: string | null;
+  hostedInviteId?: string | null;
   canApproveBudget?: boolean;
   canApproveAuthority?: boolean;
   canManageRoutines?: boolean;
@@ -44,6 +49,9 @@ export interface CreateOperatorInviteInput {
   displayName?: string | null;
   authMode: SharedOperatorAuthMode;
   role: OperatorMembershipRole;
+  sourceKind?: OperatorInviteSourceKind;
+  cloudWorkspaceId?: string | null;
+  hostedInviteId?: string | null;
   note?: string | null;
   invitedByOperatorId: string;
   inviteToken?: string;
@@ -140,6 +148,9 @@ export function createOperatorsRepo<TRunResult>(db: OperatorsDb<TRunResult>) {
           displayName: input.displayName ?? null,
           authMode: input.authMode,
           role: input.role,
+          sourceKind: input.sourceKind ?? 'local',
+          cloudWorkspaceId: input.cloudWorkspaceId ?? null,
+          hostedInviteId: input.hostedInviteId ?? null,
           note: input.note ?? null,
           inviteToken: input.inviteToken ?? nanoid(24),
           status: 'pending',
@@ -194,6 +205,13 @@ export function createOperatorsRepo<TRunResult>(db: OperatorsDb<TRunResult>) {
         db.update(operatorMemberships)
           .set({
             role: input.role,
+            sourceKind: input.sourceKind ?? existing.sourceKind,
+            cloudWorkspaceId:
+              input.cloudWorkspaceId === undefined
+                ? existing.cloudWorkspaceId
+                : input.cloudWorkspaceId,
+            hostedInviteId:
+              input.hostedInviteId === undefined ? existing.hostedInviteId : input.hostedInviteId,
             canApproveBudget: input.canApproveBudget ?? existing.canApproveBudget,
             canApproveAuthority: input.canApproveAuthority ?? existing.canApproveAuthority,
             canManageRoutines: input.canManageRoutines ?? existing.canManageRoutines,
@@ -212,6 +230,9 @@ export function createOperatorsRepo<TRunResult>(db: OperatorsDb<TRunResult>) {
           operatorId: input.operatorId,
           companyId: input.companyId,
           role: input.role,
+          sourceKind: input.sourceKind ?? 'local',
+          cloudWorkspaceId: input.cloudWorkspaceId ?? null,
+          hostedInviteId: input.hostedInviteId ?? null,
           canApproveBudget: input.canApproveBudget ?? false,
           canApproveAuthority: input.canApproveAuthority ?? false,
           canManageRoutines: input.canManageRoutines ?? false,

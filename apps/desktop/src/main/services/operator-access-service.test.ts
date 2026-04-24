@@ -191,6 +191,9 @@ describe('operator access service', () => {
         displayName: 'Shared Operator',
         authMode: 'invited',
         role: 'operator',
+        sourceKind: 'local',
+        cloudWorkspaceId: null,
+        hostedInviteId: null,
         note: 'Shared workspace pilot',
         invitedByOperatorId: LOCAL_OWNER_OPERATOR_ID,
         status: 'pending',
@@ -241,10 +244,84 @@ describe('operator access service', () => {
           membership: expect.objectContaining({
             companyId: 'company-alpha',
             role: 'admin',
+            sourceKind: 'local',
+            cloudWorkspaceId: null,
+            hostedInviteId: null,
             canApproveBudget: true,
             canApproveAuthority: true,
             canManageRoutines: true,
             canManageRuntimes: true,
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it('creates hosted invites and hosted memberships when the workspace is linked', () => {
+    const hostedService = createOperatorAccessService({
+      companiesRepo,
+      operatorsRepo,
+      cloudLinkService: {
+        getWorkspaceLink: () => ({
+          companyId: 'company-alpha',
+          state: 'linked',
+          cloudWorkspaceId: 'workspace_company-alpha',
+          cloudTenantId: 'tenant_company-alpha',
+          deviceId: 'device-1',
+          linkedDeviceId: 'device-1',
+          lastSyncedCursor: null,
+          lastSnapshotId: null,
+          lastSyncAt: null,
+          lastSyncError: null,
+          isLinked: true,
+          canLink: false,
+          canUnlink: true,
+        }),
+      },
+    });
+    hostedService.ensureLocalOwnerForCompany('company-alpha');
+
+    const invite = hostedService.createInvite({
+      companyId: 'company-alpha',
+      email: 'cloud@strategia-x.com',
+      displayName: 'Cloud Operator',
+      authMode: 'cloud',
+      role: 'reviewer',
+      note: 'Hosted collaboration pilot',
+    });
+
+    expect(invite).toEqual(
+      expect.objectContaining({
+        sourceKind: 'hosted',
+        cloudWorkspaceId: 'workspace_company-alpha',
+      }),
+    );
+    expect(invite.hostedInviteId).toMatch(/^hosted_invite_workspace_company-alpha_/);
+
+    const accepted = hostedService.acceptInvite(invite.id);
+    const entries = hostedService.listByCompany('company-alpha');
+    expect(accepted.invite).toEqual(
+      expect.objectContaining({
+        id: invite.id,
+        sourceKind: 'hosted',
+        cloudWorkspaceId: 'workspace_company-alpha',
+        hostedInviteId: invite.hostedInviteId,
+        status: 'accepted',
+      }),
+    );
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          operator: expect.objectContaining({
+            id: accepted.operatorId,
+            authMode: 'cloud',
+          }),
+          membership: expect.objectContaining({
+            companyId: 'company-alpha',
+            role: 'reviewer',
+            sourceKind: 'hosted',
+            cloudWorkspaceId: 'workspace_company-alpha',
+            hostedInviteId: invite.hostedInviteId,
           }),
         }),
       ]),

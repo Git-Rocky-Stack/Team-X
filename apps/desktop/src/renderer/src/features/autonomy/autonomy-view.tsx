@@ -307,11 +307,28 @@ function authModeDescription(entry: OperatorAccessEntry): string {
   return 'Local operator identity with no external login requirement.';
 }
 
+function membershipSourceLabel(entry: OperatorAccessEntry): string {
+  return entry.membership.sourceKind === 'hosted' ? 'hosted membership' : 'local membership';
+}
+
+function membershipSourceDescription(entry: OperatorAccessEntry): string | null {
+  if (entry.membership.sourceKind !== 'hosted') return null;
+  if (entry.membership.cloudWorkspaceId?.trim()) {
+    return `Hosted membership mirrored from ${entry.membership.cloudWorkspaceId}.`;
+  }
+  return 'Hosted membership mirrored from the linked workspace.';
+}
+
+function inviteSourceLabel(invite: OperatorInvite): string {
+  return invite.sourceKind === 'hosted' ? 'hosted invite' : 'local invite';
+}
+
 function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
   return (
     <div className="space-y-3">
       {entries.map((entry) => {
         const privileges = capabilityBadges(entry);
+        const sourceDescription = membershipSourceDescription(entry);
 
         return (
           <MissionInsetSurface key={entry.membership.id} className="p-4">
@@ -323,11 +340,15 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
                   </span>
                   <MissionPill tone="accent">{entry.membership.role}</MissionPill>
                   <MissionPill>{entry.operator.authMode}</MissionPill>
+                  <MissionPill>{membershipSourceLabel(entry)}</MissionPill>
                   {entry.operator.id === 'rocky' ? <MissionPill>local owner</MissionPill> : null}
                 </div>
                 <p className="text-xs leading-5 text-muted-foreground">
                   {entry.operator.email?.trim() ? entry.operator.email : authModeDescription(entry)}
                 </p>
+                {sourceDescription ? (
+                  <p className="text-xs leading-5 text-muted-foreground">{sourceDescription}</p>
+                ) : null}
               </div>
               <div className="flex max-w-xl flex-wrap items-center justify-end gap-2">
                 {privileges.length > 0 ? (
@@ -643,13 +664,13 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                   )}
                 </MissionInsetSurface>
                 <MissionInsetSurface className="space-y-4 p-4" data-operator-invites="">
-                  <div className="space-y-1">
-                    <div className="text-sm font-semibold text-foreground">Queue Operator Invite</div>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      Create invited or cloud operator placeholders now. Acceptance and real shared
-                      sync can land later without changing the workspace contract.
-                    </p>
-                  </div>
+                    <div className="space-y-1">
+                      <div className="text-sm font-semibold text-foreground">Queue Operator Invite</div>
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Linked workspaces queue hosted invites automatically. Unlinked workspaces
+                        keep local placeholders until shared/cloud auth is fully active.
+                      </p>
+                    </div>
                   <form
                     className="space-y-4"
                     data-operator-invite-compose=""
@@ -783,6 +804,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                     </span>
                                     <MissionPill>{invite.authMode}</MissionPill>
                                     <MissionPill>{invite.role}</MissionPill>
+                                    <MissionPill>{inviteSourceLabel(invite)}</MissionPill>
                                     <MissionPill tone={inviteStatusTone(invite.status)}>
                                       {invite.status}
                                     </MissionPill>
@@ -790,6 +812,13 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                   <p className="text-xs leading-5 text-muted-foreground">
                                     {invite.email}
                                   </p>
+                                  {invite.sourceKind === 'hosted' ? (
+                                    <p className="text-xs leading-5 text-muted-foreground">
+                                      {invite.cloudWorkspaceId?.trim()
+                                        ? `Hosted invite tracked for ${invite.cloudWorkspaceId}.`
+                                        : 'Hosted invite tracked for the linked workspace.'}
+                                    </p>
+                                  ) : null}
                                   {invite.note ? (
                                     <p className="text-xs leading-5 text-muted-foreground">
                                       {invite.note}

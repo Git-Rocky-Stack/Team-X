@@ -107,6 +107,8 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('Queue Operator Invite');
     expect(viewSrc).toContain('Create invite');
     expect(viewSrc).toContain('Accept locally');
+    expect(viewSrc).toContain('hosted invite');
+    expect(viewSrc).toContain('hosted membership');
     expect(viewSrc).toContain('Pending invites');
     expect(viewSrc).toContain("onClick={() => openSettingsSection('portability')}");
     expect(viewSrc).toContain('Open portability');

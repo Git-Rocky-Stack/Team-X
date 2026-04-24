@@ -331,11 +331,17 @@ export interface Operator {
   updatedAt: number;
 }
 
+export const OPERATOR_MEMBERSHIP_SOURCE_KINDS = ['local', 'hosted'] as const;
+export type OperatorMembershipSourceKind = (typeof OPERATOR_MEMBERSHIP_SOURCE_KINDS)[number];
+
 export interface OperatorMembership {
   id: string;
   operatorId: string;
   companyId: string;
   role: OperatorMembershipRole;
+  sourceKind: OperatorMembershipSourceKind;
+  cloudWorkspaceId: string | null;
+  hostedInviteId: string | null;
   canApproveBudget: boolean;
   canApproveAuthority: boolean;
   canManageRoutines: boolean;
@@ -346,6 +352,8 @@ export interface OperatorMembership {
 
 export const OPERATOR_INVITE_STATUSES = ['pending', 'accepted', 'revoked', 'expired'] as const;
 export type OperatorInviteStatus = (typeof OPERATOR_INVITE_STATUSES)[number];
+export const OPERATOR_INVITE_SOURCE_KINDS = ['local', 'hosted'] as const;
+export type OperatorInviteSourceKind = (typeof OPERATOR_INVITE_SOURCE_KINDS)[number];
 
 export interface OperatorInvite {
   id: string;
@@ -354,6 +362,9 @@ export interface OperatorInvite {
   displayName: string | null;
   authMode: SharedOperatorAuthMode;
   role: OperatorMembershipRole;
+  sourceKind: OperatorInviteSourceKind;
+  cloudWorkspaceId: string | null;
+  hostedInviteId: string | null;
   note: string | null;
   inviteToken: string;
   status: OperatorInviteStatus;

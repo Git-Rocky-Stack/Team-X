@@ -419,8 +419,13 @@ app
     // upsertWithDedup/listStale (the last one is the T4 addition; see
     // copilot-insights.ts §listStale comment block for rationale).
     const copilotInsightsRepo = createCopilotInsightsRepo(db);
+    const cloudLinkService = createCloudLinkService({
+      companiesRepo,
+      settingsRepo,
+    });
     const operatorAccessService = createOperatorAccessService({
       companiesRepo,
+      cloudLinkService,
       operatorsRepo,
     });
     const artifactService = createArtifactService({
@@ -439,10 +444,6 @@ app
     if (settingsSeeded > 0) {
       console.log(`[settings] seeded ${settingsSeeded} default setting(s)`);
     }
-    const cloudLinkService = createCloudLinkService({
-      companiesRepo,
-      settingsRepo,
-    });
     const deviceId = cloudLinkService.ensureDeviceIdentity();
     if (deviceId.length > 0) {
       console.log('[cloud-link] local device identity ready');
