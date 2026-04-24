@@ -96,6 +96,7 @@ describe('operators IPC handlers', () => {
       listInvitesByCompany: vi.fn(() => []),
       createInvite: vi.fn(),
       revokeInvite: vi.fn(),
+      acceptInvite: vi.fn(),
     };
     const handlers = createIpcHandlers(
       makeDeps({
@@ -162,6 +163,7 @@ describe('operators IPC handlers', () => {
       listInvitesByCompany: vi.fn(() => []),
       createInvite: vi.fn(),
       revokeInvite: vi.fn(),
+      acceptInvite: vi.fn(),
     };
     const handlers = createIpcHandlers(
       makeDeps({
@@ -186,6 +188,7 @@ describe('operators IPC handlers', () => {
       listInvitesByCompany: vi.fn(() => []),
       createInvite: vi.fn(),
       revokeInvite: vi.fn(),
+      acceptInvite: vi.fn(),
     };
     const ensureSystemForCompany = vi.fn(() => ({
       agentEmployeeId: 'system-agent',
@@ -242,6 +245,7 @@ describe('operators IPC handlers', () => {
       listInvitesByCompany: vi.fn(() => invites),
       createInvite: vi.fn(),
       revokeInvite: vi.fn(),
+      acceptInvite: vi.fn(),
     };
     const handlers = createIpcHandlers(
       makeDeps({
@@ -281,6 +285,7 @@ describe('operators IPC handlers', () => {
       listInvitesByCompany: vi.fn(() => []),
       createInvite: vi.fn(() => invite),
       revokeInvite: vi.fn(),
+      acceptInvite: vi.fn(),
     };
     const handlers = createIpcHandlers(
       makeDeps({
@@ -353,6 +358,7 @@ describe('operators IPC handlers', () => {
       listInvitesByCompany: vi.fn(() => []),
       createInvite: vi.fn(),
       revokeInvite: vi.fn(() => invite),
+      acceptInvite: vi.fn(),
     };
     const handlers = createIpcHandlers(
       makeDeps({
@@ -364,5 +370,51 @@ describe('operators IPC handlers', () => {
 
     expect(operatorAccessService.revokeInvite).toHaveBeenCalledWith('invite-1');
     expect(result).toEqual(invite);
+  });
+
+  it('accepts a pending operator invite into a real membership', async () => {
+    const resultPayload = {
+      invite: {
+        id: 'invite-1',
+        companyId: 'company-1',
+        email: 'ops@strategia-x.com',
+        displayName: 'Shared Operator',
+        authMode: 'invited',
+        role: 'admin',
+        note: null,
+        inviteToken: 'token-1',
+        status: 'accepted',
+        invitedByOperatorId: 'rocky',
+        acceptedOperatorId: 'operator-2',
+        createdAt: 5,
+        updatedAt: 6,
+        resolvedAt: 6,
+      },
+      operatorId: 'operator-2',
+      membershipId: 'membership-2',
+      reusedOperator: false,
+    };
+    const operatorAccessService = {
+      ensureLocalOwnerForCompany: vi.fn(() => ({
+        operatorId: 'rocky',
+        membershipId: 'membership-1',
+      })),
+      getSharingReadiness: vi.fn(),
+      listByCompany: vi.fn(() => []),
+      listInvitesByCompany: vi.fn(() => []),
+      createInvite: vi.fn(),
+      revokeInvite: vi.fn(),
+      acceptInvite: vi.fn(() => resultPayload),
+    };
+    const handlers = createIpcHandlers(
+      makeDeps({
+        operatorAccessService,
+      }),
+    );
+
+    const result = await handlers.operatorsAcceptInvite({ inviteId: 'invite-1' });
+
+    expect(operatorAccessService.acceptInvite).toHaveBeenCalledWith('invite-1');
+    expect(result).toEqual(resultPayload);
   });
 });

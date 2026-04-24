@@ -206,4 +206,48 @@ describe('operator access service', () => {
     expect(revoked.status).toBe('revoked');
     expect(revoked.resolvedAt).not.toBeNull();
   });
+
+  it('accepts a pending invite into a real operator membership', () => {
+    service.ensureLocalOwnerForCompany('company-alpha');
+    const invite = service.createInvite({
+      companyId: 'company-alpha',
+      email: 'shared@strategia-x.com',
+      displayName: 'Shared Operator',
+      authMode: 'invited',
+      role: 'admin',
+      note: 'Shared ops owner',
+    });
+
+    const accepted = service.acceptInvite(invite.id);
+
+    expect(accepted.reusedOperator).toBe(false);
+    expect(accepted.invite).toEqual(
+      expect.objectContaining({
+        id: invite.id,
+        status: 'accepted',
+        acceptedOperatorId: accepted.operatorId,
+      }),
+    );
+
+    const entries = service.listByCompany('company-alpha');
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          operator: expect.objectContaining({
+            id: accepted.operatorId,
+            email: 'shared@strategia-x.com',
+            authMode: 'invited',
+          }),
+          membership: expect.objectContaining({
+            companyId: 'company-alpha',
+            role: 'admin',
+            canApproveBudget: true,
+            canApproveAuthority: true,
+            canManageRoutines: true,
+            canManageRuntimes: true,
+          }),
+        }),
+      ]),
+    );
+  });
 });

@@ -42,6 +42,8 @@
 import type {
   AddProviderRequest,
   AddProviderResponse,
+  AcceptOperatorInviteRequest,
+  AcceptOperatorInviteResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   ApprovalItem,
@@ -826,6 +828,7 @@ export interface IpcOperatorAccessService {
   listInvitesByCompany(companyId: string): OperatorInvite[];
   createInvite(input: CreateOperatorInviteRequest): OperatorInvite;
   revokeInvite(inviteId: string): OperatorInvite;
+  acceptInvite(inviteId: string): AcceptOperatorInviteResponse;
   getSharingReadiness(companyId: string): CompanySharingReadinessSummary;
 }
 
@@ -1119,6 +1122,8 @@ export interface IpcHandlers {
   operatorsCreateInvite(req: CreateOperatorInviteRequest): Promise<CreateOperatorInviteResponse>;
   /** `operators.revokeInvite` — revoke one operator invite. */
   operatorsRevokeInvite(req: RevokeOperatorInviteRequest): Promise<OperatorInvite>;
+  /** `operators.acceptInvite` — accept one pending invite into a company membership. */
+  operatorsAcceptInvite(req: AcceptOperatorInviteRequest): Promise<AcceptOperatorInviteResponse>;
   /** `runtimeProfiles.list` — return runtime profiles plus binding summaries for a company. */
   runtimeProfilesList(req: ListRuntimeProfilesRequest): Promise<RuntimeProfileSummary[]>;
   /** `runtimeProfiles.create` — create one named runtime profile. */
@@ -2337,6 +2342,17 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] operators.revokeInvite: operatorAccessService dep is required');
       }
       return operatorAccessService.revokeInvite(inviteId);
+    },
+
+    async operatorsAcceptInvite(req) {
+      const inviteId = req.inviteId?.trim();
+      if (!inviteId) {
+        throw new Error('[ipc] operators.acceptInvite: inviteId is required');
+      }
+      if (!operatorAccessService) {
+        throw new Error('[ipc] operators.acceptInvite: operatorAccessService dep is required');
+      }
+      return operatorAccessService.acceptInvite(inviteId);
     },
 
     async runtimeProfilesList(req) {

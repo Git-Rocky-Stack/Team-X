@@ -19,6 +19,8 @@ export const autonomyClient = {
       ipc.operators.createInvite(...args),
     revokeInvite: (...args: Parameters<typeof ipc.operators.revokeInvite>) =>
       ipc.operators.revokeInvite(...args),
+    acceptInvite: (...args: Parameters<typeof ipc.operators.acceptInvite>) =>
+      ipc.operators.acceptInvite(...args),
   },
   runtimeProfiles: {
     list: (...args: Parameters<typeof ipc.runtimeProfiles.list>) =>

@@ -9,6 +9,7 @@ import type {
   OperatorMembershipRole,
   SharedOperatorAuthMode,
 } from '@team-x/shared-types';
+import type { AcceptOperatorInviteResponse } from '@team-x/shared-types';
 
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { OperatorInviteRow, OperatorRow, OperatorsRepo } from '../db/repos/operators.js';
@@ -37,6 +38,7 @@ function rowToOperatorInvite(row: OperatorInviteRow): OperatorInvite {
     inviteToken: row.inviteToken,
     status: row.status as OperatorInvite['status'],
     invitedByOperatorId: row.invitedByOperatorId,
+    acceptedOperatorId: row.acceptedOperatorId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     resolvedAt: row.resolvedAt,
@@ -66,6 +68,42 @@ function effectiveModeFromEntries(entries: readonly OperatorAccessEntry[]): Oper
   if (entries.some((entry) => entry.operator.authMode === 'cloud')) return 'cloud';
   if (entries.some((entry) => entry.operator.authMode === 'invited')) return 'invited';
   return 'local';
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function defaultOperatorDisplayName(invite: OperatorInvite): string {
+  if (invite.displayName?.trim()) return invite.displayName.trim();
+  const localPart = invite.email.split('@')[0]?.trim();
+  return localPart && localPart.length > 0 ? localPart : 'Invited Operator';
+}
+
+function membershipCapabilitiesForRole(role: OperatorMembershipRole) {
+  if (role === 'owner' || role === 'admin') {
+    return {
+      canApproveBudget: true,
+      canApproveAuthority: true,
+      canManageRoutines: true,
+      canManageRuntimes: true,
+    };
+  }
+  return {
+    canApproveBudget: false,
+    canApproveAuthority: false,
+    canManageRoutines: false,
+    canManageRuntimes: false,
+  };
+}
+
+function normalizeOperatorAuthMode(
+  authMode: string | null | undefined,
+  fallback: OperatorAuthMode,
+): OperatorAuthMode {
+  return authMode === 'local' || authMode === 'invited' || authMode === 'cloud'
+    ? authMode
+    : fallback;
 }
 
 function summarizeModeReadiness(input: {
@@ -254,7 +292,7 @@ export function createOperatorAccessService({
           : ensureLocalOwnerForCompany(input.companyId).operatorId;
       const invite = operatorsRepo.createInvite({
         companyId: input.companyId,
-        email: input.email.trim(),
+        email: normalizeEmail(input.email),
         displayName: input.displayName?.trim() || null,
         authMode: input.authMode,
         role: input.role,
@@ -270,6 +308,66 @@ export function createOperatorAccessService({
         throw new Error(`[operator-access] invite not found: ${inviteId}`);
       }
       return rowToOperatorInvite(updated);
+    },
+
+    acceptInvite(inviteId: string): AcceptOperatorInviteResponse {
+      const inviteRow = operatorsRepo.getInviteById(inviteId);
+      if (!inviteRow) {
+        throw new Error(`[operator-access] invite not found: ${inviteId}`);
+      }
+      const invite = rowToOperatorInvite(inviteRow);
+      if (invite.status !== 'pending') {
+        throw new Error(
+          `[operator-access] invite ${inviteId} is ${invite.status}; only pending invites can be accepted`,
+        );
+      }
+      const company = companiesRepo.getById(invite.companyId);
+      if (!company) {
+        throw new Error(`[operator-access] company not found: ${invite.companyId}`);
+      }
+
+      const normalizedEmail = normalizeEmail(invite.email);
+      const existingOperator = operatorsRepo
+        .list()
+        .find((operator) => normalizeEmail(operator.email ?? '') === normalizedEmail);
+
+      let operatorId = existingOperator?.id ?? null;
+      const reusedOperator = operatorId !== null;
+
+      if (!operatorId) {
+        operatorId = operatorsRepo.create({
+          displayName: defaultOperatorDisplayName(invite),
+          email: normalizedEmail,
+          authMode: invite.authMode,
+        });
+      } else {
+        operatorsRepo.update(operatorId, {
+          displayName:
+            existingOperator?.displayName?.trim() || defaultOperatorDisplayName(invite),
+          email: normalizedEmail,
+          authMode:
+            normalizeOperatorAuthMode(existingOperator?.authMode, invite.authMode) === 'local'
+              ? invite.authMode
+              : normalizeOperatorAuthMode(existingOperator?.authMode, invite.authMode),
+        });
+      }
+
+      const membershipId = operatorsRepo.upsertMembership({
+        operatorId,
+        companyId: invite.companyId,
+        role: invite.role,
+        ...membershipCapabilitiesForRole(invite.role),
+      });
+      const accepted = operatorsRepo.acceptInvite(inviteId, operatorId);
+      if (!accepted) {
+        throw new Error(`[operator-access] failed to accept invite: ${inviteId}`);
+      }
+      return {
+        invite: rowToOperatorInvite(accepted),
+        operatorId,
+        membershipId,
+        reusedOperator,
+      };
     },
 
     getSharingReadiness(companyId: string): CompanySharingReadinessSummary {

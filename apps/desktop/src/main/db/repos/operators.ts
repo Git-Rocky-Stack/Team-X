@@ -22,6 +22,12 @@ export interface CreateOperatorInput {
   authMode?: OperatorAuthMode;
 }
 
+export interface UpdateOperatorInput {
+  displayName?: string;
+  email?: string | null;
+  authMode?: OperatorAuthMode;
+}
+
 export interface UpsertOperatorMembershipInput {
   operatorId: string;
   companyId: string;
@@ -76,6 +82,20 @@ export function createOperatorsRepo<TRunResult>(db: OperatorsDb<TRunResult>) {
         })
         .run();
       return id;
+    },
+
+    update(id: string, input: UpdateOperatorInput): void {
+      const existing = db.select().from(operators).where(eq(operators.id, id)).get();
+      if (!existing) return;
+      db.update(operators)
+        .set({
+          displayName: input.displayName ?? existing.displayName,
+          email: input.email === undefined ? existing.email : input.email,
+          authMode: input.authMode ?? existing.authMode,
+          updatedAt: Date.now(),
+        })
+        .where(eq(operators.id, id))
+        .run();
     },
 
     getById(id: string): OperatorRow | null {
@@ -145,6 +165,22 @@ export function createOperatorsRepo<TRunResult>(db: OperatorsDb<TRunResult>) {
           status,
           updatedAt: now,
           resolvedAt: status === 'pending' ? null : now,
+        })
+        .where(eq(operatorInvites.id, id))
+        .run();
+      return db.select().from(operatorInvites).where(eq(operatorInvites.id, id)).get() ?? null;
+    },
+
+    acceptInvite(id: string, acceptedOperatorId: string): OperatorInviteRow | null {
+      const existing = db.select().from(operatorInvites).where(eq(operatorInvites.id, id)).get();
+      if (!existing) return null;
+      const now = Date.now();
+      db.update(operatorInvites)
+        .set({
+          status: 'accepted',
+          acceptedOperatorId,
+          updatedAt: now,
+          resolvedAt: now,
         })
         .where(eq(operatorInvites.id, id))
         .run();

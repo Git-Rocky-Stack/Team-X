@@ -176,6 +176,13 @@
       "when": 1778044800000,
       "tag": "0024_operator_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1778131200000,
+      "tag": "0025_operator_invite_acceptance",
+      "breakpoints": true
     }
   ]
 }

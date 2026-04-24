@@ -75,6 +75,7 @@ describe('Autonomy shell wiring', () => {
     expect(hookSrc).toContain('autonomyClient.operators.listInvites');
     expect(hookSrc).toContain('autonomyClient.operators.createInvite');
     expect(hookSrc).toContain('autonomyClient.operators.revokeInvite');
+    expect(hookSrc).toContain('autonomyClient.operators.acceptInvite');
     expect(storeSrc).toContain("autonomySubview: 'access'");
     expect(storeSrc).toContain('autonomyMemoryThreadId: string | null;');
     expect(storeSrc).toContain('setAutonomySubview: (subview: AutonomySubview) => void;');
@@ -98,6 +99,7 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('data-operator-invite={invite.id}');
     expect(viewSrc).toContain('Queue Operator Invite');
     expect(viewSrc).toContain('Create invite');
+    expect(viewSrc).toContain('Accept locally');
     expect(viewSrc).toContain('Pending invites');
     expect(viewSrc).toContain("onClick={() => openSettingsSection('portability')}");
     expect(viewSrc).toContain('Open portability');
@@ -122,6 +124,7 @@ describe('Autonomy shell wiring', () => {
     expect(clientSrc).toContain('ipc.operators.listInvites');
     expect(clientSrc).toContain('ipc.operators.createInvite');
     expect(clientSrc).toContain('ipc.operators.revokeInvite');
+    expect(clientSrc).toContain('ipc.operators.acceptInvite');
     expect(runtimeHookSrc).toContain(
       "import { autonomyClient } from '@/features/autonomy/autonomy-client.js';",
     );

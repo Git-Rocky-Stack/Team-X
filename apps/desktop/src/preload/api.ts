@@ -38,6 +38,8 @@ import type {
   AddMcpServerRequest,
   AddProviderRequest,
   AddProviderResponse,
+  AcceptOperatorInviteRequest,
+  AcceptOperatorInviteResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   AgenticRunSnapshot,
@@ -283,6 +285,7 @@ const CHANNELS = {
   operatorsListInvites: 'operators.listInvites',
   operatorsCreateInvite: 'operators.createInvite',
   operatorsRevokeInvite: 'operators.revokeInvite',
+  operatorsAcceptInvite: 'operators.acceptInvite',
   runtimeProfilesList: 'runtimeProfiles.list',
   runtimeProfilesCreate: 'runtimeProfiles.create',
   runtimeProfilesUpdate: 'runtimeProfiles.update',
@@ -516,6 +519,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.operatorsCreateInvite, req) as Promise<CreateOperatorInviteResponse>,
       revokeInvite: (req: RevokeOperatorInviteRequest) =>
         ipc.invoke(CHANNELS.operatorsRevokeInvite, req) as Promise<OperatorInvite>,
+      acceptInvite: (req: AcceptOperatorInviteRequest) =>
+        ipc.invoke(CHANNELS.operatorsAcceptInvite, req) as Promise<AcceptOperatorInviteResponse>,
     },
     runtimeProfiles: {
       list: (companyId: string) =>

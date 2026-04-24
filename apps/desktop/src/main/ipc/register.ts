@@ -78,6 +78,7 @@ const REQUEST_CHANNELS = [
   'operators.listInvites',
   'operators.createInvite',
   'operators.revokeInvite',
+  'operators.acceptInvite',
   'runtimeProfiles.list',
   'runtimeProfiles.create',
   'runtimeProfiles.update',
@@ -353,6 +354,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'operators.revokeInvite',
     async (_event, request: import('@team-x/shared-types').RevokeOperatorInviteRequest) => {
       return handlers.operatorsRevokeInvite(request);
+    },
+  );
+
+  ipcMain.handle(
+    'operators.acceptInvite',
+    async (_event, request: import('@team-x/shared-types').AcceptOperatorInviteRequest) => {
+      return handlers.operatorsAcceptInvite(request);
     },
   );
 

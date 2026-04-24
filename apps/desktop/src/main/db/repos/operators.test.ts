@@ -140,4 +140,43 @@ describe('operators repo', () => {
       }),
     ]);
   });
+
+  it('accepts a pending invite and records the accepted operator lineage', () => {
+    repo.create({
+      id: 'operator-owner',
+      displayName: 'Local Owner',
+      authMode: 'local',
+    });
+    repo.create({
+      id: 'operator-invited',
+      displayName: 'Shared Operator',
+      authMode: 'invited',
+      email: 'shared@strategia-x.com',
+    });
+
+    const invite = repo.createInvite({
+      companyId: COMPANY_ID,
+      email: 'shared@strategia-x.com',
+      displayName: 'Shared Operator',
+      authMode: 'invited',
+      role: 'operator',
+      invitedByOperatorId: 'operator-owner',
+    });
+
+    const accepted = repo.acceptInvite(invite.id, 'operator-invited');
+
+    expect(accepted).toEqual(
+      expect.objectContaining({
+        id: invite.id,
+        status: 'accepted',
+        acceptedOperatorId: 'operator-invited',
+      }),
+    );
+    expect(repo.getInviteById(invite.id)).toEqual(
+      expect.objectContaining({
+        status: 'accepted',
+        acceptedOperatorId: 'operator-invited',
+      }),
+    );
+  });
 });

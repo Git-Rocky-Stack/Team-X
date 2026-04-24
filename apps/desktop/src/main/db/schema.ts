@@ -118,6 +118,9 @@ export const operatorInvites = sqliteTable(
     invitedByOperatorId: text('invited_by_operator_id')
       .notNull()
       .references(() => operators.id, { onDelete: 'restrict' }),
+    acceptedOperatorId: text('accepted_operator_id').references(() => operators.id, {
+      onDelete: 'set null',
+    }),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
     resolvedAt: integer('resolved_at'),

@@ -305,6 +305,7 @@ export interface OperatorInvite {
   inviteToken: string;
   status: OperatorInviteStatus;
   invitedByOperatorId: string;
+  acceptedOperatorId: string | null;
   createdAt: number;
   updatedAt: number;
   resolvedAt: number | null;

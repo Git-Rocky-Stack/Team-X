@@ -303,6 +303,17 @@ export interface RevokeOperatorInviteRequest {
   inviteId: string;
 }
 
+export interface AcceptOperatorInviteRequest {
+  inviteId: string;
+}
+
+export interface AcceptOperatorInviteResponse {
+  invite: OperatorInvite;
+  operatorId: string;
+  membershipId: string;
+  reusedOperator: boolean;
+}
+
 export interface ListRuntimeProfilesRequest {
   companyId: string;
 }
@@ -1824,6 +1835,10 @@ export interface IpcContract {
     request: RevokeOperatorInviteRequest;
     response: OperatorInvite;
   };
+  'operators.acceptInvite': {
+    request: AcceptOperatorInviteRequest;
+    response: AcceptOperatorInviteResponse;
+  };
   'runtimeProfiles.list': {
     request: ListRuntimeProfilesRequest;
     response: RuntimeProfileSummary[];
@@ -2631,6 +2646,8 @@ export interface TeamXApi {
     createInvite(req: CreateOperatorInviteRequest): Promise<CreateOperatorInviteResponse>;
     /** Revoke one outstanding operator invite. */
     revokeInvite(req: RevokeOperatorInviteRequest): Promise<OperatorInvite>;
+    /** Accept one pending operator invite into a real company membership. */
+    acceptInvite(req: AcceptOperatorInviteRequest): Promise<AcceptOperatorInviteResponse>;
   };
   runtimeProfiles: {
     /** List runtime profiles and bound employee ids for one workspace. */

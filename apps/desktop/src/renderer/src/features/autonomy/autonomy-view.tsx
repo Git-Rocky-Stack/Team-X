@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import {
+  useAcceptOperatorInvite,
   useCreateOperatorInvite,
   useOperatorInvites,
   useOperators,
@@ -299,6 +300,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
   const operatorsQuery = useOperators(companyId);
   const sharingReadinessQuery = useSharingReadiness(companyId);
   const invitesQuery = useOperatorInvites(companyId);
+  const acceptInviteMutation = useAcceptOperatorInvite(companyId);
   const createInviteMutation = useCreateOperatorInvite(companyId);
   const revokeInviteMutation = useRevokeOperatorInvite(companyId);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -580,6 +582,9 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                     ) : (
                       <div className="space-y-3">
                         {invites.map((invite) => {
+                          const isAccepting =
+                            acceptInviteMutation.isPending &&
+                            acceptInviteMutation.variables?.inviteId === invite.id;
                           const isRevoking =
                             revokeInviteMutation.isPending &&
                             revokeInviteMutation.variables?.inviteId === invite.id;
@@ -615,18 +620,30 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                     Created {new Date(invite.createdAt).toLocaleString()}
                                   </p>
                                   {invite.status === 'pending' ? (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className="border-white/10 bg-black/10 hover:bg-black/20"
-                                      disabled={isRevoking}
-                                      onClick={() => {
-                                        void revokeInviteMutation.mutateAsync({ inviteId: invite.id });
-                                      }}
-                                    >
-                                      {isRevoking ? 'Revoking...' : 'Revoke'}
-                                    </Button>
+                                    <div className="flex flex-wrap justify-end gap-2">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        disabled={isAccepting || isRevoking}
+                                        onClick={() => {
+                                          void acceptInviteMutation.mutateAsync({ inviteId: invite.id });
+                                        }}
+                                      >
+                                        {isAccepting ? 'Accepting...' : 'Accept locally'}
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-white/10 bg-black/10 hover:bg-black/20"
+                                        disabled={isAccepting || isRevoking}
+                                        onClick={() => {
+                                          void revokeInviteMutation.mutateAsync({ inviteId: invite.id });
+                                        }}
+                                      >
+                                        {isRevoking ? 'Revoking...' : 'Revoke'}
+                                      </Button>
+                                    </div>
                                   ) : null}
                                 </div>
                               </div>

@@ -54,3 +54,18 @@ export function useRevokeOperatorInvite(companyId: string | null) {
     },
   });
 }
+
+export function useAcceptOperatorInvite(companyId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: autonomyClient.operators.acceptInvite,
+    onSuccess: () => {
+      if (!companyId) return;
+      void queryClient.invalidateQueries({ queryKey: ['operators', companyId] });
+      void queryClient.invalidateQueries({ queryKey: ['operators', 'invites', companyId] });
+      void queryClient.invalidateQueries({
+        queryKey: ['operators', 'sharing-readiness', companyId],
+      });
+    },
+  });
+}
