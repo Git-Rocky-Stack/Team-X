@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { CompanySharingReadinessSummary, OperatorAccessEntry } from '@team-x/shared-types';
+import type {
+  CompanySharingReadinessSummary,
+  OperatorAccessEntry,
+  OperatorInvite,
+} from '@team-x/shared-types';
 
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 
@@ -89,6 +93,9 @@ describe('operators IPC handlers', () => {
       })),
       getSharingReadiness: vi.fn(),
       listByCompany: vi.fn(() => entries),
+      listInvitesByCompany: vi.fn(() => []),
+      createInvite: vi.fn(),
+      revokeInvite: vi.fn(),
     };
     const handlers = createIpcHandlers(
       makeDeps({
@@ -152,6 +159,9 @@ describe('operators IPC handlers', () => {
       })),
       getSharingReadiness: vi.fn(() => readiness),
       listByCompany: vi.fn(() => []),
+      listInvitesByCompany: vi.fn(() => []),
+      createInvite: vi.fn(),
+      revokeInvite: vi.fn(),
     };
     const handlers = createIpcHandlers(
       makeDeps({
@@ -173,6 +183,9 @@ describe('operators IPC handlers', () => {
       })),
       getSharingReadiness: vi.fn(),
       listByCompany: vi.fn(() => []),
+      listInvitesByCompany: vi.fn(() => []),
+      createInvite: vi.fn(),
+      revokeInvite: vi.fn(),
     };
     const ensureSystemForCompany = vi.fn(() => ({
       agentEmployeeId: 'system-agent',
@@ -199,5 +212,157 @@ describe('operators IPC handlers', () => {
       systemAgentEmployeeId: 'system-agent',
       systemCopilotEmployeeId: 'system-copilot',
     });
+  });
+
+  it('lists operator invites for a workspace', async () => {
+    const invites: OperatorInvite[] = [
+      {
+        id: 'invite-1',
+        companyId: 'company-1',
+        email: 'ops@strategia-x.com',
+        displayName: 'Shared Operator',
+        authMode: 'invited',
+        role: 'operator',
+        note: 'Bring in shared supervision.',
+        inviteToken: 'token-1',
+        status: 'pending',
+        invitedByOperatorId: 'rocky',
+        createdAt: 5,
+        updatedAt: 5,
+        resolvedAt: null,
+      },
+    ];
+    const operatorAccessService = {
+      ensureLocalOwnerForCompany: vi.fn(() => ({
+        operatorId: 'rocky',
+        membershipId: 'membership-1',
+      })),
+      getSharingReadiness: vi.fn(),
+      listByCompany: vi.fn(() => []),
+      listInvitesByCompany: vi.fn(() => invites),
+      createInvite: vi.fn(),
+      revokeInvite: vi.fn(),
+    };
+    const handlers = createIpcHandlers(
+      makeDeps({
+        operatorAccessService,
+      }),
+    );
+
+    const result = await handlers.operatorsListInvites({ companyId: 'company-1' });
+
+    expect(operatorAccessService.listInvitesByCompany).toHaveBeenCalledWith('company-1');
+    expect(result).toEqual(invites);
+  });
+
+  it('creates an operator invite through the operator access service', async () => {
+    const invite: OperatorInvite = {
+      id: 'invite-1',
+      companyId: 'company-1',
+      email: 'ops@strategia-x.com',
+      displayName: 'Shared Operator',
+      authMode: 'cloud',
+      role: 'admin',
+      note: 'Shared workspace pilot.',
+      inviteToken: 'token-1',
+      status: 'pending',
+      invitedByOperatorId: 'rocky',
+      createdAt: 5,
+      updatedAt: 5,
+      resolvedAt: null,
+    };
+    const operatorAccessService = {
+      ensureLocalOwnerForCompany: vi.fn(() => ({
+        operatorId: 'rocky',
+        membershipId: 'membership-1',
+      })),
+      getSharingReadiness: vi.fn(),
+      listByCompany: vi.fn(() => []),
+      listInvitesByCompany: vi.fn(() => []),
+      createInvite: vi.fn(() => invite),
+      revokeInvite: vi.fn(),
+    };
+    const handlers = createIpcHandlers(
+      makeDeps({
+        companiesRepo: {
+          list: vi.fn(() => []),
+          create: vi.fn(() => 'company-1'),
+          getById: vi.fn(() => ({
+            id: 'company-1',
+            name: 'Acme',
+            slug: 'acme',
+            status: 'running',
+            theme: 'dark',
+            icon: null,
+            createdAt: 1,
+            settingsJson: '{}',
+            workspaceOriginId: 'company-1',
+            companyOriginId: 'company-1',
+          })),
+          archive: vi.fn(),
+          update: vi.fn(),
+          delete: vi.fn(),
+        } as unknown as IpcHandlerDeps['companiesRepo'],
+        operatorAccessService,
+      }),
+    );
+
+    const result = await handlers.operatorsCreateInvite({
+      companyId: 'company-1',
+      email: ' ops@strategia-x.com ',
+      displayName: 'Shared Operator',
+      authMode: 'cloud',
+      role: 'admin',
+      note: 'Shared workspace pilot.',
+    });
+
+    expect(operatorAccessService.createInvite).toHaveBeenCalledWith({
+      companyId: 'company-1',
+      email: 'ops@strategia-x.com',
+      displayName: 'Shared Operator',
+      authMode: 'cloud',
+      role: 'admin',
+      note: 'Shared workspace pilot.',
+    });
+    expect(result).toEqual({ invite });
+  });
+
+  it('revokes an operator invite', async () => {
+    const invite: OperatorInvite = {
+      id: 'invite-1',
+      companyId: 'company-1',
+      email: 'ops@strategia-x.com',
+      displayName: null,
+      authMode: 'invited',
+      role: 'operator',
+      note: null,
+      inviteToken: 'token-1',
+      status: 'revoked',
+      invitedByOperatorId: 'rocky',
+      createdAt: 5,
+      updatedAt: 10,
+      resolvedAt: 10,
+    };
+    const operatorAccessService = {
+      ensureLocalOwnerForCompany: vi.fn(() => ({
+        operatorId: 'rocky',
+        membershipId: 'membership-1',
+      })),
+      getSharingReadiness: vi.fn(),
+      listByCompany: vi.fn(() => []),
+      listInvitesByCompany: vi.fn(() => []),
+      createInvite: vi.fn(),
+      revokeInvite: vi.fn(() => invite),
+    };
+    const handlers = createIpcHandlers(
+      makeDeps({
+        operatorAccessService,
+      }),
+    );
+
+    const result = await handlers.operatorsRevokeInvite({ inviteId: 'invite-1' });
+
+    expect(operatorAccessService.revokeInvite).toHaveBeenCalledWith('invite-1');
+    expect(result).toEqual(invite);
   });
 });

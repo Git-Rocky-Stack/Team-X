@@ -79,6 +79,9 @@ describe('User Guide shell wiring', () => {
     expect(guideContentSrc).toContain("id: 'long-run-memory'");
     expect(guideContentSrc).toContain("id: 'portability-sharing'");
     expect(guideContentSrc).toContain("id: 'portability-reviewed'");
+    expect(guideContentSrc).toContain(
+      'Queue shared operator invites in Autonomy > Access before expecting invited or cloud posture to become actionable.',
+    );
     expect(guideHookSrc).toContain("if (action.view === 'autonomy' && action.autonomySubview) {");
     expect(guideHookSrc).toContain('setAutonomySubview(action.autonomySubview);');
   });

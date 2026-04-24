@@ -71,6 +71,10 @@ describe('Autonomy shell wiring', () => {
     expect(hookSrc).toContain('autonomyClient.operators.list(requireString(companyId,');
     expect(hookSrc).toContain("queryKey: ['operators', 'sharing-readiness', companyId]");
     expect(hookSrc).toContain('autonomyClient.operators.readiness(requireString(companyId,');
+    expect(hookSrc).toContain("queryKey: ['operators', 'invites', companyId]");
+    expect(hookSrc).toContain('autonomyClient.operators.listInvites');
+    expect(hookSrc).toContain('autonomyClient.operators.createInvite');
+    expect(hookSrc).toContain('autonomyClient.operators.revokeInvite');
     expect(storeSrc).toContain("autonomySubview: 'access'");
     expect(storeSrc).toContain('autonomyMemoryThreadId: string | null;');
     expect(storeSrc).toContain('setAutonomySubview: (subview: AutonomySubview) => void;');
@@ -88,6 +92,13 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('Operator Control Plane');
     expect(viewSrc).toContain('zero-login by default');
     expect(viewSrc).toContain('const sharingReadinessQuery = useSharingReadiness(companyId);');
+    expect(viewSrc).toContain('const invitesQuery = useOperatorInvites(companyId);');
+    expect(viewSrc).toContain('data-operator-invites=""');
+    expect(viewSrc).toContain('data-operator-invite-compose=""');
+    expect(viewSrc).toContain('data-operator-invite={invite.id}');
+    expect(viewSrc).toContain('Queue Operator Invite');
+    expect(viewSrc).toContain('Create invite');
+    expect(viewSrc).toContain('Pending invites');
     expect(viewSrc).toContain("onClick={() => openSettingsSection('portability')}");
     expect(viewSrc).toContain('Open portability');
     expect(viewSrc).toContain(
@@ -108,6 +119,9 @@ describe('Autonomy shell wiring', () => {
 
   it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {
     expect(clientSrc).toContain('export const autonomyClient = {');
+    expect(clientSrc).toContain('ipc.operators.listInvites');
+    expect(clientSrc).toContain('ipc.operators.createInvite');
+    expect(clientSrc).toContain('ipc.operators.revokeInvite');
     expect(runtimeHookSrc).toContain(
       "import { autonomyClient } from '@/features/autonomy/autonomy-client.js';",
     );

@@ -32,7 +32,7 @@ import {
   useImportCompanyPackage,
   useInstallCompanyTemplate,
 } from '@/hooks/use-company-portability.js';
-import { useSharingReadiness } from '@/hooks/use-operators.js';
+import { useOperatorInvites, useSharingReadiness } from '@/hooks/use-operators.js';
 import { ipc } from '@/lib/ipc.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -92,9 +92,12 @@ export function PortabilitySection() {
   const queryClient = useQueryClient();
   const companyId = useAppStore((state) => state.companyId);
   const setCompanyId = useAppStore((state) => state.setCompanyId);
+  const setActiveView = useAppStore((state) => state.setActiveView);
+  const setAutonomySubview = useAppStore((state) => state.setAutonomySubview);
   const { data: companies = [] } = useCompanies();
   const templatesQuery = useCompanyTemplates();
   const sharingReadinessQuery = useSharingReadiness(companyId);
+  const invitesQuery = useOperatorInvites(companyId);
   const exportWorkspace = useExportWorkspacePackage(companyId);
   const exportTemplate = useExportCompanyTemplate(companyId);
   const importPackage = useImportCompanyPackage();
@@ -106,6 +109,8 @@ export function PortabilitySection() {
 
   const activeCompany = companies.find((company) => company.id === companyId) ?? null;
   const sharingReadiness = sharingReadinessQuery.data ?? null;
+  const invites = invitesQuery.data ?? [];
+  const pendingInvites = invites.filter((invite) => invite.status === 'pending');
   const trimmedPackagePath = packagePath.trim();
   const packagePreviewQuery = useCompanyPackagePreview(
     trimmedPackagePath.length > 0 ? trimmedPackagePath : null,
@@ -303,6 +308,7 @@ export function PortabilitySection() {
                   <span>{sharingReadiness.ownerCount} owners</span>
                   <span>{sharingReadiness.invitedOperatorCount} invited</span>
                   <span>{sharingReadiness.cloudOperatorCount} cloud</span>
+                  <span>{pendingInvites.length} pending invites</span>
                   <span>
                     {sharingReadiness.lastExportedAt
                       ? `Exported ${new Date(sharingReadiness.lastExportedAt).toLocaleString()}`
@@ -319,6 +325,76 @@ export function PortabilitySection() {
                   <p className="mt-3 text-[11px] leading-snug text-emerald-600">
                     The currently selected sharing posture is ready on this workspace.
                   </p>
+                )}
+              </div>
+
+              <div
+                className="mt-3 rounded-lg border border-white/10 bg-background/70 px-3 py-3"
+                data-portability-invite-readiness=""
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground">Shared operator invites</div>
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                      Queue invited or cloud operators in Autonomy &gt; Access before expecting
+                      shared posture to become actionable.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setAutonomySubview('access');
+                      setActiveView('autonomy');
+                    }}
+                  >
+                    Open Autonomy Access
+                  </Button>
+                </div>
+
+                {invitesQuery.isLoading ? (
+                  <div className="mt-3 space-y-2" aria-busy="true">
+                    <Skeleton className="h-12 rounded-lg" />
+                    <Skeleton className="h-12 rounded-lg" />
+                  </div>
+                ) : invitesQuery.isError ? (
+                  <p className="mt-3 text-[11px] text-destructive">
+                    Failed to load shared operator invites for this workspace.
+                  </p>
+                ) : invites.length === 0 ? (
+                  <p className="mt-3 text-[11px] text-muted-foreground">
+                    No operator invites are queued yet. This workspace can still export or template
+                    cleanly, but invited and cloud posture remain preparatory until shared
+                    operators are actually queued.
+                  </p>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    {invites.slice(0, 3).map((invite) => (
+                      <div
+                        key={invite.id}
+                        className="rounded-lg border border-white/10 bg-black/10 px-3 py-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                          <div className="min-w-0 text-foreground">
+                            <div className="truncate font-medium">
+                              {invite.displayName?.trim() ? invite.displayName : invite.email}
+                            </div>
+                            <div className="truncate text-muted-foreground">{invite.email}</div>
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-muted-foreground">
+                            <span>{invite.authMode}</span>
+                            <span>{invite.role}</span>
+                            <span>{invite.status}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {invites.length > 3 ? (
+                      <p className="text-[11px] text-muted-foreground">
+                        {invites.length - 3} more invites are visible in Autonomy &gt; Access.
+                      </p>
+                    ) : null}
+                  </div>
                 )}
               </div>
 

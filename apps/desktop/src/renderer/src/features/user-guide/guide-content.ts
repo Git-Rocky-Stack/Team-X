@@ -336,6 +336,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         items: [
           'Preview every package before import so version drift, redactions, and missing secrets are visible.',
           'Save templates when you want repeatable operating models without live ticket or project state.',
+          'Queue shared operator invites in Autonomy > Access before expecting invited or cloud posture to become actionable.',
           'Treat invited and cloud sharing as posture plus metadata until the dedicated sync/auth bundle lands.',
         ],
       },

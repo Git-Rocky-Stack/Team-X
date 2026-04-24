@@ -1,6 +1,12 @@
-import { useMemo } from 'react';
+import { type FormEvent, useMemo, useState } from 'react';
 
-import type { Company, OperatorAccessEntry } from '@team-x/shared-types';
+import type {
+  Company,
+  OperatorAccessEntry,
+  OperatorInvite,
+  OperatorMembershipRole,
+  SharedOperatorAuthMode,
+} from '@team-x/shared-types';
 import {
   BadgeDollarSign,
   Bot,
@@ -13,7 +19,14 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
-import { useOperators, useSharingReadiness } from '@/hooks/use-operators.js';
+import { Input } from '@/components/ui/input.js';
+import {
+  useCreateOperatorInvite,
+  useOperatorInvites,
+  useOperators,
+  useRevokeOperatorInvite,
+  useSharingReadiness,
+} from '@/hooks/use-operators.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import {
@@ -57,6 +70,15 @@ const AUTONOMY_SUBVIEWS: Array<{
   { value: 'memory', label: 'Memory', icon: BrainCircuit },
   { value: 'access', label: 'Access', icon: ShieldCheck },
 ];
+
+const ACCESS_FIELD_CLASSNAME =
+  'h-10 w-full rounded-md border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-white/20';
+const ACCESS_TEXTAREA_CLASSNAME =
+  'min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-white/20';
+const ACCESS_LABEL_CLASSNAME =
+  'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
+const OPERATOR_INVITE_AUTH_MODE_OPTIONS: SharedOperatorAuthMode[] = ['invited', 'cloud'];
+const OPERATOR_INVITE_ROLE_OPTIONS: OperatorMembershipRole[] = ['operator', 'reviewer', 'admin'];
 
 const SUBVIEW_COPY: Record<
   AutonomySubview,
@@ -192,6 +214,21 @@ function sharingReadinessTone(
   }
 }
 
+function inviteStatusTone(
+  status: OperatorInvite['status'],
+): 'default' | 'accent' | 'warning' | 'danger' {
+  switch (status) {
+    case 'accepted':
+      return 'accent';
+    case 'expired':
+      return 'danger';
+    case 'pending':
+      return 'warning';
+    default:
+      return 'default';
+  }
+}
+
 function capabilityBadges(entry: OperatorAccessEntry): string[] {
   return [
     entry.membership.canApproveBudget ? 'Budget approvals' : null,
@@ -261,10 +298,41 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
   const openSettingsSection = useAppStore((state) => state.openSettingsSection);
   const operatorsQuery = useOperators(companyId);
   const sharingReadinessQuery = useSharingReadiness(companyId);
+  const invitesQuery = useOperatorInvites(companyId);
+  const createInviteMutation = useCreateOperatorInvite(companyId);
+  const revokeInviteMutation = useRevokeOperatorInvite(companyId);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteDisplayName, setInviteDisplayName] = useState('');
+  const [inviteAuthMode, setInviteAuthMode] = useState<SharedOperatorAuthMode>('invited');
+  const [inviteRole, setInviteRole] = useState<OperatorMembershipRole>('operator');
+  const [inviteNote, setInviteNote] = useState('');
   const entries = operatorsQuery.data ?? [];
+  const invites = invitesQuery.data ?? [];
   const accessSummary = useMemo(() => summarizeAccess(entries), [entries]);
+  const pendingInvites = useMemo(
+    () => invites.filter((invite) => invite.status === 'pending'),
+    [invites],
+  );
   const activeCopy = SUBVIEW_COPY[activeSubview];
   const sharingReadiness = sharingReadinessQuery.data ?? null;
+
+  async function handleCreateInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!companyId) return;
+    await createInviteMutation.mutateAsync({
+      companyId,
+      email: inviteEmail,
+      displayName: inviteDisplayName || undefined,
+      authMode: inviteAuthMode,
+      role: inviteRole,
+      note: inviteNote || undefined,
+    });
+    setInviteEmail('');
+    setInviteDisplayName('');
+    setInviteAuthMode('invited');
+    setInviteRole('operator');
+    setInviteNote('');
+  }
 
   if (!companyId || !company) {
     return (
@@ -390,7 +458,187 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                 tone="danger"
               />
             ) : (
-              <AccessList entries={entries} />
+              <div className="space-y-4">
+                <MissionInsetSurface className="space-y-4 p-4" data-operator-invites="">
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-foreground">Queue Operator Invite</div>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Create invited or cloud operator placeholders now. Acceptance and real shared
+                      sync can land later without changing the workspace contract.
+                    </p>
+                  </div>
+                  <form
+                    className="space-y-4"
+                    data-operator-invite-compose=""
+                    onSubmit={(event) => {
+                      void handleCreateInvite(event);
+                    }}
+                  >
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-2">
+                        <div className={ACCESS_LABEL_CLASSNAME}>Operator Email</div>
+                        <Input
+                          className={ACCESS_FIELD_CLASSNAME}
+                          type="email"
+                          value={inviteEmail}
+                          onChange={(event) => setInviteEmail(event.target.value)}
+                          placeholder="operator@strategia-x.com"
+                          required
+                        />
+                      </label>
+                      <label className="space-y-2">
+                        <div className={ACCESS_LABEL_CLASSNAME}>Display Name</div>
+                        <Input
+                          className={ACCESS_FIELD_CLASSNAME}
+                          value={inviteDisplayName}
+                          onChange={(event) => setInviteDisplayName(event.target.value)}
+                          placeholder="Alex Morgan"
+                        />
+                      </label>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-2">
+                        <div className={ACCESS_LABEL_CLASSNAME}>Auth Mode</div>
+                        <select
+                          className={ACCESS_FIELD_CLASSNAME}
+                          value={inviteAuthMode}
+                          onChange={(event) =>
+                            setInviteAuthMode(event.target.value as SharedOperatorAuthMode)
+                          }
+                        >
+                          {OPERATOR_INVITE_AUTH_MODE_OPTIONS.map((mode) => (
+                            <option key={mode} value={mode}>
+                              {mode}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-2">
+                        <div className={ACCESS_LABEL_CLASSNAME}>Workspace Role</div>
+                        <select
+                          className={ACCESS_FIELD_CLASSNAME}
+                          value={inviteRole}
+                          onChange={(event) =>
+                            setInviteRole(event.target.value as OperatorMembershipRole)
+                          }
+                        >
+                          {OPERATOR_INVITE_ROLE_OPTIONS.map((role) => (
+                            <option key={role} value={role}>
+                              {role}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <label className="space-y-2">
+                      <div className={ACCESS_LABEL_CLASSNAME}>Invite Note</div>
+                      <textarea
+                        className={ACCESS_TEXTAREA_CLASSNAME}
+                        value={inviteNote}
+                        onChange={(event) => setInviteNote(event.target.value)}
+                        placeholder="Optional context for why this operator is being added to the workspace."
+                      />
+                    </label>
+                    {createInviteMutation.isError ? (
+                      <p className="text-xs leading-5 text-red-200">
+                        {createInviteMutation.error instanceof Error
+                          ? createInviteMutation.error.message
+                          : 'The operator invite could not be created.'}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Pending invites do not create membership yet. They make the intended shared
+                        operator posture explicit now.
+                      </p>
+                      <Button type="submit" disabled={createInviteMutation.isPending}>
+                        {createInviteMutation.isPending ? 'Creating invite...' : 'Create invite'}
+                      </Button>
+                    </div>
+                  </form>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-semibold text-foreground">
+                        Invite Queue ({invites.length})
+                      </div>
+                      <MissionPill tone={pendingInvites.length > 0 ? 'warning' : 'accent'}>
+                        {pendingInvites.length} pending
+                      </MissionPill>
+                    </div>
+                    {invitesQuery.isLoading ? (
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Loading operator invites...
+                      </p>
+                    ) : invitesQuery.isError ? (
+                      <p className="text-xs leading-5 text-red-200">
+                        Operator invites could not be loaded for this workspace.
+                      </p>
+                    ) : invites.length === 0 ? (
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        No operator invites have been queued for this workspace yet.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {invites.map((invite) => {
+                          const isRevoking =
+                            revokeInviteMutation.isPending &&
+                            revokeInviteMutation.variables?.inviteId === invite.id;
+                          return (
+                            <MissionInsetSurface
+                              key={invite.id}
+                              className="space-y-3 p-4"
+                              data-operator-invite={invite.id}
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-sm font-semibold text-foreground">
+                                      {invite.displayName?.trim() ? invite.displayName : invite.email}
+                                    </span>
+                                    <MissionPill>{invite.authMode}</MissionPill>
+                                    <MissionPill>{invite.role}</MissionPill>
+                                    <MissionPill tone={inviteStatusTone(invite.status)}>
+                                      {invite.status}
+                                    </MissionPill>
+                                  </div>
+                                  <p className="text-xs leading-5 text-muted-foreground">
+                                    {invite.email}
+                                  </p>
+                                  {invite.note ? (
+                                    <p className="text-xs leading-5 text-muted-foreground">
+                                      {invite.note}
+                                    </p>
+                                  ) : null}
+                                </div>
+                                <div className="space-y-2 text-right">
+                                  <p className="text-xs leading-5 text-muted-foreground">
+                                    Created {new Date(invite.createdAt).toLocaleString()}
+                                  </p>
+                                  {invite.status === 'pending' ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-white/10 bg-black/10 hover:bg-black/20"
+                                      disabled={isRevoking}
+                                      onClick={() => {
+                                        void revokeInviteMutation.mutateAsync({ inviteId: invite.id });
+                                      }}
+                                    >
+                                      {isRevoking ? 'Revoking...' : 'Revoke'}
+                                    </Button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </MissionInsetSurface>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </MissionInsetSurface>
+                <AccessList entries={entries} />
+              </div>
             )
           ) : activeSubview === 'runtimes' ? (
             <RuntimeProfilesPanel companyId={companyId} />
@@ -445,6 +693,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                   <span className="font-semibold text-foreground">
                     {accessSummary.cloudOperators}
                   </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Pending invites</span>
+                  <span className="font-semibold text-foreground">{pendingInvites.length}</span>
                 </div>
               </div>
             </MissionInsetSurface>

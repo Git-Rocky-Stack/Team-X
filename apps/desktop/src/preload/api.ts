@@ -87,6 +87,8 @@ import type {
   CreateBudgetPolicyRequest,
   CreateGoalRequest,
   CreateGoalResponse,
+  CreateOperatorInviteRequest,
+  CreateOperatorInviteResponse,
   CreateProjectRequest,
   CreateProjectResponse,
   CreateRoutineRequest,
@@ -147,6 +149,7 @@ import type {
   Meeting,
   MeetingDetail,
   OperatorAccessEntry,
+  OperatorInvite,
   OrgchartGetResponse,
   PackThreadContextRequest,
   PackedThreadContext,
@@ -160,6 +163,7 @@ import type {
   RagStatsResponse,
   ResolveThreadRequest,
   ResolveThreadResponse,
+  RevokeOperatorInviteRequest,
   ReviewApprovalItemRequest,
   Routine,
   RoutineRun,
@@ -276,6 +280,9 @@ const CHANNELS = {
   employeesList: 'employees.list',
   operatorsList: 'operators.list',
   operatorsReadiness: 'operators.readiness',
+  operatorsListInvites: 'operators.listInvites',
+  operatorsCreateInvite: 'operators.createInvite',
+  operatorsRevokeInvite: 'operators.revokeInvite',
   runtimeProfilesList: 'runtimeProfiles.list',
   runtimeProfilesCreate: 'runtimeProfiles.create',
   runtimeProfilesUpdate: 'runtimeProfiles.update',
@@ -503,6 +510,12 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
           CHANNELS.operatorsReadiness,
           { companyId } satisfies GetOperatorSharingReadinessRequest,
         ) as Promise<CompanySharingReadinessSummary>,
+      listInvites: (companyId: string) =>
+        ipc.invoke(CHANNELS.operatorsListInvites, { companyId }) as Promise<OperatorInvite[]>,
+      createInvite: (req: CreateOperatorInviteRequest) =>
+        ipc.invoke(CHANNELS.operatorsCreateInvite, req) as Promise<CreateOperatorInviteResponse>,
+      revokeInvite: (req: RevokeOperatorInviteRequest) =>
+        ipc.invoke(CHANNELS.operatorsRevokeInvite, req) as Promise<OperatorInvite>,
     },
     runtimeProfiles: {
       list: (companyId: string) =>

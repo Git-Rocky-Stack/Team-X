@@ -69,7 +69,12 @@ describe('Portability settings shell', () => {
     expect(portabilitySectionSrc).toContain('Sharing posture');
     expect(portabilitySectionSrc).toContain('Choose the workspace’s intended sharing mode');
     expect(portabilitySectionSrc).toContain("useSharingReadiness(companyId)");
+    expect(portabilitySectionSrc).toContain("useOperatorInvites(companyId)");
     expect(portabilitySectionSrc).toContain('ipc.companies.update');
+    expect(portabilitySectionSrc).toContain('Shared operator invites');
+    expect(portabilitySectionSrc).toContain('Open Autonomy Access');
+    expect(portabilitySectionSrc).toContain('data-portability-invite-readiness=""');
+    expect(portabilitySectionSrc).toContain('pending invites');
     expect(portabilitySectionSrc).toContain('Export active workspace package');
     expect(portabilitySectionSrc).toContain('Export Package');
     expect(portabilitySectionSrc).toContain('Save active workspace as template');

@@ -171,4 +171,39 @@ describe('operator access service', () => {
       ]),
     );
   });
+
+  it('creates and revokes shared operator invites with the local owner as inviter', () => {
+    service.ensureLocalOwnerForCompany('company-alpha');
+
+    const invite = service.createInvite({
+      companyId: 'company-alpha',
+      email: '  ops@strategia-x.com  ',
+      displayName: ' Shared Operator ',
+      authMode: 'invited',
+      role: 'operator',
+      note: ' Shared workspace pilot ',
+    });
+
+    expect(invite).toEqual(
+      expect.objectContaining({
+        companyId: 'company-alpha',
+        email: 'ops@strategia-x.com',
+        displayName: 'Shared Operator',
+        authMode: 'invited',
+        role: 'operator',
+        note: 'Shared workspace pilot',
+        invitedByOperatorId: LOCAL_OWNER_OPERATOR_ID,
+        status: 'pending',
+      }),
+    );
+
+    expect(service.listInvitesByCompany('company-alpha')).toEqual([
+      expect.objectContaining({ id: invite.id }),
+    ]);
+
+    const revoked = service.revokeInvite(invite.id);
+
+    expect(revoked.status).toBe('revoked');
+    expect(revoked.resolvedAt).not.toBeNull();
+  });
 });

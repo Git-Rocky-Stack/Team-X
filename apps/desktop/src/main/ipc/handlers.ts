@@ -86,6 +86,8 @@ import type {
   CreateBudgetPolicyRequest,
   CreateGoalRequest,
   CreateGoalResponse,
+  CreateOperatorInviteRequest,
+  CreateOperatorInviteResponse,
   CreateProjectRequest,
   CreateProjectResponse,
   CreateRoutineRequest,
@@ -148,6 +150,7 @@ import type {
   ListMcpTemplatesRequest,
   ListMeetingsRequest,
   ListOperatorsRequest,
+  ListOperatorInvitesRequest,
   ListProjectsRequest,
   ListProviderModelsRequest,
   ListProviderModelsResponse,
@@ -165,6 +168,7 @@ import type {
   MeetingMode,
   MeetingStatus,
   OperatorAccessEntry,
+  OperatorInvite,
   OrgchartEdge,
   OrgchartGetRequest,
   OrgchartGetResponse,
@@ -175,6 +179,7 @@ import type {
   Project,
   ProjectDetail,
   RemoveProviderRequest,
+  RevokeOperatorInviteRequest,
   ReopenTicketRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
@@ -261,9 +266,11 @@ import {
   CONCURRENCY_SETTINGS_CLAMPS,
   COPILOT_CATEGORIES,
   DEFAULT_CONCURRENCY_CAPS,
+  OPERATOR_MEMBERSHIP_ROLES,
   PRIVACY_TIER_RANK,
   ROUTINE_TRIGGER_KINDS,
   RUNTIME_PROFILE_KINDS,
+  SHARED_OPERATOR_AUTH_MODES,
   STRATEGY_SLOTS,
   TELEMETRY_RUN_KINDS,
   getLevelRank,
@@ -816,6 +823,9 @@ export interface IpcOperatorAccessService {
   ensureLocalOwnerForCompany(companyId: string): { operatorId: string; membershipId: string };
   resolveOperatorIdForCompany(companyId: string, preferredOperatorId?: string | null): string;
   listByCompany(companyId: string): OperatorAccessEntry[];
+  listInvitesByCompany(companyId: string): OperatorInvite[];
+  createInvite(input: CreateOperatorInviteRequest): OperatorInvite;
+  revokeInvite(inviteId: string): OperatorInvite;
   getSharingReadiness(companyId: string): CompanySharingReadinessSummary;
 }
 
@@ -1103,6 +1113,12 @@ export interface IpcHandlers {
   operatorsReadiness(
     req: GetOperatorSharingReadinessRequest,
   ): Promise<CompanySharingReadinessSummary>;
+  /** `operators.listInvites` — return pending and historical invites for a company. */
+  operatorsListInvites(req: ListOperatorInvitesRequest): Promise<OperatorInvite[]>;
+  /** `operators.createInvite` — create one shared-operator invite placeholder. */
+  operatorsCreateInvite(req: CreateOperatorInviteRequest): Promise<CreateOperatorInviteResponse>;
+  /** `operators.revokeInvite` — revoke one operator invite. */
+  operatorsRevokeInvite(req: RevokeOperatorInviteRequest): Promise<OperatorInvite>;
   /** `runtimeProfiles.list` — return runtime profiles plus binding summaries for a company. */
   runtimeProfilesList(req: ListRuntimeProfilesRequest): Promise<RuntimeProfileSummary[]>;
   /** `runtimeProfiles.create` — create one named runtime profile. */
@@ -2255,6 +2271,72 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] operators.readiness: operatorAccessService dep is required');
       }
       return operatorAccessService.getSharingReadiness(req.companyId);
+    },
+
+    async operatorsListInvites(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] operators.listInvites: companyId is required');
+      }
+      if (!operatorAccessService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '[ipc] operators.listInvites: operatorAccessService dep unwired — returning an empty invite set',
+          );
+        }
+        return [];
+      }
+      return operatorAccessService.listInvitesByCompany(req.companyId);
+    },
+
+    async operatorsCreateInvite(req) {
+      const companyId = req.companyId?.trim();
+      if (!companyId) {
+        throw new Error('[ipc] operators.createInvite: companyId is required');
+      }
+      const email = req.email?.trim();
+      if (!email) {
+        throw new Error('[ipc] operators.createInvite: email is required');
+      }
+      if (!email.includes('@')) {
+        throw new Error('[ipc] operators.createInvite: email must look like a real email');
+      }
+      if (!SHARED_OPERATOR_AUTH_MODES.includes(req.authMode)) {
+        throw new Error(
+          `[ipc] operators.createInvite: authMode must be one of ${SHARED_OPERATOR_AUTH_MODES.join(', ')}`,
+        );
+      }
+      if (!OPERATOR_MEMBERSHIP_ROLES.includes(req.role)) {
+        throw new Error(
+          `[ipc] operators.createInvite: role must be one of ${OPERATOR_MEMBERSHIP_ROLES.join(', ')}`,
+        );
+      }
+      if (req.role === 'owner') {
+        throw new Error(
+          '[ipc] operators.createInvite: owner invites are not supported until shared ownership lands',
+        );
+      }
+      assertCompanyActive(companiesRepo, companyId, 'operators.createInvite');
+      if (!operatorAccessService) {
+        throw new Error('[ipc] operators.createInvite: operatorAccessService dep is required');
+      }
+      return {
+        invite: operatorAccessService.createInvite({
+          ...req,
+          companyId,
+          email,
+        }),
+      };
+    },
+
+    async operatorsRevokeInvite(req) {
+      const inviteId = req.inviteId?.trim();
+      if (!inviteId) {
+        throw new Error('[ipc] operators.revokeInvite: inviteId is required');
+      }
+      if (!operatorAccessService) {
+        throw new Error('[ipc] operators.revokeInvite: operatorAccessService dep is required');
+      }
+      return operatorAccessService.revokeInvite(inviteId);
     },
 
     async runtimeProfilesList(req) {

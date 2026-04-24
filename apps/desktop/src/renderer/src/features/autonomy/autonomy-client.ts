@@ -13,6 +13,12 @@ export const autonomyClient = {
     list: (...args: Parameters<typeof ipc.operators.list>) => ipc.operators.list(...args),
     readiness: (...args: Parameters<typeof ipc.operators.readiness>) =>
       ipc.operators.readiness(...args),
+    listInvites: (...args: Parameters<typeof ipc.operators.listInvites>) =>
+      ipc.operators.listInvites(...args),
+    createInvite: (...args: Parameters<typeof ipc.operators.createInvite>) =>
+      ipc.operators.createInvite(...args),
+    revokeInvite: (...args: Parameters<typeof ipc.operators.revokeInvite>) =>
+      ipc.operators.revokeInvite(...args),
   },
   runtimeProfiles: {
     list: (...args: Parameters<typeof ipc.runtimeProfiles.list>) =>

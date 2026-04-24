@@ -74,6 +74,10 @@ const REQUEST_CHANNELS = [
   'companies.delete',
   'employees.list',
   'operators.list',
+  'operators.readiness',
+  'operators.listInvites',
+  'operators.createInvite',
+  'operators.revokeInvite',
   'runtimeProfiles.list',
   'runtimeProfiles.create',
   'runtimeProfiles.update',
@@ -162,6 +166,8 @@ const REQUEST_CHANNELS = [
   'settings.setConcurrency',
   'settings.getExtensions',
   'settings.setExtensions',
+  'settings.getMemory',
+  'settings.setMemory',
   'settings.getRagConfig',
   'settings.setRagConfig',
   // Agentic loop (Phase 5 — M31)
@@ -328,6 +334,27 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('operators.readiness', async (_event, request: { companyId: string }) => {
     return handlers.operatorsReadiness(request);
   });
+
+  ipcMain.handle(
+    'operators.listInvites',
+    async (_event, request: import('@team-x/shared-types').ListOperatorInvitesRequest) => {
+      return handlers.operatorsListInvites(request);
+    },
+  );
+
+  ipcMain.handle(
+    'operators.createInvite',
+    async (_event, request: import('@team-x/shared-types').CreateOperatorInviteRequest) => {
+      return handlers.operatorsCreateInvite(request);
+    },
+  );
+
+  ipcMain.handle(
+    'operators.revokeInvite',
+    async (_event, request: import('@team-x/shared-types').RevokeOperatorInviteRequest) => {
+      return handlers.operatorsRevokeInvite(request);
+    },
+  );
 
   ipcMain.handle('runtimeProfiles.list', async (_event, request: { companyId: string }) => {
     return handlers.runtimeProfilesList(request);
@@ -908,6 +935,17 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'settings.setExtensions',
     async (_event, request: import('@team-x/shared-types').SettingsSetExtensionsRequest) => {
       return handlers.settingsSetExtensions(request);
+    },
+  );
+
+  ipcMain.handle('settings.getMemory', async () => {
+    return handlers.settingsGetMemory();
+  });
+
+  ipcMain.handle(
+    'settings.setMemory',
+    async (_event, request: import('@team-x/shared-types').SettingsSetMemoryRequest) => {
+      return handlers.settingsSetMemory(request);
     },
   );
 
