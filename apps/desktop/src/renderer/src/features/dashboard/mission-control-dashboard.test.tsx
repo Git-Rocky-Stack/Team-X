@@ -85,6 +85,19 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('DASHBOARD_PILL_TOGGLE_CLASS');
     expect(missionControlSrc).toContain('DASHBOARD_PILL_GHOST_CLASS');
   });
+
+  it('keeps raw dashboard card buttons keyboard-visible', () => {
+    expect(missionControlSrc).toContain('DASHBOARD_INTERACTIVE_FOCUS_CLASS');
+    expect(missionControlSrc).toContain('focus-visible:ring-brand/60');
+    expect(missionControlSrc).toContain('DASHBOARD_INTERACTIVE_FOCUS_CLASS,');
+  });
+
+  it('announces dashboard layout persistence state', () => {
+    expect(missionControlSrc).toContain('role="status"');
+    expect(missionControlSrc).toContain('aria-live="polite"');
+    expect(missionControlSrc).toContain('role="alert"');
+    expect(missionControlSrc).toContain('data-dashboard-layout-error=""');
+  });
 });
 
 describe('Dashboard integration wiring', () => {

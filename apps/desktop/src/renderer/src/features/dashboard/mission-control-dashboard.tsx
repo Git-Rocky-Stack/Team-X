@@ -49,6 +49,8 @@ const DASHBOARD_GLASS_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border-whi
 const DASHBOARD_GHOST_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border border-white/10 bg-black/10 hover:bg-black/20`;
 const DASHBOARD_PILL_TOGGLE_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full px-4`;
 const DASHBOARD_PILL_GHOST_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full border border-white/10 bg-black/10 hover:bg-black/20`;
+const DASHBOARD_INTERACTIVE_FOCUS_CLASS =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 interface MissionControlDashboardProps {
   companyId: string | null;
@@ -129,7 +131,7 @@ function HeroMetric({
 }) {
   const className = cn(
     'group flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-left transition-all',
-    onClick && 'hover:border-brand/30 hover:bg-black/30',
+    onClick && `${DASHBOARD_INTERACTIVE_FOCUS_CLASS} hover:border-brand/30 hover:bg-black/30`,
   );
 
   const content = (
@@ -579,13 +581,22 @@ export function MissionControlDashboard({
                     {operatorPosture} posture
                   </Badge>
                   {dashboardLayout.isSaving && (
-                    <Badge variant="outline" className="border-brand/25 bg-brand/10 text-brand">
+                    <Badge
+                      variant="outline"
+                      className="border-brand/25 bg-brand/10 text-brand"
+                      role="status"
+                      aria-live="polite"
+                    >
                       Saving layout
                     </Badge>
                   )}
                 </div>
                 {dashboardLayout.error && (
-                  <p className="text-xs text-red-200" data-dashboard-layout-error="">
+                  <p
+                    className="text-xs text-red-200"
+                    data-dashboard-layout-error=""
+                    role="alert"
+                  >
                     {dashboardLayout.error}
                   </p>
                 )}
@@ -855,7 +866,10 @@ export function MissionControlDashboard({
                           type="button"
                           key={run.runId}
                           onClick={() => handleOpenRunThread(run.threadId)}
-                          className="group rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition-all hover:border-brand/30 hover:bg-black/20"
+                          className={cn(
+                            'group rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition-all hover:border-brand/30 hover:bg-black/20',
+                            DASHBOARD_INTERACTIVE_FOCUS_CLASS,
+                          )}
                         >
                           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div className="space-y-2">
@@ -1225,7 +1239,10 @@ export function MissionControlDashboard({
                         type="button"
                         key={entry.id}
                         onClick={() => setDashboardSubview('commands')}
-                        className="group flex w-full items-start justify-between gap-4 rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition-all hover:border-brand/30 hover:bg-black/20"
+                        className={cn(
+                          'group flex w-full items-start justify-between gap-4 rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition-all hover:border-brand/30 hover:bg-black/20',
+                          DASHBOARD_INTERACTIVE_FOCUS_CLASS,
+                        )}
                       >
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
@@ -1359,7 +1376,10 @@ export function MissionControlDashboard({
                         onClick={() =>
                           handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'budgets')
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition hover:border-brand/30 hover:bg-black/20"
+                        className={cn(
+                          'w-full rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition hover:border-brand/30 hover:bg-black/20',
+                          DASHBOARD_INTERACTIVE_FOCUS_CLASS,
+                        )}
                         data-dashboard-autonomy-snapshot=""
                       >
                         <div className="flex items-center justify-between gap-3">
