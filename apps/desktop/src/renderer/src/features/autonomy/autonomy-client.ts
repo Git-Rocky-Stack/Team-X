@@ -22,6 +22,16 @@ export const autonomyClient = {
     acceptInvite: (...args: Parameters<typeof ipc.operators.acceptInvite>) =>
       ipc.operators.acceptInvite(...args),
   },
+  cloud: {
+    getWorkspaceLink: (...args: Parameters<typeof ipc.cloud.getWorkspaceLink>) =>
+      ipc.cloud.getWorkspaceLink(...args),
+    linkWorkspace: (...args: Parameters<typeof ipc.cloud.linkWorkspace>) =>
+      ipc.cloud.linkWorkspace(...args),
+    unlinkWorkspace: (...args: Parameters<typeof ipc.cloud.unlinkWorkspace>) =>
+      ipc.cloud.unlinkWorkspace(...args),
+    reconnectWorkspace: (...args: Parameters<typeof ipc.cloud.reconnectWorkspace>) =>
+      ipc.cloud.reconnectWorkspace(...args),
+  },
   runtimeProfiles: {
     list: (...args: Parameters<typeof ipc.runtimeProfiles.list>) =>
       ipc.runtimeProfiles.list(...args),

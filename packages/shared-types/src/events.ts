@@ -36,6 +36,11 @@ export type EventType =
   | 'company.created'
   | 'company.updated'
   | 'company.deleted'
+  | 'company.linkStarted'
+  | 'company.linked'
+  | 'company.linkFailed'
+  | 'company.unlinked'
+  | 'company.reconnected'
   | 'company.packageExported'
   | 'company.packageImported'
   | 'company.templateInstalled'
@@ -577,6 +582,44 @@ export interface CompanyDeletedPayload {
   name: string;
   /** Wall-clock timestamp in ms when the delete handler committed the transaction. */
   deletedAt: number;
+}
+
+export interface CompanyLinkStartedPayload {
+  companyId: string;
+  cloudWorkspaceId: string;
+  cloudTenantId: string;
+  linkedDeviceId: string;
+  startedAt: number;
+}
+
+export interface CompanyLinkedPayload {
+  companyId: string;
+  cloudWorkspaceId: string;
+  cloudTenantId: string;
+  linkedDeviceId: string;
+  linkedAt: number;
+}
+
+export interface CompanyLinkFailedPayload {
+  companyId: string;
+  action: 'link' | 'reconnect';
+  error: string;
+  failedAt: number;
+}
+
+export interface CompanyUnlinkedPayload {
+  companyId: string;
+  previousCloudWorkspaceId: string | null;
+  previousCloudTenantId: string | null;
+  unlinkedAt: number;
+}
+
+export interface CompanyReconnectedPayload {
+  companyId: string;
+  cloudWorkspaceId: string;
+  cloudTenantId: string;
+  linkedDeviceId: string;
+  reconnectedAt: number;
 }
 
 export interface RoutineCreatedPayload {

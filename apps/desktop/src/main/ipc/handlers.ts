@@ -78,6 +78,7 @@ import type {
   CompaniesDeleteRequest,
   CompaniesUpdateRequest,
   Company,
+  CompanyCloudLinkStatus,
   CompanySharingReadinessSummary,
   CompanySettings,
   CompanyStatus,
@@ -115,6 +116,8 @@ import type {
   ExportCompanyPackageResponse,
   ExtensionSummary,
   GetBudgetOverviewRequest,
+  GetCloudWorkspaceLinkRequest,
+  LinkCloudWorkspaceRequest,
   GetEffectiveAuthorityRequest,
   GetGoalRequest,
   GetOperatorSharingReadinessRequest,
@@ -183,6 +186,7 @@ import type {
   RemoveProviderRequest,
   RevokeOperatorInviteRequest,
   ReopenTicketRequest,
+  ReconnectCloudWorkspaceRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
   ReviewApprovalItemRequest,
@@ -250,6 +254,7 @@ import type {
   UpdateRoutineRequest,
   UpdateRuntimeProfileRequest,
   UpdateTicketRequest,
+  UnlinkCloudWorkspaceRequest,
   UpsertSkillAssignmentRequest,
   ValidateRuntimeProfileRequest,
   VaultDownloadResponse,
@@ -832,6 +837,17 @@ export interface IpcOperatorAccessService {
   getSharingReadiness(companyId: string): CompanySharingReadinessSummary;
 }
 
+export interface IpcCloudLinkService {
+  ensureDeviceIdentity(): string;
+  getWorkspaceLink(companyId: string): CompanyCloudLinkStatus;
+  startLink(companyId: string): CompanyCloudLinkStatus;
+  completeLink(companyId: string): CompanyCloudLinkStatus;
+  linkWorkspace(companyId: string): CompanyCloudLinkStatus;
+  unlinkWorkspace(companyId: string): CompanyCloudLinkStatus;
+  reconnectWorkspace(companyId: string): CompanyCloudLinkStatus;
+  failLink(companyId: string, error: string): CompanyCloudLinkStatus;
+}
+
 export interface IpcRuntimeProfilesService {
   list(companyId: string): RuntimeProfileSummary[];
   create(input: CreateRuntimeProfileRequest): string;
@@ -930,6 +946,7 @@ export interface IpcHandlerDeps {
   extensionsRegistry?: ExtensionsRegistryService;
   skillsService?: IpcSkillsService;
   operatorAccessService?: IpcOperatorAccessService;
+  cloudLinkService?: IpcCloudLinkService;
   runtimeProfilesService?: IpcRuntimeProfilesService;
   routineService?: IpcRoutineService;
   budgetGovernanceService?: IpcBudgetGovernanceService;
@@ -1116,6 +1133,16 @@ export interface IpcHandlers {
   operatorsReadiness(
     req: GetOperatorSharingReadinessRequest,
   ): Promise<CompanySharingReadinessSummary>;
+  /** `cloud.getWorkspaceLink` — return the local linked-workspace status and device identity. */
+  cloudGetWorkspaceLink(req: GetCloudWorkspaceLinkRequest): Promise<CompanyCloudLinkStatus>;
+  /** `cloud.linkWorkspace` — move one workspace into linked posture using local placeholder cloud ids. */
+  cloudLinkWorkspace(req: LinkCloudWorkspaceRequest): Promise<CompanyCloudLinkStatus>;
+  /** `cloud.unlinkWorkspace` — clear one workspace's linked-workspace metadata. */
+  cloudUnlinkWorkspace(req: UnlinkCloudWorkspaceRequest): Promise<CompanyCloudLinkStatus>;
+  /** `cloud.reconnectWorkspace` — refresh one linked workspace after a degraded or stale sync posture. */
+  cloudReconnectWorkspace(
+    req: ReconnectCloudWorkspaceRequest,
+  ): Promise<CompanyCloudLinkStatus>;
   /** `operators.listInvites` — return pending and historical invites for a company. */
   operatorsListInvites(req: ListOperatorInvitesRequest): Promise<OperatorInvite[]>;
   /** `operators.createInvite` — create one shared-operator invite placeholder. */
@@ -2016,6 +2043,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     extensionsRegistry,
     skillsService,
     operatorAccessService,
+    cloudLinkService,
     runtimeProfilesService,
     routineService,
     budgetGovernanceService,
@@ -2276,6 +2304,116 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] operators.readiness: operatorAccessService dep is required');
       }
       return operatorAccessService.getSharingReadiness(req.companyId);
+    },
+
+    async cloudGetWorkspaceLink(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] cloud.getWorkspaceLink: companyId is required');
+      }
+      if (!cloudLinkService) {
+        throw new Error('[ipc] cloud.getWorkspaceLink: cloudLinkService dep is required');
+      }
+      assertCompanyActive(companiesRepo, req.companyId, 'cloud.getWorkspaceLink');
+      return cloudLinkService.getWorkspaceLink(req.companyId);
+    },
+
+    async cloudLinkWorkspace(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] cloud.linkWorkspace: companyId is required');
+      }
+      if (!cloudLinkService) {
+        throw new Error('[ipc] cloud.linkWorkspace: cloudLinkService dep is required');
+      }
+      assertCompanyActive(companiesRepo, req.companyId, 'cloud.linkWorkspace');
+
+      const started = cloudLinkService.startLink(req.companyId);
+      emitUserAuditEvent('company.linkStarted', req.companyId, {
+        companyId: req.companyId,
+        cloudWorkspaceId: started.cloudWorkspaceId ?? 'unknown',
+        cloudTenantId: started.cloudTenantId ?? 'unknown',
+        linkedDeviceId: started.linkedDeviceId ?? started.deviceId,
+        startedAt: Date.now(),
+      });
+
+      try {
+        const linked = cloudLinkService.completeLink(req.companyId);
+        emitUserAuditEvent('company.linked', req.companyId, {
+          companyId: req.companyId,
+          cloudWorkspaceId: linked.cloudWorkspaceId ?? 'unknown',
+          cloudTenantId: linked.cloudTenantId ?? 'unknown',
+          linkedDeviceId: linked.linkedDeviceId ?? linked.deviceId,
+          linkedAt: linked.lastSyncAt ?? Date.now(),
+        });
+        return linked;
+      } catch (err) {
+        const message =
+          err instanceof Error && err.message.trim().length > 0
+            ? err.message
+            : 'Workspace link failed.';
+        const failed = cloudLinkService.failLink(req.companyId, message);
+        emitUserAuditEvent('company.linkFailed', req.companyId, {
+          companyId: req.companyId,
+          action: 'link',
+          error: failed.lastSyncError ?? message,
+          failedAt: Date.now(),
+        });
+        throw err;
+      }
+    },
+
+    async cloudUnlinkWorkspace(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] cloud.unlinkWorkspace: companyId is required');
+      }
+      if (!cloudLinkService) {
+        throw new Error('[ipc] cloud.unlinkWorkspace: cloudLinkService dep is required');
+      }
+      assertCompanyActive(companiesRepo, req.companyId, 'cloud.unlinkWorkspace');
+
+      const previous = cloudLinkService.getWorkspaceLink(req.companyId);
+      const unlinked = cloudLinkService.unlinkWorkspace(req.companyId);
+      emitUserAuditEvent('company.unlinked', req.companyId, {
+        companyId: req.companyId,
+        previousCloudWorkspaceId: previous.cloudWorkspaceId,
+        previousCloudTenantId: previous.cloudTenantId,
+        unlinkedAt: Date.now(),
+      });
+      return unlinked;
+    },
+
+    async cloudReconnectWorkspace(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] cloud.reconnectWorkspace: companyId is required');
+      }
+      if (!cloudLinkService) {
+        throw new Error('[ipc] cloud.reconnectWorkspace: cloudLinkService dep is required');
+      }
+      assertCompanyActive(companiesRepo, req.companyId, 'cloud.reconnectWorkspace');
+
+      try {
+        const reconnected = cloudLinkService.reconnectWorkspace(req.companyId);
+        emitUserAuditEvent('company.reconnected', req.companyId, {
+          companyId: req.companyId,
+          cloudWorkspaceId: reconnected.cloudWorkspaceId ?? 'unknown',
+          cloudTenantId: reconnected.cloudTenantId ?? 'unknown',
+          linkedDeviceId: reconnected.linkedDeviceId ?? reconnected.deviceId,
+          reconnectedAt: reconnected.lastSyncAt ?? Date.now(),
+        });
+        return reconnected;
+      } catch (err) {
+        const message =
+          err instanceof Error && err.message.trim().length > 0
+            ? err.message
+            : 'Workspace reconnect failed.';
+        const failed = cloudLinkService.failLink(req.companyId, message);
+        emitUserAuditEvent('company.linkFailed', req.companyId, {
+          companyId: req.companyId,
+          action: 'reconnect',
+          error: failed.lastSyncError ?? message,
+          failedAt: Date.now(),
+        });
+        throw err;
+      }
     },
 
     async operatorsListInvites(req) {

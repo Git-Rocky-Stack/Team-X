@@ -10,6 +10,7 @@ const STORE_PATH = join(currentDirname, '..', '..', 'store', 'app-store.ts');
 const SIDENAV_PATH = join(currentDirname, '..', '..', 'app', 'sidenav.tsx');
 const TOP_BAR_PATH = join(currentDirname, '..', '..', 'app', 'top-bar.tsx');
 const HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-operators.ts');
+const CLOUD_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-cloud-link.ts');
 const RUNTIME_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-runtime-profiles.ts');
 const ROUTINES_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-routines.ts');
 const BUDGETS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-budgets.ts');
@@ -31,6 +32,7 @@ const storeSrc = readFileSync(STORE_PATH, 'utf8');
 const sidenavSrc = readFileSync(SIDENAV_PATH, 'utf8');
 const topBarSrc = readFileSync(TOP_BAR_PATH, 'utf8');
 const hookSrc = readFileSync(HOOK_PATH, 'utf8');
+const cloudHookSrc = readFileSync(CLOUD_HOOK_PATH, 'utf8');
 const runtimeHookSrc = readFileSync(RUNTIME_HOOK_PATH, 'utf8');
 const routinesHookSrc = readFileSync(ROUTINES_HOOK_PATH, 'utf8');
 const budgetsHookSrc = readFileSync(BUDGETS_HOOK_PATH, 'utf8');
@@ -93,7 +95,12 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('Operator Control Plane');
     expect(viewSrc).toContain('zero-login by default');
     expect(viewSrc).toContain('const sharingReadinessQuery = useSharingReadiness(companyId);');
+    expect(viewSrc).toContain('const cloudLinkQuery = useCloudWorkspaceLink(companyId);');
     expect(viewSrc).toContain('const invitesQuery = useOperatorInvites(companyId);');
+    expect(viewSrc).toContain('data-cloud-link-card=""');
+    expect(viewSrc).toContain('Link Workspace');
+    expect(viewSrc).toContain('Unlink Workspace');
+    expect(viewSrc).toContain('Reconnect');
     expect(viewSrc).toContain('data-operator-invites=""');
     expect(viewSrc).toContain('data-operator-invite-compose=""');
     expect(viewSrc).toContain('data-operator-invite={invite.id}');
@@ -117,6 +124,11 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('<ArtifactsPanel companyId={companyId} />');
     expect(viewSrc).toContain("import { MemoryPanel } from './memory-panel.js';");
     expect(viewSrc).toContain('<MemoryPanel companyId={companyId} />');
+    expect(cloudHookSrc).toContain("queryKey: ['cloud-link', companyId]");
+    expect(cloudHookSrc).toContain('autonomyClient.cloud.getWorkspaceLink');
+    expect(cloudHookSrc).toContain('autonomyClient.cloud.linkWorkspace');
+    expect(cloudHookSrc).toContain('autonomyClient.cloud.unlinkWorkspace');
+    expect(cloudHookSrc).toContain('autonomyClient.cloud.reconnectWorkspace');
   });
 
   it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {

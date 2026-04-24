@@ -2,6 +2,7 @@ import { type FormEvent, useMemo, useState } from 'react';
 
 import type {
   Company,
+  CompanyCloudLinkStatus,
   OperatorAccessEntry,
   OperatorInvite,
   OperatorMembershipRole,
@@ -20,6 +21,12 @@ import {
 
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
+import {
+  useCloudWorkspaceLink,
+  useLinkWorkspace,
+  useReconnectWorkspace,
+  useUnlinkWorkspace,
+} from '@/hooks/use-cloud-link.js';
 import {
   useAcceptOperatorInvite,
   useCreateOperatorInvite,
@@ -230,6 +237,54 @@ function inviteStatusTone(
   }
 }
 
+function cloudLinkTone(
+  state: CompanyCloudLinkStatus['state'],
+): 'default' | 'accent' | 'warning' | 'danger' {
+  switch (state) {
+    case 'linked':
+      return 'accent';
+    case 'sync-paused':
+      return 'warning';
+    case 'sync-degraded':
+      return 'danger';
+    default:
+      return 'default';
+  }
+}
+
+function cloudLinkStateLabel(state: CompanyCloudLinkStatus['state']): string {
+  switch (state) {
+    case 'sync-paused':
+      return 'sync paused';
+    case 'sync-degraded':
+      return 'sync degraded';
+    default:
+      return state;
+  }
+}
+
+function cloudLinkDescription(link: CompanyCloudLinkStatus | null): string {
+  if (!link) {
+    return 'Resolve the current workspace link posture before changing shared/cloud access.';
+  }
+  switch (link.state) {
+    case 'linked':
+      return 'This workspace is locally linked and ready for hosted identity and event mirror follow-through.';
+    case 'linking':
+      return 'Team-X is reserving local linkage metadata for this workspace.';
+    case 'unlinking':
+      return 'Team-X is clearing local linkage metadata and returning to a fully local-only posture.';
+    case 'sync-paused':
+      return 'The workspace stays linked, but sync is intentionally paused until a future cloud session resumes it.';
+    case 'sync-degraded':
+      return link.lastSyncError?.trim()
+        ? link.lastSyncError
+        : 'The workspace is still linked, but the latest sync attempt degraded and needs a reconnect.';
+    default:
+      return 'This workspace is unlinked. Link it when you want explicit shared/cloud posture instead of local-only execution.';
+  }
+}
+
 function capabilityBadges(entry: OperatorAccessEntry): string[] {
   return [
     entry.membership.canApproveBudget ? 'Budget approvals' : null,
@@ -298,6 +353,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
   const setActiveSubview = useAppStore((state) => state.setAutonomySubview);
   const openSettingsSection = useAppStore((state) => state.openSettingsSection);
   const operatorsQuery = useOperators(companyId);
+  const cloudLinkQuery = useCloudWorkspaceLink(companyId);
+  const linkWorkspaceMutation = useLinkWorkspace(companyId);
+  const unlinkWorkspaceMutation = useUnlinkWorkspace(companyId);
+  const reconnectWorkspaceMutation = useReconnectWorkspace(companyId);
   const sharingReadinessQuery = useSharingReadiness(companyId);
   const invitesQuery = useOperatorInvites(companyId);
   const acceptInviteMutation = useAcceptOperatorInvite(companyId);
@@ -317,6 +376,11 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
   );
   const activeCopy = SUBVIEW_COPY[activeSubview];
   const sharingReadiness = sharingReadinessQuery.data ?? null;
+  const cloudLink = cloudLinkQuery.data ?? null;
+  const cloudLinkBusy =
+    linkWorkspaceMutation.isPending ||
+    unlinkWorkspaceMutation.isPending ||
+    reconnectWorkspaceMutation.isPending;
 
   async function handleCreateInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -461,6 +525,123 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
               />
             ) : (
               <div className="space-y-4">
+                <MissionInsetSurface className="space-y-4 p-4" data-cloud-link-card="">
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-foreground">Linked Workspace</div>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Explicitly link or unlink this workspace before the hosted identity and sync
+                      layers land. This slice is local-only but durable, so the operator posture is
+                      honest now instead of placeholder copy.
+                    </p>
+                  </div>
+                  {cloudLinkQuery.isLoading ? (
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Resolving linked-workspace posture...
+                    </p>
+                  ) : cloudLinkQuery.isError || !cloudLink ? (
+                    <p className="text-xs leading-5 text-red-200">
+                      Linked-workspace posture could not be loaded for this workspace.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <MissionPill tone={cloudLinkTone(cloudLink.state)}>
+                          {cloudLinkStateLabel(cloudLink.state)}
+                        </MissionPill>
+                        <MissionPill>{cloudLink.isLinked ? 'linked' : 'unlinked'}</MissionPill>
+                        <MissionPill>{cloudLink.deviceId}</MissionPill>
+                      </div>
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        {cloudLinkDescription(cloudLink)}
+                      </p>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-3">
+                          <div className={ACCESS_LABEL_CLASSNAME}>Cloud Workspace Id</div>
+                          <div className="mt-2 break-all text-xs text-foreground">
+                            {cloudLink.cloudWorkspaceId ?? 'Not reserved yet'}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-3">
+                          <div className={ACCESS_LABEL_CLASSNAME}>Last Sync</div>
+                          <div className="mt-2 text-xs text-foreground">
+                            {cloudLink.lastSyncAt
+                              ? new Date(cloudLink.lastSyncAt).toLocaleString()
+                              : 'No successful sync recorded yet'}
+                          </div>
+                        </div>
+                      </div>
+                      {cloudLink.lastSyncError ? (
+                        <p className="text-xs leading-5 text-red-200">
+                          {cloudLink.lastSyncError}
+                        </p>
+                      ) : null}
+                      {linkWorkspaceMutation.isError ? (
+                        <p className="text-xs leading-5 text-red-200">
+                          {linkWorkspaceMutation.error instanceof Error
+                            ? linkWorkspaceMutation.error.message
+                            : 'Workspace link failed.'}
+                        </p>
+                      ) : null}
+                      {unlinkWorkspaceMutation.isError ? (
+                        <p className="text-xs leading-5 text-red-200">
+                          {unlinkWorkspaceMutation.error instanceof Error
+                            ? unlinkWorkspaceMutation.error.message
+                            : 'Workspace unlink failed.'}
+                        </p>
+                      ) : null}
+                      {reconnectWorkspaceMutation.isError ? (
+                        <p className="text-xs leading-5 text-red-200">
+                          {reconnectWorkspaceMutation.error instanceof Error
+                            ? reconnectWorkspaceMutation.error.message
+                            : 'Workspace reconnect failed.'}
+                        </p>
+                      ) : null}
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          Link reserves stable local cloud ids now. Hosted auth and event sync land
+                          in the next shared/cloud slices.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              void linkWorkspaceMutation.mutateAsync();
+                            }}
+                            disabled={!cloudLink.canLink || cloudLinkBusy}
+                          >
+                            {linkWorkspaceMutation.isPending ? 'Linking...' : 'Link Workspace'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="border-white/10 bg-black/10 hover:bg-black/20"
+                            onClick={() => {
+                              void reconnectWorkspaceMutation.mutateAsync();
+                            }}
+                            disabled={!cloudLink.isLinked || cloudLinkBusy}
+                          >
+                            {reconnectWorkspaceMutation.isPending
+                              ? 'Reconnecting...'
+                              : 'Reconnect'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="border-white/10 bg-black/10 hover:bg-black/20"
+                            onClick={() => {
+                              void unlinkWorkspaceMutation.mutateAsync();
+                            }}
+                            disabled={!cloudLink.canUnlink || cloudLinkBusy}
+                          >
+                            {unlinkWorkspaceMutation.isPending ? 'Unlinking...' : 'Unlink Workspace'}
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </MissionInsetSurface>
                 <MissionInsetSurface className="space-y-4 p-4" data-operator-invites="">
                   <div className="space-y-1">
                     <div className="text-sm font-semibold text-foreground">Queue Operator Invite</div>
@@ -716,6 +897,17 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                   <span className="font-semibold text-foreground">{pendingInvites.length}</span>
                 </div>
               </div>
+            </MissionInsetSurface>
+            <MissionInsetSurface className="space-y-3 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <MissionPill tone={cloudLinkTone(cloudLink?.state ?? 'unlinked')}>
+                  {cloudLink ? cloudLinkStateLabel(cloudLink.state) : 'link unknown'}
+                </MissionPill>
+                <MissionPill>{cloudLink?.cloudWorkspaceId ?? 'no workspace id'}</MissionPill>
+              </div>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {cloudLinkDescription(cloudLink)}
+              </p>
             </MissionInsetSurface>
             <p className="text-xs leading-5 text-muted-foreground">
               {postureDescription(accessSummary)}

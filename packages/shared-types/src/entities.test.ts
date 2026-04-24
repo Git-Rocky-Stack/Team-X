@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CLOUD_INBOUND_ACTION_KINDS,
+  CLOUD_WORKSPACE_LINK_STATES,
   COMPANY_PACKAGE_MODES,
   COMPANY_PACKAGE_SECTIONS,
   LEVEL_RANK,
   getLevelRank,
+  isCloudWorkspaceLinkState,
   normalizeLevel,
+  validateCloudInboundActionEnvelope,
   validateCompanyPackage,
   validateCompanyPackageManifest,
+  validateCloudSyncCursorState,
 } from './entities.js';
 
 /**
@@ -229,6 +234,84 @@ describe('company package validation', () => {
     ).toEqual({
       ok: false,
       error: 'package.company.settings must be an object',
+    });
+  });
+});
+
+describe('shared cloud linkage contracts', () => {
+  it('accepts only the declared cloud workspace link states', () => {
+    for (const state of CLOUD_WORKSPACE_LINK_STATES) {
+      expect(isCloudWorkspaceLinkState(state)).toBe(true);
+    }
+    expect(isCloudWorkspaceLinkState('connected')).toBe(false);
+    expect(isCloudWorkspaceLinkState(null)).toBe(false);
+  });
+
+  it('validates cloud sync cursor payloads', () => {
+    expect(
+      validateCloudSyncCursorState({
+        outboundCursor: 'evt-10',
+        inboundCursor: null,
+      }),
+    ).toEqual({
+      ok: true,
+      value: {
+        outboundCursor: 'evt-10',
+        inboundCursor: null,
+      },
+    });
+
+    expect(validateCloudSyncCursorState('evt-10')).toEqual({
+      ok: false,
+      error: 'cursor must be an object',
+    });
+    expect(
+      validateCloudSyncCursorState({
+        outboundCursor: 10,
+        inboundCursor: 'cmd-4',
+      }),
+    ).toEqual({
+      ok: false,
+      error: 'cursor.outboundCursor must be a string or null',
+    });
+  });
+
+  it('validates cloud inbound action envelopes', () => {
+    const envelope = {
+      id: 'action-1',
+      companyId: 'company-1',
+      cloudWorkspaceId: 'cloud-workspace-1',
+      kind: CLOUD_INBOUND_ACTION_KINDS[0],
+      issuedAt: 123456789,
+      issuedByOperatorId: 'operator-1',
+      payload: {
+        approvalId: 'approval-1',
+      },
+    } as const;
+
+    expect(validateCloudInboundActionEnvelope(envelope)).toEqual({
+      ok: true,
+      value: envelope,
+    });
+
+    expect(
+      validateCloudInboundActionEnvelope({
+        ...envelope,
+        kind: 'remote-mutate',
+      }),
+    ).toEqual({
+      ok: false,
+      error: `action.kind must be one of ${CLOUD_INBOUND_ACTION_KINDS.join(', ')}`,
+    });
+
+    expect(
+      validateCloudInboundActionEnvelope({
+        ...envelope,
+        issuedByOperatorId: '',
+      }),
+    ).toEqual({
+      ok: false,
+      error: 'action.issuedByOperatorId must be a non-empty string or null',
     });
   });
 });

@@ -71,7 +71,16 @@ describe('Portability settings shell', () => {
     expect(portabilitySectionSrc).toContain("useSharingReadiness(companyId)");
     expect(portabilitySectionSrc).toContain("useOperatorInvites(companyId)");
     expect(portabilitySectionSrc).toContain('ipc.companies.update');
+    expect(portabilitySectionSrc).toContain('useCloudWorkspaceLink(companyId)');
+    expect(portabilitySectionSrc).toContain('useLinkWorkspace(companyId)');
+    expect(portabilitySectionSrc).toContain('useReconnectWorkspace(companyId)');
+    expect(portabilitySectionSrc).toContain('useUnlinkWorkspace(companyId)');
     expect(portabilitySectionSrc).toContain('Shared operator invites');
+    expect(portabilitySectionSrc).toContain('Linked workspace shell');
+    expect(portabilitySectionSrc).toContain('data-cloud-link-shell=""');
+    expect(portabilitySectionSrc).toContain('Link Workspace');
+    expect(portabilitySectionSrc).toContain('Reconnect');
+    expect(portabilitySectionSrc).toContain('Unlink Workspace');
     expect(portabilitySectionSrc).toContain('Open Autonomy Access');
     expect(portabilitySectionSrc).toContain('data-portability-invite-readiness=""');
     expect(portabilitySectionSrc).toContain('pending invites');

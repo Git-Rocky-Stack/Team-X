@@ -95,6 +95,11 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   'copilot.insight': 'bg-amber-600/20 text-amber-400',
   'copilot.dismissed': 'bg-gray-600/20 text-gray-400',
   'copilot.expired': 'bg-gray-600/20 text-gray-400',
+  'company.linkStarted': 'bg-blue-600/20 text-blue-400',
+  'company.linked': 'bg-emerald-600/20 text-emerald-400',
+  'company.linkFailed': 'bg-rose-600/20 text-rose-400',
+  'company.unlinked': 'bg-zinc-600/20 text-zinc-400',
+  'company.reconnected': 'bg-sky-600/20 text-sky-400',
   'company.packageExported': 'bg-indigo-600/20 text-indigo-400',
   'company.packageImported': 'bg-sky-600/20 text-sky-400',
   'company.templateInstalled': 'bg-violet-600/20 text-violet-400',
@@ -130,6 +135,11 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   'copilot.insight': 'Copilot Insight',
   'copilot.dismissed': 'Copilot Dismissed',
   'copilot.expired': 'Copilot Expired',
+  'company.linkStarted': 'Link Started',
+  'company.linked': 'Workspace Linked',
+  'company.linkFailed': 'Link Failed',
+  'company.unlinked': 'Workspace Unlinked',
+  'company.reconnected': 'Workspace Reconnected',
   'company.packageExported': 'Workspace Export',
   'company.packageImported': 'Workspace Import',
   'company.templateInstalled': 'Template Installed',
@@ -210,6 +220,11 @@ export const SUMMARIZABLE_TYPES: ReadonlySet<string> = new Set([
   'copilot.insight',
   'copilot.dismissed',
   'copilot.expired',
+  'company.linkStarted',
+  'company.linked',
+  'company.linkFailed',
+  'company.unlinked',
+  'company.reconnected',
   'company.packageExported',
   'company.packageImported',
   'company.templateInstalled',
@@ -313,6 +328,38 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
             ? `${payload.subjectRefId.slice(0, 45)}...`
             : payload.subjectRefId;
         parts.push(truncated);
+      }
+      break;
+    }
+    case 'company.linkStarted': {
+      if (typeof payload.cloudWorkspaceId === 'string') parts.push(payload.cloudWorkspaceId.slice(0, 12));
+      if (typeof payload.cloudTenantId === 'string') parts.push(payload.cloudTenantId.slice(0, 12));
+      break;
+    }
+    case 'company.linked':
+    case 'company.reconnected': {
+      if (typeof payload.cloudWorkspaceId === 'string') parts.push(payload.cloudWorkspaceId.slice(0, 12));
+      if (typeof payload.cloudTenantId === 'string') parts.push(payload.cloudTenantId.slice(0, 12));
+      if (typeof payload.linkedDeviceId === 'string') parts.push(payload.linkedDeviceId.slice(0, 10));
+      break;
+    }
+    case 'company.linkFailed': {
+      if (typeof payload.action === 'string') parts.push(payload.action);
+      if (typeof payload.error === 'string' && payload.error.length > 0) {
+        const truncated =
+          payload.error.length > 60 ? `${payload.error.slice(0, 57)}...` : payload.error;
+        parts.push(truncated);
+      }
+      break;
+    }
+    case 'company.unlinked': {
+      if (
+        typeof payload.previousCloudWorkspaceId === 'string' &&
+        payload.previousCloudWorkspaceId.length > 0
+      ) {
+        parts.push(payload.previousCloudWorkspaceId.slice(0, 12));
+      } else {
+        parts.push('local-only');
       }
       break;
     }

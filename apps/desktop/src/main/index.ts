@@ -144,6 +144,7 @@ import { createBackupService } from './services/backup.js';
 import { createBudgetGovernanceService } from './services/budget-governance-service.js';
 import { buildChatActionTools } from './services/chat-action-tools.js';
 import { type CommandService, createCommandService } from './services/command-service.js';
+import { createCloudLinkService } from './services/cloud-link-service.js';
 import { createCompanyPortabilityService } from './services/company-portability-service.js';
 import { createContextAssemblerService } from './services/context-assembler-service.js';
 import { createContextPackerService } from './services/context-packer-service.js';
@@ -437,6 +438,14 @@ app
     const settingsSeeded = settingsRepo.seedDefaults();
     if (settingsSeeded > 0) {
       console.log(`[settings] seeded ${settingsSeeded} default setting(s)`);
+    }
+    const cloudLinkService = createCloudLinkService({
+      companiesRepo,
+      settingsRepo,
+    });
+    const deviceId = cloudLinkService.ensureDeviceIdentity();
+    if (deviceId.length > 0) {
+      console.log('[cloud-link] local device identity ready');
     }
 
     // Seed well-known MCP servers on first boot (disabled by default).
@@ -980,6 +989,7 @@ app
       extensionsRegistry,
       skillsService,
       operatorAccessService,
+      cloudLinkService,
       runtimeProfilesService,
       routineService: routineServiceInstance,
       budgetGovernanceService: budgetGovernanceServiceInstance,

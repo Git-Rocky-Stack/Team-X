@@ -25,6 +25,12 @@ import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useCompanies } from '@/hooks/use-companies.js';
 import {
+  useCloudWorkspaceLink,
+  useLinkWorkspace,
+  useReconnectWorkspace,
+  useUnlinkWorkspace,
+} from '@/hooks/use-cloud-link.js';
+import {
   useCompanyPackagePreview,
   useCompanyTemplates,
   useExportCompanyTemplate,
@@ -88,6 +94,34 @@ function previewSummary(preview: CompanyImportPreview): string {
   return `${packageModeLabel(preview.manifest.mode)} · ${preview.manifest.sourceAppVersion} · ${modeLabel(preview.manifest.sharingMode)}`;
 }
 
+function cloudLinkStateLabel(
+  state: 'unlinked' | 'linking' | 'linked' | 'sync-paused' | 'sync-degraded' | 'unlinking',
+): string {
+  switch (state) {
+    case 'sync-paused':
+      return 'Sync paused';
+    case 'sync-degraded':
+      return 'Sync degraded';
+    default:
+      return state.charAt(0).toUpperCase() + state.slice(1);
+  }
+}
+
+function cloudLinkTone(
+  state: 'unlinked' | 'linking' | 'linked' | 'sync-paused' | 'sync-degraded' | 'unlinking',
+): string {
+  switch (state) {
+    case 'linked':
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+    case 'sync-paused':
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+    case 'sync-degraded':
+      return 'border-red-500/30 bg-red-500/10 text-red-300';
+    default:
+      return 'border-white/10 bg-black/10 text-muted-foreground';
+  }
+}
+
 export function PortabilitySection() {
   const queryClient = useQueryClient();
   const companyId = useAppStore((state) => state.companyId);
@@ -96,6 +130,10 @@ export function PortabilitySection() {
   const setAutonomySubview = useAppStore((state) => state.setAutonomySubview);
   const { data: companies = [] } = useCompanies();
   const templatesQuery = useCompanyTemplates();
+  const cloudLinkQuery = useCloudWorkspaceLink(companyId);
+  const linkWorkspace = useLinkWorkspace(companyId);
+  const unlinkWorkspace = useUnlinkWorkspace(companyId);
+  const reconnectWorkspace = useReconnectWorkspace(companyId);
   const sharingReadinessQuery = useSharingReadiness(companyId);
   const invitesQuery = useOperatorInvites(companyId);
   const exportWorkspace = useExportWorkspacePackage(companyId);
@@ -108,9 +146,12 @@ export function PortabilitySection() {
   const [importSlugDirty, setImportSlugDirty] = useState(false);
 
   const activeCompany = companies.find((company) => company.id === companyId) ?? null;
+  const cloudLink = cloudLinkQuery.data ?? null;
   const sharingReadiness = sharingReadinessQuery.data ?? null;
   const invites = invitesQuery.data ?? [];
   const pendingInvites = invites.filter((invite) => invite.status === 'pending');
+  const cloudLinkBusy =
+    linkWorkspace.isPending || unlinkWorkspace.isPending || reconnectWorkspace.isPending;
   const trimmedPackagePath = packagePath.trim();
   const packagePreviewQuery = useCompanyPackagePreview(
     trimmedPackagePath.length > 0 ? trimmedPackagePath : null,
@@ -325,6 +366,104 @@ export function PortabilitySection() {
                   <p className="mt-3 text-[11px] leading-snug text-emerald-600">
                     The currently selected sharing posture is ready on this workspace.
                   </p>
+                )}
+              </div>
+
+              <div
+                className="mt-3 rounded-lg border border-white/10 bg-background/70 px-3 py-3"
+                data-cloud-link-shell=""
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground">Linked workspace shell</div>
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                      This local shell reserves durable link metadata now so hosted auth and sync can
+                      land without reframing the product later.
+                    </p>
+                  </div>
+                  {cloudLinkQuery.isLoading || cloudLinkBusy ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : null}
+                </div>
+
+                {cloudLinkQuery.isLoading ? (
+                  <div className="mt-3 space-y-2" aria-busy="true">
+                    <Skeleton className="h-12 rounded-lg" />
+                    <Skeleton className="h-12 rounded-lg" />
+                  </div>
+                ) : cloudLinkQuery.isError || !cloudLink ? (
+                  <p className="mt-3 text-[11px] text-destructive">
+                    Failed to load linked-workspace posture for this workspace.
+                  </p>
+                ) : (
+                  <>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+                      <span
+                        className={`rounded-full border px-2 py-0.5 font-semibold uppercase tracking-[0.16em] ${cloudLinkTone(cloudLink.state)}`}
+                      >
+                        {cloudLinkStateLabel(cloudLink.state)}
+                      </span>
+                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-muted-foreground">
+                        {cloudLink.cloudWorkspaceId ?? 'No cloud workspace id reserved'}
+                      </span>
+                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-muted-foreground">
+                        {cloudLink.deviceId}
+                      </span>
+                    </div>
+
+                    <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+                      {cloudLink.state === 'linked'
+                        ? 'Workspace is linked locally and ready for the first hosted auth/sync follow-through.'
+                        : cloudLink.state === 'sync-degraded'
+                          ? cloudLink.lastSyncError ?? 'Workspace is linked but currently degraded.'
+                          : cloudLink.state === 'unlinked'
+                            ? 'Workspace is still fully local-only. Link it when you want explicit shared/cloud posture.'
+                            : 'Workspace link posture is transitioning locally.'}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!cloudLink.canLink || cloudLinkBusy}
+                        onClick={() => void linkWorkspace.mutateAsync()}
+                      >
+                        {linkWorkspace.isPending ? 'Linking...' : 'Link Workspace'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!cloudLink.isLinked || cloudLinkBusy}
+                        onClick={() => void reconnectWorkspace.mutateAsync()}
+                      >
+                        {reconnectWorkspace.isPending ? 'Reconnecting...' : 'Reconnect'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!cloudLink.canUnlink || cloudLinkBusy}
+                        onClick={() => void unlinkWorkspace.mutateAsync()}
+                      >
+                        {unlinkWorkspace.isPending ? 'Unlinking...' : 'Unlink Workspace'}
+                      </Button>
+                    </div>
+
+                    {linkWorkspace.isError ? (
+                      <p className="mt-3 text-[11px] text-destructive">
+                        Failed to link workspace: {String(linkWorkspace.error)}
+                      </p>
+                    ) : null}
+                    {reconnectWorkspace.isError ? (
+                      <p className="mt-3 text-[11px] text-destructive">
+                        Failed to reconnect workspace: {String(reconnectWorkspace.error)}
+                      </p>
+                    ) : null}
+                    {unlinkWorkspace.isError ? (
+                      <p className="mt-3 text-[11px] text-destructive">
+                        Failed to unlink workspace: {String(unlinkWorkspace.error)}
+                      </p>
+                    ) : null}
+                  </>
                 )}
               </div>
 

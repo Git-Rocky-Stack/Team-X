@@ -248,6 +248,59 @@ export type OperatorAuthMode = (typeof OPERATOR_AUTH_MODES)[number];
 export const SHARED_OPERATOR_AUTH_MODES = ['invited', 'cloud'] as const;
 export type SharedOperatorAuthMode = (typeof SHARED_OPERATOR_AUTH_MODES)[number];
 
+export const CLOUD_WORKSPACE_LINK_STATES = [
+  'unlinked',
+  'linking',
+  'linked',
+  'sync-paused',
+  'sync-degraded',
+  'unlinking',
+] as const;
+export type CloudWorkspaceLinkState = (typeof CLOUD_WORKSPACE_LINK_STATES)[number];
+
+export interface CloudSyncCursorState {
+  outboundCursor: string | null;
+  inboundCursor: string | null;
+}
+
+export interface CompanyCloudLinkMetadata {
+  state: CloudWorkspaceLinkState;
+  cloudWorkspaceId: string | null;
+  cloudTenantId: string | null;
+  linkedDeviceId: string | null;
+  lastSyncedCursor: CloudSyncCursorState | null;
+  lastSnapshotId: string | null;
+  lastSyncAt: number | null;
+  lastSyncError: string | null;
+}
+
+export interface CompanyCloudLinkStatus extends CompanyCloudLinkMetadata {
+  companyId: string;
+  deviceId: string;
+  isLinked: boolean;
+  canLink: boolean;
+  canUnlink: boolean;
+}
+
+export const CLOUD_INBOUND_ACTION_KINDS = [
+  'approval-review',
+  'membership-sync',
+  'sharing-mode-request',
+  'artifact-review',
+  'sync-request',
+] as const;
+export type CloudInboundActionKind = (typeof CLOUD_INBOUND_ACTION_KINDS)[number];
+
+export interface CloudInboundActionEnvelope {
+  id: string;
+  companyId: string;
+  cloudWorkspaceId: string;
+  kind: CloudInboundActionKind;
+  issuedAt: number;
+  issuedByOperatorId: string | null;
+  payload: Record<string, unknown> | null;
+}
+
 export const COMPANY_SHARING_READINESS = ['ready', 'warning', 'blocked'] as const;
 export type CompanySharingReadiness = (typeof COMPANY_SHARING_READINESS)[number];
 
@@ -1112,6 +1165,84 @@ function isCompanyPackageSectionArray(value: unknown): value is CompanyPackageSe
 
 function isOperatorAuthMode(value: unknown): value is OperatorAuthMode {
   return typeof value === 'string' && (OPERATOR_AUTH_MODES as readonly string[]).includes(value);
+}
+
+export function isCloudWorkspaceLinkState(value: unknown): value is CloudWorkspaceLinkState {
+  return (
+    typeof value === 'string' &&
+    (CLOUD_WORKSPACE_LINK_STATES as readonly string[]).includes(value)
+  );
+}
+
+export function validateCloudSyncCursorState(
+  value: unknown,
+): CompanyPackageValidationResult<CloudSyncCursorState> {
+  if (!isPlainRecord(value)) {
+    return { ok: false, error: 'cursor must be an object' };
+  }
+  if (!(value.outboundCursor === null || typeof value.outboundCursor === 'string')) {
+    return { ok: false, error: 'cursor.outboundCursor must be a string or null' };
+  }
+  if (!(value.inboundCursor === null || typeof value.inboundCursor === 'string')) {
+    return { ok: false, error: 'cursor.inboundCursor must be a string or null' };
+  }
+  return {
+    ok: true,
+    value: {
+      outboundCursor:
+        typeof value.outboundCursor === 'string' ? value.outboundCursor : null,
+      inboundCursor: typeof value.inboundCursor === 'string' ? value.inboundCursor : null,
+    },
+  };
+}
+
+export function validateCloudInboundActionEnvelope(
+  value: unknown,
+): CompanyPackageValidationResult<CloudInboundActionEnvelope> {
+  if (!isPlainRecord(value)) {
+    return { ok: false, error: 'action must be an object' };
+  }
+  if (!isNonEmptyString(value.id)) {
+    return { ok: false, error: 'action.id must be a non-empty string' };
+  }
+  if (!isNonEmptyString(value.companyId)) {
+    return { ok: false, error: 'action.companyId must be a non-empty string' };
+  }
+  if (!isNonEmptyString(value.cloudWorkspaceId)) {
+    return { ok: false, error: 'action.cloudWorkspaceId must be a non-empty string' };
+  }
+  if (
+    typeof value.kind !== 'string' ||
+    !(CLOUD_INBOUND_ACTION_KINDS as readonly string[]).includes(value.kind)
+  ) {
+    return {
+      ok: false,
+      error: `action.kind must be one of ${CLOUD_INBOUND_ACTION_KINDS.join(', ')}`,
+    };
+  }
+  if (typeof value.issuedAt !== 'number' || !Number.isFinite(value.issuedAt)) {
+    return { ok: false, error: 'action.issuedAt must be a finite number' };
+  }
+  if (!(value.issuedByOperatorId === null || value.issuedByOperatorId === undefined || isNonEmptyString(value.issuedByOperatorId))) {
+    return { ok: false, error: 'action.issuedByOperatorId must be a non-empty string or null' };
+  }
+  if (!(value.payload === null || value.payload === undefined || isPlainRecord(value.payload))) {
+    return { ok: false, error: 'action.payload must be an object or null' };
+  }
+
+  return {
+    ok: true,
+    value: {
+      id: value.id,
+      companyId: value.companyId,
+      cloudWorkspaceId: value.cloudWorkspaceId,
+      kind: value.kind as CloudInboundActionKind,
+      issuedAt: value.issuedAt,
+      issuedByOperatorId:
+        typeof value.issuedByOperatorId === 'string' ? value.issuedByOperatorId : null,
+      payload: isPlainRecord(value.payload) ? value.payload : null,
+    },
+  };
 }
 
 export function validateCompanyPackageManifest(

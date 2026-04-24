@@ -309,6 +309,74 @@ describe('audit-event-chip: portability events', () => {
   });
 });
 
+describe('audit-event-chip: shared cloud link events', () => {
+  it('maps link lifecycle events to stable labels and colors', () => {
+    expect(getEventTypeColor('company.linkStarted')).toBe('bg-blue-600/20 text-blue-400');
+    expect(getEventTypeLabel('company.linkStarted')).toBe('Link Started');
+    expect(getEventTypeColor('company.linked')).toBe('bg-emerald-600/20 text-emerald-400');
+    expect(getEventTypeLabel('company.linked')).toBe('Workspace Linked');
+    expect(getEventTypeColor('company.linkFailed')).toBe('bg-rose-600/20 text-rose-400');
+    expect(getEventTypeLabel('company.linkFailed')).toBe('Link Failed');
+    expect(getEventTypeColor('company.unlinked')).toBe('bg-zinc-600/20 text-zinc-400');
+    expect(getEventTypeLabel('company.unlinked')).toBe('Workspace Unlinked');
+    expect(getEventTypeColor('company.reconnected')).toBe('bg-sky-600/20 text-sky-400');
+    expect(getEventTypeLabel('company.reconnected')).toBe('Workspace Reconnected');
+  });
+
+  it('summarizes link lifecycle payloads with reserved ids and failure context', () => {
+    expect(
+      buildRowSummary(
+        'company.linkStarted',
+        JSON.stringify({
+          cloudWorkspaceId: 'workspace_company-1',
+          cloudTenantId: 'tenant_company-1',
+        }),
+      ),
+    ).toBe('workspace_co · tenant_compa');
+
+    expect(
+      buildRowSummary(
+        'company.linked',
+        JSON.stringify({
+          cloudWorkspaceId: 'workspace_company-1',
+          cloudTenantId: 'tenant_company-1',
+          linkedDeviceId: 'device_abcdef',
+        }),
+      ),
+    ).toBe('workspace_co · tenant_compa · device_abc');
+
+    expect(
+      buildRowSummary(
+        'company.linkFailed',
+        JSON.stringify({
+          action: 'reconnect',
+          error: 'cursor replay drift',
+        }),
+      ),
+    ).toBe('reconnect · cursor replay drift');
+
+    expect(
+      buildRowSummary(
+        'company.unlinked',
+        JSON.stringify({
+          previousCloudWorkspaceId: 'workspace_company-1',
+        }),
+      ),
+    ).toBe('workspace_co');
+
+    expect(
+      buildRowSummary(
+        'company.reconnected',
+        JSON.stringify({
+          cloudWorkspaceId: 'workspace_company-1',
+          cloudTenantId: 'tenant_company-1',
+          linkedDeviceId: 'device_abcdef',
+        }),
+      ),
+    ).toBe('workspace_co · tenant_compa · device_abc');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Regression guard — M32 T6 planner chips must still render
 // ---------------------------------------------------------------------------

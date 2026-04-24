@@ -75,6 +75,17 @@ export interface UpdateCompanyInput {
   theme?: string;
 }
 
+export interface UpdateCompanyCloudLinkInput {
+  cloudWorkspaceId?: string | null;
+  cloudTenantId?: string | null;
+  cloudLinkState?: string;
+  linkedDeviceId?: string | null;
+  lastSyncedCursorJson?: string | null;
+  lastSnapshotId?: string | null;
+  lastSyncAt?: number | null;
+  lastSyncError?: string | null;
+}
+
 type CompaniesDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
@@ -173,6 +184,21 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
       if (patch.settings !== undefined) set.settingsJson = JSON.stringify(patch.settings);
       if (patch.icon !== undefined) set.icon = patch.icon;
       if (patch.theme !== undefined) set.theme = patch.theme;
+      if (Object.keys(set).length === 0) return;
+      db.update(companies).set(set).where(eq(companies.id, id)).run();
+    },
+
+    updateCloudLink(id: string, patch: UpdateCompanyCloudLinkInput): void {
+      const set: Record<string, unknown> = {};
+      if (patch.cloudWorkspaceId !== undefined) set.cloudWorkspaceId = patch.cloudWorkspaceId;
+      if (patch.cloudTenantId !== undefined) set.cloudTenantId = patch.cloudTenantId;
+      if (patch.cloudLinkState !== undefined) set.cloudLinkState = patch.cloudLinkState;
+      if (patch.linkedDeviceId !== undefined) set.linkedDeviceId = patch.linkedDeviceId;
+      if (patch.lastSyncedCursorJson !== undefined)
+        set.lastSyncedCursorJson = patch.lastSyncedCursorJson;
+      if (patch.lastSnapshotId !== undefined) set.lastSnapshotId = patch.lastSnapshotId;
+      if (patch.lastSyncAt !== undefined) set.lastSyncAt = patch.lastSyncAt;
+      if (patch.lastSyncError !== undefined) set.lastSyncError = patch.lastSyncError;
       if (Object.keys(set).length === 0) return;
       db.update(companies).set(set).where(eq(companies.id, id)).run();
     },

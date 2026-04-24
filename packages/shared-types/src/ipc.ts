@@ -69,6 +69,7 @@ import type {
   BudgetScopeKind,
   ChatMessage,
   Company,
+  CompanyCloudLinkStatus,
   CompanySharingReadinessSummary,
   CompanyImportPreview,
   CompanyPackageManifest,
@@ -278,6 +279,22 @@ export interface ListOperatorsRequest {
 }
 
 export interface GetOperatorSharingReadinessRequest {
+  companyId: string;
+}
+
+export interface GetCloudWorkspaceLinkRequest {
+  companyId: string;
+}
+
+export interface LinkCloudWorkspaceRequest {
+  companyId: string;
+}
+
+export interface UnlinkCloudWorkspaceRequest {
+  companyId: string;
+}
+
+export interface ReconnectCloudWorkspaceRequest {
   companyId: string;
 }
 
@@ -1823,6 +1840,22 @@ export interface IpcContract {
     request: GetOperatorSharingReadinessRequest;
     response: CompanySharingReadinessSummary;
   };
+  'cloud.getWorkspaceLink': {
+    request: GetCloudWorkspaceLinkRequest;
+    response: CompanyCloudLinkStatus;
+  };
+  'cloud.linkWorkspace': {
+    request: LinkCloudWorkspaceRequest;
+    response: CompanyCloudLinkStatus;
+  };
+  'cloud.unlinkWorkspace': {
+    request: UnlinkCloudWorkspaceRequest;
+    response: CompanyCloudLinkStatus;
+  };
+  'cloud.reconnectWorkspace': {
+    request: ReconnectCloudWorkspaceRequest;
+    response: CompanyCloudLinkStatus;
+  };
   'operators.listInvites': {
     request: ListOperatorInvitesRequest;
     response: OperatorInvite[];
@@ -2648,6 +2681,16 @@ export interface TeamXApi {
     revokeInvite(req: RevokeOperatorInviteRequest): Promise<OperatorInvite>;
     /** Accept one pending operator invite into a real company membership. */
     acceptInvite(req: AcceptOperatorInviteRequest): Promise<AcceptOperatorInviteResponse>;
+  };
+  cloud: {
+    /** Return the local linked-workspace status plus stable device identity. */
+    getWorkspaceLink(companyId: string): Promise<CompanyCloudLinkStatus>;
+    /** Reserve local linkage metadata and move the workspace into linked posture. */
+    linkWorkspace(req: LinkCloudWorkspaceRequest): Promise<CompanyCloudLinkStatus>;
+    /** Clear local linkage metadata and return the workspace to unlinked posture. */
+    unlinkWorkspace(req: UnlinkCloudWorkspaceRequest): Promise<CompanyCloudLinkStatus>;
+    /** Clear local sync degradation and refresh the last-sync marker. */
+    reconnectWorkspace(req: ReconnectCloudWorkspaceRequest): Promise<CompanyCloudLinkStatus>;
   };
   runtimeProfiles: {
     /** List runtime profiles and bound employee ids for one workspace. */

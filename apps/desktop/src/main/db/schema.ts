@@ -47,10 +47,21 @@ export const companies = sqliteTable(
      */
     workspaceOriginId: text('workspace_origin_id'),
     companyOriginId: text('company_origin_id'),
+    /** Optional Team-X Cloud linkage metadata for shared workspaces. */
+    cloudWorkspaceId: text('cloud_workspace_id'),
+    cloudTenantId: text('cloud_tenant_id'),
+    cloudLinkState: text('cloud_link_state').notNull().default('unlinked'),
+    linkedDeviceId: text('linked_device_id'),
+    lastSyncedCursorJson: text('last_synced_cursor_json'),
+    lastSnapshotId: text('last_snapshot_id'),
+    lastSyncAt: integer('last_sync_at'),
+    lastSyncError: text('last_sync_error'),
   },
   (table) => ({
     workspaceOriginIdx: index('idx_companies_workspace_origin').on(table.workspaceOriginId),
     companyOriginIdx: index('idx_companies_company_origin').on(table.companyOriginId),
+    cloudWorkspaceIdx: index('idx_companies_cloud_workspace').on(table.cloudWorkspaceId),
+    cloudLinkStateIdx: index('idx_companies_cloud_link_state').on(table.cloudLinkState),
   }),
 );
 

@@ -75,6 +75,10 @@ const REQUEST_CHANNELS = [
   'employees.list',
   'operators.list',
   'operators.readiness',
+  'cloud.getWorkspaceLink',
+  'cloud.linkWorkspace',
+  'cloud.unlinkWorkspace',
+  'cloud.reconnectWorkspace',
   'operators.listInvites',
   'operators.createInvite',
   'operators.revokeInvite',
@@ -335,6 +339,34 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('operators.readiness', async (_event, request: { companyId: string }) => {
     return handlers.operatorsReadiness(request);
   });
+
+  ipcMain.handle(
+    'cloud.getWorkspaceLink',
+    async (_event, request: import('@team-x/shared-types').GetCloudWorkspaceLinkRequest) => {
+      return handlers.cloudGetWorkspaceLink(request);
+    },
+  );
+
+  ipcMain.handle(
+    'cloud.linkWorkspace',
+    async (_event, request: import('@team-x/shared-types').LinkCloudWorkspaceRequest) => {
+      return handlers.cloudLinkWorkspace(request);
+    },
+  );
+
+  ipcMain.handle(
+    'cloud.unlinkWorkspace',
+    async (_event, request: import('@team-x/shared-types').UnlinkCloudWorkspaceRequest) => {
+      return handlers.cloudUnlinkWorkspace(request);
+    },
+  );
+
+  ipcMain.handle(
+    'cloud.reconnectWorkspace',
+    async (_event, request: import('@team-x/shared-types').ReconnectCloudWorkspaceRequest) => {
+      return handlers.cloudReconnectWorkspace(request);
+    },
+  );
 
   ipcMain.handle(
     'operators.listInvites',

@@ -183,6 +183,13 @@
       "when": 1778131200000,
       "tag": "0025_operator_invite_acceptance",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1778217600000,
+      "tag": "0026_shared_cloud_linkage",
+      "breakpoints": true
     }
   ]
 }

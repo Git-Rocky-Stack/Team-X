@@ -74,6 +74,7 @@ import type {
   CompaniesCreateResponse,
   CompaniesDeleteRequest,
   CompaniesUpdateRequest,
+  CompanyCloudLinkStatus,
   CompanySharingReadinessSummary,
   CopilotAskArgs,
   CopilotAskResult,
@@ -113,6 +114,7 @@ import type {
   ExtensionSummary,
   FireEmployeeRequest,
   GetEffectiveAuthorityRequest,
+  GetCloudWorkspaceLinkRequest,
   GetOperatorSharingReadinessRequest,
   GetThreadDigestRequest,
   Goal,
@@ -124,6 +126,7 @@ import type {
   InstallCompanyTemplateRequest,
   InstallCompanyTemplateResponse,
   InstallGithubSkillRequest,
+  LinkCloudWorkspaceRequest,
   InstallLocalSkillRequest,
   InstallMcpTemplateRequest,
   InterjectMeetingRequest,
@@ -163,6 +166,7 @@ import type {
   RagDeleteForCompanyResponse,
   RagRebuildAllResponse,
   RagStatsResponse,
+  ReconnectCloudWorkspaceRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
   RevokeOperatorInviteRequest,
@@ -216,6 +220,7 @@ import type {
   TestProviderConnectionResponse,
   Thread,
   ThreadDigest,
+  UnlinkCloudWorkspaceRequest,
   Ticket,
   TicketAttachment,
   TicketDetail,
@@ -282,6 +287,10 @@ const CHANNELS = {
   employeesList: 'employees.list',
   operatorsList: 'operators.list',
   operatorsReadiness: 'operators.readiness',
+  cloudGetWorkspaceLink: 'cloud.getWorkspaceLink',
+  cloudLinkWorkspace: 'cloud.linkWorkspace',
+  cloudUnlinkWorkspace: 'cloud.unlinkWorkspace',
+  cloudReconnectWorkspace: 'cloud.reconnectWorkspace',
   operatorsListInvites: 'operators.listInvites',
   operatorsCreateInvite: 'operators.createInvite',
   operatorsRevokeInvite: 'operators.revokeInvite',
@@ -521,6 +530,19 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.operatorsRevokeInvite, req) as Promise<OperatorInvite>,
       acceptInvite: (req: AcceptOperatorInviteRequest) =>
         ipc.invoke(CHANNELS.operatorsAcceptInvite, req) as Promise<AcceptOperatorInviteResponse>,
+    },
+    cloud: {
+      getWorkspaceLink: (companyId: string) =>
+        ipc.invoke(
+          CHANNELS.cloudGetWorkspaceLink,
+          { companyId } satisfies GetCloudWorkspaceLinkRequest,
+        ) as Promise<CompanyCloudLinkStatus>,
+      linkWorkspace: (req: LinkCloudWorkspaceRequest) =>
+        ipc.invoke(CHANNELS.cloudLinkWorkspace, req) as Promise<CompanyCloudLinkStatus>,
+      unlinkWorkspace: (req: UnlinkCloudWorkspaceRequest) =>
+        ipc.invoke(CHANNELS.cloudUnlinkWorkspace, req) as Promise<CompanyCloudLinkStatus>,
+      reconnectWorkspace: (req: ReconnectCloudWorkspaceRequest) =>
+        ipc.invoke(CHANNELS.cloudReconnectWorkspace, req) as Promise<CompanyCloudLinkStatus>,
     },
     runtimeProfiles: {
       list: (companyId: string) =>

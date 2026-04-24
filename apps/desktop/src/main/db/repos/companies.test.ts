@@ -105,6 +105,19 @@ describe('companies repo', () => {
       expect(got?.companyOriginId).toBe('company-origin-1');
     });
 
+    it('defaults cloud-link metadata to an unlinked workspace', () => {
+      const id = repo.create({ name: 'Cloud Ready', slug: 'cloud-ready' });
+      const got = repo.getById(id);
+      expect(got?.cloudLinkState).toBe('unlinked');
+      expect(got?.cloudWorkspaceId).toBeNull();
+      expect(got?.cloudTenantId).toBeNull();
+      expect(got?.linkedDeviceId).toBeNull();
+      expect(got?.lastSyncedCursorJson).toBeNull();
+      expect(got?.lastSnapshotId).toBeNull();
+      expect(got?.lastSyncAt).toBeNull();
+      expect(got?.lastSyncError).toBeNull();
+    });
+
     it('enforces unique slug (throws on duplicate)', () => {
       repo.create({ name: 'One', slug: 'same-slug' });
       expect(() => repo.create({ name: 'Two', slug: 'same-slug' })).toThrow();
@@ -294,6 +307,73 @@ describe('companies repo', () => {
       const id = repo.create({ name: 'Real', slug: 'real' });
       expect(() => repo.update('not-a-real-id', { name: 'Ghost' })).not.toThrow();
       expect(repo.getById(id)?.name).toBe('Real');
+    });
+  });
+
+  describe('updateCloudLink', () => {
+    it('persists linked-workspace metadata independently from user-facing fields', () => {
+      const id = repo.create({ name: 'Linked', slug: 'linked' });
+
+      repo.updateCloudLink(id, {
+        cloudLinkState: 'linked',
+        cloudWorkspaceId: 'cloud-workspace-1',
+        cloudTenantId: 'cloud-tenant-1',
+        linkedDeviceId: 'device_123',
+        lastSyncedCursorJson: '{"outboundCursor":"evt-10","inboundCursor":"cmd-4"}',
+        lastSnapshotId: 'snapshot-2',
+        lastSyncAt: 123456789,
+        lastSyncError: 'temporary outage',
+      });
+
+      const got = repo.getById(id);
+      expect(got?.name).toBe('Linked');
+      expect(got?.slug).toBe('linked');
+      expect(got?.cloudLinkState).toBe('linked');
+      expect(got?.cloudWorkspaceId).toBe('cloud-workspace-1');
+      expect(got?.cloudTenantId).toBe('cloud-tenant-1');
+      expect(got?.linkedDeviceId).toBe('device_123');
+      expect(got?.lastSyncedCursorJson).toBe(
+        '{"outboundCursor":"evt-10","inboundCursor":"cmd-4"}',
+      );
+      expect(got?.lastSnapshotId).toBe('snapshot-2');
+      expect(got?.lastSyncAt).toBe(123456789);
+      expect(got?.lastSyncError).toBe('temporary outage');
+    });
+
+    it('accepts nulls to clear cloud-link metadata', () => {
+      const id = repo.create({ name: 'Linked', slug: 'linked' });
+
+      repo.updateCloudLink(id, {
+        cloudLinkState: 'linked',
+        cloudWorkspaceId: 'cloud-workspace-1',
+        cloudTenantId: 'cloud-tenant-1',
+        linkedDeviceId: 'device_123',
+        lastSyncedCursorJson: '{"outboundCursor":"evt-10","inboundCursor":"cmd-4"}',
+        lastSnapshotId: 'snapshot-2',
+        lastSyncAt: 123456789,
+        lastSyncError: 'temporary outage',
+      });
+
+      repo.updateCloudLink(id, {
+        cloudLinkState: 'unlinked',
+        cloudWorkspaceId: null,
+        cloudTenantId: null,
+        linkedDeviceId: null,
+        lastSyncedCursorJson: null,
+        lastSnapshotId: null,
+        lastSyncAt: null,
+        lastSyncError: null,
+      });
+
+      const got = repo.getById(id);
+      expect(got?.cloudLinkState).toBe('unlinked');
+      expect(got?.cloudWorkspaceId).toBeNull();
+      expect(got?.cloudTenantId).toBeNull();
+      expect(got?.linkedDeviceId).toBeNull();
+      expect(got?.lastSyncedCursorJson).toBeNull();
+      expect(got?.lastSnapshotId).toBeNull();
+      expect(got?.lastSyncAt).toBeNull();
+      expect(got?.lastSyncError).toBeNull();
     });
   });
 
