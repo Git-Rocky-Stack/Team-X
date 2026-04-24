@@ -1,38 +1,204 @@
-import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 
-import { Boxes, Download, LibraryBig, Loader2, PackagePlus, Sparkles } from 'lucide-react';
+import type {
+  Company,
+  CompanyImportPreview,
+  CompanyPackageMode,
+  OperatorAuthMode,
+} from '@team-x/shared-types';
+import { OPERATOR_AUTH_MODES } from '@team-x/shared-types';
+import {
+  Boxes,
+  Cloud,
+  Download,
+  LibraryBig,
+  Loader2,
+  PackagePlus,
+  ShieldCheck,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useCompanies } from '@/hooks/use-companies.js';
 import {
+  useCompanyPackagePreview,
   useCompanyTemplates,
   useExportCompanyTemplate,
+  useExportWorkspacePackage,
+  useImportCompanyPackage,
   useInstallCompanyTemplate,
 } from '@/hooks/use-company-portability.js';
+import { useSharingReadiness } from '@/hooks/use-operators.js';
+import { ipc } from '@/lib/ipc.js';
 import { useAppStore } from '@/store/app-store.js';
 
+function readinessTone(readiness: 'ready' | 'warning' | 'blocked'): string {
+  switch (readiness) {
+    case 'ready':
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+    case 'warning':
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+    default:
+      return 'border-red-500/30 bg-red-500/10 text-red-300';
+  }
+}
+
+function modeLabel(mode: OperatorAuthMode): string {
+  switch (mode) {
+    case 'invited':
+      return 'Invited';
+    case 'cloud':
+      return 'Cloud';
+    default:
+      return 'Local';
+  }
+}
+
+function modeDescription(mode: OperatorAuthMode): string {
+  switch (mode) {
+    case 'invited':
+      return 'Local-first workspace sharing through invited operator memberships.';
+    case 'cloud':
+      return 'Hosted/shared supervision seam for future sync and cloud identities.';
+    default:
+      return 'Zero-login local-first posture with one workstation owning the workspace.';
+  }
+}
+
+function modeIcon(mode: OperatorAuthMode) {
+  switch (mode) {
+    case 'invited':
+      return Users;
+    case 'cloud':
+      return Cloud;
+    default:
+      return ShieldCheck;
+  }
+}
+
+function packageModeLabel(mode: CompanyPackageMode): string {
+  return mode === 'template' ? 'Template' : 'Workspace Export';
+}
+
+function previewSummary(preview: CompanyImportPreview): string {
+  return `${packageModeLabel(preview.manifest.mode)} · ${preview.manifest.sourceAppVersion} · ${modeLabel(preview.manifest.sharingMode)}`;
+}
+
 export function PortabilitySection() {
+  const queryClient = useQueryClient();
   const companyId = useAppStore((state) => state.companyId);
+  const setCompanyId = useAppStore((state) => state.setCompanyId);
   const { data: companies = [] } = useCompanies();
   const templatesQuery = useCompanyTemplates();
+  const sharingReadinessQuery = useSharingReadiness(companyId);
+  const exportWorkspace = useExportWorkspacePackage(companyId);
   const exportTemplate = useExportCompanyTemplate(companyId);
-  const installTemplate = useInstallCompanyTemplate();
+  const importPackage = useImportCompanyPackage();
   const [packagePath, setPackagePath] = useState('');
+  const [importName, setImportName] = useState('');
+  const [importSlug, setImportSlug] = useState('');
+  const [importNameDirty, setImportNameDirty] = useState(false);
+  const [importSlugDirty, setImportSlugDirty] = useState(false);
 
   const activeCompany = companies.find((company) => company.id === companyId) ?? null;
+  const sharingReadiness = sharingReadinessQuery.data ?? null;
+  const trimmedPackagePath = packagePath.trim();
+  const packagePreviewQuery = useCompanyPackagePreview(
+    trimmedPackagePath.length > 0 ? trimmedPackagePath : null,
+  );
+  const installTemplate = useInstallCompanyTemplate(companyId);
+  const packagePreview = packagePreviewQuery.data ?? null;
 
-  const canInstall = packagePath.trim().length > 0 && !installTemplate.isPending;
+  useEffect(() => {
+    if (trimmedPackagePath.length > 0) return;
+    setImportName('');
+    setImportSlug('');
+    setImportNameDirty(false);
+    setImportSlugDirty(false);
+  }, [trimmedPackagePath]);
 
-  async function handleInstall() {
-    if (!canInstall) return;
-    try {
-      await installTemplate.mutateAsync(packagePath.trim());
-      setPackagePath('');
-    } catch {
-      // Mutation state drives the inline error row.
-    }
+  useEffect(() => {
+    if (!packagePreview || packagePreview.manifest.mode !== 'workspace-export') return;
+    if (!importNameDirty) setImportName(packagePreview.suggestedCompanyName);
+    if (!importSlugDirty) setImportSlug(packagePreview.suggestedSlug);
+  }, [packagePreview, importNameDirty, importSlugDirty]);
+
+  const updateSharingMode = useMutation({
+    mutationFn: async (mode: OperatorAuthMode) => {
+      if (!activeCompany) {
+        throw new Error('Select an active workspace before changing sharing posture.');
+      }
+      await ipc.companies.update({
+        companyId: activeCompany.id,
+        settings: {
+          ...activeCompany.settings,
+          sharing: {
+            ...(activeCompany.settings.sharing ?? {
+              readiness: 'ready',
+            }),
+            mode,
+          },
+        },
+      });
+      return mode;
+    },
+    onSuccess: async (mode) => {
+      if (!activeCompany) return;
+      queryClient.setQueryData<Company[]>(['companies'], (current = []) =>
+        current.map((company) =>
+          company.id === activeCompany.id
+            ? {
+                ...company,
+                settings: {
+                  ...company.settings,
+                  sharing: {
+                    ...(company.settings.sharing ?? {
+                      readiness: 'ready',
+                    }),
+                    mode,
+                  },
+                },
+              }
+            : company,
+        ),
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['companies'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['operators', 'sharing-readiness', activeCompany.id],
+        }),
+      ]);
+    },
+  });
+
+  const canInstallTemplate =
+    packagePreview?.manifest.mode === 'template' &&
+    trimmedPackagePath.length > 0 &&
+    !installTemplate.isPending;
+  const canImportWorkspace =
+    packagePreview?.manifest.mode === 'workspace-export' &&
+    trimmedPackagePath.length > 0 &&
+    importName.trim().length > 0 &&
+    importSlug.trim().length > 0 &&
+    !importPackage.isPending;
+
+  async function handleInstallTemplate() {
+    if (!canInstallTemplate) return;
+    await installTemplate.mutateAsync(trimmedPackagePath);
+  }
+
+  async function handleImportPackage() {
+    if (!canImportWorkspace) return;
+    const result = await importPackage.mutateAsync({
+      packagePath: trimmedPackagePath,
+      name: importName.trim(),
+      slug: importSlug.trim(),
+    });
+    setCompanyId(result.companyId);
   }
 
   return (
@@ -42,18 +208,163 @@ export function PortabilitySection() {
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Portability & Templates
         </h4>
-        {(exportTemplate.isPending || installTemplate.isPending) && (
+        {(exportWorkspace.isPending ||
+          exportTemplate.isPending ||
+          installTemplate.isPending ||
+          importPackage.isPending) && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Working" />
         )}
       </div>
 
       <p className="text-[11px] leading-snug text-muted-foreground">
-        Save the active workspace as a reusable operating template, install external Team-X template
-        packages into the local library, and then create new workspaces from those templates through
-        the workspace switcher.
+        Export the active workspace, save reusable templates, preview external Team-X packages
+        before importing them, and keep sharing posture visible as a real operator concern.
       </p>
 
       <div className="space-y-4 rounded-lg border border-border bg-surface-50 p-4">
+        <div className="rounded-lg border border-white/10 bg-black/10 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <ShieldCheck className="h-4 w-4 text-brand" />
+                Sharing posture
+              </div>
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                Choose the workspace’s intended sharing mode, then check what is already ready and
+                what still blocks invited or cloud operation.
+              </p>
+            </div>
+            {updateSharingMode.isPending || sharingReadinessQuery.isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : null}
+          </div>
+
+          {!activeCompany ? (
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Select an active workspace before adjusting its sharing posture.
+            </p>
+          ) : sharingReadinessQuery.isLoading ? (
+            <div className="mt-3 space-y-2" aria-busy="true">
+              <Skeleton className="h-16 rounded-lg" />
+              <Skeleton className="h-16 rounded-lg" />
+            </div>
+          ) : sharingReadinessQuery.isError || !sharingReadiness ? (
+            <p className="mt-3 text-[11px] text-destructive">
+              Failed to resolve sharing readiness for this workspace.
+            </p>
+          ) : (
+            <>
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
+                {OPERATOR_AUTH_MODES.map((mode) => {
+                  const readiness =
+                    sharingReadiness.modeReadiness.find((entry) => entry.mode === mode) ??
+                    sharingReadiness.modeReadiness[0];
+                  const Icon = modeIcon(mode);
+                  const selected = sharingReadiness.configuredMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => updateSharingMode.mutate(mode)}
+                      disabled={updateSharingMode.isPending}
+                      className={`rounded-lg border px-3 py-3 text-left transition-colors ${
+                        selected
+                          ? 'border-brand bg-brand/10'
+                          : 'border-white/10 bg-background/60 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                          <Icon className="h-4 w-4 text-brand" />
+                          {modeLabel(mode)}
+                        </div>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${readinessTone(readiness?.readiness ?? 'blocked')}`}
+                        >
+                          {readiness?.readiness ?? 'blocked'}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                        {modeDescription(mode)}
+                      </p>
+                      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                        {readiness?.summary ?? 'Readiness unavailable.'}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 rounded-lg border border-white/10 bg-background/70 px-3 py-3">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <span>Configured {modeLabel(sharingReadiness.configuredMode)}</span>
+                  <span>Effective {modeLabel(sharingReadiness.effectiveMode)}</span>
+                  <span>{sharingReadiness.operatorCount} operators</span>
+                  <span>{sharingReadiness.ownerCount} owners</span>
+                  <span>{sharingReadiness.invitedOperatorCount} invited</span>
+                  <span>{sharingReadiness.cloudOperatorCount} cloud</span>
+                  <span>
+                    {sharingReadiness.lastExportedAt
+                      ? `Exported ${new Date(sharingReadiness.lastExportedAt).toLocaleString()}`
+                      : 'No export recorded yet'}
+                  </span>
+                </div>
+                {sharingReadiness.missingRequirements.length > 0 ? (
+                  <ul className="mt-3 space-y-1 text-[11px] leading-snug text-muted-foreground">
+                    {sharingReadiness.missingRequirements.map((requirement) => (
+                      <li key={requirement}>- {requirement}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 text-[11px] leading-snug text-emerald-600">
+                    The currently selected sharing posture is ready on this workspace.
+                  </p>
+                )}
+              </div>
+
+              {updateSharingMode.isError ? (
+                <p className="mt-3 text-[11px] text-destructive">
+                  Failed to save sharing posture: {String(updateSharingMode.error)}
+                </p>
+              ) : null}
+            </>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-black/10 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Download className="h-4 w-4 text-brand" />
+                Export active workspace package
+              </div>
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                {activeCompany
+                  ? `${activeCompany.name} will export as a portable workspace package with secrets redacted and live operating state preserved.`
+                  : 'Select an active workspace before exporting a portable package.'}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!activeCompany || exportWorkspace.isPending}
+              onClick={() => exportWorkspace.mutate()}
+            >
+              {exportWorkspace.isPending ? 'Exporting...' : 'Export Package'}
+            </Button>
+          </div>
+          {exportWorkspace.isSuccess ? (
+            <p className="mt-3 text-[11px] text-emerald-600">
+              Workspace package saved to {exportWorkspace.data.packagePath}
+            </p>
+          ) : null}
+          {exportWorkspace.isError ? (
+            <p className="mt-3 text-[11px] text-destructive">
+              Failed to export workspace package: {String(exportWorkspace.error)}
+            </p>
+          ) : null}
+        </div>
+
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -76,26 +387,26 @@ export function PortabilitySection() {
               {exportTemplate.isPending ? 'Saving...' : 'Save Template'}
             </Button>
           </div>
-          {exportTemplate.isSuccess && (
+          {exportTemplate.isSuccess ? (
             <p className="mt-3 text-[11px] text-emerald-600">
               Template saved to {exportTemplate.data.packagePath}
             </p>
-          )}
-          {exportTemplate.isError && (
+          ) : null}
+          {exportTemplate.isError ? (
             <p className="mt-3 text-[11px] text-destructive">
               Failed to save template: {String(exportTemplate.error)}
             </p>
-          )}
+          ) : null}
         </div>
 
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
             <PackagePlus className="h-4 w-4 text-brand" />
-            Install local template package
+            Preview import or template package
           </div>
           <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-            Register an existing `.teamx-package.json` template into the local library so it shows
-            up in the workspace creation flow.
+            Preview manifest details, warnings, redactions, and sharing posture before importing a
+            workspace package or installing a template into the local library.
           </p>
           <div className="mt-3 flex gap-2">
             <Input
@@ -104,14 +415,169 @@ export function PortabilitySection() {
               placeholder="C:\\templates\\ops-template.teamx-package.json"
               className="font-mono text-xs"
             />
-            <Button type="button" variant="outline" disabled={!canInstall} onClick={handleInstall}>
-              {installTemplate.isPending ? 'Installing...' : 'Install'}
-            </Button>
           </div>
-          {installTemplate.isError && (
-            <p className="mt-3 text-[11px] text-destructive">
-              Failed to install template: {String(installTemplate.error)}
+
+          {trimmedPackagePath.length === 0 ? (
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Paste a `.teamx-package.json` path to inspect the manifest before any import or
+              install action runs.
             </p>
+          ) : packagePreviewQuery.isLoading ? (
+            <div className="mt-3 space-y-2" aria-busy="true">
+              <Skeleton className="h-16 rounded-lg" />
+              <Skeleton className="h-12 rounded-lg" />
+            </div>
+          ) : packagePreviewQuery.isError || !packagePreview ? (
+            <p className="mt-3 text-[11px] text-destructive">
+              Failed to preview package: {String(packagePreviewQuery.error)}
+            </p>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <div
+                className="rounded-lg border border-white/10 bg-background/70 px-3 py-3"
+                data-portability-manifest-preview=""
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">Manifest Preview</div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {previewSummary(packagePreview)}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    {packageModeLabel(packagePreview.manifest.mode)}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                  <span>{packagePreview.manifest.sections.length} sections</span>
+                  <span>{packagePreview.manifest.redactions.length} redactions</span>
+                  <span>Exported {new Date(packagePreview.manifest.exportedAt).toLocaleString()}</span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                  {packagePreview.manifest.sections.map((section) => (
+                    <span
+                      key={section}
+                      className="rounded-full border border-white/10 px-2 py-1 uppercase tracking-[0.14em]"
+                    >
+                      {section}
+                    </span>
+                  ))}
+                </div>
+
+                {packagePreview.warnings.length > 0 ? (
+                  <div className="mt-3">
+                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Warnings
+                    </div>
+                    <ul className="mt-2 space-y-1 text-[11px] leading-snug text-muted-foreground">
+                      {packagePreview.warnings.map((warning) => (
+                        <li key={warning}>- {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {packagePreview.missingSecrets.length > 0 ? (
+                  <div className="mt-3">
+                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Missing Secrets
+                    </div>
+                    <ul className="mt-2 space-y-1 font-mono text-[10px] leading-snug text-muted-foreground">
+                      {packagePreview.missingSecrets.map((secret) => (
+                        <li key={secret}>{secret}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+
+              {packagePreview.manifest.mode === 'workspace-export' ? (
+                <div className="rounded-lg border border-white/10 bg-background/70 px-3 py-3">
+                  <div className="text-sm font-medium text-foreground">Import as new workspace</div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Import stays non-destructive. Team-X will create a fresh workspace copy with new
+                    local ids while preserving origin metadata.
+                  </p>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                    <Input
+                      value={importName}
+                      onChange={(event) => {
+                        setImportName(event.target.value);
+                        if (!importNameDirty) setImportNameDirty(true);
+                      }}
+                      placeholder={packagePreview.suggestedCompanyName}
+                    />
+                    <Input
+                      value={importSlug}
+                      onChange={(event) => {
+                        setImportSlug(event.target.value);
+                        if (!importSlugDirty) setImportSlugDirty(true);
+                      }}
+                      placeholder={packagePreview.suggestedSlug}
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-[11px] text-muted-foreground">
+                      Suggested slug defaults to {packagePreview.suggestedSlug} when the source slug
+                      is already taken locally.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!canImportWorkspace}
+                      onClick={() => void handleImportPackage()}
+                    >
+                      {importPackage.isPending ? 'Importing...' : 'Import Workspace'}
+                    </Button>
+                  </div>
+                  {importPackage.isSuccess ? (
+                    <p className="mt-3 text-[11px] text-emerald-600">
+                      Workspace imported and switched to {importName.trim() || importSlug.trim()}.
+                    </p>
+                  ) : null}
+                  {importPackage.isError ? (
+                    <p className="mt-3 text-[11px] text-destructive">
+                      Failed to import workspace package: {String(importPackage.error)}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-white/10 bg-background/70 px-3 py-3">
+                  <div className="text-sm font-medium text-foreground">Install into local library</div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Template packages become visible in the workspace switcher after installation,
+                    but they stay local-first and never overwrite existing workspaces.
+                  </p>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-[11px] text-muted-foreground">
+                      Installed templates show up in the local template library below and in the
+                      workspace switcher create flow.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!canInstallTemplate}
+                      onClick={() => void handleInstallTemplate()}
+                    >
+                      {installTemplate.isPending ? 'Installing...' : 'Install Template'}
+                    </Button>
+                  </div>
+                  {installTemplate.isSuccess ? (
+                    <p className="mt-3 text-[11px] text-emerald-600">
+                      Template installed to {installTemplate.data.template.packagePath}
+                    </p>
+                  ) : null}
+                  {installTemplate.isError ? (
+                    <p className="mt-3 text-[11px] text-destructive">
+                      Failed to install template: {String(installTemplate.error)}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

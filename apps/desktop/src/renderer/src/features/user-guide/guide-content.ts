@@ -28,6 +28,13 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     section: 'memory',
   },
   {
+    id: 'open-settings-portability',
+    label: 'Open Portability Settings',
+    description: 'Preview packages, export workspaces, save templates, and review sharing posture.',
+    kind: 'settings',
+    section: 'portability',
+  },
+  {
     id: 'open-mission-control',
     label: 'Open Mission Control',
     description: 'Review live operations, queues, runs, and telemetry from the main dashboard.',
@@ -237,6 +244,16 @@ export const GUIDE_TASKS: GuideTask[] = [
     actionId: 'open-autonomy-memory',
   },
   {
+    id: 'portability-reviewed',
+    title: 'Review portability and sharing',
+    description:
+      'Preview import packages, understand what gets redacted, and verify the workspace sharing posture before copying or templating it.',
+    roles: OWNER_AND_BUILDER,
+    priority: 'advanced',
+    kind: 'jump',
+    actionId: 'open-settings-portability',
+  },
+  {
     id: 'telemetry-reviewed',
     title: 'Review telemetry and costs',
     description: 'Understand usage, employee activity, and model cost from the telemetry surfaces.',
@@ -301,6 +318,36 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       'operating-model-understood',
     ],
     actionIds: ['open-settings-providers', 'open-hire-dialog', 'open-mission-control'],
+  },
+  {
+    id: 'portability-sharing',
+    title: 'Portability & Sharing',
+    summary:
+      'Move a workspace safely, keep templates reusable, and understand what shared posture means before real hosted collaboration lands.',
+    category: 'Governance',
+    roles: OWNER_AND_BUILDER,
+    blocks: [
+      {
+        kind: 'paragraph',
+        text: 'Portability is distinct from backup. Exported packages are operator-facing assets meant for templating and safe workspace copy flows, while backups remain a full-fidelity recovery path.',
+      },
+      {
+        kind: 'bullets',
+        items: [
+          'Preview every package before import so version drift, redactions, and missing secrets are visible.',
+          'Save templates when you want repeatable operating models without live ticket or project state.',
+          'Treat invited and cloud sharing as posture plus metadata until the dedicated sync/auth bundle lands.',
+        ],
+      },
+      {
+        kind: 'callout',
+        tone: 'warning',
+        title: 'Operator expectation',
+        text: 'Imported workspaces stay non-destructive. Team-X always creates a fresh local copy and preserves origin metadata so future sharing and template history remain traceable.',
+      },
+    ],
+    taskIds: ['portability-reviewed', 'autonomy-access-reviewed'],
+    actionIds: ['open-settings-portability', 'open-autonomy-access'],
   },
   {
     id: 'mission-control',

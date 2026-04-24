@@ -766,13 +766,25 @@ function createImportWarnings(
     );
   }
 
+  if (manifest.sharingMode === 'invited') {
+    warnings.push(
+      'This package expects invited sharing posture. Recreate invited operator memberships after import because Team-X still bootstraps a local owner by default.',
+    );
+  }
+
+  if (manifest.sharingMode === 'cloud') {
+    warnings.push(
+      'This package expects cloud sharing posture. Team-X will preserve that metadata, but hosted operator sync is not active yet.',
+    );
+  }
+
   for (const compatibility of manifest.compatibility) {
     warnings.push(`Compatibility note: ${humanizeCompatibility(compatibility)}.`);
   }
 
   if ((packageData.starterAssets?.length ?? 0) > 0) {
     warnings.push(
-      'Starter assets are preserved in the package metadata but are not materialized during import yet.',
+      `${packageData.starterAssets?.length ?? 0} starter asset(s) are preserved in package metadata but are not materialized during import yet.`,
     );
   }
 

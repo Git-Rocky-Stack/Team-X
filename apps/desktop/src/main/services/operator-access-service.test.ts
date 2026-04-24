@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createOperatorsRepo } from '../db/repos/operators.js';
 import { companies } from '../db/schema.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
@@ -10,13 +11,14 @@ import {
 } from './operator-access-service.js';
 
 let ctx: TestDbHandle;
+let companiesRepo: ReturnType<typeof createCompaniesRepo>;
 let operatorsRepo: ReturnType<typeof createOperatorsRepo>;
 let service: ReturnType<typeof createOperatorAccessService>;
 
 beforeEach(async () => {
   ctx = await makeTestDb();
+  companiesRepo = createCompaniesRepo(ctx.db);
   operatorsRepo = createOperatorsRepo(ctx.db);
-  service = createOperatorAccessService({ operatorsRepo });
   ctx.db
     .insert(companies)
     .values([
@@ -29,6 +31,8 @@ beforeEach(async () => {
         icon: null,
         theme: 'dark',
         status: 'running',
+        workspaceOriginId: 'company-alpha',
+        companyOriginId: 'company-alpha',
       },
       {
         id: 'company-beta',
@@ -39,9 +43,15 @@ beforeEach(async () => {
         icon: null,
         theme: 'dark',
         status: 'running',
+        workspaceOriginId: 'company-beta',
+        companyOriginId: 'company-beta',
       },
     ])
     .run();
+  service = createOperatorAccessService({
+    companiesRepo,
+    operatorsRepo,
+  });
 });
 
 afterEach(() => ctx.close());
@@ -113,6 +123,52 @@ describe('operator access service', () => {
     expect(service.resolveOperatorIdForCompany('company-beta')).toBe(LOCAL_OWNER_OPERATOR_ID);
     expect(() => service.resolveOperatorIdForCompany('company-beta', 'operator-invited')).toThrow(
       /does not belong to company company-beta/i,
+    );
+  });
+
+  it('summarizes sharing readiness for local, invited, and cloud posture', () => {
+    service.ensureLocalOwnerForCompany('company-alpha');
+    operatorsRepo.create({
+      id: 'operator-invited',
+      displayName: 'Invited Operator',
+      authMode: 'invited',
+    });
+    operatorsRepo.upsertMembership({
+      operatorId: 'operator-invited',
+      companyId: 'company-alpha',
+      role: 'operator',
+      canApproveBudget: false,
+      canApproveAuthority: false,
+      canManageRoutines: false,
+      canManageRuntimes: false,
+    });
+    companiesRepo.update('company-alpha', {
+      settings: {
+        sharing: {
+          mode: 'cloud',
+          readiness: 'warning',
+          lastExportedAt: '2026-04-23T12:00:00.000Z',
+          lastExportMode: 'template',
+        },
+      },
+    });
+
+    const summary = service.getSharingReadiness('company-alpha');
+
+    expect(summary.configuredMode).toBe('cloud');
+    expect(summary.effectiveMode).toBe('invited');
+    expect(summary.operatorCount).toBe(2);
+    expect(summary.ownerCount).toBe(1);
+    expect(summary.invitedOperatorCount).toBe(1);
+    expect(summary.cloudOperatorCount).toBe(0);
+    expect(summary.readiness).toBe('warning');
+    expect(summary.missingRequirements).toContain('Add at least one cloud operator identity.');
+    expect(summary.modeReadiness).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ mode: 'local', readiness: 'ready' }),
+        expect.objectContaining({ mode: 'invited', readiness: 'ready' }),
+        expect.objectContaining({ mode: 'cloud', readiness: 'warning' }),
+      ]),
     );
   });
 });

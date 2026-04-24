@@ -261,6 +261,54 @@ describe('audit-event-chip: extension.installed + authority.violation', () => {
   });
 });
 
+describe('audit-event-chip: portability events', () => {
+  it('maps workspace export, import, and template install events to stable labels and colors', () => {
+    expect(getEventTypeColor('company.packageExported')).toBe('bg-indigo-600/20 text-indigo-400');
+    expect(getEventTypeLabel('company.packageExported')).toBe('Workspace Export');
+    expect(getEventTypeColor('company.packageImported')).toBe('bg-sky-600/20 text-sky-400');
+    expect(getEventTypeLabel('company.packageImported')).toBe('Workspace Import');
+    expect(getEventTypeColor('company.templateInstalled')).toBe(
+      'bg-violet-600/20 text-violet-400',
+    );
+    expect(getEventTypeLabel('company.templateInstalled')).toBe('Template Installed');
+  });
+
+  it('summarizes portability events with mode, sharing posture, and package identity', () => {
+    expect(
+      buildRowSummary(
+        'company.packageExported',
+        JSON.stringify({
+          mode: 'workspace-export',
+          sharingMode: 'invited',
+          packageId: 'pkg-abcdef12',
+        }),
+      ),
+    ).toBe('workspace-export · invited · pkg-abcd');
+
+    expect(
+      buildRowSummary(
+        'company.packageImported',
+        JSON.stringify({
+          mode: 'workspace-export',
+          sharingMode: 'cloud',
+          packageId: 'pkg-fedcba98',
+        }),
+      ),
+    ).toBe('workspace-export · cloud · pkg-fedc');
+
+    expect(
+      buildRowSummary(
+        'company.templateInstalled',
+        JSON.stringify({
+          templateName: 'Alpha Ops Template',
+          sharingMode: 'local',
+          packageId: 'pkg-template-1',
+        }),
+      ),
+    ).toBe('Alpha Ops Template · local · pkg-temp');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Regression guard — M32 T6 planner chips must still render
 // ---------------------------------------------------------------------------

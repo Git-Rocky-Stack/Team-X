@@ -11,6 +11,8 @@ import { ipc } from '@/lib/ipc.js';
 export const autonomyClient = {
   operators: {
     list: (...args: Parameters<typeof ipc.operators.list>) => ipc.operators.list(...args),
+    readiness: (...args: Parameters<typeof ipc.operators.readiness>) =>
+      ipc.operators.readiness(...args),
   },
   runtimeProfiles: {
     list: (...args: Parameters<typeof ipc.runtimeProfiles.list>) =>

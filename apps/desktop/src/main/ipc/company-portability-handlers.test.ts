@@ -70,6 +70,9 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     backupService: noop,
     auditRepo: noop,
     updaterService: noop,
+    bus: {
+      emit: vi.fn(),
+    } as unknown as IpcHandlerDeps['bus'],
     getHardwareProfile: () => ({}) as never,
     ...overrides,
   } as unknown as IpcHandlerDeps;
@@ -77,6 +80,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
 
 describe('company portability IPC handlers', () => {
   it('validates and delegates companies.exportPackage', async () => {
+    const bus = { emit: vi.fn() };
     const response: ExportCompanyPackageResponse = {
       packagePath: '/tmp/alpha.teamx-package.json',
       manifest: {
@@ -103,6 +107,7 @@ describe('company portability IPC handlers', () => {
     };
     const handlers = createIpcHandlers(
       makeDeps({
+        bus,
         companyPortabilityService,
       }),
     );
@@ -116,6 +121,12 @@ describe('company portability IPC handlers', () => {
       companyId: 'company-1',
       mode: 'workspace-export',
     });
+    expect(bus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'company.packageExported',
+        companyId: 'company-1',
+      }),
+    );
     expect(result).toEqual(response);
   });
 
@@ -187,6 +198,7 @@ describe('company portability IPC handlers', () => {
   });
 
   it('validates and delegates companies.importPackage', async () => {
+    const bus = { emit: vi.fn() };
     const response: ImportCompanyPackageResponse = {
       companyId: 'company-imported',
       manifest: {
@@ -213,6 +225,7 @@ describe('company portability IPC handlers', () => {
     };
     const handlers = createIpcHandlers(
       makeDeps({
+        bus,
         companyPortabilityService,
       }),
     );
@@ -228,6 +241,12 @@ describe('company portability IPC handlers', () => {
       name: 'Alpha Copy',
       slug: 'alpha-copy',
     });
+    expect(bus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'company.packageImported',
+        companyId: 'company-imported',
+      }),
+    );
     expect(result).toEqual(response);
   });
 
@@ -263,6 +282,7 @@ describe('company portability IPC handlers', () => {
   });
 
   it('delegates companies.listTemplates and companies.installTemplate', async () => {
+    const bus = { emit: vi.fn() };
     const listResponse: ListCompanyTemplatesResponse = {
       templates: [
         {
@@ -338,12 +358,14 @@ describe('company portability IPC handlers', () => {
     };
     const handlers = createIpcHandlers(
       makeDeps({
+        bus,
         companyPortabilityService,
       }),
     );
 
     const listResult = await handlers.companiesListTemplates({ companyId: 'company-1' });
     const installResult = await handlers.companiesInstallTemplate({
+      companyId: 'company-1',
       packagePath: 'C:/tmp/alpha-template.teamx-package.json',
     });
 
@@ -351,6 +373,12 @@ describe('company portability IPC handlers', () => {
     expect(companyPortabilityService.installTemplate).toHaveBeenCalledWith({
       packagePath: 'C:/tmp/alpha-template.teamx-package.json',
     });
+    expect(bus.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'company.templateInstalled',
+        companyId: 'company-1',
+      }),
+    );
     expect(listResult).toEqual(listResponse);
     expect(installResult).toEqual(installResponse);
   });

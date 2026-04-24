@@ -627,6 +627,7 @@ describe('company-portability-service', () => {
       expect.arrayContaining([
         expect.stringMatching(/already in use locally/i),
         expect.stringMatching(/redacted fields/i),
+        expect.stringMatching(/invited sharing posture/i),
         expect.stringMatching(/local skills may require manual reinstall/i),
       ]),
     );

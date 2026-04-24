@@ -257,6 +257,13 @@ export interface CompanySharingPostureSettings {
   lastExportMode?: CompanyPackageMode;
 }
 
+export interface CompanySharingModeReadiness {
+  mode: OperatorAuthMode;
+  readiness: CompanySharingReadiness;
+  missingRequirements: string[];
+  summary: string;
+}
+
 export const OPERATOR_MEMBERSHIP_ROLES = ['owner', 'admin', 'operator', 'reviewer'] as const;
 export type OperatorMembershipRole = (typeof OPERATOR_MEMBERSHIP_ROLES)[number];
 
@@ -285,6 +292,25 @@ export interface OperatorMembership {
 export interface OperatorAccessEntry {
   operator: Operator;
   membership: OperatorMembership;
+}
+
+export interface CompanySharingReadinessSummary {
+  companyId: string;
+  configuredMode: OperatorAuthMode;
+  effectiveMode: OperatorAuthMode;
+  readiness: CompanySharingReadiness;
+  missingRequirements: string[];
+  operatorCount: number;
+  ownerCount: number;
+  adminCount: number;
+  localOperatorCount: number;
+  invitedOperatorCount: number;
+  cloudOperatorCount: number;
+  hasWorkspaceOrigin: boolean;
+  hasCompanyOrigin: boolean;
+  lastExportedAt: string | null;
+  lastExportMode: CompanyPackageMode | null;
+  modeReadiness: CompanySharingModeReadiness[];
 }
 
 export const RUNTIME_PROFILE_KINDS = [

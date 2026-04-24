@@ -419,6 +419,7 @@ app
     // copilot-insights.ts §listStale comment block for rationale).
     const copilotInsightsRepo = createCopilotInsightsRepo(db);
     const operatorAccessService = createOperatorAccessService({
+      companiesRepo,
       operatorsRepo,
     });
     const artifactService = createArtifactService({

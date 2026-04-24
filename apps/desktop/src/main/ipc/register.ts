@@ -325,6 +325,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     return handlers.operatorsList(request);
   });
 
+  ipcMain.handle('operators.readiness', async (_event, request: { companyId: string }) => {
+    return handlers.operatorsReadiness(request);
+  });
+
   ipcMain.handle('runtimeProfiles.list', async (_event, request: { companyId: string }) => {
     return handlers.runtimeProfilesList(request);
   });

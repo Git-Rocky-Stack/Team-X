@@ -76,6 +76,7 @@ import type {
   CompaniesDeleteRequest,
   CompaniesUpdateRequest,
   Company,
+  CompanySharingReadinessSummary,
   CompanySettings,
   CompanyStatus,
   CopilotExportRequest,
@@ -112,6 +113,7 @@ import type {
   GetBudgetOverviewRequest,
   GetEffectiveAuthorityRequest,
   GetGoalRequest,
+  GetOperatorSharingReadinessRequest,
   GetMeetingRequest,
   GetProjectRequest,
   GetThreadDigestRequest,
@@ -814,6 +816,7 @@ export interface IpcOperatorAccessService {
   ensureLocalOwnerForCompany(companyId: string): { operatorId: string; membershipId: string };
   resolveOperatorIdForCompany(companyId: string, preferredOperatorId?: string | null): string;
   listByCompany(companyId: string): OperatorAccessEntry[];
+  getSharingReadiness(companyId: string): CompanySharingReadinessSummary;
 }
 
 export interface IpcRuntimeProfilesService {
@@ -1096,6 +1099,10 @@ export interface IpcHandlers {
   employeesList(req: { companyId: string }): Promise<Employee[]>;
   /** `operators.list` — return the operator access entries for a company. */
   operatorsList(req: ListOperatorsRequest): Promise<OperatorAccessEntry[]>;
+  /** `operators.readiness` — return sharing posture and readiness for a company. */
+  operatorsReadiness(
+    req: GetOperatorSharingReadinessRequest,
+  ): Promise<CompanySharingReadinessSummary>;
   /** `runtimeProfiles.list` — return runtime profiles plus binding summaries for a company. */
   runtimeProfilesList(req: ListRuntimeProfilesRequest): Promise<RuntimeProfileSummary[]>;
   /** `runtimeProfiles.create` — create one named runtime profile. */
@@ -2121,7 +2128,16 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] companies.exportPackage: companyPortabilityService dep is required');
       }
       assertCompanyActive(companiesRepo, req.companyId, 'companies.exportPackage');
-      return companyPortabilityService.exportCompany(req);
+      const result = await companyPortabilityService.exportCompany(req);
+      emitUserAuditEvent('company.packageExported', req.companyId, {
+        mode: req.mode,
+        packageId: result.manifest.packageId,
+        packagePath: result.packagePath,
+        exportedAt: result.manifest.exportedAt,
+        sharingMode: result.manifest.sharingMode,
+        sectionCount: result.manifest.sections.length,
+      });
+      return result;
     },
 
     async companiesPreviewImportPackage(req) {
@@ -2151,11 +2167,19 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!companyPortabilityService) {
         throw new Error('[ipc] companies.importPackage: companyPortabilityService dep is required');
       }
-      return companyPortabilityService.importAsNewCompany({
+      const result = await companyPortabilityService.importAsNewCompany({
         packagePath: req.packagePath.trim(),
         name: req.name,
         slug: req.slug,
       });
+      emitUserAuditEvent('company.packageImported', result.companyId, {
+        packageId: result.manifest.packageId,
+        mode: result.manifest.mode,
+        packagePath: req.packagePath.trim(),
+        sharingMode: result.manifest.sharingMode,
+        importedAt: Date.now(),
+      });
+      return result;
     },
 
     async companiesListTemplates(req) {
@@ -2179,15 +2203,32 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof req.packagePath !== 'string' || req.packagePath.trim().length === 0) {
         throw new Error('[ipc] companies.installTemplate: packagePath is required');
       }
+      if (req.companyId !== undefined) {
+        if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
+          throw new Error(
+            '[ipc] companies.installTemplate: companyId must be a non-empty string when provided',
+          );
+        }
+        assertCompanyActive(companiesRepo, req.companyId.trim(), 'companies.installTemplate');
+      }
       if (!companyPortabilityService) {
         throw new Error(
           '[ipc] companies.installTemplate: companyPortabilityService dep is required',
         );
       }
+      const result = await companyPortabilityService.installTemplate({
+        packagePath: req.packagePath.trim(),
+      });
+      if (req.companyId) {
+        emitUserAuditEvent('company.templateInstalled', req.companyId.trim(), {
+          packageId: result.manifest.packageId,
+          packagePath: result.packagePath,
+          templateName: result.company.name,
+          sharingMode: result.manifest.sharingMode,
+        });
+      }
       return {
-        template: await companyPortabilityService.installTemplate({
-          packagePath: req.packagePath.trim(),
-        }),
+        template: result,
       };
     },
 
@@ -2204,6 +2245,16 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         return [];
       }
       return operatorAccessService.listByCompany(req.companyId);
+    },
+
+    async operatorsReadiness(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] operators.readiness: companyId is required');
+      }
+      if (!operatorAccessService) {
+        throw new Error('[ipc] operators.readiness: operatorAccessService dep is required');
+      }
+      return operatorAccessService.getSharingReadiness(req.companyId);
     },
 
     async runtimeProfilesList(req) {

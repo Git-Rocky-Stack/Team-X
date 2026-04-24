@@ -10,3 +10,11 @@ export function useOperators(companyId: string | null) {
     enabled: companyId !== null && companyId.length > 0,
   });
 }
+
+export function useSharingReadiness(companyId: string | null) {
+  return useQuery({
+    queryKey: ['operators', 'sharing-readiness', companyId],
+    queryFn: () => autonomyClient.operators.readiness(requireString(companyId, 'companyId')),
+    enabled: companyId !== null && companyId.length > 0,
+  });
+}

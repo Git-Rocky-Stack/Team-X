@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
-import { useOperators } from '@/hooks/use-operators.js';
+import { useOperators, useSharingReadiness } from '@/hooks/use-operators.js';
 import { useAppStore } from '@/store/app-store.js';
 
 import {
@@ -168,6 +168,30 @@ function postureDescription(summary: ReturnType<typeof summarizeAccess>): string
   return 'This workspace is still local-only. The access model is explicit now, so invited or cloud operators can land later without rewriting the governance stack.';
 }
 
+function sharingModeLabel(mode: 'local' | 'invited' | 'cloud'): string {
+  switch (mode) {
+    case 'invited':
+      return 'invited';
+    case 'cloud':
+      return 'cloud';
+    default:
+      return 'local';
+  }
+}
+
+function sharingReadinessTone(
+  readiness: 'ready' | 'warning' | 'blocked',
+): 'default' | 'accent' | 'danger' {
+  switch (readiness) {
+    case 'ready':
+      return 'accent';
+    case 'warning':
+      return 'default';
+    default:
+      return 'danger';
+  }
+}
+
 function capabilityBadges(entry: OperatorAccessEntry): string[] {
   return [
     entry.membership.canApproveBudget ? 'Budget approvals' : null,
@@ -234,10 +258,13 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
 export function AutonomyView({ company, companyId }: AutonomyViewProps) {
   const activeSubview = useAppStore((state) => state.autonomySubview);
   const setActiveSubview = useAppStore((state) => state.setAutonomySubview);
+  const openSettingsSection = useAppStore((state) => state.openSettingsSection);
   const operatorsQuery = useOperators(companyId);
+  const sharingReadinessQuery = useSharingReadiness(companyId);
   const entries = operatorsQuery.data ?? [];
   const accessSummary = useMemo(() => summarizeAccess(entries), [entries]);
   const activeCopy = SUBVIEW_COPY[activeSubview];
+  const sharingReadiness = sharingReadinessQuery.data ?? null;
 
   if (!companyId || !company) {
     return (
@@ -296,9 +323,15 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             icon={Workflow}
           />
           <MissionMetricTile
-            label="Auth posture"
-            value={operatorsQuery.isLoading ? '...' : postureLabel(accessSummary)}
-            hint="Explicit operator identity model"
+            label="Sharing mode"
+            value={
+              sharingReadinessQuery.isLoading
+                ? '...'
+                : sharingReadiness
+                  ? sharingModeLabel(sharingReadiness.configuredMode)
+                  : postureLabel(accessSummary)
+            }
+            hint="Configured workspace sharing posture"
             icon={Bot}
           />
           <MissionMetricTile
@@ -418,6 +451,56 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             <p className="text-xs leading-5 text-muted-foreground">
               {postureDescription(accessSummary)}
             </p>
+            <MissionInsetSurface className="p-4">
+              {sharingReadinessQuery.isLoading ? (
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Resolving sharing readiness...
+                </p>
+              ) : sharingReadinessQuery.isError || !sharingReadiness ? (
+                <p className="text-xs leading-5 text-red-200">
+                  Sharing readiness is unavailable for this workspace.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <MissionPill tone="accent">
+                      configured {sharingModeLabel(sharingReadiness.configuredMode)}
+                    </MissionPill>
+                    <MissionPill>
+                      effective {sharingModeLabel(sharingReadiness.effectiveMode)}
+                    </MissionPill>
+                    <MissionPill tone={sharingReadinessTone(sharingReadiness.readiness)}>
+                      {sharingReadiness.readiness}
+                    </MissionPill>
+                  </div>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {sharingReadiness.lastExportedAt
+                      ? `Last export ${new Date(sharingReadiness.lastExportedAt).toLocaleString()}`
+                      : 'No workspace export or template has been recorded yet.'}
+                  </p>
+                  {sharingReadiness.missingRequirements.length > 0 ? (
+                    <div className="space-y-1 text-xs leading-5 text-muted-foreground">
+                      {sharingReadiness.missingRequirements.map((requirement) => (
+                        <p key={requirement}>- {requirement}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs leading-5 text-emerald-300">
+                      The configured sharing posture is ready on this workspace.
+                    </p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                    onClick={() => openSettingsSection('portability')}
+                  >
+                    Open portability
+                  </Button>
+                </div>
+              )}
+            </MissionInsetSurface>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"

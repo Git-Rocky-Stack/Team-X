@@ -68,7 +68,9 @@ describe('Autonomy shell wiring', () => {
 
   it('adds a company-scoped operators hook and autonomy shell content', () => {
     expect(hookSrc).toContain("queryKey: ['operators', companyId]");
-    expect(hookSrc).toContain('autonomyClient.operators.list(companyId!)');
+    expect(hookSrc).toContain('autonomyClient.operators.list(requireString(companyId,');
+    expect(hookSrc).toContain("queryKey: ['operators', 'sharing-readiness', companyId]");
+    expect(hookSrc).toContain('autonomyClient.operators.readiness(requireString(companyId,');
     expect(storeSrc).toContain("autonomySubview: 'access'");
     expect(storeSrc).toContain('autonomyMemoryThreadId: string | null;');
     expect(storeSrc).toContain('setAutonomySubview: (subview: AutonomySubview) => void;');
@@ -85,6 +87,9 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain('data-autonomy-subview={subview.value}');
     expect(viewSrc).toContain('Operator Control Plane');
     expect(viewSrc).toContain('zero-login by default');
+    expect(viewSrc).toContain('const sharingReadinessQuery = useSharingReadiness(companyId);');
+    expect(viewSrc).toContain("onClick={() => openSettingsSection('portability')}");
+    expect(viewSrc).toContain('Open portability');
     expect(viewSrc).toContain(
       "import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';",
     );
@@ -107,7 +112,9 @@ describe('Autonomy shell wiring', () => {
       "import { autonomyClient } from '@/features/autonomy/autonomy-client.js';",
     );
     expect(runtimeHookSrc).toContain("queryKey: ['runtime-profiles', companyId]");
-    expect(runtimeHookSrc).toContain('autonomyClient.runtimeProfiles.list(companyId!)');
+    expect(runtimeHookSrc).toContain(
+      "autonomyClient.runtimeProfiles.list(requireString(companyId, 'companyId'))",
+    );
     expect(runtimeHookSrc).toContain('autonomyClient.runtimeProfiles.create');
     expect(runtimeHookSrc).toContain('autonomyClient.runtimeProfiles.update');
     expect(runtimeHookSrc).toContain('autonomyClient.runtimeProfiles.bindEmployee');
@@ -132,7 +139,9 @@ describe('Autonomy shell wiring', () => {
     expect(routinesHookSrc).toContain(
       "queryKey: ['routine-runs', companyId, routineId ?? null, limit]",
     );
-    expect(routinesHookSrc).toContain('autonomyClient.routines.list(companyId!)');
+    expect(routinesHookSrc).toContain(
+      "autonomyClient.routines.list(requireString(companyId, 'companyId'))",
+    );
     expect(routinesHookSrc).toContain('autonomyClient.routines.create');
     expect(routinesHookSrc).toContain('autonomyClient.routines.update');
     expect(routinesHookSrc).toContain('autonomyClient.routines.runNow');
@@ -154,8 +163,12 @@ describe('Autonomy shell wiring', () => {
     expect(budgetsHookSrc).toContain(
       "queryKey: ['budgets', 'ledger', companyId, scopeKind ?? null, scopeRefId ?? null, limit]",
     );
-    expect(budgetsHookSrc).toContain('autonomyClient.budgets.getOverview(companyId!)');
-    expect(budgetsHookSrc).toContain('autonomyClient.budgets.listPolicies(companyId!)');
+    expect(budgetsHookSrc).toContain(
+      "autonomyClient.budgets.getOverview(requireString(companyId, 'companyId'))",
+    );
+    expect(budgetsHookSrc).toContain(
+      "autonomyClient.budgets.listPolicies(requireString(companyId, 'companyId'))",
+    );
     expect(budgetsHookSrc).toContain('autonomyClient.budgets.createPolicy');
     expect(budgetsHookSrc).toContain('autonomyClient.budgets.updatePolicy');
     expect(budgetsHookSrc).toContain('autonomyClient.budgets.deletePolicy');
@@ -213,9 +226,11 @@ describe('Autonomy shell wiring', () => {
     expect(memoryHookSrc).toContain(
       "queryKey: ['memory', 'checkpoints', companyId, threadId, limit]",
     );
-    expect(memoryHookSrc).toContain(
-      "queryKey: ['memory', 'packed-context', companyId, threadId, targetTokenBudget ?? null, recentTurnLimit ?? null]",
-    );
+    expect(memoryHookSrc).toContain("queryKey: [");
+    expect(memoryHookSrc).toContain("'memory',");
+    expect(memoryHookSrc).toContain("'packed-context',");
+    expect(memoryHookSrc).toContain('targetTokenBudget ?? null,');
+    expect(memoryHookSrc).toContain('recentTurnLimit ?? null,');
     expect(memoryHookSrc).toContain('autonomyClient.memory.getThreadDigest');
     expect(memoryHookSrc).toContain('autonomyClient.memory.listRunCheckpoints');
     expect(memoryHookSrc).toContain('autonomyClient.memory.packThreadContext');

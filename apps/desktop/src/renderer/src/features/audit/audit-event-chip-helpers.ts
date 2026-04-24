@@ -95,6 +95,9 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   'copilot.insight': 'bg-amber-600/20 text-amber-400',
   'copilot.dismissed': 'bg-gray-600/20 text-gray-400',
   'copilot.expired': 'bg-gray-600/20 text-gray-400',
+  'company.packageExported': 'bg-indigo-600/20 text-indigo-400',
+  'company.packageImported': 'bg-sky-600/20 text-sky-400',
+  'company.templateInstalled': 'bg-violet-600/20 text-violet-400',
 };
 
 /** Hand-tuned display labels where the auto-title-cased fallback reads
@@ -127,6 +130,9 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   'copilot.insight': 'Copilot Insight',
   'copilot.dismissed': 'Copilot Dismissed',
   'copilot.expired': 'Copilot Expired',
+  'company.packageExported': 'Workspace Export',
+  'company.packageImported': 'Workspace Import',
+  'company.templateInstalled': 'Template Installed',
 };
 
 /** Fallback color class when an event type is not in the map. */
@@ -204,6 +210,9 @@ export const SUMMARIZABLE_TYPES: ReadonlySet<string> = new Set([
   'copilot.insight',
   'copilot.dismissed',
   'copilot.expired',
+  'company.packageExported',
+  'company.packageImported',
+  'company.templateInstalled',
 ]);
 
 function clampSummary(s: string): string {
@@ -305,6 +314,24 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
             : payload.subjectRefId;
         parts.push(truncated);
       }
+      break;
+    }
+    case 'company.packageExported': {
+      if (typeof payload.mode === 'string') parts.push(payload.mode);
+      if (typeof payload.sharingMode === 'string') parts.push(payload.sharingMode);
+      if (typeof payload.packageId === 'string') parts.push(payload.packageId.slice(0, 8));
+      break;
+    }
+    case 'company.packageImported': {
+      if (typeof payload.mode === 'string') parts.push(payload.mode);
+      if (typeof payload.sharingMode === 'string') parts.push(payload.sharingMode);
+      if (typeof payload.packageId === 'string') parts.push(payload.packageId.slice(0, 8));
+      break;
+    }
+    case 'company.templateInstalled': {
+      if (typeof payload.templateName === 'string') parts.push(payload.templateName);
+      if (typeof payload.sharingMode === 'string') parts.push(payload.sharingMode);
+      if (typeof payload.packageId === 'string') parts.push(payload.packageId.slice(0, 8));
       break;
     }
 

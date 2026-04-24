@@ -30,7 +30,7 @@ describe('User Guide shell wiring', () => {
   it('adds a dedicated user-guide top-level view plus guide utility actions in the store', () => {
     expect(storeSrc).toContain("| 'user-guide'");
     expect(storeSrc).toContain(
-      "export type SettingsSectionFocus = 'providers' | 'extensions' | 'memory';",
+      "export type SettingsSectionFocus = 'providers' | 'extensions' | 'memory' | 'portability';",
     );
     expect(storeSrc).toContain('hireDialogRequestNonce');
     expect(storeSrc).toContain("autonomySubview: 'access'");
@@ -61,6 +61,7 @@ describe('User Guide shell wiring', () => {
 
   it('supports guide-driven settings section focus', () => {
     expect(settingsViewSrc).toContain('data-settings-section="extensions"');
+    expect(settingsViewSrc).toContain('data-settings-section="portability"');
     expect(settingsViewSrc).toContain('data-settings-section="memory"');
     expect(settingsViewSrc).toContain('data-settings-section="providers"');
     expect(settingsViewSrc).toContain('document.querySelector<HTMLElement>(');
@@ -69,12 +70,15 @@ describe('User Guide shell wiring', () => {
 
   it('adds autonomy guide actions with subview deep links through the shared app store', () => {
     expect(guideContentSrc).toContain("id: 'open-settings-memory'");
+    expect(guideContentSrc).toContain("id: 'open-settings-portability'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-access'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-runtimes'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-approvals'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-memory'");
     expect(guideContentSrc).toContain("id: 'autonomy-control-plane'");
     expect(guideContentSrc).toContain("id: 'long-run-memory'");
+    expect(guideContentSrc).toContain("id: 'portability-sharing'");
+    expect(guideContentSrc).toContain("id: 'portability-reviewed'");
     expect(guideHookSrc).toContain("if (action.view === 'autonomy' && action.autonomySubview) {");
     expect(guideHookSrc).toContain('setAutonomySubview(action.autonomySubview);');
   });

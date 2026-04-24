@@ -72,6 +72,7 @@ import type {
   CompaniesCreateResponse,
   CompaniesDeleteRequest,
   CompaniesUpdateRequest,
+  CompanySharingReadinessSummary,
   CopilotAskArgs,
   CopilotAskResult,
   CopilotConfigureArgs,
@@ -108,6 +109,7 @@ import type {
   ExtensionSummary,
   FireEmployeeRequest,
   GetEffectiveAuthorityRequest,
+  GetOperatorSharingReadinessRequest,
   GetThreadDigestRequest,
   Goal,
   GoalDetail,
@@ -273,6 +275,7 @@ const CHANNELS = {
   companiesDelete: 'companies.delete',
   employeesList: 'employees.list',
   operatorsList: 'operators.list',
+  operatorsReadiness: 'operators.readiness',
   runtimeProfilesList: 'runtimeProfiles.list',
   runtimeProfilesCreate: 'runtimeProfiles.create',
   runtimeProfilesUpdate: 'runtimeProfiles.update',
@@ -495,6 +498,11 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     operators: {
       list: (companyId: string) =>
         ipc.invoke(CHANNELS.operatorsList, { companyId }) as Promise<OperatorAccessEntry[]>,
+      readiness: (companyId: string) =>
+        ipc.invoke(
+          CHANNELS.operatorsReadiness,
+          { companyId } satisfies GetOperatorSharingReadinessRequest,
+        ) as Promise<CompanySharingReadinessSummary>,
     },
     runtimeProfiles: {
       list: (companyId: string) =>

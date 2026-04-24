@@ -69,6 +69,7 @@ import type {
   BudgetScopeKind,
   ChatMessage,
   Company,
+  CompanySharingReadinessSummary,
   CompanyImportPreview,
   CompanyPackageManifest,
   CompanyPackageMode,
@@ -257,6 +258,7 @@ export interface ListCompanyTemplatesResponse {
 }
 
 export interface InstallCompanyTemplateRequest {
+  companyId?: string;
   packagePath: string;
 }
 
@@ -269,6 +271,10 @@ export interface ListEmployeesRequest {
 }
 
 export interface ListOperatorsRequest {
+  companyId: string;
+}
+
+export interface GetOperatorSharingReadinessRequest {
   companyId: string;
 }
 
@@ -1777,6 +1783,10 @@ export interface IpcContract {
     request: ListOperatorsRequest;
     response: OperatorAccessEntry[];
   };
+  'operators.readiness': {
+    request: GetOperatorSharingReadinessRequest;
+    response: CompanySharingReadinessSummary;
+  };
   'runtimeProfiles.list': {
     request: ListRuntimeProfilesRequest;
     response: RuntimeProfileSummary[];
@@ -2576,6 +2586,8 @@ export interface TeamXApi {
   operators: {
     /** Return every operator membership for the given company. */
     list(companyId: string): Promise<OperatorAccessEntry[]>;
+    /** Return sharing posture and readiness for the given company. */
+    readiness(companyId: string): Promise<CompanySharingReadinessSummary>;
   };
   runtimeProfiles: {
     /** List runtime profiles and bound employee ids for one workspace. */

@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import type { CompanyPackageMode } from '@team-x/shared-types';
+
 import { ipc } from '@/lib/ipc.js';
 import { requireString } from '@/lib/required.js';
 
@@ -21,13 +23,20 @@ export function useCompanyTemplatePreview(packagePath: string | null) {
   });
 }
 
-export function useExportCompanyTemplate(companyId: string | null) {
+export function useCompanyPackagePreview(packagePath: string | null) {
+  return useCompanyTemplatePreview(packagePath);
+}
+
+export function useExportCompanyPackage(
+  companyId: string | null,
+  mode: CompanyPackageMode,
+) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
       ipc.companies.exportPackage({
         companyId: requireString(companyId, 'companyId'),
-        mode: 'template',
+        mode,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['company-templates'] });
@@ -36,10 +45,22 @@ export function useExportCompanyTemplate(companyId: string | null) {
   });
 }
 
-export function useInstallCompanyTemplate() {
+export function useExportCompanyTemplate(companyId: string | null) {
+  return useExportCompanyPackage(companyId, 'template');
+}
+
+export function useExportWorkspacePackage(companyId: string | null) {
+  return useExportCompanyPackage(companyId, 'workspace-export');
+}
+
+export function useInstallCompanyTemplate(companyId: string | null = null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (packagePath: string) => ipc.companies.installTemplate({ packagePath }),
+    mutationFn: (packagePath: string) =>
+      ipc.companies.installTemplate({
+        ...(companyId ? { companyId } : {}),
+        packagePath,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['company-templates'] });
     },
@@ -47,7 +68,11 @@ export function useInstallCompanyTemplate() {
 }
 
 export function useImportCompanyPackage() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ipc.companies.importPackage,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['companies'] });
+    },
   });
 }
