@@ -7,6 +7,7 @@ import {
   Bot,
   Gauge,
   LayoutPanelTop,
+  MessageCircle,
   Radar,
   RefreshCw,
   Sparkles,
@@ -43,6 +44,11 @@ import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
 import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
 
 const DAY_MS = 86_400_000;
+const DASHBOARD_TOUCH_BUTTON_CLASS = 'min-h-11';
+const DASHBOARD_GLASS_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border-white/10 bg-black/10 hover:bg-black/20`;
+const DASHBOARD_GHOST_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border border-white/10 bg-black/10 hover:bg-black/20`;
+const DASHBOARD_PILL_TOGGLE_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full px-4`;
+const DASHBOARD_PILL_GHOST_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full border border-white/10 bg-black/10 hover:bg-black/20`;
 
 interface MissionControlDashboardProps {
   companyId: string | null;
@@ -128,12 +134,12 @@ function HeroMetric({
 
   const content = (
     <>
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
         <Icon className="h-4 w-4 text-brand" />
         {label}
       </div>
       <div className="flex items-end justify-between gap-3">
-        <span className="text-2xl font-semibold tracking-tight text-foreground">{value}</span>
+        <span className="text-2xl font-semibold tracking-normal text-foreground">{value}</span>
         {onClick && (
           <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         )}
@@ -237,7 +243,7 @@ function PanelMessageState({
       className={cn(
         'flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border p-8 text-center',
         tone === 'danger'
-          ? 'border-red-500/25 bg-red-500/8 text-red-200'
+          ? 'border-red-500/25 bg-red-500/10 text-red-200'
           : 'border-dashed border-white/10 bg-black/10 text-muted-foreground',
       )}
       data-dashboard-panel-state={dataState}
@@ -450,7 +456,7 @@ export function MissionControlDashboard({
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="max-w-3xl space-y-3">
-                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                   <LayoutPanelTop className="h-4 w-4 text-brand" />
                   Mission Control
                   {company?.slug && (
@@ -471,7 +477,7 @@ export function MissionControlDashboard({
                   )}
                 </div>
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.35rem]">
+                  <h1 className="text-3xl font-semibold tracking-normal text-foreground sm:text-[2.35rem]">
                     {company?.name ?? 'Select a workspace to open the control surface'}
                   </h1>
                   <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
@@ -489,12 +495,14 @@ export function MissionControlDashboard({
                     size="sm"
                     onClick={() => handlePanelToggle('agentRuns')}
                     className={cn(
-                      'rounded-full px-4',
+                      DASHBOARD_PILL_TOGGLE_CLASS,
                       !layout.agentRuns && 'border-white/10 bg-black/10 hover:bg-black/20',
                     )}
                     data-dashboard-hero-toggle="agent-runs"
+                    aria-pressed={layout.agentRuns}
                     disabled={!companyId}
                   >
+                    <Bot className="h-4 w-4" />
                     Agent Runs
                   </Button>
                   <Button
@@ -503,12 +511,14 @@ export function MissionControlDashboard({
                     size="sm"
                     onClick={() => handlePanelToggle('employeeQueues')}
                     className={cn(
-                      'rounded-full px-4',
+                      DASHBOARD_PILL_TOGGLE_CLASS,
                       !layout.employeeQueues && 'border-white/10 bg-black/10 hover:bg-black/20',
                     )}
                     data-dashboard-hero-toggle="employee-queues"
+                    aria-pressed={layout.employeeQueues}
                     disabled={!companyId}
                   >
+                    <Ticket className="h-4 w-4" />
                     Employee Queues
                   </Button>
                   <Button
@@ -517,7 +527,7 @@ export function MissionControlDashboard({
                     size="sm"
                     onClick={handleResetLayout}
                     disabled={!companyId || !dashboardLayout.layoutDirty}
-                    className="rounded-full border border-white/10 bg-black/10 hover:bg-black/20"
+                    className={DASHBOARD_PILL_GHOST_CLASS}
                     data-dashboard-reset-layout=""
                   >
                     <TimerReset className="h-4 w-4" />
@@ -586,7 +596,7 @@ export function MissionControlDashboard({
                     variant="outline"
                     size="sm"
                     onClick={() => setActiveView('tickets')}
-                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                    className={DASHBOARD_GLASS_BUTTON_CLASS}
                   >
                     <Ticket className="h-4 w-4" />
                     Open tickets
@@ -596,7 +606,7 @@ export function MissionControlDashboard({
                     variant="outline"
                     size="sm"
                     onClick={() => setDashboardSubview('commands')}
-                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                    className={DASHBOARD_GLASS_BUTTON_CLASS}
                   >
                     <Radar className="h-4 w-4" />
                     Command log
@@ -606,7 +616,7 @@ export function MissionControlDashboard({
                     variant="outline"
                     size="sm"
                     onClick={() => setActiveView('telemetry')}
-                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                    className={DASHBOARD_GLASS_BUTTON_CLASS}
                   >
                     <Gauge className="h-4 w-4" />
                     Telemetry
@@ -618,7 +628,7 @@ export function MissionControlDashboard({
                     onClick={() =>
                       handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'access')
                     }
-                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                    className={DASHBOARD_GLASS_BUTTON_CLASS}
                   >
                     <Sparkles className="h-4 w-4" />
                     Autonomy
@@ -738,7 +748,7 @@ export function MissionControlDashboard({
                   type="button"
                   variant="outline"
                   onClick={onRetry}
-                  className="border-white/10 bg-black/10 hover:bg-black/20"
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
                 >
                   <RefreshCw className="h-4 w-4" />
                   Retry
@@ -765,8 +775,9 @@ export function MissionControlDashboard({
                       variant="ghost"
                       size="sm"
                       onClick={() => setDashboardSubview('commands')}
-                      className="border border-white/10 bg-black/10 hover:bg-black/20"
+                      className={DASHBOARD_GHOST_BUTTON_CLASS}
                     >
+                      <Radar className="h-4 w-4" />
                       Command context
                     </Button>
                   }
@@ -798,7 +809,7 @@ export function MissionControlDashboard({
                           onClick={() => {
                             void agentRunsQuery.retry();
                           }}
-                          className="border-white/10 bg-black/10 hover:bg-black/20"
+                          className={DASHBOARD_GLASS_BUTTON_CLASS}
                         >
                           <RefreshCw className="h-4 w-4" />
                           Retry
@@ -815,7 +826,7 @@ export function MissionControlDashboard({
                   ) : (
                     <div className="grid gap-3" data-dashboard-panel-state="agent-runs-ready">
                       {agentRunsQuery.hasHistoryWarning && (
-                        <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/8 p-4 text-sm text-amber-100">
+                        <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-amber-100">
                           <div className="space-y-1">
                             <p className="font-medium">Run history refresh failed</p>
                             <p className="text-amber-100/80">
@@ -831,7 +842,7 @@ export function MissionControlDashboard({
                               onClick={() => {
                                 void agentRunsQuery.retry();
                               }}
-                              className="border-white/10 bg-black/10 hover:bg-black/20"
+                              className={DASHBOARD_GLASS_BUTTON_CLASS}
                             >
                               <RefreshCw className="h-4 w-4" />
                               Retry history
@@ -928,8 +939,9 @@ export function MissionControlDashboard({
                       variant="ghost"
                       size="sm"
                       onClick={() => setActiveView('tickets')}
-                      className="border border-white/10 bg-black/10 hover:bg-black/20"
+                      className={DASHBOARD_GHOST_BUTTON_CLASS}
                     >
+                      <Ticket className="h-4 w-4" />
                       Open tickets
                     </Button>
                   }
@@ -962,7 +974,7 @@ export function MissionControlDashboard({
                           variant="outline"
                           size="sm"
                           onClick={handleRetryQueueBoard}
-                          className="border-white/10 bg-black/10 hover:bg-black/20"
+                          className={DASHBOARD_GLASS_BUTTON_CLASS}
                         >
                           <RefreshCw className="h-4 w-4" />
                           Retry
@@ -1020,8 +1032,9 @@ export function MissionControlDashboard({
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setSelectedEmployee(row.employeeId)}
-                                    className="border-white/10 bg-black/10 hover:bg-black/20"
+                                    className={DASHBOARD_GLASS_BUTTON_CLASS}
                                   >
+                                    <MessageCircle className="h-4 w-4" />
                                     Chat
                                   </Button>
                                   <Button
@@ -1029,8 +1042,9 @@ export function MissionControlDashboard({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setActiveView('tickets')}
-                                    className="border border-white/10 bg-black/10 hover:bg-black/20"
+                                    className={DASHBOARD_GHOST_BUTTON_CLASS}
                                   >
+                                    <Ticket className="h-4 w-4" />
                                     Tickets
                                   </Button>
                                 </div>
@@ -1075,7 +1089,7 @@ export function MissionControlDashboard({
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                                <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-normal text-muted-foreground">
                                   <span>Open {row.counts.open}</span>
                                   <span>In progress {row.counts.inProgress}</span>
                                   <span>Blocked {row.counts.blocked}</span>
@@ -1103,7 +1117,11 @@ export function MissionControlDashboard({
                       The mission-control shell is still active below, but the live board row is
                       hidden for this workspace.
                     </p>
-                    <Button type="button" onClick={handleResetLayout}>
+                    <Button
+                      type="button"
+                      onClick={handleResetLayout}
+                      className={DASHBOARD_TOUCH_BUTTON_CLASS}
+                    >
                       <TimerReset className="h-4 w-4" />
                       Restore default hybrid layout
                     </Button>
@@ -1116,7 +1134,7 @@ export function MissionControlDashboard({
               <div className="h-full">
                 <Card className="mission-panel h-full rounded-[24px] border-white/10 bg-transparent shadow-none">
                   <CardHeader className="pb-4">
-                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                       <Sparkles className="h-4 w-4 text-brand" />
                       Copilot Insights
                     </div>
@@ -1144,7 +1162,7 @@ export function MissionControlDashboard({
               >
                 <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                       <Radar className="h-4 w-4 text-brand" />
                       Recent Commands
                     </div>
@@ -1155,8 +1173,9 @@ export function MissionControlDashboard({
                     variant="ghost"
                     size="sm"
                     onClick={() => setDashboardSubview('commands')}
-                    className="border border-white/10 bg-black/10 hover:bg-black/20"
+                    className={DASHBOARD_GHOST_BUTTON_CLASS}
                   >
+                    <Radar className="h-4 w-4" />
                     Full log
                   </Button>
                 </CardHeader>
@@ -1186,7 +1205,7 @@ export function MissionControlDashboard({
                           variant="outline"
                           size="sm"
                           onClick={handleRetryCommandHistory}
-                          className="border-white/10 bg-black/10 hover:bg-black/20"
+                          className={DASHBOARD_GLASS_BUTTON_CLASS}
                         >
                           <RefreshCw className="h-4 w-4" />
                           Retry
@@ -1235,7 +1254,7 @@ export function MissionControlDashboard({
               >
                 <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
                       <Gauge className="h-4 w-4 text-brand" />
                       Telemetry Snapshot
                     </div>
@@ -1246,8 +1265,9 @@ export function MissionControlDashboard({
                     variant="ghost"
                     size="sm"
                     onClick={() => setActiveView('telemetry')}
-                    className="border border-white/10 bg-black/10 hover:bg-black/20"
+                    className={DASHBOARD_GHOST_BUTTON_CLASS}
                   >
+                    <Gauge className="h-4 w-4" />
                     Open telemetry
                   </Button>
                 </CardHeader>
@@ -1277,7 +1297,7 @@ export function MissionControlDashboard({
                           variant="outline"
                           size="sm"
                           onClick={handleRetryTelemetrySnapshot}
-                          className="border-white/10 bg-black/10 hover:bg-black/20"
+                          className={DASHBOARD_GLASS_BUTTON_CLASS}
                         >
                           <RefreshCw className="h-4 w-4" />
                           Retry
@@ -1295,34 +1315,34 @@ export function MissionControlDashboard({
                     <>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                             Total runs
                           </p>
-                          <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+                          <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.totalRuns)}
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                             Total tokens
                           </p>
-                          <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+                          <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.totalTokens)}
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                             Avg latency
                           </p>
-                          <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+                          <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.avgLatencyMs)}ms
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                             Total cost
                           </p>
-                          <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+                          <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
                             {formatUsd(telemetryStatsQuery.data?.totalCostUsd)}
                           </p>
                         </div>
@@ -1343,7 +1363,7 @@ export function MissionControlDashboard({
                         data-dashboard-autonomy-snapshot=""
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                             Autonomy snapshot
                           </p>
                           <Badge
