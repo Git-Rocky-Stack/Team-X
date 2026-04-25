@@ -502,6 +502,7 @@ export function MissionControlDashboard({
                     )}
                     data-dashboard-hero-toggle="agent-runs"
                     aria-pressed={layout.agentRuns}
+                    aria-label={`${layout.agentRuns ? 'Hide' : 'Show'} Agent Runs panel`}
                     disabled={!companyId}
                   >
                     <Bot className="h-4 w-4" />
@@ -518,6 +519,7 @@ export function MissionControlDashboard({
                     )}
                     data-dashboard-hero-toggle="employee-queues"
                     aria-pressed={layout.employeeQueues}
+                    aria-label={`${layout.employeeQueues ? 'Hide' : 'Show'} Employee Queues panel`}
                     disabled={!companyId}
                   >
                     <Ticket className="h-4 w-4" />
@@ -531,6 +533,7 @@ export function MissionControlDashboard({
                     disabled={!companyId || !dashboardLayout.layoutDirty}
                     className={DASHBOARD_PILL_GHOST_CLASS}
                     data-dashboard-reset-layout=""
+                    aria-label="Reset dashboard layout to the default hybrid view"
                   >
                     <TimerReset className="h-4 w-4" />
                     Reset layout
@@ -787,6 +790,7 @@ export function MissionControlDashboard({
                       size="sm"
                       onClick={() => setDashboardSubview('commands')}
                       className={DASHBOARD_GHOST_BUTTON_CLASS}
+                      aria-label="Open dashboard command context for agent runs"
                     >
                       <Radar className="h-4 w-4" />
                       Command context
@@ -866,6 +870,7 @@ export function MissionControlDashboard({
                           type="button"
                           key={run.runId}
                           onClick={() => handleOpenRunThread(run.threadId)}
+                          aria-label={`Open Copilot thread for ${run.label}`}
                           className={cn(
                             'group rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition-all hover:border-brand/30 hover:bg-black/20',
                             DASHBOARD_INTERACTIVE_FOCUS_CLASS,
@@ -954,6 +959,7 @@ export function MissionControlDashboard({
                       size="sm"
                       onClick={() => setActiveView('tickets')}
                       className={DASHBOARD_GHOST_BUTTON_CLASS}
+                      aria-label="Open tickets for employee queue detail"
                     >
                       <Ticket className="h-4 w-4" />
                       Open tickets
@@ -1047,6 +1053,7 @@ export function MissionControlDashboard({
                                     size="sm"
                                     onClick={() => setSelectedEmployee(row.employeeId)}
                                     className={DASHBOARD_GLASS_BUTTON_CLASS}
+                                    aria-label={`Open chat with ${row.name}`}
                                   >
                                     <MessageCircle className="h-4 w-4" />
                                     Chat
@@ -1057,6 +1064,7 @@ export function MissionControlDashboard({
                                     size="sm"
                                     onClick={() => setActiveView('tickets')}
                                     className={DASHBOARD_GHOST_BUTTON_CLASS}
+                                    aria-label={`Open tickets for ${row.name}`}
                                   >
                                     <Ticket className="h-4 w-4" />
                                     Tickets
@@ -1188,6 +1196,7 @@ export function MissionControlDashboard({
                     size="sm"
                     onClick={() => setDashboardSubview('commands')}
                     className={DASHBOARD_GHOST_BUTTON_CLASS}
+                    aria-label="Open full dashboard command log"
                   >
                     <Radar className="h-4 w-4" />
                     Full log
@@ -1239,6 +1248,7 @@ export function MissionControlDashboard({
                         type="button"
                         key={entry.id}
                         onClick={() => setDashboardSubview('commands')}
+                        aria-label={`Open command log entry ${intentLabel(entry.intent)}`}
                         className={cn(
                           'group flex w-full items-start justify-between gap-4 rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition-all hover:border-brand/30 hover:bg-black/20',
                           DASHBOARD_INTERACTIVE_FOCUS_CLASS,
@@ -1283,6 +1293,7 @@ export function MissionControlDashboard({
                     size="sm"
                     onClick={() => setActiveView('telemetry')}
                     className={DASHBOARD_GHOST_BUTTON_CLASS}
+                    aria-label="Open full telemetry dashboard"
                   >
                     <Gauge className="h-4 w-4" />
                     Open telemetry
@@ -1376,6 +1387,7 @@ export function MissionControlDashboard({
                         onClick={() =>
                           handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'budgets')
                         }
+                        aria-label="Open autonomy snapshot detail"
                         className={cn(
                           'w-full rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition hover:border-brand/30 hover:bg-black/20',
                           DASHBOARD_INTERACTIVE_FOCUS_CLASS,

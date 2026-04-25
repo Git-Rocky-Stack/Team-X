@@ -98,6 +98,21 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('role="alert"');
     expect(missionControlSrc).toContain('data-dashboard-layout-error=""');
   });
+
+  it('names contextual dashboard actions for assistive technology', () => {
+    expect(missionControlSrc).toContain(
+      "aria-label={`${layout.agentRuns ? 'Hide' : 'Show'} Agent Runs panel`}",
+    );
+    expect(missionControlSrc).toContain(
+      "aria-label={`${layout.employeeQueues ? 'Hide' : 'Show'} Employee Queues panel`}",
+    );
+    expect(missionControlSrc).toContain(
+      'aria-label="Reset dashboard layout to the default hybrid view"',
+    );
+    expect(missionControlSrc).toContain('aria-label={`Open Copilot thread for ${run.label}`}');
+    expect(missionControlSrc).toContain('aria-label={`Open chat with ${row.name}`}');
+    expect(missionControlSrc).toContain('aria-label="Open full telemetry dashboard"');
+  });
 });
 
 describe('Dashboard integration wiring', () => {
