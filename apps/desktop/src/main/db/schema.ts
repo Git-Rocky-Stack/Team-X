@@ -151,8 +151,14 @@ export const operatorInvites = sqliteTable(
   (table) => ({
     companyIdx: index('idx_operator_invites_company').on(table.companyId),
     statusIdx: index('idx_operator_invites_status').on(table.status),
-    companySourceIdx: index('idx_operator_invites_company_source').on(table.companyId, table.sourceKind),
-    companyStatusIdx: index('idx_operator_invites_company_status').on(table.companyId, table.status),
+    companySourceIdx: index('idx_operator_invites_company_source').on(
+      table.companyId,
+      table.sourceKind,
+    ),
+    companyStatusIdx: index('idx_operator_invites_company_status').on(
+      table.companyId,
+      table.status,
+    ),
   }),
 );
 
@@ -955,6 +961,8 @@ export const projects = sqliteTable('projects', {
   leadId: text('lead_id').references(() => employees.id),
   /** low | medium | high | critical. */
   priority: text('priority').notNull().default('medium'),
+  /** Optional deadline as UNIX ms timestamp. */
+  targetDate: integer('target_date'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });

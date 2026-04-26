@@ -8,7 +8,7 @@ import { useAppStore } from '@/store/app-store.js';
 import { ProjectCard } from './project-card.js';
 
 const COLUMNS: { status: ProjectStatus; label: string; accent: string }[] = [
-  { status: 'planning', label: 'Planning', accent: 'border-t-blue-500' },
+  { status: 'planning', label: 'Planning', accent: 'border-t-brand' },
   { status: 'active', label: 'Active', accent: 'border-t-yellow-500' },
   { status: 'completed', label: 'Completed', accent: 'border-t-green-500' },
   { status: 'archived', label: 'Archived', accent: 'border-t-zinc-500' },

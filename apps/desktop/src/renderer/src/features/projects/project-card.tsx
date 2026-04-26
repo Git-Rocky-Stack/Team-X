@@ -1,5 +1,5 @@
 import type { Employee, Project, ProjectPriority } from '@team-x/shared-types';
-import { AlertTriangle, ArrowUpCircle, Minus, User } from 'lucide-react';
+import { AlertTriangle, ArrowUpCircle, CalendarDays, Minus, User } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Card } from '@/components/ui/card.js';
@@ -24,6 +24,11 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
   const priority = PRIORITY_CONFIG[project.priority] ?? PRIORITY_CONFIG.medium;
   const PriorityIcon = priority.icon;
   const lead = project.leadId ? employees.find((e) => e.id === project.leadId) : null;
+  const targetDate = project.targetDate ? new Date(project.targetDate) : null;
+  const isOverdue =
+    targetDate &&
+    targetDate.getTime() < Date.now() &&
+    !['completed', 'archived'].includes(project.status);
 
   return (
     <button type="button" onClick={onClick} className="w-full text-left">
@@ -45,7 +50,7 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
           <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">{project.description}</p>
         )}
 
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {lead ? (
             <div className="flex items-center gap-1.5">
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand/20 text-[10px] font-bold text-brand">
@@ -57,6 +62,16 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
             <div className="flex items-center gap-1.5 text-muted-foreground/50">
               <User className="h-3.5 w-3.5" />
               <span className="text-[11px]">No lead</span>
+            </div>
+          )}
+          {targetDate && (
+            <div
+              className={`flex items-center gap-1.5 text-[11px] ${
+                isOverdue ? 'text-red-400' : 'text-muted-foreground'
+              }`}
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>{targetDate.toLocaleDateString()}</span>
             </div>
           )}
         </div>

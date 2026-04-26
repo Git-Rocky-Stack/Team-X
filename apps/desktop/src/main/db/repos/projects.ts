@@ -33,6 +33,7 @@ export interface CreateProjectInput {
   leadId?: string | null;
   priority?: string;
   status?: string;
+  targetDate?: number | null;
 }
 
 export interface UpdateProjectInput {
@@ -42,6 +43,7 @@ export interface UpdateProjectInput {
   goalId?: string | null;
   leadId?: string | null;
   priority?: string;
+  targetDate?: number | null;
 }
 
 type ProjectsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -62,6 +64,7 @@ export function createProjectsRepo<TRunResult>(db: ProjectsDb<TRunResult>) {
           status: input.status ?? 'planning',
           leadId: input.leadId ?? null,
           priority: input.priority ?? 'medium',
+          targetDate: input.targetDate ?? null,
           createdAt: now,
           updatedAt: now,
         })
@@ -107,6 +110,7 @@ export function createProjectsRepo<TRunResult>(db: ProjectsDb<TRunResult>) {
       if (input.goalId !== undefined) set.goalId = input.goalId;
       if (input.leadId !== undefined) set.leadId = input.leadId;
       if (input.priority !== undefined) set.priority = input.priority;
+      if (input.targetDate !== undefined) set.targetDate = input.targetDate;
       db.update(projects).set(set).where(eq(projects.id, id)).run();
     },
 

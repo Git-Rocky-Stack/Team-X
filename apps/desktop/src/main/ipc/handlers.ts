@@ -40,10 +40,10 @@
  */
 
 import type {
-  AddProviderRequest,
-  AddProviderResponse,
   AcceptOperatorInviteRequest,
   AcceptOperatorInviteResponse,
+  AddProviderRequest,
+  AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   ApprovalItem,
@@ -79,8 +79,8 @@ import type {
   CompaniesUpdateRequest,
   Company,
   CompanyCloudLinkStatus,
-  CompanySharingReadinessSummary,
   CompanySettings,
+  CompanySharingReadinessSummary,
   CompanyStatus,
   CopilotExportRequest,
   CopilotExportResponse,
@@ -117,11 +117,10 @@ import type {
   ExtensionSummary,
   GetBudgetOverviewRequest,
   GetCloudWorkspaceLinkRequest,
-  LinkCloudWorkspaceRequest,
   GetEffectiveAuthorityRequest,
   GetGoalRequest,
-  GetOperatorSharingReadinessRequest,
   GetMeetingRequest,
+  GetOperatorSharingReadinessRequest,
   GetProjectRequest,
   GetThreadDigestRequest,
   GetTicketRequest,
@@ -138,6 +137,7 @@ import type {
   InstallMcpTemplateRequest,
   InterjectMeetingRequest,
   InterjectMeetingResponse,
+  LinkCloudWorkspaceRequest,
   LinkTicketToProjectRequest,
   ListApprovalItemsRequest,
   ListArtifactsRequest,
@@ -154,8 +154,8 @@ import type {
   ListGoalsRequest,
   ListMcpTemplatesRequest,
   ListMeetingsRequest,
-  ListOperatorsRequest,
   ListOperatorInvitesRequest,
+  ListOperatorsRequest,
   ListProjectsRequest,
   ListProviderModelsRequest,
   ListProviderModelsResponse,
@@ -183,14 +183,14 @@ import type {
   PreviewCompanyPackageImportResponse,
   Project,
   ProjectDetail,
-  RemoveProviderRequest,
-  RevokeOperatorInviteRequest,
-  ReopenTicketRequest,
   ReconnectCloudWorkspaceRequest,
+  RemoveProviderRequest,
+  ReopenTicketRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
   ReviewApprovalItemRequest,
   ReviewAuthorityRequestRequest,
+  RevokeOperatorInviteRequest,
   Routine,
   RoutineRun,
   RunCheckpoint,
@@ -244,6 +244,7 @@ import type {
   Ticket,
   TicketAttachment,
   TicketDetail,
+  UnlinkCloudWorkspaceRequest,
   UnlinkTicketFromProjectRequest,
   UpdateBudgetPolicyRequest,
   UpdateCheckResult,
@@ -254,7 +255,6 @@ import type {
   UpdateRoutineRequest,
   UpdateRuntimeProfileRequest,
   UpdateTicketRequest,
-  UnlinkCloudWorkspaceRequest,
   UpsertSkillAssignmentRequest,
   ValidateRuntimeProfileRequest,
   VaultDownloadResponse,
@@ -1140,9 +1140,7 @@ export interface IpcHandlers {
   /** `cloud.unlinkWorkspace` — clear one workspace's linked-workspace metadata. */
   cloudUnlinkWorkspace(req: UnlinkCloudWorkspaceRequest): Promise<CompanyCloudLinkStatus>;
   /** `cloud.reconnectWorkspace` — refresh one linked workspace after a degraded or stale sync posture. */
-  cloudReconnectWorkspace(
-    req: ReconnectCloudWorkspaceRequest,
-  ): Promise<CompanyCloudLinkStatus>;
+  cloudReconnectWorkspace(req: ReconnectCloudWorkspaceRequest): Promise<CompanyCloudLinkStatus>;
   /** `operators.listInvites` — return pending and historical invites for a company. */
   operatorsListInvites(req: ListOperatorInvitesRequest): Promise<OperatorInvite[]>;
   /** `operators.createInvite` — create one shared-operator invite placeholder. */
@@ -1957,6 +1955,7 @@ function rowToProject(row: ProjectRow): Project {
     status: row.status as ProjectStatus,
     leadId: row.leadId,
     priority: row.priority as ProjectPriority,
+    targetDate: row.targetDate,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -4816,6 +4815,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         description: req.description ?? '',
         leadId: req.leadId ?? null,
         priority: req.priority ?? 'medium',
+        targetDate: req.targetDate ?? null,
       });
 
       // Invariant #11 (Phase 5.6 M-C step f).
@@ -4855,12 +4855,20 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
 
       // Compute patchedKeys BEFORE the write to track caller intent.
       // Mirrors the `companies.update` patchedKeys convention.
-      const patchedKeys: Array<'title' | 'description' | 'status' | 'goalId' | 'leadId'> = [];
+      const patchedKeys: Array<
+        'title' | 'description' | 'status' | 'goalId' | 'leadId' | 'priority' | 'targetDate'
+      > = [];
       if (req.title !== undefined) patchedKeys.push('title');
       if (req.description !== undefined) patchedKeys.push('description');
       if (req.status !== undefined) patchedKeys.push('status');
       if (req.goalId !== undefined) patchedKeys.push('goalId');
       if (req.leadId !== undefined) patchedKeys.push('leadId');
+      if (req.priority !== undefined) patchedKeys.push('priority');
+      if (req.targetDate !== undefined) patchedKeys.push('targetDate');
+
+      const previousGoalId = project.goalId;
+      const nextGoalId = req.goalId !== undefined ? req.goalId : previousGoalId;
+      const goalBindingChanged = req.goalId !== undefined && req.goalId !== previousGoalId;
 
       projectsRepo.update(req.projectId, {
         title: req.title,
@@ -4869,20 +4877,14 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         goalId: req.goalId,
         leadId: req.leadId,
         priority: req.priority,
+        targetDate: req.targetDate,
       });
-      // If status changed to completed/archived, recalc parent goal progress
-      if ((req.status === 'completed' || req.status === 'archived') && project.goalId) {
-        goalsRepo.recalcProgress(project.goalId);
+
+      if ((req.status !== undefined || goalBindingChanged) && previousGoalId) {
+        goalsRepo.recalcProgress(previousGoalId);
       }
-      // Also recalc if status changed FROM completed/archived back to something else
-      if (
-        req.status &&
-        req.status !== 'completed' &&
-        req.status !== 'archived' &&
-        (project.status === 'completed' || project.status === 'archived') &&
-        project.goalId
-      ) {
-        goalsRepo.recalcProgress(project.goalId);
+      if (goalBindingChanged && nextGoalId && nextGoalId !== previousGoalId) {
+        goalsRepo.recalcProgress(nextGoalId);
       }
 
       // Invariant #11.

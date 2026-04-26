@@ -82,6 +82,32 @@
   .font-mono {
     font-family: "JetBrains Mono Variable", ui-monospace, monospace;
   }
+
+  select {
+    color-scheme: dark;
+    accent-color: hsl(var(--mission-red));
+  }
+
+  select option,
+  select optgroup {
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
+  }
+
+  select option:checked {
+    background-color: hsl(var(--mission-red) / 0.28);
+    color: hsl(var(--foreground));
+  }
+
+  input[type="date"] {
+    color-scheme: dark;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(1);
+    opacity: 0.72;
+  }
 }
 
 @layer components {
@@ -187,6 +213,22 @@
       hsl(var(--card) / 0.38)
     );
     box-shadow: 0 20px 50px -42px hsl(var(--foreground) / 0.85);
+  }
+
+  .mission-select {
+    @apply rounded-md border border-border bg-background text-foreground outline-none transition-colors;
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
+  }
+
+  .mission-select:hover {
+    border-color: hsl(var(--foreground) / 0.22);
+    background-color: hsl(var(--card) / 0.72);
+  }
+
+  .mission-select:focus {
+    border-color: hsl(var(--mission-red) / 0.78);
+    box-shadow: 0 0 0 2px hsl(var(--mission-red) / 0.24), inset 0 1px 0
+      hsl(var(--foreground) / 0.04);
   }
 }
 

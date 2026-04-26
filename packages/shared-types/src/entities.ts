@@ -175,6 +175,8 @@ export interface Project {
   /** Project lead — null if unassigned. */
   leadId: string | null;
   priority: ProjectPriority;
+  /** Optional deadline as UNIX ms timestamp. */
+  targetDate: number | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -1180,8 +1182,7 @@ function isOperatorAuthMode(value: unknown): value is OperatorAuthMode {
 
 export function isCloudWorkspaceLinkState(value: unknown): value is CloudWorkspaceLinkState {
   return (
-    typeof value === 'string' &&
-    (CLOUD_WORKSPACE_LINK_STATES as readonly string[]).includes(value)
+    typeof value === 'string' && (CLOUD_WORKSPACE_LINK_STATES as readonly string[]).includes(value)
   );
 }
 
@@ -1200,8 +1201,7 @@ export function validateCloudSyncCursorState(
   return {
     ok: true,
     value: {
-      outboundCursor:
-        typeof value.outboundCursor === 'string' ? value.outboundCursor : null,
+      outboundCursor: typeof value.outboundCursor === 'string' ? value.outboundCursor : null,
       inboundCursor: typeof value.inboundCursor === 'string' ? value.inboundCursor : null,
     },
   };
@@ -1234,7 +1234,13 @@ export function validateCloudInboundActionEnvelope(
   if (typeof value.issuedAt !== 'number' || !Number.isFinite(value.issuedAt)) {
     return { ok: false, error: 'action.issuedAt must be a finite number' };
   }
-  if (!(value.issuedByOperatorId === null || value.issuedByOperatorId === undefined || isNonEmptyString(value.issuedByOperatorId))) {
+  if (
+    !(
+      value.issuedByOperatorId === null ||
+      value.issuedByOperatorId === undefined ||
+      isNonEmptyString(value.issuedByOperatorId)
+    )
+  ) {
     return { ok: false, error: 'action.issuedByOperatorId must be a non-empty string or null' };
   }
   if (!(value.payload === null || value.payload === undefined || isPlainRecord(value.payload))) {

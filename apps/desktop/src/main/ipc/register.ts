@@ -813,6 +813,7 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
         description?: string;
         leadId?: string | null;
         priority?: string;
+        targetDate?: number | null;
       },
     ) => {
       return handlers.projectsCreate(request);
@@ -831,6 +832,7 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
         goalId?: string | null;
         leadId?: string | null;
         priority?: string;
+        targetDate?: number | null;
       },
     ) => {
       return handlers.projectsUpdate(request);

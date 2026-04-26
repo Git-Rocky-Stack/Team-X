@@ -61,6 +61,7 @@ describe('projects repo', () => {
       expect(project?.priority).toBe('medium');
       expect(project?.goalId).toBeNull();
       expect(project?.leadId).toBeNull();
+      expect(project?.targetDate).toBeNull();
     });
 
     it('applies defaults when optional fields are omitted', () => {
@@ -72,6 +73,7 @@ describe('projects repo', () => {
       expect(project?.priority).toBe('medium');
       expect(project?.goalId).toBeNull();
       expect(project?.leadId).toBeNull();
+      expect(project?.targetDate).toBeNull();
     });
 
     it('creates a project linked to a goal', () => {
@@ -87,6 +89,16 @@ describe('projects repo', () => {
         leadId: employeeId,
       });
       expect(projectsRepo.getById(id)?.leadId).toBe(employeeId);
+    });
+
+    it('creates a project with a target date', () => {
+      const targetDate = Date.UTC(2026, 9, 15, 12, 0, 0);
+      const id = projectsRepo.create({
+        companyId,
+        title: 'Dated Project',
+        targetDate,
+      });
+      expect(projectsRepo.getById(id)?.targetDate).toBe(targetDate);
     });
   });
 
@@ -145,6 +157,17 @@ describe('projects repo', () => {
       expect(after?.status).toBe('active');
       expect(after?.description).toBe(before?.description);
       expect(after?.updatedAt).toBeGreaterThanOrEqual(before?.updatedAt ?? 0);
+    });
+
+    it('can set and clear the target date', () => {
+      const id = projectsRepo.create({ companyId, title: 'Timeline' });
+      const targetDate = Date.UTC(2026, 10, 1, 12, 0, 0);
+
+      projectsRepo.update(id, { targetDate });
+      expect(projectsRepo.getById(id)?.targetDate).toBe(targetDate);
+
+      projectsRepo.update(id, { targetDate: null });
+      expect(projectsRepo.getById(id)?.targetDate).toBeNull();
     });
 
     it('can update goalId to link/unlink from a goal', () => {

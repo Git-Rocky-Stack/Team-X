@@ -4,7 +4,7 @@ import { Calendar, FolderKanban, Target } from 'lucide-react';
 import { Badge } from '@/components/ui/badge.js';
 
 const STATUS_CONFIG: Record<GoalStatus, { label: string; color: string }> = {
-  active: { label: 'Active', color: 'bg-blue-500/10 text-blue-400' },
+  active: { label: 'Active', color: 'bg-brand/10 text-brand' },
   achieved: { label: 'Achieved', color: 'bg-green-500/10 text-green-400' },
   abandoned: { label: 'Abandoned', color: 'bg-zinc-500/10 text-zinc-400' },
 };

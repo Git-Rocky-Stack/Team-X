@@ -7,13 +7,13 @@ import { useDeleteGoal, useGoalDetail } from '@/hooks/use-goals.js';
 import { useAppStore } from '@/store/app-store.js';
 
 const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-blue-500/10 text-blue-400',
+  active: 'bg-brand/10 text-brand',
   achieved: 'bg-green-500/10 text-green-400',
   abandoned: 'bg-zinc-500/10 text-zinc-400',
 };
 
 const PROJECT_STATUS_COLORS: Record<string, string> = {
-  planning: 'text-blue-400',
+  planning: 'text-brand',
   active: 'text-yellow-400',
   completed: 'text-green-400',
   archived: 'text-zinc-400',

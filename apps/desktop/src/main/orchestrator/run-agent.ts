@@ -154,8 +154,10 @@ export interface RunAgentInput {
    */
   timeoutMs?: number;
   /**
-   * Abort when the provider goes silent for too long mid-turn. Defaults
-   * to 45s and resets on every stream event.
+   * Abort when the provider goes silent for too long after it has begun
+   * streaming. Defaults to 45s and resets on every stream event. The
+   * pre-first-token window is guarded by `timeoutMs`, because local model
+   * cold starts can be legitimately quiet for longer than the idle window.
    */
   idleTimeoutMs?: number;
 }
@@ -300,7 +302,6 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
   totalTimer = setTimeout(() => {
     abortWithKind('timeout');
   }, timeoutMs);
-  resetIdleTimer();
 
   try {
     // 4. Drain the provider stream. `streamAgent` normalizes the

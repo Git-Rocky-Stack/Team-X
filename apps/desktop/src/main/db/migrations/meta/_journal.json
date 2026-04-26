@@ -197,6 +197,13 @@
       "when": 1778304000000,
       "tag": "0027_hosted_operator_bridge",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1778390400000,
+      "tag": "0028_project_target_date",
+      "breakpoints": true
     }
   ]
 }

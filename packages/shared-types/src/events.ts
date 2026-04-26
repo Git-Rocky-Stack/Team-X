@@ -1059,7 +1059,9 @@ export interface ProjectUpdatedPayload {
    * Which patch keys landed. Subset of the mutable project column set.
    * Empty-patch-still-emits mirrors the `companies.update` convention.
    */
-  patchedKeys: Array<'title' | 'description' | 'status' | 'goalId' | 'leadId'>;
+  patchedKeys: Array<
+    'title' | 'description' | 'status' | 'goalId' | 'leadId' | 'priority' | 'targetDate'
+  >;
   /** Wall-clock timestamp in ms when the update handler wrote the row. */
   updatedAt: number;
 }

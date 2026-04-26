@@ -1,5 +1,5 @@
 import type { Employee, Goal } from '@team-x/shared-types';
-import { useState } from 'react';
+import { type FormEvent, useState } from 'react';
 
 import { Button } from '@/components/ui/button.js';
 import { Dialog } from '@/components/ui/dialog.js';
@@ -22,6 +22,13 @@ const PRIORITIES = [
   { value: 'critical', label: 'Critical' },
 ];
 
+function dateInputToTimestamp(value: string): number | null {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, 12, 0, 0, 0).getTime();
+}
+
 export function CreateProjectDialog({
   open,
   onOpenChange,
@@ -34,9 +41,10 @@ export function CreateProjectDialog({
   const [priority, setPriority] = useState('medium');
   const [leadId, setLeadId] = useState('');
   const [goalId, setGoalId] = useState('');
+  const [targetDate, setTargetDate] = useState('');
   const createProject = useCreateProject();
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!companyId || !title.trim()) return;
     createProject.mutate(
@@ -47,6 +55,7 @@ export function CreateProjectDialog({
         priority,
         leadId: leadId || undefined,
         goalId: goalId || undefined,
+        targetDate: dateInputToTimestamp(targetDate),
       },
       {
         onSuccess: () => {
@@ -55,6 +64,7 @@ export function CreateProjectDialog({
           setPriority('medium');
           setLeadId('');
           setGoalId('');
+          setTargetDate('');
           onOpenChange(false);
         },
       },
@@ -116,7 +126,7 @@ export function CreateProjectDialog({
                   id="project-priority"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+                  className="mission-select mt-1 w-full px-3 py-1.5 text-sm"
                 >
                   {PRIORITIES.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -134,7 +144,7 @@ export function CreateProjectDialog({
                   id="project-lead"
                   value={leadId}
                   onChange={(e) => setLeadId(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+                  className="mission-select mt-1 w-full px-3 py-1.5 text-sm"
                 >
                   <option value="">No lead</option>
                   {employees.map((emp) => (
@@ -154,7 +164,7 @@ export function CreateProjectDialog({
                 id="project-goal"
                 value={goalId}
                 onChange={(e) => setGoalId(e.target.value)}
-                className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+                className="mission-select mt-1 w-full px-3 py-1.5 text-sm"
               >
                 <option value="">Standalone project</option>
                 {goals.map((g) => (
@@ -163,6 +173,22 @@ export function CreateProjectDialog({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="project-target-date"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Target Date
+              </label>
+              <Input
+                id="project-target-date"
+                type="date"
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
+                className="mt-1 text-sm"
+              />
             </div>
 
             <div className="mt-2 flex justify-end gap-2">

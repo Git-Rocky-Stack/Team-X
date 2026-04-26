@@ -76,7 +76,7 @@ export function ProjectsView({ companyId, employees }: ProjectsViewProps) {
 
         {activeProjectId && (
           <div className="w-full shrink-0 lg:w-[400px]">
-            <ProjectDetailPanel projectId={activeProjectId} employees={employees} />
+            <ProjectDetailPanel projectId={activeProjectId} employees={employees} goals={goals} />
           </div>
         )}
       </div>

@@ -70,10 +70,10 @@ import type {
   ChatMessage,
   Company,
   CompanyCloudLinkStatus,
-  CompanySharingReadinessSummary,
   CompanyImportPreview,
   CompanyPackageManifest,
   CompanyPackageMode,
+  CompanySharingReadinessSummary,
   CompanyTemplateSummary,
   EffectiveAuthoritySnapshot,
   Employee,
@@ -845,6 +845,7 @@ export interface CreateProjectRequest {
   description?: string;
   leadId?: string | null;
   priority?: string;
+  targetDate?: number | null;
 }
 
 export interface CreateProjectResponse {
@@ -859,6 +860,7 @@ export interface UpdateProjectRequest {
   goalId?: string | null;
   leadId?: string | null;
   priority?: string;
+  targetDate?: number | null;
 }
 
 export interface ListProjectsRequest {

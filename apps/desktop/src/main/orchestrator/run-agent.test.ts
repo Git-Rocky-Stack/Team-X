@@ -680,5 +680,64 @@ describe('runAgent', () => {
       expect(events.map((e) => e.type)).not.toContain('work.completed');
       expect(f.costCalls).toHaveLength(0);
     });
+
+    it('does not classify quiet first-token latency as a stalled provider stream', async () => {
+      const provider: ProviderStreamFn = async function* ({ signal }) {
+        await new Promise<void>((resolve, reject) => {
+          if (signal?.aborted) {
+            reject(new DOMException('Aborted', 'AbortError'));
+            return;
+          }
+          function onAbort() {
+            clearTimeout(timer);
+            signal?.removeEventListener('abort', onAbort);
+            reject(new DOMException('Aborted', 'AbortError'));
+          }
+          const timer = setTimeout(() => {
+            signal?.removeEventListener('abort', onAbort);
+            resolve();
+          }, 40);
+          signal?.addEventListener('abort', onAbort, { once: true });
+        });
+        yield { delta: 'cold start reply' };
+        yield { done: true, usage: { promptTokens: 7, completionTokens: 3 } };
+      };
+
+      await expect(
+        runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+            idleTimeoutMs: 25,
+            timeoutMs: 500,
+          },
+        ),
+      ).resolves.toMatchObject({
+        promptTokens: 7,
+        completionTokens: 3,
+      });
+
+      const runRows = f.runs.listByEmployee(f.employeeId);
+      expect(runRows[0]?.status).toBe('success');
+
+      const messages = f.messages.listByThread(f.threadId);
+      expect(messages[0]?.content).toBe('cold start reply');
+
+      const events = f.bus.replaySince(0);
+      expect(events.map((e) => e.type)).toEqual(['work.started', 'token.delta', 'work.completed']);
+      expect(f.costCalls).toHaveLength(1);
+    });
   });
 });

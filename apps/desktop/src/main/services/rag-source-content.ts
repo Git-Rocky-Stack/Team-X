@@ -57,6 +57,7 @@ export interface RagProjectSource {
   priority: string;
   goalId: string | null;
   leadId: string | null;
+  targetDate?: number | null;
 }
 
 export interface RagVaultFileSource {
@@ -98,6 +99,7 @@ export function formatGoalEmbeddingContent(goal: RagGoalSource): string {
 }
 
 export function formatProjectEmbeddingContent(project: RagProjectSource): string {
+  const targetDate = formatTimestamp(project.targetDate ?? null);
   return compactLines([
     'Project',
     `Project ID: ${project.id}`,
@@ -106,6 +108,7 @@ export function formatProjectEmbeddingContent(project: RagProjectSource): string
     `Priority: ${project.priority}`,
     project.goalId ? `Goal ID: ${project.goalId}` : null,
     project.leadId ? `Lead ID: ${project.leadId}` : null,
+    targetDate ? `Target date: ${targetDate}` : null,
     project.description ? `Description:\n${project.description}` : null,
   ]);
 }

@@ -132,12 +132,13 @@ class FakeProjectsRepo implements IpcProjectsRepo {
     this.rows.push({
       id,
       companyId: input.companyId,
-      goalId: input.goalId,
+      goalId: input.goalId ?? null,
       title: input.title,
-      description: input.description,
-      status: 'active',
-      leadId: input.leadId,
-      priority: input.priority,
+      description: input.description ?? '',
+      status: input.status ?? 'active',
+      leadId: input.leadId ?? null,
+      priority: input.priority ?? 'medium',
+      targetDate: input.targetDate ?? null,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     } as ProjectRow);
@@ -156,7 +157,12 @@ class FakeProjectsRepo implements IpcProjectsRepo {
     const row = this.rows.find((r) => r.id === id);
     if (!row) return;
     if (input.title !== undefined) row.title = input.title;
+    if (input.description !== undefined) row.description = input.description;
     if (input.status !== undefined) row.status = input.status;
+    if (input.goalId !== undefined) row.goalId = input.goalId;
+    if (input.leadId !== undefined) row.leadId = input.leadId;
+    if (input.priority !== undefined) row.priority = input.priority;
+    if (input.targetDate !== undefined) row.targetDate = input.targetDate;
   }
   delete(id: string): void {
     this.rows = this.rows.filter((r) => r.id !== id);
@@ -714,11 +720,30 @@ describe('Invariant #11 main-side emits — Phase 5.6 M-C step f', () => {
         title: 'x',
       });
       bus.emitted.length = 0;
-      await handlers.projectsUpdate({ projectId, title: 'y', status: 'active' });
+      await handlers.projectsUpdate({
+        projectId,
+        title: 'y',
+        status: 'active',
+        priority: 'high',
+        targetDate: Date.UTC(2026, 10, 1, 12, 0, 0),
+      });
       expect(bus.emitted).toHaveLength(1);
       expect(bus.emitted[0]?.type).toBe('project.updated');
       const payload = bus.emitted[0]?.payload as { patchedKeys: string[] };
-      expect(payload.patchedKeys).toEqual(['title', 'status']);
+      expect(payload.patchedKeys).toEqual(['title', 'status', 'priority', 'targetDate']);
+    });
+
+    it('recalculates old and new goal progress when a project is rebound', async () => {
+      const { handlers, goalsRepo } = buildHarness();
+      const { projectId } = await handlers.projectsCreate({
+        companyId: COMPANY_ID,
+        title: 'bound',
+        goalId: 'goal-old',
+      });
+
+      await handlers.projectsUpdate({ projectId, goalId: 'goal-new' });
+
+      expect(goalsRepo.recalcCalls).toEqual(['goal-old', 'goal-new']);
     });
   });
 

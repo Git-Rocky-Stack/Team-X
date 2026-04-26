@@ -99,6 +99,7 @@ interface PortabilityProjectsRepo {
     leadId?: string | null;
     priority?: string;
     status?: string;
+    targetDate?: number | null;
   }): string;
   linkTicket(projectId: string, ticketId: string): void;
   listByCompany(companyId: string): ProjectRow[];
@@ -405,6 +406,7 @@ function rowToProject(row: ProjectRow): Project {
     status: row.status as Project['status'],
     leadId: row.leadId,
     priority: row.priority as Project['priority'],
+    targetDate: row.targetDate,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -1226,6 +1228,7 @@ export function createCompanyPortabilityService(deps: CompanyPortabilityServiceD
           leadId,
           priority: project.priority,
           status: project.status,
+          targetDate: project.targetDate,
         });
         deps.projectsRepo.update(projectId, {
           title: project.title,
@@ -1234,6 +1237,7 @@ export function createCompanyPortabilityService(deps: CompanyPortabilityServiceD
           goalId,
           leadId,
           priority: project.priority,
+          targetDate: project.targetDate,
         });
         imported.projects.set(project.id, projectId);
       }
