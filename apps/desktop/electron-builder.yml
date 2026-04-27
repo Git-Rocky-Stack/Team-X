@@ -59,6 +59,10 @@ win:
   artifactName: Team-X-${version}-Setup-${arch}.${ext}
 
 nsis:
+  # The electron-builder multi-arch NSIS wrapper crashes on this Windows host
+  # immediately after the assisted installer's first Next click. Ship the
+  # architecture-specific installers directly instead.
+  buildUniversalInstaller: false
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
