@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createCompaniesRepo } from './companies.js';
 import { createEmployeesRepo } from './employees.js';
-import { createRunsRepo } from './runs.js';
+import { createMessagesRepo } from './messages.js';
+import {
+  INTERRUPTED_WORK_RUN_ERROR,
+  INTERRUPTED_WORK_RUN_MESSAGE,
+  createRunsRepo,
+} from './runs.js';
 import { createThreadsRepo } from './threads.js';
 
 describe('runs repo', () => {
@@ -11,12 +16,14 @@ describe('runs repo', () => {
   let runs: ReturnType<typeof createRunsRepo>;
   let companies: ReturnType<typeof createCompaniesRepo>;
   let employees: ReturnType<typeof createEmployeesRepo>;
+  let messages: ReturnType<typeof createMessagesRepo>;
   let threads: ReturnType<typeof createThreadsRepo>;
 
   beforeEach(async () => {
     ctx = await makeTestDb();
     companies = createCompaniesRepo(ctx.db);
     employees = createEmployeesRepo(ctx.db);
+    messages = createMessagesRepo(ctx.db);
     threads = createThreadsRepo(ctx.db);
     runs = createRunsRepo(ctx.db);
   });
@@ -167,6 +174,70 @@ describe('runs repo', () => {
           costUsd: '0',
         }),
       ).not.toThrow();
+    });
+  });
+
+  describe('recoverInterruptedWorkRuns', () => {
+    it('closes stale running work rows and fills the empty assistant message', () => {
+      const companyId = companies.create({ name: 'Acme', slug: 'acme' });
+      const employeeId = employees.create({
+        companyId,
+        rolePackId: 'pack',
+        roleId: 'ceo',
+        roleMdSha: 'sha',
+        level: 'officer',
+        name: 'Iris',
+        title: 'CEO',
+      });
+      const threadId = threads.create({ companyId, kind: 'dm', createdBy: 'rocky' });
+      const runId = runs.start({
+        employeeId,
+        provider: 'ollama-local',
+        model: 'gemma4:31b-cloud',
+        threadId,
+      });
+      const runBefore = runs.getById(runId);
+      const messageId = messages.append({
+        threadId,
+        authorId: employeeId,
+        authorKind: 'employee',
+        content: '',
+      });
+
+      const recovered = runs.recoverInterruptedWorkRuns({
+        now: (runBefore?.startedAt ?? Date.now()) + 60_000,
+      });
+
+      expect(recovered).toBe(1);
+      const runAfter = runs.getById(runId);
+      expect(runAfter?.status).toBe('error');
+      expect(runAfter?.error).toBe(INTERRUPTED_WORK_RUN_ERROR);
+      expect(runAfter?.endedAt).not.toBeNull();
+      expect(runAfter?.latencyMs).toBe(60_000);
+      expect(messages.listByThread(threadId).find((row) => row.id === messageId)?.content).toBe(
+        INTERRUPTED_WORK_RUN_MESSAGE,
+      );
+    });
+
+    it('does not modify terminal or non-work rows', () => {
+      const workRunId = runs.start({ employeeId: 'emp', provider: 'p', model: 'm' });
+      runs.finish(workRunId, {
+        status: 'success',
+        promptTokens: 1,
+        completionTokens: 1,
+        latencyMs: 1,
+        costUsd: '0',
+      });
+      const copilotRunId = runs.start({
+        employeeId: 'emp',
+        provider: 'p',
+        model: 'm',
+        kind: 'copilot',
+      });
+
+      expect(runs.recoverInterruptedWorkRuns()).toBe(0);
+      expect(runs.getById(workRunId)?.status).toBe('success');
+      expect(runs.getById(copilotRunId)?.status).toBe('running');
     });
   });
 

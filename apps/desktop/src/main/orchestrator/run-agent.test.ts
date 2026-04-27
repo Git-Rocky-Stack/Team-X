@@ -739,5 +739,59 @@ describe('runAgent', () => {
       expect(events.map((e) => e.type)).toEqual(['work.started', 'token.delta', 'work.completed']);
       expect(f.costCalls).toHaveLength(1);
     });
+
+    it('closes a tool-only successful send_message turn with a synthesized reply', async () => {
+      const provider: ProviderStreamFn = async function* () {
+        yield {
+          toolCall: {
+            toolCallId: 'call-1',
+            toolName: 'send_message_to_colleague',
+            args: {
+              recipientEmployeeId: 'emp-cmo',
+              message: 'Please review the launch plan.',
+            },
+          },
+        };
+        yield {
+          toolResult: {
+            toolCallId: 'call-1',
+            toolName: 'send_message_to_colleague',
+            result: { success: true, recipientName: 'Mina Patel' },
+          },
+        };
+        yield { done: true, usage: { promptTokens: 20, completionTokens: 4 } };
+      };
+
+      await runAgent(
+        {
+          bus: f.bus,
+          messages: f.messages,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider,
+          providerName: 'p',
+          model: 'm',
+        },
+      );
+
+      const messages = f.messages.listByThread(f.threadId);
+      expect(messages[0]?.content).toBe('I sent the message to Mina Patel.');
+
+      const runRows = f.runs.listByEmployee(f.employeeId);
+      expect(runRows[0]?.status).toBe('success');
+      expect(runRows[0]?.toolCallsCount).toBe(1);
+
+      const events = f.bus.replaySince(0);
+      expect(events.map((e) => e.type)).toEqual(['work.started', 'tool.called', 'work.completed']);
+      expect(f.costCalls).toHaveLength(1);
+      expect(f.costCalls[0]).toMatchObject({ promptTokens: 20, completionTokens: 4 });
+    });
   });
 });

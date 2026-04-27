@@ -186,9 +186,41 @@ const DEFAULT_RUN_IDLE_TIMEOUT_MS = 45_000;
 const PROVIDER_TIMED_OUT_MESSAGE = 'provider timed out before completing reply';
 const PROVIDER_STALLED_MESSAGE = 'provider stream stalled before completing reply';
 
+interface CompletedToolResult {
+  toolCallId: string;
+  toolName: string;
+  result: unknown;
+}
+
 function normalizeTimeoutMs(value: number | undefined, fallback: number): number {
   if (!Number.isFinite(value) || value === undefined) return fallback;
   return Math.max(1, Math.round(value));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function synthesizeToolOnlyReply(toolResults: CompletedToolResult[]): string | null {
+  for (let i = toolResults.length - 1; i >= 0; i--) {
+    const entry = toolResults[i];
+    if (!entry || !isRecord(entry.result) || entry.result.success !== true) continue;
+
+    if (typeof entry.result.message === 'string' && entry.result.message.trim().length > 0) {
+      return entry.result.message.trim();
+    }
+
+    if (entry.toolName === 'send_message_to_colleague') {
+      const recipientName =
+        typeof entry.result.recipientName === 'string' &&
+        entry.result.recipientName.trim().length > 0
+          ? entry.result.recipientName.trim()
+          : 'the colleague';
+      return `I sent the message to ${recipientName}.`;
+    }
+  }
+
+  return null;
 }
 
 function buildInterruptedReplyContent(buffer: string, reason: 'stalled' | 'timed out'): string {
@@ -258,6 +290,8 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
   const startTime = now();
   let buffer = '';
   let usage: StreamUsage | null = null;
+  let toolCallsCount = 0;
+  const toolResults: CompletedToolResult[] = [];
   let abortKind: 'external' | 'timeout' | 'idle-timeout' | null = null;
   const streamController = new AbortController();
 
@@ -333,6 +367,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
           payload: deltaPayload,
         });
       } else if (chunk.kind === 'tool-call') {
+        toolCallsCount++;
         const toolCalledPayload: ToolCalledPayload = {
           threadId: input.threadId,
           messageId,
@@ -345,6 +380,12 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
           actorId: input.employeeId,
           actorKind: 'employee',
           payload: toolCalledPayload,
+        });
+      } else if (chunk.kind === 'tool-result') {
+        toolResults.push({
+          toolCallId: chunk.toolCallId,
+          toolName: chunk.toolName,
+          result: chunk.result,
         });
       } else if (chunk.kind === 'done') {
         usage = chunk.usage;
@@ -385,6 +426,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       completionTokens: 0,
       latencyMs,
       costUsd: '0',
+      toolCallsCount,
       error: message,
     });
     deps.bus.emit({
@@ -419,6 +461,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       completionTokens: 0,
       latencyMs,
       costUsd: '0',
+      toolCallsCount,
       error: message,
     });
     deps.bus.emit({
@@ -437,6 +480,57 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
   }
 
   if (buffer.trim().length === 0) {
+    const toolOnlyReply = synthesizeToolOnlyReply(toolResults);
+    if (toolOnlyReply !== null && usage !== null) {
+      deps.messages.updateContent(messageId, toolOnlyReply);
+      const latencyMs = Math.max(0, now() - startTime);
+      const costUsd = deps.calcCost({
+        provider: input.providerName,
+        model: input.model,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+      });
+
+      deps.runs.finish(runId, {
+        status: 'success',
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        latencyMs,
+        costUsd,
+        toolCallsCount,
+      });
+
+      if (deps.budgetGovernance) {
+        void deps.budgetGovernance.recordRunSpend(runId).catch((err) => {
+          console.warn('[runAgent] budget recordRunSpend failed:', err);
+        });
+      }
+
+      deps.bus.emit<WorkCompletedPayload>({
+        type: 'work.completed',
+        companyId: input.companyId,
+        actorId: 'orchestrator',
+        actorKind: 'orchestrator',
+        payload: {
+          threadId: input.threadId,
+          messageId,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          latencyMs,
+          costUsd: Number(costUsd),
+        },
+      });
+
+      return {
+        runId,
+        messageId,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        latencyMs,
+        costUsd,
+      };
+    }
+
     const latencyMs = Math.max(0, now() - startTime);
     const message = 'provider stream completed without assistant text';
     deps.messages.updateContent(
@@ -449,6 +543,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       completionTokens: usage.completionTokens,
       latencyMs,
       costUsd: '0',
+      toolCallsCount,
       error: message,
     });
     deps.bus.emit({
@@ -480,6 +575,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     completionTokens: usage.completionTokens,
     latencyMs,
     costUsd,
+    toolCallsCount,
   });
 
   if (deps.budgetGovernance) {

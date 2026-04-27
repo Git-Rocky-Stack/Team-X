@@ -32,7 +32,7 @@ import { nanoid } from 'nanoid';
 import type { TelemetryRunKind } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
-import { employees, runs, threads } from '../schema.js';
+import { employees, messages, runs, threads } from '../schema.js';
 
 export type RunRow = typeof runs.$inferSelect;
 
@@ -82,6 +82,10 @@ export interface RecentRunRow {
   startedAt: number;
   endedAt: number | null;
 }
+
+export const INTERRUPTED_WORK_RUN_MESSAGE =
+  "I couldn't complete that reply because the app was interrupted before the provider returned.";
+export const INTERRUPTED_WORK_RUN_ERROR = 'app interrupted before completing work run';
 
 type RunsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
@@ -149,6 +153,52 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
     /** Return one run row by id, or null if it does not exist. */
     getById(id: string): RunRow | null {
       return db.select().from(runs).where(eq(runs.id, id)).get() ?? null;
+    },
+
+    /**
+     * Startup recovery for work runs left open by a crashed or force-quit
+     * main process. There is no live in-flight work before the orchestrator
+     * is rebuilt, so any persisted `running` work row belongs to a previous
+     * process and must be made terminal before the renderer can treat the
+     * thread as healthy again.
+     */
+    recoverInterruptedWorkRuns(input: { now?: number } = {}): number {
+      const recoveredAt = input.now ?? Date.now();
+      const staleRows = db
+        .select()
+        .from(runs)
+        .where(and(eq(runs.kind, 'work'), eq(runs.status, 'running')))
+        .all();
+
+      for (const row of staleRows) {
+        db.update(runs)
+          .set({
+            status: 'error',
+            endedAt: recoveredAt,
+            latencyMs: Math.max(0, recoveredAt - row.startedAt),
+            error: INTERRUPTED_WORK_RUN_ERROR,
+          })
+          .where(eq(runs.id, row.id))
+          .run();
+
+        if (row.threadId !== null) {
+          db.update(messages)
+            .set({ content: INTERRUPTED_WORK_RUN_MESSAGE })
+            .where(
+              and(
+                eq(messages.threadId, row.threadId),
+                eq(messages.authorId, row.employeeId),
+                eq(messages.authorKind, 'employee'),
+                eq(messages.content, ''),
+                gte(messages.createdAt, row.startedAt - 1_000),
+                lte(messages.createdAt, recoveredAt),
+              ),
+            )
+            .run();
+        }
+      }
+
+      return staleRows.length;
     },
 
     /** Return every run row for a given employee. Phase 1 does not paginate. */

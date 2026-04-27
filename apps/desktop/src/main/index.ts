@@ -143,8 +143,8 @@ import { createAuthorityResolverService } from './services/authority-resolver-se
 import { createBackupService } from './services/backup.js';
 import { createBudgetGovernanceService } from './services/budget-governance-service.js';
 import { buildChatActionTools } from './services/chat-action-tools.js';
-import { type CommandService, createCommandService } from './services/command-service.js';
 import { createCloudLinkService } from './services/cloud-link-service.js';
+import { type CommandService, createCommandService } from './services/command-service.js';
 import { createCompanyPortabilityService } from './services/company-portability-service.js';
 import { createContextAssemblerService } from './services/context-assembler-service.js';
 import { createContextPackerService } from './services/context-packer-service.js';
@@ -438,6 +438,10 @@ app
     const runCheckpointService = createRunCheckpointService({
       runCheckpointsRepo,
     });
+    const recoveredInterruptedRuns = runsRepo.recoverInterruptedWorkRuns();
+    if (recoveredInterruptedRuns > 0) {
+      console.warn(`[runs] recovered ${recoveredInterruptedRuns} interrupted work run(s)`);
+    }
 
     // Seed default settings on first boot (runtime_strategy, privacy tier, caps).
     const settingsSeeded = settingsRepo.seedDefaults();

@@ -29,6 +29,7 @@ interface FullStreamPart {
   toolCallId?: string;
   toolName?: string;
   args?: unknown;
+  result?: unknown;
   error?: unknown;
 }
 
@@ -49,6 +50,11 @@ interface AdapterChunk {
     toolCallId: string;
     toolName: string;
     args: Record<string, unknown>;
+  };
+  toolResult?: {
+    toolCallId: string;
+    toolName: string;
+    result: unknown;
   };
 }
 
@@ -197,6 +203,24 @@ describe('makeOllamaStream', () => {
       expect(arg.system).toBe('You are a poet.');
       expect(arg.messages).toEqual(history);
     });
+
+    it('caps cloud Ollama tool round trips to avoid unbounded post-tool continuations', async () => {
+      nextStreamTextResult = {
+        fullStream: iterableOf([]),
+        usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
+      };
+      const stream = makeOllamaStream({ model: 'gemma4:31b-cloud' });
+      await drain(
+        stream({
+          system: '',
+          messages: [],
+          tools: { send_message_to_colleague: {} },
+          maxSteps: 5,
+        }),
+      );
+
+      expect(calls.streamText[0]?.[0]).toMatchObject({ maxSteps: 2 });
+    });
   });
 
   describe('streaming', () => {
@@ -249,6 +273,56 @@ describe('makeOllamaStream', () => {
         },
         { delta: 'Company ' },
         { delta: 'status ready' },
+        {
+          done: true,
+          usage: { promptTokens: 11, completionTokens: 5 },
+        },
+      ]);
+    });
+
+    it('forwards tool results so tool-only turns can close with a durable summary', async () => {
+      nextStreamTextResult = {
+        fullStream: iterableOfParts([
+          {
+            type: 'tool-call',
+            toolCallId: 'call-1',
+            toolName: 'send_message_to_colleague',
+            args: { recipientEmployeeId: 'emp-cmo', message: 'Please review the launch plan.' },
+          },
+          {
+            type: 'tool-result',
+            toolCallId: 'call-1',
+            toolName: 'send_message_to_colleague',
+            result: { success: true, recipientName: 'Mina Patel' },
+          },
+        ]),
+        usage: Promise.resolve({ promptTokens: 11, completionTokens: 5, totalTokens: 16 }),
+      };
+      const stream = makeOllamaStream({ model: 'qwen2.5:3b' });
+      const chunks = await drain(
+        stream({
+          system: '',
+          messages: [],
+          tools: { send_message_to_colleague: {} },
+          maxSteps: 2,
+        }),
+      );
+
+      expect(chunks).toEqual([
+        {
+          toolCall: {
+            toolCallId: 'call-1',
+            toolName: 'send_message_to_colleague',
+            args: { recipientEmployeeId: 'emp-cmo', message: 'Please review the launch plan.' },
+          },
+        },
+        {
+          toolResult: {
+            toolCallId: 'call-1',
+            toolName: 'send_message_to_colleague',
+            result: { success: true, recipientName: 'Mina Patel' },
+          },
+        },
         {
           done: true,
           usage: { promptTokens: 11, completionTokens: 5 },

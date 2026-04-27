@@ -114,6 +114,8 @@ interface OllamaPatchedToolCall {
   args: string;
 }
 
+const OLLAMA_CLOUD_MAX_TOOL_STEPS = 2;
+
 function responseHeadersToObject(headers: Headers): Record<string, string> {
   return Object.fromEntries(headers.entries());
 }
@@ -458,6 +460,11 @@ export function makeOllamaStream(options: OllamaAdapterOptions): ProviderStreamF
     : baseModel;
 
   return async function* ollamaStream({ system, messages, tools, maxSteps, signal }) {
+    const effectiveMaxSteps =
+      tools && Object.keys(tools).length > 0 && isCloudOllamaModel(options.model)
+        ? Math.min(maxSteps ?? 1, OLLAMA_CLOUD_MAX_TOOL_STEPS)
+        : (maxSteps ?? 1);
+
     const result = await streamText({
       model,
       system,
@@ -467,30 +474,57 @@ export function makeOllamaStream(options: OllamaAdapterOptions): ProviderStreamF
       // Use a large number to approximate unlimited behavior.
       maxTokens: 4096,
       ...(tools && Object.keys(tools).length > 0
-        ? { tools: tools as Record<string, CoreTool>, maxSteps: maxSteps ?? 1 }
+        ? { tools: tools as Record<string, CoreTool>, maxSteps: effectiveMaxSteps }
         : {}),
     });
 
     for await (const part of result.fullStream) {
-      if (part.type === 'text-delta') {
-        yield { delta: part.textDelta };
+      const streamPart = part as unknown as {
+        type: string;
+        textDelta?: string;
+        error?: unknown;
+        toolCallId?: string;
+        toolName?: string;
+        args?: unknown;
+        result?: unknown;
+      };
+      const partType = streamPart.type;
+      if (partType === 'text-delta') {
+        yield { delta: streamPart.textDelta ?? '' };
         continue;
       }
-      if (part.type === 'error') {
-        throw part.error instanceof Error
-          ? part.error
+      if (partType === 'error') {
+        throw streamPart.error instanceof Error
+          ? streamPart.error
           : new Error(
-              typeof part.error === 'string'
-                ? part.error
+              typeof streamPart.error === 'string'
+                ? streamPart.error
                 : '[provider-router/ollama] provider stream emitted an unknown error',
             );
       }
-      if (part.type === 'tool-call') {
+      if (partType === 'tool-call') {
+        if (typeof streamPart.toolCallId !== 'string' || typeof streamPart.toolName !== 'string') {
+          throw new Error('[provider-router/ollama] provider stream emitted a malformed tool call');
+        }
         yield {
           toolCall: {
-            toolCallId: part.toolCallId,
-            toolName: part.toolName,
-            args: part.args as Record<string, unknown>,
+            toolCallId: streamPart.toolCallId,
+            toolName: streamPart.toolName,
+            args: streamPart.args as Record<string, unknown>,
+          },
+        };
+      }
+      if (partType === 'tool-result') {
+        if (typeof streamPart.toolCallId !== 'string' || typeof streamPart.toolName !== 'string') {
+          throw new Error(
+            '[provider-router/ollama] provider stream emitted a malformed tool result',
+          );
+        }
+        yield {
+          toolResult: {
+            toolCallId: streamPart.toolCallId,
+            toolName: streamPart.toolName,
+            result: streamPart.result,
           },
         };
       }
