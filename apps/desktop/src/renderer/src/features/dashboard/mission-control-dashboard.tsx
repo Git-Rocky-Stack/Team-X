@@ -6,17 +6,20 @@ import {
   ArrowRight,
   Bot,
   Gauge,
+  HardDrive,
   LayoutPanelTop,
   MessageCircle,
   Radar,
   RefreshCw,
+  ShieldAlert,
   Sparkles,
   Ticket,
+  TicketCheck,
   TimerReset,
 } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Badge, badgeVariants } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
@@ -26,6 +29,7 @@ import { useBudgetOverview } from '@/hooks/use-budgets.js';
 import { useCommandHistory } from '@/hooks/use-command.js';
 import { useOperators } from '@/hooks/use-operators.js';
 import { useRoutines } from '@/hooks/use-routines.js';
+import { useRuntimeOperations } from '@/hooks/use-runtime-operations.js';
 import { useCompanyStats, useDailyUsage } from '@/hooks/use-telemetry.js';
 import { useTicketEventSync, useTickets } from '@/hooks/use-tickets.js';
 import { ipc } from '@/lib/ipc.js';
@@ -40,6 +44,10 @@ import {
   projectDashboardQueueRows,
   summarizeDashboardQueues,
 } from './dashboard-queue-projections.js';
+import {
+  type DashboardRuntimeOperationsSummary,
+  summarizeRuntimeOperationsForDashboard,
+} from './runtime-operations-projections.js';
 import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
 import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
 
@@ -274,6 +282,286 @@ function PanelMessageState({
   );
 }
 
+function runtimeStateClassName(tone: DashboardRuntimeOperationsSummary['stateTone']): string {
+  switch (tone) {
+    case 'accent':
+      return 'border-brand/30 bg-brand/10 text-brand';
+    case 'warning':
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
+    case 'danger':
+      return 'border-red-500/30 bg-red-500/10 text-red-200';
+    default:
+      return 'border-white/10 bg-black/10 text-foreground/80';
+  }
+}
+
+function formatRuntimeHeartbeat(value: number | null): string {
+  return value === null ? 'No heartbeat yet' : formatTimeAgo(new Date(value).toISOString());
+}
+
+function RuntimeMetricCell({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  icon: typeof Activity;
+  tone?: DashboardRuntimeOperationsSummary['stateTone'];
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border bg-black/10 p-4',
+        tone === 'warning' && 'border-amber-500/25 bg-amber-500/10',
+        tone === 'danger' && 'border-red-500/25 bg-red-500/10',
+        tone === 'accent' && 'border-brand/25 bg-brand/10',
+        tone === 'default' && 'border-white/10',
+      )}
+    >
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+        <Icon
+          className={cn(
+            'h-4 w-4',
+            tone === 'warning' && 'text-amber-300',
+            tone === 'danger' && 'text-red-300',
+            tone === 'accent' && 'text-brand',
+            tone === 'default' && 'text-brand',
+          )}
+        />
+        {label}
+      </div>
+      <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
+function RuntimeOperationsBand({
+  hasWorkspace,
+  summary,
+  isLoading,
+  isError,
+  isFetching,
+  error,
+  onRetry,
+  onOpenRuntimes,
+}: {
+  hasWorkspace: boolean;
+  summary: DashboardRuntimeOperationsSummary;
+  isLoading: boolean;
+  isError: boolean;
+  isFetching: boolean;
+  error: unknown;
+  onRetry: () => void;
+  onOpenRuntimes: () => void;
+}) {
+  const adapterSummary =
+    summary.adapterCounts.length > 0
+      ? summary.adapterCounts.map((entry) => `${entry.kind} ${entry.count}`).join(' / ')
+      : 'No adapters active';
+  const attentionHint =
+    summary.attentionCount > 0
+      ? `${summary.blockedSessionCount} blocked, ${summary.staleSessionCount} stale, ${summary.failedSessionCount} failed, ${summary.missingHeartbeatCount} missing heartbeat.`
+      : 'No blocked, stale, offline, or heartbeat-missing sessions.';
+
+  return (
+    <Card
+      className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none"
+      data-dashboard-runtime-operations=""
+    >
+      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+            <HardDrive className="h-4 w-4 text-brand" />
+            External Runtime Operations
+            <Badge
+              variant="outline"
+              className={cn('font-mono text-[10px]', runtimeStateClassName(summary.stateTone))}
+              data-dashboard-runtime-state={summary.stateLabel}
+            >
+              {summary.stateLabel}
+            </Badge>
+            {summary.budgetBlockedCount > 0 && (
+              <Badge
+                variant="outline"
+                className="border-amber-500/30 bg-amber-500/10 font-mono text-[10px] text-amber-200"
+                data-dashboard-runtime-budget-blocks=""
+              >
+                {summary.budgetBlockedCount} budget hard-stops
+              </Badge>
+            )}
+          </div>
+          <CardTitle className="text-lg text-foreground">Heartbeat and checkout pulse</CardTitle>
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            External agents, active leases, heartbeat freshness, managed workspaces, and budget stop
+            posture.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRetry}
+            disabled={!hasWorkspace || isFetching}
+            className={DASHBOARD_GHOST_BUTTON_CLASS}
+            aria-label="Refresh runtime operations snapshot"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onOpenRuntimes}
+            disabled={!hasWorkspace}
+            className={DASHBOARD_GLASS_BUTTON_CLASS}
+            aria-label="Open Autonomy runtimes"
+          >
+            <Bot className="h-4 w-4" />
+            Runtimes
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!hasWorkspace ? (
+          <PanelMessageState
+            icon={HardDrive}
+            title="Select a workspace"
+            description="Pick a workspace to load external runtime sessions, heartbeat state, and ticket checkout leases."
+            dataState="runtime-operations-unselected"
+          />
+        ) : isLoading ? (
+          <PanelSkeletonRows rows={2} heightClassName="h-28" className="lg:grid-cols-2" />
+        ) : isError ? (
+          <PanelMessageState
+            icon={ShieldAlert}
+            title="Runtime operations could not load"
+            description={formatQueryErrorMessage(
+              error,
+              'The runtime operations snapshot is temporarily unavailable for this workspace.',
+            )}
+            tone="danger"
+            dataState="runtime-operations-error"
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRetry}
+                className={DASHBOARD_GLASS_BUTTON_CLASS}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            }
+          />
+        ) : (
+          <>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <RuntimeMetricCell
+                label="Sessions"
+                value={String(summary.sessionCount)}
+                hint={`${summary.workingSessionCount} working, ${summary.managedWorkspaceCount} isolated workspaces.`}
+                icon={Activity}
+                tone={summary.workingSessionCount > 0 ? 'accent' : 'default'}
+              />
+              <RuntimeMetricCell
+                label="Attention"
+                value={String(summary.attentionCount)}
+                hint={attentionHint}
+                icon={ShieldAlert}
+                tone={summary.attentionCount > 0 ? summary.stateTone : 'default'}
+              />
+              <RuntimeMetricCell
+                label="Checkouts"
+                value={String(summary.activeCheckoutCount)}
+                hint={`${summary.checkoutBlockedCount} checkout conflicts or lease blockers surfaced.`}
+                icon={TicketCheck}
+                tone={summary.activeCheckoutCount > 0 ? 'accent' : 'default'}
+              />
+              <RuntimeMetricCell
+                label="Heartbeat"
+                value={formatRuntimeHeartbeat(summary.latestHeartbeatAt)}
+                hint={adapterSummary}
+                icon={HardDrive}
+              />
+            </div>
+
+            {summary.recentSessions.length === 0 ? (
+              <div
+                className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-5 text-sm leading-6 text-muted-foreground"
+                data-dashboard-runtime-empty=""
+              >
+                No external runtime session is active for this workspace.
+              </div>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-3" data-dashboard-runtime-session-list="">
+                {summary.recentSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="rounded-2xl border border-white/10 bg-black/10 p-4"
+                    data-dashboard-runtime-session={session.id}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="border-brand/30 bg-brand/10 text-[10px] text-brand"
+                      >
+                        {session.adapterKind}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'text-[10px] font-mono',
+                          session.status === 'working' && 'border-brand/30 bg-brand/10 text-brand',
+                          (session.status === 'blocked' || session.status === 'stale') &&
+                            'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                          (session.status === 'failed' || session.status === 'offline') &&
+                            'border-red-500/30 bg-red-500/10 text-red-200',
+                          !['working', 'blocked', 'stale', 'failed', 'offline'].includes(
+                            session.status,
+                          ) && 'border-white/10 bg-black/10 text-foreground/80',
+                        )}
+                      >
+                        {session.status}
+                      </Badge>
+                      {session.workspaceManaged && (
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-200"
+                        >
+                          isolated
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="mt-3 break-all text-sm font-semibold text-foreground">
+                      {session.currentTicketId ?? session.currentRunId ?? session.employeeId}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Last heartbeat {formatRuntimeHeartbeat(session.lastHeartbeatAt)}
+                    </p>
+                    {session.failureReason && (
+                      <p className="mt-2 text-xs leading-5 text-amber-200">
+                        {truncateText(session.failureReason, 120)}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function MissionControlSkeleton() {
   const heroSkeletonKeys = [
     'hero-skeleton-1',
@@ -281,6 +569,7 @@ function MissionControlSkeleton() {
     'hero-skeleton-3',
     'hero-skeleton-4',
     'hero-skeleton-5',
+    'hero-skeleton-6',
   ];
   return (
     <section
@@ -290,7 +579,7 @@ function MissionControlSkeleton() {
       <div className="mission-grid pointer-events-none absolute inset-0 opacity-35" />
       <div className="relative flex flex-col gap-6 p-4 sm:p-6 xl:p-8">
         <div className="mission-hero rounded-[28px] border border-white/10 p-6">
-          <div className="grid gap-4 lg:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
             {heroSkeletonKeys.map((key) => (
               <div key={key} className="h-28 animate-pulse rounded-2xl bg-black/20" />
             ))}
@@ -371,6 +660,7 @@ export function MissionControlDashboard({
   const routinesQuery = useRoutines(companyId);
   const approvalsQuery = useApprovals(companyId, undefined, 'pending');
   const budgetOverviewQuery = useBudgetOverview(companyId);
+  const runtimeOperationsQuery = useRuntimeOperations(companyId);
   const agentRuns = agentRunsQuery.runs;
   const dashboardLayout = useDashboardLayoutPreferences(company);
 
@@ -404,7 +694,12 @@ export function MissionControlDashboard({
   ).length;
   const pendingApprovalCount = approvalsQuery.data?.length ?? 0;
   const budgetOverview = budgetOverviewQuery.data;
+  const runtimeOperationsSummary = summarizeRuntimeOperationsForDashboard(
+    runtimeOperationsQuery.data,
+  );
   const queueDataReady = hasWorkspace && !ticketsQuery.isLoading && !ticketsQuery.isError;
+  const runtimeOperationsReady =
+    hasWorkspace && !runtimeOperationsQuery.isLoading && !runtimeOperationsQuery.isError;
   const telemetryReady =
     hasWorkspace &&
     !telemetryStatsQuery.isLoading &&
@@ -442,7 +737,13 @@ export function MissionControlDashboard({
     void telemetryDailyQuery.refetch();
   }
 
-  function handleOpenAutonomy(subview: 'access' | 'approvals' | 'budgets' | 'routines') {
+  function handleRetryRuntimeOperations() {
+    void runtimeOperationsQuery.refetch();
+  }
+
+  function handleOpenAutonomy(
+    subview: 'access' | 'approvals' | 'budgets' | 'routines' | 'runtimes',
+  ) {
     setAutonomySubview(subview);
     setActiveView('autonomy');
   }
@@ -570,6 +871,19 @@ export function MissionControlDashboard({
                     variant="outline"
                     className={cn(
                       'border-white/10 bg-black/10 text-foreground/80',
+                      runtimeOperationsSummary.attentionCount > 0 &&
+                        'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                    )}
+                    data-dashboard-runtime-badge=""
+                  >
+                    {runtimeOperationsReady
+                      ? `${runtimeOperationsSummary.sessionCount} runtime sessions`
+                      : 'runtime sessions'}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'border-white/10 bg-black/10 text-foreground/80',
                       pendingApprovalCount > 0 &&
                         'border-amber-500/30 bg-amber-500/10 text-amber-200',
                     )}
@@ -584,22 +898,19 @@ export function MissionControlDashboard({
                     {operatorPosture} posture
                   </Badge>
                   {dashboardLayout.isSaving && (
-                    <Badge
-                      variant="outline"
-                      className="border-brand/25 bg-brand/10 text-brand"
-                      role="status"
+                    <output
+                      className={cn(
+                        badgeVariants({ variant: 'outline' }),
+                        'border-brand/25 bg-brand/10 text-brand',
+                      )}
                       aria-live="polite"
                     >
                       Saving layout
-                    </Badge>
+                    </output>
                   )}
                 </div>
                 {dashboardLayout.error && (
-                  <p
-                    className="text-xs text-red-200"
-                    data-dashboard-layout-error=""
-                    role="alert"
-                  >
+                  <p className="text-xs text-red-200" data-dashboard-layout-error="" role="alert">
                     {dashboardLayout.error}
                   </p>
                 )}
@@ -647,11 +958,21 @@ export function MissionControlDashboard({
                     <Sparkles className="h-4 w-4" />
                     Autonomy
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenAutonomy('runtimes')}
+                    className={DASHBOARD_GLASS_BUTTON_CLASS}
+                  >
+                    <HardDrive className="h-4 w-4" />
+                    Runtimes
+                  </Button>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
               <HeroMetric
                 label="Live runs"
                 value={
@@ -672,6 +993,25 @@ export function MissionControlDashboard({
                 }
                 icon={Bot}
                 onClick={() => setDashboardSubview('commands')}
+              />
+              <HeroMetric
+                label="External runtimes"
+                value={runtimeOperationsReady ? `${runtimeOperationsSummary.sessionCount}` : '--'}
+                hint={
+                  !hasWorkspace
+                    ? 'Select a workspace to load runtime sessions and checkouts.'
+                    : runtimeOperationsQuery.isLoading
+                      ? 'Loading live runtime heartbeat and checkout state.'
+                      : runtimeOperationsQuery.isError
+                        ? 'Runtime operations are temporarily unavailable.'
+                        : runtimeOperationsSummary.attentionCount > 0
+                          ? `${runtimeOperationsSummary.attentionCount} runtime items need review.`
+                          : runtimeOperationsSummary.sessionCount > 0
+                            ? `${runtimeOperationsSummary.workingSessionCount} working with ${runtimeOperationsSummary.activeCheckoutCount} active checkout leases.`
+                            : 'No external runtime sessions are active.'
+                }
+                icon={HardDrive}
+                onClick={() => handleOpenAutonomy('runtimes')}
               />
               <HeroMetric
                 label="Workforce active"
@@ -772,6 +1112,17 @@ export function MissionControlDashboard({
           </Card>
         ) : (
           <>
+            <RuntimeOperationsBand
+              hasWorkspace={hasWorkspace}
+              summary={runtimeOperationsSummary}
+              isLoading={runtimeOperationsQuery.isLoading}
+              isError={runtimeOperationsQuery.isError}
+              isFetching={runtimeOperationsQuery.isFetching}
+              error={runtimeOperationsQuery.error}
+              onRetry={handleRetryRuntimeOperations}
+              onOpenRuntimes={() => handleOpenAutonomy('runtimes')}
+            />
+
             <div
               className={cn('grid gap-6', panelGridClass(layout.agentRuns, layout.employeeQueues))}
             >
