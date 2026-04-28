@@ -115,7 +115,7 @@ import { messages as messagesTable } from './db/schema.js';
 import { seed } from './db/seed.js';
 import { buildCommandHandlers } from './ipc/command-handlers.js';
 import { buildCopilotHandlers } from './ipc/copilot-handlers.js';
-import { createIpcHandlers } from './ipc/handlers.js';
+import { HUMAN_USER_ID, createIpcHandlers } from './ipc/handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
 import { createEventBus } from './orchestrator/event-bus.js';
@@ -1424,16 +1424,85 @@ app
           avgCompletionMs: () => null,
         };
 
-        // Write-side orchestrator seam. `enqueueAgentReply` is wired in
-        // M33 when the Copilot service threads delegation results back
-        // into the orchestrator queue; until then it's a best-effort
-        // no-op (T2 already documents this expectation in
-        // `delegate_subtask` body — the ticket is created and assigned,
-        // the orchestrator pickup is a separate path). `isCompanyPaused`
-        // mirrors the loop service's pause-gate observer for parity.
+        // Write-side orchestrator seam. Delegation is not complete when a
+        // ticket row is merely assigned: the assignee needs a ticket thread
+        // message and an actual queued reply turn. Keep that bridge here,
+        // where threads/messages/orchestrator are all in scope.
         const writeOrchestrator: WriteSideOrchestrator = {
-          enqueueAgentReply: async () => {
-            // Intentional no-op for T3 — see comment block above.
+          queueDelegatedTicket: async (args) => {
+            if (!orchestrator) {
+              throw new Error(
+                '[agentic-loop] orchestrator is unavailable for delegated ticket pickup',
+              );
+            }
+
+            const ticket = ticketsRepo.getById(args.ticketId);
+            if (!ticket || ticket.companyId !== args.companyId) {
+              throw new Error(
+                `[agentic-loop] delegated ticket "${args.ticketId}" is not available in company "${args.companyId}"`,
+              );
+            }
+
+            const assignee = employeesRepo.getById(args.employeeId);
+            if (!assignee || assignee.companyId !== args.companyId) {
+              throw new Error(
+                `[agentic-loop] delegated assignee "${args.employeeId}" is not available in company "${args.companyId}"`,
+              );
+            }
+
+            let threadId = ticket.threadId;
+            if (!threadId) {
+              threadId = threadsRepo.create({
+                companyId: args.companyId,
+                kind: 'ticket',
+                subject: ticket.title,
+                createdBy: args.actorId,
+              });
+              ticketsRepo.setThreadId(args.ticketId, threadId);
+            }
+
+            const ensureMember = (memberId: string, memberKind: 'user' | 'employee'): void => {
+              const members = threadsRepo.listMembers(threadId);
+              const alreadyMember = members.some(
+                (member) => member.memberId === memberId && member.memberKind === memberKind,
+              );
+              if (!alreadyMember) {
+                threadsRepo.addMember({ threadId, memberId, memberKind });
+              }
+            };
+
+            ensureMember(HUMAN_USER_ID, 'user');
+            ensureMember(args.employeeId, 'employee');
+            if (args.actorKind === 'employee' && args.actorId !== args.employeeId) {
+              ensureMember(args.actorId, 'employee');
+            }
+
+            const actorRow =
+              args.actorKind === 'employee' ? employeesRepo.getById(args.actorId) : null;
+            const actorLabel = actorRow?.name ?? args.actorId;
+            const description = ticket.description.trim();
+            const triggerMessageId = messagesRepo.append({
+              threadId,
+              authorId: args.actorId,
+              authorKind: args.actorKind === 'user' ? 'user' : 'employee',
+              isAgentInitiated: args.actorKind !== 'user',
+              content: `Delegated by ${actorLabel}: **${ticket.title}**\n\n${description.length > 0 ? description : '(no description)'}\n\nBegin work now. Reply with your assessment, concrete next action, blockers, and expected handoff.`,
+            });
+
+            orchestrator
+              .enqueueAgentReply({
+                threadId,
+                employeeId: args.employeeId,
+                triggerMessageId,
+              })
+              .catch((err: unknown) => {
+                console.error(
+                  `[agentic-loop] delegated ticket pickup failed for ticket=${args.ticketId}:`,
+                  err,
+                );
+              });
+
+            return { threadId, triggerMessageId };
           },
           isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
         };

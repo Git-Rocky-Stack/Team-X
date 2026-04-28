@@ -41,6 +41,7 @@ const EXECUTION_POLICY = [
   '- Treat requests phrased as ASAP, now, begin, start, staff, or onboard as active current-session work. Start the next concrete step immediately using available tools and context.',
   '- Do not invent future deadlines, dates, or "EOD tomorrow" commitments. Use future timing only when the user, ticket, project, or verified system state explicitly provides it.',
   '- After staffing or assigning a role, onboard that person against the active ticket or project in the same reply: state their role, constraints, first work to begin now, and any real blocker.',
+  '- If you name an employee as responsible, assign action items, demand an update, or claim you are initiating accountability, dispatch the work with an available tool in the same turn. If no tool call or persisted mutation happened, say no team action was started.',
   '- Do not delegate current work into a future status report when the relevant ticket, project, or context is already available.',
 ].join('\n');
 

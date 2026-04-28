@@ -225,6 +225,8 @@ export interface DelegationResult {
   readonly assigneeId: string;
   readonly assigneeName: string;
   readonly status: 'created' | 'escalated';
+  readonly executionQueued: boolean;
+  readonly threadId: string;
   readonly fallbackUsed: boolean;
   readonly attemptCount: number;
 }
@@ -488,11 +490,13 @@ export type WriteSideCompleteFn = (req: {
 
 /** Orchestrator seam — only the enqueue-reply and pause checks are used. */
 export interface WriteSideOrchestrator {
-  enqueueAgentReply(args: {
-    threadId: string;
+  queueDelegatedTicket(args: {
+    ticketId: string;
     employeeId: string;
     companyId: string;
-  }): Promise<void>;
+    actorId: string;
+    actorKind: string;
+  }): Promise<{ threadId: string; triggerMessageId: string }>;
   isCompanyPaused(companyId: string): boolean;
 }
 
@@ -1046,13 +1050,80 @@ export function buildDelegateSubtaskTool(
         }
       }
 
-      // Best-effort orchestrator enqueue. The thread will be created by the
-      // ticket-assign IPC layer in a separate path; here we only signal that
-      // the assignee should pick this ticket up. T3 may move this to the
-      // tickets IPC handler instead — leaving as best-effort for T2 isolation.
-      void chosenId;
+      let queuedThreadId: string;
+      try {
+        const pickup = await deps.orchestrator.queueDelegatedTicket({
+          ticketId,
+          employeeId: chosenId,
+          companyId: deps.companyId,
+          actorId: deps.actorId,
+          actorKind: deps.actorKind ?? 'agent',
+        });
+        queuedThreadId = pickup.threadId;
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        try {
+          deps.bus.emit({
+            type: 'task.escalated' satisfies EventType,
+            companyId: deps.companyId,
+            actorId: deps.actorId,
+            actorKind: deps.actorKind ?? 'agent',
+            payload: {
+              planId: args.planId,
+              originalAssigneeId: chosenId,
+              escalatedTo: deps.actorId,
+              reason: `Delegated ticket ${ticketId} was created, but the assignee could not be queued: ${reason}`,
+            },
+          });
+        } catch {
+          // non-fatal
+        }
+        return {
+          error: 'assignee_queue_failed',
+          reason: `Ticket "${ticketId}" was created for "${chosenId}", but the assignee could not be queued: ${reason}`,
+        };
+      }
 
-      // Emit bus event.
+      const delegatedAt = deps.now?.() ?? Date.now();
+
+      try {
+        deps.bus.emit({
+          type: 'ticket.created' satisfies EventType,
+          companyId: deps.companyId,
+          actorId: deps.actorId,
+          actorKind: deps.actorKind ?? 'agent',
+          payload: {
+            ticketId,
+            companyId: deps.companyId,
+            title: args.subtaskTitle,
+            assigneeId: chosenId,
+            createdAt: delegatedAt,
+          },
+        });
+      } catch {
+        // non-fatal
+      }
+
+      try {
+        deps.bus.emit({
+          type: 'ticket.assigned' satisfies EventType,
+          companyId: deps.companyId,
+          actorId: deps.actorId,
+          actorKind: deps.actorKind ?? 'agent',
+          payload: {
+            ticketId,
+            companyId: deps.companyId,
+            assigneeId: chosenId,
+            previousAssigneeId: null,
+            threadId: queuedThreadId,
+            assignedAt: delegatedAt,
+          },
+        });
+      } catch {
+        // non-fatal
+      }
+
+      // Emit planner-level event.
       try {
         deps.bus.emit({
           type: 'task.delegated' satisfies EventType,
@@ -1065,6 +1136,8 @@ export function buildDelegateSubtaskTool(
             assigneeId: chosenId,
             assigneeName: chosenName,
             parentProjectId: args.parentProjectId ?? null,
+            threadId: queuedThreadId,
+            executionQueued: true,
             fallbackUsed,
             attemptCount: attempts,
           },
@@ -1078,6 +1151,8 @@ export function buildDelegateSubtaskTool(
         assigneeId: chosenId,
         assigneeName: chosenName,
         status: 'created',
+        executionQueued: true,
+        threadId: queuedThreadId,
         fallbackUsed,
         attemptCount: attempts,
       };

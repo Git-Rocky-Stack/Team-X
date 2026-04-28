@@ -42,6 +42,8 @@ describe('composeSystemPromptWithRag', () => {
     expect(prompt).toContain('ASAP, now, begin, start, staff, or onboard');
     expect(prompt).toContain('Do not invent future deadlines');
     expect(prompt).toContain('onboard that person against the active ticket or project');
+    expect(prompt).toContain('dispatch the work with an available tool');
+    expect(prompt).toContain('no team action was started');
   });
 
   it('returns plain role prompt when RAG disabled', async () => {

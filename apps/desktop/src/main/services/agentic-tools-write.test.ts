@@ -197,7 +197,10 @@ function makeDeps(opts: MakeDepsOpts = {}): {
   };
 
   const orchestrator: WriteSideOrchestrator = {
-    enqueueAgentReply: vi.fn().mockResolvedValue(undefined),
+    queueDelegatedTicket: vi.fn(async (args) => ({
+      threadId: `thread-${args.ticketId}`,
+      triggerMessageId: `msg-${args.ticketId}`,
+    })),
     isCompanyPaused: () => false,
   };
 
@@ -682,7 +685,21 @@ describe('delegate_subtask', () => {
     expect(result.ticketId).toMatch(/^t-/);
     expect(result.assigneeId).toBe('e1');
     expect(result.status).toBe('created');
+    expect(result.executionQueued).toBe(true);
+    expect(result.threadId).toBe(`thread-${result.ticketId}`);
     expect(result.fallbackUsed).toBe(false);
+    expect(deps.orchestrator.queueDelegatedTicket).toHaveBeenCalledWith({
+      ticketId: result.ticketId,
+      employeeId: 'e1',
+      companyId: 'co-1',
+      actorId: 'emp-actor',
+      actorKind: 'agent',
+    });
+    expect(busCalls.map((c) => c.type)).toEqual([
+      'ticket.created',
+      'ticket.assigned',
+      'task.delegated',
+    ]);
     expect(busCalls.some((c) => c.type === 'task.delegated')).toBe(true);
   });
 
@@ -724,9 +741,36 @@ describe('delegate_subtask', () => {
       makeCtx(),
     )) as DelegationResult;
     expect(result.assigneeId).toBe('e2');
+    expect(result.executionQueued).toBe(true);
     expect(result.fallbackUsed).toBe(true);
     expect(result.attemptCount).toBe(2);
+    expect(deps.orchestrator.queueDelegatedTicket).toHaveBeenCalledWith({
+      ticketId: result.ticketId,
+      employeeId: 'e2',
+      companyId: 'co-1',
+      actorId: 'emp-actor',
+      actorKind: 'agent',
+    });
     expect(busCalls.some((c) => c.type === 'task.delegated')).toBe(true);
+  });
+
+  it('surfaces a queue failure instead of silently creating dormant work', async () => {
+    const { deps, busCalls } = setup();
+    vi.mocked(deps.orchestrator.queueDelegatedTicket).mockRejectedValueOnce(
+      new Error('orchestrator offline'),
+    );
+    const tool = buildDelegateSubtaskTool(deps);
+    const result = await tool.execute(
+      { planId: 'p1', subtaskTitle: 'Build auth', assigneeId: 'e1' },
+      makeCtx(),
+    );
+
+    expect(result).toMatchObject({
+      error: 'assignee_queue_failed',
+      reason: expect.stringContaining('orchestrator offline'),
+    });
+    expect(busCalls.some((c) => c.type === 'task.escalated')).toBe(true);
+    expect(busCalls.some((c) => c.type === 'task.delegated')).toBe(false);
   });
 
   it('emits task.escalated when failure counter hits planner_escalation_threshold', async () => {
