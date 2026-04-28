@@ -222,6 +222,49 @@ describe('skills-service', () => {
     ).resolves.toContain('repo provenance');
   });
 
+  it('installs a public manifest URL and snapshots files resolved relative to that URL', async () => {
+    const fetchFn: typeof fetch = vi.fn(async (input) => {
+      const url = String(input);
+      if (url === 'https://cdn.example.com/teamx/skills/research/teamx-skill.json') {
+        return new Response(
+          JSON.stringify({
+            name: 'Public Research Skill',
+            promptFile: 'prompt.md',
+            instructionFiles: ['notes/source-policy.md'],
+            requestedCapabilities: [],
+            requestedPaths: [],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url === 'https://cdn.example.com/teamx/skills/research/prompt.md') {
+        return new Response('Use public URL instructions.', { status: 200 });
+      }
+      if (url === 'https://cdn.example.com/teamx/skills/research/notes/source-policy.md') {
+        return new Response('Cite source URLs when summarizing.', { status: 200 });
+      }
+      return new Response('not found', { status: 404 });
+    }) as typeof fetch;
+
+    const { service, extensionsRepo } = createService({ fetchFn });
+    const result = await service.installGithub({
+      companyId: COMPANY_ID,
+      sourceUrl: 'https://cdn.example.com/teamx/skills/research/teamx-skill.json',
+    });
+
+    const extension = extensionsRepo.getById(result.extensionId);
+    expect(extension?.sourceKind).toBe('url');
+    expect(extension?.trustState).toBe('trusted');
+    const manifest = JSON.parse(extension?.manifestJson ?? '{}') as Record<string, unknown>;
+    expect(manifest.origin).toBe('url');
+    expect(manifest.manifestUrl).toBe(
+      'https://cdn.example.com/teamx/skills/research/teamx-skill.json',
+    );
+    await expect(
+      readFile(join(String(manifest.snapshotDir), 'notes', 'source-policy.md'), 'utf8'),
+    ).resolves.toContain('source URLs');
+  });
+
   it('fails a bad install without leaving partial extension rows behind', async () => {
     const sourceDir = join(tempRoot, 'broken-skill');
     await writeLocalSkill(

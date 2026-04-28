@@ -105,6 +105,16 @@ describe('buildTeamXApi', () => {
     api = buildTeamXApi(fake.ipc);
   });
 
+  describe('system.selectDirectory', () => {
+    it('invokes system.selectDirectory without request args', async () => {
+      fake.setNextInvokeResult({ canceled: false, folderPath: 'C:/skills/ops' });
+      await api.system.selectDirectory();
+      expect(fake.invokeCalls).toEqual([
+        { channel: PRELOAD_CHANNELS.systemSelectDirectory, args: [] },
+      ]);
+    });
+  });
+
   describe('employees.list', () => {
     it('invokes employees.list with a { companyId } object', async () => {
       fake.setNextInvokeResult([]);

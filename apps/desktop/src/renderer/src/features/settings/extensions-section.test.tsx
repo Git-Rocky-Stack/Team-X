@@ -118,6 +118,9 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('MCP Servers');
     expect(extensionsSectionSrc).toContain('Authority Matrix');
     expect(extensionsSectionSrc).toContain('Install Skill');
+    expect(extensionsSectionSrc).toContain('Manage Skills');
+    expect(extensionsSectionSrc).toContain('data-manage-skills=""');
+    expect(extensionsSectionSrc).toContain('data-skills-management-panel=""');
     expect(extensionsSectionSrc).toContain('Import MCP');
     expect(extensionsSectionSrc).toContain('Grant Path');
     expect(extensionsSectionSrc).toContain('Pending reviews');
@@ -143,13 +146,17 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('<ImportMcpDialog');
   });
 
-  it('adds a skill install dialog for local folders and GitHub sources', () => {
+  it('adds a skill install dialog for editable local folders and public URLs', () => {
     expect(installSkillDialogSrc).toContain('Install Skill');
     expect(installSkillDialogSrc).toContain('Local Folder');
-    expect(installSkillDialogSrc).toContain('GitHub URL');
+    expect(installSkillDialogSrc).toContain('Public URL');
     expect(installSkillDialogSrc).toContain('teamx-skill.json');
+    expect(installSkillDialogSrc).toContain('data-skill-folder-path=""');
+    expect(installSkillDialogSrc).toContain('data-skill-folder-browse=""');
+    expect(installSkillDialogSrc).toContain('window.teamx.system.selectDirectory()');
+    expect(installSkillDialogSrc).toContain('LAST_LOCAL_SKILL_PATH_KEY');
     expect(installSkillDialogSrc).toContain('Install Local Skill');
-    expect(installSkillDialogSrc).toContain('Install GitHub Skill');
+    expect(installSkillDialogSrc).toContain('Install from URL');
     expect(installSkillDialogSrc).toContain('useInstallLocalSkill(companyId)');
     expect(installSkillDialogSrc).toContain('useInstallGithubSkill(companyId)');
   });

@@ -1,5 +1,5 @@
-import { AlertTriangle, FolderLock, Loader2, Shield, Sparkles } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { AlertTriangle, FolderLock, Loader2, Settings2, Shield, Sparkles } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import { type AuthorityGrant, EXTENSIONS_AUTONOMY_MODES } from '@team-x/shared-types';
 
@@ -66,6 +66,7 @@ export function ExtensionsSection() {
   const [mcpDialogOpen, setMcpDialogOpen] = useState(false);
   const [skillDialogOpen, setSkillDialogOpen] = useState(false);
   const [previewEmployeeId, setPreviewEmployeeId] = useState<string | null>(null);
+  const skillsManagementRef = useRef<HTMLDivElement | null>(null);
 
   const extensions = extensionsQuery.data ?? [];
   const pendingAuthorityRequests = authorityRequestsQuery.data ?? [];
@@ -138,6 +139,11 @@ export function ExtensionsSection() {
       employeeId,
       enabled: nextValue === 'enabled',
     });
+  }
+
+  function handleManageSkills() {
+    skillsManagementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    skillsManagementRef.current?.focus({ preventScroll: true });
   }
 
   const skillExtensions = extensions.filter((extension) => extension.kind === 'skill');
@@ -222,18 +228,38 @@ export function ExtensionsSection() {
                   Workspace-visible skills with provenance, trust, and requested access.
                 </CardDescription>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!companyId}
-                onClick={() => setSkillDialogOpen(true)}
-              >
-                Install Skill
-              </Button>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!companyId}
+                  onClick={handleManageSkills}
+                  aria-controls="installed-skills-management"
+                  data-manage-skills=""
+                >
+                  <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  Manage Skills
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!companyId}
+                  onClick={() => setSkillDialogOpen(true)}
+                >
+                  Install Skill
+                </Button>
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent
+            id="installed-skills-management"
+            ref={skillsManagementRef}
+            tabIndex={-1}
+            className="space-y-3 outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            data-skills-management-panel=""
+          >
             {!companyId ? (
               <p className="text-sm text-muted-foreground">
                 Select a workspace to inspect installed skills.

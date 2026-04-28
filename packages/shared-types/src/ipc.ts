@@ -1149,6 +1149,11 @@ export interface TestMcpConnectionResponse {
   toolCount?: number;
 }
 
+export interface SelectDirectoryResponse {
+  canceled: boolean;
+  folderPath: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Extensions & authority shapes (Phase 6+ foundation)
 // ---------------------------------------------------------------------------
@@ -2580,6 +2585,10 @@ export type UnsubscribeFn = () => void;
  * without forcing the caller to remember positional order.
  */
 export interface TeamXApi {
+  system: {
+    /** Open a native directory picker and return the selected folder path, if any. */
+    selectDirectory(): Promise<SelectDirectoryResponse>;
+  };
   companies: {
     /** Return every company. Phase 1 + Phase 5.6 onwards may return many. */
     list(): Promise<Company[]>;
@@ -2915,7 +2924,7 @@ export interface TeamXApi {
     list(companyId: string): Promise<ExtensionSummary[]>;
     /** Install a local Team-X skill folder into the current workspace. */
     installLocalSkill(req: InstallLocalSkillRequest): Promise<{ extensionId: string }>;
-    /** Install a public GitHub-hosted Team-X skill into the current workspace. */
+    /** Install a public URL-hosted Team-X skill into the current workspace. */
     installGithubSkill(req: InstallGithubSkillRequest): Promise<{ extensionId: string }>;
     /** List workspace and employee assignment overlays for installed skills. */
     listSkillAssignments(companyId: string): Promise<SkillAssignment[]>;

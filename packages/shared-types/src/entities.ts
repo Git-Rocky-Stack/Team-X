@@ -1108,7 +1108,13 @@ export type ExtensionsAutonomyMode = (typeof EXTENSIONS_AUTONOMY_MODES)[number];
 export const EXTENSION_KINDS = ['skill', 'mcp'] as const;
 export type ExtensionKind = (typeof EXTENSION_KINDS)[number];
 
-export const EXTENSION_SOURCE_KINDS = ['local', 'github', 'marketplace', 'template'] as const;
+export const EXTENSION_SOURCE_KINDS = [
+  'local',
+  'github',
+  'url',
+  'marketplace',
+  'template',
+] as const;
 export type ExtensionSourceKind = (typeof EXTENSION_SOURCE_KINDS)[number];
 
 export const EXTENSION_TRUST_STATES = ['trusted', 'pending-review', 'denied'] as const;

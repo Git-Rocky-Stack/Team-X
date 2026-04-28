@@ -60,6 +60,7 @@ import type { IpcHandlers } from './handlers.js';
  * uses these exact strings.
  */
 const REQUEST_CHANNELS = [
+  'system.selectDirectory',
   'companies.list',
   'companies.exportPackage',
   'companies.previewImportPackage',

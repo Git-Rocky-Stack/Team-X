@@ -1894,6 +1894,24 @@ app
       ragHandlers.deleteForCompany(companyId),
     );
 
+    ipcMain.handle('system.selectDirectory', async (event) => {
+      const owner =
+        BrowserWindow.fromWebContents(event.sender) ??
+        BrowserWindow.getFocusedWindow() ??
+        undefined;
+      const options: Electron.OpenDialogOptions = {
+        title: 'Select skill folder',
+        properties: ['openDirectory', 'createDirectory'],
+      };
+      const result = owner
+        ? await dialog.showOpenDialog(owner, options)
+        : await dialog.showOpenDialog(options);
+      return {
+        canceled: result.canceled,
+        folderPath: result.filePaths[0] ?? null,
+      };
+    });
+
     // ---- Command palette IPC handlers (Phase 5 — M30 T5, M31 T6) -----------
     //
     // Mounted as a sibling block rather than folded into `createIpcHandlers`

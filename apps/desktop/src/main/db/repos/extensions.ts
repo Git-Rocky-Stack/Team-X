@@ -31,7 +31,7 @@ export interface CreateExtensionInput {
   kind: 'skill' | 'mcp';
   name: string;
   slug: string;
-  sourceKind: 'local' | 'github' | 'marketplace' | 'template';
+  sourceKind: 'local' | 'github' | 'url' | 'marketplace' | 'template';
   sourceRef: string;
   version?: string | null;
   updateChannel?: string | null;
@@ -47,7 +47,7 @@ export interface UpdateExtensionInput {
   companyId?: string | null;
   name?: string;
   slug?: string;
-  sourceKind?: 'local' | 'github' | 'marketplace' | 'template';
+  sourceKind?: 'local' | 'github' | 'url' | 'marketplace' | 'template';
   sourceRef?: string;
   version?: string | null;
   updateChannel?: string | null;

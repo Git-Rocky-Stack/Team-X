@@ -124,7 +124,13 @@ function normalizeRelativeFilePath(value: string, label: string): string {
   if (normalized.length === 0) {
     throw new Error(`[skills] ${label} is required`);
   }
-  if (normalized.startsWith('/') || normalized.startsWith('../') || normalized.includes('/../')) {
+  if (
+    normalized.startsWith('/') ||
+    normalized.startsWith('//') ||
+    normalized.startsWith('../') ||
+    normalized.includes('/../') ||
+    /^[a-z][a-z0-9+.-]*:/i.test(normalized)
+  ) {
     throw new Error(`[skills] ${label} must stay within the skill root`);
   }
   return normalized;
@@ -480,6 +486,151 @@ async function loadGitHubSkillSource(
   };
 }
 
+interface LoadedRemoteSkillSource {
+  sourceKind: 'github' | 'url';
+  source: LoadedSkillSource;
+}
+
+function isGitHubSourceUrl(sourceUrl: string): boolean {
+  try {
+    const url = new URL(sourceUrl);
+    return url.hostname === 'github.com' || url.hostname === 'raw.githubusercontent.com';
+  } catch {
+    return false;
+  }
+}
+
+function assertPublicSkillUrl(sourceUrl: string): URL {
+  let url: URL;
+  try {
+    url = new URL(sourceUrl);
+  } catch {
+    throw new Error('[skills] public skill URL must be a valid URL');
+  }
+  if (url.protocol !== 'https:') {
+    throw new Error('[skills] public skill URL must use https');
+  }
+  if (url.username || url.password) {
+    throw new Error('[skills] public skill URL must not include credentials');
+  }
+  return url;
+}
+
+function manifestFileNameFromUrl(url: URL): string {
+  return url.pathname.split('/').filter(Boolean).pop() ?? MANIFEST_FILE_CANDIDATES[0];
+}
+
+function manifestCandidateUrls(sourceUrl: string): URL[] {
+  const url = assertPublicSkillUrl(sourceUrl);
+  const fileName = manifestFileNameFromUrl(url).toLowerCase();
+  if (MANIFEST_FILE_CANDIDATES.includes(fileName as (typeof MANIFEST_FILE_CANDIDATES)[number])) {
+    return [url];
+  }
+
+  const folderUrl = new URL(url.toString());
+  folderUrl.search = '';
+  folderUrl.hash = '';
+  if (!folderUrl.pathname.endsWith('/')) {
+    folderUrl.pathname = `${folderUrl.pathname.replace(/\/+$/, '')}/`;
+  }
+  return MANIFEST_FILE_CANDIDATES.map((candidate) => new URL(candidate, folderUrl));
+}
+
+async function loadPublicUrlSkillSource(
+  sourceUrl: string,
+  fetchFn: FetchLike,
+): Promise<LoadedSkillSource> {
+  const headers = { Accept: 'application/json,text/plain,*/*', 'User-Agent': 'Team-X Desktop' };
+
+  async function fetchText(url: URL, missingMessage: string): Promise<string> {
+    const response = await fetchFn(url.toString(), { headers });
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(missingMessage);
+      }
+      throw new Error(`[skills] public URL request failed (${response.status}) for ${url}`);
+    }
+    return response.text();
+  }
+
+  let manifestUrl: URL | null = null;
+  let manifestRaw: string | null = null;
+  for (const candidate of manifestCandidateUrls(sourceUrl)) {
+    try {
+      manifestRaw = await fetchText(
+        candidate,
+        `[skills] public skill manifest not found: ${candidate}`,
+      );
+      manifestUrl = candidate;
+      break;
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('public skill manifest not found')) {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (!manifestUrl || manifestRaw === null) {
+    throw new Error('[skills] public skill URL is missing teamx-skill.json or team-x-skill.json');
+  }
+
+  const manifest = parseSkillManifest(manifestRaw);
+  const manifestFileName = manifestFileNameFromUrl(manifestUrl);
+  const baseUrl = new URL('.', manifestUrl);
+  const fileMap = new Map<string, string>();
+  const referencedFiles = [manifest.promptFile, ...manifest.instructionFiles];
+  for (const relativePath of referencedFiles) {
+    const fileUrl = new URL(relativePath, baseUrl);
+    fileMap.set(
+      relativePath,
+      await fetchText(fileUrl, `[skills] public skill file not found: ${relativePath}`),
+    );
+  }
+
+  return {
+    manifest,
+    manifestFileName,
+    async readTextFile(relativePath: string) {
+      const value = fileMap.get(relativePath);
+      if (!value) {
+        throw new Error(`[skills] snapshot missing ${relativePath}`);
+      }
+      return value;
+    },
+    async snapshotTo(targetDir: string) {
+      await ensureDirectory(targetDir);
+      await writeFile(join(targetDir, manifestFileName), manifestRaw, 'utf8');
+      for (const [relativePath, text] of fileMap.entries()) {
+        const targetPath = join(targetDir, relativePath);
+        await ensureDirectory(dirname(targetPath));
+        await writeFile(targetPath, text, 'utf8');
+      }
+    },
+    sourceMetadata: {
+      origin: 'url',
+      sourceUrl,
+      manifestUrl: manifestUrl.toString(),
+    },
+  };
+}
+
+async function loadRemoteSkillSource(
+  sourceUrl: string,
+  fetchFn: FetchLike,
+): Promise<LoadedRemoteSkillSource> {
+  if (isGitHubSourceUrl(sourceUrl)) {
+    return {
+      sourceKind: 'github',
+      source: await loadGitHubSkillSource(sourceUrl, fetchFn),
+    };
+  }
+  return {
+    sourceKind: 'url',
+    source: await loadPublicUrlSkillSource(sourceUrl, fetchFn),
+  };
+}
+
 function rowToSkillAssignment(row: SkillAssignmentRow): SkillAssignment {
   return {
     id: row.id,
@@ -548,7 +699,7 @@ export function createSkillsService(deps: SkillsServiceDeps): SkillsService {
 
   async function installFromSource(
     companyId: string,
-    sourceKind: 'local' | 'github',
+    sourceKind: 'local' | 'github' | 'url',
     sourceRef: string,
     source: LoadedSkillSource,
   ): Promise<{ extensionId: string }> {
@@ -638,8 +789,8 @@ export function createSkillsService(deps: SkillsServiceDeps): SkillsService {
 
     async installGithub({ companyId, sourceUrl }) {
       if (!companyId) throw new Error('[skills] companyId is required');
-      const source = await loadGitHubSkillSource(sourceUrl, fetchFn);
-      return installFromSource(companyId, 'github', sourceUrl, source);
+      const loaded = await loadRemoteSkillSource(sourceUrl, fetchFn);
+      return installFromSource(companyId, loaded.sourceKind, sourceUrl, loaded.source);
     },
 
     listAssignments(companyId: string) {

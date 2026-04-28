@@ -184,6 +184,7 @@ import type {
   RuntimeOperationsSnapshot,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
+  SelectDirectoryResponse,
   SendChatRequest,
   SendChatResponse,
   SettingsGetAgenticResponse,
@@ -280,6 +281,7 @@ export interface IpcRendererLike {
  * `IpcContract` in `@team-x/shared-types/ipc.ts`.
  */
 const CHANNELS = {
+  systemSelectDirectory: 'system.selectDirectory',
   companiesList: 'companies.list',
   companiesExportPackage: 'companies.exportPackage',
   companiesPreviewImportPackage: 'companies.previewImportPackage',
@@ -493,6 +495,10 @@ function telemetryEmployeeStatsRequest(
  */
 export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
   return {
+    system: {
+      selectDirectory: () =>
+        ipc.invoke(CHANNELS.systemSelectDirectory) as Promise<SelectDirectoryResponse>,
+    },
     companies: {
       list: () => ipc.invoke(CHANNELS.companiesList) as ReturnType<TeamXApi['companies']['list']>,
       exportPackage: (req: ExportCompanyPackageRequest) =>

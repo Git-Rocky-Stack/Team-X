@@ -1405,7 +1405,7 @@ export interface IpcHandlers {
   /** `extensions.installLocalSkill` — install one local skill folder into a workspace. */
   extensionsInstallLocalSkill(req: InstallLocalSkillRequest): Promise<{ extensionId: string }>;
 
-  /** `extensions.installGithubSkill` — install one GitHub-hosted skill into a workspace. */
+  /** `extensions.installGithubSkill` — install one public URL-hosted skill into a workspace. */
   extensionsInstallGithubSkill(req: InstallGithubSkillRequest): Promise<{ extensionId: string }>;
 
   /** `extensions.listSkillAssignments` — list workspace and employee skill overlays. */
@@ -2026,6 +2026,17 @@ function normalizeNullableProfileTextField(
     throw new Error(`[ipc] employees.update: ${field} must be ${maxLength} characters or fewer`);
   }
   return trimmed;
+}
+
+function skillSourceKindFromUrl(sourceUrl: string): 'github' | 'url' {
+  try {
+    const url = new URL(sourceUrl);
+    return url.hostname === 'github.com' || url.hostname === 'raw.githubusercontent.com'
+      ? 'github'
+      : 'url';
+  } catch {
+    return 'url';
+  }
 }
 
 function rowToChatMessage(row: MessageRow): ChatMessage {
@@ -4640,7 +4651,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       });
       emitUserAuditEvent('extension.installed', companyId, {
         extensionId: result.extensionId,
-        sourceKind: 'github',
+        sourceKind: skillSourceKindFromUrl(sourceUrl.trim()),
         sourceRef: sourceUrl.trim(),
       });
       return result;
