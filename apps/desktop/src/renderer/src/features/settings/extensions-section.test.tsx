@@ -60,6 +60,10 @@ describe('Extensions & Authority settings shell', () => {
     );
     expect(extensionsHooksSrc).toContain('ipc.extensions.installGithubSkill');
     expect(extensionsHooksSrc).toContain(
+      'export function useRemoveSkill(companyId: string | null)',
+    );
+    expect(extensionsHooksSrc).toContain('ipc.extensions.removeSkill({');
+    expect(extensionsHooksSrc).toContain(
       'export function useUpsertSkillAssignment(companyId: string | null)',
     );
     expect(extensionsHooksSrc).toContain('ipc.extensions.upsertSkillAssignment');
@@ -137,6 +141,11 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('Pending reviews');
     expect(extensionsSectionSrc).toContain('Workspace assignment');
     expect(extensionsSectionSrc).toContain('Employee overrides');
+    expect(extensionsSectionSrc).toContain('data-skill-remove=""');
+    expect(extensionsSectionSrc).toContain('Remove Skill');
+    expect(extensionsSectionSrc).toContain('installedMcpServers');
+    expect(extensionsSectionSrc).toContain('data-mcp-remove=""');
+    expect(extensionsSectionSrc).toContain('Remove MCP');
     expect(extensionsSectionSrc).toContain('EXTENSIONS_AUTONOMY_MODES.map');
     expect(extensionsSectionSrc).toContain('Effective preview');
     expect(extensionsSectionSrc).toContain('Authority preview employee');

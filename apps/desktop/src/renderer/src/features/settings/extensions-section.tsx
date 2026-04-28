@@ -22,6 +22,7 @@ import {
   useMcpServers,
   useMcpTemplates,
   useRemoveMcpServer,
+  useRemoveSkill,
   useReviewAuthorityRequest,
   useSkillAssignments,
   useToggleMcpServer,
@@ -70,6 +71,7 @@ export function ExtensionsSection() {
   const reviewAuthorityRequest = useReviewAuthorityRequest(companyId);
   const upsertSkillAssignment = useUpsertSkillAssignment(companyId);
   const deleteSkillAssignment = useDeleteSkillAssignment(companyId);
+  const removeSkill = useRemoveSkill(companyId);
   const toggleMcpServer = useToggleMcpServer(companyId);
   const removeMcpServer = useRemoveMcpServer(companyId);
   const [grantDialogOpen, setGrantDialogOpen] = useState(false);
@@ -102,6 +104,10 @@ export function ExtensionsSection() {
       .filter((assignment) => assignment.employeeId === null)
       .map((assignment) => [assignment.extensionId, assignment]),
   );
+  const installedMcpServers = (mcpQuery.data ?? []).filter((server) => server.companyId !== null);
+  const builtInMcpTemplateCount =
+    mcpTemplatesQuery.data?.length ??
+    (mcpQuery.data ?? []).filter((server) => server.companyId === null).length;
   const employeeSkillAssignments = new Map(
     skillAssignments
       .filter((assignment) => assignment.employeeId !== null)
@@ -301,6 +307,8 @@ export function ExtensionsSection() {
                 {skillExtensions.map((extension) => {
                   const workspaceAssignment = workspaceSkillAssignments.get(extension.id);
                   const workspaceEnabled = workspaceAssignment?.enabled ?? false;
+                  const isRemovingSkill =
+                    removeSkill.isPending && removeSkill.variables === extension.id;
                   const pendingReviewCount = pendingAuthorityRequests.filter(
                     (request) => request.extensionId === extension.id,
                   ).length;
@@ -328,6 +336,21 @@ export function ExtensionsSection() {
                           {!extension.enabled && (
                             <Badge variant="secondary">extension disabled</Badge>
                           )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => removeSkill.mutate(extension.id)}
+                            disabled={
+                              removeSkill.isPending ||
+                              upsertSkillAssignment.isPending ||
+                              deleteSkillAssignment.isPending
+                            }
+                            data-skill-remove=""
+                          >
+                            {isRemovingSkill ? 'Removing...' : 'Remove Skill'}
+                          </Button>
                         </div>
                       </div>
 
@@ -437,6 +460,11 @@ export function ExtensionsSection() {
                     </div>
                   );
                 })}
+                {removeSkill.isError && (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    Failed to remove the selected skill.
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -475,10 +503,12 @@ export function ExtensionsSection() {
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-destructive">
                 Failed to load MCP servers.
               </div>
-            ) : mcpQuery.data && mcpQuery.data.length > 0 ? (
+            ) : installedMcpServers.length > 0 ? (
               <div className="space-y-3">
-                {mcpQuery.data.map((server) => {
+                {installedMcpServers.map((server) => {
                   const extension = mcpExtensionsByRuntimeRefId.get(server.id);
+                  const isRemovingMcp =
+                    removeMcpServer.isPending && removeMcpServer.variables === server.id;
                   return (
                     <div
                       key={server.id}
@@ -528,27 +558,32 @@ export function ExtensionsSection() {
                         >
                           {server.enabled ? 'Disable' : 'Enable'}
                         </Button>
-                        {server.companyId !== null && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeMcpServer.mutate(server.id)}
-                            disabled={toggleMcpServer.isPending || removeMcpServer.isPending}
-                          >
-                            Remove
-                          </Button>
-                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => removeMcpServer.mutate(server.id)}
+                          disabled={toggleMcpServer.isPending || removeMcpServer.isPending}
+                          data-mcp-remove=""
+                        >
+                          {isRemovingMcp ? 'Removing...' : 'Remove MCP'}
+                        </Button>
                       </div>
                     </div>
                   );
                 })}
+                {removeMcpServer.isError && (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    Failed to remove the selected MCP server.
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No MCP servers are registered for this workspace.
-                {mcpTemplatesQuery.data && mcpTemplatesQuery.data.length > 0
-                  ? ` ${mcpTemplatesQuery.data.length} built-in template(s) are ready in Import MCP.`
+                No MCP servers are installed for this workspace.
+                {builtInMcpTemplateCount > 0
+                  ? ` ${builtInMcpTemplateCount} built-in template(s) are ready in Import MCP.`
                   : ''}
               </p>
             )}

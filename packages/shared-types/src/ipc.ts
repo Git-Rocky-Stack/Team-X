@@ -1172,6 +1172,11 @@ export interface InstallGithubSkillRequest {
   sourceUrl: string;
 }
 
+export interface RemoveSkillRequest {
+  companyId: string;
+  extensionId: string;
+}
+
 export interface ListSkillAssignmentsRequest {
   companyId: string;
 }
@@ -2142,6 +2147,10 @@ export interface IpcContract {
     request: InstallGithubSkillRequest;
     response: { extensionId: string };
   };
+  'extensions.removeSkill': {
+    request: RemoveSkillRequest;
+    response: undefined;
+  };
   'extensions.listSkillAssignments': {
     request: ListSkillAssignmentsRequest;
     response: SkillAssignment[];
@@ -2926,6 +2935,8 @@ export interface TeamXApi {
     installLocalSkill(req: InstallLocalSkillRequest): Promise<{ extensionId: string }>;
     /** Install a public URL-hosted Team-X skill into the current workspace. */
     installGithubSkill(req: InstallGithubSkillRequest): Promise<{ extensionId: string }>;
+    /** Remove an installed Team-X skill from the current workspace. */
+    removeSkill(req: RemoveSkillRequest): Promise<void>;
     /** List workspace and employee assignment overlays for installed skills. */
     listSkillAssignments(companyId: string): Promise<SkillAssignment[]>;
     /** Upsert a workspace-default or employee-override assignment for one skill. */

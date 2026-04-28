@@ -190,6 +190,7 @@ import type {
   Project,
   ProjectDetail,
   ReconnectCloudWorkspaceRequest,
+  RemoveSkillRequest,
   RemoveProviderRequest,
   ReopenTicketRequest,
   ResolveThreadRequest,
@@ -618,6 +619,7 @@ export interface IpcAuthorityRepo {
   listByCompany(companyId: string): AuthorityGrantRow[];
   listForEmployee(companyId: string, employeeId: string): AuthorityGrantRow[];
   deleteGrant(id: string): void;
+  deleteGrantsByScope(scopeKind: 'company' | 'employee' | 'extension', scopeId: string): void;
   createRequest(input: {
     extensionId: string;
     employeeId?: string | null;
@@ -833,6 +835,7 @@ export interface IpcUpdaterService {
 export interface IpcSkillsService {
   installLocal(input: InstallLocalSkillRequest): Promise<{ extensionId: string }>;
   installGithub(input: InstallGithubSkillRequest): Promise<{ extensionId: string }>;
+  removeSkill(input: RemoveSkillRequest): Promise<ExtensionRow>;
   listAssignments(companyId: string): SkillAssignment[];
   upsertAssignment(input: UpsertSkillAssignmentRequest): string;
   deleteAssignment(assignmentId: string): void;
@@ -1407,6 +1410,9 @@ export interface IpcHandlers {
 
   /** `extensions.installGithubSkill` — install one public URL-hosted skill into a workspace. */
   extensionsInstallGithubSkill(req: InstallGithubSkillRequest): Promise<{ extensionId: string }>;
+
+  /** `extensions.removeSkill` — uninstall one skill from a workspace. */
+  extensionsRemoveSkill(req: RemoveSkillRequest): Promise<void>;
 
   /** `extensions.listSkillAssignments` — list workspace and employee skill overlays. */
   extensionsListSkillAssignments(req: ListSkillAssignmentsRequest): Promise<SkillAssignment[]>;
@@ -4655,6 +4661,27 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         sourceRef: sourceUrl.trim(),
       });
       return result;
+    },
+
+    async extensionsRemoveSkill({ companyId, extensionId }) {
+      if (!skillsService) {
+        throw new Error('[ipc] extensions.removeSkill: skillsService dep unwired');
+      }
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] extensions.removeSkill: companyId is required');
+      }
+      if (typeof extensionId !== 'string' || extensionId.length === 0) {
+        throw new Error('[ipc] extensions.removeSkill: extensionId is required');
+      }
+      assertCompanyActive(companiesRepo, companyId, 'extensions.removeSkill');
+      const removed = await skillsService.removeSkill({ companyId, extensionId });
+      emitUserAuditEvent('extension.removed', companyId, {
+        extensionId: removed.id,
+        kind: removed.kind,
+        name: removed.name,
+        sourceKind: removed.sourceKind,
+        sourceRef: removed.sourceRef,
+      });
     },
 
     async extensionsListSkillAssignments({ companyId }) {

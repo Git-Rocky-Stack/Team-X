@@ -377,6 +377,12 @@ export function createAuthorityRepo(db: DB) {
       db.delete(authorityGrants).where(eq(authorityGrants.id, id)).run();
     },
 
+    deleteGrantsByScope(scopeKind: 'company' | 'employee' | 'extension', scopeId: string): void {
+      db.delete(authorityGrants)
+        .where(and(eq(authorityGrants.scopeKind, scopeKind), eq(authorityGrants.scopeId, scopeId)))
+        .run();
+    },
+
     createRequest(input: CreateAuthorityRequestInput): string {
       const id = nanoid();
       db.insert(authorityRequests)

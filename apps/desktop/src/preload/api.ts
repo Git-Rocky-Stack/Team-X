@@ -358,6 +358,7 @@ const CHANNELS = {
   extensionsList: 'extensions.list',
   extensionsInstallLocalSkill: 'extensions.installLocalSkill',
   extensionsInstallGithubSkill: 'extensions.installGithubSkill',
+  extensionsRemoveSkill: 'extensions.removeSkill',
   extensionsListSkillAssignments: 'extensions.listSkillAssignments',
   extensionsUpsertSkillAssignment: 'extensions.upsertSkillAssignment',
   extensionsDeleteSkillAssignment: 'extensions.deleteSkillAssignment',
@@ -718,6 +719,7 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.extensionsInstallLocalSkill, req) as Promise<{ extensionId: string }>,
       installGithubSkill: (req: InstallGithubSkillRequest) =>
         ipc.invoke(CHANNELS.extensionsInstallGithubSkill, req) as Promise<{ extensionId: string }>,
+      removeSkill: (req) => ipc.invoke(CHANNELS.extensionsRemoveSkill, req) as Promise<void>,
       listSkillAssignments: (companyId: string) =>
         ipc.invoke(CHANNELS.extensionsListSkillAssignments, {
           companyId,

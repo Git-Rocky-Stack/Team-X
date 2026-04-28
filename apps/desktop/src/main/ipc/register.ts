@@ -130,11 +130,19 @@ const REQUEST_CHANNELS = [
   'events.list',
   // MCP management (Phase 2 — M10)
   'mcp.list',
+  'mcp.listTemplates',
   'mcp.toggle',
   'mcp.addServer',
+  'mcp.installTemplate',
   'mcp.removeServer',
   'mcp.testConnection',
   'extensions.list',
+  'extensions.installLocalSkill',
+  'extensions.installGithubSkill',
+  'extensions.removeSkill',
+  'extensions.listSkillAssignments',
+  'extensions.upsertSkillAssignment',
+  'extensions.deleteSkillAssignment',
   'authority.list',
   'authority.listRequests',
   'authority.create',
@@ -712,6 +720,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'extensions.installGithubSkill',
     async (_event, request: { companyId: string; sourceUrl: string }) => {
       return handlers.extensionsInstallGithubSkill(request);
+    },
+  );
+
+  ipcMain.handle(
+    'extensions.removeSkill',
+    async (_event, request: { companyId: string; extensionId: string }) => {
+      return handlers.extensionsRemoveSkill(request);
     },
   );
 

@@ -90,6 +90,7 @@ export type EventType =
   | 'mcp.removed'
   | 'mcp.toggled'
   | 'extension.installed'
+  | 'extension.removed'
   | 'skill.assignmentUpdated'
   | 'authority.grant.created'
   | 'authority.grant.deleted'

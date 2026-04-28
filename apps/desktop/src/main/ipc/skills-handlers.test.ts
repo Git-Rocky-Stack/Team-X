@@ -49,6 +49,25 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
   const skillsService = {
     installLocal: vi.fn(async () => ({ extensionId: 'skill-1' })),
     installGithub: vi.fn(async () => ({ extensionId: 'skill-2' })),
+    removeSkill: vi.fn(async () => ({
+      id: 'skill-1',
+      companyId: 'company-1',
+      kind: 'skill',
+      name: 'Ops Briefing',
+      slug: 'ops-briefing',
+      sourceKind: 'local',
+      sourceRef: 'C:/skills/ops-briefing',
+      version: '1.0.0',
+      updateChannel: null,
+      manifestJson: '{}',
+      requestedCapabilitiesJson: '[]',
+      requestedPathsJson: '[]',
+      enabled: true,
+      trustState: 'trusted',
+      runtimeRefId: null,
+      installedAt: 1,
+      updatedAt: 1,
+    })),
     listAssignments: vi.fn((): SkillAssignment[] => [
       {
         id: 'assign-1',
@@ -215,5 +234,17 @@ describe('skill IPC handlers', () => {
     await handlers.extensionsDeleteSkillAssignment({ assignmentId: 'assign-1' });
 
     expect(deps.skillsService?.deleteAssignment).toHaveBeenCalledWith('assign-1');
+  });
+
+  it('removes an installed skill through the skills service', async () => {
+    const deps = makeDeps();
+    const handlers = createIpcHandlers(deps);
+
+    await handlers.extensionsRemoveSkill({ companyId: 'company-1', extensionId: 'skill-1' });
+
+    expect(deps.skillsService?.removeSkill).toHaveBeenCalledWith({
+      companyId: 'company-1',
+      extensionId: 'skill-1',
+    });
   });
 });

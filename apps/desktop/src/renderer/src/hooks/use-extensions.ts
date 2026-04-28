@@ -156,6 +156,26 @@ export function useInstallGithubSkill(companyId: string | null) {
   });
 }
 
+export function useRemoveSkill(companyId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (extensionId: string) =>
+      ipc.extensions.removeSkill({
+        companyId: requireString(companyId, 'companyId'),
+        extensionId,
+      }),
+    onSuccess: () => {
+      if (!companyId) return;
+      qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['skill-assignments', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority-requests', companyId] });
+      qc.invalidateQueries({ queryKey: ['effective-authority', companyId] });
+      qc.invalidateQueries({ queryKey: ['audit'] });
+    },
+  });
+}
+
 export function useUpsertSkillAssignment(companyId: string | null) {
   const qc = useQueryClient();
   return useMutation({

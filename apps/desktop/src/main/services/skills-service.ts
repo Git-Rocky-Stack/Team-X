@@ -1,6 +1,6 @@
 import type { Stats } from 'node:fs';
 import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import type { ExtensionsAutonomyMode, SkillAssignment } from '@team-x/shared-types';
 
@@ -49,6 +49,11 @@ export interface InstallGithubSkillInput {
   sourceUrl: string;
 }
 
+export interface RemoveSkillInput {
+  companyId: string;
+  extensionId: string;
+}
+
 export interface UpsertSkillAssignmentInput {
   companyId: string;
   extensionId: string;
@@ -73,6 +78,7 @@ export interface SkillsServiceDeps {
 export interface SkillsService {
   installLocal(input: InstallLocalSkillInput): Promise<{ extensionId: string }>;
   installGithub(input: InstallGithubSkillInput): Promise<{ extensionId: string }>;
+  removeSkill(input: RemoveSkillInput): Promise<ExtensionRow>;
   listAssignments(companyId: string): SkillAssignment[];
   upsertAssignment(input: UpsertSkillAssignmentInput): string;
   deleteAssignment(assignmentId: string): void;
@@ -691,6 +697,23 @@ async function buildPromptAdditionForSkill(extension: ExtensionRow): Promise<str
   return lines.join('\n\n').trim();
 }
 
+function parseSnapshotDir(manifestJson: string | null): string | null {
+  if (!manifestJson) return null;
+  try {
+    const parsed = JSON.parse(manifestJson) as Record<string, unknown>;
+    return typeof parsed.snapshotDir === 'string' && parsed.snapshotDir.trim().length > 0
+      ? parsed.snapshotDir
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function isPathInside(parent: string, child: string): boolean {
+  const relativePath = relative(resolve(parent), resolve(child));
+  return relativePath.length === 0 || (!relativePath.startsWith('..') && !isAbsolute(relativePath));
+}
+
 export function createSkillsService(deps: SkillsServiceDeps): SkillsService {
   const fetchFn = deps.fetchFn ?? fetch;
   const logger = deps.log ?? {
@@ -791,6 +814,31 @@ export function createSkillsService(deps: SkillsServiceDeps): SkillsService {
       if (!companyId) throw new Error('[skills] companyId is required');
       const loaded = await loadRemoteSkillSource(sourceUrl, fetchFn);
       return installFromSource(companyId, loaded.sourceKind, sourceUrl, loaded.source);
+    },
+
+    async removeSkill({ companyId, extensionId }) {
+      if (!companyId) throw new Error('[skills] companyId is required');
+      if (!extensionId) throw new Error('[skills] extensionId is required');
+      const extension = deps.extensionsRepo.getById(extensionId);
+      if (!extension) throw new Error(`[skills] skill not found: ${extensionId}`);
+      if (extension.kind !== 'skill') {
+        throw new Error(`[skills] extension is not a skill: ${extensionId}`);
+      }
+      if (extension.companyId !== null && extension.companyId !== companyId) {
+        throw new Error(`[skills] skill ${extensionId} does not belong to company ${companyId}`);
+      }
+
+      deps.authorityRepo.deleteGrantsByScope('extension', extensionId);
+      deps.extensionsRepo.delete(extensionId);
+
+      const snapshotDir = parseSnapshotDir(extension.manifestJson);
+      if (snapshotDir && isPathInside(deps.skillsRoot, snapshotDir)) {
+        await rm(snapshotDir, { recursive: true, force: true }).catch((err) => {
+          logger.warn(`[skills] failed to remove skill snapshot ${snapshotDir}`, err);
+        });
+      }
+
+      return extension;
     },
 
     listAssignments(companyId: string) {
