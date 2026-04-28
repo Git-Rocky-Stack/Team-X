@@ -2575,7 +2575,7 @@ export interface TeamXApi {
     /** Export one workspace as a portable Team-X package file. */
     exportPackage(req: ExportCompanyPackageRequest): Promise<ExportCompanyPackageResponse>;
 
-    /** Read one Team-X package file and return a safe import preview plus local warnings. */
+    /** Read one Team-X package path or GitHub ref and return a safe import preview plus local warnings. */
     previewImportPackage(
       req: PreviewCompanyPackageImportRequest,
     ): Promise<PreviewCompanyPackageImportResponse>;
@@ -2586,7 +2586,7 @@ export interface TeamXApi {
     /** List locally installed workspace templates available for reuse. */
     listTemplates(req?: ListCompanyTemplatesRequest): Promise<ListCompanyTemplatesResponse>;
 
-    /** Install one external Team-X template package into the local template library. */
+    /** Install one external Team-X template package path or GitHub ref into the local template library. */
     installTemplate(req: InstallCompanyTemplateRequest): Promise<InstallCompanyTemplateResponse>;
 
     /**

@@ -1724,10 +1724,7 @@ function assertPackageRef(
   return packageRef.length > 0 ? { packageRef } : { packagePath };
 }
 
-function assertSecretBindings(
-  bindings: unknown,
-  channel: string,
-): CompanyPackageSecretBinding[] {
+function assertSecretBindings(bindings: unknown, channel: string): CompanyPackageSecretBinding[] {
   if (bindings === undefined) return [];
   if (!Array.isArray(bindings)) {
     throw new Error(`[ipc] ${channel}: secretBindings must be an array when provided`);
@@ -2329,10 +2326,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (req.slug !== undefined && typeof req.slug !== 'string') {
         throw new Error('[ipc] companies.importPackage: slug must be a string when provided');
       }
-      const secretBindings = assertSecretBindings(
-        req.secretBindings,
-        'companies.importPackage',
-      );
+      const secretBindings = assertSecretBindings(req.secretBindings, 'companies.importPackage');
       if (!companyPortabilityService) {
         throw new Error('[ipc] companies.importPackage: companyPortabilityService dep is required');
       }
@@ -2381,10 +2375,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         }
         assertCompanyActive(companiesRepo, req.companyId.trim(), 'companies.installTemplate');
       }
-      const secretBindings = assertSecretBindings(
-        req.secretBindings,
-        'companies.installTemplate',
-      );
+      const secretBindings = assertSecretBindings(req.secretBindings, 'companies.installTemplate');
       if (!companyPortabilityService) {
         throw new Error(
           '[ipc] companies.installTemplate: companyPortabilityService dep is required',

@@ -36,6 +36,7 @@ import {
 import type { TestDbHandle } from '../db/test-helpers.js';
 import { makeTestDb } from '../db/test-helpers.js';
 import {
+  type CompanyPortabilityServiceDeps,
   PORTABILITY_REDACTED_VALUE,
   createCompanyPortabilityService,
 } from './company-portability-service.js';
@@ -273,7 +274,7 @@ afterEach(async () => {
   ctx.close();
 });
 
-function createService() {
+function createService(overrides: Partial<CompanyPortabilityServiceDeps> = {}) {
   const companiesRepo = createCompaniesRepo(ctx.db);
   const employeesRepo = createEmployeesRepo(ctx.db);
   const orgEdgesRepo = createOrgEdgesRepo(ctx.db);
@@ -444,6 +445,7 @@ function createService() {
     exportRootDir,
     appVersion: '1.2.1',
     now: () => new Date('2026-04-23T18:30:00.000Z'),
+    ...overrides,
   });
 
   return {
@@ -674,6 +676,88 @@ describe('company-portability-service', () => {
         expect.stringMatching(/secret/i),
       ]),
     );
+    expect(preview.missingSecretRefs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'runtimeProfiles.runtime-1.config.env.ANTHROPIC_API_KEY',
+          providerId: 'anthropic',
+          key: 'apiKey',
+          bindable: true,
+        }),
+        expect.objectContaining({
+          path: 'extensions.extension-1.manifest.apiKey',
+          bindable: false,
+        }),
+      ]),
+    );
+    expect(preview.source).toMatchObject({
+      kind: 'local-path',
+      packagePath: exported.packagePath,
+    });
+    expect(preview.plan).toMatchObject({
+      canImport: true,
+      canInstallTemplate: false,
+      totals: expect.objectContaining({
+        create: expect.any(Number),
+        rename: expect.any(Number),
+        replace: expect.any(Number),
+        skip: expect.any(Number),
+      }),
+    });
+    expect(preview.plan?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'company',
+          action: 'rename',
+        }),
+        expect.objectContaining({
+          id: 'secret-bindings',
+          action: 'replace',
+        }),
+      ]),
+    );
+  });
+
+  it('previews and installs a template package from a GitHub shorthand ref', async () => {
+    const { service } = createService();
+    const exported = await service.exportCompany({
+      companyId: COMPANY_ID,
+      mode: 'template',
+    });
+    const packageJson = await readFile(exported.packagePath, 'utf8');
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      text: async () => packageJson,
+    }));
+    const remoteService = createService({ fetch });
+
+    const preview = await remoteService.previewImport({
+      packageRef: 'rocky/team-x-templates/templates/alpha.teamx-package.json#release',
+    });
+    const installed = await remoteService.installTemplate({
+      packageRef: 'rocky/team-x-templates@release:templates/alpha.teamx-package.json',
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://raw.githubusercontent.com/rocky/team-x-templates/release/templates/alpha.teamx-package.json',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Accept: expect.stringContaining('application/json'),
+        }),
+      }),
+    );
+    expect(preview.source).toMatchObject({
+      kind: 'github',
+      owner: 'rocky',
+      repo: 'team-x-templates',
+      ref: 'release',
+      path: 'templates/alpha.teamx-package.json',
+    });
+    expect(preview.plan?.canInstallTemplate).toBe(true);
+    expect(installed.packagePath).toMatch(/[\\/]templates[\\/]/);
+    expect(await readFile(installed.packagePath, 'utf8')).toContain('"mode": "template"');
   });
 
   it('imports a workspace package into a fresh company with remapped ids and preserved origins', async () => {

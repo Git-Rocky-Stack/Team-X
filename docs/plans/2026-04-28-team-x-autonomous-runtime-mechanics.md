@@ -111,6 +111,22 @@ Exit criteria:
 - the report is deterministic and JSON-ready;
 - support can reproduce the core report from the CLI even when the app cannot be launched.
 
+### P1.4 Template Marketplace Workflow
+
+Status: shipped as the second P1 follow-through slice.
+
+- Added package-source resolution for local paths, GitHub blob/raw URLs, and GitHub shorthand refs.
+- Extended import preview with source provenance, structured missing-secret rows, and deterministic dry-run plan actions.
+- Added missing-secret binding from the preview workflow into the OS keychain for bindable runtime `apiKey` refs.
+- Kept install/import non-destructive: templates land in the local library, and workspace package imports create a fresh company with remapped local ids.
+- Documented the operator workflow in `docs/runtime/template-marketplace.md`.
+
+Exit criteria:
+
+- operators can source template packages from disk or GitHub;
+- operators can dry-run import/install impact before mutating local state;
+- runtime secret gaps are visible and bindable without leaking package secrets into disk-backed state.
+
 ## Test Plan
 
 - Runtime session repo/service tests for create, heartbeat, status changes, stale marking, and company scoping.

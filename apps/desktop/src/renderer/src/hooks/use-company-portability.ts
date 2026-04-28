@@ -27,10 +27,7 @@ export function useCompanyPackagePreview(packageRef: string | null) {
   return useCompanyTemplatePreview(packageRef);
 }
 
-export function useExportCompanyPackage(
-  companyId: string | null,
-  mode: CompanyPackageMode,
-) {
+export function useExportCompanyPackage(companyId: string | null, mode: CompanyPackageMode) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
@@ -56,7 +53,9 @@ export function useExportWorkspacePackage(companyId: string | null) {
 export function useInstallCompanyTemplate(companyId: string | null = null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: string | { packageRef: string; secretBindings?: CompanyPackageSecretBinding[] }) => {
+    mutationFn: (
+      input: string | { packageRef: string; secretBindings?: CompanyPackageSecretBinding[] },
+    ) => {
       const packageRef = typeof input === 'string' ? input : input.packageRef;
       const secretBindings = typeof input === 'string' ? undefined : input.secretBindings;
       return ipc.companies.installTemplate({

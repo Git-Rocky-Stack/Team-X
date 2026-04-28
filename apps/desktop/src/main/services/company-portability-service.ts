@@ -2,9 +2,9 @@ import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path';
 
 import {
-  COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS,
   type AuthorityGrant,
   type BudgetPolicy,
+  COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS,
   COMPANY_PACKAGE_MODES,
   COMPANY_PACKAGE_SECTIONS,
   type CompanyImportPreview,
@@ -13,11 +13,11 @@ import {
   type CompanyPackageImportPlan,
   type CompanyPackageImportPlanAction,
   type CompanyPackageManifest,
+  type CompanyPackageMissingSecretRef,
   type CompanyPackageMode,
   type CompanyPackageProjectTicketLink,
-  type CompanyPackageSection,
   type CompanyPackageSecretBinding,
-  type CompanyPackageMissingSecretRef,
+  type CompanyPackageSection,
   type CompanyPackageSourceRef,
   type CompanySettings,
   type CompanyTemplateSummary,
@@ -770,11 +770,7 @@ function readPackageError(packagePath: string, reason: string): Error {
 }
 
 function cleanGithubPath(path: string): string {
-  const clean = path
-    .replace(/\\/g, '/')
-    .replace(/^\/+/, '')
-    .replace(/\/+/g, '/')
-    .trim();
+  const clean = path.replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+/g, '/').trim();
   if (clean.length === 0) {
     throw new Error('[portability] GitHub package reference is missing a package path');
   }
@@ -817,7 +813,9 @@ function resolveGithubUrl(input: string): CompanyPackageSourceRef | null {
   if (host === 'raw.githubusercontent.com') {
     const [owner, repo, ref, ...pathParts] = parts;
     if (!owner || !repo || !ref || pathParts.length === 0) {
-      throw new Error('[portability] raw GitHub package URL must include owner, repo, ref, and path');
+      throw new Error(
+        '[portability] raw GitHub package URL must include owner, repo, ref, and path',
+      );
     }
     return githubSourceRef(input, owner, repo, ref, pathParts.join('/'));
   }
@@ -828,7 +826,9 @@ function resolveGithubUrl(input: string): CompanyPackageSourceRef | null {
       throw new Error('[portability] GitHub package URL must include owner and repo');
     }
     if (flavor !== 'blob' && flavor !== 'raw') {
-      throw new Error('[portability] GitHub package URL must point to /blob/<ref>/... or /raw/<ref>/...');
+      throw new Error(
+        '[portability] GitHub package URL must point to /blob/<ref>/... or /raw/<ref>/...',
+      );
     }
     if (!ref || pathParts.length === 0) {
       throw new Error('[portability] GitHub package URL must include a ref and package path');
@@ -874,14 +874,16 @@ function resolveGithubShorthand(input: string): CompanyPackageSourceRef | null {
 
   const [owner, repo, ...pathParts] = parts;
   if (!owner || !repo) return null;
-  const packagePath =
-    pathParts.length > 0 ? pathParts.join('/') : DEFAULT_GITHUB_PACKAGE_PATH;
+  const packagePath = pathParts.length > 0 ? pathParts.join('/') : DEFAULT_GITHUB_PACKAGE_PATH;
   return githubSourceRef(input, owner, repo, ref, packagePath);
 }
 
 function resolvePackageSource(input: string): CompanyPackageSourceRef {
   const githubUrl = resolveGithubUrl(input);
   if (githubUrl) return githubUrl;
+  if (/^https?:\/\//i.test(input.trim())) {
+    throw new Error('[portability] only GitHub package URLs are supported');
+  }
 
   const githubShorthand = resolveGithubShorthand(input);
   if (githubShorthand) return githubShorthand;
@@ -1303,7 +1305,8 @@ function buildImportPlan(input: {
       section: 'template-library',
       action: 'create',
       label: 'Install template card',
-      detail: 'Template mode can be installed into the local library and reused from the workspace create flow.',
+      detail:
+        'Template mode can be installed into the local library and reused from the workspace create flow.',
       count: 1,
     });
   }
@@ -1669,11 +1672,7 @@ export function createCompanyPortabilityService(deps: CompanyPortabilityServiceD
       packagePath?: string;
       packageRef?: string;
     }): Promise<CompanyTemplateSummary> {
-      const { packageData, source } = await readPackageFromSource(
-        input,
-        deps,
-        'installTemplate',
-      );
+      const { packageData, source } = await readPackageFromSource(input, deps, 'installTemplate');
       assertTemplatePackage(packageData);
 
       const libraryDir = templateLibraryDir(deps.exportRootDir);
@@ -1708,7 +1707,11 @@ export function createCompanyPortabilityService(deps: CompanyPortabilityServiceD
     async importAsNewCompany(
       input: ImportCompanyPackageInput,
     ): Promise<ImportCompanyPackageResult> {
-      const { packageData, source } = await readPackageFromSource(input, deps, 'importAsNewCompany');
+      const { packageData, source } = await readPackageFromSource(
+        input,
+        deps,
+        'importAsNewCompany',
+      );
       assertImportablePackage(packageData);
       const preview = buildImportPreview(packageData, deps, source);
 

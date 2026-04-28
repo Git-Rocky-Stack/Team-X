@@ -33,14 +33,14 @@ describe('Portability settings shell', () => {
     expect(portabilityHooksSrc).toContain("queryKey: ['company-templates']");
     expect(portabilityHooksSrc).toContain('ipc.companies.listTemplates()');
     expect(portabilityHooksSrc).toContain(
-      'export function useCompanyPackagePreview(packagePath: string | null)',
+      'export function useCompanyPackagePreview(packageRef: string | null)',
     );
     expect(portabilityHooksSrc).toContain(
-      'export function useCompanyTemplatePreview(packagePath: string | null)',
+      'export function useCompanyTemplatePreview(packageRef: string | null)',
     );
-    expect(portabilityHooksSrc).toContain("queryKey: ['company-template-preview', packagePath]");
+    expect(portabilityHooksSrc).toContain("queryKey: ['company-template-preview', packageRef]");
     expect(portabilityHooksSrc).toContain('ipc.companies.previewImportPackage({');
-    expect(portabilityHooksSrc).toContain("packagePath: requireString(packagePath, 'packagePath')");
+    expect(portabilityHooksSrc).toContain("packageRef: requireString(packageRef, 'packageRef')");
     expect(portabilityHooksSrc).toContain('export function useExportCompanyPackage(');
     expect(portabilityHooksSrc).toContain(
       'export function useExportCompanyTemplate(companyId: string | null)',
@@ -56,6 +56,7 @@ describe('Portability settings shell', () => {
     );
     expect(portabilityHooksSrc).toContain('ipc.companies.installTemplate({');
     expect(portabilityHooksSrc).toContain('...(companyId ? { companyId } : {}),');
+    expect(portabilityHooksSrc).toContain('secretBindings');
     expect(portabilityHooksSrc).toContain('export function useImportCompanyPackage()');
     expect(portabilityHooksSrc).toContain('mutationFn: ipc.companies.importPackage');
     expect(portabilityHooksSrc).toContain("qc.invalidateQueries({ queryKey: ['companies'] })");
@@ -86,15 +87,20 @@ describe('Portability settings shell', () => {
     expect(portabilitySectionSrc).toContain('Export Package');
     expect(portabilitySectionSrc).toContain('Save active workspace as template');
     expect(portabilitySectionSrc).toContain('Save Template');
-    expect(portabilitySectionSrc).toContain('Preview import or template package');
+    expect(portabilitySectionSrc).toContain('Preview package from path or GitHub');
     expect(portabilitySectionSrc).toContain('Manifest Preview');
+    expect(portabilitySectionSrc).toContain('packageSourceLabel(packagePreview)');
     expect(portabilitySectionSrc).toContain('Compatibility');
+    expect(portabilitySectionSrc).toContain('data-portability-import-plan=""');
+    expect(portabilitySectionSrc).toContain('Dry-run install plan');
     expect(portabilitySectionSrc).toContain('Runtime template diagnostics');
     expect(portabilitySectionSrc).toContain('data-portability-runtime-template-diagnostics=""');
     expect(portabilitySectionSrc).toContain('runtimeTemplateNotes');
     expect(portabilitySectionSrc).toContain('runtimeProfileKinds');
     expect(portabilitySectionSrc).toContain('Warnings');
-    expect(portabilitySectionSrc).toContain('Missing Secrets');
+    expect(portabilitySectionSrc).toContain('data-portability-secret-wizard=""');
+    expect(portabilitySectionSrc).toContain('Missing secret wizard');
+    expect(portabilitySectionSrc).toContain('secretBindingsFromDrafts');
     expect(portabilitySectionSrc).toContain('Import as new workspace');
     expect(portabilitySectionSrc).toContain('Import Workspace');
     expect(portabilitySectionSrc).toContain('Install into local library');

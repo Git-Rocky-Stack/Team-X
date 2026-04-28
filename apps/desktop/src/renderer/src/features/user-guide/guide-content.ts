@@ -342,8 +342,9 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       {
         kind: 'bullets',
         items: [
-          'Preview every package before import so version drift, redactions, and missing secrets are visible.',
+          'Preview every local or GitHub package before import so version drift, source provenance, redactions, missing secrets, and the dry-run plan are visible.',
           'Save templates when you want repeatable operating models without live ticket or project state.',
+          'Use the missing-secret wizard to bind runtime provider API keys before creating workspaces from external templates.',
           'Queue shared operator invites in Autonomy > Access before expecting invited or cloud posture to become actionable.',
           'Treat invited and cloud sharing as posture plus metadata until the dedicated sync/auth bundle lands.',
         ],

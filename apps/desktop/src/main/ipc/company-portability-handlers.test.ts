@@ -223,23 +223,42 @@ describe('company portability IPC handlers', () => {
       listTemplates: vi.fn(),
       installTemplate: vi.fn(),
     };
+    const secretsStore = {
+      setApiKey: vi.fn(async () => undefined),
+    };
     const handlers = createIpcHandlers(
       makeDeps({
         bus,
         companyPortabilityService,
+        secretsStore,
       }),
     );
 
     const result = await handlers.companiesImportPackage({
-      packagePath: 'C:/tmp/alpha.teamx-package.json',
+      packageRef: 'rocky/team-x-templates/templates/alpha.teamx-package.json#main',
       name: 'Alpha Copy',
       slug: 'alpha-copy',
+      secretBindings: [
+        {
+          providerId: 'anthropic',
+          key: 'apiKey',
+          value: 'sk-ant-template',
+        },
+      ],
     });
 
+    expect(secretsStore.setApiKey).toHaveBeenCalledWith('anthropic', 'sk-ant-template');
     expect(companyPortabilityService.importAsNewCompany).toHaveBeenCalledWith({
-      packagePath: 'C:/tmp/alpha.teamx-package.json',
+      packageRef: 'rocky/team-x-templates/templates/alpha.teamx-package.json#main',
       name: 'Alpha Copy',
       slug: 'alpha-copy',
+      secretBindings: [
+        {
+          providerId: 'anthropic',
+          key: 'apiKey',
+          value: 'sk-ant-template',
+        },
+      ],
     });
     expect(bus.emit).toHaveBeenCalledWith(
       expect.objectContaining({

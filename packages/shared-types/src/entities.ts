@@ -1280,14 +1280,8 @@ export interface CompanyPackageSourceRef {
   path?: string;
 }
 
-export const COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS = [
-  'create',
-  'rename',
-  'skip',
-  'replace',
-] as const;
-export type CompanyPackageImportPlanAction =
-  (typeof COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS)[number];
+export const COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS = ['create', 'rename', 'skip', 'replace'] as const;
+export type CompanyPackageImportPlanAction = (typeof COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS)[number];
 
 export type CompanyPackageImportPlanSection =
   | CompanyPackageSection
