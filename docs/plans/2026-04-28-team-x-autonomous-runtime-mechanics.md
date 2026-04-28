@@ -185,6 +185,43 @@ Exit criteria:
 - private company data cannot leak into cloud/hosted routes when local-only policy is required;
 - every route decision carries machine-readable evidence and human-readable reasons.
 
+### P2.3 Optional Private Operator Web/Mobile Access
+
+Status: shipped as the third P2 strategic differentiator slice.
+
+- Added `createPrivateOperatorAccessService` as the security policy and read-only Mission Control snapshot contract for optional private remote supervision.
+- The policy defaults to localhost-only access, refuses public bind hosts, keeps Tailscale/private tunnel guidance explicit, and returns machine-readable guardrails.
+- Read-only Mission Control, runtime, ticket, and artifact access are the first enabled private access capabilities.
+- Approval review is a second-stage capability that requires explicit opt-in and an operator membership that can approve budget or authority work.
+- Runtime launch is a later-stage explicit opt-in, and secret changes remain localhost-only even when Tailscale or hosted-bridge supervision is selected.
+- Documented the workflow and guardrails in `docs/runtime/private-operator-access.md`.
+
+Exit criteria:
+
+- localhost-only is the default and public bind attempts are blocked before runtime state is exposed;
+- private tunnel guidance is explicit without changing the local bind posture;
+- read-only mobile Mission Control can be projected from the runtime operations snapshot;
+- approval, runtime launch, and secret mutation capabilities are separately gated by operator permission and explicit opt-in;
+- blocked plans omit runtime operation snapshots so a misconfigured remote surface cannot leak live operations data.
+
+### P2.4 Paperclip Import Bridge
+
+Status: shipped as the fourth P2 strategic differentiator slice.
+
+- Added `loadPaperclipExportFolder` for conventional Paperclip export layouts split across company/workspace, agents, adapters, tasks, issues, and skills JSON files.
+- Added `previewPaperclipImportBridge` to map Paperclip exports into Team-X workspace package previews without mutating local state.
+- Paperclip agents become Team-X employees, manager links become org-chart edges, tasks/issues become tickets, and skills become skill extensions plus assignments.
+- Supported Paperclip adapters map to Team-X runtime profile kinds for Team-X internal, Bash, HTTP, Codex, Claude Code, and Cursor.
+- Unsupported adapters are surfaced as compatibility warnings, and secret-looking adapter values are converted to bindable runtime `secret_ref` entries instead of being written inline.
+- Documented the bridge in `docs/runtime/paperclip-import-bridge.md`.
+
+Exit criteria:
+
+- Paperclip export folders can be parsed from common root or split-file layouts;
+- mapped previews include employees, org edges, runtime profiles, tickets, skills, unsupported-adapter diagnostics, and missing secret refs;
+- inline Paperclip secrets are redacted into Team-X runtime secret refs;
+- the bridge emits a Team-X package/preview contract so the existing non-destructive portability import flow can own actual workspace creation.
+
 ## Test Plan
 
 - Runtime session repo/service tests for create, heartbeat, status changes, stale marking, and company scoping.
@@ -196,6 +233,8 @@ Exit criteria:
 - Integration tests proving external runtimes create sessions, claim tickets, emit heartbeats, produce artifacts, release checkouts, and recover stale state.
 - Renderer tests for Mission Control/Autonomy runtime status, stale checkout alerts, budget-blocked states, missing secret callouts, and accessible controls.
 - Portability tests for package export/import previews with adapter declarations, missing secrets, and local path compatibility warnings.
+- Private operator access tests for localhost defaults, private tunnel guidance, public bind blocking, staged approval gates, runtime gates, and local-only secret changes.
+- Paperclip bridge tests for split export-folder parsing, agent/adapter/task/issue/skill mapping, unsupported adapter diagnostics, and runtime secret-ref conversion.
 
 ## Assumptions
 
@@ -203,4 +242,4 @@ Exit criteria:
 - Existing autonomy surfaces are extended, not replaced.
 - Bash, HTTP, and Codex are the first reference runtimes.
 - Runtime session/checkouts are durable history, not ephemeral UI-only state.
-- Remote/mobile monitoring, GitHub template import UX, and benchmark dashboards are P1/P2 follow-ups.
+- GitHub template import UX and benchmark dashboards remain future P1/P2 follow-ups; the P2 Paperclip benchmark audit's four strategic differentiators are now represented in code/tests/docs.
