@@ -165,6 +165,26 @@ Exit criteria:
 - duplicate-work prevention, stale recovery, budget blocks, missing secrets, artifacts, and reboot/resume behavior are expressed as measurable scenario results;
 - the first report mode is honest about simulated runtime execution while proving the durable Team-X control-plane contracts.
 
+### P2.2 Adaptive Runtime/Model Routing
+
+Status: shipped as the second P2 strategic differentiator slice.
+
+- Added `routeAdaptiveWork` to `@team-x/provider-router` as a pure routing policy for triage, planning, review, repository work, and hosted-bot work.
+- The policy consumes `ProviderConfig`, enabled runtime profile candidates, and optional P2.1 autonomy benchmark reports.
+- Private company data now has an explicit hard local-only decision path: cloud providers and hosted HTTP runtimes are excluded before selection.
+- Repository work prefers execution-backed coding runtimes, with Codex/Claude/Cursor/Bash candidates ranked by benchmark evidence when available.
+- Hosted-bot work prefers HTTP runtime profiles and can block when a runtime is required but privacy or availability prevents a valid route.
+- Documented the policy and decision evidence in `docs/runtime/adaptive-runtime-routing.md`.
+
+Exit criteria:
+
+- low-risk triage selects cheap local execution when available;
+- planning/review requests escalate to the strongest allowed model tier;
+- repository and hosted-bot work can be routed to runtime profiles instead of only internal providers;
+- benchmark reports materially influence runtime ranking;
+- private company data cannot leak into cloud/hosted routes when local-only policy is required;
+- every route decision carries machine-readable evidence and human-readable reasons.
+
 ## Test Plan
 
 - Runtime session repo/service tests for create, heartbeat, status changes, stale marking, and company scoping.

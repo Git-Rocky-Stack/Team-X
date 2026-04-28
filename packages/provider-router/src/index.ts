@@ -1,5 +1,22 @@
 export { createRegistry, type ProviderRegistry, type PickOptions } from './registry.js';
 export {
+  ADAPTIVE_ROUTE_DATA_SENSITIVITY,
+  ADAPTIVE_ROUTE_RISK_LEVELS,
+  ADAPTIVE_ROUTE_WORK_KINDS,
+  routeAdaptiveWork,
+  type AdaptiveRouteDataSensitivity,
+  type AdaptiveRouteDecision,
+  type AdaptiveRouteEvidence,
+  type AdaptiveRouteInput,
+  type AdaptiveRouteKind,
+  type AdaptiveRouteRequest,
+  type AdaptiveRouteRiskLevel,
+  type AdaptiveRouteWorkKind,
+  type AdaptiveRuntimeBenchmarkScore,
+  type AdaptiveRuntimeCandidate,
+  type AdaptiveRuntimeScore,
+} from './adaptive-routing.js';
+export {
   streamAgent,
   type ProviderStreamEvent,
   type ProviderStreamFn,
