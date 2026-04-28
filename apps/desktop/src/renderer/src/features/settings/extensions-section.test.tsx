@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 const currentDirname = dirname(fileURLToPath(import.meta.url));
 const SETTINGS_VIEW_PATH = join(currentDirname, 'settings-view.tsx');
 const EXTENSIONS_SECTION_PATH = join(currentDirname, 'extensions-section.tsx');
+const GRANT_AUTHORITY_DIALOG_PATH = join(currentDirname, 'grant-authority-dialog.tsx');
 const IMPORT_MCP_DIALOG_PATH = join(currentDirname, 'import-mcp-dialog.tsx');
 const INSTALL_SKILL_DIALOG_PATH = join(currentDirname, 'install-skill-dialog.tsx');
 const SETTINGS_HOOKS_PATH = join(currentDirname, '..', '..', 'hooks', 'use-settings.ts');
@@ -14,6 +15,7 @@ const EXTENSIONS_HOOKS_PATH = join(currentDirname, '..', '..', 'hooks', 'use-ext
 
 const settingsViewSrc = readFileSync(SETTINGS_VIEW_PATH, 'utf8');
 const extensionsSectionSrc = readFileSync(EXTENSIONS_SECTION_PATH, 'utf8');
+const grantAuthorityDialogSrc = readFileSync(GRANT_AUTHORITY_DIALOG_PATH, 'utf8');
 const importMcpDialogSrc = readFileSync(IMPORT_MCP_DIALOG_PATH, 'utf8');
 const installSkillDialogSrc = readFileSync(INSTALL_SKILL_DIALOG_PATH, 'utf8');
 const settingsHooksSrc = readFileSync(SETTINGS_HOOKS_PATH, 'utf8');
@@ -122,7 +124,16 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('data-manage-skills=""');
     expect(extensionsSectionSrc).toContain('data-skills-management-panel=""');
     expect(extensionsSectionSrc).toContain('Import MCP');
-    expect(extensionsSectionSrc).toContain('Grant Path');
+    expect(extensionsSectionSrc).toContain('Add Grant');
+    expect(extensionsSectionSrc).toContain('data-authority-add-grant=""');
+    expect(extensionsSectionSrc).toContain('Direct authority editor');
+    expect(extensionsSectionSrc).toContain('data-authority-user-editor=""');
+    expect(extensionsSectionSrc).toContain('Workspace capability');
+    expect(extensionsSectionSrc).toContain('Workspace path');
+    expect(extensionsSectionSrc).toContain('Grant capability');
+    expect(extensionsSectionSrc).toContain('Grant path');
+    expect(extensionsSectionSrc).toContain('data-authority-employee-capability=""');
+    expect(extensionsSectionSrc).toContain('data-authority-employee-path=""');
     expect(extensionsSectionSrc).toContain('Pending reviews');
     expect(extensionsSectionSrc).toContain('Workspace assignment');
     expect(extensionsSectionSrc).toContain('Employee overrides');
@@ -144,6 +155,23 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('<InstallSkillDialog');
     expect(extensionsSectionSrc).toContain('useToggleMcpServer(companyId)');
     expect(extensionsSectionSrc).toContain('<ImportMcpDialog');
+  });
+
+  it('adds a direct authority grant dialog for capability and path resources', () => {
+    expect(extensionsSectionSrc).toContain('initialScopeKind={grantDialogDefaults.scopeKind}');
+    expect(extensionsSectionSrc).toContain(
+      'initialResourceKind={grantDialogDefaults.resourceKind}',
+    );
+    expect(extensionsSectionSrc).toContain("resourceKind: 'capability'");
+    expect(extensionsSectionSrc).toContain("resourceKind: 'path'");
+    expect(extensionsSectionSrc).toContain('openGrantDialog({');
+    expect(grantAuthorityDialogSrc).toContain('Grant Authority');
+    expect(grantAuthorityDialogSrc).toContain('Resource Type');
+    expect(grantAuthorityDialogSrc).toContain('Capability');
+    expect(grantAuthorityDialogSrc).toContain('Custom Capability');
+    expect(grantAuthorityDialogSrc).toContain('COMMON_CAPABILITIES');
+    expect(grantAuthorityDialogSrc).toContain('data-authority-grant-submit=""');
+    expect(grantAuthorityDialogSrc).toContain('resourceKind,');
   });
 
   it('adds a skill install dialog for editable local folders and public URLs', () => {

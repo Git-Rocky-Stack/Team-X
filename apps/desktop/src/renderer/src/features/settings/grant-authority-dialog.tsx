@@ -1,4 +1,4 @@
-import type { Employee } from '@team-x/shared-types';
+import type { AuthorityPermission, AuthorityResourceKind, Employee } from '@team-x/shared-types';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button.js';
@@ -18,21 +18,48 @@ interface GrantAuthorityDialogProps {
   onOpenChange: (open: boolean) => void;
   companyId: string | null;
   employees: Employee[];
+  initialScopeKind?: 'company' | 'employee';
+  initialEmployeeId?: string | null;
+  initialResourceKind?: AuthorityResourceKind;
 }
 
 const selectClass =
   'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+
+const COMMON_CAPABILITIES = [
+  'browse',
+  'context7',
+  'filesystem',
+  'filesystem.read',
+  'filesystem.write',
+  'filesystem.execute',
+  'mcp.call',
+  'network',
+  'process.spawn',
+  'shell',
+  'supabase',
+  'secrets',
+  'email',
+  'calendar',
+  'send_message_to_colleague',
+] as const;
 
 export function GrantAuthorityDialog({
   open,
   onOpenChange,
   companyId,
   employees,
+  initialScopeKind = 'company',
+  initialEmployeeId = null,
+  initialResourceKind = 'capability',
 }: GrantAuthorityDialogProps) {
   const createGrant = useCreateAuthorityGrant();
   const [scopeKind, setScopeKind] = useState<'company' | 'employee'>('company');
   const [employeeId, setEmployeeId] = useState('');
-  const [permission, setPermission] = useState<'allow' | 'deny' | 'prompt'>('allow');
+  const [resourceKind, setResourceKind] = useState<AuthorityResourceKind>('capability');
+  const [capability, setCapability] = useState<string>(COMMON_CAPABILITIES[0]);
+  const [customCapability, setCustomCapability] = useState('');
+  const [permission, setPermission] = useState<AuthorityPermission>('allow');
   const [resourceId, setResourceId] = useState('');
 
   useEffect(() => {
@@ -41,17 +68,41 @@ export function GrantAuthorityDialog({
     }
   }, [employeeId, employees]);
 
-  function resetForm() {
-    setScopeKind('company');
-    setEmployeeId(employees[0]?.id ?? '');
+  useEffect(() => {
+    if (!open) return;
+    const nextEmployeeId =
+      initialEmployeeId && employees.some((employee) => employee.id === initialEmployeeId)
+        ? initialEmployeeId
+        : (employees[0]?.id ?? '');
+    setScopeKind(initialScopeKind === 'employee' && nextEmployeeId ? 'employee' : 'company');
+    setEmployeeId(nextEmployeeId);
+    setResourceKind(initialResourceKind);
+    setCapability(COMMON_CAPABILITIES[0]);
+    setCustomCapability('');
     setPermission('allow');
     setResourceId('');
+  }, [employees, initialEmployeeId, initialResourceKind, initialScopeKind, open]);
+
+  function resetForm() {
+    setScopeKind(initialScopeKind);
+    setEmployeeId(employees[0]?.id ?? '');
+    setResourceKind(initialResourceKind);
+    setCapability(COMMON_CAPABILITIES[0]);
+    setCustomCapability('');
+    setPermission('allow');
+    setResourceId('');
+  }
+
+  function currentResourceId(): string {
+    if (resourceKind === 'path') return resourceId.trim();
+    if (capability === 'custom') return customCapability.trim();
+    return capability.trim();
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!companyId) return;
-    const trimmedResource = resourceId.trim();
+    const trimmedResource = currentResourceId();
     if (!trimmedResource) return;
     const scopeId = scopeKind === 'company' ? companyId : employeeId;
     if (!scopeId) return;
@@ -60,7 +111,7 @@ export function GrantAuthorityDialog({
         companyId,
         scopeKind,
         scopeId,
-        resourceKind: 'path',
+        resourceKind,
         resourceId: trimmedResource,
         permission,
       },
@@ -83,9 +134,9 @@ export function GrantAuthorityDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Grant Path</DialogTitle>
+          <DialogTitle>Grant Authority</DialogTitle>
           <DialogDescription>
-            Add a workspace default or employee override for a file or directory path.
+            Add a workspace default or employee override for a capability or file path.
           </DialogDescription>
         </DialogHeader>
 
@@ -102,9 +153,12 @@ export function GrantAuthorityDialog({
               value={scopeKind}
               onChange={(event) => setScopeKind(event.target.value as 'company' | 'employee')}
               className={selectClass}
+              data-authority-scope-kind=""
             >
               <option value="company">Workspace default</option>
-              <option value="employee">Employee override</option>
+              <option value="employee" disabled={employees.length === 0}>
+                Employee override
+              </option>
             </select>
           </div>
 
@@ -121,6 +175,7 @@ export function GrantAuthorityDialog({
                 value={employeeId}
                 onChange={(event) => setEmployeeId(event.target.value)}
                 className={selectClass}
+                data-authority-employee=""
               >
                 {employees.map((employee) => (
                   <option key={employee.id} value={employee.id}>
@@ -130,6 +185,69 @@ export function GrantAuthorityDialog({
               </select>
             </div>
           )}
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="authority-resource-kind"
+              className="text-xs font-medium text-muted-foreground"
+            >
+              Resource Type
+            </label>
+            <select
+              id="authority-resource-kind"
+              value={resourceKind}
+              onChange={(event) => setResourceKind(event.target.value as 'capability' | 'path')}
+              className={selectClass}
+              data-authority-resource-kind=""
+            >
+              <option value="capability">Capability</option>
+              <option value="path">File or directory path</option>
+            </select>
+          </div>
+
+          {resourceKind === 'capability' ? (
+            <div className="space-y-1.5">
+              <label
+                htmlFor="authority-capability"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Capability
+              </label>
+              <select
+                id="authority-capability"
+                value={capability}
+                onChange={(event) => setCapability(event.target.value)}
+                className={selectClass}
+                data-authority-capability=""
+              >
+                {COMMON_CAPABILITIES.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+                <option value="custom">Custom capability...</option>
+              </select>
+            </div>
+          ) : null}
+
+          {resourceKind === 'capability' && capability === 'custom' ? (
+            <div className="space-y-1.5">
+              <label
+                htmlFor="authority-custom-capability"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Custom Capability
+              </label>
+              <Input
+                id="authority-custom-capability"
+                value={customCapability}
+                onChange={(event) => setCustomCapability(event.target.value)}
+                placeholder="tool.or.capability"
+                className="font-mono text-sm"
+                data-authority-custom-capability=""
+              />
+            </div>
+          ) : null}
 
           <div className="space-y-1.5">
             <label
@@ -143,6 +261,7 @@ export function GrantAuthorityDialog({
               value={permission}
               onChange={(event) => setPermission(event.target.value as 'allow' | 'deny' | 'prompt')}
               className={selectClass}
+              data-authority-permission=""
             >
               <option value="allow">Allow</option>
               <option value="deny">Deny</option>
@@ -150,22 +269,25 @@ export function GrantAuthorityDialog({
             </select>
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="authority-path" className="text-xs font-medium text-muted-foreground">
-              Absolute Path
-            </label>
-            <Input
-              id="authority-path"
-              value={resourceId}
-              onChange={(event) => setResourceId(event.target.value)}
-              placeholder="C:\\Projects\\Client-X"
-              className="font-mono text-sm"
-            />
-          </div>
+          {resourceKind === 'path' ? (
+            <div className="space-y-1.5">
+              <label htmlFor="authority-path" className="text-xs font-medium text-muted-foreground">
+                Absolute Path
+              </label>
+              <Input
+                id="authority-path"
+                value={resourceId}
+                onChange={(event) => setResourceId(event.target.value)}
+                placeholder="C:\\Projects\\Client-X"
+                className="font-mono text-sm"
+                data-authority-path=""
+              />
+            </div>
+          ) : null}
 
           {createGrant.isError && (
             <p className="text-xs text-destructive">
-              Failed to save authority grant. Check the scope and path, then try again.
+              Failed to save authority grant. Check the scope and resource, then try again.
             </p>
           )}
 
@@ -177,10 +299,11 @@ export function GrantAuthorityDialog({
               type="submit"
               disabled={
                 !companyId ||
-                !resourceId.trim() ||
+                !currentResourceId() ||
                 createGrant.isPending ||
                 (scopeKind === 'employee' && !employeeId)
               }
+              data-authority-grant-submit=""
             >
               {createGrant.isPending ? 'Saving...' : 'Save Grant'}
             </Button>

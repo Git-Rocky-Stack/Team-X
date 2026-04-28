@@ -212,6 +212,31 @@ describe('authority IPC handlers', () => {
     expect(result).toEqual({ grantId: 'grant-1' });
   });
 
+  it('creates an employee capability override through authority.create', async () => {
+    const deps = makeDeps();
+    const handlers = createIpcHandlers(deps);
+
+    const result = await handlers.authorityCreate({
+      companyId: 'company-1',
+      scopeKind: 'employee',
+      scopeId: 'employee-1',
+      resourceKind: 'capability',
+      resourceId: 'shell',
+      permission: 'deny',
+    });
+
+    expect(deps.employeesRepo?.getById).toHaveBeenCalledWith('employee-1');
+    expect(deps.authorityRepo?.createGrant).toHaveBeenCalledWith({
+      scopeKind: 'employee',
+      scopeId: 'employee-1',
+      resourceKind: 'capability',
+      resourceId: 'shell',
+      permission: 'deny',
+      metadataJson: null,
+    });
+    expect(result).toEqual({ grantId: 'grant-1' });
+  });
+
   it('rejects employee overrides for employees outside the target company', async () => {
     const deps = makeDeps({
       employeesRepo: {

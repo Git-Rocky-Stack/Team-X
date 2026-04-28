@@ -1,7 +1,11 @@
-import { AlertTriangle, FolderLock, Loader2, Settings2, Shield, Sparkles } from 'lucide-react';
+import { AlertTriangle, FolderLock, Loader2, Settings2, Shield } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { type AuthorityGrant, EXTENSIONS_AUTONOMY_MODES } from '@team-x/shared-types';
+import {
+  type AuthorityGrant,
+  type AuthorityResourceKind,
+  EXTENSIONS_AUTONOMY_MODES,
+} from '@team-x/shared-types';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -37,6 +41,12 @@ const AUTONOMY_COPY: Record<(typeof EXTENSIONS_AUTONOMY_MODES)[number], string> 
   autonomous: 'Auto-enable and auto-grant unless a request hits a hard platform deny.',
 };
 
+interface GrantDialogDefaults {
+  scopeKind: 'company' | 'employee';
+  employeeId: string | null;
+  resourceKind: AuthorityResourceKind;
+}
+
 function permissionVariant(
   permission: AuthorityGrant['permission'],
 ): 'default' | 'secondary' | 'destructive' {
@@ -66,6 +76,11 @@ export function ExtensionsSection() {
   const [mcpDialogOpen, setMcpDialogOpen] = useState(false);
   const [skillDialogOpen, setSkillDialogOpen] = useState(false);
   const [previewEmployeeId, setPreviewEmployeeId] = useState<string | null>(null);
+  const [grantDialogDefaults, setGrantDialogDefaults] = useState<GrantDialogDefaults>({
+    scopeKind: 'company',
+    employeeId: null,
+    resourceKind: 'capability',
+  });
   const skillsManagementRef = useRef<HTMLDivElement | null>(null);
 
   const extensions = extensionsQuery.data ?? [];
@@ -144,6 +159,11 @@ export function ExtensionsSection() {
   function handleManageSkills() {
     skillsManagementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     skillsManagementRef.current?.focus({ preventScroll: true });
+  }
+
+  function openGrantDialog(defaults: GrantDialogDefaults) {
+    setGrantDialogDefaults(defaults);
+    setGrantDialogOpen(true);
   }
 
   const skillExtensions = extensions.filter((extension) => extension.kind === 'skill');
@@ -233,6 +253,7 @@ export function ExtensionsSection() {
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="text-xs"
                   disabled={!companyId}
                   onClick={handleManageSkills}
                   aria-controls="installed-skills-management"
@@ -245,6 +266,7 @@ export function ExtensionsSection() {
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="text-xs"
                   disabled={!companyId}
                   onClick={() => setSkillDialogOpen(true)}
                 >
@@ -434,6 +456,7 @@ export function ExtensionsSection() {
                 type="button"
                 variant="outline"
                 size="sm"
+                className="text-xs"
                 disabled={!companyId}
                 onClick={() => setMcpDialogOpen(true)}
               >
@@ -544,12 +567,20 @@ export function ExtensionsSection() {
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="default"
                 size="sm"
+                className="text-xs"
                 disabled={!companyId}
-                onClick={() => setGrantDialogOpen(true)}
+                onClick={() =>
+                  openGrantDialog({
+                    scopeKind: 'company',
+                    employeeId: null,
+                    resourceKind: 'capability',
+                  })
+                }
+                data-authority-add-grant=""
               >
-                Grant Path
+                Add Grant
               </Button>
             </div>
           </CardHeader>
@@ -566,6 +597,123 @@ export function ExtensionsSection() {
               </div>
             ) : (
               <div className="space-y-3">
+                <div
+                  className="rounded-lg border border-border/70 bg-muted/10 px-3 py-3"
+                  data-authority-user-editor=""
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium text-foreground">Direct authority editor</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Add capability or path grants directly to workspace defaults or a specific
+                        employee. These controls write through the same durable authority matrix as
+                        extension approvals.
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() =>
+                          openGrantDialog({
+                            scopeKind: 'company',
+                            employeeId: null,
+                            resourceKind: 'capability',
+                          })
+                        }
+                        data-authority-workspace-capability=""
+                      >
+                        Workspace capability
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() =>
+                          openGrantDialog({
+                            scopeKind: 'company',
+                            employeeId: null,
+                            resourceKind: 'path',
+                          })
+                        }
+                        data-authority-workspace-path=""
+                      >
+                        Workspace path
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {employeesQuery.isLoading ? (
+                      <Skeleton className="h-20 rounded-lg" />
+                    ) : employees.length === 0 ? (
+                      <p className="rounded-md border border-dashed border-border/70 px-3 py-3 text-xs text-muted-foreground">
+                        Hire an employee before assigning per-user overrides.
+                      </p>
+                    ) : (
+                      employees.map((employee) => {
+                        const overrideCount =
+                          authorityQuery.data?.filter(
+                            (grant) =>
+                              grant.scopeKind === 'employee' && grant.scopeId === employee.id,
+                          ).length ?? 0;
+                        return (
+                          <div
+                            key={employee.id}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/60 bg-background/50 px-3 py-2"
+                            data-authority-employee-row={employee.id}
+                          >
+                            <div className="min-w-0">
+                              <div className="truncate text-sm text-foreground">
+                                {employee.name}
+                              </div>
+                              <div className="truncate text-[11px] text-muted-foreground">
+                                {employee.title} · {overrideCount} explicit override
+                                {overrideCount === 1 ? '' : 's'}
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 flex-wrap items-center gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() =>
+                                  openGrantDialog({
+                                    scopeKind: 'employee',
+                                    employeeId: employee.id,
+                                    resourceKind: 'capability',
+                                  })
+                                }
+                                data-authority-employee-capability=""
+                              >
+                                Grant capability
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() =>
+                                  openGrantDialog({
+                                    scopeKind: 'employee',
+                                    employeeId: employee.id,
+                                    resourceKind: 'path',
+                                  })
+                                }
+                                data-authority-employee-path=""
+                              >
+                                Grant path
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
                 {showAuthorityPreview && (
                   <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-3">
                     <div className="flex items-center justify-between gap-3">
@@ -769,9 +917,6 @@ export function ExtensionsSection() {
                   ))
                 ) : (
                   <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
-                    <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-                      <Sparkles className="h-4 w-4 text-muted-foreground" />
-                    </div>
                     <p className="text-sm text-muted-foreground">
                       No explicit grants recorded yet. Role defaults remain the current baseline.
                     </p>
@@ -788,6 +933,9 @@ export function ExtensionsSection() {
         onOpenChange={setGrantDialogOpen}
         companyId={companyId}
         employees={employees}
+        initialScopeKind={grantDialogDefaults.scopeKind}
+        initialEmployeeId={grantDialogDefaults.employeeId}
+        initialResourceKind={grantDialogDefaults.resourceKind}
       />
       <InstallSkillDialog
         open={skillDialogOpen}
