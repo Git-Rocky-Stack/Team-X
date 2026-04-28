@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createRuntimeSessionsRepo } from '../db/repos/runtime-sessions.js';
 import { companies, employees, runtimeProfiles } from '../db/schema.js';
@@ -113,5 +113,44 @@ describe('runtime session service', () => {
       }),
     );
     expect(service.get(session.id)?.lastHeartbeatAt).toBe(200);
+  });
+
+  it('emits normalized stale and recovered session audit events', () => {
+    const runtimeAuditNormalizer = { emit: vi.fn(), recordArtifact: vi.fn() };
+    const auditedService = createRuntimeSessionService({
+      runtimeSessionsRepo: createRuntimeSessionsRepo(ctx.db),
+      runtimeAuditNormalizer: runtimeAuditNormalizer as never,
+    });
+    const session = auditedService.start({
+      companyId: 'company-1',
+      employeeId: 'employee-1',
+      runtimeProfileId: 'profile-1',
+      adapterKind: 'codex',
+      now: 100,
+    });
+    auditedService.heartbeat({ sessionId: session.id, status: 'working', now: 150 });
+
+    const stale = auditedService.reapStale({
+      companyId: 'company-1',
+      staleBefore: 200,
+      now: 300,
+    });
+    const recovered = auditedService.recover(session.id, { status: 'idle', now: 400 });
+
+    expect(stale[0]?.status).toBe('stale');
+    expect(recovered?.status).toBe('idle');
+    expect(runtimeAuditNormalizer.emit.mock.calls.map((call) => call[0])).toEqual([
+      expect.objectContaining({
+        type: 'runtime.session.stale',
+        sessionId: session.id,
+        status: 'stale',
+        message: 'runtime heartbeat is stale',
+      }),
+      expect.objectContaining({
+        type: 'runtime.session.recovered',
+        sessionId: session.id,
+        status: 'idle',
+      }),
+    ]);
   });
 });

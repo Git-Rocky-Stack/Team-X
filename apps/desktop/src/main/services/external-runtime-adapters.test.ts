@@ -350,11 +350,16 @@ describe('external runtime adapters', () => {
       heartbeat: vi.fn(),
       release: vi.fn(),
     };
+    const runtimeAuditNormalizer = {
+      emit: vi.fn(),
+      recordArtifact: vi.fn(),
+    };
     let now = 1_000;
     const adapters = createExternalRuntimeAdapters({
       spawnFn,
       runtimeSessionService: runtimeSessionService as never,
       ticketCheckoutsRepo: ticketCheckoutsRepo as never,
+      runtimeAuditNormalizer: runtimeAuditNormalizer as never,
       checkoutLeaseMs: 60_000,
       now: () => {
         now += 10;
@@ -423,6 +428,26 @@ describe('external runtime adapters', () => {
       'session-1',
       expect.objectContaining({ status: 'ended' }),
     );
+    expect(runtimeAuditNormalizer.emit.mock.calls.map((call) => call[0].type)).toEqual(
+      expect.arrayContaining([
+        'runtime.session.started',
+        'runtime.checkout.claimed',
+        'runtime.execution.started',
+        'runtime.heartbeat',
+        'runtime.execution.output',
+      ]),
+    );
+    expect(runtimeAuditNormalizer.recordArtifact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: 'session-1',
+        runId: 'run-1',
+        threadId: null,
+        ticketId: 'ticket-1',
+        checkoutId: 'checkout-1',
+        outputText: 'checkout work completed',
+        usage: { promptTokens: 7, completionTokens: 3 },
+      }),
+    );
     expect(chunks).toEqual([
       { delta: 'checkout work completed' },
       { done: true, usage: { promptTokens: 7, completionTokens: 3 } },
@@ -447,10 +472,15 @@ describe('external runtime adapters', () => {
       heartbeat: vi.fn(),
       release: vi.fn(),
     };
+    const runtimeAuditNormalizer = {
+      emit: vi.fn(),
+      recordArtifact: vi.fn(),
+    };
     const adapters = createExternalRuntimeAdapters({
       spawnFn,
       runtimeSessionService: runtimeSessionService as never,
       ticketCheckoutsRepo: ticketCheckoutsRepo as never,
+      runtimeAuditNormalizer: runtimeAuditNormalizer as never,
     });
     const resolved = adapters.createResolvedProvider({
       employee: makeEmployee(),
@@ -485,6 +515,15 @@ describe('external runtime adapters', () => {
       'session-1',
       expect.objectContaining({ status: 'blocked' }),
     );
+    expect(runtimeAuditNormalizer.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'runtime.checkout.conflict',
+        status: 'blocked',
+        ticketId: 'ticket-1',
+        conflictingCheckoutId: 'checkout-conflict',
+        conflictingEmployeeId: 'employee-2',
+      }),
+    );
     expect(ticketCheckoutsRepo.release).not.toHaveBeenCalled();
   });
 
@@ -515,10 +554,15 @@ describe('external runtime adapters', () => {
         approvalItem: null,
       })),
     };
+    const runtimeAuditNormalizer = {
+      emit: vi.fn(),
+      recordArtifact: vi.fn(),
+    };
     const adapters = createExternalRuntimeAdapters({
       spawnFn,
       runtimeSessionService: runtimeSessionService as never,
       ticketCheckoutsRepo: ticketCheckoutsRepo as never,
+      runtimeAuditNormalizer: runtimeAuditNormalizer as never,
       budgetAdmissionGate,
     });
     const resolved = adapters.createResolvedProvider({
@@ -561,6 +605,13 @@ describe('external runtime adapters', () => {
         status: 'blocked',
         failureReason:
           '[runtime-budget] Budget cap reached for runtime-profile scope profile-bash.',
+      }),
+    );
+    expect(runtimeAuditNormalizer.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'runtime.execution.failed',
+        status: 'blocked',
+        message: '[runtime-budget] Budget cap reached for runtime-profile scope profile-bash.',
       }),
     );
   });

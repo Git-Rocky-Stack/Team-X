@@ -117,4 +117,34 @@ describe('runtime operations service', () => {
     expect(snapshot.activeCheckouts).toEqual([]);
     expect(ticketCheckoutsRepo.getById(checkout.checkout.id)?.status).toBe('expired');
   });
+
+  it('marks stale runtime sessions before projecting Mission Control operations', () => {
+    const service = createRuntimeOperationsService({
+      runtimeSessionService,
+      ticketCheckoutsRepo,
+      now: () => 1_000,
+      staleSessionMs: 100,
+    });
+    const session = runtimeSessionService.start({
+      companyId,
+      employeeId,
+      adapterKind: 'codex',
+      now: 100,
+    });
+    runtimeSessionService.heartbeat({
+      sessionId: session.id,
+      status: 'working',
+      now: 200,
+    });
+
+    const snapshot = service.snapshot(companyId);
+
+    expect(snapshot.sessions).toEqual([
+      expect.objectContaining({
+        id: session.id,
+        status: 'stale',
+        failureReason: 'runtime heartbeat is stale',
+      }),
+    ]);
+  });
 });

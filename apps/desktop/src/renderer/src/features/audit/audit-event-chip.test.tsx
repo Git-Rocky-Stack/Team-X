@@ -267,9 +267,7 @@ describe('audit-event-chip: portability events', () => {
     expect(getEventTypeLabel('company.packageExported')).toBe('Workspace Export');
     expect(getEventTypeColor('company.packageImported')).toBe('bg-sky-600/20 text-sky-400');
     expect(getEventTypeLabel('company.packageImported')).toBe('Workspace Import');
-    expect(getEventTypeColor('company.templateInstalled')).toBe(
-      'bg-violet-600/20 text-violet-400',
-    );
+    expect(getEventTypeColor('company.templateInstalled')).toBe('bg-violet-600/20 text-violet-400');
     expect(getEventTypeLabel('company.templateInstalled')).toBe('Template Installed');
   });
 
@@ -306,6 +304,57 @@ describe('audit-event-chip: portability events', () => {
         }),
       ),
     ).toBe('Alpha Ops Template · local · pkg-temp');
+  });
+});
+
+describe('audit-event-chip: runtime audit normalization events', () => {
+  it('maps runtime lifecycle, checkout, output, and recovery events to stable labels and colors', () => {
+    expect(getEventTypeColor('runtime.session.started')).toBe('bg-sky-600/20 text-sky-400');
+    expect(getEventTypeLabel('runtime.session.started')).toBe('Runtime Started');
+    expect(getEventTypeColor('runtime.checkout.conflict')).toBe('bg-rose-600/20 text-rose-400');
+    expect(getEventTypeLabel('runtime.checkout.conflict')).toBe('Runtime Conflict');
+    expect(getEventTypeColor('runtime.artifact.created')).toBe(
+      'bg-emerald-600/20 text-emerald-400',
+    );
+    expect(getEventTypeLabel('runtime.artifact.created')).toBe('Runtime Artifact');
+    expect(getEventTypeColor('runtime.session.recovered')).toBe('bg-teal-600/20 text-teal-400');
+    expect(getEventTypeLabel('runtime.session.recovered')).toBe('Runtime Recovered');
+  });
+
+  it('summarizes runtime audit payloads with adapter, run, ticket, and artifact provenance', () => {
+    expect(
+      buildRowSummary(
+        'runtime.session.started',
+        JSON.stringify({
+          adapterKind: 'codex',
+          sessionId: 'session-abcdef',
+          runId: 'run-123456',
+        }),
+      ),
+    ).toBe('codex · session- · run-1234');
+
+    expect(
+      buildRowSummary(
+        'runtime.checkout.conflict',
+        JSON.stringify({
+          ticketId: 'ticket-abcdef',
+          conflictingEmployeeId: 'employee-2',
+          message: 'ticket is already checked out',
+        }),
+      ),
+    ).toBe('ticket-a · owned by employee- · ticket is already checked out');
+
+    expect(
+      buildRowSummary(
+        'runtime.artifact.created',
+        JSON.stringify({
+          adapterKind: 'codex',
+          status: 'working',
+          message: 'Runtime output artifact recorded.',
+          artifactId: 'artifact-123456',
+        }),
+      ),
+    ).toBe('codex · working · Runtime output artifact recorded. · artifact');
   });
 });
 

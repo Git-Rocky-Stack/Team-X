@@ -198,6 +198,45 @@ describe('artifact service', () => {
     );
   });
 
+  it('records runtime output artifacts as first-class execution deliverables', () => {
+    const artifactsRepo = createArtifactsRepo(ctx.db);
+    const service = createArtifactService({ artifactsRepo });
+
+    const artifact = service.recordRuntimeOutputArtifact({
+      companyId: 'company-1',
+      runtimeSessionId: 'session-1',
+      runtimeProfileId: 'profile-1',
+      adapterKind: 'codex',
+      runId: 'run-1',
+      ticketId: null,
+      employeeId: 'employee-1',
+      title: 'Runtime output for codex',
+      outputText: 'Implemented runtime audit normalization.',
+      usage: { promptTokens: 11, completionTokens: 5 },
+      createdAt: 40,
+    });
+
+    expect(artifact).toEqual(
+      expect.objectContaining({
+        kind: 'runtime-output',
+        sourceKind: 'runtime-execution',
+        sourceRefId: 'run-1',
+        uri: 'runtime:session-1',
+        createdByEmployeeId: 'employee-1',
+        summary: 'Implemented runtime audit normalization.',
+      }),
+    );
+    expect(artifact.preview).toEqual(
+      expect.objectContaining({
+        runtimeSessionId: 'session-1',
+        runtimeProfileId: 'profile-1',
+        adapterKind: 'codex',
+        runId: 'run-1',
+        usage: { promptTokens: 11, completionTokens: 5 },
+      }),
+    );
+  });
+
   it('deduplicates artifacts by company, kind, and source', () => {
     const artifactsRepo = createArtifactsRepo(ctx.db);
     const vaultRepo = createVaultRepo(ctx.db);

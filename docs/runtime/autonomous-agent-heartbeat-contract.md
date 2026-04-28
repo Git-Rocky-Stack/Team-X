@@ -14,6 +14,8 @@ Every external runtime execution must be represented by a durable runtime sessio
 5. Mark sessions `stale` instead of deleting them when heartbeat freshness expires.
 6. Mark sessions `ended` or `failed` with `failureReason` on normal completion, cancellation, budget block, approval block, or adapter error.
 
+Every lifecycle transition must also pass through the P1.5 normalized runtime event vocabulary documented in [External Runtime Audit Normalization](./external-runtime-audit-normalization.md). The normalized events are the operator-facing audit surface; the session and heartbeat rows remain the durable state projection.
+
 ## Heartbeat Payload
 
 Each heartbeat persists into `runtime_heartbeats` and updates the current `runtime_sessions` projection atomically:

@@ -474,6 +474,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'Use Access to verify whether the workspace is still local-only or already modeled for shared operators.',
           'Use Runtimes and Routines to understand how work is produced, not just who is assigned to it.',
           'Use Budgets and Approvals together so cost ceilings and risky actions are visible before they silently block autonomy.',
+          'Use Artifacts to review external runtime outputs that were captured from completed autonomous execution.',
           'Use Memory to inspect what long-running threads retain, what was checkpointed, and how much context gets packed forward.',
         ],
       },
@@ -542,7 +543,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         kind: 'bullets',
         items: [
           'Check telemetry when model cost or system pressure changes.',
-          'Check audit when authority, extensions, or automation decisions need verification.',
+          'Check audit when authority, extensions, runtime checkouts, stale sessions, or automation decisions need verification.',
         ],
       },
     ],

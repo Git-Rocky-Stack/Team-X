@@ -127,6 +127,25 @@ Exit criteria:
 - operators can dry-run import/install impact before mutating local state;
 - runtime secret gaps are visible and bindable without leaking package secrets into disk-backed state.
 
+### P1.5 External Runtime Audit Normalization
+
+Status: shipped as the third P1 follow-through slice.
+
+- Added a shared normalized `runtime.*` event vocabulary for session start, heartbeat, checkout claim/conflict, execution start/output/failure, artifact creation, stale sessions, and recovered sessions.
+- Added a runtime audit normalizer that emits into the existing DB-backed event bus, mirrors run-scoped runtime events into the tool-call log, and keeps run/thread/ticket/session provenance on every payload.
+- Added runtime output artifacts (`runtime-output` sourced from `runtime-execution`) so successful external runtime deliverables are reviewable artifacts, not only chat text.
+- Wired external Bash/HTTP/Codex-style adapters through the normalizer while preserving the existing session, heartbeat, checkout, workspace, secret-ref, and budget hard-stop behavior.
+- Added stale-session reaping to runtime operations snapshots so Mission Control sees stale runtime state and the audit trail records `runtime.session.stale`; stale sessions can be explicitly recovered through the session service.
+- Documented the contract in `docs/runtime/external-runtime-audit-normalization.md`.
+
+Exit criteria:
+
+- every external runtime execution emits normalized runtime events;
+- checkout conflicts and budget/runtime failures are audit-visible;
+- run-scoped runtime events are mirrored into the tool-call log;
+- successful runtime output is captured as an artifact with session/run/ticket provenance;
+- Mission Control can project stale runtime state from the operations snapshot.
+
 ## Test Plan
 
 - Runtime session repo/service tests for create, heartbeat, status changes, stale marking, and company scoping.
