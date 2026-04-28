@@ -104,6 +104,16 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   'company.packageExported': 'bg-indigo-600/20 text-indigo-400',
   'company.packageImported': 'bg-sky-600/20 text-sky-400',
   'company.templateInstalled': 'bg-violet-600/20 text-violet-400',
+  'runtime.session.started': 'bg-sky-600/20 text-sky-400',
+  'runtime.heartbeat': 'bg-blue-600/20 text-blue-400',
+  'runtime.checkout.claimed': 'bg-emerald-600/20 text-emerald-400',
+  'runtime.checkout.conflict': 'bg-rose-600/20 text-rose-400',
+  'runtime.execution.started': 'bg-sky-600/20 text-sky-400',
+  'runtime.execution.output': 'bg-indigo-600/20 text-indigo-400',
+  'runtime.execution.failed': 'bg-rose-600/20 text-rose-400',
+  'runtime.artifact.created': 'bg-emerald-600/20 text-emerald-400',
+  'runtime.session.stale': 'bg-amber-600/20 text-amber-400',
+  'runtime.session.recovered': 'bg-teal-600/20 text-teal-400',
 };
 
 /** Hand-tuned display labels where the auto-title-cased fallback reads
@@ -145,6 +155,16 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   'company.packageExported': 'Workspace Export',
   'company.packageImported': 'Workspace Import',
   'company.templateInstalled': 'Template Installed',
+  'runtime.session.started': 'Runtime Started',
+  'runtime.heartbeat': 'Runtime Heartbeat',
+  'runtime.checkout.claimed': 'Runtime Checkout',
+  'runtime.checkout.conflict': 'Runtime Conflict',
+  'runtime.execution.started': 'Runtime Execution',
+  'runtime.execution.output': 'Runtime Output',
+  'runtime.execution.failed': 'Runtime Failed',
+  'runtime.artifact.created': 'Runtime Artifact',
+  'runtime.session.stale': 'Runtime Stale',
+  'runtime.session.recovered': 'Runtime Recovered',
 };
 
 /** Fallback color class when an event type is not in the map. */
@@ -230,6 +250,16 @@ export const SUMMARIZABLE_TYPES: ReadonlySet<string> = new Set([
   'company.packageExported',
   'company.packageImported',
   'company.templateInstalled',
+  'runtime.session.started',
+  'runtime.heartbeat',
+  'runtime.checkout.claimed',
+  'runtime.checkout.conflict',
+  'runtime.execution.started',
+  'runtime.execution.output',
+  'runtime.execution.failed',
+  'runtime.artifact.created',
+  'runtime.session.stale',
+  'runtime.session.recovered',
 ]);
 
 function clampSummary(s: string): string {
@@ -381,6 +411,58 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
       if (typeof payload.templateName === 'string') parts.push(payload.templateName);
       if (typeof payload.sharingMode === 'string') parts.push(payload.sharingMode);
       if (typeof payload.packageId === 'string') parts.push(payload.packageId.slice(0, 8));
+      break;
+    }
+    case 'runtime.session.started':
+    case 'runtime.execution.started':
+    case 'runtime.session.recovered': {
+      if (typeof payload.adapterKind === 'string') parts.push(payload.adapterKind);
+      if (typeof payload.sessionId === 'string') parts.push(payload.sessionId.slice(0, 8));
+      if (typeof payload.runId === 'string') parts.push(payload.runId.slice(0, 8));
+      break;
+    }
+    case 'runtime.heartbeat':
+    case 'runtime.execution.output':
+    case 'runtime.artifact.created': {
+      if (typeof payload.adapterKind === 'string') parts.push(payload.adapterKind);
+      if (typeof payload.status === 'string') parts.push(payload.status);
+      if (typeof payload.message === 'string' && payload.message.length > 0) {
+        const truncated =
+          payload.message.length > 60 ? `${payload.message.slice(0, 57)}...` : payload.message;
+        parts.push(truncated);
+      }
+      if (typeof payload.artifactId === 'string' && payload.artifactId.length > 0) {
+        parts.push(payload.artifactId.slice(0, 8));
+      }
+      break;
+    }
+    case 'runtime.checkout.claimed': {
+      if (typeof payload.ticketId === 'string') parts.push(payload.ticketId.slice(0, 8));
+      if (typeof payload.checkoutId === 'string') parts.push(payload.checkoutId.slice(0, 8));
+      if (typeof payload.adapterKind === 'string') parts.push(payload.adapterKind);
+      break;
+    }
+    case 'runtime.checkout.conflict': {
+      if (typeof payload.ticketId === 'string') parts.push(payload.ticketId.slice(0, 8));
+      if (typeof payload.conflictingEmployeeId === 'string') {
+        parts.push(`owned by ${payload.conflictingEmployeeId.slice(0, 8)}`);
+      }
+      if (typeof payload.message === 'string' && payload.message.length > 0) {
+        const truncated =
+          payload.message.length > 60 ? `${payload.message.slice(0, 57)}...` : payload.message;
+        parts.push(truncated);
+      }
+      break;
+    }
+    case 'runtime.execution.failed':
+    case 'runtime.session.stale': {
+      if (typeof payload.adapterKind === 'string') parts.push(payload.adapterKind);
+      if (typeof payload.status === 'string') parts.push(payload.status);
+      if (typeof payload.message === 'string' && payload.message.length > 0) {
+        const truncated =
+          payload.message.length > 60 ? `${payload.message.slice(0, 57)}...` : payload.message;
+        parts.push(truncated);
+      }
       break;
     }
 

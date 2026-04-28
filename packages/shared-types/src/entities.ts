@@ -804,10 +804,20 @@ export interface BudgetOverview {
   policySummaries: BudgetPolicySummary[];
 }
 
-export const ARTIFACT_RECORD_KINDS = ['ticket-output', 'approval-record', 'vault-file'] as const;
+export const ARTIFACT_RECORD_KINDS = [
+  'ticket-output',
+  'approval-record',
+  'vault-file',
+  'runtime-output',
+] as const;
 export type ArtifactRecordKind = (typeof ARTIFACT_RECORD_KINDS)[number];
 
-export const ARTIFACT_SOURCE_KINDS = ['routine-run', 'approval-decision', 'vault-file'] as const;
+export const ARTIFACT_SOURCE_KINDS = [
+  'routine-run',
+  'approval-decision',
+  'vault-file',
+  'runtime-execution',
+] as const;
 export type ArtifactSourceKind = (typeof ARTIFACT_SOURCE_KINDS)[number];
 
 export const ARTIFACT_OUTCOME_KINDS = [

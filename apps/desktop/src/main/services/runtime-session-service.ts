@@ -11,6 +11,7 @@ import type {
   RuntimeSessionRow,
   RuntimeSessionsRepo,
 } from '../db/repos/runtime-sessions.js';
+import type { RuntimeAuditContext, RuntimeAuditNormalizer } from './runtime-audit-normalizer-service.js';
 
 export interface StartRuntimeSessionInput {
   companyId: string;
@@ -29,6 +30,7 @@ export interface StartRuntimeSessionInput {
 
 export interface RuntimeSessionServiceDeps {
   runtimeSessionsRepo: RuntimeSessionsRepo;
+  runtimeAuditNormalizer?: RuntimeAuditNormalizer;
 }
 
 function parseRecord(raw: string): Record<string, unknown> {
@@ -83,7 +85,28 @@ export function rowToRuntimeHeartbeat(row: RuntimeHeartbeatRow): RuntimeHeartbea
   };
 }
 
-export function createRuntimeSessionService({ runtimeSessionsRepo }: RuntimeSessionServiceDeps) {
+function runtimeAuditContextFromRow(row: RuntimeSessionRow): RuntimeAuditContext {
+  return {
+    companyId: row.companyId,
+    employeeId: row.employeeId,
+    runtimeProfileId: row.runtimeProfileId,
+    adapterKind: row.adapterKind as RuntimeProfileKind,
+    transport: null,
+    sessionId: row.id,
+    runId: row.currentRunId,
+    threadId: null,
+    ticketId: row.currentTicketId,
+    checkoutId: null,
+    workspacePath: row.workspacePath,
+    endpointUrl: row.endpointUrl,
+    leaseExpiresAt: row.leaseExpiresAt,
+  };
+}
+
+export function createRuntimeSessionService({
+  runtimeSessionsRepo,
+  runtimeAuditNormalizer,
+}: RuntimeSessionServiceDeps) {
   return {
     start(input: StartRuntimeSessionInput): RuntimeSession {
       const sessionId = runtimeSessionsRepo.create({
@@ -138,7 +161,39 @@ export function createRuntimeSessionService({ runtimeSessionsRepo }: RuntimeSess
       now?: number;
       reason?: string;
     }): RuntimeSession[] {
-      return runtimeSessionsRepo.markStaleBefore(input).map(rowToRuntimeSession);
+      return runtimeSessionsRepo.markStaleBefore(input).map((row) => {
+        runtimeAuditNormalizer?.emit({
+          ...runtimeAuditContextFromRow(row),
+          type: 'runtime.session.stale',
+          status: 'stale',
+          message: row.failureReason ?? input.reason ?? 'runtime heartbeat is stale',
+        });
+        return rowToRuntimeSession(row);
+      });
+    },
+
+    recover(
+      sessionId: string,
+      input: { status?: Exclude<RuntimeSessionStatus, 'stale'>; now?: number } = {},
+    ): RuntimeSession | null {
+      const before = runtimeSessionsRepo.getById(sessionId);
+      const row = runtimeSessionsRepo.update(
+        sessionId,
+        {
+          status: input.status ?? 'idle',
+          failureReason: null,
+        },
+        input.now,
+      );
+      if (row && before?.status === 'stale') {
+        runtimeAuditNormalizer?.emit({
+          ...runtimeAuditContextFromRow(row),
+          type: 'runtime.session.recovered',
+          status: row.status as RuntimeSessionStatus,
+          message: 'Runtime session recovered from stale heartbeat state.',
+        });
+      }
+      return row ? rowToRuntimeSession(row) : null;
     },
   };
 }

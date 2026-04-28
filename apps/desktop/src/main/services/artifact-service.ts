@@ -1,4 +1,4 @@
-import type { ArtifactRecord } from '@team-x/shared-types';
+import type { ArtifactRecord, RuntimeAuditUsageDelta } from '@team-x/shared-types';
 
 import type { ArtifactRow, ArtifactsRepo } from '../db/repos/artifacts.js';
 
@@ -39,6 +39,20 @@ export interface RecordVaultFileArtifactInput {
   sizeBytes: number;
   sha256: string;
   uploadedBy: string;
+  createdAt: number;
+}
+
+export interface RecordRuntimeOutputArtifactInput {
+  companyId: string;
+  runtimeSessionId: string;
+  runtimeProfileId: string | null;
+  adapterKind: string;
+  runId: string | null;
+  ticketId: string | null;
+  employeeId: string;
+  title: string;
+  outputText: string;
+  usage: RuntimeAuditUsageDelta | null;
   createdAt: number;
 }
 
@@ -161,6 +175,40 @@ export function createArtifactService({ artifactsRepo }: { artifactsRepo: Artifa
           sha256: input.sha256,
         }),
         createdByEmployeeId: null,
+        createdAt: input.createdAt,
+      });
+      const artifact = artifactsRepo.getById(artifactId);
+      if (!artifact) {
+        throw new Error(`[artifact-service] failed to read created artifact ${artifactId}`);
+      }
+      return rowToArtifact(artifact);
+    },
+
+    recordRuntimeOutputArtifact(input: RecordRuntimeOutputArtifactInput): ArtifactRecord {
+      const outputText = input.outputText.trim();
+      const summary =
+        outputText.length > 240 ? `${outputText.slice(0, 237).trimEnd()}...` : outputText;
+      const sourceRefId = input.runId ?? input.runtimeSessionId;
+      const artifactId = artifactsRepo.create({
+        companyId: input.companyId,
+        kind: 'runtime-output',
+        outcomeKind: 'artifact-created',
+        title: input.title,
+        summary: summary.length > 0 ? summary : 'Runtime completed without textual output.',
+        sourceKind: 'runtime-execution',
+        sourceRefId,
+        ticketId: input.ticketId,
+        uri: `runtime:${input.runtimeSessionId}`,
+        previewJson: JSON.stringify({
+          runtimeSessionId: input.runtimeSessionId,
+          runtimeProfileId: input.runtimeProfileId,
+          adapterKind: input.adapterKind,
+          runId: input.runId,
+          ticketId: input.ticketId,
+          usage: input.usage,
+          outputText,
+        }),
+        createdByEmployeeId: input.employeeId,
         createdAt: input.createdAt,
       });
       const artifact = artifactsRepo.getById(artifactId);

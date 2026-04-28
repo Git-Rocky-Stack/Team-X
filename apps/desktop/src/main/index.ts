@@ -187,6 +187,7 @@ import {
   createRoutineService,
 } from './services/routine-service.js';
 import { createRunCheckpointService } from './services/run-checkpoint-service.js';
+import { createRuntimeAuditNormalizer } from './services/runtime-audit-normalizer-service.js';
 import { createRuntimeOperationsService } from './services/runtime-operations-service.js';
 import { createRuntimeProfileProviderService } from './services/runtime-profile-provider-service.js';
 import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
@@ -519,8 +520,14 @@ app
       employeesRepo,
       providersService,
     });
+    const runtimeAuditNormalizer = createRuntimeAuditNormalizer({
+      bus,
+      toolCallsRepo,
+      artifactService,
+    });
     const runtimeSessionService = createRuntimeSessionService({
       runtimeSessionsRepo,
+      runtimeAuditNormalizer,
     });
     const runtimeOperationsService = createRuntimeOperationsService({
       runtimeSessionService,
@@ -547,6 +554,7 @@ app
       userDataDir: userDataDir(),
       runtimeSessionService,
       ticketCheckoutsRepo,
+      runtimeAuditNormalizer,
       budgetAdmissionGate: budgetGovernanceServiceInstance,
     });
     approvalInboxServiceInstance = createApprovalInboxService({

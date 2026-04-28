@@ -11,7 +11,10 @@ export interface RuntimeOperationsServiceDeps {
   runtimeSessionService: RuntimeSessionService;
   ticketCheckoutsRepo: Pick<TicketCheckoutsRepo, 'expireStale' | 'listActiveByCompany'>;
   now?: () => number;
+  staleSessionMs?: number;
 }
+
+const DEFAULT_STALE_SESSION_MS = 2 * 60 * 1000;
 
 function rowToTicketCheckout(row: TicketCheckoutRow): TicketCheckout {
   return {
@@ -36,16 +39,22 @@ export function createRuntimeOperationsService({
   runtimeSessionService,
   ticketCheckoutsRepo,
   now = Date.now,
+  staleSessionMs = DEFAULT_STALE_SESSION_MS,
 }: RuntimeOperationsServiceDeps) {
   return {
     snapshot(companyId: string): RuntimeOperationsSnapshot {
       const generatedAt = now();
       ticketCheckoutsRepo.expireStale({ companyId, now: generatedAt });
+      runtimeSessionService.reapStale({
+        companyId,
+        staleBefore: generatedAt - staleSessionMs,
+        now: generatedAt,
+      });
 
       return {
         companyId,
         generatedAt,
-        sessions: runtimeSessionService.listLive(companyId),
+        sessions: runtimeSessionService.list(companyId).filter((session) => session.endedAt === null),
         activeCheckouts: ticketCheckoutsRepo
           .listActiveByCompany(companyId)
           .map(rowToTicketCheckout),

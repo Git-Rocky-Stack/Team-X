@@ -5,6 +5,10 @@ import type { RuntimeProfile } from '@team-x/shared-types';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { TicketCheckoutsRepo } from '../db/repos/ticket-checkouts.js';
+import type {
+  RuntimeAuditContext,
+  RuntimeAuditNormalizer,
+} from './runtime-audit-normalizer-service.js';
 import { type RuntimeSecretReader, resolveRuntimeEnvironment } from './runtime-secret-refs.js';
 import type { RuntimeSessionService } from './runtime-session-service.js';
 import {
@@ -54,6 +58,7 @@ export interface ExternalRuntimeAdaptersDeps {
   ensureWorkspaceFn?: typeof ensureRuntimeWorkspacePaths;
   runtimeSessionService?: RuntimeSessionService;
   ticketCheckoutsRepo?: TicketCheckoutsRepo;
+  runtimeAuditNormalizer?: RuntimeAuditNormalizer;
   budgetAdmissionGate?: RuntimeBudgetAdmissionGate;
   checkoutLeaseMs?: number;
   now?: () => number;
@@ -81,6 +86,7 @@ interface RuntimeInvocationPayload {
 interface RuntimeLifecycleDeps {
   runtimeSessionService?: RuntimeSessionService;
   ticketCheckoutsRepo?: TicketCheckoutsRepo;
+  runtimeAuditNormalizer?: RuntimeAuditNormalizer;
   budgetAdmissionGate?: RuntimeBudgetAdmissionGate;
   checkoutLeaseMs: number;
   now: () => number;
@@ -88,6 +94,7 @@ interface RuntimeLifecycleDeps {
 
 interface ActiveRuntimeLifecycle {
   heartbeat(input: { message: string; usage?: StreamUsage }): Promise<void>;
+  recordOutput(input: { text: string; usage: StreamUsage }): void;
   complete(input: { usage: StreamUsage }): Promise<void>;
   fail(input: { error: unknown }): void;
 }
@@ -130,6 +137,15 @@ function usageDeltaJson(usage: StreamUsage | undefined): string {
   );
 }
 
+function usageDelta(usage: StreamUsage | undefined) {
+  return usage
+    ? {
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+      }
+    : null;
+}
+
 function startRuntimeLifecycle(args: {
   deps: RuntimeLifecycleDeps;
   employee: EmployeeRow;
@@ -138,18 +154,23 @@ function startRuntimeLifecycle(args: {
   endpointUrl?: string | null;
   workspace: RuntimeWorkspacePaths | null;
   runId?: string | null;
+  threadId?: string | null;
   currentTicketId?: string | null;
 }): ActiveRuntimeLifecycle | null {
   const service = args.deps.runtimeSessionService;
   const checkoutsRepo = args.deps.ticketCheckoutsRepo;
-  if (!service && !checkoutsRepo) return null;
+  const runtimeAudit = args.deps.runtimeAuditNormalizer;
+  if (!service && !checkoutsRepo && !runtimeAudit) return null;
 
   const startedAt = args.deps.now();
   const currentRunId = args.runId ?? null;
+  const currentThreadId = args.threadId ?? null;
   const currentTicketId = args.currentTicketId ?? null;
   let leaseExpiresAt =
     currentTicketId && checkoutsRepo ? startedAt + args.deps.checkoutLeaseMs : null;
   let terminal = false;
+  let checkoutId: string | null = null;
+  let checkoutReleased = false;
   const session = service?.start({
     companyId: args.employee.companyId,
     employeeId: args.employee.id,
@@ -169,8 +190,28 @@ function startRuntimeLifecycle(args: {
     now: startedAt,
   });
 
-  let checkoutId: string | null = null;
-  let checkoutReleased = false;
+  const auditContext = (): RuntimeAuditContext => ({
+    companyId: args.employee.companyId,
+    employeeId: args.employee.id,
+    runtimeProfileId: args.profile.id,
+    adapterKind: args.profile.kind,
+    transport: args.transport,
+    sessionId: session?.id ?? null,
+    runId: currentRunId,
+    threadId: currentThreadId,
+    ticketId: currentTicketId,
+    checkoutId,
+    workspacePath: args.workspace?.workspace ?? null,
+    endpointUrl: args.endpointUrl ?? null,
+    leaseExpiresAt,
+  });
+
+  runtimeAudit?.emit({
+    ...auditContext(),
+    type: 'runtime.session.started',
+    status: 'starting',
+    message: 'Runtime session started.',
+  });
 
   const blockRuntime = (message: string, now: number): never => {
     terminal = true;
@@ -201,6 +242,12 @@ function startRuntimeLifecycle(args: {
         now,
       });
     }
+    runtimeAudit?.emit({
+      ...auditContext(),
+      type: 'runtime.execution.failed',
+      status: 'blocked',
+      message,
+    });
     throw new Error(message);
   };
 
@@ -241,6 +288,13 @@ function startRuntimeLifecycle(args: {
         now: timestamp,
       });
     }
+    runtimeAudit?.emit({
+      ...auditContext(),
+      type: 'runtime.heartbeat',
+      status: 'working',
+      message: input.message,
+      usage: usageDelta(input.usage),
+    });
   };
 
   if (currentTicketId && checkoutsRepo) {
@@ -273,13 +327,49 @@ function startRuntimeLifecycle(args: {
           now: claimNow,
         });
       }
+      runtimeAudit?.emit({
+        ...auditContext(),
+        type: 'runtime.checkout.conflict',
+        status: 'blocked',
+        message,
+        conflictingCheckoutId: claim.conflictingCheckout.id,
+        conflictingEmployeeId: claim.conflictingCheckout.employeeId,
+      });
       throw new Error(message);
     }
     checkoutId = claim.checkout.id;
+    runtimeAudit?.emit({
+      ...auditContext(),
+      type: 'runtime.checkout.claimed',
+      status: 'working',
+      message: `Runtime checkout ${claim.outcome}.`,
+    });
   }
+
+  runtimeAudit?.emit({
+    ...auditContext(),
+    type: 'runtime.execution.started',
+    status: 'working',
+    message: 'Runtime execution started.',
+  });
 
   return {
     heartbeat,
+    recordOutput(input) {
+      runtimeAudit?.emit({
+        ...auditContext(),
+        type: 'runtime.execution.output',
+        status: 'working',
+        message: 'Runtime produced assistant output.',
+        usage: usageDelta(input.usage),
+      });
+      runtimeAudit?.recordArtifact({
+        ...auditContext(),
+        outputText: input.text,
+        usage: usageDelta(input.usage),
+        createdAt: args.deps.now(),
+      });
+    },
     async complete(input) {
       if (terminal) return;
       await heartbeat({ message: 'Runtime execution completed.', usage: input.usage });
@@ -315,6 +405,12 @@ function startRuntimeLifecycle(args: {
           now: timestamp,
         });
       }
+      runtimeAudit?.emit({
+        ...auditContext(),
+        type: 'runtime.execution.failed',
+        status: isAbortLike(input.error) ? 'ended' : 'failed',
+        message,
+      });
       if (checkoutId && checkoutsRepo && !checkoutReleased) {
         checkoutsRepo.release({
           checkoutId,
@@ -579,6 +675,7 @@ function createBashStream(args: {
       transport: 'command',
       workspace,
       runId: input.runId,
+      threadId: input.threadId,
       currentTicketId: input.currentTicketId,
     });
     try {
@@ -594,6 +691,7 @@ function createBashStream(args: {
       });
       const result = parseRuntimeResponse(stdout, payload.prompt);
       await lifecycle?.heartbeat({ message: 'Runtime response parsed.', usage: result.usage });
+      lifecycle?.recordOutput({ text: result.text, usage: result.usage });
       yield { delta: result.text };
       yield { done: true, usage: result.usage };
       await lifecycle?.complete({ usage: result.usage });
@@ -670,6 +768,7 @@ function createHttpStream(args: {
       endpointUrl: args.baseUrl,
       workspace,
       runId: input.runId,
+      threadId: input.threadId,
       currentTicketId: input.currentTicketId,
     });
     try {
@@ -695,6 +794,7 @@ function createHttpStream(args: {
       const body = await response.text();
       const result = parseRuntimeResponse(body, payload.prompt);
       await lifecycle?.heartbeat({ message: 'Runtime response parsed.', usage: result.usage });
+      lifecycle?.recordOutput({ text: result.text, usage: result.usage });
       yield { delta: result.text };
       yield { done: true, usage: result.usage };
       await lifecycle?.complete({ usage: result.usage });
@@ -749,6 +849,7 @@ export function createExternalRuntimeAdapters(
   const lifecycle: RuntimeLifecycleDeps = {
     runtimeSessionService: deps.runtimeSessionService,
     ticketCheckoutsRepo: deps.ticketCheckoutsRepo,
+    runtimeAuditNormalizer: deps.runtimeAuditNormalizer,
     budgetAdmissionGate: deps.budgetAdmissionGate,
     checkoutLeaseMs: deps.checkoutLeaseMs ?? DEFAULT_CHECKOUT_LEASE_MS,
     now: deps.now ?? Date.now,

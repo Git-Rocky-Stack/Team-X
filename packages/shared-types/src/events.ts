@@ -1,4 +1,19 @@
-import type { ActorKind } from './entities.js';
+import type { ActorKind, RuntimeProfileKind, RuntimeSessionStatus } from './entities.js';
+
+export const RUNTIME_AUDIT_EVENT_TYPES = [
+  'runtime.session.started',
+  'runtime.heartbeat',
+  'runtime.checkout.claimed',
+  'runtime.checkout.conflict',
+  'runtime.execution.started',
+  'runtime.execution.output',
+  'runtime.execution.failed',
+  'runtime.artifact.created',
+  'runtime.session.stale',
+  'runtime.session.recovered',
+] as const;
+
+export type RuntimeAuditEventType = (typeof RUNTIME_AUDIT_EVENT_TYPES)[number];
 
 export type EventType =
   | 'work.queued'
@@ -87,7 +102,8 @@ export type EventType =
   | 'project.ticketUnlinked'
   | 'goal.created'
   | 'goal.updated'
-  | 'goal.deleted';
+  | 'goal.deleted'
+  | RuntimeAuditEventType;
 
 export interface DashboardEvent<T = unknown> {
   id: string;
@@ -134,6 +150,36 @@ export interface ToolResultPayload {
   toolCallId: string;
   toolName: string;
   success: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// External runtime normalized audit events (P1.5)
+// ---------------------------------------------------------------------------
+
+export interface RuntimeAuditUsageDelta {
+  promptTokens: number;
+  completionTokens: number;
+}
+
+export interface RuntimeAuditPayload {
+  sessionId: string | null;
+  employeeId: string;
+  runtimeProfileId: string | null;
+  adapterKind: RuntimeProfileKind;
+  transport: 'command' | 'http' | null;
+  runId: string | null;
+  threadId: string | null;
+  ticketId: string | null;
+  checkoutId: string | null;
+  conflictingCheckoutId?: string | null;
+  conflictingEmployeeId?: string | null;
+  artifactId?: string | null;
+  status?: RuntimeSessionStatus;
+  message?: string | null;
+  usage?: RuntimeAuditUsageDelta | null;
+  workspacePath?: string | null;
+  endpointUrl?: string | null;
+  leaseExpiresAt?: number | null;
 }
 
 export interface AgentMessagePayload {
