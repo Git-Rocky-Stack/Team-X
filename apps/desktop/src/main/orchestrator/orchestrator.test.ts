@@ -13,7 +13,7 @@
  * mapping that inverts user/assistant roles — it shows up here first.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProviderStreamFn, StreamMessage, StreamUsage } from '@team-x/provider-router';
 
@@ -229,6 +229,26 @@ function seedResumeCheckpoint(
     nextAction: 'Resume from the latest checkpoint.',
     createdAt,
   });
+}
+
+interface Deferred<T = void> {
+  promise: Promise<T>;
+  resolve(value?: T | PromiseLike<T>): void;
+  reject(reason?: unknown): void;
+}
+
+function createDeferred<T = void>(): Deferred<T> {
+  let resolve: Deferred<T>['resolve'] = () => undefined;
+  let reject: Deferred<T>['reject'] = () => undefined;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+async function waitForDispatchCycle(): Promise<void> {
+  await new Promise<void>((resolve) => setImmediate(resolve));
 }
 
 describe('buildOrchestrator', () => {
@@ -846,7 +866,6 @@ describe('buildOrchestrator', () => {
       const order: string[] = [];
       const firstProvider: ProviderStreamFn = async function* () {
         order.push('first-start');
-        await new Promise((r) => setTimeout(r, 5));
         yield { delta: 'a' };
         order.push('first-end');
         yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
@@ -888,10 +907,8 @@ describe('buildOrchestrator', () => {
 
     it('serializes turns on the same thread even when multiple global slots are free', async () => {
       const order: string[] = [];
-      let releaseFirst: () => void = () => {};
-      const firstGate = new Promise<void>((resolve) => {
-        releaseFirst = resolve;
-      });
+      const firstStarted = createDeferred();
+      const firstGate = createDeferred();
       const secondUserMessageId = f.messagesRepo.append({
         threadId: f.threadId,
         authorId: 'rocky',
@@ -901,7 +918,8 @@ describe('buildOrchestrator', () => {
 
       const firstProvider: ProviderStreamFn = async function* () {
         order.push('first-start');
-        await firstGate;
+        firstStarted.resolve();
+        await firstGate.promise;
         yield { delta: 'a' };
         order.push('first-end');
         yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
@@ -935,19 +953,16 @@ describe('buildOrchestrator', () => {
       });
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 15));
+        await firstStarted.promise;
         expect(order).toEqual(['first-start']);
 
-        releaseFirst();
+        firstGate.resolve();
         await Promise.all([first, second]);
 
         expect(order).toEqual(['first-start', 'first-end', 'second-start', 'second-end']);
       } finally {
-        releaseFirst();
-        await Promise.race([
-          Promise.allSettled([first, second]),
-          new Promise((resolve) => setTimeout(resolve, 100)),
-        ]);
+        firstGate.resolve();
+        await Promise.allSettled([first, second]);
       }
     });
 
@@ -994,14 +1009,14 @@ describe('buildOrchestrator', () => {
       });
 
       const order: string[] = [];
-      let releaseOpenAi: () => void = () => {};
-      const openAiGate = new Promise<void>((resolve) => {
-        releaseOpenAi = resolve;
-      });
+      const openAiStarted = createDeferred();
+      const openAiGate = createDeferred();
+      const anthropicFinished = createDeferred();
 
       const openAiOne: ProviderStreamFn = async function* () {
         order.push('openai-1-start');
-        await openAiGate;
+        openAiStarted.resolve();
+        await openAiGate.promise;
         yield { delta: 'a' };
         order.push('openai-1-end');
         yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
@@ -1016,6 +1031,7 @@ describe('buildOrchestrator', () => {
         order.push('anthropic-start');
         yield { delta: 'c' };
         order.push('anthropic-end');
+        anthropicFinished.resolve();
         yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
       };
 
@@ -1075,10 +1091,10 @@ describe('buildOrchestrator', () => {
       });
 
       try {
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        await Promise.all([openAiStarted.promise, anthropicFinished.promise]);
         expect(order).toEqual(['openai-1-start', 'anthropic-start', 'anthropic-end']);
 
-        releaseOpenAi();
+        openAiGate.resolve();
         await Promise.all([first, second, third]);
 
         expect(order).toEqual([
@@ -1090,11 +1106,8 @@ describe('buildOrchestrator', () => {
           'openai-2-end',
         ]);
       } finally {
-        releaseOpenAi();
-        await Promise.race([
-          Promise.allSettled([first, second, third]),
-          new Promise((resolve) => setTimeout(resolve, 100)),
-        ]);
+        openAiGate.resolve();
+        await Promise.allSettled([first, second, third]);
       }
     });
   });
@@ -1113,14 +1126,14 @@ describe('buildOrchestrator', () => {
         content: 'second question',
       });
       const order: string[] = [];
-      let releaseFirst: () => void = () => {};
-      const firstGate = new Promise<void>((resolve) => {
-        releaseFirst = resolve;
-      });
+      const firstStarted = createDeferred();
+      const firstGate = createDeferred();
+      const secondFinished = createDeferred();
 
       const firstProvider: ProviderStreamFn = async function* () {
         order.push('first-start');
-        await firstGate;
+        firstStarted.resolve();
+        await firstGate.promise;
         yield { delta: 'a' };
         order.push('first-end');
         yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
@@ -1129,6 +1142,7 @@ describe('buildOrchestrator', () => {
         order.push('second-start');
         yield { delta: 'b' };
         order.push('second-end');
+        secondFinished.resolve();
         yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
       };
 
@@ -1153,20 +1167,28 @@ describe('buildOrchestrator', () => {
         userMessageId: secondUserMessageId,
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 15));
-      expect(order).toEqual(['first-start']);
+      try {
+        await firstStarted.promise;
+        expect(order).toEqual(['first-start']);
 
-      (
-        orchestrator as unknown as {
-          updateConcurrency(args: { slots?: number; providerCaps?: Record<string, number> }): void;
-        }
-      ).updateConcurrency({ slots: 2 });
+        (
+          orchestrator as unknown as {
+            updateConcurrency(args: {
+              slots?: number;
+              providerCaps?: Record<string, number>;
+            }): void;
+          }
+        ).updateConcurrency({ slots: 2 });
 
-      await new Promise((resolve) => setTimeout(resolve, 15));
-      expect(order).toEqual(['first-start', 'second-start', 'second-end']);
+        await secondFinished.promise;
+        expect(order).toEqual(['first-start', 'second-start', 'second-end']);
 
-      releaseFirst();
-      await Promise.all([first, second]);
+        firstGate.resolve();
+        await Promise.all([first, second]);
+      } finally {
+        firstGate.resolve();
+        await Promise.allSettled([first, second]);
+      }
     });
   });
 
@@ -1186,8 +1208,7 @@ describe('buildOrchestrator', () => {
         employeeId: f.employeeId,
         userMessageId: f.userMessageId,
       });
-      // Yield a macrotask so any queued dispatch has a chance to run.
-      await new Promise((r) => setTimeout(r, 10));
+      await waitForDispatchCycle();
       expect(started).toBe(false);
 
       orchestrator.resume();
@@ -1198,13 +1219,12 @@ describe('buildOrchestrator', () => {
 
   describe('shutdown', () => {
     it('waits for in-flight turns to finish before resolving', async () => {
-      let finishFirst: () => void = () => {};
-      const gate = new Promise<void>((res) => {
-        finishFirst = res;
-      });
+      const started = createDeferred();
+      const gate = createDeferred();
       const provider: ProviderStreamFn = async function* () {
         yield { delta: 'x' };
-        await gate;
+        started.resolve();
+        await gate.promise;
         yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
       };
       const orchestrator = buildDefaultOrchestrator(f, { provider, slots: 1 });
@@ -1215,20 +1235,25 @@ describe('buildOrchestrator', () => {
         userMessageId: f.userMessageId,
       });
 
-      // Let the first turn enter the stream loop.
-      await new Promise((r) => setTimeout(r, 10));
+      let shutdownP: Promise<void> | null = null;
+      try {
+        await started.promise;
 
-      let shutdownResolved = false;
-      const shutdownP = orchestrator.shutdown().then(() => {
-        shutdownResolved = true;
-      });
-      await new Promise((r) => setTimeout(r, 10));
-      expect(shutdownResolved).toBe(false);
+        let shutdownResolved = false;
+        shutdownP = orchestrator.shutdown().then(() => {
+          shutdownResolved = true;
+        });
+        await waitForDispatchCycle();
+        expect(shutdownResolved).toBe(false);
 
-      finishFirst();
-      await p1;
-      await shutdownP;
-      expect(shutdownResolved).toBe(true);
+        gate.resolve();
+        await p1;
+        await shutdownP;
+        expect(shutdownResolved).toBe(true);
+      } finally {
+        gate.resolve();
+        await Promise.allSettled([p1, ...(shutdownP ? [shutdownP] : [])]);
+      }
     });
 
     it('rejects subsequent enqueueChat calls after shutdown', async () => {
@@ -1426,14 +1451,13 @@ describe('buildOrchestrator', () => {
       });
 
       const order: string[] = [];
-      let releaseFirst: () => void = () => {};
-      const firstGate = new Promise<void>((resolve) => {
-        releaseFirst = resolve;
-      });
+      const firstStarted = createDeferred();
+      const firstGate = createDeferred();
       const firstProvider: ProviderStreamFn = async function* () {
         order.push('first-start');
         yield { delta: 'holding' };
-        await firstGate;
+        firstStarted.resolve();
+        await firstGate.promise;
         order.push('first-end');
         yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
       };
@@ -1463,17 +1487,22 @@ describe('buildOrchestrator', () => {
         userMessageId: secondUserMessageId,
       });
 
-      await new Promise((r) => setTimeout(r, 20));
-      expect(order).toEqual(['first-start']);
+      try {
+        await firstStarted.promise;
+        expect(order).toEqual(['first-start']);
 
-      const stopped = orchestrator.stopThread(secondThreadId);
-      expect(stopped).toBe(true);
+        const stopped = orchestrator.stopThread(secondThreadId);
+        expect(stopped).toBe(true);
 
-      await expect(second).rejects.toThrow(/canceled/i);
-      releaseFirst();
-      await first;
+        await expect(second).rejects.toThrow(/canceled/i);
+        firstGate.resolve();
+        await first;
 
-      expect(order).toEqual(['first-start', 'first-end']);
+        expect(order).toEqual(['first-start', 'first-end']);
+      } finally {
+        firstGate.resolve();
+        await Promise.allSettled([first, second]);
+      }
     });
   });
 
@@ -1595,6 +1624,7 @@ describe('buildOrchestrator', () => {
     });
 
     it('writes a timeout checkpoint when the provider stalls mid-turn', async () => {
+      vi.useFakeTimers();
       const runCheckpointService = createRunCheckpointService({
         runCheckpointsRepo: f.runCheckpointsRepo,
       });
@@ -1618,83 +1648,89 @@ describe('buildOrchestrator', () => {
           signal?.addEventListener('abort', onAbort, { once: true });
         });
       };
-      const orchestrator = buildDefaultOrchestrator(f, {
-        provider,
-        runCheckpointService,
-        contextAssemblerService: {
-          assembleThreadContext: async () => ({
-            companyId: f.companyId,
-            threadId: f.threadId,
-            generatedAt: 1,
-            retrievalQueries: [],
-            recentTurns: [],
-            blocks: [],
-          }),
-        },
-        contextPackerService: {
-          packContext: () => ({
-            companyId: f.companyId,
-            threadId: f.threadId,
-            generatedAt: 1,
-            targetTokenBudget: 256,
-            usedTokens: 4,
-            recentTurnTokens: 4,
-            blockTokens: 0,
-            retrievalTokens: 0,
-            packedTurns: [
-              {
-                messageId: f.userMessageId,
-                role: 'user',
-                authorId: 'rocky',
-                authorKind: 'user',
-                content: 'resume timeout test',
-                createdAt: 1,
-                estimatedTokens: 4,
-                truncated: false,
+      try {
+        const orchestrator = buildDefaultOrchestrator(f, {
+          provider,
+          runCheckpointService,
+          contextAssemblerService: {
+            assembleThreadContext: async () => ({
+              companyId: f.companyId,
+              threadId: f.threadId,
+              generatedAt: 1,
+              retrievalQueries: [],
+              recentTurns: [],
+              blocks: [],
+            }),
+          },
+          contextPackerService: {
+            packContext: () => ({
+              companyId: f.companyId,
+              threadId: f.threadId,
+              generatedAt: 1,
+              targetTokenBudget: 256,
+              usedTokens: 4,
+              recentTurnTokens: 4,
+              blockTokens: 0,
+              retrievalTokens: 0,
+              packedTurns: [
+                {
+                  messageId: f.userMessageId,
+                  role: 'user',
+                  authorId: 'rocky',
+                  authorKind: 'user',
+                  content: 'resume timeout test',
+                  createdAt: 1,
+                  estimatedTokens: 4,
+                  truncated: false,
+                },
+              ],
+              systemAddendum: '',
+              includedBlocks: [],
+              droppedBlocks: [],
+              retrievalQueries: [],
+              resumeOrigin: {
+                checkpointId: seeded.id,
+                checkpointKind: 'approval-blocked',
+                createdAt: 9,
               },
-            ],
-            systemAddendum: '',
-            includedBlocks: [],
-            droppedBlocks: [],
-            retrievalQueries: [],
+            }),
+          },
+          runIdleTimeoutMs: 10,
+          runTimeoutMs: 1_000,
+        });
+
+        const runPromise = orchestrator.enqueueChat({
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          userMessageId: f.userMessageId,
+        });
+
+        await started;
+        const rejection = expect(runPromise).rejects.toThrow(/stalled/i);
+        await vi.advanceTimersByTimeAsync(11);
+        await rejection;
+
+        const checkpoints = runCheckpointService.listByThread({
+          companyId: f.companyId,
+          threadId: f.threadId,
+        });
+        expect(checkpoints[0]).toEqual(
+          expect.objectContaining({
+            checkpointKind: 'timeout',
             resumeOrigin: {
               checkpointId: seeded.id,
               checkpointKind: 'approval-blocked',
               createdAt: 9,
             },
           }),
-        },
-        runIdleTimeoutMs: 25,
-        runTimeoutMs: 1_000,
-      });
-
-      const runPromise = orchestrator.enqueueChat({
-        threadId: f.threadId,
-        employeeId: f.employeeId,
-        userMessageId: f.userMessageId,
-      });
-
-      await started;
-      await expect(runPromise).rejects.toThrow(/stalled/i);
-
-      const checkpoints = runCheckpointService.listByThread({
-        companyId: f.companyId,
-        threadId: f.threadId,
-      });
-      expect(checkpoints[0]).toEqual(
-        expect.objectContaining({
-          checkpointKind: 'timeout',
-          resumeOrigin: {
-            checkpointId: seeded.id,
-            checkpointKind: 'approval-blocked',
-            createdAt: 9,
-          },
-        }),
-      );
-      expect(checkpoints[0]?.blockers[0]?.summary).toMatch(/stalled/i);
-      expect(checkpoints[0]?.progressSummary).toMatch(
-        /after resuming from the approval-blocked checkpoint/i,
-      );
+        );
+        expect(checkpoints[0]?.blockers[0]?.summary).toMatch(/stalled/i);
+        expect(checkpoints[0]?.progressSummary).toMatch(
+          /after resuming from the approval-blocked checkpoint/i,
+        );
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
@@ -1714,8 +1750,7 @@ describe('buildOrchestrator', () => {
         employeeId: f.employeeId,
         userMessageId: f.userMessageId,
       });
-      // Yield so any queued dispatch has a chance to run.
-      await new Promise((r) => setTimeout(r, 20));
+      await waitForDispatchCycle();
       expect(started).toBe(false);
       expect(orchestrator.isCompanyPaused(f.companyId)).toBe(true);
 
@@ -1726,13 +1761,12 @@ describe('buildOrchestrator', () => {
     });
 
     it('pauseCompany drains in-flight work before resolving', async () => {
-      let finishFirst: () => void = () => {};
-      const gate = new Promise<void>((res) => {
-        finishFirst = res;
-      });
+      const started = createDeferred();
+      const gate = createDeferred();
       const provider: ProviderStreamFn = async function* () {
         yield { delta: 'x' };
-        await gate;
+        started.resolve();
+        await gate.promise;
         yield { done: true, usage: { promptTokens: 1, completionTokens: 1 } };
       };
       const orchestrator = buildDefaultOrchestrator(f, { provider, slots: 2 });
@@ -1743,19 +1777,18 @@ describe('buildOrchestrator', () => {
         employeeId: f.employeeId,
         userMessageId: f.userMessageId,
       });
-      // Let the turn enter the stream loop.
-      await new Promise((r) => setTimeout(r, 10));
+      await started.promise;
 
       // Now pause — should wait for the in-flight turn.
       let pauseResolved = false;
       const pauseP = orchestrator.pauseCompany(f.companyId).then(() => {
         pauseResolved = true;
       });
-      await new Promise((r) => setTimeout(r, 10));
+      await waitForDispatchCycle();
       expect(pauseResolved).toBe(false);
 
       // Release the in-flight turn.
-      finishFirst();
+      gate.resolve();
       await chatP;
       await pauseP;
       expect(pauseResolved).toBe(true);

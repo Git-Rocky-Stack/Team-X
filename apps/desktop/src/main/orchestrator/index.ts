@@ -826,6 +826,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
   let currentProviderCaps = normalizeProviderCaps(providerCaps);
   let paused = false;
   let dispatching = false;
+  let dispatchRequested = false;
   let activeCount = 0;
   let shuttingDown = false;
   let shutdownPromise: Promise<void> | null = null;
@@ -1544,6 +1545,9 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
 
   function scheduleDispatch(): void {
     if (dispatching || paused || shuttingDown) {
+      if (dispatching && !paused && !shuttingDown) {
+        dispatchRequested = true;
+      }
       notifyDrainIfIdle();
       return;
     }
@@ -1596,9 +1600,17 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         }
       } finally {
         dispatching = false;
-        if (!paused && !shuttingDown && activeCount < currentSlots && pending.length > 0) {
+        if (
+          dispatchRequested &&
+          !paused &&
+          !shuttingDown &&
+          activeCount < currentSlots &&
+          pending.length > 0
+        ) {
+          dispatchRequested = false;
           scheduleDispatch();
         } else {
+          dispatchRequested = false;
           notifyDrainIfIdle();
         }
       }

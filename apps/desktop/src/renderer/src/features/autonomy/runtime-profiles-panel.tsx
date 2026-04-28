@@ -6,6 +6,7 @@ import type {
   RuntimeProfile,
   RuntimeProfileKind,
   RuntimeProfileSummary,
+  RuntimeProfileValidation,
 } from '@team-x/shared-types';
 import {
   Bot,
@@ -180,6 +181,278 @@ function profileIcon(kind: RuntimeProfileKind) {
   }
 }
 
+interface RuntimeDiagnostic {
+  label: string;
+  value: string;
+  tone?: 'default' | 'accent' | 'warning' | 'danger';
+  mono?: boolean;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function configString(config: Record<string, unknown> | null, key: string): string | null {
+  const value = config?.[key];
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function countRuntimeSecretRefs(value: unknown): number {
+  if (Array.isArray(value)) {
+    return value.reduce((sum: number, entry: unknown) => sum + countRuntimeSecretRefs(entry), 0);
+  }
+  if (!isRecord(value)) return 0;
+  if (
+    value.type === 'secret_ref' &&
+    typeof value.providerId === 'string' &&
+    typeof value.key === 'string'
+  ) {
+    return 1;
+  }
+  return Object.values(value).reduce(
+    (sum: number, entry: unknown) => sum + countRuntimeSecretRefs(entry),
+    0,
+  );
+}
+
+function summarizeValidationTime(timestamp: number | null): string {
+  return timestamp ? new Date(timestamp).toLocaleString() : 'not validated';
+}
+
+function formatDiagnosticValue(value: unknown): string {
+  if (value === null || value === undefined) return 'none';
+  if (typeof value === 'string') return value.trim().length > 0 ? value : 'empty';
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function profileDiagnostics(profile: RuntimeProfileSummary): RuntimeDiagnostic[] {
+  const config = isRecord(profile.config) ? profile.config : {};
+  const command = configString(config, 'command');
+  const workingDirectory = configString(config, 'workingDirectory');
+  const baseUrl = configString(config, 'baseUrl');
+  const healthPath = configString(config, 'healthPath');
+  const endpointUrl = configString(config, 'endpointUrl');
+  const providerId = configString(config, 'providerId');
+  const model = configString(config, 'model');
+  const secretRefCount = countRuntimeSecretRefs(config);
+  const diagnostics: RuntimeDiagnostic[] = [];
+
+  switch (profile.kind) {
+    case 'teamx-internal':
+      diagnostics.push({
+        label: 'Transport',
+        value: providerId ? `Team-X provider ${providerId}` : 'Team-X provider policy',
+        tone: 'accent',
+        mono: Boolean(providerId),
+      });
+      diagnostics.push({
+        label: 'Model',
+        value: model ?? 'current policy default',
+        mono: Boolean(model),
+      });
+      diagnostics.push({
+        label: 'Required Config',
+        value: providerId ? 'provider override recorded' : 'no override required',
+        tone: 'accent',
+      });
+      break;
+    case 'bash':
+      diagnostics.push({
+        label: 'Transport',
+        value: command ? 'local command launcher' : 'missing launcher command',
+        tone: command ? 'accent' : 'danger',
+      });
+      diagnostics.push({
+        label: 'Command',
+        value: command ?? 'not configured',
+        tone: command ? 'default' : 'danger',
+        mono: true,
+      });
+      diagnostics.push({
+        label: 'Working Directory',
+        value: workingDirectory ?? 'runtime workspace fallback',
+        mono: Boolean(workingDirectory),
+      });
+      break;
+    case 'http':
+      diagnostics.push({
+        label: 'Transport',
+        value: baseUrl ? 'HTTP runtime endpoint' : 'missing base URL',
+        tone: baseUrl ? 'accent' : 'danger',
+      });
+      diagnostics.push({
+        label: 'Base URL',
+        value: baseUrl ?? 'not configured',
+        tone: baseUrl ? 'default' : 'danger',
+        mono: true,
+      });
+      diagnostics.push({
+        label: 'Health Probe',
+        value: healthPath ?? '/',
+        mono: true,
+      });
+      break;
+    case 'codex':
+    case 'claude-code':
+    case 'cursor': {
+      const hasLauncher = Boolean(command);
+      const hasEndpoint = Boolean(endpointUrl);
+      diagnostics.push({
+        label: 'Transport',
+        value: hasLauncher ? 'launcher command' : hasEndpoint ? 'adapter endpoint' : 'not wired',
+        tone: hasLauncher || hasEndpoint ? 'accent' : 'warning',
+      });
+      diagnostics.push({
+        label: 'Launcher',
+        value: command ?? 'not configured',
+        tone: command ? 'default' : endpointUrl ? 'warning' : 'danger',
+        mono: true,
+      });
+      diagnostics.push({
+        label: 'Endpoint',
+        value: endpointUrl ?? 'not configured',
+        tone: endpointUrl ? 'default' : command ? 'warning' : 'danger',
+        mono: true,
+      });
+      break;
+    }
+  }
+
+  diagnostics.push({
+    label: 'Execution Mode',
+    value: profile.executionMode === 'native' ? 'execution-backed' : 'planned setup',
+    tone: profile.executionMode === 'native' ? 'accent' : 'warning',
+  });
+  diagnostics.push({
+    label: 'Secret Refs',
+    value:
+      secretRefCount === 0
+        ? 'none'
+        : `${secretRefCount} managed secret ref${secretRefCount === 1 ? '' : 's'}`,
+    tone: secretRefCount > 0 ? 'accent' : 'default',
+  });
+  diagnostics.push({
+    label: 'Last Validation',
+    value: summarizeValidationTime(profile.lastValidatedAt),
+    tone:
+      profile.lastHealthStatus === 'healthy'
+        ? 'accent'
+        : profile.lastHealthStatus === 'error'
+          ? 'danger'
+          : profile.lastHealthStatus === 'warning'
+            ? 'warning'
+            : 'default',
+  });
+
+  return diagnostics;
+}
+
+function validationDiagnostics(validation: RuntimeProfileValidation | null): RuntimeDiagnostic[] {
+  if (!validation) return [];
+  return [
+    {
+      label: 'Supports Execution',
+      value: validation.supportsExecution ? 'yes' : 'no',
+      tone: validation.supportsExecution ? 'accent' : 'danger',
+    },
+    {
+      label: 'Checked',
+      value: new Date(validation.checkedAt).toLocaleString(),
+    },
+    ...Object.entries(validation.details ?? {}).map(([key, value]) => ({
+      label: key,
+      value: formatDiagnosticValue(value),
+      mono: typeof value === 'string',
+    })),
+  ];
+}
+
+function RuntimeDiagnosticsGrid({
+  profile,
+  validation,
+}: {
+  profile: RuntimeProfileSummary;
+  validation: RuntimeProfileValidation | null;
+}) {
+  const rows = profileDiagnostics(profile);
+  const validationRows = validationDiagnostics(validation);
+
+  return (
+    <MissionInsetSurface className="space-y-3 p-3" data-runtime-adapter-diagnostics={profile.id}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-xs font-semibold text-foreground">Adapter Diagnostics</div>
+          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+            Transport, required config, validation state, and portable secret posture for this
+            runtime adapter.
+          </p>
+        </div>
+        <MissionPill tone={profile.executionMode === 'native' ? 'accent' : 'warning'}>
+          {profile.executionMode}
+        </MissionPill>
+      </div>
+
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {rows.map((row) => (
+          <div
+            key={`${row.label}-${row.value}`}
+            className="rounded-[14px] border border-white/10 bg-black/10 px-3 py-2"
+          >
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              {row.label}
+            </div>
+            <div
+              className={`mt-1 break-words text-xs leading-5 ${
+                row.tone === 'accent'
+                  ? 'text-brand'
+                  : row.tone === 'warning'
+                    ? 'text-amber-300'
+                    : row.tone === 'danger'
+                      ? 'text-red-200'
+                      : 'text-foreground'
+              } ${row.mono ? 'font-mono' : ''}`}
+            >
+              {row.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {validation ? (
+        <div
+          className="rounded-[14px] border border-brand/15 bg-brand/8 px-3 py-3"
+          data-runtime-validation-result={profile.id}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-foreground">Latest validate response</span>
+            <MissionPill tone={healthTone(validation.status)}>{validation.status}</MissionPill>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">{validation.message}</p>
+          {validationRows.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+              {validationRows.map((row) => (
+                <span
+                  key={`${row.label}-${row.value}`}
+                  className={`rounded-full border border-white/10 bg-black/10 px-2 py-1 ${row.mono ? 'font-mono' : ''}`}
+                >
+                  {row.label}: {row.value}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </MissionInsetSurface>
+  );
+}
+
 function RuntimeConfigFields({
   draft,
   providers,
@@ -300,6 +573,7 @@ function RuntimeProfileCard({
   onSave,
   onDelete,
   onValidate,
+  validation,
   saving,
   deleting,
   validating,
@@ -309,6 +583,7 @@ function RuntimeProfileCard({
   onSave: (profile: RuntimeProfileSummary, draft: RuntimeProfileDraft) => void;
   onDelete: (profileId: string) => void;
   onValidate: (profileId: string) => void;
+  validation: RuntimeProfileValidation | null;
   saving: boolean;
   deleting: boolean;
   validating: boolean;
@@ -436,6 +711,8 @@ function RuntimeProfileCard({
         providers={providers}
         onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
       />
+
+      <RuntimeDiagnosticsGrid profile={profile} validation={validation} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs leading-5 text-muted-foreground">
@@ -666,6 +943,9 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
                   companyId,
                   profileId,
                 })
+              }
+              validation={
+                validateMutation.data?.profileId === profile.id ? validateMutation.data : null
               }
               saving={updateMutation.isPending}
               deleting={deleteMutation.isPending}

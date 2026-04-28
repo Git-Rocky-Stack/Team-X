@@ -23,13 +23,13 @@ import {
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
-import { useCompanies } from '@/hooks/use-companies.js';
 import {
   useCloudWorkspaceLink,
   useLinkWorkspace,
   useReconnectWorkspace,
   useUnlinkWorkspace,
 } from '@/hooks/use-cloud-link.js';
+import { useCompanies } from '@/hooks/use-companies.js';
 import {
   useCompanyPackagePreview,
   useCompanyTemplates,
@@ -92,6 +92,21 @@ function packageModeLabel(mode: CompanyPackageMode): string {
 
 function previewSummary(preview: CompanyImportPreview): string {
   return `${packageModeLabel(preview.manifest.mode)} · ${preview.manifest.sourceAppVersion} · ${modeLabel(preview.manifest.sharingMode)}`;
+}
+
+function humanizeCompatibility(entry: string): string {
+  return entry.replace(/-/g, ' ');
+}
+
+function runtimeKindLabel(kind: string): string {
+  switch (kind) {
+    case 'teamx-internal':
+      return 'Team-X Internal';
+    case 'claude-code':
+      return 'Claude Code';
+    default:
+      return kind.charAt(0).toUpperCase() + kind.slice(1);
+  }
 }
 
 function cloudLinkStateLabel(
@@ -158,6 +173,9 @@ export function PortabilitySection() {
   );
   const installTemplate = useInstallCompanyTemplate(companyId);
   const packagePreview = packagePreviewQuery.data ?? null;
+  const runtimeProfileCount = packagePreview?.runtimeProfileCount ?? 0;
+  const runtimeProfileKinds = packagePreview?.runtimeProfileKinds ?? [];
+  const runtimeTemplateNotes = packagePreview?.runtimeTemplateNotes ?? [];
 
   useEffect(() => {
     if (trimmedPackagePath.length > 0) return;
@@ -375,10 +393,12 @@ export function PortabilitySection() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-foreground">Linked workspace shell</div>
+                    <div className="text-sm font-medium text-foreground">
+                      Linked workspace shell
+                    </div>
                     <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-                      This local shell reserves durable link metadata now so hosted auth and sync can
-                      land without reframing the product later.
+                      This local shell reserves durable link metadata now so hosted auth and sync
+                      can land without reframing the product later.
                     </p>
                   </div>
                   {cloudLinkQuery.isLoading || cloudLinkBusy ? (
@@ -415,7 +435,8 @@ export function PortabilitySection() {
                       {cloudLink.state === 'linked'
                         ? 'Workspace is linked locally and ready for the first hosted auth/sync follow-through.'
                         : cloudLink.state === 'sync-degraded'
-                          ? cloudLink.lastSyncError ?? 'Workspace is linked but currently degraded.'
+                          ? (cloudLink.lastSyncError ??
+                            'Workspace is linked but currently degraded.')
                           : cloudLink.state === 'unlinked'
                             ? 'Workspace is still fully local-only. Link it when you want explicit shared/cloud posture.'
                             : 'Workspace link posture is transitioning locally.'}
@@ -473,7 +494,9 @@ export function PortabilitySection() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-foreground">Shared operator invites</div>
+                    <div className="text-sm font-medium text-foreground">
+                      Shared operator invites
+                    </div>
                     <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
                       Queue invited or cloud operators in Autonomy &gt; Access before expecting
                       shared posture to become actionable.
@@ -503,8 +526,8 @@ export function PortabilitySection() {
                 ) : invites.length === 0 ? (
                   <p className="mt-3 text-[11px] text-muted-foreground">
                     No operator invites are queued yet. This workspace can still export or template
-                    cleanly, but invited and cloud posture remain preparatory until shared
-                    operators are actually queued.
+                    cleanly, but invited and cloud posture remain preparatory until shared operators
+                    are actually queued.
                   </p>
                 ) : (
                   <div className="mt-3 space-y-2">
@@ -607,6 +630,18 @@ export function PortabilitySection() {
               Template saved to {exportTemplate.data.packagePath}
             </p>
           ) : null}
+          {exportTemplate.isSuccess && exportTemplate.data.manifest.compatibility.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+              {exportTemplate.data.manifest.compatibility.map((entry) => (
+                <span
+                  key={entry}
+                  className="rounded-full border border-white/10 bg-background/70 px-2 py-1"
+                >
+                  {humanizeCompatibility(entry)}
+                </span>
+              ))}
+            </div>
+          ) : null}
           {exportTemplate.isError ? (
             <p className="mt-3 text-[11px] text-destructive">
               Failed to save template: {String(exportTemplate.error)}
@@ -667,7 +702,10 @@ export function PortabilitySection() {
                 <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                   <span>{packagePreview.manifest.sections.length} sections</span>
                   <span>{packagePreview.manifest.redactions.length} redactions</span>
-                  <span>Exported {new Date(packagePreview.manifest.exportedAt).toLocaleString()}</span>
+                  <span>{runtimeProfileCount} runtime profiles</span>
+                  <span>
+                    Exported {new Date(packagePreview.manifest.exportedAt).toLocaleString()}
+                  </span>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
@@ -680,6 +718,60 @@ export function PortabilitySection() {
                     </span>
                   ))}
                 </div>
+
+                {packagePreview.manifest.compatibility.length > 0 ? (
+                  <div className="mt-3">
+                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Compatibility
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                      {packagePreview.manifest.compatibility.map((entry) => (
+                        <span
+                          key={entry}
+                          className="rounded-full border border-white/10 bg-black/10 px-2 py-1"
+                        >
+                          {humanizeCompatibility(entry)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {runtimeProfileCount > 0 || runtimeTemplateNotes.length > 0 ? (
+                  <div
+                    className="mt-3 rounded-lg border border-brand/15 bg-brand/8 px-3 py-3"
+                    data-portability-runtime-template-diagnostics=""
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-sm font-medium text-foreground">
+                        Runtime template diagnostics
+                      </div>
+                      <span className="rounded-full border border-brand/20 bg-brand/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
+                        {runtimeProfileCount} runtime profile
+                        {runtimeProfileCount === 1 ? '' : 's'}
+                      </span>
+                    </div>
+                    {runtimeProfileKinds.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                        {runtimeProfileKinds.map((kind) => (
+                          <span
+                            key={kind}
+                            className="rounded-full border border-white/10 bg-black/10 px-2 py-1"
+                          >
+                            {runtimeKindLabel(kind)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {runtimeTemplateNotes.length > 0 ? (
+                      <ul className="mt-3 space-y-1 text-[11px] leading-snug text-muted-foreground">
+                        {runtimeTemplateNotes.map((note) => (
+                          <li key={note}>- {note}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {packagePreview.warnings.length > 0 ? (
                   <div className="mt-3">
@@ -761,7 +853,9 @@ export function PortabilitySection() {
                 </div>
               ) : (
                 <div className="rounded-lg border border-white/10 bg-background/70 px-3 py-3">
-                  <div className="text-sm font-medium text-foreground">Install into local library</div>
+                  <div className="text-sm font-medium text-foreground">
+                    Install into local library
+                  </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     Template packages become visible in the workspace switcher after installation,
                     but they stay local-first and never overwrite existing workspaces.
@@ -850,6 +944,19 @@ export function PortabilitySection() {
                     <span>{template.extensionCount} extensions</span>
                     <span>{template.starterAssetCount} starter assets</span>
                   </div>
+
+                  {template.manifest.compatibility.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                      {template.manifest.compatibility.slice(0, 4).map((entry) => (
+                        <span
+                          key={entry}
+                          className="rounded-full border border-white/10 bg-black/10 px-2 py-1"
+                        >
+                          {humanizeCompatibility(entry)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
 
                   <p className="mt-3 truncate font-mono text-[10px] text-muted-foreground/75">
                     {template.packagePath}

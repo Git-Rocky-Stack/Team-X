@@ -534,6 +534,7 @@ describe('company-portability-service', () => {
       expect.arrayContaining([
         'local-skills-may-require-manual-reinstall',
         'native-runtime-paths-may-require-manual-reconfiguration',
+        'runtime-secret-refs-require-rebinding',
         'skill-manifests-do-not-embed-local-prompt-snapshots',
       ]),
     );
@@ -576,6 +577,13 @@ describe('company-portability-service', () => {
       nextRunAt: null,
     });
     expect(result.manifest.mode).toBe('template');
+    expect(result.manifest.compatibility).toEqual(
+      expect.arrayContaining([
+        'native-runtime-paths-may-require-manual-reconfiguration',
+        'runtime-secret-refs-require-rebinding',
+        'template-runtime-profiles-require-host-validation',
+      ]),
+    );
     expect(result.packagePath).toMatch(/[\\/]templates[\\/]/);
   });
 
@@ -655,6 +663,15 @@ describe('company-portability-service', () => {
         'extensions.extension-1.manifest.apiKey',
         'runtimeProfiles.runtime-1.config.env.ANTHROPIC_API_KEY',
         'runtimeProfiles.runtime-1.config.headers',
+      ]),
+    );
+    expect(preview.runtimeProfileCount).toBe(1);
+    expect(preview.runtimeProfileKinds).toEqual(['codex']);
+    expect(preview.runtimeTemplateNotes).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/1 runtime profile included/i),
+        expect.stringMatching(/native path/i),
+        expect.stringMatching(/secret/i),
       ]),
     );
   });

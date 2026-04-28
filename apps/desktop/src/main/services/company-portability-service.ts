@@ -581,8 +581,24 @@ function sanitizeRuntimeProfile(
   const command = typeof profile.config?.command === 'string' ? profile.config.command : null;
   const workingDirectory =
     typeof profile.config?.workingDirectory === 'string' ? profile.config.workingDirectory : null;
+  const baseUrl = typeof profile.config?.baseUrl === 'string' ? profile.config.baseUrl : null;
+  const endpointUrl =
+    typeof profile.config?.endpointUrl === 'string' ? profile.config.endpointUrl : null;
+
+  if (mode === 'template') {
+    compatibility.add('template-runtime-profiles-require-host-validation');
+  }
+  if (profile.executionMode === 'planned') {
+    compatibility.add('planned-runtime-adapters-need-launcher-or-endpoint');
+  }
   if ((command && isAbsolute(command)) || (workingDirectory && isAbsolute(workingDirectory))) {
     compatibility.add('native-runtime-paths-may-require-manual-reconfiguration');
+  }
+  if (baseUrl || endpointUrl) {
+    compatibility.add('external-runtime-endpoints-may-require-host-access');
+  }
+  if (collectRuntimeSecretRefs(config, `runtimeProfiles.${profile.id}.config`).length > 0) {
+    compatibility.add('runtime-secret-refs-require-rebinding');
   }
 
   return {
@@ -774,6 +790,54 @@ function collectMissingSecrets(packageData: CompanyPackage): string[] {
   return Array.from(missing).sort();
 }
 
+function runtimeProfileKinds(packageData: CompanyPackage): RuntimeProfileSummary['kind'][] {
+  return Array.from(
+    new Set((packageData.autonomy?.runtimeProfiles ?? []).map((profile) => profile.kind)),
+  ).sort();
+}
+
+function buildRuntimeTemplateNotes(
+  packageData: CompanyPackage,
+  missingSecrets: string[],
+): string[] {
+  const profiles = packageData.autonomy?.runtimeProfiles ?? [];
+  if (profiles.length === 0) return [];
+
+  const manifest = packageData.manifest;
+  const notes: string[] = [
+    `${profiles.length} runtime profile${profiles.length === 1 ? '' : 's'} included (${runtimeProfileKinds(packageData).join(', ')}). Validate each adapter on this host before assigning live work.`,
+  ];
+
+  if (manifest.mode === 'template') {
+    notes.push(
+      'Template installs reset runtime health state, so launcher paths, endpoints, and local workspaces must be revalidated after installation.',
+    );
+  }
+  if (manifest.compatibility.includes('native-runtime-paths-may-require-manual-reconfiguration')) {
+    notes.push('At least one runtime profile references a native path that may not exist here.');
+  }
+  if (manifest.compatibility.includes('external-runtime-endpoints-may-require-host-access')) {
+    notes.push(
+      'At least one runtime profile points at an external endpoint that must be reachable from this host.',
+    );
+  }
+  if (
+    manifest.compatibility.includes('runtime-secret-refs-require-rebinding') ||
+    missingSecrets.some((secret) => secret.startsWith('runtimeProfiles.'))
+  ) {
+    notes.push(
+      'Runtime secret references or redacted runtime config values must be rebound locally.',
+    );
+  }
+  if (manifest.compatibility.includes('planned-runtime-adapters-need-launcher-or-endpoint')) {
+    notes.push(
+      'One or more adapter profiles are still planned until a launcher command or endpoint URL is configured.',
+    );
+  }
+
+  return notes;
+}
+
 function humanizeCompatibility(entry: string): string {
   return entry.replace(/-/g, ' ');
 }
@@ -946,12 +1010,16 @@ function buildImportPreview(
     packageData.company.slug,
     packageData.manifest.mode,
   );
+  const missingSecrets = collectMissingSecrets(packageData);
   return {
     manifest: packageData.manifest,
     warnings: createImportWarnings(packageData, deps, suggestedSlug),
-    missingSecrets: collectMissingSecrets(packageData),
+    missingSecrets,
     suggestedCompanyName: packageData.company.name,
     suggestedSlug,
+    runtimeProfileCount: packageData.autonomy?.runtimeProfiles?.length ?? 0,
+    runtimeProfileKinds: runtimeProfileKinds(packageData),
+    runtimeTemplateNotes: buildRuntimeTemplateNotes(packageData, missingSecrets),
   };
 }
 

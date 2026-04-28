@@ -1219,6 +1219,9 @@ export interface CompanyImportPreview {
   missingSecrets: string[];
   suggestedCompanyName: string;
   suggestedSlug: string;
+  runtimeProfileCount?: number;
+  runtimeProfileKinds?: RuntimeProfileKind[];
+  runtimeTemplateNotes?: string[];
 }
 
 export interface CompanyTemplateSummary {

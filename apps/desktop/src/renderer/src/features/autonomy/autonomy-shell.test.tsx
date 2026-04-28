@@ -179,6 +179,9 @@ describe('Autonomy shell wiring', () => {
     expect(runtimePanelSrc).toContain('No explicit runtime profile');
     expect(runtimePanelSrc).toContain('data-runtime-profiles-panel=""');
     expect(runtimePanelSrc).toContain('data-runtime-profile-card={profile.id}');
+    expect(runtimePanelSrc).toContain('data-runtime-adapter-diagnostics={profile.id}');
+    expect(runtimePanelSrc).toContain('Adapter Diagnostics');
+    expect(runtimePanelSrc).toContain('Secret Refs');
     expect(runtimePanelSrc).toContain('data-runtime-employee-binding={employee.id}');
     expect(runtimePanelSrc).toContain('lastHealthStatus');
     expect(runtimePanelSrc).toContain(
