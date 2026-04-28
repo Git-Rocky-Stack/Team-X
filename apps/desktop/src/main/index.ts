@@ -142,6 +142,7 @@ import { createAgenticTools } from './services/agentic-tools.js';
 import { createApprovalInboxService } from './services/approval-inbox-service.js';
 import { createArtifactService } from './services/artifact-service.js';
 import { createAuthorityResolverService } from './services/authority-resolver-service.js';
+import { createAutonomyDoctorService } from './services/autonomy-doctor-service.js';
 import { createBackupService } from './services/backup.js';
 import { createBudgetGovernanceService } from './services/budget-governance-service.js';
 import { buildChatActionTools } from './services/chat-action-tools.js';
@@ -361,8 +362,8 @@ app
   .whenReady()
   .then(async () => {
     // ---- 1. Database --------------------------------------------------------
-    initDb(dbPath());
-    runMigrations(getDb(), resolveMigrationsFolder());
+    const dbHandle = initDb(dbPath());
+    runMigrations(dbHandle.db, resolveMigrationsFolder());
     console.log('[db] migrations applied');
     const fts5Ready = initFts5(getDb());
     console.log(`[db] FTS5 vault index: ${fts5Ready ? 'ready' : 'unavailable (fallback mode)'}`);
@@ -977,6 +978,27 @@ app
         }
       },
     });
+    const autonomyDoctorService = createAutonomyDoctorService({
+      dbDiagnostics: {
+        quickCheck: () => {
+          const rows = dbHandle.raw.pragma('quick_check') as Array<Record<string, unknown>>;
+          return rows.map((row) => String(Object.values(row)[0] ?? '')).join('; ');
+        },
+        hasTable: (tableName) =>
+          Boolean(
+            dbHandle.raw
+              .prepare("select name from sqlite_master where type = 'table' and name = ?")
+              .get(tableName),
+          ),
+      },
+      backupService,
+      runtimeProfilesService,
+      runtimeOperationsService,
+      mcpServersRepo,
+      providersService,
+      budgetGovernanceService: budgetGovernanceServiceInstance,
+      secretsStore,
+    });
 
     const updaterService = createUpdaterService({
       isDev,
@@ -1017,6 +1039,7 @@ app
       cloudLinkService,
       runtimeProfilesService,
       runtimeOperationsService,
+      autonomyDoctorService,
       routineService: routineServiceInstance,
       budgetGovernanceService: budgetGovernanceServiceInstance,
       approvalInboxService: approvalInboxServiceInstance,

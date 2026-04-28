@@ -19,6 +19,13 @@ const RUNTIME_OPERATIONS_HOOK_PATH = join(
   'hooks',
   'use-runtime-operations.ts',
 );
+const AUTONOMY_DOCTOR_HOOK_PATH = join(
+  currentDirname,
+  '..',
+  '..',
+  'hooks',
+  'use-autonomy-doctor.ts',
+);
 const ROUTINES_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-routines.ts');
 const BUDGETS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-budgets.ts');
 const APPROVALS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-approvals.ts');
@@ -26,6 +33,7 @@ const ARTIFACTS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-artif
 const MEMORY_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-memory.ts');
 const CLIENT_PATH = join(currentDirname, 'autonomy-client.ts');
 const VIEW_PATH = join(currentDirname, 'autonomy-view.tsx');
+const AUTONOMY_DOCTOR_PANEL_PATH = join(currentDirname, 'autonomy-doctor-panel.tsx');
 const RUNTIME_OPERATIONS_PANEL_PATH = join(currentDirname, 'runtime-operations-panel.tsx');
 const RUNTIME_PANEL_PATH = join(currentDirname, 'runtime-profiles-panel.tsx');
 const ROUTINES_PANEL_PATH = join(currentDirname, 'routines-panel.tsx');
@@ -43,6 +51,7 @@ const hookSrc = readFileSync(HOOK_PATH, 'utf8');
 const cloudHookSrc = readFileSync(CLOUD_HOOK_PATH, 'utf8');
 const runtimeHookSrc = readFileSync(RUNTIME_HOOK_PATH, 'utf8');
 const runtimeOperationsHookSrc = readFileSync(RUNTIME_OPERATIONS_HOOK_PATH, 'utf8');
+const autonomyDoctorHookSrc = readFileSync(AUTONOMY_DOCTOR_HOOK_PATH, 'utf8');
 const routinesHookSrc = readFileSync(ROUTINES_HOOK_PATH, 'utf8');
 const budgetsHookSrc = readFileSync(BUDGETS_HOOK_PATH, 'utf8');
 const approvalsHookSrc = readFileSync(APPROVALS_HOOK_PATH, 'utf8');
@@ -50,6 +59,7 @@ const artifactsHookSrc = readFileSync(ARTIFACTS_HOOK_PATH, 'utf8');
 const memoryHookSrc = readFileSync(MEMORY_HOOK_PATH, 'utf8');
 const clientSrc = readFileSync(CLIENT_PATH, 'utf8');
 const viewSrc = readFileSync(VIEW_PATH, 'utf8');
+const autonomyDoctorPanelSrc = readFileSync(AUTONOMY_DOCTOR_PANEL_PATH, 'utf8');
 const runtimeOperationsPanelSrc = readFileSync(RUNTIME_OPERATIONS_PANEL_PATH, 'utf8');
 const runtimePanelSrc = readFileSync(RUNTIME_PANEL_PATH, 'utf8');
 const routinesPanelSrc = readFileSync(ROUTINES_PANEL_PATH, 'utf8');
@@ -128,6 +138,8 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain(
       "import { RuntimeOperationsPanel } from './runtime-operations-panel.js';",
     );
+    expect(viewSrc).toContain("import { AutonomyDoctorPanel } from './autonomy-doctor-panel.js';");
+    expect(viewSrc).toContain('<AutonomyDoctorPanel companyId={companyId} />');
     expect(viewSrc).toContain('<RuntimeOperationsPanel companyId={companyId} />');
     expect(viewSrc).toContain('<RuntimeProfilesPanel companyId={companyId} />');
     expect(viewSrc).toContain("import { RoutinesPanel } from './routines-panel.js';");
@@ -169,6 +181,14 @@ describe('Autonomy shell wiring', () => {
     expect(runtimeOperationsHookSrc).toContain("queryKey: ['runtime-operations', companyId]");
     expect(runtimeOperationsHookSrc).toContain('autonomyClient.runtimeOperations.snapshot');
     expect(runtimeOperationsHookSrc).toContain('refetchInterval: 3000');
+    expect(autonomyDoctorHookSrc).toContain("queryKey: ['autonomy-doctor', companyId]");
+    expect(autonomyDoctorHookSrc).toContain('autonomyClient.autonomyDoctor.run');
+    expect(clientSrc).toContain('autonomyDoctor: {');
+    expect(clientSrc).toContain('ipc.autonomyDoctor.run');
+    expect(autonomyDoctorPanelSrc).toContain('data-autonomy-doctor-panel=""');
+    expect(autonomyDoctorPanelSrc).toContain('data-autonomy-doctor-check={check.id}');
+    expect(autonomyDoctorPanelSrc).toContain('data-autonomy-doctor-finding={finding.id}');
+    expect(autonomyDoctorPanelSrc).toContain('Autonomy Doctor');
     expect(runtimeOperationsPanelSrc).toContain('data-runtime-operations-panel=""');
     expect(runtimeOperationsPanelSrc).toContain('data-runtime-session={session.id}');
     expect(runtimeOperationsPanelSrc).toContain('data-runtime-checkout={checkout.id}');

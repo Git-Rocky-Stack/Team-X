@@ -90,6 +90,7 @@ const REQUEST_CHANNELS = [
   'runtimeProfiles.bindEmployee',
   'runtimeProfiles.validate',
   'runtimeOperations.snapshot',
+  'autonomyDoctor.run',
   'routines.list',
   'routines.create',
   'routines.update',
@@ -436,6 +437,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('runtimeOperations.snapshot', async (_event, request: { companyId: string }) => {
     return handlers.runtimeOperationsSnapshot(request);
+  });
+
+  ipcMain.handle('autonomyDoctor.run', async (_event, request: { companyId: string }) => {
+    return handlers.autonomyDoctorRun(request);
   });
 
   ipcMain.handle('routines.list', async (_event, request: { companyId: string }) => {

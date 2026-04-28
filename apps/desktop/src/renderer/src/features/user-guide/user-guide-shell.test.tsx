@@ -71,6 +71,7 @@ describe('User Guide shell wiring', () => {
   it('adds autonomy guide actions with subview deep links through the shared app store', () => {
     expect(guideContentSrc).toContain("id: 'open-settings-memory'");
     expect(guideContentSrc).toContain("id: 'open-settings-portability'");
+    expect(guideContentSrc).toContain("id: 'open-autonomy-doctor'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-access'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-runtimes'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-approvals'");
@@ -81,6 +82,9 @@ describe('User Guide shell wiring', () => {
     expect(guideContentSrc).toContain("id: 'portability-reviewed'");
     expect(guideContentSrc).toContain(
       'Queue shared operator invites in Autonomy > Access before expecting invited or cloud posture to become actionable.',
+    );
+    expect(guideContentSrc).toContain(
+      'Use Doctor before long-running external agents so database, backup, runtime, secret, provider, MCP, and budget posture is checked in one report.',
     );
     expect(guideHookSrc).toContain("if (action.view === 'autonomy' && action.autonomySubview) {");
     expect(guideHookSrc).toContain('setAutonomySubview(action.autonomySubview);');

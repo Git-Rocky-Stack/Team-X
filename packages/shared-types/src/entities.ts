@@ -536,6 +536,58 @@ export type TicketCheckoutClaimResult =
   | { outcome: 'expired-reclaimed'; checkout: TicketCheckout; previousCheckout: TicketCheckout }
   | { outcome: 'conflict'; conflictingCheckout: TicketCheckout };
 
+export const AUTONOMY_DOCTOR_STATUSES = ['ok', 'warning', 'blocked'] as const;
+export type AutonomyDoctorStatus = (typeof AUTONOMY_DOCTOR_STATUSES)[number];
+
+export const AUTONOMY_DOCTOR_FINDING_SEVERITIES = ['info', 'warning', 'blocked'] as const;
+export type AutonomyDoctorFindingSeverity = (typeof AUTONOMY_DOCTOR_FINDING_SEVERITIES)[number];
+
+export const AUTONOMY_DOCTOR_CHECK_IDS = [
+  'db-integrity',
+  'migrations',
+  'backup-posture',
+  'runtime-profiles',
+  'runtime-secrets',
+  'runtime-sessions',
+  'ticket-checkouts',
+  'workspace-paths',
+  'mcp-health',
+  'provider-health',
+  'budget-blockers',
+] as const;
+export type AutonomyDoctorCheckId = (typeof AUTONOMY_DOCTOR_CHECK_IDS)[number];
+
+export interface AutonomyDoctorFinding {
+  id: string;
+  severity: AutonomyDoctorFindingSeverity;
+  title: string;
+  detail: string;
+  action: string | null;
+  refs: string[];
+}
+
+export interface AutonomyDoctorCheck {
+  id: AutonomyDoctorCheckId;
+  label: string;
+  status: AutonomyDoctorStatus;
+  summary: string;
+  checkedAt: number;
+  findings: AutonomyDoctorFinding[];
+}
+
+export interface AutonomyDoctorReport {
+  companyId: string;
+  generatedAt: number;
+  status: AutonomyDoctorStatus;
+  checks: AutonomyDoctorCheck[];
+  totals: {
+    ok: number;
+    warning: number;
+    blocked: number;
+    findingCount: number;
+  };
+}
+
 export interface RuntimeProfileSecretRef {
   type: 'secret_ref';
   providerId: string;

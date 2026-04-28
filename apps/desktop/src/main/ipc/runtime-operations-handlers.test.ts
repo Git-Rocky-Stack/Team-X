@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { RuntimeOperationsSnapshot } from '@team-x/shared-types';
+import type { AutonomyDoctorReport, RuntimeOperationsSnapshot } from '@team-x/shared-types';
 
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 
@@ -55,6 +55,22 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
       }),
     ),
   };
+  const autonomyDoctorService = {
+    run: vi.fn(
+      async (input: { companyId: string }): Promise<AutonomyDoctorReport> => ({
+        companyId: input.companyId,
+        generatedAt: 600,
+        status: 'ok',
+        checks: [],
+        totals: {
+          ok: 0,
+          warning: 0,
+          blocked: 0,
+          findingCount: 0,
+        },
+      }),
+    ),
+  };
 
   return {
     companiesRepo: noop,
@@ -83,6 +99,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     updaterService: noop,
     getHardwareProfile: () => ({}) as never,
     runtimeOperationsService,
+    autonomyDoctorService,
     ...overrides,
   } as unknown as IpcHandlerDeps;
 }
@@ -103,6 +120,24 @@ describe('runtime operations IPC handlers', () => {
     const handlers = createIpcHandlers(makeDeps());
 
     await expect(handlers.runtimeOperationsSnapshot({ companyId: '' })).rejects.toThrow(
+      /companyId is required/i,
+    );
+  });
+
+  it('runs the autonomy doctor report for a company', async () => {
+    const deps = makeDeps();
+    const handlers = createIpcHandlers(deps);
+
+    const result = await handlers.autonomyDoctorRun({ companyId: 'company-1' });
+
+    expect(deps.autonomyDoctorService?.run).toHaveBeenCalledWith({ companyId: 'company-1' });
+    expect(result.status).toBe('ok');
+  });
+
+  it('rejects autonomy doctor runs without a company id', async () => {
+    const handlers = createIpcHandlers(makeDeps());
+
+    await expect(handlers.autonomyDoctorRun({ companyId: '' })).rejects.toThrow(
       /companyId is required/i,
     );
   });

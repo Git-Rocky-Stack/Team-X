@@ -60,6 +60,7 @@ import type {
   AuditStats,
   AuthorityGrant,
   AuthorityRequest,
+  AutonomyDoctorReport,
   BackupCreateRequest,
   BackupCreateResponse,
   BackupEntry,
@@ -196,6 +197,7 @@ import type {
   RevokeOperatorInviteRequest,
   Routine,
   RoutineRun,
+  RunAutonomyDoctorRequest,
   RunCheckpoint,
   RunRoutineNowRequest,
   RuntimeOperationsSnapshot,
@@ -867,6 +869,10 @@ export interface IpcRuntimeOperationsService {
   snapshot(companyId: string): RuntimeOperationsSnapshot;
 }
 
+export interface IpcAutonomyDoctorService {
+  run(input: RunAutonomyDoctorRequest): Promise<AutonomyDoctorReport>;
+}
+
 export interface IpcRoutineService {
   start(companyId: string): void;
   stop(companyId: string): void;
@@ -959,6 +965,7 @@ export interface IpcHandlerDeps {
   cloudLinkService?: IpcCloudLinkService;
   runtimeProfilesService?: IpcRuntimeProfilesService;
   runtimeOperationsService?: IpcRuntimeOperationsService;
+  autonomyDoctorService?: IpcAutonomyDoctorService;
   routineService?: IpcRoutineService;
   budgetGovernanceService?: IpcBudgetGovernanceService;
   approvalInboxService?: IpcApprovalInboxService;
@@ -1176,6 +1183,8 @@ export interface IpcHandlers {
   runtimeProfilesValidate(req: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
   /** `runtimeOperations.snapshot` — live external-runtime sessions plus active ticket leases. */
   runtimeOperationsSnapshot(req: ListRuntimeOperationsRequest): Promise<RuntimeOperationsSnapshot>;
+  /** `autonomyDoctor.run` — deterministic operator health workflow report. */
+  autonomyDoctorRun(req: RunAutonomyDoctorRequest): Promise<AutonomyDoctorReport>;
   /** `routines.list` — return routine definitions for a company. */
   routinesList(req: ListRoutinesRequest): Promise<Routine[]>;
   /** `routines.create` — create one recurring routine definition. */
@@ -2098,6 +2107,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     cloudLinkService,
     runtimeProfilesService,
     runtimeOperationsService,
+    autonomyDoctorService,
     routineService,
     budgetGovernanceService,
     approvalInboxService,
@@ -2659,6 +2669,16 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         };
       }
       return runtimeOperationsService.snapshot(req.companyId);
+    },
+
+    async autonomyDoctorRun(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] autonomyDoctor.run: companyId is required');
+      }
+      if (!autonomyDoctorService) {
+        throw new Error('[ipc] autonomyDoctor.run: autonomyDoctorService dep is required');
+      }
+      return autonomyDoctorService.run(req);
     },
 
     async routinesList(req) {

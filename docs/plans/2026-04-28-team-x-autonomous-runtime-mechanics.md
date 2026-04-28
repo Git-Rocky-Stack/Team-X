@@ -94,6 +94,23 @@ Exit criteria:
 - operators can understand who is working, what is claimed, what is stale, and what is blocked without reading logs;
 - portable company packages preserve runtime intent without leaking secrets or machine-local paths.
 
+## P1 Continuation
+
+### P1.3 Autonomy Doctor
+
+Status: shipped as the first P1 follow-through slice.
+
+- Added a typed Autonomy Doctor report contract shared across main, preload, renderer, and CLI.
+- Added `createAutonomyDoctorService` for database integrity, migration-table presence, backup posture, runtime profile health, runtime secret refs, active sessions, active checkouts, workspace paths, MCP health, provider readiness, and budget blockers.
+- Added Autonomy > Doctor as the operator-facing entry point.
+- Added `pnpm autonomy:doctor` for JSON support reports against the default or supplied SQLite database.
+
+Exit criteria:
+
+- operators can run one workflow before unattended runtime work;
+- the report is deterministic and JSON-ready;
+- support can reproduce the core report from the CLI even when the app cannot be launched.
+
 ## Test Plan
 
 - Runtime session repo/service tests for create, heartbeat, status changes, stale marking, and company scoping.

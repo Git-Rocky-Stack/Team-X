@@ -16,6 +16,7 @@ import {
   Clock3,
   FolderKanban,
   ShieldCheck,
+  Stethoscope,
   Workflow,
 } from 'lucide-react';
 
@@ -51,6 +52,7 @@ import {
 } from '../mission/mission-shell.js';
 import { ApprovalsPanel } from './approvals-panel.js';
 import { ArtifactsPanel } from './artifacts-panel.js';
+import { AutonomyDoctorPanel } from './autonomy-doctor-panel.js';
 import { BudgetsPanel } from './budgets-panel.js';
 import { MemoryPanel } from './memory-panel.js';
 import { RoutinesPanel } from './routines-panel.js';
@@ -58,6 +60,7 @@ import { RuntimeOperationsPanel } from './runtime-operations-panel.js';
 import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
 type AutonomySubview =
+  | 'doctor'
   | 'runtimes'
   | 'routines'
   | 'budgets'
@@ -71,6 +74,7 @@ const AUTONOMY_SUBVIEWS: Array<{
   label: string;
   icon: typeof Bot;
 }> = [
+  { value: 'doctor', label: 'Doctor', icon: Stethoscope },
   { value: 'runtimes', label: 'Runtimes', icon: Bot },
   { value: 'routines', label: 'Routines', icon: Clock3 },
   { value: 'budgets', label: 'Budgets', icon: BadgeDollarSign },
@@ -153,6 +157,14 @@ const SUBVIEW_COPY: Record<
     emptyTitle: 'No operators resolved for this workspace',
     emptyDescription:
       'A local owner should be bootstrapped automatically. If this list stays empty, the operator-access foundation did not initialize correctly.',
+  },
+  doctor: {
+    title: 'Autonomy Doctor',
+    description:
+      'Run the operator health workflow for database integrity, recovery readiness, runtime posture, secrets, provider health, MCP health, and budget blockers.',
+    emptyTitle: 'Autonomy Doctor has no report',
+    emptyDescription:
+      'Run the doctor workflow to produce a deterministic JSON-ready health report for this workspace.',
   },
 };
 
@@ -524,7 +536,9 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_360px]">
         <MissionSectionCard title={activeCopy.title} description={activeCopy.description}>
-          {activeSubview === 'access' ? (
+          {activeSubview === 'doctor' ? (
+            <AutonomyDoctorPanel companyId={companyId} />
+          ) : activeSubview === 'access' ? (
             operatorsQuery.isLoading ? (
               <MissionStateBlock
                 title="Resolving operator access"

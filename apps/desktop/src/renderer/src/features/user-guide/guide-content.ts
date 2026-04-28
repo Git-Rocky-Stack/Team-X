@@ -43,6 +43,14 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     dashboardSubview: 'cards',
   },
   {
+    id: 'open-autonomy-doctor',
+    label: 'Open Autonomy Doctor',
+    description: 'Run the operator health workflow before launching unattended runtime work.',
+    kind: 'view',
+    view: 'autonomy',
+    autonomySubview: 'doctor',
+  },
+  {
     id: 'open-autonomy-access',
     label: 'Open Autonomy Access',
     description:
@@ -461,6 +469,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       {
         kind: 'bullets',
         items: [
+          'Use Doctor before long-running external agents so database, backup, runtime, secret, provider, MCP, and budget posture is checked in one report.',
           'Use Access to verify whether the workspace is still local-only or already modeled for shared operators.',
           'Use Runtimes and Routines to understand how work is produced, not just who is assigned to it.',
           'Use Budgets and Approvals together so cost ceilings and risky actions are visible before they silently block autonomy.',
@@ -480,6 +489,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       'routine-governance-reviewed',
     ],
     actionIds: [
+      'open-autonomy-doctor',
       'open-autonomy-access',
       'open-autonomy-runtimes',
       'open-autonomy-approvals',

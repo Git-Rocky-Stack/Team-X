@@ -62,6 +62,7 @@ import type {
   ArtifactRecord,
   AuthorityGrant,
   AuthorityRequest,
+  AutonomyDoctorReport,
   BudgetLedgerEntry,
   BudgetOverview,
   BudgetPolicy,
@@ -369,6 +370,10 @@ export interface ValidateRuntimeProfileRequest {
 }
 
 export interface ListRuntimeOperationsRequest {
+  companyId: string;
+}
+
+export interface RunAutonomyDoctorRequest {
   companyId: string;
 }
 
@@ -1930,6 +1935,10 @@ export interface IpcContract {
     request: ListRuntimeOperationsRequest;
     response: RuntimeOperationsSnapshot;
   };
+  'autonomyDoctor.run': {
+    request: RunAutonomyDoctorRequest;
+    response: AutonomyDoctorReport;
+  };
   'routines.list': {
     request: ListRoutinesRequest;
     response: Routine[];
@@ -2750,6 +2759,10 @@ export interface TeamXApi {
   runtimeOperations: {
     /** Return live runtime sessions and active ticket checkout leases for one workspace. */
     snapshot(companyId: string): Promise<RuntimeOperationsSnapshot>;
+  };
+  autonomyDoctor: {
+    /** Run the operator health workflow and return a deterministic JSON-ready report. */
+    run(companyId: string): Promise<AutonomyDoctorReport>;
   };
   routines: {
     /** List routine definitions for one workspace. */

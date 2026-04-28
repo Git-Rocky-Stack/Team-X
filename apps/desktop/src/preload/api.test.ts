@@ -243,6 +243,25 @@ describe('buildTeamXApi', () => {
     });
   });
 
+  describe('autonomyDoctor.run', () => {
+    it('invokes autonomyDoctor.run with a { companyId } object', async () => {
+      fake.setNextInvokeResult({
+        companyId: 'co-1',
+        generatedAt: 1,
+        status: 'ok',
+        checks: [],
+        totals: { ok: 0, warning: 0, blocked: 0, findingCount: 0 },
+      });
+      await api.autonomyDoctor.run('co-1');
+      expect(fake.invokeCalls).toEqual([
+        {
+          channel: (PRELOAD_CHANNELS as Record<string, string>).autonomyDoctorRun,
+          args: [{ companyId: 'co-1' }],
+        },
+      ]);
+    });
+  });
+
   describe('events.onDashboard', () => {
     it('attaches a listener to events.dashboard', () => {
       const cb = vi.fn();
@@ -326,6 +345,7 @@ describe('buildTeamXApi', () => {
       expect(PRELOAD_CHANNELS.chatResolveThread).toBe('chat.resolveThread');
       expect(PRELOAD_CHANNELS.eventsDashboard).toBe('events.dashboard');
       expect(channels.telemetryRecentRuns).toBe('telemetry.recentRuns');
+      expect(channels.autonomyDoctorRun).toBe('autonomyDoctor.run');
       expect(PRELOAD_CHANNELS.providersListModels).toBe('providers.listModels');
     });
   });
