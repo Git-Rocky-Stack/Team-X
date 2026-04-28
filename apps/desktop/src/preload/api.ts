@@ -54,6 +54,7 @@ import type {
   AuditStats,
   AuthorityGrant,
   AuthorityRequest,
+  AutonomyBenchmarkReport,
   AutonomyDoctorReport,
   BackupCreateRequest,
   BackupCreateResponse,
@@ -176,6 +177,7 @@ import type {
   RevokeOperatorInviteRequest,
   Routine,
   RoutineRun,
+  RunAutonomyBenchmarkRequest,
   RunAutonomyDoctorRequest,
   RunCheckpoint,
   RunRoutineNowRequest,
@@ -308,6 +310,7 @@ const CHANNELS = {
   runtimeProfilesValidate: 'runtimeProfiles.validate',
   runtimeOperationsSnapshot: 'runtimeOperations.snapshot',
   autonomyDoctorRun: 'autonomyDoctor.run',
+  autonomyBenchmarkRun: 'autonomyBenchmark.run',
   routinesList: 'routines.list',
   routinesCreate: 'routines.create',
   routinesUpdate: 'routines.update',
@@ -579,6 +582,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.autonomyDoctorRun, {
           companyId,
         } satisfies RunAutonomyDoctorRequest) as Promise<AutonomyDoctorReport>,
+    },
+    autonomyBenchmark: {
+      run: (req: RunAutonomyBenchmarkRequest) =>
+        ipc.invoke(CHANNELS.autonomyBenchmarkRun, req) as Promise<AutonomyBenchmarkReport>,
     },
     routines: {
       list: (companyId: string) =>

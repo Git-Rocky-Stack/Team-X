@@ -262,6 +262,46 @@ describe('buildTeamXApi', () => {
     });
   });
 
+  describe('autonomyBenchmark.run', () => {
+    it('invokes autonomyBenchmark.run with the request object verbatim', async () => {
+      fake.setNextInvokeResult({
+        id: 'benchmark-1',
+        generatedAt: 1,
+        mode: 'control-plane-simulated',
+        runtimeKinds: ['bash'],
+        scenarioIds: ['race-for-one-ticket'],
+        results: [],
+        summary: {
+          scenarioCount: 0,
+          passedCount: 0,
+          failedCount: 0,
+          successRate: 0,
+          duplicateWorkRate: 0,
+          meanLatencyMs: 0,
+          meanStaleRecoveryMs: null,
+          totalCostUsd: '0.000000',
+          totalTokenCount: 0,
+          operatorInterventions: 0,
+          artifactCompleteness: 0,
+        },
+      });
+      const req = {
+        companyId: 'co-1',
+        runtimeKinds: ['bash' as const],
+        scenarioIds: ['race-for-one-ticket' as const],
+      };
+
+      await api.autonomyBenchmark.run(req);
+
+      expect(fake.invokeCalls).toEqual([
+        {
+          channel: (PRELOAD_CHANNELS as Record<string, string>).autonomyBenchmarkRun,
+          args: [req],
+        },
+      ]);
+    });
+  });
+
   describe('events.onDashboard', () => {
     it('attaches a listener to events.dashboard', () => {
       const cb = vi.fn();
@@ -346,6 +386,7 @@ describe('buildTeamXApi', () => {
       expect(PRELOAD_CHANNELS.eventsDashboard).toBe('events.dashboard');
       expect(channels.telemetryRecentRuns).toBe('telemetry.recentRuns');
       expect(channels.autonomyDoctorRun).toBe('autonomyDoctor.run');
+      expect(channels.autonomyBenchmarkRun).toBe('autonomyBenchmark.run');
       expect(PRELOAD_CHANNELS.providersListModels).toBe('providers.listModels');
     });
   });

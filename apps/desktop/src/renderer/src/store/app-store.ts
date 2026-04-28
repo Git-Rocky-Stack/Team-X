@@ -67,6 +67,7 @@ export type TelemetrySubview = 'company' | 'employees' | 'cost';
 /** Autonomy inner subview tabs. */
 export type AutonomySubview =
   | 'doctor'
+  | 'benchmarks'
   | 'runtimes'
   | 'routines'
   | 'budgets'
@@ -115,7 +116,7 @@ export interface AppState {
   activeMeetingId: string | null;
   /** Which telemetry subview is showing (Company / Employees / Cost). */
   telemetrySubview: TelemetrySubview;
-  /** Which autonomy subview is showing (Doctor / Runtimes / Routines / Budgets / Approvals / Artifacts / Access). */
+  /** Which autonomy subview is showing (Doctor / Benchmarks / Runtimes / Routines / Budgets / Approvals / Artifacts / Access). */
   autonomySubview: AutonomySubview;
   /** Optional thread focus for the Autonomy > Memory subview. */
   autonomyMemoryThreadId: string | null;

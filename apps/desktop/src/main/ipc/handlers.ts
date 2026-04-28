@@ -60,6 +60,7 @@ import type {
   AuditStats,
   AuthorityGrant,
   AuthorityRequest,
+  AutonomyBenchmarkReport,
   AutonomyDoctorReport,
   BackupCreateRequest,
   BackupCreateResponse,
@@ -198,6 +199,7 @@ import type {
   RevokeOperatorInviteRequest,
   Routine,
   RoutineRun,
+  RunAutonomyBenchmarkRequest,
   RunAutonomyDoctorRequest,
   RunCheckpoint,
   RunRoutineNowRequest,
@@ -274,6 +276,7 @@ import type {
 } from '@team-x/shared-types';
 import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import {
+  AUTONOMY_BENCHMARK_SCENARIO_IDS,
   AUTO_THREAD_ID,
   BUDGET_SCOPE_KINDS,
   COMPANY_PACKAGE_MODES,
@@ -874,6 +877,10 @@ export interface IpcAutonomyDoctorService {
   run(input: RunAutonomyDoctorRequest): Promise<AutonomyDoctorReport>;
 }
 
+export interface IpcAutonomyBenchmarkService {
+  run(input: RunAutonomyBenchmarkRequest): Promise<AutonomyBenchmarkReport>;
+}
+
 export interface IpcRoutineService {
   start(companyId: string): void;
   stop(companyId: string): void;
@@ -968,6 +975,7 @@ export interface IpcHandlerDeps {
   runtimeProfilesService?: IpcRuntimeProfilesService;
   runtimeOperationsService?: IpcRuntimeOperationsService;
   autonomyDoctorService?: IpcAutonomyDoctorService;
+  autonomyBenchmarkService?: IpcAutonomyBenchmarkService;
   routineService?: IpcRoutineService;
   budgetGovernanceService?: IpcBudgetGovernanceService;
   approvalInboxService?: IpcApprovalInboxService;
@@ -1187,6 +1195,8 @@ export interface IpcHandlers {
   runtimeOperationsSnapshot(req: ListRuntimeOperationsRequest): Promise<RuntimeOperationsSnapshot>;
   /** `autonomyDoctor.run` — deterministic operator health workflow report. */
   autonomyDoctorRun(req: RunAutonomyDoctorRequest): Promise<AutonomyDoctorReport>;
+  /** `autonomyBenchmark.run` — deterministic autonomy benchmark harness report. */
+  autonomyBenchmarkRun(req: RunAutonomyBenchmarkRequest): Promise<AutonomyBenchmarkReport>;
   /** `routines.list` — return routine definitions for a company. */
   routinesList(req: ListRoutinesRequest): Promise<Routine[]>;
   /** `routines.create` — create one recurring routine definition. */
@@ -2164,6 +2174,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     runtimeProfilesService,
     runtimeOperationsService,
     autonomyDoctorService,
+    autonomyBenchmarkService,
     routineService,
     budgetGovernanceService,
     approvalInboxService,
@@ -2733,6 +2744,36 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] autonomyDoctor.run: autonomyDoctorService dep is required');
       }
       return autonomyDoctorService.run(req);
+    },
+
+    async autonomyBenchmarkRun(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] autonomyBenchmark.run: companyId is required');
+      }
+      if (req.runtimeKinds !== undefined) {
+        if (!Array.isArray(req.runtimeKinds)) {
+          throw new Error('[ipc] autonomyBenchmark.run: runtimeKinds must be an array');
+        }
+        for (const runtimeKind of req.runtimeKinds) {
+          if (!RUNTIME_PROFILE_KINDS.includes(runtimeKind)) {
+            throw new Error(`[ipc] autonomyBenchmark.run: unknown runtime kind ${runtimeKind}`);
+          }
+        }
+      }
+      if (req.scenarioIds !== undefined) {
+        if (!Array.isArray(req.scenarioIds)) {
+          throw new Error('[ipc] autonomyBenchmark.run: scenarioIds must be an array');
+        }
+        for (const scenarioId of req.scenarioIds) {
+          if (!AUTONOMY_BENCHMARK_SCENARIO_IDS.includes(scenarioId)) {
+            throw new Error(`[ipc] autonomyBenchmark.run: unknown scenario ${scenarioId}`);
+          }
+        }
+      }
+      if (!autonomyBenchmarkService) {
+        throw new Error('[ipc] autonomyBenchmark.run: autonomyBenchmarkService dep is required');
+      }
+      return autonomyBenchmarkService.run(req);
     },
 
     async routinesList(req) {

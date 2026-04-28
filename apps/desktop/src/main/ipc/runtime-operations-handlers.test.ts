@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { AutonomyDoctorReport, RuntimeOperationsSnapshot } from '@team-x/shared-types';
+import type {
+  AutonomyBenchmarkReport,
+  AutonomyDoctorReport,
+  RuntimeOperationsSnapshot,
+} from '@team-x/shared-types';
 
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 
@@ -71,6 +75,37 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
       }),
     ),
   };
+  const autonomyBenchmarkService = {
+    run: vi.fn(
+      async (input: {
+        companyId: string;
+        runtimeKinds?: string[];
+        scenarioIds?: string[];
+      }): Promise<AutonomyBenchmarkReport> => ({
+        id: 'benchmark-1',
+        generatedAt: 700,
+        mode: 'control-plane-simulated',
+        runtimeKinds: (input.runtimeKinds ?? ['bash']) as AutonomyBenchmarkReport['runtimeKinds'],
+        scenarioIds: (input.scenarioIds ?? [
+          'race-for-one-ticket',
+        ]) as AutonomyBenchmarkReport['scenarioIds'],
+        results: [],
+        summary: {
+          scenarioCount: 0,
+          passedCount: 0,
+          failedCount: 0,
+          successRate: 0,
+          duplicateWorkRate: 0,
+          meanLatencyMs: 0,
+          meanStaleRecoveryMs: null,
+          totalCostUsd: '0.000000',
+          totalTokenCount: 0,
+          operatorInterventions: 0,
+          artifactCompleteness: 0,
+        },
+      }),
+    ),
+  };
 
   return {
     companiesRepo: noop,
@@ -100,6 +135,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     getHardwareProfile: () => ({}) as never,
     runtimeOperationsService,
     autonomyDoctorService,
+    autonomyBenchmarkService,
     ...overrides,
   } as unknown as IpcHandlerDeps;
 }
@@ -140,5 +176,48 @@ describe('runtime operations IPC handlers', () => {
     await expect(handlers.autonomyDoctorRun({ companyId: '' })).rejects.toThrow(
       /companyId is required/i,
     );
+  });
+
+  it('runs autonomy benchmark reports for selected runtimes and scenarios', async () => {
+    const deps = makeDeps();
+    const handlers = createIpcHandlers(deps);
+
+    const result = await handlers.autonomyBenchmarkRun({
+      companyId: 'company-1',
+      runtimeKinds: ['bash'],
+      scenarioIds: ['race-for-one-ticket'],
+    });
+
+    expect(deps.autonomyBenchmarkService?.run).toHaveBeenCalledWith({
+      companyId: 'company-1',
+      runtimeKinds: ['bash'],
+      scenarioIds: ['race-for-one-ticket'],
+    });
+    expect(result.mode).toBe('control-plane-simulated');
+  });
+
+  it('rejects autonomy benchmark runs without a company id', async () => {
+    const handlers = createIpcHandlers(makeDeps());
+
+    await expect(handlers.autonomyBenchmarkRun({ companyId: '' })).rejects.toThrow(
+      /companyId is required/i,
+    );
+  });
+
+  it('rejects unknown autonomy benchmark runtime and scenario filters', async () => {
+    const handlers = createIpcHandlers(makeDeps());
+
+    await expect(
+      handlers.autonomyBenchmarkRun({
+        companyId: 'company-1',
+        runtimeKinds: ['unknown-runtime' as never],
+      }),
+    ).rejects.toThrow(/unknown runtime kind/i);
+    await expect(
+      handlers.autonomyBenchmarkRun({
+        companyId: 'company-1',
+        scenarioIds: ['unknown-scenario' as never],
+      }),
+    ).rejects.toThrow(/unknown scenario/i);
   });
 });

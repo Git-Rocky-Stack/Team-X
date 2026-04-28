@@ -62,6 +62,8 @@ import type {
   ArtifactRecord,
   AuthorityGrant,
   AuthorityRequest,
+  AutonomyBenchmarkReport,
+  AutonomyBenchmarkScenarioId,
   AutonomyDoctorReport,
   BudgetLedgerEntry,
   BudgetOverview,
@@ -381,6 +383,12 @@ export interface ListRuntimeOperationsRequest {
 
 export interface RunAutonomyDoctorRequest {
   companyId: string;
+}
+
+export interface RunAutonomyBenchmarkRequest {
+  companyId: string;
+  runtimeKinds?: RuntimeProfileKind[];
+  scenarioIds?: AutonomyBenchmarkScenarioId[];
 }
 
 export interface RuntimeOperationsSnapshot {
@@ -1945,6 +1953,10 @@ export interface IpcContract {
     request: RunAutonomyDoctorRequest;
     response: AutonomyDoctorReport;
   };
+  'autonomyBenchmark.run': {
+    request: RunAutonomyBenchmarkRequest;
+    response: AutonomyBenchmarkReport;
+  };
   'routines.list': {
     request: ListRoutinesRequest;
     response: Routine[];
@@ -2769,6 +2781,10 @@ export interface TeamXApi {
   autonomyDoctor: {
     /** Run the operator health workflow and return a deterministic JSON-ready report. */
     run(companyId: string): Promise<AutonomyDoctorReport>;
+  };
+  autonomyBenchmark: {
+    /** Run the deterministic autonomy benchmark harness for selected runtimes and scenarios. */
+    run(req: RunAutonomyBenchmarkRequest): Promise<AutonomyBenchmarkReport>;
   };
   routines: {
     /** List routine definitions for one workspace. */

@@ -142,6 +142,8 @@ import { createAgenticTools } from './services/agentic-tools.js';
 import { createApprovalInboxService } from './services/approval-inbox-service.js';
 import { createArtifactService } from './services/artifact-service.js';
 import { createAuthorityResolverService } from './services/authority-resolver-service.js';
+import { createInMemoryAutonomyBenchmarkScenarioContext } from './services/autonomy-benchmark-memory-context.js';
+import { createAutonomyBenchmarkService } from './services/autonomy-benchmark-service.js';
 import { createAutonomyDoctorService } from './services/autonomy-doctor-service.js';
 import { createBackupService } from './services/backup.js';
 import { createBudgetGovernanceService } from './services/budget-governance-service.js';
@@ -1007,6 +1009,9 @@ app
       budgetGovernanceService: budgetGovernanceServiceInstance,
       secretsStore,
     });
+    const autonomyBenchmarkService = createAutonomyBenchmarkService({
+      createScenarioContext: createInMemoryAutonomyBenchmarkScenarioContext,
+    });
 
     const updaterService = createUpdaterService({
       isDev,
@@ -1048,6 +1053,13 @@ app
       runtimeProfilesService,
       runtimeOperationsService,
       autonomyDoctorService,
+      autonomyBenchmarkService: {
+        run: (input) =>
+          autonomyBenchmarkService.run({
+            runtimeKinds: input.runtimeKinds,
+            scenarioIds: input.scenarioIds,
+          }),
+      },
       routineService: routineServiceInstance,
       budgetGovernanceService: budgetGovernanceServiceInstance,
       approvalInboxService: approvalInboxServiceInstance,

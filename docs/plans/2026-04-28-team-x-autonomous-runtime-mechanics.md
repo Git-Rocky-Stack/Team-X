@@ -222,6 +222,22 @@ Exit criteria:
 - inline Paperclip secrets are redacted into Team-X runtime secret refs;
 - the bridge emits a Team-X package/preview contract so the existing non-destructive portability import flow can own actual workspace creation.
 
+### P2.5 Autonomy Benchmark Dashboard
+
+Status: shipped as the fifth P2 strategic differentiator slice.
+
+- Added a typed `autonomyBenchmark.run` IPC/preload contract so the deterministic P2.1 harness is available from the app, not only the CLI.
+- Wired the main process to run the in-memory benchmark service through the same harness used by `pnpm autonomy:benchmark`.
+- Added Autonomy > Benchmarks with runtime and scenario filters, an explicit run control, summary tiles, per-runtime result groups, scenario evidence counts, and failure diagnostics.
+- Kept the first dashboard mode honest as `control-plane-simulated`; it proves Team-X control-plane mechanics without pretending to launch live external providers.
+
+Exit criteria:
+
+- operators can run the benchmark harness from the Autonomy control plane;
+- runtime and scenario filters are visible and explicit;
+- pass rate, duplicate-work rate, stale recovery timing, spend, token count, operator interventions, and artifact completeness are visible without reading JSON;
+- per-scenario rows include runtime, status, latency, token/cost metrics, evidence counts, notes, and errors.
+
 ## Test Plan
 
 - Runtime session repo/service tests for create, heartbeat, status changes, stale marking, and company scoping.
@@ -235,6 +251,7 @@ Exit criteria:
 - Portability tests for package export/import previews with adapter declarations, missing secrets, and local path compatibility warnings.
 - Private operator access tests for localhost defaults, private tunnel guidance, public bind blocking, staged approval gates, runtime gates, and local-only secret changes.
 - Paperclip bridge tests for split export-folder parsing, agent/adapter/task/issue/skill mapping, unsupported adapter diagnostics, and runtime secret-ref conversion.
+- Benchmark dashboard tests for IPC/preload wiring plus Autonomy shell source guards covering the benchmark hook, controls, summary, and result rows.
 
 ## Assumptions
 
@@ -242,4 +259,4 @@ Exit criteria:
 - Existing autonomy surfaces are extended, not replaced.
 - Bash, HTTP, and Codex are the first reference runtimes.
 - Runtime session/checkouts are durable history, not ephemeral UI-only state.
-- GitHub template import UX and benchmark dashboards remain future P1/P2 follow-ups; the P2 Paperclip benchmark audit's four strategic differentiators are now represented in code/tests/docs.
+- GitHub template import UX polish remains future P1 follow-up; the P2 Paperclip benchmark audit's four strategic differentiators and the benchmark dashboard follow-through are now represented in code/tests/docs.

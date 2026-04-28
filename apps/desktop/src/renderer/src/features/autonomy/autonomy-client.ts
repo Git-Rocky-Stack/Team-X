@@ -53,6 +53,10 @@ export const autonomyClient = {
   autonomyDoctor: {
     run: (...args: Parameters<typeof ipc.autonomyDoctor.run>) => ipc.autonomyDoctor.run(...args),
   },
+  autonomyBenchmark: {
+    run: (...args: Parameters<typeof ipc.autonomyBenchmark.run>) =>
+      ipc.autonomyBenchmark.run(...args),
+  },
   routines: {
     list: (...args: Parameters<typeof ipc.routines.list>) => ipc.routines.list(...args),
     listRuns: (...args: Parameters<typeof ipc.routines.listRuns>) => ipc.routines.listRuns(...args),

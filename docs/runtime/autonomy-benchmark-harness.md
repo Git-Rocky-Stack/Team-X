@@ -2,6 +2,8 @@
 
 Status: P2.1 deterministic control-plane harness shipped on 2026-04-28.
 
+The same harness is now available in the app under Autonomy > Benchmarks. The panel lets an operator select runtime targets and scenarios, run the deterministic replay, then inspect pass rate, duplicate-work rate, stale recovery timing, simulated spend, token count, artifact completeness, per-runtime result groups, and evidence counts.
+
 Run:
 
 ```powershell

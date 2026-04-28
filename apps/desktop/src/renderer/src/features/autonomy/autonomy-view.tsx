@@ -15,6 +15,7 @@ import {
   CheckSquare2,
   Clock3,
   FolderKanban,
+  Gauge,
   ShieldCheck,
   Stethoscope,
   Workflow,
@@ -52,6 +53,7 @@ import {
 } from '../mission/mission-shell.js';
 import { ApprovalsPanel } from './approvals-panel.js';
 import { ArtifactsPanel } from './artifacts-panel.js';
+import { AutonomyBenchmarkPanel } from './autonomy-benchmark-panel.js';
 import { AutonomyDoctorPanel } from './autonomy-doctor-panel.js';
 import { BudgetsPanel } from './budgets-panel.js';
 import { MemoryPanel } from './memory-panel.js';
@@ -61,6 +63,7 @@ import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
 type AutonomySubview =
   | 'doctor'
+  | 'benchmarks'
   | 'runtimes'
   | 'routines'
   | 'budgets'
@@ -75,6 +78,7 @@ const AUTONOMY_SUBVIEWS: Array<{
   icon: typeof Bot;
 }> = [
   { value: 'doctor', label: 'Doctor', icon: Stethoscope },
+  { value: 'benchmarks', label: 'Benchmarks', icon: Gauge },
   { value: 'runtimes', label: 'Runtimes', icon: Bot },
   { value: 'routines', label: 'Routines', icon: Clock3 },
   { value: 'budgets', label: 'Budgets', icon: BadgeDollarSign },
@@ -165,6 +169,14 @@ const SUBVIEW_COPY: Record<
     emptyTitle: 'Autonomy Doctor has no report',
     emptyDescription:
       'Run the doctor workflow to produce a deterministic JSON-ready health report for this workspace.',
+  },
+  benchmarks: {
+    title: 'Autonomy Benchmarks',
+    description:
+      'Replay the Paperclip-grade runtime scenarios against Team-X control-plane mechanics and inspect pass rates, recovery timing, duplicate-work prevention, spend, and artifact evidence.',
+    emptyTitle: 'No benchmark report is ready yet',
+    emptyDescription:
+      'Run the deterministic harness to produce a repeatable autonomy report for this workspace.',
   },
 };
 
@@ -538,6 +550,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
         <MissionSectionCard title={activeCopy.title} description={activeCopy.description}>
           {activeSubview === 'doctor' ? (
             <AutonomyDoctorPanel companyId={companyId} />
+          ) : activeSubview === 'benchmarks' ? (
+            <AutonomyBenchmarkPanel companyId={companyId} />
           ) : activeSubview === 'access' ? (
             operatorsQuery.isLoading ? (
               <MissionStateBlock

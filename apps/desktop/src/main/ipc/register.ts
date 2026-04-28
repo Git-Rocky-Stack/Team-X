@@ -91,6 +91,7 @@ const REQUEST_CHANNELS = [
   'runtimeProfiles.validate',
   'runtimeOperations.snapshot',
   'autonomyDoctor.run',
+  'autonomyBenchmark.run',
   'routines.list',
   'routines.create',
   'routines.update',
@@ -442,6 +443,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('autonomyDoctor.run', async (_event, request: { companyId: string }) => {
     return handlers.autonomyDoctorRun(request);
   });
+
+  ipcMain.handle(
+    'autonomyBenchmark.run',
+    async (_event, request: import('@team-x/shared-types').RunAutonomyBenchmarkRequest) => {
+      return handlers.autonomyBenchmarkRun(request);
+    },
+  );
 
   ipcMain.handle('routines.list', async (_event, request: { companyId: string }) => {
     return handlers.routinesList(request);
