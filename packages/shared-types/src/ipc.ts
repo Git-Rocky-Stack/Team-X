@@ -74,6 +74,7 @@ import type {
   CompanyImportPreview,
   CompanyPackageManifest,
   CompanyPackageMode,
+  CompanyPackageSecretBinding,
   CompanySharingReadinessSummary,
   CompanyTemplateSummary,
   EffectiveAuthoritySnapshot,
@@ -240,15 +241,18 @@ export interface ExportCompanyPackageResponse {
 }
 
 export interface PreviewCompanyPackageImportRequest {
-  packagePath: string;
+  packagePath?: string;
+  packageRef?: string;
 }
 
 export interface PreviewCompanyPackageImportResponse extends CompanyImportPreview {}
 
 export interface ImportCompanyPackageRequest {
-  packagePath: string;
+  packagePath?: string;
+  packageRef?: string;
   name?: string;
   slug?: string;
+  secretBindings?: CompanyPackageSecretBinding[];
 }
 
 export interface ImportCompanyPackageResponse {
@@ -266,7 +270,9 @@ export interface ListCompanyTemplatesResponse {
 
 export interface InstallCompanyTemplateRequest {
   companyId?: string;
-  packagePath: string;
+  packagePath?: string;
+  packageRef?: string;
+  secretBindings?: CompanyPackageSecretBinding[];
 }
 
 export interface InstallCompanyTemplateResponse {

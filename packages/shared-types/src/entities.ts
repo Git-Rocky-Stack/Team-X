@@ -1265,15 +1265,85 @@ export interface CompanyPackage {
   starterAssets?: CompanyPackageStarterAsset[];
 }
 
+export const COMPANY_PACKAGE_SOURCE_KINDS = ['local-path', 'github'] as const;
+export type CompanyPackageSourceKind = (typeof COMPANY_PACKAGE_SOURCE_KINDS)[number];
+
+export interface CompanyPackageSourceRef {
+  kind: CompanyPackageSourceKind;
+  input: string;
+  resolvedRef: string;
+  packagePath?: string;
+  url?: string;
+  owner?: string;
+  repo?: string;
+  ref?: string;
+  path?: string;
+}
+
+export const COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS = [
+  'create',
+  'rename',
+  'skip',
+  'replace',
+] as const;
+export type CompanyPackageImportPlanAction =
+  (typeof COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS)[number];
+
+export type CompanyPackageImportPlanSection =
+  | CompanyPackageSection
+  | 'budget-policies'
+  | 'runtime-bindings'
+  | 'secret-bindings'
+  | 'template-library';
+
+export interface CompanyPackageImportPlanItem {
+  id: string;
+  section: CompanyPackageImportPlanSection;
+  action: CompanyPackageImportPlanAction;
+  label: string;
+  detail: string;
+  count?: number;
+  blocking?: boolean;
+}
+
+export interface CompanyPackageImportPlan {
+  source: CompanyPackageSourceRef;
+  items: CompanyPackageImportPlanItem[];
+  totals: Record<CompanyPackageImportPlanAction, number>;
+  canImport: boolean;
+  canInstallTemplate: boolean;
+}
+
+export type CompanyPackageMissingSecretSource = 'runtime-secret-ref' | 'redacted-field';
+
+export interface CompanyPackageMissingSecretRef {
+  id: string;
+  path: string;
+  label: string;
+  source: CompanyPackageMissingSecretSource;
+  providerId?: string;
+  key?: string;
+  bindable: boolean;
+}
+
+export interface CompanyPackageSecretBinding {
+  providerId: string;
+  key: 'apiKey';
+  value: string;
+}
+
 export interface CompanyImportPreview {
   manifest: CompanyPackageManifest;
   warnings: string[];
   missingSecrets: string[];
+  missingSecretRefs?: CompanyPackageMissingSecretRef[];
   suggestedCompanyName: string;
   suggestedSlug: string;
   runtimeProfileCount?: number;
   runtimeProfileKinds?: RuntimeProfileKind[];
   runtimeTemplateNotes?: string[];
+  plan?: CompanyPackageImportPlan;
+  source?: CompanyPackageSourceRef;
 }
 
 export interface CompanyTemplateSummary {

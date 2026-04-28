@@ -4,14 +4,20 @@ import { useEffect, useState } from 'react';
 import type {
   Company,
   CompanyImportPreview,
+  CompanyPackageImportPlanAction,
+  CompanyPackageMissingSecretRef,
   CompanyPackageMode,
+  CompanyPackageSecretBinding,
   OperatorAuthMode,
 } from '@team-x/shared-types';
 import { OPERATOR_AUTH_MODES } from '@team-x/shared-types';
 import {
   Boxes,
+  ClipboardList,
   Cloud,
   Download,
+  GitBranch,
+  KeyRound,
   LibraryBig,
   Loader2,
   PackagePlus,
@@ -109,6 +115,57 @@ function runtimeKindLabel(kind: string): string {
   }
 }
 
+function packageSourceLabel(preview: CompanyImportPreview): string {
+  const source = preview.source ?? preview.plan?.source;
+  if (!source) return 'local package';
+  if (source.kind === 'github') {
+    return source.resolvedRef;
+  }
+  return source.packagePath ?? source.resolvedRef;
+}
+
+function actionTone(action: CompanyPackageImportPlanAction): string {
+  switch (action) {
+    case 'create':
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+    case 'rename':
+      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+    case 'replace':
+      return 'border-brand/30 bg-brand/10 text-brand';
+    default:
+      return 'border-white/10 bg-black/10 text-muted-foreground';
+  }
+}
+
+function fallbackMissingSecretRefs(
+  missingSecrets: string[],
+): CompanyPackageMissingSecretRef[] {
+  return missingSecrets.map((path) => ({
+    id: path,
+    path,
+    label: path,
+    source: 'redacted-field',
+    bindable: false,
+  }));
+}
+
+function secretBindingsFromDrafts(
+  refs: CompanyPackageMissingSecretRef[],
+  drafts: Record<string, string>,
+): CompanyPackageSecretBinding[] {
+  return refs.flatMap((ref) => {
+    const value = drafts[ref.id]?.trim();
+    if (!ref.bindable || ref.key !== 'apiKey' || !ref.providerId || !value) return [];
+    return [
+      {
+        providerId: ref.providerId,
+        key: 'apiKey' as const,
+        value,
+      },
+    ];
+  });
+}
+
 function cloudLinkStateLabel(
   state: 'unlinked' | 'linking' | 'linked' | 'sync-paused' | 'sync-degraded' | 'unlinking',
 ): string {
@@ -154,11 +211,12 @@ export function PortabilitySection() {
   const exportWorkspace = useExportWorkspacePackage(companyId);
   const exportTemplate = useExportCompanyTemplate(companyId);
   const importPackage = useImportCompanyPackage();
-  const [packagePath, setPackagePath] = useState('');
+  const [packageRef, setPackageRef] = useState('');
   const [importName, setImportName] = useState('');
   const [importSlug, setImportSlug] = useState('');
   const [importNameDirty, setImportNameDirty] = useState(false);
   const [importSlugDirty, setImportSlugDirty] = useState(false);
+  const [secretDrafts, setSecretDrafts] = useState<Record<string, string>>({});
 
   const activeCompany = companies.find((company) => company.id === companyId) ?? null;
   const cloudLink = cloudLinkQuery.data ?? null;
@@ -167,23 +225,32 @@ export function PortabilitySection() {
   const pendingInvites = invites.filter((invite) => invite.status === 'pending');
   const cloudLinkBusy =
     linkWorkspace.isPending || unlinkWorkspace.isPending || reconnectWorkspace.isPending;
-  const trimmedPackagePath = packagePath.trim();
+  const trimmedPackageRef = packageRef.trim();
   const packagePreviewQuery = useCompanyPackagePreview(
-    trimmedPackagePath.length > 0 ? trimmedPackagePath : null,
+    trimmedPackageRef.length > 0 ? trimmedPackageRef : null,
   );
   const installTemplate = useInstallCompanyTemplate(companyId);
   const packagePreview = packagePreviewQuery.data ?? null;
   const runtimeProfileCount = packagePreview?.runtimeProfileCount ?? 0;
   const runtimeProfileKinds = packagePreview?.runtimeProfileKinds ?? [];
   const runtimeTemplateNotes = packagePreview?.runtimeTemplateNotes ?? [];
+  const missingSecretRefs =
+    packagePreview?.missingSecretRefs ??
+    fallbackMissingSecretRefs(packagePreview?.missingSecrets ?? []);
+  const secretBindings = secretBindingsFromDrafts(missingSecretRefs, secretDrafts);
 
   useEffect(() => {
-    if (trimmedPackagePath.length > 0) return;
+    if (trimmedPackageRef.length > 0) return;
     setImportName('');
     setImportSlug('');
     setImportNameDirty(false);
     setImportSlugDirty(false);
-  }, [trimmedPackagePath]);
+    setSecretDrafts({});
+  }, [trimmedPackageRef]);
+
+  useEffect(() => {
+    setSecretDrafts({});
+  }, [packagePreview?.manifest.packageId]);
 
   useEffect(() => {
     if (!packagePreview || packagePreview.manifest.mode !== 'workspace-export') return;
@@ -241,26 +308,30 @@ export function PortabilitySection() {
 
   const canInstallTemplate =
     packagePreview?.manifest.mode === 'template' &&
-    trimmedPackagePath.length > 0 &&
+    trimmedPackageRef.length > 0 &&
     !installTemplate.isPending;
   const canImportWorkspace =
     packagePreview?.manifest.mode === 'workspace-export' &&
-    trimmedPackagePath.length > 0 &&
+    trimmedPackageRef.length > 0 &&
     importName.trim().length > 0 &&
     importSlug.trim().length > 0 &&
     !importPackage.isPending;
 
   async function handleInstallTemplate() {
     if (!canInstallTemplate) return;
-    await installTemplate.mutateAsync(trimmedPackagePath);
+    await installTemplate.mutateAsync({
+      packageRef: trimmedPackageRef,
+      secretBindings,
+    });
   }
 
   async function handleImportPackage() {
     if (!canImportWorkspace) return;
     const result = await importPackage.mutateAsync({
-      packagePath: trimmedPackagePath,
+      packageRef: trimmedPackageRef,
       name: importName.trim(),
       slug: importSlug.trim(),
+      secretBindings,
     });
     setCompanyId(result.companyId);
   }
@@ -652,25 +723,25 @@ export function PortabilitySection() {
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
             <PackagePlus className="h-4 w-4 text-brand" />
-            Preview import or template package
+            Preview package from path or GitHub
           </div>
           <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-            Preview manifest details, warnings, redactions, and sharing posture before importing a
-            workspace package or installing a template into the local library.
+            Preview local packages, GitHub URLs, or shorthand refs before importing a workspace
+            package or installing a template into the local library.
           </p>
           <div className="mt-3 flex gap-2">
             <Input
-              value={packagePath}
-              onChange={(event) => setPackagePath(event.target.value)}
-              placeholder="C:\\templates\\ops-template.teamx-package.json"
+              value={packageRef}
+              onChange={(event) => setPackageRef(event.target.value)}
+              placeholder="C:\\templates\\ops.teamx-package.json or owner/repo/path.teamx-package.json#main"
               className="font-mono text-xs"
             />
           </div>
 
-          {trimmedPackagePath.length === 0 ? (
+          {trimmedPackageRef.length === 0 ? (
             <p className="mt-3 text-[11px] text-muted-foreground">
-              Paste a `.teamx-package.json` path to inspect the manifest before any import or
-              install action runs.
+              Paste a `.teamx-package.json` path, GitHub blob/raw URL, `gh:owner/repo/path#ref`,
+              or `owner/repo@ref:path` shorthand to inspect the manifest before any action runs.
             </p>
           ) : packagePreviewQuery.isLoading ? (
             <div className="mt-3 space-y-2" aria-busy="true">
@@ -692,6 +763,10 @@ export function PortabilitySection() {
                     <div className="text-sm font-medium text-foreground">Manifest Preview</div>
                     <p className="mt-1 text-[11px] text-muted-foreground">
                       {previewSummary(packagePreview)}
+                    </p>
+                    <p className="mt-1 flex min-w-0 items-center gap-1 truncate font-mono text-[10px] text-muted-foreground/80">
+                      <GitBranch className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{packageSourceLabel(packagePreview)}</span>
                     </p>
                   </div>
                   <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -732,6 +807,48 @@ export function PortabilitySection() {
                         >
                           {humanizeCompatibility(entry)}
                         </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {packagePreview.plan ? (
+                  <div
+                    className="mt-3 rounded-lg border border-white/10 bg-black/10 px-3 py-3"
+                    data-portability-import-plan=""
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <ClipboardList className="h-4 w-4 text-brand" />
+                        Dry-run install plan
+                      </div>
+                      <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        <span>{packagePreview.plan.totals.create} create</span>
+                        <span>{packagePreview.plan.totals.rename} rename</span>
+                        <span>{packagePreview.plan.totals.replace} replace</span>
+                        <span>{packagePreview.plan.totals.skip} skip</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-2 md:grid-cols-2">
+                      {packagePreview.plan.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="rounded-lg border border-white/10 bg-background/70 px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs font-medium text-foreground">
+                              {item.label}
+                            </div>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${actionTone(item.action)}`}
+                            >
+                              {item.action}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                            {item.detail}
+                          </p>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -786,16 +903,67 @@ export function PortabilitySection() {
                   </div>
                 ) : null}
 
-                {packagePreview.missingSecrets.length > 0 ? (
-                  <div className="mt-3">
-                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      Missing Secrets
+                {missingSecretRefs.length > 0 ? (
+                  <div
+                    className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/8 px-3 py-3"
+                    data-portability-secret-wizard=""
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <KeyRound className="h-4 w-4 text-amber-300" />
+                        Missing secret wizard
+                      </div>
+                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">
+                        {secretBindings.length} bound
+                      </span>
                     </div>
-                    <ul className="mt-2 space-y-1 font-mono text-[10px] leading-snug text-muted-foreground">
-                      {packagePreview.missingSecrets.map((secret) => (
-                        <li key={secret}>{secret}</li>
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                      Bind runtime provider API keys before install/import, or leave fields empty
+                      and reconfigure them later in Settings and Autonomy.
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {missingSecretRefs.map((secret) => (
+                        <div
+                          key={secret.id}
+                          className="rounded-lg border border-white/10 bg-background/70 px-3 py-3"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="truncate text-xs font-medium text-foreground">
+                                {secret.label}
+                              </div>
+                              <div className="truncate font-mono text-[10px] text-muted-foreground">
+                                {secret.path}
+                              </div>
+                            </div>
+                            <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                              {secret.bindable ? 'bindable' : 'manual'}
+                            </span>
+                          </div>
+                          {secret.bindable ? (
+                            <Input
+                              type="password"
+                              value={secretDrafts[secret.id] ?? ''}
+                              onChange={(event) =>
+                                setSecretDrafts((current) => ({
+                                  ...current,
+                                  [secret.id]: event.target.value,
+                                }))
+                              }
+                              placeholder={`Bind ${secret.providerId ?? 'provider'} API key`}
+                              className="mt-2 text-xs"
+                              data-portability-secret-input={secret.id}
+                            />
+                          ) : (
+                            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                              This redacted field has no provider mapping in the package. Re-enter
+                              the value in the owning extension, runtime, or authority surface after
+                              import.
+                            </p>
+                          )}
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -837,7 +1005,12 @@ export function PortabilitySection() {
                       disabled={!canImportWorkspace}
                       onClick={() => void handleImportPackage()}
                     >
-                      {importPackage.isPending ? 'Importing...' : 'Import Workspace'}
+                      <Download className="mr-2 h-3.5 w-3.5" />
+                      {importPackage.isPending
+                        ? 'Importing...'
+                        : secretBindings.length > 0
+                          ? 'Import and Bind'
+                          : 'Import Workspace'}
                     </Button>
                   </div>
                   {importPackage.isSuccess ? (
@@ -871,7 +1044,12 @@ export function PortabilitySection() {
                       disabled={!canInstallTemplate}
                       onClick={() => void handleInstallTemplate()}
                     >
-                      {installTemplate.isPending ? 'Installing...' : 'Install Template'}
+                      <PackagePlus className="mr-2 h-3.5 w-3.5" />
+                      {installTemplate.isPending
+                        ? 'Installing...'
+                        : secretBindings.length > 0
+                          ? 'Install and Bind'
+                          : 'Install Template'}
                     </Button>
                   </div>
                   {installTemplate.isSuccess ? (

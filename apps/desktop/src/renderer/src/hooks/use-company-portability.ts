@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { CompanyPackageMode } from '@team-x/shared-types';
+import type { CompanyPackageMode, CompanyPackageSecretBinding } from '@team-x/shared-types';
 
 import { ipc } from '@/lib/ipc.js';
 import { requireString } from '@/lib/required.js';
@@ -12,19 +12,19 @@ export function useCompanyTemplates() {
   });
 }
 
-export function useCompanyTemplatePreview(packagePath: string | null) {
+export function useCompanyTemplatePreview(packageRef: string | null) {
   return useQuery({
-    queryKey: ['company-template-preview', packagePath],
+    queryKey: ['company-template-preview', packageRef],
     queryFn: () =>
       ipc.companies.previewImportPackage({
-        packagePath: requireString(packagePath, 'packagePath'),
+        packageRef: requireString(packageRef, 'packageRef'),
       }),
-    enabled: packagePath !== null && packagePath.length > 0,
+    enabled: packageRef !== null && packageRef.length > 0,
   });
 }
 
-export function useCompanyPackagePreview(packagePath: string | null) {
-  return useCompanyTemplatePreview(packagePath);
+export function useCompanyPackagePreview(packageRef: string | null) {
+  return useCompanyTemplatePreview(packageRef);
 }
 
 export function useExportCompanyPackage(
@@ -56,11 +56,15 @@ export function useExportWorkspacePackage(companyId: string | null) {
 export function useInstallCompanyTemplate(companyId: string | null = null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (packagePath: string) =>
-      ipc.companies.installTemplate({
+    mutationFn: (input: string | { packageRef: string; secretBindings?: CompanyPackageSecretBinding[] }) => {
+      const packageRef = typeof input === 'string' ? input : input.packageRef;
+      const secretBindings = typeof input === 'string' ? undefined : input.secretBindings;
+      return ipc.companies.installTemplate({
         ...(companyId ? { companyId } : {}),
-        packagePath,
-      }),
+        packageRef,
+        secretBindings,
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['company-templates'] });
     },

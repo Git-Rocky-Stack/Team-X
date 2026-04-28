@@ -80,6 +80,7 @@ import type {
   CompaniesUpdateRequest,
   Company,
   CompanyCloudLinkStatus,
+  CompanyPackageSecretBinding,
   CompanySettings,
   CompanySharingReadinessSummary,
   CompanyStatus,
@@ -914,7 +915,8 @@ export interface IpcCompanyPortabilityService {
   importAsNewCompany(input: ImportCompanyPackageRequest): Promise<ImportCompanyPackageResponse>;
   listTemplates(): Promise<ListCompanyTemplatesResponse['templates']>;
   installTemplate(input: {
-    packagePath: string;
+    packagePath?: string;
+    packageRef?: string;
   }): Promise<InstallCompanyTemplateResponse['template']>;
 }
 
@@ -1704,6 +1706,63 @@ function assertCompanyActive(
   }
 }
 
+function assertPackageRef(
+  req: { packagePath?: string; packageRef?: string },
+  channel: string,
+): { packagePath?: string; packageRef?: string } {
+  const packagePath = typeof req.packagePath === 'string' ? req.packagePath.trim() : '';
+  const packageRef = typeof req.packageRef === 'string' ? req.packageRef.trim() : '';
+  if (req.packagePath !== undefined && typeof req.packagePath !== 'string') {
+    throw new Error(`[ipc] ${channel}: packagePath must be a string when provided`);
+  }
+  if (req.packageRef !== undefined && typeof req.packageRef !== 'string') {
+    throw new Error(`[ipc] ${channel}: packageRef must be a string when provided`);
+  }
+  if (packagePath.length === 0 && packageRef.length === 0) {
+    throw new Error(`[ipc] ${channel}: packagePath or packageRef is required`);
+  }
+  return packageRef.length > 0 ? { packageRef } : { packagePath };
+}
+
+function assertSecretBindings(
+  bindings: unknown,
+  channel: string,
+): CompanyPackageSecretBinding[] {
+  if (bindings === undefined) return [];
+  if (!Array.isArray(bindings)) {
+    throw new Error(`[ipc] ${channel}: secretBindings must be an array when provided`);
+  }
+  return bindings.map((binding, index) => {
+    if (!binding || typeof binding !== 'object' || Array.isArray(binding)) {
+      throw new Error(`[ipc] ${channel}: secretBindings[${index}] must be an object`);
+    }
+    const record = binding as Record<string, unknown>;
+    if (typeof record.providerId !== 'string' || record.providerId.trim().length === 0) {
+      throw new Error(`[ipc] ${channel}: secretBindings[${index}].providerId is required`);
+    }
+    if (record.key !== 'apiKey') {
+      throw new Error(`[ipc] ${channel}: secretBindings[${index}].key must be "apiKey"`);
+    }
+    if (typeof record.value !== 'string' || record.value.trim().length === 0) {
+      throw new Error(`[ipc] ${channel}: secretBindings[${index}].value is required`);
+    }
+    return {
+      providerId: record.providerId.trim(),
+      key: 'apiKey',
+      value: record.value.trim(),
+    };
+  });
+}
+
+async function applySecretBindings(
+  secretsStore: IpcSecretsStore,
+  bindings: CompanyPackageSecretBinding[],
+): Promise<void> {
+  for (const binding of bindings) {
+    await secretsStore.setApiKey(binding.providerId, binding.value);
+  }
+}
+
 function assertTelemetryRunKind(value: unknown, channel: string): TelemetryRunKind | undefined {
   if (value === undefined) return undefined;
   if (typeof value === 'string' && TELEMETRY_RUN_KINDS.includes(value as TelemetryRunKind)) {
@@ -2253,42 +2312,43 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     },
 
     async companiesPreviewImportPackage(req) {
-      if (typeof req.packagePath !== 'string' || req.packagePath.trim().length === 0) {
-        throw new Error('[ipc] companies.previewImportPackage: packagePath is required');
-      }
+      const packageRef = assertPackageRef(req, 'companies.previewImportPackage');
       if (!companyPortabilityService) {
         throw new Error(
           '[ipc] companies.previewImportPackage: companyPortabilityService dep is required',
         );
       }
-      return companyPortabilityService.previewImport({
-        packagePath: req.packagePath.trim(),
-      });
+      return companyPortabilityService.previewImport(packageRef);
     },
 
     async companiesImportPackage(req) {
-      if (typeof req.packagePath !== 'string' || req.packagePath.trim().length === 0) {
-        throw new Error('[ipc] companies.importPackage: packagePath is required');
-      }
+      const packageRef = assertPackageRef(req, 'companies.importPackage');
       if (req.name !== undefined && typeof req.name !== 'string') {
         throw new Error('[ipc] companies.importPackage: name must be a string when provided');
       }
       if (req.slug !== undefined && typeof req.slug !== 'string') {
         throw new Error('[ipc] companies.importPackage: slug must be a string when provided');
       }
+      const secretBindings = assertSecretBindings(
+        req.secretBindings,
+        'companies.importPackage',
+      );
       if (!companyPortabilityService) {
         throw new Error('[ipc] companies.importPackage: companyPortabilityService dep is required');
       }
+      await applySecretBindings(secretsStore, secretBindings);
       const result = await companyPortabilityService.importAsNewCompany({
-        packagePath: req.packagePath.trim(),
+        ...packageRef,
         name: req.name,
         slug: req.slug,
+        secretBindings,
       });
       emitUserAuditEvent('company.packageImported', result.companyId, {
         packageId: result.manifest.packageId,
         mode: result.manifest.mode,
-        packagePath: req.packagePath.trim(),
+        packageRef: packageRef.packageRef ?? packageRef.packagePath,
         sharingMode: result.manifest.sharingMode,
+        secretBindingCount: secretBindings.length,
         importedAt: Date.now(),
       });
       return result;
@@ -2312,9 +2372,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     },
 
     async companiesInstallTemplate(req) {
-      if (typeof req.packagePath !== 'string' || req.packagePath.trim().length === 0) {
-        throw new Error('[ipc] companies.installTemplate: packagePath is required');
-      }
+      const packageRef = assertPackageRef(req, 'companies.installTemplate');
       if (req.companyId !== undefined) {
         if (typeof req.companyId !== 'string' || req.companyId.trim().length === 0) {
           throw new Error(
@@ -2323,20 +2381,25 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         }
         assertCompanyActive(companiesRepo, req.companyId.trim(), 'companies.installTemplate');
       }
+      const secretBindings = assertSecretBindings(
+        req.secretBindings,
+        'companies.installTemplate',
+      );
       if (!companyPortabilityService) {
         throw new Error(
           '[ipc] companies.installTemplate: companyPortabilityService dep is required',
         );
       }
-      const result = await companyPortabilityService.installTemplate({
-        packagePath: req.packagePath.trim(),
-      });
+      await applySecretBindings(secretsStore, secretBindings);
+      const result = await companyPortabilityService.installTemplate(packageRef);
       if (req.companyId) {
         emitUserAuditEvent('company.templateInstalled', req.companyId.trim(), {
           packageId: result.manifest.packageId,
           packagePath: result.packagePath,
+          packageRef: packageRef.packageRef ?? packageRef.packagePath,
           templateName: result.company.name,
           sharingMode: result.manifest.sharingMode,
+          secretBindingCount: secretBindings.length,
         });
       }
       return {

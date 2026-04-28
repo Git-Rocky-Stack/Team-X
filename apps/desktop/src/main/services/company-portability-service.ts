@@ -2,6 +2,7 @@ import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path';
 
 import {
+  COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS,
   type AuthorityGrant,
   type BudgetPolicy,
   COMPANY_PACKAGE_MODES,
@@ -9,10 +10,15 @@ import {
   type CompanyImportPreview,
   type CompanyPackage,
   type CompanyPackageCompanySnapshot,
+  type CompanyPackageImportPlan,
+  type CompanyPackageImportPlanAction,
   type CompanyPackageManifest,
   type CompanyPackageMode,
   type CompanyPackageProjectTicketLink,
   type CompanyPackageSection,
+  type CompanyPackageSecretBinding,
+  type CompanyPackageMissingSecretRef,
+  type CompanyPackageSourceRef,
   type CompanySettings,
   type CompanyTemplateSummary,
   type Employee,
@@ -49,6 +55,25 @@ import { collectRuntimeSecretRefs, isRuntimeSecretRef } from './runtime-secret-r
 export const PORTABILITY_PACKAGE_VERSION = 1;
 export const PORTABILITY_REDACTED_VALUE = '__TEAMX_REDACTED__';
 const COMPANY_SLUG_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
+const DEFAULT_GITHUB_REF = 'main';
+const DEFAULT_GITHUB_PACKAGE_PATH = 'teamx-template.teamx-package.json';
+
+interface PackageFetchResponse {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  text(): Promise<string>;
+}
+
+type PackageFetch = (
+  url: string,
+  init?: { headers?: Record<string, string> },
+) => Promise<PackageFetchResponse>;
+
+interface ReadPackageResult {
+  packageData: CompanyPackage;
+  source: CompanyPackageSourceRef;
+}
 
 interface PortabilityCompaniesRepo {
   create(input: CreateCompanyInput): string;
@@ -203,9 +228,11 @@ export interface ExportCompanyPackageResult {
 }
 
 export interface ImportCompanyPackageInput {
-  packagePath: string;
+  packagePath?: string;
+  packageRef?: string;
   name?: string;
   slug?: string;
+  secretBindings?: CompanyPackageSecretBinding[];
 }
 
 export interface ImportCompanyPackageResult {
@@ -235,6 +262,7 @@ export interface CompanyPortabilityServiceDeps {
   ensureSystemForCompany?: (companyId: string) => EnsureSystemForCompanyResult;
   exportRootDir: string;
   appVersion: string;
+  fetch?: PackageFetch;
   now?: () => Date;
 }
 
@@ -726,8 +754,163 @@ function buildTemplateSummary(
   };
 }
 
+function packageRefFromInput(
+  input: { packagePath?: string; packageRef?: string },
+  operation: string,
+): string {
+  const ref = (input.packageRef ?? input.packagePath ?? '').trim();
+  if (ref.length === 0) {
+    throw new Error(`[portability] ${operation}: packagePath or packageRef is required`);
+  }
+  return ref;
+}
+
 function readPackageError(packagePath: string, reason: string): Error {
   return new Error(`[portability] ${packagePath}: ${reason}`);
+}
+
+function cleanGithubPath(path: string): string {
+  const clean = path
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\/+/g, '/')
+    .trim();
+  if (clean.length === 0) {
+    throw new Error('[portability] GitHub package reference is missing a package path');
+  }
+  if (clean.split('/').some((part) => part === '..')) {
+    throw new Error('[portability] GitHub package reference cannot contain parent segments');
+  }
+  return clean;
+}
+
+function githubSourceRef(input: string, owner: string, repo: string, ref: string, path: string) {
+  const cleanRef = ref.trim() || DEFAULT_GITHUB_REF;
+  const cleanPath = cleanGithubPath(path);
+  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${cleanRef}/${cleanPath}`;
+  return {
+    kind: 'github' as const,
+    input,
+    resolvedRef: `${owner}/${repo}@${cleanRef}:${cleanPath}`,
+    url,
+    owner,
+    repo,
+    ref: cleanRef,
+    path: cleanPath,
+  } satisfies CompanyPackageSourceRef;
+}
+
+function resolveGithubUrl(input: string): CompanyPackageSourceRef | null {
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:') {
+    throw new Error('[portability] GitHub package URLs must use https');
+  }
+
+  const host = url.hostname.toLowerCase();
+  const parts = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+
+  if (host === 'raw.githubusercontent.com') {
+    const [owner, repo, ref, ...pathParts] = parts;
+    if (!owner || !repo || !ref || pathParts.length === 0) {
+      throw new Error('[portability] raw GitHub package URL must include owner, repo, ref, and path');
+    }
+    return githubSourceRef(input, owner, repo, ref, pathParts.join('/'));
+  }
+
+  if (host === 'github.com') {
+    const [owner, repo, flavor, ref, ...pathParts] = parts;
+    if (!owner || !repo) {
+      throw new Error('[portability] GitHub package URL must include owner and repo');
+    }
+    if (flavor !== 'blob' && flavor !== 'raw') {
+      throw new Error('[portability] GitHub package URL must point to /blob/<ref>/... or /raw/<ref>/...');
+    }
+    if (!ref || pathParts.length === 0) {
+      throw new Error('[portability] GitHub package URL must include a ref and package path');
+    }
+    return githubSourceRef(input, owner, repo, ref, pathParts.join('/'));
+  }
+
+  return null;
+}
+
+function resolveGithubShorthand(input: string): CompanyPackageSourceRef | null {
+  const trimmed = input.trim();
+  if (/^[a-z]:[\\/]/i.test(trimmed)) return null;
+  if (trimmed.includes('\\')) return null;
+
+  let body = trimmed;
+  if (body.startsWith('gh:')) body = body.slice(3);
+  if (body.startsWith('github:')) body = body.slice(7);
+
+  let ref = DEFAULT_GITHUB_REF;
+  const atRefMatch = /^([^/]+\/[^/:@]+)@([^:]+):(.+)$/.exec(body);
+  if (atRefMatch) {
+    const repoRef = atRefMatch[1];
+    const explicitRef = atRefMatch[2];
+    const path = atRefMatch[3];
+    if (!repoRef || !explicitRef || !path) return null;
+    const [owner, repo] = repoRef.split('/');
+    if (!owner || !repo) return null;
+    return githubSourceRef(input, owner, repo, explicitRef, path);
+  }
+
+  const hashIndex = body.lastIndexOf('#');
+  if (hashIndex >= 0) {
+    ref = body.slice(hashIndex + 1).trim() || DEFAULT_GITHUB_REF;
+    body = body.slice(0, hashIndex);
+  }
+
+  const parts = body.split('/').filter(Boolean);
+  if (parts.length < 2) return null;
+  if (parts.length === 2 && !trimmed.startsWith('gh:') && !trimmed.startsWith('github:')) {
+    return null;
+  }
+
+  const [owner, repo, ...pathParts] = parts;
+  if (!owner || !repo) return null;
+  const packagePath =
+    pathParts.length > 0 ? pathParts.join('/') : DEFAULT_GITHUB_PACKAGE_PATH;
+  return githubSourceRef(input, owner, repo, ref, packagePath);
+}
+
+function resolvePackageSource(input: string): CompanyPackageSourceRef {
+  const githubUrl = resolveGithubUrl(input);
+  if (githubUrl) return githubUrl;
+
+  const githubShorthand = resolveGithubShorthand(input);
+  if (githubShorthand) return githubShorthand;
+
+  const packagePath = resolve(input);
+  return {
+    kind: 'local-path',
+    input,
+    resolvedRef: packagePath,
+    packagePath,
+  };
+}
+
+function parsePackageJson(raw: string, sourceLabel: string): CompanyPackage {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    throw readPackageError(
+      sourceLabel,
+      `invalid JSON (${error instanceof Error ? error.message : String(error)})`,
+    );
+  }
+
+  const validation = validateCompanyPackage(parsed);
+  if (!validation.ok) {
+    throw readPackageError(sourceLabel, `invalid Team-X package (${validation.error})`);
+  }
+  return validation.value;
 }
 
 function normalizeSlugCandidate(value: string): string {
@@ -770,13 +953,19 @@ function suggestAvailableSlug(
   throw new Error('[portability] unable to derive an available company slug after 999 attempts');
 }
 
-function collectMissingSecrets(packageData: CompanyPackage): string[] {
-  const missing = new Set<string>();
+function collectMissingSecretRefs(packageData: CompanyPackage): CompanyPackageMissingSecretRef[] {
+  const missing = new Map<string, CompanyPackageMissingSecretRef>();
   for (const path of packageData.manifest.redactions) {
     const parts = path.split('.');
     const lastKey = parts[parts.length - 1] ?? path;
     if (isSensitiveFieldKey(lastKey)) {
-      missing.add(path);
+      missing.set(path, {
+        id: path,
+        path,
+        label: path,
+        source: 'redacted-field',
+        bindable: false,
+      });
     }
   }
   for (const profile of packageData.autonomy?.runtimeProfiles ?? []) {
@@ -784,10 +973,19 @@ function collectMissingSecrets(packageData: CompanyPackage): string[] {
       profile.config,
       `runtimeProfiles.${profile.id}.config`,
     )) {
-      missing.add(entry.path);
+      const id = `${entry.path}:${entry.ref.providerId}:${entry.ref.key}`;
+      missing.set(id, {
+        id,
+        path: entry.path,
+        label: `${profile.name}: ${entry.ref.providerId} ${entry.ref.key}`,
+        source: 'runtime-secret-ref',
+        providerId: entry.ref.providerId,
+        key: entry.ref.key,
+        bindable: entry.ref.key === 'apiKey',
+      });
     }
   }
-  return Array.from(missing).sort();
+  return Array.from(missing.values()).sort((left, right) => left.path.localeCompare(right.path));
 }
 
 function runtimeProfileKinds(packageData: CompanyPackage): RuntimeProfileSummary['kind'][] {
@@ -921,6 +1119,204 @@ function createImportWarnings(
   return warnings;
 }
 
+function planTotals(items: CompanyPackageImportPlan['items']) {
+  const totals = Object.fromEntries(
+    COMPANY_PACKAGE_IMPORT_PLAN_ACTIONS.map((action) => [action, 0]),
+  ) as Record<CompanyPackageImportPlanAction, number>;
+  for (const item of items) {
+    totals[item.action] += 1;
+  }
+  return totals;
+}
+
+function formatCount(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function buildImportPlan(input: {
+  packageData: CompanyPackage;
+  source: CompanyPackageSourceRef;
+  suggestedSlug: string;
+  missingSecretRefs: CompanyPackageMissingSecretRef[];
+}): CompanyPackageImportPlan {
+  const { packageData, source, suggestedSlug, missingSecretRefs } = input;
+  const items: CompanyPackageImportPlan['items'] = [];
+  const originalSlug = normalizeSlugCandidate(packageData.company.slug);
+  const companyAction = suggestedSlug === originalSlug ? 'create' : 'rename';
+
+  items.push({
+    id: 'company',
+    section: 'company',
+    action: companyAction,
+    label: companyAction === 'rename' ? 'Create renamed workspace' : 'Create workspace',
+    detail:
+      companyAction === 'rename'
+        ? `Workspace slug "${packageData.company.slug}" is taken locally, so dry-run will create "${suggestedSlug}".`
+        : `Workspace "${packageData.company.name}" will be created with slug "${suggestedSlug}".`,
+    count: 1,
+  });
+
+  const employees = packageData.employees?.length ?? 0;
+  items.push({
+    id: 'employees',
+    section: 'employees',
+    action: employees > 0 ? 'create' : 'skip',
+    label: employees > 0 ? 'Create employees' : 'Skip employees',
+    detail:
+      employees > 0
+        ? `${formatCount(employees, 'employee')} will be recreated with new local ids.`
+        : 'No employee section is present in this package.',
+    count: employees,
+  });
+
+  const orgEdges = packageData.orgEdges?.length ?? 0;
+  items.push({
+    id: 'org',
+    section: 'org',
+    action: orgEdges > 0 ? 'create' : 'skip',
+    label: orgEdges > 0 ? 'Create org chart edges' : 'Skip org chart',
+    detail:
+      orgEdges > 0
+        ? `${formatCount(orgEdges, 'reporting edge')} will be remapped after employee ids are created.`
+        : 'No org chart edges are present in this package.',
+    count: orgEdges,
+  });
+
+  const runtimeProfiles = packageData.autonomy?.runtimeProfiles?.length ?? 0;
+  items.push({
+    id: 'runtime-profiles',
+    section: 'autonomy',
+    action: runtimeProfiles > 0 ? 'create' : 'skip',
+    label: runtimeProfiles > 0 ? 'Create runtime profiles' : 'Skip runtime profiles',
+    detail:
+      runtimeProfiles > 0
+        ? `${formatCount(runtimeProfiles, 'runtime profile')} will be imported and revalidated on this host.`
+        : 'No runtime profiles are present in this package.',
+    count: runtimeProfiles,
+  });
+
+  const runtimeBindings = (packageData.autonomy?.runtimeProfiles ?? []).reduce(
+    (total, profile) => total + profile.boundEmployeeIds.length,
+    0,
+  );
+  if (runtimeProfiles > 0) {
+    items.push({
+      id: 'runtime-bindings',
+      section: 'runtime-bindings',
+      action: runtimeBindings > 0 ? 'create' : 'skip',
+      label: runtimeBindings > 0 ? 'Create runtime bindings' : 'Skip runtime bindings',
+      detail:
+        runtimeBindings > 0
+          ? `${formatCount(runtimeBindings, 'employee binding')} will be remapped onto imported employee ids.`
+          : 'Runtime profiles have no employee bindings to remap.',
+      count: runtimeBindings,
+    });
+  }
+
+  const routines = packageData.autonomy?.routines?.length ?? 0;
+  items.push({
+    id: 'routines',
+    section: 'autonomy',
+    action: routines > 0 ? 'create' : 'skip',
+    label: routines > 0 ? 'Create routines' : 'Skip routines',
+    detail:
+      routines > 0
+        ? `${formatCount(routines, 'routine')} will be recreated with volatile run state reset.`
+        : 'No routines are present in this package.',
+    count: routines,
+  });
+
+  const budgetPolicies = packageData.autonomy?.budgetPolicies?.length ?? 0;
+  items.push({
+    id: 'budget-policies',
+    section: 'budget-policies',
+    action: budgetPolicies > 0 ? 'create' : 'skip',
+    label: budgetPolicies > 0 ? 'Create budget policies' : 'Skip budget policies',
+    detail:
+      budgetPolicies > 0
+        ? `${formatCount(budgetPolicies, 'budget policy', 'budget policies')} will be remapped to the imported company, employee, runtime, or routine ids.`
+        : 'No budget policies are present in this package.',
+    count: budgetPolicies,
+  });
+
+  const extensions = packageData.extensions?.extensions?.length ?? 0;
+  const globalExtensions = (packageData.extensions?.extensions ?? []).filter(
+    (extension) => extension.companyId === null,
+  ).length;
+  items.push({
+    id: 'extensions',
+    section: 'extensions',
+    action: extensions - globalExtensions > 0 ? 'create' : 'skip',
+    label: extensions - globalExtensions > 0 ? 'Create extensions' : 'Skip extensions',
+    detail:
+      extensions - globalExtensions > 0
+        ? `${formatCount(extensions - globalExtensions, 'workspace extension')} will be recreated. ${globalExtensions} global/template extension row(s) will be skipped.`
+        : 'No workspace-scoped extensions are present in this package.',
+    count: extensions - globalExtensions,
+  });
+
+  const goals = packageData.goals?.length ?? 0;
+  const projects = packageData.projects?.length ?? 0;
+  const tickets = packageData.tickets?.length ?? 0;
+  const liveStateCount = goals + projects + tickets;
+  items.push({
+    id: 'work-state',
+    section: 'projects',
+    action: liveStateCount > 0 ? 'create' : 'skip',
+    label: liveStateCount > 0 ? 'Create work state' : 'Skip live work state',
+    detail:
+      liveStateCount > 0
+        ? `${formatCount(goals, 'goal')}, ${formatCount(projects, 'project')}, and ${formatCount(tickets, 'ticket')} will be recreated with remapped ids.`
+        : 'Template packages intentionally omit live goals, projects, and tickets.',
+    count: liveStateCount,
+  });
+
+  const starterAssets = packageData.starterAssets?.length ?? 0;
+  if (starterAssets > 0) {
+    items.push({
+      id: 'starter-assets',
+      section: 'starter-assets',
+      action: 'skip',
+      label: 'Skip starter asset materialization',
+      detail: `${formatCount(starterAssets, 'starter asset')} will stay as package metadata until file materialization lands.`,
+      count: starterAssets,
+    });
+  }
+
+  if (missingSecretRefs.length > 0) {
+    const bindable = missingSecretRefs.filter((secret) => secret.bindable).length;
+    const manual = missingSecretRefs.length - bindable;
+    items.push({
+      id: 'secret-bindings',
+      section: 'secret-bindings',
+      action: 'replace',
+      label: 'Replace missing local secrets',
+      detail: `${formatCount(bindable, 'bindable secret')} can be written to the OS keychain during install or import. ${formatCount(manual, 'redacted field')} still require manual configuration.`,
+      count: missingSecretRefs.length,
+      blocking: false,
+    });
+  }
+
+  if (packageData.manifest.mode === 'template') {
+    items.push({
+      id: 'template-library',
+      section: 'template-library',
+      action: 'create',
+      label: 'Install template card',
+      detail: 'Template mode can be installed into the local library and reused from the workspace create flow.',
+      count: 1,
+    });
+  }
+
+  return {
+    source,
+    items,
+    totals: planTotals(items),
+    canImport: true,
+    canInstallTemplate: packageData.manifest.mode === 'template',
+  };
+}
+
 async function readPackageFromDisk(packagePath: string): Promise<CompanyPackage> {
   let raw: string;
   try {
@@ -932,21 +1328,55 @@ async function readPackageFromDisk(packagePath: string): Promise<CompanyPackage>
     );
   }
 
-  let parsed: unknown;
+  return parsePackageJson(raw, packagePath);
+}
+
+async function readPackageFromSource(
+  input: { packagePath?: string; packageRef?: string },
+  deps: Pick<CompanyPortabilityServiceDeps, 'fetch'>,
+  operation: string,
+): Promise<ReadPackageResult> {
+  const packageRef = packageRefFromInput(input, operation);
+  const source = resolvePackageSource(packageRef);
+
+  if (source.kind === 'local-path') {
+    const packagePath = source.packagePath ?? source.resolvedRef;
+    return {
+      packageData: await readPackageFromDisk(packagePath),
+      source,
+    };
+  }
+
+  const fetchImpl = deps.fetch ?? globalThis.fetch;
+  if (typeof fetchImpl !== 'function') {
+    throw new Error('[portability] GitHub package import requires fetch support');
+  }
+
+  let response: PackageFetchResponse;
   try {
-    parsed = JSON.parse(raw);
+    response = await fetchImpl(source.url ?? source.resolvedRef, {
+      headers: {
+        Accept: 'application/json, text/plain;q=0.9, */*;q=0.1',
+      },
+    });
   } catch (error) {
     throw readPackageError(
-      packagePath,
-      `invalid JSON (${error instanceof Error ? error.message : String(error)})`,
+      source.resolvedRef,
+      `failed to fetch GitHub package (${error instanceof Error ? error.message : String(error)})`,
     );
   }
 
-  const validation = validateCompanyPackage(parsed);
-  if (!validation.ok) {
-    throw readPackageError(packagePath, `invalid Team-X package (${validation.error})`);
+  if (!response.ok) {
+    throw readPackageError(
+      source.resolvedRef,
+      `GitHub package fetch returned ${response.status} ${response.statusText}`,
+    );
   }
-  return validation.value;
+
+  return {
+    packageData: parsePackageJson(await response.text(), source.resolvedRef),
+    source,
+  };
 }
 
 async function listTemplateSummariesFromDisk(
@@ -1004,22 +1434,32 @@ function assertTemplatePackage(packageData: CompanyPackage): void {
 function buildImportPreview(
   packageData: CompanyPackage,
   deps: Pick<CompanyPortabilityServiceDeps, 'appVersion' | 'companiesRepo'>,
+  source: CompanyPackageSourceRef,
 ): CompanyImportPreview {
   const suggestedSlug = suggestAvailableSlug(
     deps.companiesRepo,
     packageData.company.slug,
     packageData.manifest.mode,
   );
-  const missingSecrets = collectMissingSecrets(packageData);
+  const missingSecretRefs = collectMissingSecretRefs(packageData);
+  const missingSecrets = missingSecretRefs.map((entry) => entry.path);
   return {
     manifest: packageData.manifest,
     warnings: createImportWarnings(packageData, deps, suggestedSlug),
     missingSecrets,
+    missingSecretRefs,
     suggestedCompanyName: packageData.company.name,
     suggestedSlug,
     runtimeProfileCount: packageData.autonomy?.runtimeProfiles?.length ?? 0,
     runtimeProfileKinds: runtimeProfileKinds(packageData),
     runtimeTemplateNotes: buildRuntimeTemplateNotes(packageData, missingSecrets),
+    plan: buildImportPlan({
+      packageData,
+      source,
+      suggestedSlug,
+      missingSecretRefs,
+    }),
+    source,
   };
 }
 
@@ -1225,38 +1665,52 @@ export function createCompanyPortabilityService(deps: CompanyPortabilityServiceD
       return listTemplateSummariesFromDisk(deps.exportRootDir);
     },
 
-    async installTemplate(input: { packagePath: string }): Promise<CompanyTemplateSummary> {
-      const packageData = await readPackageFromDisk(input.packagePath);
+    async installTemplate(input: {
+      packagePath?: string;
+      packageRef?: string;
+    }): Promise<CompanyTemplateSummary> {
+      const { packageData, source } = await readPackageFromSource(
+        input,
+        deps,
+        'installTemplate',
+      );
       assertTemplatePackage(packageData);
 
       const libraryDir = templateLibraryDir(deps.exportRootDir);
       await mkdir(libraryDir, { recursive: true });
 
-      const sourcePath = resolve(input.packagePath);
       const destinationPath = await uniquePackagePath(
         libraryDir,
         exportFileName(packageData.company.slug, 'template', now()),
       );
 
-      if (sourcePath !== resolve(destinationPath)) {
-        await copyFile(sourcePath, destinationPath);
+      if (source.kind === 'local-path') {
+        const sourcePath = resolve(source.packagePath ?? source.resolvedRef);
+        if (sourcePath !== resolve(destinationPath)) {
+          await copyFile(sourcePath, destinationPath);
+        }
+      } else {
+        await writeFile(destinationPath, JSON.stringify(packageData, null, 2), 'utf8');
       }
 
       return buildTemplateSummary(destinationPath, packageData);
     },
 
-    async previewImport(input: { packagePath: string }): Promise<CompanyImportPreview> {
-      const packageData = await readPackageFromDisk(input.packagePath);
+    async previewImport(input: {
+      packagePath?: string;
+      packageRef?: string;
+    }): Promise<CompanyImportPreview> {
+      const { packageData, source } = await readPackageFromSource(input, deps, 'previewImport');
       assertImportablePackage(packageData);
-      return buildImportPreview(packageData, deps);
+      return buildImportPreview(packageData, deps, source);
     },
 
     async importAsNewCompany(
       input: ImportCompanyPackageInput,
     ): Promise<ImportCompanyPackageResult> {
-      const packageData = await readPackageFromDisk(input.packagePath);
+      const { packageData, source } = await readPackageFromSource(input, deps, 'importAsNewCompany');
       assertImportablePackage(packageData);
-      const preview = buildImportPreview(packageData, deps);
+      const preview = buildImportPreview(packageData, deps, source);
 
       const name =
         typeof input.name === 'string' && input.name.trim().length > 0
