@@ -560,9 +560,9 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
         },
       });
 
-      const activeRoster =
-        employeesRepo
-          ?.listVisibleByCompany(input.companyId)
+      if (employeesRepo) {
+        const activeRoster = employeesRepo
+          .listVisibleByCompany(input.companyId)
           .filter(
             (employee) =>
               employee.companyId === input.companyId &&
@@ -570,19 +570,20 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
               employee.status !== 'archived' &&
               employee.status !== 'fired',
           )
-          .sort((a, b) => a.name.localeCompare(b.name)) ?? [];
-      pushBlock(blocks, countTokens, {
-        id: `roster:${company.id}`,
-        kind: 'company',
-        priority: 'critical',
-        title: 'Verified Active Roster',
-        body: formatRosterBlock(activeRoster),
-        sourceRefId: company.id,
-        sourceLabel: 'active-roster',
-        metadata: {
-          count: activeRoster.length,
-        },
-      });
+          .sort((a, b) => a.name.localeCompare(b.name));
+        pushBlock(blocks, countTokens, {
+          id: `roster:${company.id}`,
+          kind: 'company',
+          priority: 'critical',
+          title: 'Verified Active Roster',
+          body: formatRosterBlock(activeRoster),
+          sourceRefId: company.id,
+          sourceLabel: 'active-roster',
+          metadata: {
+            count: activeRoster.length,
+          },
+        });
+      }
 
       const ticket = thread.ticketId
         ? ticketsRepo.getById(thread.ticketId)
