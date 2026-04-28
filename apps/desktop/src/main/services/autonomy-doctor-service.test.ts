@@ -92,7 +92,7 @@ describe('autonomy doctor service', () => {
             manifest: {
               version: '1',
               createdAt: new Date(NOW - 1_000).toISOString(),
-              appVersion: '1.2.2',
+              appVersion: '2.0.0',
               companyCount: 1,
               fileCount: 0,
               totalSizeBytes: 100,

@@ -39,12 +39,16 @@ describe('Extensions & Authority settings shell', () => {
       'export function useInstalledExtensions(companyId: string | null)',
     );
     expect(extensionsHooksSrc).toContain("queryKey: ['extensions', companyId]");
-    expect(extensionsHooksSrc).toContain('ipc.extensions.list(companyId!)');
+    expect(extensionsHooksSrc).toContain(
+      "ipc.extensions.list(requireString(companyId, 'companyId'))",
+    );
     expect(extensionsHooksSrc).toContain(
       'export function useSkillAssignments(companyId: string | null)',
     );
     expect(extensionsHooksSrc).toContain("queryKey: ['skill-assignments', companyId]");
-    expect(extensionsHooksSrc).toContain('ipc.extensions.listSkillAssignments(companyId!)');
+    expect(extensionsHooksSrc).toContain(
+      "ipc.extensions.listSkillAssignments(requireString(companyId, 'companyId'))",
+    );
     expect(extensionsHooksSrc).toContain(
       'export function useInstallLocalSkill(companyId: string | null)',
     );
@@ -85,9 +89,9 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsHooksSrc).toContain(
       'export function useEffectiveAuthority(companyId: string | null, employeeId: string | null)',
     );
-    expect(extensionsHooksSrc).toContain(
-      'ipc.authority.getEffective({ companyId: companyId!, employeeId: employeeId! })',
-    );
+    expect(extensionsHooksSrc).toContain('ipc.authority.getEffective({');
+    expect(extensionsHooksSrc).toContain("companyId: requireString(companyId, 'companyId')");
+    expect(extensionsHooksSrc).toContain("employeeId: requireString(employeeId, 'employeeId')");
     expect(extensionsHooksSrc).toContain(
       'export function useAddMcpServer(companyId: string | null)',
     );
@@ -122,9 +126,9 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('EXTENSIONS_AUTONOMY_MODES.map');
     expect(extensionsSectionSrc).toContain('Effective preview');
     expect(extensionsSectionSrc).toContain('Authority preview employee');
-    expect(extensionsSectionSrc).toContain(
-      'Path grants are Windows-safe, case-insensitive, and directory-prefix matched.',
-    );
+    expect(extensionsSectionSrc).toContain('Path grants are Windows-safe');
+    expect(extensionsSectionSrc).toContain('case-insensitive, and');
+    expect(extensionsSectionSrc).toContain('directory-prefix matched.');
     expect(extensionsSectionSrc).toContain("useAuthorityRequests(companyId, 'pending')");
     expect(extensionsSectionSrc).toContain('useReviewAuthorityRequest(companyId)');
     expect(extensionsSectionSrc).toContain('Approve');

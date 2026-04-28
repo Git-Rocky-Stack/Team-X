@@ -144,7 +144,7 @@ describe('company package validation', () => {
     mode: 'workspace-export',
     workspaceOriginId: 'workspace-origin-1',
     companyOriginId: 'company-origin-1',
-    sourceAppVersion: '1.2.1',
+    sourceAppVersion: '2.0.0',
     exportedAt: '2026-04-23T12:00:00.000Z',
     exportedByOperatorId: 'rocky',
     sharingMode: 'local',

@@ -342,7 +342,7 @@ describe('audit-event-chip: runtime audit normalization events', () => {
           message: 'ticket is already checked out',
         }),
       ),
-    ).toBe('ticket-a · owned by employee- · ticket is already checked out');
+    ).toBe('ticket-a · owned by employee · ticket is already checked out');
 
     expect(
       buildRowSummary(

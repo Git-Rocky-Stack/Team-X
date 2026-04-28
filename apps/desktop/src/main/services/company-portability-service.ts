@@ -797,9 +797,14 @@ function githubSourceRef(input: string, owner: string, repo: string, ref: string
 }
 
 function resolveGithubUrl(input: string): CompanyPackageSourceRef | null {
+  const trimmed = input.trim();
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+    return null;
+  }
+
   let url: URL;
   try {
-    url = new URL(input);
+    url = new URL(trimmed);
   } catch {
     return null;
   }

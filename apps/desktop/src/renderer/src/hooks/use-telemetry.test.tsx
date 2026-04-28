@@ -23,7 +23,7 @@ describe('use-telemetry kind filter contracts', () => {
   });
 
   it('includes telemetry kind in every aggregate query key', () => {
-    expect(hooksSrc.match(/req\?\.kind \?\? 'all'/g) ?? []).toHaveLength(4);
+    expect(hooksSrc.match(/req\?\.kind \?\? 'all'/g) ?? []).toHaveLength(5);
     expect(hooksSrc).toMatch(
       /queryKey:\s*\['telemetry',\s*'companyStats',\s*req\?\.companyId,\s*req\?\.kind \?\? 'all'\]/,
     );
@@ -32,6 +32,9 @@ describe('use-telemetry kind filter contracts', () => {
     );
     expect(hooksSrc).toMatch(
       /queryKey:\s*\['telemetry',\s*'employeeStats',\s*req\?\.companyId,\s*req\?\.kind \?\? 'all'\]/,
+    );
+    expect(hooksSrc).toMatch(
+      /queryKey:\s*\['telemetry',\s*'recentRuns',\s*req\?\.companyId,\s*req\?\.limit \?\? 6,\s*req\?\.kind \?\? 'all'\]/,
     );
     expect(hooksSrc).toMatch(
       /queryKey:\s*\[\s*'telemetry',\s*'costBreakdown',\s*req\?\.companyId,\s*req\?\.fromMs,\s*req\?\.toMs,\s*req\?\.kind \?\? 'all',?\s*\]/,

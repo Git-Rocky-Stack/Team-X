@@ -89,7 +89,7 @@ describe('company portability IPC handlers', () => {
         mode: 'workspace-export',
         workspaceOriginId: 'workspace-origin-1',
         companyOriginId: 'company-origin-1',
-        sourceAppVersion: '1.2.1',
+        sourceAppVersion: '2.0.0',
         exportedAt: '2026-04-23T18:30:00.000Z',
         exportedByOperatorId: 'rocky',
         sharingMode: 'local',
@@ -161,7 +161,7 @@ describe('company portability IPC handlers', () => {
         mode: 'workspace-export',
         workspaceOriginId: 'workspace-origin-1',
         companyOriginId: 'company-origin-1',
-        sourceAppVersion: '1.2.1',
+        sourceAppVersion: '2.0.0',
         exportedAt: '2026-04-23T18:30:00.000Z',
         exportedByOperatorId: 'rocky',
         sharingMode: 'local',
@@ -207,7 +207,7 @@ describe('company portability IPC handlers', () => {
         mode: 'workspace-export',
         workspaceOriginId: 'workspace-origin-1',
         companyOriginId: 'company-origin-1',
-        sourceAppVersion: '1.2.1',
+        sourceAppVersion: '2.0.0',
         exportedAt: '2026-04-23T18:30:00.000Z',
         exportedByOperatorId: 'rocky',
         sharingMode: 'local',
@@ -287,7 +287,7 @@ describe('company portability IPC handlers', () => {
       handlers.companiesPreviewImportPackage({
         packagePath: '',
       }),
-    ).rejects.toThrow(/packagePath is required/i);
+    ).rejects.toThrow(/packagePath or packageRef is required/i);
 
     await expect(
       handlers.companiesImportPackage({
@@ -312,7 +312,7 @@ describe('company portability IPC handlers', () => {
             mode: 'template',
             workspaceOriginId: 'workspace-origin-1',
             companyOriginId: 'company-origin-1',
-            sourceAppVersion: '1.2.1',
+            sourceAppVersion: '2.0.0',
             exportedAt: '2026-04-23T18:30:00.000Z',
             exportedByOperatorId: 'rocky',
             sharingMode: 'local',
@@ -346,7 +346,7 @@ describe('company portability IPC handlers', () => {
           mode: 'template',
           workspaceOriginId: 'workspace-origin-fallback',
           companyOriginId: 'company-origin-fallback',
-          sourceAppVersion: '1.2.1',
+          sourceAppVersion: '2.0.0',
           exportedAt: '2026-04-23T18:30:00.000Z',
           exportedByOperatorId: 'rocky',
           sharingMode: 'local',

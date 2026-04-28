@@ -11,7 +11,7 @@
  *   2. Every workspace `package.json` carrying the Team-X release
  *      marker must carry the current release version. Pins the release
  *      marker so a wrong semver change (e.g. an accidental downgrade,
- *      partial bump, or premature 2.0.0 bump) lands with a failing CI
+ *      partial bump, or mistaken future bump) lands with a failing CI
  *      run.
  *
  * Per the M35 T3 (`audit-event-chip.test.tsx`) convention: pure
@@ -65,13 +65,13 @@ describe('top-bar release-marker freeze (M41 T6)', () => {
     expect(captured).toBe('Phase 6');
   });
 
-  it("pins all release package.json versions to '1.2.1'", () => {
+  it("pins all release package.json versions to '2.0.0'", () => {
     for (const packageJsonPath of RELEASE_PACKAGE_JSON_PATHS) {
       const raw = readFileSync(packageJsonPath, 'utf8');
       const parsed = JSON.parse(raw) as { version?: unknown };
 
       expect(typeof parsed.version, `${packageJsonPath} version must be a string`).toBe('string');
-      expect(parsed.version, `${packageJsonPath} version`).toBe('1.2.1');
+      expect(parsed.version, `${packageJsonPath} version`).toBe('2.0.0');
     }
   });
 });

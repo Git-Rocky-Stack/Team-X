@@ -443,7 +443,7 @@ function createService(overrides: Partial<CompanyPortabilityServiceDeps> = {}) {
     },
     ensureSystemForCompany,
     exportRootDir,
-    appVersion: '1.2.1',
+    appVersion: '2.0.0',
     now: () => new Date('2026-04-23T18:30:00.000Z'),
     ...overrides,
   });
@@ -731,7 +731,7 @@ describe('company-portability-service', () => {
       statusText: 'OK',
       text: async () => packageJson,
     }));
-    const remoteService = createService({ fetch });
+    const { service: remoteService } = createService({ fetch });
 
     const preview = await remoteService.previewImport({
       packageRef: 'rocky/team-x-templates/templates/alpha.teamx-package.json#release',

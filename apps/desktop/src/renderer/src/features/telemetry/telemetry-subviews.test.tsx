@@ -37,6 +37,6 @@ describe('telemetry subview kind filter requests', () => {
     expect(costSrc).toContain(
       'return { companyId, fromMs: now - days * DAY_MS, toMs: now, kind };',
     );
-    expect(costSrc).toContain('}, [companyId, kind, range, now]);');
+    expect(costSrc).toContain('}, [companyId, kind, now, range]);');
   });
 });
