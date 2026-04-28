@@ -312,6 +312,15 @@ function createService() {
           config: {
             command: 'C:/Tools/Codex/codex.exe',
             workingDirectory: 'C:/Projects/Alpha',
+            env: {
+              ANTHROPIC_API_KEY: {
+                type: 'secret_ref',
+                providerId: 'anthropic',
+                key: 'apiKey',
+                version: 'latest',
+              },
+              TEAM_X_MODE: 'autonomous',
+            },
             headers: {
               Authorization: 'Bearer top-secret',
             },
@@ -492,6 +501,15 @@ describe('company-portability-service', () => {
     expect(parsed.autonomy?.runtimeProfiles?.[0]?.config).toMatchObject({
       command: 'C:/Tools/Codex/codex.exe',
       workingDirectory: 'C:/Projects/Alpha',
+      env: {
+        ANTHROPIC_API_KEY: {
+          type: 'secret_ref',
+          providerId: 'anthropic',
+          key: 'apiKey',
+          version: 'latest',
+        },
+        TEAM_X_MODE: 'autonomous',
+      },
       headers: PORTABILITY_REDACTED_VALUE,
     });
     expect(parsed.extensions?.extensions?.[0]?.manifest).toMatchObject({
@@ -635,6 +653,7 @@ describe('company-portability-service', () => {
       expect.arrayContaining([
         'authorityGrants.grant-1.metadata.headers',
         'extensions.extension-1.manifest.apiKey',
+        'runtimeProfiles.runtime-1.config.env.ANTHROPIC_API_KEY',
         'runtimeProfiles.runtime-1.config.headers',
       ]),
     );

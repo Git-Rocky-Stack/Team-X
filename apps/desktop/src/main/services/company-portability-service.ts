@@ -571,7 +571,7 @@ function sanitizeRuntimeProfile(
   compatibility: Set<string>,
 ): RuntimeProfileSummary {
   const config = profile.config
-    ? (sanitizePortableValue(
+    ? (sanitizeRuntimeConfigValue(
         profile.config,
         `runtimeProfiles.${profile.id}.config`,
         redactions,
@@ -754,13 +754,21 @@ function suggestAvailableSlug(
   throw new Error('[portability] unable to derive an available company slug after 999 attempts');
 }
 
-function collectMissingSecrets(redactions: string[]): string[] {
+function collectMissingSecrets(packageData: CompanyPackage): string[] {
   const missing = new Set<string>();
-  for (const path of redactions) {
+  for (const path of packageData.manifest.redactions) {
     const parts = path.split('.');
     const lastKey = parts[parts.length - 1] ?? path;
     if (isSensitiveFieldKey(lastKey)) {
       missing.add(path);
+    }
+  }
+  for (const profile of packageData.autonomy?.runtimeProfiles ?? []) {
+    for (const entry of collectRuntimeSecretRefs(
+      profile.config,
+      `runtimeProfiles.${profile.id}.config`,
+    )) {
+      missing.add(entry.path);
     }
   }
   return Array.from(missing).sort();
@@ -941,7 +949,7 @@ function buildImportPreview(
   return {
     manifest: packageData.manifest,
     warnings: createImportWarnings(packageData, deps, suggestedSlug),
-    missingSecrets: collectMissingSecrets(packageData.manifest.redactions),
+    missingSecrets: collectMissingSecrets(packageData),
     suggestedCompanyName: packageData.company.name,
     suggestedSlug,
   };
