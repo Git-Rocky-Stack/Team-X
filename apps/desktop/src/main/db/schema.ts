@@ -23,6 +23,7 @@
  *   helper runs `PRAGMA foreign_keys = ON` (landing in Task 20).
  */
 
+import { sql } from 'drizzle-orm';
 import { blob, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /** One row per AI company the user has created (multi-company is Phase 2+). */
@@ -1047,6 +1048,9 @@ export const ticketCheckouts = sqliteTable(
     ),
     ticketStatusIdx: index('idx_ticket_checkouts_ticket_status').on(table.ticketId, table.status),
     expiresIdx: index('idx_ticket_checkouts_expires').on(table.expiresAt),
+    activeTicketUniqueIdx: uniqueIndex('ux_ticket_checkouts_active_ticket')
+      .on(table.ticketId)
+      .where(sql`${table.status} = 'active'`),
   }),
 );
 

@@ -44,6 +44,7 @@ import type { ProjectRow, UpdateProjectInput } from '../db/repos/projects.js';
 import type { CreateRoutineInput } from '../db/repos/routines.js';
 import type { CreateRuntimeProfileInput } from '../db/repos/runtime-profiles.js';
 import type { TicketRow } from '../db/repos/tickets.js';
+import { collectRuntimeSecretRefs, isRuntimeSecretRef } from './runtime-secret-refs.js';
 
 export const PORTABILITY_PACKAGE_VERSION = 1;
 export const PORTABILITY_REDACTED_VALUE = '__TEAMX_REDACTED__';
@@ -321,6 +322,49 @@ function sanitizePortableValue(value: unknown, path: string, redactions: Set<str
       continue;
     }
     next[key] = sanitizePortableValue(child, childPath, redactions);
+  }
+  return next;
+}
+
+function isPortableRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function sanitizeRuntimeConfigValue(
+  value: unknown,
+  path: string,
+  redactions: Set<string>,
+): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) =>
+      sanitizeRuntimeConfigValue(entry, `${path}[${index}]`, redactions),
+    );
+  }
+  if (isRuntimeSecretRef(value)) {
+    return value;
+  }
+  if (!isPortableRecord(value)) {
+    return value;
+  }
+
+  const next: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = path.length > 0 ? `${path}.${key}` : key;
+    const normalizedKey = normalizeSecretKey(key);
+    if (normalizedKey === 'env' && isPortableRecord(child)) {
+      next[key] = sanitizeRuntimeConfigValue(child, childPath, redactions);
+      continue;
+    }
+    if (isRuntimeSecretRef(child)) {
+      next[key] = child;
+      continue;
+    }
+    if (isSensitiveFieldKey(key)) {
+      redactions.add(childPath);
+      next[key] = PORTABILITY_REDACTED_VALUE;
+      continue;
+    }
+    next[key] = sanitizeRuntimeConfigValue(child, childPath, redactions);
   }
   return next;
 }
