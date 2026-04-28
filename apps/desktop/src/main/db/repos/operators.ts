@@ -1,7 +1,7 @@
 import type {
   OperatorAuthMode,
-  OperatorInviteStatus,
   OperatorInviteSourceKind,
+  OperatorInviteStatus,
   OperatorMembershipRole,
   OperatorMembershipSourceKind,
   SharedOperatorAuthMode,

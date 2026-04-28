@@ -31,6 +31,7 @@
     "audit:claims:strict": "node scripts/check-claim-evidence.mjs --strict",
     "audit:claims:json": "node scripts/check-claim-evidence.mjs --json",
     "autonomy:doctor": "node scripts/autonomy-doctor.mjs",
+    "autonomy:benchmark": "pnpm -F @team-x/desktop autonomy:benchmark",
     "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules"
   },
   "devDependencies": {

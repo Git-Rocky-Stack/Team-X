@@ -24,6 +24,7 @@
     "dist:mac": "electron-vite build && electron-builder --mac --publish never",
     "dist:linux": "electron-vite build && electron-builder --linux --publish never",
     "dist:publish": "electron-vite build && electron-builder --publish always",
+    "autonomy:benchmark": "tsx scripts/autonomy-benchmark.ts",
     "postinstall": "electron-rebuild -f -w better-sqlite3,keytar"
   },
   "dependencies": {

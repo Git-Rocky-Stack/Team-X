@@ -3,12 +3,13 @@
  */
 
 import { eq, isNull } from 'drizzle-orm';
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
-import type { getDb } from '../client.js';
+import type { Schema } from '../client.js';
 import { mcpServers, toolCalls } from '../schema.js';
 
-type DB = ReturnType<typeof getDb>;
+type McpDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export interface McpServerRow {
   id: string;
@@ -39,7 +40,7 @@ export interface CreateToolCallInput {
   error: string | null;
 }
 
-export function createMcpServersRepo(db: DB) {
+export function createMcpServersRepo<TRunResult>(db: McpDb<TRunResult>) {
   return {
     create(input: CreateMcpServerInput): string {
       const id = nanoid();
@@ -116,7 +117,7 @@ export function createMcpServersRepo(db: DB) {
 
 export type McpServersRepo = ReturnType<typeof createMcpServersRepo>;
 
-export function createToolCallsRepo(db: DB) {
+export function createToolCallsRepo<TRunResult>(db: McpDb<TRunResult>) {
   return {
     create(input: CreateToolCallInput): string {
       const id = nanoid();
@@ -185,7 +186,7 @@ const DEFAULT_MCP_SERVERS: DefaultMcpServer[] = [
  * inserts only the missing well-known templates so upgrades can pick up
  * new built-ins without resetting the table.
  */
-export function seedDefaultMcpServers(db: DB): number {
+export function seedDefaultMcpServers<TRunResult>(db: McpDb<TRunResult>): number {
   const existingGlobal = new Set(
     db
       .select({ name: mcpServers.name })

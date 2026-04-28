@@ -51,14 +51,9 @@ export interface RuntimeAuditNormalizerDeps {
   logger?: Pick<Console, 'warn'>;
 }
 
-function runtimeToolStatus(
-  eventType: RuntimeAuditEventType,
-): 'success' | 'error' | 'denied' {
+function runtimeToolStatus(eventType: RuntimeAuditEventType): 'success' | 'error' | 'denied' {
   if (eventType === 'runtime.checkout.conflict') return 'denied';
-  if (
-    eventType === 'runtime.execution.failed' ||
-    eventType === 'runtime.session.stale'
-  ) {
+  if (eventType === 'runtime.execution.failed' || eventType === 'runtime.session.stale') {
     return 'error';
   }
   return 'success';
@@ -126,7 +121,7 @@ export function createRuntimeAuditNormalizer({
             input.type === 'runtime.execution.failed' ||
             input.type === 'runtime.checkout.conflict' ||
             input.type === 'runtime.session.stale'
-              ? input.message ?? input.type
+              ? (input.message ?? input.type)
               : null,
         });
       } catch (error) {

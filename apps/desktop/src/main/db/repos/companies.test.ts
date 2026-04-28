@@ -332,9 +332,7 @@ describe('companies repo', () => {
       expect(got?.cloudWorkspaceId).toBe('cloud-workspace-1');
       expect(got?.cloudTenantId).toBe('cloud-tenant-1');
       expect(got?.linkedDeviceId).toBe('device_123');
-      expect(got?.lastSyncedCursorJson).toBe(
-        '{"outboundCursor":"evt-10","inboundCursor":"cmd-4"}',
-      );
+      expect(got?.lastSyncedCursorJson).toBe('{"outboundCursor":"evt-10","inboundCursor":"cmd-4"}');
       expect(got?.lastSnapshotId).toBe('snapshot-2');
       expect(got?.lastSyncAt).toBe(123456789);
       expect(got?.lastSyncError).toBe('temporary outage');

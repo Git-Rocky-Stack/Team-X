@@ -217,7 +217,8 @@ export function EmployeeProfileDialog({
 
           {selectedRole ? (
             <p className="text-xs text-muted-foreground">
-              Selected role level: <span className="font-medium text-foreground">{selectedRole.level}</span>
+              Selected role level:{' '}
+              <span className="font-medium text-foreground">{selectedRole.level}</span>
             </p>
           ) : null}
 

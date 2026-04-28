@@ -1,9 +1,9 @@
 import type {
   CompanyCloudLinkStatus,
+  CompanySettings,
   CompanySharingModeReadiness,
   CompanySharingReadiness,
   CompanySharingReadinessSummary,
-  CompanySettings,
   OperatorAccessEntry,
   OperatorAuthMode,
   OperatorInvite,
@@ -146,8 +146,9 @@ function summarizeModeReadiness(input: {
 
   let readiness: CompanySharingReadiness = 'ready';
   if (
-    missingRequirements.some((requirement) =>
-      requirement.includes('origin metadata') || requirement.includes('owner membership'),
+    missingRequirements.some(
+      (requirement) =>
+        requirement.includes('origin metadata') || requirement.includes('owner membership'),
     )
   ) {
     readiness = 'blocked';
@@ -386,8 +387,7 @@ export function createOperatorAccessService({
         });
       } else {
         operatorsRepo.update(operatorId, {
-          displayName:
-            existingOperator?.displayName?.trim() || defaultOperatorDisplayName(invite),
+          displayName: existingOperator?.displayName?.trim() || defaultOperatorDisplayName(invite),
           email: normalizedEmail,
           authMode:
             normalizeOperatorAuthMode(existingOperator?.authMode, invite.authMode) === 'local'
@@ -431,11 +431,15 @@ export function createOperatorAccessService({
       const configuredMode = sharing?.mode ?? effectiveModeFromEntries(entries);
       const ownerCount = entries.filter((entry) => entry.membership.role === 'owner').length;
       const adminCount = entries.filter((entry) => entry.membership.role === 'admin').length;
-      const localOperatorCount = entries.filter((entry) => entry.operator.authMode === 'local').length;
+      const localOperatorCount = entries.filter(
+        (entry) => entry.operator.authMode === 'local',
+      ).length;
       const invitedOperatorCount = entries.filter(
         (entry) => entry.operator.authMode === 'invited',
       ).length;
-      const cloudOperatorCount = entries.filter((entry) => entry.operator.authMode === 'cloud').length;
+      const cloudOperatorCount = entries.filter(
+        (entry) => entry.operator.authMode === 'cloud',
+      ).length;
       const hasWorkspaceOrigin =
         typeof company.workspaceOriginId === 'string' && company.workspaceOriginId.length > 0;
       const hasCompanyOrigin =

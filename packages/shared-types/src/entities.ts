@@ -536,6 +536,83 @@ export type TicketCheckoutClaimResult =
   | { outcome: 'expired-reclaimed'; checkout: TicketCheckout; previousCheckout: TicketCheckout }
   | { outcome: 'conflict'; conflictingCheckout: TicketCheckout };
 
+export const AUTONOMY_BENCHMARK_SCENARIO_IDS = [
+  'single-ticket-claim-completion',
+  'race-for-one-ticket',
+  'stale-worker-recovery',
+  'budget-hard-stop-before-execution',
+  'budget-hard-stop-mid-run',
+  'missing-secret-failure',
+  'blocked-ticket-delegation',
+  'artifact-review-approval',
+  'import-template-run-first-routine',
+  'reboot-resume-existing-checkpoint',
+] as const;
+export type AutonomyBenchmarkScenarioId = (typeof AUTONOMY_BENCHMARK_SCENARIO_IDS)[number];
+
+export const AUTONOMY_BENCHMARK_MODES = ['control-plane-simulated'] as const;
+export type AutonomyBenchmarkMode = (typeof AUTONOMY_BENCHMARK_MODES)[number];
+
+export const AUTONOMY_BENCHMARK_STATUSES = ['passed', 'failed'] as const;
+export type AutonomyBenchmarkStatus = (typeof AUTONOMY_BENCHMARK_STATUSES)[number];
+
+export interface AutonomyBenchmarkMetrics {
+  successRate: number;
+  duplicateWorkRate: number;
+  staleRecoveryMs: number | null;
+  costUsd: string;
+  tokenCount: number;
+  latencyMs: number;
+  operatorInterventions: number;
+  artifactCompleteness: number;
+}
+
+export interface AutonomyBenchmarkEvidence {
+  eventTypes: string[];
+  sessionStatuses: RuntimeSessionStatus[];
+  checkoutStatuses: TicketCheckoutStatus[];
+  artifactCount: number;
+  toolCallCount: number;
+  notes: string[];
+}
+
+export interface AutonomyBenchmarkScenarioResult {
+  scenarioId: AutonomyBenchmarkScenarioId;
+  label: string;
+  runtimeKind: RuntimeProfileKind;
+  mode: AutonomyBenchmarkMode;
+  status: AutonomyBenchmarkStatus;
+  startedAt: number;
+  endedAt: number;
+  metrics: AutonomyBenchmarkMetrics;
+  evidence: AutonomyBenchmarkEvidence;
+  error: string | null;
+}
+
+export interface AutonomyBenchmarkSummary {
+  scenarioCount: number;
+  passedCount: number;
+  failedCount: number;
+  successRate: number;
+  duplicateWorkRate: number;
+  meanLatencyMs: number;
+  meanStaleRecoveryMs: number | null;
+  totalCostUsd: string;
+  totalTokenCount: number;
+  operatorInterventions: number;
+  artifactCompleteness: number;
+}
+
+export interface AutonomyBenchmarkReport {
+  id: string;
+  generatedAt: number;
+  mode: AutonomyBenchmarkMode;
+  runtimeKinds: RuntimeProfileKind[];
+  scenarioIds: AutonomyBenchmarkScenarioId[];
+  results: AutonomyBenchmarkScenarioResult[];
+  summary: AutonomyBenchmarkSummary;
+}
+
 export const AUTONOMY_DOCTOR_STATUSES = ['ok', 'warning', 'blocked'] as const;
 export type AutonomyDoctorStatus = (typeof AUTONOMY_DOCTOR_STATUSES)[number];
 

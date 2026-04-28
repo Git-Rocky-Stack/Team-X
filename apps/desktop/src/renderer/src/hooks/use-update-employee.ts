@@ -39,17 +39,17 @@ export function useUpdateEmployee(companyId: string) {
         if (patch.modelPref !== undefined) {
           const trimmed = patch.modelPref?.trim() ?? '';
           if (trimmed) next.modelPref = trimmed;
-          else delete next.modelPref;
+          else next.modelPref = undefined;
         }
         if (patch.providerPref !== undefined) {
           const trimmed = patch.providerPref?.trim() ?? '';
           if (trimmed) next.providerPref = trimmed;
-          else delete next.providerPref;
+          else next.providerPref = undefined;
         }
         if (patch.avatar !== undefined) {
           const trimmed = patch.avatar?.trim() ?? '';
           if (trimmed) next.avatar = trimmed;
-          else delete next.avatar;
+          else next.avatar = undefined;
         }
         return next;
       };

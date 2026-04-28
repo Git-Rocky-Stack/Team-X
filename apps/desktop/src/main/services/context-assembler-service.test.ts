@@ -311,7 +311,8 @@ describe('context assembler service', () => {
             companyId: 'company-1',
             goalId: 'goal-mrr',
             title: 'MRR Expansion Review',
-            description: 'Assess whether the monthly recurring revenue target is aggressive enough.',
+            description:
+              'Assess whether the monthly recurring revenue target is aggressive enough.',
             status: 'active',
             priority: 'high',
             leadId: 'iris',

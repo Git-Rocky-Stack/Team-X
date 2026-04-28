@@ -19,7 +19,8 @@ function invalidateCloudLink(qc: ReturnType<typeof useQueryClient>, companyId: s
 export function useLinkWorkspace(companyId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => autonomyClient.cloud.linkWorkspace({ companyId: requireString(companyId, 'companyId') }),
+    mutationFn: () =>
+      autonomyClient.cloud.linkWorkspace({ companyId: requireString(companyId, 'companyId') }),
     onSuccess: () => invalidateCloudLink(queryClient, companyId),
   });
 }

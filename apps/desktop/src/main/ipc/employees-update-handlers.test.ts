@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
-import type { CreateEmployeeInput, EmployeeRow, PromoteEmployeeInput, UpdateEmployeeProfileInput } from '../db/repos/employees.js';
+import type {
+  CreateEmployeeInput,
+  EmployeeRow,
+  PromoteEmployeeInput,
+  UpdateEmployeeProfileInput,
+} from '../db/repos/employees.js';
 
 import type { IpcCompaniesRepo, IpcEmployeesRepo, IpcEventBus } from './handlers.js';
 import { createIpcHandlers } from './handlers.js';
@@ -50,7 +55,8 @@ class FakeEmployeesRepo implements IpcEmployeesRepo {
     if (!row) return;
     if (input.name !== undefined) (row as { name: string }).name = input.name;
     if (input.title !== undefined) (row as { title: string }).title = input.title;
-    if (input.modelPref !== undefined) (row as { modelPref: string | null }).modelPref = input.modelPref;
+    if (input.modelPref !== undefined)
+      (row as { modelPref: string | null }).modelPref = input.modelPref;
     if (input.providerPref !== undefined) {
       (row as { providerPref: string | null }).providerPref = input.providerPref;
     }
@@ -254,9 +260,9 @@ describe('IPC: employees.update', () => {
     const fx = buildFixture();
     fx.employees.put(makeEmployeeRow({ id: 'sys-1', isSystem: true, level: 'system' }));
 
-    await expect(fx.handlers.employeesUpdate({ employeeId: 'sys-1', name: 'System' })).rejects.toThrow(
-      /framework-internal/,
-    );
+    await expect(
+      fx.handlers.employeesUpdate({ employeeId: 'sys-1', name: 'System' }),
+    ).rejects.toThrow(/framework-internal/);
     expect(fx.employees.updateProfileCalls).toEqual([]);
   });
 
@@ -264,9 +270,9 @@ describe('IPC: employees.update', () => {
     const fx = buildFixture({ companyStatus: 'archived' });
     fx.employees.put(makeEmployeeRow({ id: 'cto-1' }));
 
-    await expect(fx.handlers.employeesUpdate({ employeeId: 'cto-1', name: 'Maya Chen' })).rejects.toThrow(
-      /is archived; reactivate before mutating org/,
-    );
+    await expect(
+      fx.handlers.employeesUpdate({ employeeId: 'cto-1', name: 'Maya Chen' }),
+    ).rejects.toThrow(/is archived; reactivate before mutating org/);
     expect(fx.employees.updateProfileCalls).toEqual([]);
   });
 });

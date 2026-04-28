@@ -137,9 +137,7 @@ function actionTone(action: CompanyPackageImportPlanAction): string {
   }
 }
 
-function fallbackMissingSecretRefs(
-  missingSecrets: string[],
-): CompanyPackageMissingSecretRef[] {
+function fallbackMissingSecretRefs(missingSecrets: string[]): CompanyPackageMissingSecretRef[] {
   return missingSecrets.map((path) => ({
     id: path,
     path,
@@ -248,6 +246,7 @@ export function PortabilitySection() {
     setSecretDrafts({});
   }, [trimmedPackageRef]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Secret bindings are scoped to the selected package preview.
   useEffect(() => {
     setSecretDrafts({});
   }, [packagePreview?.manifest.packageId]);
@@ -740,8 +739,8 @@ export function PortabilitySection() {
 
           {trimmedPackageRef.length === 0 ? (
             <p className="mt-3 text-[11px] text-muted-foreground">
-              Paste a `.teamx-package.json` path, GitHub blob/raw URL, `gh:owner/repo/path#ref`,
-              or `owner/repo@ref:path` shorthand to inspect the manifest before any action runs.
+              Paste a `.teamx-package.json` path, GitHub blob/raw URL, `gh:owner/repo/path#ref`, or
+              `owner/repo@ref:path` shorthand to inspect the manifest before any action runs.
             </p>
           ) : packagePreviewQuery.isLoading ? (
             <div className="mt-3 space-y-2" aria-busy="true">
@@ -836,9 +835,7 @@ export function PortabilitySection() {
                           className="rounded-lg border border-white/10 bg-background/70 px-3 py-2"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <div className="text-xs font-medium text-foreground">
-                              {item.label}
-                            </div>
+                            <div className="text-xs font-medium text-foreground">{item.label}</div>
                             <span
                               className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${actionTone(item.action)}`}
                             >

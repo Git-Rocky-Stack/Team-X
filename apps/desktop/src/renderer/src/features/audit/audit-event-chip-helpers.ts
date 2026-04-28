@@ -364,15 +364,18 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
       break;
     }
     case 'company.linkStarted': {
-      if (typeof payload.cloudWorkspaceId === 'string') parts.push(payload.cloudWorkspaceId.slice(0, 12));
+      if (typeof payload.cloudWorkspaceId === 'string')
+        parts.push(payload.cloudWorkspaceId.slice(0, 12));
       if (typeof payload.cloudTenantId === 'string') parts.push(payload.cloudTenantId.slice(0, 12));
       break;
     }
     case 'company.linked':
     case 'company.reconnected': {
-      if (typeof payload.cloudWorkspaceId === 'string') parts.push(payload.cloudWorkspaceId.slice(0, 12));
+      if (typeof payload.cloudWorkspaceId === 'string')
+        parts.push(payload.cloudWorkspaceId.slice(0, 12));
       if (typeof payload.cloudTenantId === 'string') parts.push(payload.cloudTenantId.slice(0, 12));
-      if (typeof payload.linkedDeviceId === 'string') parts.push(payload.linkedDeviceId.slice(0, 10));
+      if (typeof payload.linkedDeviceId === 'string')
+        parts.push(payload.linkedDeviceId.slice(0, 10));
       break;
     }
     case 'company.linkFailed': {

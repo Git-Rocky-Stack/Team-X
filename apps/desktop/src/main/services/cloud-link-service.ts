@@ -39,8 +39,7 @@ function parseCursorState(raw: string | null | undefined): CloudSyncCursorState 
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
     const record = parsed as Record<string, unknown>;
-    const outboundCursor =
-      typeof record.outboundCursor === 'string' ? record.outboundCursor : null;
+    const outboundCursor = typeof record.outboundCursor === 'string' ? record.outboundCursor : null;
     const inboundCursor = typeof record.inboundCursor === 'string' ? record.inboundCursor : null;
     if (outboundCursor === null && inboundCursor === null) return null;
     return { outboundCursor, inboundCursor };

@@ -10,9 +10,9 @@ import {
   isCloudWorkspaceLinkState,
   normalizeLevel,
   validateCloudInboundActionEnvelope,
+  validateCloudSyncCursorState,
   validateCompanyPackage,
   validateCompanyPackageManifest,
-  validateCloudSyncCursorState,
 } from './entities.js';
 
 /**

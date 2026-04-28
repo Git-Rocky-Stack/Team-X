@@ -304,7 +304,11 @@ function isOpenProject(project: ProjectRow): boolean {
   return !['archived', 'completed'].includes(project.status.toLowerCase());
 }
 
-function rankProjectForContext(project: ProjectRow, goal: GoalRow | null, terms: readonly string[]) {
+function rankProjectForContext(
+  project: ProjectRow,
+  goal: GoalRow | null,
+  terms: readonly string[],
+) {
   const searchable = [
     project.title,
     project.description,
@@ -558,13 +562,14 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
         ? companyProjects
             .map((project) => ({
               project,
-              score: rankProjectForContext(project, getGoal(project.goalId), recentProjectQueryTerms),
+              score: rankProjectForContext(
+                project,
+                getGoal(project.goalId),
+                recentProjectQueryTerms,
+              ),
             }))
             .filter(({ score, project }) => score > 0 || isOpenProject(project))
-            .sort(
-              (a, b) =>
-                b.score - a.score || sortProjectsForContext(a.project, b.project),
-            )
+            .sort((a, b) => b.score - a.score || sortProjectsForContext(a.project, b.project))
             .map(({ project }) => project)
             .slice(0, 4)
         : [];
@@ -621,7 +626,9 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
               .filter(({ score, goal }) => score > 0 || goal.status === 'active')
               .sort(
                 (a, b) =>
-                  b.score - a.score || b.goal.updatedAt - a.goal.updatedAt || b.goal.createdAt - a.goal.createdAt,
+                  b.score - a.score ||
+                  b.goal.updatedAt - a.goal.updatedAt ||
+                  b.goal.createdAt - a.goal.createdAt,
               )
               .map(({ goal }) => goal)
               .slice(0, 3)

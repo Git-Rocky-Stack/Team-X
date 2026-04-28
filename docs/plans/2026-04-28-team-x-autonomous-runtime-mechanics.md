@@ -146,6 +146,25 @@ Exit criteria:
 - successful runtime output is captured as an artifact with session/run/ticket provenance;
 - Mission Control can project stale runtime state from the operations snapshot.
 
+## P2 Continuation
+
+### P2.1 Autonomy Benchmark Harness
+
+Status: shipped as the first P2 strategic differentiator slice.
+
+- Added shared benchmark report types for scenario ids, runtime targets, metrics, evidence, results, and summaries.
+- Added a deterministic `control-plane-simulated` benchmark service that runs all ten Paperclip audit scenarios across Team-X internal, Bash, HTTP, Codex, and Claude Code runtime kinds.
+- Added an in-memory Team-X benchmark context that exercises real runtime sessions, heartbeats, ticket checkouts, stale recovery, normalized runtime audit events, tool-call mirrors, and runtime output artifacts.
+- Added `pnpm autonomy:benchmark` with runtime/scenario filters, JSON output, summary mode, and optional report file export.
+- Documented the workflow in `docs/runtime/autonomy-benchmark-harness.md`.
+
+Exit criteria:
+
+- operators can produce a repeatable autonomy benchmark report from the repo CLI;
+- the benchmark covers every P2 scenario named in the Paperclip audit;
+- duplicate-work prevention, stale recovery, budget blocks, missing secrets, artifacts, and reboot/resume behavior are expressed as measurable scenario results;
+- the first report mode is honest about simulated runtime execution while proving the durable Team-X control-plane contracts.
+
 ## Test Plan
 
 - Runtime session repo/service tests for create, heartbeat, status changes, stale marking, and company scoping.

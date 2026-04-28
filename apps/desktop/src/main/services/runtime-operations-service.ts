@@ -54,7 +54,9 @@ export function createRuntimeOperationsService({
       return {
         companyId,
         generatedAt,
-        sessions: runtimeSessionService.list(companyId).filter((session) => session.endedAt === null),
+        sessions: runtimeSessionService
+          .list(companyId)
+          .filter((session) => session.endedAt === null),
         activeCheckouts: ticketCheckoutsRepo
           .listActiveByCompany(companyId)
           .map(rowToTicketCheckout),
