@@ -75,6 +75,11 @@ export type ProviderStreamFn = (args: {
   tools?: Record<string, unknown>;
   maxSteps?: number;
   signal?: AbortSignal;
+  runId?: string | null;
+  threadId?: string | null;
+  companyId?: string | null;
+  employeeId?: string | null;
+  currentTicketId?: string | null;
 }) => AsyncGenerator<ProviderStreamEvent>;
 
 export interface StreamAgentArgs {
@@ -84,6 +89,11 @@ export interface StreamAgentArgs {
   tools?: Record<string, unknown>;
   maxSteps?: number;
   signal?: AbortSignal;
+  runId?: string | null;
+  threadId?: string | null;
+  companyId?: string | null;
+  employeeId?: string | null;
+  currentTicketId?: string | null;
 }
 
 /**
@@ -97,6 +107,11 @@ export async function* streamAgent(args: StreamAgentArgs): AsyncGenerator<Stream
     tools: args.tools,
     maxSteps: args.maxSteps,
     signal: args.signal,
+    runId: args.runId ?? null,
+    threadId: args.threadId ?? null,
+    companyId: args.companyId ?? null,
+    employeeId: args.employeeId ?? null,
+    currentTicketId: args.currentTicketId ?? null,
   })) {
     if (evt.toolCall) {
       yield {

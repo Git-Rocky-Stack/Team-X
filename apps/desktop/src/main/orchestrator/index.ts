@@ -101,6 +101,14 @@ export interface OrchestratorThreadsRepo {
   updateLastMessageAt(threadId: string, timestamp: number): void;
 }
 
+export interface OrchestratorTicketsRepo {
+  getByThreadId(threadId: string): {
+    id: string;
+    companyId: string;
+    assigneeId: string | null;
+  } | null;
+}
+
 // ---------------------------------------------------------------------------
 // Injection contracts
 // ---------------------------------------------------------------------------
@@ -277,6 +285,7 @@ export interface BuildOrchestratorOptions {
   employeesRepo: OrchestratorEmployeesRepo;
   companiesRepo: OrchestratorCompaniesRepo;
   threadsRepo: OrchestratorThreadsRepo;
+  ticketsRepo?: OrchestratorTicketsRepo;
   calcCost: CostCalculator;
   resolveSystemPrompt: ResolveSystemPrompt;
   resolveProvider: ResolveProvider;
@@ -769,6 +778,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     employeesRepo,
     companiesRepo,
     threadsRepo,
+    ticketsRepo,
     calcCost,
     resolveSystemPrompt,
     resolveProvider,
@@ -1029,6 +1039,18 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     }
   }
 
+  function resolveCurrentTicketId(args: {
+    thread: ThreadRow;
+    companyId: string;
+    employeeId: string;
+  }): string | null {
+    if (args.thread.kind !== 'ticket' || !ticketsRepo) return null;
+    const ticket = ticketsRepo.getByThreadId(args.thread.id);
+    if (!ticket || ticket.companyId !== args.companyId) return null;
+    if (ticket.assigneeId !== null && ticket.assigneeId !== args.employeeId) return null;
+    return ticket.id;
+  }
+
   function notifyDrainIfIdle(): void {
     if (activeCount === 0 && drainWaiters.length > 0) {
       const waiters = drainWaiters.splice(0, drainWaiters.length);
@@ -1145,6 +1167,11 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       rawHistory,
       mode: 'chat',
     });
+    const currentTicketId = resolveCurrentTicketId({
+      thread,
+      companyId: company.id,
+      employeeId: args.employeeId,
+    });
     const builtInSpecs = buildBuiltInTools(
       {
         bus,
@@ -1188,6 +1215,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         provider: provider.stream,
         providerName: provider.providerName,
         model: provider.model,
+        currentTicketId,
         signal,
         timeoutMs: runTimeoutMs,
         idleTimeoutMs: runIdleTimeoutMs,
@@ -1301,6 +1329,11 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       rawHistory,
       mode: 'agent-reply',
     });
+    const currentTicketId = resolveCurrentTicketId({
+      thread,
+      companyId: company.id,
+      employeeId: args.employeeId,
+    });
     const builtInSpecs = buildBuiltInTools(
       {
         bus,
@@ -1345,6 +1378,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         provider: provider.stream,
         providerName: provider.providerName,
         model: provider.model,
+        currentTicketId,
         signal,
         timeoutMs: runTimeoutMs,
         idleTimeoutMs: runIdleTimeoutMs,

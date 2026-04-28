@@ -103,10 +103,12 @@ import { createRoutinesRepo } from './db/repos/routines.js';
 import { createRunCheckpointsRepo } from './db/repos/run-checkpoints.js';
 import { createRunsRepo } from './db/repos/runs.js';
 import { createRuntimeProfilesRepo } from './db/repos/runtime-profiles.js';
+import { createRuntimeSessionsRepo } from './db/repos/runtime-sessions.js';
 import { createSettingsRepo } from './db/repos/settings.js';
 import { createThreadDigestsRepo } from './db/repos/thread-digests.js';
 import { createThreadsRepo } from './db/repos/threads.js';
 import { createTicketAttachmentsRepo } from './db/repos/ticket-attachments.js';
+import { createTicketCheckoutsRepo } from './db/repos/ticket-checkouts.js';
 import { createTicketsRepo } from './db/repos/tickets.js';
 import { createVaultRepo } from './db/repos/vault.js';
 import { messages as messagesTable } from './db/schema.js';
@@ -186,6 +188,7 @@ import {
 import { createRunCheckpointService } from './services/run-checkpoint-service.js';
 import { createRuntimeProfileProviderService } from './services/runtime-profile-provider-service.js';
 import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
+import { createRuntimeSessionService } from './services/runtime-session-service.js';
 import { pickStrategy } from './services/runtime-strategy.js';
 import { SecretsStore } from './services/secrets.js';
 import { createSkillsService } from './services/skills-service.js';
@@ -378,6 +381,8 @@ app
     const employeesRepo = createEmployeesRepo(db);
     const operatorsRepo = createOperatorsRepo(db);
     const runtimeProfilesRepo = createRuntimeProfilesRepo(db);
+    const runtimeSessionsRepo = createRuntimeSessionsRepo(db);
+    const ticketCheckoutsRepo = createTicketCheckoutsRepo(db);
     const routinesRepo = createRoutinesRepo(db);
     const budgetsRepo = createBudgetsRepo(db);
     const threadsRepo = createThreadsRepo(db);
@@ -512,9 +517,8 @@ app
       employeesRepo,
       providersService,
     });
-    const externalRuntimeAdapters = createExternalRuntimeAdapters({
-      secretsStore,
-      userDataDir: userDataDir(),
+    const runtimeSessionService = createRuntimeSessionService({
+      runtimeSessionsRepo,
     });
     budgetGovernanceServiceInstance = createBudgetGovernanceService({
       budgetsRepo,
@@ -531,6 +535,13 @@ app
           await orchestrator.pauseCompany(companyId);
         },
       },
+    });
+    const externalRuntimeAdapters = createExternalRuntimeAdapters({
+      secretsStore,
+      userDataDir: userDataDir(),
+      runtimeSessionService,
+      ticketCheckoutsRepo,
+      budgetAdmissionGate: budgetGovernanceServiceInstance,
     });
     approvalInboxServiceInstance = createApprovalInboxService({
       budgetsRepo,
@@ -849,6 +860,7 @@ app
       employeesRepo,
       companiesRepo,
       threadsRepo,
+      ticketsRepo,
       calcCost,
       resolveSystemPrompt: async ({ employee, company }) => {
         const rolePrompt = await roleLoader.resolveSystemPrompt({ employee, company });

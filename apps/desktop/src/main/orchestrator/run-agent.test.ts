@@ -420,6 +420,53 @@ describe('runAgent', () => {
       const finalRuns = f.runs.listByEmployee(f.employeeId);
       expect(finalRuns[0]?.status).toBe('success');
     });
+
+    it('passes run and ticket context through to provider streams', async () => {
+      const captured: {
+        runId?: string | null;
+        threadId?: string | null;
+        companyId?: string | null;
+        employeeId?: string | null;
+        currentTicketId?: string | null;
+      } = {};
+      const provider: ProviderStreamFn = async function* (args) {
+        captured.runId = args.runId;
+        captured.threadId = args.threadId;
+        captured.companyId = args.companyId;
+        captured.employeeId = args.employeeId;
+        captured.currentTicketId = args.currentTicketId;
+        yield { delta: 'Ticket context received.' };
+        yield { done: true, usage: { promptTokens: 3, completionTokens: 4 } };
+      };
+
+      const result = await runAgent(
+        {
+          bus: f.bus,
+          messages: f.messages,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 'You are a CEO.',
+          messages: baseHistory,
+          provider,
+          providerName: 'runtime:bash',
+          model: 'profile-bash',
+          currentTicketId: 'ticket-1',
+        },
+      );
+
+      expect(captured).toEqual({
+        runId: result.runId,
+        threadId: f.threadId,
+        companyId: f.companyId,
+        employeeId: f.employeeId,
+        currentTicketId: 'ticket-1',
+      });
+    });
   });
 
   describe('error handling', () => {

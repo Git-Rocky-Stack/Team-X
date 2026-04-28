@@ -4,7 +4,9 @@ import type { ProviderStreamFn, StreamMessage, StreamUsage } from '@team-x/provi
 import type { RuntimeProfile } from '@team-x/shared-types';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
+import type { TicketCheckoutsRepo } from '../db/repos/ticket-checkouts.js';
 import { type RuntimeSecretReader, resolveRuntimeEnvironment } from './runtime-secret-refs.js';
+import type { RuntimeSessionService } from './runtime-session-service.js';
 import {
   type RuntimeWorkspacePaths,
   ensureRuntimeWorkspacePaths,
@@ -50,6 +52,11 @@ export interface ExternalRuntimeAdaptersDeps {
   secretsStore?: RuntimeSecretReader;
   userDataDir?: string;
   ensureWorkspaceFn?: typeof ensureRuntimeWorkspacePaths;
+  runtimeSessionService?: RuntimeSessionService;
+  ticketCheckoutsRepo?: TicketCheckoutsRepo;
+  budgetAdmissionGate?: RuntimeBudgetAdmissionGate;
+  checkoutLeaseMs?: number;
+  now?: () => number;
 }
 
 interface RuntimeInvocationPayload {
@@ -69,6 +76,263 @@ interface RuntimeInvocationPayload {
   maxSteps: number;
   toolNames: string[];
   workspace: RuntimeWorkspacePaths | null;
+}
+
+interface RuntimeLifecycleDeps {
+  runtimeSessionService?: RuntimeSessionService;
+  ticketCheckoutsRepo?: TicketCheckoutsRepo;
+  budgetAdmissionGate?: RuntimeBudgetAdmissionGate;
+  checkoutLeaseMs: number;
+  now: () => number;
+}
+
+interface ActiveRuntimeLifecycle {
+  heartbeat(input: { message: string; usage?: StreamUsage }): Promise<void>;
+  complete(input: { usage: StreamUsage }): Promise<void>;
+  fail(input: { error: unknown }): void;
+}
+
+interface RuntimeBudgetAdmissionGate {
+  assertExecutionAllowed(input: {
+    companyId: string;
+    employeeId?: string | null;
+    executionKind: 'agentic';
+  }): Promise<{
+    allowed: boolean;
+    reason: string | null;
+    policy: { id: string; scopeKind: string; scopeRefId: string } | null;
+    approvalItem: { id: string; status: string } | null;
+  }>;
+}
+
+const DEFAULT_CHECKOUT_LEASE_MS = 5 * 60 * 1000;
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) return error.message;
+  return String(error);
+}
+
+function isAbortLike(error: unknown): boolean {
+  if (error instanceof DOMException) return error.name === 'AbortError';
+  if (error instanceof Error)
+    return error.name === 'AbortError' || /aborted|canceled/i.test(error.message);
+  return false;
+}
+
+function usageDeltaJson(usage: StreamUsage | undefined): string {
+  return JSON.stringify(
+    usage
+      ? {
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+        }
+      : {},
+  );
+}
+
+function startRuntimeLifecycle(args: {
+  deps: RuntimeLifecycleDeps;
+  employee: EmployeeRow;
+  profile: RuntimeProfile;
+  transport: 'command' | 'http';
+  endpointUrl?: string | null;
+  workspace: RuntimeWorkspacePaths | null;
+  runId?: string | null;
+  currentTicketId?: string | null;
+}): ActiveRuntimeLifecycle | null {
+  const service = args.deps.runtimeSessionService;
+  const checkoutsRepo = args.deps.ticketCheckoutsRepo;
+  if (!service && !checkoutsRepo) return null;
+
+  const startedAt = args.deps.now();
+  const currentRunId = args.runId ?? null;
+  const currentTicketId = args.currentTicketId ?? null;
+  let leaseExpiresAt =
+    currentTicketId && checkoutsRepo ? startedAt + args.deps.checkoutLeaseMs : null;
+  let terminal = false;
+  const session = service?.start({
+    companyId: args.employee.companyId,
+    employeeId: args.employee.id,
+    runtimeProfileId: args.profile.id,
+    adapterKind: args.profile.kind,
+    currentRunId,
+    currentTicketId,
+    endpointUrl: args.endpointUrl ?? null,
+    workspacePath: args.workspace?.workspace ?? null,
+    leaseExpiresAt,
+    capabilities: {
+      transport: args.transport,
+      payloadVersion: 'team-x-runtime-v1',
+      managedWorkspace: Boolean(args.workspace),
+      heartbeatContract: 'team-x-runtime-heartbeat-v1',
+    },
+    now: startedAt,
+  });
+
+  let checkoutId: string | null = null;
+  let checkoutReleased = false;
+
+  const blockRuntime = (message: string, now: number): never => {
+    terminal = true;
+    if (service && session) {
+      service.heartbeat({
+        sessionId: session.id,
+        status: 'blocked',
+        currentRunId,
+        currentTicketId,
+        leaseExpiresAt: null,
+        message,
+        now,
+      });
+    }
+    if (checkoutId && checkoutsRepo && !checkoutReleased) {
+      checkoutsRepo.release({
+        checkoutId,
+        status: 'blocked',
+        releaseReason: message,
+        now,
+      });
+      checkoutReleased = true;
+    }
+    if (service && session) {
+      service.end(session.id, {
+        status: 'blocked',
+        failureReason: message,
+        now,
+      });
+    }
+    throw new Error(message);
+  };
+
+  const assertHeartbeatBudgetAllowed = async () => {
+    if (!args.deps.budgetAdmissionGate) return;
+    const admission = await args.deps.budgetAdmissionGate.assertExecutionAllowed({
+      companyId: args.employee.companyId,
+      employeeId: args.employee.id,
+      executionKind: 'agentic',
+    });
+    if (admission.allowed) return;
+    const message =
+      admission.reason ??
+      `Runtime heartbeat blocked by budget policy${admission.policy ? ` "${admission.policy.id}"` : ''}.`;
+    blockRuntime(`[runtime-budget] ${message}`, args.deps.now());
+  };
+
+  const heartbeat = async (input: { message: string; usage?: StreamUsage }) => {
+    if (terminal) return;
+    await assertHeartbeatBudgetAllowed();
+    const timestamp = args.deps.now();
+    if (currentTicketId && checkoutsRepo && checkoutId && !checkoutReleased) {
+      leaseExpiresAt = timestamp + args.deps.checkoutLeaseMs;
+      checkoutsRepo.heartbeat(checkoutId, {
+        now: timestamp,
+        expiresAt: leaseExpiresAt,
+      });
+    }
+    if (service && session) {
+      service.heartbeat({
+        sessionId: session.id,
+        status: 'working',
+        currentRunId,
+        currentTicketId,
+        leaseExpiresAt,
+        costDeltaJson: usageDeltaJson(input.usage),
+        message: input.message,
+        now: timestamp,
+      });
+    }
+  };
+
+  if (currentTicketId && checkoutsRepo) {
+    const claimNow = args.deps.now();
+    leaseExpiresAt = claimNow + args.deps.checkoutLeaseMs;
+    const claim = checkoutsRepo.claim({
+      companyId: args.employee.companyId,
+      ticketId: currentTicketId,
+      employeeId: args.employee.id,
+      runtimeSessionId: session?.id ?? null,
+      runId: currentRunId,
+      expiresAt: leaseExpiresAt,
+      now: claimNow,
+    });
+    if (claim.outcome === 'conflict') {
+      const message = `[runtime-checkout] ticket "${currentTicketId}" is already checked out by employee "${claim.conflictingCheckout.employeeId}"`;
+      if (service && session) {
+        service.heartbeat({
+          sessionId: session.id,
+          status: 'blocked',
+          currentRunId,
+          currentTicketId,
+          leaseExpiresAt: null,
+          message,
+          now: claimNow,
+        });
+        service.end(session.id, {
+          status: 'blocked',
+          failureReason: message,
+          now: claimNow,
+        });
+      }
+      throw new Error(message);
+    }
+    checkoutId = claim.checkout.id;
+  }
+
+  return {
+    heartbeat,
+    async complete(input) {
+      if (terminal) return;
+      await heartbeat({ message: 'Runtime execution completed.', usage: input.usage });
+      const timestamp = args.deps.now();
+      if (checkoutId && checkoutsRepo && !checkoutReleased) {
+        checkoutsRepo.release({
+          checkoutId,
+          status: 'completed',
+          releaseReason: 'runtime execution completed',
+          now: timestamp,
+        });
+        checkoutReleased = true;
+      }
+      if (service && session) {
+        service.end(session.id, {
+          status: 'ended',
+          now: timestamp,
+        });
+      }
+    },
+    fail(input) {
+      if (terminal) return;
+      const message = errorMessage(input.error);
+      const timestamp = args.deps.now();
+      if (service && session) {
+        service.heartbeat({
+          sessionId: session.id,
+          status: isAbortLike(input.error) ? 'ended' : 'failed',
+          currentRunId,
+          currentTicketId,
+          leaseExpiresAt: null,
+          message,
+          now: timestamp,
+        });
+      }
+      if (checkoutId && checkoutsRepo && !checkoutReleased) {
+        checkoutsRepo.release({
+          checkoutId,
+          status: 'released',
+          releaseReason: message,
+          now: timestamp,
+        });
+        checkoutReleased = true;
+      }
+      if (service && session) {
+        service.end(session.id, {
+          status: isAbortLike(input.error) ? 'ended' : 'failed',
+          failureReason: isAbortLike(input.error) ? null : message,
+          now: timestamp,
+        });
+      }
+    },
+  };
 }
 
 function createAbortError(): Error {
@@ -275,6 +539,7 @@ function createBashStream(args: {
   secretsStore: RuntimeSecretReader | undefined;
   userDataDir: string | undefined;
   ensureWorkspaceFn: typeof ensureRuntimeWorkspacePaths;
+  lifecycle: RuntimeLifecycleDeps;
 }): ProviderStreamFn {
   return async function* (input) {
     const workspace =
@@ -307,17 +572,35 @@ function createBashStream(args: {
       runtimeEnv.TEAM_X_RUNTIME_LOGS = workspace.logs;
       runtimeEnv.TEAM_X_RUNTIME_TMP = workspace.tmp;
     }
-    const stdout = await runCommandInvocation({
-      command: args.command,
-      workingDirectory: args.workingDirectory ?? workspace?.workspace ?? null,
-      env: runtimeEnv,
-      payload,
-      signal: input.signal,
-      spawnFn: args.spawnFn,
+    const lifecycle = startRuntimeLifecycle({
+      deps: args.lifecycle,
+      employee: args.employee,
+      profile: args.profile,
+      transport: 'command',
+      workspace,
+      runId: input.runId,
+      currentTicketId: input.currentTicketId,
     });
-    const result = parseRuntimeResponse(stdout, payload.prompt);
-    yield { delta: result.text };
-    yield { done: true, usage: result.usage };
+    try {
+      await lifecycle?.heartbeat({ message: 'Runtime execution started.' });
+      await lifecycle?.heartbeat({ message: 'Launching command runtime.' });
+      const stdout = await runCommandInvocation({
+        command: args.command,
+        workingDirectory: args.workingDirectory ?? workspace?.workspace ?? null,
+        env: runtimeEnv,
+        payload,
+        signal: input.signal,
+        spawnFn: args.spawnFn,
+      });
+      const result = parseRuntimeResponse(stdout, payload.prompt);
+      await lifecycle?.heartbeat({ message: 'Runtime response parsed.', usage: result.usage });
+      yield { delta: result.text };
+      yield { done: true, usage: result.usage };
+      await lifecycle?.complete({ usage: result.usage });
+    } catch (error) {
+      lifecycle?.fail({ error });
+      throw error;
+    }
   };
 }
 
@@ -330,6 +613,7 @@ function createCommandResolvedProvider(args: {
   secretsStore: RuntimeSecretReader | undefined;
   userDataDir: string | undefined;
   ensureWorkspaceFn: typeof ensureRuntimeWorkspacePaths;
+  lifecycle: RuntimeLifecycleDeps;
 }): ExternalRuntimeResolvedProvider {
   return {
     providerName: `runtime:${args.profile.kind}`,
@@ -344,6 +628,7 @@ function createCommandResolvedProvider(args: {
       secretsStore: args.secretsStore,
       userDataDir: args.userDataDir,
       ensureWorkspaceFn: args.ensureWorkspaceFn,
+      lifecycle: args.lifecycle,
     }),
   };
 }
@@ -355,6 +640,7 @@ function createHttpStream(args: {
   fetchFn: FetchLike;
   userDataDir: string | undefined;
   ensureWorkspaceFn: typeof ensureRuntimeWorkspacePaths;
+  lifecycle: RuntimeLifecycleDeps;
 }): ProviderStreamFn {
   return async function* (input) {
     const workspace =
@@ -376,27 +662,46 @@ function createHttpStream(args: {
       tools: input.tools,
       workspace,
     });
-    const response = await args.fetchFn(args.baseUrl, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-team-x-runtime': payload.version,
-      },
-      body: JSON.stringify(payload),
-      signal: input.signal,
+    const lifecycle = startRuntimeLifecycle({
+      deps: args.lifecycle,
+      employee: args.employee,
+      profile: args.profile,
+      transport: 'http',
+      endpointUrl: args.baseUrl,
+      workspace,
+      runId: input.runId,
+      currentTicketId: input.currentTicketId,
     });
-    if (!response.ok) {
+    try {
+      await lifecycle?.heartbeat({ message: 'Runtime execution started.' });
+      await lifecycle?.heartbeat({ message: 'Posting HTTP runtime request.' });
+      const response = await args.fetchFn(args.baseUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-team-x-runtime': payload.version,
+        },
+        body: JSON.stringify(payload),
+        signal: input.signal,
+      });
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(
+          body.trim().length > 0
+            ? body.trim()
+            : `[external-runtime] HTTP adapter returned ${response.status}`,
+        );
+      }
       const body = await response.text();
-      throw new Error(
-        body.trim().length > 0
-          ? body.trim()
-          : `[external-runtime] HTTP adapter returned ${response.status}`,
-      );
+      const result = parseRuntimeResponse(body, payload.prompt);
+      await lifecycle?.heartbeat({ message: 'Runtime response parsed.', usage: result.usage });
+      yield { delta: result.text };
+      yield { done: true, usage: result.usage };
+      await lifecycle?.complete({ usage: result.usage });
+    } catch (error) {
+      lifecycle?.fail({ error });
+      throw error;
     }
-    const body = await response.text();
-    const result = parseRuntimeResponse(body, payload.prompt);
-    yield { delta: result.text };
-    yield { done: true, usage: result.usage };
   };
 }
 
@@ -407,6 +712,7 @@ function createHttpResolvedProvider(args: {
   fetchFn: FetchLike;
   userDataDir: string | undefined;
   ensureWorkspaceFn: typeof ensureRuntimeWorkspacePaths;
+  lifecycle: RuntimeLifecycleDeps;
 }): ExternalRuntimeResolvedProvider {
   return {
     providerName: `runtime:${args.profile.kind}`,
@@ -419,6 +725,7 @@ function createHttpResolvedProvider(args: {
       fetchFn: args.fetchFn,
       userDataDir: args.userDataDir,
       ensureWorkspaceFn: args.ensureWorkspaceFn,
+      lifecycle: args.lifecycle,
     }),
   };
 }
@@ -439,6 +746,13 @@ export function createExternalRuntimeAdapters(
   const fetchFn = deps.fetchFn ?? fetch;
   const spawnFn = deps.spawnFn ?? spawn;
   const ensureWorkspaceFn = deps.ensureWorkspaceFn ?? ensureRuntimeWorkspacePaths;
+  const lifecycle: RuntimeLifecycleDeps = {
+    runtimeSessionService: deps.runtimeSessionService,
+    ticketCheckoutsRepo: deps.ticketCheckoutsRepo,
+    budgetAdmissionGate: deps.budgetAdmissionGate,
+    checkoutLeaseMs: deps.checkoutLeaseMs ?? DEFAULT_CHECKOUT_LEASE_MS,
+    now: deps.now ?? Date.now,
+  };
 
   return {
     createResolvedProvider(input) {
@@ -460,6 +774,7 @@ export function createExternalRuntimeAdapters(
             secretsStore: deps.secretsStore,
             userDataDir: deps.userDataDir,
             ensureWorkspaceFn,
+            lifecycle,
           });
         case 'http':
           if (!baseUrl) return null;
@@ -470,6 +785,7 @@ export function createExternalRuntimeAdapters(
             fetchFn,
             userDataDir: deps.userDataDir,
             ensureWorkspaceFn,
+            lifecycle,
           });
         case 'codex':
         case 'claude-code':
@@ -484,6 +800,7 @@ export function createExternalRuntimeAdapters(
               secretsStore: deps.secretsStore,
               userDataDir: deps.userDataDir,
               ensureWorkspaceFn,
+              lifecycle,
             });
           }
           if (endpointUrl) {
@@ -494,6 +811,7 @@ export function createExternalRuntimeAdapters(
               fetchFn,
               userDataDir: deps.userDataDir,
               ensureWorkspaceFn,
+              lifecycle,
             });
           }
           return null;

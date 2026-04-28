@@ -322,6 +322,249 @@ describe('external runtime adapters', () => {
     }
   });
 
+  it('records runtime session heartbeats and releases ticket checkouts for command runtimes', async () => {
+    const child = new MockChildProcess();
+    const spawnFn = vi.fn(() => {
+      queueMicrotask(() => {
+        child.stdout.write(
+          JSON.stringify({
+            text: 'checkout work completed',
+            usage: { promptTokens: 7, completionTokens: 3 },
+          }),
+        );
+        child.stdout.end();
+        child.emit('close', 0, null);
+      });
+      return child;
+    });
+    const runtimeSessionService = {
+      start: vi.fn((input) => ({ id: 'session-1', ...input })),
+      heartbeat: vi.fn(),
+      end: vi.fn(),
+    };
+    const ticketCheckoutsRepo = {
+      claim: vi.fn(() => ({
+        outcome: 'claimed',
+        checkout: { id: 'checkout-1' },
+      })),
+      heartbeat: vi.fn(),
+      release: vi.fn(),
+    };
+    let now = 1_000;
+    const adapters = createExternalRuntimeAdapters({
+      spawnFn,
+      runtimeSessionService: runtimeSessionService as never,
+      ticketCheckoutsRepo: ticketCheckoutsRepo as never,
+      checkoutLeaseMs: 60_000,
+      now: () => {
+        now += 10;
+        return now;
+      },
+    });
+    const resolved = adapters.createResolvedProvider({
+      employee: makeEmployee(),
+      profile: makeProfile('bash', {
+        command: 'C:\\Tools\\runtime.cmd',
+        workingDirectory: 'C:\\Workspace',
+      }),
+    });
+
+    if (!resolved) throw new Error('expected bash runtime adapter');
+    const chunks = [];
+    for await (const chunk of resolved.stream({
+      system: 'Work the ticket',
+      messages: [{ role: 'user', content: 'Finish ticket.' }],
+      runId: 'run-1',
+      currentTicketId: 'ticket-1',
+    })) {
+      chunks.push(chunk);
+    }
+
+    expect(runtimeSessionService.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyId: 'company-1',
+        employeeId: 'employee-1',
+        runtimeProfileId: 'profile-bash',
+        adapterKind: 'bash',
+        currentRunId: 'run-1',
+        currentTicketId: 'ticket-1',
+        workspacePath: null,
+        leaseExpiresAt: expect.any(Number),
+      }),
+    );
+    expect(ticketCheckoutsRepo.claim).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyId: 'company-1',
+        ticketId: 'ticket-1',
+        employeeId: 'employee-1',
+        runtimeSessionId: 'session-1',
+        runId: 'run-1',
+        expiresAt: expect.any(Number),
+      }),
+    );
+    expect(runtimeSessionService.heartbeat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: 'session-1',
+        status: 'working',
+        currentRunId: 'run-1',
+        currentTicketId: 'ticket-1',
+        message: 'Runtime response parsed.',
+        costDeltaJson: JSON.stringify({ promptTokens: 7, completionTokens: 3 }),
+      }),
+    );
+    expect(ticketCheckoutsRepo.release).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkoutId: 'checkout-1',
+        status: 'completed',
+        releaseReason: 'runtime execution completed',
+      }),
+    );
+    expect(runtimeSessionService.end).toHaveBeenCalledWith(
+      'session-1',
+      expect.objectContaining({ status: 'ended' }),
+    );
+    expect(chunks).toEqual([
+      { delta: 'checkout work completed' },
+      { done: true, usage: { promptTokens: 7, completionTokens: 3 } },
+    ]);
+  });
+
+  it('blocks runtime execution before launch when another active checkout owns the ticket', async () => {
+    const spawnFn = vi.fn(() => new MockChildProcess());
+    const runtimeSessionService = {
+      start: vi.fn((input) => ({ id: 'session-1', ...input })),
+      heartbeat: vi.fn(),
+      end: vi.fn(),
+    };
+    const ticketCheckoutsRepo = {
+      claim: vi.fn(() => ({
+        outcome: 'conflict',
+        conflictingCheckout: {
+          id: 'checkout-conflict',
+          employeeId: 'employee-2',
+        },
+      })),
+      heartbeat: vi.fn(),
+      release: vi.fn(),
+    };
+    const adapters = createExternalRuntimeAdapters({
+      spawnFn,
+      runtimeSessionService: runtimeSessionService as never,
+      ticketCheckoutsRepo: ticketCheckoutsRepo as never,
+    });
+    const resolved = adapters.createResolvedProvider({
+      employee: makeEmployee(),
+      profile: makeProfile('bash', {
+        command: 'C:\\Tools\\runtime.cmd',
+      }),
+    });
+
+    if (!resolved) throw new Error('expected bash runtime adapter');
+    const drainRuntime = async () => {
+      for await (const chunk of resolved.stream({
+        system: 'Work the ticket',
+        messages: [{ role: 'user', content: 'Finish ticket.' }],
+        runId: 'run-1',
+        currentTicketId: 'ticket-1',
+      })) {
+        expect(chunk).toBeDefined();
+      }
+    };
+    await expect(drainRuntime()).rejects.toThrow(/already checked out/);
+
+    expect(spawnFn).not.toHaveBeenCalled();
+    expect(runtimeSessionService.heartbeat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: 'session-1',
+        status: 'blocked',
+        currentRunId: 'run-1',
+        currentTicketId: 'ticket-1',
+      }),
+    );
+    expect(runtimeSessionService.end).toHaveBeenCalledWith(
+      'session-1',
+      expect.objectContaining({ status: 'blocked' }),
+    );
+    expect(ticketCheckoutsRepo.release).not.toHaveBeenCalled();
+  });
+
+  it('stops runtime execution at heartbeat when the budget gate hard-blocks work', async () => {
+    const spawnFn = vi.fn(() => new MockChildProcess());
+    const runtimeSessionService = {
+      start: vi.fn((input) => ({ id: 'session-1', ...input })),
+      heartbeat: vi.fn(),
+      end: vi.fn(),
+    };
+    const ticketCheckoutsRepo = {
+      claim: vi.fn(() => ({
+        outcome: 'claimed',
+        checkout: { id: 'checkout-1' },
+      })),
+      heartbeat: vi.fn(),
+      release: vi.fn(),
+    };
+    const budgetAdmissionGate = {
+      assertExecutionAllowed: vi.fn(async () => ({
+        allowed: false,
+        policy: {
+          id: 'budget-1',
+          scopeKind: 'runtime-profile',
+          scopeRefId: 'profile-bash',
+        },
+        reason: 'Budget cap reached for runtime-profile scope profile-bash.',
+        approvalItem: null,
+      })),
+    };
+    const adapters = createExternalRuntimeAdapters({
+      spawnFn,
+      runtimeSessionService: runtimeSessionService as never,
+      ticketCheckoutsRepo: ticketCheckoutsRepo as never,
+      budgetAdmissionGate,
+    });
+    const resolved = adapters.createResolvedProvider({
+      employee: makeEmployee(),
+      profile: makeProfile('bash', {
+        command: 'C:\\Tools\\runtime.cmd',
+      }),
+    });
+
+    if (!resolved) throw new Error('expected bash runtime adapter');
+    const drainRuntime = async () => {
+      for await (const chunk of resolved.stream({
+        system: 'Work the ticket',
+        messages: [{ role: 'user', content: 'Finish ticket.' }],
+        runId: 'run-1',
+        currentTicketId: 'ticket-1',
+      })) {
+        expect(chunk).toBeDefined();
+      }
+    };
+    await expect(drainRuntime()).rejects.toThrow(/runtime-budget.*Budget cap reached/);
+
+    expect(budgetAdmissionGate.assertExecutionAllowed).toHaveBeenCalledWith({
+      companyId: 'company-1',
+      employeeId: 'employee-1',
+      executionKind: 'agentic',
+    });
+    expect(spawnFn).not.toHaveBeenCalled();
+    expect(ticketCheckoutsRepo.release).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkoutId: 'checkout-1',
+        status: 'blocked',
+        releaseReason:
+          '[runtime-budget] Budget cap reached for runtime-profile scope profile-bash.',
+      }),
+    );
+    expect(runtimeSessionService.end).toHaveBeenCalledWith(
+      'session-1',
+      expect.objectContaining({
+        status: 'blocked',
+        failureReason:
+          '[runtime-budget] Budget cap reached for runtime-profile scope profile-bash.',
+      }),
+    );
+  });
+
   it('treats cursor-style endpoint profiles as execution-backed HTTP adapters when configured', async () => {
     const fetchFn: typeof fetch = vi.fn(async (_input, init) => {
       const body = typeof init?.body === 'string' ? init.body : '';

@@ -25,6 +25,7 @@ import { createRunCheckpointsRepo } from '../db/repos/run-checkpoints.js';
 import { createRunsRepo } from '../db/repos/runs.js';
 import { createThreadDigestsRepo } from '../db/repos/thread-digests.js';
 import { createThreadsRepo } from '../db/repos/threads.js';
+import { createTicketsRepo } from '../db/repos/tickets.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createRunCheckpointService } from '../services/run-checkpoint-service.js';
 import { createThreadDigestService } from '../services/thread-digest-service.js';
@@ -48,6 +49,7 @@ interface Fixture {
   employeesRepo: ReturnType<typeof createEmployeesRepo>;
   companiesRepo: ReturnType<typeof createCompaniesRepo>;
   threadsRepo: ReturnType<typeof createThreadsRepo>;
+  ticketsRepo: ReturnType<typeof createTicketsRepo>;
   companyId: string;
   employeeId: string;
   threadId: string;
@@ -83,6 +85,7 @@ async function buildFixture(): Promise<Fixture> {
   const messagesRepo = createMessagesRepo(ctx.db);
   const runCheckpointsRepo = createRunCheckpointsRepo(ctx.db);
   const runsRepo = createRunsRepo(ctx.db);
+  const ticketsRepo = createTicketsRepo(ctx.db);
   const threadDigestsRepo = createThreadDigestsRepo(ctx.db);
   const eventsRepo = createEventsRepo(ctx.db);
   const bus = createEventBus({ repo: eventsRepo });
@@ -128,6 +131,7 @@ async function buildFixture(): Promise<Fixture> {
     employeesRepo,
     companiesRepo,
     threadsRepo,
+    ticketsRepo,
     companyId,
     employeeId,
     threadId,
@@ -189,6 +193,7 @@ function buildDefaultOrchestrator(
     employeesRepo: f.employeesRepo,
     companiesRepo: f.companiesRepo,
     threadsRepo: f.threadsRepo,
+    ticketsRepo: f.ticketsRepo,
     calcCost: f.calcCost,
     resolveSystemPrompt: defaultResolveSystem,
     resolveProvider: defaultResolveProvider,
@@ -304,6 +309,44 @@ describe('buildOrchestrator', () => {
       ]);
       // Silence an "unused" lint warning if it crops up.
       void runRows;
+    });
+
+    it('passes linked ticket context into runtime-capable provider streams', async () => {
+      const ticketThreadId = f.threadsRepo.create({
+        companyId: f.companyId,
+        kind: 'ticket',
+        createdBy: f.employeeId,
+      });
+      const ticketId = f.ticketsRepo.create({
+        companyId: f.companyId,
+        title: 'Build the runtime adapter',
+        assigneeId: f.employeeId,
+        reporterId: 'rocky',
+        threadId: ticketThreadId,
+      });
+      const userMessageId = f.messagesRepo.append({
+        threadId: ticketThreadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'Please work this ticket.',
+      });
+      const captured: { currentTicketId?: string | null; runId?: string | null } = {};
+      const provider: ProviderStreamFn = async function* (args) {
+        captured.currentTicketId = args.currentTicketId;
+        captured.runId = args.runId;
+        yield { delta: 'Working the ticket.' };
+        yield { done: true, usage: { promptTokens: 5, completionTokens: 4 } };
+      };
+      const orchestrator = buildDefaultOrchestrator(f, { provider });
+
+      await orchestrator.enqueueChat({
+        threadId: ticketThreadId,
+        employeeId: f.employeeId,
+        userMessageId,
+      });
+
+      expect(captured.currentTicketId).toBe(ticketId);
+      expect(captured.runId).toBeTypeOf('string');
     });
 
     it('maps a multi-turn chat history to user/assistant roles correctly', async () => {

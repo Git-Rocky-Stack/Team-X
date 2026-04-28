@@ -140,6 +140,8 @@ export interface RunAgentInput {
   tools?: Record<string, unknown>;
   /** Max reasoning steps with tool use. Defaults to 1 (no tool loop). */
   maxSteps?: number;
+  /** Ticket currently represented by this thread, when the turn is ticket-scoped. */
+  currentTicketId?: string | null;
   /**
    * Called with the `runId` immediately after the runs row is created.
    * The orchestrator uses this to thread the runId into tool execute
@@ -348,6 +350,11 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       tools: input.tools,
       maxSteps: input.maxSteps,
       signal: streamController.signal,
+      runId,
+      threadId: input.threadId,
+      companyId: input.companyId,
+      employeeId: input.employeeId,
+      currentTicketId: input.currentTicketId ?? null,
     })) {
       resetIdleTimer();
       if (chunk.kind === 'delta') {
