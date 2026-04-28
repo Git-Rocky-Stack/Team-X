@@ -46,6 +46,10 @@ export const autonomyClient = {
     validate: (...args: Parameters<typeof ipc.runtimeProfiles.validate>) =>
       ipc.runtimeProfiles.validate(...args),
   },
+  runtimeOperations: {
+    snapshot: (...args: Parameters<typeof ipc.runtimeOperations.snapshot>) =>
+      ipc.runtimeOperations.snapshot(...args),
+  },
   routines: {
     list: (...args: Parameters<typeof ipc.routines.list>) => ipc.routines.list(...args),
     listRuns: (...args: Parameters<typeof ipc.routines.listRuns>) => ipc.routines.listRuns(...args),

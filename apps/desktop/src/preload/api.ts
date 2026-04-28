@@ -35,11 +35,11 @@
  */
 
 import type {
+  AcceptOperatorInviteRequest,
+  AcceptOperatorInviteResponse,
   AddMcpServerRequest,
   AddProviderRequest,
   AddProviderResponse,
-  AcceptOperatorInviteRequest,
-  AcceptOperatorInviteResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   AgenticRunSnapshot,
@@ -115,8 +115,8 @@ import type {
   ExportCompanyPackageResponse,
   ExtensionSummary,
   FireEmployeeRequest,
-  GetEffectiveAuthorityRequest,
   GetCloudWorkspaceLinkRequest,
+  GetEffectiveAuthorityRequest,
   GetOperatorSharingReadinessRequest,
   GetThreadDigestRequest,
   Goal,
@@ -128,7 +128,6 @@ import type {
   InstallCompanyTemplateRequest,
   InstallCompanyTemplateResponse,
   InstallGithubSkillRequest,
-  LinkCloudWorkspaceRequest,
   InstallLocalSkillRequest,
   InstallMcpTemplateRequest,
   InterjectMeetingRequest,
@@ -138,6 +137,7 @@ import type {
   IpcExecuteResult,
   IpcParseResult,
   IpcSuggestItem,
+  LinkCloudWorkspaceRequest,
   ListApprovalItemsRequest,
   ListArtifactsRequest,
   ListAuthorityGrantsRequest,
@@ -171,12 +171,13 @@ import type {
   ReconnectCloudWorkspaceRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
-  RevokeOperatorInviteRequest,
   ReviewApprovalItemRequest,
+  RevokeOperatorInviteRequest,
   Routine,
   RoutineRun,
   RunCheckpoint,
   RunRoutineNowRequest,
+  RuntimeOperationsSnapshot,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
   SendChatRequest,
@@ -222,10 +223,10 @@ import type {
   TestProviderConnectionResponse,
   Thread,
   ThreadDigest,
-  UnlinkCloudWorkspaceRequest,
   Ticket,
   TicketAttachment,
   TicketDetail,
+  UnlinkCloudWorkspaceRequest,
   UnsubscribeFn,
   UpdateBudgetPolicyRequest,
   UpdateCheckResult,
@@ -303,6 +304,7 @@ const CHANNELS = {
   runtimeProfilesDelete: 'runtimeProfiles.delete',
   runtimeProfilesBindEmployee: 'runtimeProfiles.bindEmployee',
   runtimeProfilesValidate: 'runtimeProfiles.validate',
+  runtimeOperationsSnapshot: 'runtimeOperations.snapshot',
   routinesList: 'routines.list',
   routinesCreate: 'routines.create',
   routinesUpdate: 'routines.update',
@@ -521,10 +523,9 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       list: (companyId: string) =>
         ipc.invoke(CHANNELS.operatorsList, { companyId }) as Promise<OperatorAccessEntry[]>,
       readiness: (companyId: string) =>
-        ipc.invoke(
-          CHANNELS.operatorsReadiness,
-          { companyId } satisfies GetOperatorSharingReadinessRequest,
-        ) as Promise<CompanySharingReadinessSummary>,
+        ipc.invoke(CHANNELS.operatorsReadiness, {
+          companyId,
+        } satisfies GetOperatorSharingReadinessRequest) as Promise<CompanySharingReadinessSummary>,
       listInvites: (companyId: string) =>
         ipc.invoke(CHANNELS.operatorsListInvites, { companyId }) as Promise<OperatorInvite[]>,
       createInvite: (req: CreateOperatorInviteRequest) =>
@@ -536,10 +537,9 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     },
     cloud: {
       getWorkspaceLink: (companyId: string) =>
-        ipc.invoke(
-          CHANNELS.cloudGetWorkspaceLink,
-          { companyId } satisfies GetCloudWorkspaceLinkRequest,
-        ) as Promise<CompanyCloudLinkStatus>,
+        ipc.invoke(CHANNELS.cloudGetWorkspaceLink, {
+          companyId,
+        } satisfies GetCloudWorkspaceLinkRequest) as Promise<CompanyCloudLinkStatus>,
       linkWorkspace: (req: LinkCloudWorkspaceRequest) =>
         ipc.invoke(CHANNELS.cloudLinkWorkspace, req) as Promise<CompanyCloudLinkStatus>,
       unlinkWorkspace: (req: UnlinkCloudWorkspaceRequest) =>
@@ -564,6 +564,12 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         }>,
       validate: (req: ValidateRuntimeProfileRequest) =>
         ipc.invoke(CHANNELS.runtimeProfilesValidate, req) as Promise<RuntimeProfileValidation>,
+    },
+    runtimeOperations: {
+      snapshot: (companyId: string) =>
+        ipc.invoke(CHANNELS.runtimeOperationsSnapshot, {
+          companyId,
+        }) as Promise<RuntimeOperationsSnapshot>,
     },
     routines: {
       list: (companyId: string) =>

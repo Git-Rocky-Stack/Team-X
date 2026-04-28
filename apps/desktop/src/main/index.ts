@@ -186,6 +186,7 @@ import {
   createRoutineService,
 } from './services/routine-service.js';
 import { createRunCheckpointService } from './services/run-checkpoint-service.js';
+import { createRuntimeOperationsService } from './services/runtime-operations-service.js';
 import { createRuntimeProfileProviderService } from './services/runtime-profile-provider-service.js';
 import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
 import { createRuntimeSessionService } from './services/runtime-session-service.js';
@@ -519,6 +520,10 @@ app
     });
     const runtimeSessionService = createRuntimeSessionService({
       runtimeSessionsRepo,
+    });
+    const runtimeOperationsService = createRuntimeOperationsService({
+      runtimeSessionService,
+      ticketCheckoutsRepo,
     });
     budgetGovernanceServiceInstance = createBudgetGovernanceService({
       budgetsRepo,
@@ -1011,6 +1016,7 @@ app
       operatorAccessService,
       cloudLinkService,
       runtimeProfilesService,
+      runtimeOperationsService,
       routineService: routineServiceInstance,
       budgetGovernanceService: budgetGovernanceServiceInstance,
       approvalInboxService: approvalInboxServiceInstance,

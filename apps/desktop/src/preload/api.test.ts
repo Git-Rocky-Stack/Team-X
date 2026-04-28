@@ -225,6 +225,24 @@ describe('buildTeamXApi', () => {
     });
   });
 
+  describe('runtimeOperations.snapshot', () => {
+    it('invokes runtimeOperations.snapshot with a { companyId } object', async () => {
+      fake.setNextInvokeResult({
+        companyId: 'co-1',
+        generatedAt: 1,
+        sessions: [],
+        activeCheckouts: [],
+      });
+      await api.runtimeOperations.snapshot('co-1');
+      expect(fake.invokeCalls).toEqual([
+        {
+          channel: (PRELOAD_CHANNELS as Record<string, string>).runtimeOperationsSnapshot,
+          args: [{ companyId: 'co-1' }],
+        },
+      ]);
+    });
+  });
+
   describe('events.onDashboard', () => {
     it('attaches a listener to events.dashboard', () => {
       const cb = vi.fn();

@@ -54,6 +54,7 @@ import { ArtifactsPanel } from './artifacts-panel.js';
 import { BudgetsPanel } from './budgets-panel.js';
 import { MemoryPanel } from './memory-panel.js';
 import { RoutinesPanel } from './routines-panel.js';
+import { RuntimeOperationsPanel } from './runtime-operations-panel.js';
 import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
 type AutonomySubview =
@@ -100,7 +101,7 @@ const SUBVIEW_COPY: Record<
   runtimes: {
     title: 'Agent Runtimes',
     description:
-      'Bind employees to named runtime profiles so Team-X can distinguish internal execution, local launchers, and future hosted workers.',
+      'Inspect live runtime heartbeats and ticket checkouts, then bind employees to named execution profiles for internal, local, and external agents.',
     emptyTitle: 'Runtime profile control plane is empty',
     emptyDescription:
       'Create the first runtime profile, validate its health, and bind it to employees so the workspace has explicit execution posture.',
@@ -592,9 +593,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                         </div>
                       </div>
                       {cloudLink.lastSyncError ? (
-                        <p className="text-xs leading-5 text-red-200">
-                          {cloudLink.lastSyncError}
-                        </p>
+                        <p className="text-xs leading-5 text-red-200">{cloudLink.lastSyncError}</p>
                       ) : null}
                       {linkWorkspaceMutation.isError ? (
                         <p className="text-xs leading-5 text-red-200">
@@ -642,9 +641,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                             }}
                             disabled={!cloudLink.isLinked || cloudLinkBusy}
                           >
-                            {reconnectWorkspaceMutation.isPending
-                              ? 'Reconnecting...'
-                              : 'Reconnect'}
+                            {reconnectWorkspaceMutation.isPending ? 'Reconnecting...' : 'Reconnect'}
                           </Button>
                           <Button
                             type="button"
@@ -656,7 +653,9 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                             }}
                             disabled={!cloudLink.canUnlink || cloudLinkBusy}
                           >
-                            {unlinkWorkspaceMutation.isPending ? 'Unlinking...' : 'Unlink Workspace'}
+                            {unlinkWorkspaceMutation.isPending
+                              ? 'Unlinking...'
+                              : 'Unlink Workspace'}
                           </Button>
                         </div>
                       </div>
@@ -664,13 +663,15 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                   )}
                 </MissionInsetSurface>
                 <MissionInsetSurface className="space-y-4 p-4" data-operator-invites="">
-                    <div className="space-y-1">
-                      <div className="text-sm font-semibold text-foreground">Queue Operator Invite</div>
-                      <p className="text-xs leading-5 text-muted-foreground">
-                        Linked workspaces queue hosted invites automatically. Unlinked workspaces
-                        keep local placeholders until shared/cloud auth is fully active.
-                      </p>
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-foreground">
+                      Queue Operator Invite
                     </div>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Linked workspaces queue hosted invites automatically. Unlinked workspaces keep
+                      local placeholders until shared/cloud auth is fully active.
+                    </p>
+                  </div>
                   <form
                     className="space-y-4"
                     data-operator-invite-compose=""
@@ -679,9 +680,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                     }}
                   >
                     <div className="grid gap-3 md:grid-cols-2">
-                      <label className="space-y-2">
+                      <label className="space-y-2" htmlFor="operator-invite-email">
                         <div className={ACCESS_LABEL_CLASSNAME}>Operator Email</div>
                         <Input
+                          id="operator-invite-email"
                           className={ACCESS_FIELD_CLASSNAME}
                           type="email"
                           value={inviteEmail}
@@ -690,9 +692,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                           required
                         />
                       </label>
-                      <label className="space-y-2">
+                      <label className="space-y-2" htmlFor="operator-invite-display-name">
                         <div className={ACCESS_LABEL_CLASSNAME}>Display Name</div>
                         <Input
+                          id="operator-invite-display-name"
                           className={ACCESS_FIELD_CLASSNAME}
                           value={inviteDisplayName}
                           onChange={(event) => setInviteDisplayName(event.target.value)}
@@ -701,9 +704,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       </label>
                     </div>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <label className="space-y-2">
+                      <label className="space-y-2" htmlFor="operator-invite-auth-mode">
                         <div className={ACCESS_LABEL_CLASSNAME}>Auth Mode</div>
                         <select
+                          id="operator-invite-auth-mode"
                           className={ACCESS_FIELD_CLASSNAME}
                           value={inviteAuthMode}
                           onChange={(event) =>
@@ -717,9 +721,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                           ))}
                         </select>
                       </label>
-                      <label className="space-y-2">
+                      <label className="space-y-2" htmlFor="operator-invite-role">
                         <div className={ACCESS_LABEL_CLASSNAME}>Workspace Role</div>
                         <select
+                          id="operator-invite-role"
                           className={ACCESS_FIELD_CLASSNAME}
                           value={inviteRole}
                           onChange={(event) =>
@@ -734,9 +739,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                         </select>
                       </label>
                     </div>
-                    <label className="space-y-2">
+                    <label className="space-y-2" htmlFor="operator-invite-note">
                       <div className={ACCESS_LABEL_CLASSNAME}>Invite Note</div>
                       <textarea
+                        id="operator-invite-note"
                         className={ACCESS_TEXTAREA_CLASSNAME}
                         value={inviteNote}
                         onChange={(event) => setInviteNote(event.target.value)}
@@ -800,7 +806,9 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                 <div className="space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="text-sm font-semibold text-foreground">
-                                      {invite.displayName?.trim() ? invite.displayName : invite.email}
+                                      {invite.displayName?.trim()
+                                        ? invite.displayName
+                                        : invite.email}
                                     </span>
                                     <MissionPill>{invite.authMode}</MissionPill>
                                     <MissionPill>{invite.role}</MissionPill>
@@ -836,7 +844,9 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                         size="sm"
                                         disabled={isAccepting || isRevoking}
                                         onClick={() => {
-                                          void acceptInviteMutation.mutateAsync({ inviteId: invite.id });
+                                          void acceptInviteMutation.mutateAsync({
+                                            inviteId: invite.id,
+                                          });
                                         }}
                                       >
                                         {isAccepting ? 'Accepting...' : 'Accept locally'}
@@ -848,7 +858,9 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                         className="border-white/10 bg-black/10 hover:bg-black/20"
                                         disabled={isAccepting || isRevoking}
                                         onClick={() => {
-                                          void revokeInviteMutation.mutateAsync({ inviteId: invite.id });
+                                          void revokeInviteMutation.mutateAsync({
+                                            inviteId: invite.id,
+                                          });
                                         }}
                                       >
                                         {isRevoking ? 'Revoking...' : 'Revoke'}
@@ -868,7 +880,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
               </div>
             )
           ) : activeSubview === 'runtimes' ? (
-            <RuntimeProfilesPanel companyId={companyId} />
+            <div className="space-y-4">
+              <RuntimeOperationsPanel companyId={companyId} />
+              <RuntimeProfilesPanel companyId={companyId} />
+            </div>
           ) : activeSubview === 'routines' ? (
             <RoutinesPanel companyId={companyId} />
           ) : activeSubview === 'budgets' ? (

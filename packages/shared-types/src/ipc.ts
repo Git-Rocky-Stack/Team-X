@@ -97,11 +97,13 @@ import type {
   RuntimeProfileKind,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
+  RuntimeSession,
   SharedOperatorAuthMode,
   SkillAssignment,
   Thread,
   ThreadDigest,
   Ticket,
+  TicketCheckout,
 } from './entities.js';
 import type {
   AgenticRunSnapshot,
@@ -364,6 +366,17 @@ export interface BindEmployeeRuntimeProfileRequest {
 export interface ValidateRuntimeProfileRequest {
   companyId: string;
   profileId: string;
+}
+
+export interface ListRuntimeOperationsRequest {
+  companyId: string;
+}
+
+export interface RuntimeOperationsSnapshot {
+  companyId: string;
+  generatedAt: number;
+  sessions: RuntimeSession[];
+  activeCheckouts: TicketCheckout[];
 }
 
 export interface ListRoutinesRequest {
@@ -1913,6 +1926,10 @@ export interface IpcContract {
     request: ValidateRuntimeProfileRequest;
     response: RuntimeProfileValidation;
   };
+  'runtimeOperations.snapshot': {
+    request: ListRuntimeOperationsRequest;
+    response: RuntimeOperationsSnapshot;
+  };
   'routines.list': {
     request: ListRoutinesRequest;
     response: Routine[];
@@ -2729,6 +2746,10 @@ export interface TeamXApi {
     ): Promise<{ binding: EmployeeRuntimeBinding | null }>;
     /** Run the profile-kind-specific health check and persist the result. */
     validate(req: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
+  };
+  runtimeOperations: {
+    /** Return live runtime sessions and active ticket checkout leases for one workspace. */
+    snapshot(companyId: string): Promise<RuntimeOperationsSnapshot>;
   };
   routines: {
     /** List routine definitions for one workspace. */

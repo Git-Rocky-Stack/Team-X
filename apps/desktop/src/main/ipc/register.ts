@@ -89,6 +89,7 @@ const REQUEST_CHANNELS = [
   'runtimeProfiles.delete',
   'runtimeProfiles.bindEmployee',
   'runtimeProfiles.validate',
+  'runtimeOperations.snapshot',
   'routines.list',
   'routines.create',
   'routines.update',
@@ -432,6 +433,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
       return handlers.runtimeProfilesValidate(request);
     },
   );
+
+  ipcMain.handle('runtimeOperations.snapshot', async (_event, request: { companyId: string }) => {
+    return handlers.runtimeOperationsSnapshot(request);
+  });
 
   ipcMain.handle('routines.list', async (_event, request: { companyId: string }) => {
     return handlers.routinesList(request);

@@ -12,6 +12,13 @@ const TOP_BAR_PATH = join(currentDirname, '..', '..', 'app', 'top-bar.tsx');
 const HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-operators.ts');
 const CLOUD_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-cloud-link.ts');
 const RUNTIME_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-runtime-profiles.ts');
+const RUNTIME_OPERATIONS_HOOK_PATH = join(
+  currentDirname,
+  '..',
+  '..',
+  'hooks',
+  'use-runtime-operations.ts',
+);
 const ROUTINES_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-routines.ts');
 const BUDGETS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-budgets.ts');
 const APPROVALS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-approvals.ts');
@@ -19,6 +26,7 @@ const ARTIFACTS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-artif
 const MEMORY_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-memory.ts');
 const CLIENT_PATH = join(currentDirname, 'autonomy-client.ts');
 const VIEW_PATH = join(currentDirname, 'autonomy-view.tsx');
+const RUNTIME_OPERATIONS_PANEL_PATH = join(currentDirname, 'runtime-operations-panel.tsx');
 const RUNTIME_PANEL_PATH = join(currentDirname, 'runtime-profiles-panel.tsx');
 const ROUTINES_PANEL_PATH = join(currentDirname, 'routines-panel.tsx');
 const BUDGETS_PANEL_PATH = join(currentDirname, 'budgets-panel.tsx');
@@ -34,6 +42,7 @@ const topBarSrc = readFileSync(TOP_BAR_PATH, 'utf8');
 const hookSrc = readFileSync(HOOK_PATH, 'utf8');
 const cloudHookSrc = readFileSync(CLOUD_HOOK_PATH, 'utf8');
 const runtimeHookSrc = readFileSync(RUNTIME_HOOK_PATH, 'utf8');
+const runtimeOperationsHookSrc = readFileSync(RUNTIME_OPERATIONS_HOOK_PATH, 'utf8');
 const routinesHookSrc = readFileSync(ROUTINES_HOOK_PATH, 'utf8');
 const budgetsHookSrc = readFileSync(BUDGETS_HOOK_PATH, 'utf8');
 const approvalsHookSrc = readFileSync(APPROVALS_HOOK_PATH, 'utf8');
@@ -41,6 +50,7 @@ const artifactsHookSrc = readFileSync(ARTIFACTS_HOOK_PATH, 'utf8');
 const memoryHookSrc = readFileSync(MEMORY_HOOK_PATH, 'utf8');
 const clientSrc = readFileSync(CLIENT_PATH, 'utf8');
 const viewSrc = readFileSync(VIEW_PATH, 'utf8');
+const runtimeOperationsPanelSrc = readFileSync(RUNTIME_OPERATIONS_PANEL_PATH, 'utf8');
 const runtimePanelSrc = readFileSync(RUNTIME_PANEL_PATH, 'utf8');
 const routinesPanelSrc = readFileSync(ROUTINES_PANEL_PATH, 'utf8');
 const budgetsPanelSrc = readFileSync(BUDGETS_PANEL_PATH, 'utf8');
@@ -115,6 +125,10 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain(
       "import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';",
     );
+    expect(viewSrc).toContain(
+      "import { RuntimeOperationsPanel } from './runtime-operations-panel.js';",
+    );
+    expect(viewSrc).toContain('<RuntimeOperationsPanel companyId={companyId} />');
     expect(viewSrc).toContain('<RuntimeProfilesPanel companyId={companyId} />');
     expect(viewSrc).toContain("import { RoutinesPanel } from './routines-panel.js';");
     expect(viewSrc).toContain('<RoutinesPanel companyId={companyId} />');
@@ -135,6 +149,8 @@ describe('Autonomy shell wiring', () => {
 
   it('adds runtime hooks and a runtime panel with native pickers and health posture', () => {
     expect(clientSrc).toContain('export const autonomyClient = {');
+    expect(clientSrc).toContain('runtimeOperations: {');
+    expect(clientSrc).toContain('ipc.runtimeOperations.snapshot');
     expect(clientSrc).toContain('ipc.operators.listInvites');
     expect(clientSrc).toContain('ipc.operators.createInvite');
     expect(clientSrc).toContain('ipc.operators.revokeInvite');
@@ -150,6 +166,14 @@ describe('Autonomy shell wiring', () => {
     expect(runtimeHookSrc).toContain('autonomyClient.runtimeProfiles.update');
     expect(runtimeHookSrc).toContain('autonomyClient.runtimeProfiles.bindEmployee');
     expect(runtimeHookSrc).toContain('autonomyClient.runtimeProfiles.validate');
+    expect(runtimeOperationsHookSrc).toContain("queryKey: ['runtime-operations', companyId]");
+    expect(runtimeOperationsHookSrc).toContain('autonomyClient.runtimeOperations.snapshot');
+    expect(runtimeOperationsHookSrc).toContain('refetchInterval: 3000');
+    expect(runtimeOperationsPanelSrc).toContain('data-runtime-operations-panel=""');
+    expect(runtimeOperationsPanelSrc).toContain('data-runtime-session={session.id}');
+    expect(runtimeOperationsPanelSrc).toContain('data-runtime-checkout={checkout.id}');
+    expect(runtimeOperationsPanelSrc).toContain('Heartbeat');
+    expect(runtimeOperationsPanelSrc).toContain('budget hard-stops');
     expect(runtimePanelSrc).toContain('Create Runtime Profile');
     expect(runtimePanelSrc).toContain('Employee Bindings');
     expect(runtimePanelSrc).toContain('No explicit runtime profile');
@@ -257,7 +281,7 @@ describe('Autonomy shell wiring', () => {
     expect(memoryHookSrc).toContain(
       "queryKey: ['memory', 'checkpoints', companyId, threadId, limit]",
     );
-    expect(memoryHookSrc).toContain("queryKey: [");
+    expect(memoryHookSrc).toContain('queryKey: [');
     expect(memoryHookSrc).toContain("'memory',");
     expect(memoryHookSrc).toContain("'packed-context',");
     expect(memoryHookSrc).toContain('targetTokenBudget ?? null,');

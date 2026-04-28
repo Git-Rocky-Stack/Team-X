@@ -164,6 +164,7 @@ import type {
   ListRoutineRunsRequest,
   ListRoutinesRequest,
   ListRunCheckpointsRequest,
+  ListRuntimeOperationsRequest,
   ListRuntimeProfilesRequest,
   ListSkillAssignmentsRequest,
   ListTicketsRequest,
@@ -197,6 +198,7 @@ import type {
   RoutineRun,
   RunCheckpoint,
   RunRoutineNowRequest,
+  RuntimeOperationsSnapshot,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
   SendChatRequest,
@@ -861,6 +863,10 @@ export interface IpcRuntimeProfilesService {
   validateProfile(input: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
 }
 
+export interface IpcRuntimeOperationsService {
+  snapshot(companyId: string): RuntimeOperationsSnapshot;
+}
+
 export interface IpcRoutineService {
   start(companyId: string): void;
   stop(companyId: string): void;
@@ -952,6 +958,7 @@ export interface IpcHandlerDeps {
   operatorAccessService?: IpcOperatorAccessService;
   cloudLinkService?: IpcCloudLinkService;
   runtimeProfilesService?: IpcRuntimeProfilesService;
+  runtimeOperationsService?: IpcRuntimeOperationsService;
   routineService?: IpcRoutineService;
   budgetGovernanceService?: IpcBudgetGovernanceService;
   approvalInboxService?: IpcApprovalInboxService;
@@ -1167,6 +1174,8 @@ export interface IpcHandlers {
   ): Promise<{ binding: EmployeeRuntimeBinding | null }>;
   /** `runtimeProfiles.validate` — run and persist the kind-specific health check. */
   runtimeProfilesValidate(req: ValidateRuntimeProfileRequest): Promise<RuntimeProfileValidation>;
+  /** `runtimeOperations.snapshot` — live external-runtime sessions plus active ticket leases. */
+  runtimeOperationsSnapshot(req: ListRuntimeOperationsRequest): Promise<RuntimeOperationsSnapshot>;
   /** `routines.list` — return routine definitions for a company. */
   routinesList(req: ListRoutinesRequest): Promise<Routine[]>;
   /** `routines.create` — create one recurring routine definition. */
@@ -2088,6 +2097,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     operatorAccessService,
     cloudLinkService,
     runtimeProfilesService,
+    runtimeOperationsService,
     routineService,
     budgetGovernanceService,
     approvalInboxService,
@@ -2629,6 +2639,26 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] runtimeProfiles.validate: runtimeProfilesService dep is required');
       }
       return runtimeProfilesService.validateProfile(req);
+    },
+
+    async runtimeOperationsSnapshot(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] runtimeOperations.snapshot: companyId is required');
+      }
+      if (!runtimeOperationsService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '[ipc] runtimeOperations.snapshot: runtimeOperationsService dep unwired — returning an empty runtime operations snapshot',
+          );
+        }
+        return {
+          companyId: req.companyId,
+          generatedAt: Date.now(),
+          sessions: [],
+          activeCheckouts: [],
+        };
+      }
+      return runtimeOperationsService.snapshot(req.companyId);
     },
 
     async routinesList(req) {
