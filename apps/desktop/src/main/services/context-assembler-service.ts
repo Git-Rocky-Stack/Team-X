@@ -18,6 +18,7 @@ import type {
 import { formatEvidenceLine } from './retrieval-orchestrator.js';
 
 import type { CompanyRow } from '../db/repos/companies.js';
+import type { EmployeeRow } from '../db/repos/employees.js';
 import type { GoalRow } from '../db/repos/goals.js';
 import type { MessageRow } from '../db/repos/messages.js';
 import type { ProjectRow } from '../db/repos/projects.js';
@@ -89,13 +90,49 @@ function formatCompanyBlock(company: CompanyRow): string {
   return lines.join('\n');
 }
 
-function formatTicketBlock(ticket: TicketRow): string {
+function formatEmployeeReference(
+  employeesRepo: ContextAssemblerEmployeesRepo | undefined,
+  companyId: string,
+  employeeId: string | null,
+): string | null {
+  if (!employeeId) return null;
+  const employee = employeesRepo?.getById(employeeId) ?? null;
+  if (
+    !employee ||
+    employee.companyId !== companyId ||
+    employee.isSystem ||
+    employee.status === 'archived' ||
+    employee.status === 'fired'
+  ) {
+    return 'unassigned (stored employee id is not in the active roster)';
+  }
+  return `${employee.name} (${employee.title})`;
+}
+
+function formatRosterBlock(employees: EmployeeRow[]): string {
+  if (employees.length === 0) {
+    return 'No active non-system employees are currently rostered.';
+  }
+  const lines = [
+    'Use these employees only when naming, tagging, or assigning work. Do not invent employee ids.',
+  ];
+  for (const employee of employees) {
+    lines.push(`- ${employee.name} (${employee.title}, ${employee.level}); id: ${employee.id}`);
+  }
+  return lines.join('\n');
+}
+
+function formatTicketBlock(
+  ticket: TicketRow,
+  employeesRepo?: ContextAssemblerEmployeesRepo,
+): string {
   const lines = [
     `Title: ${ticket.title}`,
     `Status: ${ticket.status}`,
     `Priority: ${ticket.priority}`,
   ];
-  if (ticket.assigneeId) lines.push(`Assignee: ${ticket.assigneeId}`);
+  const assignee = formatEmployeeReference(employeesRepo, ticket.companyId, ticket.assigneeId);
+  if (assignee) lines.push(`Assignee: ${assignee}`);
   const labels = parseStringArray(ticket.labelsJson);
   if (labels.length > 0) lines.push(`Labels: ${labels.join(', ')}`);
   if (ticket.description.trim().length > 0) {
@@ -112,14 +149,19 @@ function formatTimestamp(value: number | null | undefined): string | null {
   return date.toISOString().slice(0, 10);
 }
 
-function formatProjectBlock(project: ProjectRow, relationship?: string): string {
+function formatProjectBlock(
+  project: ProjectRow,
+  relationship?: string,
+  employeesRepo?: ContextAssemblerEmployeesRepo,
+): string {
   const lines = [
     `Title: ${project.title}`,
     `Status: ${project.status}`,
     `Priority: ${project.priority}`,
   ];
   if (relationship) lines.push(`Relationship: ${relationship}`);
-  if (project.leadId) lines.push(`Lead: ${project.leadId}`);
+  const lead = formatEmployeeReference(employeesRepo, project.companyId, project.leadId);
+  if (lead) lines.push(`Lead: ${lead}`);
   const targetDate = formatTimestamp(project.targetDate);
   if (targetDate) lines.push(`Target date: ${targetDate}`);
   if (project.description.trim().length > 0) {
@@ -360,6 +402,11 @@ export interface AssembleThreadContextInput {
   recentTurnLimit?: number;
 }
 
+export interface ContextAssemblerEmployeesRepo {
+  getById(id: string): EmployeeRow | null;
+  listVisibleByCompany(companyId: string): EmployeeRow[];
+}
+
 export interface ContextAssemblerServiceDeps {
   companiesRepo: {
     getById(id: string): CompanyRow | null;
@@ -370,6 +417,7 @@ export interface ContextAssemblerServiceDeps {
   messagesRepo: {
     listByThread(threadId: string): MessageRow[];
   };
+  employeesRepo?: ContextAssemblerEmployeesRepo;
   ticketsRepo: {
     getById(id: string): TicketRow | null;
     getByThreadId(threadId: string): TicketRow | null;
@@ -414,6 +462,7 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
     companiesRepo,
     threadsRepo,
     messagesRepo,
+    employeesRepo,
     ticketsRepo,
     projectsRepo,
     goalsRepo,
@@ -511,6 +560,30 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
         },
       });
 
+      const activeRoster =
+        employeesRepo
+          ?.listVisibleByCompany(input.companyId)
+          .filter(
+            (employee) =>
+              employee.companyId === input.companyId &&
+              !employee.isSystem &&
+              employee.status !== 'archived' &&
+              employee.status !== 'fired',
+          )
+          .sort((a, b) => a.name.localeCompare(b.name)) ?? [];
+      pushBlock(blocks, countTokens, {
+        id: `roster:${company.id}`,
+        kind: 'company',
+        priority: 'critical',
+        title: 'Verified Active Roster',
+        body: formatRosterBlock(activeRoster),
+        sourceRefId: company.id,
+        sourceLabel: 'active-roster',
+        metadata: {
+          count: activeRoster.length,
+        },
+      });
+
       const ticket = thread.ticketId
         ? ticketsRepo.getById(thread.ticketId)
         : ticketsRepo.getByThreadId(thread.id);
@@ -520,7 +593,7 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
           kind: 'ticket',
           priority: 'critical',
           title: `Ticket ${ticket.id}`,
-          body: formatTicketBlock(ticket),
+          body: formatTicketBlock(ticket, employeesRepo),
           sourceRefId: ticket.id,
           sourceLabel: ticket.status,
           metadata: {
@@ -596,7 +669,7 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
           kind: 'project',
           priority: 'high',
           title: `Project ${project.title}`,
-          body: formatProjectBlock(project, relationshipParts.join('; ')),
+          body: formatProjectBlock(project, relationshipParts.join('; '), employeesRepo),
           sourceRefId: project.id,
           sourceLabel: project.status,
           metadata: {

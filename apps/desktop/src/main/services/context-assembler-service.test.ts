@@ -300,6 +300,50 @@ describe('context assembler service', () => {
           },
         ]),
       },
+      employeesRepo: {
+        getById: vi.fn((id: string) =>
+          id === 'iris'
+            ? {
+                id: 'iris',
+                companyId: 'company-1',
+                rolePackId: 'strategia-official',
+                roleId: 'role_ceo',
+                roleMdSha: 'sha',
+                level: 'officer',
+                name: 'Iris Kovač',
+                title: 'CEO',
+                status: 'idle',
+                modelPref: null,
+                providerPref: null,
+                toolsAllowedJson: '[]',
+                toolsDeniedJson: '[]',
+                avatar: null,
+                isSystem: false,
+                createdAt: 1,
+              }
+            : null,
+        ),
+        listVisibleByCompany: vi.fn(() => [
+          {
+            id: 'iris',
+            companyId: 'company-1',
+            rolePackId: 'strategia-official',
+            roleId: 'role_ceo',
+            roleMdSha: 'sha',
+            level: 'officer',
+            name: 'Iris Kovač',
+            title: 'CEO',
+            status: 'idle',
+            modelPref: null,
+            providerPref: null,
+            toolsAllowedJson: '[]',
+            toolsDeniedJson: '[]',
+            avatar: null,
+            isSystem: false,
+            createdAt: 1,
+          },
+        ]),
+      },
       ticketsRepo: {
         getById: vi.fn(() => null),
         getByThreadId: vi.fn(() => null),
@@ -328,7 +372,7 @@ describe('context assembler service', () => {
             description: 'Reduce manual process drag.',
             status: 'planning',
             priority: 'medium',
-            leadId: 'mateo',
+            leadId: 'rySeyONsAP-ZRrwziHMfE',
             targetDate: null,
             createdAt: 6,
             updatedAt: 6,
@@ -383,11 +427,20 @@ describe('context assembler service', () => {
     });
 
     const projectBlock = result.blocks.find((block) => block.id === 'project:project-mrr');
+    const staleLeadProjectBlock = result.blocks.find((block) => block.id === 'project:project-ops');
     const goalBlock = result.blocks.find((block) => block.id === 'goal:goal-mrr');
+    const rosterBlock = result.blocks.find((block) => block.id === 'roster:company-1');
 
     expect(projectBlock?.body).toContain('Relationship: assigned to current employee');
     expect(projectBlock?.body).toContain('MRR Expansion Review');
+    expect(projectBlock?.body).toContain('Lead: Iris Kovač (CEO)');
     expect(projectBlock?.body).toContain('Target date: 2026-06-30');
+    expect(staleLeadProjectBlock?.body).toContain(
+      'Lead: unassigned (stored employee id is not in the active roster)',
+    );
+    expect(staleLeadProjectBlock?.body).not.toContain('rySeyONsAP-ZRrwziHMfE');
+    expect(rosterBlock?.body).toContain('Iris Kovač (CEO, officer)');
+    expect(rosterBlock?.body).toContain('id: iris');
     expect(goalBlock?.body).toContain('Raise MRR to $50K');
     expect(goalBlock?.body).toContain('Progress: 35%');
   });

@@ -743,6 +743,7 @@ app
       companiesRepo,
       threadsRepo,
       messagesRepo,
+      employeesRepo,
       ticketsRepo,
       projectsRepo,
       goalsRepo,
