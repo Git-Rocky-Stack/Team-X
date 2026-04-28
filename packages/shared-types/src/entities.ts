@@ -456,6 +456,93 @@ export interface RuntimeProfileValidation {
   details: Record<string, unknown> | null;
 }
 
+export const RUNTIME_SESSION_STATUSES = [
+  'starting',
+  'idle',
+  'working',
+  'blocked',
+  'stale',
+  'offline',
+  'failed',
+  'ended',
+] as const;
+export type RuntimeSessionStatus = (typeof RUNTIME_SESSION_STATUSES)[number];
+
+export interface RuntimeSession {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  runtimeProfileId: string | null;
+  adapterKind: RuntimeProfileKind;
+  status: RuntimeSessionStatus;
+  currentRunId: string | null;
+  currentTicketId: string | null;
+  pid: number | null;
+  endpointUrl: string | null;
+  workspacePath: string | null;
+  capabilities: Record<string, unknown>;
+  lastHeartbeatAt: number | null;
+  leaseExpiresAt: number | null;
+  failureReason: string | null;
+  startedAt: number;
+  endedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface RuntimeHeartbeat {
+  id: string;
+  sessionId: string;
+  companyId: string;
+  employeeId: string;
+  runtimeProfileId: string | null;
+  status: RuntimeSessionStatus;
+  currentRunId: string | null;
+  currentTicketId: string | null;
+  costDelta: Record<string, unknown>;
+  message: string | null;
+  createdAt: number;
+}
+
+export const TICKET_CHECKOUT_STATUSES = [
+  'active',
+  'released',
+  'expired',
+  'completed',
+  'blocked',
+] as const;
+export type TicketCheckoutStatus = (typeof TICKET_CHECKOUT_STATUSES)[number];
+
+export interface TicketCheckout {
+  id: string;
+  companyId: string;
+  ticketId: string;
+  employeeId: string;
+  runtimeSessionId: string | null;
+  runId: string | null;
+  status: TicketCheckoutStatus;
+  claimedAt: number;
+  lastHeartbeatAt: number | null;
+  expiresAt: number;
+  releasedAt: number | null;
+  releaseReason: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type TicketCheckoutClaimResult =
+  | { outcome: 'claimed'; checkout: TicketCheckout }
+  | { outcome: 'already-owned-by-self'; checkout: TicketCheckout }
+  | { outcome: 'expired-reclaimed'; checkout: TicketCheckout; previousCheckout: TicketCheckout }
+  | { outcome: 'conflict'; conflictingCheckout: TicketCheckout };
+
+export interface RuntimeProfileSecretRef {
+  type: 'secret_ref';
+  providerId: string;
+  key: string;
+  version: string;
+}
+
 export const ROUTINE_TRIGGER_KINDS = ['interval', 'daily', 'weekly'] as const;
 export type RoutineTriggerKind = (typeof ROUTINE_TRIGGER_KINDS)[number];
 

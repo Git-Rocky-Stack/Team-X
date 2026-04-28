@@ -4,6 +4,11 @@ import type { ProviderStreamFn, StreamMessage, StreamUsage } from '@team-x/provi
 import type { RuntimeProfile } from '@team-x/shared-types';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
+import { type RuntimeSecretReader, resolveRuntimeEnvironment } from './runtime-secret-refs.js';
+import {
+  type RuntimeWorkspacePaths,
+  ensureRuntimeWorkspacePaths,
+} from './runtime-workspace-service.js';
 
 type FetchLike = typeof fetch;
 
@@ -42,6 +47,9 @@ export interface ExternalRuntimeAdapters {
 export interface ExternalRuntimeAdaptersDeps {
   fetchFn?: FetchLike;
   spawnFn?: SpawnLike;
+  secretsStore?: RuntimeSecretReader;
+  userDataDir?: string;
+  ensureWorkspaceFn?: typeof ensureRuntimeWorkspacePaths;
 }
 
 interface RuntimeInvocationPayload {
@@ -60,6 +68,7 @@ interface RuntimeInvocationPayload {
   prompt: string;
   maxSteps: number;
   toolNames: string[];
+  workspace: RuntimeWorkspacePaths | null;
 }
 
 function createAbortError(): Error {
@@ -89,6 +98,7 @@ function buildInvocationPayload(args: {
   messages: StreamMessage[];
   maxSteps: number;
   tools?: Record<string, unknown>;
+  workspace?: RuntimeWorkspacePaths | null;
 }): RuntimeInvocationPayload {
   return {
     version: 'team-x-runtime-v1',
@@ -106,6 +116,7 @@ function buildInvocationPayload(args: {
     prompt: buildPrompt(args.system, args.messages),
     maxSteps: args.maxSteps,
     toolNames: Object.keys(args.tools ?? {}),
+    workspace: args.workspace ?? null,
   };
 }
 
@@ -189,6 +200,7 @@ function parseRuntimeResponse(
 async function runCommandInvocation(args: {
   command: string;
   workingDirectory: string | null;
+  env: Record<string, string>;
   payload: RuntimeInvocationPayload;
   signal?: AbortSignal;
   spawnFn: SpawnLike;
@@ -199,6 +211,7 @@ async function runCommandInvocation(args: {
 
   const child = args.spawnFn(args.command, [], {
     cwd: args.workingDirectory ?? undefined,
+    env: { ...process.env, ...args.env },
     shell: true,
     windowsHide: true,
   });
@@ -259,8 +272,21 @@ function createBashStream(args: {
   employee: EmployeeRow;
   profile: RuntimeProfile;
   spawnFn: SpawnLike;
+  secretsStore: RuntimeSecretReader | undefined;
+  userDataDir: string | undefined;
+  ensureWorkspaceFn: typeof ensureRuntimeWorkspacePaths;
 }): ProviderStreamFn {
   return async function* (input) {
+    const workspace =
+      args.userDataDir !== undefined
+        ? await args.ensureWorkspaceFn({
+            userDataDir: args.userDataDir,
+            companySlug: args.employee.companyId,
+            employeeId: args.employee.id,
+            runtimeKind: args.profile.kind,
+            runtimeProfileSlug: args.profile.slug,
+          })
+        : null;
     const payload = buildInvocationPayload({
       employee: args.employee,
       profile: args.profile,
@@ -268,10 +294,23 @@ function createBashStream(args: {
       messages: input.messages,
       maxSteps: input.maxSteps ?? 1,
       tools: input.tools,
+      workspace,
     });
+    const runtimeEnv = await resolveRuntimeEnvironment({
+      config: args.profile.config,
+      secrets: args.secretsStore,
+    });
+    if (workspace) {
+      runtimeEnv.TEAM_X_RUNTIME_ROOT = workspace.root;
+      runtimeEnv.TEAM_X_RUNTIME_HOME = workspace.home;
+      runtimeEnv.TEAM_X_RUNTIME_WORKSPACE = workspace.workspace;
+      runtimeEnv.TEAM_X_RUNTIME_LOGS = workspace.logs;
+      runtimeEnv.TEAM_X_RUNTIME_TMP = workspace.tmp;
+    }
     const stdout = await runCommandInvocation({
       command: args.command,
-      workingDirectory: args.workingDirectory,
+      workingDirectory: args.workingDirectory ?? workspace?.workspace ?? null,
+      env: runtimeEnv,
       payload,
       signal: input.signal,
       spawnFn: args.spawnFn,
@@ -288,6 +327,9 @@ function createCommandResolvedProvider(args: {
   employee: EmployeeRow;
   profile: RuntimeProfile;
   spawnFn: SpawnLike;
+  secretsStore: RuntimeSecretReader | undefined;
+  userDataDir: string | undefined;
+  ensureWorkspaceFn: typeof ensureRuntimeWorkspacePaths;
 }): ExternalRuntimeResolvedProvider {
   return {
     providerName: `runtime:${args.profile.kind}`,
@@ -299,6 +341,9 @@ function createCommandResolvedProvider(args: {
       employee: args.employee,
       profile: args.profile,
       spawnFn: args.spawnFn,
+      secretsStore: args.secretsStore,
+      userDataDir: args.userDataDir,
+      ensureWorkspaceFn: args.ensureWorkspaceFn,
     }),
   };
 }
@@ -308,8 +353,20 @@ function createHttpStream(args: {
   employee: EmployeeRow;
   profile: RuntimeProfile;
   fetchFn: FetchLike;
+  userDataDir: string | undefined;
+  ensureWorkspaceFn: typeof ensureRuntimeWorkspacePaths;
 }): ProviderStreamFn {
   return async function* (input) {
+    const workspace =
+      args.userDataDir !== undefined
+        ? await args.ensureWorkspaceFn({
+            userDataDir: args.userDataDir,
+            companySlug: args.employee.companyId,
+            employeeId: args.employee.id,
+            runtimeKind: args.profile.kind,
+            runtimeProfileSlug: args.profile.slug,
+          })
+        : null;
     const payload = buildInvocationPayload({
       employee: args.employee,
       profile: args.profile,
@@ -317,6 +374,7 @@ function createHttpStream(args: {
       messages: input.messages,
       maxSteps: input.maxSteps ?? 1,
       tools: input.tools,
+      workspace,
     });
     const response = await args.fetchFn(args.baseUrl, {
       method: 'POST',
@@ -347,6 +405,8 @@ function createHttpResolvedProvider(args: {
   employee: EmployeeRow;
   profile: RuntimeProfile;
   fetchFn: FetchLike;
+  userDataDir: string | undefined;
+  ensureWorkspaceFn: typeof ensureRuntimeWorkspacePaths;
 }): ExternalRuntimeResolvedProvider {
   return {
     providerName: `runtime:${args.profile.kind}`,
@@ -357,6 +417,8 @@ function createHttpResolvedProvider(args: {
       employee: args.employee,
       profile: args.profile,
       fetchFn: args.fetchFn,
+      userDataDir: args.userDataDir,
+      ensureWorkspaceFn: args.ensureWorkspaceFn,
     }),
   };
 }
@@ -376,6 +438,7 @@ export function createExternalRuntimeAdapters(
 ): ExternalRuntimeAdapters {
   const fetchFn = deps.fetchFn ?? fetch;
   const spawnFn = deps.spawnFn ?? spawn;
+  const ensureWorkspaceFn = deps.ensureWorkspaceFn ?? ensureRuntimeWorkspacePaths;
 
   return {
     createResolvedProvider(input) {
@@ -394,6 +457,9 @@ export function createExternalRuntimeAdapters(
             employee: input.employee,
             profile: input.profile,
             spawnFn,
+            secretsStore: deps.secretsStore,
+            userDataDir: deps.userDataDir,
+            ensureWorkspaceFn,
           });
         case 'http':
           if (!baseUrl) return null;
@@ -402,6 +468,8 @@ export function createExternalRuntimeAdapters(
             employee: input.employee,
             profile: input.profile,
             fetchFn,
+            userDataDir: deps.userDataDir,
+            ensureWorkspaceFn,
           });
         case 'codex':
         case 'claude-code':
@@ -413,6 +481,9 @@ export function createExternalRuntimeAdapters(
               employee: input.employee,
               profile: input.profile,
               spawnFn,
+              secretsStore: deps.secretsStore,
+              userDataDir: deps.userDataDir,
+              ensureWorkspaceFn,
             });
           }
           if (endpointUrl) {
@@ -421,6 +492,8 @@ export function createExternalRuntimeAdapters(
               employee: input.employee,
               profile: input.profile,
               fetchFn,
+              userDataDir: deps.userDataDir,
+              ensureWorkspaceFn,
             });
           }
           return null;

@@ -245,4 +245,47 @@ describe('runtime profiles service', () => {
 
     expect(service.list('company-1')[0]?.executionMode).toBe('planned');
   });
+
+  it('rejects inline sensitive runtime config values', () => {
+    const service = createService();
+
+    expect(() =>
+      service.create({
+        companyId: 'company-1',
+        name: 'Unsafe Codex',
+        kind: 'codex',
+        config: {
+          env: {
+            ANTHROPIC_API_KEY: 'sk-ant-unsafe',
+          },
+        },
+      }),
+    ).toThrow(/inline sensitive value/);
+  });
+
+  it('allows runtime config secret refs for environment injection', () => {
+    const service = createService();
+    const profileId = service.create({
+      companyId: 'company-1',
+      name: 'Safe Codex',
+      kind: 'codex',
+      config: {
+        env: {
+          ANTHROPIC_API_KEY: {
+            type: 'secret_ref',
+            providerId: 'anthropic',
+            key: 'apiKey',
+            version: 'latest',
+          },
+        },
+      },
+    });
+
+    expect(service.list('company-1')[0]).toEqual(
+      expect.objectContaining({
+        id: profileId,
+        executionMode: 'planned',
+      }),
+    );
+  });
 });

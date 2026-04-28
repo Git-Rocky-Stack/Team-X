@@ -254,6 +254,97 @@ export const employeeRuntimeBindings = sqliteTable(
   }),
 );
 
+/** Durable live/external runtime session state, one row per launched agent runtime. */
+export const runtimeSessions = sqliteTable(
+  'runtime_sessions',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    runtimeProfileId: text('runtime_profile_id').references(() => runtimeProfiles.id, {
+      onDelete: 'set null',
+    }),
+    /** teamx-internal | bash | http | codex | claude-code | cursor */
+    adapterKind: text('adapter_kind').notNull(),
+    /** starting | idle | working | blocked | stale | offline | failed | ended */
+    status: text('status').notNull().default('starting'),
+    currentRunId: text('current_run_id').references(() => runs.id, { onDelete: 'set null' }),
+    currentTicketId: text('current_ticket_id').references(() => tickets.id, {
+      onDelete: 'set null',
+    }),
+    pid: integer('pid'),
+    endpointUrl: text('endpoint_url'),
+    workspacePath: text('workspace_path'),
+    capabilitiesJson: text('capabilities_json').notNull().default('{}'),
+    lastHeartbeatAt: integer('last_heartbeat_at'),
+    leaseExpiresAt: integer('lease_expires_at'),
+    failureReason: text('failure_reason'),
+    startedAt: integer('started_at').notNull(),
+    endedAt: integer('ended_at'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_runtime_sessions_company').on(table.companyId),
+    employeeIdx: index('idx_runtime_sessions_employee').on(table.employeeId),
+    profileIdx: index('idx_runtime_sessions_profile').on(table.runtimeProfileId),
+    companyStatusIdx: index('idx_runtime_sessions_company_status').on(
+      table.companyId,
+      table.status,
+    ),
+    companyHeartbeatIdx: index('idx_runtime_sessions_company_heartbeat').on(
+      table.companyId,
+      table.lastHeartbeatAt,
+    ),
+    currentRunIdx: index('idx_runtime_sessions_current_run').on(table.currentRunId),
+    currentTicketIdx: index('idx_runtime_sessions_current_ticket').on(table.currentTicketId),
+  }),
+);
+
+/** Append-only runtime heartbeat history for external agent liveness and diagnostics. */
+export const runtimeHeartbeats = sqliteTable(
+  'runtime_heartbeats',
+  {
+    id: text('id').primaryKey(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => runtimeSessions.id, { onDelete: 'cascade' }),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    runtimeProfileId: text('runtime_profile_id').references(() => runtimeProfiles.id, {
+      onDelete: 'set null',
+    }),
+    /** Mirrors runtime_sessions.status at the heartbeat instant. */
+    status: text('status').notNull(),
+    currentRunId: text('current_run_id').references(() => runs.id, { onDelete: 'set null' }),
+    currentTicketId: text('current_ticket_id').references(() => tickets.id, {
+      onDelete: 'set null',
+    }),
+    costDeltaJson: text('cost_delta_json').notNull().default('{}'),
+    message: text('message'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => ({
+    sessionIdx: index('idx_runtime_heartbeats_session').on(table.sessionId),
+    companyCreatedIdx: index('idx_runtime_heartbeats_company_created').on(
+      table.companyId,
+      table.createdAt,
+    ),
+    employeeCreatedIdx: index('idx_runtime_heartbeats_employee_created').on(
+      table.employeeId,
+      table.createdAt,
+    ),
+  }),
+);
+
 /** Recurring operating loops that materialize explicit work on a schedule. */
 export const routines = sqliteTable(
   'routines',
@@ -915,6 +1006,49 @@ export const tickets = sqliteTable('tickets', {
   updatedAt: integer('updated_at').notNull(),
   closedAt: integer('closed_at'),
 });
+
+/** Run-owned ticket leases that prevent duplicate autonomous external-agent work. */
+export const ticketCheckouts = sqliteTable(
+  'ticket_checkouts',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    ticketId: text('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'cascade' }),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    runtimeSessionId: text('runtime_session_id').references(() => runtimeSessions.id, {
+      onDelete: 'set null',
+    }),
+    runId: text('run_id').references(() => runs.id, { onDelete: 'set null' }),
+    /** active | released | expired | completed | blocked */
+    status: text('status').notNull().default('active'),
+    claimedAt: integer('claimed_at').notNull(),
+    lastHeartbeatAt: integer('last_heartbeat_at'),
+    expiresAt: integer('expires_at').notNull(),
+    releasedAt: integer('released_at'),
+    releaseReason: text('release_reason'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_ticket_checkouts_company').on(table.companyId),
+    ticketIdx: index('idx_ticket_checkouts_ticket').on(table.ticketId),
+    employeeIdx: index('idx_ticket_checkouts_employee').on(table.employeeId),
+    sessionIdx: index('idx_ticket_checkouts_session').on(table.runtimeSessionId),
+    runIdx: index('idx_ticket_checkouts_run').on(table.runId),
+    companyStatusIdx: index('idx_ticket_checkouts_company_status').on(
+      table.companyId,
+      table.status,
+    ),
+    ticketStatusIdx: index('idx_ticket_checkouts_ticket_status').on(table.ticketId, table.status),
+    expiresIdx: index('idx_ticket_checkouts_expires').on(table.expiresAt),
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // Phase 3 — M15: Goals & Projects

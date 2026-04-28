@@ -512,7 +512,10 @@ app
       employeesRepo,
       providersService,
     });
-    const externalRuntimeAdapters = createExternalRuntimeAdapters();
+    const externalRuntimeAdapters = createExternalRuntimeAdapters({
+      secretsStore,
+      userDataDir: userDataDir(),
+    });
     budgetGovernanceServiceInstance = createBudgetGovernanceService({
       budgetsRepo,
       employeesRepo,

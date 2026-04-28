@@ -1,4 +1,7 @@
 import { EventEmitter } from 'node:events';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 
 import { describe, expect, it, vi } from 'vitest';
@@ -225,6 +228,98 @@ describe('external runtime adapters', () => {
         },
       },
     ]);
+  });
+
+  it('injects managed workspace paths and secret-ref env into command runtimes', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'teamx-external-runtime-'));
+    const child = new MockChildProcess();
+    let stdinPayload = '';
+    let spawnOptions: { cwd?: string; env?: NodeJS.ProcessEnv } | undefined;
+    child.stdin.on('data', (chunk) => {
+      stdinPayload += String(chunk);
+    });
+    const spawnFn = vi.fn((_command, _args, options) => {
+      spawnOptions = options as { cwd?: string; env?: NodeJS.ProcessEnv };
+      queueMicrotask(() => {
+        child.stdout.write('workspace ready');
+        child.stdout.end();
+        child.emit('close', 0, null);
+      });
+      return child;
+    });
+    const secretsStore = {
+      getApiKey: vi.fn(async (providerId: string) =>
+        providerId === 'anthropic' ? 'sk-ant-safe' : null,
+      ),
+    };
+
+    try {
+      const adapters = createExternalRuntimeAdapters({
+        spawnFn,
+        secretsStore,
+        userDataDir: tempDir,
+      });
+      const resolved = adapters.createResolvedProvider({
+        employee: makeEmployee(),
+        profile: makeProfile('codex', {
+          command: 'codex',
+          env: {
+            ANTHROPIC_API_KEY: {
+              type: 'secret_ref',
+              providerId: 'anthropic',
+              key: 'apiKey',
+              version: 'latest',
+            },
+            TEAM_X_MODE: 'autonomous',
+          },
+        }),
+      });
+
+      if (!resolved) throw new Error('expected codex runtime adapter');
+      const chunks = [];
+      for await (const chunk of resolved.stream({
+        system: 'You are Codex',
+        messages: [{ role: 'user', content: 'Work in the isolated runtime workspace.' }],
+      })) {
+        chunks.push(chunk);
+      }
+
+      const expectedRoot = join(
+        tempDir,
+        'companies',
+        'company-1',
+        'runtimes',
+        'employee-1',
+        'profile-codex',
+      );
+      expect(spawnOptions?.cwd).toBe(join(expectedRoot, 'workspace'));
+      expect(spawnOptions?.env?.ANTHROPIC_API_KEY).toBe('sk-ant-safe');
+      expect(spawnOptions?.env?.TEAM_X_MODE).toBe('autonomous');
+      expect(spawnOptions?.env?.TEAM_X_RUNTIME_HOME).toBe(join(expectedRoot, 'home'));
+      expect(secretsStore.getApiKey).toHaveBeenCalledWith('anthropic');
+
+      const payload = JSON.parse(stdinPayload);
+      expect(payload.workspace).toEqual(
+        expect.objectContaining({
+          root: expectedRoot,
+          home: join(expectedRoot, 'home'),
+          workspace: join(expectedRoot, 'workspace'),
+        }),
+      );
+      expect(JSON.stringify(payload)).not.toContain('sk-ant-safe');
+      expect(chunks).toEqual([
+        { delta: 'workspace ready' },
+        {
+          done: true,
+          usage: {
+            promptTokens: expect.any(Number),
+            completionTokens: expect.any(Number),
+          },
+        },
+      ]);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('treats cursor-style endpoint profiles as execution-backed HTTP adapters when configured', async () => {

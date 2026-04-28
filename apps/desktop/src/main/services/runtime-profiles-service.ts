@@ -18,6 +18,7 @@ import type {
   RuntimeProfilesRepo,
 } from '../db/repos/runtime-profiles.js';
 import type { ProvidersService } from './providers.js';
+import { isRuntimeSecretRef } from './runtime-secret-refs.js';
 
 type FetchLike = typeof fetch;
 type StatLike = typeof stat;
@@ -105,6 +106,53 @@ function normalizeConfig(
     return {};
   }
   return { ...input };
+}
+
+export function isSensitiveRuntimeConfigKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return (
+    normalized === 'apikey' ||
+    normalized.endsWith('apikey') ||
+    normalized === 'token' ||
+    normalized.endsWith('token') ||
+    normalized === 'secret' ||
+    normalized.endsWith('secret') ||
+    normalized === 'password' ||
+    normalized.endsWith('password')
+  );
+}
+
+export function findInlineRuntimeSecretPaths(value: unknown, path = 'config'): string[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+  const record = value as Record<string, unknown>;
+  const paths: string[] = [];
+  for (const [key, child] of Object.entries(record)) {
+    const childPath = `${path}.${key}`;
+    if (isSensitiveRuntimeConfigKey(key)) {
+      if (isRuntimeSecretRef(child) || child === null || child === undefined) {
+        continue;
+      }
+      if (typeof child !== 'string' || child.trim().length > 0) {
+        paths.push(childPath);
+      }
+      continue;
+    }
+    paths.push(...findInlineRuntimeSecretPaths(child, childPath));
+  }
+  return paths;
+}
+
+function normalizeSafeConfig(
+  input: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  const config = normalizeConfig(input);
+  const inlineSecretPaths = findInlineRuntimeSecretPaths(config);
+  if (inlineSecretPaths.length > 0) {
+    throw new Error(
+      `[runtime-profiles] runtime config contains inline sensitive value(s): ${inlineSecretPaths.join(', ')}. Use secret_ref entries instead.`,
+    );
+  }
+  return config;
 }
 
 function getOptionalString(config: Record<string, unknown>, key: string): string | null {
@@ -541,7 +589,7 @@ export function createRuntimeProfilesService(
         slug: nextSlug(input.companyId, name, profiles),
         kind: input.kind,
         enabled: input.enabled ?? true,
-        configJson: JSON.stringify(normalizeConfig(input.config)),
+        configJson: JSON.stringify(normalizeSafeConfig(input.config)),
       });
     },
 
@@ -565,7 +613,9 @@ export function createRuntimeProfilesService(
         kind: input.kind,
         enabled: input.enabled,
         configJson:
-          input.config !== undefined ? JSON.stringify(normalizeConfig(input.config)) : undefined,
+          input.config !== undefined
+            ? JSON.stringify(normalizeSafeConfig(input.config))
+            : undefined,
         lastHealthStatus: shouldResetHealth ? 'unknown' : undefined,
         lastHealthMessage: shouldResetHealth ? null : undefined,
         lastValidatedAt: shouldResetHealth ? null : undefined,
