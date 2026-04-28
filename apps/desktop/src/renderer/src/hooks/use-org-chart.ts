@@ -27,6 +27,7 @@ export function useOrgChartEventSync(companyId: string | null): void {
       if (event.companyId !== companyId) return;
       if (
         event.type !== 'employee.hired' &&
+        event.type !== 'employee.updated' &&
         event.type !== 'employee.fired' &&
         event.type !== 'employee.promoted' &&
         event.type !== 'employee.managerSet'

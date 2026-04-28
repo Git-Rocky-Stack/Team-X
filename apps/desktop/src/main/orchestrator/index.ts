@@ -286,6 +286,7 @@ export interface BuildOrchestratorOptions {
     assembleThreadContext(input: {
       companyId: string;
       threadId: string;
+      employeeId?: string | null;
       recentTurnLimit?: number;
     }): Promise<{
       companyId: string;
@@ -560,7 +561,7 @@ function packedTurnToStreamMessage(
 function appendPackedContext(system: string, addendum: string): string {
   const trimmedAddendum = addendum.trim();
   if (trimmedAddendum.length === 0) return system;
-  return `${system}\n\n## Runtime Context\n${trimmedAddendum}`;
+  return `${system}\n\n## Runtime Context\nUse this section as verified workspace state for this turn. When it includes project, goal, ticket, or approval blocks, answer from those records instead of saying you cannot access that area.\n\n${trimmedAddendum}`;
 }
 
 function deriveObjectiveFromRows(rows: MessageRow[], respondingEmployeeId?: string): string | null {
@@ -863,6 +864,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       const assembled = await contextAssemblerService.assembleThreadContext({
         companyId: args.companyId,
         threadId: args.threadId,
+        employeeId: args.employeeId,
         recentTurnLimit: contextRecentTurnLimit,
       });
       const packed = contextPackerService.packContext({

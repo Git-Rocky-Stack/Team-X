@@ -48,7 +48,7 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-white/10 bg-black/20 px-4 py-4">
+    <div className="border-t border-white/10 bg-black/20 px-5 py-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="min-h-4 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
           {queuedCount > 0
@@ -80,7 +80,7 @@ export function Composer({
             placeholder={
               queueMode ? 'Message... (Ctrl+Enter to queue)' : 'Message... (Ctrl+Enter to send)'
             }
-            className="min-h-[3.25rem] max-h-32 resize-none border-white/10 bg-black/20 text-sm scrollbar-thin"
+            className="min-h-16 max-h-48 resize-none border-white/10 bg-black/20 text-sm scrollbar-thin"
             rows={1}
           />
           <Button

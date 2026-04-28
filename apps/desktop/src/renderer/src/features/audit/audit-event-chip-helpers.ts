@@ -40,6 +40,7 @@ export const ROW_SUMMARY_MAX_CHARS = 140;
 export const EVENT_TYPE_COLORS: Record<string, string> = {
   // Phase 1–4 events (pre-M30)
   'employee.hired': 'bg-green-600/20 text-green-400',
+  'employee.updated': 'bg-brand/15 text-brand',
   'employee.fired': 'bg-red-600/20 text-red-400',
   'employee.promoted': 'bg-blue-600/20 text-blue-400',
   'ticket.created': 'bg-cyan-600/20 text-cyan-400',
@@ -108,6 +109,7 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
 /** Hand-tuned display labels where the auto-title-cased fallback reads
  * awkwardly ("Rag Index Indexed" → "RAG Indexed"). Keep this list tight. */
 export const EVENT_TYPE_LABELS: Record<string, string> = {
+  'employee.updated': 'Employee Updated',
   'mcp.added': 'MCP Added',
   'mcp.removed': 'MCP Removed',
   'mcp.toggled': 'MCP Toggled',

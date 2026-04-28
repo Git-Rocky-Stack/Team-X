@@ -261,4 +261,133 @@ describe('context assembler service', () => {
       }),
     );
   });
+
+  it('includes assigned project and goal context for a direct employee chat', async () => {
+    const service = createContextAssemblerService({
+      companiesRepo: {
+        getById: vi.fn(() => ({
+          id: 'company-1',
+          name: 'Alpha',
+          slug: 'alpha',
+          settingsJson: JSON.stringify({ mission: 'Reach durable revenue.' }),
+          icon: null,
+          theme: 'mission-red',
+          status: 'running',
+          createdAt: 1,
+        })),
+      },
+      threadsRepo: {
+        getById: vi.fn(() => ({
+          id: 'thread-1',
+          companyId: 'company-1',
+          kind: 'dm',
+          subject: null,
+          createdBy: 'rocky',
+          createdAt: 2,
+          lastMessageAt: 9,
+          ticketId: null,
+        })),
+      },
+      messagesRepo: {
+        listByThread: vi.fn(() => [
+          {
+            id: 'message-1',
+            threadId: 'thread-1',
+            authorId: 'rocky',
+            authorKind: 'user',
+            content: 'Review the projects area regarding MRR goals.',
+            createdAt: 3,
+          },
+        ]),
+      },
+      ticketsRepo: {
+        getById: vi.fn(() => null),
+        getByThreadId: vi.fn(() => null),
+      },
+      projectsRepo: {
+        listByCompany: vi.fn(() => [
+          {
+            id: 'project-mrr',
+            companyId: 'company-1',
+            goalId: 'goal-mrr',
+            title: 'MRR Expansion Review',
+            description: 'Assess whether the monthly recurring revenue target is aggressive enough.',
+            status: 'active',
+            priority: 'high',
+            leadId: 'iris',
+            targetDate: Date.UTC(2026, 5, 30),
+            createdAt: 7,
+            updatedAt: 8,
+          },
+          {
+            id: 'project-ops',
+            companyId: 'company-1',
+            goalId: null,
+            title: 'Operations Cleanup',
+            description: 'Reduce manual process drag.',
+            status: 'planning',
+            priority: 'medium',
+            leadId: 'mateo',
+            targetDate: null,
+            createdAt: 6,
+            updatedAt: 6,
+          },
+        ]),
+        listTickets: vi.fn(() => []),
+      },
+      goalsRepo: {
+        getById: vi.fn((id: string) =>
+          id === 'goal-mrr'
+            ? {
+                id: 'goal-mrr',
+                companyId: 'company-1',
+                title: 'Raise MRR to $50K',
+                description: 'North Star revenue target for the current growth push.',
+                status: 'active',
+                progressPct: 35,
+                targetDate: Date.UTC(2026, 6, 31),
+                createdAt: 4,
+                updatedAt: 5,
+              }
+            : null,
+        ),
+        listByCompany: vi.fn(() => [
+          {
+            id: 'goal-mrr',
+            companyId: 'company-1',
+            title: 'Raise MRR to $50K',
+            description: 'North Star revenue target for the current growth push.',
+            status: 'active',
+            progressPct: 35,
+            targetDate: Date.UTC(2026, 6, 31),
+            createdAt: 4,
+            updatedAt: 5,
+          },
+        ]),
+      },
+      threadDigestService: {
+        getLatest: vi.fn(() => null),
+      },
+      runCheckpointService: {
+        getLatest: vi.fn(() => null),
+      },
+      countTokens: (text) => Math.max(1, Math.ceil(text.length / 5)),
+      now: () => 99,
+    });
+
+    const result = await service.assembleThreadContext({
+      companyId: 'company-1',
+      threadId: 'thread-1',
+      employeeId: 'iris',
+    });
+
+    const projectBlock = result.blocks.find((block) => block.id === 'project:project-mrr');
+    const goalBlock = result.blocks.find((block) => block.id === 'goal:goal-mrr');
+
+    expect(projectBlock?.body).toContain('Relationship: assigned to current employee');
+    expect(projectBlock?.body).toContain('MRR Expansion Review');
+    expect(projectBlock?.body).toContain('Target date: 2026-06-30');
+    expect(goalBlock?.body).toContain('Raise MRR to $50K');
+    expect(goalBlock?.body).toContain('Progress: 35%');
+  });
 });

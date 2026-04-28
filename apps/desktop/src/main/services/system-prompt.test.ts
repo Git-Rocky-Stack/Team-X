@@ -39,6 +39,9 @@ describe('composeSystemPromptWithRag', () => {
     expect(prompt).toContain('## Execution Policy');
     expect(prompt).toContain('Only say an action is completed');
     expect(prompt).toContain('recorded, delegated, pending, or blocked');
+    expect(prompt).toContain('ASAP, now, begin, start, staff, or onboard');
+    expect(prompt).toContain('Do not invent future deadlines');
+    expect(prompt).toContain('onboard that person against the active ticket or project');
   });
 
   it('returns plain role prompt when RAG disabled', async () => {

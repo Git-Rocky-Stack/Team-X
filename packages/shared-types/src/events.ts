@@ -44,6 +44,7 @@ export type EventType =
   | 'company.packageExported'
   | 'company.packageImported'
   | 'company.templateInstalled'
+  | 'employee.updated'
   | 'employee.promoted'
   | 'employee.managerSet'
   | 'employee.hired'
@@ -774,6 +775,21 @@ export interface EmployeePromotedPayload {
   newTitle: string;
   /** Wall-clock timestamp in ms when the promote handler wrote the row. */
   promotedAt: number;
+}
+
+export interface EmployeeUpdatedPayload {
+  /** The edited employee id. */
+  employeeId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** Human-editable fields patched by the profile editor. */
+  patchedKeys: Array<'name' | 'title' | 'modelPref' | 'providerPref' | 'avatar'>;
+  /** Updated display name after the patch. */
+  name: string;
+  /** Updated display title after the patch. */
+  title: string;
+  /** Wall-clock timestamp in ms when the update handler wrote the row. */
+  updatedAt: number;
 }
 
 export interface EmployeeManagerSetPayload {

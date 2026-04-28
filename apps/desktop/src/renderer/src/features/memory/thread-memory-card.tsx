@@ -50,11 +50,61 @@ export function ThreadMemoryCard({
     latestCheckpoint?.progressSummary ??
     'No condensed memory is available for this thread yet.';
 
+  if (compact) {
+    return (
+      <MissionInsetSurface
+        className={cn('space-y-2 rounded-[18px] p-3', className)}
+        data-thread-memory-card=""
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">{title}</span>
+              <MissionPill tone={freshnessTone(digest?.freshness)}>
+                {digest?.freshness ?? 'no digest'}
+              </MissionPill>
+              {latestCheckpoint ? (
+                <MissionPill tone={checkpointTone(latestCheckpoint.checkpointKind)}>
+                  {checkpointLabel(latestCheckpoint.checkpointKind)}
+                </MissionPill>
+              ) : null}
+            </div>
+            <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+              {digestQuery.isLoading || checkpointsQuery.isLoading
+                ? 'Loading condensed memory for this thread...'
+                : digestQuery.isError || checkpointsQuery.isError
+                  ? 'Team-X could not read the latest digest or checkpoint trail for this thread.'
+                  : previewSummary}
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 shrink-0 border-white/10 bg-black/10 px-3 text-xs hover:bg-black/20"
+            onClick={() => openAutonomyMemory(threadId)}
+            data-thread-memory-open=""
+          >
+            Inspect
+          </Button>
+        </div>
+
+        {!digestQuery.isLoading && !checkpointsQuery.isLoading ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <MissionPill mono>
+              {digest ? `${digest.estimatedTokens} tokens` : 'digest pending'}
+            </MissionPill>
+            <MissionPill mono>{checkpoints.length} checkpoints</MissionPill>
+            <MissionPill>{latestCheckpoint?.nextAction ?? 'Open full memory view'}</MissionPill>
+          </div>
+        ) : null}
+      </MissionInsetSurface>
+    );
+  }
+
   return (
-    <MissionInsetSurface
-      className={cn('space-y-3 p-4', compact ? 'rounded-[18px] p-3' : null, className)}
-      data-thread-memory-card=""
-    >
+    <MissionInsetSurface className={cn('space-y-3 p-4', className)} data-thread-memory-card="">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">

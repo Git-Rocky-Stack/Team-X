@@ -122,6 +122,17 @@ describe('buildTeamXApi', () => {
     });
   });
 
+  describe('employees.update', () => {
+    it('invokes employees.update with the request object verbatim', async () => {
+      fake.setNextInvokeResult({ employee: { id: 'emp-1', name: 'Nadia' } });
+      const req = { employeeId: 'emp-1', name: 'Nadia', title: 'CTO' } as const;
+      await api.employees.update(req);
+      expect(fake.invokeCalls).toEqual([
+        { channel: (PRELOAD_CHANNELS as Record<string, string>).employeesUpdate, args: [req] },
+      ]);
+    });
+  });
+
   describe('chat.send', () => {
     it('invokes chat.send with the request object verbatim', async () => {
       fake.setNextInvokeResult({ threadId: 't-1', messageId: 'm-1' });
@@ -290,6 +301,7 @@ describe('buildTeamXApi', () => {
     it('PRELOAD_CHANNELS matches the shared-types IpcContract channel names', () => {
       const channels = PRELOAD_CHANNELS as Record<string, string>;
       expect(PRELOAD_CHANNELS.employeesList).toBe('employees.list');
+      expect(channels.employeesUpdate).toBe('employees.update');
       expect(PRELOAD_CHANNELS.chatSend).toBe('chat.send');
       expect(PRELOAD_CHANNELS.chatList).toBe('chat.list');
       expect(channels.chatStop).toBe('chat.stop');

@@ -9,6 +9,7 @@ interface OrgChartTreeProps {
   edges: OrgchartEdge[];
   rootIds: string[];
   onChat: (employeeId: string) => void;
+  onProfile: (employee: Employee) => void;
   onPromote: (employee: Employee) => void;
   onFire: (employee: Employee) => void;
   onSetManager: (employeeId: string, managerId: string | null) => void;
@@ -19,6 +20,7 @@ export function OrgChartTree({
   edges,
   rootIds,
   onChat,
+  onProfile,
   onPromote,
   onFire,
   onSetManager,
@@ -55,6 +57,7 @@ export function OrgChartTree({
         childCount={children.length}
         managerOptions={employees}
         onChat={onChat}
+        onProfile={onProfile}
         onPromote={onPromote}
         onFire={onFire}
         onSetManager={onSetManager}

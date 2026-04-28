@@ -304,7 +304,16 @@ function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null 
         name: created.name,
         title: created.title,
         roleId: created.roleId,
-        message: `${resolved.spec.frontmatter.name} hired and verified in the company roster.`,
+        nextAction:
+          'Onboard this hire against the active ticket or project now, then start the first concrete work item in this thread.',
+        onboarding: {
+          employeeId,
+          roleId: created.roleId,
+          title: created.title,
+          instruction:
+            'Introduce the active ticket/project context, constraints, success criteria, and immediate first assignment. Do not defer to a future report unless the user or source record supplied that deadline.',
+        },
+        message: `${resolved.spec.frontmatter.name} hired and verified in the company roster. Onboard them against the active ticket or project now; do not defer to a future report unless the user supplied that deadline.`,
       };
     },
   };

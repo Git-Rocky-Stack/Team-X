@@ -211,6 +211,60 @@ describe('employees repo', () => {
     });
   });
 
+  describe('updateProfile', () => {
+    it('patches editable profile fields without changing role ownership fields', () => {
+      const id = employees.create({
+        companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'cto',
+        roleMdSha: 'sha-cto',
+        level: 'officer',
+        name: 'New Hire X3mMOc',
+        title: 'CTO',
+        modelPref: 'claude-haiku-4-5',
+        providerPref: 'anthropic',
+      });
+
+      employees.updateProfile({
+        employeeId: id,
+        name: 'Maya Chen',
+        title: 'Chief Technology Officer',
+        modelPref: null,
+        providerPref: 'openai',
+        avatar: 'https://example.com/maya.png',
+      });
+
+      const got = employees.getById(id);
+      expect(got?.companyId).toBe(companyId);
+      expect(got?.rolePackId).toBe('strategia-official');
+      expect(got?.roleId).toBe('cto');
+      expect(got?.roleMdSha).toBe('sha-cto');
+      expect(got?.level).toBe('officer');
+      expect(got?.name).toBe('Maya Chen');
+      expect(got?.title).toBe('Chief Technology Officer');
+      expect(got?.modelPref).toBeNull();
+      expect(got?.providerPref).toBe('openai');
+      expect(got?.avatar).toBe('https://example.com/maya.png');
+    });
+
+    it('is a no-op when no profile fields are supplied', () => {
+      const id = employees.create({
+        companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'cto',
+        roleMdSha: 'sha-cto',
+        level: 'officer',
+        name: 'New Hire X3mMOc',
+        title: 'CTO',
+      });
+      const before = employees.getById(id);
+
+      employees.updateProfile({ employeeId: id });
+
+      expect(employees.getById(id)).toEqual(before);
+    });
+  });
+
   describe('listVisibleByCompany (M31 T0 — is_system filter)', () => {
     const create = (cId: string, name: string, isSystem = false) =>
       employees.create({

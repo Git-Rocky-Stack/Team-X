@@ -110,6 +110,7 @@ const REQUEST_CHANNELS = [
   'memory.packThreadContext',
   'employees.create',
   'employees.fire',
+  'employees.update',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d
   // per audit rows 2.19 + 2.20). Both emit bus events per invariant #11.
   'employees.promote',
@@ -569,6 +570,13 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
   ipcMain.handle('employees.fire', async (_event, request: { employeeId: string }) => {
     return handlers.employeesFire(request);
   });
+
+  ipcMain.handle(
+    'employees.update',
+    async (_event, request: import('@team-x/shared-types').EmployeesUpdateRequest) => {
+      return handlers.employeesUpdate(request);
+    },
+  );
 
   // Org chart write-side handlers (Phase 2 — M9; restored Phase 5.6 M-C step d).
   // promote: atomic role swap; setManager: upsert / clear org-edge with

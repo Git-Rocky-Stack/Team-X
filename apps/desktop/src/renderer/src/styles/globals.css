@@ -77,6 +77,16 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
+  ::selection {
+    background-color: hsl(var(--mission-red) / 0.42);
+    color: hsl(var(--foreground));
+  }
+
+  ::-moz-selection {
+    background-color: hsl(var(--mission-red) / 0.42);
+    color: hsl(var(--foreground));
+  }
+
   code,
   pre,
   .font-mono {

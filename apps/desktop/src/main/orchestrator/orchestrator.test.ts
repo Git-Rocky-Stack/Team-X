@@ -432,6 +432,7 @@ describe('buildOrchestrator', () => {
 
     it('uses packed context for internal runs and persists completion memory state', async () => {
       const captured: { system?: string; messages?: StreamMessage[] } = {};
+      const assembleInputs: unknown[] = [];
       const provider = makeFakeProvider(
         ['done'],
         { promptTokens: 7, completionTokens: 3 },
@@ -447,24 +448,27 @@ describe('buildOrchestrator', () => {
       const orchestrator = buildDefaultOrchestrator(f, {
         provider,
         contextAssemblerService: {
-          assembleThreadContext: async () => ({
-            companyId: f.companyId,
-            threadId: f.threadId,
-            generatedAt: 1,
-            retrievalQueries: ['launch plan'],
-            recentTurns: [
-              {
-                messageId: f.userMessageId,
-                role: 'user',
-                authorId: 'rocky',
-                authorKind: 'user',
-                content: 'packed user request',
-                createdAt: 1,
-                estimatedTokens: 4,
-              },
-            ],
-            blocks: [],
-          }),
+          assembleThreadContext: async (input) => {
+            assembleInputs.push(input);
+            return {
+              companyId: f.companyId,
+              threadId: f.threadId,
+              generatedAt: 1,
+              retrievalQueries: ['launch plan'],
+              recentTurns: [
+                {
+                  messageId: f.userMessageId,
+                  role: 'user',
+                  authorId: 'rocky',
+                  authorKind: 'user',
+                  content: 'packed user request',
+                  createdAt: 1,
+                  estimatedTokens: 4,
+                },
+              ],
+              blocks: [],
+            };
+          },
         },
         contextPackerService: {
           packContext: () => ({
@@ -541,7 +545,13 @@ describe('buildOrchestrator', () => {
       expect(captured.messages).toEqual([{ role: 'user', content: 'packed user request' }]);
       expect(captured.system).toContain('You are Iris, the CEO at Strategia-X.');
       expect(captured.system).toContain('## Runtime Context');
+      expect(captured.system).toContain('Use this section as verified workspace state');
       expect(captured.system).toContain('Launch is active.');
+      expect(assembleInputs[0]).toMatchObject({
+        companyId: f.companyId,
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+      });
 
       const checkpoints = runCheckpointService.listByThread({
         companyId: f.companyId,

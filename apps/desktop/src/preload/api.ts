@@ -108,6 +108,8 @@ import type {
   EmployeesPromoteRequest,
   EmployeesPromoteResponse,
   EmployeesSetManagerRequest,
+  EmployeesUpdateRequest,
+  EmployeesUpdateResponse,
   EndMeetingResponse,
   ExportCompanyPackageRequest,
   ExportCompanyPackageResponse,
@@ -322,6 +324,7 @@ const CHANNELS = {
   memoryPackThreadContext: 'memory.packThreadContext',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
+  employeesUpdate: 'employees.update',
   // Org chart write-side (Phase 2 — M9; restored Phase 5.6 M-C step d)
   employeesPromote: 'employees.promote',
   employeesSetManager: 'employees.setManager',
@@ -620,6 +623,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       create: (req: HireEmployeeRequest) =>
         ipc.invoke(CHANNELS.employeesCreate, req) as Promise<HireEmployeeResponse>,
       fire: (req: FireEmployeeRequest) => ipc.invoke(CHANNELS.employeesFire, req) as Promise<void>,
+      update: (req: EmployeesUpdateRequest) =>
+        ipc.invoke(CHANNELS.employeesUpdate, req) as Promise<EmployeesUpdateResponse>,
       promote: (req: EmployeesPromoteRequest) =>
         ipc.invoke(CHANNELS.employeesPromote, req) as Promise<EmployeesPromoteResponse>,
       setManager: (req: EmployeesSetManagerRequest) =>

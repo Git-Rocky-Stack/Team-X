@@ -69,7 +69,7 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
   const isUser = message.authorKind === 'user';
   return (
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
-      <div className="max-w-[88%]">
+      <div className={cn('min-w-0', isUser ? 'max-w-[88%]' : 'max-w-[96%]')}>
         {showSenderName && senderName && (
           <div className="mb-1 flex items-center gap-1.5 px-1">
             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -85,7 +85,7 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
         )}
         <div
           className={cn(
-            'mission-chrome-panel rounded-[22px] border px-4 py-3 text-sm leading-7 shadow-none',
+            'mission-chrome-panel rounded-[20px] border px-4 py-3 text-sm leading-7 shadow-none break-words',
             isUser
               ? 'border-brand/20 bg-brand/10 text-foreground'
               : 'border-white/10 bg-black/20 text-foreground',
@@ -106,7 +106,7 @@ interface StreamingBubbleProps {
 function StreamingBubble({ text, employeeName }: StreamingBubbleProps) {
   return (
     <div className="flex justify-start">
-      <div className="mission-chrome-panel max-w-[88%] rounded-[22px] border border-white/10 bg-black/20 px-4 py-3 text-sm leading-7 text-foreground">
+      <div className="mission-chrome-panel max-w-[96%] rounded-[20px] border border-white/10 bg-black/20 px-4 py-3 text-sm leading-7 text-foreground break-words">
         {text.length > 0 ? (
           <>
             <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -158,7 +158,7 @@ export function MessageList({
   }, [visibleMessages.length, streamingText]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
+    <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-thin">
       <div className="flex flex-col gap-4">
         {visibleMessages.length === 0 && !isStreaming && (
           <div className="mission-state-block rounded-[24px] border border-dashed border-white/10 px-6 py-10 text-center">

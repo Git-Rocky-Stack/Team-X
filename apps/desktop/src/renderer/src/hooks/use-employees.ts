@@ -19,6 +19,7 @@ export function useEmployees(companyId: string | null) {
  *
  * Subscribed events:
  * - `employee.hired` — direct lifecycle emit from `employees.create`
+ * - `employee.updated` — direct profile-edit emit from `employees.update`
  * - `employee.fired` — direct lifecycle emit from `employees.fire`
  * - `employee.promoted` — direct lifecycle emit from `employees.promote` (M-C step d)
  * - `employee.managerSet` — direct lifecycle emit from `employees.setManager` (M-C step d)
@@ -55,6 +56,7 @@ export function useEmployeeEventSync(companyId: string | null): void {
       if (event.companyId !== companyId) return;
       if (
         event.type !== 'employee.hired' &&
+        event.type !== 'employee.updated' &&
         event.type !== 'employee.fired' &&
         event.type !== 'employee.promoted' &&
         event.type !== 'employee.managerSet'

@@ -8,8 +8,10 @@ import { useOrgChart, useOrgChartEventSync } from '@/hooks/use-org-chart.js';
 import { usePromoteEmployee } from '@/hooks/use-promote-employee.js';
 import { ROLE_OPTIONS } from '@/hooks/use-roles.js';
 import { useSetManager } from '@/hooks/use-set-manager.js';
+import { useUpdateEmployee } from '@/hooks/use-update-employee.js';
 import { useAppStore } from '@/store/app-store.js';
 
+import { EmployeeProfileDialog, type EmployeeProfileSaveInput } from './employee-profile-dialog.js';
 import { FireDialog } from './fire-dialog.js';
 import { OrgChartTree } from './org-chart-tree.js';
 import { PromoteDialog } from './promote-dialog.js';
@@ -22,12 +24,15 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
   useOrgChartEventSync(companyId);
   const { data: orgChart, isLoading, isError, refetch } = useOrgChart(companyId);
   const fireEmployee = useFireEmployee(companyId ?? '');
+  const updateEmployee = useUpdateEmployee(companyId ?? '');
   const promoteEmployee = usePromoteEmployee(companyId ?? '');
   const setManager = useSetManager(companyId ?? '');
   const setSelectedEmployee = useAppStore((state) => state.setSelectedEmployee);
   const [toast, setToast] = useState<string | null>(null);
+  const [profileTarget, setProfileTarget] = useState<Employee | null>(null);
   const [promoteTarget, setPromoteTarget] = useState<Employee | null>(null);
   const [fireTarget, setFireTarget] = useState<Employee | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [promoteError, setPromoteError] = useState<string | null>(null);
   const [fireError, setFireError] = useState<string | null>(null);
 
@@ -59,6 +64,44 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
       setToast('Employee role updated.');
     } catch (error) {
       setPromoteError(errorMessage(error));
+    }
+  }
+
+  async function handleSaveProfile(input: EmployeeProfileSaveInput) {
+    const current = orgChart?.employees.find((employee) => employee.id === input.employeeId);
+    const currentManagerId =
+      orgChart?.edges.find((edge) => edge.reportId === input.employeeId)?.managerId ?? null;
+    const role = ROLE_OPTIONS.find((option) => option.id === input.roleId);
+
+    try {
+      setProfileError(null);
+      setToast(null);
+      if (current && input.roleId !== current.roleId) {
+        await promoteEmployee.mutateAsync({
+          employeeId: input.employeeId,
+          newRoleId: input.roleId,
+          optimisticLevel: role?.level,
+          optimisticTitle: role?.name,
+        });
+      }
+      await updateEmployee.mutateAsync({
+        employeeId: input.employeeId,
+        name: input.name,
+        title: input.title,
+        modelPref: input.modelPref,
+        providerPref: input.providerPref,
+        avatar: input.avatar,
+      });
+      if (input.managerId !== currentManagerId) {
+        await setManager.mutateAsync({
+          employeeId: input.employeeId,
+          managerId: input.managerId,
+        });
+      }
+      setProfileTarget(null);
+      setToast('Employee profile updated.');
+    } catch (error) {
+      setProfileError(errorMessage(error));
     }
   }
 
@@ -160,6 +203,10 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
         edges={orgChart.edges}
         rootIds={orgChart.rootIds}
         onChat={setSelectedEmployee}
+        onProfile={(employee) => {
+          setProfileError(null);
+          setProfileTarget(employee);
+        }}
         onPromote={(employee) => {
           setPromoteError(null);
           setPromoteTarget(employee);
@@ -180,6 +227,21 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
         </output>
       ) : null}
 
+      <EmployeeProfileDialog
+        employee={profileTarget}
+        employees={orgChart.employees}
+        currentManagerId={
+          profileTarget
+            ? (orgChart.edges.find((edge) => edge.reportId === profileTarget.id)?.managerId ?? null)
+            : null
+        }
+        open={profileTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setProfileTarget(null);
+        }}
+        onSave={handleSaveProfile}
+        error={profileError}
+      />
       <PromoteDialog
         employee={promoteTarget}
         open={promoteTarget !== null}

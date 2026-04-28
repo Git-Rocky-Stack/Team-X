@@ -402,6 +402,10 @@ describe('useEmployeeEventSync (use-employees.ts — FOLLOWUP-P1-extended)', () 
     expect(src).toContain("'employee.hired'");
   });
 
+  it('subscribes to employee.updated (employees.update profile emit)', () => {
+    expect(src).toContain("'employee.updated'");
+  });
+
   it('subscribes to employee.fired (FOLLOWUP-P1-extended — employees.fire emit)', () => {
     expect(src).toContain("'employee.fired'");
   });

@@ -105,13 +105,23 @@ function formatTicketBlock(ticket: TicketRow): string {
   return lines.join('\n');
 }
 
-function formatProjectBlock(project: ProjectRow): string {
+function formatTimestamp(value: number | null | undefined): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+function formatProjectBlock(project: ProjectRow, relationship?: string): string {
   const lines = [
     `Title: ${project.title}`,
     `Status: ${project.status}`,
     `Priority: ${project.priority}`,
   ];
+  if (relationship) lines.push(`Relationship: ${relationship}`);
   if (project.leadId) lines.push(`Lead: ${project.leadId}`);
+  const targetDate = formatTimestamp(project.targetDate);
+  if (targetDate) lines.push(`Target date: ${targetDate}`);
   if (project.description.trim().length > 0) {
     lines.push('Description:');
     lines.push(project.description.trim());
@@ -125,6 +135,8 @@ function formatGoalBlock(goal: GoalRow): string {
     `Status: ${goal.status}`,
     `Progress: ${goal.progressPct}%`,
   ];
+  const targetDate = formatTimestamp(goal.targetDate);
+  if (targetDate) lines.push(`Target date: ${targetDate}`);
   if (goal.description.trim().length > 0) {
     lines.push('Description:');
     lines.push(goal.description.trim());
@@ -241,6 +253,76 @@ function dedupeRowsById<T extends { id: string }>(rows: T[]): T[] {
   return next;
 }
 
+const PROJECT_QUERY_TERMS = [
+  'project',
+  'projects',
+  'goal',
+  'goals',
+  'mrr',
+  'revenue',
+  'north star',
+  'target',
+  'targets',
+];
+
+const PROJECT_QUERY_STOP_WORDS = new Set([
+  'about',
+  'area',
+  'current',
+  'from',
+  'into',
+  'regarding',
+  'review',
+  'show',
+  'tell',
+  'the',
+  'this',
+  'with',
+]);
+
+function shouldIncludeProjectAreaSnapshot(recentUserText: string): boolean {
+  const normalized = recentUserText.toLowerCase();
+  return PROJECT_QUERY_TERMS.some((term) => normalized.includes(term));
+}
+
+function queryTerms(text: string): string[] {
+  return Array.from(new Set(text.toLowerCase().match(/[a-z0-9]+/g) ?? [])).filter(
+    (term) => term.length > 2 && !PROJECT_QUERY_STOP_WORDS.has(term),
+  );
+}
+
+function scoreAgainstTerms(text: string, terms: readonly string[]): number {
+  const normalized = text.toLowerCase();
+  let score = 0;
+  for (const term of terms) {
+    if (normalized.includes(term)) score += 1;
+  }
+  return score;
+}
+
+function isOpenProject(project: ProjectRow): boolean {
+  return !['archived', 'completed'].includes(project.status.toLowerCase());
+}
+
+function rankProjectForContext(project: ProjectRow, goal: GoalRow | null, terms: readonly string[]) {
+  const searchable = [
+    project.title,
+    project.description,
+    project.status,
+    project.priority,
+    goal?.title ?? '',
+    goal?.description ?? '',
+    goal?.status ?? '',
+  ].join('\n');
+  return scoreAgainstTerms(searchable, terms);
+}
+
+function sortProjectsForContext(a: ProjectRow, b: ProjectRow): number {
+  const aOpen = isOpenProject(a) ? 1 : 0;
+  const bOpen = isOpenProject(b) ? 1 : 0;
+  return bOpen - aOpen || b.updatedAt - a.updatedAt || b.createdAt - a.createdAt;
+}
+
 function blockPriorityRank(priority: ContextBlockPriority): number {
   switch (priority) {
     case 'critical':
@@ -270,6 +352,7 @@ const BLOCK_KIND_ORDER: Record<AssembledContextBlock['kind'], number> = {
 export interface AssembleThreadContextInput {
   companyId: string;
   threadId: string;
+  employeeId?: string | null;
   recentTurnLimit?: number;
 }
 
@@ -293,6 +376,7 @@ export interface ContextAssemblerServiceDeps {
   };
   goalsRepo: {
     getById(id: string): GoalRow | null;
+    listByCompany?(companyId: string): GoalRow[];
   };
   threadDigestService: {
     getLatest(input: { companyId: string; threadId: string }): ThreadDigest | null;
@@ -359,6 +443,12 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
       const recentTurns = allTurns
         .slice(-(input.recentTurnLimit ?? DEFAULT_CONTEXT_RECENT_TURN_LIMIT))
         .map((row) => toTurn(row, countTokens));
+      const recentUserText = recentTurns
+        .filter((turn) => turn.role === 'user')
+        .map((turn) => turn.content)
+        .join('\n');
+      const includeProjectAreaSnapshot = shouldIncludeProjectAreaSnapshot(recentUserText);
+      const recentProjectQueryTerms = queryTerms(recentUserText);
 
       const blocks: AssembledContextBlock[] = [];
       const digest = threadDigestService.getLatest({
@@ -436,20 +526,72 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
         });
       }
 
+      const companyProjects = projectsRepo.listByCompany(input.companyId);
+      const goalsById = new Map<string, GoalRow | null>();
+      const getGoal = (goalId: string | null): GoalRow | null => {
+        if (!goalId) return null;
+        if (!goalsById.has(goalId)) {
+          goalsById.set(goalId, goalsRepo.getById(goalId));
+        }
+        return goalsById.get(goalId) ?? null;
+      };
+
+      const ticketProjectIds = new Set<string>();
       const relatedProjects = ticket
-        ? projectsRepo
-            .listByCompany(input.companyId)
-            .filter((project) => projectsRepo.listTickets(project.id).includes(ticket.id))
+        ? companyProjects
+            .filter((project) => {
+              const isRelated = projectsRepo.listTickets(project.id).includes(ticket.id);
+              if (isRelated) ticketProjectIds.add(project.id);
+              return isRelated;
+            })
             .slice(0, 2)
         : [];
 
-      for (const project of relatedProjects) {
+      const assignedProjects = input.employeeId
+        ? companyProjects
+            .filter((project) => project.leadId === input.employeeId && isOpenProject(project))
+            .sort(sortProjectsForContext)
+            .slice(0, 3)
+        : [];
+
+      const queryMatchedProjects = includeProjectAreaSnapshot
+        ? companyProjects
+            .map((project) => ({
+              project,
+              score: rankProjectForContext(project, getGoal(project.goalId), recentProjectQueryTerms),
+            }))
+            .filter(({ score, project }) => score > 0 || isOpenProject(project))
+            .sort(
+              (a, b) =>
+                b.score - a.score || sortProjectsForContext(a.project, b.project),
+            )
+            .map(({ project }) => project)
+            .slice(0, 4)
+        : [];
+
+      const selectedProjects = dedupeRowsById([
+        ...relatedProjects,
+        ...assignedProjects,
+        ...queryMatchedProjects,
+      ]).slice(0, 5);
+
+      for (const project of selectedProjects) {
+        const relationshipParts: string[] = [];
+        if (ticketProjectIds.has(project.id) && ticket) {
+          relationshipParts.push(`linked to current ticket ${ticket.id}`);
+        }
+        if (input.employeeId && project.leadId === input.employeeId) {
+          relationshipParts.push('assigned to current employee as project lead');
+        }
+        if (includeProjectAreaSnapshot && relationshipParts.length === 0) {
+          relationshipParts.push('included from the current Projects area request');
+        }
         pushBlock(blocks, countTokens, {
           id: `project:${project.id}`,
           kind: 'project',
           priority: 'high',
           title: `Project ${project.title}`,
-          body: formatProjectBlock(project),
+          body: formatProjectBlock(project, relationshipParts.join('; ')),
           sourceRefId: project.id,
           sourceLabel: project.status,
           metadata: {
@@ -460,12 +602,34 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
       }
 
       const relatedGoals = dedupeRowsById(
-        relatedProjects
-          .map((project) => (project.goalId ? goalsRepo.getById(project.goalId) : null))
+        selectedProjects
+          .map((project) => getGoal(project.goalId))
           .filter((goal): goal is GoalRow => goal !== null),
-      ).slice(0, 2);
+      );
 
-      for (const goal of relatedGoals) {
+      const queryMatchedGoals =
+        includeProjectAreaSnapshot && goalsRepo.listByCompany
+          ? goalsRepo
+              .listByCompany(input.companyId)
+              .map((goal) => ({
+                goal,
+                score: scoreAgainstTerms(
+                  [goal.title, goal.description, goal.status].join('\n'),
+                  recentProjectQueryTerms,
+                ),
+              }))
+              .filter(({ score, goal }) => score > 0 || goal.status === 'active')
+              .sort(
+                (a, b) =>
+                  b.score - a.score || b.goal.updatedAt - a.goal.updatedAt || b.goal.createdAt - a.goal.createdAt,
+              )
+              .map(({ goal }) => goal)
+              .slice(0, 3)
+          : [];
+
+      const selectedGoals = dedupeRowsById([...relatedGoals, ...queryMatchedGoals]).slice(0, 4);
+
+      for (const goal of selectedGoals) {
         pushBlock(blocks, countTokens, {
           id: `goal:${goal.id}`,
           kind: 'goal',
@@ -490,8 +654,8 @@ export function createContextAssemblerService(deps: ContextAssemblerServiceDeps)
         .filter((item) => {
           if (relevantApprovalIds.has(item.id)) return true;
           if (ticket && item.subjectRefId === ticket.id) return true;
-          if (relatedProjects.some((project) => project.id === item.subjectRefId)) return true;
-          if (relatedGoals.some((goal) => goal.id === item.subjectRefId)) return true;
+          if (selectedProjects.some((project) => project.id === item.subjectRefId)) return true;
+          if (selectedGoals.some((goal) => goal.id === item.subjectRefId)) return true;
           return false;
         })
         .slice(0, 3);

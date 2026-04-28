@@ -539,6 +539,19 @@ export interface FireEmployeeRequest {
   employeeId: string;
 }
 
+export interface EmployeesUpdateRequest {
+  employeeId: string;
+  name?: string;
+  title?: string;
+  modelPref?: string | null;
+  providerPref?: string | null;
+  avatar?: string | null;
+}
+
+export interface EmployeesUpdateResponse {
+  employee: Employee;
+}
+
 /**
  * Request payload for `employees.promote` (Phase 5.6 M-C step d — restores
  * Cluster B per audit row 2.19). Promotes an existing employee into a
@@ -1992,6 +2005,10 @@ export interface IpcContract {
     // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
     response: void;
   };
+  'employees.update': {
+    request: EmployeesUpdateRequest;
+    response: EmployeesUpdateResponse;
+  };
   // Org chart write-side channels (Phase 2 — M9; restored Phase 5.6 M-C step d
   // per audit rows 2.19 + 2.20). `promote` swaps the employee's role-pack
   // role; `setManager` upserts (or clears) the org-edge whose report side
@@ -2645,6 +2662,9 @@ export interface TeamXApi {
      * if the id does not resolve to a live row.
      */
     fire(req: FireEmployeeRequest): Promise<void>;
+
+    /** Patch an employee's editable profile fields such as name, title, avatar, and runtime prefs. */
+    update(req: EmployeesUpdateRequest): Promise<EmployeesUpdateResponse>;
 
     /**
      * Promote an employee into a different role from the role-pack

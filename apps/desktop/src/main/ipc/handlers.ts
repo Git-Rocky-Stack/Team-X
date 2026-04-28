@@ -111,6 +111,8 @@ import type {
   EmployeesPromoteRequest,
   EmployeesPromoteResponse,
   EmployeesSetManagerRequest,
+  EmployeesUpdateRequest,
+  EmployeesUpdateResponse,
   EndMeetingResponse,
   ExportCompanyPackageRequest,
   ExportCompanyPackageResponse,
@@ -296,6 +298,7 @@ import type {
   CreateEmployeeInput,
   EmployeeRow,
   PromoteEmployeeInput,
+  UpdateEmployeeProfileInput,
 } from '../db/repos/employees.js';
 import type {
   AuthorityGrantRow,
@@ -426,6 +429,7 @@ export interface IpcEmployeesRepo {
    * columns in place; does NOT touch org-edges.
    */
   promote(input: PromoteEmployeeInput): void;
+  updateProfile?(input: UpdateEmployeeProfileInput): void;
 }
 
 export interface IpcThreadsRepo {
@@ -1219,6 +1223,9 @@ export interface IpcHandlers {
    */
   employeesFire(req: { employeeId: string }): Promise<void>;
 
+  /** `employees.update` — patch editable profile fields such as display name and title. */
+  employeesUpdate(req: EmployeesUpdateRequest): Promise<EmployeesUpdateResponse>;
+
   /**
    * `employees.promote` — atomic role swap (Phase 5.6 M-C step d;
    * audit row 2.19; restores Cluster B M9). Resolves the new role spec
@@ -1898,6 +1905,43 @@ function rowToEmployee(row: EmployeeRow): Employee {
   if (row.providerPref !== null) employee.providerPref = row.providerPref;
   if (row.avatar !== null) employee.avatar = row.avatar;
   return employee;
+}
+
+function normalizeProfileTextField(
+  value: unknown,
+  field: 'name' | 'title',
+  maxLength: number,
+): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') {
+    throw new Error(`[ipc] employees.update: ${field} must be a string`);
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    throw new Error(`[ipc] employees.update: ${field} is required`);
+  }
+  if (trimmed.length > maxLength) {
+    throw new Error(`[ipc] employees.update: ${field} must be ${maxLength} characters or fewer`);
+  }
+  return trimmed;
+}
+
+function normalizeNullableProfileTextField(
+  value: unknown,
+  field: 'modelPref' | 'providerPref' | 'avatar',
+  maxLength: number,
+): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') {
+    throw new Error(`[ipc] employees.update: ${field} must be a string or null`);
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  if (trimmed.length > maxLength) {
+    throw new Error(`[ipc] employees.update: ${field} must be ${maxLength} characters or fewer`);
+  }
+  return trimmed;
 }
 
 function rowToChatMessage(row: MessageRow): ChatMessage {
@@ -3522,6 +3566,100 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       } else if (process.env.NODE_ENV !== 'production') {
         console.warn('[ipc] employees.fire: bus dep unwired — renderer caches will NOT invalidate');
       }
+    },
+
+    async employeesUpdate(req) {
+      if (!req || typeof req !== 'object') {
+        throw new Error('[ipc] employees.update: request body is required');
+      }
+      const employeeId = typeof req.employeeId === 'string' ? req.employeeId : '';
+      if (employeeId.length === 0) {
+        throw new Error('[ipc] employees.update: employeeId is required');
+      }
+
+      const employee = employeesRepo.getById(employeeId);
+      if (!employee) {
+        throw new Error(`[ipc] employees.update: employee not found: ${employeeId}`);
+      }
+      if (employee.isSystem) {
+        throw new Error(
+          `[ipc] employees.update: cannot edit framework-internal employee ${employeeId} ` +
+            `(role_id=${employee.roleId})`,
+        );
+      }
+      assertCompanyActive(companiesRepo, employee.companyId, 'employees.update');
+
+      const patch: UpdateEmployeeProfileInput = { employeeId };
+      const patchedKeys: Array<'name' | 'title' | 'modelPref' | 'providerPref' | 'avatar'> = [];
+      const name = normalizeProfileTextField(req.name, 'name', 120);
+      const title = normalizeProfileTextField(req.title, 'title', 160);
+      const modelPref = normalizeNullableProfileTextField(req.modelPref, 'modelPref', 120);
+      const providerPref = normalizeNullableProfileTextField(req.providerPref, 'providerPref', 120);
+      const avatar = normalizeNullableProfileTextField(req.avatar, 'avatar', 500);
+
+      if (name !== undefined && name !== employee.name) {
+        patch.name = name;
+        patchedKeys.push('name');
+      }
+      if (title !== undefined && title !== employee.title) {
+        patch.title = title;
+        patchedKeys.push('title');
+      }
+      if (modelPref !== undefined && modelPref !== employee.modelPref) {
+        patch.modelPref = modelPref;
+        patchedKeys.push('modelPref');
+      }
+      if (providerPref !== undefined && providerPref !== employee.providerPref) {
+        patch.providerPref = providerPref;
+        patchedKeys.push('providerPref');
+      }
+      if (avatar !== undefined && avatar !== employee.avatar) {
+        patch.avatar = avatar;
+        patchedKeys.push('avatar');
+      }
+
+      if (patchedKeys.length > 0) {
+        if (!employeesRepo.updateProfile) {
+          throw new Error('[ipc] employees.update: employees repo cannot update profiles');
+        }
+        employeesRepo.updateProfile(patch);
+      }
+
+      const updated = employeesRepo.getById(employeeId) ?? employee;
+      const responseEmployee = rowToEmployee(updated);
+
+      if (patchedKeys.length > 0) {
+        const updatedAt = Date.now();
+        if (bus) {
+          try {
+            bus.emit({
+              type: 'employee.updated',
+              companyId: updated.companyId,
+              actorId: HUMAN_USER_ID,
+              actorKind: 'user',
+              payload: {
+                employeeId,
+                companyId: updated.companyId,
+                patchedKeys,
+                name: updated.name,
+                title: updated.title,
+                updatedAt,
+              },
+            });
+          } catch (err) {
+            console.error(
+              `[ipc] employees.update: bus emit failed (row still updated, id=${employeeId}):`,
+              err,
+            );
+          }
+        } else if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '[ipc] employees.update: bus dep unwired — renderer caches will NOT invalidate',
+          );
+        }
+      }
+
+      return { employee: responseEmployee };
     },
 
     async employeesPromote(req) {

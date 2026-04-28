@@ -46,6 +46,7 @@ describe('useOrgChart hook', () => {
     );
     expect(useOrgChartSrc).toContain('ipc.events.onDashboard');
     expect(useOrgChartSrc).toContain("'employee.hired'");
+    expect(useOrgChartSrc).toContain("'employee.updated'");
     expect(useOrgChartSrc).toContain("'employee.fired'");
     expect(useOrgChartSrc).toContain("'employee.promoted'");
     expect(useOrgChartSrc).toContain("'employee.managerSet'");
@@ -105,6 +106,7 @@ describe('OrgChartNode read-side row', () => {
     expect(orgNodeSrc).toContain('data-org-chart-node={employee.id}');
     expect(orgNodeSrc).toContain('onKeyDown={handleKeyDown}');
     expect(orgNodeSrc).toContain("event.key === 'Enter'");
+    expect(orgNodeSrc).toContain('data-org-chart-profile=""');
     expect(orgNodeSrc).toContain('data-org-chart-promote=""');
     expect(orgNodeSrc).toContain('data-org-chart-fire=""');
     expect(orgNodeSrc).toContain('data-org-chart-manager-select=""');

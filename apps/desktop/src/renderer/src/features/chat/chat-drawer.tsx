@@ -362,7 +362,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     <Sheet open={chatOpen} onOpenChange={setChatOpen}>
       <SheetContent
         side="right"
-        className="mission-shell flex w-[520px] max-w-full flex-col gap-0 overflow-hidden border-l border-white/10 bg-background/95 p-0 sm:max-w-[520px]"
+        className="mission-shell flex w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col gap-0 overflow-hidden border-l border-white/10 bg-background/95 p-0 sm:w-[720px] sm:max-w-[calc(100vw-2rem)] xl:w-[820px] 2xl:w-[900px]"
       >
         <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
         <div className="relative flex h-full flex-col">
@@ -418,7 +418,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 }
               />
 
-              <div className="border-b border-white/10 px-4 py-3">
+              <div className="border-b border-white/10 px-5 py-3">
                 <ThreadMemoryCard
                   companyId={companyId}
                   threadId={effectiveThreadId}
@@ -485,7 +485,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 }
               />
 
-              <div className="border-b border-white/10 px-4 py-3">
+              <div className="border-b border-white/10 px-5 py-3">
                 <ThreadMemoryCard
                   companyId={companyId}
                   threadId={effectiveThreadId}
@@ -556,7 +556,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 }
               />
 
-              <div className="border-b border-white/10 px-4 py-3">
+              <div className="border-b border-white/10 px-5 py-3">
                 <ThreadMemoryCard
                   companyId={companyId}
                   threadId={effectiveThreadId}

@@ -28,6 +28,7 @@ interface OrgChartNodeProps {
   childCount: number;
   managerOptions: Employee[];
   onChat: (employeeId: string) => void;
+  onProfile: (employee: Employee) => void;
   onPromote: (employee: Employee) => void;
   onFire: (employee: Employee) => void;
   onSetManager: (employeeId: string, managerId: string | null) => void;
@@ -40,6 +41,7 @@ export function OrgChartNode({
   childCount,
   managerOptions,
   onChat,
+  onProfile,
   onPromote,
   onFire,
   onSetManager,
@@ -143,6 +145,14 @@ export function OrgChartNode({
           >
             <MessageSquare className="inline h-3 w-3" aria-hidden="true" />
             Chat
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-brand/30 px-2 py-1 text-brand transition-colors hover:bg-brand/10"
+            data-org-chart-profile=""
+            onClick={() => onProfile(employee)}
+          >
+            Details
           </button>
           <button
             type="button"

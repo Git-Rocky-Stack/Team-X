@@ -61,6 +61,12 @@ describe('ChatView (features/chat/chat-view.tsx)', () => {
     expect(chatDrawerSrc).toContain('compact');
   });
 
+  it('keeps the communication drawer wide enough for operational reading', () => {
+    expect(chatDrawerSrc).toContain('sm:w-[720px]');
+    expect(chatDrawerSrc).toContain('xl:w-[820px]');
+    expect(chatDrawerSrc).toContain('2xl:w-[900px]');
+  });
+
   it('covers loading, error, and no-company states with stable selectors', () => {
     expect(chatViewSrc).toContain('data-chat-view=""');
     expect(chatViewSrc).toContain('data-chat-view-state="no-company"');

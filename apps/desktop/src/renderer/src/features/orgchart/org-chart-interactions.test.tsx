@@ -16,9 +16,11 @@ const HOOKS_DIR = join(currentDirname, '..', '..', 'hooks');
 const ORG_VIEW_PATH = join(currentDirname, 'org-chart-view.tsx');
 const ORG_TREE_PATH = join(currentDirname, 'org-chart-tree.tsx');
 const ORG_NODE_PATH = join(currentDirname, 'org-chart-node.tsx');
+const PROFILE_DIALOG_PATH = join(currentDirname, 'employee-profile-dialog.tsx');
 const PROMOTE_DIALOG_PATH = join(currentDirname, 'promote-dialog.tsx');
 const FIRE_DIALOG_PATH = join(currentDirname, 'fire-dialog.tsx');
 const USE_FIRE_PATH = join(HOOKS_DIR, 'use-fire-employee.ts');
+const USE_UPDATE_PATH = join(HOOKS_DIR, 'use-update-employee.ts');
 const USE_PROMOTE_PATH = join(HOOKS_DIR, 'use-promote-employee.ts');
 const USE_SET_MANAGER_PATH = join(HOOKS_DIR, 'use-set-manager.ts');
 const USE_ROLES_PATH = join(HOOKS_DIR, 'use-roles.ts');
@@ -30,16 +32,19 @@ function read(path: string): string {
 const orgViewSrc = read(ORG_VIEW_PATH);
 const orgTreeSrc = read(ORG_TREE_PATH);
 const orgNodeSrc = read(ORG_NODE_PATH);
+const profileDialogSrc = read(PROFILE_DIALOG_PATH);
 const promoteDialogSrc = read(PROMOTE_DIALOG_PATH);
 const fireDialogSrc = read(FIRE_DIALOG_PATH);
 const useFireSrc = read(USE_FIRE_PATH);
+const useUpdateSrc = read(USE_UPDATE_PATH);
 const usePromoteSrc = read(USE_PROMOTE_PATH);
 const useSetManagerSrc = read(USE_SET_MANAGER_PATH);
 const useRolesSrc = read(USE_ROLES_PATH);
 
 describe('org-chart mutation hooks', () => {
-  it('wraps fire, promote, and manager updates in React Query mutations', () => {
+  it('wraps profile, fire, promote, and manager updates in React Query mutations', () => {
     expect(existsSync(USE_FIRE_PATH)).toBe(true);
+    expect(existsSync(USE_UPDATE_PATH)).toBe(true);
     expect(existsSync(USE_PROMOTE_PATH)).toBe(true);
     expect(existsSync(USE_SET_MANAGER_PATH)).toBe(true);
 
@@ -51,6 +56,11 @@ describe('org-chart mutation hooks', () => {
     expect(useFireSrc).toContain('previousOrgChart');
     expect(useFireSrc).toContain('onError');
     expect(useFireSrc).toContain('onSettled');
+
+    expect(useUpdateSrc).toContain('export function useUpdateEmployee(companyId: string)');
+    expect(useUpdateSrc).toContain('ipc.employees.update');
+    expect(useUpdateSrc).toContain("const employeesKey = ['employees', companyId] as const");
+    expect(useUpdateSrc).toContain("const orgChartKey = ['orgchart', companyId] as const");
 
     expect(usePromoteSrc).toContain('export function usePromoteEmployee(companyId: string)');
     expect(usePromoteSrc).toContain('ipc.employees.promote');
@@ -80,19 +90,24 @@ describe('org-chart mutation hooks', () => {
 
 describe('org-chart interaction UI', () => {
   it('wires node actions to promote/fire dialogs and manager reassignment controls', () => {
+    expect(existsSync(PROFILE_DIALOG_PATH)).toBe(true);
     expect(existsSync(PROMOTE_DIALOG_PATH)).toBe(true);
     expect(existsSync(FIRE_DIALOG_PATH)).toBe(true);
     expect(orgViewSrc).toContain("useFireEmployee(companyId ?? '')");
+    expect(orgViewSrc).toContain("useUpdateEmployee(companyId ?? '')");
     expect(orgViewSrc).toContain("usePromoteEmployee(companyId ?? '')");
     expect(orgViewSrc).toContain("useSetManager(companyId ?? '')");
+    expect(orgViewSrc).toContain('<EmployeeProfileDialog');
     expect(orgViewSrc).toContain('<PromoteDialog');
     expect(orgViewSrc).toContain('<FireDialog');
     expect(orgViewSrc).toContain('data-org-chart-toast=""');
 
+    expect(orgTreeSrc).toContain('onProfile={onProfile}');
     expect(orgTreeSrc).toContain('onPromote={onPromote}');
     expect(orgTreeSrc).toContain('onFire={onFire}');
     expect(orgTreeSrc).toContain('onSetManager={onSetManager}');
 
+    expect(orgNodeSrc).toContain('data-org-chart-profile=""');
     expect(orgNodeSrc).toContain('data-org-chart-promote=""');
     expect(orgNodeSrc).toContain('data-org-chart-fire=""');
     expect(orgNodeSrc).toContain('data-org-chart-manager-select=""');
@@ -103,6 +118,12 @@ describe('org-chart interaction UI', () => {
   });
 
   it('promote and fire dialogs gate write actions behind explicit user intent', () => {
+    expect(profileDialogSrc).toContain('export function EmployeeProfileDialog');
+    expect(profileDialogSrc).toContain('data-employee-profile-name=""');
+    expect(profileDialogSrc).toContain('data-employee-profile-role=""');
+    expect(profileDialogSrc).toContain('data-employee-profile-manager=""');
+    expect(profileDialogSrc).toContain('data-employee-profile-save=""');
+
     expect(promoteDialogSrc).toContain('export function PromoteDialog');
     expect(promoteDialogSrc).toContain('useRoles()');
     expect(promoteDialogSrc).toContain('data-promote-role-select=""');

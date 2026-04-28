@@ -38,6 +38,10 @@ const EXECUTION_POLICY = [
   '## Execution Policy',
   '- Only say an action is completed when a tool result or current state confirms it.',
   '- If a decision is made but no verified mutation exists yet, describe it as recorded, delegated, pending, or blocked.',
+  '- Treat requests phrased as ASAP, now, begin, start, staff, or onboard as active current-session work. Start the next concrete step immediately using available tools and context.',
+  '- Do not invent future deadlines, dates, or "EOD tomorrow" commitments. Use future timing only when the user, ticket, project, or verified system state explicitly provides it.',
+  '- After staffing or assigning a role, onboard that person against the active ticket or project in the same reply: state their role, constraints, first work to begin now, and any real blocker.',
+  '- Do not delegate current work into a future status report when the relevant ticket, project, or context is already available.',
 ].join('\n');
 
 export function appendExecutionPolicy(prompt: string): string {

@@ -52,8 +52,7 @@ export interface CreateEmployeeInput {
  *
  * `name` is intentionally absent — promotes are role changes, not rename
  * operations. Callers that want to rename in the same UI flow issue a
- * follow-up `employees.update` (a future channel) or call the repo's
- * forthcoming `rename` method directly.
+ * follow-up `employees.update` call.
  *
  * `tools_allowed_json` / `tools_denied_json` are stored as JSON text;
  * the repo serializes the supplied string arrays the same way `create`
@@ -75,6 +74,15 @@ export interface PromoteEmployeeInput {
   toolsAllowed: string[];
   /** Tool-id blocklist from the new role's frontmatter. Persisted as JSON. */
   toolsDenied: string[];
+}
+
+export interface UpdateEmployeeProfileInput {
+  employeeId: string;
+  name?: string;
+  title?: string;
+  modelPref?: string | null;
+  providerPref?: string | null;
+  avatar?: string | null;
 }
 
 type EmployeesDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
@@ -204,6 +212,22 @@ export function createEmployeesRepo<TRunResult>(db: EmployeesDb<TRunResult>) {
         })
         .where(eq(employees.id, input.employeeId))
         .run();
+    },
+
+    /**
+     * Patch human-editable profile fields in place. Role-bound fields
+     * still flow through `promote`; this method covers the editable
+     * profile surface users expect after hiring a placeholder row.
+     */
+    updateProfile(input: UpdateEmployeeProfileInput): void {
+      const set: Record<string, string | null> = {};
+      if (input.name !== undefined) set.name = input.name;
+      if (input.title !== undefined) set.title = input.title;
+      if (input.modelPref !== undefined) set.modelPref = input.modelPref;
+      if (input.providerPref !== undefined) set.providerPref = input.providerPref;
+      if (input.avatar !== undefined) set.avatar = input.avatar;
+      if (Object.keys(set).length === 0) return;
+      db.update(employees).set(set).where(eq(employees.id, input.employeeId)).run();
     },
 
     /**

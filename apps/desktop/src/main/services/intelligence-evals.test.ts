@@ -525,7 +525,11 @@ describe('intelligence eval harness - execution fixtures', () => {
     });
     expect(result).toHaveProperty(
       'message',
-      'Chief Marketing Officer hired and verified in the company roster.',
+      'Chief Marketing Officer hired and verified in the company roster. Onboard them against the active ticket or project now; do not defer to a future report unless the user supplied that deadline.',
+    );
+    expect(result).toHaveProperty(
+      'nextAction',
+      'Onboard this hire against the active ticket or project now, then start the first concrete work item in this thread.',
     );
   });
 

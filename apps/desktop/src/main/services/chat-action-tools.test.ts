@@ -115,14 +115,22 @@ describe('buildChatActionTools', () => {
     expect(hireTool).toBeDefined();
 
     const result = await hireTool?.execute?.({ roleQuery: 'CMO' });
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       state: 'completed',
       employeeId: 'emp-cmo',
       name: expect.stringMatching(/^New Hire /),
       title: 'Chief Marketing Officer',
       roleId: 'chief-marketing-officer',
-      message: 'Chief Marketing Officer hired and verified in the company roster.',
+      nextAction: expect.stringContaining('Onboard this hire'),
+      onboarding: expect.objectContaining({
+        employeeId: 'emp-cmo',
+        roleId: 'chief-marketing-officer',
+        title: 'Chief Marketing Officer',
+        instruction: expect.stringContaining('Do not defer to a future report'),
+      }),
+      message:
+        'Chief Marketing Officer hired and verified in the company roster. Onboard them against the active ticket or project now; do not defer to a future report unless the user supplied that deadline.',
     });
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
