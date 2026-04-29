@@ -315,11 +315,7 @@ export function createThreadsRepo<TRunResult>(db: ThreadsDb<TRunResult>) {
      * from message history and project the repaired timestamp.
      */
     listByCompanyWithMembers(companyId: string): ThreadWithMembers[] {
-      const rows = db
-        .select()
-        .from(threads)
-        .where(eq(threads.companyId, companyId))
-        .all();
+      const rows = db.select().from(threads).where(eq(threads.companyId, companyId)).all();
 
       return rows
         .map((row) => {

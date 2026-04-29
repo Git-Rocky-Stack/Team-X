@@ -49,11 +49,33 @@ export interface UpdateTicketInput {
   labelsJson?: string;
   slaHours?: number | null;
   dueAt?: number | null;
+  assigneeId?: string;
+}
+
+export interface AssignTicketInput {
+  ticketId: string;
+  assigneeId: string;
+  assignedBy: string;
+  companyId: string;
+  goalId?: string;
 }
 
 type TicketsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
-export function createTicketsRepo<TRunResult>(db: TicketsDb<TRunResult>) {
+export interface AgentWakeupQueueLike {
+  queueIssueAssignmentWakeup(input: {
+    issueId: string;
+    assigneeAgentId: string;
+    contextSource: string;
+    goalId?: string;
+    projectId?: string;
+  }): Promise<void>;
+}
+
+export function createTicketsRepo<TRunResult>(
+  db: TicketsDb<TRunResult>,
+  agentWakeupQueue?: AgentWakeupQueueLike,
+) {
   return {
     /**
      * Insert a new ticket and return its id. The `assigneeId` is optional
@@ -137,10 +159,30 @@ export function createTicketsRepo<TRunResult>(db: TicketsDb<TRunResult>) {
 
     /** Set the assignee. Does NOT create a thread or enqueue work. */
     assign(id: string, assigneeId: string): void {
+      const now = Date.now();
       db.update(tickets)
-        .set({ assigneeId, status: 'in-progress', updatedAt: Date.now() })
+        .set({ assigneeId, status: 'in-progress', updatedAt: now })
         .where(eq(tickets.id, id))
         .run();
+
+      // ✅ PROACTIVE EXECUTION: Automatically wake up the assigned agent
+      // When a ticket is assigned, trigger agent wakeup immediately
+      // This transforms Team-X from "agents wait for chat" to "agents wake up for work"
+      if (agentWakeupQueue) {
+        // Get the ticket to fetch companyId and goalId for context
+        const ticket = db.select().from(tickets).where(eq(tickets.id, id)).get();
+        if (ticket) {
+          agentWakeupQueue.queueIssueAssignmentWakeup({
+            issueId: id,
+            assigneeAgentId: assigneeId,
+            contextSource: 'ticket_assignment',
+            goalId: ticket.goalId ?? undefined,
+            projectId: undefined, // Could be added later
+          }).catch((err) => {
+            console.error(`[tickets] Failed to queue agent wakeup for ${assigneeId}:`, err);
+          });
+        }
+      }
     },
 
     /** Link a discussion thread to this ticket. */

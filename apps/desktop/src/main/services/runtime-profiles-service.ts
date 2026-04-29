@@ -281,9 +281,7 @@ export function createRuntimeProfilesService(
           {
             profileId: profile.id,
             status: 'error',
-            message:
-              `Internal runtime working directory is not accessible: ${workingDirectory}. ` +
-              (err instanceof Error ? err.message : String(err)),
+            message: `Internal runtime working directory is not accessible: ${workingDirectory}. ${err instanceof Error ? err.message : String(err)}`,
             supportsExecution: false,
             details,
           },
@@ -341,9 +339,7 @@ export function createRuntimeProfilesService(
           {
             profileId: profile.id,
             status: 'healthy',
-            message:
-              `Internal runtime can execute through the configured provider "${provider.name}".` +
-              (workingDirectory ? ` Workspace: ${workingDirectory}.` : ''),
+            message: `Internal runtime can execute through the configured provider "${provider.name}".${workingDirectory ? ` Workspace: ${workingDirectory}.` : ''}`,
             supportsExecution: true,
             details: { providerId: provider.id, model, workingDirectory },
           },

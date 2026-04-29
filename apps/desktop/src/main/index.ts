@@ -191,6 +191,9 @@ import {
   type RoutineServiceCreateTicketInput,
   createRoutineService,
 } from './services/routine-service.js';
+import { createHeartbeatService } from './orchestrator/heartbeat-service.js';
+import { createAgentWakeupQueue } from './orchestrator/agent-wakeup-queue.js';
+import { createAgentWakeupRequestsRepo } from './db/repos/agent-wakeup-requests.js';
 import { createRunCheckpointService } from './services/run-checkpoint-service.js';
 import { createRuntimeAuditNormalizer } from './services/runtime-audit-normalizer-service.js';
 import { createRuntimeOperationsService } from './services/runtime-operations-service.js';
@@ -551,7 +554,8 @@ app
       mcpServersRepo,
     });
     const toolCallsRepo = createToolCallsRepo(db);
-    const ticketsRepo = createTicketsRepo(db);
+    // Note: ticketsRepo will be created later after agentWakeupQueueInstance is available
+    let ticketsRepo: ReturnType<typeof createTicketsRepo>;
     const goalsRepo = createGoalsRepo(db);
     const projectsRepo = createProjectsRepo(db);
     const meetingsRepo = createMeetingsRepo(db);
@@ -711,6 +715,28 @@ app
       authorityRepo,
       artifactService,
     });
+
+    // ✅ HEARTBEAT SERVICE: Proactive agent execution engine
+    // This transforms Team-X from reactive to proactive by automatically
+    // waking agents when routines complete or tickets are assigned
+    // Must be initialized BEFORE routineService and ticketsRepo
+    const agentWakeupRequestsRepo = createAgentWakeupRequestsRepo(db);
+    const heartbeatServiceInstance = createHeartbeatService({
+      agentWakeupRequestsRepo,
+      employeesRepo,
+      bus,
+    });
+    const agentWakeupQueueInstance = createAgentWakeupQueue({
+      heartbeatService: heartbeatServiceInstance,
+    });
+
+    // Start heartbeat processing loop (1 minute intervals)
+    heartbeatServiceInstance.start(60 * 1000);
+
+    // ✅ TICKETS REPO: Now can be created with agent wakeup support
+    // Must be after agentWakeupQueueInstance is available
+    ticketsRepo = createTicketsRepo(db, agentWakeupQueueInstance);
+
     let routineTicketCreator:
       | ((input: RoutineServiceCreateTicketInput) => Promise<{ ticketId: string }>)
       | null = null;
@@ -721,6 +747,7 @@ app
       bus,
       budgetGovernance: budgetGovernanceServiceInstance,
       artifactService,
+      agentWakeupQueue: agentWakeupQueueInstance, // ✅ PROACTIVE EXECUTION BRIDGE
       createTicket: async (input) => {
         if (!routineTicketCreator) {
           throw new Error('[main] routine ticket creator is not wired yet');
@@ -728,6 +755,7 @@ app
         return routineTicketCreator(input);
       },
     });
+
     const companyPortabilityService = createCompanyPortabilityService({
       companiesRepo,
       employeesRepo,

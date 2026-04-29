@@ -1003,10 +1003,17 @@ export const tickets = sqliteTable('tickets', {
   dueAt: integer('due_at'),
   /** FK to the discussion thread (created on first assignment). */
   threadId: text('thread_id').references(() => threads.id),
+  /** Optional goal FK for goal ancestry (Phase 5: M31 proactive execution). */
+  goalId: text('goal_id').references(() => goals.id),
+  /** Optional parent ticket FK for task decomposition hierarchies. */
+  parentTicketId: text('parent_ticket_id').references(() => tickets.id),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
   closedAt: integer('closed_at'),
-});
+}, (table) => ({
+  goalIdx: index('idx_tickets_goal').on(table.goalId),
+  parentTicketIdx: index('idx_tickets_parent').on(table.parentTicketId),
+}));
 
 /** Run-owned ticket leases that prevent duplicate autonomous external-agent work. */
 export const ticketCheckouts = sqliteTable(
@@ -1189,6 +1196,73 @@ export const ticketAttachments = sqliteTable('ticket_attachments', {
   attachedBy: text('attached_by').notNull(),
   attachedAt: integer('attached_at').notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Phase 5 — M31: Proactive Execution Engine
+// ---------------------------------------------------------------------------
+
+/**
+ * Agent wakeup requests for proactive execution. This table queues when
+ * agents should wake up to work on assigned tasks, routines, or goals.
+ *
+ * The heartbeat service processes pending requests in priority order,
+ * handles retries with exponential backoff, and tracks execution results.
+ * This is the foundation for transforming Team-X from reactive to proactive.
+ */
+export const agentWakeupRequests = sqliteTable(
+  'agent_wakeup_requests',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    agentId: text('agent_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    /** pending | processing | completed | failed | cancelled */
+    status: text('status').notNull().default('pending'),
+    /** routine | ticket_assigned | schedule | manual | goal_decomposed */
+    triggerType: text('trigger_type').notNull(),
+    /** Reference to routineId, ticketId, goalId, etc. */
+    triggerId: text('trigger_id'),
+    /** Higher priority wakes first (0-100, default 50) */
+    priority: integer('priority').notNull().default(50),
+    /** When this wakeup should execute (UNIX ms timestamp) */
+    scheduledFor: integer('scheduled_for').notNull(),
+    /** When processing started */
+    startedAt: integer('started_at'),
+    /** When processing completed (success or failure) */
+    completedAt: integer('completed_at'),
+    /** Number of retry attempts */
+    attemptCount: integer('attempt_count').notNull().default(0),
+    /** Maximum retry attempts (default 4) */
+    maxAttempts: integer('max_attempts').notNull().default(4),
+    /** When to retry after transient failure */
+    nextRetryAt: integer('next_retry_at'),
+    /** Goal ancestry and execution context (JSON) */
+    contextJson: text('context_json').notNull().default('{}'),
+    /** Execution results and metadata (JSON) */
+    resultJson: text('result_json'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_agent_wakeup_requests_company').on(table.companyId),
+    companyStatusIdx: index('idx_agent_wakeup_requests_company_status').on(
+      table.companyId,
+      table.status,
+    ),
+    agentScheduledIdx: index('idx_agent_wakeup_requests_agent_scheduled').on(
+      table.agentId,
+      table.scheduledFor,
+    ),
+    priorityScheduledIdx: index('idx_agent_wakeup_requests_priority_scheduled').on(
+      table.priority,
+      table.scheduledFor,
+    ),
+    triggerTypeIdx: index('idx_agent_wakeup_requests_trigger_type').on(table.triggerType),
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // Phase 3 — M16: Meetings (continued from above)

@@ -1,12 +1,5 @@
 import { execFile } from 'node:child_process';
-import {
-  mkdir,
-  readFile,
-  readdir,
-  rm,
-  stat,
-  writeFile,
-} from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -36,9 +29,7 @@ function resolveWorkspacePath(
   const rel = relative(workspaceRoot, absolute);
 
   if (rel.startsWith('..') || rel === '..') {
-    throw new Error(
-      `Path traversal blocked: '${requestedPath}' resolves outside the workspace.`,
-    );
+    throw new Error(`Path traversal blocked: '${requestedPath}' resolves outside the workspace.`);
   }
   return { safePath: absolute, relativePath: rel };
 }
@@ -98,8 +89,7 @@ function buildFilesystemTool(deps: ExecutionToolDeps): ToolSpec {
         },
         pattern: {
           type: 'string',
-          description:
-            'Search pattern, e.g. "*.ts" or "README*" (required for search operation).',
+          description: 'Search pattern, e.g. "*.ts" or "README*" (required for search operation).',
         },
       },
       required: ['operation', 'path'],
@@ -218,12 +208,7 @@ async function searchFiles(
 
 function matchGlob(filename: string, pattern: string): boolean {
   const regex = new RegExp(
-    '^' +
-      pattern
-        .replace(/\./g, '\\.')
-        .replace(/\*/g, '.*')
-        .replace(/\?/g, '.') +
-      '$',
+    `^${pattern.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.')}$`,
     'i',
   );
   return regex.test(filename);
@@ -275,9 +260,7 @@ function buildShellTool(deps: ExecutionToolDeps): ToolSpec {
       const workspaceRoot = getWorkspaceRoot(deps);
       await ensureWorkspace(workspaceRoot);
 
-      const cwd = args.cwd
-        ? resolveWorkspacePath(args.cwd, workspaceRoot).safePath
-        : workspaceRoot;
+      const cwd = args.cwd ? resolveWorkspacePath(args.cwd, workspaceRoot).safePath : workspaceRoot;
 
       const timeout = args.timeoutMs ?? 30_000;
 
@@ -355,9 +338,7 @@ function buildGitTool(deps: ExecutionToolDeps): ToolSpec {
       const workspaceRoot = getWorkspaceRoot(deps);
       await ensureWorkspace(workspaceRoot);
 
-      const cwd = args.cwd
-        ? resolveWorkspacePath(args.cwd, workspaceRoot).safePath
-        : workspaceRoot;
+      const cwd = args.cwd ? resolveWorkspacePath(args.cwd, workspaceRoot).safePath : workspaceRoot;
 
       try {
         const { stdout, stderr } = await execFileAsync(
@@ -461,7 +442,7 @@ function buildBrowseTool(): ToolSpec {
         }
 
         if (bodyText.length > maxSize) {
-          bodyText = bodyText.slice(0, maxSize) + '\n... [truncated]';
+          bodyText = `${bodyText.slice(0, maxSize)}\n... [truncated]`;
         }
 
         return {
@@ -485,13 +466,6 @@ function buildBrowseTool(): ToolSpec {
 // Composer — build all execution tools for an employee
 // ---------------------------------------------------------------------------
 
-export function buildExecutionTools(
-  deps: ExecutionToolDeps,
-): ToolSpec[] {
-  return [
-    buildFilesystemTool(deps),
-    buildShellTool(deps),
-    buildGitTool(deps),
-    buildBrowseTool(),
-  ];
+export function buildExecutionTools(deps: ExecutionToolDeps): ToolSpec[] {
+  return [buildFilesystemTool(deps), buildShellTool(deps), buildGitTool(deps), buildBrowseTool()];
 }

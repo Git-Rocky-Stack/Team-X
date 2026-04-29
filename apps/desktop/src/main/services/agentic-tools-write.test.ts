@@ -924,7 +924,10 @@ describe('buildWriteSideTools — composer', () => {
     ];
     for (const level of levels) {
       const tools = buildWriteSideTools({ level }, depsFor(level));
-      expect(tools.map((t) => t.name), `level=${level}`).toEqual(expected);
+      expect(
+        tools.map((t) => t.name),
+        `level=${level}`,
+      ).toEqual(expected);
     }
   });
 });

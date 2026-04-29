@@ -86,6 +86,15 @@ export interface RoutineServiceDeps {
       payload: T;
     }): unknown;
   };
+  agentWakeupQueue?: {
+    queueRoutineCompletionWakeup(input: {
+      routineId: string;
+      companyId: string;
+      agentId: string;
+      goalId?: string;
+      ticketId?: string;
+    }): Promise<void>;
+  };
   now?(): number;
   setInterval?: typeof setInterval;
   clearInterval?: typeof clearInterval;
@@ -454,6 +463,26 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
         assigneeId: routine.workConfig.assigneeId,
         labelsJson: JSON.stringify(labels),
       });
+
+      // ✅ THE MISSING BRIDGE: Transform Team-X from reactive to proactive
+      // When routines create tickets with assignees, automatically wake up those agents
+      // This single line enables autonomous agent execution toward company goals
+      if (routine.workConfig.assigneeId && agentWakeupQueue) {
+        try {
+          await agentWakeupQueue.queueRoutineCompletionWakeup({
+            routineId: routine.id,
+            companyId: routine.companyId,
+            agentId: routine.workConfig.assigneeId,
+            ticketId: ticketResult.ticketId,
+          });
+
+          console.log(`[routines] ✅ Agent wakeup queued for ${routine.workConfig.assigneeId} - routine completed, ticket created: ${ticketResult.ticketId}`);
+        } catch (wakeupError) {
+          // Log but don't fail the routine run if wakeup fails
+          logger?.error(`[routines] ⚠️ Failed to queue agent wakeup for ${routine.workConfig.assigneeId}:`, wakeupError);
+        }
+      }
+
       const finishedAt = now();
       const message = `Created ticket ${ticketResult.ticketId}`;
       routinesRepo.updateRun(runId, {

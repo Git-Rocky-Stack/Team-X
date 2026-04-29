@@ -26,7 +26,8 @@ import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput } from '../db/repos/messages.js';
 import type { GetOrCreateEmployeeDmThreadInput } from '../db/repos/threads.js';
 import type { EventBus } from './event-bus.js';
-import { buildExecutionTools, type ExecutionToolDeps } from './execution-tools.js';
+import type { ExecutionToolDeps } from './execution-tools.js';
+import { buildExecutionTools } from './execution-tools.js';
 
 // ---------------------------------------------------------------------------
 // Dependency interfaces — narrowed to exactly what the tools need
