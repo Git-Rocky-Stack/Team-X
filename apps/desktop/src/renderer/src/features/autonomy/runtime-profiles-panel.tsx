@@ -128,6 +128,9 @@ function buildConfig(draft: RuntimeProfileDraft): Record<string, unknown> {
       return {
         ...(draft.providerId.trim() ? { providerId: draft.providerId.trim() } : {}),
         ...(draft.model.trim() ? { model: draft.model.trim() } : {}),
+        ...(draft.workingDirectory.trim()
+          ? { workingDirectory: draft.workingDirectory.trim() }
+          : {}),
       };
     case 'bash':
       return {
@@ -256,6 +259,11 @@ function profileDiagnostics(profile: RuntimeProfileSummary): RuntimeDiagnostic[]
         label: 'Model',
         value: model ?? 'current policy default',
         mono: Boolean(model),
+      });
+      diagnostics.push({
+        label: 'Working Directory',
+        value: workingDirectory ?? 'runtime workspace fallback',
+        mono: Boolean(workingDirectory),
       });
       diagnostics.push({
         label: 'Required Config',
@@ -464,7 +472,7 @@ function RuntimeConfigFields({
 }) {
   if (draft.kind === 'teamx-internal') {
     return (
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-3">
         <label className="space-y-2">
           <div className={LABEL_CLASSNAME}>Provider</div>
           <select
@@ -487,6 +495,15 @@ function RuntimeConfigFields({
             value={draft.model}
             onChange={(event) => onChange({ model: event.target.value })}
             placeholder="claude-haiku-4-5"
+          />
+        </label>
+        <label className="space-y-2">
+          <div className={LABEL_CLASSNAME}>Working Directory</div>
+          <input
+            className={FIELD_CLASSNAME}
+            value={draft.workingDirectory}
+            onChange={(event) => onChange({ workingDirectory: event.target.value })}
+            placeholder="C:\\Users\\User\\Projects"
           />
         </label>
       </div>

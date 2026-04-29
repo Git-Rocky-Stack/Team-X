@@ -18,6 +18,7 @@ import {
   HUMAN_USER_ID,
   type IpcCompaniesRepo,
   type IpcEmployeesRepo,
+  type IpcEventBus,
   type IpcMessagesRepo,
   type IpcOrchestrator,
   type IpcRoleLookup,
@@ -367,6 +368,14 @@ class FakeRoleLookup implements IpcRoleLookup {
   }
 }
 
+class FakeEventBus implements IpcEventBus {
+  emitted: Parameters<IpcEventBus['emit']>[0][] = [];
+
+  emit(input: Parameters<IpcEventBus['emit']>[0]): void {
+    this.emitted.push(input);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Fixture builders
 // ---------------------------------------------------------------------------
@@ -426,6 +435,7 @@ interface Fixture {
   messages: FakeMessagesRepo;
   orchestrator: FakeOrchestrator;
   roleLookup: FakeRoleLookup;
+  bus: FakeEventBus;
   handlers: ReturnType<typeof createIpcHandlers>;
 }
 
@@ -465,6 +475,7 @@ function buildFixture(): Fixture {
   const messages = new FakeMessagesRepo();
   const orchestrator = new FakeOrchestrator();
   const roleLookup = new FakeRoleLookup();
+  const bus = new FakeEventBus();
   const handlers = createIpcHandlers({
     companiesRepo: companies,
     employeesRepo: employees,
@@ -472,8 +483,9 @@ function buildFixture(): Fixture {
     messagesRepo: messages,
     orchestrator,
     roleLookup,
+    bus,
   });
-  return { companies, employees, threads, messages, orchestrator, roleLookup, handlers };
+  return { companies, employees, threads, messages, orchestrator, roleLookup, bus, handlers };
 }
 
 // ---------------------------------------------------------------------------
@@ -857,6 +869,20 @@ describe('IPC: chat.send orchestrator failure handling', () => {
 
     // Wait for the rejected promise's catch handler to run.
     await new Promise((r) => setTimeout(r, 0));
+    expect(fx.bus.emitted).toEqual([
+      expect.objectContaining({
+        type: 'work.failed',
+        companyId: 'co-1',
+        actorId: 'orchestrator',
+        actorKind: 'orchestrator',
+        payload: expect.objectContaining({
+          threadId: 'thread-1',
+          employeeId: 'emp-iris',
+          messageId: 'msg-1',
+          error: 'provider down',
+        }),
+      }),
+    ]);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining('orchestrator turn failed'),
       expect.any(Error),

@@ -20,6 +20,7 @@ export interface ExecutionToolDeps {
   userDataDir: string;
   companySlug: string;
   employeeId: string;
+  workspaceRoot?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,6 +44,10 @@ function resolveWorkspacePath(
 }
 
 function getWorkspaceRoot(deps: ExecutionToolDeps): string {
+  if (typeof deps.workspaceRoot === 'string' && deps.workspaceRoot.trim().length > 0) {
+    return resolve(deps.workspaceRoot.trim());
+  }
+
   const paths = resolveRuntimeWorkspacePaths({
     userDataDir: deps.userDataDir,
     companySlug: deps.companySlug,

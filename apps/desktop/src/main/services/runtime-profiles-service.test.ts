@@ -172,6 +172,56 @@ describe('runtime profiles service', () => {
     expect(result.message).toMatch(/Anthropic/);
   });
 
+  it('validates internal runtime working directories before marking execution healthy', async () => {
+    const service = createService({ configuredProviderIds: ['anthropic'] });
+    const profileId = service.create({
+      companyId: 'company-1',
+      name: 'Anthropic Internal',
+      kind: 'teamx-internal',
+      config: {
+        providerId: 'anthropic',
+        model: 'claude-haiku-4-5',
+        workingDirectory: tempDir,
+      },
+    });
+
+    const result = await service.validateProfile({
+      companyId: 'company-1',
+      profileId,
+    });
+
+    expect(result.status).toBe('healthy');
+    expect(result.supportsExecution).toBe(true);
+    expect(result.details).toEqual(
+      expect.objectContaining({
+        providerId: 'anthropic',
+        workingDirectory: tempDir,
+      }),
+    );
+  });
+
+  it('rejects inaccessible internal runtime working directories', async () => {
+    const service = createService({ configuredProviderIds: ['anthropic'] });
+    const profileId = service.create({
+      companyId: 'company-1',
+      name: 'Anthropic Internal',
+      kind: 'teamx-internal',
+      config: {
+        providerId: 'anthropic',
+        workingDirectory: join(tempDir, 'missing'),
+      },
+    });
+
+    const result = await service.validateProfile({
+      companyId: 'company-1',
+      profileId,
+    });
+
+    expect(result.status).toBe('error');
+    expect(result.supportsExecution).toBe(false);
+    expect(result.message).toMatch(/working directory is not accessible/i);
+  });
+
   it('validates bash runtime profiles with an absolute command path', async () => {
     const service = createService();
     const commandPath = join(tempDir, 'launcher.exe');

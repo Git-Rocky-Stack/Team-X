@@ -163,6 +163,16 @@ export type ResolveTools = (args: {
   getRunId: () => string;
 }) => Promise<{ tools: Record<string, unknown>; maxSteps: number } | null>;
 
+/**
+ * Resolve the host directory that execution tools should expose to an
+ * employee. Returning null preserves the per-employee Team-X runtime
+ * workspace fallback.
+ */
+export type ResolveExecutionWorkspace = (args: {
+  employee: EmployeeRow;
+  company: CompanyRow;
+}) => string | null | undefined;
+
 // ---------------------------------------------------------------------------
 // Public Orchestrator interface
 // ---------------------------------------------------------------------------
@@ -291,6 +301,7 @@ export interface BuildOrchestratorOptions {
   resolveProvider: ResolveProvider;
   /** Optional — when absent, agents have no tool access. */
   resolveTools?: ResolveTools;
+  resolveExecutionWorkspace?: ResolveExecutionWorkspace;
   contextAssemblerService?: {
     assembleThreadContext(input: {
       companyId: string;
@@ -785,6 +796,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     resolveSystemPrompt,
     resolveProvider,
     resolveTools,
+    resolveExecutionWorkspace,
     contextAssemblerService,
     contextPackerService,
     threadDigestService,
@@ -1124,6 +1136,17 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     throw new Error(reason);
   }
 
+  function buildExecutionDeps(employee: EmployeeRow, company: CompanyRow) {
+    if (!userDataDir) return undefined;
+    const workspaceRoot = resolveExecutionWorkspace?.({ employee, company }) ?? null;
+    return {
+      userDataDir,
+      companySlug: company.slug,
+      employeeId: employee.id,
+      ...(workspaceRoot ? { workspaceRoot } : {}),
+    };
+  }
+
   async function runTurn(
     args: EnqueueChatArgs,
     provider: ResolvedProvider,
@@ -1183,13 +1206,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         messages: messagesRepo,
         threads: threadsRepo,
         enqueueAgentReply: enqueueAgentReplyInternal,
-        execution: userDataDir
-          ? {
-              userDataDir,
-              companySlug: company.slug,
-              employeeId: args.employeeId,
-            }
-          : undefined,
+        execution: buildExecutionDeps(employee, company),
       },
       args.employeeId,
       company.id,
@@ -1354,13 +1371,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         messages: messagesRepo,
         threads: threadsRepo,
         enqueueAgentReply: enqueueAgentReplyInternal,
-        execution: userDataDir
-          ? {
-              userDataDir,
-              companySlug: company.slug,
-              employeeId: args.employeeId,
-            }
-          : undefined,
+        execution: buildExecutionDeps(employee, company),
       },
       args.employeeId,
       company.id,

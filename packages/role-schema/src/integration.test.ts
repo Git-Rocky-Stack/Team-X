@@ -16,8 +16,10 @@ describe('role-pack integration', () => {
     expect(spec.frontmatter.level).toBe('officer');
     expect(spec.frontmatter.decision_authority).toBe('final');
     expect(spec.frontmatter.preferred_model_tier).toBe('high');
-    expect(spec.frontmatter.tools_denied).toContain('shell');
-    expect(spec.frontmatter.tools_denied).toContain('filesystem_write');
+    expect(spec.frontmatter.tools_allowed).toEqual([]);
+    expect(spec.frontmatter.tools_denied).toEqual([]);
+    expect(spec.frontmatter.capabilities).toContain('executive_leadership');
+    expect(spec.frontmatter.capabilities).toContain('business_strategy');
     expect(spec.frontmatter.kpis.length).toBeGreaterThan(0);
     expect(spec.frontmatter.cadences).toBeDefined();
     expect(spec.body).toContain('# Identity');
@@ -40,8 +42,10 @@ describe('role-pack integration', () => {
     expect(spec.frontmatter.decision_authority).toBe('delegated');
     expect(spec.frontmatter.preferred_model_tier).toBe('mid');
     expect(spec.frontmatter.reports_to).toContain('engineering-manager');
-    expect(spec.frontmatter.tools_allowed).toContain('git');
-    expect(spec.frontmatter.tools_denied).toContain('shell');
+    expect(spec.frontmatter.tools_allowed).toEqual([]);
+    expect(spec.frontmatter.tools_denied).toEqual([]);
+    expect(spec.frontmatter.capabilities).toContain('backend_engineering');
+    expect(spec.frontmatter.capabilities).toContain('frontend_engineering');
     expect(spec.body).toContain('# Identity');
     expect(spec.body).toContain('TDD');
     expect(spec.sha256).toMatch(/^[a-f0-9]{64}$/);

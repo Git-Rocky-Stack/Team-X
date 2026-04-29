@@ -1,6 +1,6 @@
 {
   "name": "team-x",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "type": "module",
   "description": "Run an AI company. Not a prompt.",

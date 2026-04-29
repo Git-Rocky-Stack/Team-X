@@ -4243,6 +4243,39 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           if (isUserCancelledTurnError(err)) {
             return;
           }
+          const message = err instanceof Error ? err.message : String(err);
+          const rows = messagesRepo.listByThread(resolvedThreadId);
+          const userMessage = rows.find((row) => row.id === messageId);
+          const alreadyStarted =
+            userMessage !== undefined &&
+            rows.some(
+              (row) =>
+                row.createdAt >= userMessage.createdAt &&
+                row.authorKind === 'employee' &&
+                row.authorId === employeeId,
+            );
+          if (!alreadyStarted) {
+            try {
+              bus?.emit({
+                type: 'work.failed',
+                companyId: employee.companyId,
+                actorId: 'orchestrator',
+                actorKind: 'orchestrator',
+                payload: {
+                  threadId: resolvedThreadId,
+                  employeeId,
+                  messageId,
+                  error: message,
+                },
+              });
+            } catch (eventErr) {
+              console.error(
+                `[ipc] chat.send: failed to emit work.failed for thread=${resolvedThreadId} ` +
+                  `employee=${employeeId} userMessage=${messageId}:`,
+                eventErr,
+              );
+            }
+          }
           console.error(
             `[ipc] chat.send: orchestrator turn failed for thread=${resolvedThreadId} ` +
               `employee=${employeeId} userMessage=${messageId}:`,

@@ -246,6 +246,51 @@ export function createRuntimeProfilesService(
     const config = normalizeConfig(profile.config);
     const providerId = getOptionalString(config, 'providerId');
     const model = getOptionalString(config, 'model');
+    const workingDirectory = getOptionalString(config, 'workingDirectory');
+    const details = { providerId, model, workingDirectory };
+
+    if (workingDirectory) {
+      if (!isAbsolute(workingDirectory)) {
+        return makeValidation(
+          {
+            profileId: profile.id,
+            status: 'error',
+            message: 'Internal runtime working directory must be an absolute path.',
+            supportsExecution: false,
+            details,
+          },
+          checkedAt,
+        );
+      }
+      try {
+        const dirStat = await statFn(workingDirectory);
+        if (!dirStat.isDirectory()) {
+          return makeValidation(
+            {
+              profileId: profile.id,
+              status: 'error',
+              message: `Internal runtime working directory is not a directory: ${workingDirectory}`,
+              supportsExecution: false,
+              details,
+            },
+            checkedAt,
+          );
+        }
+      } catch (err) {
+        return makeValidation(
+          {
+            profileId: profile.id,
+            status: 'error',
+            message:
+              `Internal runtime working directory is not accessible: ${workingDirectory}. ` +
+              (err instanceof Error ? err.message : String(err)),
+            supportsExecution: false,
+            details,
+          },
+          checkedAt,
+        );
+      }
+    }
 
     if (providerId) {
       const provider = providersService.get(providerId);
@@ -256,7 +301,7 @@ export function createRuntimeProfilesService(
             status: 'error',
             message: `Provider "${providerId}" is not registered in Team-X.`,
             supportsExecution: true,
-            details: { providerId, model },
+            details,
           },
           checkedAt,
         );
@@ -268,21 +313,22 @@ export function createRuntimeProfilesService(
             status: 'warning',
             message: `Provider "${provider.name}" is registered but currently disabled.`,
             supportsExecution: true,
-            details: { providerId, model },
+            details,
           },
           checkedAt,
         );
       }
       const configured = await providersService.isConfigured(providerId);
+      const workspaceSuffix = workingDirectory ? ` Workspace: ${workingDirectory}.` : '';
       return makeValidation(
         {
           profileId: profile.id,
           status: configured ? 'healthy' : 'warning',
           message: configured
-            ? `Internal runtime is ready via ${provider.name}${model ? ` using ${model}` : ''}.`
+            ? `Internal runtime is ready via ${provider.name}${model ? ` using ${model}` : ''}.${workspaceSuffix}`
             : `Provider "${provider.name}" exists but is not configured yet.`,
           supportsExecution: true,
-          details: { providerId, model },
+          details,
         },
         checkedAt,
       );
@@ -295,9 +341,11 @@ export function createRuntimeProfilesService(
           {
             profileId: profile.id,
             status: 'healthy',
-            message: `Internal runtime can execute through the configured provider "${provider.name}".`,
+            message:
+              `Internal runtime can execute through the configured provider "${provider.name}".` +
+              (workingDirectory ? ` Workspace: ${workingDirectory}.` : ''),
             supportsExecution: true,
-            details: { providerId: provider.id, model },
+            details: { providerId: provider.id, model, workingDirectory },
           },
           checkedAt,
         );
@@ -310,7 +358,7 @@ export function createRuntimeProfilesService(
         status: 'warning',
         message: 'No configured Team-X provider is currently available for this internal runtime.',
         supportsExecution: true,
-        details: { providerId: null, model },
+        details,
       },
       checkedAt,
     );

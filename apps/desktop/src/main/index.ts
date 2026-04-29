@@ -102,7 +102,10 @@ import { createProjectsRepo } from './db/repos/projects.js';
 import { createRoutinesRepo } from './db/repos/routines.js';
 import { createRunCheckpointsRepo } from './db/repos/run-checkpoints.js';
 import { createRunsRepo } from './db/repos/runs.js';
-import { createRuntimeProfilesRepo } from './db/repos/runtime-profiles.js';
+import {
+  type RuntimeProfilesRepo,
+  createRuntimeProfilesRepo,
+} from './db/repos/runtime-profiles.js';
 import { createRuntimeSessionsRepo } from './db/repos/runtime-sessions.js';
 import { createSettingsRepo } from './db/repos/settings.js';
 import { createThreadDigestsRepo } from './db/repos/thread-digests.js';
@@ -206,6 +209,145 @@ import { createTestCopilotComplete } from './services/test-copilot-provider.js';
 import { createThreadDigestService } from './services/thread-digest-service.js';
 import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
+
+function ensureWindowsProcessEnvironment(): void {
+  if (process.platform !== 'win32') return;
+  const userProfile = process.env.USERPROFILE ?? 'C:\\Users\\User';
+  const defaults: Record<string, string> = {
+    SystemRoot: 'C:\\WINDOWS',
+    windir: 'C:\\WINDOWS',
+    ComSpec: 'C:\\WINDOWS\\System32\\cmd.exe',
+    APPDATA: join(userProfile, 'AppData', 'Roaming'),
+    LOCALAPPDATA: join(userProfile, 'AppData', 'Local'),
+    ProgramFiles: 'C:\\Program Files',
+    ProgramW6432: 'C:\\Program Files',
+    'ProgramFiles(x86)': 'C:\\Program Files (x86)',
+  };
+  for (const [key, value] of Object.entries(defaults)) {
+    if (!process.env[key] || process.env[key]?.trim().length === 0) {
+      process.env[key] = value;
+    }
+  }
+}
+
+ensureWindowsProcessEnvironment();
+
+function getRuntimeConfigString(
+  config: Record<string, unknown> | null | undefined,
+  key: string,
+): string | null {
+  const value = config?.[key];
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function ensureDefaultRuntimeProfileBindings(args: {
+  companiesRepo: ReturnType<typeof createCompaniesRepo>;
+  employeesRepo: ReturnType<typeof createEmployeesRepo>;
+  runtimeProfilesRepo: RuntimeProfilesRepo;
+}): void {
+  for (const company of args.companiesRepo.list()) {
+    if (company.status === 'archived') continue;
+    const profile = args.runtimeProfilesRepo
+      .listByCompany(company.id)
+      .find((row) => row.enabled && row.kind === 'teamx-internal');
+    if (!profile) continue;
+
+    for (const employee of args.employeesRepo.listVisibleByCompany(company.id)) {
+      if (employee.status === 'archived' || employee.status === 'fired') continue;
+      if (args.runtimeProfilesRepo.getBinding(company.id, employee.id)) continue;
+      args.runtimeProfilesRepo.upsertBinding({
+        companyId: company.id,
+        employeeId: employee.id,
+        runtimeProfileId: profile.id,
+      });
+    }
+  }
+}
+
+function recoverUnansweredDirectMessages(args: {
+  companiesRepo: ReturnType<typeof createCompaniesRepo>;
+  threadsRepo: ReturnType<typeof createThreadsRepo>;
+  messagesRepo: ReturnType<typeof createMessagesRepo>;
+  employeesRepo: ReturnType<typeof createEmployeesRepo>;
+  orchestrator: Orchestrator;
+  bus: ReturnType<typeof createEventBus>;
+}): void {
+  for (const company of args.companiesRepo.list()) {
+    if (company.status === 'archived') continue;
+    for (const thread of args.threadsRepo.listByCompany(company.id)) {
+      if (thread.kind !== 'dm') continue;
+      const members = args.threadsRepo.listMembers(thread.id);
+      const hasHuman = members.some(
+        (member) => member.memberKind === 'user' && member.memberId === HUMAN_USER_ID,
+      );
+      if (!hasHuman) continue;
+      const employeeMember = members.find((member) => member.memberKind === 'employee');
+      if (!employeeMember) continue;
+      const employee = args.employeesRepo.getById(employeeMember.memberId);
+      if (
+        !employee ||
+        employee.companyId !== company.id ||
+        employee.status === 'archived' ||
+        employee.status === 'fired'
+      ) {
+        continue;
+      }
+      const rows = args.messagesRepo
+        .listByThread(thread.id)
+        .slice()
+        .sort((a, b) => a.createdAt - b.createdAt);
+      const latest = rows.at(-1);
+      if (
+        !latest ||
+        latest.authorKind !== 'user' ||
+        latest.authorId !== HUMAN_USER_ID ||
+        latest.content.trim().length === 0
+      ) {
+        continue;
+      }
+      void args.orchestrator
+        .enqueueChat({
+          threadId: thread.id,
+          employeeId: employee.id,
+          userMessageId: latest.id,
+        })
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          const refreshed = args.messagesRepo.listByThread(thread.id);
+          const trigger = refreshed.find((row) => row.id === latest.id);
+          const alreadyStarted =
+            trigger !== undefined &&
+            refreshed.some(
+              (row) =>
+                row.createdAt >= trigger.createdAt &&
+                row.authorKind === 'employee' &&
+                row.authorId === employee.id,
+            );
+          if (!alreadyStarted) {
+            args.bus.emit({
+              type: 'work.failed',
+              companyId: company.id,
+              actorId: 'orchestrator',
+              actorKind: 'orchestrator',
+              payload: {
+                threadId: thread.id,
+                employeeId: employee.id,
+                messageId: latest.id,
+                error: message,
+              },
+            });
+          }
+          console.error(
+            `[main] recovered chat turn failed for thread=${thread.id} ` +
+              `employee=${employee.id} userMessage=${latest.id}:`,
+            err,
+          );
+        });
+    }
+  }
+}
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
@@ -521,6 +663,11 @@ app
       runtimeProfilesRepo,
       employeesRepo,
       providersService,
+    });
+    ensureDefaultRuntimeProfileBindings({
+      companiesRepo,
+      employeesRepo,
+      runtimeProfilesRepo,
     });
     const runtimeAuditNormalizer = createRuntimeAuditNormalizer({
       bus,
@@ -893,6 +1040,11 @@ app
       },
       resolveProvider,
       resolveTools,
+      resolveExecutionWorkspace: ({ employee }) => {
+        const profile = runtimeProfilesService.getProfileForEmployee(employee.id);
+        if (!profile?.enabled) return null;
+        return getRuntimeConfigString(profile.config, 'workingDirectory');
+      },
       contextAssemblerService,
       contextPackerService,
       threadDigestService,
@@ -900,6 +1052,14 @@ app
       slots: initialSlots,
       providerCaps: initialProviderCaps,
       userDataDir: userDataDir(),
+    });
+    recoverUnansweredDirectMessages({
+      companiesRepo,
+      threadsRepo,
+      messagesRepo,
+      employeesRepo,
+      orchestrator,
+      bus,
     });
 
     // ---- RAG indexer: subscribes to the event bus, indexes on write --------
