@@ -228,15 +228,17 @@ describe('audit-event-chip: copilot.analyzed', () => {
 // Extensions & Authority hardening events
 // ---------------------------------------------------------------------------
 
-describe('audit-event-chip: extension.installed + authority.violation', () => {
-  it('maps the new extension install and authority violation events to stable labels and colors', () => {
+describe('audit-event-chip: extension install/remove + authority.violation', () => {
+  it('maps the extension lifecycle and authority violation events to stable labels and colors', () => {
     expect(getEventTypeColor('extension.installed')).toBe('bg-emerald-600/20 text-emerald-400');
     expect(getEventTypeLabel('extension.installed')).toBe('Extension Installed');
+    expect(getEventTypeColor('extension.removed')).toBe('bg-rose-600/20 text-rose-400');
+    expect(getEventTypeLabel('extension.removed')).toBe('Extension Removed');
     expect(getEventTypeColor('authority.violation')).toBe('bg-rose-600/20 text-rose-400');
     expect(getEventTypeLabel('authority.violation')).toBe('Authority Violation');
   });
 
-  it('summarizes extension installs with source metadata and authority violations with the denied resource', () => {
+  it('summarizes extension lifecycle events with source metadata and authority violations with the denied resource', () => {
     expect(
       buildRowSummary(
         'extension.installed',
@@ -247,6 +249,18 @@ describe('audit-event-chip: extension.installed + authority.violation', () => {
         }),
       ),
     ).toBe('github · https://github.com/acme/team-x-skills/tree/ma... · ext-abcd');
+
+    expect(
+      buildRowSummary(
+        'extension.removed',
+        JSON.stringify({
+          extensionId: 'ext-removed1',
+          name: 'Ops Briefing',
+          sourceKind: 'local',
+          sourceRef: 'C:/skills/ops-briefing',
+        }),
+      ),
+    ).toBe('Ops Briefing · local · C:/skills/ops-briefing · ext-remo');
 
     expect(
       buildRowSummary(

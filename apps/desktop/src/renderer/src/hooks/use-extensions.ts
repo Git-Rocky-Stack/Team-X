@@ -217,6 +217,9 @@ export function useAddMcpServer(companyId: string | null) {
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
       qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority-requests', companyId] });
+      qc.invalidateQueries({ queryKey: ['effective-authority', companyId] });
       qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
@@ -231,6 +234,9 @@ export function useInstallMcpTemplate(companyId: string | null) {
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
       qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority-requests', companyId] });
+      qc.invalidateQueries({ queryKey: ['effective-authority', companyId] });
       qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });
@@ -260,6 +266,9 @@ export function useRemoveMcpServer(companyId: string | null) {
       qc.invalidateQueries({ queryKey: ['mcp', companyId] });
       qc.invalidateQueries({ queryKey: ['mcp-templates', companyId] });
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority', companyId] });
+      qc.invalidateQueries({ queryKey: ['authority-requests', companyId] });
+      qc.invalidateQueries({ queryKey: ['effective-authority', companyId] });
       qc.invalidateQueries({ queryKey: ['audit'] });
     },
   });

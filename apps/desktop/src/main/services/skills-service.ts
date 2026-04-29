@@ -824,7 +824,7 @@ export function createSkillsService(deps: SkillsServiceDeps): SkillsService {
       if (extension.kind !== 'skill') {
         throw new Error(`[skills] extension is not a skill: ${extensionId}`);
       }
-      if (extension.companyId !== null && extension.companyId !== companyId) {
+      if (extension.companyId !== companyId) {
         throw new Error(`[skills] skill ${extensionId} does not belong to company ${companyId}`);
       }
 

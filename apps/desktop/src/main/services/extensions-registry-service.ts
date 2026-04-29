@@ -18,7 +18,7 @@ export interface ExtensionsRegistryService {
   listByCompany(companyId: string): ExtensionRow[];
   backfillMcpServers(): number;
   syncMcpServer(serverId: string, options?: SyncMcpServerOptions): ExtensionRow | null;
-  removeMcpServer(serverId: string): void;
+  removeMcpServer(serverId: string): ExtensionRow | null;
 }
 
 function slugify(value: string): string {
@@ -209,10 +209,11 @@ export function createExtensionsRegistryService(
       return syncRow(row, options);
     },
 
-    removeMcpServer(serverId: string): void {
+    removeMcpServer(serverId: string): ExtensionRow | null {
       const existing = deps.extensionsRepo.findByRuntimeRefId(serverId);
-      if (!existing) return;
+      if (!existing) return null;
       deps.extensionsRepo.delete(existing.id);
+      return existing;
     },
   };
 }

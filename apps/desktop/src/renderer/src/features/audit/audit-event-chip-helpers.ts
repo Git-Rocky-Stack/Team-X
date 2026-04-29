@@ -52,6 +52,7 @@ export const EVENT_TYPE_COLORS: Record<string, string> = {
   'mcp.removed': 'bg-orange-600/20 text-orange-400',
   'mcp.toggled': 'bg-orange-600/20 text-orange-400',
   'extension.installed': 'bg-emerald-600/20 text-emerald-400',
+  'extension.removed': 'bg-rose-600/20 text-rose-400',
   'skill.assignmentUpdated': 'bg-sky-600/20 text-sky-400',
   'authority.grant.created': 'bg-emerald-600/20 text-emerald-400',
   'authority.grant.deleted': 'bg-rose-600/20 text-rose-400',
@@ -124,6 +125,7 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   'mcp.removed': 'MCP Removed',
   'mcp.toggled': 'MCP Toggled',
   'extension.installed': 'Extension Installed',
+  'extension.removed': 'Extension Removed',
   'skill.assignmentUpdated': 'Skill Assignment',
   'authority.grant.created': 'Authority Grant Added',
   'authority.grant.deleted': 'Authority Grant Removed',
@@ -219,6 +221,7 @@ export const SUMMARIZABLE_TYPES: ReadonlySet<string> = new Set([
   'mcp.removed',
   'mcp.toggled',
   'extension.installed',
+  'extension.removed',
   'skill.assignmentUpdated',
   'authority.grant.created',
   'authority.grant.deleted',
@@ -298,7 +301,9 @@ export function buildRowSummary(eventType: string, payloadJson: string): string 
       if (typeof payload.transport === 'string') parts.push(payload.transport);
       break;
     }
-    case 'extension.installed': {
+    case 'extension.installed':
+    case 'extension.removed': {
+      if (typeof payload.name === 'string') parts.push(payload.name);
       if (typeof payload.sourceKind === 'string') parts.push(payload.sourceKind);
       if (typeof payload.sourceRef === 'string' && payload.sourceRef.length > 0) {
         const truncated =

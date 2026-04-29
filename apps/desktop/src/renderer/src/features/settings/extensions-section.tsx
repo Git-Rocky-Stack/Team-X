@@ -307,6 +307,7 @@ export function ExtensionsSection() {
                 {skillExtensions.map((extension) => {
                   const workspaceAssignment = workspaceSkillAssignments.get(extension.id);
                   const workspaceEnabled = workspaceAssignment?.enabled ?? false;
+                  const canRemoveSkill = extension.companyId === companyId;
                   const isRemovingSkill =
                     removeSkill.isPending && removeSkill.variables === extension.id;
                   const pendingReviewCount = pendingAuthorityRequests.filter(
@@ -336,21 +337,25 @@ export function ExtensionsSection() {
                           {!extension.enabled && (
                             <Badge variant="secondary">extension disabled</Badge>
                           )}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => removeSkill.mutate(extension.id)}
-                            disabled={
-                              removeSkill.isPending ||
-                              upsertSkillAssignment.isPending ||
-                              deleteSkillAssignment.isPending
-                            }
-                            data-skill-remove=""
-                          >
-                            {isRemovingSkill ? 'Removing...' : 'Remove Skill'}
-                          </Button>
+                          {canRemoveSkill ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => removeSkill.mutate(extension.id)}
+                              disabled={
+                                removeSkill.isPending ||
+                                upsertSkillAssignment.isPending ||
+                                deleteSkillAssignment.isPending
+                              }
+                              data-skill-remove=""
+                            >
+                              {isRemovingSkill ? 'Removing...' : 'Remove Skill'}
+                            </Button>
+                          ) : (
+                            <Badge variant="secondary">built-in</Badge>
+                          )}
                         </div>
                       </div>
 

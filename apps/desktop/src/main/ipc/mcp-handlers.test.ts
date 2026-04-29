@@ -298,7 +298,34 @@ describe('MCP IPC handlers', () => {
   });
 
   it('removes the runtime server and its bridge row together', async () => {
-    const deps = makeDeps();
+    const deps = makeDeps({
+      extensionsRegistry: {
+        syncMcpServer: vi.fn(),
+        removeMcpServer: vi.fn(() => ({
+          id: 'ext-server-1',
+          companyId: 'company-1',
+          kind: 'mcp',
+          name: 'Filesystem MCP',
+          slug: 'filesystem-mcp',
+          sourceKind: 'local',
+          sourceRef: 'npx filesystem-mcp',
+          version: null,
+          updateChannel: null,
+          manifestJson: JSON.stringify({ bridgeKind: 'mcp-server' }),
+          requestedCapabilitiesJson: JSON.stringify(['mcp.call', 'process.spawn']),
+          requestedPathsJson: '[]',
+          enabled: false,
+          trustState: 'pending-review',
+          runtimeRefId: 'server-1',
+          installedAt: 1,
+          updatedAt: 1,
+        })),
+        listByCompany: vi.fn(() => []),
+      } as unknown as IpcHandlerDeps['extensionsRegistry'],
+      authorityRepo: {
+        deleteGrantsByScope: vi.fn(),
+      } as unknown as IpcHandlerDeps['authorityRepo'],
+    });
     const handlers = createIpcHandlers(deps);
 
     await handlers.mcpRemoveServer({ serverId: 'server-1' });
@@ -306,5 +333,9 @@ describe('MCP IPC handlers', () => {
     expect(deps.mcpHost.disconnectServer).toHaveBeenCalledWith('server-1');
     expect(deps.mcpServersRepo.delete).toHaveBeenCalledWith('server-1');
     expect(deps.extensionsRegistry?.removeMcpServer).toHaveBeenCalledWith('server-1');
+    expect(deps.authorityRepo?.deleteGrantsByScope).toHaveBeenCalledWith(
+      'extension',
+      'ext-server-1',
+    );
   });
 });

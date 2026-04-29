@@ -293,6 +293,45 @@ describe('skills-service', () => {
     expect(extensionsRepo.listByCompany(COMPANY_ID)).toEqual([]);
   });
 
+  it('removes a workspace skill, its assignment, authority grants, and stored snapshot', async () => {
+    const sourceDir = join(tempRoot, 'removable-skill');
+    await writeLocalSkill(
+      sourceDir,
+      {
+        name: 'Removable Skill',
+        promptFile: 'prompt.md',
+        requestedCapabilities: [],
+        requestedPaths: [],
+      },
+      {
+        'prompt.md': 'Remove this prompt when the skill is uninstalled.',
+      },
+    );
+
+    const { service, extensionsRepo, skillAssignmentsRepo, authorityRepo } = createService();
+    const { extensionId } = await service.installLocal({
+      companyId: COMPANY_ID,
+      folderPath: sourceDir,
+    });
+    const extension = extensionsRepo.getById(extensionId);
+    const manifest = JSON.parse(extension?.manifestJson ?? '{}') as Record<string, unknown>;
+    const snapshotDir = String(manifest.snapshotDir ?? '');
+    const grantId = authorityRepo.createGrant({
+      scopeKind: 'extension',
+      scopeId: extensionId,
+      resourceKind: 'capability',
+      resourceId: 'shell',
+      permission: 'prompt',
+    });
+
+    await service.removeSkill({ companyId: COMPANY_ID, extensionId });
+
+    expect(extensionsRepo.getById(extensionId)).toBeNull();
+    expect(skillAssignmentsRepo.listByCompany(COMPANY_ID)).toEqual([]);
+    expect(authorityRepo.getGrantById(grantId)).toBeNull();
+    await expect(readFile(join(snapshotDir, 'prompt.md'), 'utf8')).rejects.toThrow();
+  });
+
   it('applies employee overrides over workspace defaults during prompt materialization', async () => {
     const skillDir = join(tempRoot, 'manual-skill');
     await mkdir(skillDir, { recursive: true });

@@ -205,6 +205,44 @@ describe('extensions repos', () => {
     expect(companyRows.some((row) => row.scopeId === OTHER_EMPLOYEE_ID)).toBe(false);
   });
 
+  it('deletes every authority grant for one scope without touching sibling scopes', () => {
+    const extensionId = extensionsRepo.create({
+      companyId: COMPANY_ID,
+      kind: 'skill',
+      name: 'Disposable Skill',
+      slug: 'disposable-skill',
+      sourceKind: 'local',
+      sourceRef: 'C:/skills/disposable',
+    });
+    const deletedA = authorityRepo.createGrant({
+      scopeKind: 'extension',
+      scopeId: extensionId,
+      resourceKind: 'capability',
+      resourceId: 'shell',
+      permission: 'prompt',
+    });
+    const deletedB = authorityRepo.createGrant({
+      scopeKind: 'extension',
+      scopeId: extensionId,
+      resourceKind: 'path',
+      resourceId: 'C:/Projects/Alpha',
+      permission: 'allow',
+    });
+    const retained = authorityRepo.createGrant({
+      scopeKind: 'company',
+      scopeId: COMPANY_ID,
+      resourceKind: 'capability',
+      resourceId: 'mcp.call',
+      permission: 'allow',
+    });
+
+    authorityRepo.deleteGrantsByScope('extension', extensionId);
+
+    expect(authorityRepo.getGrantById(deletedA)).toBeNull();
+    expect(authorityRepo.getGrantById(deletedB)).toBeNull();
+    expect(authorityRepo.getGrantById(retained)).not.toBeNull();
+  });
+
   it('lists pending authority requests relevant to a company', () => {
     const extensionId = extensionsRepo.create({
       companyId: COMPANY_ID,

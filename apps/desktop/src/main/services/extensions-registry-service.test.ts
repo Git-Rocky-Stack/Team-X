@@ -202,8 +202,9 @@ describe('extensions registry service', () => {
     const bridged = registry.syncMcpServer(serverId);
 
     expect(bridged).not.toBeNull();
-    registry.removeMcpServer(serverId);
+    const removed = registry.removeMcpServer(serverId);
 
+    expect(removed?.id).toBe(bridged?.id);
     expect(extensionsRepo.findByRuntimeRefId(serverId)).toBeNull();
   });
 

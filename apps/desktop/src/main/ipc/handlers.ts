@@ -190,8 +190,8 @@ import type {
   Project,
   ProjectDetail,
   ReconnectCloudWorkspaceRequest,
-  RemoveSkillRequest,
   RemoveProviderRequest,
+  RemoveSkillRequest,
   ReopenTicketRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
@@ -4564,7 +4564,10 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       const existing = mcpServersRepo.getById(serverId);
       await mcpHost.disconnectServer(serverId);
       mcpServersRepo.delete(serverId);
-      extensionsRegistry?.removeMcpServer(serverId);
+      const removedExtension = extensionsRegistry?.removeMcpServer(serverId) ?? null;
+      if (removedExtension) {
+        authorityRepo?.deleteGrantsByScope('extension', removedExtension.id);
+      }
       if (existing?.companyId) {
         emitUserAuditEvent('mcp.removed', existing.companyId, {
           serverId: existing.id,

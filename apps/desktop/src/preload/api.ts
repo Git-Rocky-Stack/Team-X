@@ -171,6 +171,7 @@ import type {
   RagRebuildAllResponse,
   RagStatsResponse,
   ReconnectCloudWorkspaceRequest,
+  RemoveSkillRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
   ReviewApprovalItemRequest,
@@ -719,7 +720,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.extensionsInstallLocalSkill, req) as Promise<{ extensionId: string }>,
       installGithubSkill: (req: InstallGithubSkillRequest) =>
         ipc.invoke(CHANNELS.extensionsInstallGithubSkill, req) as Promise<{ extensionId: string }>,
-      removeSkill: (req) => ipc.invoke(CHANNELS.extensionsRemoveSkill, req) as Promise<void>,
+      removeSkill: (req: RemoveSkillRequest) =>
+        ipc.invoke(CHANNELS.extensionsRemoveSkill, req) as Promise<void>,
       listSkillAssignments: (companyId: string) =>
         ipc.invoke(CHANNELS.extensionsListSkillAssignments, {
           companyId,
