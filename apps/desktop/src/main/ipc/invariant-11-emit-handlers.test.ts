@@ -431,6 +431,9 @@ class FakeThreadsRepo implements IpcThreadsRepo {
   listMembers(_threadId: string): ThreadMemberRow[] {
     return [];
   }
+  updateLastMessageAt(_threadId: string, _timestamp: number): void {
+    // Unused by invariant-11 tests.
+  }
   getOrCreateDmThread(_input: never): string {
     throw new Error('unused by invariant-11 tests');
   }

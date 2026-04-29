@@ -1,6 +1,5 @@
 import { execFile } from 'node:child_process';
 import {
-  access,
   mkdir,
   readFile,
   readdir,
@@ -8,12 +7,11 @@ import {
   stat,
   writeFile,
 } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 import type { ToolSpec } from '@team-x/provider-router';
 
-import type { EmployeeRow } from '../db/repos/employees.js';
 import { resolveRuntimeWorkspacePaths } from '../services/runtime-workspace-service.js';
 
 const execFileAsync = promisify(execFile);
@@ -224,12 +222,6 @@ function matchGlob(filename: string, pattern: string): boolean {
     'i',
   );
   return regex.test(filename);
-}
-
-function dirname(p: string): string {
-  const lastSep = p.lastIndexOf('/');
-  if (lastSep === -1) return '.';
-  return p.slice(0, lastSep) || '/';
 }
 
 // ---------------------------------------------------------------------------

@@ -1242,6 +1242,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       },
     )
       .then((result) => {
+        threadsRepo.updateLastMessageAt(args.threadId, now?.() ?? Date.now());
         const finalRows = messagesRepo.listByThread(args.threadId);
         recordRunCheckpoint({
           companyId: company.id,
@@ -1269,6 +1270,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         });
       })
       .catch((err) => {
+        threadsRepo.updateLastMessageAt(args.threadId, now?.() ?? Date.now());
         const failure = classifyCheckpointFailure(
           err,
           signal.aborted,
@@ -1412,6 +1414,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       },
     )
       .then((result) => {
+        threadsRepo.updateLastMessageAt(args.threadId, now?.() ?? Date.now());
         const finalRows = messagesRepo.listByThread(args.threadId);
         recordRunCheckpoint({
           companyId: company.id,
@@ -1439,6 +1442,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         });
       })
       .catch((err) => {
+        threadsRepo.updateLastMessageAt(args.threadId, now?.() ?? Date.now());
         const failure = classifyCheckpointFailure(
           err,
           signal.aborted,

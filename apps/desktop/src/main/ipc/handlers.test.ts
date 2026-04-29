@@ -250,6 +250,12 @@ class FakeThreadsRepo implements IpcThreadsRepo {
     return this.members.get(threadId) ?? [];
   }
 
+  updateLastMessageAt(threadId: string, timestamp: number): void {
+    const row = this.threads.get(threadId);
+    if (!row) return;
+    this.threads.set(threadId, { ...row, lastMessageAt: timestamp });
+  }
+
   getOrCreateDmThread(input: GetOrCreateDmThreadInput): string {
     this.getOrCreateCalls.push(input);
     if (this.nextDmThreadId === null) {
@@ -712,6 +718,7 @@ describe('IPC: chat.send', () => {
     expect(fx.orchestrator.enqueueCalls).toEqual([
       { threadId: 'thread-1', employeeId: 'emp-iris', userMessageId: 'msg-1' },
     ]);
+    expect(fx.threads.getById('thread-1')?.lastMessageAt).toBeTypeOf('number');
   });
 
   it('resolves AUTO_THREAD_ID via getOrCreateDmThread using the employee company', async () => {

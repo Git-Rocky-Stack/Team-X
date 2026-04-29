@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 import { createCompaniesRepo } from './companies.js';
+import { createMessagesRepo } from './messages.js';
 import { createThreadsRepo } from './threads.js';
 
 describe('threads repo', () => {
   let ctx: TestDbHandle;
   let threads: ReturnType<typeof createThreadsRepo>;
+  let messages: ReturnType<typeof createMessagesRepo>;
   let companyId: string;
   let otherCompanyId: string;
 
@@ -14,6 +16,7 @@ describe('threads repo', () => {
     ctx = await makeTestDb();
     const companies = createCompaniesRepo(ctx.db);
     threads = createThreadsRepo(ctx.db);
+    messages = createMessagesRepo(ctx.db);
     companyId = companies.create({ name: 'Strategia-X', slug: 'strategia-x' });
     otherCompanyId = companies.create({ name: 'Other Corp', slug: 'other-corp' });
   });
@@ -366,6 +369,28 @@ describe('threads repo', () => {
       expect(result[0]?.members).toHaveLength(2);
       expect(result[1]?.id).toBe(t1);
       expect(result[1]?.members).toHaveLength(1);
+    });
+
+    it('recovers recency from message history when lastMessageAt is missing', () => {
+      const staleDirect = threads.create({ companyId, kind: 'dm', createdBy: 'rocky' });
+      const agentThread = threads.create({ companyId, kind: 'dm', createdBy: 'emp-a' });
+      threads.addMember({ threadId: staleDirect, memberId: 'rocky', memberKind: 'user' });
+      threads.addMember({ threadId: staleDirect, memberId: 'emp-a', memberKind: 'employee' });
+      threads.addMember({ threadId: agentThread, memberId: 'emp-a', memberKind: 'employee' });
+      threads.addMember({ threadId: agentThread, memberId: 'emp-b', memberKind: 'employee' });
+
+      messages.append({
+        threadId: staleDirect,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'Iris, are you there?',
+      });
+      threads.updateLastMessageAt(agentThread, 1);
+
+      const result = threads.listByCompanyWithMembers(companyId);
+      expect(result[0]?.id).toBe(staleDirect);
+      expect(result[0]?.lastMessageAt).toBeTypeOf('number');
+      expect(result[1]?.id).toBe(agentThread);
     });
 
     it('returns empty array for a company with no threads', () => {

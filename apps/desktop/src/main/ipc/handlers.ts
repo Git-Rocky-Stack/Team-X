@@ -447,6 +447,7 @@ export interface IpcThreadsRepo {
   addMember(input: AddThreadMemberInput): void;
   listMembers(threadId: string): ThreadMemberRow[];
   getOrCreateDmThread(input: GetOrCreateDmThreadInput): string;
+  updateLastMessageAt(threadId: string, timestamp: number): void;
   listByCompanyWithMembers(companyId: string): ThreadWithMembers[];
 }
 
@@ -4212,6 +4213,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         authorKind: 'user',
         content,
       });
+      threadsRepo.updateLastMessageAt(resolvedThreadId, Date.now());
 
       // Kick off the assistant turn. CRITICAL: do NOT await the
       // returned Promise. `orchestrator.enqueueChat` resolves when the

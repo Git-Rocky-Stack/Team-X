@@ -104,9 +104,10 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const isStopping = pendingDirectChat?.isStopping ?? false;
   const awaitingReply = pendingDirectChat?.awaitingReply ?? false;
 
-  // Resolve the thread id: prefer the active (already-resolved) thread,
-  // fall back to the employee's last known thread from live state, else null.
-  const effectiveThreadId = activeThreadId ?? live?.lastThreadId ?? null;
+  // Direct-message drawers must stay pinned to the user↔employee DM.
+  // `live.lastThreadId` can point at ticket or employee↔employee work,
+  // so using it here routes Rocky's direct message into the wrong thread.
+  const effectiveThreadId = activeThreadId;
 
   const { data: messages = [] } = useChatMessages(effectiveThreadId);
   const { data: threads = [] } = useThreadList(companyId);

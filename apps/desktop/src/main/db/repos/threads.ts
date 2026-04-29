@@ -20,7 +20,7 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 import type { Schema } from '../client.js';
-import { threadMembers, threads } from '../schema.js';
+import { messages, threadMembers, threads } from '../schema.js';
 
 export type ThreadRow = typeof threads.$inferSelect;
 export type ThreadMemberRow = typeof threadMembers.$inferSelect;
@@ -310,21 +310,43 @@ export function createThreadsRepo<TRunResult>(db: ThreadsDb<TRunResult>) {
 
     /**
      * Return every thread for a company with its membership list,
-     * ordered by `lastMessageAt` desc (most-recent first). Threads
-     * with no messages yet sort last (null lastMessageAt).
+     * ordered by effective recency desc (most-recent first). Older DBs
+     * can have null `lastMessageAt` on active threads, so we recover
+     * from message history and project the repaired timestamp.
      */
     listByCompanyWithMembers(companyId: string): ThreadWithMembers[] {
       const rows = db
         .select()
         .from(threads)
         .where(eq(threads.companyId, companyId))
-        .orderBy(desc(threads.lastMessageAt))
         .all();
 
-      return rows.map((row) => ({
-        ...row,
-        members: db.select().from(threadMembers).where(eq(threadMembers.threadId, row.id)).all(),
-      }));
+      return rows
+        .map((row) => {
+          const latestMessage = db
+            .select({ createdAt: messages.createdAt })
+            .from(messages)
+            .where(eq(messages.threadId, row.id))
+            .orderBy(desc(messages.createdAt))
+            .limit(1)
+            .get();
+
+          return {
+            ...row,
+            lastMessageAt: row.lastMessageAt ?? latestMessage?.createdAt ?? null,
+            members: db
+              .select()
+              .from(threadMembers)
+              .where(eq(threadMembers.threadId, row.id))
+              .all(),
+          };
+        })
+        .sort((a, b) => {
+          const aRecency = a.lastMessageAt ?? Number.NEGATIVE_INFINITY;
+          const bRecency = b.lastMessageAt ?? Number.NEGATIVE_INFINITY;
+          if (aRecency !== bRecency) return bRecency - aRecency;
+          return b.createdAt - a.createdAt;
+        });
     },
   };
 }

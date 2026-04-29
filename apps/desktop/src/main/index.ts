@@ -1511,7 +1511,7 @@ app
             const emp = employeesRepo.getById(employeeId);
             if (!emp) return false;
             try {
-              await runtimeProfileProviderService.resolveForEmployee(emp);
+              await resolveProvider(emp);
               return true;
             } catch {
               return false;

@@ -84,6 +84,11 @@ describe('Interruptible direct chat renderer wiring', () => {
     expect(chatDrawerSrc).not.toContain('disabled={isThinking || sendMutation.isPending}');
   });
 
+  it('keeps the direct-message drawer pinned to the resolved user DM thread', () => {
+    expect(chatDrawerSrc).toContain('const effectiveThreadId = activeThreadId;');
+    expect(chatDrawerSrc).not.toContain('activeThreadId ?? live?.lastThreadId');
+  });
+
   it('adds an optional chat.stop hook that degrades cleanly until preload/main expose it', () => {
     expect(useChatSrc).toContain('export function useStopChat()');
     expect(useChatSrc).toContain("typeof chatApi.stop !== 'function'");
