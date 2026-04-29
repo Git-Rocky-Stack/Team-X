@@ -39,6 +39,7 @@ import { InstallCustomSkillDialog } from '@/components/skills/install-custom-ski
 import { SkillsMarketplace } from '@/components/skills/skills-marketplace.js';
 import { InstallCustomMcpDialog } from '@/components/mcp/install-custom-mcp-dialog.js';
 import { McpMarketplace } from '@/components/mcp/mcp-marketplace.js';
+import { SimplifiedPermissions } from '@/components/permissions/simplified-permissions.js';
 
 const AUTONOMY_COPY: Record<(typeof EXTENSIONS_AUTONOMY_MODES)[number], string> = {
   balanced: 'Auto-enable low-risk installs, but stop for sensitive capability or path expansion.',
@@ -83,6 +84,8 @@ export function ExtensionsSection() {
   const [skillDialogOpen, setSkillDialogOpen] = useState(false);
   const [customSkillDialogOpen, setCustomSkillDialogOpen] = useState(false);
   const [customMcpDialogOpen, setCustomMcpDialogOpen] = useState(false);
+  const [permissionPreset, setPermissionPreset] = useState('standard');
+  const [showAdvancedPermissions, setShowAdvancedPermissions] = useState(false);
   const [previewEmployeeId, setPreviewEmployeeId] = useState<string | null>(null);
   const [grantDialogDefaults, setGrantDialogDefaults] = useState<GrantDialogDefaults>({
     scopeKind: 'company',
@@ -684,14 +687,27 @@ export function ExtensionsSection() {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Simplified Permissions (NEW) */}
+        <Card className="col-span-full">
+          <CardContent className="pt-6">
+            <SimplifiedPermissions
+              currentPreset={permissionPreset}
+              onPresetChange={setPermissionPreset}
+              showAdvanced={showAdvancedPermissions}
+              onShowAdvancedChange={setShowAdvancedPermissions}
+              isLoading={authorityQuery.isLoading}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Legacy Authority Matrix (hidden by default) */}
+        <Card className={cn('hidden', showAdvancedPermissions && 'block')}>
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-base">Authority Matrix</CardTitle>
+                <CardTitle className="text-base">Advanced Authority Matrix</CardTitle>
                 <CardDescription>
-                  Effective workspace grants from company defaults, employee overrides, and
-                  extension requests.
+                  Detailed permission management for power users
                 </CardDescription>
               </div>
               <Button
