@@ -498,6 +498,8 @@ export interface WriteSideOrchestrator {
     actorKind: string;
   }): Promise<{ threadId: string; triggerMessageId: string }>;
   isCompanyPaused(companyId: string): boolean;
+  /** Return true if the employee has a resolvable provider (configured and enabled). */
+  canResolveProvider(employeeId: string): Promise<boolean>;
 }
 
 /** Per-employee workload + availability + history snapshot. */
@@ -991,6 +993,13 @@ export function buildDelegateSubtaskTool(
         if (deps.workload.inMeeting(candidate.id)) {
           // Soft conflict — accept the next fallback if any, otherwise queue here.
           if (candidateId !== chain[chain.length - 1]) continue;
+        }
+        // Execution readiness: skip candidates with no resolvable provider.
+        // Without this check the orchestrator silently drops the agent-reply
+        // task at dispatch time, leaving the ticket assigned but never worked.
+        if (deps.orchestrator.canResolveProvider) {
+          const canRun = await deps.orchestrator.canResolveProvider(candidate.id);
+          if (!canRun) continue;
         }
         chosenId = candidate.id;
         chosenName = candidate.name;

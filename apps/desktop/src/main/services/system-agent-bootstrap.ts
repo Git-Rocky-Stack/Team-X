@@ -164,6 +164,21 @@ function ensureSystemEmployee<TRunResult>(
 
   const existing = employees.findSystemByRoleId(companyId, roleId);
   if (existing) {
+    // Sync existing row when the on-disk spec has changed (e.g., tools
+    // added or removed in a role-pack update). Compare SHA to avoid
+    // unnecessary writes on every boot.
+    const spec = roleLookup.getSpec(roleId);
+    if (spec && existing.roleMdSha !== spec.sha256) {
+      employees.promote({
+        employeeId: existing.id,
+        roleId: spec.frontmatter.id,
+        level: spec.frontmatter.level,
+        title: spec.frontmatter.name,
+        roleMdSha: spec.sha256,
+        toolsAllowed: spec.frontmatter.tools_allowed ?? [],
+        toolsDenied: spec.frontmatter.tools_denied ?? [],
+      });
+    }
     return { employeeId: existing.id, created: false };
   }
 

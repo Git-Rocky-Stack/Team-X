@@ -1506,6 +1506,16 @@ app
             return { threadId, triggerMessageId };
           },
           isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
+          canResolveProvider: async (employeeId) => {
+            const emp = employeesRepo.getById(employeeId);
+            if (!emp) return false;
+            try {
+              await runtimeProfileProviderService.resolveForEmployee(emp);
+              return true;
+            } catch {
+              return false;
+            }
+          },
         };
 
         // Provider seam for the write-side tools' inner LLM calls

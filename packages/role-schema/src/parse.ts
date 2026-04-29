@@ -95,7 +95,7 @@ const frontmatterSchema = z.object({
   preferred_context_window: z.number().int().positive().optional(),
   tools_allowed: z.array(z.string()).default([]),
   tools_denied: z.array(z.string()).default([]),
-  decision_authority: z.enum(['final', 'delegated', 'advisory']),
+  decision_authority: z.enum(['final', 'delegated', 'advisory', 'executive']),
   escalates_to: z.array(z.string()).default([]),
   kpis: z.array(z.string()).default([]),
   capabilities: z.array(z.unknown()).optional(),

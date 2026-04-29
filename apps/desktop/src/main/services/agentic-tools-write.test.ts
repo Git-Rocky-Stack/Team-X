@@ -202,6 +202,7 @@ function makeDeps(opts: MakeDepsOpts = {}): {
       triggerMessageId: `msg-${args.ticketId}`,
     })),
     isCompanyPaused: () => false,
+    canResolveProvider: vi.fn(async () => true),
   };
 
   const providerComplete = opts.providerImpl ?? (async () => ({ text: opts.providerText ?? '[]' }));

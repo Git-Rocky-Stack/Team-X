@@ -16,7 +16,7 @@ export type RoleLevel =
 
 export type ModelTier = 'high' | 'mid' | 'low';
 
-export type DecisionAuthority = 'final' | 'delegated' | 'advisory';
+export type DecisionAuthority = 'final' | 'delegated' | 'advisory' | 'executive';
 
 export interface RoleCadence {
   type: string;
