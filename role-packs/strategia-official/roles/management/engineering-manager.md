@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, supabase]
-tools_denied: [shell, secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: delegated
 escalates_to: [vp-engineering]
 kpis: [sprint_completion_rate, team_velocity, defect_escape_rate, engineer_satisfaction, cycle_time]

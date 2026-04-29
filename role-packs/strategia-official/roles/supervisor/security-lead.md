@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, filesystem]
-tools_denied: [shell, secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: delegated
 escalates_to: [security-engineering-manager]
 kpis: [review_turnaround_time, vulnerability_backlog_age, false_positive_rate, automation_coverage, team_response_time]

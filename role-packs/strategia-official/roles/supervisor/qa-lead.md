@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7]
-tools_denied: [shell, secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: delegated
 escalates_to: [engineering-manager]
 kpis: [defect_escape_rate, test_coverage, regression_detection_speed, test_automation_ratio, release_confidence_score]

@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, filesystem]
-tools_denied: [shell, secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: advisory
 escalates_to: [tech-lead]
 kpis: [cross_cutting_impact, technical_mentorship, rfc_quality, codebase_health, complex_problem_resolution]

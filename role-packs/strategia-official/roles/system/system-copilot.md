@@ -12,24 +12,8 @@ fallback_providers:
   - openai
   - groq
 preferred_context_window: 16000
-tools_allowed:
-  - query_employees
-  - query_tickets
-  - query_projects
-  - query_meetings
-  - query_vault
-  - query_events
-  - query_copilot_insights
-tools_denied:
-  - shell
-  - filesystem_write
-  - filesystem_read
-  - network
-  - send_message_to_colleague
-  - list_colleagues
-  - decompose_project
-  - delegate_subtask
-  - review_deliverable
+tools_allowed: []
+tools_denied: []
 decision_authority: advisory
 escalates_to: []
 kpis:

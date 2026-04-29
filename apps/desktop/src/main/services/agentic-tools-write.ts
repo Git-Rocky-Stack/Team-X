@@ -153,19 +153,25 @@ export const EMPLOYEE_LEVELS = [
 ] as const;
 export type EmployeeLevel = (typeof EMPLOYEE_LEVELS)[number];
 
-/** Levels permitted to invoke `decompose_project`. §7.1 + system-agent. */
+/** Levels permitted to invoke `decompose_project`. All employees can plan. */
 const DECOMPOSE_LEVELS: readonly EmployeeLevel[] = [
   'officer',
   'senior-management',
   'management',
+  'supervisor',
+  'lead',
+  'ic',
   'system',
 ];
 
-/** Levels permitted to invoke `delegate_subtask` and `review_deliverable`. */
+/** Levels permitted to invoke `delegate_subtask` and `review_deliverable`. All employees can act. */
 const DELEGATE_REVIEW_LEVELS: readonly EmployeeLevel[] = [
+  'officer',
+  'senior-management',
   'management',
   'supervisor',
   'lead',
+  'ic',
   'system',
 ];
 

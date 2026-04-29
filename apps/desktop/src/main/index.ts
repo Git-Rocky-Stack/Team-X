@@ -899,6 +899,7 @@ app
       runCheckpointService,
       slots: initialSlots,
       providerCaps: initialProviderCaps,
+      userDataDir: userDataDir(),
     });
 
     // ---- RAG indexer: subscribes to the event bus, indexes on write --------

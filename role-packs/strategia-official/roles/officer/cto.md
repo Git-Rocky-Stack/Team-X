@@ -8,8 +8,8 @@ preferred_model_tier: high
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, supabase]
-tools_denied: [shell, secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: final
 escalates_to: [chief-executive-officer]
 kpis: [system_reliability, engineering_velocity, technical_debt_ratio, security_posture, infrastructure_cost_efficiency]

@@ -8,8 +8,8 @@ preferred_model_tier: high
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, supabase]
-tools_denied: [shell, secrets, filesystem]
+tools_allowed: []
+tools_denied: []
 decision_authority: delegated
 escalates_to: [chief-operating-officer]
 kpis: [revenue_closed, pipeline_coverage, win_rate, average_deal_size, sales_cycle_length]

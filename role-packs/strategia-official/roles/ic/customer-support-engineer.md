@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, supabase]
-tools_denied: [shell, secrets, filesystem]
+tools_allowed: []
+tools_denied: []
 decision_authority: advisory
 escalates_to: [engineering-manager]
 kpis: [first_response_time, resolution_time, customer_satisfaction, ticket_deflection_rate, bug_identification_accuracy]

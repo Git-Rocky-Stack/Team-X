@@ -8,8 +8,8 @@ preferred_model_tier: high
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, supabase]
-tools_denied: [shell, secrets, filesystem]
+tools_allowed: []
+tools_denied: []
 decision_authority: delegated
 escalates_to: [chief-operating-officer]
 kpis: [net_revenue_retention, churn_rate, customer_health_score, nps, time_to_value]

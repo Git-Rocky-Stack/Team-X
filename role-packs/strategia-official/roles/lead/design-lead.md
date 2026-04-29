@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7]
-tools_denied: [shell, secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: advisory
 escalates_to: [design-manager]
 kpis: [component_library_coverage, design_system_consistency, usability_test_pass_rate, design_handoff_quality, accessibility_score]

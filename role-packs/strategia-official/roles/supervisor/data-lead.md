@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, filesystem]
-tools_denied: [shell, secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: delegated
 escalates_to: [data-engineering-manager]
 kpis: [pipeline_uptime, data_freshness_sla, query_performance_p95, data_quality_pass_rate, pipeline_test_coverage]

@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, supabase]
-tools_denied: [shell, secrets, filesystem]
+tools_allowed: []
+tools_denied: []
 decision_authority: delegated
 escalates_to: [chief-financial-officer]
 kpis: [audit_pass_rate, policy_coverage, incident_response_time, training_completion, regulatory_gap_count]

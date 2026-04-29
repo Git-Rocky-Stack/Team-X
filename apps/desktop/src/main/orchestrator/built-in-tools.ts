@@ -26,6 +26,7 @@ import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput } from '../db/repos/messages.js';
 import type { GetOrCreateEmployeeDmThreadInput } from '../db/repos/threads.js';
 import type { EventBus } from './event-bus.js';
+import { buildExecutionTools, type ExecutionToolDeps } from './execution-tools.js';
 
 // ---------------------------------------------------------------------------
 // Dependency interfaces — narrowed to exactly what the tools need
@@ -62,6 +63,8 @@ export interface BuiltInToolDeps {
   messages: BuiltInToolMessagesRepo;
   threads: BuiltInToolThreadsRepo;
   enqueueAgentReply: EnqueueAgentReplyFn;
+  /** Execution-tool deps — optional so tests that only need messaging tools stay minimal. */
+  execution?: ExecutionToolDeps;
 }
 
 // ---------------------------------------------------------------------------
@@ -225,8 +228,12 @@ export function buildBuiltInTools(
   employeeId: string,
   companyId: string,
 ): ToolSpec[] {
-  return [
+  const core = [
     buildSendMessageTool(deps, employeeId, companyId),
     buildListColleaguesTool(deps, employeeId, companyId),
   ];
+  if (deps.execution) {
+    core.push(...buildExecutionTools(deps.execution));
+  }
+  return core;
 }

@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic, ollama]
 fallback_providers: [openrouter, groq]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, episodic-memory, filesystem_read, git]
-tools_denied: [shell, filesystem_write, email, calendar]
+tools_allowed: []
+tools_denied: []
 decision_authority: delegated
 escalates_to: [tech-lead, engineering-manager]
 kpis: [velocity, code_quality, ticket_throughput, uptime_contribution, root_cause_resolution_rate]

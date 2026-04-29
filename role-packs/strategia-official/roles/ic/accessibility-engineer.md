@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, filesystem]
-tools_denied: [shell, secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: advisory
 escalates_to: [qa-lead]
 kpis: [wcag_compliance_rate, a11y_bug_resolution_time, automated_test_coverage, screen_reader_pass_rate, a11y_training_completion]

@@ -911,37 +911,21 @@ describe('buildWriteSideTools — composer', () => {
     return makeDeps().deps;
   }
 
-  it('returns empty array for ICs', () => {
-    expect(buildWriteSideTools({ level: 'ic' }, depsFor('ic'))).toEqual([]);
-  });
-
-  it('returns decompose only for Officer / Senior Mgmt', () => {
-    const officer = buildWriteSideTools({ level: 'officer' }, depsFor('officer'));
-    const sm = buildWriteSideTools({ level: 'senior-management' }, depsFor('senior-management'));
-    expect(officer.map((t) => t.name)).toEqual(['decompose_project']);
-    expect(sm.map((t) => t.name)).toEqual(['decompose_project']);
-  });
-
-  it('returns delegate + review for Supervisor / Lead', () => {
-    const sup = buildWriteSideTools({ level: 'supervisor' }, depsFor('supervisor'));
-    const lead = buildWriteSideTools({ level: 'lead' }, depsFor('lead'));
-    expect(sup.map((t) => t.name)).toEqual(['delegate_subtask', 'review_deliverable']);
-    expect(lead.map((t) => t.name)).toEqual(['delegate_subtask', 'review_deliverable']);
-  });
-
-  it('returns all three for Management and the system agent', () => {
-    const mgmt = buildWriteSideTools({ level: 'management' }, depsFor('management'));
-    const sys = buildWriteSideTools({ level: 'system' }, depsFor('system'));
-    expect(mgmt.map((t) => t.name)).toEqual([
-      'decompose_project',
-      'delegate_subtask',
-      'review_deliverable',
-    ]);
-    expect(sys.map((t) => t.name)).toEqual([
-      'decompose_project',
-      'delegate_subtask',
-      'review_deliverable',
-    ]);
+  it('returns all three tools for every level', () => {
+    const expected = ['decompose_project', 'delegate_subtask', 'review_deliverable'];
+    const levels: EmployeeLevel[] = [
+      'officer',
+      'senior-management',
+      'management',
+      'supervisor',
+      'lead',
+      'ic',
+      'system',
+    ];
+    for (const level of levels) {
+      const tools = buildWriteSideTools({ level }, depsFor(level));
+      expect(tools.map((t) => t.name), `level=${level}`).toEqual(expected);
+    }
   });
 });
 

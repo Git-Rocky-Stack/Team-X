@@ -8,8 +8,8 @@ preferred_model_tier: high
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, supabase]
-tools_denied: [shell, secrets, filesystem]
+tools_allowed: []
+tools_denied: []
 decision_authority: final
 escalates_to: [chief-executive-officer]
 kpis: [pipeline_generation, brand_awareness, customer_acquisition_cost, market_share, content_engagement]

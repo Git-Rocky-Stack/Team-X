@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, supabase]
-tools_denied: [shell, secrets, filesystem]
+tools_allowed: []
+tools_denied: []
 decision_authority: advisory
 escalates_to: [vp-sales]
 kpis: [forecast_accuracy, pipeline_data_quality, process_efficiency, report_turnaround, system_adoption_rate]

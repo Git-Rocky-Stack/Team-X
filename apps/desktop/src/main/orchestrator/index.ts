@@ -480,6 +480,8 @@ export interface BuildOrchestratorOptions {
   now?: () => number;
   runTimeoutMs?: number;
   runIdleTimeoutMs?: number;
+  /** Electron userData path — used by execution tools for workspace isolation. */
+  userDataDir?: string;
 }
 
 /** Map a DB message's author kind to the provider-facing stream role. */
@@ -794,6 +796,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     now,
     runTimeoutMs,
     runIdleTimeoutMs,
+    userDataDir,
   } = opts;
 
   interface ResolvedProvider {
@@ -1180,6 +1183,13 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         messages: messagesRepo,
         threads: threadsRepo,
         enqueueAgentReply: enqueueAgentReplyInternal,
+        execution: userDataDir
+          ? {
+              userDataDir,
+              companySlug: company.slug,
+              employeeId: args.employeeId,
+            }
+          : undefined,
       },
       args.employeeId,
       company.id,
@@ -1342,6 +1352,13 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         messages: messagesRepo,
         threads: threadsRepo,
         enqueueAgentReply: enqueueAgentReplyInternal,
+        execution: userDataDir
+          ? {
+              userDataDir,
+              companySlug: company.slug,
+              employeeId: args.employeeId,
+            }
+          : undefined,
       },
       args.employeeId,
       company.id,

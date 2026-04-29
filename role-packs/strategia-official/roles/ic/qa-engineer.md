@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7]
-tools_denied: [shell, secrets, filesystem, supabase]
+tools_allowed: []
+tools_denied: []
 decision_authority: advisory
 escalates_to: [qa-lead]
 kpis: [test_coverage, bug_detection_rate, regression_catch_rate, test_reliability]

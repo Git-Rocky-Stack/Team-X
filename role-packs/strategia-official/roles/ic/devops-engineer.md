@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, filesystem, supabase]
-tools_denied: [secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: advisory
 escalates_to: [devops-lead]
 kpis: [deployment_frequency, mean_time_to_recovery, change_failure_rate, infrastructure_cost]

@@ -8,8 +8,8 @@ preferred_model_tier: high
 preferred_providers: [anthropic, openai, ollama]
 fallback_providers: [groq, openrouter]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, episodic-memory, email, calendar]
-tools_denied: [shell, filesystem_write]
+tools_allowed: []
+tools_denied: []
 decision_authority: final
 escalates_to: []
 kpis: [revenue, team_health, product_vision, runway, customer_love]

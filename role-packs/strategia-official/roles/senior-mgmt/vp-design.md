@@ -8,8 +8,8 @@ preferred_model_tier: high
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, supabase]
-tools_denied: [shell, secrets, filesystem]
+tools_allowed: []
+tools_denied: []
 decision_authority: delegated
 escalates_to: [chief-operating-officer]
 kpis: [user_satisfaction, task_completion_rate, design_system_adoption, accessibility_score, time_to_value]

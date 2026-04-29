@@ -8,8 +8,8 @@ preferred_model_tier: mid
 preferred_providers: [anthropic]
 fallback_providers: [ollama]
 preferred_context_window: 200000
-tools_allowed: [browse, context7, filesystem]
-tools_denied: [shell, secrets]
+tools_allowed: []
+tools_denied: []
 decision_authority: advisory
 escalates_to: [tech-lead]
 kpis: [p99_latency, throughput_improvement, regression_detection_rate, load_test_coverage, performance_budget_compliance]
