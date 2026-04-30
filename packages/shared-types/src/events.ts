@@ -106,6 +106,14 @@ export type EventType =
   | 'goal.created'
   | 'goal.updated'
   | 'goal.deleted'
+  | 'proactive.goal_decomposed'
+  | 'proactive.work_queued'
+  | 'proactive.work_started'
+  | 'proactive.work_completed'
+  | 'proactive.blocked'
+  | 'proactive.error'
+  | 'proactive.enabled_changed'
+  | 'proactive.budget_blocked'
   | RuntimeAuditEventType;
 
 export interface DashboardEvent<T = unknown> {
@@ -1248,4 +1256,123 @@ export interface AgenticRunSnapshot {
     | { kind: 'completed'; payload: AgenticCompletedPayload }
     | { kind: 'failed'; payload: AgenticFailedPayload }
     | null;
+}
+
+// ---------------------------------------------------------------------------
+// Proactive execution event payloads (Phase 6 — Proactive System)
+//
+// Proactive execution enables agents to recognize opportunities and act
+// without explicit user commands. Events track goal decomposition, work
+// queuing, execution lifecycle, and blocking conditions.
+//
+// Architectural invariant #11 — all proactive mutations emit events.
+// ---------------------------------------------------------------------------
+
+export interface ProactiveGoalDecomposedPayload {
+  /** The goal that was decomposed. */
+  goalId: string;
+  /** Agentic run ID for the decomposition operation. */
+  runId: string;
+  /** Thread where decomposition happened. */
+  threadId: string;
+  /** Number of tickets/projects proposed. */
+  proposalCount: number;
+  /** Wall-clock timestamp in ms. */
+  decomposedAt: number;
+}
+
+export interface ProactiveWorkQueuedPayload {
+  /** The ticket/trigger that caused work to be queued. */
+  triggerId: string;
+  /** Trigger kind: 'goal_decompose' | 'work_scan' | 'background_monitor'. */
+  triggerKind: 'goal_decompose' | 'work_scan' | 'background_monitor';
+  /** Thread where agent will work. */
+  threadId: string;
+  /** Employee assigned to the work. */
+  employeeId: string;
+  /** Associated goal if goal-driven. */
+  goalId: string | null;
+  /** Associated ticket if scan-driven. */
+  ticketId: string | null;
+  /** Wall-clock timestamp in ms. */
+  queuedAt: number;
+}
+
+export interface ProactiveWorkStartedPayload {
+  /** The proactive work item being executed. */
+  triggerId: string;
+  /** Agentic run ID for this work. */
+  runId: string;
+  /** Thread where agent is working. */
+  threadId: string;
+  /** Employee doing the work. */
+  employeeId: string;
+  /** Wall-clock timestamp in ms. */
+  startedAt: number;
+}
+
+export interface ProactiveWorkCompletedPayload {
+  /** The work item that completed. */
+  triggerId: string;
+  /** Agentic run ID. */
+  runId: string;
+  /** Thread where agent worked. */
+  threadId: string;
+  /** Employee who did the work. */
+  employeeId: string;
+  /** Total steps executed. */
+  totalSteps: number;
+  /** Tokens consumed. */
+  tokensIn: number;
+  tokensOut: number;
+  /** Cost in USD. */
+  costUsd: number;
+  /** Duration in ms. */
+  durationMs: number;
+  /** Wall-clock timestamp in ms. */
+  completedAt: number;
+}
+
+export interface ProactiveBlockedPayload {
+  /** The trigger that was blocked. */
+  triggerId: string;
+  /** Block reason: 'autonomy_mode' | 'authority' | 'pause' | 'budget'. */
+  reason: 'autonomy_mode' | 'authority' | 'pause' | 'budget';
+  /** Human-readable explanation. */
+  explanation: string;
+  /** Current autonomy mode when blocked. */
+  autonomyMode: string;
+  /** Wall-clock timestamp in ms. */
+  blockedAt: number;
+}
+
+export interface ProactiveErrorPayload {
+  /** Operation that failed. */
+  operation: string;
+  /** Error message. */
+  message: string;
+  /** Whether error is recoverable. */
+  recoverable: boolean;
+  /** Wall-clock timestamp in ms. */
+  errorAt: number;
+}
+
+export interface ProactiveEnabledChangedPayload {
+  /** New enabled state. */
+  enabled: boolean;
+  /** Actor who toggled (user id or system). */
+  actorId: string;
+  /** Wall-clock timestamp in ms. */
+  changedAt: number;
+}
+
+export interface ProactiveBudgetBlockedPayload {
+  /** The trigger blocked by budget. */
+  triggerId: string;
+  /** Budget policy that blocked. */
+  policyId: string | null;
+  /** Explanation of budget block. */
+  reason: string;
+  /** Wall-clock timestamp in ms. */
+  blockedAt: number;
 }

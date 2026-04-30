@@ -1,15 +1,18 @@
-import { AlertTriangle, CheckCircle2, FolderLock, Loader2, Shield, Workflow } from 'lucide-react';
+import { AlertTriangle, Bot, CheckCircle2, FolderLock, Loader2, Shield, Workflow, Zap } from 'lucide-react';
 
 import {
   type AuthorityGrant,
   type AuthorityPermission,
   EXTENSIONS_AUTONOMY_MODES,
 } from '@team-x/shared-types';
+import { useQuery } from '@tanstack/react-query';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
+import { Switch } from '@/components/ui/switch.js';
+import { ipc } from '@/lib/ipc.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import {
   useAuthorityGrants,
@@ -59,6 +62,21 @@ export function ExtensionsSection() {
   const employeesQuery = useEmployees(companyId);
   const reviewAuthorityRequest = useReviewAuthorityRequest(companyId);
   const deleteGrant = useDeleteAuthorityGrant(companyId);
+
+  // Proactive state queries
+  const proactiveSettingsQuery = useQuery({
+    queryKey: ['settings', 'proactive'],
+    queryFn: () => ipc.settings.getProactive(),
+  });
+  const proactiveStateQuery = useQuery({
+    queryKey: ['proactive', 'state', companyId],
+    queryFn: () => {
+      if (!companyId) throw new Error('companyId is required');
+      return ipc.proactive.getState({ companyId });
+    },
+    enabled: !!companyId && (proactiveSettingsQuery.data?.enabled ?? false),
+    refetchInterval: 5000,
+  });
 
   const extensions = extensionsQuery.data ?? [];
   const mcpServers = (mcpQuery.data ?? []).filter((server) => server.companyId !== null);
@@ -139,6 +157,76 @@ export function ExtensionsSection() {
                       </Button>
                     );
                   })}
+                </div>
+
+                {/* Proactive mode toggle */}
+                <div className="pt-3 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bot className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">Proactive Mode</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          Agents recognize opportunities and act autonomously
+                        </span>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={proactiveSettingsQuery.data?.enabled ?? false}
+                      disabled={proactiveSettingsQuery.isLoading || !companyId}
+                      onCheckedChange={async (checked) => {
+                        if (!companyId) return;
+                        try {
+                          await ipc.proactive.setEnabled({ companyId, enabled: checked });
+                          proactiveSettingsQuery.refetch();
+                        } catch (err) {
+                          console.error('[proactive] Failed to toggle enabled:', err);
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* Proactive work status - only show when enabled */}
+                  {proactiveSettingsQuery.data?.enabled && (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {proactiveStateQuery.isLoading || !proactiveStateQuery.data ? (
+                        <Skeleton className="h-12 col-span-3" />
+                      ) : proactiveStateQuery.isError ? (
+                        <div className="col-span-3 flex items-center gap-2 rounded border border-red-400/30 bg-red-500/10 px-2 py-1.5 text-xs text-red-400">
+                          <AlertTriangle className="h-3 w-3" />
+                          Failed to load proactive status
+                        </div>
+                      ) : (
+                        <>
+                          <div className="rounded bg-muted/30 px-2 py-2 text-center">
+                            <p className="text-[10px] uppercase text-muted-foreground">Active</p>
+                            <p className="text-base font-semibold">{proactiveStateQuery.data.activeWork}</p>
+                          </div>
+                          <div className="rounded bg-muted/30 px-2 py-2 text-center">
+                            <p className="text-[10px] uppercase text-muted-foreground">Queued</p>
+                            <p className="text-base font-semibold">{proactiveStateQuery.data.queuedWork}</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-auto py-2"
+                            onClick={async () => {
+                              if (!companyId) return;
+                              try {
+                                await ipc.proactive.scanForWork({ companyId });
+                                proactiveStateQuery.refetch();
+                              } catch (err) {
+                                console.error('[proactive] Failed to scan:', err);
+                              }
+                            }}
+                          >
+                            <Zap className="mr-1 h-3 w-3" />
+                            Scan
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {setExtensionsSettings.isError && (
                   <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">

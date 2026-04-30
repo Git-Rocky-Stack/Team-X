@@ -1,0 +1,329 @@
+/**
+ * PermissionsSection — simplified permissions UX with preset cards.
+ *
+ * Provides three permission presets for managing extension authority:
+ * - safe: read-only access to documents, vault search
+ * - standard: full filesystem access in allowed folders, shell commands
+ * - advanced: all capabilities, custom paths, full control
+ *
+ * An "Advanced" toggle reveals the full authority matrix for granular control.
+ *
+ * Phase 6 — Proactive Execution System — Slice 5
+ */
+
+import { useState } from 'react';
+
+import type { AuthorityGrant } from '@team-x/shared-types';
+
+import { Badge } from '@/components/ui/badge.js';
+import { Button } from '@/components/ui/button.js';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
+import { Skeleton } from '@/components/ui/skeleton.js';
+import { Switch } from '@/components/ui/switch.js';
+import { useAppStore } from '@/store/app-store.js';
+import {
+  useAuthorityGrants,
+  useCreateAuthorityGrant,
+  useDeleteAuthorityGrant,
+} from '@/hooks/use-extensions.js';
+
+type PermissionPreset = 'safe' | 'standard' | 'advanced';
+
+interface PresetConfig {
+  label: string;
+  description: string;
+  capabilities: string[];
+  defaultPaths: string[];
+}
+
+const PRESETS: Record<PermissionPreset, PresetConfig> = {
+  safe: {
+    label: 'Safe Mode',
+    description: 'Read-only access to documents. No shell, no network writes.',
+    capabilities: ['filesystem.read', 'vault.search'],
+    defaultPaths: ['{{documents}}'],
+  },
+  standard: {
+    label: 'Standard',
+    description: 'Full filesystem access in allowed folders. Shell commands.',
+    capabilities: ['filesystem.read', 'filesystem.write', 'shell', 'vault.search'],
+    defaultPaths: ['{{documents}}', '{{desktop}}', '{{downloads}}'],
+  },
+  advanced: {
+    label: 'Advanced',
+    description: 'All capabilities. Custom paths. Full control.',
+    capabilities: ['*'],
+    defaultPaths: [],
+  },
+};
+
+function formatPath(path: string): string {
+  if (path === '{{documents}}') return 'Documents';
+  if (path === '{{desktop}}') return 'Desktop';
+  if (path === '{{downloads}}') return 'Downloads';
+  return path;
+}
+
+export function PermissionsSection() {
+  const companyId = useAppStore((state) => state.companyId);
+  const authorityQuery = useAuthorityGrants(companyId);
+  const createGrant = useCreateAuthorityGrant();
+  const deleteGrant = useDeleteAuthorityGrant(companyId);
+
+  const [selectedPreset, setSelectedPreset] = useState<PermissionPreset>('standard');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+
+  const authorityGrants = authorityQuery.data ?? [];
+  const employeeGrants = authorityGrants.filter((g) => g.scopeKind === 'employee');
+
+  async function applyPreset(preset: PermissionPreset) {
+    if (!companyId) return;
+    setIsApplying(true);
+
+    try {
+      // Remove existing employee grants for this company
+      for (const grant of employeeGrants) {
+        await deleteGrant.mutateAsync(grant.id);
+      }
+
+      // Apply new preset grants
+      const config = PRESETS[preset];
+
+      // Add capability grants
+      for (const capability of config.capabilities) {
+        await createGrant.mutateAsync({
+          companyId,
+          scopeKind: 'company',
+          scopeId: companyId,
+          resourceKind: 'capability',
+          resourceId: capability,
+          permission: 'allow',
+        });
+      }
+
+      // Add path grants
+      for (const path of config.defaultPaths) {
+        await createGrant.mutateAsync({
+          companyId,
+          scopeKind: 'company',
+          scopeId: companyId,
+          resourceKind: 'path',
+          resourceId: path,
+          permission: 'allow',
+        });
+      }
+
+      setSelectedPreset(preset);
+    } catch (err) {
+      console.error('[permissions] Failed to apply preset:', err);
+    } finally {
+      setIsApplying(false);
+    }
+  }
+
+  return (
+    <section className="space-y-4" data-permissions-section="">
+      <div className="flex items-center gap-2">
+        <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Extension Permissions
+        </h4>
+      </div>
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        Configure what capabilities extensions can access. Presets provide common configurations;
+        use Advanced for granular control.
+      </p>
+
+      {!companyId ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <p className="text-sm text-muted-foreground">
+              Select a workspace to manage permissions.
+            </p>
+          </CardContent>
+        </Card>
+      ) : authorityQuery.isLoading ? (
+        <Card>
+          <CardContent className="py-6">
+            <div className="space-y-3">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      ) : authorityQuery.isError ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <p className="text-sm text-destructive">
+              Failed to load permissions configuration.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {/* Preset Cards */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">Permission Presets</CardTitle>
+              <CardDescription>
+                Choose a preset to quickly configure extension permissions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-3">
+                {(Object.entries(PRESETS) as [PermissionPreset, PresetConfig][]).map(
+                  ([key, config]) => {
+                    const isSelected = selectedPreset === key;
+                    return (
+                      <div
+                        key={key}
+                        data-testid={`preset-card-${key}`}
+                        className={`relative rounded-lg border-2 p-4 transition-colors ${
+                          isSelected
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border/70 bg-muted/20 hover:border-border'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="preset"
+                          id={`preset-${key}`}
+                          aria-label={`${key}-preset`}
+                          checked={isSelected}
+                          onChange={() => void applyPreset(key)}
+                          disabled={isApplying || !companyId}
+                          className="sr-only"
+                        />
+                        <label
+                          htmlFor={`preset-${key}`}
+                          className={`block cursor-pointer ${isApplying ? 'opacity-50' : ''}`}
+                        >
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-sm font-semibold capitalize">{config.label}</span>
+                            {isSelected && (
+                              <Badge variant="default" className="text-[10px]">
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mb-3 text-[11px] text-muted-foreground">
+                            {config.description}
+                          </p>
+
+                          {/* Allowed Paths */}
+                          {config.defaultPaths.length > 0 ? (
+                            <div className="space-y-1">
+                              <p className="text-[10px] uppercase text-muted-foreground">
+                                Allowed Paths:
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {config.defaultPaths.map((path) => (
+                                  <span
+                                    key={path}
+                                    className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono"
+                                  >
+                                    {formatPath(path)}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground">
+                              User-defined paths only
+                            </p>
+                          )}
+                        </label>
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+
+              {createGrant.isError && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  Failed to apply permission preset.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Advanced Toggle */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Advanced Authority Matrix</CardTitle>
+                  <CardDescription>
+                    View and manage all authority grants with granular control.
+                  </CardDescription>
+                </div>
+                <Switch
+                  checked={showAdvanced}
+                  onCheckedChange={setShowAdvanced}
+                  aria-label="Show advanced authority matrix"
+                />
+              </div>
+            </CardHeader>
+
+            {showAdvanced && (
+              <CardContent className="space-y-3">
+                {employeeGrants.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No custom authority grants configured. Use presets above for quick setup.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {employeeGrants.map((grant) => (
+                      <div
+                        key={grant.id}
+                        className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{grant.resourceId}</span>
+                            <Badge variant="outline">{grant.resourceKind}</Badge>
+                            <Badge variant="secondary">{grant.permission}</Badge>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => deleteGrant.mutate(grant.id)}
+                          disabled={deleteGrant.isPending}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Import Shield icon
+function Shield({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+    </svg>
+  );
+}

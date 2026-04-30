@@ -1780,3 +1780,12 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     },
   };
 }
+
+// Proactive dispatcher helper for proactive work execution
+export { createProactiveDispatcher } from './proactive-dispatch.js';
+export type {
+  EnqueueProactiveArgs,
+  ProactiveDispatcher,
+  ProactiveDispatcherDeps,
+  ProactiveEnqueueResult,
+} from './proactive-dispatch.js';

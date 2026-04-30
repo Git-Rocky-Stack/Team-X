@@ -843,6 +843,43 @@ export interface TicketDetail extends Ticket {
 }
 
 // ---------------------------------------------------------------------------
+// Proactive execution shapes (Phase 6 — Slice 3)
+// ---------------------------------------------------------------------------
+
+export interface ProactiveSetEnabledRequest {
+  companyId: string;
+  enabled: boolean;
+}
+
+export interface ProactiveDecomposeGoalRequest {
+  companyId: string;
+  goalId: string;
+}
+
+export interface ProactiveDecomposeGoalResponse {
+  success: boolean;
+}
+
+export interface ProactiveScanForWorkRequest {
+  companyId: string;
+}
+
+export interface ProactiveScanForWorkResponse {
+  queuedCount: number;
+}
+
+export interface ProactiveGetStateRequest {
+  companyId: string;
+}
+
+export interface ProactiveGetStateResponse {
+  enabled: boolean;
+  activeWork: number;
+  queuedWork: number;
+  lastScanAt: number | null;
+}
+
+// ---------------------------------------------------------------------------
 // Goals & Projects shapes (Phase 3 — M15)
 // ---------------------------------------------------------------------------
 
@@ -1784,6 +1821,27 @@ export interface SettingsSetCopilotWeightsResponse {
   weights: CopilotCategoryWeights;
 }
 
+// ---------------------------------------------------------------------------
+// Proactive settings types (Phase 6 — Proactive Execution System)
+// ---------------------------------------------------------------------------
+
+export interface SettingsGetProactiveResponse {
+  enabled: boolean;
+  autonomyMode: ExtensionsAutonomyMode;
+}
+
+export interface SettingsSetProactiveRequest {
+  enabled?: boolean;
+  autonomyMode?: ExtensionsAutonomyMode;
+}
+
+export interface ProactiveGetStateResponse {
+  enabled: boolean;
+  activeWork: number;
+  queuedWork: number;
+  lastScanAt: number | null;
+}
+
 /** Clamp bounds + defaults for the `intervalMinutes` key. Shared by repo, handler, and UI. */
 export const COPILOT_SETTINGS_CLAMPS = {
   intervalMinutes: { min: 1, max: 60, default: 5 },
@@ -2363,6 +2421,15 @@ export interface IpcContract {
     request: SettingsSetCopilotWeightsRequest;
     response: SettingsSetCopilotWeightsResponse;
   };
+  // Proactive settings channels (Phase 6 — Proactive Execution System)
+  'settings.getProactive': {
+    request: Record<string, never>;
+    response: SettingsGetProactiveResponse;
+  };
+  'settings.setProactive': {
+    request: SettingsSetProactiveRequest;
+    response: undefined;
+  };
   // Provider management channels (Phase 3 — M18)
   'providers.list': {
     request: Record<string, never>;
@@ -2558,6 +2625,23 @@ export interface IpcContract {
   'tickets.get': {
     request: GetTicketRequest;
     response: TicketDetail;
+  };
+  'proactive.setEnabled': {
+    request: ProactiveSetEnabledRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'proactive.decomposeGoal': {
+    request: ProactiveDecomposeGoalRequest;
+    response: ProactiveDecomposeGoalResponse;
+  };
+  'proactive.scanForWork': {
+    request: ProactiveScanForWorkRequest;
+    response: ProactiveScanForWorkResponse;
+  };
+  'proactive.getState': {
+    request: ProactiveGetStateRequest;
+    response: ProactiveGetStateResponse;
   };
 }
 
@@ -3064,6 +3148,10 @@ export interface TeamXApi {
     setCopilotWeights(
       req: SettingsSetCopilotWeightsRequest,
     ): Promise<SettingsSetCopilotWeightsResponse>;
+    /** Get proactive mode settings (enabled, autonomy mode). Phase 6 — Proactive Execution System. */
+    getProactive(): Promise<SettingsGetProactiveResponse>;
+    /** Patch one or more proactive settings. Phase 6 — Proactive Execution System. */
+    setProactive(req: SettingsSetProactiveRequest): Promise<void>;
   };
   providers: {
     /** List all configured providers with status. */
@@ -3245,6 +3333,16 @@ export interface TeamXApi {
     detachFile(req: DetachFileRequest): Promise<void>;
     /** List all file attachments for a ticket. */
     listAttachments(ticketId: string): Promise<TicketAttachment[]>;
+  };
+  proactive: {
+    /** Enable or disable proactive mode for a company. */
+    setEnabled(req: ProactiveSetEnabledRequest): Promise<void>;
+    /** Trigger immediate goal decomposition. */
+    decomposeGoal(req: ProactiveDecomposeGoalRequest): Promise<ProactiveDecomposeGoalResponse>;
+    /** Trigger background work scan. */
+    scanForWork(req: ProactiveScanForWorkRequest): Promise<ProactiveScanForWorkResponse>;
+    /** Query proactive state. */
+    getState(req: ProactiveGetStateRequest): Promise<ProactiveGetStateResponse>;
   };
 }
 

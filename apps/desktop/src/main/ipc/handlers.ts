@@ -864,6 +864,13 @@ export interface IpcCloudLinkService {
   failLink(companyId: string, error: string): CompanyCloudLinkStatus;
 }
 
+export interface IpcProactiveTriggerService {
+  decomposeGoal(args: { companyId: string; goalId: string }): Promise<void>;
+  scanForWork(args: { companyId: string }): Promise<{ queuedCount: number }>;
+  setEnabled(args: { companyId: string; enabled: boolean }): void;
+  isEnabled(companyId: string): boolean;
+}
+
 export interface IpcRuntimeProfilesService {
   list(companyId: string): RuntimeProfileSummary[];
   create(input: CreateRuntimeProfileRequest): string;
@@ -992,6 +999,13 @@ export interface IpcHandlerDeps {
   authorityRepo?: IpcAuthorityRepo;
   authorityResolver?: AuthorityResolverService;
   providersService: IpcProvidersService;
+  /**
+   * Proactive trigger service — goal decomposition and background work scanning.
+   * Optional for now; handler falls through to a no-op + dev-mode warning if
+   * unwired so a missing composition root wiring does not surface as a hard IPC failure.
+   * Phase 6 — Proactive Execution System — Slice 3.
+   */
+  proactiveTriggerService?: IpcProactiveTriggerService;
   secretsStore: IpcSecretsStore;
   settingsRepo: IpcSettingsRepo;
   vaultService: IpcVaultService;
@@ -1638,6 +1652,25 @@ export interface IpcHandlers {
   /** `updater.install` — download and install the available update. App will restart. */
   updaterInstall(): Promise<UpdateInstallResult>;
 
+  /** `proactive.setEnabled` — enable or disable proactive mode for a company. */
+  proactiveSetEnabled(req: { companyId: string; enabled: boolean }): Promise<void>;
+
+  /** `proactive.decomposeGoal` — trigger immediate goal decomposition. */
+  proactiveDecomposeGoal(req: { companyId: string; goalId: string }): Promise<{ success: boolean }>;
+
+  /** `proactive.scanForWork` — trigger background work scan. */
+  proactiveScanForWork(req: { companyId: string }): Promise<{ queuedCount: number }>;
+
+  /** `proactive.getState` — query proactive state. */
+  proactiveGetState(req: {
+    companyId: string;
+  }): Promise<{
+    enabled: boolean;
+    activeWork: number;
+    queuedWork: number;
+    lastScanAt: number | null;
+  }>;
+
   /** `tickets.create` — file a new ticket. Optionally assigns immediately. */
   ticketsCreate(req: CreateTicketRequest): Promise<CreateTicketResponse>;
 
@@ -2205,6 +2238,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     authorityRepo,
     authorityResolver,
     providersService,
+    proactiveTriggerService,
     secretsStore,
     settingsRepo,
     vaultService,
@@ -6832,6 +6866,61 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           fileSizeBytes: vaultFile?.sizeBytes,
         };
       });
+    },
+
+    // -----------------------------------------------------------------------
+    // Proactive execution (Phase 6 — Slice 3)
+    // -----------------------------------------------------------------------
+
+    async proactiveSetEnabled({ companyId, enabled }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] proactive.setEnabled: companyId is required');
+      }
+      if (!proactiveTriggerService) {
+        throw new Error('[ipc] proactive.setEnabled: proactiveTriggerService dep is required');
+      }
+      proactiveTriggerService.setEnabled({ companyId, enabled });
+    },
+
+    async proactiveDecomposeGoal({ companyId, goalId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] proactive.decomposeGoal: companyId is required');
+      }
+      if (typeof goalId !== 'string' || goalId.length === 0) {
+        throw new Error('[ipc] proactive.decomposeGoal: goalId is required');
+      }
+      if (!proactiveTriggerService) {
+        throw new Error('[ipc] proactive.decomposeGoal: proactiveTriggerService dep is required');
+      }
+      await proactiveTriggerService.decomposeGoal({ companyId, goalId });
+      return { success: true };
+    },
+
+    async proactiveScanForWork({ companyId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] proactive.scanForWork: companyId is required');
+      }
+      if (!proactiveTriggerService) {
+        throw new Error('[ipc] proactive.scanForWork: proactiveTriggerService dep is required');
+      }
+      const result = await proactiveTriggerService.scanForWork({ companyId });
+      return { queuedCount: result.queuedCount };
+    },
+
+    async proactiveGetState({ companyId }) {
+      if (typeof companyId !== 'string' || companyId.length === 0) {
+        throw new Error('[ipc] proactive.getState: companyId is required');
+      }
+      if (!proactiveTriggerService) {
+        throw new Error('[ipc] proactive.getState: proactiveTriggerService dep is required');
+      }
+      const enabled = proactiveTriggerService.isEnabled(companyId);
+      return {
+        enabled,
+        activeWork: 0, // TODO: track active work count
+        queuedWork: 0, // TODO: track queued work count
+        lastScanAt: null, // TODO: track last scan timestamp
+      };
     },
 
     // -----------------------------------------------------------------------

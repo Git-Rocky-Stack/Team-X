@@ -22,6 +22,7 @@ import { ConcurrencySection } from './concurrency-section.js';
 import { CopilotSection } from './copilot-section.js';
 import { ExtensionsSection } from './extensions-section.js';
 import { MemorySection } from './memory-section.js';
+import { PermissionsSection } from './permissions-section.js';
 import { PlannerSection } from './planner-section.js';
 import { PortabilitySection } from './portability-section.js';
 import { PrivacySection } from './privacy-section.js';
@@ -73,6 +74,9 @@ export function SettingsView() {
             <ExtensionsSection />
           </ErrorBoundary>
         </section>
+        <ErrorBoundary componentName="PermissionsSection">
+          <PermissionsSection />
+        </ErrorBoundary>
         <ErrorBoundary componentName="AgenticSection">
           <AgenticSection />
         </ErrorBoundary>
