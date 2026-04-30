@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { AlertTriangle, Check, ChevronDown, FolderOpen, Info, Shield, Settings2 } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, EyeOff, FolderOpen, Info, Shield, Settings2, X } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert.js';
 import { Badge } from '@/components/ui/badge.js';
@@ -145,7 +145,7 @@ export function SimplifiedPermissions({
                           ))}
                           {preset.capabilities.denied.map((cap) => (
                             <Badge key={cap} variant="secondary" className="text-xs">
-                              <EyeOff className="h-3 w-3 mr-1" />
+                              <X className="h-3 w-3 mr-1" />
                               {cap}
                             </Badge>
                           ))}
@@ -239,7 +239,7 @@ export function SimplifiedPermissions({
                           key={cap}
                           className="flex items-center gap-2 text-xs bg-red-50/50 dark:bg-red-950/20 px-2 py-1 rounded"
                         >
-                          <EyeOff className="h-3 w-3 text-red-600 dark:text-red-400" />
+                          <X className="h-3 w-3 text-red-600 dark:text-red-400" />
                           {cap}
                         </div>
                       ))
