@@ -18,7 +18,11 @@
  * - Atomic execution to prevent double-work
  */
 
-import type { AgentWakeupRequestsRepo } from '../db/repos/agent-wakeup-requests.js';
+import type { EventType } from '@team-x/shared-types';
+import type {
+  AgentWakeupRequestRow,
+  AgentWakeupRequestsRepo,
+} from '../db/repos/agent-wakeup-requests.js';
 import type { EmployeesRepo } from '../db/repos/employees.js';
 import type { EventBus } from './event-bus.js';
 
@@ -40,6 +44,7 @@ export interface WakeupRequest {
   id: string;
   companyId: string;
   agentId: string;
+  status: AgentWakeupRequestRow['status'];
   trigger: WakeupTrigger;
   priority: number;
   scheduledFor: Date;
@@ -100,14 +105,6 @@ export interface WakeupStats {
   avgProcessingTimeMs: number;
 }
 
-// Retry delays matching Paperclip.ai: [2min, 10min, 30min, 2hr]
-const BOUNDED_TRANSIENT_HEARTBEAT_RETRY_DELAYS_MS = [
-  2 * 60 * 1000,
-  10 * 60 * 1000,
-  30 * 60 * 1000,
-  2 * 60 * 60 * 1000,
-] as const;
-
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 60 * 1000; // 1 minute
 const MAX_CONCURRENT_PROCESSING = 5;
 
@@ -132,7 +129,7 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
     // Ensure agent belongs to the company
     if (agent.companyId !== input.context.companyId) {
       throw new Error(
-        `Agent ${input.agentId} does not belong to company ${input.context.companyId}`
+        `Agent ${input.agentId} does not belong to company ${input.context.companyId}`,
       );
     }
 
@@ -149,7 +146,7 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
 
     // Emit wakeup scheduled event
     bus.emit({
-      type: 'wakeup.scheduled',
+      type: 'wakeup.scheduled' as EventType,
       companyId: input.context.companyId,
       actorId: input.agentId,
       actorKind: 'employee',
@@ -177,7 +174,9 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
 
       // Process in priority order, with concurrency limit
       const processing = pendingRequests.slice(0, MAX_CONCURRENT_PROCESSING);
-      console.log(`[heartbeat] Processing ${processing.length} wakeup requests for company ${companyId}`);
+      console.log(
+        `[heartbeat] Processing ${processing.length} wakeup requests for company ${companyId}`,
+      );
 
       for (const request of processing) {
         await processWakeupRequest(request);
@@ -190,7 +189,6 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
       for (const request of failedRequests) {
         await retryFailedWakeup(request.id);
       }
-
     } finally {
       isProcessing = false;
     }
@@ -212,7 +210,7 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
 
       // Emit agent wakeup event
       bus.emit({
-        type: 'agent.wakeup',
+        type: 'agent.wakeup' as EventType,
         companyId: request.companyId,
         actorId: request.agentId,
         actorKind: 'employee',
@@ -233,8 +231,9 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
         processedAt: Date.now(),
       });
 
-      console.log(`[heartbeat] Successfully processed wakeup ${request.id} for agent ${request.agentId}`);
-
+      console.log(
+        `[heartbeat] Successfully processed wakeup ${request.id} for agent ${request.agentId}`,
+      );
     } catch (error) {
       console.error(`[heartbeat] Error processing wakeup ${request.id}:`, error);
 
@@ -242,13 +241,15 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
       const retryDelay = agentWakeupRequestsRepo.markAsFailedWithRetry(
         request.id,
         error instanceof Error ? error.message : String(error),
-        request.maxAttempts
+        request.maxAttempts,
       );
 
       if (retryDelay !== null) {
         console.log(`[heartbeat] Scheduled retry for wakeup ${request.id} in ${retryDelay}ms`);
       } else {
-        console.error(`[heartbeat] Wakeup ${request.id} failed permanently after ${request.attemptCount} attempts`);
+        console.error(
+          `[heartbeat] Wakeup ${request.id} failed permanently after ${request.attemptCount} attempts`,
+        );
       }
     }
   }
@@ -276,10 +277,11 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
   async function getAgentWakeupHistory(agentId: string, limit = 50): Promise<WakeupRequest[]> {
     const requests = agentWakeupRequestsRepo.listByAgent(agentId);
 
-    return requests.slice(0, limit).map(row => ({
+    return requests.slice(0, limit).map((row) => ({
       id: row.id,
       companyId: row.companyId,
       agentId: row.agentId,
+      status: row.status,
       trigger: {
         type: row.triggerType as WakeupTrigger['type'],
         id: row.triggerId ?? undefined,
@@ -297,20 +299,20 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
     }
 
     const history = await getAgentWakeupHistory(agentId, 100);
-    const pending = history.filter(r => r.trigger.type === 'pending').length;
-    const failed = history.filter(r => r.trigger.type === 'failed').length;
-    const completed = history.filter(r => r.trigger.type === 'completed').length;
+    const pending = history.filter(
+      (r) => r.status === 'pending' || r.status === 'processing',
+    ).length;
+    const failed = history.filter((r) => r.status === 'failed').length;
 
     // Agent is considered alive if it has recent successful activity
-    const recentCompleted = history.filter(r => {
-      const completedAt = new Date(r.scheduledFor).getTime() + (30 * 60 * 1000); // Assume 30min processing window
-      return completedAt > Date.now() - (24 * 60 * 60 * 1000); // Last 24 hours
+    const recentCompleted = history.filter((r) => {
+      if (r.status !== 'completed') return false;
+      const completedAt = r.scheduledFor.getTime() + 30 * 60 * 1000; // Assume 30min processing window
+      return completedAt > Date.now() - 24 * 60 * 60 * 1000; // Last 24 hours
     });
 
     const isAlive = recentCompleted.length > 0 || pending > 0;
-    const lastActivityAt = recentCompleted.length > 0
-      ? recentCompleted[0].scheduledFor.getTime()
-      : Date.now();
+    const lastActivityAt = recentCompleted[0]?.scheduledFor.getTime() ?? Date.now();
 
     return {
       agentId,
@@ -330,10 +332,7 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
     console.log(`[heartbeat] Starting heartbeat processing loop (${intervalMs}ms interval)`);
 
     processingInterval = setInterval(async () => {
-      // Process all companies that have pending requests
-      // For now, we'll process each company sequentially
-      // TODO: Optimize to process companies in parallel
-      const companies = new Set<string>(); // Would get active companies from somewhere
+      const companies = agentWakeupRequestsRepo.listCompaniesWithDueWork();
 
       for (const companyId of companies) {
         try {
@@ -346,6 +345,7 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
 
     // Initial processing on start
     setTimeout(async () => {
+      const companies = agentWakeupRequestsRepo.listCompaniesWithDueWork();
       for (const companyId of companies) {
         try {
           await processWakeupQueue(companyId);
@@ -371,14 +371,22 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
     const repoStats = agentWakeupRequestsRepo.getStats(companyId);
 
     // Calculate average processing time from completed requests
-    const completedRequests = await getAgentWakeupHistory('', 1000); // Get all completed for company
-    const companyCompleted = completedRequests.filter(r => r.companyId === companyId);
+    const companyCompleted = agentWakeupRequestsRepo
+      .listByCompany(companyId)
+      .filter(
+        (request) =>
+          request.status === 'completed' &&
+          request.startedAt !== null &&
+          request.completedAt !== null,
+      );
 
     let avgProcessingTimeMs = 0;
     if (companyCompleted.length > 0) {
-      // Would need to track processing time in the schema for accurate stats
-      // For now, return 0 as placeholder
-      avgProcessingTimeMs = 0;
+      const totalProcessingTime = companyCompleted.reduce(
+        (total, request) => total + ((request.completedAt ?? 0) - (request.startedAt ?? 0)),
+        0,
+      );
+      avgProcessingTimeMs = Math.round(totalProcessingTime / companyCompleted.length);
     }
 
     return {

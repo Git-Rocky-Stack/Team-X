@@ -24,7 +24,15 @@
  */
 
 import { sql } from 'drizzle-orm';
-import { blob, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  type AnySQLiteColumn,
+  blob,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 /** One row per AI company the user has created (multi-company is Phase 2+). */
 export const companies = sqliteTable(
@@ -977,43 +985,47 @@ export const toolCalls = sqliteTable('tool_calls', {
  * on first assignment. The orchestrator enqueues a WorkItem when an
  * assignee is set, and the agent can request close via structured output.
  */
-export const tickets = sqliteTable('tickets', {
-  id: text('id').primaryKey(),
-  companyId: text('company_id')
-    .notNull()
-    .references(() => companies.id),
-  title: text('title').notNull(),
-  description: text('description').notNull().default(''),
-  /** open | in-progress | blocked | done. */
-  status: text('status').notNull().default('open'),
-  /** low | medium | high | critical. */
-  priority: text('priority').notNull().default('medium'),
-  /** Assigned employee FK. Null = unassigned (sits in Open column). */
-  assigneeId: text('assignee_id').references(() => employees.id),
-  /** Human user or employee who filed the ticket. */
-  reporterId: text('reporter_id').notNull(),
-  /** user | employee | system. */
-  reporterKind: text('reporter_kind').notNull().default('user'),
-  /** JSON-encoded string[] of label tags. */
-  labelsJson: text('labels_json').notNull().default('[]'),
-  /** JSON-encoded string[] of blocking ticket ids. */
-  dependenciesJson: text('dependencies_json').notNull().default('[]'),
-  /** Target hours to resolution. Null = no SLA. */
-  slaHours: integer('sla_hours'),
-  dueAt: integer('due_at'),
-  /** FK to the discussion thread (created on first assignment). */
-  threadId: text('thread_id').references(() => threads.id),
-  /** Optional goal FK for goal ancestry (Phase 5: M31 proactive execution). */
-  goalId: text('goal_id').references(() => goals.id),
-  /** Optional parent ticket FK for task decomposition hierarchies. */
-  parentTicketId: text('parent_ticket_id').references(() => tickets.id),
-  createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-  closedAt: integer('closed_at'),
-}, (table) => ({
-  goalIdx: index('idx_tickets_goal').on(table.goalId),
-  parentTicketIdx: index('idx_tickets_parent').on(table.parentTicketId),
-}));
+export const tickets = sqliteTable(
+  'tickets',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id),
+    title: text('title').notNull(),
+    description: text('description').notNull().default(''),
+    /** open | in-progress | blocked | done. */
+    status: text('status').notNull().default('open'),
+    /** low | medium | high | critical. */
+    priority: text('priority').notNull().default('medium'),
+    /** Assigned employee FK. Null = unassigned (sits in Open column). */
+    assigneeId: text('assignee_id').references(() => employees.id),
+    /** Human user or employee who filed the ticket. */
+    reporterId: text('reporter_id').notNull(),
+    /** user | employee | system. */
+    reporterKind: text('reporter_kind').notNull().default('user'),
+    /** JSON-encoded string[] of label tags. */
+    labelsJson: text('labels_json').notNull().default('[]'),
+    /** JSON-encoded string[] of blocking ticket ids. */
+    dependenciesJson: text('dependencies_json').notNull().default('[]'),
+    /** Target hours to resolution. Null = no SLA. */
+    slaHours: integer('sla_hours'),
+    dueAt: integer('due_at'),
+    /** FK to the discussion thread (created on first assignment). */
+    threadId: text('thread_id').references(() => threads.id),
+    /** Optional goal FK for goal ancestry (Phase 5: M31 proactive execution). */
+    goalId: text('goal_id').references(() => goals.id),
+    /** Optional parent ticket FK for task decomposition hierarchies. */
+    parentTicketId: text('parent_ticket_id').references((): AnySQLiteColumn => tickets.id),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    closedAt: integer('closed_at'),
+  },
+  (table) => ({
+    goalIdx: index('idx_tickets_goal').on(table.goalId),
+    parentTicketIdx: index('idx_tickets_parent').on(table.parentTicketId),
+  }),
+);
 
 /** Run-owned ticket leases that prevent duplicate autonomous external-agent work. */
 export const ticketCheckouts = sqliteTable(

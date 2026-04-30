@@ -211,6 +211,20 @@
       "when": 1778476800000,
       "tag": "0029_runtime_sessions_checkouts",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1778563200000,
+      "tag": "0030_tickets_goal_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1778649600000,
+      "tag": "0031_agent_wakeup_requests",
+      "breakpoints": true
     }
   ]
 }

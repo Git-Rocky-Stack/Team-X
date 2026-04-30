@@ -5,23 +5,38 @@
  * where users can browse, enable, and manage skills with one click.
  */
 
-import { useState } from 'react';
 import { Check, Globe, Loader2, Plus, Settings2, Star, Zap } from 'lucide-react';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card.js';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible.js';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card.js';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible.js';
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.js';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select.js';
 import { Switch } from '@/components/ui/switch.js';
 import {
   BUILT_IN_SKILLS,
-  getPopularSkills,
-  getSkillsByCategory,
-  SKILL_CATEGORY_INFO,
   type BuiltInSkill,
+  SKILL_CATEGORY_INFO,
   type SkillCategory,
 } from '@/data/built-in-skills.js';
 import { cn } from '@/lib/utils.js';
@@ -120,7 +135,10 @@ export function SkillsMarketplace({
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="category-select">Category</Label>
-                <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as SkillCategory | 'all')}>
+                <Select
+                  value={selectedCategory}
+                  onValueChange={(value) => setSelectedCategory(value as SkillCategory | 'all')}
+                >
                   <SelectTrigger id="category-select">
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
@@ -224,7 +242,7 @@ function SkillCard({ skill, isInstalled, isEnabled, onToggle }: SkillCardProps) 
       className={cn(
         'transition-all hover:shadow-md cursor-pointer',
         isEnabled && 'border-green-500/50 bg-green-50/5 dark:bg-green-950/10',
-        !isInstalled && 'opacity-60'
+        !isInstalled && 'opacity-60',
       )}
     >
       <CardHeader className="pb-4">
@@ -234,7 +252,9 @@ function SkillCard({ skill, isInstalled, isEnabled, onToggle }: SkillCardProps) 
             <div
               className={cn(
                 'p-2 rounded-lg shrink-0',
-                isEnabled ? 'bg-green-500/10 text-green-600 dark:text-green-400' : 'bg-primary/10 text-primary'
+                isEnabled
+                  ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                  : 'bg-primary/10 text-primary',
               )}
             >
               <Globe className="h-5 w-5" />

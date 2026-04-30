@@ -5,27 +5,55 @@
  * where users can browse, install, and manage MCP servers with one click.
  */
 
+import {
+  AlertCircle,
+  Check,
+  Database,
+  Globe,
+  Loader2,
+  Plus,
+  Settings2,
+  Star,
+  Zap,
+} from 'lucide-react';
 import { useState } from 'react';
-import { AlertCircle, Check, Database, Globe, Loader2, Plus, Settings2, Star, Zap } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card.js';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible.js';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card.js';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible.js';
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.js';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select.js';
 import { Switch } from '@/components/ui/switch.js';
 import {
-  autoConfigureFilesystemMcp,
   BUILT_IN_MCP_TEMPLATES,
-  getPopularMcpTemplates,
-  MCP_CATEGORY_INFO,
   type BuiltInMcpTemplate,
+  MCP_CATEGORY_INFO,
   type McpCategory,
+  autoConfigureFilesystemMcp,
 } from '@/data/built-in-mcp-templates.js';
 import { cn } from '@/lib/utils.js';
+
+export type McpConnectionStatus = 'ready' | 'needs_api_key' | 'needs_connection' | 'error';
 
 interface McpMarketplaceProps {
   installedMcps: Set<string>;
@@ -35,7 +63,7 @@ interface McpMarketplaceProps {
   onConfigureMcp?: (templateId: string) => void;
   onInstallCustomMcp?: () => void;
   isLoading?: boolean;
-  connectionStatus?: Map<string, 'ready' | 'needs_api_key' | 'needs_connection' | 'error'>;
+  connectionStatus?: Map<string, McpConnectionStatus>;
 }
 
 export function McpMarketplace({
@@ -65,8 +93,7 @@ export function McpMarketplace({
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =
-        mcp.name.toLowerCase().includes(query) ||
-        mcp.description.toLowerCase().includes(query);
+        mcp.name.toLowerCase().includes(query) || mcp.description.toLowerCase().includes(query);
       if (!matchesSearch) return false;
     }
 
@@ -146,7 +173,10 @@ export function McpMarketplace({
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="mcp-category-select">Category</Label>
-                <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as McpCategory | 'all')}>
+                <Select
+                  value={selectedCategory}
+                  onValueChange={(value) => setSelectedCategory(value as McpCategory | 'all')}
+                >
                   <SelectTrigger id="mcp-category-select">
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
@@ -220,9 +250,10 @@ export function McpMarketplace({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMcps.map((mcp) => {
             // Handle filesystem MCP auto-configuration
-            const displayMcp = mcp.id === 'filesystem-local' && mcp.autoConfigure
-              ? autoConfigureFilesystemMcp()
-              : mcp;
+            const displayMcp =
+              mcp.id === 'filesystem-local' && mcp.autoConfigure
+                ? autoConfigureFilesystemMcp()
+                : mcp;
 
             return (
               <McpTemplateCard
@@ -250,7 +281,7 @@ interface McpTemplateCardProps {
   isInstalled: boolean;
   isEnabled: boolean;
   isConfiguring: boolean;
-  connectionStatus?: 'ready' | 'needs_api_key' | 'needs_connection' | 'error';
+  connectionStatus?: McpConnectionStatus;
   onToggle: () => void;
   onInstall: () => void;
   onConfigure: () => void;
@@ -271,7 +302,6 @@ function McpTemplateCard({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const categoryInfo = MCP_CATEGORY_INFO[template.category];
-  const needsApiKey = template.requiresApiKey && !template.apiKeyName?.endsWith('_API_KEY');
   const showApiKeyWarning = template.requiresApiKey && connectionStatus === 'needs_api_key';
 
   return (
@@ -279,7 +309,7 @@ function McpTemplateCard({
       className={cn(
         'transition-all hover:shadow-md cursor-pointer',
         isEnabled && 'border-blue-500/50 bg-blue-50/5 dark:bg-blue-950/10',
-        !isInstalled && 'opacity-60'
+        !isInstalled && 'opacity-60',
       )}
     >
       <CardHeader className="pb-4">
@@ -289,7 +319,9 @@ function McpTemplateCard({
             <div
               className={cn(
                 'p-2 rounded-lg shrink-0',
-                isEnabled ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-primary/10 text-primary'
+                isEnabled
+                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                  : 'bg-primary/10 text-primary',
               )}
             >
               <Database className="h-5 w-5" />
@@ -299,7 +331,9 @@ function McpTemplateCard({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-base truncate">{template.name}</CardTitle>
-                {template.popular && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />}
+                {template.popular && (
+                  <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                )}
                 {template.new && <Zap className="h-3.5 w-3.5 text-blue-500" />}
               </div>
               <CardDescription className="line-clamp-2">{template.description}</CardDescription>
@@ -421,7 +455,7 @@ function McpTemplateCard({
           <Alert variant="warning">
             <AlertCircle className="h-3 w-3" />
             <AlertDescription className="text-xs">
-              API key required. Configure to add {template.apiName}.
+              API key required. Configure {template.apiKeyName ?? 'the required API key'}.
             </AlertDescription>
           </Alert>
         )}

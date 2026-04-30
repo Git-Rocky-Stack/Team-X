@@ -5,23 +5,36 @@
  * that work for 90% of users while keeping advanced options accessible.
  */
 
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  FolderOpen,
+  Info,
+  Settings2,
+  Shield,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
-import { AlertTriangle, Check, ChevronDown, EyeOff, FolderOpen, Info, Shield, Settings2, X } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible.js';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible.js';
 import { Label } from '@/components/ui/label.js';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.js';
 import { Switch } from '@/components/ui/switch.js';
 import {
   PERMISSION_PRESETS,
   expandPathPlaceholders,
-  getUserFriendlyPathName,
   getRecommendedPreset,
-  type PermissionPreset,
+  getUserFriendlyPathName,
 } from '@/data/permission-presets.js';
 import { cn } from '@/lib/utils.js';
 
@@ -41,9 +54,9 @@ export function SimplifiedPermissions({
   isLoading = false,
 }: SimplifiedPermissionsProps) {
   const [expandedPreset, setExpandedPreset] = useState<string | null>(null);
-  const [showWarnings, setShowWarnings] = useState(true);
 
-  const selectedPreset = PERMISSION_PRESETS.find((p) => p.id === currentPreset) || getRecommendedPreset();
+  const selectedPreset =
+    PERMISSION_PRESETS.find((p) => p.id === currentPreset) || getRecommendedPreset();
 
   return (
     <div className="space-y-6">
@@ -54,7 +67,8 @@ export function SimplifiedPermissions({
           Agent Permissions
         </h3>
         <p className="text-sm text-muted-foreground">
-          Choose how much access agents have to your system. Safe defaults are recommended for most users.
+          Choose how much access agents have to your system. Safe defaults are recommended for most
+          users.
         </p>
       </div>
 
@@ -67,7 +81,7 @@ export function SimplifiedPermissions({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <RadioGroup value={currentPreset} onValueChange={onPresetChange}>
+          <RadioGroup value={currentPreset} onValueChange={onPresetChange} disabled={isLoading}>
             <div className="space-y-3">
               {PERMISSION_PRESETS.map((preset) => {
                 const isSelected = currentPreset === preset.id;
@@ -79,10 +93,16 @@ export function SimplifiedPermissions({
                     <div
                       className={cn(
                         'flex items-start gap-3 p-4 rounded-lg border-2 transition-all cursor-pointer',
-                        isSelected && preset.color === 'green' && 'border-green-500 bg-green-50/5 dark:bg-green-950/10',
-                        isSelected && preset.color === 'blue' && 'border-blue-500 bg-blue-50/5 dark:bg-blue-950/10',
-                        isSelected && preset.color === 'orange' && 'border-orange-500 bg-orange-50/5 dark:bg-orange-950/10',
-                        !isSelected && 'border-border/70 hover:border-border/70'
+                        isSelected &&
+                          preset.color === 'green' &&
+                          'border-green-500 bg-green-50/5 dark:bg-green-950/10',
+                        isSelected &&
+                          preset.color === 'blue' &&
+                          'border-blue-500 bg-blue-50/5 dark:bg-blue-950/10',
+                        isSelected &&
+                          preset.color === 'orange' &&
+                          'border-orange-500 bg-orange-50/5 dark:bg-orange-950/10',
+                        !isSelected && 'border-border/70 hover:border-border/70',
                       )}
                     >
                       {/* Radio Button */}
@@ -101,7 +121,7 @@ export function SimplifiedPermissions({
                                 htmlFor={`preset-${preset.id}`}
                                 className={cn(
                                   'font-semibold cursor-pointer',
-                                  isSelected && 'text-foreground'
+                                  isSelected && 'text-foreground',
                                 )}
                               >
                                 {preset.name}
@@ -158,8 +178,11 @@ export function SimplifiedPermissions({
                             <AlertDescription className="text-xs">
                               <div className="font-medium mb-1">Important:</div>
                               <ul className="space-y-1">
-                                {preset.warnings.map((warning, index) => (
-                                  <li key={index} className="flex items-start gap-2">
+                                {preset.warnings.map((warning) => (
+                                  <li
+                                    key={`${preset.id}-${warning}`}
+                                    className="flex items-start gap-2"
+                                  >
                                     <span>•</span>
                                     <span>{warning}</span>
                                   </li>
@@ -189,9 +212,7 @@ export function SimplifiedPermissions({
               </CardTitle>
             </CollapsibleTrigger>
           </Collapsible>
-          <CardDescription>
-            Detailed breakdown of what agents can and cannot do
-          </CardDescription>
+          <CardDescription>Detailed breakdown of what agents can and cannot do</CardDescription>
         </CardHeader>
 
         <CollapsibleContent>
@@ -348,18 +369,15 @@ export function SimplifiedPermissions({
                   : 'Show detailed permission matrix for fine-grained control'}
               </p>
             </div>
-            <Switch
-              checked={showAdvanced}
-              onCheckedChange={onShowAdvancedChange || (() => {})}
-            />
+            <Switch checked={showAdvanced} onCheckedChange={onShowAdvancedChange || (() => {})} />
           </div>
 
           {showAdvanced && (
             <Alert variant="warning" className="mt-4">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Advanced permissions require technical understanding of security implications.
-                Most users should use the presets above.
+                Advanced permissions require technical understanding of security implications. Most
+                users should use the presets above.
               </AlertDescription>
             </Alert>
           )}
@@ -371,8 +389,8 @@ export function SimplifiedPermissions({
         <Shield className="h-4 w-4" />
         <AlertDescription className="text-xs">
           <strong>Security First:</strong> Team-X uses a permission system to keep your data safe.
-          Start with Safe Mode and increase permissions only as needed. You can change permissions at any
-          time from this panel.
+          Start with Safe Mode and increase permissions only as needed. You can change permissions
+          at any time from this panel.
         </AlertDescription>
       </Alert>
     </div>

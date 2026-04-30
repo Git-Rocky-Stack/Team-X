@@ -64,6 +64,7 @@ type TicketsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export interface AgentWakeupQueueLike {
   queueIssueAssignmentWakeup(input: {
+    companyId: string;
     issueId: string;
     assigneeAgentId: string;
     contextSource: string;
@@ -172,15 +173,18 @@ export function createTicketsRepo<TRunResult>(
         // Get the ticket to fetch companyId and goalId for context
         const ticket = db.select().from(tickets).where(eq(tickets.id, id)).get();
         if (ticket) {
-          agentWakeupQueue.queueIssueAssignmentWakeup({
-            issueId: id,
-            assigneeAgentId: assigneeId,
-            contextSource: 'ticket_assignment',
-            goalId: ticket.goalId ?? undefined,
-            projectId: undefined, // Could be added later
-          }).catch((err) => {
-            console.error(`[tickets] Failed to queue agent wakeup for ${assigneeId}:`, err);
-          });
+          agentWakeupQueue
+            .queueIssueAssignmentWakeup({
+              companyId: ticket.companyId,
+              issueId: id,
+              assigneeAgentId: assigneeId,
+              contextSource: 'ticket_assignment',
+              goalId: ticket.goalId ?? undefined,
+              projectId: undefined, // Could be added later
+            })
+            .catch((err) => {
+              console.error(`[tickets] Failed to queue agent wakeup for ${assigneeId}:`, err);
+            });
         }
       }
     },

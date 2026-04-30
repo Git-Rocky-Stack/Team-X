@@ -12,13 +12,16 @@ import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useEmployees } from '@/hooks/use-employees.js';
-import { cn } from '@/lib/utils.js';
 import {
+  useAddMcpServer,
   useAuthorityGrants,
   useAuthorityRequests,
   useDeleteAuthorityGrant,
   useDeleteSkillAssignment,
   useEffectiveAuthority,
+  useInstallGithubSkill,
+  useInstallLocalSkill,
+  useInstallMcpTemplate,
   useInstalledExtensions,
   useMcpServers,
   useMcpTemplates,
@@ -26,27 +29,41 @@ import {
   useRemoveSkill,
   useReviewAuthorityRequest,
   useSkillAssignments,
+  useTestMcpConnection,
   useToggleMcpServer,
   useUpsertSkillAssignment,
 } from '@/hooks/use-extensions.js';
 import { useExtensionsSettings, useSetExtensionsSettings } from '@/hooks/use-settings.js';
 import { requireString } from '@/lib/required.js';
+import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
+import { InstallCustomMcpDialog } from '@/components/mcp/install-custom-mcp-dialog.js';
+import { type McpConnectionStatus, McpMarketplace } from '@/components/mcp/mcp-marketplace.js';
+import { SimplifiedPermissions } from '@/components/permissions/simplified-permissions.js';
+import { InstallCustomSkillDialog } from '@/components/skills/install-custom-skill-dialog.js';
+import { SkillsMarketplace } from '@/components/skills/skills-marketplace.js';
 import { GrantAuthorityDialog } from './grant-authority-dialog.js';
 import { ImportMcpDialog } from './import-mcp-dialog.js';
 import { InstallSkillDialog } from './install-skill-dialog.js';
-import { InstallCustomSkillDialog } from '@/components/skills/install-custom-skill-dialog.js';
-import { SkillsMarketplace } from '@/components/skills/skills-marketplace.js';
-import { InstallCustomMcpDialog } from '@/components/mcp/install-custom-mcp-dialog.js';
-import { McpMarketplace } from '@/components/mcp/mcp-marketplace.js';
-import { SimplifiedPermissions } from '@/components/permissions/simplified-permissions.js';
 
 const AUTONOMY_COPY: Record<(typeof EXTENSIONS_AUTONOMY_MODES)[number], string> = {
   balanced: 'Auto-enable low-risk installs, but stop for sensitive capability or path expansion.',
   conservative: 'New installs stay inert until explicitly reviewed and approved.',
   autonomous: 'Auto-enable and auto-grant unless a request hits a hard platform deny.',
 };
+
+function toMcpConnectionStatus(lastHealth: string | null | undefined): McpConnectionStatus {
+  if (
+    lastHealth === 'ready' ||
+    lastHealth === 'needs_api_key' ||
+    lastHealth === 'needs_connection' ||
+    lastHealth === 'error'
+  ) {
+    return lastHealth;
+  }
+  return 'ready';
+}
 
 interface GrantDialogDefaults {
   scopeKind: 'company' | 'employee';
@@ -77,6 +94,11 @@ export function ExtensionsSection() {
   const reviewAuthorityRequest = useReviewAuthorityRequest(companyId);
   const upsertSkillAssignment = useUpsertSkillAssignment(companyId);
   const deleteSkillAssignment = useDeleteSkillAssignment(companyId);
+  const installLocalSkill = useInstallLocalSkill(companyId);
+  const installGithubSkill = useInstallGithubSkill(companyId);
+  const addMcpServer = useAddMcpServer(companyId);
+  const installMcpTemplate = useInstallMcpTemplate(companyId);
+  const testMcpConnection = useTestMcpConnection();
   const removeSkill = useRemoveSkill(companyId);
   const toggleMcpServer = useToggleMcpServer(companyId);
   const removeMcpServer = useRemoveMcpServer(companyId);
@@ -107,17 +129,25 @@ export function ExtensionsSection() {
     ),
   );
   const effectiveAuthorityQuery = useEffectiveAuthority(companyId, previewEmployeeId);
-  const employeeNameById = new Map((employees ?? []).map((employee) => [employee.id, employee.name]));
-  const extensionNameById = new Map((extensions ?? []).map((extension) => [extension.id, extension.name]));
+  const employeeNameById = new Map(
+    (employees ?? []).map((employee) => [employee.id, employee.name]),
+  );
+  const extensionNameById = new Map(
+    (extensions ?? []).map((extension) => [extension.id, extension.name]),
+  );
   const workspaceSkillAssignments = new Map(
-    (skillAssignments ?? []).filter((assignment) => assignment.employeeId === null).map((assignment) => [assignment.extensionId, assignment]),
+    (skillAssignments ?? [])
+      .filter((assignment) => assignment.employeeId === null)
+      .map((assignment) => [assignment.extensionId, assignment]),
   );
   const installedMcpServers = (mcpQuery.data ?? []).filter((server) => server.companyId !== null);
   const builtInMcpTemplateCount =
     mcpTemplatesQuery.data?.length ??
-    ((mcpQuery.data ?? []).filter((server) => server.companyId === null)).length;
+    (mcpQuery.data ?? []).filter((server) => server.companyId === null).length;
   const employeeSkillAssignments = new Map(
-    (skillAssignments ?? []).filter((assignment) => assignment.employeeId !== null).map((assignment) => [`${assignment.extensionId}:${assignment.employeeId}`, assignment]),
+    (skillAssignments ?? [])
+      .filter((assignment) => assignment.employeeId !== null)
+      .map((assignment) => [`${assignment.extensionId}:${assignment.employeeId}`, assignment]),
   );
 
   useEffect(() => {
@@ -180,13 +210,12 @@ export function ExtensionsSection() {
 
   async function handleInstallCustomSkill(source: { type: 'local' | 'url'; value: string }) {
     if (!companyId) return;
-    const requiredCompanyId = requireString(companyId, 'companyId');
-
-    // This is a placeholder - the actual implementation would call the appropriate install handlers
-    // For now, we'll just close the dialog since the install logic is complex
-    console.log('Install custom skill:', source);
-    // TODO: Implement actual skill installation logic
-    // This would involve calling the existing installLocal or installUrl mutations
+    const workspaceId = requireString(companyId, 'companyId');
+    if (source.type === 'local') {
+      await installLocalSkill.mutateAsync({ companyId: workspaceId, folderPath: source.value });
+      return;
+    }
+    await installGithubSkill.mutateAsync({ companyId: workspaceId, sourceUrl: source.value });
   }
 
   async function handleInstallCustomMcp(config: {
@@ -198,12 +227,21 @@ export function ExtensionsSection() {
     url?: string;
   }) {
     if (!companyId) return;
-    const requiredCompanyId = requireString(companyId, 'companyId');
-
-    // This is a placeholder - the actual implementation would call the MCP installation handler
-    console.log('Install custom MCP:', config);
-    // TODO: Implement actual MCP installation logic
-    // This would involve calling the existing addMcpServer mutation
+    const workspaceId = requireString(companyId, 'companyId');
+    const configJson =
+      config.transport === 'sse'
+        ? JSON.stringify({ url: config.url ?? '' })
+        : JSON.stringify({
+            command: config.command,
+            args: config.args,
+            ...(config.env ? { env: config.env } : {}),
+          });
+    await addMcpServer.mutateAsync({
+      companyId: workspaceId,
+      name: config.name,
+      transport: config.transport,
+      configJson,
+    });
   }
 
   const skillExtensions = extensions.filter((extension) => extension.kind === 'skill');
@@ -283,14 +321,16 @@ export function ExtensionsSection() {
           <CardContent className="pt-6">
             <SkillsMarketplace
               installedSkills={new Set(skillExtensions.map((ext) => ext.id))}
-              enabledSkills={new Set(
-                skillExtensions
-                  .filter((ext) => {
-                    const assignment = workspaceSkillAssignments.get(ext.id);
-                    return assignment?.enabled ?? false;
-                  })
-                  .map((ext) => ext.id),
-              )}
+              enabledSkills={
+                new Set(
+                  skillExtensions
+                    .filter((ext) => {
+                      const assignment = workspaceSkillAssignments.get(ext.id);
+                      return assignment?.enabled ?? false;
+                    })
+                    .map((ext) => ext.id),
+                )
+              }
               onToggleSkill={async (skillId, enabled) => {
                 if (!companyId) return;
                 await handleWorkspaceSkillToggle(skillId, enabled);
@@ -537,29 +577,35 @@ export function ExtensionsSection() {
           <CardContent className="pt-6">
             <McpMarketplace
               installedMcps={new Set(installedMcpServers.map((server) => server.id))}
-              enabledMcps={new Set(
-                installedMcpServers.filter((server) => server.enabled).map((server) => server.id),
-              )}
+              enabledMcps={
+                new Set(
+                  installedMcpServers.filter((server) => server.enabled).map((server) => server.id),
+                )
+              }
               onToggleMcp={async (mcpId, enabled) => {
                 if (!companyId) return;
-                await toggleMcpServer.mutate({
+                await toggleMcpServer.mutateAsync({
                   serverId: mcpId,
                   enabled,
                 });
               }}
               onInstallMcp={async (templateId) => {
-                // This would install the MCP template
-                // For now, just a placeholder
-                console.log('Install MCP template:', templateId);
+                if (!companyId) return;
+                await installMcpTemplate.mutateAsync({
+                  companyId: requireString(companyId, 'companyId'),
+                  templateId,
+                });
               }}
               onInstallCustomMcp={() => setCustomMcpDialogOpen(true)}
               isLoading={mcpQuery.isLoading}
-              connectionStatus={new Map(
-                installedMcpServers.map((server) => [
-                  server.id,
-                  server.lastHealth as any || 'ready',
-                ]),
-              )}
+              connectionStatus={
+                new Map(
+                  installedMcpServers.map((server) => [
+                    server.id,
+                    toMcpConnectionStatus(server.lastHealth),
+                  ]),
+                )
+              }
             />
           </CardContent>
         </Card>
@@ -570,9 +616,7 @@ export function ExtensionsSection() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-base">Advanced MCP Management</CardTitle>
-                <CardDescription>
-                  Detailed MCP server configuration and management
-                </CardDescription>
+                <CardDescription>Detailed MCP server configuration and management</CardDescription>
               </div>
               <Button
                 type="button"
@@ -703,9 +747,7 @@ export function ExtensionsSection() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-base">Advanced Authority Matrix</CardTitle>
-                <CardDescription>
-                  Detailed permission management for power users
-                </CardDescription>
+                <CardDescription>Detailed permission management for power users</CardDescription>
               </div>
               <Button
                 type="button"
@@ -1089,13 +1131,27 @@ export function ExtensionsSection() {
         open={customSkillDialogOpen}
         onOpenChange={setCustomSkillDialogOpen}
         onInstall={handleInstallCustomSkill}
-        isInstalling={removeSkill.isPending}
+        isInstalling={installLocalSkill.isPending || installGithubSkill.isPending}
       />
       <InstallCustomMcpDialog
         open={customMcpDialogOpen}
         onOpenChange={setCustomMcpDialogOpen}
         onInstall={handleInstallCustomMcp}
-        isInstalling={removeMcpServer.isPending}
+        onTest={(config) =>
+          testMcpConnection.mutateAsync({
+            transport: config.transport,
+            configJson:
+              config.transport === 'sse'
+                ? JSON.stringify({ url: config.url ?? '' })
+                : JSON.stringify({
+                    command: config.command,
+                    args: config.args,
+                    ...(config.env ? { env: config.env } : {}),
+                  }),
+          })
+        }
+        isInstalling={addMcpServer.isPending}
+        isTesting={testMcpConnection.isPending}
       />
     </section>
   );

@@ -36,6 +36,8 @@ export type EventType =
   | 'agent.step'
   | 'agentic.completed'
   | 'agentic.failed'
+  | 'wakeup.scheduled'
+  | 'agent.wakeup'
   | 'plan.proposed'
   | 'plan.approved'
   | 'task.delegated'

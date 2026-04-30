@@ -249,3 +249,5 @@ export function createEmployeesRepo<TRunResult>(db: EmployeesDb<TRunResult>) {
     },
   };
 }
+
+export type EmployeesRepo = ReturnType<typeof createEmployeesRepo>;

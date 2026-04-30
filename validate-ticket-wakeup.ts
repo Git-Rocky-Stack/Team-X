@@ -8,8 +8,8 @@
  * 4. All type interfaces are aligned
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const PROJECT_ROOT = join(process.cwd(), 'apps', 'desktop');
 
@@ -19,7 +19,7 @@ function checkFileExists(filePath: string): boolean {
 
 function checkFileContains(filePath: string, searchStrings: string[]): boolean {
   const content = readFileSync(join(PROJECT_ROOT, filePath), 'utf-8');
-  return searchStrings.every(s => content.includes(s));
+  return searchStrings.every((s) => content.includes(s));
 }
 
 console.log('🔍 Validating Ticket Assignment → Agent Wakeup Integration\n');
@@ -31,7 +31,7 @@ const checks = [
     requiredStrings: [
       'export function createTicketsRepo<TRunResult>(',
       'agentWakeupQueue?: AgentWakeupQueueLike,',
-    ]
+    ],
   },
   {
     name: '2. Tickets assign() uses injected agentWakeupQueue',
@@ -41,8 +41,8 @@ const checks = [
       'agentWakeupQueue.queueIssueAssignmentWakeup({',
       'issueId: id,',
       'assigneeAgentId: assigneeId,',
-      'contextSource: \'ticket_assignment\',',
-    ]
+      "contextSource: 'ticket_assignment',",
+    ],
   },
   {
     name: '3. Main index initializes heartbeat before routine service',
@@ -52,7 +52,7 @@ const checks = [
       'const heartbeatServiceInstance = createHeartbeatService({',
       'const agentWakeupQueueInstance = createAgentWakeupQueue({',
       'heartbeatServiceInstance.start(60 * 1000);',
-    ]
+    ],
   },
   {
     name: '4. Routine service uses agentWakeupQueue',
@@ -60,14 +60,12 @@ const checks = [
     requiredStrings: [
       'routineServiceInstance = createRoutineService({',
       'agentWakeupQueue: agentWakeupQueueInstance,',
-    ]
+    ],
   },
   {
     name: '5. Tickets repo created with agentWakeupQueue',
     file: 'src/main/index.ts',
-    requiredStrings: [
-      'ticketsRepo = createTicketsRepo(db, agentWakeupQueueInstance)',
-    ]
+    requiredStrings: ['ticketsRepo = createTicketsRepo(db, agentWakeupQueueInstance)'],
   },
 ];
 
@@ -102,7 +100,9 @@ for (const check of checks) {
 console.log(`\n📊 Validation Results: ${passedChecks}/${checks.length} checks passed`);
 
 if (failedChecks === 0) {
-  console.log('\n🎉 All validation checks passed! Ticket assignment → agent wakeup integration is complete.');
+  console.log(
+    '\n🎉 All validation checks passed! Ticket assignment → agent wakeup integration is complete.',
+  );
   process.exit(0);
 } else {
   console.log(`\n⚠️  ${failedChecks} validation check(s) failed. Please review the integration.`);

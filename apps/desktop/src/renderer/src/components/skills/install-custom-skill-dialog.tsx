@@ -5,12 +5,13 @@
  * with automatic URL validation and skill preview.
  */
 
+import { AlertCircle, Check, FolderOpen, Globe2, Loader2, Sparkles } from 'lucide-react';
 import { useState } from 'react';
-import { AlertCircle, Check, FolderOpen, Globe2, Loader2, Sparkles, X } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
+import { Card, CardContent } from '@/components/ui/card.js';
 import {
   Dialog,
   DialogContent,
@@ -22,8 +23,6 @@ import {
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
-import { Textarea } from '@/components/ui/textarea.js';
-import { cn } from '@/lib/utils.js';
 
 interface SkillPreview {
   name: string;
@@ -113,13 +112,14 @@ export function InstallCustomSkillDialog({
       // Try to extract skill name from URL
       const urlParts = inputUrl.split('/').filter(Boolean);
       if (urlParts.length > 0) {
-        const lastPart = urlParts[urlParts.length - 1];
-        mockPreview.name = lastPart
-          .replace(/[-_]/g, ' ')
-          .replace(/\b\w/g, (l) => l.toUpperCase())
-          .replace('Team X Skill', '')
-          .replace('Teamx Skill', '')
-          .trim() || 'Custom Skill';
+        const lastPart = urlParts.slice(-1)[0] ?? 'Custom Skill';
+        mockPreview.name =
+          lastPart
+            .replace(/[-_]/g, ' ')
+            .replace(/\b\w/g, (l) => l.toUpperCase())
+            .replace('Team X Skill', '')
+            .replace('Teamx Skill', '')
+            .trim() || 'Custom Skill';
       }
 
       setPreview(mockPreview);
@@ -174,9 +174,7 @@ export function InstallCustomSkillDialog({
     const folderName = pathParts[pathParts.length - 1] || 'Custom Skill';
 
     const mockPreview: SkillPreview = {
-      name: folderName
-        .replace(/[-_]/g, ' ')
-        .replace(/\b\w/g, (l) => l.toUpperCase()),
+      name: folderName.replace(/[-_]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
       description: 'A custom skill from local folder',
       tools: ['local_tool_1', 'local_tool_2'],
       capabilities: ['filesystem.read'],
@@ -370,8 +368,8 @@ export function InstallCustomSkillDialog({
                     <Alert>
                       <Sparkles className="h-4 w-4" />
                       <AlertDescription className="text-xs">
-                        This skill will be installed and available for your agents to use. You can enable
-                        or disable it anytime from the Skills Marketplace.
+                        This skill will be installed and available for your agents to use. You can
+                        enable or disable it anytime from the Skills Marketplace.
                       </AlertDescription>
                     </Alert>
                   </div>

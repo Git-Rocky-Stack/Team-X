@@ -62,16 +62,8 @@ export const PERMISSION_PRESETS: PermissionPreset[] = [
       denied: ['process.spawn', 'network', 'database.write'],
     },
     paths: {
-      allowed: [
-        '%%USER_DOCUMENTS%%',
-        '%%USER_DESKTOP%%',
-        '%%USER_DOWNLOADS%%',
-      ],
-      denied: [
-        '%%SYSTEM_ROOT%%',
-        '%%PROGRAM_FILES%%',
-        '%%WINDOWS%%',
-      ],
+      allowed: ['%%USER_DOCUMENTS%%', '%%USER_DESKTOP%%', '%%USER_DOWNLOADS%%'],
+      denied: ['%%SYSTEM_ROOT%%', '%%PROGRAM_FILES%%', '%%WINDOWS%%'],
     },
     warnings: [],
     recommended: true,
@@ -114,13 +106,19 @@ export function getPresetById(id: string): PermissionPreset | undefined {
  * Get recommended preset
  */
 export function getRecommendedPreset(): PermissionPreset {
-  return PERMISSION_PRESETS.find((preset) => preset.recommended)!;
+  const recommended = PERMISSION_PRESETS.find((preset) => preset.recommended);
+  if (!recommended) {
+    throw new Error('Permission presets must include one recommended preset');
+  }
+  return recommended;
 }
 
 /**
  * Get preset by level
  */
-export function getPresetByLevel(level: 'safe' | 'standard' | 'advanced'): PermissionPreset | undefined {
+export function getPresetByLevel(
+  level: 'safe' | 'standard' | 'advanced',
+): PermissionPreset | undefined {
   return PERMISSION_PRESETS.find((preset) => preset.level === level);
 }
 
@@ -185,7 +183,10 @@ export function getUserFriendlyPathName(path: string): string {
   if (expanded.includes('Documents')) return '📁 Documents';
   if (expanded.includes('Desktop')) return '🖥️ Desktop';
   if (expanded.includes('Downloads')) return '📥 Downloads';
-  if (expanded.includes(process.env.HOME || '') || expanded.includes(process.env.USERPROFILE || '')) {
+  if (
+    expanded.includes(process.env.HOME || '') ||
+    expanded.includes(process.env.USERPROFILE || '')
+  ) {
     return '🏠 User Home';
   }
 
@@ -214,7 +215,10 @@ export function getPathDescription(path: string, type: 'allowed' | 'denied'): st
 /**
  * Validate if a preset is safe for a given use case
  */
-export function isPresetSafeForUseCase(presetId: string, useCase: 'development' | 'production' | 'testing'): boolean {
+export function isPresetSafeForUseCase(
+  presetId: string,
+  useCase: 'development' | 'production' | 'testing',
+): boolean {
   const preset = getPresetById(presetId);
   if (!preset) return false;
 
@@ -233,14 +237,20 @@ export function isPresetSafeForUseCase(presetId: string, useCase: 'development' 
 /**
  * Get preset recommendation based on user experience
  */
-export function getRecommendedPresetForUser(experience: 'beginner' | 'intermediate' | 'advanced'): PermissionPreset {
+export function getRecommendedPresetForUser(
+  experience: 'beginner' | 'intermediate' | 'advanced',
+): PermissionPreset {
   switch (experience) {
-    case 'beginner':
-      return getPresetById('safe')!;
+    case 'beginner': {
+      const safePreset = getPresetById('safe');
+      return safePreset ?? getRecommendedPreset();
+    }
     case 'intermediate':
       return getRecommendedPreset();
-    case 'advanced':
-      return getPresetById('advanced')!;
+    case 'advanced': {
+      const advancedPreset = getPresetById('advanced');
+      return advancedPreset ?? getRecommendedPreset();
+    }
     default:
       return getRecommendedPreset();
   }

@@ -320,6 +320,7 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
     budgetGovernance,
     artifactService,
     bus,
+    agentWakeupQueue,
     now = () => Date.now(),
     setInterval: setIntervalImpl = setInterval,
     clearInterval: clearIntervalImpl = clearInterval,
@@ -476,10 +477,15 @@ export function createRoutineService(deps: RoutineServiceDeps): RoutineService {
             ticketId: ticketResult.ticketId,
           });
 
-          console.log(`[routines] ✅ Agent wakeup queued for ${routine.workConfig.assigneeId} - routine completed, ticket created: ${ticketResult.ticketId}`);
+          console.log(
+            `[routines] ✅ Agent wakeup queued for ${routine.workConfig.assigneeId} - routine completed, ticket created: ${ticketResult.ticketId}`,
+          );
         } catch (wakeupError) {
           // Log but don't fail the routine run if wakeup fails
-          logger?.error(`[routines] ⚠️ Failed to queue agent wakeup for ${routine.workConfig.assigneeId}:`, wakeupError);
+          logger?.error(
+            `[routines] ⚠️ Failed to queue agent wakeup for ${routine.workConfig.assigneeId}:`,
+            wakeupError,
+          );
         }
       }
 

@@ -5,11 +5,10 @@
  * with validation, testing, and clear feedback.
  */
 
-import { useState } from 'react';
 import { AlertCircle, Check, Globe, Loader2, Play, Server, Zap } from 'lucide-react';
+import { useState } from 'react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert.js';
-import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -21,10 +20,14 @@ import {
 } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
 import { Label } from '@/components/ui/label.js';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.js';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.js';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select.js';
 import { Textarea } from '@/components/ui/textarea.js';
-import { cn } from '@/lib/utils.js';
 
 interface ConnectionTestResult {
   ok: boolean;
@@ -55,7 +58,6 @@ interface InstallCustomMcpDialogProps {
 }
 
 type TransportType = 'stdio' | 'sse';
-type InstallMode = 'manual' | 'advanced';
 
 export function InstallCustomMcpDialog({
   open,
@@ -65,7 +67,6 @@ export function InstallCustomMcpDialog({
   isInstalling = false,
   isTesting = false,
 }: InstallCustomMcpDialogProps) {
-  const [mode, setMode] = useState<InstallMode>('manual');
   const [transport, setTransport] = useState<TransportType>('stdio');
   const [name, setName] = useState('');
   const [command, setCommand] = useState('npx');
@@ -76,7 +77,6 @@ export function InstallCustomMcpDialog({
   const [error, setError] = useState<string | null>(null);
 
   function resetForm() {
-    setMode('manual');
     setTransport('stdio');
     setName('');
     setCommand('npx');
@@ -201,7 +201,10 @@ export function InstallCustomMcpDialog({
 
             <div className="space-y-2">
               <Label htmlFor="mcp-transport">Transport Type</Label>
-              <Select value={transport} onValueChange={(value) => setTransport(value as TransportType)}>
+              <Select
+                value={transport}
+                onValueChange={(value) => setTransport(value as TransportType)}
+              >
                 <SelectTrigger id="mcp-transport">
                   <SelectValue />
                 </SelectTrigger>
@@ -343,9 +346,7 @@ export function InstallCustomMcpDialog({
                       .filter(Boolean)
                       .join(' ') || '(none)'}
                   </div>
-                  {envText && envText !== '{}' && (
-                    <div>Env: {envText}</div>
-                  )}
+                  {envText && envText !== '{}' && <div>Env: {envText}</div>}
                 </>
               ) : (
                 <div>URL: {url || '(not set)'}</div>

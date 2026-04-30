@@ -120,14 +120,16 @@ describe('Extensions & Authority settings shell', () => {
 
   it('renders the four control-plane cards with visible next actions', () => {
     expect(extensionsSectionSrc).toContain('Autonomy Policy');
-    expect(extensionsSectionSrc).toContain('Installed Skills');
-    expect(extensionsSectionSrc).toContain('MCP Servers');
-    expect(extensionsSectionSrc).toContain('Authority Matrix');
+    expect(extensionsSectionSrc).toContain('SkillsMarketplace');
+    expect(extensionsSectionSrc).toContain('McpMarketplace');
+    expect(extensionsSectionSrc).toContain('SimplifiedPermissions');
+    expect(extensionsSectionSrc).toContain('Advanced Authority Matrix');
     expect(extensionsSectionSrc).toContain('Install Skill');
     expect(extensionsSectionSrc).toContain('Manage Skills');
     expect(extensionsSectionSrc).toContain('data-manage-skills=""');
     expect(extensionsSectionSrc).toContain('data-skills-management-panel=""');
-    expect(extensionsSectionSrc).toContain('Import MCP');
+    expect(extensionsSectionSrc).toContain('onInstallMcp={async (templateId) =>');
+    expect(extensionsSectionSrc).toContain('installMcpTemplate.mutateAsync');
     expect(extensionsSectionSrc).toContain('Add Grant');
     expect(extensionsSectionSrc).toContain('data-authority-add-grant=""');
     expect(extensionsSectionSrc).toContain('Direct authority editor');
@@ -162,8 +164,13 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('useUpsertSkillAssignment(companyId)');
     expect(extensionsSectionSrc).toContain('useDeleteSkillAssignment(companyId)');
     expect(extensionsSectionSrc).toContain('<InstallSkillDialog');
+    expect(extensionsSectionSrc).toContain('<InstallCustomSkillDialog');
     expect(extensionsSectionSrc).toContain('useToggleMcpServer(companyId)');
+    expect(extensionsSectionSrc).toContain('useAddMcpServer(companyId)');
+    expect(extensionsSectionSrc).toContain('useInstallMcpTemplate(companyId)');
+    expect(extensionsSectionSrc).toContain('useTestMcpConnection()');
     expect(extensionsSectionSrc).toContain('<ImportMcpDialog');
+    expect(extensionsSectionSrc).toContain('<InstallCustomMcpDialog');
   });
 
   it('adds a direct authority grant dialog for capability and path resources', () => {

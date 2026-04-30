@@ -16,7 +16,7 @@
  *   await agentWakeupQueue.queueIssueAssignmentWakeup({ issueId, assigneeAgentId, contextSource });
  */
 
-import type { HeartbeatService } from './heartbeat-service.js';
+import type { HeartbeatService, WakeupContext } from './heartbeat-service.js';
 
 export interface AgentWakeupQueueDeps {
   heartbeatService: HeartbeatService;
@@ -25,6 +25,7 @@ export interface AgentWakeupQueueDeps {
 export interface AgentWakeupQueue {
   // Wake agent when issue is assigned
   queueIssueAssignmentWakeup(input: {
+    companyId: string;
     issueId: string;
     assigneeAgentId: string;
     contextSource: string;
@@ -48,7 +49,7 @@ export interface AgentWakeupQueue {
     intervalMinutes: number;
     context: {
       goalId?: string;
-      sourceKind: string;
+      sourceKind: WakeupContext['sourceKind'];
       metadata?: Record<string, unknown>;
     };
   }): Promise<string>;
@@ -74,6 +75,7 @@ export function createAgentWakeupQueue(deps: AgentWakeupQueueDeps): AgentWakeupQ
   const { heartbeatService } = deps;
 
   async function queueIssueAssignmentWakeup(input: {
+    companyId: string;
     issueId: string;
     assigneeAgentId: string;
     contextSource: string;
@@ -89,7 +91,7 @@ export function createAgentWakeupQueue(deps: AgentWakeupQueueDeps): AgentWakeupQ
       scheduledFor: new Date(), // Wake immediately
       priority: 70, // High priority for user assignments
       context: {
-        companyId: '', // Will be filled in by the caller
+        companyId: input.companyId,
         goalId: input.goalId,
         projectId: input.projectId,
         sourceKind: 'manual_assignment' as const,
@@ -136,7 +138,7 @@ export function createAgentWakeupQueue(deps: AgentWakeupQueueDeps): AgentWakeupQ
     intervalMinutes: number;
     context: {
       goalId?: string;
-      sourceKind: string;
+      sourceKind: WakeupContext['sourceKind'];
       metadata?: Record<string, unknown>;
     };
   }): Promise<string> {
@@ -152,7 +154,7 @@ export function createAgentWakeupQueue(deps: AgentWakeupQueueDeps): AgentWakeupQ
       context: {
         companyId: input.companyId,
         goalId: input.context.goalId,
-        sourceKind: input.context.sourceKind as any,
+        sourceKind: input.context.sourceKind,
         metadata: input.context.metadata,
       },
     });

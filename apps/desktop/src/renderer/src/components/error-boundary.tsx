@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button.js';
@@ -35,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error('Error Boundary caught an error:', error, errorInfo);
     this.setState({
       error,
@@ -43,7 +44,7 @@ export class ErrorBoundary extends Component<Props, State> {
     });
   }
 
-  render(): ReactNode {
+  override render(): ReactNode {
     if (this.state.hasError) {
       // Custom fallback UI can be provided via props
       if (this.props.fallback) {
@@ -56,19 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <Card className="w-full max-w-2xl border-destructive/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
+                <AlertTriangle className="h-5 w-5" aria-hidden="true" />
                 Component Error
               </CardTitle>
               <CardDescription>
@@ -95,11 +84,7 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
 
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.location.reload()}
-                >
+                <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
                   Reload Application
                 </Button>
                 <Button
@@ -114,8 +99,8 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                <strong>Debug info:</strong> Check the browser console (F12 → Console) for
-                more details. Open an issue with the error message and component stack above.
+                <strong>Debug info:</strong> Check the browser console (F12 → Console) for more
+                details. Open an issue with the error message and component stack above.
               </div>
             </CardContent>
           </Card>

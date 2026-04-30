@@ -74,6 +74,7 @@ import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
 import { dbPath, userDataDir } from './db/paths.js';
+import { createAgentWakeupRequestsRepo } from './db/repos/agent-wakeup-requests.js';
 import { createArtifactsRepo } from './db/repos/artifacts.js';
 import { createAuditRepo } from './db/repos/audit.js';
 import { createBudgetsRepo } from './db/repos/budgets.js';
@@ -121,7 +122,9 @@ import { buildCopilotHandlers } from './ipc/copilot-handlers.js';
 import { HUMAN_USER_ID, createIpcHandlers } from './ipc/handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
+import { createAgentWakeupQueue } from './orchestrator/agent-wakeup-queue.js';
 import { createEventBus } from './orchestrator/event-bus.js';
+import { createHeartbeatService } from './orchestrator/heartbeat-service.js';
 import {
   type Orchestrator,
   type ResolveProvider,
@@ -191,9 +194,6 @@ import {
   type RoutineServiceCreateTicketInput,
   createRoutineService,
 } from './services/routine-service.js';
-import { createHeartbeatService } from './orchestrator/heartbeat-service.js';
-import { createAgentWakeupQueue } from './orchestrator/agent-wakeup-queue.js';
-import { createAgentWakeupRequestsRepo } from './db/repos/agent-wakeup-requests.js';
 import { createRunCheckpointService } from './services/run-checkpoint-service.js';
 import { createRuntimeAuditNormalizer } from './services/runtime-audit-normalizer-service.js';
 import { createRuntimeOperationsService } from './services/runtime-operations-service.js';
@@ -554,8 +554,6 @@ app
       mcpServersRepo,
     });
     const toolCallsRepo = createToolCallsRepo(db);
-    // Note: ticketsRepo will be created later after agentWakeupQueueInstance is available
-    let ticketsRepo: ReturnType<typeof createTicketsRepo>;
     const goalsRepo = createGoalsRepo(db);
     const projectsRepo = createProjectsRepo(db);
     const meetingsRepo = createMeetingsRepo(db);
@@ -686,6 +684,21 @@ app
       runtimeSessionService,
       ticketCheckoutsRepo,
     });
+
+    // Proactive execution bridge: wake agents when routines complete or
+    // tickets are assigned, then let the heartbeat loop process due work.
+    const agentWakeupRequestsRepo = createAgentWakeupRequestsRepo(db);
+    const heartbeatServiceInstance = createHeartbeatService({
+      agentWakeupRequestsRepo,
+      employeesRepo,
+      bus,
+    });
+    const agentWakeupQueueInstance = createAgentWakeupQueue({
+      heartbeatService: heartbeatServiceInstance,
+    });
+    heartbeatServiceInstance.start(60 * 1000);
+    const ticketsRepo = createTicketsRepo(db, agentWakeupQueueInstance);
+
     budgetGovernanceServiceInstance = createBudgetGovernanceService({
       budgetsRepo,
       employeesRepo,
@@ -715,27 +728,6 @@ app
       authorityRepo,
       artifactService,
     });
-
-    // ✅ HEARTBEAT SERVICE: Proactive agent execution engine
-    // This transforms Team-X from reactive to proactive by automatically
-    // waking agents when routines complete or tickets are assigned
-    // Must be initialized BEFORE routineService and ticketsRepo
-    const agentWakeupRequestsRepo = createAgentWakeupRequestsRepo(db);
-    const heartbeatServiceInstance = createHeartbeatService({
-      agentWakeupRequestsRepo,
-      employeesRepo,
-      bus,
-    });
-    const agentWakeupQueueInstance = createAgentWakeupQueue({
-      heartbeatService: heartbeatServiceInstance,
-    });
-
-    // Start heartbeat processing loop (1 minute intervals)
-    heartbeatServiceInstance.start(60 * 1000);
-
-    // ✅ TICKETS REPO: Now can be created with agent wakeup support
-    // Must be after agentWakeupQueueInstance is available
-    ticketsRepo = createTicketsRepo(db, agentWakeupQueueInstance);
 
     let routineTicketCreator:
       | ((input: RoutineServiceCreateTicketInput) => Promise<{ ticketId: string }>)

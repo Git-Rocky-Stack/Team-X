@@ -364,7 +364,10 @@ export function getMcpCategories(): McpCategory[] {
  * Auto-configure filesystem MCP for the current OS
  */
 export function autoConfigureFilesystemMcp(): BuiltInMcpTemplate {
-  const template = getMcpTemplateById('filesystem-local')!;
+  const template = getMcpTemplateById('filesystem-local');
+  if (!template) {
+    throw new Error('Built-in filesystem MCP template is missing');
+  }
   const os = process.platform || 'unknown';
   let allowedPath = '';
 

@@ -13,7 +13,7 @@
  * - Track wakeup history and execution results
  */
 
-import { and, asc, desc, eq, gt, isNull, lte } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNotNull, lte, or } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
@@ -29,7 +29,7 @@ export interface CreateAgentWakeupInput {
   triggerId?: string;
   priority?: number;
   scheduledFor?: number;
-  context?: Record<string, unknown>;
+  context?: unknown;
 }
 
 export interface UpdateAgentWakeupInput {
@@ -118,8 +118,8 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
           and(
             eq(agentWakeupRequests.companyId, companyId),
             eq(agentWakeupRequests.status, 'pending'),
-            lte(agentWakeupRequests.scheduledFor, now)
-          )
+            lte(agentWakeupRequests.scheduledFor, now),
+          ),
         )
         .orderBy(desc(agentWakeupRequests.priority), asc(agentWakeupRequests.scheduledFor))
         .all();
@@ -137,10 +137,10 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
           and(
             eq(agentWakeupRequests.companyId, companyId),
             eq(agentWakeupRequests.status, 'failed'),
-            eq(agentWakeupRequests.completedAt), // Ensure completedAt is set (not null)
+            isNotNull(agentWakeupRequests.completedAt),
             gt(agentWakeupRequests.attemptCount, 0), // Has been attempted at least once
-            lte(agentWakeupRequests.nextRetryAt, now) // Retry time has passed
-          )
+            lte(agentWakeupRequests.nextRetryAt, now), // Retry time has passed
+          ),
         )
         .orderBy(asc(agentWakeupRequests.nextRetryAt))
         .all();
@@ -156,8 +156,8 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
         .where(
           and(
             eq(agentWakeupRequests.companyId, companyId),
-            eq(agentWakeupRequests.triggerType, triggerType)
-          )
+            eq(agentWakeupRequests.triggerType, triggerType),
+          ),
         )
         .orderBy(desc(agentWakeupRequests.scheduledFor))
         .all();
@@ -189,10 +189,7 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
         updates.resultJson = JSON.stringify(input.result);
       }
 
-      db.update(agentWakeupRequests)
-        .set(updates)
-        .where(eq(agentWakeupRequests.id, id))
-        .run();
+      db.update(agentWakeupRequests).set(updates).where(eq(agentWakeupRequests.id, id)).run();
     },
 
     /**
@@ -230,7 +227,7 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
      * Mark a wakeup request as failed and schedule retry with exponential backoff.
      * Returns the next retry delay in milliseconds, or null if max attempts reached.
      */
-    markAsFailedWithRetry(id: string, error: string, maxAttempts: number = 4): number | null {
+    markAsFailedWithRetry(id: string, error: string, maxAttempts = 4): number | null {
       const existing = this.getById(id);
       if (!existing) return null;
 
@@ -249,7 +246,9 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
       // Calculate exponential backoff with jitter
       // Delays: 2min, 10min, 30min, 2hr
       const baseDelays = [2 * 60 * 1000, 10 * 60 * 1000, 30 * 60 * 1000, 2 * 60 * 60 * 1000];
-      const baseDelay = baseDelays[Math.min(attemptCount - 1, baseDelays.length - 1)];
+      const defaultBaseDelay = 2 * 60 * 1000;
+      const baseDelay =
+        baseDelays[Math.min(attemptCount - 1, baseDelays.length - 1)] ?? defaultBaseDelay;
       const jitter = (Math.random() - 0.5) * 0.5 * baseDelay; // ±25% jitter
       const retryDelay = Math.max(baseDelay + jitter, 60 * 1000); // At least 1 minute
       const nextRetryAt = Date.now() + retryDelay;
@@ -289,11 +288,38 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
         .where(
           and(
             eq(agentWakeupRequests.status, 'completed'),
-            lte(agentWakeupRequests.createdAt, beforeTimestamp)
-          )
+            lte(agentWakeupRequests.createdAt, beforeTimestamp),
+          ),
         )
-        .run();
+        .run() as unknown as { changes: number };
       return result.changes;
+    },
+
+    /**
+     * Return companies that currently have due wakeup work. The heartbeat
+     * loop uses this so it can stay repo-driven instead of depending on
+     * the broader companies table.
+     */
+    listCompaniesWithDueWork(): string[] {
+      const now = Date.now();
+      const rows = db
+        .select({ companyId: agentWakeupRequests.companyId })
+        .from(agentWakeupRequests)
+        .where(
+          or(
+            and(
+              eq(agentWakeupRequests.status, 'pending'),
+              lte(agentWakeupRequests.scheduledFor, now),
+            ),
+            and(
+              eq(agentWakeupRequests.status, 'failed'),
+              isNotNull(agentWakeupRequests.nextRetryAt),
+              lte(agentWakeupRequests.nextRetryAt, now),
+            ),
+          ),
+        )
+        .all();
+      return Array.from(new Set(rows.map((row) => row.companyId)));
     },
 
     /**
@@ -309,7 +335,10 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
         .select()
         .from(agentWakeupRequests)
         .where(
-          and(eq(agentWakeupRequests.companyId, companyId), eq(agentWakeupRequests.status, 'pending'))
+          and(
+            eq(agentWakeupRequests.companyId, companyId),
+            eq(agentWakeupRequests.status, 'pending'),
+          ),
         )
         .all().length;
 
@@ -317,7 +346,10 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
         .select()
         .from(agentWakeupRequests)
         .where(
-          and(eq(agentWakeupRequests.companyId, companyId), eq(agentWakeupRequests.status, 'processing'))
+          and(
+            eq(agentWakeupRequests.companyId, companyId),
+            eq(agentWakeupRequests.status, 'processing'),
+          ),
         )
         .all().length;
 
@@ -325,7 +357,10 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
         .select()
         .from(agentWakeupRequests)
         .where(
-          and(eq(agentWakeupRequests.companyId, companyId), eq(agentWakeupRequests.status, 'completed'))
+          and(
+            eq(agentWakeupRequests.companyId, companyId),
+            eq(agentWakeupRequests.status, 'completed'),
+          ),
         )
         .all().length;
 
@@ -333,7 +368,10 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
         .select()
         .from(agentWakeupRequests)
         .where(
-          and(eq(agentWakeupRequests.companyId, companyId), eq(agentWakeupRequests.status, 'failed'))
+          and(
+            eq(agentWakeupRequests.companyId, companyId),
+            eq(agentWakeupRequests.status, 'failed'),
+          ),
         )
         .all().length;
 
@@ -341,3 +379,5 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
     },
   };
 }
+
+export type AgentWakeupRequestsRepo = ReturnType<typeof createAgentWakeupRequestsRepo>;
