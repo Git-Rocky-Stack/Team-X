@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useEmployees } from '@/hooks/use-employees.js';
+import { cn } from '@/lib/utils.js';
 import {
   useAuthorityGrants,
   useAuthorityRequests,
