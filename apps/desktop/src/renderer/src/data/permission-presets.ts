@@ -5,6 +5,14 @@
  * that work for 90% of users while keeping advanced options accessible.
  */
 
+import {
+  getRendererHomeDirectory,
+  getRendererKnownPath,
+  getRendererPlatform,
+  getRendererProgramFiles,
+  getRendererSystemRoot,
+} from '@/lib/renderer-environment.js';
+
 export interface PermissionPreset {
   id: string;
   name: string;
@@ -126,47 +134,24 @@ export function getPresetByLevel(
  * Expand path placeholders to actual paths
  */
 export function expandPathPlaceholders(path: string): string {
-  const os = process.platform || 'unknown';
+  const os = getRendererPlatform();
+  const homeDirectory = getRendererHomeDirectory(os);
 
   // User directory placeholders
-  let expanded = path.replace(/%%USER_HOME%%/g, process.env.HOME || process.env.USERPROFILE || '');
-  expanded = expanded.replace(/%%USER_DOCUMENTS%%/g, () => {
-    if (os === 'win32') {
-      return `${process.env.USERPROFILE}\\Documents`;
-    }
-    return `${process.env.HOME}/Documents`;
-  });
-  expanded = expanded.replace(/%%USER_DESKTOP%%/g, () => {
-    if (os === 'win32') {
-      return `${process.env.USERPROFILE}\\Desktop`;
-    }
-    return `${process.env.HOME}/Desktop`;
-  });
-  expanded = expanded.replace(/%%USER_DOWNLOADS%%/g, () => {
-    if (os === 'win32') {
-      return `${process.env.USERPROFILE}\\Downloads`;
-    }
-    return `${process.env.HOME}/Downloads`;
-  });
+  let expanded = path.replace(/%%USER_HOME%%/g, homeDirectory);
+  expanded = expanded.replace(/%%USER_DOCUMENTS%%/g, () => getRendererKnownPath('documents', os));
+  expanded = expanded.replace(/%%USER_DESKTOP%%/g, () => getRendererKnownPath('desktop', os));
+  expanded = expanded.replace(/%%USER_DOWNLOADS%%/g, () => getRendererKnownPath('downloads', os));
 
   // System placeholders
   expanded = expanded.replace(/%%SYSTEM_ROOT%%/g, () => {
-    if (os === 'win32') {
-      return process.env.SystemRoot || 'C:\\Windows';
-    }
-    return '/system';
+    return getRendererSystemRoot(os);
   });
   expanded = expanded.replace(/%%PROGRAM_FILES%%/g, () => {
-    if (os === 'win32') {
-      return process.env.ProgramFiles || 'C:\\Program Files';
-    }
-    return '/usr/bin';
+    return getRendererProgramFiles(os);
   });
   expanded = expanded.replace(/%%WINDOWS%%/g, () => {
-    if (os === 'win32') {
-      return process.env.WINDIR || 'C:\\Windows';
-    }
-    return '/windows';
+    return getRendererSystemRoot(os);
   });
 
   return expanded;
@@ -177,16 +162,21 @@ export function expandPathPlaceholders(path: string): string {
  */
 export function getUserFriendlyPathName(path: string): string {
   const expanded = expandPathPlaceholders(path);
-  const os = process.platform || 'unknown';
+  const os = getRendererPlatform();
+  const upperPath = path.toUpperCase();
+  const homeDirectory = getRendererHomeDirectory(os);
 
   // User directories
-  if (expanded.includes('Documents')) return '📁 Documents';
-  if (expanded.includes('Desktop')) return '🖥️ Desktop';
-  if (expanded.includes('Downloads')) return '📥 Downloads';
-  if (
-    expanded.includes(process.env.HOME || '') ||
-    expanded.includes(process.env.USERPROFILE || '')
-  ) {
+  if (upperPath.includes('USER_DOCUMENTS') || expanded.includes('Documents')) {
+    return '📁 Documents';
+  }
+  if (upperPath.includes('USER_DESKTOP') || expanded.includes('Desktop')) {
+    return '🖥️ Desktop';
+  }
+  if (upperPath.includes('USER_DOWNLOADS') || expanded.includes('Downloads')) {
+    return '📥 Downloads';
+  }
+  if (upperPath.includes('USER_HOME') || expanded.includes(homeDirectory)) {
     return '🏠 User Home';
   }
 

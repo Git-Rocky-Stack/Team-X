@@ -5,6 +5,8 @@
  * Each template includes metadata, configuration, and usage information.
  */
 
+import { getRendererKnownPath } from '@/lib/renderer-environment.js';
+
 export interface BuiltInMcpTemplate {
   id: string;
   name: string;
@@ -368,23 +370,7 @@ export function autoConfigureFilesystemMcp(): BuiltInMcpTemplate {
   if (!template) {
     throw new Error('Built-in filesystem MCP template is missing');
   }
-  const os = process.platform || 'unknown';
-  let allowedPath = '';
-
-  // Set safe default paths based on OS
-  switch (os) {
-    case 'win32':
-      allowedPath = `${process.env.USERPROFILE}\\Documents`;
-      break;
-    case 'darwin':
-      allowedPath = `${process.env.HOME}/Documents`;
-      break;
-    case 'linux':
-      allowedPath = `${process.env.HOME}/Documents`;
-      break;
-    default:
-      allowedPath = process.cwd();
-  }
+  const allowedPath = getRendererKnownPath('documents');
 
   // Update the args with the OS-specific path
   const updatedArgs = ['-y', '@modelcontextprotocol/server-filesystem', allowedPath];
