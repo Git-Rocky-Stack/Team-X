@@ -100,28 +100,24 @@ export function ExtensionsSection() {
   const skillAssignments = skillAssignmentsQuery.data ?? [];
   const employees = employeesQuery.data ?? [];
   const mcpExtensionsByRuntimeRefId = new Map(
-    extensions.flatMap((extension) =>
+    (extensions ?? []).flatMap((extension) =>
       extension.kind === 'mcp' && typeof extension.runtimeRefId === 'string'
         ? ([[extension.runtimeRefId, extension]] as const)
         : [],
     ),
   );
   const effectiveAuthorityQuery = useEffectiveAuthority(companyId, previewEmployeeId);
-  const employeeNameById = new Map(employees.map((employee) => [employee.id, employee.name]));
-  const extensionNameById = new Map(extensions.map((extension) => [extension.id, extension.name]));
+  const employeeNameById = new Map((employees ?? []).map((employee) => [employee.id, employee.name]));
+  const extensionNameById = new Map((extensions ?? []).map((extension) => [extension.id, extension.name]));
   const workspaceSkillAssignments = new Map(
-    skillAssignments
-      .filter((assignment) => assignment.employeeId === null)
-      .map((assignment) => [assignment.extensionId, assignment]),
+    (skillAssignments ?? []).filter((assignment) => assignment.employeeId === null).map((assignment) => [assignment.extensionId, assignment]),
   );
   const installedMcpServers = (mcpQuery.data ?? []).filter((server) => server.companyId !== null);
   const builtInMcpTemplateCount =
     mcpTemplatesQuery.data?.length ??
-    (mcpQuery.data ?? []).filter((server) => server.companyId === null).length;
+    ((mcpQuery.data ?? []).filter((server) => server.companyId === null)).length;
   const employeeSkillAssignments = new Map(
-    skillAssignments
-      .filter((assignment) => assignment.employeeId !== null)
-      .map((assignment) => [`${assignment.extensionId}:${assignment.employeeId}`, assignment]),
+    (skillAssignments ?? []).filter((assignment) => assignment.employeeId !== null).map((assignment) => [`${assignment.extensionId}:${assignment.employeeId}`, assignment]),
   );
 
   useEffect(() => {
