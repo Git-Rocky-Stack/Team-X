@@ -66,6 +66,7 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
+  allowElevation: true
   deleteAppDataOnUninstall: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
@@ -79,6 +80,7 @@ nsis:
   uninstallUrlInfoAbout: https://github.com/Git-Rocky-Stack/
   uninstallUrlReadme: https://github.com/Git-Rocky-Stack/
   uninstallUrlUpdateInfo: https://github.com/Git-Rocky-Stack/
+  runAfterFinish: false
 
 # ─── macOS ────────────────────────────────────────────────────────────
 mac:

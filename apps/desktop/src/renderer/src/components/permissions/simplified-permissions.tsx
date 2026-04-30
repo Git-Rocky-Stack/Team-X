@@ -79,10 +79,9 @@ export function SimplifiedPermissions({
                     <div
                       className={cn(
                         'flex items-start gap-3 p-4 rounded-lg border-2 transition-all cursor-pointer',
-                        isSelected
-                          ? `${preset.color === 'green' && 'border-green-500 bg-green-50/5 dark:bg-green-950/10'}`
-                          : `${preset.color === 'blue' && 'border-blue-500 bg-blue-50/5 dark:bg-blue-950/10'}`
-                          : `${preset.color === 'orange' && 'border-orange-500 bg-orange-50/5 dark:bg-orange-950/10'}`,
+                        isSelected && preset.color === 'green' && 'border-green-500 bg-green-50/5 dark:bg-green-950/10',
+                        isSelected && preset.color === 'blue' && 'border-blue-500 bg-blue-50/5 dark:bg-blue-950/10',
+                        isSelected && preset.color === 'orange' && 'border-orange-500 bg-orange-50/5 dark:bg-orange-950/10',
                         !isSelected && 'border-border/70 hover:border-border/70'
                       )}
                     >
