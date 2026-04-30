@@ -14,6 +14,8 @@ import { useEffect } from 'react';
 
 import { useAppStore } from '@/store/app-store.js';
 
+import { ErrorBoundary } from '@/components/error-boundary.js';
+
 import { AgenticSection } from './agentic-section.js';
 import { BackupSection } from './backup-section.js';
 import { ConcurrencySection } from './concurrency-section.js';
@@ -51,27 +53,53 @@ export function SettingsView() {
         </p>
       </div>
       <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-6">
-        <UpdaterSection />
-        <RuntimeSection />
-        <PrivacySection />
-        <RagSection />
-        <ConcurrencySection />
+        <ErrorBoundary componentName="UpdaterSection">
+          <UpdaterSection />
+        </ErrorBoundary>
+        <ErrorBoundary componentName="RuntimeSection">
+          <RuntimeSection />
+        </ErrorBoundary>
+        <ErrorBoundary componentName="PrivacySection">
+          <PrivacySection />
+        </ErrorBoundary>
+        <ErrorBoundary componentName="RagSection">
+          <RagSection />
+        </ErrorBoundary>
+        <ErrorBoundary componentName="ConcurrencySection">
+          <ConcurrencySection />
+        </ErrorBoundary>
         <section data-settings-section="extensions">
-          <ExtensionsSection />
+          <ErrorBoundary componentName="ExtensionsSection">
+            <ExtensionsSection />
+          </ErrorBoundary>
         </section>
-        <AgenticSection />
-        <PlannerSection />
+        <ErrorBoundary componentName="AgenticSection">
+          <AgenticSection />
+        </ErrorBoundary>
+        <ErrorBoundary componentName="PlannerSection">
+          <PlannerSection />
+        </ErrorBoundary>
         <section data-settings-section="portability">
-          <PortabilitySection />
+          <ErrorBoundary componentName="PortabilitySection">
+            <PortabilitySection />
+          </ErrorBoundary>
         </section>
         <section data-settings-section="memory">
-          <MemorySection />
+          <ErrorBoundary componentName="MemorySection">
+            <MemorySection />
+          </ErrorBoundary>
         </section>
-        <CopilotSection />
+        <ErrorBoundary componentName="CopilotSection">
+          <CopilotSection />
+        </ErrorBoundary>
         <section data-settings-section="providers">
-          <ProvidersSection />
+          <ErrorBoundary componentName="ProvidersSection">
+            <ProvidersSection />
+          </ErrorBoundary>
         </section>
-        <BackupSection />
+        <ErrorBoundary componentName="BackupSection">
+          <BackupSection />
+        </ErrorBoundary>
       </div>
     </div>
   );

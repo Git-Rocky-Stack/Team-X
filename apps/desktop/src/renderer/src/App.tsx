@@ -27,6 +27,7 @@ import { TelemetryView } from './features/telemetry/telemetry-view.js';
 import { TicketsView } from './features/tickets/tickets-view.js';
 import { UserGuideView } from './features/user-guide/user-guide-view.js';
 import { VaultView } from './features/vault/vault-view.js';
+import { ErrorBoundary } from './components/error-boundary.js';
 
 /**
  * Root application component. Phase 3 expands routing to all top-level
@@ -187,7 +188,11 @@ export default function App() {
       case 'user-guide':
         return <UserGuideView company={activeCompany} employees={employees} />;
       case 'settings':
-        return <SettingsView />;
+        return (
+          <ErrorBoundary componentName="SettingsView">
+            <SettingsView />
+          </ErrorBoundary>
+        );
       default:
         return null;
     }
