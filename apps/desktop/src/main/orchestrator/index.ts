@@ -62,13 +62,19 @@ import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { FinishRunInput, StartRunInput } from '../db/repos/runs.js';
 import type { GetOrCreateEmployeeDmThreadInput, ThreadRow } from '../db/repos/threads.js';
 
-import { type EnqueueAgentReplyFn, buildBuiltInTools } from './built-in-tools.js';
+import {
+  type EnqueueAgentReplyFn,
+  type MaterializeColleagueAssignmentInput,
+  buildBuiltInTools,
+} from './built-in-tools.js';
 import type { EventBus } from './event-bus.js';
 import { type CostCalculator, runAgent } from './run-agent.js';
 
 // ---------------------------------------------------------------------------
 // Repo shapes
 // ---------------------------------------------------------------------------
+
+const HUMAN_USER_ID = 'rocky';
 
 /**
  * Narrowed repo interfaces. Each one declares exactly the methods the
@@ -98,16 +104,55 @@ export interface OrchestratorCompaniesRepo {
 
 export interface OrchestratorThreadsRepo {
   getById(id: string): ThreadRow | null;
+  create(input: { companyId: string; kind: 'ticket'; createdBy: string; subject?: string }): string;
+  addMember(input: {
+    threadId: string;
+    memberId: string;
+    memberKind: 'user' | 'employee';
+    roleInThread?: string;
+  }): void;
+  listMembers(threadId: string): Array<{
+    threadId: string;
+    memberId: string;
+    memberKind: 'user' | 'employee';
+    roleInThread: string | null;
+  }>;
   getOrCreateEmployeeDmThread(input: GetOrCreateEmployeeDmThreadInput): string;
   updateLastMessageAt(threadId: string, timestamp: number): void;
 }
 
 export interface OrchestratorTicketsRepo {
+  create(input: {
+    companyId: string;
+    title: string;
+    description?: string;
+    priority?: string;
+    status?: string;
+    assigneeId?: string | null;
+    reporterId: string;
+    reporterKind?: string;
+    labelsJson?: string;
+    dependenciesJson?: string;
+    slaHours?: number | null;
+    dueAt?: number | null;
+    threadId?: string | null;
+    closedAt?: number | null;
+  }): string;
+  getById(id: string): {
+    id: string;
+    companyId: string;
+    title: string;
+    description: string;
+    assigneeId: string | null;
+    threadId: string | null;
+  } | null;
   getByThreadId(threadId: string): {
     id: string;
     companyId: string;
     assigneeId: string | null;
   } | null;
+  assign(id: string, assigneeId: string): void;
+  setThreadId(id: string, threadId: string): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -1148,6 +1193,155 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     };
   }
 
+  function ensureThreadMember(args: {
+    threadId: string;
+    memberId: string;
+    memberKind: 'user' | 'employee';
+  }): void {
+    const alreadyMember = threadsRepo
+      .listMembers(args.threadId)
+      .some(
+        (member) =>
+          member.memberId === args.memberId && member.memberKind === args.memberKind,
+      );
+    if (alreadyMember) return;
+    threadsRepo.addMember({
+      threadId: args.threadId,
+      memberId: args.memberId,
+      memberKind: args.memberKind,
+    });
+  }
+
+  async function materializeColleagueAssignment(
+    args: MaterializeColleagueAssignmentInput,
+  ): Promise<{ ticketId: string; ticketThreadId: string; triggerMessageId: string } | null> {
+    if (!ticketsRepo) return null;
+
+    const sender = employeesRepo.getById(args.senderEmployeeId);
+    const recipient = employeesRepo.getById(args.recipientEmployeeId);
+    if (!sender || sender.companyId !== args.companyId) {
+      throw new Error(`sender "${args.senderEmployeeId}" is not available in this company`);
+    }
+    if (!recipient || recipient.companyId !== args.companyId) {
+      throw new Error(`recipient "${args.recipientEmployeeId}" is not available in this company`);
+    }
+
+    const ticketId = ticketsRepo.create({
+      companyId: args.companyId,
+      title: args.ticketTitle,
+      description:
+        `Delegated from ${sender.name} to ${recipient.name} via agent-to-agent chat.\n\n` +
+        args.message.trim(),
+      priority: args.priority,
+      assigneeId: recipient.id,
+      reporterId: sender.id,
+      reporterKind: 'employee',
+      labelsJson: JSON.stringify(args.labels),
+    });
+
+    ticketsRepo.assign(ticketId, recipient.id);
+
+    const ticket = ticketsRepo.getById(ticketId);
+    if (!ticket || ticket.companyId !== args.companyId) {
+      throw new Error(`created ticket "${ticketId}" could not be verified`);
+    }
+
+    let ticketThreadId = ticket.threadId;
+    if (!ticketThreadId) {
+      ticketThreadId = threadsRepo.create({
+        companyId: args.companyId,
+        kind: 'ticket',
+        subject: ticket.title,
+        createdBy: sender.id,
+      });
+      ticketsRepo.setThreadId(ticketId, ticketThreadId);
+    }
+
+    ensureThreadMember({ threadId: ticketThreadId, memberId: HUMAN_USER_ID, memberKind: 'user' });
+    ensureThreadMember({ threadId: ticketThreadId, memberId: sender.id, memberKind: 'employee' });
+    ensureThreadMember({
+      threadId: ticketThreadId,
+      memberId: recipient.id,
+      memberKind: 'employee',
+    });
+
+    const materializedAt = now?.() ?? Date.now();
+    const triggerMessageId = messagesRepo.append({
+      threadId: ticketThreadId,
+      authorId: sender.id,
+      authorKind: 'employee',
+      isAgentInitiated: true,
+      content:
+        `Delegated by ${sender.name}: **${ticket.title}**\n\n` +
+        `${args.message.trim()}\n\n` +
+        'Begin work from this ticket. Reply with your assessment, concrete next action, blockers, and expected handoff.',
+    });
+    threadsRepo.updateLastMessageAt(ticketThreadId, materializedAt);
+
+    try {
+      bus.emit({
+        type: 'ticket.created',
+        companyId: args.companyId,
+        actorId: sender.id,
+        actorKind: 'employee',
+        payload: {
+          ticketId,
+          companyId: args.companyId,
+          title: ticket.title,
+          assigneeId: recipient.id,
+          createdAt: materializedAt,
+        },
+      });
+    } catch {
+      // Durable ticket exists; event fan-out is best-effort at this boundary.
+    }
+
+    try {
+      bus.emit({
+        type: 'ticket.assigned',
+        companyId: args.companyId,
+        actorId: sender.id,
+        actorKind: 'employee',
+        payload: {
+          ticketId,
+          companyId: args.companyId,
+          assigneeId: recipient.id,
+          previousAssigneeId: null,
+          threadId: ticketThreadId,
+          assignedAt: materializedAt,
+        },
+      });
+    } catch {
+      // Durable assignment exists; event fan-out is best-effort at this boundary.
+    }
+
+    try {
+      bus.emit({
+        type: 'task.delegated',
+        companyId: args.companyId,
+        actorId: sender.id,
+        actorKind: 'employee',
+        payload: {
+          ticketId,
+          planId: `agent-message:${args.dmMessageId}`,
+          assigneeId: recipient.id,
+          assigneeName: recipient.name,
+          parentProjectId: null,
+          threadId: ticketThreadId,
+          sourceThreadId: args.dmThreadId,
+          sourceMessageId: args.dmMessageId,
+          executionQueued: true,
+          fallbackUsed: false,
+          attemptCount: 1,
+        },
+      });
+    } catch {
+      // Durable ticket exists; event fan-out is best-effort at this boundary.
+    }
+
+    return { ticketId, ticketThreadId, triggerMessageId };
+  }
+
   async function runTurn(
     args: EnqueueChatArgs,
     provider: ResolvedProvider,
@@ -1207,6 +1401,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         messages: messagesRepo,
         threads: threadsRepo,
         enqueueAgentReply: enqueueAgentReplyInternal,
+        materializeColleagueAssignment,
         execution: buildExecutionDeps(employee, company),
       },
       args.employeeId,
@@ -1372,6 +1567,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         messages: messagesRepo,
         threads: threadsRepo,
         enqueueAgentReply: enqueueAgentReplyInternal,
+        materializeColleagueAssignment,
         execution: buildExecutionDeps(employee, company),
       },
       args.employeeId,

@@ -1,11 +1,19 @@
-
 import { useQuery } from '@tanstack/react-query';
 import {
   type AuthorityGrant,
   type AuthorityPermission,
   EXTENSIONS_AUTONOMY_MODES,
 } from '@team-x/shared-types';
-import { AlertTriangle, Bot, CheckCircle2, FolderLock, Loader2, Shield, Workflow, Zap } from 'lucide-react';
+import {
+  AlertTriangle,
+  Bot,
+  CheckCircle2,
+  FolderLock,
+  Loader2,
+  Shield,
+  Workflow,
+  Zap,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -31,12 +39,14 @@ const AUTONOMY_COPY: Record<(typeof EXTENSIONS_AUTONOMY_MODES)[number], string> 
   autonomous: 'Auto-enable and auto-grant unless a request hits a hard platform deny.',
 };
 
-function permissionVariant(
-  permission: AuthorityPermission,
-): 'default' | 'secondary' | 'destructive' {
-  if (permission === 'deny') return 'destructive';
-  if (permission === 'prompt') return 'secondary';
-  return 'default';
+function permissionBadgeClass(permission: AuthorityPermission): string {
+  if (permission === 'deny') {
+    return 'border-red-500/55 bg-red-950/70 text-red-100 shadow-[0_0_0_1px_rgba(248,113,113,0.14)]';
+  }
+  if (permission === 'prompt') {
+    return 'border-amber-500/55 bg-amber-950/70 text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.12)]';
+  }
+  return 'border-brand-500/65 bg-brand-900/75 text-red-50 shadow-[0_0_0_1px_rgba(170,32,36,0.2)]';
 }
 
 function renderAuthorityScope(
@@ -200,11 +210,15 @@ export function ExtensionsSection() {
                         <>
                           <div className="rounded bg-muted/30 px-2 py-2 text-center">
                             <p className="text-[10px] uppercase text-muted-foreground">Active</p>
-                            <p className="text-base font-semibold">{proactiveStateQuery.data.activeWork}</p>
+                            <p className="text-base font-semibold">
+                              {proactiveStateQuery.data.activeWork}
+                            </p>
                           </div>
                           <div className="rounded bg-muted/30 px-2 py-2 text-center">
                             <p className="text-[10px] uppercase text-muted-foreground">Queued</p>
-                            <p className="text-base font-semibold">{proactiveStateQuery.data.queuedWork}</p>
+                            <p className="text-base font-semibold">
+                              {proactiveStateQuery.data.queuedWork}
+                            </p>
                           </div>
                           <Button
                             variant="outline"
@@ -424,7 +438,7 @@ export function ExtensionsSection() {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <Badge variant={permissionVariant(grant.permission)}>
+                      <Badge variant="outline" className={permissionBadgeClass(grant.permission)}>
                         {grant.permission}
                       </Badge>
                       <Button

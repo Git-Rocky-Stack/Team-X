@@ -76,6 +76,16 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('Remove');
   });
 
+  it('keeps active authority permission badges visibly color-coded on AMOLED settings', () => {
+    expect(extensionsSectionSrc).toContain('function permissionBadgeClass(');
+    expect(extensionsSectionSrc).toContain('border-brand-500/65 bg-brand-900/75 text-red-50');
+    expect(extensionsSectionSrc).toContain('border-red-500/55 bg-red-950/70 text-red-100');
+    expect(extensionsSectionSrc).toContain('border-amber-500/55 bg-amber-950/70 text-amber-100');
+    expect(extensionsSectionSrc).toContain(
+      '<Badge variant="outline" className={permissionBadgeClass(grant.permission)}>',
+    );
+  });
+
   it('does not mount the removed marketplace or simplified permission components', () => {
     expect(extensionsSectionSrc).not.toContain('SkillsMarketplace');
     expect(extensionsSectionSrc).not.toContain('McpMarketplace');

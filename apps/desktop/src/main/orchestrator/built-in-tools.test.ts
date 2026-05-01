@@ -15,6 +15,7 @@ import {
   buildBuiltInTools,
   buildListColleaguesTool,
   buildSendMessageTool,
+  classifyColleagueAssignment,
 } from './built-in-tools.js';
 import type { EventBus } from './event-bus.js';
 
@@ -81,6 +82,11 @@ function makeDeps(): {
   };
 
   const enqueueAgentReply: EnqueueAgentReplyFn = vi.fn().mockResolvedValue(undefined);
+  const materializeColleagueAssignment = vi.fn().mockResolvedValue({
+    ticketId: 'ticket-1',
+    ticketThreadId: 'ticket-thread-1',
+    triggerMessageId: 'ticket-message-1',
+  });
 
   const bus = {
     emit: vi.fn().mockReturnValue({
@@ -96,7 +102,14 @@ function makeDeps(): {
     replaySince: vi.fn().mockReturnValue([]),
   } as unknown as EventBus;
 
-  const deps: BuiltInToolDeps = { bus, employees, messages, threads, enqueueAgentReply };
+  const deps: BuiltInToolDeps = {
+    bus,
+    employees,
+    messages,
+    threads,
+    enqueueAgentReply,
+    materializeColleagueAssignment,
+  };
 
   return { deps, employees, messages, threads, enqueueAgentReply, bus };
 }
@@ -179,6 +192,44 @@ describe('buildSendMessageTool', () => {
       employeeId: 'emp-swe',
       triggerMessageId: 'msg-1',
     });
+    expect(deps.deps.materializeColleagueAssignment).not.toHaveBeenCalled();
+  });
+
+  it('materializes action-oriented colleague messages into assigned ticket work', async () => {
+    const tool = buildSendMessageTool(deps.deps, 'emp-ceo', 'company-1');
+    const result = await tool.execute({
+      recipientEmployeeId: 'emp-swe',
+      message:
+        "Chase, I am assigning you to the critical project: 'Determine which product will bring $20k MRR by May 30th'. Your immediate task is to audit Agent-X, System-X, and Team-X. Report back ASAP.",
+    } as never);
+    const r = result as {
+      success: boolean;
+      ticketCreated: boolean;
+      ticketId: string;
+      workThreadId: string;
+    };
+
+    expect(r.success).toBe(true);
+    expect(r.ticketCreated).toBe(true);
+    expect(r.ticketId).toBe('ticket-1');
+    expect(r.workThreadId).toBe('ticket-thread-1');
+    expect(deps.deps.materializeColleagueAssignment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyId: 'company-1',
+        senderEmployeeId: 'emp-ceo',
+        recipientEmployeeId: 'emp-swe',
+        dmThreadId: 'thread-1',
+        dmMessageId: 'msg-1',
+        ticketTitle: 'audit Agent-X, System-X, and Team-X',
+        priority: 'critical',
+        labels: ['agent-delegated', 'agent-message', 'critical'],
+      }),
+    );
+    expect(deps.enqueueAgentReply).toHaveBeenCalledWith({
+      threadId: 'ticket-thread-1',
+      employeeId: 'emp-swe',
+      triggerMessageId: 'ticket-message-1',
+    });
   });
 
   it('rejects messaging a non-existent employee', async () => {
@@ -228,6 +279,28 @@ describe('buildListColleaguesTool', () => {
     const { deps } = makeDeps();
     const tool = buildListColleaguesTool(deps, 'emp-ceo', 'company-1');
     expect(tool.name).toBe('list_colleagues');
+  });
+});
+
+describe('classifyColleagueAssignment', () => {
+  it('detects the Iris critical-audit transcript as durable ticket work', () => {
+    const intent = classifyColleagueAssignment(
+      "Chase, I am assigning you to the critical project: 'Determine which product will bring $20k MRR by May 30th'. Your immediate task is to audit Agent-X, System-X, and Team-X. Report back ASAP.",
+    );
+
+    expect(intent).toEqual({
+      shouldCreateTicket: true,
+      ticketTitle: 'audit Agent-X, System-X, and Team-X',
+      priority: 'critical',
+      labels: ['agent-delegated', 'agent-message', 'critical'],
+    });
+  });
+
+  it('leaves casual colleague updates as chat-only messages', () => {
+    const intent = classifyColleagueAssignment('Thanks for the context. I will read it.');
+
+    expect(intent.shouldCreateTicket).toBe(false);
+    expect(intent.labels).toEqual([]);
   });
 });
 

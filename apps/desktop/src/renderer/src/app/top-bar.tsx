@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 
+import { BoardMessageQueue } from './board-message-queue.js';
+
 import { Badge } from '@/components/ui/badge.js';
 import { MissionControlRow } from '@/features/mission/mission-shell.js';
 import { WorkspaceSwitcher } from '@/features/workspace/workspace-switcher.js';
@@ -130,7 +132,8 @@ export function TopBar() {
           </MissionControlRow>
         </nav>
 
-        <div className="flex items-center gap-3 shrink-0 ml-auto">
+        <div className="flex shrink-0 items-center gap-3 ml-auto">
+          <BoardMessageQueue />
           <img
             src={brandLogo}
             alt="Strategia-X"
