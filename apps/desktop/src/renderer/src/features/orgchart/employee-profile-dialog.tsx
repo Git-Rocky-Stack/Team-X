@@ -1,4 +1,4 @@
-import type { Employee } from '@team-x/shared-types';
+import type { Employee, RuntimeProfile } from '@team-x/shared-types';
 import { useEffect, useMemo, useState } from 'react';
 
 
@@ -12,6 +12,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.js';
 import { useRoles } from '@/hooks/use-roles.js';
+import {
+  useBindEmployeeRuntimeProfile,
+  useRuntimeProfiles,
+} from '@/hooks/use-runtime-profiles.js';
 
 export interface EmployeeProfileSaveInput {
   employeeId: string;
@@ -25,6 +29,7 @@ export interface EmployeeProfileSaveInput {
 }
 
 interface EmployeeProfileDialogProps {
+  companyId: string | null;
   employee: Employee | null;
   employees: Employee[];
   currentManagerId: string | null;
@@ -38,6 +43,7 @@ const fieldClass =
   'h-10 w-full rounded-md border border-border bg-surface-100 px-3 text-sm text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30';
 
 export function EmployeeProfileDialog({
+  companyId,
   employee,
   employees,
   currentManagerId,
@@ -47,6 +53,8 @@ export function EmployeeProfileDialog({
   error,
 }: EmployeeProfileDialogProps) {
   const { roles, rolesByLevel } = useRoles();
+  const { data: runtimeProfiles = [] } = useRuntimeProfiles(companyId);
+  const bindMutation = useBindEmployeeRuntimeProfile(companyId);
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [roleId, setRoleId] = useState('');
@@ -74,6 +82,16 @@ export function EmployeeProfileDialog({
     () => roles.find((role) => role.id === roleId) ?? null,
     [roleId, roles],
   );
+
+  const currentProfileByEmployee = useMemo(() => {
+    const mapping = new Map<string, string>();
+    for (const profile of runtimeProfiles) {
+      for (const employeeId of (profile as RuntimeProfile & { boundEmployeeIds?: string[] }).boundEmployeeIds ?? []) {
+        mapping.set(employeeId, profile.id);
+      }
+    }
+    return mapping;
+  }, [runtimeProfiles]);
 
   function handleRoleChange(nextRoleId: string) {
     const nextRole = roles.find((role) => role.id === nextRoleId);
@@ -110,7 +128,7 @@ export function EmployeeProfileDialog({
       <DialogContent className="max-w-2xl" data-employee-profile-dialog="">
         <DialogHeader>
           <DialogTitle>Employee profile</DialogTitle>
-          <DialogDescription>Edit the employee record, role, and reporting line.</DialogDescription>
+          <DialogDescription>Edit the employee record, role, reporting line, and runtime profile.</DialogDescription>
         </DialogHeader>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
@@ -200,6 +218,32 @@ export function EmployeeProfileDialog({
                 placeholder="Default"
                 data-employee-profile-model=""
               />
+            </label>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2 text-sm font-medium text-foreground md:col-span-2">
+              <span>Runtime profile</span>
+              <select
+                className={fieldClass}
+                value={currentProfileByEmployee.get(employee?.id ?? '') ?? ''}
+                onChange={(event) => {
+                  if (!employee || !companyId) return;
+                  bindMutation.mutate({
+                    companyId,
+                    employeeId: employee.id,
+                    runtimeProfileId: event.target.value || null,
+                  });
+                }}
+                data-employee-profile-runtime=""
+              >
+                <option value="">No explicit runtime profile</option>
+                {runtimeProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name} ({profile.kind})
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
 

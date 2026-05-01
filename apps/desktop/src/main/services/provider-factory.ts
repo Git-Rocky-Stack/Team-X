@@ -80,6 +80,7 @@ import {
 } from '@team-x/provider-router';
 import type { ProviderConfig, ProviderKind } from '@team-x/shared-types';
 
+import type { CompaniesRepo } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
 
 import {
@@ -148,6 +149,7 @@ export interface SecretsReader {
 export interface ProviderFactoryDeps {
   providersService: ProvidersService;
   secretsStore: SecretsReader;
+  companiesRepo: CompaniesRepo;
 }
 
 export interface ProviderFactory {
@@ -175,7 +177,7 @@ export interface ProviderFactory {
 }
 
 export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactory {
-  const { providersService, secretsStore } = deps;
+  const { providersService, secretsStore, companiesRepo } = deps;
 
   /**
    * Resolve a `ProviderConfig` row to a bound `ProviderStreamFn`.
@@ -293,11 +295,34 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
    * exists AND passes `isConfigured()`. Dedupes the list so the same
    * id never gets checked twice when the employee's preferred id
    * happens to coincide with one of the defaults.
+   *
+   * Resolution order:
+   *   1. employee.providerPref (explicit employee override)
+   *   2. company.settings.defaultProviderId (company default)
+   *   3. DEFAULT_ANTHROPIC_ID (hardcoded Anthropic fallback)
+   *   4. DEFAULT_OLLAMA_LOCAL_ID (hardcoded Ollama fallback)
    */
-  async function pickConfigured(preferredId: string | null | undefined): Promise<ProviderConfig> {
+  async function pickConfigured(
+    preferredId: string | null | undefined,
+    companyId?: string
+  ): Promise<ProviderConfig> {
     const candidates: string[] = [];
     if (typeof preferredId === 'string' && preferredId.length > 0) {
       candidates.push(preferredId);
+    }
+    // Check company default provider if companyId is provided
+    if (typeof companyId === 'string') {
+      const company = companiesRepo.getById(companyId);
+      if (company) {
+        try {
+          const settings = JSON.parse(company.settingsJson || '{}');
+          if (typeof settings.defaultProviderId === 'string' && settings.defaultProviderId.length > 0) {
+            candidates.push(settings.defaultProviderId);
+          }
+        } catch {
+          // Invalid settings JSON, skip company default
+        }
+      }
     }
     candidates.push(DEFAULT_ANTHROPIC_ID, DEFAULT_OLLAMA_LOCAL_ID);
 
@@ -358,7 +383,7 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
   }
 
   async function resolveForEmployee(employee: EmployeeRow): Promise<ResolvedProvider> {
-    const provider = await pickConfigured(employee.providerPref);
+    const provider = await pickConfigured(employee.providerPref, employee.companyId);
     const model = defaultModelFor(provider, employee.modelPref);
     const stream = await buildStream(provider, model);
     return { providerName: provider.id, providerKind: provider.kind, model, stream };

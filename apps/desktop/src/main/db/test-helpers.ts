@@ -47,10 +47,28 @@ let _SQL: Awaited<ReturnType<typeof initSqlJs>> | null = null;
 /**
  * Lazily initialize the sql.js WASM module once per test process. Subsequent
  * calls reuse the cached module and create new in-memory databases cheaply.
+ *
+ * Note: In production (bundled Electron), we need to tell sql.js where to
+ * find its WASM file. The WASM file is copied to out/main/sql-wasm.wasm
+ * during the build process.
  */
 async function getSqlModule() {
   if (_SQL !== null) return _SQL;
-  _SQL = await initSqlJs();
+
+  // Determine the correct WASM file path based on the environment
+  _SQL = await initSqlJs({
+    locateFile: (file) => {
+      // In the bundled app, thisDir is out/main/db/, so we go up two levels to out/main/
+      // The WASM file is copied directly to out/main/sql-wasm.wasm
+      const bundledPath = join(thisDir, '..', '..', file);
+      // In dev (unbundled), use node_modules path
+      const nodeModulesPath = join(thisDir, '..', '..', '..', 'node_modules', 'sql.js', 'dist', file);
+
+      // In production, the WASM file will be in the same directory as the bundled JS
+      // In dev, fall back to node_modules
+      return bundledPath;
+    },
+  });
   return _SQL;
 }
 

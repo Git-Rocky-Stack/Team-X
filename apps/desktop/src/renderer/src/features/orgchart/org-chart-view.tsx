@@ -228,6 +228,7 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
       ) : null}
 
       <EmployeeProfileDialog
+        companyId={companyId}
         employee={profileTarget}
         employees={orgChart.employees}
         currentManagerId={

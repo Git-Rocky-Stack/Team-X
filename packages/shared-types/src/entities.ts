@@ -243,6 +243,10 @@ export interface CompanySettings {
   dashboardLayout?: CompanyDashboardLayoutSettings;
   userGuide?: CompanyUserGuideSettings;
   sharing?: CompanySharingPostureSettings;
+  /** Default LLM provider for all employees in this company. Employees can override via providerPref. */
+  defaultProviderId?: string;
+  /** Default model for all employees using the company default provider. */
+  defaultModel?: string;
 }
 
 export const OPERATOR_AUTH_MODES = ['local', 'invited', 'cloud'] as const;

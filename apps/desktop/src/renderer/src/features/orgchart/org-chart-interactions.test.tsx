@@ -122,6 +122,7 @@ describe('org-chart interaction UI', () => {
     expect(profileDialogSrc).toContain('data-employee-profile-name=""');
     expect(profileDialogSrc).toContain('data-employee-profile-role=""');
     expect(profileDialogSrc).toContain('data-employee-profile-manager=""');
+    expect(profileDialogSrc).toContain('data-employee-profile-runtime=""');
     expect(profileDialogSrc).toContain('data-employee-profile-save=""');
 
     expect(promoteDialogSrc).toContain('export function PromoteDialog');

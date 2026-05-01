@@ -1,4 +1,6 @@
 import { resolve } from 'node:path';
+import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 
@@ -15,6 +17,8 @@ const workspaceDeps = [
   '@team-x/provider-router',
   '@team-x/telemetry-core',
   '@team-x/intelligence',
+  // sql.js must be bundled for autonomy benchmarks (uses in-memory SQLite via sql.js)
+  'sql.js',
 ];
 
 // Both package.json files set "type": "module", so Electron loads
@@ -31,7 +35,22 @@ const esmDirnameShim = [
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: workspaceDeps })],
+    plugins: [
+      externalizeDepsPlugin({ exclude: workspaceDeps }),
+      {
+        name: 'copy-sqljs-wasm',
+        writeBundle() {
+          // Copy sql.js WASM file to the main process output directory
+          // so it can be loaded at runtime in the bundled app.
+          const wasmSrc = join(__dirname, 'node_modules/sql.js/dist/sql-wasm.wasm');
+          const wasmDest = join(__dirname, 'out/main/sql-wasm.wasm');
+          if (existsSync(wasmSrc)) {
+            mkdirSync(join(__dirname, 'out/main'), { recursive: true });
+            copyFileSync(wasmSrc, wasmDest);
+          }
+        },
+      },
+    ],
     build: {
       outDir: 'out/main',
       rollupOptions: {
