@@ -63,6 +63,26 @@ interface FilesystemArgs {
   pattern?: string;
 }
 
+const SEARCH_MAX_RESULTS = 200;
+const SEARCH_IGNORED_DIRS = new Set([
+  '.cache',
+  '.git',
+  '.hg',
+  '.next',
+  '.nuxt',
+  '.parcel-cache',
+  '.svn',
+  '.turbo',
+  '.vite',
+  'build',
+  'coverage',
+  'dist',
+  'node_modules',
+  'out',
+  'release',
+  'vendor',
+]);
+
 function buildFilesystemTool(deps: ExecutionToolDeps): ToolSpec {
   return {
     name: 'filesystem',
@@ -167,7 +187,13 @@ function buildFilesystemTool(deps: ExecutionToolDeps): ToolSpec {
           }
           try {
             const results = await searchFiles(workspaceRoot, safePath, args.pattern);
-            return { success: true, matches: results };
+            return {
+              success: true,
+              matches: results.matches,
+              truncated: results.truncated,
+              maxResults: SEARCH_MAX_RESULTS,
+              ignoredDirectories: [...SEARCH_IGNORED_DIRS],
+            };
           } catch (err) {
             return {
               success: false,
@@ -182,33 +208,48 @@ function buildFilesystemTool(deps: ExecutionToolDeps): ToolSpec {
   };
 }
 
+interface SearchResult {
+  matches: string[];
+  truncated: boolean;
+}
+
 async function searchFiles(
   workspaceRoot: string,
   searchRoot: string,
   pattern: string,
-): Promise<string[]> {
+): Promise<SearchResult> {
   const results: string[] = [];
-  const entries = await readdir(searchRoot, { withFileTypes: true });
+  let truncated = false;
 
-  for (const entry of entries) {
-    const fullPath = join(searchRoot, entry.name);
-    const rel = relative(workspaceRoot, fullPath);
+  async function visit(directory: string): Promise<void> {
+    const entries = await readdir(directory, { withFileTypes: true });
 
-    if (entry.isDirectory()) {
-      results.push(...(await searchFiles(workspaceRoot, fullPath, pattern)));
-    } else if (entry.isFile()) {
-      // Simple glob-like matching
-      if (matchGlob(entry.name, pattern)) {
+    for (const entry of entries) {
+      if (results.length >= SEARCH_MAX_RESULTS) {
+        truncated = true;
+        return;
+      }
+
+      const fullPath = join(directory, entry.name);
+      const rel = relative(workspaceRoot, fullPath);
+
+      if (entry.isDirectory()) {
+        if (SEARCH_IGNORED_DIRS.has(entry.name)) continue;
+        await visit(fullPath);
+      } else if (entry.isFile() && matchGlob(entry.name, pattern)) {
         results.push(rel);
       }
     }
   }
-  return results;
+
+  await visit(searchRoot);
+  return { matches: results, truncated };
 }
 
 function matchGlob(filename: string, pattern: string): boolean {
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(
-    `^${pattern.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.')}$`,
+    `^${escaped.replace(/\*/g, '.*').replace(/\?/g, '.')}$`,
     'i',
   );
   return regex.test(filename);

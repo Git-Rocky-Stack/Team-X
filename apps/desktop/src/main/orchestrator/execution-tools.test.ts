@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -49,5 +49,43 @@ describe('execution tools', () => {
         path: '..\\outside.txt',
       }),
     ).rejects.toThrow(/Path traversal blocked/);
+  });
+
+  it('skips dependency and build directories during recursive filesystem searches', async () => {
+    await mkdir(join(tempDir, 'src'), { recursive: true });
+    await mkdir(join(tempDir, 'node_modules', 'slow-package'), { recursive: true });
+    await mkdir(join(tempDir, '.git', 'objects'), { recursive: true });
+    await mkdir(join(tempDir, 'release'), { recursive: true });
+    await writeFile(join(tempDir, 'src', 'target.ts'), 'export {};', 'utf-8');
+    await writeFile(join(tempDir, 'node_modules', 'slow-package', 'target.ts'), 'ignored', 'utf-8');
+    await writeFile(join(tempDir, '.git', 'objects', 'target.ts'), 'ignored', 'utf-8');
+    await writeFile(join(tempDir, 'release', 'target.ts'), 'ignored', 'utf-8');
+
+    const result = (await buildFilesystemTool().execute({
+      operation: 'search',
+      path: '.',
+      pattern: '*.ts',
+    })) as { matches: string[]; truncated: boolean; ignoredDirectories: string[] };
+
+    expect(result.truncated).toBe(false);
+    expect(result.matches).toEqual([join('src', 'target.ts')]);
+    expect(result.ignoredDirectories).toEqual(expect.arrayContaining(['node_modules', '.git']));
+  });
+
+  it('caps recursive filesystem search results so broad workspace scans stay bounded', async () => {
+    await mkdir(join(tempDir, 'src'), { recursive: true });
+    for (let i = 0; i < 205; i += 1) {
+      await writeFile(join(tempDir, 'src', `file-${i}.ts`), 'export {};', 'utf-8');
+    }
+
+    const result = (await buildFilesystemTool().execute({
+      operation: 'search',
+      path: '.',
+      pattern: '*.ts',
+    })) as { matches: string[]; truncated: boolean; maxResults: number };
+
+    expect(result.maxResults).toBe(200);
+    expect(result.matches).toHaveLength(200);
+    expect(result.truncated).toBe(true);
   });
 });
