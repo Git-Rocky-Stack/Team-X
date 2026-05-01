@@ -1,9 +1,9 @@
 /**
  * Electron main process entry point.
  *
- * Boot order — every step happens inside `app.whenReady()` so the
- * Electron app, the userData path, and the keychain are all available
- * before any service touches them:
+ * Boot order — the userData profile is pinned before `app.whenReady()`;
+ * every service boot step then happens inside `app.whenReady()` so the
+ * Electron app and keychain are available before any service touches them:
  *
  *   1. Open + migrate the SQLite database.
  *   2. Seed the hardcoded Phase 1 company + employees on first boot.
@@ -43,16 +43,17 @@
 
 import { join } from 'node:path';
 
-
-
 import {
+  type LoopCompleteFn,
+  type LoopMessage,
+  type LoopProviderCompletion,
   type RagRepo,
   type RagService,
   createEntityResolver,
   createIntentClassifier,
   createRagService,
   createSlotFiller,
- LoopCompleteFn, LoopMessage, LoopProviderCompletion } from '@team-x/intelligence';
+} from '@team-x/intelligence';
 import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
 import { streamAgent } from '@team-x/provider-router';
 import type {
@@ -71,6 +72,7 @@ import { calcCostUsd } from '@team-x/telemetry-core';
 import { eq } from 'drizzle-orm';
 import { BrowserWindow, app, dialog, ipcMain } from 'electron';
 
+import { configureStableUserDataPath } from './app-user-data.js';
 import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
@@ -507,6 +509,8 @@ let approvalInboxServiceInstance: ReturnType<typeof createApprovalInboxService> 
  * per Phase 5 §8.5. Separated from the window (T3) for test isolation.
  */
 let copilotEventTriggerInstance: CopilotEventTrigger | null = null;
+
+configureStableUserDataPath(app, { logger: console });
 
 app
   .whenReady()

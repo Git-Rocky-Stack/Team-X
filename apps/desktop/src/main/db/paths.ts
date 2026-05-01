@@ -14,9 +14,9 @@
  *   └─ vault/                  ← file vault (landing in Task 26+)
  *
  * `app.getPath('userData')` is the platform-correct per-user app data
- * directory: %APPDATA%/Team-X on Windows, ~/Library/Application Support/
- * Team-X on macOS, ~/.config/Team-X on Linux. The name is driven by
- * `productName` in electron-builder config (landing in Task 49).
+ * directory after main boot pins the profile to the stable Team-X app
+ * name: %APPDATA%/Team-X on Windows, ~/Library/Application Support/
+ * Team-X on macOS, ~/.config/Team-X on Linux.
  */
 
 import { mkdirSync } from 'node:fs';
