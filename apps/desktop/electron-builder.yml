@@ -81,6 +81,10 @@ nsis:
   uninstallUrlReadme: https://github.com/Git-Rocky-Stack/
   uninstallUrlUpdateInfo: https://github.com/Git-Rocky-Stack/
   runAfterFinish: false
+  # Fix: System.dll plugin causes ACCESS_VIOLATION (0xc0000005) crash on Windows 11
+  # Disabling the plugin prevents installer from crashing on startup
+  useZip: false
+  packElevateHelper: false
 
 # ─── macOS ────────────────────────────────────────────────────────────
 mac:
