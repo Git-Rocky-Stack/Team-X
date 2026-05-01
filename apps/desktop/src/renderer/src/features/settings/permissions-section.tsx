@@ -13,8 +13,6 @@
 
 import { useState } from 'react';
 
-import type { AuthorityGrant } from '@team-x/shared-types';
-
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
@@ -309,7 +307,7 @@ export function PermissionsSection() {
                   <p className="text-xs font-medium text-muted-foreground">Add Custom Path</p>
                   <p className="text-[10px] text-muted-foreground">
                     Grant extensions access to specific filesystem paths. Use templates like{' '}
-                    <code className="rounded bg-muted px-1 py-0.5">{{documents}}</code> or browse to select a
+                    <code className="rounded bg-muted px-1 py-0.5">{'{{documents}}'}</code> or browse to select a
                     directory.
                   </p>
                   <div className="flex gap-2">

@@ -407,8 +407,10 @@ Use the decompose_project tool to generate the proposal.`;
         );
 
         // Check if proactive_work capability is allowed
-        const proactiveCapability = authority.capabilities.find(
-          (c) => c.resourceId === 'proactive_work' || c.resourceId === '*',
+        const proactiveCapability = authority.entries.find(
+          (entry: { resourceKind: string; resourceId: string; permission: string }) =>
+            entry.resourceKind === 'capability' &&
+            (entry.resourceId === 'proactive_work' || entry.resourceId === '*'),
         );
 
         if (proactiveCapability?.permission === 'deny') {

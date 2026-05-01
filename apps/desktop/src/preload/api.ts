@@ -166,6 +166,13 @@ import type {
   PreviewCompanyPackageImportResponse,
   Project,
   ProjectDetail,
+  ProactiveDecomposeGoalRequest,
+  ProactiveDecomposeGoalResponse,
+  ProactiveGetStateRequest,
+  ProactiveGetStateResponse,
+  ProactiveScanForWorkRequest,
+  ProactiveScanForWorkResponse,
+  ProactiveSetEnabledRequest,
   ProviderConfig,
   RagDeleteForCompanyResponse,
   RagRebuildAllResponse,
@@ -197,6 +204,8 @@ import type {
   SettingsGetMemoryResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
+  SettingsGetProactiveResponse,
+  SettingsSetProactiveRequest,
   SettingsGetRagConfigResponse,
   SettingsGetRuntimeResponse,
   SettingsSetAgenticRequest,
@@ -418,6 +427,8 @@ const CHANNELS = {
   settingsSetCopilot: 'settings.setCopilot',
   settingsGetCopilotWeights: 'settings.getCopilotWeights',
   settingsSetCopilotWeights: 'settings.setCopilotWeights',
+  settingsGetProactive: 'settings.getProactive',
+  settingsSetProactive: 'settings.setProactive',
   // Provider management (Phase 3 — M18)
   providersList: 'providers.list',
   providersAdd: 'providers.add',
@@ -476,6 +487,10 @@ const CHANNELS = {
   copilotAsk: 'copilot.ask',
   copilotConfigure: 'copilot.configure',
   copilotExport: 'copilot.export',
+  proactiveSetEnabled: 'proactive.setEnabled',
+  proactiveDecomposeGoal: 'proactive.decomposeGoal',
+  proactiveScanForWork: 'proactive.scanForWork',
+  proactiveGetState: 'proactive.getState',
 } as const;
 
 function telemetryCompanyStatsRequest(
@@ -846,6 +861,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
           CHANNELS.settingsSetCopilotWeights,
           req,
         ) as Promise<SettingsSetCopilotWeightsResponse>,
+      getProactive: () =>
+        ipc.invoke(CHANNELS.settingsGetProactive) as Promise<SettingsGetProactiveResponse>,
+      setProactive: (req: SettingsSetProactiveRequest) =>
+        ipc.invoke(CHANNELS.settingsSetProactive, req) as Promise<void>,
     },
     providers: {
       list: () => ipc.invoke(CHANNELS.providersList) as Promise<ProviderConfig[]>,
@@ -954,6 +973,16 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.ticketsDetachFile, req) as Promise<void>,
       listAttachments: (ticketId: string) =>
         ipc.invoke(CHANNELS.ticketsListAttachments, { ticketId }) as Promise<TicketAttachment[]>,
+    },
+    proactive: {
+      setEnabled: (req: ProactiveSetEnabledRequest) =>
+        ipc.invoke(CHANNELS.proactiveSetEnabled, req) as Promise<void>,
+      decomposeGoal: (req: ProactiveDecomposeGoalRequest) =>
+        ipc.invoke(CHANNELS.proactiveDecomposeGoal, req) as Promise<ProactiveDecomposeGoalResponse>,
+      scanForWork: (req: ProactiveScanForWorkRequest) =>
+        ipc.invoke(CHANNELS.proactiveScanForWork, req) as Promise<ProactiveScanForWorkResponse>,
+      getState: (req: ProactiveGetStateRequest) =>
+        ipc.invoke(CHANNELS.proactiveGetState, req) as Promise<ProactiveGetStateResponse>,
     },
   };
 }

@@ -159,13 +159,9 @@ export function createProactiveDispatcher(
     companyId: string;
     employeeId: string;
     threadId: string;
-    trigger: ProactiveTrigger;
     triggerId: string;
-    sourceGoalId?: string;
-    sourceTicketId?: string;
   }): void {
-    const { companyId, employeeId, threadId, trigger, triggerId, sourceGoalId, sourceTicketId } =
-      args;
+    const { companyId, employeeId, threadId, triggerId } = args;
 
     const payload: ProactiveWorkStartedPayload = {
       triggerId,
@@ -229,11 +225,13 @@ export function createProactiveDispatcher(
     employeeId: string;
     triggerId: string;
     reason: string;
+    policyId?: string | null;
   }): void {
-    const { companyId, employeeId, triggerId, reason } = args;
+    const { companyId, employeeId, triggerId, reason, policyId } = args;
 
     const payload: ProactiveBudgetBlockedPayload = {
       triggerId,
+      policyId: policyId ?? null,
       reason,
       blockedAt: now(),
     };
@@ -327,7 +325,13 @@ export function createProactiveDispatcher(
 
         if (!admission.allowed) {
           const reason = admission.reason ?? 'Budget policy blocked execution.';
-          emitBudgetBlocked({ companyId, employeeId, triggerId, reason });
+          emitBudgetBlocked({
+            companyId,
+            employeeId,
+            triggerId,
+            reason,
+            policyId: admission.policy?.id ?? null,
+          });
           return { success: false, error: 'budget_blocked', reason };
         }
       } catch (err) {
@@ -379,10 +383,7 @@ export function createProactiveDispatcher(
       companyId,
       employeeId,
       threadId,
-      trigger,
       triggerId,
-      sourceGoalId,
-      sourceTicketId,
     });
 
     // 8. Enqueue via orchestrator

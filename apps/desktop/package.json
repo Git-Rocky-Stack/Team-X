@@ -19,6 +19,8 @@
     "test": "vitest run",
     "test:e2e": "electron-vite build && playwright test",
     "test:e2e:run": "playwright test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "dist": "electron-vite build && electron-builder --publish never",
     "dist:win": "electron-vite build && electron-builder --win --publish never",
     "dist:mac": "electron-vite build && electron-builder --mac --publish never",
