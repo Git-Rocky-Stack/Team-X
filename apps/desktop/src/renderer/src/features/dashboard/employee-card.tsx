@@ -75,13 +75,13 @@ export function EmployeeCard({ employee, live }: EmployeeCardProps) {
       className={cn(
         'group relative flex w-full flex-col items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200',
         isSelected
-          ? 'border-brand/40 bg-black/25 shadow-sm'
-          : 'border-border bg-surface-50 hover:border-border/80 hover:bg-surface-100 hover:shadow-sm',
+          ? 'border-brand/40 bg-black shadow-sm'
+          : 'border-border bg-black hover:border-border/80 hover:bg-black hover:shadow-sm',
       )}
     >
       {/* Header: avatar + name + status */}
       <div className="flex w-full items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-200 text-sm font-semibold text-foreground/80">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black text-sm font-semibold text-foreground/80">
           {initials(employee.name)}
         </div>
         <div className="min-w-0 flex-1">
@@ -94,22 +94,20 @@ export function EmployeeCard({ employee, live }: EmployeeCardProps) {
           </div>
           <span className="block truncate text-xs text-muted-foreground">{employee.title}</span>
         </div>
-        <span className="shrink-0 rounded-md bg-surface-200 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <span className="shrink-0 rounded-md bg-black px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
           {employee.level}
         </span>
       </div>
 
       {/* Stream preview — only visible when the employee is actively thinking */}
       {displayStatus === 'thinking' && streamTail.length > 0 && (
-        <div className="relative w-full overflow-hidden rounded-lg border border-border/50 bg-background/80">
+        <div className="relative w-full overflow-hidden rounded-lg border border-border/50 bg-black">
           <pre
             ref={streamRef}
             className="max-h-[12rem] overflow-y-auto px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground/70 scrollbar-thin"
           >
             {streamTail}
           </pre>
-          {/* Bottom gradient fade */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background/80 to-transparent" />
         </div>
       )}
 

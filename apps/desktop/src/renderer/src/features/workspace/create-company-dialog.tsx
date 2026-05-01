@@ -81,7 +81,7 @@ type ThemeChoice = 'dark' | 'light';
 type CreateCompanyMode = 'blank' | 'template';
 
 const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+  'flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm ring-offset-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 function suggestSlug(name: string): string {
   return name
@@ -315,7 +315,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
           </div>
 
           {mode === 'template' ? (
-            <div className="space-y-3 rounded-lg border border-border bg-surface-50 p-3">
+            <div className="space-y-3 rounded-lg border border-border bg-black p-3">
               <div className="space-y-1.5">
                 <label
                   htmlFor="create-company-template"
@@ -440,8 +440,8 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
                         'flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-xs font-medium capitalize transition-colors',
                         'focus-within:outline-none focus-within:ring-2 focus-within:ring-brand',
                         isSelected
-                          ? 'border-brand/40 bg-black/25 text-brand'
-                          : 'border-border bg-surface-50 text-muted-foreground hover:bg-surface-100',
+                          ? 'border-brand/40 bg-black text-brand'
+                          : 'border-border bg-black text-muted-foreground hover:bg-black',
                       )}
                     >
                       <input
@@ -459,7 +459,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
               </div>
             </fieldset>
           ) : (
-            <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-2 text-[11px] text-muted-foreground">
+            <div className="rounded-lg border border-white/10 bg-black px-3 py-2 text-[11px] text-muted-foreground">
               Theme and baseline settings come from the selected template. You can adjust them in
               Company Settings after creation.
             </div>
@@ -480,7 +480,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
             onClick={handleSubmit}
             disabled={submitDisabled}
             data-create-company-submit=""
-            className="bg-brand text-white hover:bg-brand/90"
+            className="border border-brand/40 bg-black text-brand hover:bg-black"
           >
             {createMutation.isPending || importMutation.isPending
               ? mode === 'template'
@@ -504,7 +504,7 @@ function TemplatePreviewCard({
   warnings: string[];
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-3">
+    <div className="rounded-lg border border-white/10 bg-black px-3 py-3">
       <div>
         <div className="text-sm font-medium text-foreground">{template.company.name}</div>
         <div className="text-xs text-muted-foreground">

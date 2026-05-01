@@ -22,7 +22,7 @@ export function DashboardSubtabs() {
   const setSubview = useAppStore((s) => s.setDashboardSubview);
 
   return (
-    <div className="flex items-center gap-1 border-b border-border/70 bg-background/80 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+    <div className="flex items-center gap-1 border-b border-border/70 bg-black px-4 py-2">
       {SUBTABS.map((tab) => {
         const isActive = tab.subview === activeSubview;
         const Icon = tab.icon;
@@ -35,8 +35,8 @@ export function DashboardSubtabs() {
               flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors
               ${
                 isActive
-                  ? 'border border-brand/30 bg-black/25 text-brand'
-                  : 'border border-transparent text-muted-foreground hover:border-white/10 hover:bg-white/5 hover:text-foreground'
+                  ? 'border border-brand/30 bg-black text-brand'
+                  : 'border border-transparent text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground'
               }
             `}
           >

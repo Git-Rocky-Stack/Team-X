@@ -83,7 +83,7 @@ export function MissionHero({
 
           <div className="flex items-start gap-4">
             {Icon ? (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black/20 text-brand">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black text-brand">
                 <Icon className="h-5 w-5" />
               </div>
             ) : null}
@@ -136,12 +136,12 @@ export function MissionPill({
         mono && 'font-mono',
         uppercase && 'font-semibold uppercase tracking-[0.22em]',
         tone === 'accent'
-          ? 'border-brand/30 bg-black/20 text-brand'
+          ? 'border-brand/30 bg-black text-brand'
           : tone === 'warning'
-            ? 'border-amber-500/20 bg-amber-500/10 text-amber-300'
+            ? 'border-amber-500/20 bg-black text-amber-300'
             : tone === 'danger'
-              ? 'border-red-500/20 bg-red-500/10 text-red-200'
-              : 'border-white/10 bg-black/20 text-muted-foreground',
+              ? 'border-red-500/20 bg-black text-red-200'
+              : 'border-white/10 bg-black text-muted-foreground',
         className,
       )}
       data-mission-pill=""
@@ -247,7 +247,7 @@ export function MissionControlRow({
   return (
     <div
       className={cn(
-        'mission-control-row flex flex-wrap items-center rounded-[22px] border border-white/10 backdrop-blur-sm',
+        'mission-control-row flex flex-wrap items-center rounded-[22px] border border-white/10',
         density === 'compact' ? 'gap-1.5 px-2 py-2' : 'gap-2 px-3 py-3',
         className,
       )}
@@ -279,8 +279,8 @@ export function MissionSegmentedButton({
         'mission-segmented-button rounded-[18px] border font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50',
         compact ? 'px-3 py-2 text-[11px]' : 'px-3.5 py-2 text-xs',
         active
-          ? 'border-brand/30 bg-black/25 text-brand shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)]'
-          : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-surface-100 hover:text-foreground',
+          ? 'border-brand/30 bg-black text-brand shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)]'
+          : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground',
         className,
       )}
       data-mission-segmented-button=""
@@ -308,12 +308,12 @@ export function MissionIconButton({
       className={cn(
         'mission-icon-button flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border border-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
         tone === 'accent'
-          ? 'border-brand/25 bg-black/20 text-brand hover:bg-white/[0.04]'
+          ? 'border-brand/25 bg-black text-brand hover:bg-black'
           : tone === 'warning'
-            ? 'border-amber-500/20 bg-amber-500/10 text-amber-300 hover:bg-amber-500/15'
+            ? 'border-amber-500/20 bg-black text-amber-300 hover:bg-black'
             : tone === 'danger'
-              ? 'border-red-500/20 bg-red-500/10 text-red-200 hover:bg-red-500/15'
-              : 'text-muted-foreground hover:bg-black/20 hover:text-foreground',
+              ? 'border-red-500/20 bg-black text-red-200 hover:bg-black'
+              : 'text-muted-foreground hover:bg-black hover:text-foreground',
         className,
       )}
       data-mission-icon-button=""
@@ -338,7 +338,7 @@ export function MissionInsetSurface({
     <div
       className={cn(
         'mission-inset-surface rounded-[22px] border',
-        tone === 'danger' ? 'border-red-500/20 bg-red-500/6' : 'border-white/10 bg-black/10',
+        tone === 'danger' ? 'border-red-500/20 bg-black' : 'border-white/10 bg-black',
         className,
       )}
       data-mission-inset-surface=""
@@ -383,7 +383,7 @@ export function MissionSheetHeader({
         {Icon ? (
           <div
             className={cn(
-              'flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-brand/25 bg-black/20 text-brand',
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-brand/25 bg-black text-brand',
               iconClassName,
             )}
           >
@@ -432,7 +432,7 @@ export function MissionStateBlock({
       className={cn(
         'mission-state-block flex flex-col items-center justify-center gap-3 rounded-[24px] border p-8 text-center',
         tone === 'danger'
-          ? 'border-red-500/25 bg-red-500/8 text-red-200'
+          ? 'border-red-500/25 bg-black text-red-200'
           : 'border-dashed border-white/10 text-muted-foreground',
         className,
       )}
@@ -477,7 +477,7 @@ export function MissionMetricTile({
 }: MissionMetricTileProps) {
   const sharedClassName = cn(
     'mission-metric-tile group flex flex-col gap-3 rounded-[22px] border border-white/10 p-4 text-left transition-all',
-    onClick && 'hover:border-brand/30 hover:bg-black/25',
+    onClick && 'hover:border-brand/30 hover:bg-black',
     className,
   );
 

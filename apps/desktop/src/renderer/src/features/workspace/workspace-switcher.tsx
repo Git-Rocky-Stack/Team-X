@@ -63,7 +63,7 @@ import { useAppStore } from '@/store/app-store.js';
  *             workspace…" CTA so the user can recover (post step (b)
  *             collapse — no more dead-end empty state).
  * - disabled → pending mutation disables the trigger.
- * - hover   → DropdownMenuItem's `focus:bg-accent` + border-hover on
+ * - hover   → AMOLED trigger fill + border-hover on
  *             trigger via button-style utility classes.
  */
 export function WorkspaceSwitcher() {
@@ -101,17 +101,15 @@ export function WorkspaceSwitcher() {
           aria-label={triggerAriaLabel}
           data-workspace-switcher-trigger=""
           className={cn(
-            'mission-workspace-trigger flex h-auto w-full items-center justify-between gap-3 rounded-[24px] border border-white/10 px-3 py-2.5 text-left transition-all backdrop-blur-sm',
+            'mission-workspace-trigger flex h-auto w-full items-center justify-between gap-3 rounded-[24px] border border-white/10 px-3 py-2.5 text-left transition-all',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-            'data-[state=open]:bg-surface-100 data-[state=open]:border-border',
-            isError
-              ? 'text-destructive hover:bg-destructive/10'
-              : 'text-foreground hover:bg-surface-100',
+            'data-[state=open]:border-border data-[state=open]:bg-black',
+            isError ? 'text-destructive hover:bg-black' : 'text-foreground hover:bg-black',
             isLoading && 'cursor-wait opacity-70',
           )}
         >
           <span className="flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black/25 text-brand">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black text-brand">
               <Building2 className="h-4 w-4" />
             </span>
             <span className="min-w-0">
@@ -139,7 +137,7 @@ export function WorkspaceSwitcher() {
 
         <DropdownMenuContent
           align="start"
-          className="min-w-[280px] rounded-[24px] border-white/10 bg-background/95 p-2 shadow-2xl backdrop-blur-xl"
+          className="min-w-[280px] rounded-[24px] border-white/10 bg-black p-2 shadow-2xl"
           data-workspace-switcher-content=""
         >
           <DropdownMenuLabel className="px-3 py-2">
@@ -181,7 +179,7 @@ export function WorkspaceSwitcher() {
                   data-workspace-switcher-item={company.id}
                   className={cn(
                     'rounded-[18px] px-3 py-2.5',
-                    isActive && 'border border-brand/25 bg-black/25 font-semibold text-brand',
+                    isActive && 'border border-brand/25 bg-black font-semibold text-brand',
                   )}
                 >
                   <Building2 className="mr-2 h-3.5 w-3.5 text-muted-foreground" />

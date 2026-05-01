@@ -163,7 +163,7 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
     <div className="space-y-6 p-6">
       {[...groups.entries()].map(([dateLabel, dateEvents]) => (
         <div key={dateLabel}>
-          <div className="sticky top-0 z-10 mb-3 bg-background/95 backdrop-blur-sm">
+          <div className="sticky top-0 z-10 mb-3 bg-black">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {dateLabel}
             </span>
@@ -171,10 +171,10 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
           <div className="relative ml-4 border-l border-border pl-6">
             {dateEvents.map((event) => (
               <div key={event.id} className="group relative mb-4 last:mb-0">
-                <div className="absolute -left-[31px] flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-50">
+                <div className="absolute -left-[31px] flex h-5 w-5 items-center justify-center rounded-full border border-border bg-black">
                   {eventIcon(event.type)}
                 </div>
-                <div className="flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-surface-50">
+                <div className="flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-black">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-foreground">
                       {eventDescription(event, employeeMap)}

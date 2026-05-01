@@ -18,10 +18,10 @@ function StreamPane({ employee, live }: StreamPaneProps) {
     <button
       type="button"
       onClick={() => setSelected(employee.id)}
-      className="flex h-full min-w-[280px] flex-col rounded-xl border border-border bg-surface-50 transition-colors hover:border-brand/30"
+      className="flex h-full min-w-[280px] flex-col rounded-xl border border-border bg-black transition-colors hover:border-brand/30"
     >
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-200 text-xs font-semibold">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black text-xs font-semibold">
           {employee.name
             .split(' ')
             .map((w) => w[0])
@@ -100,7 +100,7 @@ export function StreamView({ employees }: StreamViewProps) {
           )}
         </span>
       </div>
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 scrollbar-thin">
         <div className="flex h-full gap-4" style={{ minWidth: `${sorted.length * 296}px` }}>
           {sorted.map((emp) => (
             <StreamPane

@@ -7,10 +7,9 @@ import { Button } from '@/components/ui/button.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 function SkeletonCard() {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-50 p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-black p-4">
       <div className="flex items-center gap-3">
         <Skeleton className="h-10 w-10 rounded-full" />
         <div className="flex-1 space-y-1.5">

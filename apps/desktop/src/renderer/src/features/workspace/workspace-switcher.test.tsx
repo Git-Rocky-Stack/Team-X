@@ -115,7 +115,7 @@ describe('WorkspaceSwitcher (features/workspace/workspace-switcher.tsx)', () => 
 
   it('applies hover + focus-visible brand ring on the trigger', () => {
     expect(src).toContain('focus-visible:ring-brand');
-    expect(src).toContain('hover:bg-surface-100');
+    expect(src).toContain('hover:bg-black');
   });
 
   // Accessibility contract.

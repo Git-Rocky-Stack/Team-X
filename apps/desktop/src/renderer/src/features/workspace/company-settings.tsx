@@ -211,7 +211,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="mission-shell flex w-full flex-col overflow-hidden border-l border-white/10 bg-background/95 p-0 sm:max-w-md"
+        className="mission-shell flex w-full flex-col overflow-hidden border-l border-white/10 bg-black p-0 sm:max-w-md"
         data-company-settings-panel=""
       >
         <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
@@ -231,7 +231,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
           {!company ? (
             <div className="px-5 py-8 text-sm text-muted-foreground">No workspace selected.</div>
           ) : (
-            <div className="flex-1 overflow-y-auto px-5 py-5">
+            <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-thin">
               <MissionInsetSurface className="p-4">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">General</h3>
@@ -256,7 +256,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       aria-invalid={nameError !== null}
                       aria-describedby={nameError ? 'company-settings-name-error' : undefined}
                       data-company-settings-field="name"
-                      className="border-white/10 bg-black/20"
+                      className="border-white/10 bg-black"
                     />
                     {nameError ? (
                       <p
@@ -284,7 +284,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       aria-invalid={slugError !== null}
                       aria-describedby={slugError ? 'company-settings-slug-error' : undefined}
                       data-company-settings-field="slug"
-                      className="border-white/10 bg-black/20"
+                      className="border-white/10 bg-black"
                     />
                     {slugError ? (
                       <p
@@ -311,7 +311,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       placeholder="Optional"
                       maxLength={16}
                       data-company-settings-field="icon"
-                      className="border-white/10 bg-black/20"
+                      className="border-white/10 bg-black"
                     />
                   </div>
 
@@ -328,8 +328,8 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                               'flex-1 cursor-pointer rounded-[18px] border px-3 py-3 text-center text-xs font-semibold capitalize transition-colors',
                               'focus-within:outline-none focus-within:ring-2 focus-within:ring-brand',
                               isSelected
-                                ? 'border-brand/30 bg-black/25 text-brand'
-                                : 'border-white/10 bg-black/10 text-muted-foreground hover:bg-black/20',
+                                ? 'border-brand/30 bg-black text-brand'
+                                : 'border-white/10 bg-black text-muted-foreground hover:bg-black',
                             )}
                           >
                             <input
@@ -359,7 +359,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       value={defaultProviderId}
                       onChange={(e) => setDefaultProviderId(e.target.value)}
                       data-company-settings-field="defaultProviderId"
-                      className="h-10 w-full rounded-md border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30"
+                      className="h-10 w-full rounded-md border border-white/10 bg-black px-3 text-sm text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30"
                     >
                       <option value="">Use system defaults</option>
                       {providers?.map((provider) => (
@@ -379,7 +379,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                     onClick={() => void handleSave()}
                     disabled={isBusy || name.trim().length === 0 || slug.length === 0}
                     data-company-settings-save=""
-                    className="w-full rounded-[18px] bg-brand text-white hover:bg-brand/90"
+                    className="w-full rounded-[18px] border border-brand/40 bg-black text-brand hover:bg-black"
                   >
                     <Save className="h-4 w-4" />
                     {updateMutation.isPending ? 'Saving...' : 'Save changes'}
@@ -389,7 +389,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
 
               <MissionInsetSurface
                 tone="danger"
-                className="mt-4 border-destructive/25 bg-destructive/5 p-4"
+                className="mt-4 border-destructive/25 bg-black p-4"
               >
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 text-destructive" aria-hidden="true" />
@@ -408,13 +408,13 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                     onClick={() => void handleArchive()}
                     disabled={isBusy}
                     data-company-settings-archive=""
-                    className="w-full justify-start rounded-[18px] border-white/10 bg-black/10 text-foreground hover:bg-black/20"
+                    className="w-full justify-start rounded-[18px] border-white/10 bg-black text-foreground hover:bg-black"
                   >
                     <Archive className="h-4 w-4" />
                     {archiveMutation.isPending ? 'Archiving...' : 'Archive workspace'}
                   </Button>
 
-                  <details className="rounded-[20px] border border-destructive/25 bg-black/20 p-3">
+                  <details className="rounded-[20px] border border-destructive/25 bg-black p-3">
                     <summary className="cursor-pointer text-xs font-medium text-destructive">
                       Permanently delete this workspace
                     </summary>
@@ -428,7 +428,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                         onChange={(e) => setDeleteConfirm(e.target.value)}
                         placeholder={company.name}
                         data-company-settings-delete-confirm=""
-                        className="border-white/10 bg-black/20"
+                        className="border-white/10 bg-black"
                       />
                       <Button
                         type="button"

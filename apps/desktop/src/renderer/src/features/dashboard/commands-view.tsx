@@ -57,10 +57,10 @@ function SkeletonRow() {
       aria-hidden="true"
       className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5 last:border-0"
     >
-      <span className="h-3 w-16 animate-pulse rounded bg-surface-100" />
-      <span className="h-5 w-24 animate-pulse rounded bg-surface-100" />
-      <span className="h-3 flex-1 animate-pulse rounded bg-surface-100" />
-      <span className="h-4 w-12 animate-pulse rounded bg-surface-100" />
+      <span className="h-3 w-16 animate-pulse rounded bg-black" />
+      <span className="h-5 w-24 animate-pulse rounded bg-black" />
+      <span className="h-3 flex-1 animate-pulse rounded bg-black" />
+      <span className="h-4 w-12 animate-pulse rounded bg-black" />
     </div>
   );
 }
@@ -75,7 +75,7 @@ function EmptyState() {
       <p className="text-sm font-medium">No commands yet</p>
       <p className="text-xs text-muted-foreground/70">
         Press{' '}
-        <kbd className="rounded border border-border bg-surface-100 px-1.5 py-0.5 font-mono text-[10px]">
+        <kbd className="rounded border border-border bg-black px-1.5 py-0.5 font-mono text-[10px]">
           Ctrl+K
         </kbd>{' '}
         to get started.
@@ -125,7 +125,7 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
       type="button"
       onClick={onCopy}
       title={`Click to copy: ${previewText}`}
-      className="group flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-surface-100/40 focus-visible:bg-surface-100/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
+      className="group flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-black focus-visible:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
     >
       <span className="w-20 shrink-0 text-xs text-muted-foreground">
         {formatTimeAgo(entry.executedAt)}
@@ -135,7 +135,7 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
         {actorLabel}
       </span>
 
-      <Badge variant="outline" className="shrink-0 border-brand/35 bg-black/25 text-xs text-brand">
+      <Badge variant="outline" className="shrink-0 border-brand/35 bg-black text-xs text-brand">
         {label}
       </Badge>
 
@@ -145,8 +145,8 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
         variant="outline"
         className={
           outcomeOk
-            ? 'shrink-0 border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-400'
-            : 'shrink-0 border-red-500/30 bg-red-500/10 text-xs text-red-400'
+            ? 'shrink-0 border-emerald-500/30 bg-black text-xs text-emerald-400'
+            : 'shrink-0 border-red-500/30 bg-black text-xs text-red-400'
         }
       >
         {outcomeOk ? 'ok' : 'error'}
@@ -189,7 +189,7 @@ export function CommandsView({ companyId }: CommandsViewProps) {
 
   return (
     <div className="flex h-full flex-col p-4" data-testid="commands-view">
-      <Card className="flex flex-1 flex-col border-border bg-surface-50/40">
+      <Card className="flex flex-1 flex-col border-border bg-black">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="flex items-center gap-2">
             <Terminal className="h-4 w-4 text-brand" />

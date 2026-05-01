@@ -6,19 +6,19 @@ import { useAppStore } from '@/store/app-store.js';
 function levelColor(level: string): string {
   switch (level.toLowerCase()) {
     case 'officer':
-      return 'border-amber-500/50 bg-amber-500/5';
+      return 'border-amber-500/50 bg-black';
     case 'senior-management':
-      return 'border-purple-500/50 bg-purple-500/5';
+      return 'border-purple-500/50 bg-black';
     case 'management':
-      return 'border-blue-500/50 bg-blue-500/5';
+      return 'border-blue-500/50 bg-black';
     case 'supervisor':
-      return 'border-cyan-500/50 bg-cyan-500/5';
+      return 'border-cyan-500/50 bg-black';
     case 'lead':
-      return 'border-green-500/50 bg-green-500/5';
+      return 'border-green-500/50 bg-black';
     case 'ic':
-      return 'border-zinc-500/50 bg-zinc-500/5';
+      return 'border-zinc-500/50 bg-black';
     default:
-      return 'border-border bg-surface-50';
+      return 'border-border bg-black';
   }
 }
 
@@ -76,7 +76,7 @@ function FloorCell({ employee }: FloorCellProps) {
       )}
     >
       <div className="relative">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-200 text-xs font-bold">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-xs font-bold">
           {employee.name
             .split(' ')
             .map((w) => w[0])
@@ -95,7 +95,7 @@ function FloorCell({ employee }: FloorCellProps) {
         <p className="truncate text-xs font-medium text-foreground">{employee.name}</p>
         <p className="truncate text-[10px] text-muted-foreground">{employee.title}</p>
       </div>
-      <span className="rounded-full bg-surface-200 px-2 py-0.5 text-[9px] font-medium text-muted-foreground">
+      <span className="rounded-full bg-black px-2 py-0.5 text-[9px] font-medium text-muted-foreground">
         {levelLabel(employee.level)}
       </span>
     </button>

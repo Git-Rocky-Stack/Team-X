@@ -53,10 +53,10 @@ import { useAppStore } from '@/store/app-store.js';
 
 const DAY_MS = 86_400_000;
 const DASHBOARD_TOUCH_BUTTON_CLASS = 'min-h-11';
-const DASHBOARD_GLASS_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border-white/10 bg-black/10 hover:bg-black/20`;
-const DASHBOARD_GHOST_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border border-white/10 bg-black/10 hover:bg-black/20`;
+const DASHBOARD_GLASS_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border-white/10 bg-black hover:bg-black`;
+const DASHBOARD_GHOST_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border border-white/10 bg-black hover:bg-black`;
 const DASHBOARD_PILL_TOGGLE_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full px-4`;
-const DASHBOARD_PILL_GHOST_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full border border-white/10 bg-black/10 hover:bg-black/20`;
+const DASHBOARD_PILL_GHOST_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full border border-white/10 bg-black hover:bg-black`;
 const DASHBOARD_INTERACTIVE_FOCUS_CLASS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
@@ -107,13 +107,13 @@ function liveStatusLabel(status: DashboardQueueRow['liveStatus']): string {
 function liveStatusClassName(status: DashboardQueueRow['liveStatus']): string {
   switch (status) {
     case 'thinking':
-      return 'border-brand/35 bg-black/25 text-brand';
+      return 'border-brand/35 bg-black text-brand';
     case 'blocked':
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+      return 'border-amber-500/30 bg-black text-amber-300';
     case 'error':
-      return 'border-red-500/30 bg-red-500/10 text-red-300';
+      return 'border-red-500/30 bg-black text-red-300';
     default:
-      return 'border-border/80 bg-background/50 text-muted-foreground';
+      return 'border-border/80 bg-black text-muted-foreground';
   }
 }
 
@@ -194,10 +194,7 @@ function PrimaryPanel({
           <div className="flex items-center gap-2">
             <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
             {countLabel && (
-              <Badge
-                variant="outline"
-                className="border-border/80 bg-background/40 text-[10px] font-mono"
-              >
+              <Badge variant="outline" className="border-border/80 bg-black text-[10px] font-mono">
                 {countLabel}
               </Badge>
             )}
@@ -227,7 +224,7 @@ function PanelSkeletonRows({
   return (
     <div className={cn('grid gap-3', className)} data-dashboard-panel-state="loading">
       {skeletonKeys.map((key) => (
-        <div key={key} className={cn(heightClassName, 'animate-pulse rounded-2xl bg-black/10')} />
+        <div key={key} className={cn(heightClassName, 'animate-pulse rounded-2xl bg-black')} />
       ))}
     </div>
   );
@@ -253,8 +250,8 @@ function PanelMessageState({
       className={cn(
         'flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border p-8 text-center',
         tone === 'danger'
-          ? 'border-red-500/25 bg-red-500/10 text-red-200'
-          : 'border-dashed border-white/10 bg-black/10 text-muted-foreground',
+          ? 'border-red-500/25 bg-black text-red-200'
+          : 'border-dashed border-white/10 bg-black text-muted-foreground',
       )}
       data-dashboard-panel-state={dataState}
     >
@@ -285,13 +282,13 @@ function PanelMessageState({
 function runtimeStateClassName(tone: DashboardRuntimeOperationsSummary['stateTone']): string {
   switch (tone) {
     case 'accent':
-      return 'border-brand/35 bg-black/25 text-brand';
+      return 'border-brand/35 bg-black text-brand';
     case 'warning':
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
+      return 'border-amber-500/30 bg-black text-amber-200';
     case 'danger':
-      return 'border-red-500/30 bg-red-500/10 text-red-200';
+      return 'border-red-500/30 bg-black text-red-200';
     default:
-      return 'border-white/10 bg-black/10 text-foreground/80';
+      return 'border-white/10 bg-black text-foreground/80';
   }
 }
 
@@ -316,9 +313,9 @@ function RuntimeMetricCell({
     <div
       className={cn(
         'rounded-2xl border bg-black p-4',
-        tone === 'warning' && 'border-amber-500/25 bg-amber-950/40',
-        tone === 'danger' && 'border-red-500/25 bg-red-950/40',
-        tone === 'accent' && 'border-brand/30 bg-black/35',
+        tone === 'warning' && 'border-amber-500/25 bg-black',
+        tone === 'danger' && 'border-red-500/25 bg-black',
+        tone === 'accent' && 'border-brand/30 bg-black',
         tone === 'default' && 'border-white/10',
       )}
     >
@@ -388,7 +385,7 @@ function RuntimeOperationsBand({
             {summary.budgetBlockedCount > 0 && (
               <Badge
                 variant="outline"
-                className="border-amber-500/30 bg-amber-500/10 font-mono text-[10px] text-amber-200"
+                className="border-amber-500/30 bg-black font-mono text-[10px] text-amber-200"
                 data-dashboard-runtime-budget-blocks=""
               >
                 {summary.budgetBlockedCount} budget hard-stops
@@ -495,7 +492,7 @@ function RuntimeOperationsBand({
 
             {summary.recentSessions.length === 0 ? (
               <div
-                className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-5 text-sm leading-6 text-muted-foreground"
+                className="rounded-2xl border border-dashed border-white/10 bg-black p-5 text-sm leading-6 text-muted-foreground"
                 data-dashboard-runtime-empty=""
               >
                 No external runtime session is active for this workspace.
@@ -505,13 +502,13 @@ function RuntimeOperationsBand({
                 {summary.recentSessions.map((session) => (
                   <div
                     key={session.id}
-                    className="rounded-2xl border border-white/10 bg-black/10 p-4"
+                    className="rounded-2xl border border-white/10 bg-black p-4"
                     data-dashboard-runtime-session={session.id}
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge
                         variant="outline"
-                        className="border-brand/35 bg-black/25 text-[10px] text-brand"
+                        className="border-brand/35 bg-black text-[10px] text-brand"
                       >
                         {session.adapterKind}
                       </Badge>
@@ -519,14 +516,14 @@ function RuntimeOperationsBand({
                         variant="outline"
                         className={cn(
                           'text-[10px] font-mono',
-                          session.status === 'working' && 'border-brand/35 bg-black/25 text-brand',
+                          session.status === 'working' && 'border-brand/35 bg-black text-brand',
                           (session.status === 'blocked' || session.status === 'stale') &&
-                            'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                            'border-amber-500/30 bg-black text-amber-200',
                           (session.status === 'failed' || session.status === 'offline') &&
-                            'border-red-500/30 bg-red-500/10 text-red-200',
+                            'border-red-500/30 bg-black text-red-200',
                           !['working', 'blocked', 'stale', 'failed', 'offline'].includes(
                             session.status,
-                          ) && 'border-white/10 bg-black/10 text-foreground/80',
+                          ) && 'border-white/10 bg-black text-foreground/80',
                         )}
                       >
                         {session.status}
@@ -534,7 +531,7 @@ function RuntimeOperationsBand({
                       {session.workspaceManaged && (
                         <Badge
                           variant="outline"
-                          className="border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-200"
+                          className="border-emerald-500/30 bg-black text-[10px] text-emerald-200"
                         >
                           isolated
                         </Badge>
@@ -586,8 +583,8 @@ function MissionControlSkeleton() {
           </div>
         </div>
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.95fr)]">
-          <div className="h-[26rem] animate-pulse rounded-[24px] border border-white/10 bg-black/10" />
-          <div className="h-[26rem] animate-pulse rounded-[24px] border border-white/10 bg-black/10" />
+          <div className="h-[26rem] animate-pulse rounded-[24px] border border-white/10 bg-black" />
+          <div className="h-[26rem] animate-pulse rounded-[24px] border border-white/10 bg-black" />
         </div>
       </div>
     </section>
@@ -765,7 +762,7 @@ export function MissionControlDashboard({
                   {company?.slug && (
                     <Badge
                       variant="outline"
-                      className="border-white/10 bg-black/10 font-mono text-[10px] text-foreground/80"
+                      className="border-white/10 bg-black font-mono text-[10px] text-foreground/80"
                     >
                       {company.slug}
                     </Badge>
@@ -773,7 +770,7 @@ export function MissionControlDashboard({
                   {company?.status && (
                     <Badge
                       variant="outline"
-                      className="border-brand/30 bg-black/25 font-mono text-[10px] text-brand"
+                      className="border-brand/30 bg-black font-mono text-[10px] text-brand"
                     >
                       {company.status}
                     </Badge>
@@ -794,12 +791,14 @@ export function MissionControlDashboard({
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
-                    variant={layout.agentRuns ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
                     onClick={() => handlePanelToggle('agentRuns')}
                     className={cn(
                       DASHBOARD_PILL_TOGGLE_CLASS,
-                      !layout.agentRuns && 'border-white/10 bg-black/10 hover:bg-black/20',
+                      layout.agentRuns
+                        ? 'border-brand/40 bg-black text-brand hover:bg-black'
+                        : 'border-white/10 bg-black text-muted-foreground hover:bg-black',
                     )}
                     data-dashboard-hero-toggle="agent-runs"
                     aria-pressed={layout.agentRuns}
@@ -811,12 +810,14 @@ export function MissionControlDashboard({
                   </Button>
                   <Button
                     type="button"
-                    variant={layout.employeeQueues ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
                     onClick={() => handlePanelToggle('employeeQueues')}
                     className={cn(
                       DASHBOARD_PILL_TOGGLE_CLASS,
-                      !layout.employeeQueues && 'border-white/10 bg-black/10 hover:bg-black/20',
+                      layout.employeeQueues
+                        ? 'border-brand/40 bg-black text-brand hover:bg-black'
+                        : 'border-white/10 bg-black text-muted-foreground hover:bg-black',
                     )}
                     data-dashboard-hero-toggle="employee-queues"
                     aria-pressed={layout.employeeQueues}
@@ -842,27 +843,18 @@ export function MissionControlDashboard({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge
-                    variant="outline"
-                    className="border-white/10 bg-black/10 text-foreground/80"
-                  >
+                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
                     {visiblePrimaryPanelCount(layout)} / 2 live panels
                   </Badge>
-                  <Badge
-                    variant="outline"
-                    className="border-white/10 bg-black/10 text-foreground/80"
-                  >
+                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
                     {commandRows.length} recent commands
                   </Badge>
-                  <Badge
-                    variant="outline"
-                    className="border-white/10 bg-black/10 text-foreground/80"
-                  >
+                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
                     {tickets.length} tracked tickets
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="border-white/10 bg-black/10 text-foreground/80"
+                    className="border-white/10 bg-black text-foreground/80"
                     data-dashboard-autonomy-badge="routines"
                   >
                     {enabledRoutineCount} active routines
@@ -870,9 +862,9 @@ export function MissionControlDashboard({
                   <Badge
                     variant="outline"
                     className={cn(
-                      'border-white/10 bg-black/10 text-foreground/80',
+                      'border-white/10 bg-black text-foreground/80',
                       runtimeOperationsSummary.attentionCount > 0 &&
-                        'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                        'border-amber-500/30 bg-black text-amber-200',
                     )}
                     data-dashboard-runtime-badge=""
                   >
@@ -883,25 +875,21 @@ export function MissionControlDashboard({
                   <Badge
                     variant="outline"
                     className={cn(
-                      'border-white/10 bg-black/10 text-foreground/80',
-                      pendingApprovalCount > 0 &&
-                        'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                      'border-white/10 bg-black text-foreground/80',
+                      pendingApprovalCount > 0 && 'border-amber-500/30 bg-black text-amber-200',
                     )}
                     data-dashboard-autonomy-badge="approvals"
                   >
                     {pendingApprovalCount} pending approvals
                   </Badge>
-                  <Badge
-                    variant="outline"
-                    className="border-white/10 bg-black/10 text-foreground/80"
-                  >
+                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
                     {operatorPosture} posture
                   </Badge>
                   {dashboardLayout.isSaving && (
                     <output
                       className={cn(
                         badgeVariants({ variant: 'outline' }),
-                        'border-brand/30 bg-black/25 text-brand',
+                        'border-brand/30 bg-black text-brand',
                       )}
                       aria-live="polite"
                     >
@@ -1192,7 +1180,7 @@ export function MissionControlDashboard({
                   ) : (
                     <div className="grid gap-3" data-dashboard-panel-state="agent-runs-ready">
                       {agentRunsQuery.hasHistoryWarning && (
-                        <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-amber-100">
+                        <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-black p-4 text-sm text-amber-100">
                           <div className="space-y-1">
                             <p className="font-medium">Run history refresh failed</p>
                             <p className="text-amber-100/80">
@@ -1223,7 +1211,7 @@ export function MissionControlDashboard({
                           onClick={() => handleOpenRunThread(run.threadId)}
                           aria-label={`Open Copilot thread for ${run.label}`}
                           className={cn(
-                            'group rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition-all hover:border-brand/30 hover:bg-black/20',
+                            'group rounded-2xl border border-white/10 bg-black p-4 text-left transition-all hover:border-brand/30 hover:bg-black',
                             DASHBOARD_INTERACTIVE_FOCUS_CLASS,
                           )}
                         >
@@ -1238,11 +1226,11 @@ export function MissionControlDashboard({
                                   className={cn(
                                     'text-[10px] font-mono',
                                     run.status === 'completed' &&
-                                      'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+                                      'border-emerald-500/30 bg-black text-emerald-300',
                                     run.status === 'failed' &&
-                                      'border-red-500/30 bg-red-500/10 text-red-300',
+                                      'border-red-500/30 bg-black text-red-300',
                                     run.status === 'running' &&
-                                      'border-brand/35 bg-black/25 text-brand',
+                                      'border-brand/35 bg-black text-brand',
                                   )}
                                 >
                                   {run.status}
@@ -1370,7 +1358,7 @@ export function MissionControlDashboard({
                         return (
                           <div
                             key={row.employeeId}
-                            className="rounded-2xl border border-white/10 bg-black/10 p-4"
+                            className="rounded-2xl border border-white/10 bg-black p-4"
                             data-dashboard-queue-row={row.employeeId}
                           >
                             <div className="flex flex-col gap-3">
@@ -1424,7 +1412,7 @@ export function MissionControlDashboard({
                               </div>
 
                               <div className="space-y-2">
-                                <div className="h-2 overflow-hidden rounded-full bg-background/60">
+                                <div className="h-2 overflow-hidden rounded-full bg-black">
                                   {totalTickets > 0 && (
                                     <div className="flex h-full">
                                       {row.counts.open > 0 && (
@@ -1484,7 +1472,7 @@ export function MissionControlDashboard({
                   description="Both live boards are collapsed. Reset the layout to restore the default hybrid dashboard."
                   dataPanel="all-hidden"
                 >
-                  <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-black/10 p-8 text-center">
+                  <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-black p-8 text-center">
                     <LayoutPanelTop className="h-8 w-8 text-brand" />
                     <p className="max-w-lg text-sm text-muted-foreground">
                       The mission-control shell is still active below, but the live board row is
@@ -1515,13 +1503,13 @@ export function MissionControlDashboard({
                   </CardHeader>
                   <CardContent>
                     <div
-                      className="rounded-2xl border border-white/10 bg-black/10 p-4"
+                      className="rounded-2xl border border-white/10 bg-black p-4"
                       data-dashboard-secondary-panel="copilot"
                     >
                       <p className="mb-3 text-xs text-muted-foreground">
                         Keep live findings visible without letting them outrank the work boards.
                       </p>
-                      <div className="[&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0 [&_[data-copilot-widget-count]]:border-white/10 [&_[data-copilot-widget-count]]:bg-black/10 [&_[data-copilot-widget-view-all]]:border-white/10 [&_[data-copilot-widget-view-all]]:bg-black/10 [&_[data-copilot-widget-view-all]]:hover:bg-black/20">
+                      <div className="[&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0 [&_[data-copilot-widget-count]]:border-white/10 [&_[data-copilot-widget-count]]:bg-black [&_[data-copilot-widget-view-all]]:border-white/10 [&_[data-copilot-widget-view-all]]:bg-black [&_[data-copilot-widget-view-all]]:hover:bg-black">
                         <CopilotDashboardWidget />
                       </div>
                     </div>
@@ -1601,7 +1589,7 @@ export function MissionControlDashboard({
                         onClick={() => setDashboardSubview('commands')}
                         aria-label={`Open command log entry ${intentLabel(entry.intent)}`}
                         className={cn(
-                          'group flex w-full items-start justify-between gap-4 rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition-all hover:border-brand/30 hover:bg-black/20',
+                          'group flex w-full items-start justify-between gap-4 rounded-2xl border border-white/10 bg-black p-4 text-left transition-all hover:border-brand/30 hover:bg-black',
                           DASHBOARD_INTERACTIVE_FOCUS_CLASS,
                         )}
                       >
@@ -1609,7 +1597,7 @@ export function MissionControlDashboard({
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge
                               variant="outline"
-                              className="border-brand/35 bg-black/25 text-[10px] text-brand"
+                              className="border-brand/35 bg-black text-[10px] text-brand"
                             >
                               {intentLabel(entry.intent)}
                             </Badge>
@@ -1693,7 +1681,7 @@ export function MissionControlDashboard({
                   ) : (
                     <>
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                        <div className="rounded-2xl border border-white/10 bg-black p-4">
                           <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                             Total runs
                           </p>
@@ -1701,7 +1689,7 @@ export function MissionControlDashboard({
                             {formatCompactNumber(telemetryStatsQuery.data?.totalRuns)}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                        <div className="rounded-2xl border border-white/10 bg-black p-4">
                           <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                             Total tokens
                           </p>
@@ -1709,7 +1697,7 @@ export function MissionControlDashboard({
                             {formatCompactNumber(telemetryStatsQuery.data?.totalTokens)}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                        <div className="rounded-2xl border border-white/10 bg-black p-4">
                           <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                             Avg latency
                           </p>
@@ -1717,7 +1705,7 @@ export function MissionControlDashboard({
                             {formatCompactNumber(telemetryStatsQuery.data?.avgLatencyMs)}ms
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+                        <div className="rounded-2xl border border-white/10 bg-black p-4">
                           <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
                             Total cost
                           </p>
@@ -1727,7 +1715,7 @@ export function MissionControlDashboard({
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-white/10 bg-black/10 p-4 text-sm text-muted-foreground">
+                      <div className="rounded-2xl border border-white/10 bg-black p-4 text-sm text-muted-foreground">
                         Current window: {formatCompactNumber(todayUsage?.totalRuns ?? 0)} runs,{' '}
                         {formatCompactNumber(todayUsage?.totalTokens ?? 0)} tokens,{' '}
                         {formatUsd(todayUsage?.costUsd)} cost.
@@ -1740,7 +1728,7 @@ export function MissionControlDashboard({
                         }
                         aria-label="Open autonomy snapshot detail"
                         className={cn(
-                          'w-full rounded-2xl border border-white/10 bg-black/10 p-4 text-left transition hover:border-brand/30 hover:bg-black/20',
+                          'w-full rounded-2xl border border-white/10 bg-black p-4 text-left transition hover:border-brand/30 hover:bg-black',
                           DASHBOARD_INTERACTIVE_FOCUS_CLASS,
                         )}
                         data-dashboard-autonomy-snapshot=""
@@ -1752,9 +1740,9 @@ export function MissionControlDashboard({
                           <Badge
                             variant="outline"
                             className={cn(
-                              'border-white/10 bg-black/10 text-[10px] text-foreground/80',
+                              'border-white/10 bg-black text-[10px] text-foreground/80',
                               pendingApprovalCount > 0 &&
-                                'border-amber-500/30 bg-amber-500/10 text-amber-200',
+                                'border-amber-500/30 bg-black text-amber-200',
                             )}
                           >
                             {pendingApprovalCount} pending

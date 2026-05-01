@@ -44,11 +44,11 @@ function EmployeeItem({ employee }: { employee: Employee }) {
       className={cn(
         'flex w-full items-center gap-3 rounded-[18px] border border-transparent px-3 py-2.5 text-left transition-all',
         isSelected
-          ? 'border-brand/30 bg-black/25 text-foreground'
-          : 'text-muted-foreground hover:border-white/10 hover:bg-surface-100 hover:text-foreground',
+          ? 'border-brand/30 bg-black text-foreground'
+          : 'text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground',
       )}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] border border-white/10 bg-black/25 text-xs font-semibold">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] border border-white/10 bg-black text-xs font-semibold">
         {employee.name
           .split(' ')
           .map((w) => w[0])
@@ -96,7 +96,7 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
   const showGuideSummary = activeCompany !== null;
 
   return (
-    <aside className="mission-chrome-panel flex w-64 shrink-0 flex-col rounded-[30px] border border-white/10 bg-black/20 backdrop-blur-xl">
+    <aside className="mission-chrome-panel flex w-64 shrink-0 flex-col rounded-[30px] border border-white/10 bg-black">
       <div className="flex items-center justify-between px-4 py-4">
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -110,7 +110,7 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 gap-1 rounded-full border border-brand/30 bg-black/25 px-3 text-xs font-semibold text-brand hover:bg-white/[0.04] hover:text-brand"
+          className="h-8 gap-1 rounded-full border border-brand/30 bg-black px-3 text-xs font-semibold text-brand hover:bg-black hover:text-brand"
           onClick={onHireClick}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -136,7 +136,7 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
             )}
           </div>
           {thinkingCount > 0 ? (
-            <div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-right text-[11px]">
+            <div className="rounded-full border border-white/10 bg-black px-3 py-1 text-right text-[11px]">
               <span className="font-semibold text-brand">{thinkingCount} busy</span>
             </div>
           ) : null}
@@ -164,7 +164,7 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
         <button
           type="button"
           onClick={() => useAppStore.getState().openThreadList()}
-          className="flex w-full items-center gap-2 rounded-[18px] border border-transparent px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:border-white/10 hover:bg-surface-100 hover:text-foreground"
+          className="flex w-full items-center gap-2 rounded-[18px] border border-transparent px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:border-white/10 hover:bg-black hover:text-foreground"
         >
           <MessageSquare className="h-4 w-4 text-brand" />
           Threads
@@ -180,8 +180,8 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
           className={cn(
             'mb-2 flex w-full items-start gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors',
             activeView === 'autonomy'
-              ? 'border-brand/30 bg-black/25 text-foreground'
-              : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-surface-100 hover:text-foreground',
+              ? 'border-brand/30 bg-black text-foreground'
+              : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground',
           )}
           data-autonomy-nav=""
         >
@@ -200,8 +200,8 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
           className={cn(
             'flex w-full items-start gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors',
             activeView === 'user-guide'
-              ? 'border-brand/30 bg-black/25 text-foreground'
-              : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-surface-100 hover:text-foreground',
+              ? 'border-brand/30 bg-black text-foreground'
+              : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground',
           )}
           data-user-guide-nav=""
         >
@@ -210,7 +210,7 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-medium">User Guide</span>
               {showGuideSummary ? (
-                <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] text-muted-foreground">
+                <span className="rounded-full border border-white/10 bg-black px-2 py-0.5 text-[10px] text-muted-foreground">
                   {guideSummary.coreRemaining > 0 ? `${guideSummary.coreRemaining} left` : 'ready'}
                 </span>
               ) : null}
@@ -229,7 +229,7 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
         aria-live="polite"
         aria-atomic="true"
       >
-        <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">
+        <span className="rounded-full border border-white/10 bg-black px-3 py-1">
           {thinkingCount > 0 && (
             <>
               <span className="font-medium text-brand">{thinkingCount} busy</span>
