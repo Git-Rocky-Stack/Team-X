@@ -348,9 +348,9 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
               // Only clear if the employee's providerPref matches what we're clearing
               // This is a heuristic - we can't know for sure which were auto-set
               // For now, we'll just clear all and let them fall back to defaults
-            )
+            ),
           )
-          .run();
+          .run() as unknown as { changes: number };
         return result.changes;
       }
 
@@ -359,7 +359,7 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
         .update(employees)
         .set({ providerPref: providerId })
         .where(and(eq(employees.companyId, companyId), eq(employees.providerPref, '')))
-        .run();
+        .run() as unknown as { changes: number };
       return result.changes;
     },
   };

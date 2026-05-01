@@ -13,14 +13,13 @@
  *
  * Layered for testability:
  *
- *   1. `createProviderFactory({ providersService, secretsStore })` is
- *      a PURE factory. The factory accepts injected services rather
- *      than reaching for module-level singletons, so the unit suite
- *      can hand-roll fakes that never touch the DB or the keychain.
- *      The `secretsStore` parameter is typed against the narrow
- *      `SecretsReader` interface (just `getApiKey`) for the same
- *      reason — tests don't need to satisfy the full `SecretsStore`
- *      surface area.
+ *   1. `createProviderFactory({ providersService, secretsStore, companiesRepo })`
+ *      is a PURE factory. The factory accepts injected services rather
+ *      than reaching for module-level singletons, so the unit suite can
+ *      hand-roll fakes that never touch the DB or the keychain. The
+ *      `secretsStore` and `companiesRepo` parameters are typed against
+ *      narrow interfaces for the same reason — tests don't need to satisfy
+ *      either full runtime service surface.
  *
  *   2. `getProviderFactory()` is a thin runtime wrapper that
  *      constructs the process-wide instance against
@@ -147,10 +146,14 @@ export interface SecretsReader {
   getApiKey(providerId: string): Promise<string | null>;
 }
 
+export interface ProviderFactoryCompaniesRepo {
+  getById(id: string): { settingsJson: string | null } | null;
+}
+
 export interface ProviderFactoryDeps {
   providersService: ProvidersService;
   secretsStore: SecretsReader;
-  companiesRepo: CompaniesRepo;
+  companiesRepo: ProviderFactoryCompaniesRepo;
 }
 
 export interface ProviderFactory {
@@ -305,7 +308,7 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
    */
   async function pickConfigured(
     preferredId: string | null | undefined,
-    companyId?: string
+    companyId?: string,
   ): Promise<ProviderConfig> {
     const candidates: string[] = [];
     if (typeof preferredId === 'string' && preferredId.length > 0) {
@@ -317,7 +320,10 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
       if (company) {
         try {
           const settings = JSON.parse(company.settingsJson || '{}');
-          if (typeof settings.defaultProviderId === 'string' && settings.defaultProviderId.length > 0) {
+          if (
+            typeof settings.defaultProviderId === 'string' &&
+            settings.defaultProviderId.length > 0
+          ) {
             candidates.push(settings.defaultProviderId);
           }
         } catch {

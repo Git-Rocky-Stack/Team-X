@@ -114,7 +114,7 @@ export interface OrchestratorThreadsRepo {
   listMembers(threadId: string): Array<{
     threadId: string;
     memberId: string;
-    memberKind: 'user' | 'employee';
+    memberKind: string;
     roleInThread: string | null;
   }>;
   getOrCreateEmployeeDmThread(input: GetOrCreateEmployeeDmThreadInput): string;

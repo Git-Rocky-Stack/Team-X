@@ -62,7 +62,11 @@ import type { ProviderConfig } from '@team-x/shared-types';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
 
-import { type SecretsReader, createProviderFactory } from './provider-factory.js';
+import {
+  type ProviderFactoryCompaniesRepo,
+  type SecretsReader,
+  createProviderFactory,
+} from './provider-factory.js';
 import type { ProvidersService } from './providers.js';
 
 // ---------------------------------------------------------------------------
@@ -106,6 +110,18 @@ class FakeSecrets implements SecretsReader {
 
   async getApiKey(providerId: string): Promise<string | null> {
     return this.keys.get(providerId) ?? null;
+  }
+}
+
+class FakeCompaniesRepo implements ProviderFactoryCompaniesRepo {
+  private settings = new Map<string, string>();
+
+  setSettings(companyId: string, settings: Record<string, unknown>): void {
+    this.settings.set(companyId, JSON.stringify(settings));
+  }
+
+  getById(id: string): { settingsJson: string | null } | null {
+    return { settingsJson: this.settings.get(id) ?? '{}' };
   }
 }
 
@@ -154,6 +170,7 @@ function makeEmployee(overrides: Partial<EmployeeRow> = {}): EmployeeRow {
 describe('createProviderFactory', () => {
   let providers: FakeProvidersService;
   let secrets: FakeSecrets;
+  let companies: FakeCompaniesRepo;
   let factory: ReturnType<typeof createProviderFactory>;
 
   beforeEach(() => {
@@ -161,7 +178,12 @@ describe('createProviderFactory', () => {
     calls.makeOllama.length = 0;
     providers = new FakeProvidersService();
     secrets = new FakeSecrets();
-    factory = createProviderFactory({ providersService: providers, secretsStore: secrets });
+    companies = new FakeCompaniesRepo();
+    factory = createProviderFactory({
+      providersService: providers,
+      secretsStore: secrets,
+      companiesRepo: companies,
+    });
   });
 
   describe('create({ providerId, model })', () => {
@@ -253,6 +275,20 @@ describe('createProviderFactory', () => {
       const resolved = await factory.resolveForEmployee(employee);
 
       expect(resolved.providerName).toBe('anthropic');
+    });
+
+    it('uses the company default provider before hardcoded fallbacks', async () => {
+      providers.set(OLLAMA_ROW);
+      providers.set(ANTHROPIC_ROW);
+      secrets.set('anthropic', 'sk-ant');
+      companies.setSettings('co_test_1', { defaultProviderId: 'ollama-local' });
+
+      const employee = makeEmployee({ providerPref: null });
+      const resolved = await factory.resolveForEmployee(employee);
+
+      expect(resolved.providerName).toBe('ollama-local');
+      expect(calls.makeOllama).toHaveLength(1);
+      expect(calls.makeAnthropic).toHaveLength(0);
     });
 
     it('falls back to ollama-local when anthropic is unavailable', async () => {

@@ -30,6 +30,7 @@
  * `SQLJsDatabase<Schema>` under tests.
  */
 
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -62,11 +63,20 @@ async function getSqlModule() {
       // The WASM file is copied directly to out/main/sql-wasm.wasm
       const bundledPath = join(thisDir, '..', '..', file);
       // In dev (unbundled), use node_modules path
-      const nodeModulesPath = join(thisDir, '..', '..', '..', 'node_modules', 'sql.js', 'dist', file);
+      const nodeModulesPath = join(
+        thisDir,
+        '..',
+        '..',
+        '..',
+        'node_modules',
+        'sql.js',
+        'dist',
+        file,
+      );
 
-      // In production, the WASM file will be in the same directory as the bundled JS
-      // In dev, fall back to node_modules
-      return bundledPath;
+      // In production, the WASM file will be in the same directory as the bundled JS.
+      // In Vitest/dev, use the package asset from node_modules.
+      return existsSync(bundledPath) ? bundledPath : nodeModulesPath;
     },
   });
   return _SQL;

@@ -792,7 +792,7 @@ app
       resolveProvider = createTestModeResolveProvider();
       console.log('[main] test-mode provider active — canned responses, no LLM calls');
     } else {
-      const providerFactory = createProviderFactory({ providersService, secretsStore });
+      const providerFactory = createProviderFactory({ providersService, secretsStore, companiesRepo });
       const runtimeProfileProviderService = createRuntimeProfileProviderService({
         runtimeProfilesService,
         providerFactory,
@@ -1720,7 +1720,7 @@ app
               `[agentic-loop] Write-side actor "${employee.id}" not found in employees repo.`,
             );
           }
-          const factory = createProviderFactory({ providersService, secretsStore });
+          const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
           const resolved = await factory.resolveForEmployee(actorRow);
           let text = '';
           for await (const chunk of streamAgent({
@@ -1791,7 +1791,7 @@ app
         if (!emp) {
           throw new Error(`[agentic-loop] system-agent employee ${systemAgentId} not found`);
         }
-        const factory = createProviderFactory({ providersService, secretsStore });
+        const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
         const resolved = await factory.resolveForEmployee(emp);
         const { providerName, model, stream } = resolved;
         const complete: LoopCompleteFn = async ({ system, messages, signal }) => {
@@ -1909,7 +1909,7 @@ app
             `[copilot-analyzer] system-copilot employee ${systemCopilotId} not found for company ${companyId}`,
           );
         }
-        const factory = createProviderFactory({ providersService, secretsStore });
+        const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
         const resolved = await factory.resolveForEmployee(emp);
         const { providerName, model, stream } = resolved;
         const complete: CopilotAnalyzerCompleteFn = async ({ system, user, signal }) => {
