@@ -61,7 +61,6 @@ import type {
   AgenticFailedPayload,
   DashboardEvent,
 } from '@team-x/shared-types';
-
 import { useCallback, useEffect, useState } from 'react';
 
 import { ipc } from '@/lib/ipc.js';

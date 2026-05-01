@@ -2,15 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CompaniesUpdateRequest, Company } from '@team-x/shared-types';
 
 import {
-  useAuthorityGrants,
-  useAuthorityRequests,
-  useInstalledExtensions,
-} from '@/hooks/use-extensions.js';
-import { useProviders } from '@/hooks/use-providers.js';
-import { ipc } from '@/lib/ipc.js';
-import { useAppStore } from '@/store/app-store.js';
-
-import {
   defaultGuideSectionIdForRole,
   guideActionById,
   guideCompletionSummary,
@@ -21,8 +12,18 @@ import {
   userGuidePreferencesFromCompanySettings,
   withUserGuideInCompanySettings,
 } from './guide-progress.js';
-
 import type { GuideSection } from './guide-types.js';
+
+import {
+  useAuthorityGrants,
+  useAuthorityRequests,
+  useInstalledExtensions,
+} from '@/hooks/use-extensions.js';
+import { useProviders } from '@/hooks/use-providers.js';
+import { ipc } from '@/lib/ipc.js';
+import { useAppStore } from '@/store/app-store.js';
+
+
 
 function userGuideErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.length > 0) return error.message;

@@ -1,11 +1,7 @@
 import { BrainCircuit, Clock3, ShieldCheck } from 'lucide-react';
 
-import { Button } from '@/components/ui/button.js';
-import { useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
-import { cn } from '@/lib/utils.js';
-import { useAppStore } from '@/store/app-store.js';
-
 import { MissionInsetSurface, MissionPill } from '../mission/mission-shell.js';
+
 import {
   checkpointLabel,
   checkpointTone,
@@ -14,6 +10,12 @@ import {
   resumeOriginHint,
   resumeOriginLabel,
 } from './memory-formatters.js';
+
+import { Button } from '@/components/ui/button.js';
+import { useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
+import { cn } from '@/lib/utils.js';
+import { useAppStore } from '@/store/app-store.js';
+
 
 interface ThreadMemoryCardProps {
   companyId: string | null;

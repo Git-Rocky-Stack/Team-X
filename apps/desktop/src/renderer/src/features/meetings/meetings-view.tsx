@@ -2,11 +2,12 @@ import type { Employee, Meeting } from '@team-x/shared-types';
 import { Calendar, Clock, Plus, Users2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { CallMeetingDialog } from './call-meeting-dialog.js';
+import { MeetingDetailPanel } from './meeting-detail.js';
+
 import { useMeetingEventSync, useMeetings } from '@/hooks/use-meetings.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { CallMeetingDialog } from './call-meeting-dialog.js';
-import { MeetingDetailPanel } from './meeting-detail.js';
 
 interface MeetingsViewProps {
   companyId: string | null;

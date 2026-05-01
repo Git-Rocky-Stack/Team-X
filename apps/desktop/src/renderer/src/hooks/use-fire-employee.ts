@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
 import type { OrgchartGetResponse } from '@team-x/shared-types';
 
 import { ipc } from '@/lib/ipc.js';

@@ -9,8 +9,7 @@ import type {
   OperatorInvite,
   OperatorMembershipRole,
   SharedOperatorAuthMode,
-} from '@team-x/shared-types';
-import type { AcceptOperatorInviteResponse } from '@team-x/shared-types';
+ AcceptOperatorInviteResponse } from '@team-x/shared-types';
 
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { OperatorInviteRow, OperatorRow, OperatorsRepo } from '../db/repos/operators.js';

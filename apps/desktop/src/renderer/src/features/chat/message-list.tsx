@@ -1,8 +1,7 @@
-import { useEffect, useRef } from 'react';
 
 import type { ChatMessage, Employee } from '@team-x/shared-types';
-
 import { Bot } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 import { cn } from '@/lib/utils.js';
 

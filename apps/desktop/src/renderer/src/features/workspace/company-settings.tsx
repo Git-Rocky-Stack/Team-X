@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { CompaniesUpdateRequest, Company } from '@team-x/shared-types';
 import { AlertTriangle, Archive, Building2, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import type { CompaniesUpdateRequest, Company } from '@team-x/shared-types';
 
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';

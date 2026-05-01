@@ -42,10 +42,8 @@
  */
 
 import { join } from 'node:path';
-import { BrowserWindow, app, dialog, ipcMain } from 'electron';
-import { setupApplicationMenu } from './menu.js';
 
-import { calcCostUsd } from '@team-x/telemetry-core';
+
 
 import {
   type RagRepo,
@@ -54,8 +52,7 @@ import {
   createIntentClassifier,
   createRagService,
   createSlotFiller,
-} from '@team-x/intelligence';
-import type { LoopCompleteFn, LoopMessage, LoopProviderCompletion } from '@team-x/intelligence';
+ LoopCompleteFn, LoopMessage, LoopProviderCompletion } from '@team-x/intelligence';
 import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
 import { streamAgent } from '@team-x/provider-router';
 import type {
@@ -70,7 +67,10 @@ import {
   DEFAULT_CONCURRENCY_CAPS,
   SYSTEM_COPILOT_ROLE_ID,
 } from '@team-x/shared-types';
+import { calcCostUsd } from '@team-x/telemetry-core';
 import { eq } from 'drizzle-orm';
+import { BrowserWindow, app, dialog, ipcMain } from 'electron';
+
 import { closeDb, getDb, initDb } from './db/client.js';
 import { initFts5 } from './db/fts5-init.js';
 import { runMigrations } from './db/migrate.js';
@@ -123,6 +123,7 @@ import { buildCopilotHandlers } from './ipc/copilot-handlers.js';
 import { HUMAN_USER_ID, createIpcHandlers } from './ipc/handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
+import { setupApplicationMenu } from './menu.js';
 import { createAgentWakeupQueue } from './orchestrator/agent-wakeup-queue.js';
 import { createEventBus } from './orchestrator/event-bus.js';
 import { createHeartbeatService } from './orchestrator/heartbeat-service.js';

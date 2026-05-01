@@ -1,5 +1,4 @@
 import type { DashboardEvent } from '@team-x/shared-types';
-
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type IpcRendererLike, PRELOAD_CHANNELS, buildTeamXApi } from './api.js';

@@ -19,6 +19,21 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 
+import { formatAgentRunPhase } from './agent-runs-projections.js';
+import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
+import { visiblePrimaryPanelCount } from './dashboard-layout.js';
+import {
+  type DashboardQueueRow,
+  projectDashboardQueueRows,
+  summarizeDashboardQueues,
+} from './dashboard-queue-projections.js';
+import {
+  type DashboardRuntimeOperationsSummary,
+  summarizeRuntimeOperationsForDashboard,
+} from './runtime-operations-projections.js';
+import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
+import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
+
 import { Badge, badgeVariants } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
@@ -36,20 +51,6 @@ import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { formatAgentRunPhase } from './agent-runs-projections.js';
-import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
-import { visiblePrimaryPanelCount } from './dashboard-layout.js';
-import {
-  type DashboardQueueRow,
-  projectDashboardQueueRows,
-  summarizeDashboardQueues,
-} from './dashboard-queue-projections.js';
-import {
-  type DashboardRuntimeOperationsSummary,
-  summarizeRuntimeOperationsForDashboard,
-} from './runtime-operations-projections.js';
-import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
-import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
 
 const DAY_MS = 86_400_000;
 const DASHBOARD_TOUCH_BUTTON_CLASS = 'min-h-11';

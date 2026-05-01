@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createSettingsRepo } from '../db/repos/settings.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+
 import { createCloudLinkService } from './cloud-link-service.js';
 
 describe('cloud-link-service', () => {

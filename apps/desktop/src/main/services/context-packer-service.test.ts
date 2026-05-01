@@ -1,6 +1,6 @@
+import type { AssembledThreadContext } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-import type { AssembledThreadContext } from '@team-x/shared-types';
 
 import { createContextPackerService } from './context-packer-service.js';
 

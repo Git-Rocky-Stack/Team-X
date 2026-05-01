@@ -11,8 +11,6 @@
  * Phase 6 — Proactive Execution System — Slice 3
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import type {
   ProactiveDecomposeGoalRequest,
   ProactiveDecomposeGoalResponse,
@@ -20,6 +18,8 @@ import type {
   ProactiveScanForWorkResponse,
   ProactiveSetEnabledRequest,
 } from '@team-x/shared-types';
+import { describe, expect, it, vi } from 'vitest';
+
 
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 

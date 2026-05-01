@@ -1,6 +1,6 @@
+import { Send, Square } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-import { Send, Square } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';
 import { Textarea } from '@/components/ui/textarea.js';

@@ -10,8 +10,6 @@
  * Phase 5 — M33 T7.
  */
 
-import { useEffect, useState } from 'react';
-
 import {
   COPILOT_CATEGORIES,
   COPILOT_CATEGORY_WEIGHTS_DEFAULT,
@@ -22,6 +20,10 @@ import {
   type SettingsGetCopilotResponse,
 } from '@team-x/shared-types';
 import { AlertTriangle, Loader2, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+
+import { formatCopilotWeightLabel } from '../copilot/copilot-helpers.js';
 
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
@@ -33,7 +35,6 @@ import {
 } from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { formatCopilotWeightLabel } from '../copilot/copilot-helpers.js';
 
 function clamp(value: number, min: number, max: number): number {
   if (Number.isNaN(value) || !Number.isFinite(value)) return min;

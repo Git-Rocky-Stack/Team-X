@@ -6,10 +6,14 @@
  * Phase 3 — M17.
  */
 
+import type { TelemetryKindFilter } from '@team-x/shared-types';
 import { Activity, BarChart3, DollarSign, Gauge, Radar, Rows3, Users2 } from 'lucide-react';
 import { type ComponentType, useMemo, useState } from 'react';
 
-import type { TelemetryKindFilter } from '@team-x/shared-types';
+
+import { CompanyTelemetry } from './company-telemetry.js';
+import { CostBreakdown } from './cost-breakdown.js';
+import { EmployeeTelemetry } from './employee-telemetry.js';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -29,9 +33,6 @@ import { useOperators } from '@/hooks/use-operators.js';
 import { telemetryRequestKind, useCompanyStats } from '@/hooks/use-telemetry.js';
 import { type TelemetrySubview, useAppStore } from '@/store/app-store.js';
 
-import { CompanyTelemetry } from './company-telemetry.js';
-import { CostBreakdown } from './cost-breakdown.js';
-import { EmployeeTelemetry } from './employee-telemetry.js';
 
 interface SubtabDef {
   label: string;

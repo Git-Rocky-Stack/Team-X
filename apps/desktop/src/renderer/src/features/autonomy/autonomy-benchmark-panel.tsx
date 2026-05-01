@@ -1,4 +1,3 @@
-import { useMemo, useState } from 'react';
 
 import type {
   AutonomyBenchmarkReport,
@@ -17,9 +16,8 @@ import {
   RotateCcw,
   XCircle,
 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
-import { Button } from '@/components/ui/button.js';
-import { useAutonomyBenchmark } from '@/hooks/use-autonomy-benchmark.js';
 
 import {
   MissionControlRow,
@@ -28,6 +26,9 @@ import {
   MissionPill,
   MissionStateBlock,
 } from '../mission/mission-shell.js';
+
+import { Button } from '@/components/ui/button.js';
+import { useAutonomyBenchmark } from '@/hooks/use-autonomy-benchmark.js';
 
 const DEFAULT_BENCHMARK_RUNTIME_KINDS = [
   'teamx-internal',

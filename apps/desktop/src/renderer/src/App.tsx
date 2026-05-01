@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { useCompanies } from '@/hooks/use-companies.js';
-import { useDashboardEvents } from '@/hooks/use-dashboard-events.js';
-import { useEmployees } from '@/hooks/use-employees.js';
-import { useAppStore } from '@/store/app-store.js';
 
 import { AppLayout } from './app/layout.js';
 import { ErrorBoundary } from './components/error-boundary.js';
@@ -28,6 +24,11 @@ import { TelemetryView } from './features/telemetry/telemetry-view.js';
 import { TicketsView } from './features/tickets/tickets-view.js';
 import { UserGuideView } from './features/user-guide/user-guide-view.js';
 import { VaultView } from './features/vault/vault-view.js';
+
+import { useCompanies } from '@/hooks/use-companies.js';
+import { useDashboardEvents } from '@/hooks/use-dashboard-events.js';
+import { useEmployees } from '@/hooks/use-employees.js';
+import { useAppStore } from '@/store/app-store.js';
 
 /**
  * Root application component. Phase 3 expands routing to all top-level

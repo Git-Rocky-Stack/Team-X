@@ -25,7 +25,9 @@ import type { MeetingActionItem, MeetingMode } from '@team-x/shared-types';
 import type { CreateMeetingInput, MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput } from '../db/repos/messages.js';
 import type { CreateTicketInput } from '../db/repos/tickets.js';
+
 import type { EventBus } from './event-bus.js';
+
 import type { Orchestrator, OrchestratorEmployeesRepo, OrchestratorMessagesRepo } from './index.js';
 
 // ---------------------------------------------------------------------------

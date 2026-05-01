@@ -1,5 +1,3 @@
-import { useMemo, useState } from 'react';
-
 import type { Company, Employee } from '@team-x/shared-types';
 import {
   ArrowRight,
@@ -12,6 +10,17 @@ import {
   Search,
   ShieldCheck,
 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+
+import { GUIDE_ACTIONS } from './guide-content.js';
+import {
+  guideActionById,
+  guideRoleDescription,
+  guideRoleLabel,
+  guideTaskById,
+} from './guide-progress.js';
+import { useUserGuide } from './use-user-guide.js';
 
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
@@ -29,14 +38,6 @@ import {
 } from '@/features/mission/mission-shell.js';
 import { cn } from '@/lib/utils.js';
 
-import { GUIDE_ACTIONS } from './guide-content.js';
-import {
-  guideActionById,
-  guideRoleDescription,
-  guideRoleLabel,
-  guideTaskById,
-} from './guide-progress.js';
-import { useUserGuide } from './use-user-guide.js';
 
 interface UserGuideViewProps {
   company: Company | null;

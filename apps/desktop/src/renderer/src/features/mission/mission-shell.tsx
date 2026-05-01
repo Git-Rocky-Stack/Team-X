@@ -215,7 +215,7 @@ export function MissionSectionCard({
   );
 }
 
-interface MissionRailCardProps extends MissionSectionCardProps {}
+type MissionRailCardProps = MissionSectionCardProps;
 
 export function MissionRailCard({
   className,

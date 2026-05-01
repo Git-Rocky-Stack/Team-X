@@ -47,6 +47,7 @@
  * has to reason about `data: unknown`.
  */
 
+import type { AgentStepPayload } from '@team-x/shared-types';
 import {
   AlertTriangle,
   Brain,
@@ -57,7 +58,12 @@ import {
   Wrench,
 } from 'lucide-react';
 
-import type { AgentStepPayload } from '@team-x/shared-types';
+
+import {
+  narrowDelegationMade,
+  narrowReviewPending,
+  narrowTicketCreated,
+} from './step-card-narrow.js';
 
 import { cn } from '@/lib/utils.js';
 
@@ -128,11 +134,6 @@ function narrowError(data: unknown): ErrorData {
 
 // Write-side narrow helpers — extracted to step-card-narrow.ts for
 // testability without renderer deps (Phase 5 — M32 T6).
-import {
-  narrowDelegationMade,
-  narrowReviewPending,
-  narrowTicketCreated,
-} from './step-card-narrow.js';
 
 /**
  * Stable JSON pretty-print with 2-space indent. If the value is not

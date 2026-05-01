@@ -97,7 +97,6 @@ export function CreateProjectDialog({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Project name"
                 className="mt-1 text-sm"
-                autoFocus
               />
             </div>
 

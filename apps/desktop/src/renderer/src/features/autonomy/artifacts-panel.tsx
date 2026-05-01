@@ -1,10 +1,7 @@
-import { useMemo, useState } from 'react';
-
 import type { ArtifactRecord, ArtifactSourceKind } from '@team-x/shared-types';
 import { CheckSquare2, FileStack, FolderKanban, Ticket, UploadCloud, Workflow } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
-import { useArtifactEventSync, useArtifacts } from '@/hooks/use-artifacts.js';
-import { useAppStore } from '@/store/app-store.js';
 
 import {
   MissionControlRow,
@@ -14,6 +11,10 @@ import {
   MissionSegmentedButton,
   MissionStateBlock,
 } from '../mission/mission-shell.js';
+
+import { useArtifactEventSync, useArtifacts } from '@/hooks/use-artifacts.js';
+import { useAppStore } from '@/store/app-store.js';
+
 
 type ArtifactFilter = 'all' | ArtifactSourceKind;
 

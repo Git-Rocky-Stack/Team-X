@@ -1,10 +1,10 @@
-import { nanoid } from 'nanoid';
-
 import type {
   CloudSyncCursorState,
   CloudWorkspaceLinkState,
   CompanyCloudLinkStatus,
 } from '@team-x/shared-types';
+import { nanoid } from 'nanoid';
+
 
 import type { CompanyRow, UpdateCompanyCloudLinkInput } from '../db/repos/companies.js';
 

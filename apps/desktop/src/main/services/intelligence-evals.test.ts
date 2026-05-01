@@ -11,6 +11,7 @@ import type { DashboardEvent, RoleSpec } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { CommandHistoryRepo, CommandHistoryRow } from '../db/repos/command-history.js';
+
 import { buildChatActionTools } from './chat-action-tools.js';
 import {
   type CommandEntityResolver,

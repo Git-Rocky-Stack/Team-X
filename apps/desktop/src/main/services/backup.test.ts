@@ -131,7 +131,6 @@ describe('BackupService.ensurePostRestoreSystemEmployees', () => {
     const result = service.ensurePostRestoreSystemEmployees({
       listCompanyIds: () => ['c-odd'],
       ensureSystemForCompany: () => {
-        // eslint-disable-next-line @typescript-eslint/no-throw-literal
         throw 'raw string throw';
       },
     });

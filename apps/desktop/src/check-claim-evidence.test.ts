@@ -10,6 +10,7 @@
 // e2e-regression-guards.test.ts (M35 T9). Imports the .mjs engine as ESM.
 
 import { describe, expect, it } from 'vitest';
+
 // @ts-expect-error — .mjs script with implicit module resolution; vitest resolves at runtime.
 import {
   applyAllowlist,

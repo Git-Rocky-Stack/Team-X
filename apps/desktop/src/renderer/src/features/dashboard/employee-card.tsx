@@ -1,6 +1,6 @@
+import type { Employee } from '@team-x/shared-types';
 import { useEffect, useRef } from 'react';
 
-import type { Employee } from '@team-x/shared-types';
 
 import { cn } from '@/lib/utils.js';
 import type { EmployeeLiveState } from '@/store/app-store.js';

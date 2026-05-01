@@ -2,10 +2,10 @@
  * Meeting service tests — full lifecycle against real repos + orchestrator.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { ProviderStreamFn, StreamUsage } from '@team-x/provider-router';
 import type { DashboardEvent } from '@team-x/shared-types';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
@@ -16,9 +16,11 @@ import { createRunsRepo } from '../db/repos/runs.js';
 import { createThreadsRepo } from '../db/repos/threads.js';
 import { createTicketsRepo } from '../db/repos/tickets.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+
 import { createEventBus } from './event-bus.js';
-import { type Orchestrator, buildOrchestrator } from './index.js';
 import { createMeetingService } from './meeting-service.js';
+
+import { type Orchestrator, buildOrchestrator } from './index.js';
 
 function makeFakeProvider(deltas: string[], usage: StreamUsage): ProviderStreamFn {
   return async function* () {

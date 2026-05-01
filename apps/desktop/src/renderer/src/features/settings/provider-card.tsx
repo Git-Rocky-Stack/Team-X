@@ -348,7 +348,6 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Paste API key..."
                 className="text-xs h-8 flex-1 font-mono"
-                autoFocus
               />
               <Button
                 type="submit"

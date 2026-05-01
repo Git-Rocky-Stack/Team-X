@@ -12,9 +12,9 @@
  *      intentional (this test is the canary).
  */
 
+import type { IpcIntentName } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-import type { IpcIntentName } from '@team-x/shared-types';
 
 import { INTENT_LABELS, intentLabel } from './intent-labels.js';
 

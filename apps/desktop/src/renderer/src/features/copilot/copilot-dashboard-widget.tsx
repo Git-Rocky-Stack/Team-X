@@ -18,12 +18,13 @@
 import { Loader2, Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 
+import { pickDashboardTopN, sortBySeverity } from './copilot-helpers.js';
+import { CopilotInsightCard } from './copilot-insight-card.js';
+
 import { Badge } from '@/components/ui/badge.js';
 import { useCopilotInsights } from '@/hooks/use-copilot.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { pickDashboardTopN, sortBySeverity } from './copilot-helpers.js';
-import { CopilotInsightCard } from './copilot-insight-card.js';
 
 export function CopilotDashboardWidget() {
   const companyId = useAppStore((s) => s.companyId);

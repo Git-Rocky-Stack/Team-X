@@ -83,7 +83,6 @@ export function CreateTicketDialog({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="What needs to be done?"
                 className="mt-1 text-sm"
-                autoFocus
               />
             </div>
 

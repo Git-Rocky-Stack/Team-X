@@ -15,7 +15,6 @@
  * renderer will see in production.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { ProviderStreamFn, StreamMessage, StreamUsage } from '@team-x/provider-router';
 import type {
@@ -24,6 +23,7 @@ import type {
   WorkCompletedPayload,
   WorkStartedPayload,
 } from '@team-x/shared-types';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
@@ -32,6 +32,7 @@ import { createMessagesRepo } from '../db/repos/messages.js';
 import { createRunsRepo } from '../db/repos/runs.js';
 import { createThreadsRepo } from '../db/repos/threads.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+
 import { createEventBus } from './event-bus.js';
 import { type CostCalculator, runAgent } from './run-agent.js';
 
@@ -597,7 +598,7 @@ describe('runAgent', () => {
     });
 
     it('non-Error throws are coerced to a string in the error field', async () => {
-      // biome-ignore lint/correctness/useYield: intentional — generator throws before any chunk is produced
+      // eslint-disable-next-line require-yield -- intentional — generator throws before any chunk is produced
       const provider: ProviderStreamFn = async function* () {
         throw 'string error';
       };

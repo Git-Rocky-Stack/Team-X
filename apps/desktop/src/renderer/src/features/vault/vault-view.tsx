@@ -1,5 +1,4 @@
-import { useCallback, useState } from 'react';
-
+import type { VaultFile } from '@team-x/shared-types';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -16,6 +15,8 @@ import {
   Upload,
   XCircle,
 } from 'lucide-react';
+import { useCallback, useState } from 'react';
+
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -30,8 +31,6 @@ import {
   useVaultVerify,
 } from '@/hooks/use-vault.js';
 import { ipc } from '@/lib/ipc.js';
-
-import type { VaultFile } from '@team-x/shared-types';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';

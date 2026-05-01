@@ -1,6 +1,6 @@
+import type { HardwareProfile } from '@team-x/shared-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { HardwareProfile } from '@team-x/shared-types';
 
 // Mock node:os before import
 vi.mock('node:os', () => ({

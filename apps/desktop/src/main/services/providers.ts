@@ -25,12 +25,14 @@
  */
 
 import { randomUUID } from 'node:crypto';
+
 import type { PrivacyTier, ProviderConfig, ProviderKind } from '@team-x/shared-types';
 import { eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 import { type Schema, getDb } from '../db/client.js';
 import { providers } from '../db/schema.js';
+
 import { SecretsStore } from './secrets.js';
 
 /**
@@ -247,7 +249,7 @@ export function createProvidersService<TRunResult>(
             // Missing /api suffix - add it
             fixedBaseUrl = `${config.baseUrl}/api`;
           } else if (
-            config.baseUrl.match(/^https?:\/\/[\w\.\-]+:\d+$/) &&
+            config.baseUrl.match(/^https?:\/\/[\w.-]+:\d+$/) &&
             !config.baseUrl.includes('/api')
           ) {
             // Any host:port pattern without /api (e.g., http://192.168.1.100:11434)

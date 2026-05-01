@@ -1,6 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
-
 import type {
   Company,
   CompanyImportPreview,
@@ -25,6 +23,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';

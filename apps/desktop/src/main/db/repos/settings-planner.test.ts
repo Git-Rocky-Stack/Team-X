@@ -4,11 +4,12 @@
  * Phase 5 — M32 T7.
  */
 
+import { PLANNER_APPROVAL_LEVEL_DEFAULT, PLANNER_SETTINGS_CLAMPS } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { PLANNER_APPROVAL_LEVEL_DEFAULT, PLANNER_SETTINGS_CLAMPS } from '@team-x/shared-types';
 
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
+
 import { createSettingsRepo } from './settings.js';
 
 let ctx: TestDbHandle;

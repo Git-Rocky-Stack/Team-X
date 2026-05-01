@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+
 import type { RetrievalEvidencePack } from './retrieval-orchestrator.js';
 import {
   type ComposeDeps,

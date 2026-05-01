@@ -11,7 +11,6 @@
  * Phase 5 — M29 T8.
  */
 
-import { useEffect, useState } from 'react';
 
 import type { SettingsGetRagConfigResponse } from '@team-x/shared-types';
 import {
@@ -23,6 +22,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -261,7 +261,7 @@ export function RagSection() {
               className="h-8 text-xs"
             />
             <p className="text-[10px] text-muted-foreground/70">
-              'auto' or provider id (e.g. 'ollama-local')
+              &apos;auto&apos; or provider id (e.g. &apos;ollama-local&apos;)
             </p>
           </div>
           <div className="space-y-1">
@@ -280,7 +280,7 @@ export function RagSection() {
               placeholder="nomic-embed-text"
               className="h-8 text-xs"
             />
-            <p className="text-[10px] text-muted-foreground/70">'auto' or model name</p>
+            <p className="text-[10px] text-muted-foreground/70">&apos;auto&apos; or model name</p>
           </div>
           <div className="space-y-1">
             <label

@@ -12,9 +12,7 @@
 
 import { useEffect } from 'react';
 
-import { useAppStore } from '@/store/app-store.js';
 
-import { ErrorBoundary } from '@/components/error-boundary.js';
 
 import { AgenticSection } from './agentic-section.js';
 import { BackupSection } from './backup-section.js';
@@ -30,6 +28,9 @@ import { ProvidersSection } from './providers-section.js';
 import { RagSection } from './rag-section.js';
 import { RuntimeSection } from './runtime-section.js';
 import { UpdaterSection } from './updater-section.js';
+
+import { ErrorBoundary } from '@/components/error-boundary.js';
+import { useAppStore } from '@/store/app-store.js';
 
 export function SettingsView() {
   const focusSection = useAppStore((state) => state.settingsFocusSection);

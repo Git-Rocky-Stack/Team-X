@@ -18,8 +18,9 @@ import { createMessagesRepo } from '../db/repos/messages.js';
 import { createThreadsRepo } from '../db/repos/threads.js';
 import type { TestDbHandle } from '../db/test-helpers.js';
 import { makeTestDb } from '../db/test-helpers.js';
+
 import { createEventBus } from './event-bus.js';
-import { createProactiveDispatcher, type ProactiveDispatcherDeps } from './proactive-dispatch.js';
+import { createProactiveDispatcher } from './proactive-dispatch.js';
 
 interface Fixture {
   ctx: TestDbHandle;

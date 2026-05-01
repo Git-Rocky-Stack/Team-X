@@ -20,6 +20,7 @@ import type { CommandExecutedPayload, DashboardEvent } from '@team-x/shared-type
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CommandHistoryRow } from '../db/repos/command-history.js';
+
 import {
   COMMAND_HISTORY_CAP,
   type CommandEntityResolver,
@@ -872,7 +873,7 @@ describe('CommandService.history', () => {
   it('11. FIFO cap 20 — 21st execute drops the oldest', async () => {
     const { svc, historyRepo } = buildService();
     for (let i = 0; i < 21; i++) {
-      // eslint-disable-next-line no-await-in-loop
+       
       await svc.execute(baseReq({ rawText: `msg-${i}` }));
     }
     // trim() should have been invoked 21 times (once per successful execute).

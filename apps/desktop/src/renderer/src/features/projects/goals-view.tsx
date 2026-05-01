@@ -2,13 +2,14 @@ import type { Employee } from '@team-x/shared-types';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
+import { CreateGoalDialog } from './create-goal-dialog.js';
+import { GoalDetailPanel } from './goal-detail.js';
+import { GoalRow } from './goal-row.js';
+
 import { useGoalEventSync, useGoals } from '@/hooks/use-goals.js';
 import { useProjects } from '@/hooks/use-projects.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { CreateGoalDialog } from './create-goal-dialog.js';
-import { GoalDetailPanel } from './goal-detail.js';
-import { GoalRow } from './goal-row.js';
 
 interface GoalsViewProps {
   companyId: string | null;

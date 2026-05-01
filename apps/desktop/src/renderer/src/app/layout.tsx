@@ -1,6 +1,6 @@
+import type { Employee } from '@team-x/shared-types';
 import type { ReactNode } from 'react';
 
-import type { Employee } from '@team-x/shared-types';
 
 import { Sidenav } from './sidenav.js';
 import { TopBar } from './top-bar.js';

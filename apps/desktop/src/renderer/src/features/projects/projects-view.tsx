@@ -1,16 +1,16 @@
 import type { Employee } from '@team-x/shared-types';
 import { useState } from 'react';
 
-import { useGoals } from '@/hooks/use-goals.js';
-import { useProjectEventSync, useProjects } from '@/hooks/use-projects.js';
-import { useAppStore } from '@/store/app-store.js';
-
-import { GoalsView } from './goals-view.js';
 
 import { CreateProjectDialog } from './create-project-dialog.js';
+import { GoalsView } from './goals-view.js';
 import { ProjectDetailPanel } from './project-detail.js';
 import { ProjectsKanban } from './projects-kanban.js';
 import { ProjectsSubtabs } from './projects-subtabs.js';
+
+import { useGoals } from '@/hooks/use-goals.js';
+import { useProjectEventSync, useProjects } from '@/hooks/use-projects.js';
+import { useAppStore } from '@/store/app-store.js';
 
 interface ProjectsViewProps {
   companyId: string | null;

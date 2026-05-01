@@ -1,8 +1,9 @@
+import type { RuntimeProfile } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { RuntimeProfile } from '@team-x/shared-types';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
+
 import { createRuntimeProfileProviderService } from './runtime-profile-provider-service.js';
 
 function makeEmployee(): EmployeeRow {

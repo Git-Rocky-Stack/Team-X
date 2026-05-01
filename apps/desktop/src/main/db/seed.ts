@@ -87,6 +87,7 @@ import {
   SYSTEM_COPILOT_ROLE_ID,
   SYSTEM_COPILOT_ROLE_PACK_ID,
 } from '../services/system-agent-bootstrap.js';
+
 import type { Schema } from './client.js';
 import { getDb } from './client.js';
 import { createCompaniesRepo } from './repos/companies.js';

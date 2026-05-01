@@ -7,10 +7,10 @@
  * Phase 3 — M17.
  */
 
+import type { TelemetryKindFilter } from '@team-x/shared-types';
 import { ArrowDown, ArrowUp, ArrowUpDown, Users2 } from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
 
-import type { TelemetryKindFilter } from '@team-x/shared-types';
 
 import { Button } from '@/components/ui/button.js';
 import {

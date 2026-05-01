@@ -1,5 +1,3 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import type {
   ApprovalItem,
   ArtifactRecord,
@@ -7,6 +5,8 @@ import type {
   RunCheckpoint,
   ThreadDigest,
 } from '@team-x/shared-types';
+import { describe, expect, it, vi } from 'vitest';
+
 
 import { createContextAssemblerService } from './context-assembler-service.js';
 

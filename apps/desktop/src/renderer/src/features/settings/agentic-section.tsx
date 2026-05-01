@@ -12,7 +12,6 @@
  * Phase 5 — M31 T7.
  */
 
-import { useEffect, useState } from 'react';
 
 import {
   AGENTIC_SETTINGS_CLAMPS,
@@ -20,6 +19,7 @@ import {
   type SettingsSetAgenticRequest,
 } from '@team-x/shared-types';
 import { AlertTriangle, Loader2, Workflow } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';

@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useState } from 'react';
-
 import { MEMORY_TARGET_TOKEN_BUDGET_OPTIONS, type Thread } from '@team-x/shared-types';
 import {
   BrainCircuit,
@@ -9,12 +7,8 @@ import {
   ShieldCheck,
   Waypoints,
 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { Button } from '@/components/ui/button.js';
-import { useThreadList } from '@/hooks/use-chat.js';
-import { usePackedThreadContext, useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
-import { useMemorySettings } from '@/hooks/use-settings.js';
-import { useAppStore } from '@/store/app-store.js';
 
 import {
   isAgentThread as checkAgentThread,
@@ -36,6 +30,13 @@ import {
   MissionSegmentedButton,
   MissionStateBlock,
 } from '../mission/mission-shell.js';
+
+import { Button } from '@/components/ui/button.js';
+import { useThreadList } from '@/hooks/use-chat.js';
+import { usePackedThreadContext, useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
+import { useMemorySettings } from '@/hooks/use-settings.js';
+import { useAppStore } from '@/store/app-store.js';
+
 
 const TOKEN_BUDGETS = MEMORY_TARGET_TOKEN_BUDGET_OPTIONS;
 

@@ -12,9 +12,7 @@
  * Phase 6 — Proactive Execution System — Slice 4.
  */
 
-import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import type { DashboardEvent } from '@team-x/shared-types';
 import {
   AlertTriangle,
@@ -22,6 +20,7 @@ import {
   Loader2,
   Zap,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button.js';
 import { Card } from '@/components/ui/card.js';

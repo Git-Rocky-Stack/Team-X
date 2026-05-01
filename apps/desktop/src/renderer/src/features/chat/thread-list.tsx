@@ -17,13 +17,13 @@
  */
 
 import type { Employee, Thread } from '@team-x/shared-types';
-
 import { Bot, MessageSquare, Sparkles } from 'lucide-react';
+
+import { SystemAgentBadge } from './system-agent-badge.js';
 
 import { MissionPill } from '@/features/mission/mission-shell.js';
 import { cn } from '@/lib/utils.js';
 
-import { SystemAgentBadge } from './system-agent-badge.js';
 
 /** True when every member in the thread is an employee (no human user). */
 export function isAgentThread(thread: Thread): boolean {

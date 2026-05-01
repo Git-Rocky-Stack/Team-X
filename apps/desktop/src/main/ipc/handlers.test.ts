@@ -1,8 +1,8 @@
+import type { RoleSpec } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RoleSpec } from '@team-x/shared-types';
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
-import type { EmployeeRow } from '../db/repos/employees.js';
+import type { EmployeeRow , CreateEmployeeInput } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type {
   AddThreadMemberInput,
@@ -12,7 +12,6 @@ import type {
   ThreadRow,
 } from '../db/repos/threads.js';
 
-import type { CreateEmployeeInput } from '../db/repos/employees.js';
 import {
   AUTO_THREAD_ID,
   HUMAN_USER_ID,

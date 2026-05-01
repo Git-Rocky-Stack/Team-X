@@ -1,11 +1,12 @@
 import type { Employee } from '@team-x/shared-types';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
+import { EmployeeCard } from './employee-card.js';
+
 import { Button } from '@/components/ui/button.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { EmployeeCard } from './employee-card.js';
 
 function SkeletonCard() {
   return (

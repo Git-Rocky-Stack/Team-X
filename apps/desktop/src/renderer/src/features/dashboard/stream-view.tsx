@@ -1,5 +1,4 @@
 import type { Employee } from '@team-x/shared-types';
-
 import { Radio } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area.js';

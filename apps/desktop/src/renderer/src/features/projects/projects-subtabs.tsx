@@ -1,6 +1,6 @@
+import { Kanban, Target } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-import { Kanban, Target } from 'lucide-react';
 
 import { type ProjectsSubview, useAppStore } from '@/store/app-store.js';
 

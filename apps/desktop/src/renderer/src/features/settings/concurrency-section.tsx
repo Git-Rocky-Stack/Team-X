@@ -4,13 +4,13 @@
  * Phase 3 — M19, widened in runtime-limits follow-up.
  */
 
-import { useEffect, useState } from 'react';
 
 import {
   CONCURRENCY_SETTINGS_CLAMPS,
   type SettingsGetConcurrencyResponse,
 } from '@team-x/shared-types';
 import { Loader2, Sliders } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';

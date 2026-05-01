@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { companies, employees, runCheckpoints, runs, threads } from '../schema.js';
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
+
 import { createRunCheckpointsRepo } from './run-checkpoints.js';
 
 let ctx: TestDbHandle;

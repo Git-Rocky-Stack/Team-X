@@ -17,6 +17,7 @@ import { createTicketCheckoutsRepo } from '../db/repos/ticket-checkouts.js';
 import { createTicketsRepo } from '../db/repos/tickets.js';
 import { makeTestDb } from '../db/test-helpers.js';
 import { createEventBus } from '../orchestrator/event-bus.js';
+
 import { createArtifactService } from './artifact-service.js';
 import type { AutonomyBenchmarkScenarioContext } from './autonomy-benchmark-service.js';
 import { createRuntimeAuditNormalizer } from './runtime-audit-normalizer-service.js';

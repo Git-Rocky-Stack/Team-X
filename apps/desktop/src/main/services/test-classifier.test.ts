@@ -13,9 +13,9 @@
  * tests pin the canned behaviour the Playwright E2E spec depends on.
  */
 
+import type { NluContext } from '@team-x/intelligence';
 import { describe, expect, it } from 'vitest';
 
-import type { NluContext } from '@team-x/intelligence';
 
 import { createTestClassifier } from './test-classifier.js';
 

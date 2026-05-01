@@ -1,5 +1,4 @@
 import type { Employee } from '@team-x/shared-types';
-
 import { ChevronRight, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 
@@ -85,6 +84,7 @@ export function OrgChartNode({
       role="treeitem"
       aria-level={depth + 1}
       aria-expanded={childCount > 0 ? true : undefined}
+      aria-selected={undefined}
       draggable
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}

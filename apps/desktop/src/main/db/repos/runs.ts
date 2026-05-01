@@ -25,11 +25,11 @@
  * Cross-driver generic typing — same pattern as the other repos.
  */
 
+import type { TelemetryRunKind } from '@team-x/shared-types';
 import { type SQL, and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
-import type { TelemetryRunKind } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
 import { employees, messages, runs, threads } from '../schema.js';

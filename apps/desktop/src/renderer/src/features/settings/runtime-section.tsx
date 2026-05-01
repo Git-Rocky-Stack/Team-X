@@ -4,10 +4,11 @@
  * Phase 3 — M19.
  */
 
-import { Skeleton } from '@/components/ui/skeleton.js';
-import { useRuntimeSettings, useSetRuntime } from '@/hooks/use-settings.js';
 import type { RuntimeStrategy } from '@team-x/shared-types';
 import { Activity, Cpu, HardDrive, Loader2, Monitor, Zap } from 'lucide-react';
+
+import { Skeleton } from '@/components/ui/skeleton.js';
+import { useRuntimeSettings, useSetRuntime } from '@/hooks/use-settings.js';
 
 interface StrategyOption {
   value: RuntimeStrategy;

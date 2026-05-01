@@ -9,7 +9,6 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import type {
   SettingsSetAgenticRequest,
   SettingsSetConcurrencyRequest,

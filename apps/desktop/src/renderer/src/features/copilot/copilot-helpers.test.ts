@@ -11,9 +11,9 @@
  * T6 — pure functions, no DOM, no IPC, no React.
  */
 
+import type { CopilotInsight } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-import type { CopilotInsight } from '@team-x/shared-types';
 
 import {
   DASHBOARD_CAP,

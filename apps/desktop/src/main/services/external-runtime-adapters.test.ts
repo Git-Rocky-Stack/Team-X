@@ -4,11 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 
+import type { RuntimeProfile } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { RuntimeProfile } from '@team-x/shared-types';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
+
 import { createExternalRuntimeAdapters } from './external-runtime-adapters.js';
 
 class MockChildProcess extends EventEmitter {

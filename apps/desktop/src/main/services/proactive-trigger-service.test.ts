@@ -10,13 +10,13 @@
  * Phase 1 — Foundation — Week 1
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import type {
   EffectiveAuthoritySnapshot,
   ExtensionsAutonomyMode,
   EventType,
 } from '@team-x/shared-types';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 
 import {
   type ProactiveTriggerService,
@@ -821,6 +821,8 @@ describe('proactive-trigger-service', () => {
       );
       // Should handle gracefully, not throw
       expect(result).toBeDefined();
+      // TODO: Add expectation for error events when error handling is implemented
+      void errorEvents; // Explicitly mark as intentionally unused for now
     });
   });
 });

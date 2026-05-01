@@ -28,6 +28,7 @@
  *      user-configured (invariant #5), never implicit.
  */
 
+import type { IntentName } from '@team-x/intelligence';
 import type {
   AgenticRunSnapshot,
   CommandHistoryRequest,
@@ -43,7 +44,6 @@ import type {
   IpcSuggestItem,
 } from '@team-x/shared-types';
 
-import type { IntentName } from '@team-x/intelligence';
 
 import type { AgenticLoopService } from '../services/agentic-loop-service.js';
 import type { CommandService } from '../services/command-service.js';

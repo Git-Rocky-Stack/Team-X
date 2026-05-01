@@ -25,6 +25,7 @@ import type { AgentMessagePayload } from '@team-x/shared-types';
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput } from '../db/repos/messages.js';
 import type { GetOrCreateEmployeeDmThreadInput } from '../db/repos/threads.js';
+
 import type { EventBus } from './event-bus.js';
 import type { ExecutionToolDeps } from './execution-tools.js';
 import { buildExecutionTools } from './execution-tools.js';

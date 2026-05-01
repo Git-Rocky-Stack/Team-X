@@ -21,7 +21,7 @@
  */
 
 import type { ToolContext } from '@team-x/intelligence';
-import type { Capability, RoleSpec } from '@team-x/shared-types';
+import type { Capability, EmployeeLevel, RoleSpec } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
 import {

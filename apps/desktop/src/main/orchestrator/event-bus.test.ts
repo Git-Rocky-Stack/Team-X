@@ -20,9 +20,9 @@
  * real database driver.
  */
 
+import type { DashboardEvent, TokenDeltaPayload } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { DashboardEvent, TokenDeltaPayload } from '@team-x/shared-types';
 
 import {
   type AppendEventInput,
@@ -31,6 +31,7 @@ import {
   createEventsRepo,
 } from '../db/repos/events.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+
 import { type EventsRepoLike, createEventBus } from './event-bus.js';
 
 // ---------------------------------------------------------------------------

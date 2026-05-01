@@ -1,4 +1,3 @@
-import { useState } from 'react';
 
 import { useMutation } from '@tanstack/react-query';
 import type {
@@ -6,6 +5,7 @@ import type {
   AutonomyBenchmarkScenarioId,
   RuntimeProfileKind,
 } from '@team-x/shared-types';
+import { useState } from 'react';
 
 import { autonomyClient } from '@/features/autonomy/autonomy-client.js';
 import { requireString } from '@/lib/required.js';

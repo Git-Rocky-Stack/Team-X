@@ -11,6 +11,7 @@
  * Phase 6 — Proactive Execution System — Slice 5
  */
 
+import { FolderOpen, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -19,14 +20,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { Switch } from '@/components/ui/switch.js';
-import { FolderOpen, Plus } from 'lucide-react';
-import { useAppStore } from '@/store/app-store.js';
 import {
   useAuthorityGrants,
   useCreateAuthorityGrant,
   useDeleteAuthorityGrant,
 } from '@/hooks/use-extensions.js';
 import { ipc } from '@/lib/ipc.js';
+import { useAppStore } from '@/store/app-store.js';
 
 type PermissionPreset = 'safe' | 'standard' | 'advanced';
 

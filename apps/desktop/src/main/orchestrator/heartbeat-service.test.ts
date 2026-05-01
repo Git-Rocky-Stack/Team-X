@@ -13,6 +13,7 @@ import type {
   AgentWakeupRequestsRepo,
 } from '../db/repos/agent-wakeup-requests.js';
 import type { EmployeeRow, EmployeesRepo } from '../db/repos/employees.js';
+
 import type { EventBus } from './event-bus.js';
 import { createHeartbeatService } from './heartbeat-service.js';
 

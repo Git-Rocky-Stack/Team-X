@@ -7,7 +7,6 @@
  * Phase 5 — M33 T7.
  */
 
-import { describe, expect, it, vi } from 'vitest';
 
 import type {
   CopilotCategory,
@@ -20,6 +19,7 @@ import type {
   SettingsSetCopilotWeightsResponse,
 } from '@team-x/shared-types';
 import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
+import { describe, expect, it, vi } from 'vitest';
 
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 

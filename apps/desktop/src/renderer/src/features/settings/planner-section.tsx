@@ -9,7 +9,6 @@
  * Phase 5 — M32 T7.
  */
 
-import { useEffect, useState } from 'react';
 
 import {
   PLANNER_APPROVAL_LEVELS,
@@ -19,6 +18,7 @@ import {
   type SettingsSetPlannerRequest,
 } from '@team-x/shared-types';
 import { AlertTriangle, GitBranch, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';

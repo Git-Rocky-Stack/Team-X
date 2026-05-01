@@ -1,6 +1,9 @@
 import { Building2, Check, ChevronsUpDown, Plus, RefreshCw, Settings } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { CompanySettings } from './company-settings.js';
+import { CreateCompanyDialog } from './create-company-dialog.js';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,8 +17,6 @@ import { useCompanies, useCompanyEventSync } from '@/hooks/use-companies.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { CompanySettings } from './company-settings.js';
-import { CreateCompanyDialog } from './create-company-dialog.js';
 
 /**
  * Top-bar workspace switcher.

@@ -1,8 +1,8 @@
+import type { RuntimeProfileHealthStatus, RuntimeProfileKind } from '@team-x/shared-types';
 import { and, eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
-import type { RuntimeProfileHealthStatus, RuntimeProfileKind } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
 import { employeeRuntimeBindings, runtimeProfiles } from '../schema.js';

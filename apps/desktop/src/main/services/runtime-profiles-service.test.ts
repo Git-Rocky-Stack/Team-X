@@ -2,14 +2,15 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import type { ProviderConfig } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ProviderConfig } from '@team-x/shared-types';
 
 import { createEmployeesRepo } from '../db/repos/employees.js';
 import { createRuntimeProfilesRepo } from '../db/repos/runtime-profiles.js';
 import { companies } from '../db/schema.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+
 import { createRuntimeProfilesService } from './runtime-profiles-service.js';
 
 let ctx: TestDbHandle;

@@ -1,5 +1,3 @@
-import type { ComponentType } from 'react';
-
 import {
   Building2,
   FileArchive,
@@ -13,6 +11,8 @@ import {
   Users2,
   Workflow,
 } from 'lucide-react';
+import type { ComponentType } from 'react';
+
 
 import { Badge } from '@/components/ui/badge.js';
 import { MissionControlRow } from '@/features/mission/mission-shell.js';

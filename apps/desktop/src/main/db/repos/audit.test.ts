@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
+
 import { createAuditRepo } from './audit.js';
 import { createEventsRepo } from './events.js';
 

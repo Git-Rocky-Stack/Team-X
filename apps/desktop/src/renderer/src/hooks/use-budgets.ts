@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import type { BudgetScopeKind } from '@team-x/shared-types';
 
 import { autonomyClient } from '@/features/autonomy/autonomy-client.js';

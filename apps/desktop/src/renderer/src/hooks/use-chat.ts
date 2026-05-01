@@ -1,7 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import type { DashboardEvent, SendChatRequest } from '@team-x/shared-types';
-
 import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';

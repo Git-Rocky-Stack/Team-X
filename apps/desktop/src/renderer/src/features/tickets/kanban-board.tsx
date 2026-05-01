@@ -1,11 +1,12 @@
 import type { Employee, Ticket, TicketStatus } from '@team-x/shared-types';
 import { Plus } from 'lucide-react';
 
+import { TicketCard } from './ticket-card.js';
+
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { useUpdateTicketStatus } from '@/hooks/use-tickets.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { TicketCard } from './ticket-card.js';
 
 const COLUMNS: {
   status: TicketStatus;

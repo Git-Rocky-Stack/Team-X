@@ -250,7 +250,7 @@ export function InstallCustomMcpDialog({
                   disabled={isInstalling}
                 />
                 <p className="text-xs text-muted-foreground">
-                  The command to run (usually 'npx' for Node.js packages)
+                  The command to run (usually &apos;npx&apos; for Node.js packages)
                 </p>
               </div>
 

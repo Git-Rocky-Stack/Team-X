@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { companies, employees, runtimeProfiles } from '../schema.js';
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
+
 import { createRuntimeSessionsRepo } from './runtime-sessions.js';
 
 let ctx: TestDbHandle;

@@ -11,9 +11,9 @@
  * level assertions for the empty/loading/error/populated states.
  */
 
+import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
 
 import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
 

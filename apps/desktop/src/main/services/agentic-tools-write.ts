@@ -1,3 +1,4 @@
+import type { Tool, ToolContext } from '@team-x/intelligence';
 import {
   CAPABILITY_LIST,
   type Capability,
@@ -80,7 +81,6 @@ import {
  *     with a settings-repo-backed accessor passed in via `deps.getPlanner`.
  */
 
-import type { Tool, ToolContext } from '@team-x/intelligence';
 import { z } from 'zod';
 
 import type { createEmployeesRepo } from '../db/repos/employees.js';

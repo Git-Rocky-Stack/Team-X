@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import * as schema from '../schema.js';
+
 import { createEmbeddingsRepo } from './embeddings.js';
 
 function createTestDb() {

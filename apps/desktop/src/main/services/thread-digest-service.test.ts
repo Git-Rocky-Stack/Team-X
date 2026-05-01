@@ -1,11 +1,12 @@
+import type { ThreadDigestPinnedFact } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { ThreadDigestPinnedFact } from '@team-x/shared-types';
 
 import { createMessagesRepo } from '../db/repos/messages.js';
 import { createThreadDigestsRepo } from '../db/repos/thread-digests.js';
 import { companies, threads } from '../db/schema.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+
 import { createThreadDigestService } from './thread-digest-service.js';
 
 let ctx: TestDbHandle;

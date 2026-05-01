@@ -2,6 +2,10 @@ import type { Employee, Ticket } from '@team-x/shared-types';
 import { AlertTriangle, KanbanSquare, Plus, Radar, Rows3 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { CreateTicketDialog } from './create-ticket-dialog.js';
+import { KanbanBoard } from './kanban-board.js';
+import { TicketDetailPanel } from './ticket-detail.js';
+
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import {
@@ -17,9 +21,6 @@ import {
 import { useTicketEventSync, useTickets } from '@/hooks/use-tickets.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { CreateTicketDialog } from './create-ticket-dialog.js';
-import { KanbanBoard } from './kanban-board.js';
-import { TicketDetailPanel } from './ticket-detail.js';
 
 interface TicketsViewProps {
   companyId: string | null;

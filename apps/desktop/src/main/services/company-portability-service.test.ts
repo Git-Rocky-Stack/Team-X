@@ -2,10 +2,10 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CompanyPackage, CompanySettings } from '@team-x/shared-types';
 import { validateCompanyPackage } from '@team-x/shared-types';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createBudgetsRepo } from '../db/repos/budgets.js';
 import { createCompaniesRepo } from '../db/repos/companies.js';
@@ -35,6 +35,7 @@ import {
 } from '../db/schema.js';
 import type { TestDbHandle } from '../db/test-helpers.js';
 import { makeTestDb } from '../db/test-helpers.js';
+
 import {
   type CompanyPortabilityServiceDeps,
   PORTABILITY_REDACTED_VALUE,

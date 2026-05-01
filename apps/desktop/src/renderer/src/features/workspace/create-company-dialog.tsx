@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
+import type { Company, CompanyTemplateSummary } from '@team-x/shared-types';
 import { Building2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import type { Company, CompanyTemplateSummary } from '@team-x/shared-types';
 
 import { Button } from '@/components/ui/button.js';
 import {
@@ -378,7 +378,6 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
               }}
               placeholder="e.g. Dynasty-X"
               maxLength={MAX_NAME_LENGTH + 20}
-              autoFocus
               aria-invalid={nameError !== null}
               aria-describedby={nameError ? 'create-company-name-error' : undefined}
               data-create-company-field="name"

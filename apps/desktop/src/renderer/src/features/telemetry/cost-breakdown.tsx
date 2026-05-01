@@ -7,6 +7,7 @@
  * Phase 3 — M17.
  */
 
+import type { TelemetryKindFilter } from '@team-x/shared-types';
 import { DollarSign } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
@@ -23,7 +24,6 @@ import {
   YAxis,
 } from 'recharts';
 
-import type { TelemetryKindFilter } from '@team-x/shared-types';
 
 import { Button } from '@/components/ui/button.js';
 import {

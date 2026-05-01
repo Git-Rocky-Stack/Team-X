@@ -15,8 +15,6 @@
  * boot, no provider seams, no I/O.
  */
 
-import { describe, expect, it, vi } from 'vitest';
-
 import type {
   CommandHistoryRequest,
   CommandParseRequest,
@@ -27,9 +25,12 @@ import type {
   IpcParseResult,
   IpcSuggestItem,
 } from '@team-x/shared-types';
+import { describe, expect, it, vi } from 'vitest';
+
 
 import type { AgenticLoopRunState, AgenticLoopService } from '../services/agentic-loop-service.js';
 import type { CommandService } from '../services/command-service.js';
+
 import { buildCommandHandlers } from './command-handlers.js';
 
 // ---------------------------------------------------------------------------

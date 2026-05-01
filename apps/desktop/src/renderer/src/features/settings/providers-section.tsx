@@ -7,12 +7,13 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
+import { AddProviderDialog } from './add-provider-dialog.js';
+import { ProviderCard } from './provider-card.js';
+
 import { Button } from '@/components/ui/button.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useProviders } from '@/hooks/use-providers.js';
 
-import { AddProviderDialog } from './add-provider-dialog.js';
-import { ProviderCard } from './provider-card.js';
 
 export function ProvidersSection() {
   const { data: providers = [], isLoading, isError, refetch } = useProviders();

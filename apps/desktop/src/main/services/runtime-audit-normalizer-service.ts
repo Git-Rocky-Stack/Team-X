@@ -10,6 +10,7 @@ import type {
 
 import type { ToolCallsRepo } from '../db/repos/mcp-servers.js';
 import type { EventBus } from '../orchestrator/event-bus.js';
+
 import type { ArtifactService } from './artifact-service.js';
 
 export interface RuntimeAuditContext {

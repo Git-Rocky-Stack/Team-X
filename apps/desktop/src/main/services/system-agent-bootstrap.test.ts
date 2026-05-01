@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+
 import {
   type BootstrapRoleLookup,
   SYSTEM_AGENT_DISPLAY_NAME,

@@ -10,12 +10,7 @@ import type {
   RunCheckpoint,
   ThreadDigest,
 } from '@team-x/shared-types';
-import type {
-  RetrievalConfig,
-  RetrievalEvidencePack,
-  RetrievalRecentMessage,
-} from './retrieval-orchestrator.js';
-import { formatEvidenceLine } from './retrieval-orchestrator.js';
+
 
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
@@ -24,6 +19,13 @@ import type { MessageRow } from '../db/repos/messages.js';
 import type { ProjectRow } from '../db/repos/projects.js';
 import type { ThreadRow } from '../db/repos/threads.js';
 import type { TicketRow } from '../db/repos/tickets.js';
+
+import { formatEvidenceLine } from './retrieval-orchestrator.js';
+import type {
+  RetrievalConfig,
+  RetrievalEvidencePack,
+  RetrievalRecentMessage,
+} from './retrieval-orchestrator.js';
 
 export const DEFAULT_CONTEXT_RECENT_TURN_LIMIT = 12;
 

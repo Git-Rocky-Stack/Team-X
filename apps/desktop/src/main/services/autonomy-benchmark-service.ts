@@ -1,5 +1,3 @@
-import { nanoid } from 'nanoid';
-
 import {
   AUTONOMY_BENCHMARK_SCENARIO_IDS,
   type AutonomyBenchmarkEvidence,
@@ -16,8 +14,11 @@ import {
   type RuntimeSessionStatus,
   type TicketCheckoutStatus,
 } from '@team-x/shared-types';
+import { nanoid } from 'nanoid';
+
 
 import type { TicketCheckoutRow, TicketCheckoutsRepo } from '../db/repos/ticket-checkouts.js';
+
 import type {
   RuntimeAuditContext,
   RuntimeAuditNormalizer,

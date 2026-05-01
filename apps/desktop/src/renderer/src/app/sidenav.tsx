@@ -1,5 +1,4 @@
 import type { Employee } from '@team-x/shared-types';
-
 import { BookOpenText, MessageSquare, Plus, Users, Workflow } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.js';

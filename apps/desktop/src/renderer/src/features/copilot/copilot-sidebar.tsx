@@ -26,9 +26,6 @@
  *     `features/chat/composer.tsx` keymap.
  */
 
-import { Loader2, Send, Sparkles } from 'lucide-react';
-import { useMemo, useState } from 'react';
-
 import {
   COPILOT_CATEGORIES,
   COPILOT_EXPORT_FORMATS,
@@ -40,6 +37,12 @@ import {
   type CopilotFeedbackSuggestion,
   type CopilotSeverity,
 } from '@team-x/shared-types';
+import { Loader2, Send, Sparkles } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+
+import { formatFeedbackSuggestionPrompt, sortBySeverity } from './copilot-helpers.js';
+import { CopilotInsightCard } from './copilot-insight-card.js';
 
 import { Badge } from '@/components/ui/badge.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -55,8 +58,6 @@ import { useAskCopilot, useCopilotExport, useCopilotInsights } from '@/hooks/use
 import { useSetCopilotWeights } from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { formatFeedbackSuggestionPrompt, sortBySeverity } from './copilot-helpers.js';
-import { CopilotInsightCard } from './copilot-insight-card.js';
 
 // ---------------------------------------------------------------------------
 

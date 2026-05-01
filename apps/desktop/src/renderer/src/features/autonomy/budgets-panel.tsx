@@ -1,5 +1,3 @@
-import { type FormEvent, useMemo, useState } from 'react';
-
 import type {
   BudgetAlertLevel,
   BudgetPolicy,
@@ -10,6 +8,16 @@ import type {
   RuntimeProfileSummary,
 } from '@team-x/shared-types';
 import { AlertTriangle, BadgeDollarSign, Ban, Clock3, ShieldAlert, Trash2 } from 'lucide-react';
+import { type FormEvent, useMemo, useState } from 'react';
+
+
+import {
+  MissionIconButton,
+  MissionInsetSurface,
+  MissionMetricTile,
+  MissionPill,
+  MissionStateBlock,
+} from '../mission/mission-shell.js';
 
 import {
   useBudgetApprovals,
@@ -23,13 +31,6 @@ import { useEmployees } from '@/hooks/use-employees.js';
 import { useRoutines } from '@/hooks/use-routines.js';
 import { useRuntimeProfiles } from '@/hooks/use-runtime-profiles.js';
 
-import {
-  MissionIconButton,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
 
 const FIELD_CLASSNAME =
   'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';

@@ -1,8 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { UserPlus } from 'lucide-react';
 import { useState } from 'react';
 
-import { UserPlus } from 'lucide-react';
 
-import { useQueryClient } from '@tanstack/react-query';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -177,7 +177,6 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Iris Kovac"
-                autoFocus
               />
             </div>
 

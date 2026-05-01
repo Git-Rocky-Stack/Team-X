@@ -52,7 +52,6 @@
  * Phase 5 — M33 — T4.
  */
 
-import { z } from 'zod';
 
 import type {
   ActorKind,
@@ -67,6 +66,7 @@ import type {
   EventType,
 } from '@team-x/shared-types';
 import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
+import { z } from 'zod';
 
 import type {
   CopilotInsightRow,
@@ -77,7 +77,6 @@ import type {
   UpsertContext,
   UpsertResult,
 } from '../db/repos/copilot-insights.js';
-
 import {
   COPILOT_CATEGORIES,
   COPILOT_SEVERITIES,

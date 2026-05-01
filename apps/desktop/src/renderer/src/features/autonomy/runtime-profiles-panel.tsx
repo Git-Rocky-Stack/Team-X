@@ -1,5 +1,3 @@
-import { useMemo, useState } from 'react';
-
 import type {
   Employee,
   ProviderConfig,
@@ -19,6 +17,16 @@ import {
   RefreshCw,
   Trash2,
 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+
+import {
+  MissionIconButton,
+  MissionInsetSurface,
+  MissionMetricTile,
+  MissionPill,
+  MissionStateBlock,
+} from '../mission/mission-shell.js';
 
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useProviders } from '@/hooks/use-providers.js';
@@ -31,13 +39,6 @@ import {
   useValidateRuntimeProfile,
 } from '@/hooks/use-runtime-profiles.js';
 
-import {
-  MissionIconButton,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
 
 const FIELD_CLASSNAME =
   'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';

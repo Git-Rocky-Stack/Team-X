@@ -1,18 +1,17 @@
-import { AlertTriangle, Bot, CheckCircle2, FolderLock, Loader2, Shield, Workflow, Zap } from 'lucide-react';
 
+import { useQuery } from '@tanstack/react-query';
 import {
   type AuthorityGrant,
   type AuthorityPermission,
   EXTENSIONS_AUTONOMY_MODES,
 } from '@team-x/shared-types';
-import { useQuery } from '@tanstack/react-query';
+import { AlertTriangle, Bot, CheckCircle2, FolderLock, Loader2, Shield, Workflow, Zap } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { Switch } from '@/components/ui/switch.js';
-import { ipc } from '@/lib/ipc.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import {
   useAuthorityGrants,
@@ -23,6 +22,7 @@ import {
   useReviewAuthorityRequest,
 } from '@/hooks/use-extensions.js';
 import { useExtensionsSettings, useSetExtensionsSettings } from '@/hooks/use-settings.js';
+import { ipc } from '@/lib/ipc.js';
 import { useAppStore } from '@/store/app-store.js';
 
 const AUTONOMY_COPY: Record<(typeof EXTENSIONS_AUTONOMY_MODES)[number], string> = {

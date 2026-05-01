@@ -65,7 +65,6 @@ export function CreateGoalDialog({ open, onOpenChange, companyId }: CreateGoalDi
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="What do you want to achieve?"
                 className="mt-1 text-sm"
-                autoFocus
               />
             </div>
 

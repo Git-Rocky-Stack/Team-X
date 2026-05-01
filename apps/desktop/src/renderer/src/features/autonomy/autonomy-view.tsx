@@ -1,4 +1,3 @@
-import { type FormEvent, useMemo, useState } from 'react';
 
 import type {
   Company,
@@ -20,6 +19,31 @@ import {
   Stethoscope,
   Workflow,
 } from 'lucide-react';
+import { type FormEvent, useMemo, useState } from 'react';
+
+
+import {
+  MissionControlRow,
+  MissionHero,
+  MissionInsetSurface,
+  MissionMetricTile,
+  MissionPageShell,
+  MissionPill,
+  MissionRailCard,
+  MissionSectionCard,
+  MissionSegmentedButton,
+  MissionStateBlock,
+} from '../mission/mission-shell.js';
+
+import { ApprovalsPanel } from './approvals-panel.js';
+import { ArtifactsPanel } from './artifacts-panel.js';
+import { AutonomyBenchmarkPanel } from './autonomy-benchmark-panel.js';
+import { AutonomyDoctorPanel } from './autonomy-doctor-panel.js';
+import { BudgetsPanel } from './budgets-panel.js';
+import { MemoryPanel } from './memory-panel.js';
+import { RoutinesPanel } from './routines-panel.js';
+import { RuntimeOperationsPanel } from './runtime-operations-panel.js';
+import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
@@ -38,28 +62,6 @@ import {
   useSharingReadiness,
 } from '@/hooks/use-operators.js';
 import { useAppStore } from '@/store/app-store.js';
-
-import {
-  MissionControlRow,
-  MissionHero,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPageShell,
-  MissionPill,
-  MissionRailCard,
-  MissionSectionCard,
-  MissionSegmentedButton,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
-import { ApprovalsPanel } from './approvals-panel.js';
-import { ArtifactsPanel } from './artifacts-panel.js';
-import { AutonomyBenchmarkPanel } from './autonomy-benchmark-panel.js';
-import { AutonomyDoctorPanel } from './autonomy-doctor-panel.js';
-import { BudgetsPanel } from './budgets-panel.js';
-import { MemoryPanel } from './memory-panel.js';
-import { RoutinesPanel } from './routines-panel.js';
-import { RuntimeOperationsPanel } from './runtime-operations-panel.js';
-import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
 type AutonomySubview =
   | 'doctor'

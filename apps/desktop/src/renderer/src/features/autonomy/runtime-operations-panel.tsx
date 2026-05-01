@@ -1,8 +1,6 @@
 import type { RuntimeSession, TicketCheckout } from '@team-x/shared-types';
 import { Activity, Clock3, HardDrive, RefreshCw, ShieldAlert, TicketCheck } from 'lucide-react';
 
-import { useRuntimeOperations } from '@/hooks/use-runtime-operations.js';
-
 import {
   MissionControlRow,
   MissionIconButton,
@@ -11,6 +9,9 @@ import {
   MissionPill,
   MissionStateBlock,
 } from '../mission/mission-shell.js';
+
+import { useRuntimeOperations } from '@/hooks/use-runtime-operations.js';
+
 
 function formatTimestamp(value: number | null): string {
   return value === null ? 'never' : new Date(value).toLocaleTimeString();

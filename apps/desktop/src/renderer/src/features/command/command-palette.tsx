@@ -33,8 +33,7 @@
  * focus trap + Esc dismissal.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
+import type { IpcExecuteResult, IpcIntentName, IpcParseResult } from '@team-x/shared-types';
 import {
   AlertCircle,
   CornerDownLeft,
@@ -45,8 +44,12 @@ import {
   Undo2,
   X,
 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { IpcExecuteResult, IpcIntentName, IpcParseResult } from '@team-x/shared-types';
+
+
+import { INTENT_LABELS } from './intent-labels.js';
+import { StepCard, StepCardSkeleton } from './step-card.js';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -57,8 +60,6 @@ import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { type ActiveView, useAppStore } from '@/store/app-store.js';
 
-import { INTENT_LABELS } from './intent-labels.js';
-import { StepCard, StepCardSkeleton } from './step-card.js';
 
 // ---------------------------------------------------------------------------
 // Intent metadata — destructive-tint flag, paired with the shared
@@ -633,7 +634,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                   <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                     <div className="flex-1">
-                      <p className="font-medium">Couldn't parse that.</p>
+                      <p className="font-medium">Couldn&apos;t parse that.</p>
                       <p className="mt-0.5 text-xs opacity-90">{parseError}</p>
                     </div>
                     <button
@@ -802,7 +803,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                   parseResult.intent === 'complex_request' &&
                   !parseError && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      I'll route this to the conversational agent.
+                      I&apos;ll route this to the conversational agent.
                     </p>
                   )}
               </div>
@@ -931,6 +932,7 @@ function StepLogView({
       {/* Step scroll container */}
       <ul
         ref={listRef}
+        role="listbox"
         aria-label="Agent step transcript"
         onKeyDown={onListKeyDown}
         className="flex min-h-[160px] flex-1 flex-col gap-2 overflow-y-auto bg-surface-50 px-4 py-3"

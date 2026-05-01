@@ -33,7 +33,6 @@
  * Phase 5 — M30 T4.
  */
 
-import { nanoid } from 'nanoid';
 
 import type {
   IntentClassifier,
@@ -45,6 +44,7 @@ import type {
 } from '@team-x/intelligence';
 import { INTENT_NAMES } from '@team-x/intelligence';
 import type { CommandExecutedPayload, DashboardEvent } from '@team-x/shared-types';
+import { nanoid } from 'nanoid';
 
 import type { CommandHistoryRepo } from '../db/repos/command-history.js';
 

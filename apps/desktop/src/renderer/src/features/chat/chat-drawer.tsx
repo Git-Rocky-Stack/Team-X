@@ -19,10 +19,20 @@
  */
 
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
-
 import type { Employee } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
+import { ArrowLeft, Bot, Eye, List, Loader2, Sparkles } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+
+
+import { Composer } from './composer.js';
+import { MessageList } from './message-list.js';
+import { SystemAgentBadge } from './system-agent-badge.js';
+import {
+  ThreadList,
+  isAgentThread as checkAgentThread,
+  isCopilotThread as checkCopilotThread,
+} from './thread-list.js';
 
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet.js';
 import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';
@@ -38,16 +48,7 @@ import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { ArrowLeft, Bot, Eye, List, Loader2, Sparkles } from 'lucide-react';
 
-import { Composer } from './composer.js';
-import { MessageList } from './message-list.js';
-import { SystemAgentBadge } from './system-agent-badge.js';
-import {
-  ThreadList,
-  isAgentThread as checkAgentThread,
-  isCopilotThread as checkCopilotThread,
-} from './thread-list.js';
 
 function statusColor(status: string): string {
   switch (status) {

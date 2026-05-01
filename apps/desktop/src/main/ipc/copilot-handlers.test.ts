@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
 
 import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
 import type { AuditEvent, CopilotCategory, DashboardEvent } from '@team-x/shared-types';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   type CopilotHandlersDeps,

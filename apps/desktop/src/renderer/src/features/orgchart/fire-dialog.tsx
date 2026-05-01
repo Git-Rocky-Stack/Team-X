@@ -1,6 +1,6 @@
+import type { Employee } from '@team-x/shared-types';
 import { useEffect, useState } from 'react';
 
-import type { Employee } from '@team-x/shared-types';
 
 import { Button } from '@/components/ui/button.js';
 import {

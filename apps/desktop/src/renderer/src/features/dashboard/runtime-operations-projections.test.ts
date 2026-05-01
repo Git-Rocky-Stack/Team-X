@@ -1,5 +1,4 @@
 import type { RuntimeOperationsSnapshot, RuntimeSession } from '@team-x/shared-types';
-
 import { describe, expect, it } from 'vitest';
 
 import { summarizeRuntimeOperationsForDashboard } from './runtime-operations-projections.js';

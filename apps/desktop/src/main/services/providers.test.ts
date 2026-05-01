@@ -23,6 +23,7 @@ vi.mock('keytar', () => ({
 
 import { providers as providersTable } from '../db/schema.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+
 import {
   DEFAULT_ANTHROPIC_ID,
   DEFAULT_OLLAMA_LOCAL_ID,

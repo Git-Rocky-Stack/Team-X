@@ -1,6 +1,7 @@
 import type { Employee } from '@team-x/shared-types';
-
 import { AlertCircle, Bot, Loader2, MessageSquare, Sparkles, Users2 } from 'lucide-react';
+
+import { ThreadList, isAgentThread, isCopilotThread } from './thread-list.js';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -17,7 +18,6 @@ import {
 import { useThreadList } from '@/hooks/use-chat.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { ThreadList, isAgentThread, isCopilotThread } from './thread-list.js';
 
 interface ChatViewProps {
   companyId: string | null;

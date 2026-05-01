@@ -51,6 +51,8 @@ export default [
         ...globals.node,
         ...globals.browser,
         Electron: 'readonly',
+        NodeJS: 'readonly',
+        Console: 'readonly',
       },
     },
     plugins: {
@@ -58,7 +60,7 @@ export default [
     },
     rules: {
       ...tsESLint.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/ban-ts-comment': 'warn',
       '@typescript-eslint/no-require-imports': 'off', // Allow for main process

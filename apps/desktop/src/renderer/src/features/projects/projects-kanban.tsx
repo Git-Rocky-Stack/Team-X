@@ -1,11 +1,12 @@
 import type { Employee, Project, ProjectStatus } from '@team-x/shared-types';
 import { Plus } from 'lucide-react';
 
+import { ProjectCard } from './project-card.js';
+
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { useUpdateProject } from '@/hooks/use-projects.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { ProjectCard } from './project-card.js';
 
 const COLUMNS: { status: ProjectStatus; label: string; accent: string }[] = [
   { status: 'planning', label: 'Planning', accent: 'border-t-brand' },

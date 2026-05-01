@@ -13,9 +13,9 @@
  * mapping that inverts user/assistant roles — it shows up here first.
  */
 
+import type { ProviderStreamFn, StreamMessage, StreamUsage } from '@team-x/provider-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ProviderStreamFn, StreamMessage, StreamUsage } from '@team-x/provider-router';
 
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
@@ -29,7 +29,10 @@ import { createTicketsRepo } from '../db/repos/tickets.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 import { createRunCheckpointService } from '../services/run-checkpoint-service.js';
 import { createThreadDigestService } from '../services/thread-digest-service.js';
+
 import { createEventBus } from './event-bus.js';
+import type { CostCalculator } from './run-agent.js';
+
 import {
   type Orchestrator,
   type ResolveProvider,
@@ -37,7 +40,6 @@ import {
   type ResolveTools,
   buildOrchestrator,
 } from './index.js';
-import type { CostCalculator } from './run-agent.js';
 
 interface Fixture {
   ctx: TestDbHandle;

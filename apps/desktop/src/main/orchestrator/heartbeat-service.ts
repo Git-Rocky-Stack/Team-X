@@ -19,11 +19,13 @@
  */
 
 import type { EventType } from '@team-x/shared-types';
+
 import type {
   AgentWakeupRequestRow,
   AgentWakeupRequestsRepo,
 } from '../db/repos/agent-wakeup-requests.js';
 import type { EmployeesRepo } from '../db/repos/employees.js';
+
 import type { EventBus } from './event-bus.js';
 
 export interface WakeupTrigger {

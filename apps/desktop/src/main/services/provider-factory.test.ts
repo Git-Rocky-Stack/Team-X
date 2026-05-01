@@ -61,6 +61,7 @@ vi.mock('@team-x/provider-router', () => ({
 import type { ProviderConfig } from '@team-x/shared-types';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
+
 import { type SecretsReader, createProviderFactory } from './provider-factory.js';
 import type { ProvidersService } from './providers.js';
 

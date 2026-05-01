@@ -43,11 +43,12 @@
  *   wrap the `send` in try/catch as a belt-and-suspenders measure.
  */
 
+import type { MeetingMode } from '@team-x/shared-types';
 import { BrowserWindow, ipcMain } from 'electron';
 
-import type { MeetingMode } from '@team-x/shared-types';
 
 import type { EventBus } from '../orchestrator/event-bus.js';
+
 import type { IpcHandlers } from './handlers.js';
 
 /**

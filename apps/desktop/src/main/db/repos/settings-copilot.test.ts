@@ -4,10 +4,6 @@
  * Phase 5 — M33 T7.
  */
 
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { describe, expect, it } from 'vitest';
-
 import {
   COPILOT_CATEGORIES,
   COPILOT_CATEGORY_WEIGHTS_DEFAULT,
@@ -17,8 +13,13 @@ import {
   type CopilotCategory,
   type SettingsSetCopilotWeightsRequest,
 } from '@team-x/shared-types';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { describe, expect, it } from 'vitest';
+
 
 import * as schema from '../schema.js';
+
 import { createSettingsRepo } from './settings.js';
 
 function makeRepo() {

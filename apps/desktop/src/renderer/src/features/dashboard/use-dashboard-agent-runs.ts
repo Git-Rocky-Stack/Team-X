@@ -1,9 +1,5 @@
 import type { DashboardEvent } from '@team-x/shared-types';
-
 import { useEffect, useState } from 'react';
-
-import { useRecentRuns } from '@/hooks/use-telemetry.js';
-import { ipc } from '@/lib/ipc.js';
 
 import {
   type DashboardAgentRun,
@@ -11,6 +7,10 @@ import {
   projectTelemetryRecentRuns,
   reduceDashboardAgentRuns,
 } from './agent-runs-projections.js';
+
+import { useRecentRuns } from '@/hooks/use-telemetry.js';
+import { ipc } from '@/lib/ipc.js';
+
 
 export interface UseDashboardAgentRunsResult {
   runs: DashboardAgentRun[];

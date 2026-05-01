@@ -1,6 +1,6 @@
+import type { VaultFile, VaultSearchResult } from '@team-x/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { VaultFile, VaultSearchResult } from '@team-x/shared-types';
 import type { IpcVaultService } from './handlers.js';
 
 /**

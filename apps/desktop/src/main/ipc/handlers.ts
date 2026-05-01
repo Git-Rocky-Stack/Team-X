@@ -39,6 +39,23 @@
  *   the product moves toward a proper multi-operator model.
  */
 
+import {
+  AUTONOMY_BENCHMARK_SCENARIO_IDS,
+  AUTO_THREAD_ID,
+  BUDGET_SCOPE_KINDS,
+  COMPANY_PACKAGE_MODES,
+  CONCURRENCY_SETTINGS_CLAMPS,
+  COPILOT_CATEGORIES,
+  DEFAULT_CONCURRENCY_CAPS,
+  OPERATOR_MEMBERSHIP_ROLES,
+  PRIVACY_TIER_RANK,
+  ROUTINE_TRIGGER_KINDS,
+  RUNTIME_PROFILE_KINDS,
+  SHARED_OPERATOR_AUTH_MODES,
+  STRATEGY_SLOTS,
+  TELEMETRY_RUN_KINDS,
+  getLevelRank,
+} from '@team-x/shared-types';
 import type {
   AcceptOperatorInviteRequest,
   AcceptOperatorInviteResponse,
@@ -276,27 +293,17 @@ import type {
   VaultUploadRequest,
   VaultUploadResponse,
   VaultVerifyResponse,
-} from '@team-x/shared-types';
-import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
-import {
-  AUTONOMY_BENCHMARK_SCENARIO_IDS,
-  AUTO_THREAD_ID,
-  BUDGET_SCOPE_KINDS,
-  COMPANY_PACKAGE_MODES,
-  CONCURRENCY_SETTINGS_CLAMPS,
-  COPILOT_CATEGORIES,
-  DEFAULT_CONCURRENCY_CAPS,
-  OPERATOR_MEMBERSHIP_ROLES,
-  PRIVACY_TIER_RANK,
-  ROUTINE_TRIGGER_KINDS,
-  RUNTIME_PROFILE_KINDS,
-  SHARED_OPERATOR_AUTH_MODES,
-  STRATEGY_SLOTS,
-  TELEMETRY_RUN_KINDS,
-  getLevelRank,
-} from '@team-x/shared-types';
+ HardwareProfile, ProviderConfig , RoleSpec ,
+  ActorKind,
+  AuthorKind,
+  EmployeeStatus,
+  EventType,
+  GoalStatus,
+  ProjectPriority,
+  ProjectStatus,
+  TicketPriority,
+  TicketStatus} from '@team-x/shared-types';
 
-import type { RoleSpec } from '@team-x/shared-types';
 
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 import type { CopilotExportFilter, CopilotExportResult } from '../db/repos/copilot-insights.js';
@@ -311,12 +318,14 @@ import type {
   PromoteEmployeeInput,
   UpdateEmployeeProfileInput,
 } from '../db/repos/employees.js';
+import type { EventRow } from '../db/repos/events.js';
 import type {
   AuthorityGrantRow,
   AuthorityRequestRow,
   ExtensionRow,
 } from '../db/repos/extensions.js';
 import type { CreateGoalInput, GoalRow, UpdateGoalInput } from '../db/repos/goals.js';
+import type { McpServersRepo } from '../db/repos/mcp-servers.js';
 import type { MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { OrgEdgeRow } from '../db/repos/orgchart.js';
@@ -580,8 +589,6 @@ export interface IpcRoleLookup {
 // Public surface
 // ---------------------------------------------------------------------------
 
-import type { EventRow } from '../db/repos/events.js';
-import type { McpServersRepo } from '../db/repos/mcp-servers.js';
 import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
 import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
 import type { McpHost } from '../services/mcp-host.js';
@@ -1730,17 +1737,6 @@ export interface IpcHandlers {
 // nullables so the renderer never sees a half-shape it has to
 // re-validate.
 
-import type {
-  ActorKind,
-  AuthorKind,
-  EmployeeStatus,
-  EventType,
-  GoalStatus,
-  ProjectPriority,
-  ProjectStatus,
-  TicketPriority,
-  TicketStatus,
-} from '@team-x/shared-types';
 
 /**
  * Refuse a write IPC against an archived company. Phase 5.6 M-C step d

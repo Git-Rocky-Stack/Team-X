@@ -1,7 +1,11 @@
 import type { Employee } from '@team-x/shared-types';
-
 import { AlertCircle, GitBranch, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+
+import { EmployeeProfileDialog, type EmployeeProfileSaveInput } from './employee-profile-dialog.js';
+import { FireDialog } from './fire-dialog.js';
+import { OrgChartTree } from './org-chart-tree.js';
+import { PromoteDialog } from './promote-dialog.js';
 
 import { useFireEmployee } from '@/hooks/use-fire-employee.js';
 import { useOrgChart, useOrgChartEventSync } from '@/hooks/use-org-chart.js';
@@ -11,10 +15,6 @@ import { useSetManager } from '@/hooks/use-set-manager.js';
 import { useUpdateEmployee } from '@/hooks/use-update-employee.js';
 import { useAppStore } from '@/store/app-store.js';
 
-import { EmployeeProfileDialog, type EmployeeProfileSaveInput } from './employee-profile-dialog.js';
-import { FireDialog } from './fire-dialog.js';
-import { OrgChartTree } from './org-chart-tree.js';
-import { PromoteDialog } from './promote-dialog.js';
 
 interface OrgChartViewProps {
   companyId: string | null;

@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import type { CompanyPackageMode, CompanyPackageSecretBinding } from '@team-x/shared-types';
 
 import { ipc } from '@/lib/ipc.js';

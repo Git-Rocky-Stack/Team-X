@@ -1,6 +1,6 @@
+import type { CompanySettings } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-import type { CompanySettings } from '@team-x/shared-types';
 
 import { GUIDE_TASKS } from './guide-content.js';
 import {

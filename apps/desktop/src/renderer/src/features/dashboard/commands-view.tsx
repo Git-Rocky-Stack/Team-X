@@ -21,11 +21,13 @@
  * surface — this is purely a read-only audit-style card.
  */
 
+import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
+import { Check, Copy, Terminal } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
-import { Check, Copy, Terminal } from 'lucide-react';
 
-import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
+
+import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
@@ -34,7 +36,6 @@ import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
 import { useCommandHistory } from '@/hooks/use-command.js';
 
-import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Constants

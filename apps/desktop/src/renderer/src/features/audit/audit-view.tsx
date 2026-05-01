@@ -1,4 +1,3 @@
-import { useCallback, useMemo, useState } from 'react';
 
 import type { AuditEvent, AuditFilter, Employee } from '@team-x/shared-types';
 import {
@@ -15,6 +14,7 @@ import {
   TrendingUp,
   X,
 } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';

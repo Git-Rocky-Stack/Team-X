@@ -1,6 +1,6 @@
+import { Grid3X3, LayoutGrid, Radio, ScrollText, Terminal } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-import { Grid3X3, LayoutGrid, Radio, ScrollText, Terminal } from 'lucide-react';
 
 import { type DashboardSubview, useAppStore } from '@/store/app-store.js';
 

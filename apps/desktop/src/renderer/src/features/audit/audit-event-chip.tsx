@@ -26,13 +26,14 @@
 
 import type { ReactElement } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
-
 import {
   getEventTypeAriaLabel,
   getEventTypeColor,
   getEventTypeLabel,
 } from './audit-event-chip-helpers.js';
+
+import { Badge } from '@/components/ui/badge.js';
+
 
 // Re-export the helper surface so consumers (audit-view.tsx, tests,
 // future features) can import everything chip-related from a single

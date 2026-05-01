@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
+
 import { createEventsRepo } from './events.js';
 
 describe('events repo', () => {

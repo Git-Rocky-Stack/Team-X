@@ -37,8 +37,6 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
-
 import type {
   CopilotAskArgs,
   CopilotAskResult,
@@ -53,6 +51,8 @@ import type {
   CopilotInsightListResult,
   DashboardEvent,
 } from '@team-x/shared-types';
+import { useEffect } from 'react';
+
 
 import { ipc } from '@/lib/ipc.js';
 

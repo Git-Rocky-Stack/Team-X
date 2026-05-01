@@ -12,7 +12,6 @@
  * The 2 event-triggered debounce tests live in copilot-event-trigger.test.ts.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   ActorKind,
@@ -26,6 +25,7 @@ import type {
   EventType,
 } from '@team-x/shared-types';
 import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CopilotInsightRow } from '../db/repos/copilot-insights.js';
 

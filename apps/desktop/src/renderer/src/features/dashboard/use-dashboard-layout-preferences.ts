@@ -2,8 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CompaniesUpdateRequest, Company } from '@team-x/shared-types';
 import { useState } from 'react';
 
-import { ipc } from '@/lib/ipc.js';
-
 import {
   DEFAULT_DASHBOARD_LAYOUT,
   type DashboardLayoutState,
@@ -13,6 +11,9 @@ import {
   setDashboardPanelVisibility,
   withDashboardLayoutInCompanySettings,
 } from './dashboard-layout.js';
+
+import { ipc } from '@/lib/ipc.js';
+
 
 function layoutErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.length > 0) return error.message;

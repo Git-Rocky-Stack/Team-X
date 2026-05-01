@@ -252,7 +252,6 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                 value={activeDraft.title}
                 onChange={(event) => updateDraft({ title: event.target.value })}
                 className="mt-1 text-sm"
-                autoFocus
               />
             </div>
 

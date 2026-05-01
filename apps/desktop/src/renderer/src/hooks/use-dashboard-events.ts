@@ -1,5 +1,4 @@
 import type { DashboardEvent } from '@team-x/shared-types';
-
 import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';

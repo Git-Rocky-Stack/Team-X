@@ -81,6 +81,7 @@ import {
 import type { ProviderConfig, ProviderKind } from '@team-x/shared-types';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
+
 import {
   DEFAULT_ANTHROPIC_ID,
   DEFAULT_OLLAMA_LOCAL_ID,

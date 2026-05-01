@@ -8,8 +8,6 @@ import {
   Stethoscope,
 } from 'lucide-react';
 
-import { useAutonomyDoctor } from '@/hooks/use-autonomy-doctor.js';
-
 import {
   MissionControlRow,
   MissionIconButton,
@@ -18,6 +16,9 @@ import {
   MissionPill,
   MissionStateBlock,
 } from '../mission/mission-shell.js';
+
+import { useAutonomyDoctor } from '@/hooks/use-autonomy-doctor.js';
+
 
 function statusTone(status: AutonomyDoctorStatus): 'accent' | 'warning' | 'danger' {
   if (status === 'blocked') return 'danger';

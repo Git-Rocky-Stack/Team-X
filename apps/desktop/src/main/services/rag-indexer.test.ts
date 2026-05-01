@@ -1,5 +1,6 @@
 import type { DashboardEvent } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
+
 import { type RagIndexerDeps, createRagIndexer } from './rag-indexer.js';
 
 function makeFakeBus() {

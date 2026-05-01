@@ -1,10 +1,7 @@
-import { useMemo, useState } from 'react';
-
 import type { ApprovalItem, ApprovalItemKind, ApprovalItemStatus } from '@team-x/shared-types';
 import { BadgeDollarSign, CheckSquare2, FolderLock, ShieldCheck } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
-import { useApprovals, useReviewApproval } from '@/hooks/use-approvals.js';
-import { useInstalledExtensions } from '@/hooks/use-extensions.js';
 
 import {
   MissionControlRow,
@@ -14,6 +11,10 @@ import {
   MissionSegmentedButton,
   MissionStateBlock,
 } from '../mission/mission-shell.js';
+
+import { useApprovals, useReviewApproval } from '@/hooks/use-approvals.js';
+import { useInstalledExtensions } from '@/hooks/use-extensions.js';
+
 
 const FIELD_CLASSNAME =
   'min-h-[96px] w-full rounded-[16px] border border-white/10 bg-black/20 px-3 py-3 text-sm text-foreground outline-none transition focus:border-brand/30';

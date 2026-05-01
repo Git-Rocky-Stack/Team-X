@@ -197,6 +197,7 @@ function sanitizeFilename(name: string): string {
   return (
     name
       // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional — strip C0 control chars from filenames
+      // eslint-disable-next-line no-control-regex -- intentional — strip C0 control chars from filenames
       .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
       .replace(/\s+/g, '_')
       .replace(/_+/g, '_')
