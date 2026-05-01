@@ -72,6 +72,7 @@ nsis:
   createStartMenuShortcut: true
   installerIcon: build/installerIcon.ico
   uninstallerIcon: build/uninstallerIcon.ico
+  installerSidebar: build/installerBanner.bmp
   license: build/license.html
   menuCategory: Strategia-X
   shortcutName: Team-X
