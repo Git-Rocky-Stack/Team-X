@@ -80,7 +80,8 @@ import {
 } from '@team-x/provider-router';
 import type { ProviderConfig, ProviderKind } from '@team-x/shared-types';
 
-import type { CompaniesRepo } from '../db/repos/companies.js';
+import { getDb } from '../db/client.js';
+import { createCompaniesRepo } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
 
 import {
@@ -409,6 +410,7 @@ export function getProviderFactory(): ProviderFactory {
     _factory = createProviderFactory({
       providersService: getProvidersService(),
       secretsStore: new SecretsStore(),
+      companiesRepo: createCompaniesRepo(getDb()),
     });
   }
   return _factory;

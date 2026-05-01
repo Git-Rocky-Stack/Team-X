@@ -3,6 +3,8 @@ import type { CompaniesUpdateRequest, Company } from '@team-x/shared-types';
 import { AlertTriangle, Archive, Building2, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { useProviders } from '@/hooks/use-providers.js';
+
 
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
@@ -43,11 +45,13 @@ function errorMessage(err: unknown, fallback: string): string {
 export function CompanySettings({ open, onOpenChange, company }: CompanySettingsProps) {
   const queryClient = useQueryClient();
   const setCompanyId = useAppStore((s) => s.setCompanyId);
+  const { data: providers } = useProviders();
 
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [icon, setIcon] = useState('');
   const [theme, setTheme] = useState<ThemeChoice>('dark');
+  const [defaultProviderId, setDefaultProviderId] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -69,6 +73,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
     setSlug(company.slug);
     setIcon(company.icon ?? '');
     setTheme(normalizeTheme(company.theme));
+    setDefaultProviderId(company.settings.defaultProviderId ?? '');
     setNameError(null);
     setSlugError(null);
     setSubmitError(null);
@@ -127,7 +132,11 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
         slug,
         icon: nextIcon,
         theme,
-        settings: { ...company.settings, theme },
+        settings: {
+          ...company.settings,
+          theme,
+          defaultProviderId: defaultProviderId || undefined,
+        },
       });
 
       queryClient.setQueryData<Company[]>(['companies'], (current = []) =>
@@ -139,7 +148,11 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                 slug,
                 icon: nextIcon,
                 theme,
-                settings: { ...item.settings, theme },
+                settings: {
+                  ...item.settings,
+                  theme,
+                  defaultProviderId: defaultProviderId || undefined,
+                },
               }
             : item,
         ),
@@ -334,6 +347,32 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       })}
                     </div>
                   </fieldset>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="company-settings-provider"
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Default provider
+                    </label>
+                    <select
+                      id="company-settings-provider"
+                      value={defaultProviderId}
+                      onChange={(e) => setDefaultProviderId(e.target.value)}
+                      data-company-settings-field="defaultProviderId"
+                      className="h-10 w-full rounded-md border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30"
+                    >
+                      <option value="">Use system defaults</option>
+                      {providers?.map((provider) => (
+                        <option key={provider.id} value={provider.id}>
+                          {provider.name} ({provider.kind})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Default LLM provider for all employees. Employees can override this in their profile.
+                    </p>
+                  </div>
 
                   <Button
                     type="button"

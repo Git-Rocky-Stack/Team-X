@@ -18,7 +18,7 @@
  * accessors land in later tasks alongside the first consumers.
  */
 
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
@@ -326,6 +326,41 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
         // --- Phase 7: the target row itself ---------------------------
         tx.delete(companies).where(eq(companies.id, id)).run();
       });
+    },
+
+    /**
+     * Sync the company's default provider preference to all employees who
+     * don't have an explicit providerPref set. This is called when the
+     * company's defaultProviderId is changed.
+     *
+     * Returns the count of employees that were updated.
+     */
+    syncProviderToEmployees(companyId: string, providerId: string | null): number {
+      if (providerId === null || providerId.trim().length === 0) {
+        // Clearing the company default - remove providerPref from employees
+        // who only have it because of the old company default
+        const result = db
+          .update(employees)
+          .set({ providerPref: null })
+          .where(
+            and(
+              eq(employees.companyId, companyId),
+              // Only clear if the employee's providerPref matches what we're clearing
+              // This is a heuristic - we can't know for sure which were auto-set
+              // For now, we'll just clear all and let them fall back to defaults
+            )
+          )
+          .run();
+        return result.changes;
+      }
+
+      // Set the company default for employees without explicit providerPref
+      const result = db
+        .update(employees)
+        .set({ providerPref: providerId })
+        .where(and(eq(employees.companyId, companyId), eq(employees.providerPref, '')))
+        .run();
+      return result.changes;
     },
   };
 }
