@@ -12,8 +12,6 @@
 
 import { useEffect } from 'react';
 
-
-
 import { AgenticSection } from './agentic-section.js';
 import { BackupSection } from './backup-section.js';
 import { ConcurrencySection } from './concurrency-section.js';
@@ -47,7 +45,7 @@ export function SettingsView() {
   }, [focusSection, setFocusSection]);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="amoled-menu-surface flex h-full flex-col bg-black">
       <div className="border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold text-foreground">Settings</h2>
         <p className="text-xs text-muted-foreground mt-0.5">

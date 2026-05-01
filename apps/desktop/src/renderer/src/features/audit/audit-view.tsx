@@ -1,4 +1,3 @@
-
 import type { AuditEvent, AuditFilter, Employee } from '@team-x/shared-types';
 import {
   Activity,
@@ -295,14 +294,14 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
   // Guard: no company selected
   if (!companyId) {
     return (
-      <div className="flex h-full items-center justify-center text-zinc-500">
+      <div className="amoled-menu-surface flex h-full items-center justify-center bg-black text-zinc-500">
         Select a company to view the audit log.
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
+    <div className="amoled-menu-surface flex h-full flex-col gap-4 bg-black p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

@@ -74,11 +74,11 @@ describe('PermissionsSection component', () => {
 
   describe('preset card rendering', () => {
     it('renders preset cards with proper data-testid attributes', () => {
-      expect(permissionsSectionSrc).toContain("data-testid={`preset-card-${key}`}");
+      expect(permissionsSectionSrc).toContain('data-testid={`preset-card-${key}`}');
     });
 
     it('displays preset label with capitalize styling', () => {
-      expect(permissionsSectionSrc).toContain("capitalize");
+      expect(permissionsSectionSrc).toContain('capitalize');
     });
 
     it('shows Active badge for selected preset', () => {
@@ -129,7 +129,9 @@ describe('PermissionsSection component', () => {
     });
 
     it('hides advanced matrix by default (showAdvanced state = false)', () => {
-      expect(permissionsSectionSrc).toContain("const [showAdvanced, setShowAdvanced] = useState(false)");
+      expect(permissionsSectionSrc).toContain(
+        'const [showAdvanced, setShowAdvanced] = useState(false)',
+      );
     });
   });
 
@@ -139,7 +141,7 @@ describe('PermissionsSection component', () => {
     });
 
     it('renders grant list items with resource info', () => {
-      expect(permissionsSectionSrc).toContain('{grant.resourceId}');
+      expect(permissionsSectionSrc).toContain('{formatPath(grant.resourceId)}');
       expect(permissionsSectionSrc).toContain('{grant.resourceKind}');
       expect(permissionsSectionSrc).toContain('{grant.permission}');
     });
@@ -162,13 +164,13 @@ describe('PermissionsSection component', () => {
 
     it('creates capability grants for preset capabilities', () => {
       expect(permissionsSectionSrc).toContain('for (const capability of config.capabilities)');
-      expect(permissionsSectionSrc).toContain('resourceKind: \'capability\'');
-      expect(permissionsSectionSrc).toContain('permission: \'allow\'');
+      expect(permissionsSectionSrc).toContain("resourceKind: 'capability'");
+      expect(permissionsSectionSrc).toContain("permission: 'allow'");
     });
 
     it('creates path grants for preset defaultPaths', () => {
       expect(permissionsSectionSrc).toContain('for (const path of config.defaultPaths)');
-      expect(permissionsSectionSrc).toContain('resourceKind: \'path\'');
+      expect(permissionsSectionSrc).toContain("resourceKind: 'path'");
     });
 
     it('updates selectedPreset state after successful application', () => {
@@ -203,7 +205,7 @@ describe('PermissionsSection component', () => {
 
   describe('hook usage', () => {
     it('uses useAppStore for companyId', () => {
-      expect(permissionsSectionSrc).toContain("useAppStore((state) => state.companyId)");
+      expect(permissionsSectionSrc).toContain('useAppStore((state) => state.companyId)');
     });
 
     it('uses useAuthorityGrants to fetch grants', () => {
@@ -224,8 +226,9 @@ describe('PermissionsSection component', () => {
       expect(permissionsSectionSrc).toContain('export function PermissionsSection()');
     });
 
-    it('imports AuthorityGrant type from shared-types', () => {
-      expect(permissionsSectionSrc).toContain("from '@team-x/shared-types'");
+    it('uses hook-returned authority grant records without a renderer-local shared type import', () => {
+      expect(permissionsSectionSrc).toContain('const authorityGrants = authorityQuery.data ?? []');
+      expect(permissionsSectionSrc).not.toContain("from '@team-x/shared-types'");
     });
 
     it('imports required UI components', () => {

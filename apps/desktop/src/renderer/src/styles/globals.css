@@ -238,6 +238,25 @@
   }
 }
 
+.amoled-menu-surface {
+  background-color: #000000;
+}
+
+.amoled-menu-surface
+  :is(
+    [class*="bg-zinc-"],
+    [class*="bg-surface-"],
+    [class*="bg-background"],
+    [class*="bg-card"],
+    [class*="bg-popover"],
+    [class*="bg-muted"],
+    [class*="bg-secondary"],
+    [class*="bg-destructive"],
+    [class*="bg-primary/"]
+  ) {
+  background-color: #000000 !important;
+}
+
 /* Scrollbar styling for dark theme */
 @layer utilities {
   .scrollbar-thin {
