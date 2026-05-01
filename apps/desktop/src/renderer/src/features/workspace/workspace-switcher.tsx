@@ -17,7 +17,6 @@ import { useCompanies, useCompanyEventSync } from '@/hooks/use-companies.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 /**
  * Top-bar workspace switcher.
  *
@@ -182,7 +181,7 @@ export function WorkspaceSwitcher() {
                   data-workspace-switcher-item={company.id}
                   className={cn(
                     'rounded-[18px] px-3 py-2.5',
-                    isActive && 'bg-brand/5 font-semibold text-brand',
+                    isActive && 'border border-brand/25 bg-black/25 font-semibold text-brand',
                   )}
                 >
                   <Building2 className="mr-2 h-3.5 w-3.5 text-muted-foreground" />

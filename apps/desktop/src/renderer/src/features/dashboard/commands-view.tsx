@@ -25,8 +25,6 @@ import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
 import { Check, Copy, Terminal } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
-
-
 import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -35,7 +33,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.j
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
 import { useCommandHistory } from '@/hooks/use-command.js';
-
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -138,7 +135,7 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
         {actorLabel}
       </span>
 
-      <Badge variant="outline" className="shrink-0 border-brand/30 bg-brand/10 text-xs text-brand">
+      <Badge variant="outline" className="shrink-0 border-brand/35 bg-black/25 text-xs text-brand">
         {label}
       </Badge>
 

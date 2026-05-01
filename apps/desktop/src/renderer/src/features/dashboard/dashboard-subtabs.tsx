@@ -1,7 +1,6 @@
 import { Grid3X3, LayoutGrid, Radio, ScrollText, Terminal } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-
 import { type DashboardSubview, useAppStore } from '@/store/app-store.js';
 
 interface SubtabDef {
@@ -36,7 +35,7 @@ export function DashboardSubtabs() {
               flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors
               ${
                 isActive
-                  ? 'border border-brand/25 bg-brand/10 text-brand'
+                  ? 'border border-brand/30 bg-black/25 text-brand'
                   : 'border border-transparent text-muted-foreground hover:border-white/10 hover:bg-white/5 hover:text-foreground'
               }
             `}

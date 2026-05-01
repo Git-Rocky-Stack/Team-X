@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 
 import { useProviders } from '@/hooks/use-providers.js';
 
-
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet.js';
@@ -329,7 +328,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                               'flex-1 cursor-pointer rounded-[18px] border px-3 py-3 text-center text-xs font-semibold capitalize transition-colors',
                               'focus-within:outline-none focus-within:ring-2 focus-within:ring-brand',
                               isSelected
-                                ? 'border-brand/20 bg-brand/10 text-brand'
+                                ? 'border-brand/30 bg-black/25 text-brand'
                                 : 'border-white/10 bg-black/10 text-muted-foreground hover:bg-black/20',
                             )}
                           >
@@ -370,7 +369,8 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       ))}
                     </select>
                     <p className="text-xs text-muted-foreground">
-                      Default LLM provider for all employees. Employees can override this in their profile.
+                      Default LLM provider for all employees. Employees can override this in their
+                      profile.
                     </p>
                   </div>
 

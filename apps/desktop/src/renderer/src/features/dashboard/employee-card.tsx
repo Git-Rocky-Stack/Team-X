@@ -1,7 +1,6 @@
 import type { Employee } from '@team-x/shared-types';
 import { useEffect, useRef } from 'react';
 
-
 import { cn } from '@/lib/utils.js';
 import type { EmployeeLiveState } from '@/store/app-store.js';
 import { useAppStore } from '@/store/app-store.js';
@@ -76,7 +75,7 @@ export function EmployeeCard({ employee, live }: EmployeeCardProps) {
       className={cn(
         'group relative flex w-full flex-col items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200',
         isSelected
-          ? 'border-brand/40 bg-brand/5 shadow-sm shadow-brand/10'
+          ? 'border-brand/40 bg-black/25 shadow-sm'
           : 'border-border bg-surface-50 hover:border-border/80 hover:bg-surface-100 hover:shadow-sm',
       )}
     >

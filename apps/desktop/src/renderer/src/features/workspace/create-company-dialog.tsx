@@ -3,7 +3,6 @@ import type { Company, CompanyTemplateSummary } from '@team-x/shared-types';
 import { Building2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -441,7 +440,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
                         'flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-xs font-medium capitalize transition-colors',
                         'focus-within:outline-none focus-within:ring-2 focus-within:ring-brand',
                         isSelected
-                          ? 'border-brand/40 bg-brand/5 text-brand'
+                          ? 'border-brand/40 bg-black/25 text-brand'
                           : 'border-border bg-surface-50 text-muted-foreground hover:bg-surface-100',
                       )}
                     >

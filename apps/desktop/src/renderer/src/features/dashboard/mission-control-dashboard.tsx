@@ -51,7 +51,6 @@ import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 const DAY_MS = 86_400_000;
 const DASHBOARD_TOUCH_BUTTON_CLASS = 'min-h-11';
 const DASHBOARD_GLASS_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border-white/10 bg-black/10 hover:bg-black/20`;
@@ -108,7 +107,7 @@ function liveStatusLabel(status: DashboardQueueRow['liveStatus']): string {
 function liveStatusClassName(status: DashboardQueueRow['liveStatus']): string {
   switch (status) {
     case 'thinking':
-      return 'border-brand/30 bg-brand/10 text-brand';
+      return 'border-brand/35 bg-black/25 text-brand';
     case 'blocked':
       return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
     case 'error':
@@ -286,7 +285,7 @@ function PanelMessageState({
 function runtimeStateClassName(tone: DashboardRuntimeOperationsSummary['stateTone']): string {
   switch (tone) {
     case 'accent':
-      return 'border-brand/30 bg-brand/10 text-brand';
+      return 'border-brand/35 bg-black/25 text-brand';
     case 'warning':
       return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
     case 'danger':
@@ -319,7 +318,7 @@ function RuntimeMetricCell({
         'rounded-2xl border bg-black p-4',
         tone === 'warning' && 'border-amber-500/25 bg-amber-950/40',
         tone === 'danger' && 'border-red-500/25 bg-red-950/40',
-        tone === 'accent' && 'border-brand/25 bg-brand/40',
+        tone === 'accent' && 'border-brand/30 bg-black/35',
         tone === 'default' && 'border-white/10',
       )}
     >
@@ -512,7 +511,7 @@ function RuntimeOperationsBand({
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge
                         variant="outline"
-                        className="border-brand/30 bg-brand/10 text-[10px] text-brand"
+                        className="border-brand/35 bg-black/25 text-[10px] text-brand"
                       >
                         {session.adapterKind}
                       </Badge>
@@ -520,7 +519,7 @@ function RuntimeOperationsBand({
                         variant="outline"
                         className={cn(
                           'text-[10px] font-mono',
-                          session.status === 'working' && 'border-brand/30 bg-brand/10 text-brand',
+                          session.status === 'working' && 'border-brand/35 bg-black/25 text-brand',
                           (session.status === 'blocked' || session.status === 'stale') &&
                             'border-amber-500/30 bg-amber-500/10 text-amber-200',
                           (session.status === 'failed' || session.status === 'offline') &&
@@ -774,7 +773,7 @@ export function MissionControlDashboard({
                   {company?.status && (
                     <Badge
                       variant="outline"
-                      className="border-brand/25 bg-brand/10 font-mono text-[10px] text-brand"
+                      className="border-brand/30 bg-black/25 font-mono text-[10px] text-brand"
                     >
                       {company.status}
                     </Badge>
@@ -902,7 +901,7 @@ export function MissionControlDashboard({
                     <output
                       className={cn(
                         badgeVariants({ variant: 'outline' }),
-                        'border-brand/25 bg-brand/10 text-brand',
+                        'border-brand/30 bg-black/25 text-brand',
                       )}
                       aria-live="polite"
                     >
@@ -1243,7 +1242,7 @@ export function MissionControlDashboard({
                                     run.status === 'failed' &&
                                       'border-red-500/30 bg-red-500/10 text-red-300',
                                     run.status === 'running' &&
-                                      'border-brand/30 bg-brand/10 text-brand',
+                                      'border-brand/35 bg-black/25 text-brand',
                                   )}
                                 >
                                   {run.status}
@@ -1610,7 +1609,7 @@ export function MissionControlDashboard({
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge
                               variant="outline"
-                              className="border-brand/30 bg-brand/10 text-[10px] text-brand"
+                              className="border-brand/35 bg-black/25 text-[10px] text-brand"
                             >
                               {intentLabel(entry.intent)}
                             </Badge>

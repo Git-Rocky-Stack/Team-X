@@ -136,7 +136,7 @@ export function MissionPill({
         mono && 'font-mono',
         uppercase && 'font-semibold uppercase tracking-[0.22em]',
         tone === 'accent'
-          ? 'border-brand/20 bg-brand/10 text-brand'
+          ? 'border-brand/30 bg-black/20 text-brand'
           : tone === 'warning'
             ? 'border-amber-500/20 bg-amber-500/10 text-amber-300'
             : tone === 'danger'
@@ -279,7 +279,7 @@ export function MissionSegmentedButton({
         'mission-segmented-button rounded-[18px] border font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50',
         compact ? 'px-3 py-2 text-[11px]' : 'px-3.5 py-2 text-xs',
         active
-          ? 'border-brand/20 bg-brand/10 text-brand shadow-[inset_0_1px_0_hsl(var(--mission-red)/0.12)]'
+          ? 'border-brand/30 bg-black/25 text-brand shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)]'
           : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-surface-100 hover:text-foreground',
         className,
       )}
@@ -308,7 +308,7 @@ export function MissionIconButton({
       className={cn(
         'mission-icon-button flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border border-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
         tone === 'accent'
-          ? 'bg-brand/10 text-brand hover:bg-brand/15'
+          ? 'border-brand/25 bg-black/20 text-brand hover:bg-white/[0.04]'
           : tone === 'warning'
             ? 'border-amber-500/20 bg-amber-500/10 text-amber-300 hover:bg-amber-500/15'
             : tone === 'danger'
@@ -383,7 +383,7 @@ export function MissionSheetHeader({
         {Icon ? (
           <div
             className={cn(
-              'flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-brand/10 text-brand',
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-brand/25 bg-black/20 text-brand',
               iconClassName,
             )}
           >

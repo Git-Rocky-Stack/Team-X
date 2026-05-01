@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-
 import { Badge } from '@/components/ui/badge.js';
 import { MissionControlRow } from '@/features/mission/mission-shell.js';
 import { WorkspaceSwitcher } from '@/features/workspace/workspace-switcher.js';
@@ -99,7 +98,7 @@ export function TopBar() {
                     'group flex shrink-0 items-center gap-2 rounded-[18px] px-3.5 py-2 text-xs font-semibold transition-all',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                     isActive
-                      ? 'border border-brand/20 bg-brand/10 text-brand shadow-[inset_0_1px_0_hsl(var(--mission-red)/0.12)]'
+                      ? 'border border-brand/30 bg-black/25 text-brand shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)]'
                       : tab.disabled
                         ? 'cursor-not-allowed text-muted-foreground/50'
                         : 'border border-transparent text-muted-foreground hover:border-white/10 hover:bg-surface-100 hover:text-foreground',
@@ -122,8 +121,8 @@ export function TopBar() {
                 'group flex shrink-0 items-center gap-2 rounded-[18px] px-3.5 py-2 text-xs font-semibold transition-all',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                 copilotSidebarOpen
-                  ? 'border border-brand/20 bg-brand/10 text-brand shadow-[inset_0_1px_0_hsl(var(--mission-red)/0.12)]'
-                  : 'border border-transparent text-brand hover:border-brand/20 hover:bg-brand/10',
+                  ? 'border border-brand/30 bg-black/25 text-brand shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)]'
+                  : 'border border-transparent text-brand hover:border-brand/25 hover:bg-white/[0.04]',
               )}
             >
               <span className="hidden text-sm font-semibold lg:inline">Copilot</span>
