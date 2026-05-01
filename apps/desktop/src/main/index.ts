@@ -43,6 +43,7 @@
 
 import { join } from 'node:path';
 import { BrowserWindow, app, dialog, ipcMain } from 'electron';
+import { setupApplicationMenu } from './menu.js';
 
 import { calcCostUsd } from '@team-x/telemetry-core';
 
@@ -2206,6 +2207,9 @@ app
     );
 
     console.log('[main] orchestrator + IPC ready');
+
+    // ---- Application menu ---------------------------------------------------
+    setupApplicationMenu();
 
     // ---- 6. Window ---------------------------------------------------------
     createWindow();

@@ -198,6 +198,9 @@ const REQUEST_CHANNELS = [
   'settings.setCopilot',
   'settings.getCopilotWeights',
   'settings.setCopilotWeights',
+  // Proactive settings (Phase 6 — Proactive Execution System)
+  'settings.getProactive',
+  'settings.setProactive',
   // Provider management (Phase 3 — M18)
   'providers.list',
   'providers.add',
@@ -213,6 +216,11 @@ const REQUEST_CHANNELS = [
   'vault.delete',
   'vault.verify',
   'vault.stats',
+  // Proactive execution (Phase 6 — Proactive Execution System)
+  'proactive.setEnabled',
+  'proactive.decomposeGoal',
+  'proactive.scanForWork',
+  'proactive.getState',
   // Ticket management (Phase 2 — M12)
   'tickets.create',
   'tickets.update',
@@ -1095,6 +1103,18 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     },
   );
 
+  // Proactive settings handlers (Phase 6 — Proactive Execution System)
+  ipcMain.handle('settings.getProactive', async () => {
+    return handlers.settingsGetProactive();
+  });
+
+  ipcMain.handle(
+    'settings.setProactive',
+    async (_event, request: import('@team-x/shared-types').SettingsSetProactiveRequest) => {
+      return handlers.settingsSetProactive(request);
+    },
+  );
+
   // Provider management handlers (Phase 3 — M18)
   ipcMain.handle('providers.list', async () => {
     return handlers.providersList();
@@ -1174,6 +1194,32 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('vault.stats', async (_event, request: { companyId: string }) => {
     return handlers.vaultStats(request);
+  });
+
+  // Proactive execution handlers (Phase 6 — Proactive Execution System)
+  ipcMain.handle(
+    'proactive.setEnabled',
+    async (_event, request: { companyId: string; enabled: boolean }) => {
+      return handlers.proactiveSetEnabled(request);
+    },
+  );
+
+  ipcMain.handle(
+    'proactive.decomposeGoal',
+    async (_event, request: { companyId: string; goalId: string }) => {
+      return handlers.proactiveDecomposeGoal(request);
+    },
+  );
+
+  ipcMain.handle(
+    'proactive.scanForWork',
+    async (_event, request: { companyId: string }) => {
+      return handlers.proactiveScanForWork(request);
+    },
+  );
+
+  ipcMain.handle('proactive.getState', async (_event, request: { companyId: string }) => {
+    return handlers.proactiveGetState(request);
   });
 
   // Backup/restore handlers (Phase 4 — M23)

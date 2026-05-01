@@ -33,6 +33,7 @@ import {
   type SettingsGetExtensionsResponse,
   type SettingsGetMemoryResponse,
   type SettingsGetPlannerResponse,
+  type SettingsGetProactiveResponse,
   type SettingsSetAgenticRequest,
   type SettingsSetCopilotRequest,
   type SettingsSetCopilotWeightsRequest,
@@ -40,6 +41,7 @@ import {
   type SettingsSetExtensionsRequest,
   type SettingsSetMemoryRequest,
   type SettingsSetPlannerRequest,
+  type SettingsSetProactiveRequest,
 } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
@@ -91,6 +93,10 @@ const SETTING_DEFAULTS: Array<{ key: string; value: unknown }> = [
   },
   { key: 'copilot_categories', value: COPILOT_CATEGORIES },
   { key: 'copilot_category_weights', value: COPILOT_CATEGORY_WEIGHTS_DEFAULT },
+  // Proactive execution (Phase 6 — Proactive Execution System). Defaults to off;
+  // autonomy mode controls how aggressively agents act without explicit commands.
+  { key: 'proactive_enabled', value: false },
+  { key: 'proactive_autonomy_mode', value: 'balanced' },
 ];
 
 /**
@@ -504,6 +510,42 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
         const safe: CopilotCategory[] =
           filtered.length === 0 ? (COPILOT_CATEGORIES.slice() as CopilotCategory[]) : filtered;
         this.set('copilot_categories', safe);
+      }
+    },
+
+    /**
+     * Read the proactive execution settings as a single typed snapshot.
+     * Missing keys fall back to safe defaults (disabled, balanced autonomy).
+     *
+     * Phase 6 — Proactive Execution System.
+     */
+    getProactive(): SettingsGetProactiveResponse {
+      const enabled = this.get<boolean>('proactive_enabled', false);
+      const rawMode = this.get<string>('proactive_autonomy_mode', 'balanced');
+      const autonomyMode = (EXTENSIONS_AUTONOMY_MODES as readonly string[]).includes(rawMode)
+        ? (rawMode as SettingsGetProactiveResponse['autonomyMode'])
+        : 'balanced';
+      return { enabled, autonomyMode };
+    },
+
+    /**
+     * Patch one or more proactive execution settings. `enabled` is coerced to
+     * boolean; `autonomyMode` is validated against `EXTENSIONS_AUTONOMY_MODES`.
+     * Missing keys retain their current persisted value.
+     *
+     * Phase 6 — Proactive Execution System.
+     */
+    setProactive(req: SettingsSetProactiveRequest): void {
+      if (req.enabled !== undefined) {
+        this.set('proactive_enabled', Boolean(req.enabled));
+      }
+      if (req.autonomyMode !== undefined) {
+        if (!(EXTENSIONS_AUTONOMY_MODES as readonly string[]).includes(req.autonomyMode)) {
+          throw new Error(
+            `[settings] setProactive: autonomyMode must be one of ${EXTENSIONS_AUTONOMY_MODES.join(', ')}`,
+          );
+        }
+        this.set('proactive_autonomy_mode', req.autonomyMode);
       }
     },
   };

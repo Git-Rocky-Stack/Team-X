@@ -20,6 +20,8 @@ import { WorkspaceSwitcher } from '@/features/workspace/workspace-switcher.js';
 import { cn } from '@/lib/utils.js';
 import { type ActiveView, useAppStore } from '@/store/app-store.js';
 
+import brandLogo from '/logo.png';
+
 interface TabDef {
   label: string;
   icon: ComponentType<{ className?: string }>;
@@ -109,29 +111,33 @@ export function TopBar() {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setCopilotSidebarOpen(!copilotSidebarOpen)}
+              aria-label="Toggle Copilot sidebar (Cmd+Shift+K)"
+              aria-pressed={copilotSidebarOpen}
+              title="Copilot (Cmd+Shift+K)"
+              data-copilot-toolbar-toggle=""
+              className={cn(
+                'group flex shrink-0 items-center gap-2 rounded-[18px] px-3.5 py-2 text-xs font-semibold transition-all',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                copilotSidebarOpen
+                  ? 'border border-brand/20 bg-brand/10 text-brand shadow-[inset_0_1px_0_hsl(var(--mission-red)/0.12)]'
+                  : 'border border-transparent text-brand hover:border-brand/20 hover:bg-brand/10',
+              )}
+            >
+              <span className="hidden text-sm font-semibold lg:inline">Copilot</span>
+            </button>
           </MissionControlRow>
         </nav>
 
-        <button
-          type="button"
-          onClick={() => setCopilotSidebarOpen(!copilotSidebarOpen)}
-          aria-label="Toggle Copilot sidebar (Cmd+Shift+K)"
-          aria-pressed={copilotSidebarOpen}
-          title="Copilot (Cmd+Shift+K)"
-          data-copilot-toolbar-toggle=""
-          className={cn(
-            'mission-chrome-panel flex h-14 items-center gap-2.5 rounded-[24px] border border-white/10 bg-black/25 px-4 transition-all',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-            copilotSidebarOpen
-              ? 'text-brand shadow-[0_20px_50px_-38px_hsl(var(--mission-red)/0.85)]'
-              : 'text-muted-foreground hover:bg-surface-100 hover:text-foreground',
-          )}
-        >
-          <span className="hidden text-sm font-semibold lg:inline">Copilot</span>
-          <span className="hidden rounded-full border border-white/10 px-2 py-0.5 font-mono text-[10px] text-muted-foreground xl:inline">
-            Cmd+Shift+K
-          </span>
-        </button>
+        <div className="flex items-center gap-3 shrink-0 ml-auto">
+          <img
+            src={brandLogo}
+            alt="Strategia-X"
+            className="h-[67px] w-auto opacity-90 hover:opacity-100 transition-opacity"
+          />
+        </div>
       </div>
     </header>
   );

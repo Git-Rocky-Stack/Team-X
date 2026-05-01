@@ -138,8 +138,8 @@ function HeroMetric({
   onClick?: () => void;
 }) {
   const className = cn(
-    'group flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-left transition-all',
-    onClick && `${DASHBOARD_INTERACTIVE_FOCUS_CLASS} hover:border-brand/30 hover:bg-black/30`,
+    'group flex flex-col gap-3 rounded-2xl border border-white/10 bg-black p-4 text-left transition-all',
+    onClick && `${DASHBOARD_INTERACTIVE_FOCUS_CLASS} hover:border-brand/30 hover:bg-black`,
   );
 
   const content = (
@@ -315,10 +315,10 @@ function RuntimeMetricCell({
   return (
     <div
       className={cn(
-        'rounded-2xl border bg-black/10 p-4',
-        tone === 'warning' && 'border-amber-500/25 bg-amber-500/10',
-        tone === 'danger' && 'border-red-500/25 bg-red-500/10',
-        tone === 'accent' && 'border-brand/25 bg-brand/10',
+        'rounded-2xl border bg-black p-4',
+        tone === 'warning' && 'border-amber-500/25 bg-amber-950/40',
+        tone === 'danger' && 'border-red-500/25 bg-red-950/40',
+        tone === 'accent' && 'border-brand/25 bg-brand/40',
         tone === 'default' && 'border-white/10',
       )}
     >
@@ -581,7 +581,7 @@ function MissionControlSkeleton() {
         <div className="mission-hero rounded-[28px] border border-white/10 p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
             {heroSkeletonKeys.map((key) => (
-              <div key={key} className="h-28 animate-pulse rounded-2xl bg-black/20" />
+              <div key={key} className="h-28 animate-pulse rounded-2xl bg-black" />
             ))}
           </div>
         </div>

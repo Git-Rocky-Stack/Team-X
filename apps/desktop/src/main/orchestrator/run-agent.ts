@@ -538,6 +538,61 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       };
     }
 
+    // Tools were executed but the SDK didn't surface result details (e.g.,
+    // send_message_to_colleague via Vercel AI SDK's internal tool loop).
+    // Treat as success with a generic acknowledgment — the tool side-effects
+    // (message sent, event emitted) already happened.
+    if (toolCallsCount > 0 && usage !== null) {
+      const genericMessage = "Done. I've taken care of that.";
+      deps.messages.updateContent(messageId, genericMessage);
+      const latencyMs = Math.max(0, now() - startTime);
+      const costUsd = deps.calcCost({
+        provider: input.providerName,
+        model: input.model,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+      });
+
+      deps.runs.finish(runId, {
+        status: 'success',
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        latencyMs,
+        costUsd,
+        toolCallsCount,
+      });
+
+      if (deps.budgetGovernance) {
+        void deps.budgetGovernance.recordRunSpend(runId).catch((err) => {
+          console.warn('[runAgent] budget recordRunSpend failed:', err);
+        });
+      }
+
+      deps.bus.emit<WorkCompletedPayload>({
+        type: 'work.completed',
+        companyId: input.companyId,
+        actorId: 'orchestrator',
+        actorKind: 'orchestrator',
+        payload: {
+          threadId: input.threadId,
+          messageId,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          latencyMs,
+          costUsd: Number(costUsd),
+        },
+      });
+
+      return {
+        runId,
+        messageId,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        latencyMs,
+        costUsd,
+      };
+    }
+
     const latencyMs = Math.max(0, now() - startTime);
     const message = 'provider stream completed without assistant text';
     deps.messages.updateContent(

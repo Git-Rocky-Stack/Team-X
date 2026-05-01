@@ -18,14 +18,17 @@ import type { AuthorityGrant } from '@team-x/shared-types';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
+import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { Switch } from '@/components/ui/switch.js';
+import { FolderOpen, Plus } from 'lucide-react';
 import { useAppStore } from '@/store/app-store.js';
 import {
   useAuthorityGrants,
   useCreateAuthorityGrant,
   useDeleteAuthorityGrant,
 } from '@/hooks/use-extensions.js';
+import { ipc } from '@/lib/ipc.js';
 
 type PermissionPreset = 'safe' | 'standard' | 'advanced';
 
@@ -73,6 +76,8 @@ export function PermissionsSection() {
   const [selectedPreset, setSelectedPreset] = useState<PermissionPreset>('standard');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [newPathInput, setNewPathInput] = useState('');
+  const [isAddingPath, setIsAddingPath] = useState(false);
 
   const authorityGrants = authorityQuery.data ?? [];
   const employeeGrants = authorityGrants.filter((g) => g.scopeKind === 'employee');
@@ -119,6 +124,37 @@ export function PermissionsSection() {
       console.error('[permissions] Failed to apply preset:', err);
     } finally {
       setIsApplying(false);
+    }
+  }
+
+  async function addCustomPath(path: string) {
+    if (!companyId) return;
+    setIsAddingPath(true);
+    try {
+      await createGrant.mutateAsync({
+        companyId,
+        scopeKind: 'company',
+        scopeId: companyId,
+        resourceKind: 'path',
+        resourceId: path,
+        permission: 'allow',
+      });
+      setNewPathInput('');
+    } catch (err) {
+      console.error('[permissions] Failed to add custom path:', err);
+    } finally {
+      setIsAddingPath(false);
+    }
+  }
+
+  async function handleSelectDirectory() {
+    if (!companyId) return;
+    try {
+      const result = await ipc.system.selectDirectory();
+      if (result.canceled || !result.folderPath) return;
+      setNewPathInput(result.folderPath);
+    } catch (err) {
+      console.error('[permissions] Failed to select directory:', err);
     }
   }
 
@@ -267,40 +303,101 @@ export function PermissionsSection() {
             </CardHeader>
 
             {showAdvanced && (
-              <CardContent className="space-y-3">
-                {employeeGrants.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      No custom authority grants configured. Use presets above for quick setup.
-                    </p>
+              <CardContent className="space-y-4">
+                {/* Add custom path section */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Add Custom Path</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Grant extensions access to specific filesystem paths. Use templates like{' '}
+                    <code className="rounded bg-muted px-1 py-0.5">{{documents}}</code> or browse to select a
+                    directory.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="{{documents}}, /path/to/folder, or browse..."
+                      value={newPathInput}
+                      onChange={(e) => setNewPathInput(e.target.value)}
+                      disabled={isAddingPath || !companyId}
+                      className="h-9 text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newPathInput.trim()) {
+                          e.preventDefault();
+                          addCustomPath(newPathInput.trim());
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectDirectory}
+                      disabled={isAddingPath || !companyId}
+                      className="h-9 px-3"
+                      title="Browse for directory"
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => newPathInput.trim() && addCustomPath(newPathInput.trim())}
+                      disabled={isAddingPath || !companyId || !newPathInput.trim()}
+                      className="h-9"
+                    >
+                      {isAddingPath ? (
+                        <>Adding...</>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </>
+                      )}
+                    </Button>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {employeeGrants.map((grant) => (
-                      <div
-                        key={grant.id}
-                        className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{grant.resourceId}</span>
-                            <Badge variant="outline">{grant.resourceKind}</Badge>
-                            <Badge variant="secondary">{grant.permission}</Badge>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => deleteGrant.mutate(grant.id)}
-                          disabled={deleteGrant.isPending}
+                  {createGrant.isError && (
+                    <p className="text-[10px] text-destructive">Failed to add path. Please try again.</p>
+                  )}
+                </div>
+
+                {/* Existing grants list */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Existing Grants ({employeeGrants.length})
+                  </p>
+                  {employeeGrants.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        No custom authority grants configured. Use presets above for quick setup or add custom
+                        paths.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {employeeGrants.map((grant) => (
+                        <div
+                          key={grant.id}
+                          className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2"
                         >
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">{formatPath(grant.resourceId)}</span>
+                              <Badge variant="outline">{grant.resourceKind}</Badge>
+                              <Badge variant="secondary">{grant.permission}</Badge>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => deleteGrant.mutate(grant.id)}
+                            disabled={deleteGrant.isPending}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             )}
           </Card>

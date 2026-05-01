@@ -218,6 +218,7 @@ import type {
   SettingsGetMemoryResponse,
   SettingsGetPlannerResponse,
   SettingsGetPrivacyResponse,
+  SettingsGetProactiveResponse,
   SettingsGetRagConfigResponse,
   SettingsGetRuntimeResponse,
   SettingsSetAgenticRequest,
@@ -229,6 +230,7 @@ import type {
   SettingsSetMemoryRequest,
   SettingsSetPlannerRequest,
   SettingsSetPrivacyRequest,
+  SettingsSetProactiveRequest,
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
   SkillAssignment,
@@ -764,6 +766,10 @@ export interface IpcSettingsRepo {
   getCopilotWeights(): SettingsGetCopilotWeightsResponse;
   /** Copilot feedback weights — clamped partial write. Phase 6 — M38. */
   setCopilotWeights(req: SettingsSetCopilotWeightsRequest): SettingsSetCopilotWeightsResponse;
+  /** Proactive execution settings — snapshot read. Phase 6 — Proactive Execution System. */
+  getProactive(): SettingsGetProactiveResponse;
+  /** Proactive execution settings — validated partial write. Phase 6 — Proactive Execution System. */
+  setProactive(req: SettingsSetProactiveRequest): void;
 }
 
 /**
@@ -1579,6 +1585,16 @@ export interface IpcHandlers {
   settingsSetCopilotWeights(
     req: SettingsSetCopilotWeightsRequest,
   ): Promise<SettingsSetCopilotWeightsResponse>;
+
+  // -----------------------------------------------------------------------
+  // Proactive settings handlers (Phase 6 — Proactive Execution System)
+  // -----------------------------------------------------------------------
+
+  /** `settings.getProactive` — proactive mode enabled and autonomy mode. */
+  settingsGetProactive(): Promise<SettingsGetProactiveResponse>;
+
+  /** `settings.setProactive` — patch proactive settings with validation. */
+  settingsSetProactive(req: SettingsSetProactiveRequest): Promise<void>;
 
   // -----------------------------------------------------------------------
   // Provider management handlers (Phase 3 — M18)
@@ -5888,6 +5904,23 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         );
       }
       return result;
+    },
+
+    // -----------------------------------------------------------------------
+    // Proactive settings handlers (Phase 6 — Proactive Execution System)
+    // -----------------------------------------------------------------------
+
+    /** `settings.getProactive` — proactive mode enabled and autonomy mode. */
+    async settingsGetProactive(): Promise<SettingsGetProactiveResponse> {
+      return settingsRepo.getProactive();
+    },
+
+    /** `settings.setProactive` — patch proactive settings with validation. */
+    async settingsSetProactive(req: SettingsSetProactiveRequest): Promise<void> {
+      // Repo handles enabled coercion + autonomyMode validation.
+      // After persisting, the proactiveTriggerService reads from settingsRepo
+      // on next check, so changes take effect without app restart.
+      settingsRepo.setProactive(req);
     },
 
     // -----------------------------------------------------------------------

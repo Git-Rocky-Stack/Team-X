@@ -129,7 +129,12 @@ export function createProactiveDispatcher(
   /**
    * Build trigger message content based on trigger type and context.
    */
-  function buildTriggerMessage(args: EnqueueProactiveArgs): string {
+  function buildTriggerMessage(args: {
+    trigger: ProactiveTrigger;
+    triggerId: string;
+    sourceGoalId?: string;
+    sourceTicketId?: string;
+  }): string {
     const { trigger, triggerId, sourceGoalId, sourceTicketId } = args;
 
     switch (trigger) {
@@ -164,11 +169,9 @@ export function createProactiveDispatcher(
 
     const payload: ProactiveWorkStartedPayload = {
       triggerId,
-      triggerKind: trigger,
+      runId: triggerId,
       threadId,
       employeeId,
-      goalId: sourceGoalId ?? null,
-      ticketId: sourceTicketId ?? null,
       startedAt: now(),
     };
 
