@@ -1,7 +1,6 @@
 import type { AgentMessagePayload } from '@team-x/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-
 import type { EmployeeRow } from '../db/repos/employees.js';
 
 import type {

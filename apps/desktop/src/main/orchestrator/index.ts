@@ -1200,10 +1200,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
   }): void {
     const alreadyMember = threadsRepo
       .listMembers(args.threadId)
-      .some(
-        (member) =>
-          member.memberId === args.memberId && member.memberKind === args.memberKind,
-      );
+      .some((member) => member.memberId === args.memberId && member.memberKind === args.memberKind);
     if (alreadyMember) return;
     threadsRepo.addMember({
       threadId: args.threadId,
@@ -1229,9 +1226,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     const ticketId = ticketsRepo.create({
       companyId: args.companyId,
       title: args.ticketTitle,
-      description:
-        `Delegated from ${sender.name} to ${recipient.name} via agent-to-agent chat.\n\n` +
-        args.message.trim(),
+      description: `Delegated from ${sender.name} to ${recipient.name} via agent-to-agent chat.\n\n${args.message.trim()}`,
       priority: args.priority,
       assigneeId: recipient.id,
       reporterId: sender.id,
@@ -1271,10 +1266,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       authorId: sender.id,
       authorKind: 'employee',
       isAgentInitiated: true,
-      content:
-        `Delegated by ${sender.name}: **${ticket.title}**\n\n` +
-        `${args.message.trim()}\n\n` +
-        'Begin work from this ticket. Reply with your assessment, concrete next action, blockers, and expected handoff.',
+      content: `Delegated by ${sender.name}: **${ticket.title}**\n\n${args.message.trim()}\n\nBegin work from this ticket. Reply with your assessment, concrete next action, blockers, and expected handoff.`,
     });
     threadsRepo.updateLastMessageAt(ticketThreadId, materializedAt);
 

@@ -16,7 +16,6 @@
 import type { ProviderStreamFn, StreamMessage, StreamUsage } from '@team-x/provider-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
 import { createEventsRepo } from '../db/repos/events.js';
@@ -493,6 +492,110 @@ describe('buildOrchestrator', () => {
         'send_message_to_colleague',
       ]);
       expect(captured.maxSteps).toBe(7);
+    });
+
+    it('materializes agent-to-agent assignments into assigned ticket queue work', async () => {
+      const chaseId = f.employeesRepo.create({
+        companyId: f.companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'cto',
+        roleMdSha: 'sha-chase',
+        level: 'officer',
+        name: 'Chase Manville',
+        title: 'Chief Technology Officer',
+      });
+      let recipientRanResolve: () => void = () => {};
+      const recipientRan = new Promise<void>((resolve) => {
+        recipientRanResolve = resolve;
+      });
+      const provider: ProviderStreamFn = async function* (args) {
+        if (args.employeeId === chaseId) {
+          recipientRanResolve();
+          yield { delta: 'Starting the ticket now.' };
+          yield { done: true, usage: { promptTokens: 5, completionTokens: 4 } };
+          return;
+        }
+
+        const sendTool = args.tools?.send_message_to_colleague as
+          | {
+              execute(input: {
+                recipientEmployeeId: string;
+                message: string;
+              }): Promise<unknown>;
+            }
+          | undefined;
+        if (!sendTool) throw new Error('send_message_to_colleague tool missing');
+
+        const message =
+          "Chase, I am assigning you to the critical project: 'Determine which product will bring $20k MRR by May 30th'. Your immediate task is to audit Agent-X, System-X, and Team-X. Report back ASAP.";
+        const result = await sendTool.execute({
+          recipientEmployeeId: chaseId,
+          message,
+        });
+        yield {
+          toolCall: {
+            toolCallId: 'call-delegate',
+            toolName: 'send_message_to_colleague',
+            args: { recipientEmployeeId: chaseId, message },
+          },
+        };
+        yield {
+          toolResult: {
+            toolCallId: 'call-delegate',
+            toolName: 'send_message_to_colleague',
+            result,
+          },
+        };
+        yield { done: true, usage: { promptTokens: 30, completionTokens: 5 } };
+      };
+      const orchestrator = buildDefaultOrchestrator(f, { provider, now: () => 1_234_567 });
+
+      await orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+      await Promise.race([
+        recipientRan,
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('recipient ticket pickup did not run')), 500),
+        ),
+      ]);
+
+      const assignedTickets = f.ticketsRepo.listByAssignee(chaseId);
+      expect(assignedTickets).toHaveLength(1);
+      expect(assignedTickets[0]).toEqual(
+        expect.objectContaining({
+          title: 'audit Agent-X, System-X, and Team-X',
+          assigneeId: chaseId,
+          reporterId: f.employeeId,
+          reporterKind: 'employee',
+          priority: 'critical',
+          status: 'in-progress',
+        }),
+      );
+      const labels = JSON.parse(assignedTickets[0]?.labelsJson ?? '[]') as string[];
+      expect(labels).toEqual(['agent-delegated', 'agent-message', 'critical']);
+      expect(assignedTickets[0]?.threadId).toEqual(expect.any(String));
+
+      const ticketThreadId = assignedTickets[0]?.threadId;
+      expect(ticketThreadId).toBeTruthy();
+      const ticketThread = ticketThreadId ? f.threadsRepo.getById(ticketThreadId) : null;
+      expect(ticketThread).toEqual(expect.objectContaining({ kind: 'ticket' }));
+      const ticketMessages = ticketThreadId ? f.messagesRepo.listByThread(ticketThreadId) : [];
+      expect(
+        ticketMessages.some((row) => row.content.includes('Begin work from this ticket')),
+      ).toBe(true);
+
+      const eventTypes = f.bus.replaySince(0).map((event) => event.type);
+      expect(eventTypes).toEqual(
+        expect.arrayContaining([
+          'message.agent_to_agent',
+          'ticket.created',
+          'ticket.assigned',
+          'task.delegated',
+        ]),
+      );
     });
 
     it('uses packed context for internal runs and persists completion memory state', async () => {
