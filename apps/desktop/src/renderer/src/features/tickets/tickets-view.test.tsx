@@ -43,5 +43,8 @@ describe('Tickets mission-language carry-forward', () => {
     expect(detailSrc).toContain('<ThreadMemoryCard');
     expect(detailSrc).toContain('detail.threadId');
     expect(detailSrc).toContain('title="Ticket memory"');
+    expect(detailSrc).toContain('data-ticket-participants=""');
+    expect(detailSrc).toContain('useAddTicketParticipant');
+    expect(detailSrc).toContain('useRemoveTicketParticipant');
   });
 });

@@ -370,6 +370,61 @@ describe('buildOrchestrator', () => {
       expect(captured.runId).toBeTypeOf('string');
     });
 
+    it('passes linked ticket context to ticket participants who are not the primary assignee', async () => {
+      const assigneeId = f.employeesRepo.create({
+        companyId: f.companyId,
+        rolePackId: 'strategia-official',
+        roleId: 'operator',
+        roleMdSha: 'sha-test-2',
+        level: 'manager',
+        name: 'Carolyn',
+        title: 'GTM Lead',
+      });
+      const ticketThreadId = f.threadsRepo.create({
+        companyId: f.companyId,
+        kind: 'ticket',
+        createdBy: 'rocky',
+      });
+      f.threadsRepo.addMember({
+        threadId: ticketThreadId,
+        memberId: 'rocky',
+        memberKind: 'user',
+      });
+      f.threadsRepo.addMember({
+        threadId: ticketThreadId,
+        memberId: f.employeeId,
+        memberKind: 'employee',
+      });
+      const ticketId = f.ticketsRepo.create({
+        companyId: f.companyId,
+        title: 'Coordinate the handoff',
+        assigneeId,
+        reporterId: 'rocky',
+        threadId: ticketThreadId,
+      });
+      const userMessageId = f.messagesRepo.append({
+        threadId: ticketThreadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'Everyone on this ticket should wake up.',
+      });
+      const captured: { currentTicketId?: string | null } = {};
+      const provider: ProviderStreamFn = async function* (args) {
+        captured.currentTicketId = args.currentTicketId;
+        yield { delta: 'I see the ticket context.' };
+        yield { done: true, usage: { promptTokens: 6, completionTokens: 5 } };
+      };
+      const orchestrator = buildDefaultOrchestrator(f, { provider });
+
+      await orchestrator.enqueueChat({
+        threadId: ticketThreadId,
+        employeeId: f.employeeId,
+        userMessageId,
+      });
+
+      expect(captured.currentTicketId).toBe(ticketId);
+    });
+
     it('maps a multi-turn chat history to user/assistant roles correctly', async () => {
       // Seed a richer history: user → assistant → user, then enqueue.
       f.messagesRepo.append({

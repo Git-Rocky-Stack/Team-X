@@ -1,5 +1,16 @@
 import type { Employee } from '@team-x/shared-types';
-import { ArrowLeft, Clock, FileText, MessageSquare, Paperclip, Send, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Clock,
+  FileText,
+  MessageSquare,
+  Paperclip,
+  Plus,
+  Send,
+  UserMinus,
+  Users,
+  X,
+} from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -12,7 +23,13 @@ import {
   useDetachFile,
   useTicketAttachments,
 } from '@/hooks/use-ticket-attachments.js';
-import { useAddTicketComment, useCloseTicket, useTicketDetail } from '@/hooks/use-tickets.js';
+import {
+  useAddTicketComment,
+  useAddTicketParticipant,
+  useCloseTicket,
+  useRemoveTicketParticipant,
+  useTicketDetail,
+} from '@/hooks/use-tickets.js';
 import { useVaultFiles } from '@/hooks/use-vault.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -40,12 +57,15 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
   const { data: detail, isLoading } = useTicketDetail(ticketId);
   const addComment = useAddTicketComment();
   const closeTicket = useCloseTicket();
+  const addParticipant = useAddTicketParticipant();
+  const removeParticipant = useRemoveTicketParticipant();
   const { data: attachments = [] } = useTicketAttachments(ticketId);
   const { data: vaultFiles = [] } = useVaultFiles(detail?.companyId ?? null);
   const attachFile = useAttachFile();
   const detachFile = useDetachFile();
   const [comment, setComment] = useState('');
   const [showAttachPicker, setShowAttachPicker] = useState(false);
+  const [selectedParticipantId, setSelectedParticipantId] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   if (isLoading || !detail) {
@@ -74,6 +94,19 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
   }
 
   const assignee = detail.assignee;
+  const participants = detail.participants;
+  const participantIds = new Set(participants.map((participant) => participant.id));
+  const addableEmployees = employees.filter(
+    (employee) => employee.companyId === detail.companyId && !participantIds.has(employee.id),
+  );
+
+  function handleAddParticipant() {
+    if (!selectedParticipantId) return;
+    addParticipant.mutate(
+      { ticketId, employeeId: selectedParticipantId },
+      { onSuccess: () => setSelectedParticipantId('') },
+    );
+  }
 
   return (
     <div className="flex h-full flex-col bg-transparent" data-ticket-detail="">
@@ -153,6 +186,86 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
           />
         </div>
       ) : null}
+
+      <div className="border-b border-white/10 px-5 py-4" data-ticket-participants="">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Participants ({participants.length})
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <select
+            value={selectedParticipantId}
+            onChange={(event) => setSelectedParticipantId(event.target.value)}
+            className="h-9 min-w-0 flex-1 rounded-[12px] border border-white/10 bg-black/15 px-2.5 text-xs text-foreground outline-none transition-colors focus:border-brand/60"
+            aria-label="Add ticket participant"
+            disabled={addableEmployees.length === 0 || addParticipant.isPending}
+          >
+            <option value="">
+              {addableEmployees.length === 0 ? 'All employees are on this ticket' : 'Add employee'}
+            </option>
+            {addableEmployees.map((employee) => (
+              <option key={employee.id} value={employee.id}>
+                {employee.name} - {employee.title}
+              </option>
+            ))}
+          </select>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 border-white/10 bg-black/10 px-2.5 text-foreground hover:bg-black/20"
+            onClick={handleAddParticipant}
+            disabled={!selectedParticipantId || addParticipant.isPending}
+            aria-label="Add selected employee to ticket"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+
+        {participants.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {participants.map((participant) => {
+              const isAssignee = participant.id === detail.assigneeId;
+              return (
+                <div
+                  key={participant.id}
+                  className="flex max-w-full items-center gap-2 rounded-[14px] border border-white/10 bg-black/15 px-2.5 py-1.5"
+                >
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-brand/10 text-[10px] font-semibold text-brand">
+                    {participant.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-[11px] text-foreground">{participant.name}</div>
+                    <div className="truncate text-[10px] text-muted-foreground">
+                      {isAssignee ? 'Owner' : participant.title}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeParticipant.mutate({ ticketId, employeeId: participant.id })
+                    }
+                    className="ml-auto rounded p-1 text-muted-foreground/60 transition-colors hover:bg-red-500/10 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-300/50"
+                    aria-label={`Remove ${participant.name} from ticket`}
+                    disabled={removeParticipant.isPending}
+                  >
+                    <UserMinus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="mt-3 text-[11px] italic text-muted-foreground/70">
+            No employee participants yet.
+          </p>
+        )}
+      </div>
 
       <div className="border-b border-white/10 px-5 py-3">
         <div className="mb-2 flex items-center justify-between gap-3">

@@ -2409,7 +2409,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         `[ipc] ${channel}: employee ${employeeId} does not belong to company ${ticket.companyId}`,
       );
     }
-    if (employee.isSystem === 1) {
+    if (employee.isSystem) {
       throw new Error(`[ipc] ${channel}: system employees cannot be ticket participants`);
     }
     return employee;
@@ -2431,7 +2431,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     const rows: EmployeeRow[] = [];
     for (const employeeId of employeeIds) {
       const employee = employeesRepo.getById(employeeId);
-      if (!employee || employee.companyId !== ticket.companyId || employee.isSystem === 1) {
+      if (!employee || employee.companyId !== ticket.companyId || employee.isSystem) {
         continue;
       }
       rows.push(employee);

@@ -99,8 +99,10 @@ class FakeTicketsRepo implements IpcTicketsRepo {
     const row = this.rows.find((r) => r.id === id);
     if (!row) return;
     if (input.title !== undefined) row.title = input.title;
+    if (input.description !== undefined) row.description = input.description;
     if (input.status !== undefined) row.status = input.status;
     if (input.priority !== undefined) row.priority = input.priority;
+    if (input.assigneeId !== undefined) row.assigneeId = input.assigneeId;
   }
   assign(id: string, assigneeId: string): void {
     const row = this.rows.find((r) => r.id === id);
@@ -415,7 +417,8 @@ function makeFakeRoleLookup() {
 class FakeThreadsRepo implements IpcThreadsRepo {
   private seq = 0;
   createCalls: CreateThreadInput[] = [];
-  memberCalls: Array<{ threadId: string; memberId: string }> = [];
+  memberCalls: Array<{ threadId: string; memberId: string; memberKind: string }> = [];
+  memberRows: ThreadMemberRow[] = [];
 
   create(input: CreateThreadInput): string {
     this.createCalls.push(input);
@@ -426,10 +429,30 @@ class FakeThreadsRepo implements IpcThreadsRepo {
     throw new Error('unused by invariant-11 tests');
   }
   addMember(input: { threadId: string; memberId: string; memberKind: string }): void {
-    this.memberCalls.push({ threadId: input.threadId, memberId: input.memberId });
+    this.memberCalls.push({
+      threadId: input.threadId,
+      memberId: input.memberId,
+      memberKind: input.memberKind,
+    });
+    this.memberRows.push({
+      threadId: input.threadId,
+      memberId: input.memberId,
+      memberKind: input.memberKind,
+      roleInThread: null,
+    } as ThreadMemberRow);
   }
-  listMembers(_threadId: string): ThreadMemberRow[] {
-    return [];
+  removeMember(input: { threadId: string; memberId: string; memberKind: string }): void {
+    this.memberRows = this.memberRows.filter(
+      (member) =>
+        !(
+          member.threadId === input.threadId &&
+          member.memberId === input.memberId &&
+          member.memberKind === input.memberKind
+        ),
+    );
+  }
+  listMembers(threadId: string): ThreadMemberRow[] {
+    return this.memberRows.filter((member) => member.threadId === threadId);
   }
   updateLastMessageAt(_threadId: string, _timestamp: number): void {
     // Unused by invariant-11 tests.
@@ -445,14 +468,27 @@ class FakeThreadsRepo implements IpcThreadsRepo {
 class FakeMessagesRepo implements IpcMessagesRepo {
   private seq = 0;
   appendCalls: AppendMessageInput[] = [];
+  rows: MessageRow[] = [];
 
   append(input: AppendMessageInput): string {
     this.appendCalls.push(input);
     this.seq += 1;
-    return `msg-${this.seq}`;
+    const id = `msg-${this.seq}`;
+    this.rows.push({
+      id,
+      threadId: input.threadId,
+      authorId: input.authorId,
+      authorKind: input.authorKind,
+      content: input.content,
+      toolCallsJson: input.toolCalls === undefined ? null : JSON.stringify(input.toolCalls),
+      parentId: input.parentId ?? null,
+      isAgentInitiated: input.isAgentInitiated ?? false,
+      createdAt: Date.now(),
+    } as MessageRow);
+    return id;
   }
-  listByThread(_threadId: string): never {
-    throw new Error('unused by invariant-11 tests');
+  listByThread(threadId: string): MessageRow[] {
+    return this.rows.filter((row) => row.threadId === threadId);
   }
 }
 
@@ -964,6 +1000,75 @@ describe('Invariant #11 main-side emits — Phase 5.6 M-C step f', () => {
       };
       expect(payload.messageId).toBe(result.messageId);
       expect(payload.authorId).toBe('rocky');
+    });
+
+    it('wakes every employee participant and historical employee author on human comments', async () => {
+      const { handlers, employeesRepo, ticketsRepo, threadsRepo, messagesRepo, orchestrator } =
+        buildHarness();
+      employeesRepo.seed('emp-1', COMPANY_ID, 'Alice');
+      employeesRepo.seed('emp-2', COMPANY_ID, 'Iris');
+      employeesRepo.seed('emp-3', COMPANY_ID, 'Carolyn');
+      const { ticketId } = await handlers.ticketsCreate({
+        companyId: COMPANY_ID,
+        title: 'x',
+        assigneeId: 'emp-1',
+      });
+      const threadId = ticketsRepo.getById(ticketId)?.threadId;
+      expect(threadId).toBeTypeOf('string');
+      threadsRepo.addMember({
+        threadId: threadId ?? '',
+        memberId: 'emp-2',
+        memberKind: 'employee',
+      });
+      messagesRepo.append({
+        threadId: threadId ?? '',
+        authorId: 'emp-3',
+        authorKind: 'employee',
+        content: 'I participated earlier.',
+      });
+      orchestrator.enqueueCalls.length = 0;
+
+      await handlers.ticketsAddComment({ ticketId, content: 'Any update?' });
+
+      expect(orchestrator.enqueueCalls.map((call) => call.employeeId)).toEqual([
+        'emp-1',
+        'emp-2',
+        'emp-3',
+      ]);
+    });
+  });
+
+  describe('tickets.addParticipant / tickets.removeParticipant', () => {
+    it('adds, wakes, and removes ticket participants from the ticket thread', async () => {
+      const { handlers, employeesRepo, ticketsRepo, threadsRepo, orchestrator, bus } =
+        buildHarness();
+      employeesRepo.seed('emp-1', COMPANY_ID, 'Alice');
+      employeesRepo.seed('emp-2', COMPANY_ID, 'Iris');
+      const { ticketId } = await handlers.ticketsCreate({
+        companyId: COMPANY_ID,
+        title: 'x',
+        assigneeId: 'emp-1',
+      });
+      const threadId = ticketsRepo.getById(ticketId)?.threadId;
+      expect(threadId).toBeTypeOf('string');
+      bus.emitted.length = 0;
+      orchestrator.enqueueCalls.length = 0;
+
+      await handlers.ticketsAddParticipant({ ticketId, employeeId: 'emp-2' });
+
+      expect(threadsRepo.listMembers(threadId ?? '').map((member) => member.memberId)).toContain(
+        'emp-2',
+      );
+      expect(orchestrator.enqueueCalls.map((call) => call.employeeId)).toEqual(['emp-2']);
+      expect(bus.emitted[0]?.type).toBe('ticket.participantAdded');
+
+      bus.emitted.length = 0;
+      await handlers.ticketsRemoveParticipant({ ticketId, employeeId: 'emp-2' });
+
+      expect(threadsRepo.listMembers(threadId ?? '').map((member) => member.memberId)).not.toContain(
+        'emp-2',
+      );
+      expect(bus.emitted[0]?.type).toBe('ticket.participantRemoved');
     });
   });
 

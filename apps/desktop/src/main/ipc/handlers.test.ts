@@ -246,6 +246,20 @@ class FakeThreadsRepo implements IpcThreadsRepo {
     this.members.set(input.threadId, list);
   }
 
+  removeMember(input: AddThreadMemberInput): void {
+    const list = this.members.get(input.threadId) ?? [];
+    this.members.set(
+      input.threadId,
+      list.filter(
+        (member) =>
+          !(
+            member.memberId === input.memberId &&
+            member.memberKind === input.memberKind
+          ),
+      ),
+    );
+  }
+
   listMembers(threadId: string): ThreadMemberRow[] {
     return this.members.get(threadId) ?? [];
   }

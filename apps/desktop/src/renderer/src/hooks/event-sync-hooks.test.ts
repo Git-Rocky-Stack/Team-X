@@ -83,6 +83,11 @@ describe('useTicketEventSync (use-tickets.ts)', () => {
     expect(src).toContain("'ticket.assigned'");
   });
 
+  it('subscribes to ticket participant membership changes', () => {
+    expect(src).toContain("'ticket.participantAdded'");
+    expect(src).toContain("'ticket.participantRemoved'");
+  });
+
   it('subscribes to ticket.closed (M-C step f — tickets.close emit)', () => {
     expect(src).toContain("'ticket.closed'");
   });
