@@ -311,6 +311,49 @@ describe('buildTeamXApi', () => {
     });
   });
 
+  describe('agentImprovement', () => {
+    it('invokes agentImprovement.list with a { companyId } object', async () => {
+      fake.setNextInvokeResult({
+        companyId: 'co-1',
+        generatedAt: 1,
+        openTicketCount: 0,
+        openTickets: [],
+        recentRuns: [],
+      });
+
+      await api.agentImprovement.list('co-1');
+
+      expect(fake.invokeCalls).toEqual([
+        {
+          channel: (PRELOAD_CHANNELS as Record<string, string>).agentImprovementList,
+          args: [{ companyId: 'co-1' }],
+        },
+      ]);
+    });
+
+    it('invokes agentImprovement.run with the request object verbatim', async () => {
+      const req = { companyId: 'co-1', eventLimit: 50 };
+      fake.setNextInvokeResult({
+        companyId: 'co-1',
+        ranAt: 1,
+        inspectedEventCount: 0,
+        inspectedTicketCount: 0,
+        recommendations: [],
+        createdTicketIds: [],
+        skippedExistingTicketIds: [],
+      });
+
+      await api.agentImprovement.run(req);
+
+      expect(fake.invokeCalls).toEqual([
+        {
+          channel: (PRELOAD_CHANNELS as Record<string, string>).agentImprovementRun,
+          args: [req],
+        },
+      ]);
+    });
+  });
+
   describe('events.onDashboard', () => {
     it('attaches a listener to events.dashboard', () => {
       const cb = vi.fn();
@@ -396,6 +439,8 @@ describe('buildTeamXApi', () => {
       expect(channels.telemetryRecentRuns).toBe('telemetry.recentRuns');
       expect(channels.autonomyDoctorRun).toBe('autonomyDoctor.run');
       expect(channels.autonomyBenchmarkRun).toBe('autonomyBenchmark.run');
+      expect(channels.agentImprovementList).toBe('agentImprovement.list');
+      expect(channels.agentImprovementRun).toBe('agentImprovement.run');
       expect(PRELOAD_CHANNELS.providersListModels).toBe('providers.listModels');
     });
   });

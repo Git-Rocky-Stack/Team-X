@@ -59,11 +59,14 @@ import {
 import type {
   AcceptOperatorInviteRequest,
   AcceptOperatorInviteResponse,
+  ActorKind,
   AddProviderRequest,
   AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
   AddTicketParticipantRequest,
+  AgentImprovementRunResult,
+  AgentImprovementSnapshot,
   ApprovalItem,
   ArchiveCompanyRequest,
   ArtifactRecord,
@@ -76,6 +79,7 @@ import type {
   AuditExportResponse,
   AuditFilter,
   AuditStats,
+  AuthorKind,
   AuthorityGrant,
   AuthorityRequest,
   AutonomyBenchmarkReport,
@@ -129,12 +133,14 @@ import type {
   EffectiveAuthoritySnapshot,
   Employee,
   EmployeeRuntimeBinding,
+  EmployeeStatus,
   EmployeesPromoteRequest,
   EmployeesPromoteResponse,
   EmployeesSetManagerRequest,
   EmployeesUpdateRequest,
   EmployeesUpdateResponse,
   EndMeetingResponse,
+  EventType,
   ExportCompanyPackageRequest,
   ExportCompanyPackageResponse,
   ExtensionSummary,
@@ -149,6 +155,8 @@ import type {
   GetTicketRequest,
   Goal,
   GoalDetail,
+  GoalStatus,
+  HardwareProfile,
   HireEmployeeRequest,
   HireEmployeeResponse,
   ImportCompanyPackageRequest,
@@ -162,6 +170,7 @@ import type {
   InterjectMeetingResponse,
   LinkCloudWorkspaceRequest,
   LinkTicketToProjectRequest,
+  ListAgentImprovementRequest,
   ListApprovalItemsRequest,
   ListArtifactsRequest,
   ListAttachmentsRequest,
@@ -207,18 +216,23 @@ import type {
   PreviewCompanyPackageImportResponse,
   Project,
   ProjectDetail,
+  ProjectPriority,
+  ProjectStatus,
+  ProviderConfig,
   ReconnectCloudWorkspaceRequest,
   RemoveProviderRequest,
-  RemoveTicketParticipantRequest,
   RemoveSkillRequest,
+  RemoveTicketParticipantRequest,
   ReopenTicketRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
   ReviewApprovalItemRequest,
   ReviewAuthorityRequestRequest,
   RevokeOperatorInviteRequest,
+  RoleSpec,
   Routine,
   RoutineRun,
+  RunAgentImprovementRequest,
   RunAutonomyBenchmarkRequest,
   RunAutonomyDoctorRequest,
   RunCheckpoint,
@@ -275,6 +289,8 @@ import type {
   Ticket,
   TicketAttachment,
   TicketDetail,
+  TicketPriority,
+  TicketStatus,
   UnlinkCloudWorkspaceRequest,
   UnlinkTicketFromProjectRequest,
   UpdateBudgetPolicyRequest,
@@ -295,17 +311,7 @@ import type {
   VaultUploadRequest,
   VaultUploadResponse,
   VaultVerifyResponse,
- HardwareProfile, ProviderConfig , RoleSpec ,
-  ActorKind,
-  AuthorKind,
-  EmployeeStatus,
-  EventType,
-  GoalStatus,
-  ProjectPriority,
-  ProjectStatus,
-  TicketPriority,
-  TicketStatus} from '@team-x/shared-types';
-
+} from '@team-x/shared-types';
 
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 import type { CopilotExportFilter, CopilotExportResult } from '../db/repos/copilot-insights.js';
@@ -908,6 +914,11 @@ export interface IpcAutonomyBenchmarkService {
   run(input: RunAutonomyBenchmarkRequest): Promise<AutonomyBenchmarkReport>;
 }
 
+export interface IpcAgentImprovementService {
+  list(input: ListAgentImprovementRequest): AgentImprovementSnapshot;
+  run(input: RunAgentImprovementRequest): AgentImprovementRunResult;
+}
+
 export interface IpcRoutineService {
   start(companyId: string): void;
   stop(companyId: string): void;
@@ -1003,6 +1014,7 @@ export interface IpcHandlerDeps {
   runtimeOperationsService?: IpcRuntimeOperationsService;
   autonomyDoctorService?: IpcAutonomyDoctorService;
   autonomyBenchmarkService?: IpcAutonomyBenchmarkService;
+  agentImprovementService?: IpcAgentImprovementService;
   routineService?: IpcRoutineService;
   budgetGovernanceService?: IpcBudgetGovernanceService;
   approvalInboxService?: IpcApprovalInboxService;
@@ -1231,6 +1243,10 @@ export interface IpcHandlers {
   autonomyDoctorRun(req: RunAutonomyDoctorRequest): Promise<AutonomyDoctorReport>;
   /** `autonomyBenchmark.run` — deterministic autonomy benchmark harness report. */
   autonomyBenchmarkRun(req: RunAutonomyBenchmarkRequest): Promise<AutonomyBenchmarkReport>;
+  /** `agentImprovement.list` — current self-improvement queue and loop history. */
+  agentImprovementList(req: ListAgentImprovementRequest): Promise<AgentImprovementSnapshot>;
+  /** `agentImprovement.run` — observe recent signals and open deduped improvement tickets. */
+  agentImprovementRun(req: RunAgentImprovementRequest): Promise<AgentImprovementRunResult>;
   /** `routines.list` — return routine definitions for a company. */
   routinesList(req: ListRoutinesRequest): Promise<Routine[]>;
   /** `routines.create` — create one recurring routine definition. */
@@ -1744,7 +1760,6 @@ export interface IpcHandlers {
 // nullables so the renderer never sees a half-shape it has to
 // re-validate.
 
-
 /**
  * Refuse a write IPC against an archived company. Phase 5.6 M-C step d
  * hardening (BUG-002) — archived companies are soft-deleted; the
@@ -2245,6 +2260,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     runtimeOperationsService,
     autonomyDoctorService,
     autonomyBenchmarkService,
+    agentImprovementService,
     routineService,
     budgetGovernanceService,
     approvalInboxService,
@@ -2947,6 +2963,49 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] autonomyBenchmark.run: autonomyBenchmarkService dep is required');
       }
       return autonomyBenchmarkService.run(req);
+    },
+
+    async agentImprovementList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] agentImprovement.list: companyId is required');
+      }
+      if (req.limit !== undefined && (!Number.isFinite(req.limit) || req.limit <= 0)) {
+        throw new Error('[ipc] agentImprovement.list: limit must be a positive number');
+      }
+      if (!agentImprovementService) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            '[ipc] agentImprovement.list: agentImprovementService dep unwired — returning an empty self-improvement snapshot',
+          );
+        }
+        return {
+          companyId: req.companyId,
+          generatedAt: Date.now(),
+          openTicketCount: 0,
+          openTickets: [],
+          recentRuns: [],
+        };
+      }
+      return agentImprovementService.list(req);
+    },
+
+    async agentImprovementRun(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] agentImprovement.run: companyId is required');
+      }
+      if (
+        req.eventLimit !== undefined &&
+        (!Number.isFinite(req.eventLimit) || req.eventLimit <= 0)
+      ) {
+        throw new Error('[ipc] agentImprovement.run: eventLimit must be a positive number');
+      }
+      if (req.dryRun !== undefined && typeof req.dryRun !== 'boolean') {
+        throw new Error('[ipc] agentImprovement.run: dryRun must be a boolean when provided');
+      }
+      if (!agentImprovementService) {
+        throw new Error('[ipc] agentImprovement.run: agentImprovementService dep is required');
+      }
+      return agentImprovementService.run(req);
     },
 
     async routinesList(req) {

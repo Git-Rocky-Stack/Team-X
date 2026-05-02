@@ -57,6 +57,12 @@ export const autonomyClient = {
     run: (...args: Parameters<typeof ipc.autonomyBenchmark.run>) =>
       ipc.autonomyBenchmark.run(...args),
   },
+  agentImprovement: {
+    list: (...args: Parameters<typeof ipc.agentImprovement.list>) =>
+      ipc.agentImprovement.list(...args),
+    run: (...args: Parameters<typeof ipc.agentImprovement.run>) =>
+      ipc.agentImprovement.run(...args),
+  },
   routines: {
     list: (...args: Parameters<typeof ipc.routines.list>) => ipc.routines.list(...args),
     listRuns: (...args: Parameters<typeof ipc.routines.listRuns>) => ipc.routines.listRuns(...args),

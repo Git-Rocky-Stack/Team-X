@@ -1,4 +1,3 @@
-
 import type {
   Company,
   CompanyCloudLinkStatus,
@@ -21,7 +20,6 @@ import {
 } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 
-
 import {
   MissionControlRow,
   MissionHero,
@@ -35,6 +33,7 @@ import {
   MissionStateBlock,
 } from '../mission/mission-shell.js';
 
+import { AgentImprovementPanel } from './agent-improvement-panel.js';
 import { ApprovalsPanel } from './approvals-panel.js';
 import { ArtifactsPanel } from './artifacts-panel.js';
 import { AutonomyBenchmarkPanel } from './autonomy-benchmark-panel.js';
@@ -66,6 +65,7 @@ import { useAppStore } from '@/store/app-store.js';
 type AutonomySubview =
   | 'doctor'
   | 'benchmarks'
+  | 'improvement'
   | 'runtimes'
   | 'routines'
   | 'budgets'
@@ -81,6 +81,7 @@ const AUTONOMY_SUBVIEWS: Array<{
 }> = [
   { value: 'doctor', label: 'Doctor', icon: Stethoscope },
   { value: 'benchmarks', label: 'Benchmarks', icon: Gauge },
+  { value: 'improvement', label: 'Improve', icon: BrainCircuit },
   { value: 'runtimes', label: 'Runtimes', icon: Bot },
   { value: 'routines', label: 'Routines', icon: Clock3 },
   { value: 'budgets', label: 'Budgets', icon: BadgeDollarSign },
@@ -179,6 +180,14 @@ const SUBVIEW_COPY: Record<
     emptyTitle: 'No benchmark report is ready yet',
     emptyDescription:
       'Run the deterministic harness to produce a repeatable autonomy report for this workspace.',
+  },
+  improvement: {
+    title: 'Agent Improvement Loop',
+    description:
+      'Observe recent execution failures and stalled ticket patterns, then create deduped improvement tickets through the normal queue.',
+    emptyTitle: 'No improvement loop data is ready yet',
+    emptyDescription:
+      'Run the self-improvement loop to inspect recent operational signals and open durable correction tickets when patterns appear.',
   },
 };
 
@@ -916,6 +925,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             </div>
           ) : activeSubview === 'routines' ? (
             <RoutinesPanel companyId={companyId} />
+          ) : activeSubview === 'improvement' ? (
+            <AgentImprovementPanel companyId={companyId} />
           ) : activeSubview === 'budgets' ? (
             <BudgetsPanel companyId={companyId} company={company} />
           ) : activeSubview === 'approvals' ? (

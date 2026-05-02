@@ -94,17 +94,38 @@ When you assign a ticket to an employee, Team-X:
 3. The orchestrator queues the agent for a run
 4. The agent reads the ticket, thinks through its role spec, and responds with its approach or completed work
 
+### Ticket Participants
+
+Ticket assignment is the owner signal, but participants are the collaboration set. Use the **Participants** section in the ticket detail panel to add or remove employees from an existing ticket thread.
+
+- Adding a participant creates the ticket thread if needed, adds the employee to the thread membership, posts a system note, and wakes that employee into the ticket context.
+- Removing a participant removes that employee from the ticket thread. If the removed employee was the current assignee, Team-X clears the assignee and reopens the ticket unless it was already done.
+- System employees are excluded from participant membership; ticket participants must be regular employees in the same company.
+- Participant changes emit `ticket.participantAdded` and `ticket.participantRemoved` events so the UI, audit trail, and ticket caches stay current.
+
+Use this instead of managing durable tasking only from chat. If Iris, Carolyn, or any other employee should stay accountable to a ticket, put them on the ticket.
+
 ### Ticket Detail Panel
 
 Click on a ticket to see:
 - Full description and metadata
 - Discussion thread (messages from you and the agent)
+- Ticket participants, including owner and collaborators
 - Attached files (from the vault)
+- Ticket memory digest and checkpoint access when the ticket has a thread
 - Priority and status
 
 ### Adding Comments
 
-Type in the ticket detail panel's composer to add a comment. If the ticket is assigned, the agent receives your comment and responds — creating a natural back-and-forth workflow.
+Type in the ticket detail panel's composer to add a comment. Press **Enter** to send, or **Shift+Enter** for a new line.
+
+When a human comments on a ticket, Team-X wakes every employee participant and historical employee author on that ticket thread. That matters for multi-agent ticket work: the wake signal is not limited to the last two people who spoke.
+
+### Ticket Threads From Chat
+
+Open **Threads** from the left rail to inspect direct messages, agent conversations, Copilot transcripts, and ticket threads. Ticket rows are marked with a ticket badge.
+
+When you click a ticket thread from the thread roster, Team-X opens the ticket detail as a preview panel on the left side of the drawer while the thread queue remains visible on the right. Closing the preview returns you to the same thread list position instead of forcing you to navigate back through the menu.
 
 ## Workflow Example
 
@@ -117,5 +138,6 @@ Here's a typical workflow:
    - "Implement JWT token service" assigned to the Senior Backend Engineer
    - "Build login/signup UI" assigned to the Senior Frontend Developer
 4. **Watch the agents work** via the Dashboard stream and timeline views
-5. **Review and iterate** by commenting on tickets
-6. **Track progress** via the goal's progress bar as tickets move to Done
+5. **Add participants** when more than one employee should wake on the ticket discussion
+6. **Review and iterate** by commenting on tickets
+7. **Track progress** via the goal's progress bar as tickets move to Done

@@ -72,19 +72,32 @@ describe('User Guide shell wiring', () => {
     expect(guideContentSrc).toContain("id: 'open-settings-memory'");
     expect(guideContentSrc).toContain("id: 'open-settings-portability'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-doctor'");
+    expect(guideContentSrc).toContain("id: 'open-autonomy-benchmarks'");
+    expect(guideContentSrc).toContain("id: 'open-autonomy-improvement'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-access'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-runtimes'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-approvals'");
+    expect(guideContentSrc).toContain("id: 'open-autonomy-artifacts'");
     expect(guideContentSrc).toContain("id: 'open-autonomy-memory'");
     expect(guideContentSrc).toContain("id: 'autonomy-control-plane'");
     expect(guideContentSrc).toContain("id: 'long-run-memory'");
     expect(guideContentSrc).toContain("id: 'portability-sharing'");
     expect(guideContentSrc).toContain("id: 'portability-reviewed'");
+    expect(guideContentSrc).toContain("id: 'improvement-loop-reviewed'");
     expect(guideContentSrc).toContain(
       'Queue shared operator invites in Autonomy > Access before expecting invited or cloud posture to become actionable.',
     );
     expect(guideContentSrc).toContain(
       'Use Doctor before long-running external agents so database, backup, runtime, secret, provider, MCP, and budget posture is checked in one report.',
+    );
+    expect(guideContentSrc).toContain(
+      'Use Improve to run the agent self-improvement loop. It inspects recent work failures, runtime failures, blocked tickets, and stale in-progress tickets, then opens deduped correction tickets through the normal queue.',
+    );
+    expect(guideContentSrc).toContain(
+      'When a human comments on a ticket, Team-X wakes every employee participant and historical employee author on that ticket thread, not just the last pair of speakers.',
+    );
+    expect(guideContentSrc).toContain(
+      'Right-click misspelled words in editable fields to use Chromium spelling suggestions, Add to Dictionary, and standard edit actions.',
     );
     expect(guideHookSrc).toContain("if (action.view === 'autonomy' && action.autonomySubview) {");
     expect(guideHookSrc).toContain('setAutonomySubview(action.autonomySubview);');

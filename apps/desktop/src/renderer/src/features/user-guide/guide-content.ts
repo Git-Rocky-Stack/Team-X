@@ -51,6 +51,23 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     autonomySubview: 'doctor',
   },
   {
+    id: 'open-autonomy-benchmarks',
+    label: 'Open Autonomy Benchmarks',
+    description: 'Replay deterministic autonomy scenarios and inspect the control-plane results.',
+    kind: 'view',
+    view: 'autonomy',
+    autonomySubview: 'benchmarks',
+  },
+  {
+    id: 'open-autonomy-improvement',
+    label: 'Open Agent Improvement',
+    description:
+      'Run the self-improvement loop that opens durable correction tickets from recent signals.',
+    kind: 'view',
+    view: 'autonomy',
+    autonomySubview: 'improvement',
+  },
+  {
     id: 'open-autonomy-access',
     label: 'Open Autonomy Access',
     description:
@@ -90,6 +107,14 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     kind: 'view',
     view: 'autonomy',
     autonomySubview: 'approvals',
+  },
+  {
+    id: 'open-autonomy-artifacts',
+    label: 'Open Artifacts',
+    description: 'Review runtime outputs and evidence captured from autonomous execution.',
+    kind: 'view',
+    view: 'autonomy',
+    autonomySubview: 'artifacts',
   },
   {
     id: 'open-autonomy-memory',
@@ -240,6 +265,16 @@ export const GUIDE_TASKS: GuideTask[] = [
     priority: 'advanced',
     kind: 'jump',
     actionId: 'open-autonomy-approvals',
+  },
+  {
+    id: 'improvement-loop-reviewed',
+    title: 'Review the self-improvement loop',
+    description:
+      'Inspect how Team-X turns repeated failures, blocked work, and stale execution patterns into deduped correction tickets.',
+    roles: OWNER_AND_BUILDER,
+    priority: 'advanced',
+    kind: 'jump',
+    actionId: 'open-autonomy-improvement',
   },
   {
     id: 'memory-engine-reviewed',
@@ -395,9 +430,18 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         text: 'Tickets show the active queue surface for work distribution, while Projects and Goals express longer-running execution intent. Operators should use both surfaces together rather than treating them as isolated lists.',
       },
       {
+        kind: 'bullets',
+        items: [
+          'Create work as tickets and assign owners or participants there instead of managing durable tasking only from chat.',
+          'Use the participant selector in ticket detail to add or remove employees from an existing ticket thread.',
+          'When a human comments on a ticket, Team-X wakes every employee participant and historical employee author on that ticket thread, not just the last pair of speakers.',
+          'Open ticket threads from the Threads drawer to preview the ticket detail on the left while keeping the thread queue visible on the right.',
+        ],
+      },
+      {
         kind: 'callout',
         title: 'Operator pattern',
-        text: 'Use Tickets to manage immediate flow and Projects to understand why that work exists.',
+        text: 'Use Tickets to manage immediate flow, Projects to understand why that work exists, and participant membership to make sure everyone on the ticket wakes with the same context.',
       },
     ],
     taskIds: ['ticket-queue-reviewed'],
@@ -418,7 +462,9 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         kind: 'bullets',
         items: [
           'Use Chat for direct instructions and follow-ups.',
-          'Use the thread drawer to inspect active and historical conversations.',
+          'Use the thread drawer to inspect active and historical conversations without losing your place in the queue.',
+          'Open ticket threads from the drawer when you need the ticket preview panel instead of switching away from the thread list.',
+          'Right-click misspelled words in editable fields to use Chromium spelling suggestions, Add to Dictionary, and standard edit actions.',
           'Use Copilot for signal and recommendations, not as the only place to operate the team.',
         ],
       },
@@ -459,18 +505,20 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: 'autonomy-control-plane',
     title: 'Autonomy Control Plane',
     summary:
-      'Supervise runtimes, routines, budgets, approvals, artifacts, and operator posture from one surface.',
+      'Supervise doctor checks, benchmarks, self-improvement, runtimes, routines, budgets, approvals, artifacts, memory, and operator posture from one surface.',
     category: 'Governance',
     roles: OWNER_AND_BUILDER,
     blocks: [
       {
         kind: 'paragraph',
-        text: 'Autonomy is the operating control plane for execution posture and governance. It makes runtime bindings, recurring routines, budget policies, approvals, artifacts, and operator access explicit instead of scattering them across implementation details.',
+        text: 'Autonomy is the operating control plane for execution posture and governance. It makes doctor checks, benchmark evidence, self-improvement tickets, runtime bindings, recurring routines, budget policies, approvals, artifacts, memory, and operator access explicit instead of scattering them across implementation details.',
       },
       {
         kind: 'bullets',
         items: [
           'Use Doctor before long-running external agents so database, backup, runtime, secret, provider, MCP, and budget posture is checked in one report.',
+          'Use Benchmarks to replay deterministic runtime scenarios and verify autonomy behavior with repeatable evidence.',
+          'Use Improve to run the agent self-improvement loop. It inspects recent work failures, runtime failures, blocked tickets, and stale in-progress tickets, then opens deduped correction tickets through the normal queue.',
           'Use Access to verify whether the workspace is still local-only or already modeled for shared operators.',
           'Use Runtimes and Routines to understand how work is produced, not just who is assigned to it.',
           'Use Budgets and Approvals together so cost ceilings and risky actions are visible before they silently block autonomy.',
@@ -489,12 +537,16 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       'autonomy-access-reviewed',
       'runtime-posture-reviewed',
       'routine-governance-reviewed',
+      'improvement-loop-reviewed',
     ],
     actionIds: [
       'open-autonomy-doctor',
+      'open-autonomy-benchmarks',
+      'open-autonomy-improvement',
       'open-autonomy-access',
       'open-autonomy-runtimes',
       'open-autonomy-approvals',
+      'open-autonomy-artifacts',
       'open-autonomy-memory',
     ],
   },
@@ -565,7 +617,8 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       {
         kind: 'bullets',
         items: [
-          'If employees do not respond, confirm the provider path before assuming chat logic is broken.',
+          'If employees do not respond, confirm the provider path and ticket participant membership before assuming chat logic is broken.',
+          'If an agent on a ticket does not wake after a comment, verify that the employee is present in the ticket participant section or is a historical author on that ticket thread.',
           'If an extension appears installed but unusable, review authority requests and trust state.',
           'If a workspace feels empty, verify that providers, employees, and at least one real work surface have been configured.',
         ],

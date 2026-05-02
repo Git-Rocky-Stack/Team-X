@@ -17,13 +17,12 @@
  */
 
 import type { Employee, Thread } from '@team-x/shared-types';
-import { Bot, MessageSquare, Sparkles } from 'lucide-react';
+import { Bot, MessageSquare, Sparkles, TicketCheck } from 'lucide-react';
 
 import { SystemAgentBadge } from './system-agent-badge.js';
 
 import { MissionPill } from '@/features/mission/mission-shell.js';
 import { cn } from '@/lib/utils.js';
-
 
 /** True when every member in the thread is an employee (no human user). */
 export function isAgentThread(thread: Thread): boolean {
@@ -57,10 +56,11 @@ function formatTimestamp(ts: number | null): string {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-type ThreadKind = 'copilot' | 'agent' | 'regular';
+type ThreadKind = 'copilot' | 'agent' | 'ticket' | 'regular';
 
 function classify(thread: Thread): ThreadKind {
   if (isCopilotThread(thread)) return 'copilot';
+  if (thread.kind === 'ticket') return 'ticket';
   if (isAgentThread(thread)) return 'agent';
   return 'regular';
 }
@@ -77,11 +77,20 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
   const iconBg =
     kind === 'copilot'
       ? 'bg-brand/15 text-brand'
-      : kind === 'agent'
-        ? 'bg-amber-500/15 text-amber-500'
-        : 'bg-white/10 text-foreground';
+      : kind === 'ticket'
+        ? 'bg-brand/15 text-brand'
+        : kind === 'agent'
+          ? 'bg-amber-500/15 text-amber-500'
+          : 'bg-white/10 text-foreground';
 
-  const Icon = kind === 'copilot' ? Sparkles : kind === 'agent' ? Bot : MessageSquare;
+  const Icon =
+    kind === 'copilot'
+      ? Sparkles
+      : kind === 'ticket'
+        ? TicketCheck
+        : kind === 'agent'
+          ? Bot
+          : MessageSquare;
 
   return (
     <button
@@ -116,6 +125,12 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
           <MissionPill tone="warning" className="mt-2 px-2 py-1 text-[10px]">
             <Bot className="h-2.5 w-2.5" />
             Agent conversation
+          </MissionPill>
+        )}
+        {kind === 'ticket' && (
+          <MissionPill tone="accent" className="mt-2 px-2 py-1 text-[10px]">
+            <TicketCheck className="h-2.5 w-2.5" />
+            Ticket thread
           </MissionPill>
         )}
         {kind === 'regular' && (

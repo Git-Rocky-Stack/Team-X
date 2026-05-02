@@ -46,5 +46,8 @@ describe('Tickets mission-language carry-forward', () => {
     expect(detailSrc).toContain('data-ticket-participants=""');
     expect(detailSrc).toContain('useAddTicketParticipant');
     expect(detailSrc).toContain('useRemoveTicketParticipant');
+    expect(detailSrc).toContain('onClose?: () => void;');
+    expect(detailSrc).toContain('const closeDetail = onClose ?? (() => setActiveTicketId(null));');
+    expect(detailSrc).toContain('onClick={closeDetail}');
   });
 });

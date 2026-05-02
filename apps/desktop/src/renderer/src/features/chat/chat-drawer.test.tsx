@@ -9,10 +9,12 @@ import { useAppStore } from '../../store/app-store.js';
 const currentDirname = dirname(fileURLToPath(import.meta.url));
 const CHAT_DRAWER_PATH = join(currentDirname, 'chat-drawer.tsx');
 const COMPOSER_PATH = join(currentDirname, 'composer.tsx');
+const THREAD_LIST_PATH = join(currentDirname, 'thread-list.tsx');
 const USE_CHAT_PATH = join(currentDirname, '..', '..', 'hooks', 'use-chat.ts');
 
 const chatDrawerSrc = readFileSync(CHAT_DRAWER_PATH, 'utf8');
 const composerSrc = readFileSync(COMPOSER_PATH, 'utf8');
+const threadListSrc = readFileSync(THREAD_LIST_PATH, 'utf8');
 const useChatSrc = readFileSync(USE_CHAT_PATH, 'utf8');
 const initialStoreState = useAppStore.getState();
 
@@ -93,5 +95,24 @@ describe('Interruptible direct chat renderer wiring', () => {
     expect(useChatSrc).toContain('export function useStopChat()');
     expect(useChatSrc).toContain("typeof chatApi.stop !== 'function'");
     expect(useChatSrc).toContain('return { stopped: false }');
+  });
+
+  it('opens ticket threads in a left-side preview while preserving the thread index', () => {
+    expect(chatDrawerSrc).toContain('function TicketThreadPreviewPanel');
+    expect(chatDrawerSrc).toContain('data-thread-ticket-preview=""');
+    expect(chatDrawerSrc).toContain('const { data: tickets = [] } = useTickets(companyId);');
+    expect(chatDrawerSrc).toContain('const threadTicketPreviewId = threadTicketPreviewThreadId');
+    expect(chatDrawerSrc).toContain("if (thread.kind === 'ticket')");
+    expect(chatDrawerSrc).toContain('setActiveThreadId(threadId);');
+    expect(chatDrawerSrc).toContain('setThreadTicketPreviewThreadId(thread.id);');
+    expect(chatDrawerSrc).toContain('<TicketThreadPreviewPanel');
+    expect(chatDrawerSrc).toContain('onClose={() => setThreadTicketPreviewThreadId(null)}');
+  });
+
+  it('labels ticket threads distinctly in the thread index', () => {
+    expect(threadListSrc).toContain("type ThreadKind = 'copilot' | 'agent' | 'ticket' | 'regular'");
+    expect(threadListSrc).toContain("if (thread.kind === 'ticket') return 'ticket';");
+    expect(threadListSrc).toContain('TicketCheck');
+    expect(threadListSrc).toContain('Ticket thread');
   });
 });

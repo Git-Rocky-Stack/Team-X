@@ -57,7 +57,7 @@ Team-X auto-detects Ollama at `http://127.0.0.1:11434`.
 
 1. Click on any employee card in the Dashboard (e.g., the CEO)
 2. The **Chat Drawer** opens on the right
-3. Type a message in the composer and press Enter
+3. Type a message in the composer and press **Ctrl/Cmd+Enter**, or click the send button
 4. Watch the agent think and respond in real-time — you'll see the token stream as it generates
 
 The agent's response is informed by its role specification. The CEO thinks strategically; the engineer thinks technically.
@@ -70,35 +70,41 @@ The top bar contains navigation tabs:
 
 | Tab | Description |
 |-----|-------------|
-| Dashboard | Employee cards, timeline, stream, floor, and org views |
-| Chat | Thread list with all conversations |
-| Tickets | Kanban board for task management |
-| Projects | Project cards and goal tracking |
+| Dashboard | Mission Control, timeline, stream, floor, commands, live queues, runtime signals, and telemetry snapshots |
+| Autonomy | Doctor checks, benchmarks, agent self-improvement, runtimes, routines, budgets, approvals, artifacts, memory, and operator access |
+| Org | Org chart visualization and employee structure |
+| Projects | Project cards, goals, linked tickets, and progress tracking |
+| Tickets | Kanban board, ticket detail, participants, attachments, comments, and ticket-thread discussion |
 | Meetings | Meeting history and the "Call Meeting" action |
-| Telemetry | Usage stats, cost analysis, provider breakdown |
+| Chat | Direct conversations, the thread roster, ticket-thread previews, agent conversations, and Copilot transcripts |
 | Files | File vault with search and integrity checks |
+| Telemetry | Usage stats, cost analysis, provider breakdown |
 | Audit | Append-only event log with filters and export |
-| Settings | Providers, runtime strategy, privacy, backup, updates |
+| Settings | Providers, runtime strategy, privacy, backup, updates, extensions, memory, and portability |
 
 ### Sidenav
 
 The left sidenav shows:
 - **Company switcher** — switch between multiple AI organizations
 - **Employee list** — quick access to chat with any employee
+- **Threads** — open the communication roster without leaving your current work context
+- **Autonomy** — jump to the operator control plane
+- **User Guide** — role-based onboarding and deep links into live setup surfaces
 - **Status indicators** — agent activity at a glance
 
 ### Dashboard Subviews
 
 The Dashboard has 5 views accessible via subtabs:
-- **Cards** — employee cards with live token stream previews
+- **Mission Control** — operations-first view of runs, queues, commands, autonomy posture, and telemetry
 - **Timeline** — chronological event feed
 - **Stream** — raw LLM output from all agents
 - **Floor** — grid layout of employee activity
-- **Org** — embedded org chart visualization
+- **Commands** — recent command-palette operations
 
 ## Next Steps
 
 - [Hire more employees](hiring-employees.md) from the 57-role catalog
 - [Create your first project](managing-projects.md) with goals and tickets
 - [Add cloud providers](configuring-providers.md) for more powerful models
+- [Review the Autonomy control plane](autonomy-control-plane.md) before unattended runtime work
 - [Set up backups](backup-and-restore.md) to protect your data

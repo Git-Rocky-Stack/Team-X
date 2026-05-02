@@ -46,7 +46,6 @@
 import type { MeetingMode } from '@team-x/shared-types';
 import { BrowserWindow, ipcMain } from 'electron';
 
-
 import type { EventBus } from '../orchestrator/event-bus.js';
 
 import type { IpcHandlers } from './handlers.js';
@@ -94,6 +93,8 @@ const REQUEST_CHANNELS = [
   'runtimeOperations.snapshot',
   'autonomyDoctor.run',
   'autonomyBenchmark.run',
+  'agentImprovement.list',
+  'agentImprovement.run',
   'routines.list',
   'routines.create',
   'routines.update',
@@ -468,6 +469,17 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'autonomyBenchmark.run',
     async (_event, request: import('@team-x/shared-types').RunAutonomyBenchmarkRequest) => {
       return handlers.autonomyBenchmarkRun(request);
+    },
+  );
+
+  ipcMain.handle('agentImprovement.list', async (_event, request: { companyId: string }) => {
+    return handlers.agentImprovementList(request);
+  });
+
+  ipcMain.handle(
+    'agentImprovement.run',
+    async (_event, request: import('@team-x/shared-types').RunAgentImprovementRequest) => {
+      return handlers.agentImprovementRun(request);
     },
   );
 
@@ -1214,12 +1226,9 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     },
   );
 
-  ipcMain.handle(
-    'proactive.scanForWork',
-    async (_event, request: { companyId: string }) => {
-      return handlers.proactiveScanForWork(request);
-    },
-  );
+  ipcMain.handle('proactive.scanForWork', async (_event, request: { companyId: string }) => {
+    return handlers.proactiveScanForWork(request);
+  });
 
   ipcMain.handle('proactive.getState', async (_event, request: { companyId: string }) => {
     return handlers.proactiveGetState(request);

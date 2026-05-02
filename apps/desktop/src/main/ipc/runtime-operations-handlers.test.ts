@@ -1,10 +1,11 @@
 import type {
+  AgentImprovementRunResult,
+  AgentImprovementSnapshot,
   AutonomyBenchmarkReport,
   AutonomyDoctorReport,
   RuntimeOperationsSnapshot,
 } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
-
 
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 
@@ -219,5 +220,57 @@ describe('runtime operations IPC handlers', () => {
         scenarioIds: ['unknown-scenario' as never],
       }),
     ).rejects.toThrow(/unknown scenario/i);
+  });
+
+  it('routes agent improvement reads and runs through the improvement service', async () => {
+    const snapshot: AgentImprovementSnapshot = {
+      companyId: 'company-1',
+      generatedAt: 800,
+      openTicketCount: 0,
+      openTickets: [],
+      recentRuns: [],
+    };
+    const runResult: AgentImprovementRunResult = {
+      companyId: 'company-1',
+      ranAt: 900,
+      inspectedEventCount: 2,
+      inspectedTicketCount: 1,
+      recommendations: [],
+      createdTicketIds: [],
+      skippedExistingTicketIds: [],
+    };
+    const agentImprovementService = {
+      list: vi.fn(() => snapshot),
+      run: vi.fn(() => runResult),
+    };
+    const deps = makeDeps({ agentImprovementService });
+    const handlers = createIpcHandlers(deps);
+
+    await expect(handlers.agentImprovementList({ companyId: 'company-1' })).resolves.toBe(snapshot);
+    await expect(
+      handlers.agentImprovementRun({ companyId: 'company-1', eventLimit: 50 }),
+    ).resolves.toBe(runResult);
+    expect(agentImprovementService.list).toHaveBeenCalledWith({ companyId: 'company-1' });
+    expect(agentImprovementService.run).toHaveBeenCalledWith({
+      companyId: 'company-1',
+      eventLimit: 50,
+    });
+  });
+
+  it('rejects invalid agent improvement requests before service dispatch', async () => {
+    const agentImprovementService = {
+      list: vi.fn(),
+      run: vi.fn(),
+    };
+    const handlers = createIpcHandlers(makeDeps({ agentImprovementService }));
+
+    await expect(handlers.agentImprovementList({ companyId: '' })).rejects.toThrow(
+      /companyId is required/i,
+    );
+    await expect(
+      handlers.agentImprovementRun({ companyId: 'company-1', eventLimit: 0 }),
+    ).rejects.toThrow(/eventLimit must be a positive number/i);
+    expect(agentImprovementService.list).not.toHaveBeenCalled();
+    expect(agentImprovementService.run).not.toHaveBeenCalled();
   });
 });

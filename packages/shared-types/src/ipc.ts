@@ -108,6 +108,7 @@ import type {
   ThreadDigest,
   Ticket,
   TicketCheckout,
+  TicketPriority,
 } from './entities.js';
 import type {
   AgenticRunSnapshot,
@@ -389,6 +390,64 @@ export interface RunAutonomyBenchmarkRequest {
   companyId: string;
   runtimeKinds?: RuntimeProfileKind[];
   scenarioIds?: AutonomyBenchmarkScenarioId[];
+}
+
+export type AgentImprovementSignalKind =
+  | 'work_failures'
+  | 'runtime_failures'
+  | 'blocked_tickets'
+  | 'stale_in_progress';
+
+export interface AgentImprovementRecommendation {
+  id: string;
+  signalKind: AgentImprovementSignalKind;
+  title: string;
+  description: string;
+  priority: TicketPriority;
+  sourceCount: number;
+  labels: string[];
+  sourceRefs: string[];
+  existingTicketId: string | null;
+  createdTicketId: string | null;
+}
+
+export interface AgentImprovementRunSummary {
+  eventId: string;
+  ranAt: number;
+  recommendationCount: number;
+  createdTicketCount: number;
+  createdTicketIds: string[];
+  inspectedEventCount: number;
+  inspectedTicketCount: number;
+}
+
+export interface AgentImprovementSnapshot {
+  companyId: string;
+  generatedAt: number;
+  openTicketCount: number;
+  openTickets: Ticket[];
+  recentRuns: AgentImprovementRunSummary[];
+}
+
+export interface ListAgentImprovementRequest {
+  companyId: string;
+  limit?: number;
+}
+
+export interface RunAgentImprovementRequest {
+  companyId: string;
+  eventLimit?: number;
+  dryRun?: boolean;
+}
+
+export interface AgentImprovementRunResult {
+  companyId: string;
+  ranAt: number;
+  inspectedEventCount: number;
+  inspectedTicketCount: number;
+  recommendations: AgentImprovementRecommendation[];
+  createdTicketIds: string[];
+  skippedExistingTicketIds: string[];
 }
 
 export interface RuntimeOperationsSnapshot {
@@ -2036,6 +2095,14 @@ export interface IpcContract {
     request: RunAutonomyBenchmarkRequest;
     response: AutonomyBenchmarkReport;
   };
+  'agentImprovement.list': {
+    request: ListAgentImprovementRequest;
+    response: AgentImprovementSnapshot;
+  };
+  'agentImprovement.run': {
+    request: RunAgentImprovementRequest;
+    response: AgentImprovementRunResult;
+  };
   'routines.list': {
     request: ListRoutinesRequest;
     response: Routine[];
@@ -2906,6 +2973,12 @@ export interface TeamXApi {
   autonomyBenchmark: {
     /** Run the deterministic autonomy benchmark harness for selected runtimes and scenarios. */
     run(req: RunAutonomyBenchmarkRequest): Promise<AutonomyBenchmarkReport>;
+  };
+  agentImprovement: {
+    /** Read current agent self-improvement tickets plus recent loop history. */
+    list(companyId: string): Promise<AgentImprovementSnapshot>;
+    /** Run the observe -> assess -> ticket loop for one workspace. */
+    run(req: RunAgentImprovementRequest): Promise<AgentImprovementRunResult>;
   };
   routines: {
     /** List routine definitions for one workspace. */

@@ -22,8 +22,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Employee } from '@team-x/shared-types';
 import { AUTO_THREAD_ID } from '@team-x/shared-types';
 import { ArrowLeft, Bot, Eye, List, Loader2, Sparkles } from 'lucide-react';
-import { useEffect, useRef } from 'react';
-
+import { useEffect, useRef, useState } from 'react';
 
 import { Composer } from './composer.js';
 import { MessageList } from './message-list.js';
@@ -42,13 +41,13 @@ import {
   MissionPill,
   MissionSheetHeader,
 } from '@/features/mission/mission-shell.js';
+import { TicketDetailPanel } from '@/features/tickets/ticket-detail.js';
 import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
 import { useChatMessages, useSendMessage, useStopChat, useThreadList } from '@/hooks/use-chat.js';
+import { useTickets } from '@/hooks/use-tickets.js';
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
-
-
 
 function statusColor(status: string): string {
   switch (status) {
@@ -75,6 +74,36 @@ interface ChatDrawerProps {
   employees: Employee[];
 }
 
+interface TicketThreadPreviewPanelProps {
+  ticketId: string | null;
+  employees: Employee[];
+  onClose: () => void;
+}
+
+function TicketThreadPreviewPanel({ ticketId, employees, onClose }: TicketThreadPreviewPanelProps) {
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 z-20 flex flex-col overflow-hidden border-l border-white/10 bg-background/95 shadow-2xl shadow-black/70 backdrop-blur-xl',
+        'xl:fixed xl:inset-y-4 xl:left-auto xl:right-[calc(820px+1rem)] xl:w-[48rem] xl:max-w-[calc(100vw-860px)] xl:rounded-[24px] xl:border',
+        '2xl:right-[calc(900px+1rem)] 2xl:w-[54rem] 2xl:max-w-[calc(100vw-920px)]',
+      )}
+      data-thread-ticket-preview=""
+    >
+      {ticketId ? (
+        <TicketDetailPanel ticketId={ticketId} employees={employees} onClose={onClose} />
+      ) : (
+        <div
+          className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground"
+          data-thread-ticket-preview-state="loading"
+        >
+          Loading ticket detail...
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ChatDrawer({ employees }: ChatDrawerProps) {
   const selectedId = useAppStore((s) => s.selectedEmployeeId);
   const chatOpen = useAppStore((s) => s.chatOpen);
@@ -96,6 +125,9 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const dequeueQueuedDirectChatMessage = useAppStore((s) => s.dequeueQueuedDirectChatMessage);
   const setDirectChatStopping = useAppStore((s) => s.setDirectChatStopping);
   const setDirectChatAwaitingReply = useAppStore((s) => s.setDirectChatAwaitingReply);
+  const [threadTicketPreviewThreadId, setThreadTicketPreviewThreadId] = useState<string | null>(
+    null,
+  );
 
   const employee = employees.find((e) => e.id === selectedId) ?? null;
   const live = selectedId ? employeeLive[selectedId] : undefined;
@@ -112,6 +144,10 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
 
   const { data: messages = [] } = useChatMessages(effectiveThreadId);
   const { data: threads = [] } = useThreadList(companyId);
+  const { data: tickets = [] } = useTickets(companyId);
+  const threadTicketPreviewId = threadTicketPreviewThreadId
+    ? (tickets.find((candidate) => candidate.threadId === threadTicketPreviewThreadId)?.id ?? null)
+    : null;
   const sendMutation = useSendMessage();
   const stopMutation = useStopChat();
   const qc = useQueryClient();
@@ -160,6 +196,22 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
       void qc.invalidateQueries({ queryKey: ['threads'] });
     }
   }, [lastAgentMessageAt, qc]);
+
+  useEffect(() => {
+    if (!chatOpen || !threadListView) {
+      setThreadTicketPreviewThreadId(null);
+    }
+  }, [chatOpen, threadListView]);
+
+  useEffect(() => {
+    if (!threadTicketPreviewThreadId) return;
+    const previewThreadStillBelongsToWorkspace = threads.some(
+      (thread) => thread.id === threadTicketPreviewThreadId && thread.companyId === companyId,
+    );
+    if (!previewThreadStillBelongsToWorkspace) {
+      setThreadTicketPreviewThreadId(null);
+    }
+  }, [companyId, threadTicketPreviewThreadId, threads]);
 
   // Resolve user↔employee DM thread on drawer open (existing behavior).
   // Only fires for the employee DM view — not for thread list or agent threads.
@@ -330,6 +382,12 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   function handleSelectThread(threadId: string) {
     const thread = threads.find((t) => t.id === threadId);
     if (!thread) return;
+    if (thread.kind === 'ticket') {
+      setActiveThreadId(threadId);
+      setThreadTicketPreviewThreadId(thread.id);
+      return;
+    }
+    setThreadTicketPreviewThreadId(null);
     const isCopilot = checkCopilotThread(thread);
     if (isCopilot) {
       openThread({
@@ -364,12 +422,22 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     <Sheet open={chatOpen} onOpenChange={setChatOpen}>
       <SheetContent
         side="right"
-        className="mission-shell flex w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col gap-0 overflow-hidden border-l border-white/10 bg-background/95 p-0 sm:w-[720px] sm:max-w-[calc(100vw-2rem)] xl:w-[820px] 2xl:w-[900px]"
+        className={cn(
+          'mission-shell flex w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col gap-0 border-l border-white/10 bg-background/95 p-0 sm:w-[720px] sm:max-w-[calc(100vw-2rem)] xl:w-[820px] 2xl:w-[900px]',
+          threadTicketPreviewThreadId ? 'overflow-visible' : 'overflow-hidden',
+        )}
       >
         <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
         <div className="relative flex h-full flex-col">
           {threadListView ? (
             <>
+              {threadTicketPreviewThreadId ? (
+                <TicketThreadPreviewPanel
+                  ticketId={threadTicketPreviewId}
+                  employees={employees}
+                  onClose={() => setThreadTicketPreviewThreadId(null)}
+                />
+              ) : null}
               <MissionSheetHeader
                 eyebrow="Communication index"
                 icon={List}

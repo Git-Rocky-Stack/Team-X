@@ -50,10 +50,12 @@ const PRIORITY_COLORS: Record<string, string> = {
 interface TicketDetailPanelProps {
   ticketId: string;
   employees: Employee[];
+  onClose?: () => void;
 }
 
-export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProps) {
+export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetailPanelProps) {
   const setActiveTicketId = useAppStore((s) => s.setActiveTicketId);
+  const closeDetail = onClose ?? (() => setActiveTicketId(null));
   const { data: detail, isLoading } = useTicketDetail(ticketId);
   const addComment = useAddTicketComment();
   const closeTicket = useCloseTicket();
@@ -113,7 +115,7 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
       <div className="flex items-start gap-3 border-b border-white/10 px-5 py-4">
         <button
           type="button"
-          onClick={() => setActiveTicketId(null)}
+          onClick={closeDetail}
           className="rounded-[14px] border border-white/10 bg-black/20 p-2 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground xl:hidden"
           aria-label="Close detail"
         >
@@ -134,7 +136,7 @@ export function TicketDetailPanel({ ticketId, employees }: TicketDetailPanelProp
 
         <button
           type="button"
-          onClick={() => setActiveTicketId(null)}
+          onClick={closeDetail}
           className="rounded-[14px] border border-white/10 bg-black/20 p-2 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
           aria-label="Close"
         >

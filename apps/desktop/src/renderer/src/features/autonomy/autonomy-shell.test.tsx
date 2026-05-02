@@ -33,6 +33,13 @@ const AUTONOMY_BENCHMARK_HOOK_PATH = join(
   'hooks',
   'use-autonomy-benchmark.ts',
 );
+const AGENT_IMPROVEMENT_HOOK_PATH = join(
+  currentDirname,
+  '..',
+  '..',
+  'hooks',
+  'use-agent-improvement.ts',
+);
 const ROUTINES_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-routines.ts');
 const BUDGETS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-budgets.ts');
 const APPROVALS_HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-approvals.ts');
@@ -42,6 +49,7 @@ const CLIENT_PATH = join(currentDirname, 'autonomy-client.ts');
 const VIEW_PATH = join(currentDirname, 'autonomy-view.tsx');
 const AUTONOMY_DOCTOR_PANEL_PATH = join(currentDirname, 'autonomy-doctor-panel.tsx');
 const AUTONOMY_BENCHMARK_PANEL_PATH = join(currentDirname, 'autonomy-benchmark-panel.tsx');
+const AGENT_IMPROVEMENT_PANEL_PATH = join(currentDirname, 'agent-improvement-panel.tsx');
 const RUNTIME_OPERATIONS_PANEL_PATH = join(currentDirname, 'runtime-operations-panel.tsx');
 const RUNTIME_PANEL_PATH = join(currentDirname, 'runtime-profiles-panel.tsx');
 const ROUTINES_PANEL_PATH = join(currentDirname, 'routines-panel.tsx');
@@ -61,6 +69,7 @@ const runtimeHookSrc = readFileSync(RUNTIME_HOOK_PATH, 'utf8');
 const runtimeOperationsHookSrc = readFileSync(RUNTIME_OPERATIONS_HOOK_PATH, 'utf8');
 const autonomyDoctorHookSrc = readFileSync(AUTONOMY_DOCTOR_HOOK_PATH, 'utf8');
 const autonomyBenchmarkHookSrc = readFileSync(AUTONOMY_BENCHMARK_HOOK_PATH, 'utf8');
+const agentImprovementHookSrc = readFileSync(AGENT_IMPROVEMENT_HOOK_PATH, 'utf8');
 const routinesHookSrc = readFileSync(ROUTINES_HOOK_PATH, 'utf8');
 const budgetsHookSrc = readFileSync(BUDGETS_HOOK_PATH, 'utf8');
 const approvalsHookSrc = readFileSync(APPROVALS_HOOK_PATH, 'utf8');
@@ -70,6 +79,7 @@ const clientSrc = readFileSync(CLIENT_PATH, 'utf8');
 const viewSrc = readFileSync(VIEW_PATH, 'utf8');
 const autonomyDoctorPanelSrc = readFileSync(AUTONOMY_DOCTOR_PANEL_PATH, 'utf8');
 const autonomyBenchmarkPanelSrc = readFileSync(AUTONOMY_BENCHMARK_PANEL_PATH, 'utf8');
+const agentImprovementPanelSrc = readFileSync(AGENT_IMPROVEMENT_PANEL_PATH, 'utf8');
 const runtimeOperationsPanelSrc = readFileSync(RUNTIME_OPERATIONS_PANEL_PATH, 'utf8');
 const runtimePanelSrc = readFileSync(RUNTIME_PANEL_PATH, 'utf8');
 const routinesPanelSrc = readFileSync(ROUTINES_PANEL_PATH, 'utf8');
@@ -121,6 +131,7 @@ describe('Autonomy shell wiring', () => {
     );
     expect(viewSrc).toContain('AUTONOMY_SUBVIEWS');
     expect(viewSrc).toContain("{ value: 'benchmarks', label: 'Benchmarks', icon: Gauge }");
+    expect(viewSrc).toContain("{ value: 'improvement', label: 'Improve', icon: BrainCircuit }");
     expect(viewSrc).toContain('data-autonomy-view=""');
     expect(viewSrc).toContain('data-autonomy-subview={subview.value}');
     expect(viewSrc).toContain('Operator Control Plane');
@@ -153,8 +164,12 @@ describe('Autonomy shell wiring', () => {
     expect(viewSrc).toContain(
       "import { AutonomyBenchmarkPanel } from './autonomy-benchmark-panel.js';",
     );
+    expect(viewSrc).toContain(
+      "import { AgentImprovementPanel } from './agent-improvement-panel.js';",
+    );
     expect(viewSrc).toContain('<AutonomyDoctorPanel companyId={companyId} />');
     expect(viewSrc).toContain('<AutonomyBenchmarkPanel companyId={companyId} />');
+    expect(viewSrc).toContain('<AgentImprovementPanel companyId={companyId} />');
     expect(viewSrc).toContain('<RuntimeOperationsPanel companyId={companyId} />');
     expect(viewSrc).toContain('<RuntimeProfilesPanel companyId={companyId} />');
     expect(viewSrc).toContain("import { RoutinesPanel } from './routines-panel.js';");
@@ -202,6 +217,15 @@ describe('Autonomy shell wiring', () => {
     expect(clientSrc).toContain('ipc.autonomyDoctor.run');
     expect(clientSrc).toContain('autonomyBenchmark: {');
     expect(clientSrc).toContain('ipc.autonomyBenchmark.run');
+    expect(clientSrc).toContain('agentImprovement: {');
+    expect(clientSrc).toContain('ipc.agentImprovement.list');
+    expect(clientSrc).toContain('ipc.agentImprovement.run');
+    expect(agentImprovementHookSrc).toContain("queryKey: ['agent-improvement', companyId]");
+    expect(agentImprovementHookSrc).toContain('autonomyClient.agentImprovement.list');
+    expect(agentImprovementHookSrc).toContain('autonomyClient.agentImprovement.run');
+    expect(agentImprovementPanelSrc).toContain('data-agent-improvement-panel=""');
+    expect(agentImprovementPanelSrc).toContain('Run Improvement Loop');
+    expect(agentImprovementPanelSrc).toContain('Self-improvement tickets');
     expect(autonomyDoctorPanelSrc).toContain('data-autonomy-doctor-panel=""');
     expect(autonomyDoctorPanelSrc).toContain('data-autonomy-doctor-check={check.id}');
     expect(autonomyDoctorPanelSrc).toContain('data-autonomy-doctor-finding={finding.id}');

@@ -4,6 +4,8 @@ The Agentic Loop is Team-X's answer to questions the command palette's determini
 
 You don't trigger the loop directly. You just ask the palette a real question.
 
+> Looking for the agent self-improvement loop? That is a separate Autonomy surface. Use **Autonomy > Improve** to inspect recent execution failures, blocked tickets, and stale in-progress work, then open deduped correction tickets through the normal queue. See [Autonomy Control Plane](autonomy-control-plane.md).
+
 ## Overview
 
 - **Free-form, grounded answers** — not a chatbot, not a generic LLM summary. The loop reads your live company state through six read-only query tools, so every claim is anchored in real data

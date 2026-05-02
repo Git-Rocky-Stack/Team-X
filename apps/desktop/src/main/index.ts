@@ -137,6 +137,7 @@ import {
 } from './orchestrator/index.js';
 import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
+import { createAgentImprovementService } from './services/agent-improvement-service.js';
 import {
   type AgenticLoopService,
   createAgenticLoopService,
@@ -216,6 +217,7 @@ import { createTestCopilotComplete } from './services/test-copilot-provider.js';
 import { createThreadDigestService } from './services/thread-digest-service.js';
 import { createUpdaterService } from './services/updater.js';
 import { createVaultService } from './services/vault.js';
+import { attachSpellcheckContextMenu } from './spellcheck-context-menu.js';
 
 function ensureWindowsProcessEnvironment(): void {
   if (process.platform !== 'win32') return;
@@ -438,8 +440,10 @@ async function createWindow(): Promise<void> {
       // this flag with an explicit security trade-off note.
       sandbox: true,
       webSecurity: true,
+      spellcheck: true,
     },
   });
+  attachSpellcheckContextMenu(win);
 
   win.once('ready-to-show', () => {
     win.show();
@@ -792,7 +796,11 @@ app
       resolveProvider = createTestModeResolveProvider();
       console.log('[main] test-mode provider active — canned responses, no LLM calls');
     } else {
-      const providerFactory = createProviderFactory({ providersService, secretsStore, companiesRepo });
+      const providerFactory = createProviderFactory({
+        providersService,
+        secretsStore,
+        companiesRepo,
+      });
       const runtimeProfileProviderService = createRuntimeProfileProviderService({
         runtimeProfilesService,
         providerFactory,
@@ -1200,6 +1208,11 @@ app
     const autonomyBenchmarkService = createAutonomyBenchmarkService({
       createScenarioContext: createInMemoryAutonomyBenchmarkScenarioContext,
     });
+    const agentImprovementService = createAgentImprovementService({
+      ticketsRepo,
+      eventsRepo,
+      bus,
+    });
 
     const updaterService = createUpdaterService({
       isDev,
@@ -1248,6 +1261,7 @@ app
             scenarioIds: input.scenarioIds,
           }),
       },
+      agentImprovementService,
       routineService: routineServiceInstance,
       budgetGovernanceService: budgetGovernanceServiceInstance,
       approvalInboxService: approvalInboxServiceInstance,
