@@ -49,7 +49,7 @@ export interface UpdateTicketInput {
   labelsJson?: string;
   slaHours?: number | null;
   dueAt?: number | null;
-  assigneeId?: string;
+  assigneeId?: string | null;
 }
 
 export interface AssignTicketInput {
@@ -155,6 +155,7 @@ export function createTicketsRepo<TRunResult>(
       if (input.labelsJson !== undefined) set.labelsJson = input.labelsJson;
       if (input.slaHours !== undefined) set.slaHours = input.slaHours;
       if (input.dueAt !== undefined) set.dueAt = input.dueAt;
+      if (input.assigneeId !== undefined) set.assigneeId = input.assigneeId;
       db.update(tickets).set(set).where(eq(tickets.id, id)).run();
     },
 

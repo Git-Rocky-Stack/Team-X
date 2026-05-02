@@ -140,6 +140,20 @@ describe('threads repo', () => {
       expect(threads.listMembers(t2)).toHaveLength(1);
     });
 
+    it('removes only the requested member edge', () => {
+      const tid = threads.create({ companyId, kind: 'ticket', createdBy: 'u' });
+      threads.addMember({ threadId: tid, memberId: 'rocky', memberKind: 'user' });
+      threads.addMember({ threadId: tid, memberId: 'emp-iris', memberKind: 'employee' });
+      threads.addMember({ threadId: tid, memberId: 'emp-carolyn', memberKind: 'employee' });
+
+      threads.removeMember({ threadId: tid, memberId: 'emp-iris', memberKind: 'employee' });
+
+      expect(threads.listMembers(tid).map((member) => member.memberId)).toEqual([
+        'rocky',
+        'emp-carolyn',
+      ]);
+    });
+
     it('enforces the foreign key to threads (addMember throws on unknown threadId)', () => {
       expect(() =>
         threads.addMember({

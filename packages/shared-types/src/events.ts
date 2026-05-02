@@ -83,6 +83,8 @@ export type EventType =
   | 'ticket.created'
   | 'ticket.updated'
   | 'ticket.assigned'
+  | 'ticket.participantAdded'
+  | 'ticket.participantRemoved'
   | 'ticket.closed'
   | 'ticket.reopened'
   | 'ticket.commentAdded'
@@ -990,6 +992,38 @@ export interface TicketAssignedPayload {
   threadId: string;
   /** Wall-clock timestamp in ms when the assign handler wrote the row. */
   assignedAt: number;
+}
+
+export interface TicketParticipantAddedPayload {
+  /** The ticket the employee was added to. */
+  ticketId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** The added employee participant. */
+  employeeId: string;
+  /** The ticket discussion thread id, created if the ticket did not already have one. */
+  threadId: string;
+  /** True when the employee was not already a ticket thread member. */
+  added: boolean;
+  /** Wall-clock timestamp in ms when the participant handler completed. */
+  addedAt: number;
+}
+
+export interface TicketParticipantRemovedPayload {
+  /** The ticket the employee was removed from. */
+  ticketId: string;
+  /** Companion company-scope id. */
+  companyId: string;
+  /** The removed employee participant. */
+  employeeId: string;
+  /** The ticket discussion thread id, or null when the ticket had no discussion thread yet. */
+  threadId: string | null;
+  /** True when the employee was a thread member before this removal. */
+  removed: boolean;
+  /** True when removing the participant also cleared the ticket's primary assignee. */
+  clearedAssignee: boolean;
+  /** Wall-clock timestamp in ms when the participant handler completed. */
+  removedAt: number;
 }
 
 export interface TicketClosedPayload {

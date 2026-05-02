@@ -63,6 +63,7 @@ import type {
   AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
+  AddTicketParticipantRequest,
   ApprovalItem,
   ArchiveCompanyRequest,
   ArtifactRecord,
@@ -208,6 +209,7 @@ import type {
   ProjectDetail,
   ReconnectCloudWorkspaceRequest,
   RemoveProviderRequest,
+  RemoveTicketParticipantRequest,
   RemoveSkillRequest,
   ReopenTicketRequest,
   ResolveThreadRequest,
@@ -456,6 +458,7 @@ export interface IpcThreadsRepo {
   create(input: CreateThreadInput): string;
   getById(id: string): ThreadRow | null;
   addMember(input: AddThreadMemberInput): void;
+  removeMember(input: AddThreadMemberInput): void;
   listMembers(threadId: string): ThreadMemberRow[];
   getOrCreateDmThread(input: GetOrCreateDmThreadInput): string;
   updateLastMessageAt(threadId: string, timestamp: number): void;
@@ -1702,6 +1705,10 @@ export interface IpcHandlers {
 
   /** `tickets.assign` — assign a ticket to an employee, creating thread + WorkItem. */
   ticketsAssign(req: AssignTicketRequest): Promise<void>;
+  /** `tickets.addParticipant` — add an employee to an existing ticket discussion. */
+  ticketsAddParticipant(req: AddTicketParticipantRequest): Promise<void>;
+  /** `tickets.removeParticipant` — remove an employee from an existing ticket discussion. */
+  ticketsRemoveParticipant(req: RemoveTicketParticipantRequest): Promise<void>;
 
   /** `tickets.close` — close a ticket (status → done). */
   ticketsClose(req: CloseTicketRequest): Promise<void>;
@@ -2353,6 +2360,108 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       },
       actorId,
     );
+  }
+
+  function ensureTicketThread(ticket: TicketRow): string {
+    let threadId = ticket.threadId;
+    if (!threadId) {
+      threadId = threadsRepo.create({
+        companyId: ticket.companyId,
+        kind: 'ticket',
+        subject: ticket.title,
+        createdBy: HUMAN_USER_ID,
+      });
+      ticketsRepo.setThreadId(ticket.id, threadId);
+    }
+
+    ensureTicketMember(threadId, HUMAN_USER_ID, 'user');
+    if (ticket.assigneeId) {
+      ensureTicketMember(threadId, ticket.assigneeId, 'employee');
+    }
+
+    return threadId;
+  }
+
+  function ensureTicketMember(
+    threadId: string,
+    memberId: string,
+    memberKind: 'user' | 'employee',
+  ): boolean {
+    const alreadyMember = threadsRepo
+      .listMembers(threadId)
+      .some((member) => member.memberId === memberId && member.memberKind === memberKind);
+    if (alreadyMember) return false;
+    threadsRepo.addMember({ threadId, memberId, memberKind });
+    return true;
+  }
+
+  function validateTicketParticipant(
+    ticket: TicketRow,
+    employeeId: string,
+    channel: string,
+  ): EmployeeRow {
+    const employee = employeesRepo.getById(employeeId);
+    if (!employee) {
+      throw new Error(`[ipc] ${channel}: employee not found: ${employeeId}`);
+    }
+    if (employee.companyId !== ticket.companyId) {
+      throw new Error(
+        `[ipc] ${channel}: employee ${employeeId} does not belong to company ${ticket.companyId}`,
+      );
+    }
+    if (employee.isSystem === 1) {
+      throw new Error(`[ipc] ${channel}: system employees cannot be ticket participants`);
+    }
+    return employee;
+  }
+
+  function listTicketParticipantRows(ticket: TicketRow, threadId: string | null): EmployeeRow[] {
+    const employeeIds = new Set<string>();
+    if (ticket.assigneeId) employeeIds.add(ticket.assigneeId);
+
+    if (threadId) {
+      for (const member of threadsRepo.listMembers(threadId)) {
+        if (member.memberKind === 'employee') employeeIds.add(member.memberId);
+      }
+      for (const message of messagesRepo.listByThread(threadId)) {
+        if (message.authorKind === 'employee') employeeIds.add(message.authorId);
+      }
+    }
+
+    const rows: EmployeeRow[] = [];
+    for (const employeeId of employeeIds) {
+      const employee = employeesRepo.getById(employeeId);
+      if (!employee || employee.companyId !== ticket.companyId || employee.isSystem === 1) {
+        continue;
+      }
+      rows.push(employee);
+    }
+    return rows;
+  }
+
+  function enqueueTicketParticipantWakeups(args: {
+    ticket: TicketRow;
+    threadId: string;
+    messageId: string;
+    excludeEmployeeIds?: Set<string>;
+    reason: string;
+  }): void {
+    const excluded = args.excludeEmployeeIds ?? new Set<string>();
+    for (const employee of listTicketParticipantRows(args.ticket, args.threadId)) {
+      if (excluded.has(employee.id)) continue;
+      orchestrator
+        .enqueueChat({
+          threadId: args.threadId,
+          employeeId: employee.id,
+          userMessageId: args.messageId,
+        })
+        .catch((err: unknown) => {
+          console.error(
+            `[ipc] ${args.reason}: orchestrator turn failed for ticket=${args.ticket.id}, employee=${employee.id}:`,
+            err,
+          );
+        });
+    }
   }
 
   return {
@@ -6568,6 +6677,155 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
     },
 
+    async ticketsAddParticipant(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.addParticipant: ticketId is required');
+      }
+      if (typeof req.employeeId !== 'string' || req.employeeId.length === 0) {
+        throw new Error('[ipc] tickets.addParticipant: employeeId is required');
+      }
+
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.addParticipant: ticket not found: ${req.ticketId}`);
+      }
+      const employee = validateTicketParticipant(ticket, req.employeeId, 'tickets.addParticipant');
+      const threadId = ensureTicketThread(ticket);
+      const added = ensureTicketMember(threadId, req.employeeId, 'employee');
+      const changedAt = Date.now();
+
+      const messageId = messagesRepo.append({
+        threadId,
+        authorId: HUMAN_USER_ID,
+        authorKind: 'system',
+        content: added
+          ? `${employee.name} was added to this ticket.`
+          : `${employee.name} is already on this ticket.`,
+      });
+      threadsRepo.updateLastMessageAt(threadId, changedAt);
+
+      orchestrator
+        .enqueueChat({
+          threadId,
+          employeeId: req.employeeId,
+          userMessageId: messageId,
+        })
+        .catch((err: unknown) => {
+          console.error(
+            `[ipc] tickets.addParticipant: orchestrator turn failed for ticket=${req.ticketId}, employee=${req.employeeId}:`,
+            err,
+          );
+        });
+
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.participantAdded',
+            companyId: ticket.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              ticketId: req.ticketId,
+              companyId: ticket.companyId,
+              employeeId: req.employeeId,
+              threadId,
+              added,
+              addedAt: changedAt,
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.addParticipant: bus emit failed (participant still added, ticket=${req.ticketId}, employee=${req.employeeId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] tickets.addParticipant: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+    },
+
+    async ticketsRemoveParticipant(req) {
+      if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
+        throw new Error('[ipc] tickets.removeParticipant: ticketId is required');
+      }
+      if (typeof req.employeeId !== 'string' || req.employeeId.length === 0) {
+        throw new Error('[ipc] tickets.removeParticipant: employeeId is required');
+      }
+
+      const ticket = ticketsRepo.getById(req.ticketId);
+      if (!ticket) {
+        throw new Error(`[ipc] tickets.removeParticipant: ticket not found: ${req.ticketId}`);
+      }
+      const employee = validateTicketParticipant(
+        ticket,
+        req.employeeId,
+        'tickets.removeParticipant',
+      );
+      const threadId = ticket.threadId;
+      const wasMember = threadId
+        ? threadsRepo
+            .listMembers(threadId)
+            .some(
+              (member) => member.memberId === req.employeeId && member.memberKind === 'employee',
+            )
+        : false;
+      if (threadId) {
+        threadsRepo.removeMember({ threadId, memberId: req.employeeId, memberKind: 'employee' });
+      }
+
+      const clearedAssignee = ticket.assigneeId === req.employeeId;
+      if (clearedAssignee) {
+        ticketsRepo.update(req.ticketId, {
+          assigneeId: null,
+          status: ticket.status === 'done' ? ticket.status : 'open',
+        });
+      }
+
+      const changedAt = Date.now();
+      if (threadId) {
+        messagesRepo.append({
+          threadId,
+          authorId: HUMAN_USER_ID,
+          authorKind: 'system',
+          content: `${employee.name} was removed from this ticket.${
+            clearedAssignee ? ' The ticket is now unassigned.' : ''
+          }`,
+        });
+        threadsRepo.updateLastMessageAt(threadId, changedAt);
+      }
+
+      if (bus) {
+        try {
+          bus.emit({
+            type: 'ticket.participantRemoved',
+            companyId: ticket.companyId,
+            actorId: HUMAN_USER_ID,
+            actorKind: 'user',
+            payload: {
+              ticketId: req.ticketId,
+              companyId: ticket.companyId,
+              employeeId: req.employeeId,
+              threadId,
+              removed: wasMember,
+              clearedAssignee,
+              removedAt: changedAt,
+            },
+          });
+        } catch (err) {
+          console.error(
+            `[ipc] tickets.removeParticipant: bus emit failed (participant still removed, ticket=${req.ticketId}, employee=${req.employeeId}):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] tickets.removeParticipant: bus dep unwired — renderer caches will NOT invalidate',
+        );
+      }
+    },
+
     async ticketsClose(req) {
       if (typeof req.ticketId !== 'string' || req.ticketId.length === 0) {
         throw new Error('[ipc] tickets.close: ticketId is required');
@@ -6651,22 +6909,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error(`[ipc] tickets.addComment: ticket not found: ${req.ticketId}`);
       }
 
-      // Ensure ticket has a thread
-      let threadId = ticket.threadId;
-      if (!threadId) {
-        threadId = threadsRepo.create({
-          companyId: ticket.companyId,
-          kind: 'ticket',
-          subject: ticket.title,
-          createdBy: HUMAN_USER_ID,
-        });
-        threadsRepo.addMember({
-          threadId,
-          memberId: HUMAN_USER_ID,
-          memberKind: 'user',
-        });
-        ticketsRepo.setThreadId(req.ticketId, threadId);
-      }
+      const threadId = ensureTicketThread(ticket);
 
       const messageId = messagesRepo.append({
         threadId,
@@ -6675,21 +6918,12 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         content: req.content.trim(),
       });
 
-      // If the ticket is assigned, enqueue a response from the agent
-      if (ticket.assigneeId) {
-        orchestrator
-          .enqueueChat({
-            threadId,
-            employeeId: ticket.assigneeId,
-            userMessageId: messageId,
-          })
-          .catch((err: unknown) => {
-            console.error(
-              `[ipc] tickets.addComment: orchestrator turn failed for ticket=${req.ticketId}:`,
-              err,
-            );
-          });
-      }
+      enqueueTicketParticipantWakeups({
+        ticket,
+        threadId,
+        messageId,
+        reason: 'tickets.addComment',
+      });
 
       // Invariant #11 (Phase 5.6 M-C step f). authorId is HUMAN_USER_ID
       // because this IPC is the Rocky-facing channel; agent-authored
@@ -6753,11 +6987,13 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         const empRow = employeesRepo.getById(ticket.assigneeId);
         if (empRow) assignee = rowToEmployee(empRow);
       }
+      const participants = listTicketParticipantRows(ticket, ticket.threadId).map(rowToEmployee);
 
       return {
         ...rowToTicket(ticket),
         messages,
         assignee,
+        participants,
       };
     },
 

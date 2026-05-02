@@ -118,6 +118,19 @@ export function createThreadsRepo<TRunResult>(db: ThreadsDb<TRunResult>) {
         .run();
     },
 
+    /** Remove every matching membership edge from a thread. */
+    removeMember(input: AddThreadMemberInput): void {
+      db.delete(threadMembers)
+        .where(
+          and(
+            eq(threadMembers.threadId, input.threadId),
+            eq(threadMembers.memberId, input.memberId),
+            eq(threadMembers.memberKind, input.memberKind),
+          ),
+        )
+        .run();
+    },
+
     /** Return every member of a given thread. */
     listMembers(threadId: string): ThreadMemberRow[] {
       return db.select().from(threadMembers).where(eq(threadMembers.threadId, threadId)).all();

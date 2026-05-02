@@ -42,6 +42,7 @@ import type {
   AddProviderResponse,
   AddTicketCommentRequest,
   AddTicketCommentResponse,
+  AddTicketParticipantRequest,
   AgenticRunSnapshot,
   ApprovalItem,
   ArtifactRecord,
@@ -178,6 +179,7 @@ import type {
   RagRebuildAllResponse,
   RagStatsResponse,
   ReconnectCloudWorkspaceRequest,
+  RemoveTicketParticipantRequest,
   RemoveSkillRequest,
   ResolveThreadRequest,
   ResolveThreadResponse,
@@ -448,6 +450,8 @@ const CHANNELS = {
   ticketsCreate: 'tickets.create',
   ticketsUpdate: 'tickets.update',
   ticketsAssign: 'tickets.assign',
+  ticketsAddParticipant: 'tickets.addParticipant',
+  ticketsRemoveParticipant: 'tickets.removeParticipant',
   ticketsClose: 'tickets.close',
   ticketsReopen: 'tickets.reopen',
   ticketsAddComment: 'tickets.addComment',
@@ -958,6 +962,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.ticketsUpdate, req) as Promise<void>,
       assign: (req: { ticketId: string; assigneeId: string }) =>
         ipc.invoke(CHANNELS.ticketsAssign, req) as Promise<void>,
+      addParticipant: (req: AddTicketParticipantRequest) =>
+        ipc.invoke(CHANNELS.ticketsAddParticipant, req) as Promise<void>,
+      removeParticipant: (req: RemoveTicketParticipantRequest) =>
+        ipc.invoke(CHANNELS.ticketsRemoveParticipant, req) as Promise<void>,
       close: (ticketId: string) => ipc.invoke(CHANNELS.ticketsClose, { ticketId }) as Promise<void>,
       reopen: (ticketId: string) =>
         ipc.invoke(CHANNELS.ticketsReopen, { ticketId }) as Promise<void>,

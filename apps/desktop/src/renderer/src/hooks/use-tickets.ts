@@ -43,6 +43,29 @@ export function useAssignTicket() {
   });
 }
 
+export function useAddTicketParticipant() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: { ticketId: string; employeeId: string }) => ipc.tickets.addParticipant(req),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+      qc.invalidateQueries({ queryKey: ['ticket-detail', variables.ticketId] });
+    },
+  });
+}
+
+export function useRemoveTicketParticipant() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: { ticketId: string; employeeId: string }) =>
+      ipc.tickets.removeParticipant(req),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+      qc.invalidateQueries({ queryKey: ['ticket-detail', variables.ticketId] });
+    },
+  });
+}
+
 export function useUpdateTicketStatus() {
   const qc = useQueryClient();
   return useMutation({
@@ -86,6 +109,8 @@ export function useAddTicketComment() {
  * - `ticket.updated` — direct lifecycle emit from `tickets.update`
  * - `ticket.assigned` — direct lifecycle emit from `tickets.assign`
  *   (also fires inside `tickets.create` when immediate-assign is used)
+ * - `ticket.participantAdded` / `ticket.participantRemoved` — direct
+ *   lifecycle emits from the ticket participant menu
  * - `ticket.closed` — direct lifecycle emit from `tickets.close`
  * - `ticket.reopened` — direct lifecycle emit from `tickets.reopen`
  * - `ticket.commentAdded` — direct lifecycle emit from `tickets.addComment`
@@ -128,6 +153,8 @@ export function useTicketEventSync(companyId: string | null): void {
         event.type !== 'ticket.created' &&
         event.type !== 'ticket.updated' &&
         event.type !== 'ticket.assigned' &&
+        event.type !== 'ticket.participantAdded' &&
+        event.type !== 'ticket.participantRemoved' &&
         event.type !== 'ticket.closed' &&
         event.type !== 'ticket.reopened' &&
         event.type !== 'ticket.commentAdded' &&

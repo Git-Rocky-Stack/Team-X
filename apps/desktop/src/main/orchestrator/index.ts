@@ -1109,7 +1109,11 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     if (args.thread.kind !== 'ticket' || !ticketsRepo) return null;
     const ticket = ticketsRepo.getByThreadId(args.thread.id);
     if (!ticket || ticket.companyId !== args.companyId) return null;
-    if (ticket.assigneeId !== null && ticket.assigneeId !== args.employeeId) return null;
+    if (ticket.assigneeId === args.employeeId) return ticket.id;
+    const isTicketParticipant = threadsRepo
+      .listMembers(args.thread.id)
+      .some((member) => member.memberKind === 'employee' && member.memberId === args.employeeId);
+    if (!isTicketParticipant) return null;
     return ticket.id;
   }
 

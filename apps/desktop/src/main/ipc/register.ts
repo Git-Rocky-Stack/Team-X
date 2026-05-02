@@ -226,6 +226,8 @@ const REQUEST_CHANNELS = [
   'tickets.create',
   'tickets.update',
   'tickets.assign',
+  'tickets.addParticipant',
+  'tickets.removeParticipant',
   'tickets.close',
   'tickets.reopen',
   'tickets.addComment',
@@ -1328,6 +1330,20 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'tickets.assign',
     async (_event, request: { ticketId: string; assigneeId: string }) => {
       return handlers.ticketsAssign(request);
+    },
+  );
+
+  ipcMain.handle(
+    'tickets.addParticipant',
+    async (_event, request: { ticketId: string; employeeId: string }) => {
+      return handlers.ticketsAddParticipant(request);
+    },
+  );
+
+  ipcMain.handle(
+    'tickets.removeParticipant',
+    async (_event, request: { ticketId: string; employeeId: string }) => {
+      return handlers.ticketsRemoveParticipant(request);
     },
   );
 

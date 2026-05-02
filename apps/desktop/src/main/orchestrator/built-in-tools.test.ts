@@ -295,6 +295,41 @@ describe('classifyColleagueAssignment', () => {
     });
   });
 
+  it('detects Iris-style review-and-report directives as durable ticket work', () => {
+    const intent = classifyColleagueAssignment(
+      "Carolyn, I've prioritized the $20k MRR goal for May 30th. We are at 0% progress. Review our product list (Agent-X, Android Architect, App Concept Analytics, ClipForge, ElementForge, Lumina Studio OS, ResumeForge, System-X, Team-X, Wealthwise) and tell me which 3 have the highest immediate market demand. I need this to decide which one we bet the month on.",
+    );
+
+    expect(intent.shouldCreateTicket).toBe(true);
+    expect(intent.ticketTitle).toMatch(/^Review our product list/);
+    expect(intent.ticketTitle).toContain('ClipForge');
+    expect(intent.ticketTitle.length).toBeLessThanOrEqual(160);
+    expect(intent.priority).toBe('high');
+    expect(intent.labels).toEqual(['agent-delegated', 'agent-message', 'high']);
+  });
+
+  it('derives useful ticket titles from direct "I need a/the" assignments', () => {
+    expect(
+      classifyColleagueAssignment(
+        "Chase, I need a technical audit of ClipForge immediately. Confirm you can execute this and provide a Go/No-Go.",
+      ),
+    ).toMatchObject({
+      shouldCreateTicket: true,
+      ticketTitle: 'technical audit of ClipForge immediately',
+      priority: 'critical',
+    });
+
+    expect(
+      classifyColleagueAssignment(
+        "Carolyn, I need the Blitzscale marketing framework for ClipForge. Define acquisition channels and CAC targets.",
+      ),
+    ).toMatchObject({
+      shouldCreateTicket: true,
+      ticketTitle: 'Blitzscale marketing framework for ClipForge',
+      priority: 'high',
+    });
+  });
+
   it('leaves casual colleague updates as chat-only messages', () => {
     const intent = classifyColleagueAssignment('Thanks for the context. I will read it.');
 

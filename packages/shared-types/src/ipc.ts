@@ -811,6 +811,16 @@ export interface AssignTicketRequest {
   assigneeId: string;
 }
 
+export interface AddTicketParticipantRequest {
+  ticketId: string;
+  employeeId: string;
+}
+
+export interface RemoveTicketParticipantRequest {
+  ticketId: string;
+  employeeId: string;
+}
+
 export interface CloseTicketRequest {
   ticketId: string;
 }
@@ -840,6 +850,7 @@ export interface GetTicketRequest {
 export interface TicketDetail extends Ticket {
   messages: ChatMessage[];
   assignee: Employee | null;
+  participants: Employee[];
 }
 
 // ---------------------------------------------------------------------------
@@ -2606,6 +2617,14 @@ export interface IpcContract {
     request: AssignTicketRequest;
     response: undefined;
   };
+  'tickets.addParticipant': {
+    request: AddTicketParticipantRequest;
+    response: undefined;
+  };
+  'tickets.removeParticipant': {
+    request: RemoveTicketParticipantRequest;
+    response: undefined;
+  };
   'tickets.close': {
     request: CloseTicketRequest;
     response: undefined;
@@ -3317,6 +3336,10 @@ export interface TeamXApi {
     update(req: UpdateTicketRequest): Promise<void>;
     /** Assign a ticket to an employee. Creates ticket thread and enqueues WorkItem. */
     assign(req: AssignTicketRequest): Promise<void>;
+    /** Add an employee to the ticket discussion and wake them into the thread. */
+    addParticipant(req: AddTicketParticipantRequest): Promise<void>;
+    /** Remove an employee from the ticket discussion. */
+    removeParticipant(req: RemoveTicketParticipantRequest): Promise<void>;
     /** Close a ticket (sets status to 'done' and records closedAt). */
     close(ticketId: string): Promise<void>;
     /** Reopen a previously closed ticket. */

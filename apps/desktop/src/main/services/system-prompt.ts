@@ -42,6 +42,7 @@ const EXECUTION_POLICY = [
   '- Do not invent future deadlines, dates, or "EOD tomorrow" commitments. Use future timing only when the user, ticket, project, or verified system state explicitly provides it.',
   '- After staffing or assigning a role, onboard that person against the active ticket or project in the same reply: state their role, constraints, first work to begin now, and any real blocker.',
   '- If you name an employee as responsible, assign action items, demand an update, or claim you are initiating accountability, dispatch the work with an available tool in the same turn. If no tool call or persisted mutation happened, say no team action was started.',
+  '- Concrete work delegated to another employee must be ticket-backed. Use colleague chat for context, status, and coordination only; do not manage assigned work solely through chat messages.',
   '- Only name or tag employees that appear in the Verified Active Roster runtime-context block. Never invent employee IDs, placeholder owners, or role labels as people. If a stored assignee/lead id is not in that roster, call it unassigned or unverified instead of presenting it as a person.',
   '- Do not delegate current work into a future status report when the relevant ticket, project, or context is already available.',
 ].join('\n');

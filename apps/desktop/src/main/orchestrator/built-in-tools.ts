@@ -117,6 +117,7 @@ const ASSIGNMENT_PATTERNS = [
   /\bdelegat(?:e|ing|ed)\b/i,
   /\byour\s+immediate\s+task\b/i,
   /\bi\s+need\s+(?:you\s+to|a|an|the)\b/i,
+  /(?:^|[.!?]\s+)(?:[A-Za-z][\w .'-]{0,80},\s*)?(?:analyze|assess|audit|build|create|define|deliver|determine|develop|draft|ensure|fix|identify|implement|investigate|prepare|provide|report|review|ship|write)\b/i,
   /\bplease\s+(?:audit|review|build|fix|ship|implement|investigate|determine|ensure|prepare|report)\b/i,
   /\breport\s+back\b/i,
   /\bcritical\s+project\b/i,
@@ -127,7 +128,8 @@ const ASSIGNMENT_PATTERNS = [
 const CRITICAL_PATTERNS = [
   /\bcritical\b/i,
   /\basap\b/i,
-  /\bimmediate(?:ly)?\b/i,
+  /\bimmediately\b/i,
+  /\bimmediate\s+(?:action|execution|follow-?up|need|next action|pivot|priority|task|work)\b/i,
   /\burgent(?:ly)?\b/i,
   /\bnow\b/i,
   /\btoday\b/i,
@@ -162,8 +164,10 @@ function deriveDelegatedTicketTitle(message: string, subject?: string): string {
   const directTask = sentenceFromPattern(message, [
     /\byour\s+immediate\s+task\s+is\s+to\s+([^.!?\n]+)/i,
     /\bi\s+need\s+you\s+to\s+([^.!?\n]+)/i,
+    /\bi\s+need\s+(?:a|an|the)\s+([^.!?\n]+)/i,
     /\bplease\s+([^.!?\n]+)/i,
     /\btask\s*:\s*([^.!?\n]+)/i,
+    /(?:^|[.!?]\s+)(?:[A-Za-z][\w .'-]{0,80},\s*)?((?:analyze|assess|audit|build|create|define|deliver|determine|develop|draft|ensure|fix|identify|implement|investigate|prepare|provide|report|review|ship|write)\b[^.!?\n]+)/i,
   ]);
   if (directTask) return trimTitle(directTask);
 
