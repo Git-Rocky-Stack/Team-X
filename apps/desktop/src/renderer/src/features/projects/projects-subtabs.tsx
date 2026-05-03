@@ -1,6 +1,5 @@
-import { Kanban, Target } from 'lucide-react';
+import { CalendarDays, Kanban, Target } from 'lucide-react';
 import type { ComponentType } from 'react';
-
 
 import { type ProjectsSubview, useAppStore } from '@/store/app-store.js';
 
@@ -13,6 +12,7 @@ interface SubtabDef {
 const SUBTABS: SubtabDef[] = [
   { label: 'Kanban', icon: Kanban, subview: 'kanban' },
   { label: 'Goals', icon: Target, subview: 'goals' },
+  { label: 'Schedule', icon: CalendarDays, subview: 'schedule' },
 ];
 
 export function ProjectsSubtabs() {

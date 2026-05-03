@@ -1,15 +1,17 @@
 import type { Employee } from '@team-x/shared-types';
 import { useState } from 'react';
 
-
 import { CreateProjectDialog } from './create-project-dialog.js';
 import { GoalsView } from './goals-view.js';
 import { ProjectDetailPanel } from './project-detail.js';
 import { ProjectsKanban } from './projects-kanban.js';
 import { ProjectsSubtabs } from './projects-subtabs.js';
+import { ScheduleView } from './schedule-view.js';
 
 import { useGoals } from '@/hooks/use-goals.js';
 import { useProjectEventSync, useProjects } from '@/hooks/use-projects.js';
+import { useScheduleEventSync } from '@/hooks/use-schedule.js';
+import { useTickets } from '@/hooks/use-tickets.js';
 import { useAppStore } from '@/store/app-store.js';
 
 interface ProjectsViewProps {
@@ -20,7 +22,9 @@ interface ProjectsViewProps {
 export function ProjectsView({ companyId, employees }: ProjectsViewProps) {
   const { data: projects = [], isLoading, isError, refetch } = useProjects(companyId);
   const { data: goals = [] } = useGoals(companyId);
+  const { data: tickets = [] } = useTickets(companyId);
   useProjectEventSync(companyId);
+  useScheduleEventSync(companyId);
   const projectsSubview = useAppStore((s) => s.projectsSubview);
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const [createOpen, setCreateOpen] = useState(false);
@@ -62,6 +66,18 @@ export function ProjectsView({ companyId, employees }: ProjectsViewProps) {
   function renderSubview() {
     if (projectsSubview === 'goals') {
       return <GoalsView companyId={companyId} employees={employees} />;
+    }
+
+    if (projectsSubview === 'schedule') {
+      return (
+        <ScheduleView
+          companyId={companyId}
+          employees={employees}
+          tickets={tickets}
+          projects={projects}
+          goals={goals}
+        />
+      );
     }
 
     return (

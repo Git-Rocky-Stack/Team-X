@@ -81,6 +81,7 @@ import type {
   CompaniesUpdateRequest,
   CompanyCloudLinkStatus,
   CompanySharingReadinessSummary,
+  CompleteScheduleItemRequest,
   CopilotAskArgs,
   CopilotAskResult,
   CopilotConfigureArgs,
@@ -101,12 +102,15 @@ import type {
   CreateProjectResponse,
   CreateRoutineRequest,
   CreateRuntimeProfileRequest,
+  CreateScheduleItemRequest,
+  CreateScheduleItemResponse,
   CreateTicketRequest,
   CreateTicketResponse,
   DashboardEvent,
   DashboardEventListener,
   DeleteRoutineRequest,
   DeleteRuntimeProfileRequest,
+  DeleteScheduleItemRequest,
   DetachFileRequest,
   EffectiveAuthoritySnapshot,
   EmployeeRuntimeBinding,
@@ -155,6 +159,7 @@ import type {
   ListProviderModelsResponse,
   ListRoutineRunsRequest,
   ListRunCheckpointsRequest,
+  ListScheduleItemsRequest,
   ListSkillAssignmentsRequest,
   McpServerSummary,
   McpTemplateSummary,
@@ -197,6 +202,7 @@ import type {
   RuntimeOperationsSnapshot,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
+  ScheduleItem,
   SelectDirectoryResponse,
   SendChatRequest,
   SendChatResponse,
@@ -256,6 +262,7 @@ import type {
   UpdateProviderRequest,
   UpdateRoutineRequest,
   UpdateRuntimeProfileRequest,
+  UpdateScheduleItemRequest,
   UpdateTicketRequest,
   ValidateRuntimeProfileRequest,
   VaultDownloadResponse,
@@ -349,6 +356,11 @@ const CHANNELS = {
   memoryGetThreadDigest: 'memory.getThreadDigest',
   memoryListRunCheckpoints: 'memory.listRunCheckpoints',
   memoryPackThreadContext: 'memory.packThreadContext',
+  scheduleList: 'schedule.list',
+  scheduleCreate: 'schedule.create',
+  scheduleUpdate: 'schedule.update',
+  scheduleComplete: 'schedule.complete',
+  scheduleDelete: 'schedule.delete',
   employeesCreate: 'employees.create',
   employeesFire: 'employees.fire',
   employeesUpdate: 'employees.update',
@@ -676,6 +688,22 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.memoryListRunCheckpoints, req) as Promise<RunCheckpoint[]>,
       packThreadContext: (req: PackThreadContextRequest) =>
         ipc.invoke(CHANNELS.memoryPackThreadContext, req) as Promise<PackedThreadContext>,
+    },
+    schedule: {
+      list: (req: ListScheduleItemsRequest) =>
+        ipc.invoke(CHANNELS.scheduleList, req) as Promise<ScheduleItem[]>,
+      create: (req: CreateScheduleItemRequest) =>
+        ipc.invoke(CHANNELS.scheduleCreate, req) as Promise<CreateScheduleItemResponse>,
+      update: (req: UpdateScheduleItemRequest) =>
+        ipc.invoke(CHANNELS.scheduleUpdate, req) as Promise<void>,
+      complete: (scheduleItemId: string) =>
+        ipc.invoke(CHANNELS.scheduleComplete, {
+          scheduleItemId,
+        } satisfies CompleteScheduleItemRequest) as Promise<void>,
+      delete: (scheduleItemId: string) =>
+        ipc.invoke(CHANNELS.scheduleDelete, {
+          scheduleItemId,
+        } satisfies DeleteScheduleItemRequest) as Promise<void>,
     },
     employees: {
       list: (companyId: string) =>

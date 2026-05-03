@@ -59,7 +59,7 @@ export type SettingsSectionFocus = 'providers' | 'extensions' | 'memory' | 'port
 export type DashboardSubview = 'cards' | 'timeline' | 'stream' | 'floor' | 'commands';
 
 /** Projects inner subview tabs. */
-export type ProjectsSubview = 'kanban' | 'goals';
+export type ProjectsSubview = 'kanban' | 'goals' | 'schedule';
 
 /** Telemetry inner subview tabs. */
 export type TelemetrySubview = 'company' | 'employees' | 'cost';

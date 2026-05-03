@@ -111,6 +111,7 @@ import {
   createRuntimeProfilesRepo,
 } from './db/repos/runtime-profiles.js';
 import { createRuntimeSessionsRepo } from './db/repos/runtime-sessions.js';
+import { createScheduleItemsRepo } from './db/repos/schedule-items.js';
 import { createSettingsRepo } from './db/repos/settings.js';
 import { createThreadDigestsRepo } from './db/repos/thread-digests.js';
 import { createThreadsRepo } from './db/repos/threads.js';
@@ -566,6 +567,7 @@ app
     const toolCallsRepo = createToolCallsRepo(db);
     const goalsRepo = createGoalsRepo(db);
     const projectsRepo = createProjectsRepo(db);
+    const scheduleItemsRepo = createScheduleItemsRepo(db);
     const meetingsRepo = createMeetingsRepo(db);
     // Phase 5.6 M-C step c — restores Cluster B (M9 org chart) per audit
     // row 2.21. Backs `orgchart.get` IPC + the forthcoming
@@ -1238,6 +1240,8 @@ app
       ticketAttachmentsRepo,
       goalsRepo,
       projectsRepo,
+      scheduleItemsRepo,
+      agentWakeupRequestsRepo,
       meetingsRepo,
       orgEdgesRepo,
       runsRepo,

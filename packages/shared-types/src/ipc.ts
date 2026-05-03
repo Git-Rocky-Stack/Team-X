@@ -102,6 +102,9 @@ import type {
   RuntimeProfileSummary,
   RuntimeProfileValidation,
   RuntimeSession,
+  ScheduleItem,
+  ScheduleItemKind,
+  ScheduleItemStatus,
   SharedOperatorAuthMode,
   SkillAssignment,
   Thread,
@@ -947,6 +950,61 @@ export interface ProactiveGetStateResponse {
   activeWork: number;
   queuedWork: number;
   lastScanAt: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// Schedule / Calendar shapes
+// ---------------------------------------------------------------------------
+
+export interface ListScheduleItemsRequest {
+  companyId: string;
+  from?: number;
+  to?: number;
+  includeDerived?: boolean;
+}
+
+export interface CreateScheduleItemRequest {
+  companyId: string;
+  title: string;
+  description?: string;
+  kind?: ScheduleItemKind;
+  priority?: TicketPriority;
+  startsAt: number;
+  endsAt?: number | null;
+  reminderAt?: number | null;
+  ticketId?: string | null;
+  projectId?: string | null;
+  goalId?: string | null;
+  assigneeId?: string | null;
+}
+
+export interface CreateScheduleItemResponse {
+  scheduleItemId: string;
+  wakeupRequestId: string | null;
+}
+
+export interface UpdateScheduleItemRequest {
+  scheduleItemId: string;
+  title?: string;
+  description?: string;
+  kind?: ScheduleItemKind;
+  status?: ScheduleItemStatus;
+  priority?: TicketPriority;
+  startsAt?: number;
+  endsAt?: number | null;
+  reminderAt?: number | null;
+  ticketId?: string | null;
+  projectId?: string | null;
+  goalId?: string | null;
+  assigneeId?: string | null;
+}
+
+export interface CompleteScheduleItemRequest {
+  scheduleItemId: string;
+}
+
+export interface DeleteScheduleItemRequest {
+  scheduleItemId: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -2183,6 +2241,29 @@ export interface IpcContract {
     request: PackThreadContextRequest;
     response: PackedThreadContext;
   };
+  'schedule.list': {
+    request: ListScheduleItemsRequest;
+    response: ScheduleItem[];
+  };
+  'schedule.create': {
+    request: CreateScheduleItemRequest;
+    response: CreateScheduleItemResponse;
+  };
+  'schedule.update': {
+    request: UpdateScheduleItemRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'schedule.complete': {
+    request: CompleteScheduleItemRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
+  'schedule.delete': {
+    request: DeleteScheduleItemRequest;
+    // biome-ignore lint/suspicious/noConfusingVoidType: idiomatic for this contract
+    response: void;
+  };
   'employees.create': {
     request: HireEmployeeRequest;
     response: HireEmployeeResponse;
@@ -3027,6 +3108,18 @@ export interface TeamXApi {
     listRunCheckpoints(req: ListRunCheckpointsRequest): Promise<RunCheckpoint[]>;
     /** Assemble and bound one thread's context into the next runtime-ready pack. */
     packThreadContext(req: PackThreadContextRequest): Promise<PackedThreadContext>;
+  };
+  schedule: {
+    /** Return calendar entries: manual scheduled work plus ticket/project/goal deadlines. */
+    list(req: ListScheduleItemsRequest): Promise<ScheduleItem[]>;
+    /** Create a manual scheduled item, optionally linked to an employee, ticket, project, or goal. */
+    create(req: CreateScheduleItemRequest): Promise<CreateScheduleItemResponse>;
+    /** Patch one manual scheduled item. Derived deadline entries are read-only. */
+    update(req: UpdateScheduleItemRequest): Promise<void>;
+    /** Complete one manual scheduled task and cancel its pending wakeup, if any. */
+    complete(scheduleItemId: string): Promise<void>;
+    /** Delete one manual scheduled item and cancel its pending wakeup, if any. */
+    delete(scheduleItemId: string): Promise<void>;
   };
   orgchart: {
     /**

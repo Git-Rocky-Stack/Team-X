@@ -107,6 +107,7 @@ import type {
   CompanySettings,
   CompanySharingReadinessSummary,
   CompanyStatus,
+  CompleteScheduleItemRequest,
   CopilotExportRequest,
   CopilotExportResponse,
   CopilotWeightsChangedPayload,
@@ -120,6 +121,8 @@ import type {
   CreateProjectResponse,
   CreateRoutineRequest,
   CreateRuntimeProfileRequest,
+  CreateScheduleItemRequest,
+  CreateScheduleItemResponse,
   CreateTicketRequest,
   CreateTicketResponse,
   DashboardEvent,
@@ -129,6 +132,7 @@ import type {
   DeleteProjectRequest,
   DeleteRoutineRequest,
   DeleteRuntimeProfileRequest,
+  DeleteScheduleItemRequest,
   DetachFileRequest,
   EffectiveAuthoritySnapshot,
   Employee,
@@ -196,6 +200,7 @@ import type {
   ListRunCheckpointsRequest,
   ListRuntimeOperationsRequest,
   ListRuntimeProfilesRequest,
+  ListScheduleItemsRequest,
   ListSkillAssignmentsRequest,
   ListTicketsRequest,
   McpServerSummary,
@@ -240,6 +245,10 @@ import type {
   RuntimeOperationsSnapshot,
   RuntimeProfileSummary,
   RuntimeProfileValidation,
+  ScheduleItem,
+  ScheduleItemKind,
+  ScheduleItemSourceKind,
+  ScheduleItemStatus,
   SendChatRequest,
   SendChatResponse,
   SettingsGetAgenticResponse,
@@ -301,6 +310,7 @@ import type {
   UpdateProviderRequest,
   UpdateRoutineRequest,
   UpdateRuntimeProfileRequest,
+  UpdateScheduleItemRequest,
   UpdateTicketRequest,
   UpsertSkillAssignmentRequest,
   ValidateRuntimeProfileRequest,
@@ -345,6 +355,11 @@ import type {
   EmployeeStatsRow,
   RecentRunRow,
 } from '../db/repos/runs.js';
+import type {
+  CreateScheduleItemInput,
+  ScheduleItemRow,
+  UpdateScheduleItemInput,
+} from '../db/repos/schedule-items.js';
 import type {
   AddThreadMemberInput,
   CreateThreadInput,
@@ -516,6 +531,27 @@ export interface IpcProjectsRepo {
   unlinkTicket(projectId: string, ticketId: string): void;
   listTickets(projectId: string): string[];
   countTicketsByStatus(projectId: string): { total: number; done: number };
+}
+
+export interface IpcScheduleItemsRepo {
+  create(input: CreateScheduleItemInput): string;
+  getById(id: string): ScheduleItemRow | null;
+  listByCompany(companyId: string): ScheduleItemRow[];
+  update(id: string, patch: UpdateScheduleItemInput): void;
+  delete(id: string): void;
+}
+
+export interface IpcAgentWakeupRequestsRepo {
+  create(input: {
+    companyId: string;
+    agentId: string;
+    triggerType: 'routine' | 'ticket_assigned' | 'schedule' | 'manual' | 'goal_decomposed';
+    triggerId?: string;
+    priority?: number;
+    scheduledFor?: number;
+    context?: unknown;
+  }): string;
+  cancel(id: string): void;
 }
 
 /**
@@ -999,6 +1035,8 @@ export interface IpcHandlerDeps {
   ticketAttachmentsRepo: IpcTicketAttachmentsRepo;
   goalsRepo: IpcGoalsRepo;
   projectsRepo: IpcProjectsRepo;
+  scheduleItemsRepo: IpcScheduleItemsRepo;
+  agentWakeupRequestsRepo?: IpcAgentWakeupRequestsRepo;
   meetingsRepo: IpcMeetingsRepo;
   orgEdgesRepo: IpcOrgEdgesRepo;
   runsRepo: IpcRunsRepo;
@@ -1287,6 +1325,16 @@ export interface IpcHandlers {
   memoryListRunCheckpoints(req: ListRunCheckpointsRequest): Promise<RunCheckpoint[]>;
   /** `memory.packThreadContext` — assemble and bound one thread's context. */
   memoryPackThreadContext(req: PackThreadContextRequest): Promise<PackedThreadContext>;
+  /** `schedule.list` — calendar entries from manual schedule rows and source deadlines. */
+  scheduleList(req: ListScheduleItemsRequest): Promise<ScheduleItem[]>;
+  /** `schedule.create` — create manual scheduled work. */
+  scheduleCreate(req: CreateScheduleItemRequest): Promise<CreateScheduleItemResponse>;
+  /** `schedule.update` — patch one manual scheduled work item. */
+  scheduleUpdate(req: UpdateScheduleItemRequest): Promise<void>;
+  /** `schedule.complete` — mark one manual scheduled task complete. */
+  scheduleComplete(req: CompleteScheduleItemRequest): Promise<void>;
+  /** `schedule.delete` — delete one manual scheduled work item. */
+  scheduleDelete(req: DeleteScheduleItemRequest): Promise<void>;
 
   /**
    * `employees.create` — hire a new employee from a role-pack role.
@@ -2176,6 +2224,91 @@ function rowToProject(row: ProjectRow): Project {
   };
 }
 
+const SCHEDULE_ITEM_KINDS: readonly ScheduleItemKind[] = [
+  'task',
+  'deadline',
+  'milestone',
+  'reminder',
+];
+const SCHEDULE_ITEM_STATUSES: readonly ScheduleItemStatus[] = [
+  'scheduled',
+  'completed',
+  'cancelled',
+];
+const SCHEDULE_PRIORITIES: readonly TicketPriority[] = ['low', 'medium', 'high', 'critical'];
+
+function rowToScheduleItem(row: ScheduleItemRow): ScheduleItem {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    title: row.title,
+    description: row.description,
+    kind: row.kind as ScheduleItemKind,
+    status: row.status as ScheduleItemStatus,
+    priority: row.priority as TicketPriority,
+    startsAt: row.startsAt,
+    endsAt: row.endsAt,
+    reminderAt: row.reminderAt,
+    ticketId: row.ticketId,
+    projectId: row.projectId,
+    goalId: row.goalId,
+    assigneeId: row.assigneeId,
+    wakeupRequestId: row.wakeupRequestId,
+    sourceKind: row.sourceKind as ScheduleItemSourceKind,
+    sourceId: row.sourceId,
+    createdById: row.createdById,
+    createdByKind: row.createdByKind as AuthorKind,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    completedAt: row.completedAt,
+  };
+}
+
+function scheduleItemInRange(item: ScheduleItem, from?: number, to?: number): boolean {
+  const itemEnd = item.endsAt ?? item.startsAt;
+  if (typeof from === 'number' && Number.isFinite(from) && itemEnd < from) return false;
+  if (typeof to === 'number' && Number.isFinite(to) && item.startsAt > to) return false;
+  return true;
+}
+
+function normalizeOptionalId(value: unknown, field: string): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') {
+    throw new Error(`[ipc] schedule: ${field} must be a string or null`);
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeScheduleTimestamp(
+  value: unknown,
+  field: string,
+  required: boolean,
+): number | null {
+  if (value === undefined || value === null) {
+    if (required) throw new Error(`[ipc] schedule: ${field} is required`);
+    return null;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    throw new Error(`[ipc] schedule: ${field} must be a positive UNIX ms timestamp`);
+  }
+  return Math.trunc(value);
+}
+
+function schedulePriorityWeight(priority: TicketPriority): number {
+  switch (priority) {
+    case 'critical':
+      return 90;
+    case 'high':
+      return 70;
+    case 'medium':
+      return 50;
+    case 'low':
+      return 30;
+  }
+}
+
 function rowToMeeting(row: MeetingRow): Meeting {
   let attendees: string[] = [];
   try {
@@ -2245,6 +2378,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     ticketAttachmentsRepo,
     goalsRepo,
     projectsRepo,
+    scheduleItemsRepo,
+    agentWakeupRequestsRepo,
     meetingsRepo,
     orgEdgesRepo,
     runsRepo,
@@ -2480,6 +2615,187 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           );
         });
     }
+  }
+
+  function validateScheduleLinkage(
+    companyId: string,
+    links: {
+      ticketId?: string | null;
+      projectId?: string | null;
+      goalId?: string | null;
+      assigneeId?: string | null;
+    },
+  ): void {
+    if (links.ticketId) {
+      const ticket = ticketsRepo.getById(links.ticketId);
+      if (!ticket || ticket.companyId !== companyId) {
+        throw new Error(`[ipc] schedule: ticket not found in company: ${links.ticketId}`);
+      }
+    }
+    if (links.projectId) {
+      const project = projectsRepo.getById(links.projectId);
+      if (!project || project.companyId !== companyId) {
+        throw new Error(`[ipc] schedule: project not found in company: ${links.projectId}`);
+      }
+    }
+    if (links.goalId) {
+      const goal = goalsRepo.getById(links.goalId);
+      if (!goal || goal.companyId !== companyId) {
+        throw new Error(`[ipc] schedule: goal not found in company: ${links.goalId}`);
+      }
+    }
+    if (links.assigneeId) {
+      const employee = employeesRepo.getById(links.assigneeId);
+      if (!employee || employee.companyId !== companyId || employee.isSystem) {
+        throw new Error(`[ipc] schedule: assignee not found in company: ${links.assigneeId}`);
+      }
+    }
+  }
+
+  function maybeQueueScheduleWakeup(item: ScheduleItem): string | null {
+    if (!agentWakeupRequestsRepo || !item.assigneeId || item.status !== 'scheduled') return null;
+    return agentWakeupRequestsRepo.create({
+      companyId: item.companyId,
+      agentId: item.assigneeId,
+      triggerType: 'schedule',
+      triggerId: item.id,
+      priority: schedulePriorityWeight(item.priority),
+      scheduledFor: Math.max(item.startsAt, Date.now()),
+      context: {
+        companyId: item.companyId,
+        goalId: item.goalId ?? undefined,
+        projectId: item.projectId ?? undefined,
+        sourceKind: 'schedule',
+        sourceRefId: item.id,
+        metadata: {
+          scheduleItemId: item.id,
+          ticketId: item.ticketId,
+          title: item.title,
+        },
+      },
+    });
+  }
+
+  function cancelScheduleWakeup(wakeupRequestId: string | null | undefined): void {
+    if (!wakeupRequestId || !agentWakeupRequestsRepo) return;
+    try {
+      agentWakeupRequestsRepo.cancel(wakeupRequestId);
+    } catch (err) {
+      console.error(`[ipc] schedule: failed to cancel wakeup ${wakeupRequestId}:`, err);
+    }
+  }
+
+  function attachWakeupIfNeeded(itemId: string): string | null {
+    const row = scheduleItemsRepo.getById(itemId);
+    if (!row) return null;
+    const item = rowToScheduleItem(row);
+    const wakeupRequestId = maybeQueueScheduleWakeup(item);
+    if (wakeupRequestId) {
+      scheduleItemsRepo.update(item.id, { wakeupRequestId });
+    }
+    return wakeupRequestId;
+  }
+
+  function buildDerivedScheduleItems(companyId: string): ScheduleItem[] {
+    const now = Date.now();
+    const ticketItems = ticketsRepo
+      .listByCompany(companyId)
+      .filter((ticket) => ticket.dueAt !== null && ticket.dueAt > 0)
+      .map(
+        (ticket): ScheduleItem => ({
+          id: `ticket-due-${ticket.id}`,
+          companyId,
+          title: `Ticket due: ${ticket.title}`,
+          description: ticket.description,
+          kind: 'deadline',
+          status: ticket.status === 'done' ? 'completed' : 'scheduled',
+          priority: ticket.priority as TicketPriority,
+          startsAt: ticket.dueAt ?? now,
+          endsAt: null,
+          reminderAt: null,
+          ticketId: ticket.id,
+          projectId: null,
+          goalId: ticket.goalId,
+          assigneeId: ticket.assigneeId,
+          wakeupRequestId: null,
+          sourceKind: 'ticket_due',
+          sourceId: ticket.id,
+          createdById: ticket.reporterId,
+          createdByKind: ticket.reporterKind as AuthorKind,
+          createdAt: ticket.createdAt,
+          updatedAt: ticket.updatedAt,
+          completedAt: ticket.closedAt,
+        }),
+      );
+
+    const projectItems = projectsRepo
+      .listByCompany(companyId)
+      .filter((project) => project.targetDate !== null && project.targetDate > 0)
+      .map(
+        (project): ScheduleItem => ({
+          id: `project-target-${project.id}`,
+          companyId,
+          title: `Project target: ${project.title}`,
+          description: project.description,
+          kind: 'milestone',
+          status:
+            project.status === 'completed' || project.status === 'archived'
+              ? 'completed'
+              : 'scheduled',
+          priority: project.priority as TicketPriority,
+          startsAt: project.targetDate ?? now,
+          endsAt: null,
+          reminderAt: null,
+          ticketId: null,
+          projectId: project.id,
+          goalId: project.goalId,
+          assigneeId: project.leadId,
+          wakeupRequestId: null,
+          sourceKind: 'project_target',
+          sourceId: project.id,
+          createdById: HUMAN_USER_ID,
+          createdByKind: 'user',
+          createdAt: project.createdAt,
+          updatedAt: project.updatedAt,
+          completedAt: project.status === 'completed' ? project.updatedAt : null,
+        }),
+      );
+
+    const goalItems = goalsRepo
+      .listByCompany(companyId)
+      .filter((goal) => goal.targetDate !== null && goal.targetDate > 0)
+      .map(
+        (goal): ScheduleItem => ({
+          id: `goal-target-${goal.id}`,
+          companyId,
+          title: `Goal target: ${goal.title}`,
+          description: goal.description,
+          kind: 'milestone',
+          status:
+            goal.status === 'achieved' || goal.status === 'abandoned' ? 'completed' : 'scheduled',
+          priority:
+            goal.status === 'active' && goal.targetDate !== null && goal.targetDate < now
+              ? 'high'
+              : 'medium',
+          startsAt: goal.targetDate ?? now,
+          endsAt: null,
+          reminderAt: null,
+          ticketId: null,
+          projectId: null,
+          goalId: goal.id,
+          assigneeId: null,
+          wakeupRequestId: null,
+          sourceKind: 'goal_target',
+          sourceId: goal.id,
+          createdById: HUMAN_USER_ID,
+          createdByKind: 'user',
+          createdAt: goal.createdAt,
+          updatedAt: goal.updatedAt,
+          completedAt: goal.status === 'achieved' ? goal.updatedAt : null,
+        }),
+      );
+
+    return [...ticketItems, ...projectItems, ...goalItems];
   }
 
   return {
@@ -3383,6 +3699,222 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       return contextPackerService.packContext({
         context,
         targetTokenBudget: req.targetTokenBudget,
+      });
+    },
+
+    async scheduleList(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] schedule.list: companyId is required');
+      }
+      assertCompanyActive(companiesRepo, req.companyId, 'schedule.list');
+      const manualItems = scheduleItemsRepo.listByCompany(req.companyId).map(rowToScheduleItem);
+      const derivedItems =
+        req.includeDerived === false ? [] : buildDerivedScheduleItems(req.companyId);
+      return [...manualItems, ...derivedItems]
+        .filter((item) => scheduleItemInRange(item, req.from, req.to))
+        .sort((a, b) => a.startsAt - b.startsAt || a.title.localeCompare(b.title));
+    },
+
+    async scheduleCreate(req) {
+      if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
+        throw new Error('[ipc] schedule.create: companyId is required');
+      }
+      assertCompanyActive(companiesRepo, req.companyId, 'schedule.create');
+      if (typeof req.title !== 'string' || req.title.trim().length === 0) {
+        throw new Error('[ipc] schedule.create: title is required');
+      }
+      const title = req.title.trim();
+      if (title.length > 160) {
+        throw new Error('[ipc] schedule.create: title must be 160 characters or fewer');
+      }
+      const kind = req.kind ?? 'task';
+      if (!SCHEDULE_ITEM_KINDS.includes(kind)) {
+        throw new Error('[ipc] schedule.create: kind is invalid');
+      }
+      const priority = req.priority ?? 'medium';
+      if (!SCHEDULE_PRIORITIES.includes(priority)) {
+        throw new Error('[ipc] schedule.create: priority is invalid');
+      }
+      const startsAt = normalizeScheduleTimestamp(req.startsAt, 'startsAt', true);
+      const endsAt = normalizeScheduleTimestamp(req.endsAt, 'endsAt', false);
+      const reminderAt = normalizeScheduleTimestamp(req.reminderAt, 'reminderAt', false);
+      if (startsAt === null) {
+        throw new Error('[ipc] schedule.create: startsAt is required');
+      }
+      if (endsAt !== null && endsAt < startsAt) {
+        throw new Error('[ipc] schedule.create: endsAt must be after startsAt');
+      }
+
+      const ticketId = normalizeOptionalId(req.ticketId, 'ticketId') ?? null;
+      const projectId = normalizeOptionalId(req.projectId, 'projectId') ?? null;
+      const goalId = normalizeOptionalId(req.goalId, 'goalId') ?? null;
+      const assigneeId = normalizeOptionalId(req.assigneeId, 'assigneeId') ?? null;
+      validateScheduleLinkage(req.companyId, { ticketId, projectId, goalId, assigneeId });
+
+      const scheduleItemId = scheduleItemsRepo.create({
+        companyId: req.companyId,
+        title,
+        description: req.description?.trim() ?? '',
+        kind,
+        priority,
+        startsAt,
+        endsAt,
+        reminderAt,
+        ticketId,
+        projectId,
+        goalId,
+        assigneeId,
+        createdById: HUMAN_USER_ID,
+        createdByKind: 'user',
+      });
+      const wakeupRequestId = attachWakeupIfNeeded(scheduleItemId);
+
+      emitUserAuditEvent('schedule.created', req.companyId, {
+        scheduleItemId,
+        title,
+        startsAt,
+        ticketId,
+        projectId,
+        goalId,
+        assigneeId,
+        wakeupRequestId,
+        createdAt: Date.now(),
+      });
+
+      return { scheduleItemId, wakeupRequestId };
+    },
+
+    async scheduleUpdate(req) {
+      if (typeof req.scheduleItemId !== 'string' || req.scheduleItemId.length === 0) {
+        throw new Error('[ipc] schedule.update: scheduleItemId is required');
+      }
+      const current = scheduleItemsRepo.getById(req.scheduleItemId);
+      if (!current) {
+        throw new Error(`[ipc] schedule.update: schedule item not found: ${req.scheduleItemId}`);
+      }
+      assertCompanyActive(companiesRepo, current.companyId, 'schedule.update');
+      const patch: UpdateScheduleItemInput = {};
+
+      if (req.title !== undefined) {
+        if (typeof req.title !== 'string' || req.title.trim().length === 0) {
+          throw new Error('[ipc] schedule.update: title must be non-empty when provided');
+        }
+        const title = req.title.trim();
+        if (title.length > 160) {
+          throw new Error('[ipc] schedule.update: title must be 160 characters or fewer');
+        }
+        patch.title = title;
+      }
+      if (req.description !== undefined) patch.description = req.description.trim();
+      if (req.kind !== undefined) {
+        if (!SCHEDULE_ITEM_KINDS.includes(req.kind)) {
+          throw new Error('[ipc] schedule.update: kind is invalid');
+        }
+        patch.kind = req.kind;
+      }
+      if (req.status !== undefined) {
+        if (!SCHEDULE_ITEM_STATUSES.includes(req.status)) {
+          throw new Error('[ipc] schedule.update: status is invalid');
+        }
+        patch.status = req.status;
+        patch.completedAt =
+          req.status === 'completed' || req.status === 'cancelled' ? Date.now() : null;
+      }
+      if (req.priority !== undefined) {
+        if (!SCHEDULE_PRIORITIES.includes(req.priority)) {
+          throw new Error('[ipc] schedule.update: priority is invalid');
+        }
+        patch.priority = req.priority;
+      }
+      const startsAt =
+        req.startsAt !== undefined
+          ? normalizeScheduleTimestamp(req.startsAt, 'startsAt', true)
+          : current.startsAt;
+      const endsAt =
+        req.endsAt !== undefined
+          ? normalizeScheduleTimestamp(req.endsAt, 'endsAt', false)
+          : current.endsAt;
+      if (startsAt === null) {
+        throw new Error('[ipc] schedule.update: startsAt is required');
+      }
+      if (endsAt !== null && endsAt < startsAt) {
+        throw new Error('[ipc] schedule.update: endsAt must be after startsAt');
+      }
+      if (req.startsAt !== undefined) patch.startsAt = startsAt;
+      if (req.endsAt !== undefined) patch.endsAt = endsAt;
+      if (req.reminderAt !== undefined) {
+        patch.reminderAt = normalizeScheduleTimestamp(req.reminderAt, 'reminderAt', false);
+      }
+      const ticketId =
+        req.ticketId !== undefined
+          ? normalizeOptionalId(req.ticketId, 'ticketId')
+          : current.ticketId;
+      const projectId =
+        req.projectId !== undefined
+          ? normalizeOptionalId(req.projectId, 'projectId')
+          : current.projectId;
+      const goalId =
+        req.goalId !== undefined ? normalizeOptionalId(req.goalId, 'goalId') : current.goalId;
+      const assigneeId =
+        req.assigneeId !== undefined
+          ? normalizeOptionalId(req.assigneeId, 'assigneeId')
+          : current.assigneeId;
+      validateScheduleLinkage(current.companyId, { ticketId, projectId, goalId, assigneeId });
+      if (req.ticketId !== undefined) patch.ticketId = ticketId;
+      if (req.projectId !== undefined) patch.projectId = projectId;
+      if (req.goalId !== undefined) patch.goalId = goalId;
+      if (req.assigneeId !== undefined) patch.assigneeId = assigneeId;
+
+      cancelScheduleWakeup(current.wakeupRequestId);
+      patch.wakeupRequestId = null;
+      scheduleItemsRepo.update(req.scheduleItemId, patch);
+      const wakeupRequestId = attachWakeupIfNeeded(req.scheduleItemId);
+
+      emitUserAuditEvent('schedule.updated', current.companyId, {
+        scheduleItemId: req.scheduleItemId,
+        patchedKeys: Object.keys(patch).filter((key) => key !== 'wakeupRequestId'),
+        wakeupRequestId,
+        updatedAt: Date.now(),
+      });
+    },
+
+    async scheduleComplete(req) {
+      if (typeof req.scheduleItemId !== 'string' || req.scheduleItemId.length === 0) {
+        throw new Error('[ipc] schedule.complete: scheduleItemId is required');
+      }
+      const item = scheduleItemsRepo.getById(req.scheduleItemId);
+      if (!item) {
+        throw new Error(`[ipc] schedule.complete: schedule item not found: ${req.scheduleItemId}`);
+      }
+      assertCompanyActive(companiesRepo, item.companyId, 'schedule.complete');
+      cancelScheduleWakeup(item.wakeupRequestId);
+      const completedAt = Date.now();
+      scheduleItemsRepo.update(req.scheduleItemId, {
+        status: 'completed',
+        completedAt,
+        wakeupRequestId: null,
+      });
+      emitUserAuditEvent('schedule.completed', item.companyId, {
+        scheduleItemId: req.scheduleItemId,
+        completedAt,
+      });
+    },
+
+    async scheduleDelete(req) {
+      if (typeof req.scheduleItemId !== 'string' || req.scheduleItemId.length === 0) {
+        throw new Error('[ipc] schedule.delete: scheduleItemId is required');
+      }
+      const item = scheduleItemsRepo.getById(req.scheduleItemId);
+      if (!item) {
+        throw new Error(`[ipc] schedule.delete: schedule item not found: ${req.scheduleItemId}`);
+      }
+      assertCompanyActive(companiesRepo, item.companyId, 'schedule.delete');
+      cancelScheduleWakeup(item.wakeupRequestId);
+      scheduleItemsRepo.delete(req.scheduleItemId);
+      emitUserAuditEvent('schedule.deleted', item.companyId, {
+        scheduleItemId: req.scheduleItemId,
+        title: item.title,
+        deletedAt: Date.now(),
       });
     },
 

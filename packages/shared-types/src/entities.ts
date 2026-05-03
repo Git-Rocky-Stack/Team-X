@@ -143,6 +143,39 @@ export type TicketStatus = 'open' | 'in-progress' | 'blocked' | 'done';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 
 // ---------------------------------------------------------------------------
+// Schedule / Calendar
+// ---------------------------------------------------------------------------
+
+export type ScheduleItemKind = 'task' | 'deadline' | 'milestone' | 'reminder';
+export type ScheduleItemStatus = 'scheduled' | 'completed' | 'cancelled';
+export type ScheduleItemSourceKind = 'manual' | 'ticket_due' | 'project_target' | 'goal_target';
+
+export interface ScheduleItem {
+  id: string;
+  companyId: string;
+  title: string;
+  description: string;
+  kind: ScheduleItemKind;
+  status: ScheduleItemStatus;
+  priority: TicketPriority;
+  startsAt: number;
+  endsAt: number | null;
+  reminderAt: number | null;
+  ticketId: string | null;
+  projectId: string | null;
+  goalId: string | null;
+  assigneeId: string | null;
+  wakeupRequestId: string | null;
+  sourceKind: ScheduleItemSourceKind;
+  sourceId: string | null;
+  createdById: string;
+  createdByKind: AuthorKind;
+  createdAt: number;
+  updatedAt: number;
+  completedAt: number | null;
+}
+
+// ---------------------------------------------------------------------------
 // Goals & Projects (Phase 3 — M15)
 // ---------------------------------------------------------------------------
 

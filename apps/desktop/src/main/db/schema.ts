@@ -1138,6 +1138,65 @@ export const projectTickets = sqliteTable('project_tickets', {
 });
 
 // ---------------------------------------------------------------------------
+// Phase 6 — Scheduler / Calendar
+// ---------------------------------------------------------------------------
+
+/**
+ * User-scheduled work and reminders. Existing ticket due dates, project
+ * target dates, and goal target dates remain on their source tables and are
+ * projected into the calendar at read time; this table stores manual calendar
+ * entries that can optionally link to those source records.
+ */
+export const scheduleItems = sqliteTable(
+  'schedule_items',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description').notNull().default(''),
+    /** task | deadline | milestone | reminder */
+    kind: text('kind').notNull().default('task'),
+    /** scheduled | completed | cancelled */
+    status: text('status').notNull().default('scheduled'),
+    /** low | medium | high | critical */
+    priority: text('priority').notNull().default('medium'),
+    startsAt: integer('starts_at').notNull(),
+    endsAt: integer('ends_at'),
+    reminderAt: integer('reminder_at'),
+    ticketId: text('ticket_id').references(() => tickets.id, { onDelete: 'set null' }),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    goalId: text('goal_id').references(() => goals.id, { onDelete: 'set null' }),
+    assigneeId: text('assignee_id').references(() => employees.id, { onDelete: 'set null' }),
+    wakeupRequestId: text('wakeup_request_id').references(() => agentWakeupRequests.id, {
+      onDelete: 'set null',
+    }),
+    sourceKind: text('source_kind').notNull().default('manual'),
+    sourceId: text('source_id'),
+    createdById: text('created_by_id').notNull(),
+    /** user | employee | system */
+    createdByKind: text('created_by_kind').notNull().default('user'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    completedAt: integer('completed_at'),
+  },
+  (table) => ({
+    companyIdx: index('idx_schedule_items_company').on(table.companyId),
+    companyStartsIdx: index('idx_schedule_items_company_starts').on(
+      table.companyId,
+      table.startsAt,
+    ),
+    companyStatusIdx: index('idx_schedule_items_company_status').on(table.companyId, table.status),
+    ticketIdx: index('idx_schedule_items_ticket').on(table.ticketId),
+    projectIdx: index('idx_schedule_items_project').on(table.projectId),
+    goalIdx: index('idx_schedule_items_goal').on(table.goalId),
+    assigneeIdx: index('idx_schedule_items_assignee').on(table.assigneeId),
+    wakeupIdx: index('idx_schedule_items_wakeup').on(table.wakeupRequestId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
 // Phase 3 — M16: Meetings
 // ---------------------------------------------------------------------------
 

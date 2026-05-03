@@ -21,6 +21,13 @@ const PRIORITIES = [
   { value: 'critical', label: 'Critical' },
 ];
 
+function dateInputToTimestamp(value: string): number | null {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, 12, 0, 0, 0).getTime();
+}
+
 export function CreateTicketDialog({
   open,
   onOpenChange,
@@ -32,6 +39,7 @@ export function CreateTicketDialog({
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
   const [assigneeId, setAssigneeId] = useState('');
+  const [dueDate, setDueDate] = useState('');
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +52,7 @@ export function CreateTicketDialog({
         description: description.trim() || undefined,
         priority,
         assigneeId: assigneeId || undefined,
+        dueAt: dateInputToTimestamp(dueDate) ?? undefined,
       },
       {
         onSuccess: () => {
@@ -51,6 +60,7 @@ export function CreateTicketDialog({
           setDescription('');
           setPriority('medium');
           setAssigneeId('');
+          setDueDate('');
           onOpenChange(false);
         },
       },
@@ -142,6 +152,22 @@ export function CreateTicketDialog({
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="ticket-due-date"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Due Date
+              </label>
+              <Input
+                id="ticket-due-date"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="mt-1 text-sm"
+              />
             </div>
 
             <div className="mt-2 flex justify-end gap-2">

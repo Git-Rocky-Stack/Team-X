@@ -28,6 +28,7 @@ export function useCreateTicket() {
     mutationFn: (req: Parameters<typeof ipc.tickets.create>[0]) => ipc.tickets.create(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tickets'] });
+      qc.invalidateQueries({ queryKey: ['schedule'] });
     },
   });
 }
@@ -39,6 +40,7 @@ export function useAssignTicket() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tickets'] });
       qc.invalidateQueries({ queryKey: ['ticket-detail'] });
+      qc.invalidateQueries({ queryKey: ['schedule'] });
     },
   });
 }
@@ -74,6 +76,7 @@ export function useUpdateTicketStatus() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tickets'] });
       qc.invalidateQueries({ queryKey: ['ticket-detail'] });
+      qc.invalidateQueries({ queryKey: ['schedule'] });
     },
   });
 }
@@ -85,6 +88,7 @@ export function useCloseTicket() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tickets'] });
       qc.invalidateQueries({ queryKey: ['ticket-detail'] });
+      qc.invalidateQueries({ queryKey: ['schedule'] });
     },
   });
 }

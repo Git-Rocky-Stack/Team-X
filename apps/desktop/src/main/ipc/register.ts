@@ -114,6 +114,11 @@ const REQUEST_CHANNELS = [
   'memory.getThreadDigest',
   'memory.listRunCheckpoints',
   'memory.packThreadContext',
+  'schedule.list',
+  'schedule.create',
+  'schedule.update',
+  'schedule.complete',
+  'schedule.delete',
   'employees.create',
   'employees.fire',
   'employees.update',
@@ -607,6 +612,41 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'memory.packThreadContext',
     async (_event, request: import('@team-x/shared-types').PackThreadContextRequest) => {
       return handlers.memoryPackThreadContext(request);
+    },
+  );
+
+  ipcMain.handle(
+    'schedule.list',
+    async (_event, request: import('@team-x/shared-types').ListScheduleItemsRequest) => {
+      return handlers.scheduleList(request);
+    },
+  );
+
+  ipcMain.handle(
+    'schedule.create',
+    async (_event, request: import('@team-x/shared-types').CreateScheduleItemRequest) => {
+      return handlers.scheduleCreate(request);
+    },
+  );
+
+  ipcMain.handle(
+    'schedule.update',
+    async (_event, request: import('@team-x/shared-types').UpdateScheduleItemRequest) => {
+      return handlers.scheduleUpdate(request);
+    },
+  );
+
+  ipcMain.handle(
+    'schedule.complete',
+    async (_event, request: import('@team-x/shared-types').CompleteScheduleItemRequest) => {
+      return handlers.scheduleComplete(request);
+    },
+  );
+
+  ipcMain.handle(
+    'schedule.delete',
+    async (_event, request: import('@team-x/shared-types').DeleteScheduleItemRequest) => {
+      return handlers.scheduleDelete(request);
     },
   );
 

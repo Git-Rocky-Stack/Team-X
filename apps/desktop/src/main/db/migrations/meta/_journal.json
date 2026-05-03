@@ -225,6 +225,13 @@
       "when": 1778649600000,
       "tag": "0031_agent_wakeup_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1778736000000,
+      "tag": "0032_schedule_items",
+      "breakpoints": true
     }
   ]
 }
