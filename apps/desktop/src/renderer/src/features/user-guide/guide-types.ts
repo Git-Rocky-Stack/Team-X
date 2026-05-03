@@ -4,6 +4,7 @@ import type {
   ActiveView,
   AutonomySubview,
   DashboardSubview,
+  ProjectsSubview,
   SettingsSectionFocus,
   TelemetrySubview,
 } from '@/store/app-store.js';
@@ -48,6 +49,7 @@ export type GuideAction =
       kind: 'view';
       view: ActiveView;
       dashboardSubview?: DashboardSubview;
+      projectsSubview?: ProjectsSubview;
       telemetrySubview?: TelemetrySubview;
       autonomySubview?: AutonomySubview;
     }

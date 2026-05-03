@@ -6,7 +6,7 @@ This guide walks you through installing Team-X and having your first conversatio
 
 ### Download
 
-Download the installer for your platform from the [Releases page](https://github.com/strategia-x/team-x/releases):
+Download the installer for your platform from the Team-X releases page:
 
 - **Windows**: Run the `.exe` installer (NSIS). Follow the prompts.
 - **macOS**: Open the `.dmg` and drag Team-X to Applications.
@@ -40,7 +40,7 @@ You'll see the Dashboard with two employee cards. The app is ready.
 
 Team-X is designed to work fully offline with local models. The recommended setup:
 
-1. Install [Ollama](https://ollama.com) for your platform
+1. Install Ollama for your platform
 2. Start the Ollama service:
    ```bash
    ollama serve
@@ -73,8 +73,8 @@ The top bar contains navigation tabs:
 | Dashboard | Mission Control, timeline, stream, floor, commands, live queues, runtime signals, and telemetry snapshots |
 | Autonomy | Doctor checks, benchmarks, agent self-improvement, runtimes, routines, budgets, approvals, artifacts, memory, and operator access |
 | Org | Org chart visualization and employee structure |
-| Projects | Project cards, goals, linked tickets, and progress tracking |
-| Tickets | Kanban board, ticket detail, participants, attachments, comments, and ticket-thread discussion |
+| Projects | Project cards, goals, linked tickets, target dates, schedule calendar, and progress tracking |
+| Tickets | Kanban board, ticket detail, due dates, participants, attachments, comments, and ticket-thread discussion |
 | Meetings | Meeting history and the "Call Meeting" action |
 | Chat | Direct conversations, the thread roster, ticket-thread previews, agent conversations, and Copilot transcripts |
 | Files | File vault with search, integrity checks, ticket attachments, and agent-created deliverables |
@@ -113,9 +113,10 @@ Generated files are written inside the employee workspace. When vault storage is
 
 ## Next Steps
 
-- [Hire more employees](hiring-employees.md) from the 57-role catalog
-- [Create your first project](managing-projects.md) with goals and tickets
-- [Review Files and generated deliverables](using-the-vault.md)
-- [Add cloud providers](configuring-providers.md) for more powerful models
-- [Review the Autonomy control plane](autonomy-control-plane.md) before unattended runtime work
-- [Set up backups](backup-and-restore.md) to protect your data
+- Hire more employees from the 57-role catalog.
+- Create your first project with goals and tickets.
+- Review the schedule calendar for deadlines and future agent wakeups.
+- Review Files and generated deliverables.
+- Add cloud providers for more powerful models.
+- Review the Autonomy control plane before unattended runtime work.
+- Set up backups to protect your data.

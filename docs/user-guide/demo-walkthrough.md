@@ -10,8 +10,8 @@ no scripting, no recordings, no mock data. The arc is the same one
 the Team-X demo video follows, promoted here as a user-facing
 onboarding path.
 
-> **New to Team-X?** Skim [Getting Started](./getting-started.md)
-> first for install and first-boot. This tour picks up from the
+> **New to Team-X?** Skim the Getting Started guide first for install
+> and first-boot. This tour picks up from the
 > default Strategia-X company that seeds on first boot.
 
 ---
@@ -29,11 +29,11 @@ on screen before it is named.
 
 | # | Scenario | What you learn | Duration |
 |---|---|---|---:|
-| 1 | [Hire a CEO, chat with it, watch it think](../demo/scenarios/01-hire-a-ceo.md) | The app is real — streaming replies, token-by-token rendering, local models | 3 min |
-| 2 | [File a ticket → agent closes it with an MCP tool](../demo/scenarios/02-ticket-lifecycle.md) | Agents *do* things, not just chat — MCP tool calls, ticket lifecycle | 3 min |
-| 3 | [One-click all-hands → minutes → action items](../demo/scenarios/03-one-click-all-hands.md) | The meeting primitive + orchestrator pause semantics | 2 min |
-| 4 | [Ask `Cmd+K` why the frontend team is behind](../demo/scenarios/04-ask-copilot-grounded-answer.md) | Intelligence Layer read-side — grounded answers over your org state | 3 min |
-| 5 | [Decompose the Q1 roadmap → copilot surfaces the new workload](../demo/scenarios/05-decompose-and-surface.md) | Intelligence Layer write-side — task planner + proactive copilot | 4 min |
+| 1 | Hire a CEO, chat with it, watch it think | The app is real — streaming replies, token-by-token rendering, local models | 3 min |
+| 2 | File a ticket → agent closes it with an MCP tool | Agents *do* things, not just chat — MCP tool calls, ticket lifecycle | 3 min |
+| 3 | One-click all-hands → minutes → action items | The meeting primitive + orchestrator pause semantics | 2 min |
+| 4 | Ask `Cmd+K` why the frontend team is behind | Intelligence Layer read-side — grounded answers over your org state | 3 min |
+| 5 | Decompose the Q1 roadmap → copilot surfaces the new workload | Intelligence Layer write-side — task planner + proactive copilot | 4 min |
 | — | Buffer | — | ~1 min |
 | **Total** | | | **~15 min** |
 
@@ -100,25 +100,13 @@ stable contracts — or open an issue.
 
 ## Where to next
 
-- **Want the Phase 6 add-on tour?** See
-  [Phase 6 Walkthrough](../demo/phase-6-walkthrough.md) for
-  capability-backed role fit, Copilot feedback suggestions, telemetry
-  kind filters, and local insight export.
-- **Want to learn the command palette?** See
-  [Keyboard Shortcuts](./keyboard-shortcuts.md).
-- **Want to try the copilot without reading the tour?** See
-  [Copilot UI](./copilot-ui.md) and
-  [Copilot Service](./copilot-service.md).
-- **Want to run the task planner yourself?** See
-  [Task Planner](./task-planner.md).
-- **Building your own F10 role pack?** See
-  [CONTRIBUTING](../../CONTRIBUTING.md) for the role-spec schema and
-  signing workflow.
+- **Want the Phase 6 add-on tour?** Run the capability evidence sequence: planner role-fit evidence, Copilot feedback suggestions, telemetry kind filters, and local insight export.
+- **Want to learn the command palette?** Review the keyboard shortcuts and command-palette sections in the user guide.
+- **Want to try the copilot without reading the tour?** Open the Copilot sidebar and review the Copilot Service behavior described in the guide.
+- **Want to run the task planner yourself?** Use `Cmd+K` / `Ctrl+K` and ask Team-X to decompose a project into tickets.
+- **Building your own F10 role pack?** Use the role-spec schema and signing workflow documented with the role-pack tooling.
 
 The Phase 6 add-on tour keeps Copilot advisory: role-fit evidence,
 feedback weights, telemetry filters, and export make the system easier
 to inspect and calibrate without adding autonomous write-side action.
-For the planning background, see the Phase 5 retrospective at
-[`docs/plans/2026-04-19-team-x-phase-5-retrospective.md`](../plans/2026-04-19-team-x-phase-5-retrospective.md)
-and the Phase 6 retrospective at
-[`docs/plans/2026-04-26-team-x-phase-6-retrospective.md`](../plans/2026-04-26-team-x-phase-6-retrospective.md).
+Planning background lives in the product design and autonomous runtime mechanics notes, but this walkthrough does not depend on those older Markdown files.

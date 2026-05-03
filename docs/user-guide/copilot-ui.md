@@ -8,9 +8,8 @@ adds feedback suggestions, category/severity filters, and local
 CSV/JSON export.
 
 > **Prerequisite:** the Copilot Service must be enabled. Check
-> `Settings → Runtime → Copilot`. See
-> [`copilot-service.md`](./copilot-service.md) for the underlying
-> analyzer.
+> `Settings → Runtime → Copilot`. The underlying analyzer runs through
+> the Copilot Service.
 
 ---
 
@@ -176,19 +175,10 @@ re-running the loop.
 
 ---
 
-## Related docs
+## Related Surfaces
 
-- [`copilot-service.md`](./copilot-service.md) — the analyzer, IPC
-  surface, and configuration keys that produce the insights this UI
-  renders.
-- [`command-palette.md`](./command-palette.md) — the M30 palette that
-  action buttons dispatch through (and the shortcut cousin of the
-  sidebar).
-- [`task-planner.md`](./task-planner.md) — the M32 write-side gate
-  that copilot-dispatched `decompose_project` / `delegate_subtask` /
-  `review_deliverable` actions route through.
-- [`keyboard-shortcuts.md`](./keyboard-shortcuts.md) — full shortcut
-  reference including `Cmd+Shift+K`.
-- [`../demo/phase-6-walkthrough.md`](../demo/phase-6-walkthrough.md)
-  — release-candidate demo path for feedback, filters, telemetry, and
-  export.
+- Copilot Service produces the insights this UI renders.
+- Command Palette is the action-dispatch path for suggested actions.
+- Task Planner is the write-side gate for `decompose_project`, `delegate_subtask`, and `review_deliverable`.
+- Keyboard Shortcuts includes `Cmd+Shift+K` / `Ctrl+Shift+K`.
+- Phase 6 capability evidence covers feedback, filters, telemetry, and export.

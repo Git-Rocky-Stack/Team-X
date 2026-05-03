@@ -140,6 +140,14 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     view: 'tickets',
   },
   {
+    id: 'open-project-schedule',
+    label: 'Open Schedule',
+    description: 'Open the calendar view for deadlines, project targets, and future tasking.',
+    kind: 'view',
+    view: 'projects',
+    projectsSubview: 'schedule',
+  },
+  {
     id: 'open-files',
     label: 'Open Files',
     description: 'Review uploaded and agent-created deliverables in the company file vault.',
@@ -221,6 +229,16 @@ export const GUIDE_TASKS: GuideTask[] = [
     priority: 'recommended',
     kind: 'jump',
     actionId: 'open-tickets',
+  },
+  {
+    id: 'schedule-reviewed',
+    title: 'Review the team schedule',
+    description:
+      'Open the schedule to see ticket due dates, project targets, goal targets, and future assigned work in one calendar.',
+    roles: ['owner', 'operator'],
+    priority: 'recommended',
+    kind: 'jump',
+    actionId: 'open-project-schedule',
   },
   {
     id: 'file-vault-reviewed',
@@ -453,16 +471,49 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'Use the participant selector in ticket detail to add or remove employees from an existing ticket thread.',
           'When a human comments on a ticket, Team-X wakes every employee participant and historical employee author on that ticket thread, not just the last pair of speakers.',
           'Open ticket threads from the Threads drawer to preview the ticket detail on the left while keeping the thread queue visible on the right.',
+          'Use due dates, project target dates, and goal target dates so the Schedule subtab can surface deadlines automatically.',
         ],
       },
       {
         kind: 'callout',
         title: 'Operator pattern',
-        text: 'Use Tickets to manage immediate flow, Projects to understand why that work exists, and participant membership to make sure everyone on the ticket wakes with the same context.',
+        text: 'Use Tickets to manage immediate flow, Projects to understand why that work exists, Schedule to keep future dates visible, and participant membership to make sure everyone on the ticket wakes with the same context.',
       },
     ],
-    taskIds: ['ticket-queue-reviewed'],
-    actionIds: ['open-tickets'],
+    taskIds: ['ticket-queue-reviewed', 'schedule-reviewed'],
+    actionIds: ['open-tickets', 'open-project-schedule'],
+  },
+  {
+    id: 'schedule-and-deadlines',
+    title: 'Schedule And Deadlines',
+    summary:
+      'Coordinate ticket due dates, project targets, goal targets, and future assigned work from one calendar.',
+    category: 'Execution',
+    roles: ['owner', 'operator'],
+    blocks: [
+      {
+        kind: 'paragraph',
+        text: 'The Schedule subtab in Projects is the calendar layer for the company. It combines manual scheduled work with deadlines already attached to tickets, projects, and goals so operators do not have to hunt through separate queues to understand what is due.',
+      },
+      {
+        kind: 'bullets',
+        items: [
+          'Ticket due dates, project target dates, and goal target dates appear automatically as read-only calendar entries.',
+          'Use Add to create manual tasks, deadlines, milestones, or reminders with a start date, optional end time, optional reminder, priority, notes, and a link to a ticket, project, or goal.',
+          'Assign a scheduled item to an employee when that future task should queue an agent wakeup at the scheduled time.',
+          'Complete or delete manual schedule items from the calendar or agenda; derived ticket, project, and goal entries stay tied to their source record.',
+          'Use the Today, Overdue, Next 14 days, and Agent wakes counters to spot time pressure before it becomes blocked work.',
+        ],
+      },
+      {
+        kind: 'callout',
+        tone: 'accent',
+        title: 'Recommended pattern',
+        text: 'Create durable work in Tickets, Projects, or Goals first, then use Schedule for date coordination and future wakeups. Avoid relying on chat-only reminders for accountable work.',
+      },
+    ],
+    taskIds: ['schedule-reviewed'],
+    actionIds: ['open-project-schedule'],
   },
   {
     id: 'files-and-deliverables',
@@ -564,7 +615,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         items: [
           'Use Doctor before long-running external agents so database, backup, runtime, secret, provider, MCP, and budget posture is checked in one report.',
           'Use Benchmarks to replay deterministic runtime scenarios and verify autonomy behavior with repeatable evidence.',
-          'Use Improve to run the agent self-improvement loop. It inspects recent work failures, runtime failures, blocked tickets, and stale in-progress tickets, then opens deduped correction tickets through the normal queue.',
+          'Use Improve to run the agent self-improvement loop. It inspects recent work failures, runtime execution failures, stale sessions, blocked tickets, and stale in-progress tickets, then opens deduped correction tickets through the normal queue.',
           'Use Access to verify whether the workspace is still local-only or already modeled for shared operators.',
           'Use Runtimes and Routines to understand how work is produced, not just who is assigned to it.',
           'Use Budgets and Approvals together so cost ceilings and risky actions are visible before they silently block autonomy.',
@@ -576,7 +627,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         kind: 'callout',
         tone: 'accent',
         title: 'Recommended pattern',
-        text: 'Mission Control tells you what is happening now. Autonomy tells you why that execution is allowed, how it is governed, and which recurring systems are shaping the workload.',
+        text: 'Mission Control tells you what is happening now. Autonomy tells you why that execution is allowed, how it is governed, which recurring systems are shaping the workload, and which self-improvement tickets are needed after repeated failures.',
       },
     ],
     taskIds: [

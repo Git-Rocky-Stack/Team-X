@@ -2,9 +2,16 @@
 
 The Agentic Loop is Team-X's answer to questions the command palette's deterministic intents can't handle. When you type something conversational, multi-hop, or analytical into `Cmd+K` — *"why is the frontend team behind?"*, *"summarize what the CEO did this week"*, *"who should I assign the auth bug to?"* — the classifier routes it to the agentic loop, which plans, calls read-only org tools, observes the results, and iterates until it produces a grounded multi-paragraph answer citing specific tickets, employees, and events.
 
-You don't trigger the loop directly. You just ask the palette a real question.
+You don't trigger the core question-answer loop directly. You just ask the palette a real question.
 
-> Looking for the agent self-improvement loop? That is a separate Autonomy surface. Use **Autonomy > Improve** to inspect recent execution failures, blocked tickets, and stale in-progress work, then open deduped correction tickets through the normal queue. See [Autonomy Control Plane](autonomy-control-plane.md).
+The same agentic foundation now powers several user-facing surfaces:
+
+- **Complex Request**: read-only investigation and grounded answers from `Cmd+K`.
+- **Task Planner**: write-side project decomposition, delegation, and deliverable review with confirmation gates.
+- **Copilot Ask**: direct Copilot questions grounded in prior Copilot insights.
+- **Agent Self-Improvement**: Autonomy > Improve scans repeated failures, runtime failures, blocked tickets, and stale in-progress tickets, then opens deduped correction tickets through the normal queue.
+
+Use this page for the core command-palette loop. Task Planner, Copilot Service, and Autonomy Control Plane are the user-facing surfaces built on top of the same foundation.
 
 ## Overview
 
@@ -107,7 +114,23 @@ Use employee chat or a ticket when you want an actual file deliverable. The supp
 | Office documents | `.docx`, `.xlsx`, `.pptx` |
 | Legacy Office wording | `.doc`, `.xls`, `.ppt` requests are created as `.docx`, `.xlsx`, `.pptx` |
 
-Created files stay inside the employee workspace. When vault storage is available, Team-X also stores the output in the File Vault, tags it as `agent-created`, and records artifact provenance under **Autonomy > Artifacts**. See [Using the Vault](using-the-vault.md) for the operator workflow.
+Created files stay inside the employee workspace. When vault storage is available, Team-X also stores the output in the File Vault, tags it as `agent-created`, and records artifact provenance under **Autonomy > Artifacts**.
+
+## Agent Self-Improvement Loop
+
+The self-improvement loop is an Autonomy surface, not a direct `Cmd+K` conversation. It exists so repeated operational problems become visible tickets instead of disappearing into logs.
+
+Open **Autonomy > Improve** and click **Run Improvement Loop** to inspect:
+
+- repeated `work.failed` events
+- `runtime.execution.failed` events
+- `runtime.session.stale` events
+- blocked tickets
+- tickets left `in-progress` for 48 hours or more
+
+For each signal, Team-X opens one correction ticket unless an open self-improvement ticket for the same signal already exists. Those tickets carry `agent-improvement`, `self-improvement`, and signal-specific labels so they can be filtered, assigned, reviewed, and closed like normal work.
+
+The Improve panel also shows open self-improvement tickets, recent loop history, inspected event/ticket counts, recommendations, and created ticket IDs. Run it after failures, runtime stalls, or heavy autonomous work sessions.
 
 ## Settings
 

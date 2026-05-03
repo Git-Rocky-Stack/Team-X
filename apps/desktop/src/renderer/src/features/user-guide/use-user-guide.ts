@@ -23,8 +23,6 @@ import { useProviders } from '@/hooks/use-providers.js';
 import { ipc } from '@/lib/ipc.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
-
 function userGuideErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.length > 0) return error.message;
   const fallback = String(error);
@@ -53,6 +51,7 @@ export function useUserGuide({ company, employeeCount }: UseUserGuideOptions) {
   const setActiveView = useAppStore((state) => state.setActiveView);
   const setAutonomySubview = useAppStore((state) => state.setAutonomySubview);
   const setDashboardSubview = useAppStore((state) => state.setDashboardSubview);
+  const setProjectsSubview = useAppStore((state) => state.setProjectsSubview);
   const setTelemetrySubview = useAppStore((state) => state.setTelemetrySubview);
   const openSettingsSection = useAppStore((state) => state.openSettingsSection);
   const requestHireDialog = useAppStore((state) => state.requestHireDialog);
@@ -154,6 +153,9 @@ export function useUserGuide({ company, employeeCount }: UseUserGuideOptions) {
 
     if (action.view === 'dashboard') {
       setDashboardSubview(action.dashboardSubview ?? 'cards');
+    }
+    if (action.view === 'projects' && action.projectsSubview) {
+      setProjectsSubview(action.projectsSubview);
     }
     if (action.view === 'telemetry' && action.telemetrySubview) {
       setTelemetrySubview(action.telemetrySubview);

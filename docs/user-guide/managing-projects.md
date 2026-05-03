@@ -12,7 +12,8 @@ Goals are company-level objectives that give your AI organization purpose.
 2. Switch to the **Goals** subtab
 3. Click **Create Goal**
 4. Enter a name (e.g., "Launch MVP by Q3") and description
-5. Click **Create**
+5. Optionally set a **Target Date** so the goal appears on the schedule calendar
+6. Click **Create**
 
 ### Tracking Progress
 
@@ -37,6 +38,7 @@ Projects are scoped initiatives linked to a goal, with a project lead and connec
    - **Description** — scope and context
    - **Goal** — link to a parent goal (optional)
    - **Lead** — assign a project lead from your employees
+   - **Target Date** — optional deadline that appears on the schedule calendar
 3. Click **Create**
 
 ### The Projects Kanban
@@ -45,10 +47,10 @@ Projects are displayed as cards in a kanban-style board with 4 columns:
 
 | Column | Meaning |
 |--------|---------|
-| Open | Not yet started |
-| In Progress | Active work underway |
-| Blocked | Waiting on a dependency |
-| Done | Completed |
+| Planning | Not yet started |
+| Active | Active work underway |
+| Completed | Work completed |
+| Archived | Removed from active execution without deleting history |
 
 Drag project cards between columns to update their status.
 
@@ -71,7 +73,18 @@ Tickets are the atomic unit of work in Team-X. Agents pick up tickets, work on t
    - **Description** — detailed requirements and context
    - **Priority** — Low, Medium, High, or Critical
    - **Assignee** — optionally assign to an employee immediately
+   - **Due Date** — optional deadline that appears on the schedule calendar
 4. Click **Create**
+
+### Due Dates and Schedule Visibility
+
+Tickets, projects, and goals can all carry dates:
+
+- Ticket **Due Date** becomes a read-only **Ticket due** entry in the Schedule subtab.
+- Project **Target Date** becomes a read-only **Project target** milestone.
+- Goal **Target Date** becomes a read-only **Goal target** milestone.
+
+Use these source dates when the deadline belongs to the work record itself. Use manual schedule items when you need a separate reminder, follow-up, milestone, or future agent wakeup.
 
 ### The Tickets Kanban
 
@@ -133,6 +146,17 @@ Open **Threads** from the left rail to inspect direct messages, agent conversati
 
 When you click a ticket thread from the thread roster, Team-X opens the ticket detail as a preview panel on the left side of the drawer while the thread queue remains visible on the right. Closing the preview returns you to the same thread list position instead of forcing you to navigate back through the menu.
 
+## Schedule Calendar
+
+The **Schedule** subtab under Projects gives operators one calendar for time-bound work. It combines source deadlines with manual scheduled items:
+
+- Source deadlines: ticket due dates, project target dates, and goal target dates.
+- Manual entries: tasks, deadlines, milestones, and reminders created with **Add**.
+- Optional assignment: assign a manual schedule item to an employee when Team-X should queue a future agent wakeup.
+- Optional links: connect a manual schedule item to a ticket, project, or goal so the calendar item keeps its business context.
+
+The calendar includes a 7-day view, an agenda list, and summary counters for **Today**, **Overdue**, **Next 14 days**, and **Agent wakes**. Manual items can be completed or deleted directly from the calendar. Derived ticket, project, and goal entries stay read-only because their source record owns the date.
+
 ## Workflow Example
 
 Here's a typical workflow:
@@ -143,7 +167,11 @@ Here's a typical workflow:
    - "Design auth database schema" assigned to the Senior Database Engineer
    - "Implement JWT token service" assigned to the Senior Backend Engineer
    - "Build login/signup UI" assigned to the Senior Frontend Developer
-4. **Watch the agents work** via the Dashboard stream and timeline views
-5. **Add participants** when more than one employee should wake on the ticket discussion
-6. **Review and iterate** by commenting on tickets
-7. **Track progress** via the goal's progress bar as tickets move to Done
+4. **Set due dates and target dates** so deadlines show on the Schedule subtab
+5. **Schedule follow-ups** for future checks, reminders, or agent wakeups
+6. **Watch the agents work** via the Dashboard stream and timeline views
+7. **Add participants** when more than one employee should wake on the ticket discussion
+8. **Review and iterate** by commenting on tickets
+9. **Track progress** via the goal's progress bar as tickets move to Done
+
+The Scheduling and Calendar guide covers the full calendar operating model in more detail.

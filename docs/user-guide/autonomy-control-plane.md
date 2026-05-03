@@ -21,7 +21,7 @@ Use this page when preparing unattended work, reviewing runtime health, approvin
 
 ## Agent Self-Improvement Loop
 
-The **Improve** subview turns operational patterns into ordinary tickets so the team fixes process problems through the same durable queue as product work.
+The **Improve** subview turns operational patterns into ordinary tickets so the team fixes process problems through the same durable queue as product work. It is the user-facing agent self-improvement loop: the loop does not silently patch behavior, hide failures, or mutate role prompts without review. It opens visible correction tickets.
 
 When you click **Run Improvement Loop**, Team-X inspects recent events and tickets for these signals:
 
@@ -38,6 +38,18 @@ The Improve panel shows:
 - recent loop-run history
 - the latest run result, including inspected event count, inspected ticket count, recommendations, and created ticket IDs
 - direct links into the Tickets view for any open improvement ticket
+
+### How to Use It
+
+Run **Improve** after any heavy work session, failed runtime run, provider disruption, repeated blocked-ticket pattern, or stale in-progress queue. Review the created tickets like normal work:
+
+1. Open the self-improvement ticket.
+2. Assign an owner or add participants.
+3. Attach evidence if needed.
+4. Ask the assigned employee to fix the process, prompt, runtime, checklist, or operating gap.
+5. Close the ticket only after the correction is implemented or intentionally rejected.
+
+The loop dedupes by signal so rerunning it is safe. If the same blocked-ticket or stale-runtime pattern is already represented by an open self-improvement ticket, Team-X reports the recommendation without opening a duplicate.
 
 ## Operating Pattern
 
@@ -56,7 +68,10 @@ When an employee creates a deliverable with execution tools, Team-X writes the f
 
 Use **Files** to browse, verify integrity, search, and attach the output to tickets. Use **Autonomy > Artifacts** when you need the execution record: which employee created it, which vault record it points to, and how it fits into recent autonomous work.
 
-## Related Runtime Docs
+## Related Runtime Concepts
 
-- [Autonomy Doctor](../runtime/autonomy-doctor.md)
-- [Autonomy benchmark harness](../runtime/autonomy-benchmark-harness.md)
+- Autonomy Doctor readiness checks
+- Autonomy benchmark harness evidence
+- Runtime operations snapshots
+- Agent wakeup requests
+- Budget governance and approval gates
