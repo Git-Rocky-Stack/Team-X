@@ -45,6 +45,8 @@ Team-X classifies your input into one of 15 intents. Each intent has required an
 
 `complex_request` is the catch-all: anything ambiguous, multi-step, or below the confidence threshold gets routed to the conversational agent (M31's agentic loop). You will never get a hard "I don't understand" response — you will get a thoughtful one.
 
+File creation is handled by employee execution tools, not by a dedicated palette intent. Ask an employee in chat or on a ticket for deliverables such as Markdown briefs, XLSX trackers, DOCX reports, or PPTX updates. Created files appear in the employee workspace and, when vault storage is available, in **Files** and **Autonomy > Artifacts**.
+
 ## Destructive Actions
 
 Four intents are gated by an explicit confirmation step:

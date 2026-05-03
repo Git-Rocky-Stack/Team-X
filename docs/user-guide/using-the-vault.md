@@ -8,6 +8,7 @@ The File Vault is Team-X's built-in file storage system. Files are stored on you
 - **SHA256 integrity** — every file is checksummed on upload and can be verified at any time
 - **FTS5 search** — file names, extracted text content, and tags are searchable via SQLite full-text search
 - **Ticket attachments** — vault files can be linked to tickets for agent-accessible workflows
+- **Agent-created deliverables** — employee-generated files can land in the vault and artifact feed with provenance
 
 ## Uploading Files
 
@@ -26,6 +27,16 @@ Agents can create deliverables directly from a task when their execution tools a
 
 Generated files are written inside the agent's workspace first. When vault storage is available, Team-X also copies the file into the File Vault, records SHA256 metadata, tags it as `agent-created`, and surfaces it in **Files** and **Autonomy > Artifacts** with the creating employee as provenance.
 
+### Request Pattern
+
+Use ordinary task language in chat or on a ticket:
+
+- "Create a Markdown rollout brief for this ticket."
+- "Build an XLSX status table with owner, priority, due date, and blocker columns."
+- "Draft a PPTX project update with one slide for scope, one for progress, and one for risks."
+
+The agent should report the created workspace path and, when vault storage succeeds, the vault file reference. Treat the deliverable as complete only after the tool result confirms the file path or vault record.
+
 ### What Happens on Upload
 
 - The file is copied to `<app-data>/companies/<company>/vault/<sha256-prefix>/<filename>`
@@ -40,6 +51,7 @@ The vault browser shows all files for the current company:
 - **Grid/list view** — file icons with names, sizes, and upload dates
 - **Mime type indicators** — different icons for images, documents, code, and other types
 - **Metadata** — file size, upload date, SHA256 hash
+- **Provenance** — agent-created files appear with employee attribution through the artifact feed
 
 ## Searching
 

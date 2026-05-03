@@ -11,6 +11,7 @@ You don't trigger the planner directly. You ask the palette a write-shaped quest
 - **Deterministic workload scoring** — `delegate_subtask` picks an assignee with a four-term scoring function (role-fit, load, availability, past performance) with locked weights. No LLM call, no non-determinism, fully auditable
 - **Confirmation gates** — the palette shows an **amber** confirmation card for write-side runs (distinct from the **red** card destructive structured commands like `fire_employee` get). You see the rephrased intent and can Cancel before any write fires
 - **Six new event types** on the append-only `events` bus (`plan.proposed`, `plan.approved`, `task.delegated`, `task.escalated`, `review.requested`, `review.completed`) plus three new step-card kinds in the palette (`ticket_created`, `delegation_made`, `review_pending`)
+- **File deliverables fit the same review loop** — employees can create `txt`, `md`, `csv`, `json`, `html`, `docx`, `xlsx`, and `pptx` files from assigned work; vault-backed outputs appear in Files and Artifacts before review
 - **Honors every existing invariant** — provider router is the only LLM touch-point, orchestrator is the only scheduler, append-only event stream, zero phone-home, OS keychain for secrets
 
 ## When the Planner Triggers
@@ -59,6 +60,16 @@ The palette transitions through the same six states as the M31 read-side loop (`
 | `review_deliverable` | Management, Supervisor, Lead, system-agent | Marks a closed ticket as approved or rejected with a freeform reviewer note. A reject pushes the ticket back to `in-progress` and records a `review.completed` event with `outcome: 'reject'`. Three rejects in a row escalate the deliverable per the same threshold |
 
 Every tool returns a JSON-safe envelope. `decompose_project` returns the proposed tree before any tickets are created — the loop typically calls `delegate_subtask` per leaf subtask in the next steps to actually file the work. `delegate_subtask` and `review_deliverable` are both write-on-success: the DB row lands before the tool returns, and the bus event fires inside the same transaction boundary.
+
+## File Deliverables
+
+The planner owns ticket creation, delegation, and review. The employee assigned to the ticket owns the actual deliverable. When that deliverable is a file, the employee can use built-in execution tooling to create:
+
+- `.txt`, `.md`, `.csv`, `.json`, and `.html` files
+- `.docx`, `.xlsx`, and `.pptx` Office files
+- Modern Office equivalents when the request says `.doc`, `.xls`, or `.ppt`
+
+Generated files are workspace-bounded. If vault storage is available, Team-X also stores the file in the company vault, tags it `agent-created`, and records artifact provenance with the creating employee. Review the file in **Files** or **Autonomy > Artifacts**, then use the ticket discussion or the planner's `review_deliverable` path to accept or reject the work.
 
 ## Workload Scoring
 

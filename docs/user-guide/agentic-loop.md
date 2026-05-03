@@ -95,6 +95,20 @@ The agentic loop gets access to six read-only query tools, each wrapping an exis
 
 Every tool returns a `{rows, truncated}` envelope. The loop caps results at 50 rows per call — if `truncated: true`, the agent typically re-queries with narrower filters on the next step. Per-row payloads are summarized to 200 characters with ellipsis, so a single tool call can't flood the token budget.
 
+## Employee File Creation
+
+The command-palette agentic loop above is read-only unless it routes into the Task Planner. Regular employee turns are different: when an employee has execution tools enabled, Team-X gives that employee workspace file tools, including `create_document`.
+
+Use employee chat or a ticket when you want an actual file deliverable. The supported output set is:
+
+| Output | Formats |
+|--------|---------|
+| Text documents | `.txt`, `.md`, `.csv`, `.json`, `.html` |
+| Office documents | `.docx`, `.xlsx`, `.pptx` |
+| Legacy Office wording | `.doc`, `.xls`, `.ppt` requests are created as `.docx`, `.xlsx`, `.pptx` |
+
+Created files stay inside the employee workspace. When vault storage is available, Team-X also stores the output in the File Vault, tags it as `agent-created`, and records artifact provenance under **Autonomy > Artifacts**. See [Using the Vault](using-the-vault.md) for the operator workflow.
+
 ## Settings
 
 Three new keys live in **Settings → Runtime → Agentic Loop**:
@@ -164,7 +178,7 @@ Every claim is grounded in a tool result. The final answer's bracketed citation 
 
 **"Can I see every run from the past?"** Yes. Copilot Conversations is the primary surface — every run is a thread. For audit-log filtering, switch to the **Audit** tab, filter by event type `agentic.completed` or `agentic.failed`, and expand a row to see the payload (runId, finalAnswer, stepCount, tokensUsed, durationMs, or reason on failure).
 
-**"How do I write my own tool?"** You can't, yet. The six read-only tools are main-process closures over existing repos — intentionally built in, not plugin-loaded, so they bypass the MCP host and can't accidentally talk to an external service. The write-side (creating tickets, delegating work, reviewing deliverables) ships in M32 (Task Planner) and uses a separate tool set with destructive-action gates. Custom tools are not part of the Phase 6 surface.
+**"How do I write my own tool?"** You can't, yet. The six command-palette query tools are main-process closures over existing repos — intentionally built in, not plugin-loaded, so they bypass the MCP host and can't accidentally talk to an external service. The write-side planner tools and the employee `create_document` execution tool are also built-in surfaces with explicit gating and workspace bounds. Custom tools are not part of the Phase 6 surface.
 
 ## Privacy
 

@@ -15,7 +15,7 @@ Use this page when preparing unattended work, reviewing runtime health, approvin
 | Routines | Define recurring operating loops that materialize as visible work instead of hidden background automation. |
 | Budgets | Review spend governance, warnings, hard caps, and approval thresholds across company, employee, runtime, and routine scopes. |
 | Approvals | Process authority, planner, budget, and routine decisions from one operator inbox. |
-| Artifacts | Review concrete runtime outputs and evidence captured from autonomous execution. |
+| Artifacts | Review concrete runtime outputs, agent-created files, and evidence captured from autonomous execution. |
 | Memory | Inspect thread digests, resumable checkpoints, and packed-context posture for long-running work. |
 | Access | Review local, invited, and cloud-ready operator membership posture for the workspace. |
 
@@ -49,6 +49,12 @@ Before launching long or external work:
 4. Use **Benchmarks** when you need repeatable evidence that runtime mechanics still behave correctly.
 5. Run **Improve** after failures, stalls, or a heavy work session so repeated problems become actionable correction tickets.
 6. Inspect **Artifacts** and **Memory** when the question is what a runtime produced or what context a long thread retained.
+
+## Agent-Created File Evidence
+
+When an employee creates a deliverable with execution tools, Team-X writes the file inside that employee's workspace. If vault storage is available, the same output is copied into the File Vault, tagged `agent-created`, and recorded as an Artifact with employee provenance.
+
+Use **Files** to browse, verify integrity, search, and attach the output to tickets. Use **Autonomy > Artifacts** when you need the execution record: which employee created it, which vault record it points to, and how it fits into recent autonomous work.
 
 ## Related Runtime Docs
 

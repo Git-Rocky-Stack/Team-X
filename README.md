@@ -56,7 +56,7 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 
 ### Ship-Ready
 
-- **File vault** — filesystem-backed blob storage with SHA256 integrity verification and FTS5 full-text search
+- **File vault + agent-created deliverables** — filesystem-backed blob storage with SHA256 integrity verification, FTS5 full-text search, ticket attachments, and employee-generated `txt` / `md` / `csv` / `json` / `html` / `docx` / `xlsx` / `pptx` outputs surfaced in Files and Artifacts
 - **Ticket attachments** — bridge vault files to tickets for agent-accessible file workflows
 - **One-click backup/restore** — full SQLite + vault archive with manifest validation
 - **Append-only audit log** — filterable event timeline with summary cards, actor search, date range picker, and CSV/JSON export

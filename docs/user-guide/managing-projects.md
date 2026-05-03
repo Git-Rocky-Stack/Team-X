@@ -115,6 +115,12 @@ Click on a ticket to see:
 - Ticket memory digest and checkpoint access when the ticket has a thread
 - Priority and status
 
+### File Deliverables
+
+Agents can create files as part of ticket work when execution tools are enabled. Supported outputs include text files (`.txt`, `.md`, `.csv`, `.json`, `.html`) and Office files (`.docx`, `.xlsx`, `.pptx`). If you ask for legacy `.doc`, `.xls`, or `.ppt`, Team-X creates the modern Office equivalent.
+
+When vault storage is available, generated files are copied into **Files**, tagged `agent-created`, and surfaced in **Autonomy > Artifacts** with the creating employee as provenance. Attach the generated vault file back to the ticket when it should remain part of the ticket record.
+
 ### Adding Comments
 
 Type in the ticket detail panel's composer to add a comment. Press **Enter** to send, or **Shift+Enter** for a new line.

@@ -77,7 +77,7 @@ The top bar contains navigation tabs:
 | Tickets | Kanban board, ticket detail, participants, attachments, comments, and ticket-thread discussion |
 | Meetings | Meeting history and the "Call Meeting" action |
 | Chat | Direct conversations, the thread roster, ticket-thread previews, agent conversations, and Copilot transcripts |
-| Files | File vault with search and integrity checks |
+| Files | File vault with search, integrity checks, ticket attachments, and agent-created deliverables |
 | Telemetry | Usage stats, cost analysis, provider breakdown |
 | Audit | Append-only event log with filters and export |
 | Settings | Providers, runtime strategy, privacy, backup, updates, extensions, memory, and portability |
@@ -101,10 +101,21 @@ The Dashboard has 5 views accessible via subtabs:
 - **Floor** — grid layout of employee activity
 - **Commands** — recent command-palette operations
 
+## Your First Generated File
+
+Once providers are configured and an employee has execution tools enabled, you can ask that employee to create a concrete file deliverable from chat or a ticket. Team-X supports:
+
+- Text deliverables: `.txt`, `.md`, `.csv`, `.json`, `.html`
+- Office deliverables: `.docx`, `.xlsx`, `.pptx`
+- Legacy Office wording: `.doc`, `.xls`, and `.ppt` requests are produced as modern `.docx`, `.xlsx`, and `.pptx` files
+
+Generated files are written inside the employee workspace. When vault storage is available, Team-X also copies the file into **Files**, tags it as `agent-created`, records SHA256 metadata, and adds artifact provenance under **Autonomy > Artifacts**.
+
 ## Next Steps
 
 - [Hire more employees](hiring-employees.md) from the 57-role catalog
 - [Create your first project](managing-projects.md) with goals and tickets
+- [Review Files and generated deliverables](using-the-vault.md)
 - [Add cloud providers](configuring-providers.md) for more powerful models
 - [Review the Autonomy control plane](autonomy-control-plane.md) before unattended runtime work
 - [Set up backups](backup-and-restore.md) to protect your data

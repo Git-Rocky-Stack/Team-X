@@ -24,7 +24,7 @@ Two shortcuts unlock most of the intelligence surface:
 4. [Configuring Providers](configuring-providers.md) — Adding LLM providers, privacy tiers, runtime strategies
 
 ### Phase 4 — Ship-Ready
-5. [Using the Vault](using-the-vault.md) — File storage, search, integrity verification, ticket attachments
+5. [Using the Vault](using-the-vault.md) — File storage, search, integrity verification, ticket attachments, and agent-created deliverables
 6. [Backup and Restore](backup-and-restore.md) — Creating backups, restoring, backup history
 
 ### Phase 5 — Intelligence Layer
@@ -38,7 +38,7 @@ Two shortcuts unlock most of the intelligence surface:
 12. [Task Planner](task-planner.md) — Capability-backed role fit for planner assignments with the M32 keyword fallback preserved
 13. [Copilot Service](copilot-service.md) — Feedback category weights, repeated-dismissal suggestion audit trail, and Copilot run-kind tagging
 14. [Copilot UI](copilot-ui.md) — Feedback suggestions, category/severity filters, and local CSV/JSON insight export
-15. [Autonomy Control Plane](autonomy-control-plane.md) — Doctor, benchmarks, agent self-improvement, runtimes, routines, budgets, approvals, artifacts, memory, and operator access
+15. [Autonomy Control Plane](autonomy-control-plane.md) — Doctor, benchmarks, agent self-improvement, runtimes, routines, budgets, approvals, artifacts, agent-created files, memory, and operator access
 16. [Phase 6 Walkthrough](../demo/phase-6-walkthrough.md) — Release-candidate demo path for capability role fit, feedback, telemetry filters, and export
 
 ### Reference
