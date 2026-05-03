@@ -1,7 +1,6 @@
 import type { SettingsGetMemoryResponse, SettingsSetMemoryRequest } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 
 function makeMemorySnapshot(
@@ -58,7 +57,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     backupService: noop,
     auditRepo: noop,
     updaterService: noop,
-    copilotAnalyzerService: { restart: vi.fn() },
+    copilotAnalyzerService: { start: vi.fn(), restart: vi.fn(), stop: vi.fn() },
     bus: { emit: vi.fn() } as never,
     getHardwareProfile: () => ({}) as never,
     ...overrides,

@@ -55,4 +55,10 @@ describe('CopilotSidebar filters and export controls', () => {
     expect(sidebarSrc).toContain('exportMutation.data.truncated');
     expect(sidebarSrc).toContain('data-copilot-export-error=""');
   });
+
+  it('surfaces copilot ask failures instead of failing silently', () => {
+    expect(sidebarSrc).toContain('data-copilot-ask-error=""');
+    expect(sidebarSrc).toContain('role="alert"');
+    expect(sidebarSrc).toContain('askMutation.reset()');
+  });
 });

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 
-import type { IpcCompaniesRepo, IpcEventBus } from './handlers.js';
+import type { IpcCompaniesRepo, IpcCopilotAnalyzerService, IpcEventBus } from './handlers.js';
 import { createIpcHandlers } from './handlers.js';
 
 /**
@@ -176,6 +176,24 @@ function makeBusMock() {
   };
 }
 
+function makeCopilotAnalyzerMock() {
+  const startCalls: string[] = [];
+  const restartCalls: string[] = [];
+  const stopCalls: string[] = [];
+  const service: IpcCopilotAnalyzerService = {
+    start: (companyId) => {
+      startCalls.push(companyId);
+    },
+    restart: (companyId) => {
+      restartCalls.push(companyId);
+    },
+    stop: (companyId) => {
+      stopCalls.push(companyId);
+    },
+  };
+  return { service, startCalls, restartCalls, stopCalls };
+}
+
 // ---------------------------------------------------------------------------
 // Test harness — same buildTestHandlers shape as backup-handlers.test.ts
 // ---------------------------------------------------------------------------
@@ -184,13 +202,16 @@ function buildTestHandlers(opts?: {
   companiesRepo?: FakeCompaniesRepo;
   bootstrap?: ReturnType<typeof makeBootstrapMock>;
   bus?: ReturnType<typeof makeBusMock>;
+  copilotAnalyzer?: ReturnType<typeof makeCopilotAnalyzerMock>;
   omitBootstrap?: boolean;
   omitBus?: boolean;
+  omitCopilotAnalyzer?: boolean;
 }) {
   const noop = {} as Record<string, unknown>;
   const companiesRepo = opts?.companiesRepo ?? new FakeCompaniesRepo();
   const bootstrap = opts?.bootstrap ?? makeBootstrapMock();
   const bus = opts?.bus ?? makeBusMock();
+  const copilotAnalyzer = opts?.copilotAnalyzer ?? makeCopilotAnalyzerMock();
   const handlers = createIpcHandlers({
     companiesRepo,
     employeesRepo: noop as never,
@@ -216,10 +237,11 @@ function buildTestHandlers(opts?: {
     auditRepo: noop as never,
     updaterService: noop as never,
     bus: opts?.omitBus ? undefined : bus.bus,
+    copilotAnalyzerService: opts?.omitCopilotAnalyzer ? undefined : copilotAnalyzer.service,
     ensureSystemForCompany: opts?.omitBootstrap ? undefined : bootstrap.fn,
     getHardwareProfile: () => ({ cpuCores: 4, ramGb: 16, gpuName: null, gpuVramGb: null }),
   });
-  return { handlers, companiesRepo, bootstrap, bus };
+  return { handlers, companiesRepo, bootstrap, bus, copilotAnalyzer };
 }
 
 // ---------------------------------------------------------------------------
@@ -272,6 +294,13 @@ describe('companies.create handler — Phase 5.6 M-C step b', () => {
       const { handlers, bootstrap } = buildTestHandlers();
       const result = await handlers.companiesCreate({ name: 'Acme', slug: 'acme' });
       expect(bootstrap.calls).toEqual([result.companyId]);
+    });
+
+    it('starts the copilot analyzer timer for the new company', async () => {
+      const { handlers, copilotAnalyzer } = buildTestHandlers();
+      const result = await handlers.companiesCreate({ name: 'Acme', slug: 'acme' });
+      expect(copilotAnalyzer.startCalls).toEqual([result.companyId]);
+      expect(copilotAnalyzer.restartCalls).toHaveLength(0);
     });
 
     it('emits company.created on the bus with the full payload (invariant #11)', async () => {

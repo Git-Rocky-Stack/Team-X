@@ -40,7 +40,6 @@ import {
 import { Loader2, Send, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-
 import { formatFeedbackSuggestionPrompt, sortBySeverity } from './copilot-helpers.js';
 import { CopilotInsightCard } from './copilot-insight-card.js';
 
@@ -57,7 +56,6 @@ import {
 import { useAskCopilot, useCopilotExport, useCopilotInsights } from '@/hooks/use-copilot.js';
 import { useSetCopilotWeights } from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
-
 
 // ---------------------------------------------------------------------------
 
@@ -107,6 +105,13 @@ function formatExportFileName(filePath: string): string {
   return filePath.split(/[\\/]/).pop() ?? filePath;
 }
 
+function formatAskError(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+  return 'Copilot could not start that request. Check provider settings and try again.';
+}
+
 export function CopilotSidebar() {
   const open = useAppStore((s) => s.copilotSidebarOpen);
   const setOpen = useAppStore((s) => s.setCopilotSidebarOpen);
@@ -135,6 +140,7 @@ export function CopilotSidebar() {
   const setCopilotWeights = useSetCopilotWeights();
 
   const sorted = useMemo(() => (data?.insights ? sortBySeverity(data.insights) : []), [data]);
+  const askErrorMessage = askMutation.isError ? formatAskError(askMutation.error) : null;
 
   async function submitAsk() {
     if (!companyId) return;
@@ -420,7 +426,10 @@ export function CopilotSidebar() {
                   id="copilot-ask-input"
                   rows={2}
                   value={askText}
-                  onChange={(e) => setAskText(e.target.value)}
+                  onChange={(e) => {
+                    if (askMutation.isError) askMutation.reset();
+                    setAskText(e.target.value);
+                  }}
                   onKeyDown={onAskKeyDown}
                   placeholder="Why is the frontend team behind?"
                   className="flex-1 resize-none border-white/10 bg-black/20 text-sm"
@@ -442,6 +451,15 @@ export function CopilotSidebar() {
                   )}
                 </button>
               </div>
+              {askErrorMessage && (
+                <p
+                  className="mt-2 text-xs leading-5 text-destructive"
+                  role="alert"
+                  data-copilot-ask-error=""
+                >
+                  {askErrorMessage}
+                </p>
+              )}
               <p className="mt-2 text-[10px] text-muted-foreground">Cmd/Ctrl+Enter to submit.</p>
             </MissionInsetSurface>
           </div>

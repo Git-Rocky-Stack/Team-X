@@ -92,18 +92,24 @@ class FakeCompaniesRepo implements IpcCompaniesRepo {
 }
 
 function makeAnalyzerMock(): IpcCopilotAnalyzerService & {
+  startCalls: string[];
   stopCalls: string[];
   restartCalls: string[];
 } {
+  const startCalls: string[] = [];
   const stopCalls: string[] = [];
   const restartCalls: string[] = [];
   return {
+    start: (companyId: string) => {
+      startCalls.push(companyId);
+    },
     stop: (companyId: string) => {
       stopCalls.push(companyId);
     },
     restart: (companyId: string) => {
       restartCalls.push(companyId);
     },
+    startCalls,
     stopCalls,
     restartCalls,
   };
@@ -255,10 +261,12 @@ describe('companies.delete handler — Phase 5.6 M-C step e', () => {
     it('calls analyzer.stop BEFORE eventWindow.clear BEFORE repo.delete', async () => {
       const order: string[] = [];
       const analyzer = {
+        start: (_: string) => {},
         stop: (_: string) => {
           order.push('analyzer.stop');
         },
         restart: (_: string) => {},
+        startCalls: [] as string[],
         stopCalls: [] as string[],
         restartCalls: [] as string[],
       };

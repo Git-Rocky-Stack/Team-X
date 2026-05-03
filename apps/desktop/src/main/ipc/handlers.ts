@@ -791,16 +791,17 @@ export interface IpcSettingsRepo {
 
 /**
  * Narrow copilot-analyzer-service surface the IPC handlers need for the
- * `settings.setCopilot` side effect (restart the per-company timer so
- * a new interval / enabled / categories picks up without an app
- * restart). The full service surface lives in
+ * `settings.setCopilot` side effect and company lifecycle starts/stops
+ * for the per-company timer. The full service surface lives in
  * `main/services/copilot-analyzer-service.ts`; this interface pulls in
- * only the one method the IPC boundary requires.
+ * only the methods the IPC boundary requires.
  *
  * Phase 5 — M33 T7.
  */
 export interface IpcCopilotAnalyzerService {
-  /** Restart the per-company analyzer timer. No-ops if the timer isn't running. */
+  /** Start the per-company analyzer timer. No-ops if it is already running. */
+  start(companyId: string): void;
+  /** Restart the per-company analyzer timer after settings change. */
   restart(companyId: string): void;
   /**
    * Hard-stop the per-company analyzer timer and abort any in-flight
@@ -3488,6 +3489,20 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       } else if (process.env.NODE_ENV !== 'production') {
         console.warn(
           '[ipc] companies.create: routineService dep unwired — new company routines will not auto-start until next app start',
+        );
+      }
+      if (copilotAnalyzerService) {
+        try {
+          copilotAnalyzerService.start(companyId);
+        } catch (err) {
+          console.error(
+            `[ipc] companies.create: copilot analyzer start failed for company ${companyId} (company remains usable, copilot may not tick until settings are saved or the app restarts):`,
+            err,
+          );
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[ipc] companies.create: copilotAnalyzerService dep unwired — new company copilot will not auto-start until next app start',
         );
       }
 

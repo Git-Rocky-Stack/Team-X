@@ -1286,12 +1286,15 @@ app
       // Lazy wrapper — the CopilotAnalyzerService is instantiated later
       // in this same bootstrap block (after RAG indexer, agentic loop,
       // etc.), so we close over the module-level handle and resolve it
-      // on each `restart` / `stop` call. No-ops cleanly if a
+      // on each `start` / `restart` / `stop` call. No-ops cleanly if a
       // `setCopilot` / `companies.archive` IPC fires before the analyzer
       // is live (defensive only — in practice the renderer cannot
       // reach settings until after app-ready, which is after the
       // analyzer has been wired).
       copilotAnalyzerService: {
+        start: (cid: string) => {
+          copilotAnalyzerServiceInstance?.start(cid);
+        },
         restart: (cid: string) => {
           copilotAnalyzerServiceInstance?.restart(cid);
         },
@@ -1959,6 +1962,10 @@ app
         return { complete, provider: providerName, model };
       },
     });
+    for (const company of companiesRepo.list()) {
+      if (company.status === 'archived') continue;
+      copilotAnalyzerServiceInstance.start(company.id);
+    }
 
     // ---- Copilot event trigger (M33 T4) ---------------------------------
     //
