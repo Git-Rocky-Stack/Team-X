@@ -1,7 +1,6 @@
 import type { CompanySettings } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-
 import { GUIDE_TASKS } from './guide-content.js';
 import {
   defaultGuideSectionIdForRole,
@@ -77,7 +76,11 @@ describe('guide-progress', () => {
         welcomeDismissedAt: null,
         lastViewedSectionId: defaultGuideSectionIdForRole('owner'),
         selectedRole: 'owner',
-        completedTaskIds: ['dashboard-reviewed', 'operating-model-understood'],
+        completedTaskIds: [
+          'dashboard-reviewed',
+          'workspace-model-reviewed',
+          'operating-model-understood',
+        ],
       },
       {
         hasEnabledProvider: true,
