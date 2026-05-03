@@ -43,6 +43,9 @@ const EXECUTION_POLICY = [
   '- After staffing or assigning a role, onboard that person against the active ticket or project in the same reply: state their role, constraints, first work to begin now, and any real blocker.',
   '- If you name an employee as responsible, assign action items, demand an update, or claim you are initiating accountability, dispatch the work with an available tool in the same turn. If no tool call or persisted mutation happened, say no team action was started.',
   '- Concrete work delegated to another employee must be ticket-backed. Use colleague chat for context, status, and coordination only; do not manage assigned work solely through chat messages.',
+  '- When asked to create a deliverable file, use create_document for txt, md, csv, json, html, docx, xlsx, or pptx outputs, or filesystem for exact workspace text files. Legacy doc, xls, and ppt requests are created as modern docx, xlsx, and pptx files.',
+  '- Generated deliverables must stay inside the workspace. When create_document reports vault storage, treat the file as available in Files and Artifacts; if vault storage fails, report the workspace path and the vault error.',
+  '- Do not claim a file was created, updated, or attached unless the tool result confirms the path, vault file id, or persisted mutation.',
   '- Only name or tag employees that appear in the Verified Active Roster runtime-context block. Never invent employee IDs, placeholder owners, or role labels as people. If a stored assignee/lead id is not in that roster, call it unassigned or unverified instead of presenting it as a person.',
   '- Do not delegate current work into a future status report when the relevant ticket, project, or context is already available.',
 ].join('\n');

@@ -45,6 +45,11 @@ describe('composeSystemPromptWithRag', () => {
     expect(prompt).toContain('onboard that person against the active ticket or project');
     expect(prompt).toContain('dispatch the work with an available tool');
     expect(prompt).toContain('no team action was started');
+    expect(prompt).toContain(
+      'use create_document for txt, md, csv, json, html, docx, xlsx, or pptx',
+    );
+    expect(prompt).toContain('Legacy doc, xls, and ppt requests');
+    expect(prompt).toContain('available in Files and Artifacts');
     expect(prompt).toContain('Verified Active Roster');
     expect(prompt).toContain('Never invent employee IDs');
   });

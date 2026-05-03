@@ -348,6 +348,15 @@ export interface BuildOrchestratorOptions {
   /** Optional — when absent, agents have no tool access. */
   resolveTools?: ResolveTools;
   resolveExecutionWorkspace?: ResolveExecutionWorkspace;
+  vaultService?: {
+    store(
+      companyId: string,
+      sourcePath: string,
+      uploadedBy: string,
+      tags?: string[],
+      uploadedByKind?: 'user' | 'employee' | 'system',
+    ): Promise<string>;
+  };
   contextAssemblerService?: {
     assembleThreadContext(input: {
       companyId: string;
@@ -843,6 +852,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     resolveProvider,
     resolveTools,
     resolveExecutionWorkspace,
+    vaultService,
     contextAssemblerService,
     contextPackerService,
     threadDigestService,
@@ -1192,7 +1202,9 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     return {
       userDataDir,
       companySlug: company.slug,
+      companyId: company.id,
       employeeId: employee.id,
+      ...(vaultService ? { vault: vaultService } : {}),
       ...(workspaceRoot ? { workspaceRoot } : {}),
     };
   }

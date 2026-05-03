@@ -140,6 +140,13 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     view: 'tickets',
   },
   {
+    id: 'open-files',
+    label: 'Open Files',
+    description: 'Review uploaded and agent-created deliverables in the company file vault.',
+    kind: 'view',
+    view: 'files',
+  },
+  {
     id: 'open-telemetry',
     label: 'Open Telemetry',
     description: 'Inspect system-wide analytics, usage, and cost breakdowns.',
@@ -214,6 +221,16 @@ export const GUIDE_TASKS: GuideTask[] = [
     priority: 'recommended',
     kind: 'jump',
     actionId: 'open-tickets',
+  },
+  {
+    id: 'file-vault-reviewed',
+    title: 'Review Files and deliverables',
+    description:
+      'Open Files and understand how uploads, ticket attachments, and agent-created deliverables are stored.',
+    roles: ['owner', 'operator'],
+    priority: 'recommended',
+    kind: 'jump',
+    actionId: 'open-files',
   },
   {
     id: 'extensions-installed',
@@ -446,6 +463,35 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
     taskIds: ['ticket-queue-reviewed'],
     actionIds: ['open-tickets'],
+  },
+  {
+    id: 'files-and-deliverables',
+    title: 'Files And Deliverables',
+    summary: 'Use the vault as the durable home for uploads, attachments, and agent-created files.',
+    category: 'Execution',
+    roles: ['owner', 'operator'],
+    blocks: [
+      {
+        kind: 'paragraph',
+        text: 'Files is the company vault for operator uploads, ticket attachments, and generated deliverables. Agents can create workspace files during execution and, when vault storage is available, those outputs become searchable vault records and artifact evidence.',
+      },
+      {
+        kind: 'bullets',
+        items: [
+          'Agents can create txt, md, csv, json, html, docx, xlsx, and pptx deliverables from active work.',
+          'Legacy doc, xls, and ppt requests are produced as modern docx, xlsx, and pptx files.',
+          'Agent-created deliverables are tagged as agent-created and attributed to the employee that created them.',
+          'Use Files for browsing, integrity checks, and ticket attachments; use Autonomy > Artifacts for execution provenance.',
+        ],
+      },
+      {
+        kind: 'callout',
+        title: 'Operator pattern',
+        text: 'Ask for the deliverable in the ticket or chat, then verify the created file in Files or Artifacts before treating it as complete.',
+      },
+    ],
+    taskIds: ['file-vault-reviewed'],
+    actionIds: ['open-files', 'open-autonomy-artifacts'],
   },
   {
     id: 'chat-and-copilot',

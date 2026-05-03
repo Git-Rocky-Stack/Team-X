@@ -20,7 +20,11 @@ import { createReadStream } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import type { VaultFileCreatedPayload, VaultFileDeletedPayload } from '@team-x/shared-types';
+import type {
+  ActorKind,
+  VaultFileCreatedPayload,
+  VaultFileDeletedPayload,
+} from '@team-x/shared-types';
 
 import type {
   CreateFileVaultInput,
@@ -52,6 +56,7 @@ export interface VaultServiceDeps {
       sizeBytes: number;
       sha256: string;
       uploadedBy: string;
+      uploadedByKind?: ActorKind;
       createdAt: number;
     }): unknown;
   };
@@ -158,6 +163,8 @@ function guessMimeType(filename: string): string {
     '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     '.xls': 'application/vnd.ms-excel',
     '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.ppt': 'application/vnd.ms-powerpoint',
+    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     // Archives
     '.zip': 'application/zip',
     '.tar': 'application/x-tar',
@@ -194,15 +201,16 @@ async function extractText(filePath: string, mimeType: string): Promise<string |
  * Sanitize a filename for safe filesystem storage. Preserves extension.
  */
 function sanitizeFilename(name: string): string {
-  return (
-    name
-      // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional — strip C0 control chars from filenames
-      // eslint-disable-next-line no-control-regex -- intentional — strip C0 control chars from filenames
-      .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
-      .replace(/\s+/g, '_')
-      .replace(/_+/g, '_')
-      .slice(0, 200)
-  );
+  return name
+    .split('')
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      return code < 32 || '<>:"/\\|?*'.includes(char) ? '_' : char;
+    })
+    .join('')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .slice(0, 200);
 }
 
 function rowToVaultFile(row: FileVaultRow): VaultFile {
@@ -253,6 +261,7 @@ export function createVaultService(deps: VaultServiceDeps) {
       sourcePath: string,
       uploadedBy: string,
       tags?: string[],
+      uploadedByKind: ActorKind = 'user',
     ): Promise<string> {
       const originalName = path.basename(sourcePath);
       const mimeType = guessMimeType(originalName);
@@ -299,6 +308,7 @@ export function createVaultService(deps: VaultServiceDeps) {
             sizeBytes,
             sha256,
             uploadedBy,
+            uploadedByKind,
             createdAt: Date.now(),
           });
         } catch (err) {
@@ -317,7 +327,7 @@ export function createVaultService(deps: VaultServiceDeps) {
             type: 'vault.file_created',
             companyId,
             actorId: uploadedBy,
-            actorKind: 'user',
+            actorKind: uploadedByKind,
             payload: { fileId: id, originalName, mimeType, sizeBytes, sha256 },
           });
         } catch (err) {

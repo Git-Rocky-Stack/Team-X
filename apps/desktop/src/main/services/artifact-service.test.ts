@@ -238,6 +238,42 @@ describe('artifact service', () => {
     );
   });
 
+  it('records employee provenance for agent-created vault files', () => {
+    const artifactsRepo = createArtifactsRepo(ctx.db);
+    const vaultRepo = createVaultRepo(ctx.db);
+    const service = createArtifactService({ artifactsRepo });
+    const fileId = vaultRepo.create({
+      companyId: 'company-1',
+      filename: 'brief.docx',
+      originalName: 'brief.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      sizeBytes: 256,
+      sha256: 'def456',
+      vaultPath: 'de/brief.docx',
+      uploadedBy: 'employee-1',
+    });
+
+    const artifact = service.recordVaultFileArtifact({
+      companyId: 'company-1',
+      fileId,
+      originalName: 'brief.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      sizeBytes: 256,
+      sha256: 'def456',
+      uploadedBy: 'employee-1',
+      uploadedByKind: 'employee',
+      createdAt: 50,
+    });
+
+    expect(artifact).toEqual(
+      expect.objectContaining({
+        kind: 'vault-file',
+        createdByEmployeeId: 'employee-1',
+        uri: `vault:${fileId}`,
+      }),
+    );
+  });
+
   it('deduplicates artifacts by company, kind, and source', () => {
     const artifactsRepo = createArtifactsRepo(ctx.db);
     const vaultRepo = createVaultRepo(ctx.db);

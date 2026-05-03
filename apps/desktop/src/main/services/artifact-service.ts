@@ -1,4 +1,4 @@
-import type { ArtifactRecord, RuntimeAuditUsageDelta } from '@team-x/shared-types';
+import type { ActorKind, ArtifactRecord, RuntimeAuditUsageDelta } from '@team-x/shared-types';
 
 import type { ArtifactRow, ArtifactsRepo } from '../db/repos/artifacts.js';
 
@@ -39,6 +39,7 @@ export interface RecordVaultFileArtifactInput {
   sizeBytes: number;
   sha256: string;
   uploadedBy: string;
+  uploadedByKind?: ActorKind;
   createdAt: number;
 }
 
@@ -174,7 +175,7 @@ export function createArtifactService({ artifactsRepo }: { artifactsRepo: Artifa
           sizeBytes: input.sizeBytes,
           sha256: input.sha256,
         }),
-        createdByEmployeeId: null,
+        createdByEmployeeId: input.uploadedByKind === 'employee' ? input.uploadedBy : null,
         createdAt: input.createdAt,
       });
       const artifact = artifactsRepo.getById(artifactId);

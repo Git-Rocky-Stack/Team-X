@@ -639,6 +639,19 @@ app
     );
 
     const bus = createEventBus({ repo: eventsRepo });
+    const vaultService = createVaultService({
+      vaultRepo,
+      artifactService,
+      companiesBasePath: join(app.getPath('userData'), 'companies'),
+      getCompanySlug: (companyId: string) => {
+        const company = companiesRepo.list().find((c) => c.id === companyId);
+        return company?.slug ?? null;
+      },
+      // M30 T0 — wire the event bus so vault mutations fan out to the
+      // renderer subscriber. Closes the vault-backup E2E staleness
+      // regression (see docs/plans/2026-04-13-vault-backup-regression-findings.md).
+      bus,
+    });
 
     // ---- MCP Host initialization --------------------------------------------
     const mcpHost = createMcpHost({
@@ -1079,6 +1092,7 @@ app
         if (!profile?.enabled) return null;
         return getRuntimeConfigString(profile.config, 'workingDirectory');
       },
+      vaultService,
       contextAssemblerService,
       contextPackerService,
       threadDigestService,
@@ -1152,20 +1166,6 @@ app
     });
     copilotEventWindow.start();
     copilotEventWindowInstance = copilotEventWindow;
-
-    const vaultService = createVaultService({
-      vaultRepo,
-      artifactService,
-      companiesBasePath: join(app.getPath('userData'), 'companies'),
-      getCompanySlug: (companyId: string) => {
-        const company = companiesRepo.list().find((c) => c.id === companyId);
-        return company?.slug ?? null;
-      },
-      // M30 T0 — wire the event bus so vault mutations fan out to the
-      // renderer subscriber. Closes the vault-backup E2E staleness
-      // regression (see docs/plans/2026-04-13-vault-backup-regression-findings.md).
-      bus,
-    });
 
     const backupService = createBackupService({
       dbPath: dbPath(),

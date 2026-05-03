@@ -730,6 +730,7 @@ export interface IpcVaultService {
     sourcePath: string,
     uploadedBy: string,
     tags?: string[],
+    uploadedByKind?: ActorKind,
   ): Promise<string>;
   retrieve(fileId: string): Promise<{ file: VaultFile; absolutePath: string }>;
   verify(fileId: string): Promise<{ ok: boolean; expected: string; actual: string }>;

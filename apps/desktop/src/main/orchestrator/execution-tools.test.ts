@@ -1,10 +1,10 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildExecutionTools } from './execution-tools.js';
+import { type ExecutionToolDeps, buildExecutionTools } from './execution-tools.js';
 
 let tempDir: string;
 
@@ -25,6 +25,46 @@ function buildFilesystemTool() {
   }).find((entry) => entry.name === 'filesystem');
   if (!tool) throw new Error('filesystem tool not found');
   return tool;
+}
+
+function buildCreateDocumentTool(overrides: Partial<ExecutionToolDeps> = {}) {
+  const tool = buildExecutionTools({
+    userDataDir: join(tempDir, 'user-data'),
+    companySlug: 'strategia-x',
+    companyId: 'co-1',
+    employeeId: 'emp-iris',
+    workspaceRoot: tempDir,
+    ...overrides,
+  }).find((entry) => entry.name === 'create_document');
+  if (!tool) throw new Error('create_document tool not found');
+  return tool;
+}
+
+function listZipEntries(buffer: Buffer): string[] {
+  let endOfCentralDirectory = -1;
+  for (let i = buffer.length - 22; i >= 0; i -= 1) {
+    if (buffer.readUInt32LE(i) === 0x06054b50) {
+      endOfCentralDirectory = i;
+      break;
+    }
+  }
+  if (endOfCentralDirectory < 0) {
+    throw new Error('ZIP end of central directory not found');
+  }
+
+  const entryCount = buffer.readUInt16LE(endOfCentralDirectory + 10);
+  let offset = buffer.readUInt32LE(endOfCentralDirectory + 16);
+  const entries: string[] = [];
+  for (let i = 0; i < entryCount; i += 1) {
+    expect(buffer.readUInt32LE(offset)).toBe(0x02014b50);
+    const nameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    const nameStart = offset + 46;
+    entries.push(buffer.subarray(nameStart, nameStart + nameLength).toString('utf-8'));
+    offset = nameStart + nameLength + extraLength + commentLength;
+  }
+  return entries;
 }
 
 describe('execution tools', () => {
@@ -87,5 +127,110 @@ describe('execution tools', () => {
     expect(result.maxResults).toBe(200);
     expect(result.matches).toHaveLength(200);
     expect(result.truncated).toBe(true);
+  });
+
+  it('creates markdown deliverables and stores them in the vault when wired', async () => {
+    const vault = {
+      store: vi.fn(async () => 'file-1'),
+    };
+
+    const result = (await buildCreateDocumentTool({ vault }).execute({
+      path: 'deliverables/status.md',
+      format: 'md',
+      title: 'Status',
+      content: 'Iris created this update.',
+      tags: ['status'],
+    })) as {
+      success: boolean;
+      path: string;
+      format: string;
+      vaultFileId: string | null;
+      storedInVault: boolean;
+    };
+
+    expect(await readFile(join(tempDir, 'deliverables', 'status.md'), 'utf-8')).toBe(
+      '# Status\n\nIris created this update.',
+    );
+    expect(vault.store).toHaveBeenCalledWith(
+      'co-1',
+      join(tempDir, 'deliverables', 'status.md'),
+      'emp-iris',
+      ['agent-created', 'status'],
+      'employee',
+    );
+    expect(result).toMatchObject({
+      success: true,
+      path: join('deliverables', 'status.md'),
+      format: 'md',
+      vaultFileId: 'file-1',
+      storedInVault: true,
+    });
+  });
+
+  it('creates valid Office Open XML containers for docx, xlsx, and pptx deliverables', async () => {
+    const tool = buildCreateDocumentTool();
+
+    await tool.execute({
+      path: 'brief.docx',
+      title: 'Brief',
+      content: 'One\nTwo',
+    });
+    await tool.execute({
+      path: 'metrics.xlsx',
+      rows: [
+        ['Metric', 'Value'],
+        ['Tickets', 4],
+      ],
+    });
+    await tool.execute({
+      path: 'deck.pptx',
+      title: 'Deck',
+      slides: [{ title: 'Launch', bullets: ['Plan', 'Risks'] }],
+    });
+
+    expect(listZipEntries(await readFile(join(tempDir, 'brief.docx')))).toEqual(
+      expect.arrayContaining(['[Content_Types].xml', '_rels/.rels', 'word/document.xml']),
+    );
+    expect(listZipEntries(await readFile(join(tempDir, 'metrics.xlsx')))).toEqual(
+      expect.arrayContaining([
+        '[Content_Types].xml',
+        'xl/workbook.xml',
+        'xl/worksheets/sheet1.xml',
+      ]),
+    );
+    expect(listZipEntries(await readFile(join(tempDir, 'deck.pptx')))).toEqual(
+      expect.arrayContaining([
+        '[Content_Types].xml',
+        'ppt/presentation.xml',
+        'ppt/slides/slide1.xml',
+      ]),
+    );
+  });
+
+  it('normalizes legacy Office extension requests to modern Office files', async () => {
+    const result = (await buildCreateDocumentTool().execute({
+      path: 'proposal.doc',
+      format: 'doc',
+      title: 'Proposal',
+      content: 'Modern document body.',
+    })) as { success: boolean; path: string; format: string };
+
+    expect(result).toMatchObject({
+      success: true,
+      path: 'proposal.docx',
+      format: 'docx',
+    });
+    expect(listZipEntries(await readFile(join(tempDir, 'proposal.docx')))).toContain(
+      'word/document.xml',
+    );
+  });
+
+  it('keeps document creation bounded to the configured workspace root', async () => {
+    await expect(
+      buildCreateDocumentTool().execute({
+        path: '..\\outside.docx',
+        content: 'escape',
+      }),
+    ).rejects.toThrow(/Path traversal blocked/);
   });
 });

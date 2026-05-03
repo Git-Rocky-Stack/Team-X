@@ -16,6 +16,16 @@ The File Vault is Team-X's built-in file storage system. Files are stored on you
 3. Select one or more files from the native file dialog
 4. Files are copied to the vault, checksummed, and indexed
 
+## Agent-Created Files
+
+Agents can create deliverables directly from a task when their execution tools are enabled. Supported outputs include:
+
+- Plain text: `.txt`, `.md`, `.csv`, `.json`, `.html`
+- Office documents: `.docx`, `.xlsx`, `.pptx`
+- Legacy Office requests: `.doc`, `.xls`, and `.ppt` are created as modern `.docx`, `.xlsx`, and `.pptx` files
+
+Generated files are written inside the agent's workspace first. When vault storage is available, Team-X also copies the file into the File Vault, records SHA256 metadata, tags it as `agent-created`, and surfaces it in **Files** and **Autonomy > Artifacts** with the creating employee as provenance.
+
 ### What Happens on Upload
 
 - The file is copied to `<app-data>/companies/<company>/vault/<sha256-prefix>/<filename>`

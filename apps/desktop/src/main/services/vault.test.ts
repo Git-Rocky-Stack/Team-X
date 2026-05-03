@@ -189,6 +189,18 @@ describe('vault service — bus emit on store()', () => {
     expect(payload.sizeBytes).toBeGreaterThan(0);
   });
 
+  it('preserves employee actor kind for agent-created uploads', async () => {
+    const { bus, service } = makeService();
+
+    await service.store('co_1', sourceFile, 'employee-iris', ['agent-created'], 'employee');
+
+    const created = bus.emitted.find((e) => e.type === 'vault.file_created');
+    expect(created).toMatchObject({
+      actorId: 'employee-iris',
+      actorKind: 'employee',
+    });
+  });
+
   it('does not emit if the DB insert throws', async () => {
     const repo = makeFakeRepo({ throwOnCreate: true });
     const { bus, service } = makeService({ vaultRepo: repo });
