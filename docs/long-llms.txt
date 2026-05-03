@@ -1,0 +1,756 @@
+# Team-X Documentation - Extended AI Reference
+
+**Comprehensive documentation for AI systems and advanced LLM consumption**
+
+---
+
+## Project Metadata
+
+**Name:** Team-X
+**Type:** AI-powered workforce desktop application
+**Version:** 1.0.0
+**Status:** Production
+**Repository:** https://github.com/teamflow-x/team-x
+**Website:** https://teamflow-x.com
+**Documentation Root:** https://docs.teamflow-x.com
+**License:** MIT
+**Support:** support@teamflow-x.com
+**Community:** https://discord.gg/teamflow-x
+
+---
+
+## Detailed Description
+
+Team-X is a desktop application (Electron + React) that provides an AI-powered workforce. Users hire AI employees with curated roles (57 available), assign work through tickets, and watch as agents collaborate autonomously while maintaining oversight through Mission Control Dashboard.
+
+**Key Differentiators:**
+- **Curated Employee Roles:** Pre-configured AI agents with specialized skills, personalities, and work styles
+- **Autonomous Collaboration:** Agents work together, participate in ticket threads, and coordinate without human intervention
+- **Budget Governance:** Multi-layer budget controls (monthly caps, per-ticket limits, approval workflows)
+- **Provider Flexibility:** Switch between Anthropic (Claude), OpenAI (GPT), and Ollama (local) with automatic failover
+- **Multi-Workspace:** Manage multiple companies/clients with data isolation and shared policies
+- **Complete Oversight:** Mission Control Dashboard shows all activity, Copilot provides proactive insights
+
+**Target Users:**
+- Startups and small businesses
+- Agencies managing multiple clients
+- Product teams
+- Freelancers scaling their capacity
+- Developers wanting AI assistance
+
+---
+
+## Architecture Overview
+
+**Technology Stack:**
+- **Desktop Shell:** Electron (Chromium)
+- **Frontend:** React with TypeScript
+- **State Management:** Zustand
+- **Styling:** Tailwind CSS
+- **Charts:** Recharts
+- **Icons:** Lucide React
+- **AI Providers:** Anthropic Claude, OpenAI GPT, Ollama (local LLaMA, Mistral)
+- **Protocol:** MCP (Model Context Protocol) for extensions
+
+**Architecture Pattern:**
+- MVVM for separation of concerns
+- Event-driven architecture for real-time updates
+- Plugin system for extensibility
+- REST API for automation
+- Webhook system for integrations
+
+---
+
+## Comprehensive Feature Documentation
+
+### 1. Mission Control Dashboard
+
+**Location:** Main view (Ctrl+D / Cmd+D)
+
+**Panels:**
+- **Active Runs:** Shows agents currently working, with progress bars and elapsed time
+- **Recent Tickets:** Latest tickets with status, assignee, and duration
+- **Copilot Insights:** Proactive recommendations categorized as Critical, Warning, Info
+- **Budget Status:** Real-time spend vs budget with projections
+
+**Purpose:** Single pane of glass for operational oversight. Operators can monitor all workspace activity from one screen.
+
+**Key Interactions:**
+- Click agent run to view stream and artifacts
+- Click ticket to open detail view
+- Click insight to expand details or dismiss
+
+### 2. Command Palette
+
+**Access:** Ctrl+K (Windows/Linux) or Cmd+K (macOS)
+
+**Capabilities:**
+- Natural language command interpretation
+- Fuzzy matching across all commands
+- Command history (up/down arrows)
+- Autocomplete for common actions
+
+**Command Categories:**
+- Ticket operations (create, assign, close, etc.)
+- Employee operations (hire, fire, list, etc.)
+- Budget operations (show spend, set alerts, etc.)
+- System operations (settings, integrations, etc.)
+
+**Example Commands:**
+- "Create a ticket for fixing the login bug"
+- "Hire a senior React developer named Sarah"
+- "Show me all open tickets assigned to Alex"
+- "What's our total spend this month across all workspaces?"
+- "Cancel all agents running longer than 30 minutes"
+
+### 3. Employees (AI Agents)
+
+**57 Curated Roles:**
+
+**Engineering Roles (20+):**
+- Full Stack Engineer (React, TypeScript, Node.js, Python)
+- Backend Engineer (APIs, databases, microservices)
+- Frontend Engineer (React, Vue, Angular, CSS)
+- DevOps Engineer (Docker, Kubernetes, CI/CD, AWS/GCP/Azure)
+- Security Engineer (Audits, vulnerability scanning, compliance)
+- QA Engineer (Testing strategies, automation, Cypress/Selenium)
+- Database Architect (Schema design, optimization, migrations)
+- Mobile Engineer (React Native, Flutter, Swift, Kotlin)
+
+**Design Roles (8+):**
+- UI/UX Designer (Figma, design systems, user research)
+- Graphic Designer (Branding, marketing materials, visual design)
+- Product Designer (User flows, wireframes, prototypes)
+- Design Systems Lead (Component libraries, tokens, documentation)
+
+**Product Roles (6+):**
+- Product Manager (Roadmaps, prioritization, stakeholder management)
+- Technical Writer (Documentation, guides, API docs)
+- Business Analyst (Requirements, process analysis, metrics)
+
+**Marketing Roles (8+):**
+- Content Writer (Blog posts, copywriting, SEO content)
+- SEO Specialist (Keyword research, on-page optimization)
+- Social Media Manager (Twitter, LinkedIn, Instagram)
+- Email Marketing Specialist (Campaigns, automation, analytics)
+
+**Data Roles (7+):**
+- Data Analyst (SQL, Python, visualization, insights)
+- Data Scientist (ML models, statistical analysis)
+- ML Engineer (Training, deployment, monitoring)
+
+**Operations Roles (8+):**
+- Project Manager (Timelines, resources, risks)
+- Scrum Master (Agile ceremonies, team velocity)
+- Release Manager (Deployments, rollbacks, monitoring)
+
+**Employee Customization:**
+- Name: Custom name when hiring
+- Provider: Anthropic, OpenAI, or Ollama (per employee)
+- Personality: Communication style, approach, curiosity, independence
+- Work Style: Speed preference, communication style, documentation level
+
+### 4. Tickets & Work Management
+
+**Ticket Structure:**
+- **Title:** Brief description
+- **Description:** Detailed requirements, context, acceptance criteria
+- **Assignee:** Primary employee responsible
+- **Participants:** Additional employees collaborating (participant wake semantics)
+- **Priority:** Low, Normal, High, Critical
+- **Dependencies:** Other tickets that must complete first
+- **Status:** Open, In Progress, Done, Cancelled
+
+**Ticket Lifecycle:**
+1. **Created:** Ticket initialized, assignee notified
+2. **In Progress:** Agent run started, employee working
+3. **Done:** Work completed, artifacts delivered
+4. **Cancelled:** Work discontinued, artifacts preserved
+
+**Task Planner:**
+- AI-powered decomposition of large projects
+- Input: High-level project description
+- Output: Structured ticket hierarchy with dependencies
+- Example: "Build a React dashboard" → 12 tickets with dependencies
+
+### 5. Agent Runs
+
+**Agent Run Process:**
+1. **Initialization:** Provider selected, runtime configured
+2. **Execution:** Agent reads ticket, uses tools to complete work
+3. **Tool Use:** Read files, write files, run commands, search code
+4. **Collaboration:** Agent may ask questions, request clarification
+5. **Completion:** Work delivered, artifacts created, ticket marked done
+
+**Agent Stream:**
+Real-time feed showing:
+- Agent's thoughts and reasoning
+- Tool calls (Read, Write, Bash, etc.)
+- Progress updates and milestones
+- Errors and recoveries
+- Final summary and artifacts
+
+**Artifacts:**
+Deliverables created during agent run:
+- Code files
+- Documentation
+- Test results
+- Reports
+- Screenshots (for design work)
+
+**Approval Workflows:**
+- Write operations require operator approval
+- Budget overrides require confirmation
+- Ticket creation from routines can be batch-approved
+
+### 6. Autonomy Control Plane
+
+**Components:**
+
+**Runtimes:** Execution environments for agents
+- local-default: Standard runtime with file/bash/search tools
+- bash-runtime: Custom shell execution runtime
+- node-runtime: Node.js code execution
+- python-runtime: Python code execution
+
+**Routines:** Automated recurring tasks
+- Schedule: Cron expression (e.g., "0 9 * * MON" = Monday 9am)
+- Work template: Ticket template for routine-generated work
+- Budget cap: Monthly spend limit per routine
+- Examples: Daily code review, Nightly data sync, Weekly summary, Security scan
+
+**Budgets:** Multi-layer spend controls
+- Monthly budget: Workspace cap
+- Per-ticket budget: Individual ticket limit
+- Routine budget: Per-routine monthly cap
+- Approval workflow: Override requests for approval
+
+**Approvals:** Governance for sensitive operations
+- Budget overrides
+- Write operations (file creation/modification)
+- Routine-generated tickets
+- Provider failover triggers
+
+**MCP Servers:** Model Context Protocol integrations
+- Extend agent capabilities with custom tools
+- Examples: Database queries, web search, API integrations
+- Management: Add/remove servers, configure connections
+
+**Doctor:** Health diagnostics
+- Database integrity check
+- Runtime posture assessment
+- Provider health verification
+- MCP server status
+- Budget blocker detection
+- Recovery readiness validation
+
+### 7. Copilot (Proactive Intelligence)
+
+**Insight Categories:**
+- **Critical (🔴):** Immediate action required
+- **Warning (⚠️):** Attention needed soon
+- **Info (ℹ️):** Informational, no action required
+
+**Insight Types:**
+- **Operational:** System health, failures, performance issues
+- **Cost:** Spend anomalies, budget alerts, optimization opportunities
+- **Workflow:** Process improvements, blocked work, collaboration suggestions
+- **Security:** Vulnerabilities, access issues, compliance gaps
+
+**Proactive Actions:**
+- Detects stuck agent runs
+- Identifies budget overruns
+- Suggests cost optimizations
+- Flags performance degradation
+- Recommends process improvements
+
+### 8. Provider Routing
+
+**Supported Providers:**
+
+**Anthropic Claude:**
+- Models: Claude Opus 4.7 (best reasoning), Claude Sonnet 4.6 (balanced), Claude Haiku 4.5 (fast)
+- Strengths: Complex reasoning, code generation, long context
+- Cost: $$
+
+**OpenAI:**
+- Models: GPT-4o (balanced), GPT-4o-mini (fast, cheap)
+- Strengths: Speed, cost-effectiveness, broad capabilities
+- Cost: $
+
+**Ollama (Local):**
+- Models: LLaMA 3.1, Mistral, others (user-configured)
+- Strengths: Privacy, free, offline capability
+- Cost: Free
+
+**Failover:**
+- Automatic provider switching on failure
+- Configurable failover triggers
+- Backup provider selection
+
+### 9. Multi-Workspace Operations
+
+**Workspace Isolation:**
+- Separate employees, tickets, budgets, data
+- Employees can have access to multiple workspaces
+- Cost allocation based on employee allocation
+
+**Shared Policies:**
+- Master policy templates (budget, security, employee, documentation)
+- Apply to multiple workspaces
+- Updates propagate to all workspaces
+
+**Cross-Workspace Reporting:**
+- Operator-only aggregate reporting
+- Total spend across all workspaces
+- Employee utilization across workspaces
+
+### 10. Files & Deliverables
+
+**Storage:**
+- Local file system storage
+- Cloud backup (optional, encrypted)
+- Vault organization (workspace vault, shared vault, personal vault)
+
+**Artifact Types:**
+- Code files (all languages)
+- Documentation (Markdown, PDF)
+- Designs (Figma, Sketch files)
+- Reports (CSV, JSON, PDF)
+- Screenshots and images
+
+**Access Control:**
+- Read-only vs read-write permissions
+- Sharing via links (with expiration)
+- Version history
+
+---
+
+## Getting Started Workflow
+
+### First-Time Setup (15 minutes)
+
+1. **Download:** Get installer from teamflow-x.com/download
+2. **Install:** Run installer for your OS
+3. **Sign Up/Create Account:** Email/password or social login
+4. **Configure Workspace:** Name, budget, purpose
+5. **Hire First Employee:** Select role (Full Stack Engineer recommended)
+6. **Create First Ticket:** Title, description, assignee
+7. **Run Agent:** Watch agent work autonomously
+8. **Review Results:** Check artifacts, approve work
+
+### Daily Workflow (5-10 minutes)
+
+**Morning Check:**
+1. Run Doctor: `Ctrl+K` → "Run Doctor"
+2. Review Copilot insights
+3. Check active tickets
+4. Monitor budgets
+
+**Throughout Day:**
+- Create tickets via Command Palette
+- Monitor agent runs in Mission Control
+- Review completed work
+
+**Evening Check:**
+1. Review day's agent runs
+2. Check Copilot insights
+3. Verify budget status
+4. Plan tomorrow's work
+
+---
+
+## Common Workflows Explained
+
+### Product Development Workflow
+
+**Use Case:** Startup building MVP in 6 weeks
+
+**Steps:**
+1. **Planning:** Use Task Planner to decompose MVP into tickets
+2. **Hiring:** Hire product team (PM, Designer, Full Stack, QA)
+3. **Execution:** Create tickets, agents execute autonomously
+4. **Collaboration:** Agents coordinate via ticket threads
+5. **Review:** Approve work, provide feedback
+6. **Iteration:** Tickets marked done or revised
+
+**Outcome:** 42 tickets, $127 spend, 6-week timeline
+
+### Cost Optimization Workflow
+
+**Use Case:** Reduce spend while maintaining productivity
+
+**Steps:**
+1. **Run Doctor:** Identify cost drivers
+2. **Review Copilot Insights:** Find optimization opportunities
+3. **Provider Selection:** Use cheaper models for routine work
+4. **Routine Optimization:** Reduce frequency where possible
+5. **Employee Allocation:** Optimize multi-workspace assignments
+6. **Monitor:** Track improvements over 30 days
+
+**Outcome:** $450 → $280/month (38% savings), 94% productivity maintained
+
+### Failure Recovery Workflow
+
+**Use Case:** Cascading failures (stuck agents, runtime disconnection)
+
+**Steps:**
+1. **Detection:** Copilot surfaces critical insights
+2. **Doctor:** Run full health check
+3. **Classification:** Identify failure types and dependencies
+4. **Recovery:** Fix dependencies in order (MCP → Runtimes → Agents)
+5. **Root Cause:** Post-incident review, preventive tickets
+6. **Monitoring:** Week 1 checks for recurrence
+
+**Outcome:** Full recovery in 47 minutes, 80% risk reduction
+
+### Shift Handoff Workflow
+
+**Use Case:** Operator going on 2-week vacation
+
+**Steps:**
+1. **Pre-Handoff:** Run Doctor, assign action items
+2. **Documentation:** Create comprehensive handoff document
+3. **Live Session:** 90-minute walkthrough with backup operator
+4. **During Absence:** Daily check-ins, escalation path
+5. **Reintegration:** Post-handoff debrief, lessons learned
+
+**Outcome:** Complete knowledge transfer, zero incidents during absence
+
+### Cross-Functional Collaboration
+
+**Use Case:** Building Real-Time Collaboration Panel
+
+**Teams:** Design (Lin), Frontend (Priya), Backend (Mike), QA (Sarah), Tech Lead (Elena), Product (Alex)
+
+**Steps:**
+1. **Requirements:** Product creates user stories with cross-functional input
+2. **Architecture:** Tech Lead designs with consultation
+3. **Backend:** Mike implements WebSocket server
+4. **Frontend:** Priya builds components (coordination via ticket threads)
+5. **Integration:** Elena coordinates end-to-end testing
+6. **QA:** Sarah validates across 11 scenarios
+
+**Outcome:** Feature delivered on time, 12 tickets, 15 dependencies
+
+---
+
+## Advanced Topics
+
+### Routine Governance
+
+**Creating Safe Routines:**
+1. Define purpose and schedule
+2. Configure budget cap
+3. Set approval gates
+4. Create work template
+5. Validate with benchmark
+6. Monitor and optimize
+
+**Deprecation Process:**
+1. Add deprecation notice (routine still runs)
+2. Reduce frequency (daily → weekly)
+3. Disable routine
+4. Delete after grace period
+
+### MCP Server Development
+
+**Creating Custom Tools:**
+1. Initialize MCP server project
+2. Define tools with input schemas
+3. Implement tool logic
+4. Handle errors gracefully
+5. Test with MCP client
+6. Register in Team-X
+
+### Custom Employee Roles
+
+**Role Definition:**
+- Skills: Technical capabilities
+- Personality: Communication, approach, curiosity, independence
+- Work Style: Speed, communication, documentation
+- System Prompt: Behavior instructions
+
+### Budget Optimization Strategies
+
+**Provider Selection:**
+- Use Ollama for sensitive data (free, local)
+- Use GPT-4o-mini for routine tasks (fast, cheap)
+- Use Claude Opus for complex reasoning (worth the cost)
+
+**Routine Optimization:**
+- Reduce frequency (daily → weekly)
+- Batch operations (multiple tickets in one run)
+- Skip when no changes
+
+**Employee Allocation:**
+- Multi-workspace sharing for efficiency
+- Idle employees cost nothing
+- Hire and fire based on demand
+
+---
+
+## Troubleshooting Guide
+
+### Common Issues
+
+**Agent stuck running:**
+- Check provider status
+- Review agent run log for errors
+- Cancel run if needed
+- Use improvement loop to prevent recurrence
+
+**Budget exhausted:**
+- Approve override if legitimate
+- Review spend breakdown
+- Adjust budgets for future
+- Use cheaper providers
+
+**Employee performance issues:**
+- Review agent run history
+- Provide feedback in ticket thread
+- Adjust system prompt
+- Reassign to different role if needed
+
+**Integration failures:**
+- Check API keys and tokens
+- Verify webhook URLs
+- Review integration logs
+- Test with sample data
+
+### Doctor Diagnostics
+
+**What Doctor Checks:**
+- Database integrity
+- Recovery readiness
+- Runtime posture
+- Secrets configuration
+- Provider health
+- MCP server health
+- Budget blockers
+
+**Running Doctor:**
+`Ctrl+K` → "Run Doctor"
+or
+Mission Control → Autonomy → Doctor → Run Doctor
+
+---
+
+## Best Practices
+
+### Ticket Writing
+
+**Good Ticket Example:**
+```
+Title: Fix SAML authentication for enterprise users
+
+Description:
+**Problem**
+Enterprise users cannot login via SAML SSO.
+Error: "Authentication failed: Invalid SAML response"
+
+**Steps to Reproduce**
+1. Go to /login
+2. Click "Login with SAML"
+3. Enter IdP credentials
+4. Click submit
+
+**Expected**
+User redirected to dashboard with valid session
+
+**Actual**
+Error page shown, user not logged in
+
+**Acceptance Criteria**
+- [ ] SAML login works for IdP
+- [ ] Error handling improved
+- [ ] User redirected correctly
+- [ ] Logs show authentication details
+
+**Notes**
+- IdP: Okta
+- SAML version 2.0
+- Certificate updated on 2026-05-01
+```
+
+### Budget Management
+
+**Best Practices:**
+1. Set monthly budgets at 80% of expected spend
+2. Use per-ticket budgets for risky work
+3. Monitor Copilot cost insights weekly
+4. Use approval workflows for overrides
+5. Review routine spend monthly
+
+### Employee Management
+
+**Hiring:**
+- Start with 3-5 employees
+- Hire for roles, not generalists
+- Test with small tasks first
+- Adjust roles based on performance
+
+**Firing:**
+- Archive old tickets first
+- Document reason for termination
+- Consider rehire with different role
+
+### Security Practices
+
+**API Keys:**
+- Rotate monthly
+- Use environment variables
+- Never commit to repositories
+- Use scoped keys when possible
+
+**Data Protection:**
+- Enable encryption at rest
+- Use HTTPS for all connections
+- Regular security audits
+- Keep dependencies updated
+
+---
+
+## Integration Capabilities
+
+### Native Integrations
+- GitHub (PR reviews, issues)
+- GitLab (MR reviews, issues)
+- Slack (notifications, commands)
+- Discord (notifications, voice)
+- Jira (issue sync, status mapping)
+- Notion (database sync, pages)
+
+### Webhook Events
+- ticket.created
+- ticket.started
+- ticket.done
+- run.failed
+- budget.alert
+- employee.hired
+
+### API Endpoints
+- Workspace management
+- Employee CRUD
+- Ticket CRUD
+- Agent run control
+- Budget queries
+
+---
+
+## Glossary (Key Terms)
+
+**Agent:** AI entity powered by LLM that works on tickets autonomously
+**Agent Run:** Single execution of an agent working on a ticket
+**Artifact:** Output produced by agent run (code, docs, reports)
+**Assignee:** Employee primarily responsible for a ticket
+**Autonomy Control Plane:** Governance system (runtimes, routines, budgets, approvals)
+**Budget:** Spend limit (monthly, per-ticket, per-routine)
+**Command Palette:** NLU-driven command interface (Ctrl+K/Cmd+K)
+**Copilot:** Proactive intelligence analyzer surfacing insights
+**Doctor:** Health diagnostic tool in Autonomy Control Plane
+**Employee:** AI agent with curated role (57 available)
+**MCP:** Model Context Protocol for extending agent capabilities
+**Mission Control:** Real-time operations dashboard
+**Participant:** Employee added to ticket for collaboration (not primary assignee)
+**Provider:** AI model provider (Anthropic, OpenAI, Ollama)
+**Routine:** Automated recurring task executed on schedule
+**Runtime:** Execution environment for agent (tools, file access, commands)
+**Ticket:** Work unit assigned to employee
+**Workspace:** Company container (employees, tickets, budgets, data)
+
+---
+
+## Support Resources
+
+**Self-Service:**
+- Documentation: docs.teamflow-x.com
+- FAQ: docs/user-guide/faq.md
+- Troubleshooting: docs/user-guide/troubleshooting.md
+- Keyboard Shortcuts: docs/user-guide/keyboard-shortcuts.md
+
+**Community:**
+- Discord: discord.gg/teamflow-x
+- GitHub Discussions: github.com/teamflow-x/discussions
+- Stack Overflow: Tag questions with `teamflow-x`
+
+**Direct Support:**
+- Email: support@teamflow-x.com
+- Response Time: < 24 hours for critical issues
+- Documentation: developers@teamflow-x.com
+- Sales: sales@teamflow-x.com
+
+---
+
+## License Information
+
+**License:** MIT License
+**Copyright:** 2026 Team-X
+**Repository:** https://github.com/teamflow-x/team-x
+**License File:** LICENSE in repository root
+
+**Permissions:**
+- Commercial use
+- Modification
+- Distribution
+- Private use
+
+**Limitations:**
+- Warranty disclaimer
+- Liability limitation
+
+---
+
+## Citation Information
+
+**Cite Team-X as:**
+```
+Team-X. (2026). AI-Powered Workforce Desktop Application (Version 1.0).
+Retrieved from https://teamflow-x.com
+```
+
+**APA Citation:**
+```
+Team-X. (2026). Team-X: AI-powered workforce desktop application
+(Version 1.0) [Computer software]. https://teamflow-x.com
+```
+
+**BibTeX:**
+```
+@software{teamx_2026,
+  author = {Team-X},
+  title = {Team-X: AI-Powered Workforce Desktop Application},
+  version = {1.0},
+  year = {2026},
+  url = {https://teamflow-x.com}
+}
+```
+
+---
+
+## Version History
+
+**v1.0.0** (2026-05-03)
+- Initial public release
+- 57 curated employee roles
+- Multi-workspace support
+- Full governance features
+- Comprehensive documentation
+
+---
+
+## SEO Keywords
+
+AI workforce, AI employees, autonomous agents, AI-powered team, virtual team, AI productivity, AI automation, desktop productivity app, AI collaboration, AI project management, agent orchestration, LLM workspace, Claude desktop, GPT desktop, AI desktop application, AI development team, AI design team, AI content team, automated workflows, routine automation, budget governance, provider routing, Anthropic integration, OpenAI integration, local LLM, Ollama desktop, MCP server, Model Context Protocol, AI oversight, AI transparency, AI cost management, multi-tenant workspace, agency management, client workspaces, shift handoff, operator backup, AI documentation, AI ticket management
+
+---
+
+## End of Extended Documentation Index
+
+For complete documentation, see: https://docs.teamflow-x.com
+
+---
+
+*Generated: 2026-05-03*
+*Version: 1.0.0*
+*Platform: Team-X Desktop Application*

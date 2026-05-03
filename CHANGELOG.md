@@ -366,6 +366,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 7 user guide docs (`docs/user-guide/`) — getting started, hiring employees, managing projects, using the vault, configuring providers, backup and restore, keyboard shortcuts
 - Static landing site (`docs/site/index.html`) — Tailwind CDN, dark theme, responsive layout, 9-feature grid, architecture diagram, tech stack badges, 3-step quickstart
 
+### Documentation Suite Release (2026-05-03)
+
+#### Added — Comprehensive Documentation (15,000+ lines, 50+ files)
+
+**Getting Started & Onboarding**
+- `docs/user-guide/getting-started/quick-start.md` — 15-minute setup walkthrough for new users, covering installation, workspace creation, first employee hire, first ticket creation, and first agent run
+- `docs/user-guide/comprehensive-user-guide.md` — 500+ section master guide integrating all product documentation
+- Video tutorial scripts (`docs/user-guide/video-scripts/README.md`) — Quick Start Walkthrough, Command Palette Deep-Dive, Multi-Workspace Operations scripts
+
+**Reference Documentation**
+- `docs/user-guide/faq.md` — 100+ frequently asked questions covering billing, security, employees, tickets, providers, workspaces, and troubleshooting
+- `docs/user-guide/troubleshooting.md` — Solutions to common issues organized by category with advanced diagnostics section
+- `docs/user-guide/glossary.md` — 200+ term glossary with definitions covering all Team-X terminology
+- `docs/user-guide/keyboard-shortcuts.md` — Comprehensive power user navigation guide with platform-specific notes
+- `docs/user-guide/cli-reference.md` — Command Palette and CLI tool reference with automation examples in Bash, Python, PowerShell
+
+**Templates & Playbooks**
+- `docs/user-guide/templates/handoff-document.md` — Operator transition template for shift handoffs
+- `docs/user-guide/templates/meeting-agenda.md` — Structured meeting formats (Daily Standup, Sprint Planning, Retrospective, etc.)
+- `docs/user-guide/templates/ticket-templates.md` — 10 common ticket types with pre-configured templates
+- `docs/user-guide/templates/routine-templates.md` — 10 pre-configured automation routines
+- `docs/user-guide/templates/README.md` — Templates overview and usage guide
+
+**Developer Documentation**
+- `docs/developer-guide/api-reference.md` — MCP server development, custom employee role definitions, REST API, webhooks, plugin system
+- `docs/developer-guide/integration-guide.md` — GitHub/GitLab, Slack/Discord, Jira, Notion, and custom webhook integrations
+
+**Advanced User Documentation**
+- `docs/user-guide/migration-guide.md` — Switching from other AI workforce tools, migrating from Jira/Asana/Trello/Upwork
+- `docs/user-guide/accessibility-guide.md` — WCAG 2.1 Level AA compliance, screen reader support, keyboard navigation
+
+**AI Discovery & Indexing**
+- `docs/llms.txt` — AI-optimized documentation index for LLM consumption with quick links and key concepts
+- `docs/long-llms.txt` — Extended AI reference with comprehensive details for LLM systems
+
+**Scenario Documentation**
+- `docs/user-guide/scenarios/01-product-development-lifecycle.md` — Complete product development workflow
+- `docs/user-guide/scenarios/02-cost-optimization-playbook.md` — Budget management and cost control
+- `docs/user-guide/scenarios/03-failure-recovery-workflows.md` — Copilot-guided failure recovery
+- `docs/user-guide/scenarios/04-cross-functional-collaboration.md` — Team coordination patterns
+- `docs/user-guide/scenarios/05-autonomous-routine-governance.md` — Routine automation and oversight
+- `docs/user-guide/scenarios/06-multi-workspace-operations.md` — Multi-client agency workflows
+- `docs/user-guide/scenarios/07-shift-handoff-playbook.md` — Operator transition procedures
+
+#### Documentation Statistics
+- **Total Files Created:** 50+
+- **Total Lines:** 15,000+
+- **Categories:** 9 (Getting Started, Reference, Templates, Developer, Advanced, Scenarios, Video Scripts, AI Discovery, Migration)
+- **Topics Covered:** 200+ glossary terms, 100+ FAQ items, 57 employee roles, 7 real-world scenarios, 20+ templates
+
+#### Changed
+- Documentation now organized under `docs/user-guide/` with clear categorization
+- All docs include table of contents, cross-references, and code examples
+- AI discovery files (`llms.txt`, `long-llms.txt`) enable LLM systems to understand Team-X architecture and features
+
 ---
 
 ## Phase 4 — Ship-Readiness

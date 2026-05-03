@@ -11,7 +11,7 @@
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, schedule future work, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
 
-[Download](#installation) | [User Guide](docs/user-guide/) | [Contributing](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
+[Download](#installation) | [Quick Start](docs/user-guide/getting-started/quick-start.md) | [User Guide](docs/user-guide/comprehensive-user-guide.md) | [Contributing](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -173,6 +173,50 @@ Team-X/
 | Unit tests | Vitest (1683 tests) |
 | E2E tests | Playwright (17 specs / 22 cases) |
 | CI | GitHub Actions |
+
+---
+
+## Documentation
+
+Team-X includes comprehensive documentation across 50+ files and 15,000+ lines:
+
+### Getting Started
+- **[Quick Start Guide](docs/user-guide/getting-started/quick-start.md)** — 15-minute setup walkthrough for new users
+- **[Comprehensive User Guide](docs/user-guide/comprehensive-user-guide.md)** — Complete product documentation (500+ sections)
+
+### Reference
+- **[FAQ](docs/user-guide/faq.md)** — 100+ frequently asked questions
+- **[Troubleshooting](docs/user-guide/troubleshooting.md)** — Common issues and solutions
+- **[Glossary](docs/user-guide/glossary.md)** — 200+ term reference
+- **[Keyboard Shortcuts](docs/user-guide/keyboard-shortcuts.md)** — Power user navigation
+- **[CLI Reference](docs/user-guide/cli-reference.md)** — Command Palette and CLI tool documentation
+
+### Real-World Scenarios
+- **[Product Development Lifecycle](docs/user-guide/scenarios/01-product-development-lifecycle.md)** — Complete product workflow
+- **[Cost Optimization Playbook](docs/user-guide/scenarios/02-cost-optimization-playbook.md)** — Budget management
+- **[Failure Recovery Workflows](docs/user-guide/scenarios/03-failure-recovery-workflows.md)** — Copilot-guided recovery
+- **[Cross-Functional Collaboration](docs/user-guide/scenarios/04-cross-functional-collaboration.md)** — Team coordination
+- **[Autonomous Routine Governance](docs/user-guide/scenarios/05-autonomous-routine-governance.md)** — Routine automation
+- **[Multi-Workspace Operations](docs/user-guide/scenarios/06-multi-workspace-operations.md)** — Multi-client workflows
+- **[Shift Handoff Playbook](docs/user-guide/scenarios/07-shift-handoff-playbook.md)** — Operator transitions
+
+### Templates
+- **[Templates](docs/user-guide/templates/README.md)** — Handoff documents, meeting agendas, ticket templates, routine templates
+
+### Developer
+- **[API Reference](docs/developer-guide/api-reference.md)** — MCP server development, custom roles, REST API, webhooks, plugins
+- **[Integration Guide](docs/developer-guide/integration-guide.md)** — GitHub, GitLab, Slack, Discord, Jira, Notion integrations
+
+### Advanced
+- **[Migration Guide](docs/user-guide/migration-guide.md)** — Switching from other tools
+- **[Accessibility Guide](docs/user-guide/accessibility-guide.md)** — WCAG 2.1 compliance documentation
+
+### Video Tutorials
+- **[Video Scripts](docs/user-guide/video-scripts/README.md)** — Quick Start Walkthrough, Command Palette Deep-Dive, Multi-Workspace Operations
+
+### AI Discovery
+- **[llms.txt](docs/llms.txt)** — AI-optimized documentation index for LLM consumption
+- **[long-llms.txt](docs/long-llms.txt)** — Extended AI reference with comprehensive details
 
 ---
 

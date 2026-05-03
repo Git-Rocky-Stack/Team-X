@@ -1,0 +1,196 @@
+# Team-X Documentation Index
+
+**AI-optimized documentation index for LLM consumption**
+
+---
+
+## Project Overview
+
+**Project:** Team-X
+**Description:** AI-powered workforce desktop application
+**Version:** 1.0.0
+**Repository:** https://github.com/teamflow-x/team-x
+**Website:** https://teamflow-x.com
+**Documentation:** https://docs.teamflow-x.com
+
+---
+
+## Quick Links
+
+**Getting Started:**
+- Quick Start Guide: docs/user-guide/getting-started/quick-start.md
+- Installation: https://teamflow-x.com/download
+- Account Creation: https://teamflow-x.com/signup
+
+**Core Documentation:**
+- Comprehensive User Guide: docs/user-guide/comprehensive-user-guide.md
+- FAQ: docs/user-guide/faq.md
+- Troubleshooting: docs/user-guide/troubleshooting.md
+
+**Developers:**
+- Developer Guide: docs/developer-guide/api-reference.md
+- Integration Guide: docs/developer-guide/integration-guide.md
+- MCP Protocol: https://modelcontextprotocol.io
+
+**Community:**
+- Discord: https://discord.gg/teamflow-x
+- GitHub: https://github.com/teamflow-x
+- Support: support@teamflow-x.com
+
+---
+
+## Documentation Structure
+
+```
+docs/
+├── user-guide/
+│   ├── comprehensive-user-guide.md          # Main documentation (500+ sections)
+│   ├── getting-started/
+│   │   └── quick-start.md                  # 15-minute setup guide
+│   ├── scenarios/                           # Real-world scenarios (7 scenarios)
+│   │   ├── 01-product-development-lifecycle.md
+│   │   ├── 02-cost-optimization-playbook.md
+│   │   ├── 03-failure-recovery-workflows.md
+│   │   ├── 04-cross-functional-collaboration.md
+│   │   ├── 05-autonomous-routine-governance.md
+│   │   ├── 06-multi-workspace-operations.md
+│   │   └── 07-shift-handoff-playbook.md
+│   ├── templates/                           # Reusable templates
+│   │   ├── handoff-document.md
+│   │   ├── meeting-agenda.md
+│   │   ├── ticket-templates.md
+│   │   ├── routine-templates.md
+│   │   └── README.md
+│   ├── video-scripts/                       # Video tutorial scripts
+│   │   └── README.md
+│   ├── faq.md                               # Frequently asked questions
+│   ├── troubleshooting.md                    # Common issues and solutions
+│   ├── glossary.md                          # 200+ term glossary
+│   ├── keyboard-shortcuts.md                 # Power user shortcuts
+│   ├── accessibility-guide.md                # WCAG compliance
+│   ├── migration-guide.md                   # Platform migration
+│   └── cli-reference.md                      # CLI and Command Palette
+├── developer-guide/
+│   ├── api-reference.md                     # REST API, MCP, plugins
+│   └── integration-guide.md                  # GitHub, Slack, Jira, etc.
+└── README.md                                 # Project overview
+```
+
+---
+
+## Key Concepts
+
+**Team-X:** Desktop application providing AI-powered workforce
+**Employee:** AI agent with curated role (57 roles available)
+**Ticket:** Work unit assigned to employee
+**Agent Run:** Single execution of agent working on ticket
+**Mission Control:** Real-time operations dashboard
+**Command Palette:** NLU-driven command interface (Ctrl+K/Cmd+K)
+**Copilot:** Proactive intelligence analyzer
+**Autonomy Control Plane:** Governance system (runtimes, routines, budgets)
+**Workspace:** Company container (employees, tickets, budgets)
+**Provider:** AI model provider (Anthropic, OpenAI, Ollama)
+**MCP:** Model Context Protocol for extending agent capabilities
+
+---
+
+## Core Features
+
+1. **AI Workforce:** Hire AI employees with specialized roles
+2. **Natural Language Interface:** Command Palette (Ctrl+K)
+3. **Mission Control Dashboard:** Real-time operations overview
+4. **Autonomous Execution:** Agents work independently on tickets
+5. **Budget Governance:** Per-ticket and monthly budget controls
+6. **Multi-Workspace:** Manage multiple clients/projects
+7. **Provider Routing:** Anthropic, OpenAI, Ollama with failover
+8. **Routine Automation:** Scheduled recurring tasks
+9. **Copilot Insights:** Proactive recommendations
+10. **Audit Trail:** Complete event logging
+
+---
+
+## Quick Reference
+
+### Keyboard Shortcuts
+
+- `Ctrl+K` / `Cmd+K` — Open Command Palette
+- `Ctrl+T` / `Cmd+T` — Tickets Panel
+- `Ctrl+E` / `Cmd+E` — Employees Panel
+- `Ctrl+A` / `Cmd+A` — Autonomy Control Plane
+- `Ctrl+D` / `Cmd+D` — Mission Control Dashboard
+- `Esc` — Close/go back
+
+### Command Palette Examples
+
+- "Create ticket for fixing login bug"
+- "Hire a UI/UX designer"
+- "Show our spend this month"
+- "Assign all open tickets to Alex"
+- "Cancel all running agents"
+
+### Employee Roles (57 total)
+
+**Engineering:** Full Stack Engineer, Backend Engineer, Frontend Engineer, DevOps Engineer, Security Engineer, QA Engineer, Database Architect
+**Design:** UI/UX Designer, Graphic Designer, Product Designer, Design Systems Lead
+**Product:** Product Manager, Technical Writer, Business Analyst
+**Marketing:** Content Writer, SEO Specialist, Social Media Manager, Email Marketing Specialist
+**Data:** Data Analyst, Data Scientist, ML Engineer
+**Operations:** Project Manager, Scrum Master, Release Manager
+
+### Platform Support
+
+- **Windows:** Windows 10/11 (64-bit)
+- **macOS:** macOS 11+ (Big Sur or later)
+- **Linux:** Ubuntu 20.04+, Debian 11+
+
+---
+
+## Common Use Cases
+
+**Product Development:**
+- Hire product team (PM, Designer, Engineers)
+- Create tickets for features, bugs, reviews
+- Agents collaborate autonomously
+- Track progress in Mission Control
+
+**Agency Work:**
+- One workspace per client
+- Master policies for consistency
+- Employee sharing across workspaces
+- Client-specific billing
+
+**Shift Handoff:**
+- Pre-handoff validation with Doctor
+- Comprehensive handoff documentation
+- Backup operator coverage
+- Post-handoff reintegration
+
+**Cost Optimization:**
+- Budget caps and alerts
+- Provider selection (cheaper models for routine work)
+- Routine schedule optimization
+- Spend analytics via Copilot
+
+---
+
+## Support Resources
+
+**Documentation:** docs.teamflow-x.com
+**Help Center:** support.teamflow-x.com
+**Community Discord:** discord.gg/teamflow-x
+**GitHub Issues:** github.com/teamflow-x/issues
+**Status Page:** status.teamflow-x.com
+**Email:** support@teamflow-x.com
+
+---
+
+## License
+
+MIT License — See LICENSE file for details
+
+---
+
+## Version
+
+Documentation Version: 1.0.0
+Last Updated: 2026-05-03
