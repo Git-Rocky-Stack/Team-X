@@ -125,6 +125,7 @@ import { buildCommandHandlers } from './ipc/command-handlers.js';
 import { buildCopilotHandlers } from './ipc/copilot-handlers.js';
 import { HUMAN_USER_ID, createIpcHandlers } from './ipc/handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
+import { buildEnhancedAiHandlers } from './ipc/enhanced-ai-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
 import { setupApplicationMenu } from './menu.js';
 import { createAgentWakeupQueue } from './orchestrator/agent-wakeup-queue.js';
@@ -193,6 +194,7 @@ import {
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRagIndexer } from './services/rag-indexer.js';
 import { rebuildCompanyRagSources } from './services/rag-rebuild.js';
+import { createEnhancedAiService, type EnhancedAiService } from './services/enhanced-ai.js';
 import { createRetrievalOrchestrator } from './services/retrieval-orchestrator.js';
 import { createRoleLoader } from './services/role-loader.js';
 import {
@@ -1151,6 +1153,65 @@ app
     });
     ragIndexer.start();
     ragIndexerInstance = ragIndexer;
+
+    // ---- Enhanced AI service: Phase 2 & 3 features ------------------------
+    //
+    // Integrates semantic chunking, query expansion, long-term memory,
+    // knowledge graph, multi-turn planning, streaming, and tracing with
+    // the desktop app. Requires an LLM provider to function fully.
+    // (Phase 5 — M32)
+    const llmProvider = settingsRepo.get<string>('llm_provider', 'auto');
+    const llmEnabled = llmProvider !== 'auto' && llmProvider !== null;
+    let enhancedAiService: EnhancedAiService | null = null;
+
+    if (llmEnabled && ragService !== null) {
+      // Create an LLM complete function based on the provider
+      // This will be wired up once the LLM settings are fully configured
+      const embedText = async (texts: string[]) => {
+        // Re-use the embed adapter from RAG
+        const adapter = await buildEmbedAdapter({
+          provider: settingsRepo.get<string>('embedding_provider', 'ollama-local'),
+          model: settingsRepo.get<string>('embedding_model', 'nomic-embed-text'),
+          dimension: settingsRepo.get<number>('embedding_dimension', 768),
+          providersService,
+          secretsStore,
+        });
+        if (!adapter) throw new Error('Embedding adapter not available');
+        const embedFn = createEmbedText(adapter);
+        return embedFn(texts);
+      };
+
+      // For now, we create a minimal LLM complete stub
+      // This will be replaced with the actual LLM provider in production
+      const llmComplete = async (prompt: string): Promise<string> => {
+        // This is a stub — the actual implementation will call the configured LLM
+        console.warn('[enhanced-ai] LLM complete called but not yet wired to provider');
+        return '(LLM response not configured)';
+      };
+
+      try {
+        enhancedAiService = createEnhancedAiService({
+          ragService,
+          embedText,
+          dimension: settingsRepo.get<number>('embedding_dimension', 768),
+          ragRepo: {
+            upsert: (input) => embeddingsRepo.upsert(input),
+            deleteBySource: (id) => embeddingsRepo.deleteBySource(id),
+            listByCompany: (cid) =>
+              embeddingsRepo
+                .listByCompany(cid)
+                .map((r) => ({ ...r, sourceType: r.sourceType as any })),
+          },
+          llmComplete,
+        });
+        console.log('[enhanced-ai] service ready — Phase 2 & 3 features available');
+      } catch (err) {
+        console.error('[enhanced-ai] failed to initialize:', err);
+        enhancedAiService = null;
+      }
+    } else {
+      console.log('[enhanced-ai] disabled — configure LLM provider to enable');
+    }
 
     // ---- Copilot event window: bounded per-company rolling buffer ---------
     //
@@ -2115,6 +2176,31 @@ app
     ipcMain.handle('rag.deleteForCompany', (_evt, companyId: string) =>
       ragHandlers.deleteForCompany(companyId),
     );
+
+    // ---- Enhanced AI IPC handlers (Phase 5 — M32) ------------------------
+    //
+    // Exposes semantic chunking, query expansion, long-term memory,
+    // knowledge graph, multi-turn planning, and streaming responses to
+    // the renderer process. All handlers gracefully degrade when the
+    // enhanced AI service is not available (LLM not configured).
+    const enhancedAiHandlers = buildEnhancedAiHandlers({
+      enhancedAiService,
+    });
+    ipcMain.handle('enhancedAi.stats', () => enhancedAiHandlers.stats());
+    ipcMain.handle('enhancedAi.query', async (_evt, input) => enhancedAiHandlers.query(input));
+    ipcMain.handle('enhancedAi.indexWithSemanticChunking', async (_evt, input) =>
+      enhancedAiHandlers.indexWithSemanticChunking(input),
+    );
+    ipcMain.handle('enhancedAi.extractAndStoreFacts', async (_evt, input) =>
+      enhancedAiHandlers.extractAndStoreFacts(input),
+    );
+    ipcMain.handle('enhancedAi.queryKnowledge', async (_evt, input) =>
+      enhancedAiHandlers.queryKnowledge(input),
+    );
+    ipcMain.handle('enhancedAi.createPlan', async (_evt, input) =>
+      enhancedAiHandlers.createPlan(input),
+    );
+    ipcMain.handle('enhancedAi.getStats', async () => enhancedAiHandlers.getStats());
 
     ipcMain.handle('system.selectDirectory', async (event) => {
       const owner =

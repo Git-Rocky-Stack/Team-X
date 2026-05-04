@@ -16,6 +16,7 @@ import { AgenticSection } from './agentic-section.js';
 import { BackupSection } from './backup-section.js';
 import { ConcurrencySection } from './concurrency-section.js';
 import { CopilotSection } from './copilot-section.js';
+import { EnhancedAiSection } from './enhanced-ai-section.js';
 import { ExtensionsSection } from './extensions-section.js';
 import { MemorySection } from './memory-section.js';
 import { PermissionsSection } from './permissions-section.js';
@@ -64,6 +65,9 @@ export function SettingsView() {
         </ErrorBoundary>
         <ErrorBoundary componentName="RagSection">
           <RagSection />
+        </ErrorBoundary>
+        <ErrorBoundary componentName="EnhancedAiSection">
+          <EnhancedAiSection />
         </ErrorBoundary>
         <ErrorBoundary componentName="ConcurrencySection">
           <ConcurrencySection />

@@ -323,6 +323,13 @@ import type {
   VaultVerifyResponse,
 } from '@team-x/shared-types';
 
+// Enhanced AI settings types (Phase 5 — M32)
+// These are added to the shared-types package but may not be in the main export yet
+import type {
+  SettingsGetEnhancedAiConfigResponse,
+  SettingsSetEnhancedAiConfigRequest,
+} from '@team-x/shared-types';
+
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 import type { CopilotExportFilter, CopilotExportResult } from '../db/repos/copilot-insights.js';
 import {
@@ -1632,6 +1639,10 @@ export interface IpcHandlers {
   settingsGetRagConfig(): Promise<SettingsGetRagConfigResponse>;
   /** `settings.setRagConfig` — patch one or more RAG configuration keys (Phase 5 — M29). */
   settingsSetRagConfig(req: SettingsSetRagConfigRequest): Promise<void>;
+  /** `settings.getEnhancedAiConfig` — full Enhanced AI configuration snapshot (Phase 5 — M32). */
+  settingsGetEnhancedAiConfig(): Promise<SettingsGetEnhancedAiConfigResponse>;
+  /** `settings.setEnhancedAiConfig` — patch one or more Enhanced AI configuration keys (Phase 5 — M32). */
+  settingsSetEnhancedAiConfig(req: SettingsSetEnhancedAiConfigRequest): Promise<void>;
   /** `settings.getAgentic` — agentic-loop budget caps (max steps, max tokens, timeout ms) (Phase 5 — M31). */
   settingsGetAgentic(): Promise<SettingsGetAgenticResponse>;
   /** `settings.setAgentic` — patch one or more agentic-loop budget caps with clamping (Phase 5 — M31). */
@@ -6522,6 +6533,109 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           throw new Error('[ipc] settings.setRagConfig: embeddingDimension must be 64..8192');
         }
         settingsRepo.set('embedding_dimension', Math.round(req.embeddingDimension));
+      }
+    },
+
+    // -----------------------------------------------------------------------
+    // Enhanced AI configuration handlers (Phase 5 — M32)
+    // -----------------------------------------------------------------------
+
+    async settingsGetEnhancedAiConfig(): Promise<SettingsGetEnhancedAiConfigResponse> {
+      return {
+        llmProvider: settingsRepo.get<string>('llm_provider', 'auto'),
+        llmModel: settingsRepo.get<string>('llm_model', 'auto'),
+        llmMaxTokens: settingsRepo.get<number>('llm_max_tokens', 4096),
+        llmTemperature: settingsRepo.get<number>('llm_temperature', 0.7),
+        queryExpansionEnabled: settingsRepo.get<boolean>('query_expansion_enabled', true),
+        semanticChunkingEnabled: settingsRepo.get<boolean>('semantic_chunking_enabled', true),
+        longTermMemoryEnabled: settingsRepo.get<boolean>('long_term_memory_enabled', true),
+        knowledgeGraphEnabled: settingsRepo.get<boolean>('knowledge_graph_enabled', true),
+        planningEnabled: settingsRepo.get<boolean>('planning_enabled', false),
+        planningThreshold: settingsRepo.get<number>('planning_threshold', 200),
+        streamingEnabled: settingsRepo.get<boolean>('streaming_enabled', true),
+        tracingEnabled: settingsRepo.get<boolean>('tracing_enabled', false),
+        tracingSampleRate: settingsRepo.get<number>('tracing_sample_rate', 0.1),
+      };
+    },
+
+    async settingsSetEnhancedAiConfig(req: SettingsSetEnhancedAiConfigRequest): Promise<void> {
+      if (req.llmProvider !== undefined) {
+        if (typeof req.llmProvider !== 'string' || req.llmProvider.length === 0) {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: llmProvider must be non-empty');
+        }
+        settingsRepo.set('llm_provider', req.llmProvider);
+      }
+      if (req.llmModel !== undefined) {
+        if (typeof req.llmModel !== 'string' || req.llmModel.length === 0) {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: llmModel must be non-empty');
+        }
+        settingsRepo.set('llm_model', req.llmModel);
+      }
+      if (req.llmMaxTokens !== undefined) {
+        if (!Number.isFinite(req.llmMaxTokens) || req.llmMaxTokens < 1 || req.llmMaxTokens > 32000) {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: llmMaxTokens must be 1..32000');
+        }
+        settingsRepo.set('llm_max_tokens', Math.round(req.llmMaxTokens));
+      }
+      if (req.llmTemperature !== undefined) {
+        if (!Number.isFinite(req.llmTemperature) || req.llmTemperature < 0 || req.llmTemperature > 2) {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: llmTemperature must be 0..2');
+        }
+        settingsRepo.set('llm_temperature', req.llmTemperature);
+      }
+      if (req.queryExpansionEnabled !== undefined) {
+        if (typeof req.queryExpansionEnabled !== 'boolean') {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: queryExpansionEnabled must be boolean');
+        }
+        settingsRepo.set('query_expansion_enabled', req.queryExpansionEnabled);
+      }
+      if (req.semanticChunkingEnabled !== undefined) {
+        if (typeof req.semanticChunkingEnabled !== 'boolean') {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: semanticChunkingEnabled must be boolean');
+        }
+        settingsRepo.set('semantic_chunking_enabled', req.semanticChunkingEnabled);
+      }
+      if (req.longTermMemoryEnabled !== undefined) {
+        if (typeof req.longTermMemoryEnabled !== 'boolean') {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: longTermMemoryEnabled must be boolean');
+        }
+        settingsRepo.set('long_term_memory_enabled', req.longTermMemoryEnabled);
+      }
+      if (req.knowledgeGraphEnabled !== undefined) {
+        if (typeof req.knowledgeGraphEnabled !== 'boolean') {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: knowledgeGraphEnabled must be boolean');
+        }
+        settingsRepo.set('knowledge_graph_enabled', req.knowledgeGraphEnabled);
+      }
+      if (req.planningEnabled !== undefined) {
+        if (typeof req.planningEnabled !== 'boolean') {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: planningEnabled must be boolean');
+        }
+        settingsRepo.set('planning_enabled', req.planningEnabled);
+      }
+      if (req.planningThreshold !== undefined) {
+        if (!Number.isFinite(req.planningThreshold) || req.planningThreshold < 50 || req.planningThreshold > 1000) {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: planningThreshold must be 50..1000');
+        }
+        settingsRepo.set('planning_threshold', Math.round(req.planningThreshold));
+      }
+      if (req.streamingEnabled !== undefined) {
+        if (typeof req.streamingEnabled !== 'boolean') {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: streamingEnabled must be boolean');
+        }
+        settingsRepo.set('streaming_enabled', req.streamingEnabled);
+      }
+      if (req.tracingEnabled !== undefined) {
+        if (typeof req.tracingEnabled !== 'boolean') {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: tracingEnabled must be boolean');
+        }
+        settingsRepo.set('tracing_enabled', req.tracingEnabled);
+      }
+      if (req.tracingSampleRate !== undefined) {
+        if (!Number.isFinite(req.tracingSampleRate) || req.tracingSampleRate < 0 || req.tracingSampleRate > 1) {
+          throw new Error('[ipc] settings.setEnhancedAiConfig: tracingSampleRate must be 0..1');
+        }
+        settingsRepo.set('tracing_sample_rate', req.tracingSampleRate);
       }
     },
 

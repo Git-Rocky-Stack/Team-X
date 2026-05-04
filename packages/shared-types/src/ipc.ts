@@ -2021,6 +2021,66 @@ export interface SettingsSetRagConfigRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Enhanced AI configuration settings (Phase 5 — M32)
+// ---------------------------------------------------------------------------
+
+/**
+ * Full Enhanced AI configuration snapshot, pulled from the `ai_*`
+ * keys in the settings repo. Includes LLM provider config and feature
+ * toggles for Phase 2 & 3 capabilities.
+ */
+export interface SettingsGetEnhancedAiConfigResponse {
+  /** LLM provider id for completion calls. 'auto' lets the resolver pick. */
+  llmProvider: string;
+  /** Model name within the LLM provider. 'auto' lets the resolver pick. */
+  llmModel: string;
+  /** Maximum tokens to generate per completion. */
+  llmMaxTokens: number;
+  /** Temperature for sampling (0.0–2.0). */
+  llmTemperature: number;
+
+  /** Enable query expansion for better retrieval recall. */
+  queryExpansionEnabled: boolean;
+  /** Enable semantic chunking instead of fixed-size chunking. */
+  semanticChunkingEnabled: boolean;
+  /** Enable long-term memory (fact extraction and storage). */
+  longTermMemoryEnabled: boolean;
+  /** Enable knowledge graph for cross-thread entity relationships. */
+  knowledgeGraphEnabled: boolean;
+  /** Enable multi-turn planning for complex queries. */
+  planningEnabled: boolean;
+  /** Minimum query length (chars) to trigger planning. */
+  planningThreshold: number;
+  /** Enable streaming responses for real-time output. */
+  streamingEnabled: boolean;
+  /** Enable distributed tracing for observability. */
+  tracingEnabled: boolean;
+  /** Sample rate for tracing (0.0–1.0). */
+  tracingSampleRate: number;
+}
+
+/**
+ * Partial update for the Enhanced AI configuration. Every field is optional;
+ * the handler patches only the supplied keys, leaving the rest at their
+ * current values.
+ */
+export interface SettingsSetEnhancedAiConfigRequest {
+  llmProvider?: string;
+  llmModel?: string;
+  llmMaxTokens?: number;
+  llmTemperature?: number;
+  queryExpansionEnabled?: boolean;
+  semanticChunkingEnabled?: boolean;
+  longTermMemoryEnabled?: boolean;
+  knowledgeGraphEnabled?: boolean;
+  planningEnabled?: boolean;
+  planningThreshold?: number;
+  streamingEnabled?: boolean;
+  tracingEnabled?: boolean;
+  tracingSampleRate?: number;
+}
+
+// ---------------------------------------------------------------------------
 // Low-level channel map (used by ipcMain.handle and its generic helpers)
 // ---------------------------------------------------------------------------
 
@@ -2543,6 +2603,15 @@ export interface IpcContract {
   };
   'settings.setRagConfig': {
     request: SettingsSetRagConfigRequest;
+    response: undefined;
+  };
+  // Enhanced AI channels (Phase 5 — M32)
+  'settings.getEnhancedAiConfig': {
+    request: Record<string, never>;
+    response: SettingsGetEnhancedAiConfigResponse;
+  };
+  'settings.setEnhancedAiConfig': {
+    request: SettingsSetEnhancedAiConfigRequest;
     response: undefined;
   };
   // Agentic loop channels (Phase 5 — M31)
@@ -3308,6 +3377,10 @@ export interface TeamXApi {
     getRagConfig(): Promise<SettingsGetRagConfigResponse>;
     /** Patch one or more RAG configuration keys. Missing keys retain their current value. */
     setRagConfig(req: SettingsSetRagConfigRequest): Promise<void>;
+    /** Get full Enhanced AI configuration snapshot (LLM provider, features toggles). Phase 5 — M32. */
+    getEnhancedAiConfig(): Promise<SettingsGetEnhancedAiConfigResponse>;
+    /** Patch one or more Enhanced AI configuration keys. Missing keys retain their current value. Phase 5 — M32. */
+    setEnhancedAiConfig(req: SettingsSetEnhancedAiConfigRequest): Promise<void>;
     /** Get agentic-loop budget caps (max steps, max tokens, timeout ms). Phase 5 — M31. */
     getAgentic(): Promise<SettingsGetAgenticResponse>;
     /** Patch one or more agentic-loop budget caps. Values are clamped. Phase 5 — M31. */

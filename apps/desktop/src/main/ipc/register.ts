@@ -195,6 +195,9 @@ const REQUEST_CHANNELS = [
   'settings.setMemory',
   'settings.getRagConfig',
   'settings.setRagConfig',
+  // Enhanced AI (Phase 5 — M32)
+  'settings.getEnhancedAiConfig',
+  'settings.setEnhancedAiConfig',
   // Agentic loop (Phase 5 — M31)
   'settings.getAgentic',
   'settings.setAgentic',
@@ -260,6 +263,14 @@ const REQUEST_CHANNELS = [
   'rag.stats',
   'rag.rebuildAll',
   'rag.deleteForCompany',
+  // Enhanced AI (Phase 5 — M32)
+  'enhancedAi.stats',
+  'enhancedAi.query',
+  'enhancedAi.indexWithSemanticChunking',
+  'enhancedAi.extractAndStoreFacts',
+  'enhancedAi.queryKnowledge',
+  'enhancedAi.createPlan',
+  'enhancedAi.getStats',
   // Command palette (Phase 5 — M30)
   'command.parse',
   'command.execute',
@@ -1105,6 +1116,18 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
     'settings.setRagConfig',
     async (_event, request: import('@team-x/shared-types').SettingsSetRagConfigRequest) => {
       return handlers.settingsSetRagConfig(request);
+    },
+  );
+
+  // Enhanced AI configuration handlers (Phase 5 — M32)
+  ipcMain.handle('settings.getEnhancedAiConfig', async () => {
+    return handlers.settingsGetEnhancedAiConfig();
+  });
+
+  ipcMain.handle(
+    'settings.setEnhancedAiConfig',
+    async (_event, request: import('@team-x/shared-types').SettingsSetEnhancedAiConfigRequest) => {
+      return handlers.settingsSetEnhancedAiConfig(request);
     },
   );
 

@@ -6,16 +6,26 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": { ".": "./src/index.ts" },
+  "bin": {
+    "team-x-ai": "./src/cli/index.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "ai:info": "tsx src/cli/ai-cli.ts info",
+    "ai:knowledge": "tsx src/cli/ai-cli.ts knowledge --stats",
+    "ai:memory": "tsx src/cli/ai-cli.ts memory --fresh",
+    "ai:eval": "tsx scripts/eval/run-benchmark.ts",
+    "ai:trace": "tsx src/cli/ai-cli.ts trace --summary"
   },
   "dependencies": {
     "@team-x/shared-types": "workspace:*",
     "@team-x/provider-router": "workspace:*",
+    "commander": "^12.0.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "tsx": "^4.7.0",
     "typescript": "5.5.4",
     "vitest": "^2"
   }
