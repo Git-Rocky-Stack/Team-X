@@ -406,7 +406,7 @@ export function createPlanExecutor(options: {
 
       try {
         // Topological sort by dependencies
-        const executionOrder = this.topologicalSort(plan);
+        const executionOrder = topologicalSort(plan);
 
         let completed = 0;
         const stepResults = new Map<string, unknown>();
@@ -670,40 +670,43 @@ export function createPlanExecutor(options: {
 
       return lines.join('\n');
     },
-
-    // Helper method for topological sort
-    topologicalSort(plan: ExecutionPlan): string[] {
-      const sorted: string[] = [];
-      const visited = new Set<string>();
-      const visiting = new Set<string>();
-
-      const visit = (stepId: string) => {
-        if (visited.has(stepId)) return;
-        if (visiting.has(stepId)) {
-          throw new Error(`Circular dependency detected involving ${stepId}`);
-        }
-
-        visiting.add(stepId);
-
-        const step = plan.steps.find((s) => s.id === stepId);
-        if (step) {
-          for (const dep of step.dependencies) {
-            visit(dep);
-          }
-        }
-
-        visiting.delete(stepId);
-        visited.add(stepId);
-        sorted.push(stepId);
-      };
-
-      for (const step of plan.steps) {
-        visit(step.id);
-      }
-
-      return sorted;
-    },
   };
+}
+
+/**
+ * Topologically sort plan steps so dependencies execute before dependents.
+ * Throws on circular dependencies.
+ */
+function topologicalSort(plan: ExecutionPlan): string[] {
+  const sorted: string[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+
+  const visit = (stepId: string) => {
+    if (visited.has(stepId)) return;
+    if (visiting.has(stepId)) {
+      throw new Error(`Circular dependency detected involving ${stepId}`);
+    }
+
+    visiting.add(stepId);
+
+    const step = plan.steps.find((s) => s.id === stepId);
+    if (step) {
+      for (const dep of step.dependencies) {
+        visit(dep);
+      }
+    }
+
+    visiting.delete(stepId);
+    visited.add(stepId);
+    sorted.push(stepId);
+  };
+
+  for (const step of plan.steps) {
+    visit(step.id);
+  }
+
+  return sorted;
 }
 
 /**
@@ -737,7 +740,7 @@ export function createPlanAwareLoop(options: {
       }
 
       // Otherwise, create and execute a plan
-      const plan = await options.executor.createPlan(query);
+      await options.executor.createPlan(query);
 
       // The plan execution will handle calling tools
       // For now, we'll run the original loop and track it

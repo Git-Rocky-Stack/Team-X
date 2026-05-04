@@ -404,7 +404,7 @@ export function createTracer(options: TracerOptions & {
       const span = this.startSpan(name, opts);
 
       try {
-        const result = await fn(span);
+        await fn(span);
         this.endSpan(span, undefined, { code: 'ok' });
         return span;
       } catch (err) {
@@ -450,9 +450,9 @@ export function createTracer(options: TracerOptions & {
       }
     },
 
-    recordException(span, exception, attributes = {}) {
+    recordException(span, exception: unknown, attributes = {}) {
       const attrs = new Map(Object.entries(attributes));
-      attrs.set('exception.type', exception.constructor.name);
+      attrs.set('exception.type', (exception as { constructor?: { name?: string } })?.constructor?.name ?? 'Unknown');
       attrs.set('exception.message', exception instanceof Error ? exception.message : String(exception));
 
       if (exception instanceof Error && exception.stack) {
@@ -559,7 +559,7 @@ function spanToJson(span: Span): unknown {
       traceId: span.context.traceId,
       spanId: span.context.spanId,
       parentSpanId: span.context.parentSpanId,
-      sampled: span.context.sampleed,
+      sampled: span.context.sampled,
     },
     name: span.name,
     kind: span.kind,

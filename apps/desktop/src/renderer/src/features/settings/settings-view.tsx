@@ -66,9 +66,11 @@ export function SettingsView() {
         <ErrorBoundary componentName="RagSection">
           <RagSection />
         </ErrorBoundary>
-        <ErrorBoundary componentName="EnhancedAiSection">
-          <EnhancedAiSection />
-        </ErrorBoundary>
+        <section data-settings-section="enhanced-ai">
+          <ErrorBoundary componentName="EnhancedAiSection">
+            <EnhancedAiSection />
+          </ErrorBoundary>
+        </section>
         <ErrorBoundary componentName="ConcurrencySection">
           <ConcurrencySection />
         </ErrorBoundary>

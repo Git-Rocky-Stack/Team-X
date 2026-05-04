@@ -13,7 +13,6 @@ export {
   detectContentType,
   detectBoundaries,
   createTokenCounter,
-  type ChunkOptions,
   type SemanticChunkOptions,
   type Chunk,
   type ContentType,
@@ -85,14 +84,13 @@ export {
 } from './logging.js';
 export {
   createQueryExpansionService,
-  expandQuerySemantic,
-  expandQuerySynonyms,
-  expandQueryEntities,
-  expandQueryHyDE,
+  expandQuerySemantically,
+  expandQueryWithSynonyms,
+  expandQueryWithEntities,
+  expandQueryWithHyDE,
   expandQueryCombined,
   type QueryExpansionService,
   type EntityContext,
   type ExpandedQuery,
   type HyDEOptions,
-  type ExpansionOptions,
 } from './query-expansion.js';

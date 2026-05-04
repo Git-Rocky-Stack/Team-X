@@ -8,10 +8,6 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
-import type { EmbeddingSourceType } from '@team-x/shared-types';
-
-import type { RagService } from '../rag/service.js';
-
 /**
  * A fact extracted from conversation or content.
  */
@@ -559,7 +555,7 @@ export function createLongTermMemoryService(options: {
       return facts;
     },
 
-    retrieveRankedFacts(companyId, query, freshnessOpts) {
+    retrieveRankedFacts(companyId, _query, freshnessOpts) {
       const facts = options.repo.listFactsByCompany(companyId);
       const now_ = now();
       const opts = freshnessOpts ?? freshnessOptions;

@@ -1183,7 +1183,7 @@ app
 
       // For now, we create a minimal LLM complete stub
       // This will be replaced with the actual LLM provider in production
-      const llmComplete = async (prompt: string): Promise<string> => {
+      const llmComplete = async (_prompt: string): Promise<string> => {
         // This is a stub — the actual implementation will call the configured LLM
         console.warn('[enhanced-ai] LLM complete called but not yet wired to provider');
         return '(LLM response not configured)';

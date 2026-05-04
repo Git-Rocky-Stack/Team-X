@@ -9,7 +9,10 @@
  * end-to-end.
  */
 
-import type { SettingsGetEnhancedAiConfigResponse } from '@team-x/shared-types';
+import type {
+  SettingsGetEnhancedAiConfigResponse,
+  SettingsSetEnhancedAiConfigRequest,
+} from '@team-x/shared-types';
 import {
   AlertTriangle,
   Brain,
@@ -19,14 +22,13 @@ import {
   Loader2,
   Network,
   Sparkles,
-  Stream,
+  Waves,
   Target,
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
-import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import {
@@ -491,7 +493,7 @@ export function EnhancedAiSection() {
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <Stream className="h-3 w-3 text-muted-foreground" />
+              <Waves className="h-3 w-3 text-muted-foreground" />
               <p className="text-xs font-medium text-foreground">Streaming Responses</p>
             </div>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">

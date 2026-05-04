@@ -230,6 +230,8 @@ import type {
   SettingsSetProactiveRequest,
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
+  SettingsGetEnhancedAiConfigResponse,
+  SettingsSetEnhancedAiConfigRequest,
   SkillAssignment,
   StopChatRequest,
   StopChatResponse,
@@ -448,6 +450,8 @@ const CHANNELS = {
   settingsSetCopilotWeights: 'settings.setCopilotWeights',
   settingsGetProactive: 'settings.getProactive',
   settingsSetProactive: 'settings.setProactive',
+  settingsGetEnhancedAiConfig: 'settings.getEnhancedAiConfig',
+  settingsSetEnhancedAiConfig: 'settings.setEnhancedAiConfig',
   // Provider management (Phase 3 — M18)
   providersList: 'providers.list',
   providersAdd: 'providers.add',
@@ -910,6 +914,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.settingsGetProactive) as Promise<SettingsGetProactiveResponse>,
       setProactive: (req: SettingsSetProactiveRequest) =>
         ipc.invoke(CHANNELS.settingsSetProactive, req) as Promise<void>,
+      getEnhancedAiConfig: () =>
+        ipc.invoke(CHANNELS.settingsGetEnhancedAiConfig) as Promise<SettingsGetEnhancedAiConfigResponse>,
+      setEnhancedAiConfig: (req: SettingsSetEnhancedAiConfigRequest) =>
+        ipc.invoke(CHANNELS.settingsSetEnhancedAiConfig, req) as Promise<void>,
     },
     providers: {
       list: () => ipc.invoke(CHANNELS.providersList) as Promise<ProviderConfig[]>,

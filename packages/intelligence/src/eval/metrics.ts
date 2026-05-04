@@ -57,7 +57,8 @@ export function calculateQueryMetrics(
 
   // Find first relevant result rank
   for (let i = 0; i < retrievedIds.length; i++) {
-    if (relevantSet.has(retrievedIds[i])) {
+    const id = retrievedIds[i];
+    if (id !== undefined && relevantSet.has(id)) {
       firstRelevantRank = i;
       hasRelevantResult = true;
       break;
@@ -97,7 +98,8 @@ function calculateAveragePrecision(
   let relevantCount = 0;
 
   for (let i = 0; i < retrievedIds.length; i++) {
-    if (relevantSet.has(retrievedIds[i])) {
+    const id = retrievedIds[i];
+    if (id !== undefined && relevantSet.has(id)) {
       relevantCount++;
       const precisionAtI = relevantCount / (i + 1);
       precisionSum += precisionAtI;
@@ -122,7 +124,8 @@ function calculateNDCG(
   // Calculate DCG
   let dcg = 0;
   for (let i = 0; i < Math.min(k, retrievedIds.length); i++) {
-    const relevance = relevantSet.has(retrievedIds[i]) ? 1 : 0;
+    const id = retrievedIds[i];
+    const relevance = id !== undefined && relevantSet.has(id) ? 1 : 0;
     dcg += relevance / Math.log2(i + 2);
   }
 
@@ -222,6 +225,7 @@ export function aggregateMetrics(
 
   for (let i = 0; i < queryMetrics.length; i++) {
     const metrics = queryMetrics[i];
+    if (!metrics) continue;
     const query = queries.find((q) => q.id === metrics.queryId);
     if (!query) continue;
 
@@ -295,8 +299,8 @@ function percentile(sorted: number[], p: number): number {
   const upper = Math.ceil(index);
   const weight = index - lower;
 
-  if (upper >= sorted.length) return sorted[sorted.length - 1];
-  return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+  if (upper >= sorted.length) return sorted[sorted.length - 1] ?? 0;
+  return (sorted[lower] ?? 0) * (1 - weight) + (sorted[upper] ?? 0) * weight;
 }
 
 /**
@@ -355,8 +359,8 @@ export function compareEvaluations(
     const c = comparison[i];
     return {
       queryId: b.queryId,
-      deltaMrr: c.mrr - b.mrr,
-      deltaMap: c.averagePrecision - b.averagePrecision,
+      deltaMrr: (c?.mrr ?? 0) - b.mrr,
+      deltaMap: (c?.averagePrecision ?? 0) - b.averagePrecision,
     };
   });
 

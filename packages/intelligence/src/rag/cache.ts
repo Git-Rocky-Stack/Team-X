@@ -75,7 +75,7 @@ export interface RetrievalOptions {
 export interface CachedRetrieval {
   /** Retrieved documents */
   results: Array<{
-    id: string;
+    id?: string;
     sourceId: string;
     sourceType: string;
     chunkIndex: number;
@@ -357,7 +357,7 @@ export class QueryCache {
   private invalidations = 0;
 
   constructor(options: CacheOptions = {}) {
-    const { ttl = 300000, maxEntries = 1000, maxSizeBytes = 50 * 1024 * 1024 } = options; // 50MB default
+    const { maxEntries = 1000, maxSizeBytes = 50 * 1024 * 1024 } = options; // 50MB default
     this.cache = new LRUCache(maxEntries, maxSizeBytes);
   }
 
@@ -398,8 +398,8 @@ export class QueryCache {
    * Invalidate cache entries for a company.
    * Call this when content is added/updated/deleted.
    */
-  invalidateByCompany(companyId: string): number {
-    const deleted = this.cache.deleteWhere((key, value) => {
+  invalidateByCompany(_companyId: string): number {
+    const deleted = this.cache.deleteWhere(() => {
       // Key contains company hash, so we need to check by reconstructing
       // For simplicity, we'll clear all entries (could be optimized)
       return true; // Delete all for now

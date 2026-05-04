@@ -241,9 +241,17 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     id: 'open-settings',
     label: 'Open Settings',
     description:
-      'Review runtime, privacy, RAG, concurrency, planner, copilot, and backup controls.',
+      'Review runtime, privacy, RAG, enhanced AI, concurrency, permissions, planner, copilot, provider, portability, memory, and backup controls.',
     kind: 'view',
     view: 'settings',
+  },
+  {
+    id: 'open-settings-enhanced-ai',
+    label: 'Open Enhanced AI Settings',
+    description:
+      'Configure LLM provider, model options, and Phase 2 & 3 AI features like query expansion, semantic chunking, long-term memory, knowledge graph, multi-turn planning, streaming responses, and distributed tracing.',
+    kind: 'settings',
+    section: 'enhanced-ai',
   },
 ];
 
@@ -465,7 +473,7 @@ export const GUIDE_TASKS: GuideTask[] = [
     id: 'settings-reviewed',
     title: 'Review system settings',
     description:
-      'Walk through runtime, privacy, RAG, concurrency, permissions, planner, copilot, provider, portability, memory, and backup controls.',
+      'Walk through runtime, privacy, RAG, enhanced AI, concurrency, permissions, planner, copilot, provider, portability, memory, and backup controls.',
     roles: ALL_ROLES,
     priority: 'advanced',
     kind: 'jump',
@@ -639,6 +647,50 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
     taskIds: ['provider-ready', 'settings-reviewed'],
     actionIds: ['open-settings-providers', 'open-settings'],
+  },
+  {
+    id: 'enhanced-ai-capabilities',
+    title: 'Enhanced AI Capabilities',
+    summary:
+      'Configure Phase 2 & 3 AI features: query expansion, semantic chunking v2, long-term memory, knowledge graph, multi-turn planning, streaming responses, and distributed tracing.',
+    category: 'Setup',
+    roles: ALL_ROLES,
+    blocks: [
+      {
+        kind: 'paragraph',
+        text: 'Enhanced AI settings unlock Phase 2 & 3 capabilities that go beyond basic retrieval-augmented generation. These features work together to provide more intelligent, context-aware, and traceable AI interactions. Each feature can be enabled independently based on your needs and resource constraints.',
+      },
+      {
+        kind: 'bullets',
+        items: [
+          'Query Expansion improves retrieval by generating semantic variations, synonyms, entity-based expansions, and hypothetical document embeddings (HyDE) for better matches.',
+          'Semantic Chunking v2 uses document structure-aware splitting that preserves code blocks, list integrity, and markdown hierarchy instead of naive token-based chunking.',
+          'Long-Term Memory extracts facts from conversations with freshness scoring (time decay + frequency boost), tracks summaries, and enables cross-thread context retention.',
+          'Knowledge Graph builds a network of entities (people, concepts, events) and relationships (causes, belongs_to, related_to) for intelligent context retrieval and graph-based reasoning.',
+          'Multi-Turn Planning creates execution plans with topological sorting, auto-revision on failures, and configurable complexity thresholds for complex multi-step requests.',
+          'Streaming Responses enable real-time token-by-token output for better user experience on long-running generations, with configurable transport (SSE/WebSocket).',
+          'Distributed Tracing provides W3C Trace Context compliance with full span hierarchy for debugging, performance analysis, and observability of AI operations.',
+        ],
+      },
+      {
+        kind: 'callout',
+        tone: 'accent',
+        title: 'Feature interaction',
+        text: 'These features work best together. Query expansion feeds semantic chunking, which feeds long-term memory extraction, which updates the knowledge graph, all tracked by distributed tracing. Enable incrementally and test each before combining.',
+      },
+      {
+        kind: 'paragraph',
+        text: 'LLM Configuration controls the base model used for enhanced AI operations. Choose the provider (Ollama, OpenAI, Anthropic, etc.), model name, max tokens for generation, and temperature for creativity. Higher temperature (0.7-1.0) produces more diverse outputs; lower temperature (0.0-0.3) produces more deterministic results.',
+      },
+      {
+        kind: 'callout',
+        tone: 'warning',
+        title: 'Resource considerations',
+        text: 'Knowledge graph operations and distributed tracing add computational overhead. Use sample rate for tracing (0.1 = 10% of requests) in production to balance observability with performance. Set planning threshold based on your typical task complexity.',
+      },
+    ],
+    taskIds: ['settings-reviewed'],
+    actionIds: ['open-settings-enhanced-ai'],
   },
   {
     id: 'hiring-and-org-chart',
@@ -1134,7 +1186,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: 'settings-privacy-backup',
     title: 'Settings, Privacy, And Backup',
     summary:
-      'Understand the full Settings surface: updater, runtime, privacy, RAG, concurrency, permissions, planner, copilot, providers, portability, memory, and recovery.',
+      'Understand the full Settings surface: updater, runtime, privacy, RAG, enhanced AI, concurrency, permissions, planner, copilot, providers, portability, memory, and recovery.',
     category: 'Setup',
     roles: ALL_ROLES,
     blocks: [
@@ -1149,6 +1201,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'Runtime Strategy chooses the operating posture for model routing and hardware use.',
           'Privacy Tier caps whether local, open-source cloud, or proprietary cloud providers can be used.',
           'RAG controls retrieval-augmented context from the vault, including enablement, top K, threshold, context budget, embedding provider, and embedding model.',
+          'Enhanced AI configures Phase 2 & 3 capabilities: query expansion, semantic chunking v2, long-term memory (facts, summaries), knowledge graph (entities, relationships), multi-turn planning with auto-revision, streaming responses, and distributed tracing with W3C compliance.',
           'Concurrency caps keep provider calls within local hardware limits, cloud plan limits, and budget expectations.',
           'Permissions define who can manage workspace actions such as providers, budgets, and operators in shared-ready contexts.',
           'Planner and Agentic Loop settings govern write-side decomposition, confirmation gates, max steps, max tokens, and timeout behavior.',
@@ -1164,7 +1217,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
     ],
     taskIds: ['settings-reviewed', 'provider-ready'],
-    actionIds: ['open-settings', 'open-settings-providers', 'open-settings-memory'],
+    actionIds: ['open-settings', 'open-settings-providers', 'open-settings-enhanced-ai', 'open-settings-memory'],
   },
   {
     id: 'telemetry-and-audit',

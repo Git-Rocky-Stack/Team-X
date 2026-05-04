@@ -1340,12 +1340,18 @@ export interface ProactiveWorkQueuedPayload {
 export interface ProactiveWorkStartedPayload {
   /** The proactive work item being executed. */
   triggerId: string;
+  /** Trigger kind: 'goal_decompose' | 'work_scan' | 'background_monitor'. */
+  triggerKind: 'goal_decompose' | 'work_scan' | 'background_monitor';
   /** Agentic run ID for this work. */
   runId: string;
   /** Thread where agent is working. */
   threadId: string;
   /** Employee doing the work. */
   employeeId: string;
+  /** Associated goal if goal-driven. */
+  goalId: string | null;
+  /** Associated ticket if scan-driven. */
+  ticketId: string | null;
   /** Wall-clock timestamp in ms. */
   startedAt: number;
 }

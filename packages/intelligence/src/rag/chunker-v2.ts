@@ -112,7 +112,7 @@ export interface Chunk {
 /**
  * Token counter interface.
  */
-interface TokenCounter {
+export interface TokenCounter {
   count(text: string): number;
   countBatch(texts: string[]): number[];
 }
@@ -214,7 +214,6 @@ export function detectContentType(text: string, sampleSize: number = 500): Conte
  */
 export function detectBoundaries(text: string, contentType: ContentType): ChunkBoundary[] {
   const boundaries: ChunkBoundary[] = [];
-  let pos = 0;
 
   if (contentType === 'code' || contentType === 'data') {
     // For code/data, detect line-based boundaries
@@ -222,7 +221,7 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
     let currentPos = 0;
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i] ?? '';
       const lineLength = line.length + 1; // +1 for newline
 
       // Detect empty lines (paragraph boundaries)
@@ -258,7 +257,7 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
         position: match.index,
         type: 'heading',
         strength: 0.95,
-        metadata: { level: match[1].length },
+        metadata: { level: (match[1] ?? '').length },
       });
     }
 
@@ -283,7 +282,7 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
     const listRegex = /^(\s*)([-*+]|\d+\.)\s+/gm;
     while ((match = listRegex.exec(text)) !== null) {
       boundaries.push({
-        position: match.index + match[1].length,
+        position: match.index + (match[1] ?? '').length,
         type: 'list',
         strength: 0.7,
         metadata: { delimiter: match[2] },
@@ -423,7 +422,6 @@ export async function semanticChunk(
 
   const maxChars = opts.maxTokens * 4; // Fallback char estimation
   const overlapChars = adaptiveOverlap * 4;
-  const minChars = opts.minChunkTokens * 4;
 
   // Special handling for code content
   if (opts.contentType === 'code' || opts.contentType === 'data') {
@@ -438,7 +436,6 @@ export async function semanticChunk(
   // General semantic chunking for prose
   const chunks: Chunk[] = [];
   let currentStart = 0;
-  let currentEnd = 0;
   let chunkIndex = 0;
 
   // Split by boundaries first
@@ -478,10 +475,12 @@ export async function semanticChunk(
         let overlapLength = 0;
 
         for (let i = currentSegments.length - 1; i >= 0; i--) {
-          const segLength = currentSegments[i].length;
+          const seg = currentSegments[i];
+          if (seg === undefined) continue;
+          const segLength = seg.length;
           if (overlapLength + segLength > overlapChars) break;
 
-          overlapSegments.unshift(currentSegments[i]);
+          overlapSegments.unshift(seg);
           overlapLength += segLength + 1; // +1 for space
         }
 
@@ -579,7 +578,10 @@ function chunkCodeOrData(
   let chunkIndex = 0;
 
   for (let i = 0; i < lines.length; i++) {
-    currentLines.push(lines[i]);
+    const line = lines[i];
+    if (line !== undefined) {
+      currentLines.push(line);
+    }
 
     if (currentLines.length >= maxLines || i === lines.length - 1) {
       const content = currentLines.join('\n');
@@ -618,8 +620,8 @@ async function chunkMarkdownWithCodeBlocks(
   text: string,
   options: Required<SemanticChunkOptions>,
   counter: TokenCounter,
-  boundaries: ChunkBoundary[]
-): Chunk[] {
+  _boundaries: ChunkBoundary[]
+): Promise<Chunk[]> {
   const chunks: Chunk[] = [];
   let chunkIndex = 0;
 
@@ -633,7 +635,7 @@ async function chunkMarkdownWithCodeBlocks(
     codeBlocks.push({
       start: match.index,
       end: match.index + match[0].length,
-      content: match[1],
+      content: match[1] ?? '',
       language: match[0].match(/```([a-z]*)/)?.[1] || 'text',
     });
   }

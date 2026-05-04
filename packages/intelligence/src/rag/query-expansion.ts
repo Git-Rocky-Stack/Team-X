@@ -10,7 +10,6 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
-import type { CrossEncoderScoreFn } from './reranker.js';
 
 /**
  * Query expansion result.
@@ -259,9 +258,12 @@ export async function expandQueryCombined(
   if (useSemantic) {
     const semantic = expandQuerySemantically(query, semanticVariations);
     for (let i = 0; i < semantic.expansions.length; i++) {
+      const expanded = semantic.expansions[i];
+      const weight = semantic.weights[i];
+      if (expanded === undefined || weight === undefined) continue;
       allExpansions.push({
-        query: semantic.expansions[i],
-        weight: semantic.weights[i] * 0.7, // Reduce weight for variations
+        query: expanded,
+        weight: weight * 0.7, // Reduce weight for variations
         method: 'semantic',
       });
     }
@@ -271,9 +273,12 @@ export async function expandQueryCombined(
   if (useSynonyms) {
     const synonym = expandQueryWithSynonyms(query, context);
     for (let i = 0; i < synonym.expansions.length; i++) {
+      const expanded = synonym.expansions[i];
+      const weight = synonym.weights[i];
+      if (expanded === undefined || weight === undefined) continue;
       allExpansions.push({
-        query: synonym.expansions[i],
-        weight: synonym.weights[i] * 0.8,
+        query: expanded,
+        weight: weight * 0.8,
         method: 'synonym',
       });
     }
@@ -283,9 +288,12 @@ export async function expandQueryCombined(
   if (useEntities) {
     const entity = expandQueryWithEntities(query, context);
     for (let i = 0; i < entity.expansions.length; i++) {
+      const expanded = entity.expansions[i];
+      const weight = entity.weights[i];
+      if (expanded === undefined || weight === undefined) continue;
       allExpansions.push({
-        query: entity.expansions[i],
-        weight: entity.weights[i] * 0.9,
+        query: expanded,
+        weight: weight * 0.9,
         method: 'entity',
       });
     }
@@ -295,9 +303,12 @@ export async function expandQueryCombined(
   if (useHyDE && hydeOptions) {
     const hyde = await expandQueryWithHyDE(query, hydeOptions);
     for (let i = 0; i < hyde.expansions.length; i++) {
+      const expanded = hyde.expansions[i];
+      const weight = hyde.weights[i];
+      if (expanded === undefined || weight === undefined) continue;
       allExpansions.push({
-        query: hyde.expansions[i],
-        weight: hyde.weights[i] * 0.6, // Lower weight for hypotheticals
+        query: expanded,
+        weight: weight * 0.6, // Lower weight for hypotheticals
         method: 'hyde',
       });
     }
@@ -330,7 +341,7 @@ export async function expandQueryCombined(
  * removing duplicates and re-ranking by combined score.
  */
 export async function retrieveWithExpansion(
-  originalQuery: string,
+  _originalQuery: string,
   expandedQuery: ExpandedQuery,
   retrieveFn: (query: string, topK: number) => Promise<
     Array<{ id: string; score: number; content: string }>
@@ -359,9 +370,10 @@ export async function retrieveWithExpansion(
   // Score aggregation
   const scoreMap = new Map<string, { scores: number[]; content: string }>();
 
-  for (let i = 0; i < allResults.length.length; i++) {
+  for (let i = 0; i < allResults.length; i++) {
     const results = allResults[i];
-    const weight = expandedQuery.weights[i];
+    const weight = expandedQuery.weights[i] ?? 1;
+    if (!results) continue;
 
     for (const result of results) {
       if (result.score < threshold) continue;
@@ -396,8 +408,8 @@ export async function retrieveWithExpansion(
       case 'rrf':
         // Reciprocal Rank Fusion
         // score = sum(1 / (K + rank)) for each result
-        finalScore = data.scores.reduce((sum, score) => {
-          const rank = allResults[0].findIndex((r) => r.id === id) + 1;
+        finalScore = data.scores.reduce((sum) => {
+          const rank = (allResults[0]?.findIndex((r) => r.id === id) ?? -1) + 1;
           return sum + 1 / (rrfK + rank);
         }, 0);
         break;

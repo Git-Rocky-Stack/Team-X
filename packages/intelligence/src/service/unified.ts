@@ -14,88 +14,84 @@
  * Phase 5 — M31 (Integration).
  */
 
-import type { EmbeddingSourceType } from '@team-x/shared-types';
-
 // RAG
 import {
   createRagService,
   type RagService,
-  type RagServiceOptions,
+  type RagRepo,
   type IndexSourceInput,
-  type RetrieveInput,
   type RetrievalHit,
-} from './rag/service.js';
-import {
-  createEmbeddingGenerator,
-  type EmbedTextFn,
-} from './rag/embeddings.js';
+} from '../rag/service.js';
+import type { EmbedTextFn } from '../rag/embeddings.js';
 import {
   createQueryCache,
   type QueryCache,
-} from './rag/cache.js';
+} from '../rag/cache.js';
 import {
   createQueryExpansionService,
   type QueryExpansionService,
   type EntityContext,
-  type ExpandedQuery,
-} from './rag/query-expansion.js';
+} from '../rag/query-expansion.js';
 import {
   createRagEvaluator,
   type AggregatedMetrics,
   type EvalQuery,
-} from './eval/index.js';
+  type EvalDataset,
+} from '../eval/index.js';
 
 // Memory & Knowledge
 import {
   createLongTermMemoryService,
   createInMemoryMemoryRepo,
-  extractFacts,
   type LongTermMemoryService,
   type ExtractedFact,
   type ConversationSummary,
-} from './memory/index.js';
+} from '../memory/index.js';
 import {
   createKnowledgeGraphService,
   createInMemoryGraphRepo,
   type KnowledgeGraphService,
   type GraphQueryResult,
-} from './knowledge/index.js';
+} from '../knowledge/index.js';
 
 // Planning
 import {
   createPlanExecutor,
   type PlanExecutor,
   type ExecutionPlan,
-} from './loop/planning.js';
+} from '../loop/planning.js';
 
 // Streaming
 import {
-  createResponseStreamer,
-  type ResponseStreamer,
   type StreamChunk,
   accumulateStream,
-} from './streaming/index.js';
+} from '../streaming/index.js';
 
 // Observability
 import {
   createAgentTracer,
   type Tracer,
   type Span,
-} from './observability/index.js';
+} from '../observability/index.js';
 
 /**
  * AI service configuration.
  */
 export interface AiServiceConfig {
-  /** Embedding configuration */
+  /** Embedding configuration — caller wires their provider via embedText. */
   embedding: {
-    model: string;
-    apiKey?: string;
-    dimension?: number;
+    embedText: EmbedTextFn;
+    dimension: number;
   };
 
   /** RAG configuration */
   rag?: {
+    /**
+     * Storage repo for embeddings. Required to enable RAG retrieval/indexing.
+     * If omitted, RAG-dependent methods (index, query, queryStream, evaluate)
+     * will throw at call time.
+     */
+    repo?: RagRepo;
     topK?: number;
     threshold?: number;
     cacheTtl?: number;
@@ -334,7 +330,7 @@ export interface AiService {
   /**
    * Get underlying RAG service (for advanced usage).
    */
-  getRagService(): RagService;
+  getRagService(): RagService | null;
 
   /**
    * Get tracer (for observability).
@@ -349,14 +345,12 @@ export function createAiService(config: AiServiceConfig): AiService {
   let initialized = false;
 
   // Core components
-  let embedder: { embedText: EmbedTextFn; dimension: number };
-  let cache: QueryCache;
-  let ragService: RagService;
+  let cache: QueryCache | null = null;
+  let ragService: RagService | null = null;
   let queryExpansion: QueryExpansionService | null = null;
   let memory: LongTermMemoryService | null = null;
   let knowledge: KnowledgeGraphService | null = null;
   let planner: PlanExecutor | null = null;
-  let streamer: ResponseStreamer;
   let tracer: Tracer | null = null;
 
   // Statistics
@@ -372,17 +366,22 @@ export function createAiService(config: AiServiceConfig): AiService {
   async function initialize(): Promise<void> {
     if (initialized) return;
 
-    // Initialize embedder
-    embedder = createEmbeddingGenerator({
-      model: config.embedding.model,
-      apiKey: config.embedding.apiKey,
-    });
-
     // Initialize cache
     cache = createQueryCache({
-      maxSize: 1000,
-      defaultTtl: config.rag?.cacheTtl ?? 300000,
+      ttl: config.rag?.cacheTtl ?? 300000,
+      maxEntries: 1000,
     });
+
+    // Initialize RAG service if a repo is provided
+    if (config.rag?.repo) {
+      ragService = createRagService({
+        embedText: config.embedding.embedText,
+        dimension: config.embedding.dimension,
+        repo: config.rag.repo,
+        cache,
+        cacheTtl: config.rag.cacheTtl,
+      });
+    }
 
     // Initialize query expansion if enabled
     if (config.rag?.enableExpansion) {
@@ -396,7 +395,7 @@ export function createAiService(config: AiServiceConfig): AiService {
     if (config.llm) {
       memory = createLongTermMemoryService({
         repo: createInMemoryMemoryRepo(),
-        summarizeFn: async (conv, ctx) => {
+        summarizeFn: async (conv, _ctx) => {
           const response = await config.llm!.complete(`
 Summarize this conversation in 2-3 sentences.
 Focus on key decisions, facts, and action items.
@@ -432,7 +431,7 @@ Respond with JSON array:
 ]
           `);
           const parsed = JSON.parse(response);
-          return parsed.map((f: any) => ({
+          return parsed.map((f: ExtractedFact) => ({
             ...f,
             id: `fact_${Date.now()}_${Math.random().toString(36).slice(2)}`,
             companyId: ctx.companyId,
@@ -462,9 +461,6 @@ Respond with JSON array:
         },
       });
     }
-
-    // Initialize streamer
-    streamer = createResponseStreamer();
 
     // Initialize tracer
     if (config.observability?.enableTracing) {
@@ -496,6 +492,9 @@ Respond with JSON array:
       async function* generateStream(): AsyncGenerator<StreamChunk> {
         if (!initialized) {
           throw new Error('Service not initialized. Call initialize() first.');
+        }
+        if (!ragService) {
+          throw new Error('RAG not configured. Provide rag.repo to enable retrieval.');
         }
 
         // Start trace span
@@ -535,8 +534,9 @@ Respond with JSON array:
               companyId,
             };
             const expanded = await queryExpansion.expand(query, entityContext);
-            if (expanded.expansions.length > 0) {
-              expandedQuery = expanded.expansions[0];
+            const firstExpansion = expanded.expansions[0];
+            if (firstExpansion) {
+              expandedQuery = firstExpansion;
             }
           }
 
@@ -621,18 +621,20 @@ Respond with JSON array:
       // Return stream and result promise
       const stream = generateStream();
       const resultPromise = (async () => {
-        const chunks = [];
+        const chunks: StreamChunk[] = [];
         for await (const chunk of stream) {
           chunks.push(chunk);
         }
         const finalChunk = chunks.find((c) => c.isFinal);
-        const metadata = finalChunk?.metadata as any;
+        const metadata = finalChunk?.metadata as
+          | { relatedEntities?: Array<{ entity: string; relation: string }>; contextCount?: number }
+          | undefined;
 
         return {
           answer: chunks.filter((c) => c.type === 'text').map((c) => c.content).join(''),
-          context: metadata?.contextCount ? [] : [],
+          context: [],
           facts: [],
-          related: metadata?.relatedEntities || [],
+          related: metadata?.relatedEntities ?? [],
           plan,
           timestamp: startTime,
           latencyMs: Date.now() - startTime,
@@ -654,6 +656,9 @@ Respond with JSON array:
     async index(input) {
       if (!initialized) {
         throw new Error('Service not initialized. Call initialize() first.');
+      }
+      if (!ragService) {
+        throw new Error('RAG not configured. Provide rag.repo to enable indexing.');
       }
 
       return ragService.indexSource(input);
@@ -744,15 +749,13 @@ Respond with JSON array:
         maxResults: 1,
       });
 
-      if (nodes.nodes.length === 0 || targetNodes.nodes.length === 0) {
+      const fromNode = nodes.nodes[0];
+      const toNode = targetNodes.nodes[0];
+      if (!fromNode || !toNode) {
         return null;
       }
 
-      const path = knowledge.findPath(
-        nodes.nodes[0].id,
-        targetNodes.nodes[0].id,
-        maxHops
-      );
+      const path = knowledge.findPath(fromNode.id, toNode.id, maxHops);
 
       if (!path) {
         return null;
@@ -770,28 +773,50 @@ Respond with JSON array:
     },
 
     async evaluate(dataset) {
+      if (!ragService) {
+        throw new Error('RAG not configured. Provide rag.repo to enable evaluation.');
+      }
+      const rag = ragService;
+
       const evaluator = createRagEvaluator({
-        retrieve: async (query) => {
-          const hits = await ragService.retrieve({
-            companyId: 'eval', // Default company for evaluation
+        retrieve: async (query, options) => {
+          const startedAt = Date.now();
+          const hits = await rag.retrieve({
+            companyId: options.companyId ?? 'eval',
             query,
-            topK: 10,
-            threshold: 0.7,
+            topK: options.topK,
+            threshold: options.threshold,
           });
+          const latencyMs = Date.now() - startedAt;
           return {
-            results: hits.map((h) => ({
+            queryId: query,
+            retrievedDocs: hits.map((h, idx) => ({
               id: h.sourceId,
               score: h.similarity,
               content: h.contentText,
+              chunkIndex: idx,
             })),
+            latencyMs,
+            timestamp: Date.now(),
           };
         },
       });
 
-      return evaluator.evaluateDataset(dataset);
+      const evalDataset: EvalDataset = {
+        name: 'inline-dataset',
+        version: '1.0.0',
+        queries: dataset,
+        metadata: {
+          createdAt: Date.now(),
+          lastUpdated: Date.now(),
+        },
+      };
+
+      const result = await evaluator.evaluateDataset(evalDataset);
+      return result.aggregated;
     },
 
-    getStats(companyId) {
+    getStats(_companyId) {
       return {
         rag: {
           totalRetrievals: stats.rag.totalRetrievals,
@@ -839,52 +864,5 @@ Respond with JSON array:
     },
   };
 
-  // Initialize components
-  initialize().then(() => {
-    // RAG service needs to be created after initialize
-    // We'll set it up here for the service methods to use
-  });
-
   return service;
-}
-
-/**
- * Create AI service with default configuration.
- */
-export function createDefaultAiService(): AiService {
-  return createAiService({
-    embedding: {
-      model: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
-      apiKey: process.env.OPENAI_API_KEY,
-    },
-    llm: {
-      model: 'gpt-4',
-      provider: 'openai',
-      complete: async (prompt) => {
-        // Placeholder - in real usage, this would call an LLM
-        return JSON.stringify({ response: 'LLM response placeholder' });
-      },
-    },
-    rag: {
-      topK: 10,
-      threshold: 0.7,
-      cacheTtl: 300000,
-      enableExpansion: false,
-      enableRerank: false,
-    },
-    memory: {
-      summarizationTrigger: {
-        minMessages: 10,
-        maxMessages: 50,
-      },
-    },
-    planning: {
-      enablePlanning: true,
-      planningThreshold: 200,
-    },
-    observability: {
-      enableTracing: true,
-      traceSampleRate: 0.1,
-    },
-  });
 }

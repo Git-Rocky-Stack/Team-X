@@ -30,7 +30,7 @@ describe('User Guide shell wiring', () => {
   it('adds a dedicated user-guide top-level view plus guide utility actions in the store', () => {
     expect(storeSrc).toContain("| 'user-guide'");
     expect(storeSrc).toContain(
-      "export type SettingsSectionFocus = 'providers' | 'extensions' | 'memory' | 'portability';",
+      "export type SettingsSectionFocus =\n  | 'providers'\n  | 'extensions'\n  | 'memory'\n  | 'portability'\n  | 'enhanced-ai';",
     );
     expect(storeSrc).toContain('hireDialogRequestNonce');
     expect(storeSrc).toContain("autonomySubview: 'access'");

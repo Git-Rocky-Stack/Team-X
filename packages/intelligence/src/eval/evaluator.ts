@@ -6,7 +6,6 @@
  */
 
 import type {
-  AggregatedMetrics,
   EvalDataset,
   EvalQuery,
   EvaluationConfig,
@@ -283,7 +282,14 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
      * Get target metrics for evaluation.
      * These are the minimum acceptable values for production.
      */
-    getTargets(): Record<string, number> {
+    getTargets(): {
+      precisionAt5: number;
+      recallAt10: number;
+      meanAveragePrecision: number;
+      meanReciprocalRank: number;
+      hitRate: number;
+      latencyP95: number;
+    } {
       return {
         precisionAt5: 0.8,
         recallAt10: 0.7,

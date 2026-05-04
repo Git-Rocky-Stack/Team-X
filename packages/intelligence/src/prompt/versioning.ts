@@ -7,7 +7,6 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
-import { hashQuery } from '../rag/logging.js';
 
 /**
  * Few-shot example for prompting.
@@ -456,7 +455,7 @@ export function createPromptRegistry(): PromptRegistry {
 /**
  * Default system prompts for the Strategia-X AI assistant.
  */
-export const DEFAULT_SYSTEM_PROMPTS = {
+export const DEFAULT_SYSTEM_PROMPTS: Record<string, PromptTemplate> = {
   copilot: {
     id: 'copilot-system',
     name: 'Strategia-X Company Copilot',

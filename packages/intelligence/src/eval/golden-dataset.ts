@@ -34,6 +34,7 @@ const DOCS = {
   project_1: 'PROJECT_001_PLACEHOLDER',
   project_2: 'PROJECT_002_PLACEHOLDER',
   project_active: 'PROJECT_ACTIVE_PLACEHOLDER',
+  project_blocked: 'PROJECT_BLOCKED_PLACEHOLDER',
   project_risk: 'PROJECT_RISK_PLACEHOLDER',
   project_q1: 'PROJECT_Q1_PLACEHOLDER',
   project_q2: 'PROJECT_Q2_PLACEHOLDER',

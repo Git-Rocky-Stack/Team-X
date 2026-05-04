@@ -160,14 +160,20 @@ export function createProactiveDispatcher(
     employeeId: string;
     threadId: string;
     triggerId: string;
+    triggerKind: ProactiveTrigger;
+    goalId: string | null;
+    ticketId: string | null;
   }): void {
-    const { companyId, employeeId, threadId, triggerId } = args;
+    const { companyId, employeeId, threadId, triggerId, triggerKind, goalId, ticketId } = args;
 
     const payload: ProactiveWorkStartedPayload = {
       triggerId,
+      triggerKind,
       runId: triggerId,
       threadId,
       employeeId,
+      goalId,
+      ticketId,
       startedAt: now(),
     };
 
@@ -384,6 +390,9 @@ export function createProactiveDispatcher(
       employeeId,
       threadId,
       triggerId,
+      triggerKind: trigger,
+      goalId: sourceGoalId ?? null,
+      ticketId: sourceTicketId ?? null,
     });
 
     // 8. Enqueue via orchestrator

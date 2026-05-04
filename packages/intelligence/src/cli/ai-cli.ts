@@ -17,7 +17,39 @@
 
 import { Command } from 'commander';
 
-const program = new Command();
+interface InfoOptions {
+  json?: boolean;
+}
+
+interface KnowledgeOptions {
+  company?: string;
+  query?: string;
+  stats?: boolean;
+  json?: boolean;
+}
+
+interface MemoryOptions {
+  company?: string;
+  type?: string;
+  fresh?: boolean;
+  json?: boolean;
+}
+
+interface EvalOptions {
+  dataset?: string;
+  output?: string;
+  format?: string;
+  topK?: string;
+  threshold?: string;
+}
+
+interface TraceOptions {
+  input?: string;
+  output?: string;
+  summary?: boolean;
+}
+
+export const program = new Command();
 
 program
   .name('ai-cli')
@@ -32,7 +64,7 @@ program
   .command('info')
   .description('Show AI system information and statistics')
   .option('-j, --json', 'Output as JSON')
-  .action(async (options) => {
+  .action(async (options: InfoOptions) => {
     const info = {
       system: {
         name: 'Team-X AI System',
@@ -109,7 +141,7 @@ program
   .option('-q, --query <text>', 'Search query')
   .option('-s, --stats', 'Show graph statistics')
   .option('-j, --json', 'Output as JSON')
-  .action(async (options) => {
+  .action(async (options: KnowledgeOptions) => {
     const mockStats = {
       totalNodes: 0,
       totalEdges: 0,
@@ -157,7 +189,7 @@ program
   .option('-t, --type <type>', 'Filter by fact type')
   .option('--fresh', 'Show freshness scores')
   .option('-j, --json', 'Output as JSON')
-  .action(async (options) => {
+  .action(async (options: MemoryOptions) => {
     const mockFacts = [
       { fact: 'Example fact 1', type: 'status', freshness: 0.85 },
       { fact: 'Example fact 2', type: 'decision', freshness: 0.72 },
@@ -196,7 +228,7 @@ program
   .option('-f, --format <format>', 'Output format: text | json | html')
   .option('-t, --top-k <n>', 'Top-K for retrieval (default: 10)')
   .option('--threshold <n>', 'Similarity threshold (default: 0.7)')
-  .action(async (options) => {
+  .action(async (options: EvalOptions) => {
     console.log('🧪 Running RAG Evaluation...');
     console.log('');
     console.log('This would run the full evaluation pipeline.');
@@ -220,7 +252,7 @@ program
   .option('-i, --input <path>', 'Input trace file')
   .option('-o, --output <path>', 'Output file')
   .option('--summary', 'Show trace summary')
-  .action(async (options) => {
+  .action(async (options: TraceOptions) => {
     if (options.summary) {
       console.log('📊 Trace Summary');
       console.log('');
@@ -249,7 +281,7 @@ program
 // Parse and execute
 // ---------------------------------------------------------------------------
 
-program.parseAsync(process.argv).catch((err) => {
+program.parseAsync(process.argv).catch((err: unknown) => {
   console.error('Error:', err);
   process.exit(1);
 });

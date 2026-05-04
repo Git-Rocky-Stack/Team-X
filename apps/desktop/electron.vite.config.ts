@@ -3,6 +3,42 @@ import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import type { Plugin } from 'rollup';
+
+/**
+ * Plugin to handle .js extension imports in workspace packages.
+ * Workspace packages use .js extensions for ESM compliance (compiled output),
+ * but during bundling we need to resolve them to .ts source files.
+ */
+function jsToTsExtension(): Plugin {
+  return {
+    name: 'js-to-ts-extension',
+    resolveId(source, importer) {
+      if (!importer) return null;
+
+      // Only process relative imports ending in .js from workspace packages
+      if (!source.startsWith('./') && !source.startsWith('../')) return null;
+      if (!source.endsWith('.js')) return null;
+
+      // Check if importer is from a workspace package
+      const workspacePackages = ['intelligence', 'shared-types', 'role-schema', 'provider-router', 'telemetry-core'];
+      const isWorkspaceImport = workspacePackages.some(pkg =>
+        importer.includes(`@team-x/${pkg}`) || importer.includes(`/packages/${pkg}/`)
+      );
+
+      if (!isWorkspaceImport) return null;
+
+      // Get the absolute directory of the importer
+      const importerDir = importer.replace(/\/[^/]+$/, '');
+
+      // Resolve the absolute path of the source (without .js extension)
+      const resolvedAbs = resolve(importerDir, source.replace(/\.js$/, '.ts'));
+
+      // Return the absolute path
+      return { id: resolvedAbs };
+    },
+  };
+}
 
 // Workspace packages are authored in TypeScript with `main: ./src/index.ts`
 // (no compile step — they exist as source-only modules in the pnpm workspace).
@@ -36,6 +72,7 @@ const esmDirnameShim = [
 export default defineConfig({
   main: {
     plugins: [
+      jsToTsExtension(),
       externalizeDepsPlugin({ exclude: workspaceDeps }),
       {
         name: 'copy-sqljs-wasm',
@@ -55,6 +92,7 @@ export default defineConfig({
       outDir: 'out/main',
       rollupOptions: {
         input: { index: resolve(__dirname, 'src/main/index.ts') },
+        external: ['tiktoken', 'tiktoken/lite'],
         output: {
           banner: esmDirnameShim,
           // Force a single-file bundle for the main process. Without
@@ -69,7 +107,10 @@ export default defineConfig({
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin({ exclude: workspaceDeps })],
+    plugins: [
+      jsToTsExtension(),
+      externalizeDepsPlugin({ exclude: workspaceDeps }),
+    ],
     build: {
       outDir: 'out/preload',
       rollupOptions: {

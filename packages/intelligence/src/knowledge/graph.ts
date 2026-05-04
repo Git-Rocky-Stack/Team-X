@@ -483,6 +483,7 @@ export function createKnowledgeGraphService(options: {
   idGen?: () => string;
   now?: () => number;
 }): KnowledgeGraphService {
+  const repo = options.repo;
   const now = options.now ?? Date.now;
   const idGen =
     options.idGen ??
@@ -628,7 +629,7 @@ export function createKnowledgeGraphService(options: {
 
     findPath(fromNodeId, toNodeId, maxHops = 5) {
       // BFS for shortest path
-      const queue: Array<{ nodeId: string; path: KnowledgePath }> = [
+      const queue: Array<{ nodeId: string; path: GraphPath }> = [
         { nodeId: fromNodeId, path: { nodeIds: [fromNodeId], edges: [], weight: 0, length: 0 } },
       ];
       const visited = new Set<string>([fromNodeId]);
@@ -642,7 +643,7 @@ export function createKnowledgeGraphService(options: {
 
         if (path.length >= maxHops) continue;
 
-        const outEdges = options.repo.getEdgesFromNode(nodeId);
+        const outEdges = repo.getEdgesFromNode(nodeId);
         for (const edge of outEdges) {
           if (!visited.has(edge.toNodeId)) {
             visited.add(edge.toNodeId);
@@ -708,11 +709,11 @@ export function createKnowledgeGraphService(options: {
       };
     },
 
-    suggestRelated(nodeId, options = {}) {
-      const maxResults = options.maxResults ?? 10;
-      const relationTypes = options.relationTypes;
+    suggestRelated(nodeId, opts = {}) {
+      const maxResults = opts.maxResults ?? 10;
+      const relationTypes = opts.relationTypes;
 
-      const edges = options.repo.getEdgesFromNode(nodeId);
+      const edges = repo.getEdgesFromNode(nodeId);
       let relatedIds = edges.map((e) => e.toNodeId);
 
       // Filter by relation types if specified
@@ -723,7 +724,7 @@ export function createKnowledgeGraphService(options: {
 
       // Get nodes and sort by edge weight
       const relatedNodes = relatedIds
-        .map((id) => options.repo.getNode(id))
+        .map((id) => repo.getNode(id))
         .filter((n): n is KnowledgeNode => n !== undefined)
         .sort((a, b) => b.accessCount - a.accessCount)
         .slice(0, maxResults);
@@ -731,22 +732,22 @@ export function createKnowledgeGraphService(options: {
       return relatedNodes;
     },
 
-    inferRelationships(companyId, options = {}) {
-      const maxDepth = options.maxDepth ?? 2;
-      const minConfidence = options.minConfidence ?? 0.5;
+    inferRelationships(companyId, opts = {}) {
+      const maxDepth = opts.maxDepth ?? 2;
+      const minConfidence = opts.minConfidence ?? 0.5;
 
       const inferred: KnowledgeEdge[] = [];
-      const nodes = options.repo.getNodesByCompany(companyId);
+      const nodes = repo.getNodesByCompany(companyId);
 
       // Transitive inference: if A -> B and B -> C, then A -> C
       for (const node of nodes) {
-        const related = options.repo.findRelatedNodes(node.id, maxDepth);
+        const related = repo.findRelatedNodes(node.id, maxDepth);
 
         for (const edge of related.edges) {
           // Only infer if confidence threshold met
           if (edge.weight >= minConfidence) {
             // Check if edge already exists
-            const existing = options.repo.getEdgesBetweenNodes(
+            const existing = repo.getEdgesBetweenNodes(
               node.id,
               edge.toNodeId
             );

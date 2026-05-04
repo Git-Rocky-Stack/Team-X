@@ -23,6 +23,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.4] - 2026-05-03
+
+### Added
+- **Enhanced AI settings deep-link** — `SettingsSectionFocus` now includes `'enhanced-ai'`, the User Guide can scroll-focus the Enhanced AI panel, and the section is wrapped in `data-settings-section="enhanced-ai"` consistent with sibling sections.
+- **Settings IPC: enhanced AI config** — preload exposes `settings.getEnhancedAiConfig` / `settings.setEnhancedAiConfig` channels (M32 wiring).
+
+### Changed
+- **`@team-x/intelligence` unified service (M31)** — `createAiService` rewritten to align with actual upstream module signatures: `RagService` is now properly constructed when a `RagRepo` is supplied via `rag.repo`; embedding config takes a caller-supplied `embedText: EmbedTextFn` and `dimension`; `createQueryCache` is initialized with `{ ttl, maxEntries }`; `evaluate()` wraps `EvalQuery[]` into a real `EvalDataset` and returns `result.aggregated`; nullish array accesses on graph queries and query expansion are guarded.
+- **Sqlite-vec embeddings repo** — `populateVecTable` cast tightened so `db.run` returns `{ changes }` with the correct type.
+- **Embeddings repo statements** — `db.execute(...).all()` calls collapsed to `.all()` directly to match drizzle-orm SQLite types.
+
+### Fixed
+- **Desktop typecheck** — full typecheck pass across `tsconfig.main`, `tsconfig.preload`, `tsconfig.renderer`, and `tsconfig.e2e`.
+- **Removed unused symbols** — dropped unused `Button` import from `EnhancedAiSection` and unused `extractFacts`/`createRagService`/`RagServiceOptions`/`RetrieveInput`/`ExpandedQuery`/`embedder`/`streamer` references from `unified.ts`.
+- **Stub LLM-complete signature** in `apps/desktop/src/main/index.ts` no longer trips `noUnusedParameters` (`prompt` → `_prompt`).
+
+### Known issues
+- `@team-x/intelligence` package still has ~130 pre-existing typecheck errors outside of `unified.ts` (Map/Set iteration target, `rag/index.ts` re-export typos, `logging.ts` field shape mismatches). Tracked separately — does not block the desktop app, which typechecks clean.
+- Local test suite shows ~24 SQLite-touching test failures driven by an Electron-vs-Node native ABI mismatch in `better-sqlite3` after `electron-rebuild`. Environmental, not a code defect; CI runs against the matching ABI.
+- `apps/desktop/src/main/orchestrator/proactive-dispatch.test.ts` — pre-existing payload-shape drift between event emitter and assertions (3 cases). Not introduced this release.
+
+---
+
 ## Phase 6 - Capabilities & Evidence
 
 ## [1.2.0] - 2026-04-20

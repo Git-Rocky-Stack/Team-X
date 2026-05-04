@@ -5,7 +5,7 @@
  * Phase 5 — M28 (updated with sqlite-vec integration).
  */
 
-import { count, eq, and, sql } from 'drizzle-orm';
+import { count, eq, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 import type { Schema } from '../client.js';
@@ -120,7 +120,7 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
       // Perform similarity search using sqlite-vec
       // The vec0 extension provides the distance() function
       const results = db
-        .execute(
+        .all(
           sql`
             SELECT
               e.id,
@@ -137,8 +137,7 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
             ORDER BY v.distance ASC
             LIMIT ${topK}
           `
-        )
-        .all() as Array<{
+        ) as Array<{
           id: string;
           source_id: string;
           source_type: string;
@@ -187,13 +186,12 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
      */
     populateVecTable(companyId?: string): number {
       let query = sql`INSERT OR IGNORE INTO embeddings_vec (rowid, embedding_float) SELECT rowid, embedding FROM embeddings`;
-      const params: typeof sql[] = [];
 
       if (companyId) {
         query = sql`${query} WHERE company_id = ${companyId}`;
       }
 
-      const result = db.execute(query).run();
+      const result = db.run(query) as unknown as { changes: number };
       return result.changes;
     },
 
@@ -217,15 +215,14 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
         .get()?.value ?? 0) as number;
 
       const byType = db
-        .execute(
+        .all(
           sql`
             SELECT source_type, COUNT(*) as count
             FROM embeddings
             ${whereClause}
             GROUP BY source_type
           `
-        )
-        .all() as Array<{ source_type: string; count: number }>;
+        ) as Array<{ source_type: string; count: number }>;
 
       const bySourceType: Record<string, number> = {};
       for (const row of byType) {
@@ -273,7 +270,7 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
     }> {
       // This is a self-join using vec distance to find near-duplicates
       const results = db
-        .execute(
+        .all(
           sql`
             SELECT
               e1.id AS id1,
@@ -291,8 +288,7 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
             ORDER BY similarity DESC
             LIMIT 100
           `
-        )
-        .all() as Array<{
+        ) as Array<{
           id1: string;
           id2: string;
           source_id1: string;

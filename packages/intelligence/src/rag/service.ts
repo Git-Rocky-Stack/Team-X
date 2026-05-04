@@ -11,7 +11,6 @@ import { type ChunkOptions, chunkText } from './chunker.js';
 import type { EmbedTextFn } from './embeddings.js';
 import { cosineSimilarity } from './retriever.js';
 import type { QueryCache, RetrievalOptions } from './cache.js';
-import { createCacheKey } from './cache.js';
 
 export interface RagEmbeddingRow {
   id: string;
@@ -149,15 +148,6 @@ function normalizeVector(vec: number[]): number[] {
   const magnitude = Math.sqrt(sumSquares);
   if (magnitude === 0) return vec;
   return vec.map((v) => v / magnitude);
-}
-
-/**
- * Convert Buffer to normalized Float32Array for sqlite-vec.
- */
-function bufferToNormalizedFloat32Array(buf: Buffer): Float32Array {
-  const arr = bufferToFloatArray(buf);
-  const normalized = normalizeVector(arr);
-  return Float32Array.from(normalized);
 }
 
 export function createRagService(opts: RagServiceOptions): RagService {

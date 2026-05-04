@@ -21,6 +21,7 @@ export interface RetrievalLogEntry {
   event:
     | 'retrieval_started'
     | 'retrieval_completed'
+    | 'retrieval_failed'
     | 'cache_hit'
     | 'cache_miss'
     | 'embedding_started'
@@ -46,6 +47,12 @@ export interface RetrievalLogEntry {
   data: {
     /** Number of results retrieved */
     resultCount?: number;
+
+    /** Top-K requested for retrieval */
+    topK?: number;
+
+    /** Similarity threshold used for retrieval */
+    threshold?: number;
 
     /** Similarity scores of results */
     scores?: number[];
@@ -183,10 +190,10 @@ export class StructuredLogger {
     const level: RetrievalLogEntry['level'] = entry.event.includes('failed') ? 'error' : 'info';
     if (this.shouldLog(level)) {
       const fullEntry: RetrievalLogEntry = {
+        ...entry,
         version: '1.0.0',
         timestamp: Date.now(),
         level,
-        ...entry,
       };
       this.write(fullEntry);
     }
@@ -195,14 +202,14 @@ export class StructuredLogger {
   /**
    * Log an embedding operation.
    */
-  logEmbedding(entry: Omit<EmbeddingLogEntry, 'version' | 'timestamp'>): void {
+  logEmbedding(entry: Omit<EmbeddingLogEntry, 'version' | 'timestamp' | 'level'>): void {
     const level: EmbeddingLogEntry['level'] = entry.event.includes('failed') ? 'error' : 'info';
     if (this.shouldLog(level)) {
       const fullEntry: EmbeddingLogEntry = {
+        ...entry,
         version: '1.0.0',
         timestamp: Date.now(),
         level,
-        ...entry,
       };
       this.write(fullEntry);
     }
@@ -211,14 +218,14 @@ export class StructuredLogger {
   /**
    * Log an indexing operation.
    */
-  logIndexing(entry: Omit<IndexingLogEntry, 'version' | 'timestamp'>): void {
+  logIndexing(entry: Omit<IndexingLogEntry, 'version' | 'timestamp' | 'level'>): void {
     const level: IndexingLogEntry['level'] = entry.event.includes('failed') ? 'error' : 'info';
     if (this.shouldLog(level)) {
       const fullEntry: IndexingLogEntry = {
+        ...entry,
         version: '1.0.0',
         timestamp: Date.now(),
         level,
-        ...entry,
       };
       this.write(fullEntry);
     }
@@ -444,7 +451,6 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
         companyId: input.companyId,
         queryHash,
         queryText: input.query.slice(0, 200),
-        level: 'error',
         data: {
           latencyMs,
           error: error instanceof Error ? error.message : String(error),
@@ -511,7 +517,6 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
       context.logger.logIndexing({
         event: 'indexing_failed',
         companyId: input.companyId,
-        level: 'error',
         data: {
           sourceId: input.sourceId,
           sourceType: input.sourceType,
@@ -535,7 +540,3 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
   return service;
 }
 
-/**
- * Export logger types and functions.
- */
-export type { RetrievalLogEntry, EmbeddingLogEntry, IndexingLogEntry, LoggerOptions, RAGLoggingContext };

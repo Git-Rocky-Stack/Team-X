@@ -53,7 +53,12 @@ export type ActiveView =
   | 'user-guide'
   | 'settings';
 
-export type SettingsSectionFocus = 'providers' | 'extensions' | 'memory' | 'portability';
+export type SettingsSectionFocus =
+  | 'providers'
+  | 'extensions'
+  | 'memory'
+  | 'portability'
+  | 'enhanced-ai';
 
 /** Dashboard inner subview tabs. */
 export type DashboardSubview = 'cards' | 'timeline' | 'stream' | 'floor' | 'commands';

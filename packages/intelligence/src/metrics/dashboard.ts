@@ -7,23 +7,10 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
-import type {
-  AggregatedMetrics,
-  EvalQuery,
-  QueryMetrics,
-  RetrievalResult,
-} from '../eval/types.js';
+import type { AggregatedMetrics } from '../eval/types.js';
 
-import {
-  calculateQueryMetrics,
-  formatAggregatedMetrics,
-} from '../eval/metrics.js';
-
-import type {
-  RetrievalLogEntry,
-  EmbeddingLogEntry,
-  CacheStats,
-} from '../rag/logging.js';
+import type { RetrievalLogEntry, EmbeddingLogEntry } from '../rag/logging.js';
+import type { CacheStats } from '../rag/cache.js';
 
 /**
  * Dashboard metrics snapshot.
@@ -377,13 +364,13 @@ export function createInMemoryDashboardStore(): DashboardStore {
     },
 
     getOldestTimestamp() {
-      if (snapshots.length === 0) return null;
-      return snapshots[0].timestamp;
+      const first = snapshots[0];
+      return first ? first.timestamp : null;
     },
 
     getNewestTimestamp() {
-      if (snapshots.length === 0) return null;
-      return snapshots[snapshots.length - 1].timestamp;
+      const last = snapshots[snapshots.length - 1];
+      return last ? last.timestamp : null;
     },
 
     clearOlderThan(timestamp) {
@@ -404,8 +391,9 @@ function calculateTrend(points: Array<{ timestamp: number; value: number }>): 'u
   if (points.length < 2) return 'stable';
 
   const recent = points.slice(-Math.min(10, points.length));
-  const first = recent[0].value;
-  const last = recent[recent.length - 1].value;
+  const first = recent[0]?.value ?? 0;
+  const last = recent[recent.length - 1]?.value ?? 0;
+  if (first === 0) return last === 0 ? 'stable' : 'up';
   const change = ((last - first) / first) * 100;
 
   if (Math.abs(change) < 5) return 'stable';
@@ -413,14 +401,20 @@ function calculateTrend(points: Array<{ timestamp: number; value: number }>): 'u
 }
 
 /**
- * Calculate stats from values.
+ * Calculate stats from values, including a coarse trend direction.
  */
-function calculateStats(values: number[]): { min: number; max: number; mean: number } {
-  if (values.length === 0) return { min: 0, max: 0, mean: 0 };
+function calculateStats(values: number[]): {
+  min: number;
+  max: number;
+  mean: number;
+  trend: 'up' | 'down' | 'stable';
+} {
+  if (values.length === 0) return { min: 0, max: 0, mean: 0, trend: 'stable' };
   const min = Math.min(...values);
   const max = Math.max(...values);
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  return { min, max, mean };
+  const points = values.map((value, idx) => ({ timestamp: idx, value }));
+  return { min, max, mean, trend: calculateTrend(points) };
 }
 
 /**
@@ -478,13 +472,13 @@ export function createMetricsDashboard(options: {
       const timestamp = now();
 
       // Calculate retrieval metrics
-      const successful = retrievalLogs.filter((l) => l.status === 'completed').length;
-      const failed = retrievalLogs.filter((l) => l.status === 'failed').length;
+      const successful = retrievalLogs.filter((l) => l.event === 'retrieval_completed').length;
+      const failed = retrievalLogs.filter((l) => l.event === 'retrieval_failed').length;
       const total = retrievalLogs.length;
 
       const latencies = retrievalLogs
-        .filter((l) => l.status === 'completed')
-        .map((l) => l.latencyMs)
+        .filter((l) => l.event === 'retrieval_completed')
+        .map((l) => l.data.latencyMs ?? 0)
         .sort((a, b) => a - b);
 
       const latencySnapshot = latencies.length > 0
@@ -511,7 +505,7 @@ export function createMetricsDashboard(options: {
 
       const resultCounts = new Map<number, number>();
       for (const log of retrievalLogs) {
-        const count = log.resultCount ?? 0;
+        const count = log.data.resultCount ?? 0;
         resultCounts.set(count, (resultCounts.get(count) ?? 0) + 1);
       }
 
@@ -551,18 +545,24 @@ export function createMetricsDashboard(options: {
       }
 
       // Cache snapshot
-      const cacheSnapshot: CacheSnapshot = currentCacheStats ?? {
-        entries: 0,
-        totalLookups: 0,
-        hits: 0,
-        misses: 0,
-        hitRate: 0,
-        evictions: 0,
-        invalidations: 0,
-        estimatedSizeBytes: 0,
-        estimatedCostSavings: { callsSaved: 0, percentReduction: 0 },
-        avgEntryLifetime: 0,
-      };
+      const cacheSnapshot: CacheSnapshot = currentCacheStats
+        ? {
+            ...currentCacheStats,
+            estimatedCostSavings: { callsSaved: currentCacheStats.hits, percentReduction: currentCacheStats.hitRate },
+            avgEntryLifetime: 0,
+          }
+        : {
+            entries: 0,
+            totalLookups: 0,
+            hits: 0,
+            misses: 0,
+            hitRate: 0,
+            evictions: 0,
+            invalidations: 0,
+            estimatedSizeBytes: 0,
+            estimatedCostSavings: { callsSaved: 0, percentReduction: 0 },
+            avgEntryLifetime: 0,
+          };
 
       if (currentCacheStats && currentCacheStats.totalLookups > 0) {
         cacheSnapshot.estimatedCostSavings = {
@@ -697,7 +697,7 @@ export function createMetricsDashboard(options: {
           failedRetrievals: failed,
           successRate: total > 0 ? successful / total : 1,
           latency: latencySnapshot,
-          avgResults: total > 0 ? retrievalLogs.reduce((sum, l) => sum + (l.resultCount ?? 0), 0) / total : 0,
+          avgResults: total > 0 ? retrievalLogs.reduce((sum, l) => sum + (l.data.resultCount ?? 0), 0) / total : 0,
           resultDistribution: resultCounts,
         },
         cache: cacheSnapshot,
@@ -713,8 +713,9 @@ export function createMetricsDashboard(options: {
 
     async getDashboardData(): Promise<DashboardMetrics> {
       const snapshots = options.store.getRecentSnapshots(1);
-      if (snapshots.length > 0) {
-        return snapshots[0];
+      const latest = snapshots[0];
+      if (latest) {
+        return latest;
       }
       return this.generateSnapshot();
     },
@@ -773,8 +774,8 @@ export function createMetricsDashboard(options: {
       }
 
       const latencies = retrievalLogs
-        .filter((l) => l.status === 'completed')
-        .map((l) => l.latencyMs)
+        .filter((l) => l.event === 'retrieval_completed')
+        .map((l) => l.data.latencyMs ?? 0)
         .sort((a, b) => a - b);
       if (latencies.length > 0) {
         const p95 = latencies[Math.floor(latencies.length * 0.95)] ?? 0;
@@ -794,7 +795,7 @@ export function createMetricsDashboard(options: {
       }
 
       const total = retrievalLogs.length;
-      const failed = retrievalLogs.filter((l) => l.status === 'failed').length;
+      const failed = retrievalLogs.filter((l) => l.event === 'retrieval_failed').length;
       const errorRate = total > 0 ? failed / total : 0;
       if (errorRate > t.maxErrorRate) {
         failures.push({ metric: 'Error Rate', value: errorRate, target: t.maxErrorRate });

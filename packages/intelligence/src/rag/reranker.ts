@@ -150,11 +150,11 @@ export function createApiCrossEncoder(opts: ApiCrossEncoderOptions): CrossEncode
         throw new Error(`Cross-encoder API failed: ${response.status} ${body}`);
       }
 
-      const json = await response.json();
-      const results = json.results as Array<{ index: number; relevance_score: number }>;
+      const json = (await response.json()) as { results: Array<{ index: number; relevance_score: number }> };
+      const results = json.results;
 
       return results.map((r) => ({
-        id: documents[r.index].id,
+        id: documents[r.index]?.id ?? '',
         score: r.relevance_score,
       }));
     } finally {
