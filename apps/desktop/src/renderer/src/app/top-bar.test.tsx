@@ -41,15 +41,17 @@ const DESKTOP_PACKAGE_JSON_PATH = join(currentDirname, '..', '..', '..', '..', '
 const REPO_ROOT_DIR = join(currentDirname, '..', '..', '..', '..', '..', '..');
 const REPO_ROOT_PACKAGE_JSON_PATH = join(REPO_ROOT_DIR, 'package.json');
 
-const APP_RELEASE_VERSION = '2.0.3';
+const APP_RELEASE_VERSION = '2.0.5';
 const PACKAGE_RELEASE_VERSION = '2.0.0';
+const SHARED_TYPES_RELEASE_VERSION = '2.0.1';
+const INTELLIGENCE_RELEASE_VERSION = '2.0.2';
 
 const RELEASE_PACKAGE_JSON_MARKERS = [
   { path: REPO_ROOT_PACKAGE_JSON_PATH, version: APP_RELEASE_VERSION },
   { path: DESKTOP_PACKAGE_JSON_PATH, version: APP_RELEASE_VERSION },
   {
     path: join(REPO_ROOT_DIR, 'packages', 'shared-types', 'package.json'),
-    version: PACKAGE_RELEASE_VERSION,
+    version: SHARED_TYPES_RELEASE_VERSION,
   },
   {
     path: join(REPO_ROOT_DIR, 'packages', 'role-schema', 'package.json'),
@@ -61,7 +63,7 @@ const RELEASE_PACKAGE_JSON_MARKERS = [
   },
   {
     path: join(REPO_ROOT_DIR, 'packages', 'intelligence', 'package.json'),
-    version: PACKAGE_RELEASE_VERSION,
+    version: INTELLIGENCE_RELEASE_VERSION,
   },
   {
     path: join(REPO_ROOT_DIR, 'packages', 'telemetry-core', 'package.json'),

@@ -80,7 +80,7 @@ describe('createSettingsRepo', () => {
   describe('seedDefaults', () => {
     it('seeds all default settings on empty DB', () => {
       const count = repo.seedDefaults();
-      expect(count).toBe(26);
+      expect(count).toBe(28);
       expect(repo.get<string>('runtime_strategy', '')).toBe('auto');
       expect(repo.get<string>('max_privacy_tier', '')).toBe('proprietary-cloud');
       expect(repo.get<number>('orchestrator_slots', 0)).toBe(6);
@@ -92,7 +92,7 @@ describe('createSettingsRepo', () => {
     it('does not overwrite existing settings', () => {
       repo.set('runtime_strategy', 'lean');
       const count = repo.seedDefaults();
-      expect(count).toBe(25);
+      expect(count).toBe(27);
       expect(repo.get<string>('runtime_strategy', '')).toBe('lean');
     });
 

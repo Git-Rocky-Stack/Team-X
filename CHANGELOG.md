@@ -23,6 +23,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.5] - 2026-05-04
+
+### Added
+- **`tiktoken/lite` declaration shim** at `packages/intelligence/src/types/tiktoken-lite.d.ts` so the optional dynamic-import path in `chunker-v2.ts` typechecks cleanly while preserving the runtime char-count fallback.
+- **`commander@^12` CLI dependency** — listed in `packages/intelligence/package.json` is now actually installed (lockfile was out of sync); `pnpm install` resolved the gap.
+- **`triggerKind` / `goalId` / `ticketId` on `ProactiveWorkStartedPayload`** — schema in `@team-x/shared-types` now carries the same trigger context as `ProactiveWorkQueuedPayload`, and `proactive-dispatch.ts` plumbs them through `emitWorkStarted`. Resolves prior consumer-side drift.
+
+### Changed
+- **`@team-x/intelligence` typecheck cleanup** (`v2.0.1` → `v2.0.2`) — full typecheck pass across the package after a sweep that fixed:
+  - `cli/ai-cli.ts` — typed `commander` action `options` callbacks (`InfoOptions`, `KnowledgeOptions`, `MemoryOptions`, `EvalOptions`, `TraceOptions`), exported `program` so `cli/index.ts` can re-export it.
+  - `eval/evaluator.ts` — `getTargets()` returns a strongly-typed object instead of `Record<string, number>` so target accesses don't fall under `noUncheckedIndexedAccess`.
+  - `eval/metrics.ts` — `retrievedIds[i]` / `queryMetrics[i]` / `sorted[lower]` / per-query comparison guards added.
+  - `eval/golden-dataset.ts` — added missing `project_blocked` placeholder to the `DOCS` shape so semantic/recent/complex queries stop dereferencing a non-existent key.
+  - `knowledge/graph.ts` — captured `repo` once at service construction so `suggestRelated` and `inferRelationships` stop shadowing the outer `options`; `KnowledgePath` reference corrected to `GraphPath`.
+  - `loop/planning.ts` — extracted `topologicalSort` to a free function (was on the object literal but not on the `PlanExecutor` interface), removed unused `plan` capture in `wrapLoopExecution`.
+  - `metrics/dashboard.ts` — fixed `CacheStats` import path (`rag/cache.js`, not `rag/logging.js`); replaced bogus `l.status` / `l.latencyMs` / `l.resultCount` reads with the real `RetrievalLogEntry` shape (`l.event` and `l.data.*`); `calculateStats` now returns the `trend` field that `TimeSeriesData.stats` requires; `CacheSnapshot` constructed via spread + computed cost-savings instead of bare `CacheStats` assignment; oldest/newest timestamps and `getDashboardData` snapshot reads now nullish-guard the index access.
+  - `observability/tracing.ts` — `sampleed` typo → `sampled`, `recordException` types `exception: unknown` consistently, dropped unused `result` capture in `startActiveSpan`.
+  - `prompt/versioning.ts` — `DEFAULT_SYSTEM_PROMPTS` typed as `Record<string, PromptTemplate>` so the `metadata.status` literal narrows to the `'production' | 'draft' | 'testing' | 'deprecated'` union; dropped unused `hashQuery` import.
+  - `rag/cache.ts` — dropped unused destructured `ttl`, `companyId`, `key`, `value`.
+  - `rag/chunker-v2.ts` — added the `tiktoken/lite` declaration shim, removed unused `pos` / `minChars` / `currentEnd`, nullish-guarded `lines[i]` and `currentSegments[i]` and `match[1]`, fixed `chunkMarkdownWithCodeBlocks` async-return type to `Promise<Chunk[]>`, exported `TokenCounter`.
+  - `rag/index.ts` — corrected re-export names: `expandQuerySemantic` → `expandQuerySemantically`, `expandQuerySynonyms` → `expandQueryWithSynonyms`, `expandQueryEntities` → `expandQueryWithEntities`, `expandQueryHyDE` → `expandQueryWithHyDE`; dropped non-existent `ChunkOptions` and `ExpansionOptions`.
+  - `rag/logging.ts` — added `'retrieval_failed'` event variant, added `topK` / `threshold` to retrieval `data`, made `level` part of the `Omit<...>` parameter so the calling site computes it (no more "level overwritten by spread" warnings), removed conflicting re-export at line 541.
+  - `rag/query-expansion.ts` — nullish-guarded every `expansions[i]` / `weights[i]` access, fixed `allResults.length.length` typo to `allResults.length`, removed unused imports.
+  - `rag/reranker.ts` — `await response.json()` typed via cast instead of `unknown` index access.
+  - `rag/service.ts` — removed unused `bufferToNormalizedFloat32Array` and unused `createCacheKey` import.
+  - `memory/long-term.ts` — dropped unused `EmbeddingSourceType` and `RagService` imports; renamed unused `query` parameter to `_query`.
+- **Settings count freeze** — `settings.test.ts` now expects 28 / 27 (was 26 / 25) to match Phase 6 proactive defaults that landed without a corresponding test bump.
+- **Top-bar release-marker pins** — `top-bar.test.tsx` now pins app at 2.0.5, intelligence at 2.0.2, shared-types at 2.0.1, others at 2.0.0.
+
+### Fixed
+- **Lockfile sync** — `pnpm install` actually pulled `commander@12.1.0` and `tsx@4.21.0` into `packages/intelligence`; previously listed in `package.json` but absent from `node_modules`.
+- **`proactive-dispatch.test.ts` payload assertions** — all 11 cases now pass after `ProactiveWorkStartedPayload` was extended to carry the trigger kind and source IDs.
+
+### Known issues
+- 27 local test failures remain, all pre-existing and unrelated to this release:
+  - 21 driven by the `better-sqlite3` Electron-vs-Node native ABI mismatch (`NODE_MODULE_VERSION 125` vs `115`) after `electron-rebuild` runs on `pnpm install`. CI runs against the matching ABI.
+  - 5 are `phase-5-complete-marker` / `phase-6-complete-marker` doc audits that need the design-doc and CLAUDE.md release-marker bumps from the Phase release plan.
+  - 1 is the `top-bar` Phase 6 badge literal — unchanged at "Phase 6", no action needed.
+
+---
+
 ## [2.0.4] - 2026-05-03
 
 ### Added
