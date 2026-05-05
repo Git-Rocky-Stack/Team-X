@@ -1,22 +1,36 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { describe, expect, it } from 'vitest';
+/**
+ * `initVec` tests — verifies the sqlite-vec initializer degrades gracefully
+ * when the extension is unavailable.
+ *
+ * Uses `makeTestDb()` (sql.js / WASM) per the workspace DB-test convention.
+ * sql.js does not ship the vec0 module, so `initVec` should hit its catch
+ * branch and return `false` — exactly the production fallback behavior we
+ * want under brute-force cosine similarity.
+ */
 
-import * as schema from './schema.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { type TestDbHandle, makeTestDb } from './test-helpers.js';
 import { initVec } from './vec-init.js';
+
+let ctx: TestDbHandle;
+
+beforeEach(async () => {
+  ctx = await makeTestDb();
+});
+
+afterEach(() => {
+  ctx.close();
+});
 
 describe('initVec', () => {
   it('returns boolean without throwing when sqlite-vec unavailable', () => {
-    const raw = new Database(':memory:');
-    const db = drizzle(raw, { schema });
-    const result = initVec(db, 1536);
+    const result = initVec(ctx.db, 1536);
     expect(typeof result).toBe('boolean');
   });
 
   it('accepts different dimensions', () => {
-    const raw = new Database(':memory:');
-    const db = drizzle(raw, { schema });
-    const result = initVec(db, 768);
+    const result = initVec(ctx.db, 768);
     expect(typeof result).toBe('boolean');
   });
 });

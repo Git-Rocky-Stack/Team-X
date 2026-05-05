@@ -23,6 +23,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.6] - 2026-05-04
+
+### Changed
+- **`embeddings.test.ts`, `settings-copilot.test.ts`, `vec-init.test.ts` migrated off `better-sqlite3`** — these three files were the last hold-outs in the desktop test suite that imported `better-sqlite3` directly. They now use `makeTestDb()` (sql.js / WASM) per the convention documented in `apps/desktop/src/main/db/test-helpers.ts`. Eliminates the `NODE_MODULE_VERSION 125 vs 115` ABI mismatch that was blocking 17 tests from running locally on plain Node 20 after the desktop `postinstall` rebuilt the native binding for Electron.
+- **`embeddings.ts` `deleteBySource` / `deleteByCompany` rewritten as count-then-delete** — drizzle-orm's `.run()` return shape differs across drivers (`{ changes }` on better-sqlite3 vs `void` on sql-js). Repos that need a deleted-row count now run a `count()` SELECT first, then DELETE — same cross-driver pattern already used in `command-history.ts`. No behavior change in production; restores the sql-js return contract for tests.
+- **Top-bar release-marker pin** bumped to `2.0.6` for the app version.
+
+### Fixed
+- **Local test suite recovers 16 NMV-bound tests** — `embeddings.test.ts` (6), `settings-copilot.test.ts` (9), and `vec-init.test.ts` (2) were all failing with `The module '...better_sqlite3.node' was compiled against a different Node.js version`. All now pass.
+- **Total test failures down 30 → 11** between v2.0.4 and v2.0.6 (proactive-dispatch payload fix in v2.0.5 + the NMV migration in v2.0.6).
+
+### Known issues
+- 11 local test failures remain, all pre-existing and unrelated to the ABI work:
+  - 5 are `phase-5-complete-marker` / `phase-6-complete-marker` doc audits (release plan owns the CLAUDE.md / design-doc bumps).
+  - 1 is `seed.test.ts > serializes tools_allowed and tools_denied` — role-pack frontmatter expects `'browse'` to appear in the seeded tools list; appears to be a pre-existing data issue in the role packs.
+  - 2 are `execution-tools.test.ts > caps recursive filesystem search results` — the test runs an unbounded recursive scan that exceeds the 5s default Vitest timeout on Windows, plus a follow-on `ENOTEMPTY` cleanup error. Infra flake, not a code defect.
+  - 3 are `budget-governance-service.test.ts` — pre-existing assertion drift (`expected '0' to be '2.5'`, `expected true to be false`, `expected undefined to be defined`). Logic/contract issue, not the DB layer.
+  - 1 is `proactive-trigger-service.test.ts > checks authority before queuing proactive work` — pre-existing fake-orchestrator drift.
+
+---
+
 ## [2.0.5] - 2026-05-04
 
 ### Added

@@ -1,38 +1,45 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { beforeEach, describe, expect, it } from 'vitest';
+/**
+ * EmbeddingsRepo unit tests.
+ *
+ * Uses the shared `makeTestDb()` helper (sql.js / WASM) per the DB-test
+ * convention documented in `test-helpers.ts`. The previous incarnation
+ * imported `better-sqlite3` directly, which fails under Vitest because the
+ * native binding is rebuilt for Electron's ABI by the desktop postinstall
+ * hook. Migrating to sql.js eliminates the NMV mismatch and aligns this
+ * file with every other repo test in the workspace.
+ */
 
-import * as schema from '../schema.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { companies } from '../schema.js';
+import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 
 import { createEmbeddingsRepo } from './embeddings.js';
 
-function createTestDb() {
-  const raw = new Database(':memory:');
-  raw.pragma('journal_mode = WAL');
-  raw.pragma('foreign_keys = ON');
-  const db = drizzle(raw, { schema });
+let ctx: TestDbHandle;
+let repo: ReturnType<typeof createEmbeddingsRepo>;
 
-  // Create minimal tables needed for embeddings tests
-  raw.exec(
-    [
-      'CREATE TABLE companies (',
-      '  id TEXT PRIMARY KEY, name TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,',
-      '  created_at INTEGER NOT NULL, settings_json TEXT NOT NULL DEFAULT "{}",',
-      '  icon TEXT, theme TEXT NOT NULL DEFAULT "dark", status TEXT NOT NULL DEFAULT "running",',
-      '  archived_at INTEGER, mcp_configs_json TEXT, provider_prefs_json TEXT, max_concurrent_agents INTEGER',
-      ');',
-      'CREATE TABLE embeddings (',
-      '  id TEXT PRIMARY KEY, company_id TEXT NOT NULL, source_type TEXT NOT NULL,',
-      '  source_id TEXT NOT NULL, chunk_index INTEGER NOT NULL DEFAULT 0,',
-      '  content_text TEXT NOT NULL, embedding BLOB NOT NULL, created_at INTEGER NOT NULL,',
-      '  UNIQUE(source_id, chunk_index)',
-      ');',
-      "INSERT INTO companies (id, name, slug, created_at) VALUES ('co-1', 'Test Co', 'test-co', 1000);",
-    ].join('\n'),
-  );
+beforeEach(async () => {
+  ctx = await makeTestDb();
+  ctx.db
+    .insert(companies)
+    .values({
+      id: 'co-1',
+      name: 'Test Co',
+      slug: 'test-co',
+      createdAt: 1000,
+      settingsJson: '{}',
+      icon: null,
+      theme: 'dark',
+      status: 'running',
+    })
+    .run();
+  repo = createEmbeddingsRepo(ctx.db);
+});
 
-  return { db, raw };
-}
+afterEach(() => {
+  ctx.close();
+});
 
 function fakeEmbedding(dim = 4): Buffer {
   const arr = new Float32Array(dim);
@@ -41,13 +48,6 @@ function fakeEmbedding(dim = 4): Buffer {
 }
 
 describe('EmbeddingsRepo', () => {
-  let repo: ReturnType<typeof createEmbeddingsRepo>;
-
-  beforeEach(() => {
-    const { db } = createTestDb();
-    repo = createEmbeddingsRepo(db);
-  });
-
   it('upserts a single-chunk embedding', () => {
     const id = repo.upsert({
       id: 'emb-1',

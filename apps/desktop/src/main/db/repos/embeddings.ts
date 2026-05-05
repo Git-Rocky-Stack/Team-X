@@ -70,11 +70,16 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
     },
 
     deleteBySource(sourceId: string): number {
-      const result = db
-        .delete(embeddings)
+      // Count-then-delete: drizzle-orm's `.run()` return shape differs across
+      // drivers (better-sqlite3 returns `{ changes }`, sql-js returns void).
+      // Count first so the caller gets a consistent number on both runtimes.
+      const before = (db
+        .select({ value: count() })
+        .from(embeddings)
         .where(eq(embeddings.sourceId, sourceId))
-        .run() as unknown as { changes: number };
-      return result.changes;
+        .get()?.value ?? 0) as number;
+      db.delete(embeddings).where(eq(embeddings.sourceId, sourceId)).run();
+      return before;
     },
 
     listByCompany(companyId: string): EmbeddingRow[] {
@@ -250,11 +255,13 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
      * Use with caution - this is not recoverable without backups.
      */
     deleteByCompany(companyId: string): number {
-      const result = db
-        .delete(embeddings)
+      const before = (db
+        .select({ value: count() })
+        .from(embeddings)
         .where(eq(embeddings.companyId, companyId))
-        .run() as unknown as { changes: number };
-      return result.changes;
+        .get()?.value ?? 0) as number;
+      db.delete(embeddings).where(eq(embeddings.companyId, companyId)).run();
+      return before;
     },
 
     /**

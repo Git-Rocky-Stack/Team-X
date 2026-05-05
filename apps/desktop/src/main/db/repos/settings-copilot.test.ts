@@ -13,29 +13,18 @@ import {
   type CopilotCategory,
   type SettingsSetCopilotWeightsRequest,
 } from '@team-x/shared-types';
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { describe, expect, it } from 'vitest';
 
-
-import * as schema from '../schema.js';
+import { makeTestDb } from '../test-helpers.js';
 
 import { createSettingsRepo } from './settings.js';
 
-function makeRepo() {
-  const raw = new Database(':memory:');
-  const ddl = [
-    'CREATE TABLE IF NOT EXISTS settings (',
-    '  key TEXT PRIMARY KEY,',
-    '  value_json TEXT NOT NULL,',
-    "  scope TEXT NOT NULL DEFAULT 'global',",
-    '  scope_id TEXT,',
-    '  updated_at INTEGER NOT NULL DEFAULT 0',
-    ')',
-  ].join('\n');
-  raw.prepare(ddl).run();
-  const db = drizzle(raw, { schema });
-  return createSettingsRepo(db);
+// Migrated to sql.js (`makeTestDb()`) per the workspace DB-test convention
+// — see `test-helpers.ts`. The previous `better-sqlite3` import failed under
+// Vitest because the native binding is rebuilt for Electron's ABI.
+async function makeRepo() {
+  const ctx = await makeTestDb();
+  return createSettingsRepo(ctx.db);
 }
 
 // ---------------------------------------------------------------------------
@@ -43,8 +32,8 @@ function makeRepo() {
 // ---------------------------------------------------------------------------
 
 describe('getCopilot defaults', () => {
-  it('returns defaults when no keys are persisted', () => {
-    const repo = makeRepo();
+  it('returns defaults when no keys are persisted', async () => {
+    const repo = await makeRepo();
     const c = repo.getCopilot();
     expect(c.enabled).toBe(COPILOT_ENABLED_DEFAULT);
     expect(c.intervalMinutes).toBe(COPILOT_SETTINGS_CLAMPS.intervalMinutes.default);
@@ -57,8 +46,8 @@ describe('getCopilot defaults', () => {
 // ---------------------------------------------------------------------------
 
 describe('setCopilot clamping', () => {
-  it('clamps intervalMinutes to [1, 60] on both read and write paths', () => {
-    const repo = makeRepo();
+  it('clamps intervalMinutes to [1, 60] on both read and write paths', async () => {
+    const repo = await makeRepo();
     // Write-side clamp: 0 -> 1 (min), 999 -> 60 (max), 15 passes through.
     repo.setCopilot({ companyId: 'c1', intervalMinutes: 0 });
     expect(repo.getCopilot().intervalMinutes).toBe(1);
@@ -75,15 +64,15 @@ describe('setCopilot clamping', () => {
     expect(repo.getCopilot().intervalMinutes).toBe(1);
   });
 
-  it('empty categories fall back to the full COPILOT_CATEGORIES set (write-side guard)', () => {
-    const repo = makeRepo();
+  it('empty categories fall back to the full COPILOT_CATEGORIES set (write-side guard)', async () => {
+    const repo = await makeRepo();
     repo.setCopilot({ companyId: 'c1', categories: [] });
     expect(repo.getCopilot().categories).toEqual(Array.from(COPILOT_CATEGORIES));
     expect(repo.getCopilot().categories.length).toBe(COPILOT_CATEGORIES.length);
   });
 
-  it('filters unknown categories and keeps the valid subset', () => {
-    const repo = makeRepo();
+  it('filters unknown categories and keeps the valid subset', async () => {
+    const repo = await makeRepo();
     const dirty = ['operational', 'bogus', 'anomaly', 'nope'] as unknown as CopilotCategory[];
     repo.setCopilot({ companyId: 'c1', categories: dirty });
     expect(repo.getCopilot().categories).toEqual(['operational', 'anomaly']);
@@ -95,8 +84,8 @@ describe('setCopilot clamping', () => {
 // ---------------------------------------------------------------------------
 
 describe('copilot category weights', () => {
-  it('seedDefaults creates the copilot_category_weights setting', () => {
-    const repo = makeRepo();
+  it('seedDefaults creates the copilot_category_weights setting', async () => {
+    const repo = await makeRepo();
 
     repo.seedDefaults();
 
@@ -105,14 +94,14 @@ describe('copilot category weights', () => {
     expect(JSON.parse(raw ?? 'null')).toEqual(COPILOT_CATEGORY_WEIGHTS_DEFAULT);
   });
 
-  it('returns five-key defaults when no weights are persisted', () => {
-    const repo = makeRepo();
+  it('returns five-key defaults when no weights are persisted', async () => {
+    const repo = await makeRepo();
 
     expect(repo.getCopilotWeights()).toEqual({ weights: COPILOT_CATEGORY_WEIGHTS_DEFAULT });
   });
 
-  it('patches one category without changing the others', () => {
-    const repo = makeRepo();
+  it('patches one category without changing the others', async () => {
+    const repo = await makeRepo();
 
     const result = repo.setCopilotWeights({ companyId: 'c1', weights: { cost: 0.25 } });
 
@@ -123,8 +112,8 @@ describe('copilot category weights', () => {
     expect(repo.getCopilotWeights().weights).toEqual(result.weights);
   });
 
-  it('clamps weights into the M38 category-weight range', () => {
-    const repo = makeRepo();
+  it('clamps weights into the M38 category-weight range', async () => {
+    const repo = await makeRepo();
 
     const result = repo.setCopilotWeights({
       companyId: 'c1',
@@ -135,8 +124,8 @@ describe('copilot category weights', () => {
     expect(result.weights.anomaly).toBe(COPILOT_CATEGORY_WEIGHT_CLAMP.max);
   });
 
-  it('ignores unknown runtime keys and malformed persisted values', () => {
-    const repo = makeRepo();
+  it('ignores unknown runtime keys and malformed persisted values', async () => {
+    const repo = await makeRepo();
 
     const dirty = {
       companyId: 'c1',
