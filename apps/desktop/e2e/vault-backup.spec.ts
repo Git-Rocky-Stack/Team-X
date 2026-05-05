@@ -134,7 +134,7 @@ test.describe('Team-X Phase 4 vault-backup flow', () => {
     await expect(window.locator('[data-copilot-toolbar-toggle]')).toBeVisible();
 
     // --- 2. Navigate to Files tab --------------------------------------------
-    const filesTab = window.getByRole('button', { name: 'Files' });
+    const filesTab = window.getByRole('button', { name: 'Files', exact: true });
     await filesTab.click();
     log('Files tab clicked');
 
@@ -198,7 +198,7 @@ test.describe('Team-X Phase 4 vault-backup flow', () => {
     log('SHA256 integrity verified');
 
     // --- 6. Navigate to Settings → Backup section ----------------------------
-    const settingsTab = window.getByRole('button', { name: 'Settings' });
+    const settingsTab = window.getByRole('button', { name: 'Settings', exact: true });
     await settingsTab.click();
     log('Settings tab clicked');
 

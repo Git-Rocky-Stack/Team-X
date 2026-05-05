@@ -124,7 +124,7 @@ test.describe('Team-X Phase 3 meeting flow', () => {
     await expect(window.locator('[data-copilot-toolbar-toggle]')).toBeVisible();
 
     // --- 2. Navigate to Meetings tab -----------------------------------------
-    const meetingsTab = window.getByRole('button', { name: 'Meetings' });
+    const meetingsTab = window.getByRole('button', { name: 'Meetings', exact: true });
     await meetingsTab.click();
     log('Meetings tab clicked');
 

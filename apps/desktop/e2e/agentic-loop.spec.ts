@@ -231,10 +231,15 @@ test.describe('Team-X Phase 5 — M31 agentic loop', () => {
     // --- 7. The read-only copilot thread renders the step transcript ------
     // M31 T5 persists every loop step as a message on this thread.
     // The chat-drawer's `viewingCopilotThread` branch renders a
-    // read-only banner ("Copilot transcript — read only") once the
-    // run reaches a terminal state; it's our strongest signal that
-    // the copilot-specific branch is the one rendering the drawer.
-    await expect(window.getByText('Copilot transcript — read only')).toBeVisible({
+    // read-only banner ("Copilot transcript is read only in the drawer.")
+    // once the run reaches a terminal non-failed state; it's our strongest
+    // signal that the copilot-specific branch is the one rendering the
+    // drawer. Source: chat-drawer.tsx — the `else` arm of the
+    // `copilotRunning ? ... : copilotResult?.kind === 'failed' ? ... : ...`
+    // ternary at the bottom of the `viewingCopilotThread` branch.
+    await expect(
+      window.getByText('Copilot transcript is read only in the drawer.'),
+    ).toBeVisible({
       timeout: 10_000,
     });
     log('copilot transcript banner visible (read-only view)');

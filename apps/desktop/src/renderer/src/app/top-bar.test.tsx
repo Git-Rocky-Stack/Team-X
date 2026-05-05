@@ -41,7 +41,7 @@ const DESKTOP_PACKAGE_JSON_PATH = join(currentDirname, '..', '..', '..', '..', '
 const REPO_ROOT_DIR = join(currentDirname, '..', '..', '..', '..', '..', '..');
 const REPO_ROOT_PACKAGE_JSON_PATH = join(REPO_ROOT_DIR, 'package.json');
 
-const APP_RELEASE_VERSION = '2.0.7';
+const APP_RELEASE_VERSION = '2.0.8';
 const PACKAGE_RELEASE_VERSION = '2.0.0';
 const SHARED_TYPES_RELEASE_VERSION = '2.0.1';
 const INTELLIGENCE_RELEASE_VERSION = '2.0.2';

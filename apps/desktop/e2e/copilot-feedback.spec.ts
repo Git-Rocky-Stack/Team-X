@@ -164,7 +164,7 @@ test.describe('Team-X Phase 6 — M38 copilot feedback loop', () => {
     await window.keyboard.press('Escape');
     await expect(sidebar).not.toBeVisible({ timeout: 10_000 });
 
-    await window.getByRole('button', { name: 'Settings' }).click();
+    await window.getByRole('button', { name: 'Settings', exact: true }).click();
     const costWeightRow = window.locator('[data-copilot-weight-category="cost"]');
     await expect(costWeightRow).toContainText('0.5x', { timeout: 10_000 });
   });

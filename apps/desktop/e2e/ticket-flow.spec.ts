@@ -135,18 +135,21 @@ test.describe('Team-X Phase 2 ticket flow', () => {
     log('SWE card visible');
 
     // --- 3. Navigate to Tickets view ----------------------------------------
-    const ticketsTab = window.getByRole('button', { name: 'Tickets' });
+    const ticketsTab = window.getByRole('button', { name: 'Tickets', exact: true });
     await ticketsTab.click();
     log('Tickets tab clicked');
 
-    // Verify kanban columns render (the column headers are uppercase labels)
-    await expect(window.getByText('Open', { exact: true })).toBeVisible();
-    await expect(window.getByText('In Progress', { exact: true })).toBeVisible();
-    await expect(window.getByText('Done', { exact: true })).toBeVisible();
-    log('kanban columns visible');
+    // The fresh-seed company has zero tickets, so the tickets view
+    // renders the empty-state surface (`data-tickets-view-state="empty"`)
+    // — KanbanBoard only mounts after the first ticket exists. Assert
+    // the empty state and use the "File the first ticket" CTA to open
+    // the create dialog. Once a ticket is created, the kanban columns
+    // are verified at step 6 below.
+    await expect(window.locator('[data-tickets-view-state="empty"]')).toBeVisible();
+    log('empty tickets state visible');
 
     // --- 4. Open Create Ticket dialog ---------------------------------------
-    const createBtn = window.locator('button[aria-label="Create ticket"]');
+    const createBtn = window.getByRole('button', { name: 'File the first ticket' });
     await expect(createBtn).toBeVisible();
     await createBtn.click();
     log('Create Ticket dialog opened');
@@ -200,18 +203,23 @@ test.describe('Team-X Phase 2 ticket flow', () => {
     await ticketCard.click();
     log('ticket card clicked');
 
-    // The detail panel has a border-l and renders the title as an h2.
-    // Scope all subsequent assertions to the detail panel to avoid
-    // strict-mode violations from duplicate text in the kanban card.
-    const detailPanel = window.locator('.border-l.border-border').first();
-    const detailTitle = detailPanel.locator('h2').filter({ hasText: ticketTitle });
+    // The detail panel uses the stable `data-ticket-detail=""` anchor
+    // (pinned by tickets-view.test.tsx) and renders the title as the
+    // surface heading. Scope all subsequent assertions to the detail
+    // panel to avoid strict-mode violations from duplicate text in the
+    // kanban card.
+    const detailPanel = window.locator('[data-ticket-detail=""]');
+    const detailTitle = detailPanel.getByText(ticketTitle).first();
     await expect(detailTitle).toBeVisible({ timeout: 5000 });
     log('ticket detail panel open');
 
     // Verify the ticket description inside the detail panel. The text
-    // also appears in the initial message, so scope to the <p> tag
-    // (the detail description paragraph, not the message <div>).
-    await expect(detailPanel.locator('p').filter({ hasText: ticketDesc })).toBeVisible({
+    // appears both in the dedicated description <p> and in a thread
+    // preview <p> (line-clamped) — both inside the detail panel — so
+    // scope to the first matching paragraph.
+    await expect(
+      detailPanel.locator('p').filter({ hasText: ticketDesc }).first(),
+    ).toBeVisible({
       timeout: 10_000,
     });
     log('ticket description visible in detail');
@@ -220,9 +228,14 @@ test.describe('Team-X Phase 2 ticket flow', () => {
     // The orchestrator fires the agent after ticket creation. The
     // test-mode provider streams the canned reply. The detail panel
     // polls via useTicketDetail (refetchInterval: 3s), so the reply
-    // should appear within a few seconds. Scope to detail panel to
-    // avoid matching any streaming preview in the dashboard.
-    await expect(detailPanel.getByText(TEST_MODE_REPLY)).toBeVisible({ timeout: 20_000 });
+    // should appear within a few seconds. The reply surfaces in two
+    // places inside the detail panel — the chat-bubble <div> and a
+    // line-clamped "Thread focus" preview <p>. Use `.last()` to land
+    // on the chat-bubble (rendered after the focus preview in DOM
+    // order) for a deterministic anchor.
+    await expect(detailPanel.getByText(TEST_MODE_REPLY).last()).toBeVisible({
+      timeout: 20_000,
+    });
     log('agent canned reply visible in ticket thread');
   });
 });

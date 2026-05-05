@@ -168,7 +168,10 @@ test.describe('Team-X Phase 6 — M39 telemetry kind filter', () => {
       .toBeGreaterThan(copilotBefore);
     const copilotRuns = (await getCompanyStats(companyId, 'copilot')).totalRuns;
 
-    await window.getByRole('button', { name: 'Telemetry' }).click();
+    await window
+      .getByRole('navigation')
+      .getByRole('button', { name: 'Telemetry', exact: true })
+      .click();
     const totalRunsCard = window.locator('[data-telemetry-stat="total-runs"]');
     await expect(totalRunsCard).toBeVisible({ timeout: 10_000 });
 

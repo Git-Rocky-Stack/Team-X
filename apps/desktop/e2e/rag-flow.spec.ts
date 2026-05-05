@@ -182,7 +182,12 @@ test.describe('Team-X rag-flow', () => {
 
     // Assistant echoes the marker. This persist confirms the orchestrator
     // turn completed → `work.completed` event fired → RagIndexer ran.
-    await expect(window.getByText(RAG_MARKER, { exact: true })).toBeVisible({
+    // Scope to the CEO drawer — the marker also surfaces on the Mission
+    // Control dashboard event stream once persisted, so an unscoped
+    // `getByText` matches both the chat bubble and the dashboard card.
+    await expect(
+      window.getByLabel('Iris Kovač', { exact: true }).getByText(RAG_MARKER, { exact: true }),
+    ).toBeVisible({
       timeout: 20_000,
     });
     log('assistant echoed RAG_MARKER ✓');

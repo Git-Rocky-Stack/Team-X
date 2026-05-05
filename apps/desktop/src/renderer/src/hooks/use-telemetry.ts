@@ -31,6 +31,14 @@ export function useCompanyStats(req: TelemetryCompanyStatsRequest | null) {
     // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
     queryFn: () => ipc.telemetry.companyStats(req!),
     enabled: req !== null && req.companyId.length > 0,
+    // The Mission Control dashboard subscribes to the same companyStats
+    // cache key (no kind filter) on app boot. Without 'always' here, the
+    // global staleTime (5s) keeps that initial value fresh, so when the
+    // user (or the M39 e2e) navigates to Telemetry mid-stale-window the
+    // page renders the boot-time count instead of the current count.
+    // 'always' refetches every time CompanyTelemetry mounts → Telemetry
+    // tab always shows fresh data on entry.
+    refetchOnMount: 'always',
   });
 }
 

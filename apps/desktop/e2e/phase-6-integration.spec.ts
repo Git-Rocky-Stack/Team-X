@@ -257,7 +257,10 @@ test.describe('Team-X Phase 6 — M41 integration', () => {
 
     await window.keyboard.press('Escape');
     await expect(sidebar).not.toBeVisible({ timeout: 10_000 });
-    await window.getByRole('button', { name: 'Telemetry' }).click();
+    await window
+      .getByRole('navigation')
+      .getByRole('button', { name: 'Telemetry', exact: true })
+      .click();
     await expect(window.locator('[data-telemetry-stat="total-runs"]')).toBeVisible({
       timeout: 10_000,
     });

@@ -244,15 +244,36 @@ export function seedIfEmpty<TRunResult>(
 export function seed(rolePacksRoot?: string): SeedResult | null {
   const db = getDb();
   const root = rolePacksRoot ?? defaultRolePacksRoot();
+
+  // Base settings shared by dev + production + e2e.
+  const settings: Record<string, unknown> = {
+    mission: 'Arm every builder with an AI company that runs itself.',
+    values: ['Quality', 'Privacy', 'Speed', 'Ownership'],
+  };
+
+  // E2E auto-open guard: the renderer auto-opens the User Guide on
+  // first boot per company when `userGuide.welcomeDismissedAt` is
+  // unset (App.tsx). Each Playwright spec creates a fresh
+  // userDataDir → fresh company → auto-open fires → dashboard cards
+  // (and every keyword-named top-bar tab) are no longer in the DOM,
+  // breaking flows that legitimately start on the dashboard. Pre-
+  // dismiss the welcome at seed-time for NODE_ENV=test runs so e2e
+  // boots land directly on the dashboard. Production users still
+  // see the welcome on first launch — this branch never runs there.
+  // Unit tests are unaffected: `seed.test.ts` calls `seedIfEmpty`
+  // directly, bypassing this runtime wrapper.
+  if (process.env.NODE_ENV === 'test') {
+    settings.userGuide = {
+      welcomeDismissedAt: new Date().toISOString(),
+    };
+  }
+
   const result = seedIfEmpty(db, {
     rolePacksRoot: root,
     company: {
       name: 'Strategia-X',
       slug: 'strategia-x',
-      settings: {
-        mission: 'Arm every builder with an AI company that runs itself.',
-        values: ['Quality', 'Privacy', 'Speed', 'Ownership'],
-      },
+      settings,
     },
     assignments: [
       {

@@ -220,7 +220,16 @@ test.describe('Team-X smoke', () => {
     // After `work.completed`, the chat query invalidates and the
     // assistant bubble replaces the streaming bubble with the final
     // persisted content. Either state satisfies the assertion.
-    await expect(window.getByText(TEST_MODE_REPLY, { exact: true })).toBeVisible({
+    //
+    // The reply also surfaces on the Mission Control dashboard event
+    // stream once persisted, so `getByText(...)` matches in both the
+    // chat drawer (the assertion target) and the dashboard event card.
+    // Scope to the drawer's labelled container — `<drawer aria-label="Iris
+    // Kovač">` per `chat-drawer.tsx` — to pin the assertion on the chat
+    // bubble specifically.
+    await expect(
+      window.getByLabel('Iris Kovač', { exact: true }).getByText(TEST_MODE_REPLY, { exact: true }),
+    ).toBeVisible({
       timeout: 20_000,
     });
     log('canned reply visible ✓');

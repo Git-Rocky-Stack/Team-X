@@ -23,6 +23,135 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.8] — 2026-05-04 — E2E green & Telemetry refresh fix
+
+End-to-end Playwright suite back to **22/22** (was 11 failed / 10 passed / 1
+not-run after the User Guide merge + dashboard redesign). The recovery covered
+three regression families and one production refresh-on-mount fix that doubles
+as a real UX improvement. Unit tests still **2266/2266**, build clean, lint
+clean (0 errors; 110 pre-existing non-null-assertion warnings remain in
+renderer hooks — out of scope).
+
+### Fixed
+
+- **Lint** (`apps/desktop/src/main/ipc/invariant-11-emit-handlers.test.ts`):
+  added missing `MessageRow` to the type-only import from
+  `../db/repos/messages.js`. The `FakeMessagesRepo` class referenced
+  `MessageRow` in three places (`rows: MessageRow[]`, the `as MessageRow` cast
+  in `append()`, and the `listByThread(): MessageRow[]` return type) without
+  importing it — ESLint flagged 3 `'MessageRow' is not defined` errors. The
+  module already exports `MessageRow = typeof messages.$inferSelect` so the
+  fix is a one-line type-import addition. Landed in the standalone commit
+  `464c1c9` ahead of the e2e bundle.
+
+- **E2E Group A — User Guide button-text collisions** (5 specs): the
+  comprehensive User Guide pane (commit `735d6f2`) renders section-nav and
+  action buttons whose accessible names *contain* the keywords `Settings`,
+  `Files`, `Meetings`, `Telemetry`, `Tickets`. Playwright's default partial-
+  match `getByRole('button', { name })` started resolving to up to 6 elements
+  and tripping strict-mode. Mitigation: added `exact: true` to the top-bar
+  tab selectors in
+  `e2e/{vault-backup,meeting-flow,copilot-feedback,phase-6-integration,telemetry-kind-filter,ticket-flow}.spec.ts`,
+  and additionally scoped the two Telemetry assertions
+  (`phase-6-integration.spec.ts`, `telemetry-kind-filter.spec.ts`) to
+  `getByRole('navigation').getByRole('button', { name: 'Telemetry', exact: true })`
+  because the page also renders a "Telemetry" CTA button in main content
+  even with `exact: true`.
+
+- **E2E Group B — User Guide auto-open hides dashboard** (3 specs):
+  `apps/desktop/src/renderer/src/App.tsx` auto-opens `activeView='user-guide'`
+  on first boot per company when `settings.userGuide.welcomeDismissedAt` is
+  unset. Each Playwright spec creates a fresh `userDataDir` →
+  fresh seeded company → auto-open fires → dashboard never mounts → CEO/SWE
+  cards (and every keyword-named top-bar tab) absent from DOM. Mitigation in
+  `apps/desktop/src/main/db/seed.ts`: in the `seed()` runtime wrapper
+  (called only from `main/index.ts`), pre-stamp
+  `userGuide.welcomeDismissedAt = new Date().toISOString()` when
+  `process.env.NODE_ENV === 'test'`. Production users still see the welcome
+  on first launch; unit tests are unaffected because `seed.test.ts` calls
+  `seedIfEmpty` directly and bypasses the runtime wrapper. The fresh
+  `setting:userGuide` JSON is parsed correctly by
+  `handlers.ts::rowToCompany` and consumed by App.tsx's `welcomeDismissedAt`
+  guard, which short-circuits the auto-open `useEffect`.
+
+- **Sidenav employee-card aria-label** (`apps/desktop/src/renderer/src/app/sidenav.tsx`):
+  the dashboard `CardsView`/`EmployeeCard` (which carried the
+  `{name}, {title} — {status}. Click to open chat.` aria-label format
+  documented in `e2e/smoke.spec.ts`'s header) was retired in favor of
+  `MissionControlDashboard` (ops-stats view, no per-employee cards). The
+  sidenav `EmployeeItem` carried the same employees but with no aria-label
+  at all, making the smoke / rag-flow / ticket-flow specs that pin
+  `button[aria-label^="Iris Kovač, Chief Executive Officer"]` time out at
+  15s with no fallback target. Added the same aria-label format and
+  `statusLabel(status)` helper to `EmployeeItem`. Mirrors `EmployeeCard`'s
+  format exactly so the tests' header-documented contract still holds, and
+  is a real screen-reader UX improvement (one rich announcement instead of
+  three orphaned text fragments).
+
+- **E2E Group C — Copilot transcript banner text drift** (2 specs): the
+  chat-drawer renders `"Copilot transcript is read only in the drawer."`
+  in the `viewingCopilotThread` terminal-state branch (chat-drawer.tsx:531),
+  but `agentic-loop.spec.ts` and `task-planner.spec.ts` were still asserting
+  `"Copilot transcript — read only"` from before the text changed. Updated
+  both specs to match the live string and refreshed the inline comments to
+  point readers at chat-drawer.tsx's else-arm of the
+  `copilotRunning ? ... : copilotResult?.kind === 'failed' ? ... : ...`
+  ternary.
+
+- **Smoke / rag-flow assertion scoping**: when an assistant reply lands, it
+  surfaces both inside the chat-drawer bubble AND on the Mission Control
+  dashboard event card, so unscoped `getByText(...)` would resolve to two
+  elements and trip strict-mode. Scoped both specs to
+  `getByLabel('Iris Kovač', { exact: true }).getByText(...)` to pin the
+  assertion on the chat bubble specifically.
+
+- **Ticket-flow rewrite for empty-state + duplicate-text strict-mode**:
+  fresh-seeded companies have zero tickets → `tickets-view.tsx` renders the
+  empty-state surface (`data-tickets-view-state="empty"`) instead of the
+  KanbanBoard. Replaced the obsolete `getByText('Open', { exact: true })`
+  column-header assertions with the empty-state anchor and switched the
+  create dialog opener to the "File the first ticket" CTA. Also moved the
+  detail-panel selector from the brittle `.border-l.border-border` CSS
+  match to the stable `[data-ticket-detail=""]` data anchor (pinned by
+  `tickets-view.test.tsx`), and added `.first()` / `.last()` qualifiers on
+  the ticket-description and agent-reply assertions where the text appears
+  in both the chat bubble and a "Thread focus" line-clamped preview.
+
+### Changed
+
+- **`useCompanyStats` refetch policy** (`apps/desktop/src/renderer/src/hooks/use-telemetry.ts`):
+  added `refetchOnMount: 'always'`. The Mission Control dashboard subscribes
+  to the same companyStats cache key (no kind filter) on app boot. With the
+  global staleTime=5s in `lib/query-client.ts`, navigating to Telemetry
+  mid-stale-window read the boot-time count from cache and never refetched —
+  observed in the M39 e2e where the "Runs" total tile stuck at 1 even though
+  IPC `getCompanyStats(companyId)` returned 2 (work=1 + copilot=1). With
+  `'always'`, every CompanyTelemetry mount fetches fresh — proper UX for the
+  Telemetry tab AND deterministic for the M39 spec. No other hooks changed
+  — `useDailyUsage`, `useEmployeeStats`, `useCostBreakdown` retain default
+  staleTime; only the boot-mounted shared-key query needs the override.
+
+- **`top-bar.test.tsx` release marker** pinned to **2.0.8**.
+
+### Operational
+
+- E2E Playwright suite: **22 passed (1.7 m total)** — 0 failed, 0 not-run,
+  no flakes across two consecutive full runs.
+- Unit tests: **2266 passed** across 5 test-running packages
+  (apps/desktop=1959, packages/intelligence=152, packages/provider-router=91,
+  packages/role-schema=57, packages/telemetry-core=7).
+- Production renderer build: **3,303.85 kB JS / 116.23 kB CSS / 1.00 kB
+  index.html** (no regression vs v2.0.7's 3,302.94 kB / 116.23 kB; the +0.9
+  kB delta is the `refetchOnMount` config and the sidenav aria-label
+  template literal).
+- Lint: ESLint 0 errors (was 3 before the MessageRow fix); 110 pre-existing
+  `@typescript-eslint/no-non-null-assertion` warnings remain in renderer
+  hooks — separate cleanup lane.
+- Biome: 249 errors + 43 warnings remain (largely auto-fixable
+  `Number.parseInt`, import-ordering); follow-up commit lands in v2.0.9.
+
+---
+
 ## [2.0.7] - 2026-05-04
 
 ### Added

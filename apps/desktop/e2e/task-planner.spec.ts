@@ -253,8 +253,11 @@ test.describe('Team-X Phase 5 — M32 task planner (write-side)', () => {
     // --- 8. Copilot transcript renders the persisted run ------------------
     // M31 T5 persists every loop step as a message on the copilot
     // thread. The chat-drawer's `viewingCopilotThread` branch renders a
-    // read-only banner once the run reaches a terminal state.
-    await expect(window.getByText('Copilot transcript — read only')).toBeVisible({
+    // read-only banner ("Copilot transcript is read only in the drawer.")
+    // once the run reaches a terminal non-failed state.
+    await expect(
+      window.getByText('Copilot transcript is read only in the drawer.'),
+    ).toBeVisible({
       timeout: 10_000,
     });
     log('copilot transcript banner visible (read-only view)');
