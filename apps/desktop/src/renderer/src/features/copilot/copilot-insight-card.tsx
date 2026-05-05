@@ -34,7 +34,6 @@ import type {
 import { Activity, AlertTriangle, DollarSign, GitBranch, Users, X } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-
 import { parseActionEntities } from './copilot-helpers.js';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -42,7 +41,6 @@ import { Button } from '@/components/ui/button.js';
 import { useCommandExecute } from '@/hooks/use-command.js';
 import { useDismissCopilotInsight } from '@/hooks/use-copilot.js';
 import { cn } from '@/lib/utils.js';
-
 
 // ---------------------------------------------------------------------------
 // Visual mapping — category and severity

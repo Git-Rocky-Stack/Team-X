@@ -873,7 +873,6 @@ describe('CommandService.history', () => {
   it('11. FIFO cap 20 — 21st execute drops the oldest', async () => {
     const { svc, historyRepo } = buildService();
     for (let i = 0; i < 21; i++) {
-       
       await svc.execute(baseReq({ rawText: `msg-${i}` }));
     }
     // trim() should have been invoked 21 times (once per successful execute).

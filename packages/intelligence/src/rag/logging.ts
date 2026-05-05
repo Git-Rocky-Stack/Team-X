@@ -266,7 +266,7 @@ export function hashQuery(query: string): string {
   const str = query.toLowerCase().trim();
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
   return Math.abs(hash).toString(36);
@@ -342,15 +342,11 @@ export function getLoggingSummary(context: RAGLoggingContext): {
       : 0;
   const avgEmbeddingLatencyMs = 0; // Would need separate tracking
   const cacheLookups = context.stats.cacheHits + context.stats.cacheMisses;
-  const cacheHitRate =
-    cacheLookups > 0 ? context.stats.cacheHits / cacheLookups : 0;
+  const cacheHitRate = cacheLookups > 0 ? context.stats.cacheHits / cacheLookups : 0;
   const totalOps =
-    context.stats.totalRetrievals +
-    context.stats.totalEmbeddings +
-    context.stats.totalIndexing;
+    context.stats.totalRetrievals + context.stats.totalEmbeddings + context.stats.totalIndexing;
   const errorRate = totalOps > 0 ? context.stats.totalErrors / totalOps : 0;
-  const operationsPerSecond =
-    uptimeMs > 0 ? (totalOps / uptimeMs) * 1000 : 0;
+  const operationsPerSecond = uptimeMs > 0 ? (totalOps / uptimeMs) * 1000 : 0;
 
   return {
     uptimeMs,
@@ -384,13 +380,13 @@ export interface LoggedRagServiceOptions {
  */
 export function createLoggedRagService<T extends { retrieve: Function; indexSource: Function }>(
   service: T,
-  options: LoggedRagServiceOptions = {}
+  options: LoggedRagServiceOptions = {},
 ): T {
   const context = createRAGLoggingContext(options.logger);
 
   // Wrap retrieve method
   const originalRetrieve = service.retrieve.bind(service);
-  (service as any).retrieve = async function (...args: any[]) {
+  (service as any).retrieve = async (...args: any[]) => {
     const [input] = args as [{ companyId: string; query: string; topK: number; threshold: number }];
 
     const queryHash = hashQuery(input.query);
@@ -467,8 +463,10 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
 
   // Wrap indexSource method
   const originalIndexSource = service.indexSource.bind(service);
-  (service as any).indexSource = async function (...args: any[]) {
-    const [input] = args as [{ companyId: string; sourceType: string; sourceId: string; content: string }];
+  (service as any).indexSource = async (...args: any[]) => {
+    const [input] = args as [
+      { companyId: string; sourceType: string; sourceId: string; content: string },
+    ];
 
     const startTime = performance.now();
 
@@ -539,4 +537,3 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
 
   return service;
 }
-

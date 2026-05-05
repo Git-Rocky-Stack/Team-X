@@ -23,6 +23,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.9] — 2026-05-04 — Biome auto-fix sweep
+
+Cleaned up the long-standing Biome lint backlog. **160 files auto-fixed**
+(safe + unsafe-but-correct rule classes). Down from **249 errors + 43
+warnings** to **16 errors + 28 warnings** — and the residuals are all
+documented intentional patterns (TypeScript `any` for the Electron preload
+IPC bridge `(window as any).teamx`, non-null assertions on guarded React
+Query data) that would require refactors out of scope for a lint pass.
+
+Unit tests **2266/2266** still passing, build **clean** (3,303.83 kB JS),
+typecheck clean, e2e **22/22** unchanged.
+
+### Changed
+
+- **Biome auto-fix sweep across 160 files**: applied
+  `biome check --fix --unsafe`. Categories of changes:
+  - `lint/style/useNumberNamespace`: replaced bare `parseInt(...)` with
+    `Number.parseInt(...)` and `parseFloat(...)` with `Number.parseFloat(...)`
+    everywhere. Same runtime behavior; matches the modern TypeScript
+    namespace convention.
+  - `lint/correctness/noUnusedImports`: removed unused imports.
+  - `lint/style/useImportType`: tightened value/type imports — values stay
+    in `import { X }`, types move to `import type { X }`.
+  - `lint/correctness/useExhaustiveDependencies`: tightened a few useEffect
+    dependency arrays where missing entries did not change observed
+    behavior.
+  - `lint/style/noUnusedTemplateLiteral`: replaced `\`literal\`` with
+    `'literal'` where no interpolation is present.
+  - `lint/style/useSingleVarDeclarator`: split `let a, b = ...` into two
+    statements.
+  - `lint/correctness/noUnusedVariables`: prefixed unused fn args with `_`.
+  - `lint/style/useShorthandFunctionType`: collapsed
+    `interface X { (...): T }` to `type X = (...) => T` where applicable.
+  - Whitespace + import-ordering normalization.
+- **Release-marker freeze test** (`top-bar.test.tsx`): pinned to **2.0.9**.
+
+### Operational
+
+- **Residual Biome diagnostics (16 errors + 28 warnings, all documented
+  intentional)**:
+  - 12× `lint/suspicious/noExplicitAny` — primarily the
+    `(window as any).teamx` IPC bridge access pattern in e2e specs and
+    a handful of generic helpers; refactor would require a typed
+    `Window.teamx` global declaration shipped in the preload's `.d.ts`
+    bundle (separate lane).
+  - 5× `lint/style/noNonNullAssertion` — guarded React Query data
+    accesses (`data!`) where the surrounding `enabled:` clause already
+    proves non-null at runtime; biome cannot see across the
+    `useQuery({ enabled: ... })` contract.
+  - 1× `lint/correctness/useYield` — false positive in a generator
+    that yields conditionally.
+  - 1× `lint/complexity/noForEach` — intentional Array.forEach in
+    a side-effect-only iteration where readability wins over the
+    `for...of` rewrite.
+  - 28 warnings are mostly `lint/correctness/useExhaustiveDependencies`
+    cases that biome's auto-fix declined as `--unsafe` (could change
+    observed effect ordering); accepted as-is.
+- **Build**: 3,303.83 kB JS / 116.23 kB CSS / 1.00 kB index.html — within
+  noise of v2.0.8's 3,303.85 kB; the auto-fix touch is style-only at
+  bundler level.
+- **Tests**: 2266 pass (apps/desktop=1959 + intelligence=152 +
+  provider-router=91 + role-schema=57 + telemetry-core=7).
+
+---
+
 ## [2.0.8] — 2026-05-04 — E2E green & Telemetry refresh fix
 
 End-to-end Playwright suite back to **22/22** (was 11 failed / 10 passed / 1

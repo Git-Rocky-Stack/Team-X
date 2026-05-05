@@ -116,32 +116,28 @@ describe('execution tools', () => {
     expect(result.ignoredDirectories).toEqual(expect.arrayContaining(['node_modules', '.git']));
   });
 
-  it(
-    'caps recursive filesystem search results so broad workspace scans stay bounded',
-    async () => {
-      await mkdir(join(tempDir, 'src'), { recursive: true });
-      // Parallel writes — sequential awaits hit Windows fs latency hard and
-      // overran the default 5 s timeout. 205 fixture files in parallel
-      // complete in well under a second on every supported platform.
-      await Promise.all(
-        Array.from({ length: 205 }, (_, i) =>
-          writeFile(join(tempDir, 'src', `file-${i}.ts`), 'export {};', 'utf-8'),
-        ),
-      );
+  it('caps recursive filesystem search results so broad workspace scans stay bounded', async () => {
+    await mkdir(join(tempDir, 'src'), { recursive: true });
+    // Parallel writes — sequential awaits hit Windows fs latency hard and
+    // overran the default 5 s timeout. 205 fixture files in parallel
+    // complete in well under a second on every supported platform.
+    await Promise.all(
+      Array.from({ length: 205 }, (_, i) =>
+        writeFile(join(tempDir, 'src', `file-${i}.ts`), 'export {};', 'utf-8'),
+      ),
+    );
 
-      const result = (await buildFilesystemTool().execute({
-        operation: 'search',
-        path: '.',
-        pattern: '*.ts',
-      })) as { matches: string[]; truncated: boolean; maxResults: number };
+    const result = (await buildFilesystemTool().execute({
+      operation: 'search',
+      path: '.',
+      pattern: '*.ts',
+    })) as { matches: string[]; truncated: boolean; maxResults: number };
 
-      expect(result.maxResults).toBe(200);
-      expect(result.matches).toHaveLength(200);
-      expect(result.truncated).toBe(true);
-    },
-    // Defensive bump for slow CI sandboxes; healthy paths run in <1 s.
-    15_000,
-  );
+    expect(result.maxResults).toBe(200);
+    expect(result.matches).toHaveLength(200);
+    expect(result.truncated).toBe(true);
+  }, // Defensive bump for slow CI sandboxes; healthy paths run in <1 s.
+  15_000);
 
   it('creates markdown deliverables and stores them in the vault when wired', async () => {
     const vault = {

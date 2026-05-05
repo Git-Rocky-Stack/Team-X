@@ -1,7 +1,6 @@
 import type { RoleSpec } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import { buildChatActionTools } from './chat-action-tools.js';
 
 function makeRoleSpec(

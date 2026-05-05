@@ -1,4 +1,5 @@
 import type {
+  AcceptOperatorInviteResponse,
   CompanyCloudLinkStatus,
   CompanySettings,
   CompanySharingModeReadiness,
@@ -9,7 +10,7 @@ import type {
   OperatorInvite,
   OperatorMembershipRole,
   SharedOperatorAuthMode,
- AcceptOperatorInviteResponse } from '@team-x/shared-types';
+} from '@team-x/shared-types';
 
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { OperatorInviteRow, OperatorRow, OperatorsRepo } from '../db/repos/operators.js';

@@ -25,7 +25,6 @@ import { Badge } from '@/components/ui/badge.js';
 import { useCopilotInsights } from '@/hooks/use-copilot.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 export function CopilotDashboardWidget() {
   const companyId = useAppStore((s) => s.companyId);
   const setOpen = useAppStore((s) => s.setCopilotSidebarOpen);

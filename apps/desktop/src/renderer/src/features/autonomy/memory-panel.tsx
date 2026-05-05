@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-
 import {
   isAgentThread as checkAgentThread,
   isCopilotThread as checkCopilotThread,
@@ -36,7 +35,6 @@ import { useThreadList } from '@/hooks/use-chat.js';
 import { usePackedThreadContext, useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
 import { useMemorySettings } from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
-
 
 const TOKEN_BUDGETS = MEMORY_TARGET_TOKEN_BUDGET_OPTIONS;
 

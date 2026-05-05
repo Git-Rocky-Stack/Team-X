@@ -1,4 +1,3 @@
-
 import type {
   AutonomyBenchmarkReport,
   AutonomyBenchmarkScenarioId,
@@ -17,7 +16,6 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-
 
 import {
   MissionControlRow,

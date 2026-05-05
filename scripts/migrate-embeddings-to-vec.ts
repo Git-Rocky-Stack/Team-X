@@ -10,9 +10,9 @@
  *   npx tsx scripts/migrate-embeddings-to-vec.ts --all
  */
 
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -57,7 +57,7 @@ function getDbPath(opts: Options): string {
 
   for (const path of paths) {
     try {
-      const fs = require('fs');
+      const fs = require('node:fs');
       if (fs.existsSync(path)) return path;
     } catch {}
   }
@@ -85,9 +85,7 @@ async function migrate(opts: Options): Promise<void> {
 
     // Check if vec table exists
     const vecExists = db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='embeddings_vec'"
-      )
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='embeddings_vec'")
       .get();
 
     if (!vecExists) {
@@ -135,18 +133,22 @@ async function migrate(opts: Options): Promise<void> {
     console.log(`  - Processed: ${result.changes} embeddings`);
 
     // Verify
-    const vecCount = (db.prepare('SELECT COUNT(*) as count FROM embeddings_vec').get() as {
-      count: number;
-    }).count;
+    const vecCount = (
+      db.prepare('SELECT COUNT(*) as count FROM embeddings_vec').get() as {
+        count: number;
+      }
+    ).count;
     console.log(`  - Total in vec table: ${vecCount}`);
 
     // Show stats
-    const stats = db.prepare(`
+    const stats = db
+      .prepare(`
       SELECT source_type, COUNT(*) as count
       FROM embeddings
       ${opts.company ? 'WHERE company_id = ?' : ''}
       GROUP BY source_type
-    `).all(...params) as Array<{ source_type: string; count: number }>;
+    `)
+      .all(...params) as Array<{ source_type: string; count: number }>;
 
     console.log('\nEmbeddings by source type:');
     for (const stat of stats) {

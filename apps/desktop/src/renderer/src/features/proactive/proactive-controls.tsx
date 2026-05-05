@@ -14,12 +14,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DashboardEvent } from '@team-x/shared-types';
-import {
-  AlertTriangle,
-  Bot,
-  Loader2,
-  Zap,
-} from 'lucide-react';
+import { AlertTriangle, Bot, Loader2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button.js';
@@ -272,8 +267,7 @@ export function useDecomposeGoal() {
 export function useScanForWork() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ companyId }: { companyId: string }) =>
-      ipc.proactive.scanForWork({ companyId }),
+    mutationFn: ({ companyId }: { companyId: string }) => ipc.proactive.scanForWork({ companyId }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['proactive', 'state'] });
     },

@@ -1,7 +1,6 @@
 import type { ArtifactRecord, RuntimeAuditPayload } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import { createRuntimeAuditNormalizer } from './runtime-audit-normalizer-service.js';
 
 function artifactFixture(overrides: Partial<ArtifactRecord> = {}): ArtifactRecord {

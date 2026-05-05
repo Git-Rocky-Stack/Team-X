@@ -16,7 +16,6 @@
 import { SYSTEM_AGENT_ROLE_ID, SYSTEM_COPILOT_ROLE_ID } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import {
   type CopilotToolInsightRow,
   type CopilotToolInsightsRepo,

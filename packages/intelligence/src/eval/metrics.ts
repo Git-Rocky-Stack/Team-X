@@ -28,7 +28,7 @@ import type {
 export function calculateQueryMetrics(
   query: EvalQuery,
   result: RetrievalResult,
-  kValues: number[]
+  kValues: number[],
 ): QueryMetrics {
   const retrievedIds = result.retrievedDocs.map((d) => d.id);
   const relevantSet = new Set(query.relevantDocIds);
@@ -90,10 +90,7 @@ export function calculateQueryMetrics(
  * AP = (1 / |relevant|) * sum(P@k * rel@k)
  * where rel@k = 1 if item at rank k is relevant, else 0
  */
-function calculateAveragePrecision(
-  retrievedIds: string[],
-  relevantSet: Set<string>
-): number {
+function calculateAveragePrecision(retrievedIds: string[], relevantSet: Set<string>): number {
   let precisionSum = 0;
   let relevantCount = 0;
 
@@ -116,11 +113,7 @@ function calculateAveragePrecision(
  * DCG = sum(rel_i / log2(i + 2))
  * where rel_i = 1 if relevant at position i, else 0
  */
-function calculateNDCG(
-  retrievedIds: string[],
-  relevantSet: Set<string>,
-  k: number
-): number {
+function calculateNDCG(retrievedIds: string[], relevantSet: Set<string>, k: number): number {
   // Calculate DCG
   let dcg = 0;
   for (let i = 0; i < Math.min(k, retrievedIds.length); i++) {
@@ -148,7 +141,7 @@ function calculateNDCG(
 export function aggregateMetrics(
   queryMetrics: QueryMetrics[],
   queries: EvalQuery[],
-  kValues: number[]
+  kValues: number[],
 ): AggregatedMetrics {
   if (queryMetrics.length === 0) {
     return {
@@ -171,32 +164,21 @@ export function aggregateMetrics(
   const meanNdcg = new Map<number, number>();
 
   for (const k of kValues) {
-    const sumPrecision = queryMetrics.reduce(
-      (sum, m) => sum + (m.precision.get(k) ?? 0),
-      0
-    );
+    const sumPrecision = queryMetrics.reduce((sum, m) => sum + (m.precision.get(k) ?? 0), 0);
     meanPrecision.set(k, sumPrecision / queryMetrics.length);
 
-    const sumRecall = queryMetrics.reduce(
-      (sum, m) => sum + (m.recall.get(k) ?? 0),
-      0
-    );
+    const sumRecall = queryMetrics.reduce((sum, m) => sum + (m.recall.get(k) ?? 0), 0);
     meanRecall.set(k, sumRecall / queryMetrics.length);
 
-    const sumNdcg = queryMetrics.reduce(
-      (sum, m) => sum + (m.ndcg.get(k) ?? 0),
-      0
-    );
+    const sumNdcg = queryMetrics.reduce((sum, m) => sum + (m.ndcg.get(k) ?? 0), 0);
     meanNdcg.set(k, sumNdcg / queryMetrics.length);
   }
 
   // Calculate MAP and MRR
   const meanAveragePrecision =
-    queryMetrics.reduce((sum, m) => sum + m.averagePrecision, 0) /
-    queryMetrics.length;
+    queryMetrics.reduce((sum, m) => sum + m.averagePrecision, 0) / queryMetrics.length;
 
-  const meanReciprocalRank =
-    queryMetrics.reduce((sum, m) => sum + m.mrr, 0) / queryMetrics.length;
+  const meanReciprocalRank = queryMetrics.reduce((sum, m) => sum + m.mrr, 0) / queryMetrics.length;
 
   // Calculate latency percentiles
   const latencies = queryMetrics.map((m) => m.latencyMs).sort((a, b) => a - b);
@@ -204,24 +186,15 @@ export function aggregateMetrics(
     p50: percentile(latencies, 50),
     p95: percentile(latencies, 95),
     p99: percentile(latencies, 99),
-    mean:
-      latencies.reduce((sum, l) => sum + l, 0) / latencies.length,
+    mean: latencies.reduce((sum, l) => sum + l, 0) / latencies.length,
   };
 
   // Calculate hit rate
-  const hitRate =
-    queryMetrics.filter((m) => m.hasRelevantResult).length /
-    queryMetrics.length;
+  const hitRate = queryMetrics.filter((m) => m.hasRelevantResult).length / queryMetrics.length;
 
   // Break down by intent
-  const byIntent = new Map<
-    QueryIntent,
-    { count: number; map: number; mrr: number }
-  >();
-  const byDifficulty = new Map<
-    number,
-    { count: number; map: number; mrr: number }
-  >();
+  const byIntent = new Map<QueryIntent, { count: number; map: number; mrr: number }>();
+  const byDifficulty = new Map<number, { count: number; map: number; mrr: number }>();
 
   for (let i = 0; i < queryMetrics.length; i++) {
     const metrics = queryMetrics[i];
@@ -312,7 +285,7 @@ function percentile(sorted: number[], p: number): number {
 export function compareEvaluations(
   baseline: QueryMetrics[],
   comparison: QueryMetrics[],
-  queries: EvalQuery[]
+  queries: EvalQuery[],
 ): {
   mapDelta: number;
   mrrDelta: number;
@@ -338,21 +311,14 @@ export function compareEvaluations(
   const comparisonAgg = aggregateMetrics(comparison, queries, [5, 10]);
 
   // Calculate deltas
-  const mapDelta =
-    comparisonAgg.meanAveragePrecision - baselineAgg.meanAveragePrecision;
-  const mrrDelta =
-    comparisonAgg.meanReciprocalRank - baselineAgg.meanReciprocalRank;
+  const mapDelta = comparisonAgg.meanAveragePrecision - baselineAgg.meanAveragePrecision;
+  const mrrDelta = comparisonAgg.meanReciprocalRank - baselineAgg.meanReciprocalRank;
   const precisionAt5Delta =
-    (comparisonAgg.meanPrecision.get(5) ?? 0) -
-    (baselineAgg.meanPrecision.get(5) ?? 0);
+    (comparisonAgg.meanPrecision.get(5) ?? 0) - (baselineAgg.meanPrecision.get(5) ?? 0);
   const recallAt10Delta =
-    (comparisonAgg.meanRecall.get(10) ?? 0) -
-    (baselineAgg.meanRecall.get(10) ?? 0);
-  const ndcgAt10Delta =
-    (comparisonAgg.meanNdcg.get(10) ?? 0) -
-    (baselineAgg.meanNdcg.get(10) ?? 0);
-  const latencyP95Delta =
-    comparisonAgg.latency.p95 - baselineAgg.latency.p95;
+    (comparisonAgg.meanRecall.get(10) ?? 0) - (baselineAgg.meanRecall.get(10) ?? 0);
+  const ndcgAt10Delta = (comparisonAgg.meanNdcg.get(10) ?? 0) - (baselineAgg.meanNdcg.get(10) ?? 0);
+  const latencyP95Delta = comparisonAgg.latency.p95 - baselineAgg.latency.p95;
 
   // Per-query deltas
   const perQuery = baseline.map((b, i) => {
@@ -438,7 +404,7 @@ export function formatMetrics(metrics: AggregatedMetrics): string {
     lines.push('By Intent:');
     for (const [intent, data] of metrics.byIntent) {
       lines.push(
-        `  ${intent}: MAP=${data.map.toFixed(3)}, MRR=${data.mrr.toFixed(3)} (${data.count} queries)`
+        `  ${intent}: MAP=${data.map.toFixed(3)}, MRR=${data.mrr.toFixed(3)} (${data.count} queries)`,
       );
     }
     lines.push('');
@@ -448,7 +414,7 @@ export function formatMetrics(metrics: AggregatedMetrics): string {
     lines.push('By Difficulty:');
     for (const [difficulty, data] of metrics.byDifficulty) {
       lines.push(
-        `  Level ${difficulty}: MAP=${data.map.toFixed(3)}, MRR=${data.mrr.toFixed(3)} (${data.count} queries)`
+        `  Level ${difficulty}: MAP=${data.map.toFixed(3)}, MRR=${data.mrr.toFixed(3)} (${data.count} queries)`,
       );
     }
   }

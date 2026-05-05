@@ -70,7 +70,7 @@ export type CrossEncoderScoreFn = (
   documents: Array<{
     id: string;
     content: string;
-  }>
+  }>,
 ) => Promise<Array<{ id: string; score: number }>>;
 
 /**
@@ -79,11 +79,7 @@ export type CrossEncoderScoreFn = (
  */
 export function createMockCrossEncoder(): CrossEncoderScoreFn {
   return async (query, documents) => {
-    const queryTerms = new Set(
-      query
-        .toLowerCase()
-        .match(/[a-z0-9]+/g) || []
-    );
+    const queryTerms = new Set(query.toLowerCase().match(/[a-z0-9]+/g) || []);
 
     return documents.map((doc) => {
       const content = doc.content.toLowerCase();
@@ -150,7 +146,9 @@ export function createApiCrossEncoder(opts: ApiCrossEncoderOptions): CrossEncode
         throw new Error(`Cross-encoder API failed: ${response.status} ${body}`);
       }
 
-      const json = (await response.json()) as { results: Array<{ index: number; relevance_score: number }> };
+      const json = (await response.json()) as {
+        results: Array<{ index: number; relevance_score: number }>;
+      };
       const results = json.results;
 
       return results.map((r) => ({
@@ -177,7 +175,7 @@ export async function rerank(
     score: number;
   }>,
   scoreFn: CrossEncoderScoreFn,
-  options: RerankerOptions = {}
+  options: RerankerOptions = {},
 ): Promise<RerankResult[]> {
   const {
     topN = candidates.length,
@@ -190,7 +188,7 @@ export async function rerank(
   // Score all candidates with cross-encoder
   const scores = await scoreFn(
     query,
-    candidates.map((c) => ({ id: c.id, content: c.content }))
+    candidates.map((c) => ({ id: c.id, content: c.content })),
   );
 
   // Create a map of id -> score
@@ -205,17 +203,11 @@ export async function rerank(
     const maxOriginal = Math.max(...candidates.map((c) => c.score), 1);
     const maxRerank = Math.max(...Array.from(scoreMap.values()), 1);
 
-    const normalizedOriginal = normalize
-      ? originalScore / maxOriginal
-      : originalScore;
-    const normalizedRerank = normalize
-      ? rerankedScore / maxRerank
-      : rerankedScore;
+    const normalizedOriginal = normalize ? originalScore / maxOriginal : originalScore;
+    const normalizedRerank = normalize ? rerankedScore / maxRerank : rerankedScore;
 
     // Compute final weighted score
-    const finalScore =
-      normalizedOriginal * originalWeight +
-      normalizedRerank * rerankWeight;
+    const finalScore = normalizedOriginal * originalWeight + normalizedRerank * rerankWeight;
 
     return {
       id: candidate.id,
@@ -252,7 +244,7 @@ export interface RerankerService {
       chunkIndex: number;
       content: string;
       score: number;
-    }>
+    }>,
   ): Promise<RerankResult[]>;
 
   /**
@@ -267,7 +259,7 @@ export interface RerankerService {
 
 export function createRerankerService(
   scoreFn: CrossEncoderScoreFn,
-  options?: RerankerOptions
+  options?: RerankerOptions,
 ): RerankerService {
   const opts = options || {};
   let totalReranks = 0;
@@ -285,8 +277,7 @@ export function createRerankerService(
       return {
         totalReranks,
         totalCandidates,
-        avgCandidatesPerRerank:
-          totalReranks > 0 ? totalCandidates / totalReranks : 0,
+        avgCandidatesPerRerank: totalReranks > 0 ? totalCandidates / totalReranks : 0,
       };
     },
   };
@@ -303,7 +294,7 @@ export function extractContentFromHits(
     chunkIndex: number;
     contentText: string;
     similarity: number;
-  }>
+  }>,
 ): Array<{
   id: string;
   sourceId: string;
@@ -325,9 +316,7 @@ export function extractContentFromHits(
 /**
  * Convert reranked results back to retrieval hits format.
  */
-export function rerankedToHits(
-  reranked: RerankResult[]
-): Array<{
+export function rerankedToHits(reranked: RerankResult[]): Array<{
   id: string;
   sourceId: string;
   sourceType: string;
@@ -353,28 +342,32 @@ export function rerankedToHits(
  */
 export async function retrieveWithRerank(
   query: string,
-  initialRetrieve: (topK: number) => Promise<Array<{
+  initialRetrieve: (topK: number) => Promise<
+    Array<{
+      id: string;
+      sourceId: string;
+      sourceType: string;
+      chunkIndex: number;
+      contentText: string;
+      similarity: number;
+    }>
+  >,
+  scoreFn: CrossEncoderScoreFn,
+  options: {
+    initialK?: number; // Initial retrieval count (default: 20)
+    rerankTopN?: number; // How many to rerank (default: 20)
+    returnTopK?: number; // Final return count (default: 10)
+  } = {},
+): Promise<
+  Array<{
     id: string;
     sourceId: string;
     sourceType: string;
     chunkIndex: number;
     contentText: string;
     similarity: number;
-  }>>,
-  scoreFn: CrossEncoderScoreFn,
-  options: {
-    initialK?: number; // Initial retrieval count (default: 20)
-    rerankTopN?: number; // How many to rerank (default: 20)
-    returnTopK?: number; // Final return count (default: 10)
-  } = {}
-): Promise<Array<{
-  id: string;
-  sourceId: string;
-  sourceType: string;
-  chunkIndex: number;
-  contentText: string;
-  similarity: number;
-}>> {
+  }>
+> {
   const { initialK = 20, rerankTopN = 20, returnTopK = 10 } = options;
 
   // Step 1: Retrieve initial results

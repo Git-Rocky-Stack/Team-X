@@ -22,7 +22,6 @@ import {
 import { AlertTriangle, Loader2, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-
 import { formatCopilotWeightLabel } from '../copilot/copilot-helpers.js';
 
 import { Input } from '@/components/ui/input.js';
@@ -34,7 +33,6 @@ import {
   useSetCopilotWeights,
 } from '@/hooks/use-settings.js';
 import { useAppStore } from '@/store/app-store.js';
-
 
 function clamp(value: number, min: number, max: number): number {
   if (Number.isNaN(value) || !Number.isFinite(value)) return min;

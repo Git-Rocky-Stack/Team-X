@@ -2,7 +2,7 @@ import type { RoleSpec } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
-import type { EmployeeRow , CreateEmployeeInput } from '../db/repos/employees.js';
+import type { CreateEmployeeInput, EmployeeRow } from '../db/repos/employees.js';
 import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type {
   AddThreadMemberInput,
@@ -251,11 +251,7 @@ class FakeThreadsRepo implements IpcThreadsRepo {
     this.members.set(
       input.threadId,
       list.filter(
-        (member) =>
-          !(
-            member.memberId === input.memberId &&
-            member.memberKind === input.memberKind
-          ),
+        (member) => !(member.memberId === input.memberId && member.memberKind === input.memberKind),
       ),
     );
   }

@@ -7,7 +7,6 @@ import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { useUpdateTicketStatus } from '@/hooks/use-tickets.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 const COLUMNS: {
   status: TicketStatus;
   label: string;

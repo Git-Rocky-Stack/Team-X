@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-
 import { AppLayout } from './app/layout.js';
 import { ErrorBoundary } from './components/error-boundary.js';
 import { AuditView } from './features/audit/audit-view.js';

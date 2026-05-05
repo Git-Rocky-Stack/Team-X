@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import type { ProviderConfig } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-
 import { createEmployeesRepo } from '../db/repos/employees.js';
 import { createRuntimeProfilesRepo } from '../db/repos/runtime-profiles.js';
 import { companies } from '../db/schema.js';

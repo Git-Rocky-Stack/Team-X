@@ -113,9 +113,13 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
       }
 
       // Build exclusion clause
-      const excludeClause = excludeSourceIds.length > 0
-        ? sql`AND e.source_id NOT IN ${sql.join(excludeSourceIds.map(id => sql`${id}`), sql`, `)}`
-        : sql``;
+      const excludeClause =
+        excludeSourceIds.length > 0
+          ? sql`AND e.source_id NOT IN ${sql.join(
+              excludeSourceIds.map((id) => sql`${id}`),
+              sql`, `,
+            )}`
+          : sql``;
 
       // Convert threshold from similarity to distance
       // sqlite-vec uses Euclidean distance: distance = sqrt(2 * (1 - similarity))
@@ -124,9 +128,8 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
 
       // Perform similarity search using sqlite-vec
       // The vec0 extension provides the distance() function
-      const results = db
-        .all(
-          sql`
+      const results = db.all(
+        sql`
             SELECT
               e.id,
               e.source_id,
@@ -141,15 +144,15 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
               AND v.distance <= ${maxDistance}
             ORDER BY v.distance ASC
             LIMIT ${topK}
-          `
-        ) as Array<{
-          id: string;
-          source_id: string;
-          source_type: string;
-          chunk_index: number;
-          content_text: string;
-          distance: number;
-        }>;
+          `,
+      ) as Array<{
+        id: string;
+        source_id: string;
+        source_type: string;
+        chunk_index: number;
+        content_text: string;
+        distance: number;
+      }>;
 
       // Convert distance to similarity (0-1, higher is better)
       return results.map((row) => {
@@ -209,9 +212,7 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
       bySourceType: Record<string, number>;
       avgChunksPerSource: number;
     } {
-      const whereClause = companyId
-        ? sql`WHERE company_id = ${companyId}`
-        : sql``;
+      const whereClause = companyId ? sql`WHERE company_id = ${companyId}` : sql``;
 
       const total = (db
         .select({ value: count() })
@@ -219,15 +220,14 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
         .where(companyId ? eq(embeddings.companyId, companyId) : undefined)
         .get()?.value ?? 0) as number;
 
-      const byType = db
-        .all(
-          sql`
+      const byType = db.all(
+        sql`
             SELECT source_type, COUNT(*) as count
             FROM embeddings
             ${whereClause}
             GROUP BY source_type
-          `
-        ) as Array<{ source_type: string; count: number }>;
+          `,
+      ) as Array<{ source_type: string; count: number }>;
 
       const bySourceType: Record<string, number> = {};
       for (const row of byType) {
@@ -235,11 +235,11 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
       }
 
       const uniqueSources = companyId
-        ? (db
+        ? ((db
             .select({ value: count() })
             .from(embeddings)
             .where(eq(embeddings.companyId, companyId))
-            .get()?.value ?? 1) as number
+            .get()?.value ?? 1) as number)
         : 1;
 
       return {
@@ -268,7 +268,10 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
      * Find potential duplicate embeddings using similarity threshold.
      * Useful for data quality analysis.
      */
-    findDuplicates(companyId: string, threshold: number = 0.98): Array<{
+    findDuplicates(
+      companyId: string,
+      threshold = 0.98,
+    ): Array<{
       id1: string;
       id2: string;
       sourceId1: string;
@@ -276,9 +279,8 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
       similarity: number;
     }> {
       // This is a self-join using vec distance to find near-duplicates
-      const results = db
-        .all(
-          sql`
+      const results = db.all(
+        sql`
             SELECT
               e1.id AS id1,
               e2.id AS id2,
@@ -294,14 +296,14 @@ export function createEmbeddingsRepo<TRunResult>(db: EmbeddingsDb<TRunResult>) {
               AND v1.distance <= ${Math.sqrt(2 * (1 - threshold))}
             ORDER BY similarity DESC
             LIMIT 100
-          `
-        ) as Array<{
-          id1: string;
-          id2: string;
-          source_id1: string;
-          source_id2: string;
-          similarity: number;
-        }>;
+          `,
+      ) as Array<{
+        id1: string;
+        id2: string;
+        source_id1: string;
+        source_id2: string;
+        similarity: number;
+      }>;
 
       return results.map((r) => ({
         id1: r.id1,

@@ -12,7 +12,6 @@
  * The 2 event-triggered debounce tests live in copilot-event-trigger.test.ts.
  */
 
-
 import type {
   ActorKind,
   CopilotAnalyzedPayload,

@@ -24,8 +24,8 @@
 
 import type {
   EffectiveAuthoritySnapshot,
-  ExtensionsAutonomyMode,
   EventType,
+  ExtensionsAutonomyMode,
 } from '@team-x/shared-types';
 
 // ---------------------------------------------------------------------------
@@ -231,7 +231,8 @@ export function createProactiveTriggerService(
           payload: {
             triggerId: goalId,
             reason: 'autonomy_mode',
-            explanation: 'Conservative autonomy mode requires explicit approval for goal decomposition',
+            explanation:
+              'Conservative autonomy mode requires explicit approval for goal decomposition',
             autonomyMode: settings.autonomyMode,
             blockedAt: now(),
           },
@@ -392,19 +393,14 @@ Use the decompose_project tool to generate the proposal.`;
     const tickets = deps.ticketsRepo.listByCompany(companyId);
 
     // Filter for unassigned, open tickets
-    const unassignedTickets = tickets.filter(
-      (t) => t.assigneeId === null && t.status === 'open',
-    );
+    const unassignedTickets = tickets.filter((t) => t.assigneeId === null && t.status === 'open');
 
     let queuedCount = 0;
 
     for (const ticket of unassignedTickets) {
       // Check authority if ticket was filed by an employee
       if (ticket.reporterKind === 'employee' && ticket.reporterId) {
-        const authority = deps.authorityResolver.resolveEmployee(
-          companyId,
-          ticket.reporterId,
-        );
+        const authority = deps.authorityResolver.resolveEmployee(companyId, ticket.reporterId);
 
         // Check if proactive_work capability is allowed
         const proactiveCapability = authority.entries.find(

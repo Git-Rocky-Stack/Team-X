@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useProviders } from '@/hooks/use-providers.js';
 
-
 export function ProvidersSection() {
   const { data: providers = [], isLoading, isError, refetch } = useProviders();
   const [addOpen, setAddOpen] = useState(false);

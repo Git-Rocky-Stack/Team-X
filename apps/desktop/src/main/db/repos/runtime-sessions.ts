@@ -3,7 +3,6 @@ import { desc, eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
-
 import type { Schema } from '../client.js';
 import { runtimeHeartbeats, runtimeSessions } from '../schema.js';
 

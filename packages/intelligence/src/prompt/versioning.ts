@@ -7,7 +7,6 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
-
 /**
  * Few-shot example for prompting.
  */
@@ -183,9 +182,7 @@ export class PromptRegistry {
    * List all versions of a template.
    */
   listVersions(id: string): PromptTemplate[] {
-    return [...(this.templates.get(id) || [])].sort((a, b) =>
-      b.version.localeCompare(a.version)
-    );
+    return [...(this.templates.get(id) || [])].sort((a, b) => b.version.localeCompare(a.version));
   }
 
   /**
@@ -320,7 +317,7 @@ export class PromptRegistry {
 
     // Determine winner based on metrics
     let bestTemplate: string | null = null;
-    let bestScore = -Infinity;
+    let bestScore = Number.NEGATIVE_INFINITY;
 
     for (const [templateId, metrics] of test.metrics.templateMetrics) {
       if (metrics.avgScore && metrics.avgScore > bestScore) {
@@ -408,7 +405,11 @@ export class PromptRegistry {
   /**
    * Compare two template versions.
    */
-  compareVersions(id: string, version1: string, version2: string): {
+  compareVersions(
+    id: string,
+    version1: string,
+    version2: string,
+  ): {
     template1: PromptTemplate;
     template2: PromptTemplate;
     changes: string[];
@@ -433,7 +434,9 @@ export class PromptRegistry {
 
     // Check for few-shot changes
     if (t1.fewShots?.length !== t2.fewShots?.length) {
-      changes.push(`Few-shot examples count changed: ${t1.fewShots?.length || 0} → ${t2.fewShots?.length || 0}`);
+      changes.push(
+        `Few-shot examples count changed: ${t1.fewShots?.length || 0} → ${t2.fewShots?.length || 0}`,
+      );
     }
 
     // Check for metadata changes

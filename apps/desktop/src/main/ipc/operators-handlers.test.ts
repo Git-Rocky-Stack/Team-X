@@ -5,7 +5,6 @@ import type {
 } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 
 function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {

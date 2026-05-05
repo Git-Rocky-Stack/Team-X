@@ -1,7 +1,6 @@
 import type { RoleSpec } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 import type { EmployeeRow, PromoteEmployeeInput } from '../db/repos/employees.js';
 

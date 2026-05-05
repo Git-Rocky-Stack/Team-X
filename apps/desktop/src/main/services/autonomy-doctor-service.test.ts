@@ -6,7 +6,6 @@ import type {
 } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import { createAutonomyDoctorService } from './autonomy-doctor-service.js';
 
 const NOW = 1_900_000_000_000;

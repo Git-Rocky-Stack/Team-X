@@ -7,7 +7,6 @@ import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { useUpdateProject } from '@/hooks/use-projects.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 const COLUMNS: { status: ProjectStatus; label: string; accent: string }[] = [
   { status: 'planning', label: 'Planning', accent: 'border-t-brand' },
   { status: 'active', label: 'Active', accent: 'border-t-yellow-500' },

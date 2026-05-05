@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-
 import { GUIDE_ACTIONS } from './guide-content.js';
 import {
   guideActionById,
@@ -37,7 +36,6 @@ import {
   MissionStateBlock,
 } from '@/features/mission/mission-shell.js';
 import { cn } from '@/lib/utils.js';
-
 
 interface UserGuideViewProps {
   company: Company | null;

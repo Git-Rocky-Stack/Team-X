@@ -10,7 +10,6 @@
 import type { CopilotAnalyzedReason, DashboardEvent, EventType } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import {
   type CopilotEventTriggerAnalyzer,
   type CopilotEventTriggerBus,

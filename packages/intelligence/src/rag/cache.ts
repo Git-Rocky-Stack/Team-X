@@ -13,7 +13,7 @@
  * - Storage: In-memory Map with LRU eviction
  */
 
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 /**
  * Cache entry with expiration.
@@ -125,10 +125,7 @@ export interface CacheStats {
 /**
  * Create a cache key from query and options.
  */
-export function createCacheKey(
-  query: string,
-  options: RetrievalOptions
-): string {
+export function createCacheKey(query: string, options: RetrievalOptions): string {
   // Normalize query: lowercase, trim, collapse whitespace
   const normalized = query.toLowerCase().trim().replace(/\s+/g, ' ');
 
@@ -157,7 +154,7 @@ export class LRUCache<K, V> {
   private currentSizeBytes = 0;
   private evictions = 0;
 
-  constructor(maxEntries: number = 1000, maxSizeBytes: number = 0) {
+  constructor(maxEntries = 1000, maxSizeBytes = 0) {
     this.maxEntries = maxEntries;
     this.maxSizeBytes = maxSizeBytes;
   }
@@ -304,10 +301,7 @@ export class LRUCache<K, V> {
    */
   private evictIfNeeded(newSize: number): void {
     // Check entry count limit
-    while (
-      this.maxEntries > 0 &&
-      this.cache.size >= this.maxEntries
-    ) {
+    while (this.maxEntries > 0 && this.cache.size >= this.maxEntries) {
       const lruKey = this.accessOrder.shift();
       if (lruKey !== undefined) {
         this.deleteInternal(lruKey);
@@ -338,7 +332,7 @@ export class LRUCache<K, V> {
     if (typeof value === 'string') return value.length * 2 + 8;
     if (typeof value === 'number') return 8;
     if (typeof value === 'boolean') return 4;
-    if (value instanceof Array) return value.length * 64; // Rough estimate per item
+    if (Array.isArray(value)) return value.length * 64; // Rough estimate per item
     if (typeof value === 'object') {
       return Object.keys(value).length * 64 + 128; // Rough estimate
     }
@@ -386,7 +380,7 @@ export class QueryCache {
     query: string,
     options: RetrievalOptions,
     results: CachedRetrieval['results'],
-    ttl: number = 300000
+    ttl = 300000,
   ): void {
     const key = createCacheKey(query, options);
     const cachedAt = Date.now();

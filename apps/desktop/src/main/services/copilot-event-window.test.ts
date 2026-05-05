@@ -1,7 +1,6 @@
 import type { ActorKind, DashboardEvent, EventType } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import type { EventRow } from '../db/repos/events.js';
 
 import {

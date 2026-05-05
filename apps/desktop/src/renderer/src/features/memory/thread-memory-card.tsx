@@ -16,7 +16,6 @@ import { useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 interface ThreadMemoryCardProps {
   companyId: string | null;
   threadId: string | null;

@@ -23,7 +23,6 @@
 import type { DashboardEvent, TokenDeltaPayload } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-
 import {
   type AppendEventInput,
   type AppendEventResult,

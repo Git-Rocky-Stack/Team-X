@@ -10,7 +10,6 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
-
 /**
  * Query expansion result.
  */
@@ -71,10 +70,7 @@ export interface HyDEOptions {
 /**
  * Expand query using semantic variations.
  */
-export function expandQuerySemantically(
-  query: string,
-  variations: number = 3
-): ExpandedQuery {
+export function expandQuerySemantically(query: string, variations = 3): ExpandedQuery {
   const expansions: string[] = [];
 
   // Generate paraphrases
@@ -101,30 +97,24 @@ export function expandQuerySemantically(
 /**
  * Expand query using domain-specific synonyms.
  */
-export function expandQueryWithSynonyms(
-  query: string,
-  context: EntityContext
-): ExpandedQuery {
+export function expandQueryWithSynonyms(query: string, context: EntityContext): ExpandedQuery {
   const expansions: string[] = [query];
   const weights = [1.0];
 
   // Replace with synonyms from domain context
   if (context.domainSynonyms) {
-    let modifiedQuery = query;
-    let synonymCount = 0;
+    const modifiedQuery = query;
+    let _synonymCount = 0;
 
     for (const [term, synonyms] of context.domainSynonyms) {
       const regex = new RegExp(`\\b${term}\\b`, 'gi');
       if (regex.test(modifiedQuery)) {
         // Create expansion with synonyms
-        const withSynonyms = modifiedQuery.replace(
-          regex,
-          `(${term}|${synonyms.join('|')})`
-        );
+        const withSynonyms = modifiedQuery.replace(regex, `(${term}|${synonyms.join('|')})`);
         if (withSynonyms !== modifiedQuery) {
           expansions.push(withSynonyms);
           weights.push(0.9); // Slightly lower weight for expanded queries
-          synonymCount++;
+          _synonymCount++;
         }
       }
     }
@@ -141,10 +131,7 @@ export function expandQueryWithSynonyms(
 /**
  * Expand query using entity names and IDs.
  */
-export function expandQueryWithEntities(
-  query: string,
-  context: EntityContext
-): ExpandedQuery {
+export function expandQueryWithEntities(query: string, context: EntityContext): ExpandedQuery {
   const expansions: string[] = [query];
   const weights = [1.0];
 
@@ -196,7 +183,7 @@ export function expandQueryWithEntities(
  */
 export async function expandQueryWithHyDE(
   query: string,
-  options: HyDEOptions
+  options: HyDEOptions,
 ): Promise<ExpandedQuery> {
   const { llm, nDocs = 3, maxTokens = 256 } = options;
 
@@ -238,7 +225,7 @@ export async function expandQueryCombined(
     hydeOptions?: HyDEOptions;
     semanticVariations?: number;
     maxExpansions?: number;
-  } = {}
+  } = {},
 ): Promise<ExpandedQuery> {
   const {
     useSemantic = true,
@@ -343,27 +330,21 @@ export async function expandQueryCombined(
 export async function retrieveWithExpansion(
   _originalQuery: string,
   expandedQuery: ExpandedQuery,
-  retrieveFn: (query: string, topK: number) => Promise<
-    Array<{ id: string; score: number; content: string }>
-  >,
+  retrieveFn: (
+    query: string,
+    topK: number,
+  ) => Promise<Array<{ id: string; score: number; content: string }>>,
   options: {
     topK?: number;
     threshold?: number;
     mergeStrategy?: 'average' | 'max' | 'rrf';
     rrfK?: number; // K for Reciprocal Rank Fusion
-  } = {}
+  } = {},
 ): Promise<Array<{ id: string; score: number; content: string }>> {
-  const {
-    topK = 10,
-    threshold = 0.0,
-    mergeStrategy = 'average',
-    rrfK = 60,
-  } = options;
+  const { topK = 10, threshold = 0.0, mergeStrategy = 'average', rrfK = 60 } = options;
 
   // Retrieve for each expanded query
-  const retrievalPromises = expandedQuery.expansions.map((expQuery) =>
-    retrieveFn(expQuery, topK)
-  );
+  const retrievalPromises = expandedQuery.expansions.map((expQuery) => retrieveFn(expQuery, topK));
 
   const allResults = await Promise.all(retrievalPromises);
 
@@ -524,9 +505,10 @@ export interface QueryExpansionService {
   retrieveWithExpansion(
     query: string,
     context: EntityContext,
-    retrieveFn: (query: string, topK: number) => Promise<
-      Array<{ id: string; score: number; content: string }>
-    >
+    retrieveFn: (
+      query: string,
+      topK: number,
+    ) => Promise<Array<{ id: string; score: number; content: string }>>,
   ): Promise<Array<{ id: string; score: number; content: string }>>;
 
   /**
@@ -555,16 +537,15 @@ export function createQueryExpansionService(options: {
         useSemantic: true,
         useSynonyms: true,
         useEntities: true,
-        useHyDE: options.hydeEnabled && options.llm ? true : false,
+        useHyDE: !!(options.hydeEnabled && options.llm),
         hydeOptions: options.llm ? { llm: options.llm } : undefined,
         semanticVariations: 2,
         maxExpansions: 8,
       });
 
       // Track method usage
-      const methods = expanded.method === 'combined'
-        ? ['semantic', 'synonym', 'entity']
-        : [expanded.method];
+      const methods =
+        expanded.method === 'combined' ? ['semantic', 'synonym', 'entity'] : [expanded.method];
       for (const method of methods) {
         methodCounts[method] = (methodCounts[method] || 0) + 1;
       }

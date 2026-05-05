@@ -27,7 +27,6 @@ import type {
 } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import type { AgenticLoopRunState, AgenticLoopService } from '../services/agentic-loop-service.js';
 import type { CommandService } from '../services/command-service.js';
 

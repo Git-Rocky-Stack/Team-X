@@ -11,7 +11,6 @@ import {
 } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-
 import { type TestDbHandle, makeTestDb } from '../test-helpers.js';
 
 import { createSettingsRepo } from './settings.js';

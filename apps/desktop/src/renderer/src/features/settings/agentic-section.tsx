@@ -12,7 +12,6 @@
  * Phase 5 — M31 T7.
  */
 
-
 import {
   AGENTIC_SETTINGS_CLAMPS,
   type SettingsGetAgenticResponse,

@@ -15,7 +15,6 @@
 import type { IpcIntentName } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-
 import { INTENT_LABELS, intentLabel } from './intent-labels.js';
 
 // Canonical intent list — kept in lock-step with `IpcIntentName`.

@@ -46,8 +46,6 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-
-
 import { INTENT_LABELS } from './intent-labels.js';
 import { StepCard, StepCardSkeleton } from './step-card.js';
 
@@ -59,7 +57,6 @@ import { useCommandExecute, useCommandHistory, useCommandParse } from '@/hooks/u
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { type ActiveView, useAppStore } from '@/store/app-store.js';
-
 
 // ---------------------------------------------------------------------------
 // Intent metadata — destructive-tint flag, paired with the shared
@@ -932,7 +929,6 @@ function StepLogView({
       {/* Step scroll container */}
       <ul
         ref={listRef}
-        role="listbox"
         aria-label="Agent step transcript"
         onKeyDown={onListKeyDown}
         className="flex min-h-[160px] flex-1 flex-col gap-2 overflow-y-auto bg-surface-50 px-4 py-3"

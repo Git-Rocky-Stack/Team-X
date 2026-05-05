@@ -17,17 +17,16 @@
  *   --threshold  Similarity threshold (default: 0.7)
  */
 
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import { join } from 'path';
-import { writeFileSync } from 'fs';
 
 import {
-  createRagEvaluator,
   type AggregatedMetrics,
   type EvalQuery,
-  type RetrievalResult,
+  createRagEvaluator,
 } from '@team-x/intelligence/eval';
-import { createRagService, type RagService } from '@team-x/intelligence/rag';
+import { type RagService, createRagService } from '@team-x/intelligence/rag';
 import { createEmbeddingGenerator } from '@team-x/intelligence/rag';
 import { createQueryCache } from '@team-x/intelligence/rag';
 
@@ -83,7 +82,7 @@ function createRagServiceFromDb(dbPath: string, options: Options): RagService {
         input.chunkIndex,
         input.contentText,
         input.embedding,
-        input.createdAt
+        input.createdAt,
       );
       return input.id;
     },
@@ -155,7 +154,7 @@ function createRagServiceFromDb(dbPath: string, options: Options): RagService {
 async function runEvaluation(
   dataset: EvalQuery[],
   ragService: RagService,
-  options: Options
+  options: Options,
 ): Promise<AggregatedMetrics> {
   // Get a company ID from the dataset
   const firstQuery = dataset[0];
@@ -249,7 +248,7 @@ function formatTextReport(metrics: AggregatedMetrics): string {
   const targets = {
     'Precision@5': { value: metrics.meanPrecision.get(5) ?? 0, target: 0.8 },
     'Recall@10': { value: metrics.meanRecall.get(10) ?? 0, target: 0.7 },
-    'MRR': { value: metrics.meanReciprocalRank, target: 0.85 },
+    MRR: { value: metrics.meanReciprocalRank, target: 0.85 },
     'P95 Latency': { value: metrics.latency.p95, target: 100, inverse: true },
   };
 
@@ -258,7 +257,9 @@ function formatTextReport(metrics: AggregatedMetrics): string {
     const pass = inverse ? value <= target : value >= target;
     allPass = allPass && pass;
     const status = pass ? '✅' : '❌';
-    lines.push(`${status} ${name}: ${value.toFixed(inverse ? 1 : 4)} / ${target}${inverse ? 'ms' : ''}`);
+    lines.push(
+      `${status} ${name}: ${value.toFixed(inverse ? 1 : 4)} / ${target}${inverse ? 'ms' : ''}`,
+    );
   }
   lines.push('');
 
@@ -319,20 +320,28 @@ function formatHtmlReport(metrics: AggregatedMetrics): string {
   </div>
 
   <h2>📯 Precision @ K</h2>
-  ${pValues.map(({ k, v }) => `
+  ${pValues
+    .map(
+      ({ k, v }) => `
     <div class="metric">
       <div class="metric-label">P@${k}: ${(v * 100).toFixed(1)}%</div>
       <div class="bar-container"><div class="bar" style="width: ${v * 100}%"></div></div>
     </div>
-  `).join('')}
+  `,
+    )
+    .join('')}
 
   <h2>🔄 Recall @ K</h2>
-  ${rValues.map(({ k, v }) => `
+  ${rValues
+    .map(
+      ({ k, v }) => `
     <div class="metric">
       <div class="metric-label">R@${k}: ${(v * 100).toFixed(1)}%</div>
       <div class="bar-container"><div class="bar" style="width: ${v * 100}%"></div></div>
     </div>
-  `).join('')}
+  `,
+    )
+    .join('')}
 
   <h2>⏱️ Latency</h2>
   <div class="grid">
@@ -343,11 +352,11 @@ function formatHtmlReport(metrics: AggregatedMetrics): string {
 
   <h2>🎯 Target Checking</h2>
   <div class="card">
-    <div class="${metrics.meanPrecision.get(5) ?? 0 >= 0.8 ? 'pass' : 'fail'}">
-      ${metrics.meanPrecision.get(5) ?? 0 >= 0.8 ? '✅' : '❌'} Precision@5: ${((metrics.meanPrecision.get(5) ?? 0) * 100).toFixed(1)}% / 80%
+    <div class="${(metrics.meanPrecision.get(5) ?? 0 >= 0.8) ? 'pass' : 'fail'}">
+      ${(metrics.meanPrecision.get(5) ?? 0 >= 0.8) ? '✅' : '❌'} Precision@5: ${((metrics.meanPrecision.get(5) ?? 0) * 100).toFixed(1)}% / 80%
     </div>
-    <div class="${metrics.meanRecall.get(10) ?? 0 >= 0.7 ? 'pass' : 'fail'}">
-      ${metrics.meanRecall.get(10) ?? 0 >= 0.7 ? '✅' : '❌'} Recall@10: ${((metrics.meanRecall.get(10) ?? 0) * 100).toFixed(1)}% / 70%
+    <div class="${(metrics.meanRecall.get(10) ?? 0 >= 0.7) ? 'pass' : 'fail'}">
+      ${(metrics.meanRecall.get(10) ?? 0 >= 0.7) ? '✅' : '❌'} Recall@10: ${((metrics.meanRecall.get(10) ?? 0) * 100).toFixed(1)}% / 70%
     </div>
     <div class="${metrics.meanReciprocalRank >= 0.85 ? 'pass' : 'fail'}">
       ${metrics.meanReciprocalRank >= 0.85 ? '✅' : '❌'} MRR: ${metrics.meanReciprocalRank.toFixed(4)} / 0.85
@@ -374,9 +383,12 @@ async function main() {
   const options: Options = {
     format: (args.find((a) => a.startsWith('--format='))?.split('=')[1] || 'text') as any,
     outputFile: args.find((a) => a.startsWith('--output='))?.split('=')[1],
-    topK: parseInt(args.find((a) => a.startsWith('--top-k='))?.split('=')[1] || '10', 10),
-    threshold: parseFloat(args.find((a) => a.startsWith('--threshold='))?.split('=')[1] || '0.7'),
-    embeddingModel: args.find((a) => a.startsWith('--model='))?.split('=')[1] || 'text-embedding-3-small',
+    topK: Number.parseInt(args.find((a) => a.startsWith('--top-k='))?.split('=')[1] || '10', 10),
+    threshold: Number.parseFloat(
+      args.find((a) => a.startsWith('--threshold='))?.split('=')[1] || '0.7',
+    ),
+    embeddingModel:
+      args.find((a) => a.startsWith('--model='))?.split('=')[1] || 'text-embedding-3-small',
     embeddingApiKey: args.find((a) => a.startsWith('--api-key='))?.split('=')[1],
   };
 

@@ -9,8 +9,8 @@
 
 import type { AggregatedMetrics } from '../eval/types.js';
 
-import type { RetrievalLogEntry, EmbeddingLogEntry } from '../rag/logging.js';
 import type { CacheStats } from '../rag/cache.js';
+import type { EmbeddingLogEntry, RetrievalLogEntry } from '../rag/logging.js';
 
 /**
  * Dashboard metrics snapshot.
@@ -387,7 +387,9 @@ export function createInMemoryDashboardStore(): DashboardStore {
 /**
  * Calculate trend direction from time series.
  */
-function calculateTrend(points: Array<{ timestamp: number; value: number }>): 'up' | 'down' | 'stable' {
+function calculateTrend(
+  points: Array<{ timestamp: number; value: number }>,
+): 'up' | 'down' | 'stable' {
   if (points.length < 2) return 'stable';
 
   const recent = points.slice(-Math.min(10, points.length));
@@ -481,27 +483,28 @@ export function createMetricsDashboard(options: {
         .map((l) => l.data.latencyMs ?? 0)
         .sort((a, b) => a - b);
 
-      const latencySnapshot = latencies.length > 0
-        ? {
-            p50: latencies[Math.floor(latencies.length * 0.5)] ?? 0,
-            p75: latencies[Math.floor(latencies.length * 0.75)] ?? 0,
-            p90: latencies[Math.floor(latencies.length * 0.9)] ?? 0,
-            p95: latencies[Math.floor(latencies.length * 0.95)] ?? 0,
-            p99: latencies[Math.floor(latencies.length * 0.99)] ?? 0,
-            min: latencies[0] ?? 0,
-            max: latencies[latencies.length - 1] ?? 0,
-            mean: latencies.reduce((a, b) => a + b, 0) / latencies.length,
-          }
-        : {
-            p50: 0,
-            p75: 0,
-            p90: 0,
-            p95: 0,
-            p99: 0,
-            min: 0,
-            max: 0,
-            mean: 0,
-          };
+      const latencySnapshot =
+        latencies.length > 0
+          ? {
+              p50: latencies[Math.floor(latencies.length * 0.5)] ?? 0,
+              p75: latencies[Math.floor(latencies.length * 0.75)] ?? 0,
+              p90: latencies[Math.floor(latencies.length * 0.9)] ?? 0,
+              p95: latencies[Math.floor(latencies.length * 0.95)] ?? 0,
+              p99: latencies[Math.floor(latencies.length * 0.99)] ?? 0,
+              min: latencies[0] ?? 0,
+              max: latencies[latencies.length - 1] ?? 0,
+              mean: latencies.reduce((a, b) => a + b, 0) / latencies.length,
+            }
+          : {
+              p50: 0,
+              p75: 0,
+              p90: 0,
+              p95: 0,
+              p99: 0,
+              min: 0,
+              max: 0,
+              mean: 0,
+            };
 
       const resultCounts = new Map<number, number>();
       for (const log of retrievalLogs) {
@@ -548,7 +551,10 @@ export function createMetricsDashboard(options: {
       const cacheSnapshot: CacheSnapshot = currentCacheStats
         ? {
             ...currentCacheStats,
-            estimatedCostSavings: { callsSaved: currentCacheStats.hits, percentReduction: currentCacheStats.hitRate },
+            estimatedCostSavings: {
+              callsSaved: currentCacheStats.hits,
+              percentReduction: currentCacheStats.hitRate,
+            },
             avgEntryLifetime: 0,
           }
         : {
@@ -578,18 +584,22 @@ export function createMetricsDashboard(options: {
         issues.push({
           severity: 'warning',
           category: 'latency',
-          message: `P95 latency exceeds target`,
+          message: 'P95 latency exceeds target',
           detectedAt: timestamp,
           value: latencySnapshot.p95,
           threshold: targets.maxP95Latency,
         });
       }
 
-      if (currentCacheStats && currentCacheStats.hitRate < targets.minCacheHitRate && currentCacheStats.totalLookups > 100) {
+      if (
+        currentCacheStats &&
+        currentCacheStats.hitRate < targets.minCacheHitRate &&
+        currentCacheStats.totalLookups > 100
+      ) {
         issues.push({
           severity: 'info',
           category: 'cache',
-          message: `Cache hit rate below target`,
+          message: 'Cache hit rate below target',
           detectedAt: timestamp,
           value: currentCacheStats.hitRate,
           threshold: targets.minCacheHitRate,
@@ -601,7 +611,7 @@ export function createMetricsDashboard(options: {
         issues.push({
           severity: 'error',
           category: 'retrieval',
-          message: `Error rate exceeds target`,
+          message: 'Error rate exceeds target',
           detectedAt: timestamp,
           value: errorRate,
           threshold: targets.maxErrorRate,
@@ -618,8 +628,7 @@ export function createMetricsDashboard(options: {
         evalSnapshot.map,
       ];
 
-      const healthScore =
-        healthScoreValues.reduce((a, b) => a + b, 0) / healthScoreValues.length;
+      const healthScore = healthScoreValues.reduce((a, b) => a + b, 0) / healthScoreValues.length;
 
       const healthSnapshot: HealthSnapshot = {
         healthScore,
@@ -676,16 +685,52 @@ export function createMetricsDashboard(options: {
       }
 
       // Calculate trend directions
-      const mapPoints = recentSnapshots.map((s) => ({ timestamp: s.timestamp, value: s.evaluation.map }));
-      const p95Points = recentSnapshots.map((s) => ({ timestamp: s.timestamp, value: s.retrieval.latency.p95 }));
-      const cachePoints = recentSnapshots.map((s) => ({ timestamp: s.timestamp, value: s.cache.hitRate }));
-      const volumePoints = recentSnapshots.map((s) => ({ timestamp: s.timestamp, value: s.retrieval.totalRetrievals }));
+      const mapPoints = recentSnapshots.map((s) => ({
+        timestamp: s.timestamp,
+        value: s.evaluation.map,
+      }));
+      const p95Points = recentSnapshots.map((s) => ({
+        timestamp: s.timestamp,
+        value: s.retrieval.latency.p95,
+      }));
+      const cachePoints = recentSnapshots.map((s) => ({
+        timestamp: s.timestamp,
+        value: s.cache.hitRate,
+      }));
+      const volumePoints = recentSnapshots.map((s) => ({
+        timestamp: s.timestamp,
+        value: s.retrieval.totalRetrievals,
+      }));
 
       const trendSnapshot: TrendSnapshot = {
-        evaluation: [{ metric: 'map', points: mapPoints, stats: calculateStats(mapPoints.map((p) => p.value)) }],
-        latency: [{ metric: 'p95_latency', points: p95Points, stats: calculateStats(p95Points.map((p) => p.value)) }],
-        cacheHitRate: [{ metric: 'cache_hit_rate', points: cachePoints, stats: calculateStats(cachePoints.map((p) => p.value)) }],
-        volume: [{ metric: 'retrieval_volume', points: volumePoints, stats: calculateStats(volumePoints.map((p) => p.value)) }],
+        evaluation: [
+          {
+            metric: 'map',
+            points: mapPoints,
+            stats: calculateStats(mapPoints.map((p) => p.value)),
+          },
+        ],
+        latency: [
+          {
+            metric: 'p95_latency',
+            points: p95Points,
+            stats: calculateStats(p95Points.map((p) => p.value)),
+          },
+        ],
+        cacheHitRate: [
+          {
+            metric: 'cache_hit_rate',
+            points: cachePoints,
+            stats: calculateStats(cachePoints.map((p) => p.value)),
+          },
+        ],
+        volume: [
+          {
+            metric: 'retrieval_volume',
+            points: volumePoints,
+            stats: calculateStats(volumePoints.map((p) => p.value)),
+          },
+        ],
       };
 
       const dashboardMetrics: DashboardMetrics = {
@@ -697,7 +742,10 @@ export function createMetricsDashboard(options: {
           failedRetrievals: failed,
           successRate: total > 0 ? successful / total : 1,
           latency: latencySnapshot,
-          avgResults: total > 0 ? retrievalLogs.reduce((sum, l) => sum + (l.data.resultCount ?? 0), 0) / total : 0,
+          avgResults:
+            total > 0
+              ? retrievalLogs.reduce((sum, l) => sum + (l.data.resultCount ?? 0), 0) / total
+              : 0,
           resultDistribution: resultCounts,
         },
         cache: cacheSnapshot,
@@ -723,24 +771,60 @@ export function createMetricsDashboard(options: {
     getTrends(period: 'hour' | 'day' | 'week' | 'month'): TrendSnapshot {
       const now_ = now();
       const periodMs =
-        period === 'hour' ? 60 * 60 * 1000 :
-        period === 'day' ? 24 * 60 * 60 * 1000 :
-        period === 'week' ? 7 * 24 * 60 * 60 * 1000 :
-        30 * 24 * 60 * 60 * 1000;
+        period === 'hour'
+          ? 60 * 60 * 1000
+          : period === 'day'
+            ? 24 * 60 * 60 * 1000
+            : period === 'week'
+              ? 7 * 24 * 60 * 60 * 1000
+              : 30 * 24 * 60 * 60 * 1000;
 
       const start = now_ - periodMs;
       const snapshots = options.store.getSnapshotsInRange(start, now_);
 
       const mapPoints = snapshots.map((s) => ({ timestamp: s.timestamp, value: s.evaluation.map }));
-      const p95Points = snapshots.map((s) => ({ timestamp: s.timestamp, value: s.retrieval.latency.p95 }));
-      const cachePoints = snapshots.map((s) => ({ timestamp: s.timestamp, value: s.cache.hitRate }));
-      const volumePoints = snapshots.map((s) => ({ timestamp: s.timestamp, value: s.retrieval.totalRetrievals }));
+      const p95Points = snapshots.map((s) => ({
+        timestamp: s.timestamp,
+        value: s.retrieval.latency.p95,
+      }));
+      const cachePoints = snapshots.map((s) => ({
+        timestamp: s.timestamp,
+        value: s.cache.hitRate,
+      }));
+      const volumePoints = snapshots.map((s) => ({
+        timestamp: s.timestamp,
+        value: s.retrieval.totalRetrievals,
+      }));
 
       return {
-        evaluation: [{ metric: 'map', points: mapPoints, stats: calculateStats(mapPoints.map((p) => p.value)) }],
-        latency: [{ metric: 'p95_latency', points: p95Points, stats: calculateStats(p95Points.map((p) => p.value)) }],
-        cacheHitRate: [{ metric: 'cache_hit_rate', points: cachePoints, stats: calculateStats(cachePoints.map((p) => p.value)) }],
-        volume: [{ metric: 'retrieval_volume', points: volumePoints, stats: calculateStats(volumePoints.map((p) => p.value)) }],
+        evaluation: [
+          {
+            metric: 'map',
+            points: mapPoints,
+            stats: calculateStats(mapPoints.map((p) => p.value)),
+          },
+        ],
+        latency: [
+          {
+            metric: 'p95_latency',
+            points: p95Points,
+            stats: calculateStats(p95Points.map((p) => p.value)),
+          },
+        ],
+        cacheHitRate: [
+          {
+            metric: 'cache_hit_rate',
+            points: cachePoints,
+            stats: calculateStats(cachePoints.map((p) => p.value)),
+          },
+        ],
+        volume: [
+          {
+            metric: 'retrieval_volume',
+            points: volumePoints,
+            stats: calculateStats(volumePoints.map((p) => p.value)),
+          },
+        ],
       };
     },
 

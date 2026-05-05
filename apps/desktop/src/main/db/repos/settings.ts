@@ -43,7 +43,6 @@ import {
 import { eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
-
 import type { Schema } from '../client.js';
 import { settings } from '../schema.js';
 

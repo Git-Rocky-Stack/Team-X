@@ -1,7 +1,6 @@
 import type { HardwareProfile } from '@team-x/shared-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-
 // Mock node:os before import
 vi.mock('node:os', () => ({
   cpus: () => Array.from({ length: 8 }, () => ({})),

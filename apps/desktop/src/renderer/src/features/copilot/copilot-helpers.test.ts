@@ -14,7 +14,6 @@
 import type { CopilotInsight } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-
 import {
   DASHBOARD_CAP,
   SEVERITY_RANK,

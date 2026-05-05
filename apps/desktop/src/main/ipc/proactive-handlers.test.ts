@@ -20,7 +20,6 @@ import type {
 } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import { type IpcHandlerDeps, createIpcHandlers } from './handlers.js';
 
 type ProactiveHandlers = ReturnType<typeof createIpcHandlers> & {
@@ -28,9 +27,7 @@ type ProactiveHandlers = ReturnType<typeof createIpcHandlers> & {
   proactiveDecomposeGoal(
     req: ProactiveDecomposeGoalRequest,
   ): Promise<ProactiveDecomposeGoalResponse>;
-  proactiveScanForWork(
-    req: ProactiveScanForWorkRequest,
-  ): Promise<ProactiveScanForWorkResponse>;
+  proactiveScanForWork(req: ProactiveScanForWorkRequest): Promise<ProactiveScanForWorkResponse>;
   proactiveGetState(req: { companyId: string }): Promise<{
     enabled: boolean;
     activeWork: number;

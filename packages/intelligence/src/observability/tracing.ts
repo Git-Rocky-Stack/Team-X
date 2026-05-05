@@ -41,11 +41,11 @@ export interface TraceState {
  * Span kind.
  */
 export type SpanKind =
-  | 'internal'    // Internal operation
-  | 'server'      // Incoming request
-  | 'client'      // Outgoing request
-  | 'producer'    // Message publisher
-  | 'consumer';   // Message subscriber
+  | 'internal' // Internal operation
+  | 'server' // Incoming request
+  | 'client' // Outgoing request
+  | 'producer' // Message publisher
+  | 'consumer'; // Message subscriber
 
 /**
  * Span status.
@@ -186,7 +186,7 @@ export interface Tracer {
       attributes?: Record<string, AttributeValue>;
       links?: SpanLink[];
       startTime?: bigint;
-    }
+    },
   ): Span;
 
   /**
@@ -200,7 +200,7 @@ export interface Tracer {
       attributes?: Record<string, AttributeValue>;
       links?: SpanLink[];
       startTime?: bigint;
-    }
+    },
   ): Promise<Span>;
 
   /**
@@ -211,7 +211,11 @@ export interface Tracer {
   /**
    * Record an exception in a span.
    */
-  recordException(span: Span, exception: unknown, attributes?: Record<string, AttributeValue>): void;
+  recordException(
+    span: Span,
+    exception: unknown,
+    attributes?: Record<string, AttributeValue>,
+  ): void;
 
   /**
    * Add an event to a span.
@@ -319,19 +323,23 @@ export interface LlmTracer extends Tracer {
 /**
  * In-memory tracer implementation.
  */
-export function createTracer(options: TracerOptions & {
-  processors?: SpanProcessor[];
-  now?: () => bigint;
-  idGen?: () => string;
-}): Tracer {
+export function createTracer(
+  options: TracerOptions & {
+    processors?: SpanProcessor[];
+    now?: () => bigint;
+    idGen?: () => string;
+  },
+): Tracer {
   const now = options.now ?? (() => BigInt(Date.now()) * 1_000_000n);
-  const idGen = options.idGen ?? (() => {
-    return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
+  const idGen =
+    options.idGen ??
+    (() => {
+      return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
     });
-  });
 
   const processors = options.processors ?? [];
   const rootSpans: Span[] = [];
@@ -452,8 +460,14 @@ export function createTracer(options: TracerOptions & {
 
     recordException(span, exception: unknown, attributes = {}) {
       const attrs = new Map(Object.entries(attributes));
-      attrs.set('exception.type', (exception as { constructor?: { name?: string } })?.constructor?.name ?? 'Unknown');
-      attrs.set('exception.message', exception instanceof Error ? exception.message : String(exception));
+      attrs.set(
+        'exception.type',
+        (exception as { constructor?: { name?: string } })?.constructor?.name ?? 'Unknown',
+      );
+      attrs.set(
+        'exception.message',
+        exception instanceof Error ? exception.message : String(exception),
+      );
 
       if (exception instanceof Error && exception.stack) {
         attrs.set('exception.stacktrace', exception.stack);
@@ -514,18 +528,22 @@ export function createTracer(options: TracerOptions & {
 
     injectCarrier(context) {
       return {
-        'traceparent': this.injectTraceHeader(context),
-        'tracestate': context.vendor ? Array.from(context.vendor.entries()).map(([k, v]) => `${k}=${v}`).join(',') : '',
+        traceparent: this.injectTraceHeader(context),
+        tracestate: context.vendor
+          ? Array.from(context.vendor.entries())
+              .map(([k, v]) => `${k}=${v}`)
+              .join(',')
+          : '',
       };
     },
 
     extractCarrier(carrier) {
-      const traceparent = carrier['traceparent'];
+      const traceparent = carrier.traceparent;
       if (traceparent) {
         const context = this.extractTraceHeader(traceparent);
         if (context) {
           // Parse tracestate if present
-          const tracestate = carrier['tracestate'];
+          const tracestate = carrier.tracestate;
           if (tracestate) {
             const vendor = new Map<string, string>();
             for (const pair of tracestate.split(',')) {
@@ -544,7 +562,7 @@ export function createTracer(options: TracerOptions & {
       return JSON.stringify(
         rootSpans.map((span) => spanToJson(span)),
         null,
-        2
+        2,
       );
     },
   };
@@ -590,19 +608,14 @@ export function createConsoleSpanProcessor(): SpanProcessor {
     },
 
     onEnd(span) {
-      const duration = span.endTime
-        ? Number((span.endTime - span.startTime) / 1_000_000n)
-        : 0;
+      const duration = span.endTime ? Number((span.endTime - span.startTime) / 1_000_000n) : 0;
       console.log(
-        `[TRACE] End span: ${span.name} (${span.context.spanId.slice(0, 8)}) - ${duration}ms - ${span.status.code}`
+        `[TRACE] End span: ${span.name} (${span.context.spanId.slice(0, 8)}) - ${duration}ms - ${span.status.code}`,
       );
     },
 
     onError(exception, span) {
-      console.error(
-        `[TRACE] Error in span: ${span.name}`,
-        exception
-      );
+      console.error(`[TRACE] Error in span: ${span.name}`, exception);
     },
   };
 }
@@ -610,9 +623,11 @@ export function createConsoleSpanProcessor(): SpanProcessor {
 /**
  * Create a RAG-specific tracer.
  */
-export function createRagTracer(options: TracerOptions & {
-  processors?: SpanProcessor[];
-}): RagTracer {
+export function createRagTracer(
+  options: TracerOptions & {
+    processors?: SpanProcessor[];
+  },
+): RagTracer {
   const baseTracer = createTracer(options);
 
   return {
@@ -637,18 +652,18 @@ export function createRagTracer(options: TracerOptions & {
             await params.fn();
 
             baseTracer.addEvent(span, 'query_complete', {
-              'duration_ms': performance.now() - start,
+              duration_ms: performance.now() - start,
             });
           } catch (err) {
             baseTracer.addEvent(span, 'query_error', {
-              'error': String(err),
+              error: String(err),
             });
             throw err;
           }
 
           return span;
         },
-        { kind: 'client' }
+        { kind: 'client' },
       );
     },
 
@@ -670,7 +685,7 @@ export function createRagTracer(options: TracerOptions & {
 
           return span;
         },
-        { kind: 'internal' }
+        { kind: 'internal' },
       );
     },
   };
@@ -679,9 +694,11 @@ export function createRagTracer(options: TracerOptions & {
 /**
  * Create an agent-specific tracer.
  */
-export function createAgentTracer(options: TracerOptions & {
-  processors?: SpanProcessor[];
-}): AgentTracer {
+export function createAgentTracer(
+  options: TracerOptions & {
+    processors?: SpanProcessor[];
+  },
+): AgentTracer {
   const baseTracer = createTracer(options);
 
   return {
@@ -704,14 +721,14 @@ export function createAgentTracer(options: TracerOptions & {
             baseTracer.addEvent(span, 'loop_complete');
           } catch (err) {
             baseTracer.addEvent(span, 'loop_error', {
-              'error': String(err),
+              error: String(err),
             });
             throw err;
           }
 
           return span;
         },
-        { kind: 'internal' }
+        { kind: 'internal' },
       );
     },
 
@@ -730,18 +747,18 @@ export function createAgentTracer(options: TracerOptions & {
             const result = await params.fn();
 
             baseTracer.addEvent(span, 'tool_call_complete', {
-              'result_size': JSON.stringify(result).length,
+              result_size: JSON.stringify(result).length,
             });
 
             return span;
           } catch (err) {
             baseTracer.addEvent(span, 'tool_call_error', {
-              'error': String(err),
+              error: String(err),
             });
             throw err;
           }
         },
-        { kind: 'client' }
+        { kind: 'client' },
       );
     },
   };
@@ -750,9 +767,11 @@ export function createAgentTracer(options: TracerOptions & {
 /**
  * Create an LLM-specific tracer.
  */
-export function createLlmTracer(options: TracerOptions & {
-  processors?: SpanProcessor[];
-}): LlmTracer {
+export function createLlmTracer(
+  options: TracerOptions & {
+    processors?: SpanProcessor[];
+  },
+): LlmTracer {
   const baseTracer = createTracer(options);
 
   return {
@@ -770,29 +789,29 @@ export function createLlmTracer(options: TracerOptions & {
 
           baseTracer.addEvent(span, 'completion_start');
 
-      try {
-        const result = await params.fn();
+          try {
+            const result = await params.fn();
 
-        baseTracer.setAttributes(span, {
-          'llm.completion_tokens': result.completionTokens,
-        });
+            baseTracer.setAttributes(span, {
+              'llm.completion_tokens': result.completionTokens,
+            });
 
-        baseTracer.addEvent(span, 'completion_complete', {
-          'total_tokens': params.promptTokens + result.completionTokens,
-        });
+            baseTracer.addEvent(span, 'completion_complete', {
+              total_tokens: params.promptTokens + result.completionTokens,
+            });
 
-        return span;
-      } catch (err) {
-        baseTracer.addEvent(span, 'completion_error', {
-          'error': String(err),
-        });
-        throw err;
-      }
+            return span;
+          } catch (err) {
+            baseTracer.addEvent(span, 'completion_error', {
+              error: String(err),
+            });
+            throw err;
+          }
+        },
+        { kind: 'client' },
+      );
     },
-    { kind: 'client' }
-  );
-},
-};
+  };
 }
 
 /**
@@ -800,7 +819,7 @@ export function createLlmTracer(options: TracerOptions & {
  */
 export function propagateTrace<T extends { headers?: Record<string, string> }>(
   request: T,
-  tracer: Tracer
+  tracer: Tracer,
 ): T {
   const context = tracer.getContext();
   if (!context) return request;

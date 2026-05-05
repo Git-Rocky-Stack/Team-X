@@ -1,7 +1,6 @@
 import { AUTONOMY_BENCHMARK_SCENARIO_IDS } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-
 import { createInMemoryAutonomyBenchmarkScenarioContext } from './autonomy-benchmark-memory-context.js';
 import {
   AUTONOMY_BENCHMARK_DEFAULT_RUNTIME_KINDS,

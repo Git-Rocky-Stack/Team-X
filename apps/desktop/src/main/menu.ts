@@ -6,7 +6,7 @@
  * About dialog that displays version, license, and links.
  */
 
-import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
+import { BrowserWindow, Menu, app, dialog, shell } from 'electron';
 
 const PACKAGE_VERSION = app.getVersion();
 
@@ -24,30 +24,32 @@ export function showAboutDialog(): void {
 
   if (!win) return;
 
-  void dialog.showMessageBox(win, {
-    type: 'info',
-    title: 'About Strategia-X',
-    message: `Strategia-X ${PACKAGE_VERSION}`,
-    detail: [
-      'Operational command shell for autonomous AI teams.',
-      '',
-      'License: MIT',
-      'Copyright © 2025 Rocky Stack / Strategia',
-      '',
-      'An open-source project for AI-powered team orchestration.',
-      'Source code available on GitHub.',
-      '',
-      'Built with Electron, React, and TypeScript.',
-      'Powered by Claude, Anthropic, and Ollama.',
-    ].join('\n'),
-    buttons: ['View on GitHub', 'Close'],
-    defaultId: 0,
-    cancelId: 1,
-  }).then((result) => {
-    if (result.response === 0) {
-      void shell.openExternal('https://github.com/rocky-stack/strategia-x');
-    }
-  });
+  void dialog
+    .showMessageBox(win, {
+      type: 'info',
+      title: 'About Strategia-X',
+      message: `Strategia-X ${PACKAGE_VERSION}`,
+      detail: [
+        'Operational command shell for autonomous AI teams.',
+        '',
+        'License: MIT',
+        'Copyright © 2025 Rocky Stack / Strategia',
+        '',
+        'An open-source project for AI-powered team orchestration.',
+        'Source code available on GitHub.',
+        '',
+        'Built with Electron, React, and TypeScript.',
+        'Powered by Claude, Anthropic, and Ollama.',
+      ].join('\n'),
+      buttons: ['View on GitHub', 'Close'],
+      defaultId: 0,
+      cancelId: 1,
+    })
+    .then((result) => {
+      if (result.response === 0) {
+        void shell.openExternal('https://github.com/rocky-stack/strategia-x');
+      }
+    });
 }
 
 /**
@@ -105,8 +107,7 @@ export function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
         },
         {
           label: 'Report an Issue',
-          click: () =>
-            void shell.openExternal('https://github.com/rocky-stack/strategia-x/issues'),
+          click: () => void shell.openExternal('https://github.com/rocky-stack/strategia-x/issues'),
         },
         {
           label: 'View Source on GitHub',
@@ -118,9 +119,7 @@ export function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
         {
           label: 'License (MIT)',
           click: () =>
-            void shell.openExternal(
-              'https://github.com/rocky-stack/strategia-x/blob/main/LICENSE',
-            ),
+            void shell.openExternal('https://github.com/rocky-stack/strategia-x/blob/main/LICENSE'),
         },
       ],
     },

@@ -10,7 +10,6 @@ import { useGoalEventSync, useGoals } from '@/hooks/use-goals.js';
 import { useProjects } from '@/hooks/use-projects.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 interface GoalsViewProps {
   companyId: string | null;
   employees: Employee[];

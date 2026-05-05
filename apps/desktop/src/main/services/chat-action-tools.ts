@@ -1,6 +1,5 @@
 import { basename } from 'node:path';
 
-
 import type { ToolSpec } from '@team-x/provider-router';
 import type { RoleSpec } from '@team-x/shared-types';
 import { nanoid } from 'nanoid';

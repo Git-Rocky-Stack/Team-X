@@ -19,7 +19,6 @@ import {
 
 import { useAutonomyDoctor } from '@/hooks/use-autonomy-doctor.js';
 
-
 function statusTone(status: AutonomyDoctorStatus): 'accent' | 'warning' | 'danger' {
   if (status === 'blocked') return 'danger';
   if (status === 'warning') return 'warning';

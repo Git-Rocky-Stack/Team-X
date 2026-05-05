@@ -165,10 +165,13 @@ export interface PlanExecutor {
   /**
    * Create a plan from a query.
    */
-  createPlan(query: string, context?: {
-    conversationHistory?: string[];
-    availableTools?: string[];
-  }): Promise<ExecutionPlan>;
+  createPlan(
+    query: string,
+    context?: {
+      conversationHistory?: string[];
+      availableTools?: string[];
+    },
+  ): Promise<ExecutionPlan>;
 
   /**
    * Execute a plan step by step.
@@ -179,7 +182,7 @@ export interface PlanExecutor {
       invokeTool: (tool: string, args: Record<string, unknown>) => Promise<unknown>;
       onProgress?: (update: PlanProgressUpdate) => void;
       signal?: AbortSignal;
-    }
+    },
   ): Promise<ExecutionPlan>;
 
   /**
@@ -188,7 +191,7 @@ export interface PlanExecutor {
   revisePlan(
     plan: ExecutionPlan,
     reason: string,
-    trigger: 'user' | 'auto' | 'error_recovery'
+    trigger: 'user' | 'auto' | 'error_recovery',
   ): Promise<ExecutionPlan>;
 
   /**
@@ -312,8 +315,7 @@ export function createPlanExecutor(options: {
 }): PlanExecutor {
   const now = options.now ?? Date.now;
   const idGen =
-    options.idGen ??
-    (() => `plan_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`);
+    options.idGen ?? (() => `plan_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`);
 
   const trackingOptions: PlanTrackingOptions = {
     autoRevise: true,
@@ -368,7 +370,7 @@ export function createPlanExecutor(options: {
         revisions.set(plan.id, []);
 
         return plan;
-      } catch (err) {
+      } catch (_err) {
         // Fallback: create a simple single-step plan
         const plan: ExecutionPlan = {
           id: idGen(),
@@ -448,10 +450,7 @@ export function createPlanExecutor(options: {
 
           if (step.tool && context.invokeTool) {
             try {
-              const result = await context.invokeTool(
-                step.tool,
-                step.args || {}
-              );
+              const result = await context.invokeTool(step.tool, step.args || {});
 
               step.result = result;
               step.status = 'completed';
@@ -617,7 +616,7 @@ export function createPlanExecutor(options: {
           }
         } else if (step.kind === 'answer') {
           planSteps.push({
-            id: `final`,
+            id: 'final',
             description: 'Final answer',
             status: 'completed',
             dependencies: [],
@@ -651,12 +650,17 @@ export function createPlanExecutor(options: {
 
       for (const step of plan.steps) {
         const statusIcon =
-          step.status === 'completed' ? '✅' :
-          step.status === 'failed' ? '❌' :
-          step.status === 'in_progress' ? '🔄' :
-          step.status === 'blocked' ? '🚫' :
-          step.status === 'skipped' ? '⏭️' :
-          '⏳';
+          step.status === 'completed'
+            ? '✅'
+            : step.status === 'failed'
+              ? '❌'
+              : step.status === 'in_progress'
+                ? '🔄'
+                : step.status === 'blocked'
+                  ? '🚫'
+                  : step.status === 'skipped'
+                    ? '⏭️'
+                    : '⏳';
 
         lines.push(`  ${statusIcon} ${step.description}`);
 
@@ -720,7 +724,7 @@ export function createPlanAwareLoop(options: {
   shouldCreatePlan: (query: string, estimatedSteps?: number) => boolean;
   wrapLoopExecution: (
     runLoop: () => Promise<any>,
-    query: string
+    query: string,
   ) => Promise<{ result: any; plan?: ExecutionPlan }>;
 } {
   return {

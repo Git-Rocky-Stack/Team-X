@@ -16,10 +16,7 @@
 import type { EmbeddingSourceType } from '@team-x/shared-types';
 
 // Import from @team-x/intelligence (with minimal surface for now)
-import {
-  type RagService,
-  type RagRepo,
-} from '@team-x/intelligence';
+import type { RagRepo, RagService } from '@team-x/intelligence';
 
 /**
  * Enhanced AI service options.
@@ -51,14 +48,17 @@ export interface EnhancedAiService {
   /**
    * Query with RAG + expansion + knowledge.
    */
-  enhancedQuery(query: string, options?: {
-    companyId?: string;
-    topK?: number;
-    threshold?: number;
-    useExpansion?: boolean;
-    includeRelated?: boolean;
-    usePlanning?: boolean;
-  }): Promise<{
+  enhancedQuery(
+    query: string,
+    options?: {
+      companyId?: string;
+      topK?: number;
+      threshold?: number;
+      useExpansion?: boolean;
+      includeRelated?: boolean;
+      usePlanning?: boolean;
+    },
+  ): Promise<{
     answer: string;
     context: Array<{ sourceId: string; content: string; similarity: number }>;
     related?: Array<{ entity: string; relation: string }>;
@@ -78,18 +78,24 @@ export interface EnhancedAiService {
   /**
    * Extract and store facts.
    */
-  extractAndStoreFacts(conversation: string, options: {
-    sourceId: string;
-    companyId?: string;
-  }): Promise<number>;
+  extractAndStoreFacts(
+    conversation: string,
+    options: {
+      sourceId: string;
+      companyId?: string;
+    },
+  ): Promise<number>;
 
   /**
    * Query knowledge graph.
    */
-  queryKnowledge(query: string, options?: {
-    maxDepth?: number;
-    maxResults?: number;
-  }): {
+  queryKnowledge(
+    query: string,
+    options?: {
+      maxDepth?: number;
+      maxResults?: number;
+    },
+  ): {
     nodes: Array<{ id: string; label: string; type: string }>;
     edges: Array<{ from: string; to: string; relation: string }>;
   };
@@ -137,9 +143,7 @@ function chunkText(content: string, maxSize = 512, overlap = 64): string[] {
 /**
  * Create enhanced AI service.
  */
-export function createEnhancedAiService(
-  options: EnhancedAiServiceOptions
-): EnhancedAiService {
+export function createEnhancedAiService(options: EnhancedAiServiceOptions): EnhancedAiService {
   const { ragService } = options;
 
   return {
@@ -211,7 +215,7 @@ export function createEnhancedAiService(
       for (const word of words) {
         yield {
           type: 'text',
-          content: word + ' ',
+          content: `${word} `,
           isFinal: false,
         };
         await new Promise((resolve) => setTimeout(resolve, 20));

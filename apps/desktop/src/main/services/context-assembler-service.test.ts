@@ -7,7 +7,6 @@ import type {
 } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import { createContextAssemblerService } from './context-assembler-service.js';
 
 describe('context assembler service', () => {

@@ -1,4 +1,3 @@
-
 import type { ChatMessage, Employee } from '@team-x/shared-types';
 import { Bot } from 'lucide-react';
 import { useEffect, useRef } from 'react';

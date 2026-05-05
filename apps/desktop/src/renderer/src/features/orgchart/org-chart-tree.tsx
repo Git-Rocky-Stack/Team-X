@@ -1,7 +1,6 @@
 import type { Employee, OrgchartEdge } from '@team-x/shared-types';
 import { useMemo } from 'react';
 
-
 import { OrgChartNode } from './org-chart-node.js';
 
 interface OrgChartTreeProps {

@@ -5,6 +5,12 @@
  * and computes metrics using the golden dataset.
  */
 
+import {
+  aggregateMetrics,
+  calculateQueryMetrics,
+  compareEvaluations,
+  formatMetrics,
+} from './metrics.js';
 import type {
   EvalDataset,
   EvalQuery,
@@ -13,7 +19,6 @@ import type {
   QueryMetrics,
   RetrievalResult,
 } from './types.js';
-import { aggregateMetrics, calculateQueryMetrics, compareEvaluations, formatMetrics } from './metrics.js';
 
 /**
  * Function signature for retrieving documents.
@@ -25,7 +30,7 @@ export type RetrieveFunction = (
     topK: number;
     threshold: number;
     companyId?: string;
-  }
+  },
 ) => Promise<RetrievalResult>;
 
 /**
@@ -80,7 +85,7 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
      */
     async evaluateDataset(
       dataset: EvalDataset,
-      config: Partial<EvaluationConfig> = {}
+      config: Partial<EvaluationConfig> = {},
     ): Promise<EvaluationResult> {
       const runId = `eval_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const startedAt = Date.now();
@@ -96,16 +101,14 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
       // Filter queries if needed
       let queries = dataset.queries;
       if (fullConfig.intentFilter?.length) {
-        queries = queries.filter((q) => fullConfig.intentFilter!.includes(q.intent));
+        queries = queries.filter((q) => fullConfig.intentFilter?.includes(q.intent));
       }
       if (fullConfig.tagFilter?.length) {
-        queries = queries.filter((q) =>
-          q.tags?.some((t) => fullConfig.tagFilter!.includes(t))
-        );
+        queries = queries.filter((q) => q.tags?.some((t) => fullConfig.tagFilter?.includes(t)));
       }
       if (fullConfig.difficultyFilter?.length) {
         queries = queries.filter((q) =>
-          q.difficulty ? fullConfig.difficultyFilter!.includes(q.difficulty) : false
+          q.difficulty ? fullConfig.difficultyFilter?.includes(q.difficulty) : false,
         );
       }
 
@@ -140,8 +143,8 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
                   hasRelevantResult: false,
                   latencyMs: 0,
                 };
-              })
-            )
+              }),
+            ),
           );
           queryMetrics.push(...results);
         }
@@ -194,12 +197,12 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
      */
     compare(
       baseline: EvaluationResult,
-      comparison: EvaluationResult
+      comparison: EvaluationResult,
     ): ReturnType<typeof compareEvaluations> {
       return compareEvaluations(
         baseline.queryMetrics,
         comparison.queryMetrics,
-        baseline.config.dataset.queries
+        baseline.config.dataset.queries,
       );
     },
 
@@ -218,19 +221,15 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
       lines.push(formatMetrics(result.aggregated));
 
       // Worst performing queries
-      const worstQueries = [...result.queryMetrics]
-        .sort((a, b) => a.mrr - b.mrr)
-        .slice(0, 5);
+      const worstQueries = [...result.queryMetrics].sort((a, b) => a.mrr - b.mrr).slice(0, 5);
 
       if (worstQueries.length > 0) {
         lines.push('');
         lines.push('Worst Performing Queries (by MRR):');
         for (const metrics of worstQueries) {
-          const query = result.config.dataset.queries.find(
-            (q) => q.id === metrics.queryId
-          );
+          const query = result.config.dataset.queries.find((q) => q.id === metrics.queryId);
           lines.push(
-            `  ${metrics.queryId}: MRR=${metrics.mrr.toFixed(3)}, AP=${metrics.averagePrecision.toFixed(3)}`
+            `  ${metrics.queryId}: MRR=${metrics.mrr.toFixed(3)}, AP=${metrics.averagePrecision.toFixed(3)}`,
           );
           if (query) {
             lines.push(`    Query: "${query.query}"`);
@@ -240,19 +239,15 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
       }
 
       // Best performing queries
-      const bestQueries = [...result.queryMetrics]
-        .sort((a, b) => b.mrr - a.mrr)
-        .slice(0, 5);
+      const bestQueries = [...result.queryMetrics].sort((a, b) => b.mrr - a.mrr).slice(0, 5);
 
       if (bestQueries.length > 0) {
         lines.push('');
         lines.push('Best Performing Queries (by MRR):');
         for (const metrics of bestQueries) {
-          const query = result.config.dataset.queries.find(
-            (q) => q.id === metrics.queryId
-          );
+          const query = result.config.dataset.queries.find((q) => q.id === metrics.queryId);
           lines.push(
-            `  ${metrics.queryId}: MRR=${metrics.mrr.toFixed(3)}, AP=${metrics.averagePrecision.toFixed(3)}`
+            `  ${metrics.queryId}: MRR=${metrics.mrr.toFixed(3)}, AP=${metrics.averagePrecision.toFixed(3)}`,
           );
           if (query) {
             lines.push(`    Query: "${query.query}"`);
@@ -274,7 +269,7 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
           results: result,
         },
         null,
-        2
+        2,
       );
     },
 

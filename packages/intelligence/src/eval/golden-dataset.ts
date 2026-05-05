@@ -82,7 +82,8 @@ const QUERIES: EvalQuery[] = [
     difficulty: 1,
     relevantDocIds: [DOCS.ticket_1],
     tags: ['ticket-lookup', 'status'],
-    expectedAnswer: 'The status of ticket TIX-001 should be clearly stated (e.g., "In Progress", "Open", "Closed").',
+    expectedAnswer:
+      'The status of ticket TIX-001 should be clearly stated (e.g., "In Progress", "Open", "Closed").',
   },
   {
     id: 'factual_002',
@@ -91,7 +92,8 @@ const QUERIES: EvalQuery[] = [
     difficulty: 1,
     relevantDocIds: [DOCS.ticket_high_priority],
     tags: ['ticket-lookup', 'assignee'],
-    expectedAnswer: 'Should return the employee name and title assigned to the high-priority ticket.',
+    expectedAnswer:
+      'Should return the employee name and title assigned to the high-priority ticket.',
   },
   {
     id: 'factual_003',
@@ -179,7 +181,7 @@ const QUERIES: EvalQuery[] = [
 
   {
     id: 'recent_001',
-    query: 'What happened in yesterday\'s standup?',
+    query: "What happened in yesterday's standup?",
     intent: 'recent',
     difficulty: 2,
     relevantDocIds: [DOCS.meeting_standup],
@@ -226,7 +228,8 @@ const QUERIES: EvalQuery[] = [
     difficulty: 4,
     relevantDocIds: [DOCS.goal_1, DOCS.project_risk, DOCS.ticket_unassigned],
     tags: ['multi-source', 'risk', 'staffing'],
-    expectedAnswer: 'Should identify goals that may be at risk specifically because of unassigned work or staffing shortages.',
+    expectedAnswer:
+      'Should identify goals that may be at risk specifically because of unassigned work or staffing shortages.',
   },
   {
     id: 'complex_002',
@@ -235,7 +238,8 @@ const QUERIES: EvalQuery[] = [
     difficulty: 4,
     relevantDocIds: [DOCS.project_q1, DOCS.project_blocked, DOCS.ticket_1],
     tags: ['multi-source', 'project', 'deadline'],
-    expectedAnswer: 'Should find projects related to Q1 that have issues, blockers, or incomplete work.',
+    expectedAnswer:
+      'Should find projects related to Q1 that have issues, blockers, or incomplete work.',
   },
   {
     id: 'complex_003',
@@ -244,7 +248,8 @@ const QUERIES: EvalQuery[] = [
     difficulty: 4,
     relevantDocIds: [DOCS.project_1, DOCS.ticket_assigned, DOCS.project_active],
     tags: ['multi-source', 'assignee', 'status'],
-    expectedAnswer: 'Should find tickets assigned to a project lead that are still in "Open" or "Todo" status.',
+    expectedAnswer:
+      'Should find tickets assigned to a project lead that are still in "Open" or "Todo" status.',
   },
   {
     id: 'complex_004',
@@ -253,7 +258,8 @@ const QUERIES: EvalQuery[] = [
     difficulty: 5,
     relevantDocIds: [DOCS.goal_revenue, DOCS.project_2, DOCS.ticket_blocked, DOCS.project_risk],
     tags: ['multi-source', 'revenue', 'behind'],
-    expectedAnswer: 'Should aggregate tickets, projects, and goals related to revenue that are not on track.',
+    expectedAnswer:
+      'Should aggregate tickets, projects, and goals related to revenue that are not on track.',
   },
   {
     id: 'complex_005',
@@ -262,16 +268,23 @@ const QUERIES: EvalQuery[] = [
     difficulty: 5,
     relevantDocIds: [DOCS.project_active, DOCS.project_1, DOCS.project_2],
     tags: ['multi-source', 'dependencies', 'projects'],
-    expectedAnswer: 'Should identify relationships or dependencies between projects (e.g., shared tickets, parent-child goals).',
+    expectedAnswer:
+      'Should identify relationships or dependencies between projects (e.g., shared tickets, parent-child goals).',
   },
   {
     id: 'complex_006',
     query: 'What unassigned high-priority work is blocking the Q1 project?',
     intent: 'complex',
     difficulty: 4,
-    relevantDocIds: [DOCS.project_q1, DOCS.ticket_high_priority, DOCS.ticket_unassigned, DOCS.project_blocked],
+    relevantDocIds: [
+      DOCS.project_q1,
+      DOCS.ticket_high_priority,
+      DOCS.ticket_unassigned,
+      DOCS.project_blocked,
+    ],
     tags: ['multi-source', 'blocking', 'unassigned'],
-    expectedAnswer: 'Should find unassigned high-priority tickets that are linked to or blocking the Q1 project.',
+    expectedAnswer:
+      'Should find unassigned high-priority tickets that are linked to or blocking the Q1 project.',
   },
 
   // ============================================================================
@@ -390,7 +403,8 @@ export const GOLDEN_DATASET: EvalDataset = {
   metadata: {
     createdAt: Date.now(),
     author: 'Rocky Elsalaymeh',
-    description: 'Golden dataset for Team-X RAG evaluation. Covers factual, semantic, recent, complex, and lookup queries.',
+    description:
+      'Golden dataset for Team-X RAG evaluation. Covers factual, semantic, recent, complex, and lookup queries.',
     lastUpdated: Date.now(),
   },
 };
@@ -413,14 +427,13 @@ export function validateDataset(dataset: EvalDataset = GOLDEN_DATASET): Array<{
   const issues: Array<{ type: 'error' | 'warning'; message: string }> = [];
 
   // Check for placeholder IDs
-  const hasPlaceholder = Object.values(DOCS).some((id) =>
-    id.includes('PLACEHOLDER')
-  );
+  const hasPlaceholder = Object.values(DOCS).some((id) => id.includes('PLACEHOLDER'));
 
   if (hasPlaceholder) {
     issues.push({
       type: 'error',
-      message: 'Dataset contains placeholder document IDs. Replace with actual IDs from your system.',
+      message:
+        'Dataset contains placeholder document IDs. Replace with actual IDs from your system.',
     });
   }
 
@@ -444,10 +457,13 @@ export function validateDataset(dataset: EvalDataset = GOLDEN_DATASET): Array<{
   }
 
   // Check distribution across intents
-  const intentCounts = dataset.queries.reduce((acc, q) => {
-    acc[q.intent] = (acc[q.intent] || 0) + 1;
-    return acc;
-  }, {} as Record<QueryIntent, number>);
+  const intentCounts = dataset.queries.reduce(
+    (acc, q) => {
+      acc[q.intent] = (acc[q.intent] || 0) + 1;
+      return acc;
+    },
+    {} as Record<QueryIntent, number>,
+  );
 
   const minPerIntent = 5;
   const lowIntentCounts = Object.entries(intentCounts)
@@ -462,11 +478,14 @@ export function validateDataset(dataset: EvalDataset = GOLDEN_DATASET): Array<{
   }
 
   // Check distribution across difficulty levels
-  const difficultyCounts = dataset.queries.reduce((acc, q) => {
-    const diff = q.difficulty ?? 3;
-    acc[diff] = (acc[diff] || 0) + 1;
-    return acc;
-  }, {} as Record<number, number>);
+  const difficultyCounts = dataset.queries.reduce(
+    (acc, q) => {
+      const diff = q.difficulty ?? 3;
+      acc[diff] = (acc[diff] || 0) + 1;
+      return acc;
+    },
+    {} as Record<number, number>,
+  );
 
   for (let d = 1; d <= 5; d++) {
     if ((difficultyCounts[d] ?? 0) < 3) {

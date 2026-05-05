@@ -11,7 +11,6 @@ import type {
   ThreadDigest,
 } from '@team-x/shared-types';
 
-
 import type { CompanyRow } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { GoalRow } from '../db/repos/goals.js';

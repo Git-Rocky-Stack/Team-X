@@ -12,9 +12,9 @@
  *   --min-count  Minimum documents required per type (default: 3)
  */
 
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
 
 interface Options {
   dryRun: boolean;
@@ -63,7 +63,7 @@ function extractDocumentIds(db: Database.Database, minCount: number): Partial<Do
   const mapping: Partial<DocMapping> = {};
 
   // Helper to get source_id from embeddings by source type
-  const getSourceIds = (sourceType: string, limit: number = 10): string[] => {
+  const getSourceIds = (sourceType: string, limit = 10): string[] => {
     const stmt = db.prepare(`
       SELECT DISTINCT source_id
       FROM embeddings
@@ -75,7 +75,7 @@ function extractDocumentIds(db: Database.Database, minCount: number): Partial<Do
   };
 
   // Helper to search for specific content
-  const searchByContent = (sourceType: string, searchTerms: string[], limit: number = 5): string[] => {
+  const searchByContent = (sourceType: string, searchTerms: string[], limit = 5): string[] => {
     const results = new Set<string>();
     for (const term of searchTerms) {
       const stmt = db.prepare(`
@@ -236,7 +236,7 @@ function updateGoldenDataset(mapping: Partial<DocMapping>, dryRun: boolean): voi
     }
   }
 
-  console.log('\n' + '━'.repeat(60));
+  console.log(`\n${'━'.repeat(60)}`);
   console.log(`✅ Found ${changes.length} document IDs`);
 
   // Write file
@@ -255,7 +255,10 @@ function main() {
   const args = process.argv.slice(2);
   const options: Options = {
     dryRun: args.includes('--dry-run'),
-    minCount: parseInt(args.find((a) => a.startsWith('--min-count='))?.split('=')[1] ?? '3', 10),
+    minCount: Number.parseInt(
+      args.find((a) => a.startsWith('--min-count='))?.split('=')[1] ?? '3',
+      10,
+    ),
   };
 
   console.log('🔍 Updating Golden Dataset with Real Document IDs');
@@ -271,9 +274,7 @@ function main() {
   try {
     // Check if embeddings table exists
     const tableExists = db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='embeddings'"
-      )
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='embeddings'")
       .get();
 
     if (!tableExists) {

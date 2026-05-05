@@ -26,7 +26,7 @@
 
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, resolve , join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -217,9 +217,7 @@ test.describe('Team-X Phase 2 ticket flow', () => {
     // appears both in the dedicated description <p> and in a thread
     // preview <p> (line-clamped) — both inside the detail panel — so
     // scope to the first matching paragraph.
-    await expect(
-      detailPanel.locator('p').filter({ hasText: ticketDesc }).first(),
-    ).toBeVisible({
+    await expect(detailPanel.locator('p').filter({ hasText: ticketDesc }).first()).toBeVisible({
       timeout: 10_000,
     });
     log('ticket description visible in detail');

@@ -7,10 +7,10 @@
 
 import type { EmbeddingSourceType } from '@team-x/shared-types';
 
+import type { QueryCache, RetrievalOptions } from './cache.js';
 import { type ChunkOptions, chunkText } from './chunker.js';
 import type { EmbedTextFn } from './embeddings.js';
 import { cosineSimilarity } from './retriever.js';
-import type { QueryCache, RetrievalOptions } from './cache.js';
 
 export interface RagEmbeddingRow {
   id: string;
@@ -52,14 +52,16 @@ export interface RagRepo {
     topK: number;
     threshold: number;
     excludeSourceIds?: string[];
-  }): Promise<Array<{
-    id: string;
-    sourceId: string;
-    sourceType: EmbeddingSourceType;
-    chunkIndex: number;
-    contentText: string;
-    similarity: number;
-  }>>;
+  }): Promise<
+    Array<{
+      id: string;
+      sourceId: string;
+      sourceType: EmbeddingSourceType;
+      chunkIndex: number;
+      contentText: string;
+      similarity: number;
+    }>
+  >;
 }
 
 export interface RagServiceOptions {
@@ -233,12 +235,12 @@ export function createRagService(opts: RagServiceOptions): RagService {
       const normalizedQuery = new Float32Array(normalizeVector(queryVector));
 
       let results: Array<{
-    sourceType: EmbeddingSourceType;
-    sourceId: string;
-    chunkIndex: number;
-    contentText: string;
-    similarity: number;
-  }> = [];
+        sourceType: EmbeddingSourceType;
+        sourceId: string;
+        chunkIndex: number;
+        contentText: string;
+        similarity: number;
+      }> = [];
 
       // Try sqlite-vec accelerated search first
       if (!opts.forceBruteForce && opts.repo.similaritySearch) {

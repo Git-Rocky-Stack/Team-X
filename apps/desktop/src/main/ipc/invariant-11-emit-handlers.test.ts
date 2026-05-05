@@ -1065,9 +1065,9 @@ describe('Invariant #11 main-side emits — Phase 5.6 M-C step f', () => {
       bus.emitted.length = 0;
       await handlers.ticketsRemoveParticipant({ ticketId, employeeId: 'emp-2' });
 
-      expect(threadsRepo.listMembers(threadId ?? '').map((member) => member.memberId)).not.toContain(
-        'emp-2',
-      );
+      expect(
+        threadsRepo.listMembers(threadId ?? '').map((member) => member.memberId),
+      ).not.toContain('emp-2');
       expect(bus.emitted[0]?.type).toBe('ticket.participantRemoved');
     });
   });

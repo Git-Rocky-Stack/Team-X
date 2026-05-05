@@ -1217,7 +1217,12 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
     ],
     taskIds: ['settings-reviewed', 'provider-ready'],
-    actionIds: ['open-settings', 'open-settings-providers', 'open-settings-enhanced-ai', 'open-settings-memory'],
+    actionIds: [
+      'open-settings',
+      'open-settings-providers',
+      'open-settings-enhanced-ai',
+      'open-settings-memory',
+    ],
   },
   {
     id: 'telemetry-and-audit',

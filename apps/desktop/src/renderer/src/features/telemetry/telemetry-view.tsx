@@ -10,7 +10,6 @@ import type { TelemetryKindFilter } from '@team-x/shared-types';
 import { Activity, BarChart3, DollarSign, Gauge, Radar, Rows3, Users2 } from 'lucide-react';
 import { type ComponentType, useMemo, useState } from 'react';
 
-
 import { CompanyTelemetry } from './company-telemetry.js';
 import { CostBreakdown } from './cost-breakdown.js';
 import { EmployeeTelemetry } from './employee-telemetry.js';
@@ -32,7 +31,6 @@ import { useBudgetOverview } from '@/hooks/use-budgets.js';
 import { useOperators } from '@/hooks/use-operators.js';
 import { telemetryRequestKind, useCompanyStats } from '@/hooks/use-telemetry.js';
 import { type TelemetrySubview, useAppStore } from '@/store/app-store.js';
-
 
 interface SubtabDef {
   label: string;

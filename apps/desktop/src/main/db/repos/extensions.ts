@@ -2,7 +2,6 @@ import type { AuthorityGrant } from '@team-x/shared-types';
 import { and, eq, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
-
 import type { getDb } from '../client.js';
 import {
   authorityGrants,

@@ -11,7 +11,6 @@ import {
 import { useRecentRuns } from '@/hooks/use-telemetry.js';
 import { ipc } from '@/lib/ipc.js';
 
-
 export interface UseDashboardAgentRunsResult {
   runs: DashboardAgentRun[];
   isLoading: boolean;

@@ -56,14 +56,14 @@ export interface ExtractedFact {
  * Types of facts we extract.
  */
 export type FactType =
-  | 'preference'    // User/system preferences
-  | 'status'        // Current status (project state, employee status)
-  | 'decision'      // Decisions made
-  | 'relationship'  // Entity relationships (who works on what)
-  | 'event'         // Events that occurred
-  | 'metric'        // Numeric metrics/KPIs
-  | 'procedure'     // How-to procedures
-  | 'custom';       // Other
+  | 'preference' // User/system preferences
+  | 'status' // Current status (project state, employee status)
+  | 'decision' // Decisions made
+  | 'relationship' // Entity relationships (who works on what)
+  | 'event' // Events that occurred
+  | 'metric' // Numeric metrics/KPIs
+  | 'procedure' // How-to procedures
+  | 'custom'; // Other
 
 /**
  * A summary of a conversation or content.
@@ -195,7 +195,7 @@ export type SummarizeFn = (
     companyId: string;
     title?: string;
     maxLength?: number;
-  }
+  },
 ) => Promise<{
   summary: string;
   topics: string[];
@@ -211,7 +211,7 @@ export type ExtractFactsFn = (
     companyId: string;
     sourceId: string;
     options: ExtractionOptions;
-  }
+  },
 ) => Promise<ExtractedFact[]>;
 
 /**
@@ -272,7 +272,7 @@ export const DEFAULT_FRESHNESS_OPTIONS: FreshnessOptions = {
 function calculateTimeDecay(observedAt: number, now: number, halfLife: number): number {
   const age = now - observedAt;
   if (age < 0) return 1.0; // Future facts = fully fresh
-  return Math.pow(0.5, age / halfLife);
+  return 0.5 ** (age / halfLife);
 }
 
 /**
@@ -282,12 +282,12 @@ function calculateFrequencyBoost(
   accessCount: number,
   lastAccessedAt: number,
   now: number,
-  options: FreshnessOptions
+  options: FreshnessOptions,
 ): number {
   if (accessCount === 0) return 1.0;
 
   const daysSinceAccess = (now - lastAccessedAt) / (24 * 60 * 60 * 1000);
-  const decay = Math.pow(options.frequencyDecay, daysSinceAccess);
+  const decay = options.frequencyDecay ** daysSinceAccess;
 
   // Boost scales with log of access count (diminishing returns)
   const rawBoost = 1 + Math.log1p(accessCount) * 0.2;
@@ -303,14 +303,14 @@ export function calculateFreshness(
   fact: ExtractedFact,
   options: FreshnessOptions = DEFAULT_FRESHNESS_OPTIONS,
   baseRelevance: number = fact.confidence,
-  now: number = Date.now()
+  now: number = Date.now(),
 ): FreshnessScore {
   const timeDecay = calculateTimeDecay(fact.observedAt, now, options.halfLife);
   const frequencyBoost = calculateFrequencyBoost(
     fact.accessCount,
     fact.lastAccessedAt,
     now,
-    options
+    options,
   );
 
   // Check expiration
@@ -334,21 +334,24 @@ export function calculateFreshness(
 export const DEFAULT_FACT_PATTERNS: FactExtractionPattern[] = [
   {
     name: 'employee_status',
-    pattern: /(?<name>\w+(?:\s+\w+)*)\s+(is|was)\s+(?<status>on vacation|out of office|available|busy|in a meeting|working from home)/gi,
+    pattern:
+      /(?<name>\w+(?:\s+\w+)*)\s+(is|was)\s+(?<status>on vacation|out of office|available|busy|in a meeting|working from home)/gi,
     type: 'status',
     template: '{{name}} is {{status}}',
     confidence: 0.9,
   },
   {
     name: 'project_status',
-    pattern: /(?:the\s+)?(?<project>[\w-]+)\s+(?:project\s+)?is\s+(?<status>on track|delayed|at risk|completed|paused|cancelled)/gi,
+    pattern:
+      /(?:the\s+)?(?<project>[\w-]+)\s+(?:project\s+)?is\s+(?<status>on track|delayed|at risk|completed|paused|cancelled)/gi,
     type: 'status',
     template: 'Project {{project}} is {{status}}',
     confidence: 0.85,
   },
   {
     name: 'preference',
-    pattern: /(?:I\s+(?:prefer|like|want)|(?:we\s+should|let['']s\s+)?(?:use|enable|disable))\s+(?<preference>[^.]+)/gi,
+    pattern:
+      /(?:I\s+(?:prefer|like|want)|(?:we\s+should|let['']s\s+)?(?:use|enable|disable))\s+(?<preference>[^.]+)/gi,
     type: 'preference',
     template: 'Prefers: {{preference}}',
     confidence: 0.75,
@@ -362,7 +365,8 @@ export const DEFAULT_FACT_PATTERNS: FactExtractionPattern[] = [
   },
   {
     name: 'assignment',
-    pattern: /(?<person>\w+(?:\s+\w+)*)\s+(?:is\s+)?(?:working\s+on|assigned\s+to|leading|owns)\s+(?<thing>[^.]+)/gi,
+    pattern:
+      /(?<person>\w+(?:\s+\w+)*)\s+(?:is\s+)?(?:working\s+on|assigned\s+to|leading|owns)\s+(?<thing>[^.]+)/gi,
     type: 'relationship',
     template: '{{person}} works on {{thing}}',
     confidence: 0.85,
@@ -383,7 +387,7 @@ export interface LongTermMemoryService {
       sourceId: string;
       observedAt?: number;
       options?: ExtractionOptions;
-    }
+    },
   ): Promise<ExtractedFact[]>;
 
   /**
@@ -394,11 +398,14 @@ export interface LongTermMemoryService {
   /**
    * Retrieve relevant facts for a company.
    */
-  retrieveFacts(companyId: string, options?: {
-    types?: FactType[];
-    includeExpired?: boolean;
-    maxResults?: number;
-  }): ExtractedFact[];
+  retrieveFacts(
+    companyId: string,
+    options?: {
+      types?: FactType[];
+      includeExpired?: boolean;
+      maxResults?: number;
+    },
+  ): ExtractedFact[];
 
   /**
    * Retrieve ranked facts (by freshness score).
@@ -406,7 +413,7 @@ export interface LongTermMemoryService {
   retrieveRankedFacts(
     companyId: string,
     query?: string,
-    freshnessOptions?: FreshnessOptions
+    freshnessOptions?: FreshnessOptions,
   ): Array<{ fact: ExtractedFact; score: FreshnessScore }>;
 
   /**
@@ -421,7 +428,7 @@ export interface LongTermMemoryService {
       conversationStart: number;
       conversationEnd: number;
       messageCount: number;
-    }
+    },
   ): Promise<ConversationSummary>;
 
   /**
@@ -438,7 +445,7 @@ export interface LongTermMemoryService {
       tokenCount: number;
       timeSpan: number;
     },
-    trigger?: Partial<SummarizationTrigger>
+    trigger?: Partial<SummarizationTrigger>,
   ): boolean;
 
   /**
@@ -471,10 +478,8 @@ export function createLongTermMemoryService(options: {
 }): LongTermMemoryService {
   const now = options.now ?? Date.now;
   const idGen =
-    options.idGen ??
-    (() => `fact_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`);
-  const summaryIdGen = () =>
-    `sum_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`;
+    options.idGen ?? (() => `fact_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`);
+  const summaryIdGen = () => `sum_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`;
 
   const summarizationTrigger: SummarizationTrigger = {
     minMessages: 10,
@@ -656,12 +661,12 @@ export function createInMemoryMemoryRepo(): LongTermMemoryRepo {
       if (!sourceToFacts.has(fact.sourceId)) {
         sourceToFacts.set(fact.sourceId, new Set());
       }
-      sourceToFacts.get(fact.sourceId)!.add(fact.id);
+      sourceToFacts.get(fact.sourceId)?.add(fact.id);
 
       if (!companyToFacts.has(fact.companyId)) {
         companyToFacts.set(fact.companyId, new Set());
       }
-      companyToFacts.get(fact.companyId)!.add(fact.id);
+      companyToFacts.get(fact.companyId)?.add(fact.id);
     },
 
     getFact(id) {
@@ -713,12 +718,12 @@ export function createInMemoryMemoryRepo(): LongTermMemoryRepo {
       if (!sourceToSummaries.has(summary.sourceId)) {
         sourceToSummaries.set(summary.sourceId, new Set());
       }
-      sourceToSummaries.get(summary.sourceId)!.add(summary.id);
+      sourceToSummaries.get(summary.sourceId)?.add(summary.id);
 
       if (!companyToSummaries.has(summary.companyId)) {
         companyToSummaries.set(summary.companyId, new Set());
       }
-      companyToSummaries.get(summary.companyId)!.add(summary.id);
+      companyToSummaries.get(summary.companyId)?.add(summary.id);
     },
 
     getSummary(id) {

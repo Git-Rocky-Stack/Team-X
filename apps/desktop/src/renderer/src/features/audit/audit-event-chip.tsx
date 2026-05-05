@@ -34,7 +34,6 @@ import {
 
 import { Badge } from '@/components/ui/badge.js';
 
-
 // Re-export the helper surface so consumers (audit-view.tsx, tests,
 // future features) can import everything chip-related from a single
 // module path and aren't forced to know the file split exists.

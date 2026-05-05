@@ -44,7 +44,6 @@ import type {
   IpcSuggestItem,
 } from '@team-x/shared-types';
 
-
 import type { AgenticLoopService } from '../services/agentic-loop-service.js';
 import type { CommandService } from '../services/command-service.js';
 

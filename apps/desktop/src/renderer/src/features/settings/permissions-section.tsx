@@ -189,9 +189,7 @@ export function PermissionsSection() {
       ) : authorityQuery.isError ? (
         <Card>
           <CardContent className="flex items-center justify-center py-12">
-            <p className="text-sm text-destructive">
-              Failed to load permissions configuration.
-            </p>
+            <p className="text-sm text-destructive">Failed to load permissions configuration.</p>
           </CardContent>
         </Card>
       ) : (
@@ -307,8 +305,8 @@ export function PermissionsSection() {
                   <p className="text-xs font-medium text-muted-foreground">Add Custom Path</p>
                   <p className="text-[10px] text-muted-foreground">
                     Grant extensions access to specific filesystem paths. Use templates like{' '}
-                    <code className="rounded bg-muted px-1 py-0.5">{'{{documents}}'}</code> or browse to select a
-                    directory.
+                    <code className="rounded bg-muted px-1 py-0.5">{'{{documents}}'}</code> or
+                    browse to select a directory.
                   </p>
                   <div className="flex gap-2">
                     <Input
@@ -352,7 +350,9 @@ export function PermissionsSection() {
                     </Button>
                   </div>
                   {createGrant.isError && (
-                    <p className="text-[10px] text-destructive">Failed to add path. Please try again.</p>
+                    <p className="text-[10px] text-destructive">
+                      Failed to add path. Please try again.
+                    </p>
                   )}
                 </div>
 
@@ -364,8 +364,8 @@ export function PermissionsSection() {
                   {employeeGrants.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
                       <p className="text-sm text-muted-foreground">
-                        No custom authority grants configured. Use presets above for quick setup or add custom
-                        paths.
+                        No custom authority grants configured. Use presets above for quick setup or
+                        add custom paths.
                       </p>
                     </div>
                   ) : (
@@ -377,7 +377,9 @@ export function PermissionsSection() {
                         >
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium truncate">{formatPath(grant.resourceId)}</span>
+                              <span className="text-sm font-medium truncate">
+                                {formatPath(grant.resourceId)}
+                              </span>
                               <Badge variant="outline">{grant.resourceKind}</Badge>
                               <Badge variant="secondary">{grant.permission}</Badge>
                             </div>

@@ -7,7 +7,6 @@
  * Phase 5 — M33 T7.
  */
 
-
 import type {
   CopilotCategory,
   CopilotCategoryWeights,

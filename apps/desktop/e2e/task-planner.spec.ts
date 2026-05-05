@@ -255,9 +255,7 @@ test.describe('Team-X Phase 5 — M32 task planner (write-side)', () => {
     // thread. The chat-drawer's `viewingCopilotThread` branch renders a
     // read-only banner ("Copilot transcript is read only in the drawer.")
     // once the run reaches a terminal non-failed state.
-    await expect(
-      window.getByText('Copilot transcript is read only in the drawer.'),
-    ).toBeVisible({
+    await expect(window.getByText('Copilot transcript is read only in the drawer.')).toBeVisible({
       timeout: 10_000,
     });
     log('copilot transcript banner visible (read-only view)');

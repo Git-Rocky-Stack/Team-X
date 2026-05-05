@@ -6572,38 +6572,54 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         settingsRepo.set('llm_model', req.llmModel);
       }
       if (req.llmMaxTokens !== undefined) {
-        if (!Number.isFinite(req.llmMaxTokens) || req.llmMaxTokens < 1 || req.llmMaxTokens > 32000) {
+        if (
+          !Number.isFinite(req.llmMaxTokens) ||
+          req.llmMaxTokens < 1 ||
+          req.llmMaxTokens > 32000
+        ) {
           throw new Error('[ipc] settings.setEnhancedAiConfig: llmMaxTokens must be 1..32000');
         }
         settingsRepo.set('llm_max_tokens', Math.round(req.llmMaxTokens));
       }
       if (req.llmTemperature !== undefined) {
-        if (!Number.isFinite(req.llmTemperature) || req.llmTemperature < 0 || req.llmTemperature > 2) {
+        if (
+          !Number.isFinite(req.llmTemperature) ||
+          req.llmTemperature < 0 ||
+          req.llmTemperature > 2
+        ) {
           throw new Error('[ipc] settings.setEnhancedAiConfig: llmTemperature must be 0..2');
         }
         settingsRepo.set('llm_temperature', req.llmTemperature);
       }
       if (req.queryExpansionEnabled !== undefined) {
         if (typeof req.queryExpansionEnabled !== 'boolean') {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: queryExpansionEnabled must be boolean');
+          throw new Error(
+            '[ipc] settings.setEnhancedAiConfig: queryExpansionEnabled must be boolean',
+          );
         }
         settingsRepo.set('query_expansion_enabled', req.queryExpansionEnabled);
       }
       if (req.semanticChunkingEnabled !== undefined) {
         if (typeof req.semanticChunkingEnabled !== 'boolean') {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: semanticChunkingEnabled must be boolean');
+          throw new Error(
+            '[ipc] settings.setEnhancedAiConfig: semanticChunkingEnabled must be boolean',
+          );
         }
         settingsRepo.set('semantic_chunking_enabled', req.semanticChunkingEnabled);
       }
       if (req.longTermMemoryEnabled !== undefined) {
         if (typeof req.longTermMemoryEnabled !== 'boolean') {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: longTermMemoryEnabled must be boolean');
+          throw new Error(
+            '[ipc] settings.setEnhancedAiConfig: longTermMemoryEnabled must be boolean',
+          );
         }
         settingsRepo.set('long_term_memory_enabled', req.longTermMemoryEnabled);
       }
       if (req.knowledgeGraphEnabled !== undefined) {
         if (typeof req.knowledgeGraphEnabled !== 'boolean') {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: knowledgeGraphEnabled must be boolean');
+          throw new Error(
+            '[ipc] settings.setEnhancedAiConfig: knowledgeGraphEnabled must be boolean',
+          );
         }
         settingsRepo.set('knowledge_graph_enabled', req.knowledgeGraphEnabled);
       }
@@ -6614,7 +6630,11 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         settingsRepo.set('planning_enabled', req.planningEnabled);
       }
       if (req.planningThreshold !== undefined) {
-        if (!Number.isFinite(req.planningThreshold) || req.planningThreshold < 50 || req.planningThreshold > 1000) {
+        if (
+          !Number.isFinite(req.planningThreshold) ||
+          req.planningThreshold < 50 ||
+          req.planningThreshold > 1000
+        ) {
           throw new Error('[ipc] settings.setEnhancedAiConfig: planningThreshold must be 50..1000');
         }
         settingsRepo.set('planning_threshold', Math.round(req.planningThreshold));
@@ -6632,7 +6652,11 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         settingsRepo.set('tracing_enabled', req.tracingEnabled);
       }
       if (req.tracingSampleRate !== undefined) {
-        if (!Number.isFinite(req.tracingSampleRate) || req.tracingSampleRate < 0 || req.tracingSampleRate > 1) {
+        if (
+          !Number.isFinite(req.tracingSampleRate) ||
+          req.tracingSampleRate < 0 ||
+          req.tracingSampleRate > 1
+        ) {
           throw new Error('[ipc] settings.setEnhancedAiConfig: tracingSampleRate must be 0..1');
         }
         settingsRepo.set('tracing_sample_rate', req.tracingSampleRate);

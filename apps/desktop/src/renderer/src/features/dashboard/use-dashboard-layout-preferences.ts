@@ -14,7 +14,6 @@ import {
 
 import { ipc } from '@/lib/ipc.js';
 
-
 function layoutErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message.length > 0) return error.message;
   const fallback = String(error);

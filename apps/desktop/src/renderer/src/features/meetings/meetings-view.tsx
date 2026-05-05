@@ -8,7 +8,6 @@ import { MeetingDetailPanel } from './meeting-detail.js';
 import { useMeetingEventSync, useMeetings } from '@/hooks/use-meetings.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 interface MeetingsViewProps {
   companyId: string | null;
   employees: Employee[];

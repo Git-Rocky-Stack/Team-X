@@ -4,20 +4,14 @@
  * Run with: node scripts/check-provider-setup.js
  */
 
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
 
 const require = createRequire(import.meta.url);
 const { app } = require('electron');
 
 async function main() {
-  const dbPath = join(
-    app.getPath('appData'),
-    'Team-X',
-    'team-x',
-    'team-x.sqlite'
-  );
+  const dbPath = join(app.getPath('appData'), 'Team-X', 'team-x', 'team-x.sqlite');
 
   console.log('Database path:', dbPath);
   console.log('\n--- Checking Provider Configuration ---\n');
@@ -28,25 +22,31 @@ async function main() {
 
   try {
     // Check providers table
-    const providers = db.prepare(`
+    const providers = db
+      .prepare(`
       SELECT id, name, kind, privacy_tier, enabled
       FROM providers
       ORDER BY id
-    `).all();
+    `)
+      .all();
 
     console.log('Configured providers:');
     for (const p of providers) {
-      console.log(`  ${p.id.padEnd(15)} ${p.name.padEnd(25)} ${p.kind.padEnd(15)} ${p.privacy_tier.padEnd(15)} ${p.enabled ? 'enabled' : 'disabled'}`);
+      console.log(
+        `  ${p.id.padEnd(15)} ${p.name.padEnd(25)} ${p.kind.padEnd(15)} ${p.privacy_tier.padEnd(15)} ${p.enabled ? 'enabled' : 'disabled'}`,
+      );
     }
 
     // Check CEO employee preferences
-    const ceo = db.prepare(`
+    const ceo = db
+      .prepare(`
       SELECT id, name, title, provider_pref, model_pref
       FROM employees
       WHERE id = 'rocky' OR level = 'officer'
       ORDER BY created_at ASC
       LIMIT 1
-    `).get();
+    `)
+      .get();
 
     if (ceo) {
       console.log('\n--- CEO Employee Preferences ---\n');
@@ -67,9 +67,11 @@ async function main() {
       if (apiKey && apiKey.length > 0) {
         console.log(`  ✓ Anthropic API key: ${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`);
       } else {
-        console.log(`  ✗ Anthropic API key: NOT FOUND or EMPTY`);
-        console.log(`    → Set key with: pnpm run env:key-import`);
-        console.log(`    → Or manually: keytar set --service=team-x --username=anthropic YOUR_API_KEY`);
+        console.log('  ✗ Anthropic API key: NOT FOUND or EMPTY');
+        console.log('    → Set key with: pnpm run env:key-import');
+        console.log(
+          '    → Or manually: keytar set --service=team-x --username=anthropic YOUR_API_KEY',
+        );
       }
     } catch (err) {
       console.log(`  ✗ Could not check keychain: ${err.message}`);
@@ -84,9 +86,8 @@ async function main() {
       console.log(`  Base URL: ${config.baseUrl || 'default (http://localhost:11434/api)'}`);
       console.log(`    → Test: curl ${config.baseUrl || 'http://localhost:11434/api'}/tags`);
     } else {
-      console.log(`  Ollama provider not found`);
+      console.log('  Ollama provider not found');
     }
-
   } finally {
     db.close();
   }
@@ -99,7 +100,7 @@ async function main() {
   console.log('  4. Check for proxy/firewall blocking api.anthropic.com');
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Error:', err.message);
   process.exit(1);
 });

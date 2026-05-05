@@ -311,7 +311,7 @@ describe('classifyColleagueAssignment', () => {
   it('derives useful ticket titles from direct "I need a/the" assignments', () => {
     expect(
       classifyColleagueAssignment(
-        "Chase, I need a technical audit of ClipForge immediately. Confirm you can execute this and provide a Go/No-Go.",
+        'Chase, I need a technical audit of ClipForge immediately. Confirm you can execute this and provide a Go/No-Go.',
       ),
     ).toMatchObject({
       shouldCreateTicket: true,
@@ -321,7 +321,7 @@ describe('classifyColleagueAssignment', () => {
 
     expect(
       classifyColleagueAssignment(
-        "Carolyn, I need the Blitzscale marketing framework for ClipForge. Define acquisition channels and CAC targets.",
+        'Carolyn, I need the Blitzscale marketing framework for ClipForge. Define acquisition channels and CAC targets.',
       ),
     ).toMatchObject({
       shouldCreateTicket: true,

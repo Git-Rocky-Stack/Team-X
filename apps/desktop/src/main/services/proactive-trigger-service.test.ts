@@ -12,11 +12,10 @@
 
 import type {
   EffectiveAuthoritySnapshot,
-  ExtensionsAutonomyMode,
   EventType,
+  ExtensionsAutonomyMode,
 } from '@team-x/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 
 import {
   type ProactiveTriggerService,
@@ -116,10 +115,7 @@ interface AuthorityGrantEntry {
 class FakeAuthorityResolver {
   private employeeGrants = new Map<string, AuthorityGrantEntry[]>();
 
-  setEmployeeAuthority(
-    employeeId: string,
-    grants: AuthorityGrantEntry[],
-  ): void {
+  setEmployeeAuthority(employeeId: string, grants: AuthorityGrantEntry[]): void {
     this.employeeGrants.set(employeeId, grants);
   }
 
@@ -136,7 +132,8 @@ class FakeAuthorityResolver {
       companyId,
       employeeId,
       entries: grants.map((g) => ({
-        resourceKind: g.resourceKind as EffectiveAuthoritySnapshot['entries'][number]['resourceKind'],
+        resourceKind:
+          g.resourceKind as EffectiveAuthoritySnapshot['entries'][number]['resourceKind'],
         resourceId: g.resourceId,
         permission: g.permission,
         sourceKind: 'employee',
@@ -189,9 +186,7 @@ class FakeGoalsRepo {
   }
 
   listByCompany(companyId: string): GoalRow[] {
-    return Array.from(this.goals.values()).filter(
-      (g) => g.companyId === companyId,
-    );
+    return Array.from(this.goals.values()).filter((g) => g.companyId === companyId);
   }
 }
 
@@ -203,9 +198,7 @@ class FakeTicketsRepo {
   }
 
   listByCompany(companyId: string): TicketRow[] {
-    return Array.from(this.tickets.values()).filter(
-      (t) => t.companyId === companyId,
-    );
+    return Array.from(this.tickets.values()).filter((t) => t.companyId === companyId);
   }
 }
 
@@ -221,9 +214,7 @@ class FakeEmployeesRepo {
   }
 
   listByCompany(companyId: string): EmployeeRow[] {
-    return Array.from(this.employees.values()).filter(
-      (e) => e.companyId === companyId,
-    );
+    return Array.from(this.employees.values()).filter((e) => e.companyId === companyId);
   }
 }
 
@@ -344,8 +335,7 @@ function buildFixture(): Fixture {
       start: (args) => agenticLoopService.start(args),
     },
     authorityResolver: {
-      resolveEmployee: (cid, eid) =>
-        authorityResolver.resolveEmployee(cid, eid),
+      resolveEmployee: (cid, eid) => authorityResolver.resolveEmployee(cid, eid),
     },
     employeesRepo: {
       getById: (id) => employeesRepo.getById(id),
@@ -460,14 +450,10 @@ describe('proactive-trigger-service', () => {
       // Assert: no agentic loop call, authority request created
       expect(fixture.agenticLoopService.starts).toHaveLength(0);
 
-      const blockedEvents = fixture.bus.emitted.filter(
-        (e) => e.type === 'proactive.blocked',
-      );
+      const blockedEvents = fixture.bus.emitted.filter((e) => e.type === 'proactive.blocked');
       expect(blockedEvents).toHaveLength(1);
       const blockedEvent = blockedEvents[0]!;
-      expect((blockedEvent.payload as { reason: string }).reason).toContain(
-        'autonomy',
-      );
+      expect((blockedEvent.payload as { reason: string }).reason).toContain('autonomy');
     });
 
     it('respects autonomy mode: balanced allows goal decomposition', async () => {
@@ -524,9 +510,7 @@ describe('proactive-trigger-service', () => {
       });
 
       // Assert: error event emitted
-      const errorEvents = fixture.bus.emitted.filter(
-        (e) => e.type === 'proactive.error',
-      );
+      const errorEvents = fixture.bus.emitted.filter((e) => e.type === 'proactive.error');
       expect(errorEvents).toHaveLength(1);
     });
   });
@@ -584,9 +568,7 @@ describe('proactive-trigger-service', () => {
       expect(result.queuedCount).toBe(2);
 
       // Assert: proactive.work_queued events emitted
-      const queuedEvents = fixture.bus.emitted.filter(
-        (e) => e.type === 'proactive.work_queued',
-      );
+      const queuedEvents = fixture.bus.emitted.filter((e) => e.type === 'proactive.work_queued');
       expect(queuedEvents).toHaveLength(2);
     });
 
@@ -655,9 +637,7 @@ describe('proactive-trigger-service', () => {
       });
 
       // Assert: proactive.blocked emitted, no enqueue
-      const blockedEvents = fixture.bus.emitted.filter(
-        (e) => e.type === 'proactive.blocked',
-      );
+      const blockedEvents = fixture.bus.emitted.filter((e) => e.type === 'proactive.blocked');
       expect(blockedEvents.length).toBeGreaterThan(0);
       expect(fixture.orchestrator.enqueuedChats).toHaveLength(0);
     });
@@ -762,9 +742,7 @@ describe('proactive-trigger-service', () => {
       });
 
       // Assert: event emitted
-      const events = fixture.bus.emitted.filter(
-        (e) => e.type === 'proactive.enabled_changed',
-      );
+      const events = fixture.bus.emitted.filter((e) => e.type === 'proactive.enabled_changed');
       expect(events).toHaveLength(1);
       const event = events[0]!;
       expect((event.payload as { enabled: boolean }).enabled).toBe(false);
@@ -815,9 +793,7 @@ describe('proactive-trigger-service', () => {
       });
 
       // Assert: error emitted or handled gracefully
-      const errorEvents = fixture.bus.emitted.filter(
-        (e) => e.type === 'proactive.error',
-      );
+      const errorEvents = fixture.bus.emitted.filter((e) => e.type === 'proactive.error');
       // Should handle gracefully, not throw
       expect(result).toBeDefined();
       // TODO: Add expectation for error events when error handling is implemented

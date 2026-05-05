@@ -5,7 +5,6 @@ import type {
 } from '@team-x/shared-types';
 import { nanoid } from 'nanoid';
 
-
 import type { CompanyRow, UpdateCompanyCloudLinkInput } from '../db/repos/companies.js';
 
 export const CLOUD_DEVICE_ID_SETTING_KEY = 'cloud_device_id';

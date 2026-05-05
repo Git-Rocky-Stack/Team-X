@@ -51,10 +51,7 @@ interface TraceOptions {
 
 export const program = new Command();
 
-program
-  .name('ai-cli')
-  .description('Team-X AI System CLI')
-  .version('1.0.0');
+program.name('ai-cli').description('Team-X AI System CLI').version('1.0.0');
 
 // ---------------------------------------------------------------------------
 // INFO Command

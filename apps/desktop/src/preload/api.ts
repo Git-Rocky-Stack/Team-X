@@ -211,6 +211,7 @@ import type {
   SettingsGetCopilotResponse,
   SettingsGetCopilotWeightsRequest,
   SettingsGetCopilotWeightsResponse,
+  SettingsGetEnhancedAiConfigResponse,
   SettingsGetExtensionsResponse,
   SettingsGetMemoryResponse,
   SettingsGetPlannerResponse,
@@ -223,6 +224,7 @@ import type {
   SettingsSetCopilotRequest,
   SettingsSetCopilotWeightsRequest,
   SettingsSetCopilotWeightsResponse,
+  SettingsSetEnhancedAiConfigRequest,
   SettingsSetExtensionsRequest,
   SettingsSetMemoryRequest,
   SettingsSetPlannerRequest,
@@ -230,8 +232,6 @@ import type {
   SettingsSetProactiveRequest,
   SettingsSetRagConfigRequest,
   SettingsSetRuntimeRequest,
-  SettingsGetEnhancedAiConfigResponse,
-  SettingsSetEnhancedAiConfigRequest,
   SkillAssignment,
   StopChatRequest,
   StopChatResponse,
@@ -915,7 +915,9 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       setProactive: (req: SettingsSetProactiveRequest) =>
         ipc.invoke(CHANNELS.settingsSetProactive, req) as Promise<void>,
       getEnhancedAiConfig: () =>
-        ipc.invoke(CHANNELS.settingsGetEnhancedAiConfig) as Promise<SettingsGetEnhancedAiConfigResponse>,
+        ipc.invoke(
+          CHANNELS.settingsGetEnhancedAiConfig,
+        ) as Promise<SettingsGetEnhancedAiConfigResponse>,
       setEnhancedAiConfig: (req: SettingsSetEnhancedAiConfigRequest) =>
         ipc.invoke(CHANNELS.settingsSetEnhancedAiConfig, req) as Promise<void>,
     },

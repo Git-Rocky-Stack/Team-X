@@ -52,7 +52,6 @@
  * Phase 5 — M33 — T4.
  */
 
-
 import type {
   ActorKind,
   CopilotAnalyzedPayload,

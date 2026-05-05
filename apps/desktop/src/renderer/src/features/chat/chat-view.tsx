@@ -18,7 +18,6 @@ import {
 import { useThreadList } from '@/hooks/use-chat.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 interface ChatViewProps {
   companyId: string | null;
   employees: Employee[];

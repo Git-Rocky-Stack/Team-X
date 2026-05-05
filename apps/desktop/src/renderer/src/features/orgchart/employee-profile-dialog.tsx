@@ -1,7 +1,6 @@
 import type { Employee, RuntimeProfile } from '@team-x/shared-types';
 import { useEffect, useMemo, useState } from 'react';
 
-
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -12,10 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.js';
 import { useRoles } from '@/hooks/use-roles.js';
-import {
-  useBindEmployeeRuntimeProfile,
-  useRuntimeProfiles,
-} from '@/hooks/use-runtime-profiles.js';
+import { useBindEmployeeRuntimeProfile, useRuntimeProfiles } from '@/hooks/use-runtime-profiles.js';
 
 export interface EmployeeProfileSaveInput {
   employeeId: string;
@@ -86,7 +82,8 @@ export function EmployeeProfileDialog({
   const currentProfileByEmployee = useMemo(() => {
     const mapping = new Map<string, string>();
     for (const profile of runtimeProfiles) {
-      for (const employeeId of (profile as RuntimeProfile & { boundEmployeeIds?: string[] }).boundEmployeeIds ?? []) {
+      for (const employeeId of (profile as RuntimeProfile & { boundEmployeeIds?: string[] })
+        .boundEmployeeIds ?? []) {
         mapping.set(employeeId, profile.id);
       }
     }
@@ -128,7 +125,9 @@ export function EmployeeProfileDialog({
       <DialogContent className="max-w-2xl" data-employee-profile-dialog="">
         <DialogHeader>
           <DialogTitle>Employee profile</DialogTitle>
-          <DialogDescription>Edit the employee record, role, reporting line, and runtime profile.</DialogDescription>
+          <DialogDescription>
+            Edit the employee record, role, reporting line, and runtime profile.
+          </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-5" onSubmit={handleSubmit}>

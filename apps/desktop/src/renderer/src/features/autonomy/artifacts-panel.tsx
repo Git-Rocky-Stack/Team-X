@@ -2,7 +2,6 @@ import type { ArtifactRecord, ArtifactSourceKind } from '@team-x/shared-types';
 import { CheckSquare2, FileStack, FolderKanban, Ticket, UploadCloud, Workflow } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-
 import {
   MissionControlRow,
   MissionInsetSurface,
@@ -14,7 +13,6 @@ import {
 
 import { useArtifactEventSync, useArtifacts } from '@/hooks/use-artifacts.js';
 import { useAppStore } from '@/store/app-store.js';
-
 
 type ArtifactFilter = 'all' | ArtifactSourceKind;
 

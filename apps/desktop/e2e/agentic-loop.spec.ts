@@ -237,9 +237,7 @@ test.describe('Team-X Phase 5 — M31 agentic loop', () => {
     // drawer. Source: chat-drawer.tsx — the `else` arm of the
     // `copilotRunning ? ... : copilotResult?.kind === 'failed' ? ... : ...`
     // ternary at the bottom of the `viewingCopilotThread` branch.
-    await expect(
-      window.getByText('Copilot transcript is read only in the drawer.'),
-    ).toBeVisible({
+    await expect(window.getByText('Copilot transcript is read only in the drawer.')).toBeVisible({
       timeout: 10_000,
     });
     log('copilot transcript banner visible (read-only view)');

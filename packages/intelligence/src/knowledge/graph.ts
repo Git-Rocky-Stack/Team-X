@@ -54,14 +54,14 @@ export interface KnowledgeNode {
  * Types of nodes in the knowledge graph.
  */
 export type NodeType =
-  | 'entity'        // People, organizations
-  | 'concept'       // Ideas, topics, themes
-  | 'event'         // Time-bound occurrences
-  | 'status'        // State information
-  | 'relationship'  // Connections between entities
-  | 'decision'      // Made decisions
-  | 'preference'    // User/system preferences
-  | 'metric';       // Quantitative measures
+  | 'entity' // People, organizations
+  | 'concept' // Ideas, topics, themes
+  | 'event' // Time-bound occurrences
+  | 'status' // State information
+  | 'relationship' // Connections between entities
+  | 'decision' // Made decisions
+  | 'preference' // User/system preferences
+  | 'metric'; // Quantitative measures
 
 /**
  * Knowledge graph edge representing a relationship.
@@ -104,26 +104,26 @@ export interface KnowledgeEdge {
  * Types of relationships between nodes.
  */
 export type RelationType =
-  | 'related_to'           // General association
-  | 'works_on'             // Employee → project/task
-  | 'assigned_to'          // Task → assignee
-  | 'depends_on'           // Task → dependency
-  | 'blocks'               // Task → blocked by
-  | 'part_of'              // Sub-goal → goal
-  | 'leads_to'             // Cause → effect
-  | 'requires'             // Prerequisite
-  | 'conflicts_with'       // Conflict relationship
-  | 'similar_to'           // Semantic similarity
-  | 'mentions'             // Reference
-  | 'owns'                 // Ownership
-  | 'reports_to'           // Hierarchy
-  | 'collaborates_with'    // Collaboration
-  | 'located_at'           // Location
-  | 'scheduled_for'        // Time
-  | 'has_status'           // Entity → status
-  | 'has_metric'           // Entity → metric
-  | 'decided'              // Decision maker
-  | 'prefers';             // Preference holder
+  | 'related_to' // General association
+  | 'works_on' // Employee → project/task
+  | 'assigned_to' // Task → assignee
+  | 'depends_on' // Task → dependency
+  | 'blocks' // Task → blocked by
+  | 'part_of' // Sub-goal → goal
+  | 'leads_to' // Cause → effect
+  | 'requires' // Prerequisite
+  | 'conflicts_with' // Conflict relationship
+  | 'similar_to' // Semantic similarity
+  | 'mentions' // Reference
+  | 'owns' // Ownership
+  | 'reports_to' // Hierarchy
+  | 'collaborates_with' // Collaboration
+  | 'located_at' // Location
+  | 'scheduled_for' // Time
+  | 'has_status' // Entity → status
+  | 'has_metric' // Entity → metric
+  | 'decided' // Decision maker
+  | 'prefers'; // Preference holder
 
 /**
  * Knowledge graph query result.
@@ -218,7 +218,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
   const nodes = new Map<string, KnowledgeNode>();
   const edges = new Map<string, KnowledgeEdge>();
   const fromNodeIndex = new Map<string, Set<string>>(); // fromId -> edgeIds
-  const toNodeIndex = new Map<string, Set<string>>();   // toId -> edgeIds
+  const toNodeIndex = new Map<string, Set<string>>(); // toId -> edgeIds
   const companyNodesIndex = new Map<string, Set<string>>();
   const companyEdgesIndex = new Map<string, Set<string>>();
 
@@ -229,7 +229,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
       if (!companyNodesIndex.has(node.companyId)) {
         companyNodesIndex.set(node.companyId, new Set());
       }
-      companyNodesIndex.get(node.companyId)!.add(node.id);
+      companyNodesIndex.get(node.companyId)?.add(node.id);
     },
 
     getNode(id) {
@@ -273,17 +273,17 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
       if (!companyEdgesIndex.has(edge.companyId)) {
         companyEdgesIndex.set(edge.companyId, new Set());
       }
-      companyEdgesIndex.get(edge.companyId)!.add(edge.id);
+      companyEdgesIndex.get(edge.companyId)?.add(edge.id);
 
       if (!fromNodeIndex.has(edge.fromNodeId)) {
         fromNodeIndex.set(edge.fromNodeId, new Set());
       }
-      fromNodeIndex.get(edge.fromNodeId)!.add(edge.id);
+      fromNodeIndex.get(edge.fromNodeId)?.add(edge.id);
 
       if (!toNodeIndex.has(edge.toNodeId)) {
         toNodeIndex.set(edge.toNodeId, new Set());
       }
-      toNodeIndex.get(edge.toNodeId)!.add(edge.id);
+      toNodeIndex.get(edge.toNodeId)?.add(edge.id);
     },
 
     getEdge(id) {
@@ -333,9 +333,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
       const startNode = nodes.get(nodeId);
       if (startNode) resultNodes.push(startNode);
 
-      const queue: Array<{ nodeId: string; depth: number }> = [
-        { nodeId, depth: 0 },
-      ];
+      const queue: Array<{ nodeId: string; depth: number }> = [{ nodeId, depth: 0 }];
 
       while (queue.length > 0) {
         const { nodeId: currentId, depth } = queue.shift()!;
@@ -453,7 +451,7 @@ export interface KnowledgeGraphService {
    */
   suggestRelated(
     nodeId: string,
-    options?: { maxResults?: number; relationTypes?: RelationType[] }
+    options?: { maxResults?: number; relationTypes?: RelationType[] },
   ): KnowledgeNode[];
 
   /**
@@ -461,7 +459,7 @@ export interface KnowledgeGraphService {
    */
   inferRelationships(
     companyId: string,
-    options?: { maxDepth?: number; minConfidence?: number }
+    options?: { maxDepth?: number; minConfidence?: number },
   ): KnowledgeEdge[];
 
   /**
@@ -486,10 +484,8 @@ export function createKnowledgeGraphService(options: {
   const repo = options.repo;
   const now = options.now ?? Date.now;
   const idGen =
-    options.idGen ??
-    (() => `node_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`);
-  const edgeIdGen = () =>
-    `edge_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`;
+    options.idGen ?? (() => `node_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`);
+  const edgeIdGen = () => `edge_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`;
 
   // Node label cache for entity resolution
   const labelToNodeId = new Map<string, string>(); // companyId:label -> nodeId
@@ -587,10 +583,7 @@ export function createKnowledgeGraphService(options: {
       const maxResults = context.maxResults ?? 20;
 
       // Find nodes matching the query
-      const matchingNodes = options.repo.findNodesByLabel(
-        context.companyId,
-        context.query
-      );
+      const matchingNodes = options.repo.findNodesByLabel(context.companyId, context.query);
 
       if (matchingNodes.length === 0) {
         return {
@@ -747,10 +740,7 @@ export function createKnowledgeGraphService(options: {
           // Only infer if confidence threshold met
           if (edge.weight >= minConfidence) {
             // Check if edge already exists
-            const existing = repo.getEdgesBetweenNodes(
-              node.id,
-              edge.toNodeId
-            );
+            const existing = repo.getEdgesBetweenNodes(node.id, edge.toNodeId);
 
             if (existing.length === 0) {
               // Create inferred edge
@@ -792,7 +782,7 @@ export function createKnowledgeGraphService(options: {
           stats: this.getStats(companyId),
         },
         null,
-        2
+        2,
       );
     },
   };

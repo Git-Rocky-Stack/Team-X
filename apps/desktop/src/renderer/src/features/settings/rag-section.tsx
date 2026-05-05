@@ -11,7 +11,6 @@
  * Phase 5 — M29 T8.
  */
 
-
 import type { SettingsGetRagConfigResponse } from '@team-x/shared-types';
 import {
   AlertTriangle,

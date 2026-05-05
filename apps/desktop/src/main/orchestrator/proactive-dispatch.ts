@@ -18,8 +18,8 @@
 
 import type {
   EventType,
-  ProactiveBudgetBlockedPayload,
   ProactiveBlockedPayload,
+  ProactiveBudgetBlockedPayload,
   ProactiveErrorPayload,
   ProactiveWorkStartedPayload,
 } from '@team-x/shared-types';
@@ -121,9 +121,7 @@ export interface ProactiveDispatcher {
 // Implementation
 // ---------------------------------------------------------------------------
 
-export function createProactiveDispatcher(
-  deps: ProactiveDispatcherDeps,
-): ProactiveDispatcher {
+export function createProactiveDispatcher(deps: ProactiveDispatcherDeps): ProactiveDispatcher {
   const now = deps.now ?? Date.now;
 
   /**
@@ -299,9 +297,7 @@ export function createProactiveDispatcher(
    * 7. Emit proactive.work_started event
    * 8. Call orchestrator.enqueueChat
    */
-  async function enqueueProactive(
-    args: EnqueueProactiveArgs,
-  ): Promise<ProactiveEnqueueResult> {
+  async function enqueueProactive(args: EnqueueProactiveArgs): Promise<ProactiveEnqueueResult> {
     const { companyId, employeeId, trigger, triggerId, sourceGoalId, sourceTicketId } = args;
 
     // 1. Validate employee

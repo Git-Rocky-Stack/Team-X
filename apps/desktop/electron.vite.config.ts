@@ -1,5 +1,5 @@
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
@@ -21,9 +21,15 @@ function jsToTsExtension(): Plugin {
       if (!source.endsWith('.js')) return null;
 
       // Check if importer is from a workspace package
-      const workspacePackages = ['intelligence', 'shared-types', 'role-schema', 'provider-router', 'telemetry-core'];
-      const isWorkspaceImport = workspacePackages.some(pkg =>
-        importer.includes(`@team-x/${pkg}`) || importer.includes(`/packages/${pkg}/`)
+      const workspacePackages = [
+        'intelligence',
+        'shared-types',
+        'role-schema',
+        'provider-router',
+        'telemetry-core',
+      ];
+      const isWorkspaceImport = workspacePackages.some(
+        (pkg) => importer.includes(`@team-x/${pkg}`) || importer.includes(`/packages/${pkg}/`),
       );
 
       if (!isWorkspaceImport) return null;
@@ -107,10 +113,7 @@ export default defineConfig({
     },
   },
   preload: {
-    plugins: [
-      jsToTsExtension(),
-      externalizeDepsPlugin({ exclude: workspaceDeps }),
-    ],
+    plugins: [jsToTsExtension(), externalizeDepsPlugin({ exclude: workspaceDeps })],
     build: {
       outDir: 'out/preload',
       rollupOptions: {

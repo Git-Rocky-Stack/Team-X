@@ -11,7 +11,6 @@ import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
-
 import type { Schema } from '../client.js';
 import {
   approvalDecisions,

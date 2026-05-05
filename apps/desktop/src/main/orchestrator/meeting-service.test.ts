@@ -2,7 +2,6 @@
  * Meeting service tests — full lifecycle against real repos + orchestrator.
  */
 
-
 import type { ProviderStreamFn, StreamUsage } from '@team-x/provider-router';
 import type { DashboardEvent } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

@@ -15,7 +15,6 @@ import { useSetManager } from '@/hooks/use-set-manager.js';
 import { useUpdateEmployee } from '@/hooks/use-update-employee.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 interface OrgChartViewProps {
   companyId: string | null;
 }

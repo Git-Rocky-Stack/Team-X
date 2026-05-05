@@ -16,7 +16,6 @@
 import type { NluContext } from '@team-x/intelligence';
 import { describe, expect, it } from 'vitest';
 
-
 import { createTestClassifier } from './test-classifier.js';
 
 const CTX: NluContext = { companyId: 'co-1' };

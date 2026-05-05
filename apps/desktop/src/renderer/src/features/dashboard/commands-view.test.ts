@@ -14,7 +14,6 @@
 import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-
 import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
 
 function makeEntry(id: string, executedAt: string): IpcCommandHistoryEntry {

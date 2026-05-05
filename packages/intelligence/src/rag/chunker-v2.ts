@@ -159,7 +159,7 @@ function createCharTokenCounter(): TokenCounter {
 /**
  * Detect content type from text sample.
  */
-export function detectContentType(text: string, sampleSize: number = 500): ContentType {
+export function detectContentType(text: string, sampleSize = 500): ContentType {
   const sample = text.slice(0, sampleSize);
 
   // Check for code patterns
@@ -384,7 +384,7 @@ export function calculateContentDensity(text: string): {
  */
 export async function semanticChunk(
   text: string,
-  options: SemanticChunkOptions = {}
+  options: SemanticChunkOptions = {},
 ): Promise<Chunk[]> {
   const opts: Required<SemanticChunkOptions> = {
     maxTokens: 512,
@@ -402,22 +402,15 @@ export async function semanticChunk(
   };
 
   // Get token counter
-  const counter = opts.useTokenizer
-    ? await createTokenCounter()
-    : createCharTokenCounter();
+  const counter = opts.useTokenizer ? await createTokenCounter() : createCharTokenCounter();
 
   // Detect boundaries if preserving structure
-  const boundaries = opts.preserveStructure
-    ? detectBoundaries(text, opts.contentType)
-    : [];
+  const boundaries = opts.preserveStructure ? detectBoundaries(text, opts.contentType) : [];
 
   // Calculate content density for adaptive overlap
   const density = calculateContentDensity(text);
   const adaptiveOverlap = opts.adaptiveOverlap
-    ? Math.floor(
-        opts.overlapTokens *
-          (1 + density.density * (opts.denseOverlapMultiplier - 1))
-      )
+    ? Math.floor(opts.overlapTokens * (1 + density.density * (opts.denseOverlapMultiplier - 1)))
     : opts.overlapTokens;
 
   const maxChars = opts.maxTokens * 4; // Fallback char estimation
@@ -435,7 +428,7 @@ export async function semanticChunk(
 
   // General semantic chunking for prose
   const chunks: Chunk[] = [];
-  let currentStart = 0;
+  const currentStart = 0;
   let chunkIndex = 0;
 
   // Split by boundaries first
@@ -527,7 +520,7 @@ export async function semanticChunk(
  */
 function splitByBoundaries(
   text: string,
-  boundaries: ChunkBoundary[]
+  boundaries: ChunkBoundary[],
 ): Array<{ content: string; boundaries: ChunkBoundary[] }> {
   if (boundaries.length === 0) {
     return [{ content: text, boundaries: [] }];
@@ -567,7 +560,7 @@ function splitByBoundaries(
 function chunkCodeOrData(
   text: string,
   options: Required<SemanticChunkOptions>,
-  counter: TokenCounter
+  counter: TokenCounter,
 ): Chunk[] {
   const chunks: Chunk[] = [];
   const lines = text.split('\n');
@@ -620,15 +613,14 @@ async function chunkMarkdownWithCodeBlocks(
   text: string,
   options: Required<SemanticChunkOptions>,
   counter: TokenCounter,
-  _boundaries: ChunkBoundary[]
+  _boundaries: ChunkBoundary[],
 ): Promise<Chunk[]> {
   const chunks: Chunk[] = [];
   let chunkIndex = 0;
 
   // Find all code blocks
   const codeBlockRegex = /```[a-z]*\n([\s\S]*?)```/g;
-  const codeBlocks: Array<{ start: number; end: number; content: string; language: string }> =
-    [];
+  const codeBlocks: Array<{ start: number; end: number; content: string; language: string }> = [];
 
   let match;
   while ((match = codeBlockRegex.exec(text)) !== null) {
@@ -703,10 +695,7 @@ async function chunkMarkdownWithCodeBlocks(
 /**
  * Backward-compatible chunk function (original signature).
  */
-export async function chunkText(
-  text: string,
-  options?: SemanticChunkOptions
-): Promise<string[]> {
+export async function chunkText(text: string, options?: SemanticChunkOptions): Promise<string[]> {
   const chunks = await semanticChunk(text, options);
   return chunks.map((c) => c.content);
 }
@@ -757,7 +746,7 @@ export async function analyzeTextForChunking(text: string): Promise<{
       };
       break;
 
-    case 'markdown':
+    case 'markdown': {
       // Count code blocks for estimation
       const codeBlockCount = (text.match(/```/g) || []).length / 2;
       estimatedChunks = Math.ceil(totalTokens / 512) + codeBlockCount;
@@ -771,6 +760,7 @@ export async function analyzeTextForChunking(text: string): Promise<{
         adaptiveOverlap: true,
       };
       break;
+    }
 
     default:
       estimatedChunks = Math.ceil(totalTokens / 512);

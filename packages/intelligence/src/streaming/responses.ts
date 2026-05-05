@@ -42,16 +42,16 @@ export interface StreamChunk {
  * Types of stream chunks.
  */
 export type StreamChunkType =
-  | 'token'          // Individual token
-  | 'text'           // Text fragment (multiple tokens)
-  | 'reasoning'      // Model reasoning/thought process
-  | 'tool_call'      // Tool invocation start
-  | 'tool_result'    // Tool result
-  | 'plan'           // Planning step
-  | 'answer'         // Final answer fragment
-  | 'error'          // Error message
-  | 'metadata'       // Metadata update
-  | 'control';       // Control signal (start/end)
+  | 'token' // Individual token
+  | 'text' // Text fragment (multiple tokens)
+  | 'reasoning' // Model reasoning/thought process
+  | 'tool_call' // Tool invocation start
+  | 'tool_result' // Tool result
+  | 'plan' // Planning step
+  | 'answer' // Final answer fragment
+  | 'error' // Error message
+  | 'metadata' // Metadata update
+  | 'control'; // Control signal (start/end)
 
 /**
  * Stream event for Server-Sent Events.
@@ -128,7 +128,7 @@ export interface ResponseStreamer {
    */
   stream(
     response: string | AsyncGenerator<string>,
-    options?: StreamOptions
+    options?: StreamOptions,
   ): AsyncGenerator<StreamChunk>;
 
   /**
@@ -145,7 +145,7 @@ export interface ResponseStreamer {
    * Create a multiplexed stream for multiple concurrent outputs.
    */
   multiplex(
-    streams: Array<{ id: string; source: AsyncGenerator<StreamChunk> }>
+    streams: Array<{ id: string; source: AsyncGenerator<StreamChunk> }>,
   ): AsyncGenerator<{ streamId: string; chunk: StreamChunk }>;
 
   /**
@@ -171,9 +171,7 @@ export interface TokenStream {
 /**
  * Create a token stream from an async generator.
  */
-export function createTokenStream(
-  generator: AsyncGenerator<string>
-): TokenStream {
+export function createTokenStream(generator: AsyncGenerator<string>): TokenStream {
   let aborted = false;
   let complete = false;
 
@@ -206,7 +204,7 @@ export function createTokenStream(
  */
 export function createStaticStream(
   text: string,
-  options?: { tokensPerChunk?: number; delayMs?: number }
+  options?: { tokensPerChunk?: number; delayMs?: number },
 ): AsyncGenerator<string> {
   const tokensPerChunk = options?.tokensPerChunk ?? 1;
   const delayMs = options?.delayMs ?? 0;
@@ -418,9 +416,7 @@ export function createResponseStreamer(options?: {
     },
 
     async *multiplex(streams) {
-      const streamStates = new Map(
-        streams.map((s) => [s.id, { active: true, index: 0 }])
-      );
+      const streamStates = new Map(streams.map((s) => [s.id, { active: true, index: 0 }]));
 
       // Simple round-robin multiplexing
       while (Array.from(streamStates.values()).some((s) => s.active)) {
@@ -468,7 +464,7 @@ export function formatSSE(event: StreamEvent): string {
  */
 export async function* asSSEStream(
   chunks: AsyncGenerator<StreamChunk>,
-  streamer: ResponseStreamer
+  streamer: ResponseStreamer,
 ): AsyncGenerator<string> {
   for await (const chunk of chunks) {
     const event = streamer.toSSE(chunk);
@@ -485,9 +481,7 @@ export async function* asSSEStream(
 /**
  * Accumulate stream chunks into a full response.
  */
-export async function accumulateStream(
-  stream: AsyncGenerator<StreamChunk>
-): Promise<string> {
+export async function accumulateStream(stream: AsyncGenerator<StreamChunk>): Promise<string> {
   const chunks: string[] = [];
 
   for await (const chunk of stream) {
@@ -508,7 +502,7 @@ export async function accumulateStream(
  */
 export async function* filterStream(
   stream: AsyncGenerator<StreamChunk>,
-  types: Set<StreamChunkType>
+  types: Set<StreamChunkType>,
 ): AsyncGenerator<StreamChunk> {
   for await (const chunk of stream) {
     if (types.has(chunk.type)) {
@@ -526,7 +520,7 @@ export async function* filterStream(
  */
 export async function* transformStream(
   stream: AsyncGenerator<StreamChunk>,
-  transform: (chunk: StreamChunk) => StreamChunk
+  transform: (chunk: StreamChunk) => StreamChunk,
 ): AsyncGenerator<StreamChunk> {
   for await (const chunk of stream) {
     yield transform(chunk);

@@ -123,9 +123,9 @@ import { messages as messagesTable } from './db/schema.js';
 import { seed } from './db/seed.js';
 import { buildCommandHandlers } from './ipc/command-handlers.js';
 import { buildCopilotHandlers } from './ipc/copilot-handlers.js';
+import { buildEnhancedAiHandlers } from './ipc/enhanced-ai-handlers.js';
 import { HUMAN_USER_ID, createIpcHandlers } from './ipc/handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
-import { buildEnhancedAiHandlers } from './ipc/enhanced-ai-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
 import { setupApplicationMenu } from './menu.js';
 import { createAgentWakeupQueue } from './orchestrator/agent-wakeup-queue.js';
@@ -178,6 +178,7 @@ import {
 import { createCopilotEventWindow } from './services/copilot-event-window.js';
 import type { CopilotEventWindow } from './services/copilot-event-window.js';
 import { createCopilotService } from './services/copilot-service.js';
+import { type EnhancedAiService, createEnhancedAiService } from './services/enhanced-ai.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
@@ -194,7 +195,6 @@ import {
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRagIndexer } from './services/rag-indexer.js';
 import { rebuildCompanyRagSources } from './services/rag-rebuild.js';
-import { createEnhancedAiService, type EnhancedAiService } from './services/enhanced-ai.js';
 import { createRetrievalOrchestrator } from './services/retrieval-orchestrator.js';
 import { createRoleLoader } from './services/role-loader.js';
 import {

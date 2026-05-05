@@ -1,7 +1,6 @@
 import type { BackupManifest } from '@team-x/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-
 import type { IpcBackupService } from './handlers.js';
 import { createIpcHandlers } from './handlers.js';
 

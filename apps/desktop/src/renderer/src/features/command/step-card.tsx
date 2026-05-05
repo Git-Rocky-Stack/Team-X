@@ -58,7 +58,6 @@ import {
   Wrench,
 } from 'lucide-react';
 
-
 import {
   narrowDelegationMade,
   narrowReviewPending,

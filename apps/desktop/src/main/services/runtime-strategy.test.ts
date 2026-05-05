@@ -1,7 +1,6 @@
 import type { HardwareProfile, ProviderConfig } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-
 import { type StrategyInput, pickStrategy } from './runtime-strategy.js';
 
 // ---------------------------------------------------------------------------

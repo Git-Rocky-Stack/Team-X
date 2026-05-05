@@ -14,65 +14,51 @@
  * Phase 5 — M31 (Integration).
  */
 
-// RAG
 import {
-  createRagService,
-  type RagService,
-  type RagRepo,
-  type IndexSourceInput,
-  type RetrievalHit,
-} from '../rag/service.js';
+  type AggregatedMetrics,
+  type EvalDataset,
+  type EvalQuery,
+  createRagEvaluator,
+} from '../eval/index.js';
+import { type QueryCache, createQueryCache } from '../rag/cache.js';
 import type { EmbedTextFn } from '../rag/embeddings.js';
 import {
-  createQueryCache,
-  type QueryCache,
-} from '../rag/cache.js';
-import {
-  createQueryExpansionService,
-  type QueryExpansionService,
   type EntityContext,
+  type QueryExpansionService,
+  createQueryExpansionService,
 } from '../rag/query-expansion.js';
+// RAG
 import {
-  createRagEvaluator,
-  type AggregatedMetrics,
-  type EvalQuery,
-  type EvalDataset,
-} from '../eval/index.js';
+  type IndexSourceInput,
+  type RagRepo,
+  type RagService,
+  type RetrievalHit,
+  createRagService,
+} from '../rag/service.js';
 
+import {
+  type GraphQueryResult,
+  type KnowledgeGraphService,
+  createInMemoryGraphRepo,
+  createKnowledgeGraphService,
+} from '../knowledge/index.js';
 // Memory & Knowledge
 import {
-  createLongTermMemoryService,
-  createInMemoryMemoryRepo,
-  type LongTermMemoryService,
-  type ExtractedFact,
   type ConversationSummary,
+  type ExtractedFact,
+  type LongTermMemoryService,
+  createInMemoryMemoryRepo,
+  createLongTermMemoryService,
 } from '../memory/index.js';
-import {
-  createKnowledgeGraphService,
-  createInMemoryGraphRepo,
-  type KnowledgeGraphService,
-  type GraphQueryResult,
-} from '../knowledge/index.js';
 
 // Planning
-import {
-  createPlanExecutor,
-  type PlanExecutor,
-  type ExecutionPlan,
-} from '../loop/planning.js';
+import { type ExecutionPlan, type PlanExecutor, createPlanExecutor } from '../loop/planning.js';
 
 // Streaming
-import {
-  type StreamChunk,
-  accumulateStream,
-} from '../streaming/index.js';
+import { type StreamChunk, accumulateStream } from '../streaming/index.js';
 
 // Observability
-import {
-  createAgentTracer,
-  type Tracer,
-  type Span,
-} from '../observability/index.js';
+import { type Span, type Tracer, createAgentTracer } from '../observability/index.js';
 
 /**
  * AI service configuration.
@@ -235,7 +221,7 @@ export interface AiService {
       threshold?: number;
       usePlan?: boolean;
       includeRelated?: boolean;
-    }
+    },
   ): StreamingQueryResult;
 
   /**
@@ -249,7 +235,7 @@ export interface AiService {
       threshold?: number;
       usePlan?: boolean;
       includeRelated?: boolean;
-    }
+    },
   ): Promise<QueryResult>;
 
   /**
@@ -260,11 +246,7 @@ export interface AiService {
   /**
    * Extract facts from text.
    */
-  extractFacts(
-    companyId: string,
-    sourceId: string,
-    text: string
-  ): Promise<ExtractedFact[]>;
+  extractFacts(companyId: string, sourceId: string, text: string): Promise<ExtractedFact[]>;
 
   /**
    * Retrieve relevant facts.
@@ -275,7 +257,7 @@ export interface AiService {
     options?: {
       maxResults?: number;
       types?: string[];
-    }
+    },
   ): ExtractedFact[];
 
   /**
@@ -290,7 +272,7 @@ export interface AiService {
       messageCount?: number;
       conversationStart?: number;
       conversationEnd?: number;
-    }
+    },
   ): Promise<ConversationSummary>;
 
   /**
@@ -299,7 +281,7 @@ export interface AiService {
   queryKnowledge(
     companyId: string,
     query: string,
-    options?: { maxResults?: number; maxDepth?: number }
+    options?: { maxResults?: number; maxDepth?: number },
   ): GraphQueryResult;
 
   /**
@@ -309,7 +291,7 @@ export interface AiService {
     companyId: string,
     fromEntity: string,
     toEntity: string,
-    maxHops?: number
+    maxHops?: number,
   ): { path: string[]; edges: unknown[] } | null;
 
   /**
@@ -386,7 +368,7 @@ export function createAiService(config: AiServiceConfig): AiService {
     // Initialize query expansion if enabled
     if (config.rag?.enableExpansion) {
       queryExpansion = createQueryExpansionService({
-        llm: config.llm?.complete ? async (p) => config.llm!.complete(p) : undefined,
+        llm: config.llm?.complete ? async (p) => config.llm?.complete(p) : undefined,
         hydeEnabled: !!config.llm,
       });
     }
@@ -396,7 +378,7 @@ export function createAiService(config: AiServiceConfig): AiService {
       memory = createLongTermMemoryService({
         repo: createInMemoryMemoryRepo(),
         summarizeFn: async (conv, _ctx) => {
-          const response = await config.llm!.complete(`
+          const response = await config.llm?.complete(`
 Summarize this conversation in 2-3 sentences.
 Focus on key decisions, facts, and action items.
 
@@ -413,7 +395,7 @@ Respond with JSON:
           return JSON.parse(response);
         },
         extractFactsFn: async (text, ctx) => {
-          const response = await config.llm!.complete(`
+          const response = await config.llm?.complete(`
 Extract key facts from this text.
 Focus on: status updates, decisions, relationships, preferences.
 
@@ -453,7 +435,7 @@ Respond with JSON array:
     // Initialize planner
     if (config.llm && config.planning?.enablePlanning) {
       planner = createPlanExecutor({
-        llm: async (prompt) => config.llm!.complete(prompt),
+        llm: async (prompt) => config.llm?.complete(prompt),
         trackingOptions: {
           autoRevise: true,
           maxRevisions: 3,
@@ -568,7 +550,10 @@ Respond with JSON array:
           }
 
           // Generate answer (streaming)
-          const answer = `Based on the retrieved context, here's what I found: ${hits.slice(0, 3).map(h => h.contentText.slice(0, 50)).join('; ')}`;
+          const answer = `Based on the retrieved context, here's what I found: ${hits
+            .slice(0, 3)
+            .map((h) => h.contentText.slice(0, 50))
+            .join('; ')}`;
 
           // Stream answer character by character
           const chunkSize = 10;
@@ -631,7 +616,10 @@ Respond with JSON array:
           | undefined;
 
         return {
-          answer: chunks.filter((c) => c.type === 'text').map((c) => c.content).join(''),
+          answer: chunks
+            .filter((c) => c.type === 'text')
+            .map((c) => c.content)
+            .join(''),
           context: [],
           facts: [],
           related: metadata?.relatedEntities ?? [],
@@ -694,9 +682,7 @@ Respond with JSON array:
       const maxResults = options.maxResults ?? 20;
       const ranked = memory.retrieveRankedFacts(companyId, query);
 
-      return ranked
-        .slice(0, maxResults)
-        .map((r) => r.fact);
+      return ranked.slice(0, maxResults).map((r) => r.fact);
     },
 
     async summarize(companyId, sourceId, conversation, context = {}) {
@@ -820,9 +806,8 @@ Respond with JSON array:
       return {
         rag: {
           totalRetrievals: stats.rag.totalRetrievals,
-          cacheHitRate: stats.rag.cacheLookups > 0
-            ? stats.rag.cacheHits / stats.rag.cacheLookups
-            : 0,
+          cacheHitRate:
+            stats.rag.cacheLookups > 0 ? stats.rag.cacheHits / stats.rag.cacheLookups : 0,
           avgLatencyMs: 0, // Would be tracked in real implementation
         },
         memory: {

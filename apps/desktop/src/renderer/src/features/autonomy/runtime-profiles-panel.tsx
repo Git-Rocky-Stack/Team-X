@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-
 import {
   MissionIconButton,
   MissionInsetSurface,
@@ -38,7 +37,6 @@ import {
   useUpdateRuntimeProfile,
   useValidateRuntimeProfile,
 } from '@/hooks/use-runtime-profiles.js';
-
 
 const FIELD_CLASSNAME =
   'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';

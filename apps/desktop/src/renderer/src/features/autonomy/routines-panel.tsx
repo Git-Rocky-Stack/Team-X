@@ -8,7 +8,6 @@ import type {
 import { Activity, CalendarDays, Clock3, Play, RefreshCw, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-
 import {
   MissionIconButton,
   MissionInsetSurface,
@@ -26,7 +25,6 @@ import {
   useRunRoutineNow,
   useUpdateRoutine,
 } from '@/hooks/use-routines.js';
-
 
 const FIELD_CLASSNAME =
   'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';

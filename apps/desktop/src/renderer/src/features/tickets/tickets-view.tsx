@@ -21,7 +21,6 @@ import {
 import { useTicketEventSync, useTickets } from '@/hooks/use-tickets.js';
 import { useAppStore } from '@/store/app-store.js';
 
-
 interface TicketsViewProps {
   companyId: string | null;
   employees: Employee[];

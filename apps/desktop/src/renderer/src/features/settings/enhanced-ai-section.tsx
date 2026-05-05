@@ -22,8 +22,8 @@ import {
   Loader2,
   Network,
   Sparkles,
-  Waves,
   Target,
+  Waves,
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -31,10 +31,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge.js';
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
-import {
-  useEnhancedAiConfig,
-  useSetEnhancedAiConfig,
-} from '@/hooks/use-enhanced-ai.js';
+import { useEnhancedAiConfig, useSetEnhancedAiConfig } from '@/hooks/use-enhanced-ai.js';
 
 const LLM_MAX_TOKENS_MIN = 1;
 const LLM_MAX_TOKENS_MAX = 32000;
@@ -173,10 +170,7 @@ export function EnhancedAiSection() {
             </p>
           </div>
           <div className="space-y-1">
-            <label
-              htmlFor="ai-llm-model"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="ai-llm-model" className="text-[11px] font-medium text-muted-foreground">
               Model
             </label>
             <Input
@@ -453,7 +447,11 @@ export function EnhancedAiSection() {
                   })
                 }
                 onBlur={() => {
-                  const next = clamp(draft.planningThreshold, PLANNING_THRESHOLD_MIN, PLANNING_THRESHOLD_MAX);
+                  const next = clamp(
+                    draft.planningThreshold,
+                    PLANNING_THRESHOLD_MIN,
+                    PLANNING_THRESHOLD_MAX,
+                  );
                   if (next !== draft.planningThreshold) {
                     setDraft({ ...draft, planningThreshold: next });
                   }
