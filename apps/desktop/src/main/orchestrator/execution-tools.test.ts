@@ -13,7 +13,11 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(tempDir, { recursive: true, force: true });
+  // Windows occasionally returns ENOTEMPTY on rmdir under load — retry once
+  // with `maxRetries` (Node fs/promises supports this since 16.x) before
+  // surfacing the failure. The recursive cap test creates 200+ files and
+  // hits this flake reproducibly.
+  await rm(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 function buildFilesystemTool() {
@@ -112,22 +116,32 @@ describe('execution tools', () => {
     expect(result.ignoredDirectories).toEqual(expect.arrayContaining(['node_modules', '.git']));
   });
 
-  it('caps recursive filesystem search results so broad workspace scans stay bounded', async () => {
-    await mkdir(join(tempDir, 'src'), { recursive: true });
-    for (let i = 0; i < 205; i += 1) {
-      await writeFile(join(tempDir, 'src', `file-${i}.ts`), 'export {};', 'utf-8');
-    }
+  it(
+    'caps recursive filesystem search results so broad workspace scans stay bounded',
+    async () => {
+      await mkdir(join(tempDir, 'src'), { recursive: true });
+      // Parallel writes — sequential awaits hit Windows fs latency hard and
+      // overran the default 5 s timeout. 205 fixture files in parallel
+      // complete in well under a second on every supported platform.
+      await Promise.all(
+        Array.from({ length: 205 }, (_, i) =>
+          writeFile(join(tempDir, 'src', `file-${i}.ts`), 'export {};', 'utf-8'),
+        ),
+      );
 
-    const result = (await buildFilesystemTool().execute({
-      operation: 'search',
-      path: '.',
-      pattern: '*.ts',
-    })) as { matches: string[]; truncated: boolean; maxResults: number };
+      const result = (await buildFilesystemTool().execute({
+        operation: 'search',
+        path: '.',
+        pattern: '*.ts',
+      })) as { matches: string[]; truncated: boolean; maxResults: number };
 
-    expect(result.maxResults).toBe(200);
-    expect(result.matches).toHaveLength(200);
-    expect(result.truncated).toBe(true);
-  });
+      expect(result.maxResults).toBe(200);
+      expect(result.matches).toHaveLength(200);
+      expect(result.truncated).toBe(true);
+    },
+    // Defensive bump for slow CI sandboxes; healthy paths run in <1 s.
+    15_000,
+  );
 
   it('creates markdown deliverables and stores them in the vault when wired', async () => {
     const vault = {

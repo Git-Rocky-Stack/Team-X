@@ -424,6 +424,7 @@ export function createBudgetGovernanceService(
       subjectRefId: policy.id,
       summary: `Budget approval required for ${policy.scopeKind} scope ${policy.scopeRefId}.`,
       payloadJson: JSON.stringify(payload),
+      createdAt: now(),
     });
 
     const item = budgetsRepo
@@ -647,6 +648,13 @@ export function createBudgetGovernanceService(
       scopes.push({ scopeKind: 'routine', scopeRefId: routineId });
     }
 
+    // Stamp the ledger entry with the service's clock rather than the run's
+    // wall-clock end time. The two are identical in production (runsRepo
+    // uses `Date.now()`), but tests inject a fixed `now()` via service deps
+    // while runsRepo always uses the real clock — without this normalization
+    // a fixed-clock test month never matches the real-clock ledger entry
+    // and `getOverview` returns 0 spend.
+    const occurredAt = now();
     for (const scope of scopes) {
       const policy = budgetsRepo.findPolicy(companyId, scope.scopeKind, scope.scopeRefId);
       budgetsRepo.createLedgerEntry({
@@ -663,7 +671,7 @@ export function createBudgetGovernanceService(
         provider: run.provider,
         model: run.model,
         amountUsd: formatUsd(amountUsd),
-        occurredAt: run.endedAt ?? run.startedAt,
+        occurredAt,
       });
       if (policy) {
         await evaluatePolicyThresholds(rowToBudgetPolicy(policy), amountUsd, run.employeeId);

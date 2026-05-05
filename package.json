@@ -1,6 +1,6 @@
 {
   "name": "team-x",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "private": true,
   "type": "module",
   "description": "Run an AI company. Not a prompt.",
@@ -27,8 +27,8 @@
     "dist:mac": "pnpm -F @team-x/desktop dist:mac",
     "dist:linux": "pnpm -F @team-x/desktop dist:linux",
     "dist:publish": "pnpm -F @team-x/desktop dist:publish",
-    "sign:pack": "node scripts/sign-pack.mjs strategia-official",
-    "sign:pack:keygen": "node scripts/generate-pack-key.mjs strategia-official",
+    "sign:pack": "npx tsx scripts/sign-pack.mjs strategia-official",
+    "sign:pack:keygen": "npx tsx scripts/generate-pack-key.mjs strategia-official",
     "audit:claims": "node scripts/check-claim-evidence.mjs",
     "audit:claims:strict": "node scripts/check-claim-evidence.mjs --strict",
     "audit:claims:json": "node scripts/check-claim-evidence.mjs --json",

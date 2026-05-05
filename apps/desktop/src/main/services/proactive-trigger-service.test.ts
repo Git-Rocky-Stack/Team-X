@@ -123,28 +123,27 @@ class FakeAuthorityResolver {
     this.employeeGrants.set(employeeId, grants);
   }
 
-  resolveEmployee(_companyId: string, employeeId: string): EffectiveAuthoritySnapshot {
+  resolveEmployee(companyId: string, employeeId: string): EffectiveAuthoritySnapshot {
     const grants = this.employeeGrants.get(employeeId) ?? [];
+    // Match the real EffectiveAuthoritySnapshot contract from
+    // @team-x/shared-types: a flat `entries` list of resolved authority
+    // resolutions, plus the materialized tools allowlist/denylist. The old
+    // shape (`capabilities` / `paths` arrays) was an earlier draft that the
+    // type was renamed away from; tests need to mirror the real type so
+    // production consumers (e.g. `proactive-trigger-service.scanForWork`)
+    // see the data they actually parse against.
     return {
+      companyId,
       employeeId,
-      capabilities: grants
-        .filter((g) => g.resourceKind === 'capability')
-        .map((g) => ({
-          resourceKind: 'capability' as const,
-          resourceId: g.resourceId,
-          permission: g.permission,
-          sourceKind: 'employee' as const,
-          createdAt: Date.now(),
-        })),
-      paths: grants
-        .filter((g) => g.resourceKind === 'path')
-        .map((g) => ({
-          resourceKind: 'path' as const,
-          resourceId: g.resourceId,
-          permission: g.permission,
-          sourceKind: 'employee' as const,
-          createdAt: Date.now(),
-        })),
+      entries: grants.map((g) => ({
+        resourceKind: g.resourceKind as EffectiveAuthoritySnapshot['entries'][number]['resourceKind'],
+        resourceId: g.resourceId,
+        permission: g.permission,
+        sourceKind: 'employee',
+        sourceId: employeeId,
+      })),
+      toolsAllowed: [],
+      toolsDenied: [],
     };
   }
 }

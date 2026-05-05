@@ -16,8 +16,15 @@ describe('role-pack integration', () => {
     expect(spec.frontmatter.level).toBe('officer');
     expect(spec.frontmatter.decision_authority).toBe('final');
     expect(spec.frontmatter.preferred_model_tier).toBe('high');
-    expect(spec.frontmatter.tools_allowed).toEqual([]);
-    expect(spec.frontmatter.tools_denied).toEqual([]);
+    // CEO frontmatter declares the tool set described in the role body
+    // ("Use **browse** for market research…", "You do not have shell or
+    // filesystem write access"). Mirrors the desktop seed.test contract.
+    expect(spec.frontmatter.tools_allowed).toEqual(
+      expect.arrayContaining(['browse', 'email', 'calendar', 'context7', 'episodic-memory']),
+    );
+    expect(spec.frontmatter.tools_denied).toEqual(
+      expect.arrayContaining(['shell', 'filesystem_write']),
+    );
     expect(spec.frontmatter.capabilities).toContain('executive_leadership');
     expect(spec.frontmatter.capabilities).toContain('business_strategy');
     expect(spec.frontmatter.kpis.length).toBeGreaterThan(0);

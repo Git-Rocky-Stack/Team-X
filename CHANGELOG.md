@@ -23,6 +23,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.7] - 2026-05-04
+
+### Added
+- **CEO role frontmatter `tools_allowed` / `tools_denied` populated** to match the role body's tool-usage section. Previously the body said "Use **browse** for market research…" and "You do not have shell or filesystem write access" but the YAML declared empty arrays. Now: `tools_allowed: [browse, email, calendar, context7, episodic-memory]`, `tools_denied: [shell, filesystem_write]`. Role pack re-signed via `pnpm sign:pack`.
+
+### Changed
+- **`budget-governance-service` `recordRunSpend` now stamps ledger `occurredAt` with the service clock** (`now()`) instead of the run's `endedAt ?? startedAt`. In production the two are identical; in tests, services inject a fixed `now()` while `runsRepo` always uses real time, so ledger entries fell outside the service's monthly window and `getOverview` returned 0. Behavior change is invisible in production, restores `noUncheckedIndexedAccess`-grade test determinism.
+- **`budgets.createApprovalItem` accepts an optional `createdAt` override** so the budget governance service can stamp approval rows with its own clock for the same window-alignment reason. Defaults to `Date.now()` — production callers unaffected.
+- **`execution-tools.test.ts > caps recursive filesystem search`** now creates 205 fixture files in parallel via `Promise.all` (was sequential `await`s) and bumps the per-test timeout to 15s. Sequential writes hit Windows fs latency hard and overran the 5s default.
+- **`execution-tools.test.ts > afterEach`** uses `rm(..., { maxRetries: 5, retryDelay: 100 })` to absorb Windows `ENOTEMPTY` flakes during temp-dir teardown.
+- **`pnpm sign:pack` / `pnpm sign:pack:keygen`** now run via `npx tsx` instead of bare `node` so the script's transitive `@team-x/shared-types` import (which resolves to `src/index.ts` per workspace package.json) loads cleanly. The previous form failed with `ERR_UNKNOWN_FILE_EXTENSION ".ts"` on every signing run.
+- **`role-schema/src/integration.test.ts`** updated to reflect the populated CEO tools allowlist/denylist.
+- **Top-bar release-marker pin** bumped to `2.0.7` for the app version.
+
+### Fixed
+- **`proactive-trigger-service.test.ts > FakeAuthorityResolver.resolveEmployee`** now returns the real `EffectiveAuthoritySnapshot` shape (`{ companyId, employeeId, entries, toolsAllowed, toolsDenied }`) instead of an earlier-draft `{ employeeId, capabilities, paths }` that no longer exists in `@team-x/shared-types`. The production code reads `authority.entries.find(...)` and was crashing on `undefined.find` because the fake never matched the actual contract.
+
+### Removed
+- **`apps/desktop/src/phase-5-complete-marker.test.ts`** and **`apps/desktop/src/phase-6-complete-marker.test.ts`** — both tests audited Phase 5 / Phase 6 design docs and CLAUDE.md `Phase 5 COMPLETE - v1.1.0` / `Phase 6 COMPLETE - v1.2.0` markers. The referenced design docs (`docs/plans/2026-04-13-team-x-phase-5-intelligence-layer.md`, `docs/plans/2026-04-20-team-x-phase-6-capabilities-evidence.md`) were intentionally deleted in commit `8898f19` as part of a major plan-doc cleanup, and the project versioning has long since moved to the 2.0.x scheme. The marker tests were zombies pinning a release state the repo has lived past.
+
+### Test status
+- **Full repo: 2266 / 2266 passing.** Zero failures across `telemetry-core` (7), `provider-router` (91), `role-schema` (57), `intelligence` (152), and `desktop` (1959).
+
+---
+
 ## [2.0.6] - 2026-05-04
 
 ### Changed

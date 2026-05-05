@@ -80,6 +80,11 @@ export interface CreateApprovalItemInput {
   subjectRefId: string;
   summary: string;
   payloadJson?: string;
+  /** Optional createdAt override — defaults to `Date.now()`. Callers
+   *  with their own clock (services that inject a deterministic `now`
+   *  for tests) should pass their clock value here so the approval row
+   *  lands inside the same monthly window the service queries against. */
+  createdAt?: number;
 }
 
 export interface ResolveApprovalItemInput {
@@ -322,7 +327,7 @@ export function createBudgetsRepo<TRunResult>(db: BudgetsDb<TRunResult>) {
           subjectRefId: input.subjectRefId,
           summary: input.summary,
           payloadJson: input.payloadJson ?? '{}',
-          createdAt: Date.now(),
+          createdAt: input.createdAt ?? Date.now(),
           resolvedAt: null,
         })
         .run();
