@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { CreateGoalInput, GoalRow, UpdateGoalInput } from '../db/repos/goals.js';
-import type { AppendMessageInput } from '../db/repos/messages.js';
+import type { AppendMessageInput, MessageRow } from '../db/repos/messages.js';
 import type { CreateProjectInput, ProjectRow, UpdateProjectInput } from '../db/repos/projects.js';
 import type { CreateThreadInput, ThreadMemberRow } from '../db/repos/threads.js';
 import type { CreateTicketInput, TicketRow, UpdateTicketInput } from '../db/repos/tickets.js';
