@@ -145,6 +145,158 @@
   *::-webkit-scrollbar-corner {
     background: #000000;
   }
+
+  /*
+   * Range-input ("slider") styling — keeps the rail visible on AMOLED-black
+   * surfaces and gives the brand-red thumb a glow so the affordance reads
+   * even at a glance. Apply via the `.brand-range` class.
+   */
+  .brand-range {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .brand-range:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .brand-range:focus {
+    outline: none;
+  }
+
+  .brand-range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .brand-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px;
+    width: 14px;
+    border-radius: 9999px;
+    background: hsl(var(--mission-red));
+    border: 2px solid #000000;
+    box-shadow: 0 0 0 1px hsl(var(--mission-red) / 0.6), 0 0 8px hsl(var(--mission-red) / 0.55);
+    margin-top: -4px;
+    transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+  }
+
+  .brand-range:hover::-webkit-slider-thumb {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 1px hsl(var(--mission-red) / 0.85), 0 0 12px hsl(var(--mission-red) / 0.75);
+  }
+
+  .brand-range:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 12px hsl(var(--mission-red) / 0.8);
+  }
+
+  .brand-range::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .brand-range::-moz-range-progress {
+    height: 6px;
+    border-radius: 9999px;
+    background: hsl(var(--mission-red) / 0.85);
+  }
+
+  .brand-range::-moz-range-thumb {
+    height: 14px;
+    width: 14px;
+    border-radius: 9999px;
+    background: hsl(var(--mission-red));
+    border: 2px solid #000000;
+    box-shadow: 0 0 0 1px hsl(var(--mission-red) / 0.6), 0 0 8px hsl(var(--mission-red) / 0.55);
+  }
+
+  /*
+   * Selected-state primitive — applied to the active choice in any
+   * "select one of N" chooser: mode buttons, preset cards, filter chips,
+   * posture selectors, the Board Queue button, etc. Single source of
+   * truth for the selected visual language.
+   *
+   * Usage:
+   *   className={cn(structuralClasses, selected && 'brand-selected')}
+   *
+   * Do NOT also apply conflicting utility classes (e.g. border-brand,
+   * bg-brand/10, text-brand) when this class is on — it supplies all
+   * of them. Pair it against an unselected hover treatment, e.g.:
+   *
+   *   className={cn(
+   *     'rounded-lg border ...',
+   *     selected ? 'brand-selected' : 'border-border hover:border-white/20',
+   *   )}
+   *
+   * This class is reserved for chooser-card selection. Navigation tabs,
+   * list-item highlights, and semantic color codings (e.g. category
+   * pills) follow their own patterns and are not in scope.
+   */
+  .brand-selected {
+    /* Default tone — Strategia red. Color variants below override the
+     * three HSL channels to retint without re-declaring the shape. */
+    --bs-h: 358;
+    --bs-s: 78%;
+    --bs-l: 48%;
+
+    border-color: hsl(var(--bs-h) var(--bs-s) var(--bs-l));
+    background-color: hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.15);
+    color: hsl(var(--foreground));
+    box-shadow:
+      0 0 0 1px hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.5),
+      0 0 12px hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.25);
+    transition:
+      background-color 150ms ease-out,
+      box-shadow 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+
+  .brand-selected:hover {
+    background-color: hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.22);
+    box-shadow:
+      0 0 0 1px hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.7),
+      0 0 16px hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.4);
+  }
+
+  .brand-selected:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /*
+   * Color variants — apply ALONGSIDE .brand-selected when the chooser
+   * carries semantic color meaning (e.g. privacy tiers).
+   *   className="brand-selected brand-selected-amber"
+   *
+   * Each variant only re-tints the HSL channels; the bezel weight, glow
+   * shape, hover behavior, and transition stay locked to the base.
+   */
+  .brand-selected-green {
+    --bs-h: 142;
+    --bs-s: 71%;
+    --bs-l: 45%;
+  }
+
+  .brand-selected-blue {
+    --bs-h: 217;
+    --bs-s: 91%;
+    --bs-l: 60%;
+  }
+
+  .brand-selected-amber {
+    --bs-h: 38;
+    --bs-s: 92%;
+    --bs-l: 50%;
+  }
 }
 
 @layer components {

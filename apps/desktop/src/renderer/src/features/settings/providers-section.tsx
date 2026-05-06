@@ -4,7 +4,6 @@
  * Phase 3 — M18.
  */
 
-import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { AddProviderDialog } from './add-provider-dialog.js';
@@ -28,7 +27,6 @@ export function ProvidersSection() {
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
           Add Provider
         </Button>
       </div>

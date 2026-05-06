@@ -9,16 +9,7 @@
  */
 
 import type { PrivacyTier, ProviderConfig } from '@team-x/shared-types';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Key,
-  Loader2,
-  Power,
-  PowerOff,
-  Trash2,
-  Zap,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -189,15 +180,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
               : 'text-muted-foreground'
           }`}
         >
-          {provider.enabled ? (
-            <>
-              <Power className="h-3 w-3" /> Enabled
-            </>
-          ) : (
-            <>
-              <PowerOff className="h-3 w-3" /> Disabled
-            </>
-          )}
+          {provider.enabled ? 'Enabled' : 'Disabled'}
         </Button>
       </div>
 
@@ -377,9 +360,8 @@ export function ProviderCard({ provider }: ProviderCardProps) {
               variant="outline"
               size="sm"
               onClick={() => setShowKeyInput(true)}
-              className="gap-1.5 text-xs w-full justify-center"
+              className="text-xs w-full justify-center"
             >
-              <Key className="h-3 w-3" />
               Set API Key
             </Button>
           )}
@@ -397,33 +379,20 @@ export function ProviderCard({ provider }: ProviderCardProps) {
             disabled={testMut.isPending}
             className="gap-1.5 text-xs"
           >
-            {testMut.isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Zap className="h-3 w-3" />
-            )}
+            {testMut.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
             Test
           </Button>
 
           {/* Test result indicator */}
           {testMut.isSuccess && testMut.data.ok && (
-            <span className="flex items-center gap-1 text-[11px] text-green-400">
-              <CheckCircle2 className="h-3 w-3" /> Connected
-            </span>
+            <span className="text-[11px] text-green-400">Connected</span>
           )}
           {testMut.isSuccess && !testMut.data.ok && (
-            <span
-              className="flex items-center gap-1 text-[11px] text-destructive"
-              title={testMut.data.error}
-            >
-              <AlertCircle className="h-3 w-3" /> Failed
+            <span className="text-[11px] text-destructive" title={testMut.data.error}>
+              Failed
             </span>
           )}
-          {testMut.isError && (
-            <span className="flex items-center gap-1 text-[11px] text-destructive">
-              <AlertCircle className="h-3 w-3" /> Error
-            </span>
-          )}
+          {testMut.isError && <span className="text-[11px] text-destructive">Error</span>}
         </div>
 
         <Button
@@ -434,11 +403,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
           disabled={removeMut.isPending}
           className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
-          {removeMut.isPending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Trash2 className="h-3 w-3" />
-          )}
+          {removeMut.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
           Remove
         </Button>
       </div>

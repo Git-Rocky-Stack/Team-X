@@ -13,25 +13,14 @@ import type {
   SettingsGetEnhancedAiConfigResponse,
   SettingsSetEnhancedAiConfigRequest,
 } from '@team-x/shared-types';
-import {
-  AlertTriangle,
-  Brain,
-  Cpu,
-  GitBranch,
-  Layers,
-  Loader2,
-  Network,
-  Sparkles,
-  Target,
-  Waves,
-  Zap,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useEnhancedAiConfig, useSetEnhancedAiConfig } from '@/hooks/use-enhanced-ai.js';
+import { useProviders } from '@/hooks/use-providers.js';
 
 const LLM_MAX_TOKENS_MIN = 1;
 const LLM_MAX_TOKENS_MAX = 32000;
@@ -52,6 +41,7 @@ function clamp(value: number, min: number, max: number): number {
 export function EnhancedAiSection() {
   const { data: config, isLoading: configLoading, isError: configError } = useEnhancedAiConfig();
   const setConfig = useSetEnhancedAiConfig();
+  const { data: providers, isLoading: providersLoading } = useProviders();
 
   // Local draft state — mirrors server values on load and after each
   // successful save.
@@ -64,12 +54,9 @@ export function EnhancedAiSection() {
   if (configLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <div className="flex items-center gap-2">
-          <Brain className="h-3.5 w-3.5 text-muted-foreground" />
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Enhanced AI
-          </h4>
-        </div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Enhanced AI
+        </h4>
         <Skeleton className="h-48 rounded-lg" />
       </section>
     );
@@ -78,14 +65,10 @@ export function EnhancedAiSection() {
   if (configError || !config) {
     return (
       <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Brain className="h-3.5 w-3.5 text-muted-foreground" />
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Enhanced AI
-          </h4>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5" />
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Enhanced AI
+        </h4>
+        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
           Failed to load Enhanced AI configuration.
         </div>
       </section>
@@ -109,14 +92,18 @@ export function EnhancedAiSection() {
     setConfig.mutate({ [key]: next } as SettingsSetEnhancedAiConfigRequest);
   }
 
-  const hasLlmProvider = config.llmProvider !== 'auto' && config.llmProvider !== null;
-  const llmDisabled = !hasLlmProvider;
+  // "LLM Detected" reflects whether the orchestrator can actually route a
+  // call right now — i.e. at least one configured provider is enabled.
+  // The Enhanced AI llmProvider field is a routing preference ('auto' is
+  // the default); it is not the source of truth for availability.
+  const hasEnabledProvider = (providers ?? []).some((provider) => provider.enabled);
+  const detectionPending = providersLoading && !providers;
+  const llmDisabled = !hasEnabledProvider && !detectionPending;
 
   return (
     <section className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Brain className="h-3.5 w-3.5 text-muted-foreground" />
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Enhanced AI
         </h4>
@@ -124,16 +111,38 @@ export function EnhancedAiSection() {
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
         <span className="ml-auto">
-          {hasLlmProvider ? (
+          {detectionPending ? (
             <Badge
               variant="outline"
-              className="border-green-400/30 bg-green-400/5 text-green-400 text-[10px] px-1.5 py-0"
+              className="border-muted-foreground/30 bg-muted/20 text-muted-foreground text-[10px] px-1.5 py-0 gap-1.5"
             >
-              LLM Configured
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse"
+              />
+              Detecting…
+            </Badge>
+          ) : hasEnabledProvider ? (
+            <Badge
+              variant="outline"
+              className="border-green-400/40 bg-green-400/10 text-green-400 text-[10px] px-1.5 py-0 gap-1.5"
+            >
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.85)] animate-pulse"
+              />
+              LLM Detected
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">
-              No LLM
+            <Badge
+              variant="outline"
+              className="border-red-400/40 bg-red-500/10 text-red-400 text-[10px] px-1.5 py-0 gap-1.5"
+            >
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.85)]"
+              />
+              No LLM Detected
             </Badge>
           )}
         </span>
@@ -141,13 +150,10 @@ export function EnhancedAiSection() {
 
       {/* LLM Provider */}
       <div
-        className={`rounded-lg border border-border bg-surface-50 p-4 space-y-3 transition-opacity ${llmDisabled ? 'opacity-60' : ''}`}
+        className="rounded-lg border border-border bg-surface-50 p-4 space-y-3"
         aria-disabled={llmDisabled}
       >
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          <p className="text-xs font-semibold text-foreground">LLM Provider</p>
-        </div>
+        <p className="text-xs font-semibold text-foreground">LLM Provider</p>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <div className="space-y-1">
             <label
@@ -165,7 +171,7 @@ export function EnhancedAiSection() {
               placeholder="auto"
               className="h-8 text-xs"
             />
-            <p className="text-[10px] text-muted-foreground/70">
+            <p className="text-[10px] text-muted-foreground">
               &apos;auto&apos; or provider id (e.g. &apos;openai&apos;, &apos;anthropic&apos;)
             </p>
           </div>
@@ -182,7 +188,7 @@ export function EnhancedAiSection() {
               placeholder="gpt-4"
               className="h-8 text-xs"
             />
-            <p className="text-[10px] text-muted-foreground/70">&apos;auto&apos; or model name</p>
+            <p className="text-[10px] text-muted-foreground">&apos;auto&apos; or model name</p>
           </div>
           <div className="space-y-1">
             <label
@@ -215,7 +221,7 @@ export function EnhancedAiSection() {
               disabled={setConfig.isPending}
               className="h-8 text-xs font-mono"
             />
-            <p className="text-[10px] text-muted-foreground/70">
+            <p className="text-[10px] text-muted-foreground">
               Max tokens per completion ({LLM_MAX_TOKENS_MIN}–{LLM_MAX_TOKENS_MAX})
             </p>
           </div>
@@ -247,12 +253,12 @@ export function EnhancedAiSection() {
               onTouchEnd={() => commit('llmTemperature', draft.llmTemperature)}
               onKeyUp={() => commit('llmTemperature', draft.llmTemperature)}
               disabled={setConfig.isPending}
-              className="w-full h-1.5 rounded-full bg-surface-100 appearance-none cursor-pointer accent-brand disabled:cursor-not-allowed disabled:opacity-50"
+              className="brand-range"
               aria-valuemin={LLM_TEMPERATURE_MIN}
               aria-valuemax={LLM_TEMPERATURE_MAX}
               aria-valuenow={draft.llmTemperature}
             />
-            <p className="text-[10px] text-muted-foreground/70">
+            <p className="text-[10px] text-muted-foreground">
               Sampling temperature (0 = focused, 2 = creative)
             </p>
           </div>
@@ -261,18 +267,15 @@ export function EnhancedAiSection() {
 
       {/* Feature Toggles */}
       <div
-        className={`rounded-lg border border-border bg-surface-50 p-4 space-y-4 transition-opacity ${llmDisabled ? 'opacity-60' : ''}`}
+        className="rounded-lg border border-border bg-surface-50 p-4 space-y-4"
         aria-disabled={llmDisabled}
       >
-        <p className="text-xs font-semibold text-foreground">Phase 2 & 3 Features</p>
+        <p className="text-xs font-semibold text-foreground">Additional AI Settings</p>
 
         {/* Query Expansion */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <Network className="h-3 w-3 text-muted-foreground" />
-              <p className="text-xs font-medium text-foreground">Query Expansion</p>
-            </div>
+            <p className="text-xs font-medium text-foreground">Query Expansion</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
               Generate semantic variations for better retrieval recall.
             </p>
@@ -305,10 +308,7 @@ export function EnhancedAiSection() {
         {/* Semantic Chunking */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <Layers className="h-3 w-3 text-muted-foreground" />
-              <p className="text-xs font-medium text-foreground">Semantic Chunking</p>
-            </div>
+            <p className="text-xs font-medium text-foreground">Semantic Chunking</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
               Structure-aware content splitting for better context.
             </p>
@@ -341,10 +341,7 @@ export function EnhancedAiSection() {
         {/* Long-Term Memory */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <Target className="h-3 w-3 text-muted-foreground" />
-              <p className="text-xs font-medium text-foreground">Long-Term Memory</p>
-            </div>
+            <p className="text-xs font-medium text-foreground">Long-Term Memory</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
               Extract and store facts across conversations with freshness tracking.
             </p>
@@ -377,10 +374,7 @@ export function EnhancedAiSection() {
         {/* Knowledge Graph */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <GitBranch className="h-3 w-3 text-muted-foreground" />
-              <p className="text-xs font-medium text-foreground">Knowledge Graph</p>
-            </div>
+            <p className="text-xs font-medium text-foreground">Knowledge Graph</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
               Cross-thread entity relationships and context linking.
             </p>
@@ -413,10 +407,7 @@ export function EnhancedAiSection() {
         {/* Multi-Turn Planning */}
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <Cpu className="h-3 w-3 text-muted-foreground" />
-              <p className="text-xs font-medium text-foreground">Multi-Turn Planning</p>
-            </div>
+            <p className="text-xs font-medium text-foreground">Multi-Turn Planning</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug mb-2">
               Decompose complex queries into execution plans.
             </p>
@@ -490,10 +481,7 @@ export function EnhancedAiSection() {
         {/* Streaming Responses */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <Waves className="h-3 w-3 text-muted-foreground" />
-              <p className="text-xs font-medium text-foreground">Streaming Responses</p>
-            </div>
+            <p className="text-xs font-medium text-foreground">Streaming Responses</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
               Real-time token streaming for faster perceived response.
             </p>
@@ -526,10 +514,7 @@ export function EnhancedAiSection() {
         {/* Distributed Tracing */}
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <Zap className="h-3 w-3 text-muted-foreground" />
-              <p className="text-xs font-medium text-foreground">Distributed Tracing</p>
-            </div>
+            <p className="text-xs font-medium text-foreground">Distributed Tracing</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug mb-2">
               Request lifecycle tracking and observability.
             </p>
@@ -559,7 +544,7 @@ export function EnhancedAiSection() {
                 onTouchEnd={() => commit('tracingSampleRate', draft.tracingSampleRate)}
                 onKeyUp={() => commit('tracingSampleRate', draft.tracingSampleRate)}
                 disabled={!draft.tracingEnabled || setConfig.isPending}
-                className="w-full h-1 rounded-full bg-surface-100 appearance-none cursor-pointer accent-brand disabled:cursor-not-allowed disabled:opacity-50"
+                className="brand-range"
                 aria-valuemin={TRACING_SAMPLE_RATE_MIN}
                 aria-valuemax={TRACING_SAMPLE_RATE_MAX}
                 aria-valuenow={draft.tracingSampleRate}
@@ -594,18 +579,16 @@ export function EnhancedAiSection() {
 
       {/* Save error banner */}
       {setConfig.isError && (
-        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
           <span className="min-w-0 truncate">Failed to save: {String(setConfig.error)}</span>
         </div>
       )}
 
       {/* Info banner for LLM */}
-      {!hasLlmProvider && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+      {!detectionPending && !hasEnabledProvider && (
+        <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
           <span className="min-w-0">
-            Configure an LLM provider in Provider settings to enable Enhanced AI features.
+            Enable an LLM provider in Provider settings to enable Enhanced AI features.
           </span>
         </div>
       )}

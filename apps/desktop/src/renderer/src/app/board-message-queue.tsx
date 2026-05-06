@@ -354,11 +354,11 @@ export function BoardMessageQueue() {
         aria-expanded={open}
         data-board-message-queue-button=""
         className={cn(
-          'group flex h-11 shrink-0 items-center gap-2 rounded-[18px] border bg-black px-3 text-xs font-semibold transition-all',
+          'group flex h-11 shrink-0 items-center gap-2 rounded-[18px] border px-3 text-xs font-semibold',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
           hasUnread
-            ? 'border-brand/45 text-red-50 shadow-[0_0_28px_-18px_hsl(var(--brand))]'
-            : 'border-white/10 text-muted-foreground hover:border-brand/25 hover:text-foreground',
+            ? 'brand-selected'
+            : 'border-white/10 bg-black text-muted-foreground transition-colors hover:border-brand/25 hover:text-foreground',
         )}
       >
         <span className="relative flex h-5 w-5 items-center justify-center">

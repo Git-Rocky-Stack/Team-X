@@ -9,20 +9,7 @@ import type {
   OperatorAuthMode,
 } from '@team-x/shared-types';
 import { OPERATOR_AUTH_MODES } from '@team-x/shared-types';
-import {
-  Boxes,
-  ClipboardList,
-  Cloud,
-  Download,
-  GitBranch,
-  KeyRound,
-  LibraryBig,
-  Loader2,
-  PackagePlus,
-  ShieldCheck,
-  Sparkles,
-  Users,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button.js';
@@ -77,17 +64,6 @@ function modeDescription(mode: OperatorAuthMode): string {
       return 'Hosted/shared supervision seam for future sync and cloud identities.';
     default:
       return 'Zero-login local-first posture with one workstation owning the workspace.';
-  }
-}
-
-function modeIcon(mode: OperatorAuthMode) {
-  switch (mode) {
-    case 'invited':
-      return Users;
-    case 'cloud':
-      return Cloud;
-    default:
-      return ShieldCheck;
   }
 }
 
@@ -337,7 +313,6 @@ export function PortabilitySection() {
   return (
     <section className="space-y-3" data-settings-portability="">
       <div className="flex items-center gap-2">
-        <LibraryBig className="h-3.5 w-3.5 text-muted-foreground" />
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Portability & Templates
         </h4>
@@ -358,10 +333,7 @@ export function PortabilitySection() {
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <ShieldCheck className="h-4 w-4 text-brand" />
-                Sharing posture
-              </div>
+              <div className="text-sm font-medium text-foreground">Sharing posture</div>
               <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
                 Choose the workspace’s intended sharing mode, then check what is already ready and
                 what still blocks invited or cloud operation.
@@ -392,7 +364,6 @@ export function PortabilitySection() {
                   const readiness =
                     sharingReadiness.modeReadiness.find((entry) => entry.mode === mode) ??
                     sharingReadiness.modeReadiness[0];
-                  const Icon = modeIcon(mode);
                   const selected = sharingReadiness.configuredMode === mode;
                   return (
                     <button
@@ -400,15 +371,14 @@ export function PortabilitySection() {
                       type="button"
                       onClick={() => updateSharingMode.mutate(mode)}
                       disabled={updateSharingMode.isPending}
-                      className={`rounded-lg border px-3 py-3 text-left transition-colors ${
+                      className={`rounded-lg border px-3 py-3 text-left ${
                         selected
-                          ? 'border-brand bg-brand/10'
-                          : 'border-white/10 bg-background/60 hover:border-white/20'
+                          ? 'brand-selected'
+                          : 'border-white/10 bg-background/60 hover:border-white/20 transition-colors'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                          <Icon className="h-4 w-4 text-brand" />
+                        <div className="text-sm font-medium text-foreground">
                           {modeLabel(mode)}
                         </div>
                         <span
@@ -641,8 +611,7 @@ export function PortabilitySection() {
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Download className="h-4 w-4 text-brand" />
+              <div className="text-sm font-medium text-foreground">
                 Export active workspace package
               </div>
               <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
@@ -675,8 +644,7 @@ export function PortabilitySection() {
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Sparkles className="h-4 w-4 text-brand" />
+              <div className="text-sm font-medium text-foreground">
                 Save active workspace as template
               </div>
               <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
@@ -719,8 +687,7 @@ export function PortabilitySection() {
         </div>
 
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <PackagePlus className="h-4 w-4 text-brand" />
+          <div className="text-sm font-medium text-foreground">
             Preview package from path or GitHub
           </div>
           <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
@@ -762,8 +729,7 @@ export function PortabilitySection() {
                     <p className="mt-1 text-[11px] text-muted-foreground">
                       {previewSummary(packagePreview)}
                     </p>
-                    <p className="mt-1 flex min-w-0 items-center gap-1 truncate font-mono text-[10px] text-muted-foreground/80">
-                      <GitBranch className="h-3 w-3 shrink-0" />
+                    <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground/80">
                       <span className="truncate">{packageSourceLabel(packagePreview)}</span>
                     </p>
                   </div>
@@ -816,8 +782,7 @@ export function PortabilitySection() {
                     data-portability-import-plan=""
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <ClipboardList className="h-4 w-4 text-brand" />
+                      <div className="text-sm font-medium text-foreground">
                         Dry-run install plan
                       </div>
                       <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
@@ -905,8 +870,7 @@ export function PortabilitySection() {
                     data-portability-secret-wizard=""
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <KeyRound className="h-4 w-4 text-amber-300" />
+                      <div className="text-sm font-medium text-foreground">
                         Missing secret wizard
                       </div>
                       <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">
@@ -1001,7 +965,6 @@ export function PortabilitySection() {
                       disabled={!canImportWorkspace}
                       onClick={() => void handleImportPackage()}
                     >
-                      <Download className="mr-2 h-3.5 w-3.5" />
                       {importPackage.isPending
                         ? 'Importing...'
                         : secretBindings.length > 0
@@ -1040,7 +1003,6 @@ export function PortabilitySection() {
                       disabled={!canInstallTemplate}
                       onClick={() => void handleInstallTemplate()}
                     >
-                      <PackagePlus className="mr-2 h-3.5 w-3.5" />
                       {installTemplate.isPending
                         ? 'Installing...'
                         : secretBindings.length > 0
@@ -1065,10 +1027,7 @@ export function PortabilitySection() {
         </div>
 
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Boxes className="h-4 w-4 text-brand" />
-            Local template library
-          </div>
+          <div className="text-sm font-medium text-foreground">Local template library</div>
           <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
             Template-backed workspace creation lives in the workspace switcher. This library keeps
             the reusable operating models visible and local-first.
@@ -1105,8 +1064,7 @@ export function PortabilitySection() {
                         {new Date(template.manifest.exportedAt).toLocaleString()}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                      <Download className="h-3 w-3" />
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                       Template
                     </div>
                   </div>

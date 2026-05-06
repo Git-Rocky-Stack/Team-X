@@ -8,7 +8,7 @@ import {
   CONCURRENCY_SETTINGS_CLAMPS,
   type SettingsGetConcurrencyResponse,
 } from '@team-x/shared-types';
-import { Loader2, Sliders } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Input } from '@/components/ui/input.js';
@@ -107,7 +107,6 @@ export function ConcurrencySection() {
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <Sliders className="h-3.5 w-3.5 text-muted-foreground" />
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Concurrency
         </h4>

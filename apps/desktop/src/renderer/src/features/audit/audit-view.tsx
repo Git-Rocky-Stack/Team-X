@@ -153,10 +153,10 @@ function EventTypeChips({
             key={eventType}
             type="button"
             onClick={() => onToggle(eventType)}
-            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
               active
-                ? 'border-brand/40 bg-brand/10 text-brand'
-                : 'border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600'
+                ? 'brand-selected'
+                : 'border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600 transition-colors'
             }`}
           >
             {formatEventType(eventType)} <span className="text-zinc-500">({count})</span>

@@ -60,7 +60,7 @@ export function RuntimeSection() {
                 flex flex-col items-start rounded-lg border p-3 text-left transition-colors
                 ${
                   isActive
-                    ? 'border-brand bg-brand/5 text-brand'
+                    ? 'brand-selected'
                     : 'border-border bg-surface-50 text-muted-foreground hover:border-foreground/20 hover:text-foreground'
                 }
               `}

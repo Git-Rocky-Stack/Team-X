@@ -12,15 +12,7 @@
  */
 
 import type { SettingsGetRagConfigResponse } from '@team-x/shared-types';
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Database,
-  Loader2,
-  RefreshCw,
-  Sparkles,
-  Trash2,
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -100,12 +92,9 @@ export function RagSection() {
   if (configLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <div className="flex items-center gap-2">
-          <Database className="h-3.5 w-3.5 text-muted-foreground" />
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            RAG (Retrieval-Augmented Generation)
-          </h4>
-        </div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          RAG (Retrieval-Augmented Generation)
+        </h4>
         <Skeleton className="h-48 rounded-lg" />
       </section>
     );
@@ -114,12 +103,9 @@ export function RagSection() {
   if (configError || !config) {
     return (
       <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Database className="h-3.5 w-3.5 text-muted-foreground" />
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            RAG (Retrieval-Augmented Generation)
-          </h4>
-        </div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          RAG (Retrieval-Augmented Generation)
+        </h4>
         <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
           <AlertTriangle className="h-3.5 w-3.5" />
           Failed to load RAG configuration.
@@ -171,7 +157,6 @@ export function RagSection() {
     <section className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Database className="h-3.5 w-3.5 text-muted-foreground" />
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           RAG (Retrieval-Augmented Generation)
         </h4>
@@ -182,12 +167,23 @@ export function RagSection() {
           {enabled ? (
             <Badge
               variant="outline"
-              className="border-green-400/30 bg-green-400/5 text-green-400 text-[10px] px-1.5 py-0"
+              className="border-green-400/40 bg-green-400/10 text-green-400 text-[10px] px-1.5 py-0 gap-1.5"
             >
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.85)] animate-pulse"
+              />
               Enabled
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">
+            <Badge
+              variant="outline"
+              className="border-red-400/40 bg-red-500/10 text-red-400 text-[10px] px-1.5 py-0 gap-1.5"
+            >
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.85)]"
+              />
               Disabled
             </Badge>
           )}
@@ -238,10 +234,7 @@ export function RagSection() {
         className={`rounded-lg border border-border bg-surface-50 p-4 space-y-3 transition-opacity ${disabledKnobs ? 'opacity-60' : ''}`}
         aria-disabled={disabledKnobs}
       >
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          <p className="text-xs font-semibold text-foreground">Embedding Provider</p>
-        </div>
+        <p className="text-xs font-semibold text-foreground">Embedding Provider</p>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <div className="space-y-1">
             <label
@@ -387,7 +380,7 @@ export function RagSection() {
             onTouchEnd={() => commit('ragThreshold', draft.ragThreshold)}
             onKeyUp={() => commit('ragThreshold', draft.ragThreshold)}
             disabled={disabledKnobs || setConfig.isPending}
-            className="w-full h-1.5 rounded-full bg-surface-100 appearance-none cursor-pointer accent-brand disabled:cursor-not-allowed disabled:opacity-50"
+            className="brand-range"
             aria-valuemin={RAG_THRESHOLD_MIN}
             aria-valuemax={RAG_THRESHOLD_MAX}
             aria-valuenow={draft.ragThreshold}
@@ -447,16 +440,38 @@ export function RagSection() {
       <div className="rounded-lg border border-border bg-surface-50 p-4">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-semibold text-foreground">Index Stats</p>
-          {stats?.enabled ? (
+          {statsLoading && !stats ? (
             <Badge
               variant="outline"
-              className="border-green-400/30 bg-green-400/5 text-green-400 text-[10px] px-1.5 py-0"
+              className="border-muted-foreground/30 bg-muted/20 text-muted-foreground text-[10px] px-1.5 py-0 gap-1.5"
             >
-              Active
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse"
+              />
+              Detecting…
+            </Badge>
+          ) : stats?.enabled ? (
+            <Badge
+              variant="outline"
+              className="border-green-400/40 bg-green-400/10 text-green-400 text-[10px] px-1.5 py-0 gap-1.5"
+            >
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.85)] animate-pulse"
+              />
+              Indexing Active
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0">
-              Inactive
+            <Badge
+              variant="outline"
+              className="border-red-400/40 bg-red-500/10 text-red-400 text-[10px] px-1.5 py-0 gap-1.5"
+            >
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.85)]"
+              />
+              Indexing Offline
             </Badge>
           )}
         </div>

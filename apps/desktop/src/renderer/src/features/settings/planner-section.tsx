@@ -16,7 +16,7 @@ import {
   type SettingsGetPlannerResponse,
   type SettingsSetPlannerRequest,
 } from '@team-x/shared-types';
-import { AlertTriangle, GitBranch, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Input } from '@/components/ui/input.js';
@@ -50,12 +50,9 @@ export function PlannerSection() {
   if (isLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <div className="flex items-center gap-2">
-          <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Task Planner
-          </h4>
-        </div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Task Planner
+        </h4>
         <Skeleton className="h-48 rounded-lg" />
       </section>
     );
@@ -64,14 +61,10 @@ export function PlannerSection() {
   if (isError || !data) {
     return (
       <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Task Planner
-          </h4>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5" />
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Task Planner
+        </h4>
+        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
           Failed to load task planner settings.
         </div>
       </section>
@@ -101,7 +94,6 @@ export function PlannerSection() {
     <section className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Task Planner
         </h4>
@@ -278,8 +270,7 @@ export function PlannerSection() {
 
       {/* Save error banner */}
       {setPlanner.isError && (
-        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
           <span className="min-w-0 truncate">Failed to save: {String(setPlanner.error)}</span>
         </div>
       )}

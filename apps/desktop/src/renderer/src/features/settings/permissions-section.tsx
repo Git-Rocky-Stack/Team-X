@@ -11,7 +11,6 @@
  * Phase 6 — Proactive Execution System — Slice 5
  */
 
-import { FolderOpen, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -158,12 +157,9 @@ export function PermissionsSection() {
 
   return (
     <section className="space-y-4" data-permissions-section="">
-      <div className="flex items-center gap-2">
-        <Shield className="h-3.5 w-3.5 text-muted-foreground" />
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Extension Permissions
-        </h4>
-      </div>
+      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Extension Permissions
+      </h4>
       <p className="text-[11px] leading-snug text-muted-foreground">
         Configure what capabilities extensions can access. Presets provide common configurations;
         use Advanced for granular control.
@@ -211,10 +207,10 @@ export function PermissionsSection() {
                       <div
                         key={key}
                         data-testid={`preset-card-${key}`}
-                        className={`relative rounded-lg border-2 p-4 transition-colors ${
+                        className={`relative rounded-lg border-2 p-4 ${
                           isSelected
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border/70 bg-muted/20 hover:border-border'
+                            ? 'brand-selected'
+                            : 'border-border/70 bg-muted/20 hover:border-border transition-colors'
                         }`}
                       >
                         <input
@@ -330,7 +326,7 @@ export function PermissionsSection() {
                       className="h-9 px-3"
                       title="Browse for directory"
                     >
-                      <FolderOpen className="h-4 w-4" />
+                      Browse
                     </Button>
                     <Button
                       variant="default"
@@ -339,14 +335,7 @@ export function PermissionsSection() {
                       disabled={isAddingPath || !companyId || !newPathInput.trim()}
                       className="h-9"
                     >
-                      {isAddingPath ? (
-                        <>Adding...</>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4 mr-1" />
-                          Add
-                        </>
-                      )}
+                      {isAddingPath ? 'Adding...' : 'Add'}
                     </Button>
                   </div>
                   {createGrant.isError && (
@@ -407,20 +396,3 @@ export function PermissionsSection() {
   );
 }
 
-// Import Shield icon
-function Shield({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-    </svg>
-  );
-}

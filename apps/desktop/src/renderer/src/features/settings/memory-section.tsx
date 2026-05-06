@@ -4,7 +4,7 @@ import {
   type SettingsGetMemoryResponse,
   type SettingsSetMemoryRequest,
 } from '@team-x/shared-types';
-import { AlertTriangle, BrainCircuit, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { useMemorySettings, useSetMemorySettings } from '../../hooks/use-settings.js';
@@ -31,12 +31,9 @@ export function MemorySection() {
   if (isLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <div className="flex items-center gap-2">
-          <BrainCircuit className="h-3.5 w-3.5 text-muted-foreground" />
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Long-Run Memory
-          </h4>
-        </div>
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Long-Run Memory
+        </h4>
         <Skeleton className="h-40 rounded-lg" />
       </section>
     );
@@ -45,14 +42,10 @@ export function MemorySection() {
   if (isError || !data) {
     return (
       <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <BrainCircuit className="h-3.5 w-3.5 text-muted-foreground" />
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Long-Run Memory
-          </h4>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5" />
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Long-Run Memory
+        </h4>
+        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
           Failed to load long-run memory settings.
         </div>
       </section>
@@ -73,7 +66,6 @@ export function MemorySection() {
   return (
     <section className="space-y-3" data-settings-memory="">
       <div className="flex items-center gap-2">
-        <BrainCircuit className="h-3.5 w-3.5 text-muted-foreground" />
         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Long-Run Memory
         </h4>
@@ -106,9 +98,10 @@ export function MemorySection() {
                 variant="outline"
                 size="sm"
                 className={cn(
-                  'border-white/10 bg-black/10 text-xs hover:bg-black/20',
-                  draft.defaultTargetTokenBudget === budget &&
-                    'border-brand/30 bg-brand/10 text-brand',
+                  'text-xs',
+                  draft.defaultTargetTokenBudget === budget
+                    ? 'brand-selected'
+                    : 'border-white/10 bg-black/10 hover:bg-black/20',
                 )}
                 disabled={setMemory.isPending}
                 onClick={() => commit('defaultTargetTokenBudget', budget)}
@@ -218,8 +211,7 @@ export function MemorySection() {
       </div>
 
       {setMemory.isError && (
-        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
           <span className="min-w-0 truncate">Failed to save: {String(setMemory.error)}</span>
         </div>
       )}

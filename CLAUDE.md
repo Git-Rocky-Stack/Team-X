@@ -22,6 +22,41 @@ This project lives under `Strategia-Enhanced-App/` and inherits rules from:
 - **A11y:** WCAG 2.1 AA minimum, AAA for critical text; keyboard-navigable; 44 px touch targets
 - **States:** every interactive element — hover, focus, loading, error, empty, disabled
 
+### Reusable visual primitives (in `apps/desktop/src/renderer/src/styles/globals.css`)
+
+When you reach for one of the patterns below, **use the existing class — do not reinvent it inline**. New visual primitives belong here, not scattered across feature files.
+
+- **`.brand-selected`** — the active choice in any "select one of N" chooser (mode buttons, preset cards, filter chips, posture selectors, the Board Queue button, etc.). Supplies border, bg, text color, glow, hover, and focus-visible. Pair with `cn()`:
+  ```tsx
+  className={cn(
+    'rounded-lg border px-3 py-3',
+    selected ? 'brand-selected' : 'border-border hover:border-white/20 transition-colors',
+  )}
+  ```
+  Do **not** also apply `border-brand`, `bg-brand/10`, `text-brand`, etc. when this class is on — it owns those properties. Reserved for chooser-card selection only; navigation tabs, list-item highlights, and semantic color codings (e.g. category pills) are out of scope.
+
+  **Color variants** for choosers where color carries semantic meaning — apply alongside `.brand-selected`. The bezel weight, glow shape, hover behavior, and transition stay locked; only the tint changes.
+  - `.brand-selected-green` — Local-only / safe / read-only / approved
+  - `.brand-selected-blue` — Open-source / standard / informational
+  - `.brand-selected-amber` — Caution / proprietary cloud / advanced / pending review
+  ```tsx
+  className={cn('rounded-lg border', selected && `brand-selected ${tier.variant}`)}
+  ```
+- **`.brand-range`** — `<input type="range">` slider styling. Visible rail + brand-red thumb with hover/focus glow. Apply with `className="brand-range"` and nothing else.
+
+### Status badges (LED + label)
+
+All status badges across the renderer share one foundation:
+`text-[10px] px-1.5 py-0 gap-1.5` + a 1.5×1.5px LED span as the first child.
+
+| State | Border | Bg | Text | LED |
+|---|---|---|---|---|
+| All-good / on | `border-green-400/40` | `bg-green-400/10` | `text-green-400` | green, `animate-pulse` |
+| Off / not-running | `border-red-400/40` | `bg-red-500/10` | `text-red-400` | red, solid |
+| Loading / detecting | `border-muted-foreground/30` | `bg-muted/20` | `text-muted-foreground` | grey, `animate-pulse` |
+
+Match this signature when adding a new status badge so the page reads as one family.
+
 ## Key contacts
 
 - **Project lead:** Rocky Elsalaymeh

@@ -1,4 +1,4 @@
-import { AlertTriangle, Archive, CheckCircle2, HardDrive, Loader2, Upload } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -33,35 +33,26 @@ export function BackupSection() {
   return (
     <div className="rounded-lg border border-border bg-surface-50 p-4">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <HardDrive className="h-4 w-4 text-brand" />
-          <h3 className="text-sm font-semibold">Backup & Restore</h3>
-        </div>
+        <h3 className="text-sm font-semibold">Backup & Restore</h3>
         <Button
           size="sm"
           className="h-7 gap-1.5 text-xs"
           onClick={() => createBackup.mutate(undefined)}
           disabled={createBackup.isPending}
         >
-          {createBackup.isPending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Archive className="h-3 w-3" />
-          )}
+          {createBackup.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
           {createBackup.isPending ? 'Backing up...' : 'Create Backup'}
         </Button>
       </div>
 
       {createBackup.isSuccess && (
-        <div className="mb-3 flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-xs text-green-400">
-          <CheckCircle2 className="h-3.5 w-3.5" />
+        <div className="mb-3 rounded bg-green-500/10 px-3 py-2 text-xs text-green-400">
           Backup created successfully
         </div>
       )}
 
       {createBackup.isError && (
-        <div className="mb-3 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5" />
+        <div className="mb-3 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
           Backup failed: {String(createBackup.error)}
         </div>
       )}
@@ -76,8 +67,7 @@ export function BackupSection() {
         </div>
       ) : backups.length === 0 ? (
         <div className="rounded border border-border/50 bg-surface-100 px-4 py-6 text-center">
-          <Archive className="mx-auto h-6 w-6 text-muted-foreground/40" />
-          <p className="mt-2 text-xs text-muted-foreground/60">No backups yet</p>
+          <p className="text-xs text-muted-foreground/60">No backups yet</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -137,11 +127,10 @@ export function BackupSection() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-6 px-2 text-[10px] gap-1"
+                    className="h-6 px-2 text-[10px]"
                     onClick={() => setConfirmRestore(backup.path)}
                     disabled={restoreBackup.isPending}
                   >
-                    <Upload className="h-3 w-3" />
                     Restore
                   </Button>
                 )}
@@ -152,15 +141,13 @@ export function BackupSection() {
       )}
 
       {restoreBackup.isSuccess && (
-        <div className="mt-3 flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-xs text-green-400">
-          <CheckCircle2 className="h-3.5 w-3.5" />
+        <div className="mt-3 rounded bg-green-500/10 px-3 py-2 text-xs text-green-400">
           Restore complete. Restart the app to apply changes.
         </div>
       )}
 
       {restoreBackup.isError && (
-        <div className="mt-3 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5" />
+        <div className="mt-3 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
           Restore failed: {String(restoreBackup.error)}
         </div>
       )}
