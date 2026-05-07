@@ -9,7 +9,18 @@
  * (all-created, none-created, mixed, per-company throw, empty set).
  *
  * Phase 5 — M33 follow-up F4.
+ *
+ * Also covers `delete(backupPath)` — added in the Phase 6 follow-up
+ * that surfaced "Delete" buttons next to each row of the Settings
+ * Backup & Restore card. The safety contract (path-traversal guard)
+ * is the load-bearing invariant — these tests exercise it against a
+ * real OS temp directory to catch any drift in `path.relative`
+ * semantics across Windows / POSIX.
  */
+
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -137,6 +148,9 @@ describe('BackupService.ensurePostRestoreSystemEmployees', () => {
     expect(result.skipped).toEqual([{ companyId: 'c-odd', reason: 'raw string throw' }]);
   });
 
+  // The `delete(backupPath)` method below has its own describe block —
+  // these idempotency tests stay scoped to the post-restore sweep.
+
   it('is idempotent — re-running on the same set yields zero-count second pass', () => {
     let agentExists = false;
     let copilotExists = false;
@@ -164,5 +178,71 @@ describe('BackupService.ensurePostRestoreSystemEmployees', () => {
     expect(second.perCompany).toEqual([
       { companyId: 'c-1', agentCreated: false, copilotCreated: false },
     ]);
+  });
+});
+
+describe('BackupService.delete', () => {
+  let tempRoot: string;
+  let backupsDir: string;
+  let outsideDir: string;
+  let service: ReturnType<typeof createBackupService>;
+
+  beforeEach(async () => {
+    tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-x-backup-delete-'));
+    backupsDir = path.join(tempRoot, 'backups');
+    outsideDir = path.join(tempRoot, 'outside-the-jail');
+    await fs.mkdir(backupsDir, { recursive: true });
+    await fs.mkdir(outsideDir, { recursive: true });
+
+    service = createBackupService({
+      dbPath: path.join(tempRoot, 'team-x.sqlite'),
+      companiesBasePath: path.join(tempRoot, 'companies'),
+      backupsDir,
+      appVersion: '0.0.0-test',
+      checkpointWal: () => {},
+    });
+  });
+
+  afterEach(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  it('removes an existing backup directory inside the backups jail', async () => {
+    const target = path.join(backupsDir, 'backup-2026-05-07T12-00-00');
+    await fs.mkdir(target, { recursive: true });
+    await fs.writeFile(path.join(target, 'manifest.json'), '{"version":"1"}');
+    await fs.writeFile(path.join(target, 'team-x.sqlite'), 'fake db bytes');
+
+    const result = await service.delete(target);
+
+    expect(result.deletedPath).toBe(path.resolve(target));
+    await expect(fs.access(target)).rejects.toThrow();
+  });
+
+  it('treats a missing path as a successful idempotent delete (no throw)', async () => {
+    const target = path.join(backupsDir, 'never-existed');
+    const result = await service.delete(target);
+    expect(result.deletedPath).toBe(path.resolve(target));
+  });
+
+  it('refuses to delete a path outside the backups directory', async () => {
+    await expect(service.delete(outsideDir)).rejects.toThrow(/refusing to delete path outside/);
+    // Outside dir must still exist — the guard fired before any rm.
+    await expect(fs.access(outsideDir)).resolves.toBeUndefined();
+  });
+
+  it('refuses to delete via a `..` traversal that escapes the jail', async () => {
+    const traversal = path.join(backupsDir, '..', 'outside-the-jail');
+    await expect(service.delete(traversal)).rejects.toThrow(/refusing to delete path outside/);
+    await expect(fs.access(outsideDir)).resolves.toBeUndefined();
+  });
+
+  it('refuses to delete the backups directory itself (relative is empty)', async () => {
+    await expect(service.delete(backupsDir)).rejects.toThrow(/refusing to delete path outside/);
+    await expect(fs.access(backupsDir)).resolves.toBeUndefined();
+  });
+
+  it('refuses an empty backupPath', async () => {
+    await expect(service.delete('')).rejects.toThrow(/backupPath is required/);
   });
 });

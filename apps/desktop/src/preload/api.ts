@@ -61,6 +61,8 @@ import type {
   AutonomyDoctorReport,
   BackupCreateRequest,
   BackupCreateResponse,
+  BackupDeleteRequest,
+  BackupDeleteResponse,
   BackupEntry,
   BackupRestoreRequest,
   BackupRestoreResponse,
@@ -482,6 +484,7 @@ const CHANNELS = {
   backupCreate: 'backup.create',
   backupRestore: 'backup.restore',
   backupList: 'backup.list',
+  backupDelete: 'backup.delete',
   // Ticket attachments (Phase 4 — M22)
   ticketsAttachFile: 'tickets.attachFile',
   ticketsDetachFile: 'tickets.detachFile',
@@ -959,6 +962,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
       restore: (req: BackupRestoreRequest) =>
         ipc.invoke(CHANNELS.backupRestore, req) as Promise<BackupRestoreResponse>,
       list: () => ipc.invoke(CHANNELS.backupList) as Promise<BackupEntry[]>,
+      delete: (req: BackupDeleteRequest) =>
+        ipc.invoke(CHANNELS.backupDelete, req) as Promise<BackupDeleteResponse>,
     },
     audit: {
       list: (filter: AuditFilter) =>

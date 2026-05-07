@@ -23,6 +23,155 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.0] — 2026-05-07 — Agentic system enhancement · settings UX repairs · system-employee top-up
+
+Major release in two halves: a four-fix sweep across Settings + system bootstrap that
+restores user-visible features Rocky filed as broken (`copilot.ask` error for pre-M33
+companies, dead proactive-mode toggle, missing Skill / MCP install entry points,
+no way to delete old backups), and a three-track agentic-system enhancement that
+replaces three load-bearing stubs with their real implementations (Enhanced AI's
+LLM provider, workload-aware delegation signals, the `/promote` natural-language
+command). The composition root for the main process now wires every authored
+service that was sitting on the shelf — verified by a comprehensive
+authored-vs-wired audit across 119 service files and ~290 IPC channels.
+Tests **2051/2053 passing** (every targeted suite green; the two pre-existing
+failures are a `keytar` native-ABI mismatch and a release-marker drift now
+resolved by this bump). Typecheck clean across all four `tsconfig` projects.
+
+### Added
+
+- **Authority Snapshot install entry points**
+  (`apps/desktop/src/renderer/src/features/settings/extensions-section.tsx`).
+  Two new buttons — `Add Skill` and `Add MCP` — surface in the card header.
+  Each opens the existing `InstallSkillDialog` / `ImportMcpDialog`, both of
+  which had shipped fully-working but were not exposed from the new Settings
+  page (the previous shell had a banner explaining marketplace installs were
+  removed "until the replacement flow can be engineered without risking the
+  whole page" — this is that replacement). CLI extensions deferred pending
+  the agentic system design pass; `EXTENSION_KINDS` remains `['skill', 'mcp']`.
+  Test guard flipped from `not.toContain('InstallSkillDialog')` to
+  `toContain` with the right wiring shape (`extensions-section.test.tsx:89-115`).
+- **Backup delete IPC + UX**
+  (`apps/desktop/src/main/services/backup.ts`,
+  `packages/shared-types/src/ipc.ts`,
+  `apps/desktop/src/main/ipc/handlers.ts`,
+  `apps/desktop/src/main/ipc/register.ts`,
+  `apps/desktop/src/preload/api.ts`,
+  `apps/desktop/src/renderer/src/hooks/use-backup.ts`,
+  `apps/desktop/src/renderer/src/features/settings/backup-section.tsx`).
+  Full-stack add: service `delete(backupPath)` method with a path-traversal
+  safety guard (`path.relative` from `backupsDir` rejects `..` traversal,
+  absolute paths on different drives, the jail itself, and empty strings),
+  `BackupDeleteRequest` / `BackupDeleteResponse` shared types, `backup.delete`
+  channel registered alongside `backup.create` / `backup.restore` / `backup.list`,
+  preload method, `useDeleteBackup` hook with `['backups']` cache invalidation,
+  and a `Trash2` icon button per row in the BackupSection with a confirm
+  flow that's mutually exclusive with the existing Restore confirm. Six new
+  unit tests cover the happy path, idempotent missing-path delete, four
+  traversal-guard cases (`backup.test.ts:188-243`).
+- **Boot-time system-employee top-up**
+  (`apps/desktop/src/main/index.ts:1437-1470`).
+  The per-company boot loop now idempotently runs `ensureSystemAgent` +
+  `ensureSystemCopilot` for every live company. Pre-M33 companies — created
+  via M31 paths before `ensureSystemCopilot` landed — now get their missing
+  `system-copilot` row on first boot after the upgrade. Without this top-up,
+  `copilot.ask` threw `[copilot-service] No system-copilot employee for
+  company "<id>". Did ensureSystemCopilot run on company creation?` for any
+  company that predated M33. Errors per-company are logged + swallowed so a
+  single broken company can't block boot for the rest. New regression test
+  `system-agent-bootstrap.test.ts` simulates the pre-M33 state (agent row
+  exists, copilot row missing) and asserts the agent row stays untouched
+  while the copilot row gets created.
+
+### Changed
+
+- **Enhanced AI now uses the real LLM provider**
+  (`apps/desktop/src/main/index.ts:1189-1248`).
+  The M32 placeholder `llmComplete` that returned the literal string
+  `(LLM response not configured)` regardless of input is gone. Replaced with
+  an adapter that resolves the first live company's `system-agent`, threads
+  it through the same `resolveProvider` closure the agentic loop and copilot
+  analyzer use (test-mode → canned; production → runtime profile + secrets),
+  and accumulates `streamAgent` deltas into a single text blob — same shape
+  the `WriteSideCompleteFn` adapter uses at line ~1862. All 7 `enhancedAi.*`
+  IPC channels (`enhancedAi.stats`, `enhancedAi.query`,
+  `enhancedAi.indexWithSemanticChunking`, `enhancedAi.extractAndStoreFacts`,
+  `enhancedAi.queryKnowledge`, `enhancedAi.createPlan`, `enhancedAi.getStats`)
+  now return real LLM output when the user has configured a provider. Test-mode
+  and unconfigured-mode paths unchanged (still gated by
+  `llmEnabled && ragService !== null`).
+- **Workload-aware delegation has real signals**
+  (`apps/desktop/src/main/index.ts:1810-1859`).
+  `WriteSideWorkloadProvider.inMeeting(employeeId)` now reads the active
+  meeting via `meetingsRepo.getActive(companyId)`, parses `attendeesJson`,
+  and tests membership — replacing the `() => false` stub that always told
+  the planner every employee was available.
+  `avgCompletionMs(employeeId, _subtaskType)` aggregates `closedAt - createdAt`
+  across all closed tickets the candidate was the assignee on (clamped against
+  the 48-hour `pastPerformanceCeilingMs` default). Returns `null` for new
+  hires so they're not penalized (preserves the planner's neutral 0.5
+  default). Subtask-type filtering is forward-compat: parameter accepted,
+  ignored in V1 — ticket labels do not yet carry a subtask-type taxonomy.
+  Both implementations wrap in `try/catch` → conservative defaults
+  (`false` / `null`) on repo errors. Result: `decompose_project` and
+  `delegate_subtask` tools score candidates with real load + history instead
+  of always-available + no-history.
+- **`/promote` works in the command palette**
+  (`apps/desktop/src/main/index.ts:2329-2342`,
+  `apps/desktop/src/main/services/command-service.ts`).
+  The CommandService dispatcher's `employeesPromote` slot was unwired despite
+  the IPC handler shipping in M-C step d (`employees.promote` registered at
+  `register.ts:687`, exercised by `employees-promote-handlers.test.ts`).
+  Result: typing `promote Alice to CTO` in the palette returned
+  `handler_error`. Now wired with a shape adapter — classifier emits
+  `{employeeId, roleId, newLevel}`, IPC takes `{employeeId, newRoleId}`,
+  `newLevel` is discarded because the IPC handler derives the level from
+  the role spec (single source of truth, no divergence risk).
+- **Release-marker freeze pinned to 3.0.0**
+  (`apps/desktop/src/renderer/src/app/top-bar.test.tsx:44-47`).
+  `APP_RELEASE_VERSION`, `PACKAGE_RELEASE_VERSION`, `SHARED_TYPES_RELEASE_VERSION`,
+  `INTELLIGENCE_RELEASE_VERSION` all unified at `3.0.0`. Resolves the v2.0.10-era
+  drift where `APP_RELEASE_VERSION` was still `'2.0.9'` after the workspace
+  shipped at `2.0.10`.
+
+### Fixed
+
+- **Proactive mode toggle no longer snap-backs**
+  (`apps/desktop/src/main/index.ts:1994-2078`).
+  `ProactiveTriggerService` was authored at
+  `apps/desktop/src/main/services/proactive-trigger-service.ts`, referenced
+  by 4 IPC handlers (`proactive.setEnabled`, `proactive.decomposeGoal`,
+  `proactive.scanForWork`, `proactive.getState`), and **never instantiated**
+  in the composition root. Every `proactive.*` IPC fell through to
+  `throw new Error('[ipc] proactive.<method>: proactiveTriggerService dep
+  is required')`. The renderer's optimistic Switch caught the throw and
+  reverted to OFF on every flip. Fix: `createProactiveTriggerService(...)`
+  is now instantiated right after `createAgenticLoopService`, and the IPC
+  handler deps include a lazy-resolver wrapper (matches the existing
+  `copilotAnalyzerService` pattern at line 1364) so the trigger service
+  can come online after `createIpcHandlers` is composed. The wrapper closes
+  over a module-level `proactiveTriggerServiceInstance: ProactiveTriggerService | null`
+  declared next to `agenticLoopServiceInstance`.
+
+### Audited (no changes)
+
+- **Authored-vs-wired audit** across 119 service files in
+  `apps/desktop/src/main/services/`, ~290 IPC channels in
+  `register.ts` REQUEST_CHANNELS / `handlers.ts` IpcHandlers / `shared-types`
+  ChannelMap, and 20+ optional handler deps. Confirmed the
+  `ProactiveTriggerService` gap was the only fully-unwired service.
+  Other findings (workload-signal stubs, Enhanced AI LLM stub, missing
+  `/promote` dispatcher entry) are addressed by this release; remaining
+  intentional deferments (classifier `complete` stub at `index.ts:1467`,
+  the `companies.archive` clear hookup for `copilotEventWindow.clear` —
+  which IS wired despite a stale comment at line 1227) are documented and
+  unchanged. No drift in registry consistency: every channel in
+  REQUEST_CHANNELS has a matching `ipcMain.handle` registration; every
+  `IpcHandlers` method has a matching channel; every ChannelMap entry has
+  a backing handler.
+
+---
+
 ## [2.0.10] — 2026-05-06 — Typography cascade · orchestrator retry · settings UX
 
 Three-part release: a workspace-wide typography master format that

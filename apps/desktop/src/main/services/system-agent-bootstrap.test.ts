@@ -303,6 +303,42 @@ describe('ensureSystemCopilot (M33 T2)', () => {
     );
   });
 
+  it('top-up path — pre-M33 company (agent only) gets system-copilot row on boot top-up without disturbing the existing agent row', () => {
+    // Simulates the production scenario that triggered the
+    // [copilot-service] "No system-copilot employee for company ..."
+    // error: a company seeded under M31 (agent only) needs a copilot
+    // row when the M33 boot-time top-up runs. The agent row must
+    // remain untouched (same id, no rewrite) and exactly one copilot
+    // row must be inserted.
+    const lookup = makePairLookup();
+
+    // Step 1: simulate pre-M33 state — only the system-agent exists.
+    const agentBefore = ensureSystemAgent({ db: ctx.db, companyId, roleLookup: lookup });
+    expect(agentBefore.created).toBe(true);
+
+    const employees = createEmployeesRepo(ctx.db);
+    expect(employees.findSystemByRoleId(companyId, SYSTEM_COPILOT_ROLE_ID)).toBeNull();
+
+    // Step 2: run the boot-time top-up. Both ensure functions are
+    // invoked — agent is a no-op, copilot is a fresh insert.
+    const agentTopUp = ensureSystemAgent({ db: ctx.db, companyId, roleLookup: lookup });
+    const copilotTopUp = ensureSystemCopilot({ db: ctx.db, companyId, roleLookup: lookup });
+
+    expect(agentTopUp.created).toBe(false);
+    expect(agentTopUp.employeeId).toBe(agentBefore.employeeId);
+    expect(copilotTopUp.created).toBe(true);
+    expect(copilotTopUp.employeeId).not.toBe(agentBefore.employeeId);
+
+    // Step 3: verify both rows now resolve through findSystemByRoleId
+    // — this is the lookup `copilot-service` uses; it MUST succeed.
+    expect(employees.findSystemByRoleId(companyId, SYSTEM_AGENT_ROLE_ID)?.id).toBe(
+      agentBefore.employeeId,
+    );
+    expect(employees.findSystemByRoleId(companyId, SYSTEM_COPILOT_ROLE_ID)?.id).toBe(
+      copilotTopUp.employeeId,
+    );
+  });
+
   it('filter sweep — listVisibleByCompany hides BOTH system pseudo-employees', () => {
     const lookup = makePairLookup();
     ensureSystemAgent({ db: ctx.db, companyId, roleLookup: lookup });

@@ -374,6 +374,57 @@ export function createBackupService(deps: BackupServiceDeps) {
     },
 
     /**
+     * Delete a backup directory permanently. Used by the Settings UI to
+     * prune old backups without leaving the app — there is no undo.
+     *
+     * Safety contract:
+     *
+     *  - The argument is a full filesystem path, taken verbatim from the
+     *    renderer's `BackupEntry.path`. To prevent any chance of a
+     *    directory-traversal bug deleting `C:\Windows` (or `/etc`), the
+     *    path MUST resolve inside `backupsDir`. We compute the relative
+     *    path and reject anything that escapes (`..`) or absolute-paths
+     *    out (`path.relative` returns an absolute path on different
+     *    drives on Windows). Callers receive a typed error in those cases.
+     *  - The directory must exist. A missing path is treated as success
+     *    (idempotent delete) so a renderer race that double-clicks the
+     *    button does not surface an error to the user.
+     *  - `fs.rm` is invoked with `recursive: true` to clear the manifest +
+     *    DB copy + vault snapshots inside the backup directory.
+     *
+     * Returns the deleted path so the IPC layer can echo it for audit
+     * logging without a second round trip.
+     */
+    async delete(backupPath: string): Promise<{ deletedPath: string }> {
+      if (typeof backupPath !== 'string' || backupPath.length === 0) {
+        throw new Error('[backup] delete: backupPath is required');
+      }
+
+      const resolved = path.resolve(backupPath);
+      const resolvedRoot = path.resolve(backupsDir);
+      const relative = path.relative(resolvedRoot, resolved);
+      const escapesRoot =
+        relative.length === 0 ||
+        relative.startsWith('..') ||
+        path.isAbsolute(relative);
+      if (escapesRoot) {
+        throw new Error(
+          `[backup] delete: refusing to delete path outside backups directory: ${backupPath}`,
+        );
+      }
+
+      try {
+        await fs.access(resolved);
+      } catch {
+        // Already gone — treat as success.
+        return { deletedPath: resolved };
+      }
+
+      await fs.rm(resolved, { recursive: true, force: true });
+      return { deletedPath: resolved };
+    },
+
+    /**
      * List all backup directories in the backups directory.
      */
     async list(): Promise<BackupEntry[]> {

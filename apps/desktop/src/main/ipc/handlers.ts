@@ -86,6 +86,8 @@ import type {
   AutonomyDoctorReport,
   BackupCreateRequest,
   BackupCreateResponse,
+  BackupDeleteRequest,
+  BackupDeleteResponse,
   BackupEntry,
   BackupRestoreRequest,
   BackupRestoreResponse,
@@ -740,6 +742,9 @@ export interface IpcBackupService {
   ): Promise<{ backupPath: string; manifest: import('@team-x/shared-types').BackupManifest }>;
   restore(backupPath: string): Promise<import('@team-x/shared-types').BackupManifest>;
   list(): Promise<BackupEntry[]>;
+  /** Delete a backup directory permanently. Path must resolve inside the
+   *  app's backups directory; service throws otherwise. */
+  delete(backupPath: string): Promise<{ deletedPath: string }>;
   /**
    * Post-restore sweep that re-bootstraps `system-agent` +
    * `system-copilot` for every company in the restored DB. Handler
@@ -1731,6 +1736,8 @@ export interface IpcHandlers {
   backupRestore(req: BackupRestoreRequest): Promise<BackupRestoreResponse>;
   /** `backup.list` — list existing backups. */
   backupList(): Promise<BackupEntry[]>;
+  /** `backup.delete` — delete a backup directory permanently. */
+  backupDelete(req: BackupDeleteRequest): Promise<BackupDeleteResponse>;
 
   // -----------------------------------------------------------------------
   // Audit log handlers (Phase 4 — M24)
@@ -7021,6 +7028,14 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
 
     async backupList() {
       return backupService.list();
+    },
+
+    async backupDelete(req) {
+      if (typeof req.backupPath !== 'string' || req.backupPath.length === 0) {
+        throw new Error('[ipc] backup.delete: backupPath is required');
+      }
+      const result = await backupService.delete(req.backupPath);
+      return { deletedPath: result.deletedPath };
     },
 
     // -----------------------------------------------------------------------

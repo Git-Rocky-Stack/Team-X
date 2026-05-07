@@ -4,7 +4,7 @@ import {
   type AuthorityPermission,
   EXTENSIONS_AUTONOMY_MODES,
 } from '@team-x/shared-types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plug, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge.js';
@@ -25,6 +25,9 @@ import { useExtensionsSettings, useSetExtensionsSettings } from '@/hooks/use-set
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
+
+import { ImportMcpDialog } from './import-mcp-dialog.js';
+import { InstallSkillDialog } from './install-skill-dialog.js';
 
 const AUTONOMY_COPY: Record<(typeof EXTENSIONS_AUTONOMY_MODES)[number], string> = {
   conservative: 'New installs stay inert until explicitly reviewed and approved.',
@@ -85,6 +88,12 @@ export function ExtensionsSection() {
     null,
   );
   const [proactiveToggling, setProactiveToggling] = useState(false);
+
+  // Install dialog open/close — Authority Snapshot card hosts the entry points.
+  // Two separate flags so each dialog manages its own state without coupling.
+  const [skillDialogOpen, setSkillDialogOpen] = useState(false);
+  const [mcpDialogOpen, setMcpDialogOpen] = useState(false);
+
   useEffect(() => {
     if (proactiveSettingsQuery.data) {
       setProactiveEnabledOptimistic(proactiveSettingsQuery.data.enabled);
@@ -272,10 +281,40 @@ export function ExtensionsSection() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-h3">Authority Snapshot</CardTitle>
-            <CardDescription>
-              Read-only extension inventory plus direct approval and grant controls.
-            </CardDescription>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <CardTitle className="text-h3">Authority Snapshot</CardTitle>
+                <CardDescription>
+                  Extension inventory plus direct install entry points for Skills and MCP servers.
+                </CardDescription>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5"
+                  onClick={() => setSkillDialogOpen(true)}
+                  disabled={!companyId}
+                  data-extension-add-skill=""
+                >
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add Skill
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5"
+                  onClick={() => setMcpDialogOpen(true)}
+                  disabled={!companyId}
+                  data-extension-add-mcp=""
+                >
+                  <Plug className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add MCP
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {!companyId ? (
@@ -470,6 +509,17 @@ export function ExtensionsSection() {
           </CardContent>
         </Card>
       </div>
+
+      <InstallSkillDialog
+        open={skillDialogOpen}
+        onOpenChange={setSkillDialogOpen}
+        companyId={companyId}
+      />
+      <ImportMcpDialog
+        open={mcpDialogOpen}
+        onOpenChange={setMcpDialogOpen}
+        companyId={companyId}
+      />
     </section>
   );
 }

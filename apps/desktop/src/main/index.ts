@@ -66,6 +66,7 @@ import type {
 import {
   CONCURRENCY_SETTINGS_CLAMPS,
   DEFAULT_CONCURRENCY_CAPS,
+  SYSTEM_AGENT_ROLE_ID,
   SYSTEM_COPILOT_ROLE_ID,
 } from '@team-x/shared-types';
 import { calcCostUsd } from '@team-x/telemetry-core';
@@ -192,6 +193,10 @@ import {
   isTestMode,
   makeFakeEmbedAdapter,
 } from './services/provider-factory.js';
+import {
+  type ProactiveTriggerService,
+  createProactiveTriggerService,
+} from './services/proactive-trigger-service.js';
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRagIndexer } from './services/rag-indexer.js';
 import { rebuildCompanyRagSources } from './services/rag-rebuild.js';
@@ -506,6 +511,7 @@ let agenticLoopServiceInstance: AgenticLoopService | null = null;
  * on the bus.
  */
 let copilotAnalyzerServiceInstance: CopilotAnalyzerService | null = null;
+let proactiveTriggerServiceInstance: ProactiveTriggerService | null = null;
 let routineServiceInstance: RoutineService | null = null;
 let budgetGovernanceServiceInstance: ReturnType<typeof createBudgetGovernanceService> | null = null;
 let approvalInboxServiceInstance: ReturnType<typeof createApprovalInboxService> | null = null;
@@ -1181,12 +1187,64 @@ app
         return embedFn(texts);
       };
 
-      // For now, we create a minimal LLM complete stub
-      // This will be replaced with the actual LLM provider in production
-      const llmComplete = async (_prompt: string): Promise<string> => {
-        // This is a stub — the actual implementation will call the configured LLM
-        console.warn('[enhanced-ai] LLM complete called but not yet wired to provider');
-        return '(LLM response not configured)';
+      // LLM completion adapter — wires Enhanced AI's `(prompt) => Promise<string>`
+      // shape to the same `streamAgent` provider-router path the agentic loop
+      // and copilot analyzer already use. Resolution strategy:
+      //
+      //   1. Find the first non-archived company at call time. Enhanced AI is
+      //      a framework-level capability not bound to any single actor, but
+      //      `resolveProvider` requires an `EmployeeRow` to look up the
+      //      runtime profile binding. We use the system-agent of the first
+      //      live company as a representative actor — in single-user mode all
+      //      companies share the user's chosen provider config, so the choice
+      //      is functionally equivalent.
+      //   2. Resolve the provider through the same `resolveProvider` closure
+      //      the orchestrator uses (test-mode → canned; production → runtime
+      //      profile + secrets). This guarantees the user's configured model,
+      //      provider, and capabilities are honored.
+      //   3. Stream the response, accumulate deltas into a single text blob,
+      //      and return. Usage telemetry is discarded here — Enhanced AI does
+      //      not yet surface per-call cost; the orchestrator-level telemetry
+      //      covers run-level accounting (matches the `WriteSideCompleteFn`
+      //      pattern at line ~1862).
+      //
+      // This replaces the M32 placeholder that returned `(LLM response not
+      // configured)` regardless of input — that stub silently degraded all 7
+      // `enhancedAi.*` IPC channels.
+      const llmComplete = async (prompt: string): Promise<string> => {
+        const liveCompany = companiesRepo.list().find((c) => c.status !== 'archived');
+        if (!liveCompany) {
+          throw new Error(
+            '[enhanced-ai] llmComplete: no live company exists — cannot resolve provider',
+          );
+        }
+        const systemAgentRow = employeesRepo.findSystemByRoleId(
+          liveCompany.id,
+          SYSTEM_AGENT_ROLE_ID,
+        );
+        if (!systemAgentRow) {
+          throw new Error(
+            `[enhanced-ai] llmComplete: no system-agent for company "${liveCompany.id}" — boot top-up should have created one`,
+          );
+        }
+        const actorRow = employeesRepo.getById(systemAgentRow.id);
+        if (!actorRow) {
+          throw new Error(
+            `[enhanced-ai] llmComplete: system-agent row "${systemAgentRow.id}" vanished mid-resolution`,
+          );
+        }
+        const resolved = await resolveProvider(actorRow);
+        let text = '';
+        for await (const chunk of streamAgent({
+          providerFactory: resolved.stream,
+          system: '',
+          messages: [{ role: 'user', content: prompt }],
+        })) {
+          if (chunk.kind === 'delta') {
+            text += chunk.delta;
+          }
+        }
+        return text;
       };
 
       try {
@@ -1376,6 +1434,46 @@ app
           copilotEventWindow.clear(cid);
         },
       },
+      // Proactive trigger service — same lazy-resolver pattern as
+      // copilotAnalyzerService above. The trigger service depends on
+      // `agenticLoopService`, which is constructed AFTER `createIpcHandlers`
+      // (the ordering reflects an existing wiring constraint: the loop
+      // service consumes the build-tools surface composed inline from the
+      // handler factory's repos). Closing over the module-level handle
+      // and resolving on each method call lets us register the IPC
+      // surface up-front while the actual instance comes online a few
+      // hundred lines later. Without this wiring, `proactive.setEnabled`
+      // (and the rest of the proactive.* IPC) throws
+      // `[ipc] proactive.<method>: proactiveTriggerService dep is required`,
+      // which the renderer surfaces as a snap-back on the toggle Switch.
+      proactiveTriggerService: {
+        decomposeGoal: (args) => {
+          if (!proactiveTriggerServiceInstance) {
+            return Promise.reject(
+              new Error('[main] proactiveTriggerService not yet initialized'),
+            );
+          }
+          return proactiveTriggerServiceInstance.decomposeGoal(args);
+        },
+        scanForWork: (args) => {
+          if (!proactiveTriggerServiceInstance) {
+            return Promise.reject(
+              new Error('[main] proactiveTriggerService not yet initialized'),
+            );
+          }
+          return proactiveTriggerServiceInstance.scanForWork(args);
+        },
+        setEnabled: (args) => {
+          if (!proactiveTriggerServiceInstance) {
+            throw new Error('[main] proactiveTriggerService not yet initialized');
+          }
+          proactiveTriggerServiceInstance.setEnabled(args);
+        },
+        isEnabled: (companyId) => {
+          if (!proactiveTriggerServiceInstance) return false;
+          return proactiveTriggerServiceInstance.isEnabled(companyId);
+        },
+      },
       // Event bus — used by `companies.archive` to emit `company.archived`
       // so renderer caches invalidate (architectural invariant #11).
       // Narrowed to `{ emit }` at the handler boundary; the richer
@@ -1436,6 +1534,25 @@ app
     };
     for (const company of companiesRepo.list()) {
       if (company.status === 'archived') continue;
+      // System-employee top-up — idempotent. Companies created before
+      // M33 T2 (e.g., via M31 paths) lack the `system-copilot` row;
+      // companies created before M31's `is_system` migration lack the
+      // `system-agent` row. Both ensure functions short-circuit when
+      // the row already exists, so this is a zero-cost no-op for
+      // current-schema companies. Without this top-up, `copilot.ask`
+      // throws `[copilot-service] No system-copilot employee for
+      // company "..."` for any pre-M33 company. Errors are logged
+      // and swallowed so a single broken company can't block boot
+      // for the rest.
+      try {
+        ensureSystemAgent({ db, companyId: company.id, roleLookup: roleLoader });
+        ensureSystemCopilot({ db, companyId: company.id, roleLookup: roleLoader });
+      } catch (err) {
+        console.error(
+          `[main] system-employee top-up failed for company ${company.id}:`,
+          err,
+        );
+      }
       routineServiceInstance?.start(company.id);
     }
     // ---- Command palette service (Phase 5 — M30 T4) -----------------------
@@ -1690,8 +1807,58 @@ app
               return 0;
             }
           },
-          inMeeting: () => false,
-          avgCompletionMs: () => null,
+          // Track 2 — wired workload signals (replaces M32 stubs that
+          // returned `false` and `null` unconditionally and degraded the
+          // delegation scoring function in `agentic-tools-write.ts`).
+          //
+          // `inMeeting`: a candidate is in-meeting iff the company has an
+          // active meeting AND the candidate's id is in the meeting's
+          // serialized attendees list. Active meetings pause turn dispatch
+          // for those attendees, so delegating a ticket to them creates
+          // ghost work; the planner should de-prioritize.
+          //
+          // `avgCompletionMs`: averaged ticket cycle time
+          // (`closedAt - createdAt`) across all CLOSED tickets the
+          // candidate was the assignee on. The planner clamps against
+          // `pastPerformanceCeilingMs` (default 48h), so this signal
+          // differentiates fast vs. slow closers within that window.
+          // `subtaskType` is accepted for forward compatibility but
+          // ignored in V1 — ticket labels do not yet carry a subtask-type
+          // taxonomy that maps cleanly onto the planner's bucket. Future
+          // refinement: filter by labels matching `subtaskType` when the
+          // taxonomy stabilizes.
+          //
+          // Both implementations are wrapped in try/catch and degrade to
+          // the conservative defaults (`false` / `null`) on repo errors —
+          // the agentic loop must not abort over a workload signal hiccup.
+          inMeeting: (employeeId) => {
+            try {
+              const active = meetingsRepo.getActive(companyId);
+              if (!active) return false;
+              const attendees = JSON.parse(active.attendeesJson) as unknown;
+              if (!Array.isArray(attendees)) return false;
+              return attendees.some((a) => a === employeeId);
+            } catch {
+              return false;
+            }
+          },
+          avgCompletionMs: (employeeId, _subtaskType) => {
+            try {
+              const closedAssigned = ticketsRepo
+                .listByAssignee(employeeId)
+                .filter(
+                  (t) => t.closedAt !== null && t.closedAt > t.createdAt,
+                );
+              if (closedAssigned.length === 0) return null;
+              const total = closedAssigned.reduce(
+                (sum, t) => sum + ((t.closedAt ?? 0) - t.createdAt),
+                0,
+              );
+              return total / closedAssigned.length;
+            } catch {
+              return null;
+            }
+          },
         };
 
         // Write-side orchestrator seam. Delegation is not complete when a
@@ -1917,6 +2084,105 @@ app
       humanUserId: 'user',
     });
 
+    // ---- Proactive trigger service (Phase 6 — Slice 1-3) ----------------
+    //
+    // Goal decomposition + background work scanning + setEnabled toggle.
+    // Constructed HERE because the trigger consumes `agenticLoopService`
+    // (just created above) and `orchestrator.isCompanyPaused`. The IPC
+    // surface registered earlier closes over `proactiveTriggerServiceInstance`
+    // via a lazy resolver — see the `proactiveTriggerService` block in the
+    // `createIpcHandlers({...})` deps. Without this assignment, the
+    // proactive.* IPC channels throw and the autonomy-policy Switch in
+    // Settings snaps back to OFF after every flip.
+    proactiveTriggerServiceInstance = createProactiveTriggerService({
+      orchestrator: {
+        enqueueChat: async (args) => {
+          if (!orchestrator) {
+            throw new Error('[proactive] orchestrator not available for enqueueChat');
+          }
+          await orchestrator.enqueueChat(args);
+        },
+        isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
+      },
+      agenticLoopService: {
+        start: (args) => agenticLoopServiceInstance!.start(args),
+      },
+      authorityResolver: {
+        resolveEmployee: (cid, eid) => authorityResolver.resolveEmployee(cid, eid),
+      },
+      employeesRepo: {
+        getById: (id) => {
+          const row = employeesRepo.getById(id);
+          if (!row) return null;
+          return {
+            id: row.id,
+            companyId: row.companyId,
+            level: row.level,
+            isSystem: row.isSystem ?? false,
+          };
+        },
+        listByCompany: (cid) =>
+          employeesRepo.listByCompany(cid).map((e) => ({
+            id: e.id,
+            companyId: e.companyId,
+            level: e.level,
+            isSystem: e.isSystem ?? false,
+          })),
+      },
+      goalsRepo: {
+        listByCompany: (cid) =>
+          goalsRepo.listByCompany(cid).map((g) => ({
+            id: g.id,
+            companyId: g.companyId,
+            title: g.title,
+            description: g.description ?? '',
+            status: g.status,
+          })),
+      },
+      ticketsRepo: {
+        listByCompany: (cid) =>
+          ticketsRepo.listByCompany(cid).map((t) => ({
+            id: t.id,
+            companyId: t.companyId,
+            title: t.title,
+            description: t.description ?? '',
+            status: t.status,
+            assigneeId: t.assigneeId ?? null,
+            reporterId: t.reporterId,
+            reporterKind: t.reporterKind,
+            priority: t.priority,
+          })),
+      },
+      projectsRepo: {
+        listByCompany: (cid) =>
+          projectsRepo.listByCompany(cid).map((p) => ({
+            id: p.id,
+            companyId: p.companyId,
+            goalId: p.goalId ?? null,
+            title: p.title,
+            description: p.description ?? '',
+            status: p.status,
+          })),
+      },
+      bus: {
+        // The proactive trigger service narrows `actorKind` to `string`
+        // in its structural deps (so its tests can hand-roll fakes
+        // without depending on the shared-types `ActorKind` union). At
+        // runtime it only emits canonical values (`'orchestrator'`,
+        // `'employee'`, `'system'`), so widening at this boundary via
+        // a cast is sound and keeps the trigger service decoupled
+        // from the wire enum.
+        emit: (input) =>
+          bus.emit({
+            ...input,
+            actorKind: input.actorKind as Parameters<typeof bus.emit>[0]['actorKind'],
+          }),
+      },
+      settingsRepo: {
+        getProactive: () => settingsRepo.getProactive(),
+      },
+    });
+
     // ---- Copilot analyzer (M33 T4) --------------------------------------
     //
     // Periodic + event-triggered insight producer. Stands alongside the
@@ -2060,8 +2326,25 @@ app
         employeesList: (req) => ipcHandlers.employeesList(req),
         employeesCreate: (req) => ipcHandlers.employeesCreate(req),
         employeesFire: (req) => ipcHandlers.employeesFire(req),
-        // employeesPromote — not yet wired; CommandService dispatcher
-        // guards for absence and emits `handler_error`.
+        // Track 3 — wire the natural-language `promote` command. The
+        // IPC handler has shipped (`employees.promote`, register.ts:687)
+        // and is exercised by `employees-promote-handlers.test.ts`, but
+        // the CommandService dispatcher slot was never connected, so
+        // typing "promote Alice to CTO" in the palette emitted
+        // `handler_error`. The IPC handler takes `{ employeeId, newRoleId }`
+        // and returns the full promotion record; the dispatcher wants
+        // `{ employeeId, roleId, newLevel }` → `Promise<void>`. We adapt
+        // at the boundary: forward `roleId` as `newRoleId`, ignore the
+        // classifier-supplied `newLevel` (the IPC handler derives the
+        // level from the role spec — passing it here would be redundant
+        // and create a divergence risk between classifier output and the
+        // role-loader's source of truth), and discard the response.
+        employeesPromote: async (req) => {
+          await ipcHandlers.employeesPromote({
+            employeeId: req.employeeId,
+            newRoleId: req.roleId,
+          });
+        },
         ticketsAssign: (req) =>
           ipcHandlers.ticketsAssign({ ticketId: req.ticketId, assigneeId: req.assigneeId }),
         ticketsCreate: (req) => ipcHandlers.ticketsCreate(req),

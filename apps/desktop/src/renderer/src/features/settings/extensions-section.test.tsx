@@ -92,8 +92,26 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).not.toContain('SimplifiedPermissions');
     expect(extensionsSectionSrc).not.toContain('InstallCustomSkillDialog');
     expect(extensionsSectionSrc).not.toContain('InstallCustomMcpDialog');
-    expect(extensionsSectionSrc).not.toContain('InstallSkillDialog');
-    expect(extensionsSectionSrc).not.toContain('ImportMcpDialog');
+  });
+
+  it('hosts the Add Skill and Add MCP install entry points on the Authority Snapshot card', () => {
+    // Phase 6 follow-up — Authority Snapshot is the canonical location for
+    // direct Skill / MCP installs from Settings (CLI extensions deferred
+    // pending the agentic system design pass). The card surfaces two
+    // buttons that open the existing install dialogs; the dialogs
+    // themselves are unchanged from their previous use sites.
+    expect(extensionsSectionSrc).toContain(
+      "import { InstallSkillDialog } from './install-skill-dialog.js';",
+    );
+    expect(extensionsSectionSrc).toContain(
+      "import { ImportMcpDialog } from './import-mcp-dialog.js';",
+    );
+    expect(extensionsSectionSrc).toContain('data-extension-add-skill=""');
+    expect(extensionsSectionSrc).toContain('data-extension-add-mcp=""');
+    expect(extensionsSectionSrc).toContain('<InstallSkillDialog');
+    expect(extensionsSectionSrc).toContain('<ImportMcpDialog');
+    expect(extensionsSectionSrc).toContain('Add Skill');
+    expect(extensionsSectionSrc).toContain('Add MCP');
   });
 
   it('keeps Settings extension helpers safe for the packaged renderer sandbox', () => {

@@ -246,6 +246,7 @@ const REQUEST_CHANNELS = [
   'backup.create',
   'backup.restore',
   'backup.list',
+  'backup.delete',
   // Audit log (Phase 4 — M24)
   'audit.list',
   'audit.stats',
@@ -1308,6 +1309,10 @@ export function registerIpcHandlers(handlers: IpcHandlers, bus: EventBus): () =>
 
   ipcMain.handle('backup.list', async () => {
     return handlers.backupList();
+  });
+
+  ipcMain.handle('backup.delete', async (_event, request: { backupPath: string }) => {
+    return handlers.backupDelete(request);
   });
 
   // Audit log handlers (Phase 4 — M24)

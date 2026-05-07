@@ -24,3 +24,13 @@ export function useRestoreBackup() {
     mutationFn: (backupPath: string) => ipc.backup.restore({ backupPath }),
   });
 }
+
+export function useDeleteBackup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (backupPath: string) => ipc.backup.delete({ backupPath }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backups'] });
+    },
+  });
+}

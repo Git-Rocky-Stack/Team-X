@@ -1532,6 +1532,17 @@ export interface BackupRestoreRequest {
   backupPath: string;
 }
 
+export interface BackupDeleteRequest {
+  /** Full path to the backup directory to delete. Must resolve inside the
+   *  app's backups directory — paths that escape are rejected at the service. */
+  backupPath: string;
+}
+
+export interface BackupDeleteResponse {
+  /** The resolved (canonical) path that was removed. Echoed for audit logging. */
+  deletedPath: string;
+}
+
 export interface BackupRestoreResponse {
   manifest: BackupManifest;
   /**
@@ -2725,6 +2736,10 @@ export interface IpcContract {
     request: Record<string, never>;
     response: BackupEntry[];
   };
+  'backup.delete': {
+    request: BackupDeleteRequest;
+    response: BackupDeleteResponse;
+  };
   // Audit log channels (Phase 4 — M24)
   'audit.list': {
     request: AuditFilter;
@@ -3448,6 +3463,9 @@ export interface TeamXApi {
     restore(req: BackupRestoreRequest): Promise<BackupRestoreResponse>;
     /** List all existing backup archives. */
     list(): Promise<BackupEntry[]>;
+    /** Delete a backup archive permanently. The path must live inside the
+     *  app's backups directory; paths that escape are rejected. */
+    delete(req: BackupDeleteRequest): Promise<BackupDeleteResponse>;
   };
   audit: {
     /** Filtered, paginated list of audit events. */
