@@ -101,11 +101,11 @@ function DetailField({
 }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-border/45 bg-surface-50 px-3 py-2.5">
-      <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase text-muted-foreground/70">
+      <span className="flex items-center gap-1.5 text-eyebrow-sm text-muted-foreground/70">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </span>
-      <span className={`text-xs ${muted ? 'text-muted-foreground/60' : 'text-foreground'}`}>
+      <span className={`text-caption ${muted ? 'text-muted-foreground/60' : 'text-foreground'}`}>
         {value}
       </span>
     </div>
@@ -198,14 +198,14 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <h2 className="flex-1 truncate text-sm font-semibold text-foreground">{project.title}</h2>
+        <h2 className="flex-1 truncate text-h3 text-foreground">{project.title}</h2>
         {isEditing ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={cancelEdit}
-            className="h-8 px-2 text-xs"
+            className="h-8 px-2 text-button-sm"
           >
             <X className="h-3.5 w-3.5" />
             Cancel
@@ -216,7 +216,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             variant="ghost"
             size="sm"
             onClick={beginEdit}
-            className="h-8 px-2 text-xs"
+            className="h-8 px-2 text-button-sm"
           >
             <Pencil className="h-3.5 w-3.5" />
             Edit
@@ -243,7 +243,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             <div>
               <label
                 htmlFor="project-edit-title"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-label text-muted-foreground"
               >
                 Title
               </label>
@@ -251,14 +251,14 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                 id="project-edit-title"
                 value={activeDraft.title}
                 onChange={(event) => updateDraft({ title: event.target.value })}
-                className="mt-1 text-sm"
+                className="mt-1 text-body"
               />
             </div>
 
             <div>
               <label
                 htmlFor="project-edit-description"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-label text-muted-foreground"
               >
                 Description
               </label>
@@ -266,7 +266,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                 id="project-edit-description"
                 value={activeDraft.description}
                 onChange={(event) => updateDraft({ description: event.target.value })}
-                className="mt-1 min-h-[104px] text-sm"
+                className="mt-1 min-h-[104px] text-body"
               />
             </div>
 
@@ -274,7 +274,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
               <div>
                 <label
                   htmlFor="project-edit-status"
-                  className="text-xs font-medium text-muted-foreground"
+                  className="text-label text-muted-foreground"
                 >
                   Status
                 </label>
@@ -282,7 +282,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                   id="project-edit-status"
                   value={activeDraft.status}
                   onChange={(event) => updateDraft({ status: event.target.value as ProjectStatus })}
-                  className="mission-select mt-1 w-full px-3 py-2 text-sm"
+                  className="mission-select mt-1 w-full px-3 py-2 text-body"
                 >
                   {STATUS_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -295,7 +295,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
               <div>
                 <label
                   htmlFor="project-edit-priority"
-                  className="text-xs font-medium text-muted-foreground"
+                  className="text-label text-muted-foreground"
                 >
                   Priority
                 </label>
@@ -305,7 +305,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                   onChange={(event) =>
                     updateDraft({ priority: event.target.value as ProjectPriority })
                   }
-                  className="mission-select mt-1 w-full px-3 py-2 text-sm"
+                  className="mission-select mt-1 w-full px-3 py-2 text-body"
                 >
                   {PRIORITY_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -319,7 +319,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             <div>
               <label
                 htmlFor="project-edit-lead"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-label text-muted-foreground"
               >
                 Lead
               </label>
@@ -327,7 +327,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                 id="project-edit-lead"
                 value={activeDraft.leadId}
                 onChange={(event) => updateDraft({ leadId: event.target.value })}
-                className="mission-select mt-1 w-full px-3 py-2 text-sm"
+                className="mission-select mt-1 w-full px-3 py-2 text-body"
               >
                 <option value="">No lead assigned</option>
                 {employees.map((employee) => (
@@ -341,7 +341,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             <div>
               <label
                 htmlFor="project-edit-goal"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-label text-muted-foreground"
               >
                 Goal
               </label>
@@ -349,7 +349,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                 id="project-edit-goal"
                 value={activeDraft.goalId}
                 onChange={(event) => updateDraft({ goalId: event.target.value })}
-                className="mission-select mt-1 w-full px-3 py-2 text-sm"
+                className="mission-select mt-1 w-full px-3 py-2 text-body"
               >
                 <option value="">Standalone project</option>
                 {goals.map((goal) => (
@@ -363,7 +363,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             <div>
               <label
                 htmlFor="project-edit-target-date"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-label text-muted-foreground"
               >
                 Target Date
               </label>
@@ -372,7 +372,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                 type="date"
                 value={activeDraft.targetDate}
                 onChange={(event) => updateDraft({ targetDate: event.target.value })}
-                className="mt-1 text-sm"
+                className="mt-1 text-body"
               />
             </div>
 
@@ -403,9 +403,9 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             {project.description ? (
-              <p className="text-xs leading-relaxed text-muted-foreground">{project.description}</p>
+              <p className="text-caption text-muted-foreground">{project.description}</p>
             ) : (
-              <p className="text-xs text-muted-foreground/50">No description added.</p>
+              <p className="text-caption text-muted-foreground/50">No description added.</p>
             )}
 
             <div className="grid grid-cols-1 gap-2">
@@ -424,29 +424,29 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              <span className="text-eyebrow-sm text-muted-foreground/70">
                 Lead
               </span>
               {lead ? (
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/20 text-[11px] font-bold text-brand">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/20 text-caption font-bold text-brand">
                     {lead.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-foreground">{lead.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{lead.title}</p>
+                    <p className="text-caption font-medium text-foreground">{lead.name}</p>
+                    <p className="text-caption text-muted-foreground">{lead.title}</p>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 text-muted-foreground/50">
                   <User className="h-3.5 w-3.5" />
-                  <span className="text-xs">No lead assigned</span>
+                  <span className="text-caption">No lead assigned</span>
                 </div>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              <span className="text-eyebrow-sm text-muted-foreground/70">
                 Ticket Progress
               </span>
               <div className="flex items-center gap-2">
@@ -456,7 +456,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                     style={{ width: `${progressPct}%` }}
                   />
                 </div>
-                <span className="text-[10px] font-medium text-muted-foreground">
+                <span className="text-caption font-medium text-muted-foreground">
                   {project.ticketCounts.done}/{project.ticketCounts.total}
                 </span>
               </div>
@@ -464,14 +464,14 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
 
             {project.ticketIds.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                <span className="text-eyebrow-sm text-muted-foreground/70">
                   Linked Tickets ({project.ticketIds.length})
                 </span>
                 <div className="flex flex-col gap-1">
                   {project.ticketIds.map((ticketId) => (
                     <div
                       key={ticketId}
-                      className="rounded-md bg-surface-50 px-2.5 py-1.5 text-[11px] text-muted-foreground"
+                      className="rounded-md bg-surface-50 px-2.5 py-1.5 text-caption text-muted-foreground"
                     >
                       {ticketId.slice(0, 8)}...
                     </div>
@@ -480,7 +480,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
               </div>
             )}
 
-            <div className="text-[10px] text-muted-foreground/50">
+            <div className="text-caption text-muted-foreground/50">
               Created {new Date(project.createdAt).toLocaleDateString()} | Updated{' '}
               {new Date(project.updatedAt).toLocaleDateString()}
             </div>

@@ -52,18 +52,18 @@ export function FireDialog({ employee, open, onOpenChange, onFire, error }: Fire
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <label className="block text-sm font-medium text-foreground" htmlFor="fire-confirm-name">
+          <label className="block text-body-strong text-foreground" htmlFor="fire-confirm-name">
             Type the employee name to confirm
           </label>
           <input
             id="fire-confirm-name"
-            className="w-full rounded-md border border-border bg-surface-100 px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand"
+            className="w-full rounded-md border border-border bg-surface-100 px-3 py-2 text-body text-foreground outline-none focus:ring-2 focus:ring-brand"
             value={confirmName}
             onChange={(event) => setConfirmName(event.target.value)}
             data-fire-confirm-name=""
           />
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? <p className="text-body text-red-400">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

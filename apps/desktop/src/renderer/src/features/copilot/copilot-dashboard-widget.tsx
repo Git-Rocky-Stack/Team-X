@@ -43,10 +43,10 @@ export function CopilotDashboardWidget() {
     >
       <header className="mb-3 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-brand" aria-hidden="true" />
-        <h2 className="text-sm font-semibold text-foreground">Copilot insights</h2>
+        <h2 className="text-h4 text-foreground">Copilot insights</h2>
         <Badge
           variant="outline"
-          className="ml-auto font-mono text-[10px] px-1.5"
+          className="ml-auto font-mono text-eyebrow-sm px-1.5"
           data-copilot-widget-count={total}
         >
           {total} active
@@ -61,11 +61,11 @@ export function CopilotDashboardWidget() {
 
       {isError && (
         <div className="py-4 text-center">
-          <p className="text-xs text-muted-foreground">Could not load insights.</p>
+          <p className="text-caption text-muted-foreground">Could not load insights.</p>
           <button
             type="button"
             onClick={() => refetch()}
-            className="mt-2 rounded-md border border-border px-2.5 py-1 text-[10px] font-medium text-foreground hover:bg-surface-100"
+            className="mt-2 rounded-md border border-border px-2.5 py-1 text-button-sm text-foreground hover:bg-surface-100"
           >
             Retry
           </button>
@@ -74,7 +74,7 @@ export function CopilotDashboardWidget() {
 
       {!isLoading && !isError && total === 0 && (
         <div className="py-6 text-center" data-copilot-widget-empty="">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             No active insights — the copilot is monitoring in the background.
           </p>
         </div>
@@ -91,7 +91,7 @@ export function CopilotDashboardWidget() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="mt-3 w-full rounded-md border border-dashed border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
+            className="mt-3 w-full rounded-md border border-dashed border-border px-3 py-2 text-button-sm text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
             data-copilot-widget-view-all=""
           >
             {hasMore ? `View all (${total})` : 'Open sidebar'}

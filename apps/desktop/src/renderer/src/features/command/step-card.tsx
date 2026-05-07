@@ -202,7 +202,7 @@ export function StepCard({
             label="Planning"
             index={step.stepIndex}
           />
-          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+          <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">
             {d.text}
           </p>
         </article>
@@ -222,13 +222,13 @@ export function StepCard({
             icon={<Wrench className="h-3.5 w-3.5" aria-hidden="true" />}
             label="Tool call"
             index={step.stepIndex}
-            detail={<code className="font-mono text-xs text-brand">{d.toolName}</code>}
+            detail={<code className="text-code-sm text-brand">{d.toolName}</code>}
           />
           <details className="mt-1.5" open={defaultOpen}>
-            <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-0">
+            <summary className="cursor-pointer select-none text-caption text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-0">
               Arguments
             </summary>
-            <pre className="mt-1 max-h-48 overflow-auto rounded bg-surface-200 p-2 font-mono text-[11px] leading-relaxed text-foreground">
+            <pre className="mt-1 max-h-48 overflow-auto rounded bg-surface-200 p-2 text-code-sm leading-relaxed text-foreground">
               {safeStringify(d.args)}
             </pre>
           </details>
@@ -249,13 +249,13 @@ export function StepCard({
             icon={<Check className="h-3.5 w-3.5" aria-hidden="true" />}
             label="Tool result"
             index={step.stepIndex}
-            detail={<code className="font-mono text-xs text-brand">{d.toolName}</code>}
+            detail={<code className="text-code-sm text-brand">{d.toolName}</code>}
           />
           <details className="mt-1.5" open={defaultOpen}>
-            <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-0">
+            <summary className="cursor-pointer select-none text-caption text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-0">
               Observation
             </summary>
-            <pre className="mt-1 max-h-48 overflow-auto rounded bg-surface-200 p-2 font-mono text-[11px] leading-relaxed text-foreground">
+            <pre className="mt-1 max-h-48 overflow-auto rounded bg-surface-200 p-2 text-code-sm leading-relaxed text-foreground">
               {safeStringify(d.result)}
             </pre>
           </details>
@@ -278,7 +278,7 @@ export function StepCard({
             index={step.stepIndex}
             labelClassName="text-brand"
           />
-          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+          <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">
             {d.text}
           </p>
         </article>
@@ -299,9 +299,9 @@ export function StepCard({
             label="Error"
             index={step.stepIndex}
             labelClassName="text-red-400"
-            detail={<code className="font-mono text-xs text-red-400">{d.reason}</code>}
+            detail={<code className="text-code-sm text-red-400">{d.reason}</code>}
           />
-          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+          <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">
             {d.message}
           </p>
         </article>
@@ -324,15 +324,15 @@ export function StepCard({
             labelClassName="text-emerald-400"
             detail={
               d.ticketId ? (
-                <code className="font-mono text-xs text-emerald-400/80">
+                <code className="text-code-sm text-emerald-400/80">
                   {d.ticketId.slice(0, 8)}
                 </code>
               ) : undefined
             }
           />
-          {d.title && <p className="mt-1.5 text-sm leading-relaxed text-foreground">{d.title}</p>}
+          {d.title && <p className="mt-1.5 text-body text-foreground">{d.title}</p>}
           {d.assigneeId && (
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-caption text-muted-foreground">
               Assigned to <span className="text-emerald-400">{d.assigneeId.slice(0, 8)}</span>
               {d.planId ? (
                 <span className="ml-2 text-zinc-500">Plan {d.planId.slice(0, 8)}</span>
@@ -359,11 +359,11 @@ export function StepCard({
             labelClassName="text-sky-400"
             detail={
               d.ticketId ? (
-                <code className="font-mono text-xs text-sky-400/80">{d.ticketId.slice(0, 8)}</code>
+                <code className="text-code-sm text-sky-400/80">{d.ticketId.slice(0, 8)}</code>
               ) : undefined
             }
           />
-          <p className="mt-1.5 text-sm leading-relaxed text-foreground">
+          <p className="mt-1.5 text-body text-foreground">
             {d.assigneeName ? (
               <>
                 Delegated to <span className="font-medium text-sky-400">{d.assigneeName}</span>
@@ -373,7 +373,7 @@ export function StepCard({
             )}
           </p>
           {d.planId && (
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-caption text-muted-foreground">
               Plan <span className="text-zinc-400">{d.planId.slice(0, 8)}</span>
             </p>
           )}
@@ -403,15 +403,15 @@ export function StepCard({
             labelClassName="text-amber-400"
             detail={
               d.outcome ? (
-                <span className={`text-xs font-medium ${outcomeColor}`}>{d.outcome}</span>
+                <span className={`text-caption font-medium ${outcomeColor}`}>{d.outcome}</span>
               ) : undefined
             }
           />
-          <p className="mt-1.5 text-sm leading-relaxed text-foreground">
+          <p className="mt-1.5 text-body text-foreground">
             {d.ticketId ? (
               <>
                 Ticket{' '}
-                <code className="font-mono text-xs text-amber-400/80">
+                <code className="text-code-sm text-amber-400/80">
                   {d.ticketId.slice(0, 8)}
                 </code>{' '}
                 under review
@@ -421,7 +421,7 @@ export function StepCard({
             )}
           </p>
           {(d.reviewerId || d.planId) && (
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-caption text-muted-foreground">
               {d.reviewerId && (
                 <span>
                   Reviewer <span className="text-zinc-400">{d.reviewerId.slice(0, 8)}</span>
@@ -461,7 +461,7 @@ interface StepHeaderProps {
 
 function StepHeader({ icon, label, index, detail, labelClassName }: StepHeaderProps) {
   return (
-    <header className="flex items-center gap-2 text-xs">
+    <header className="flex items-center gap-2 text-caption">
       <span
         aria-hidden="true"
         className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-200 text-muted-foreground"
@@ -470,14 +470,14 @@ function StepHeader({ icon, label, index, detail, labelClassName }: StepHeaderPr
       </span>
       <span
         className={cn(
-          'font-medium uppercase tracking-wide',
+          'text-eyebrow',
           labelClassName ?? 'text-muted-foreground',
         )}
       >
         {label}
       </span>
       {detail ? <span className="truncate">{detail}</span> : null}
-      <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">
+      <span className="ml-auto shrink-0 text-eyebrow-sm tabular-nums text-muted-foreground">
         #{String(index + 1).padStart(2, '0')}
       </span>
     </header>

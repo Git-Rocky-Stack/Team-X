@@ -40,10 +40,10 @@ function MeetingRow({ meeting }: { meeting: Meeting }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h4 className="truncate text-sm font-medium text-foreground">
+          <h4 className="truncate text-body-strong text-foreground">
             {meeting.agenda || 'Untitled Meeting'}
           </h4>
-          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="mt-1 flex items-center gap-3 text-caption text-muted-foreground">
             <span className="flex items-center gap-1">
               <Users2 className="h-3 w-3" />
               {meeting.attendees.length}
@@ -87,7 +87,7 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-          <p className="text-xs text-muted-foreground">Loading meetings...</p>
+          <p className="text-caption text-muted-foreground">Loading meetings...</p>
         </div>
       </div>
     );
@@ -97,11 +97,11 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-sm font-medium text-muted-foreground">Failed to load meetings</p>
+          <p className="text-body-strong text-muted-foreground">Failed to load meetings</p>
           <button
             type="button"
             onClick={() => refetch()}
-            className="rounded-md bg-brand px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand/90"
+            className="rounded-md bg-brand px-4 py-1.5 text-button-sm text-white transition-colors hover:bg-brand/90"
           >
             Retry
           </button>
@@ -121,15 +121,15 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Meetings</h2>
-              <p className="text-xs text-muted-foreground">
+              <h1 className="text-h1 text-foreground">Meetings</h1>
+              <p className="text-caption text-muted-foreground">
                 {meetings.length} meeting{meetings.length !== 1 ? 's' : ''}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setCallOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand/90"
+              className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-button-sm text-white transition-colors hover:bg-brand/90"
             >
               <Plus className="h-3.5 w-3.5" />
               Call Meeting
@@ -141,8 +141,8 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
             {meetings.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Users2 className="h-10 w-10 text-muted-foreground/30" />
-                <p className="mt-3 text-sm font-medium text-muted-foreground">No meetings yet</p>
-                <p className="mt-1 text-xs text-muted-foreground/60">
+                <p className="mt-3 text-body-strong text-muted-foreground">No meetings yet</p>
+                <p className="mt-1 text-caption text-muted-foreground/60">
                   Call a meeting to bring your team together.
                 </p>
               </div>
@@ -150,7 +150,7 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
               <div className="space-y-2">
                 {activeMeetings.length > 0 && (
                   <div>
-                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    <p className="mb-1.5 text-eyebrow-sm text-muted-foreground/60">
                       Active
                     </p>
                     <div className="space-y-1.5">
@@ -162,7 +162,7 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
                 )}
                 {pastMeetings.length > 0 && (
                   <div className={activeMeetings.length > 0 ? 'mt-4' : ''}>
-                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    <p className="mb-1.5 text-eyebrow-sm text-muted-foreground/60">
                       Past
                     </p>
                     <div className="space-y-1.5">

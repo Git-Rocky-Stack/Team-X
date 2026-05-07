@@ -29,8 +29,8 @@ function StreamPane({ employee, live }: StreamPaneProps) {
             .slice(0, 2)}
         </div>
         <div className="min-w-0 flex-1 text-left">
-          <p className="truncate text-sm font-medium text-foreground">{employee.name}</p>
-          <p className="truncate text-xs text-muted-foreground">{employee.title}</p>
+          <p className="truncate text-body-strong text-foreground">{employee.name}</p>
+          <p className="truncate text-caption text-muted-foreground">{employee.title}</p>
         </div>
         <span
           className={cn(
@@ -41,16 +41,16 @@ function StreamPane({ employee, live }: StreamPaneProps) {
       </div>
       <ScrollArea className="flex-1 px-4 py-3">
         {isThinking && live.currentStream.length > 0 ? (
-          <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground/80">
+          <pre className="whitespace-pre-wrap text-code-sm leading-relaxed text-foreground/80">
             {live.currentStream.slice(-800)}
           </pre>
         ) : isThinking ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-caption text-muted-foreground">
             <Radio className="h-3.5 w-3.5 animate-pulse text-brand" />
             Thinking...
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground/60 italic">Idle</p>
+          <p className="text-caption text-muted-foreground/60 italic">Idle</p>
         )}
       </ScrollArea>
     </button>
@@ -76,8 +76,8 @@ export function StreamView({ employees }: StreamViewProps) {
   if (employees.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-lg font-medium text-muted-foreground">No employees yet</p>
-        <p className="mt-1 text-sm text-muted-foreground/70">
+        <p className="text-h3 text-muted-foreground">No employees yet</p>
+        <p className="mt-1 text-body text-muted-foreground/70">
           Hire employees to see their live output streams here.
         </p>
       </div>
@@ -88,7 +88,7 @@ export function StreamView({ employees }: StreamViewProps) {
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-6 py-2">
         <Radio className="h-4 w-4 text-brand" />
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-caption font-medium text-muted-foreground">
           {thinkingCount > 0 ? (
             <>
               <span className="text-brand">{thinkingCount} active</span>

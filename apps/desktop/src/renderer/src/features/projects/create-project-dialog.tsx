@@ -81,14 +81,14 @@ export function CreateProjectDialog({
           role="presentation"
         />
         <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background p-6 shadow-xl">
-          <h2 className="text-base font-semibold text-foreground">Create Project</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <h2 className="text-h3 text-foreground">Create Project</h2>
+          <p className="mt-1 text-caption text-muted-foreground">
             Add a new project and optionally link it to a goal.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
             <div>
-              <label htmlFor="project-title" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="project-title" className="text-label text-muted-foreground">
                 Title *
               </label>
               <Input
@@ -96,12 +96,12 @@ export function CreateProjectDialog({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Project name"
-                className="mt-1 text-sm"
+                className="mt-1 text-body"
               />
             </div>
 
             <div>
-              <label htmlFor="project-desc" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="project-desc" className="text-label text-muted-foreground">
                 Description
               </label>
               <Textarea
@@ -109,7 +109,7 @@ export function CreateProjectDialog({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Project scope and objectives..."
-                className="mt-1 min-h-[80px] text-sm"
+                className="mt-1 min-h-[80px] text-body"
               />
             </div>
 
@@ -117,7 +117,7 @@ export function CreateProjectDialog({
               <div className="flex-1">
                 <label
                   htmlFor="project-priority"
-                  className="text-xs font-medium text-muted-foreground"
+                  className="text-label text-muted-foreground"
                 >
                   Priority
                 </label>
@@ -125,7 +125,7 @@ export function CreateProjectDialog({
                   id="project-priority"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="mission-select mt-1 w-full px-3 py-1.5 text-sm"
+                  className="mission-select mt-1 w-full px-3 py-1.5 text-body"
                 >
                   {PRIORITIES.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -136,14 +136,14 @@ export function CreateProjectDialog({
               </div>
 
               <div className="flex-1">
-                <label htmlFor="project-lead" className="text-xs font-medium text-muted-foreground">
+                <label htmlFor="project-lead" className="text-label text-muted-foreground">
                   Lead
                 </label>
                 <select
                   id="project-lead"
                   value={leadId}
                   onChange={(e) => setLeadId(e.target.value)}
-                  className="mission-select mt-1 w-full px-3 py-1.5 text-sm"
+                  className="mission-select mt-1 w-full px-3 py-1.5 text-body"
                 >
                   <option value="">No lead</option>
                   {employees.map((emp) => (
@@ -156,14 +156,14 @@ export function CreateProjectDialog({
             </div>
 
             <div>
-              <label htmlFor="project-goal" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="project-goal" className="text-label text-muted-foreground">
                 Link to Goal
               </label>
               <select
                 id="project-goal"
                 value={goalId}
                 onChange={(e) => setGoalId(e.target.value)}
-                className="mission-select mt-1 w-full px-3 py-1.5 text-sm"
+                className="mission-select mt-1 w-full px-3 py-1.5 text-body"
               >
                 <option value="">Standalone project</option>
                 {goals.map((g) => (
@@ -177,7 +177,7 @@ export function CreateProjectDialog({
             <div>
               <label
                 htmlFor="project-target-date"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-label text-muted-foreground"
               >
                 Target Date
               </label>
@@ -186,7 +186,7 @@ export function CreateProjectDialog({
                 type="date"
                 value={targetDate}
                 onChange={(e) => setTargetDate(e.target.value)}
-                className="mt-1 text-sm"
+                className="mt-1 text-body"
               />
             </div>
 

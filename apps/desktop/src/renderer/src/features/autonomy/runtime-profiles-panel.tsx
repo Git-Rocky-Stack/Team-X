@@ -39,9 +39,8 @@ import {
 } from '@/hooks/use-runtime-profiles.js';
 
 const FIELD_CLASSNAME =
-  'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';
-const LABEL_CLASSNAME =
-  'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
+  'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-body text-foreground outline-none transition focus:border-brand/30';
+const LABEL_CLASSNAME = 'text-eyebrow text-muted-foreground';
 
 const KIND_OPTIONS: Array<{ value: RuntimeProfileKind; label: string; description: string }> = [
   {
@@ -395,8 +394,8 @@ function RuntimeDiagnosticsGrid({
     <MissionInsetSurface className="space-y-3 p-3" data-runtime-adapter-diagnostics={profile.id}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-xs font-semibold text-foreground">Adapter Diagnostics</div>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+          <div className="text-body-strong text-foreground">Adapter Diagnostics</div>
+          <p className="mt-1 text-caption text-muted-foreground">
             Transport, required config, validation state, and portable secret posture for this
             runtime adapter.
           </p>
@@ -412,11 +411,11 @@ function RuntimeDiagnosticsGrid({
             key={`${row.label}-${row.value}`}
             className="rounded-[14px] border border-white/10 bg-black/10 px-3 py-2"
           >
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="text-eyebrow-sm text-muted-foreground">
               {row.label}
             </div>
             <div
-              className={`mt-1 break-words text-xs leading-5 ${
+              className={`mt-1 break-words text-caption ${
                 row.tone === 'accent'
                   ? 'text-brand'
                   : row.tone === 'warning'
@@ -438,12 +437,12 @@ function RuntimeDiagnosticsGrid({
           data-runtime-validation-result={profile.id}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-foreground">Latest validate response</span>
+            <span className="text-body-strong text-foreground">Latest validate response</span>
             <MissionPill tone={healthTone(validation.status)}>{validation.status}</MissionPill>
           </div>
-          <p className="mt-2 text-xs leading-5 text-muted-foreground">{validation.message}</p>
+          <p className="mt-2 text-caption text-muted-foreground">{validation.message}</p>
           {validationRows.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+            <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
               {validationRows.map((row) => (
                 <span
                   key={`${row.label}-${row.value}`}
@@ -616,8 +615,8 @@ function RuntimeProfileCard({
               <Icon className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-foreground">{profile.name}</div>
-              <div className="text-xs text-muted-foreground">{profile.slug}</div>
+              <div className="text-body-strong text-foreground">{profile.name}</div>
+              <div className="text-caption text-muted-foreground">{profile.slug}</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -731,14 +730,14 @@ function RuntimeProfileCard({
       <RuntimeDiagnosticsGrid profile={profile} validation={validation} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs leading-5 text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           {profile.lastHealthMessage?.trim()
             ? profile.lastHealthMessage
             : 'No validation result is stored yet for this runtime profile.'}
         </p>
         <button
           type="button"
-          className="rounded-[16px] border border-brand/20 bg-brand/10 px-4 py-2 text-xs font-semibold text-brand transition hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-[16px] border border-brand/20 bg-brand/10 px-4 py-2 text-button-sm text-brand transition hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={saving}
           onClick={() => onSave(profile, draft)}
         >
@@ -838,8 +837,8 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
       <MissionInsetSurface className="space-y-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold text-foreground">Create Runtime Profile</div>
-            <p className="text-xs leading-5 text-muted-foreground">
+            <h3 className="text-h3 text-foreground">Create Runtime Profile</h3>
+            <p className="text-caption text-muted-foreground">
               Team-X Internal, Bash Launcher, and HTTP Adapter are execution-backed now. Codex,
               Claude Code, and Cursor become execution-backed too as soon as you add a launcher
               command or endpoint URL.
@@ -901,13 +900,13 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
         />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs leading-5 text-muted-foreground">
+          <div className="text-caption text-muted-foreground">
             {KIND_OPTIONS.find((option) => option.value === draft.kind)?.description ??
               'Define the runtime posture this profile should capture.'}
           </div>
           <button
             type="button"
-            className="rounded-[16px] border border-brand/20 bg-brand/10 px-4 py-2 text-xs font-semibold text-brand transition hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-[16px] border border-brand/20 bg-brand/10 px-4 py-2 text-button-sm text-brand transition hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={createMutation.isPending}
             onClick={() => {
               createMutation.mutate(
@@ -928,7 +927,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
           </button>
         </div>
 
-        {createError ? <div className="text-xs text-red-200">{createError}</div> : null}
+        {createError ? <div className="text-caption text-red-200">{createError}</div> : null}
       </MissionInsetSurface>
 
       {profiles.length === 0 ? (
@@ -976,8 +975,8 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
       <MissionInsetSurface className="space-y-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold text-foreground">Employee Bindings</div>
-            <p className="text-xs leading-5 text-muted-foreground">
+            <h3 className="text-h3 text-foreground">Employee Bindings</h3>
+            <p className="text-caption text-muted-foreground">
               Use the explicit runtime profile picker for each employee. The selector is
               workspace-scoped and intentionally obvious.
             </p>
@@ -1000,8 +999,8 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
                 data-runtime-employee-binding={employee.id}
               >
                 <div className="space-y-1">
-                  <div className="text-sm font-semibold text-foreground">{employee.name}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-body-strong text-foreground">{employee.name}</div>
+                  <div className="text-caption text-muted-foreground">
                     {employee.title} • {employee.level}
                   </div>
                 </div>
@@ -1028,10 +1027,10 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
           </div>
         )}
 
-        {bindError ? <div className="text-xs text-red-200">{bindError}</div> : null}
-        {updateError ? <div className="text-xs text-red-200">{updateError}</div> : null}
-        {deleteError ? <div className="text-xs text-red-200">{deleteError}</div> : null}
-        {validateError ? <div className="text-xs text-red-200">{validateError}</div> : null}
+        {bindError ? <div className="text-caption text-red-200">{bindError}</div> : null}
+        {updateError ? <div className="text-caption text-red-200">{updateError}</div> : null}
+        {deleteError ? <div className="text-caption text-red-200">{deleteError}</div> : null}
+        {validateError ? <div className="text-caption text-red-200">{validateError}</div> : null}
       </MissionInsetSurface>
     </div>
   );

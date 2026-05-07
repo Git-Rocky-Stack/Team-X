@@ -33,10 +33,10 @@ export function BackupSection() {
   return (
     <div className="rounded-lg border border-border bg-surface-50 p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">Backup & Restore</h3>
+        <h2 className="text-h2 text-foreground">Backup & Restore</h2>
         <Button
           size="sm"
-          className="h-7 gap-1.5 text-xs"
+          className="h-7 gap-1.5 text-button-sm"
           onClick={() => createBackup.mutate(undefined)}
           disabled={createBackup.isPending}
         >
@@ -46,18 +46,18 @@ export function BackupSection() {
       </div>
 
       {createBackup.isSuccess && (
-        <div className="mb-3 rounded bg-green-500/10 px-3 py-2 text-xs text-green-400">
+        <div className="mb-3 rounded bg-green-500/10 px-3 py-2 text-body text-green-400">
           Backup created successfully
         </div>
       )}
 
       {createBackup.isError && (
-        <div className="mb-3 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="mb-3 rounded bg-red-500/10 px-3 py-2 text-body text-red-400">
           Backup failed: {String(createBackup.error)}
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground mb-3">
+      <p className="text-body-sm text-muted-foreground mb-3">
         Backups include the full database and all vault files. Restore replaces all current data.
       </p>
 
@@ -67,7 +67,7 @@ export function BackupSection() {
         </div>
       ) : backups.length === 0 ? (
         <div className="rounded border border-border/50 bg-surface-100 px-4 py-6 text-center">
-          <p className="text-xs text-muted-foreground/60">No backups yet</p>
+          <p className="text-caption text-muted-foreground/60">No backups yet</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -77,15 +77,15 @@ export function BackupSection() {
               className="flex items-center justify-between rounded border border-border/50 bg-surface-100 px-3 py-2"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium truncate">{backup.filename}</p>
+                <p className="text-body-strong truncate">{backup.filename}</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-caption text-muted-foreground">
                     {formatDate(backup.createdAt)}
                   </span>
                   {backup.manifest && (
                     <>
-                      <span className="text-[10px] text-muted-foreground">&middot;</span>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-caption text-muted-foreground">&middot;</span>
+                      <span className="text-caption text-muted-foreground">
                         {formatBytes(backup.sizeBytes)}
                       </span>
                       <Badge variant="outline" className="text-[9px] px-1 py-0">
@@ -101,11 +101,11 @@ export function BackupSection() {
               <div className="flex items-center gap-1.5 ml-2">
                 {confirmRestore === backup.path ? (
                   <>
-                    <span className="text-[10px] text-red-400 mr-1">Overwrite all data?</span>
+                    <span className="text-caption text-red-400 mr-1">Overwrite all data?</span>
                     <Button
                       size="sm"
                       variant="destructive"
-                      className="h-6 px-2 text-[10px]"
+                      className="h-6 px-2 text-caption"
                       onClick={() => {
                         restoreBackup.mutate(backup.path);
                         setConfirmRestore(null);
@@ -117,7 +117,7 @@ export function BackupSection() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 px-2 text-[10px]"
+                      className="h-6 px-2 text-caption"
                       onClick={() => setConfirmRestore(null)}
                     >
                       Cancel
@@ -127,7 +127,7 @@ export function BackupSection() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-6 px-2 text-[10px]"
+                    className="h-6 px-2 text-caption"
                     onClick={() => setConfirmRestore(backup.path)}
                     disabled={restoreBackup.isPending}
                   >
@@ -141,13 +141,13 @@ export function BackupSection() {
       )}
 
       {restoreBackup.isSuccess && (
-        <div className="mt-3 rounded bg-green-500/10 px-3 py-2 text-xs text-green-400">
+        <div className="mt-3 rounded bg-green-500/10 px-3 py-2 text-body text-green-400">
           Restore complete. Restart the app to apply changes.
         </div>
       )}
 
       {restoreBackup.isError && (
-        <div className="mt-3 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="mt-3 rounded bg-red-500/10 px-3 py-2 text-body text-red-400">
           Restore failed: {String(restoreBackup.error)}
         </div>
       )}

@@ -149,11 +149,11 @@ export function ProviderCard({ provider }: ProviderCardProps) {
       {/* ---- Header ---- */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-100 text-xs font-bold uppercase text-muted-foreground">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-100 text-button-sm font-bold uppercase text-muted-foreground">
             {provider.kind.charAt(0)}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{provider.name}</p>
+            <p className="text-body-strong text-foreground truncate">{provider.name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
                 {provider.kind}
@@ -174,7 +174,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
           size="sm"
           onClick={handleToggle}
           disabled={isBusy}
-          className={`shrink-0 gap-1.5 text-xs ${
+          className={`shrink-0 gap-1.5 text-button-sm ${
             provider.enabled
               ? 'text-green-400 border-green-400/30 hover:bg-green-400/10'
               : 'text-muted-foreground'
@@ -187,7 +187,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
       {/* ---- Base URL (if set) ---- */}
       {provider.baseUrl && (
         <div className="px-4 pb-1">
-          <p className="text-[11px] text-muted-foreground/70 font-mono truncate">
+          <p className="text-caption text-muted-foreground/70 font-mono truncate">
             {provider.baseUrl}
           </p>
         </div>
@@ -197,7 +197,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
         <div className="border-t border-border px-4 py-3">
           <label
             htmlFor={`provider-model-${provider.id}`}
-            className="text-xs font-medium text-muted-foreground"
+            className="text-label text-muted-foreground"
           >
             Default Model
           </label>
@@ -207,14 +207,14 @@ export function ProviderCard({ provider }: ProviderCardProps) {
               value={ollamaModel}
               onChange={(e) => setOllamaModel(e.target.value)}
               placeholder="e.g. glm-5:cloud or llama3.1:8b"
-              className="text-xs h-8 flex-1 font-mono"
+              className="text-code-sm h-8 flex-1"
             />
             <Button
               type="submit"
               variant="outline"
               size="sm"
               disabled={updateMut.isPending || !hasUnsavedOllamaModel}
-              className="h-8 text-xs shrink-0"
+              className="h-8 text-button-sm shrink-0"
             >
               {updateMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
             </Button>
@@ -226,7 +226,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                 void modelQuery.refetch();
               }}
               disabled={modelQuery.isFetching}
-              className="h-8 text-xs shrink-0"
+              className="h-8 text-button-sm shrink-0"
             >
               {modelQuery.isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Refresh'}
             </Button>
@@ -235,28 +235,28 @@ export function ProviderCard({ provider }: ProviderCardProps) {
             <div className="mb-1.5 flex items-center justify-between gap-2">
               <label
                 htmlFor={`provider-model-select-${provider.id}`}
-                className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
+                className="text-eyebrow-sm text-muted-foreground"
               >
                 Model Picker
               </label>
               {!modelQuery.isFetching && !modelQuery.isError && allOllamaModels.length > 0 && (
-                <span className="text-[10px] font-mono text-muted-foreground">
+                <span className="text-code-sm text-muted-foreground">
                   {allOllamaModels.length} detected
                   {suggestedCloudModels.length > 0 ? ` + ${suggestedCloudModels.length} cloud` : ''}
                 </span>
               )}
             </div>
             {modelQuery.isFetching ? (
-              <div className="flex items-center gap-2 py-1 text-[11px] text-muted-foreground">
+              <div className="flex items-center gap-2 py-1 text-caption text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Loading Ollama tags...
               </div>
             ) : modelQuery.isError ? (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 Could not load Ollama tags right now.
               </p>
             ) : allOllamaModels.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 No Ollama tags detected from the local daemon.
               </p>
             ) : (
@@ -270,7 +270,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                     saveOllamaModel(nextModel);
                   }
                 }}
-                className="h-8 w-full rounded-md border border-border bg-background px-3 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="h-8 w-full rounded-md border border-border bg-background px-3 text-code-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="">Choose an Ollama model…</option>
                 {detectedLocalModels.length > 0 && (
@@ -304,13 +304,13 @@ export function ProviderCard({ provider }: ProviderCardProps) {
             )}
           </div>
           {hasUnsavedOllamaModel && (
-            <p className="mt-2 text-[11px] text-amber-400/80">
+            <p className="mt-2 text-caption text-amber-400/80">
               {updateMut.isPending
                 ? 'Saving the selected Ollama model now...'
                 : 'Model change is staged locally. Press Save to apply it.'}
             </p>
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground/70">
+          <p className="mt-2 text-caption text-muted-foreground/70">
             {modelQuery.isError
               ? 'Could not load local Ollama tags. Cloud models can also be entered manually.'
               : modelQuery.data && modelQuery.data.models.length > 0
@@ -330,14 +330,14 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Paste API key..."
-                className="text-xs h-8 flex-1 font-mono"
+                className="text-code-sm h-8 flex-1"
               />
               <Button
                 type="submit"
                 variant="outline"
                 size="sm"
                 disabled={!apiKey.trim() || updateMut.isPending}
-                className="h-8 text-xs shrink-0"
+                className="h-8 text-button-sm shrink-0"
               >
                 {updateMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
               </Button>
@@ -349,7 +349,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                   setShowKeyInput(false);
                   setApiKey('');
                 }}
-                className="h-8 text-xs shrink-0"
+                className="h-8 text-button-sm shrink-0"
               >
                 Cancel
               </Button>
@@ -360,7 +360,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
               variant="outline"
               size="sm"
               onClick={() => setShowKeyInput(true)}
-              className="text-xs w-full justify-center"
+              className="text-button-sm w-full justify-center"
             >
               Set API Key
             </Button>
@@ -377,7 +377,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
             size="sm"
             onClick={handleTest}
             disabled={testMut.isPending}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-button-sm"
           >
             {testMut.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
             Test
@@ -385,14 +385,14 @@ export function ProviderCard({ provider }: ProviderCardProps) {
 
           {/* Test result indicator */}
           {testMut.isSuccess && testMut.data.ok && (
-            <span className="text-[11px] text-green-400">Connected</span>
+            <span className="text-caption text-green-400">Connected</span>
           )}
           {testMut.isSuccess && !testMut.data.ok && (
-            <span className="text-[11px] text-destructive" title={testMut.data.error}>
+            <span className="text-caption text-destructive" title={testMut.data.error}>
               Failed
             </span>
           )}
-          {testMut.isError && <span className="text-[11px] text-destructive">Error</span>}
+          {testMut.isError && <span className="text-caption text-destructive">Error</span>}
         </div>
 
         <Button
@@ -401,7 +401,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
           size="sm"
           onClick={handleRemove}
           disabled={removeMut.isPending}
-          className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="gap-1.5 text-button-sm text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
           {removeMut.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
           Remove
@@ -410,7 +410,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
 
       {removeMut.isError && (
         <div className="border-t border-border px-4 py-2">
-          <p className="text-[11px] text-destructive">
+          <p className="text-caption text-destructive">
             Failed to remove provider. {errorMessage(removeMut.error, 'Try again.')}
           </p>
         </div>

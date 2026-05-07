@@ -83,7 +83,7 @@ export function KanbanBoard({ tickets, employees, onCreateClick }: KanbanBoardPr
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                  <h3 className="text-eyebrow text-muted-foreground">
                     {column.label}
                   </h3>
                   <span
@@ -92,7 +92,7 @@ export function KanbanBoard({ tickets, employees, onCreateClick }: KanbanBoardPr
                     {columnTickets.length}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-caption text-muted-foreground">
                   {column.status === 'done'
                     ? 'Delivered work and closed follow-through.'
                     : 'Drag work here to update operational status.'}
@@ -114,7 +114,7 @@ export function KanbanBoard({ tickets, employees, onCreateClick }: KanbanBoardPr
             <ScrollArea className="flex-1 px-3 py-3">
               <div className="flex flex-col gap-3">
                 {columnTickets.length === 0 ? (
-                  <div className="flex h-24 items-center justify-center rounded-[18px] border border-dashed border-white/10 bg-black/10 text-center text-[11px] leading-5 text-muted-foreground/70">
+                  <div className="flex h-24 items-center justify-center rounded-[18px] border border-dashed border-white/10 bg-black/10 text-center text-caption text-muted-foreground/70">
                     {column.status === 'open'
                       ? 'No backlog yet. File the first ticket to seed this queue.'
                       : 'No tickets in this lane right now.'}

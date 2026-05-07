@@ -47,9 +47,9 @@ export function SettingsView() {
 
   return (
     <div className="amoled-menu-surface flex h-full flex-col bg-black">
-      <div className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">Settings</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
+      <div className="border-b border-border px-4 py-4">
+        <h1 className="text-h1 text-foreground">Settings</h1>
+        <p className="text-body-sm text-muted-foreground mt-1">
           Manage providers, API keys, and system preferences.
         </p>
       </div>

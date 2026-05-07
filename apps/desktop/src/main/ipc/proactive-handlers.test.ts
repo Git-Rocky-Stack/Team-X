@@ -144,6 +144,30 @@ describe('proactive IPC handlers', () => {
       });
     });
 
+    it('persists `enabled` to the settings table so the optimistic Switch sticks', async () => {
+      // Regression: without this write the renderer's react-query
+      // invalidation refetches the unchanged DB value and snaps the
+      // Switch back to off. Both sources of truth (settings.proactive_enabled
+      // in the DB AND the trigger service's in-memory map) must move
+      // together. See `extensions-section.tsx` handleProactiveToggle for
+      // the consumer flow this test pins.
+      const deps = makeDeps();
+      const handlers = asProactiveHandlers(createIpcHandlers(deps));
+
+      await handlers.proactiveSetEnabled({
+        companyId: 'company-123',
+        enabled: true,
+      });
+      expect(deps.settingsRepo.setProactive).toHaveBeenCalledWith({ enabled: true });
+
+      await handlers.proactiveSetEnabled({
+        companyId: 'company-123',
+        enabled: false,
+      });
+      expect(deps.settingsRepo.setProactive).toHaveBeenCalledWith({ enabled: false });
+      expect(deps.settingsRepo.setProactive).toHaveBeenCalledTimes(2);
+    });
+
     it('validates companyId is a non-empty string', async () => {
       const deps = makeDeps();
       const handlers = asProactiveHandlers(createIpcHandlers(deps));

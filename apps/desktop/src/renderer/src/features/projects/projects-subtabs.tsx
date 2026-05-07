@@ -30,7 +30,7 @@ export function ProjectsSubtabs() {
             key={tab.subview}
             onClick={() => setSubview(tab.subview)}
             className={`
-              flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors
+              flex items-center gap-1.5 rounded-md px-3 py-1.5 text-button-sm transition-colors
               ${
                 isActive
                   ? 'bg-brand/10 text-brand'

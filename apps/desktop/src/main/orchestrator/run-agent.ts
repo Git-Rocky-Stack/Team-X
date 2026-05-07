@@ -60,6 +60,12 @@ import type { AppendMessageInput } from '../db/repos/messages.js';
 import type { FinishRunInput, StartRunInput } from '../db/repos/runs.js';
 
 import type { EventBus } from './event-bus.js';
+import {
+  MAX_PROVIDER_ATTEMPTS,
+  PROVIDER_CONNECTION_DROPPED_MESSAGE,
+  PROVIDER_RETRY_BACKOFF_MS,
+  isTransientFetchFailure,
+} from './transient-errors.js';
 
 /**
  * Minimal structural shape runAgent needs from the messages repo. The
@@ -295,135 +301,191 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
   let usage: StreamUsage | null = null;
   let toolCallsCount = 0;
   const toolResults: CompletedToolResult[] = [];
-  let abortKind: 'external' | 'timeout' | 'idle-timeout' | null = null;
-  const streamController = new AbortController();
 
-  const abortWithKind = (kind: 'external' | 'timeout' | 'idle-timeout') => {
-    if (streamController.signal.aborted) return;
-    abortKind = kind;
-    streamController.abort();
-  };
+  // Retry-loop result. `lastErr === null` means the stream drained
+  // successfully on at least one attempt; `lastErr !== null` means we
+  // exhausted retries (or hit a non-retryable failure on attempt 1).
+  let lastErr: unknown = null;
+  let lastAbortKind: 'external' | 'timeout' | 'idle-timeout' | null = null;
+  // Tracks whether ANY attempt has yielded at least one chunk. Once
+  // true, retry is permanently disabled: re-running the stream would
+  // duplicate streamed output to the renderer's open message bubble.
+  let chunkSeen = false;
 
-  const externalAbortListener = () => {
-    abortWithKind('external');
-  };
-  if (input.signal) {
-    if (input.signal.aborted) {
+  // 4. Drain the provider stream — with one transparent retry on
+  //    pre-stream transient failures (e.g. stale undici keepalive
+  //    socket against Ollama's local→cloud proxy). The retry only
+  //    fires when no chunks have been received yet, the error is a
+  //    recognised transient flake, and the user has not aborted.
+  for (let attempt = 0; attempt < MAX_PROVIDER_ATTEMPTS; attempt++) {
+    let abortKind: 'external' | 'timeout' | 'idle-timeout' | null = null;
+    const streamController = new AbortController();
+
+    const abortWithKind = (kind: 'external' | 'timeout' | 'idle-timeout') => {
+      if (streamController.signal.aborted) return;
+      abortKind = kind;
+      streamController.abort();
+    };
+
+    const externalAbortListener = () => {
       abortWithKind('external');
-    } else {
-      input.signal.addEventListener('abort', externalAbortListener, { once: true });
+    };
+    if (input.signal) {
+      if (input.signal.aborted) {
+        abortWithKind('external');
+      } else {
+        input.signal.addEventListener('abort', externalAbortListener, { once: true });
+      }
+    }
+
+    let totalTimer: ReturnType<typeof setTimeout> | null = null;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearTimers = () => {
+      if (totalTimer !== null) {
+        clearTimeout(totalTimer);
+        totalTimer = null;
+      }
+      if (idleTimer !== null) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    };
+    const resetIdleTimer = () => {
+      if (idleTimer !== null) {
+        clearTimeout(idleTimer);
+      }
+      idleTimer = setTimeout(() => {
+        abortWithKind('idle-timeout');
+      }, idleTimeoutMs);
+    };
+
+    totalTimer = setTimeout(() => {
+      abortWithKind('timeout');
+    }, timeoutMs);
+
+    try {
+      // streamAgent normalizes the underlying adapter into the
+      // StreamChunk union so this loop is the same for every provider.
+      for await (const chunk of streamAgent({
+        providerFactory: input.provider,
+        system: input.system,
+        messages: input.messages,
+        tools: input.tools,
+        maxSteps: input.maxSteps,
+        signal: streamController.signal,
+        runId,
+        threadId: input.threadId,
+        companyId: input.companyId,
+        employeeId: input.employeeId,
+        currentTicketId: input.currentTicketId ?? null,
+      })) {
+        chunkSeen = true;
+        resetIdleTimer();
+        if (chunk.kind === 'delta') {
+          buffer += chunk.delta;
+          deps.messages.updateContent(messageId, buffer);
+
+          const deltaPayload: TokenDeltaPayload = {
+            threadId: input.threadId,
+            messageId,
+            delta: chunk.delta,
+          };
+          deps.bus.emit<TokenDeltaPayload>({
+            type: 'token.delta',
+            companyId: input.companyId,
+            actorId: input.employeeId,
+            actorKind: 'employee',
+            payload: deltaPayload,
+          });
+        } else if (chunk.kind === 'tool-call') {
+          toolCallsCount++;
+          const toolCalledPayload: ToolCalledPayload = {
+            threadId: input.threadId,
+            messageId,
+            toolCallId: chunk.toolCallId,
+            toolName: chunk.toolName,
+          };
+          deps.bus.emit<ToolCalledPayload>({
+            type: 'tool.called',
+            companyId: input.companyId,
+            actorId: input.employeeId,
+            actorKind: 'employee',
+            payload: toolCalledPayload,
+          });
+        } else if (chunk.kind === 'tool-result') {
+          toolResults.push({
+            toolCallId: chunk.toolCallId,
+            toolName: chunk.toolName,
+            result: chunk.result,
+          });
+        } else if (chunk.kind === 'done') {
+          usage = chunk.usage;
+        }
+      }
+      // Stream drained without throwing — clear any prior attempt's
+      // captured error and break out of the retry loop.
+      lastErr = null;
+      lastAbortKind = null;
+      break;
+    } catch (err) {
+      lastErr = err;
+      lastAbortKind = abortKind;
+
+      const isAborted =
+        abortKind !== null || input.signal?.aborted === true || isAbortError(err);
+      const canRetry =
+        !isAborted &&
+        !chunkSeen &&
+        attempt < MAX_PROVIDER_ATTEMPTS - 1 &&
+        isTransientFetchFailure(err);
+
+      if (canRetry) {
+        // The `finally` below clears timers and removes the abort
+        // listener; a fresh AbortController + listener pair is set up
+        // at the top of the next iteration.
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, PROVIDER_RETRY_BACKOFF_MS);
+        });
+        continue;
+      }
+      break;
+    } finally {
+      clearTimers();
+      if (input.signal) {
+        input.signal.removeEventListener('abort', externalAbortListener);
+      }
     }
   }
 
-  let totalTimer: ReturnType<typeof setTimeout> | null = null;
-  let idleTimer: ReturnType<typeof setTimeout> | null = null;
-  const clearTimers = () => {
-    if (totalTimer !== null) {
-      clearTimeout(totalTimer);
-      totalTimer = null;
-    }
-    if (idleTimer !== null) {
-      clearTimeout(idleTimer);
-      idleTimer = null;
-    }
-  };
-  const resetIdleTimer = () => {
-    if (idleTimer !== null) {
-      clearTimeout(idleTimer);
-    }
-    idleTimer = setTimeout(() => {
-      abortWithKind('idle-timeout');
-    }, idleTimeoutMs);
-  };
-
-  totalTimer = setTimeout(() => {
-    abortWithKind('timeout');
-  }, timeoutMs);
-
-  try {
-    // 4. Drain the provider stream. `streamAgent` normalizes the
-    //    underlying adapter into the StreamChunk union so this loop
-    //    is the same for every provider.
-    for await (const chunk of streamAgent({
-      providerFactory: input.provider,
-      system: input.system,
-      messages: input.messages,
-      tools: input.tools,
-      maxSteps: input.maxSteps,
-      signal: streamController.signal,
-      runId,
-      threadId: input.threadId,
-      companyId: input.companyId,
-      employeeId: input.employeeId,
-      currentTicketId: input.currentTicketId ?? null,
-    })) {
-      resetIdleTimer();
-      if (chunk.kind === 'delta') {
-        buffer += chunk.delta;
-        deps.messages.updateContent(messageId, buffer);
-
-        const deltaPayload: TokenDeltaPayload = {
-          threadId: input.threadId,
-          messageId,
-          delta: chunk.delta,
-        };
-        deps.bus.emit<TokenDeltaPayload>({
-          type: 'token.delta',
-          companyId: input.companyId,
-          actorId: input.employeeId,
-          actorKind: 'employee',
-          payload: deltaPayload,
-        });
-      } else if (chunk.kind === 'tool-call') {
-        toolCallsCount++;
-        const toolCalledPayload: ToolCalledPayload = {
-          threadId: input.threadId,
-          messageId,
-          toolCallId: chunk.toolCallId,
-          toolName: chunk.toolName,
-        };
-        deps.bus.emit<ToolCalledPayload>({
-          type: 'tool.called',
-          companyId: input.companyId,
-          actorId: input.employeeId,
-          actorKind: 'employee',
-          payload: toolCalledPayload,
-        });
-      } else if (chunk.kind === 'tool-result') {
-        toolResults.push({
-          toolCallId: chunk.toolCallId,
-          toolName: chunk.toolName,
-          result: chunk.result,
-        });
-      } else if (chunk.kind === 'done') {
-        usage = chunk.usage;
-      }
-    }
-  } catch (err) {
+  if (lastErr !== null) {
     // 5a. Provider failure path. Close the run row with the error,
     //     emit work.failed (NOT work.completed), then re-throw so the
     //     work-queue caller's enqueue Promise rejects.
     const latencyMs = Math.max(0, now() - startTime);
-    const timedOut = abortKind === 'timeout' || abortKind === 'idle-timeout';
+    const timedOut = lastAbortKind === 'timeout' || lastAbortKind === 'idle-timeout';
     const aborted =
-      abortKind === 'external' ||
-      (!timedOut && (input.signal?.aborted === true || isAbortError(err)));
+      lastAbortKind === 'external' ||
+      (!timedOut && (input.signal?.aborted === true || isAbortError(lastErr)));
+    const transientExhausted =
+      !timedOut && !aborted && !chunkSeen && isTransientFetchFailure(lastErr);
     const message = timedOut
-      ? abortKind === 'idle-timeout'
+      ? lastAbortKind === 'idle-timeout'
         ? PROVIDER_STALLED_MESSAGE
         : PROVIDER_TIMED_OUT_MESSAGE
       : aborted
         ? 'Run canceled by user'
-        : err instanceof Error
-          ? err.message
-          : String(err);
+        : transientExhausted
+          ? PROVIDER_CONNECTION_DROPPED_MESSAGE
+          : lastErr instanceof Error
+            ? lastErr.message
+            : String(lastErr);
 
     if (timedOut) {
       deps.messages.updateContent(
         messageId,
         buildInterruptedReplyContent(
           buffer,
-          abortKind === 'idle-timeout' ? 'stalled' : 'timed out',
+          lastAbortKind === 'idle-timeout' ? 'stalled' : 'timed out',
         ),
       );
     }
@@ -449,12 +511,11 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         error: message,
       },
     });
-    throw timedOut ? new Error(message) : err;
-  } finally {
-    clearTimers();
-    if (input.signal) {
-      input.signal.removeEventListener('abort', externalAbortListener);
-    }
+    throw timedOut
+      ? new Error(message)
+      : transientExhausted
+        ? new Error(message, { cause: lastErr })
+        : lastErr;
   }
 
   // 5b. Success path. A provider that closes the stream without ever

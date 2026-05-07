@@ -77,14 +77,14 @@ export function CreateTicketDialog({
           role="presentation"
         />
         <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background p-6 shadow-xl">
-          <h2 className="text-base font-semibold text-foreground">File a Ticket</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <h2 className="text-h3 text-foreground">File a Ticket</h2>
+          <p className="mt-1 text-caption text-muted-foreground">
             Create a new ticket and optionally assign it to a team member.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
             <div>
-              <label htmlFor="ticket-title" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="ticket-title" className="text-label text-muted-foreground">
                 Title *
               </label>
               <Input
@@ -92,12 +92,12 @@ export function CreateTicketDialog({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="What needs to be done?"
-                className="mt-1 text-sm"
+                className="mt-1 text-body"
               />
             </div>
 
             <div>
-              <label htmlFor="ticket-desc" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="ticket-desc" className="text-label text-muted-foreground">
                 Description
               </label>
               <Textarea
@@ -105,7 +105,7 @@ export function CreateTicketDialog({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Provide context, requirements, or instructions..."
-                className="mt-1 min-h-[80px] text-sm"
+                className="mt-1 min-h-[80px] text-body"
               />
             </div>
 
@@ -113,7 +113,7 @@ export function CreateTicketDialog({
               <div className="flex-1">
                 <label
                   htmlFor="ticket-priority"
-                  className="text-xs font-medium text-muted-foreground"
+                  className="text-label text-muted-foreground"
                 >
                   Priority
                 </label>
@@ -121,7 +121,7 @@ export function CreateTicketDialog({
                   id="ticket-priority"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-body text-foreground"
                 >
                   {PRIORITIES.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -134,7 +134,7 @@ export function CreateTicketDialog({
               <div className="flex-1">
                 <label
                   htmlFor="ticket-assignee"
-                  className="text-xs font-medium text-muted-foreground"
+                  className="text-label text-muted-foreground"
                 >
                   Assign to
                 </label>
@@ -142,7 +142,7 @@ export function CreateTicketDialog({
                   id="ticket-assignee"
                   value={assigneeId}
                   onChange={(e) => setAssigneeId(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-body text-foreground"
                 >
                   <option value="">Unassigned</option>
                   {employees.map((emp) => (
@@ -157,7 +157,7 @@ export function CreateTicketDialog({
             <div>
               <label
                 htmlFor="ticket-due-date"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-label text-muted-foreground"
               >
                 Due Date
               </label>
@@ -166,7 +166,7 @@ export function CreateTicketDialog({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="mt-1 text-sm"
+                className="mt-1 text-body"
               />
             </div>
 

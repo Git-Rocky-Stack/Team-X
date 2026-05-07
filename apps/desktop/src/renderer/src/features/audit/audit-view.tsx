@@ -80,27 +80,27 @@ function SummaryCards({
     <div className="grid grid-cols-3 gap-4">
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-zinc-400">Total Events</CardTitle>
+          <CardTitle className="text-body-strong text-zinc-400">Total Events</CardTitle>
           <List className="h-4 w-4 text-zinc-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-zinc-100">{totalEvents.toLocaleString()}</div>
+          <div className="text-numeric text-zinc-100">{totalEvents.toLocaleString()}</div>
         </CardContent>
       </Card>
 
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-zinc-400">Events Today</CardTitle>
+          <CardTitle className="text-body-strong text-zinc-400">Events Today</CardTitle>
           <TrendingUp className="h-4 w-4 text-zinc-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-zinc-100">{eventsToday.toLocaleString()}</div>
+          <div className="text-numeric text-zinc-100">{eventsToday.toLocaleString()}</div>
         </CardContent>
       </Card>
 
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-zinc-400">Top Event Type</CardTitle>
+          <CardTitle className="text-body-strong text-zinc-400">Top Event Type</CardTitle>
           <Activity className="h-4 w-4 text-zinc-500" />
         </CardHeader>
         <CardContent>
@@ -108,13 +108,13 @@ function SummaryCards({
             const top = topEventTypes[0];
             return top ? (
               <>
-                <div className="text-lg font-bold text-zinc-100">
+                <div className="text-h3 text-zinc-100">
                   {formatEventType(top.eventType)}
                 </div>
-                <p className="text-xs text-zinc-500">{top.count} occurrences</p>
+                <p className="text-caption text-zinc-500">{top.count} occurrences</p>
               </>
             ) : (
-              <div className="text-lg font-bold text-zinc-100">None</div>
+              <div className="text-h3 text-zinc-100">None</div>
             );
           })()}
         </CardContent>
@@ -141,7 +141,7 @@ function EventTypeChips({
         <button
           type="button"
           onClick={onClear}
-          className="flex items-center gap-1 rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-700"
+          className="flex items-center gap-1 rounded-full bg-zinc-800 px-2 py-0.5 text-button-sm text-zinc-400 transition-colors hover:bg-zinc-700"
         >
           Clear <X className="h-3 w-3" />
         </button>
@@ -153,7 +153,7 @@ function EventTypeChips({
             key={eventType}
             type="button"
             onClick={() => onToggle(eventType)}
-            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+            className={`rounded-full border px-2.5 py-0.5 text-button-sm ${
               active
                 ? 'brand-selected'
                 : 'border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:border-zinc-600 transition-colors'
@@ -194,31 +194,31 @@ function EventRow({
           <ChevronRight className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
         )}
 
-        <span className="w-36 shrink-0 text-xs text-zinc-500">
+        <span className="w-36 shrink-0 text-caption text-zinc-500">
           {formatTimestamp(event.createdAt)}
         </span>
 
         <AuditEventChip eventType={event.eventType} />
 
-        <span className="shrink-0 text-sm text-zinc-300">
+        <span className="shrink-0 text-body text-zinc-300">
           {getActorLabel(event.actorId, event.actorKind, employees)}
         </span>
 
         {rowSummary ? (
-          <span className="ml-2 min-w-0 flex-1 truncate text-xs text-zinc-400" title={rowSummary}>
+          <span className="ml-2 min-w-0 flex-1 truncate text-caption text-zinc-400" title={rowSummary}>
             {rowSummary}
           </span>
         ) : (
           <span className="flex-1" />
         )}
 
-        <span className="ml-auto shrink-0 text-xs text-zinc-600">{event.actorKind}</span>
+        <span className="ml-auto shrink-0 text-caption text-zinc-600">{event.actorKind}</span>
       </button>
 
       {isExpanded && payload && (
         <div className="border-t border-zinc-800/30 bg-zinc-900/30 px-4 py-3 pl-12">
-          <p className="mb-1.5 text-xs font-medium text-zinc-400">Payload</p>
-          <pre className="max-h-48 overflow-auto rounded-md bg-zinc-950 p-3 font-mono text-xs text-zinc-400">
+          <p className="mb-1.5 text-label text-zinc-400">Payload</p>
+          <pre className="max-h-48 overflow-auto rounded-md bg-zinc-950 p-3 text-code-sm text-zinc-400">
             {JSON.stringify(payload, null, 2)}
           </pre>
         </div>
@@ -306,7 +306,7 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-brand" />
-          <h2 className="text-lg font-semibold text-zinc-100">Audit Log</h2>
+          <h1 className="text-h1 text-zinc-100">Audit Log</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -330,7 +330,7 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
             JSON
           </Button>
           {exportMutation.isSuccess && (
-            <span className="text-xs text-green-400">
+            <span className="text-caption text-green-400">
               Exported to {exportMutation.data.filePath.split(/[\\/]/).pop()}
             </span>
           )}
@@ -367,7 +367,7 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
                 setSearchActor(e.target.value);
                 setPage(0);
               }}
-              className="border-zinc-700 bg-zinc-900 pl-8 text-sm text-zinc-200 placeholder:text-zinc-600"
+              className="border-zinc-700 bg-zinc-900 pl-8 text-body text-zinc-200 placeholder:text-zinc-600"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -379,9 +379,9 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
                 setDateFrom(e.target.value);
                 setPage(0);
               }}
-              className="w-36 border-zinc-700 bg-zinc-900 text-xs text-zinc-200"
+              className="w-36 border-zinc-700 bg-zinc-900 text-caption text-zinc-200"
             />
-            <span className="text-xs text-zinc-500">to</span>
+            <span className="text-caption text-zinc-500">to</span>
             <Input
               type="date"
               value={dateTo}
@@ -389,7 +389,7 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
                 setDateTo(e.target.value);
                 setPage(0);
               }}
-              className="w-36 border-zinc-700 bg-zinc-900 text-xs text-zinc-200"
+              className="w-36 border-zinc-700 bg-zinc-900 text-caption text-zinc-200"
             />
           </div>
         </div>
@@ -406,7 +406,7 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
         ) : events.length === 0 ? (
           <div className="flex h-40 flex-col items-center justify-center gap-2 text-zinc-500">
             <Shield className="h-8 w-8" />
-            <p className="text-sm">No events match the current filters.</p>
+            <p className="text-body">No events match the current filters.</p>
           </div>
         ) : (
           <div>
@@ -424,7 +424,7 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
       </ScrollArea>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between text-xs text-zinc-500">
+      <div className="flex items-center justify-between text-caption text-zinc-500">
         <span>
           {events.length > 0
             ? `Showing ${page * PAGE_SIZE + 1}-${page * PAGE_SIZE + events.length}`
@@ -437,7 +437,7 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
             size="sm"
             disabled={page === 0}
             onClick={() => setPage((p) => Math.max(0, p - 1))}
-            className="h-7 border-zinc-700 px-3 text-xs text-zinc-400 hover:bg-zinc-800"
+            className="h-7 border-zinc-700 px-3 text-button-sm text-zinc-400 hover:bg-zinc-800"
           >
             Previous
           </Button>
@@ -447,7 +447,7 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
             size="sm"
             disabled={events.length < PAGE_SIZE}
             onClick={() => setPage((p) => p + 1)}
-            className="h-7 border-zinc-700 px-3 text-xs text-zinc-400 hover:bg-zinc-800"
+            className="h-7 border-zinc-700 px-3 text-button-sm text-zinc-400 hover:bg-zinc-800"
           >
             Next
           </Button>

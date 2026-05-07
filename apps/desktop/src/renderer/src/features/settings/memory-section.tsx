@@ -31,9 +31,7 @@ export function MemorySection() {
   if (isLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Long-Run Memory
-        </h4>
+        <h2 className="text-h2 text-foreground">Long-Run Memory</h2>
         <Skeleton className="h-40 rounded-lg" />
       </section>
     );
@@ -42,10 +40,8 @@ export function MemorySection() {
   if (isError || !data) {
     return (
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Long-Run Memory
-        </h4>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <h2 className="text-h2 text-foreground">Long-Run Memory</h2>
+        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
           Failed to load long-run memory settings.
         </div>
       </section>
@@ -66,15 +62,13 @@ export function MemorySection() {
   return (
     <section className="space-y-3" data-settings-memory="">
       <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Long-Run Memory
-        </h4>
+        <h2 className="text-h2 text-foreground">Long-Run Memory</h2>
         {setMemory.isPending && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
       </div>
 
-      <p className="text-[11px] leading-snug text-muted-foreground">
+      <p className="text-body-sm text-muted-foreground mt-1">
         These defaults shape how Team-X condenses long threads into digests, how much recent
         conversation it prioritizes, and how deep the checkpoint trail stays visible in the operator
         memory surface.
@@ -83,10 +77,8 @@ export function MemorySection() {
       <div className="space-y-4 rounded-lg border border-border bg-surface-50 p-4">
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-[11px] font-medium text-muted-foreground">
-              Default pack budget
-            </span>
-            <span className="text-[11px] font-mono tabular-nums text-foreground">
+            <span className="text-label text-muted-foreground">Default pack budget</span>
+            <span className="text-code-sm tabular-nums text-foreground">
               {draft.defaultTargetTokenBudget.toLocaleString()}
             </span>
           </div>
@@ -98,7 +90,7 @@ export function MemorySection() {
                 variant="outline"
                 size="sm"
                 className={cn(
-                  'text-xs',
+                  'text-button-sm',
                   draft.defaultTargetTokenBudget === budget
                     ? 'brand-selected'
                     : 'border-white/10 bg-black/10 hover:bg-black/20',
@@ -110,20 +102,17 @@ export function MemorySection() {
               </Button>
             ))}
           </div>
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Autonomy &gt; Memory starts from this token envelope before any per-session override.
           </p>
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="memory-recent-turn-limit"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="memory-recent-turn-limit" className="text-label text-muted-foreground">
               Recent turn window
             </label>
-            <span className="text-[11px] font-mono tabular-nums text-foreground">
+            <span className="text-code-sm tabular-nums text-foreground">
               {draft.recentTurnLimit}
             </span>
           </div>
@@ -153,9 +142,9 @@ export function MemorySection() {
               commit('recentTurnLimit', next);
             }}
             disabled={setMemory.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Fresh turns prioritized before lower-signal context is compressed (
             {MEMORY_SETTINGS_CLAMPS.recentTurnLimit.min}-
             {MEMORY_SETTINGS_CLAMPS.recentTurnLimit.max}).
@@ -166,11 +155,11 @@ export function MemorySection() {
           <div className="flex items-center justify-between gap-4">
             <label
               htmlFor="memory-checkpoint-history-limit"
-              className="text-[11px] font-medium text-muted-foreground"
+              className="text-label text-muted-foreground"
             >
               Checkpoint history depth
             </label>
-            <span className="text-[11px] font-mono tabular-nums text-foreground">
+            <span className="text-code-sm tabular-nums text-foreground">
               {draft.checkpointHistoryLimit}
             </span>
           </div>
@@ -200,9 +189,9 @@ export function MemorySection() {
               commit('checkpointHistoryLimit', next);
             }}
             disabled={setMemory.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             How many resumable checkpoints stay visible in the detailed memory view (
             {MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit.min}-
             {MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit.max}).
@@ -211,7 +200,7 @@ export function MemorySection() {
       </div>
 
       {setMemory.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
           <span className="min-w-0 truncate">Failed to save: {String(setMemory.error)}</span>
         </div>
       )}

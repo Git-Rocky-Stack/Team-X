@@ -48,11 +48,11 @@ function TicketRow({ ticket, onOpen }: { ticket: Ticket; onOpen: (ticketId: stri
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <TicketCheck className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">{ticket.title}</span>
+            <span className="text-body-strong text-foreground">{ticket.title}</span>
             <MissionPill tone={priorityTone(ticket.priority)}>{ticket.priority}</MissionPill>
             <MissionPill>{ticket.status}</MissionPill>
           </div>
-          <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+          <p className="line-clamp-2 text-caption text-muted-foreground">
             {ticket.description}
           </p>
         </div>
@@ -89,12 +89,12 @@ function RecommendationRow({
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <BrainCircuit className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">{recommendation.title}</span>
+            <span className="text-body-strong text-foreground">{recommendation.title}</span>
             <MissionPill tone={priorityTone(recommendation.priority)}>
               {recommendation.priority}
             </MissionPill>
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             {recommendation.sourceCount} source
             {recommendation.sourceCount === 1 ? '' : 's'} inspected.
           </p>
@@ -160,12 +160,12 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <BrainCircuit className="h-4 w-4 text-muted-foreground" />
-            <div className="text-sm font-semibold text-foreground">Agent Improvement Loop</div>
+            <h2 className="text-h2 text-foreground">Agent Improvement Loop</h2>
             <MissionPill tone={snapshot.openTicketCount > 0 ? 'warning' : 'accent'}>
               {snapshot.openTicketCount > 0 ? 'active' : 'clear'}
             </MissionPill>
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Last checked {formatTimestamp(snapshot.generatedAt)}.
           </p>
         </div>
@@ -181,7 +181,7 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
           </MissionIconButton>
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-[16px] border border-brand/25 bg-black px-4 text-xs font-semibold text-brand transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-[16px] border border-brand/25 bg-black px-4 text-button-sm text-brand transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
             onClick={() => runLoop.mutate()}
             disabled={runLoop.isPending}
           >
@@ -214,7 +214,7 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
 
       {runLoop.isError ? (
         <MissionInsetSurface className="p-4" tone="danger">
-          <div className="flex items-center gap-2 text-sm font-semibold text-red-200">
+          <div className="flex items-center gap-2 text-body-strong text-red-200">
             <AlertTriangle className="h-4 w-4" />
             Improvement loop failed
           </div>
@@ -224,16 +224,16 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
       {latestRun ? (
         <MissionInsetSurface className="space-y-3 p-4" data-agent-improvement-run-result="">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm font-semibold text-foreground">Latest loop run</div>
+            <div className="text-body-strong text-foreground">Latest loop run</div>
             <MissionPill mono>{formatTimestamp(latestRun.ranAt)}</MissionPill>
           </div>
-          <div className="grid gap-2 text-xs leading-5 text-muted-foreground md:grid-cols-3">
+          <div className="grid gap-2 text-caption text-muted-foreground md:grid-cols-3">
             <span>{latestRun.inspectedEventCount} events inspected</span>
             <span>{latestRun.inspectedTicketCount} tickets inspected</span>
             <span>{latestRun.createdTicketIds.length} tickets opened</span>
           </div>
           {latestRun.recommendations.length === 0 ? (
-            <div className="rounded-md border border-white/10 bg-black/10 px-3 py-2 text-xs leading-5 text-muted-foreground">
+            <div className="rounded-md border border-white/10 bg-black/10 px-3 py-2 text-caption text-muted-foreground">
               No new improvement signals.
             </div>
           ) : (
@@ -249,11 +249,11 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
         <MissionInsetSurface className="space-y-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm font-semibold text-foreground">Self-improvement tickets</div>
+            <h3 className="text-h3 text-foreground">Self-improvement tickets</h3>
             <MissionPill>{snapshot.openTicketCount}</MissionPill>
           </div>
           {snapshot.openTickets.length === 0 ? (
-            <div className="rounded-md border border-white/10 bg-black/10 px-3 py-3 text-xs leading-5 text-muted-foreground">
+            <div className="rounded-md border border-white/10 bg-black/10 px-3 py-3 text-caption text-muted-foreground">
               No open self-improvement tickets.
             </div>
           ) : (
@@ -267,11 +267,11 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
 
         <MissionInsetSurface className="space-y-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm font-semibold text-foreground">Loop history</div>
+            <h3 className="text-h3 text-foreground">Loop history</h3>
             <MissionPill>{snapshot.recentRuns.length}</MissionPill>
           </div>
           {snapshot.recentRuns.length === 0 ? (
-            <div className="rounded-md border border-white/10 bg-black/10 px-3 py-3 text-xs leading-5 text-muted-foreground">
+            <div className="rounded-md border border-white/10 bg-black/10 px-3 py-3 text-caption text-muted-foreground">
               No loop runs recorded.
             </div>
           ) : (
@@ -283,14 +283,14 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
                   data-agent-improvement-run={run.eventId}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-foreground">
+                    <span className="text-caption font-semibold text-foreground">
                       {formatTimestamp(run.ranAt)}
                     </span>
                     <MissionPill tone={run.createdTicketCount > 0 ? 'accent' : 'default'}>
                       {run.createdTicketCount} opened
                     </MissionPill>
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  <p className="mt-2 text-caption text-muted-foreground">
                     {run.recommendationCount} recommendations from {run.inspectedEventCount} events
                     and {run.inspectedTicketCount} tickets.
                   </p>

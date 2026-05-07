@@ -214,7 +214,7 @@ export function InstallCustomMcpDialog({
                       <Server className="h-4 w-4" />
                       <div>
                         <div className="font-medium">stdio</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-caption text-muted-foreground">
                           Standard input/output (recommended)
                         </div>
                       </div>
@@ -225,7 +225,7 @@ export function InstallCustomMcpDialog({
                       <Globe className="h-4 w-4" />
                       <div>
                         <div className="font-medium">SSE</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-caption text-muted-foreground">
                           Server-Sent Events (HTTP-based)
                         </div>
                       </div>
@@ -246,10 +246,10 @@ export function InstallCustomMcpDialog({
                   placeholder="npx"
                   value={command}
                   onChange={(e) => setCommand(e.target.value)}
-                  className="font-mono text-sm"
+                  className="text-code"
                   disabled={isInstalling}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   The command to run (usually &apos;npx&apos; for Node.js packages)
                 </p>
               </div>
@@ -261,10 +261,10 @@ export function InstallCustomMcpDialog({
                   placeholder="-y,@modelcontextprotocol/server-filesystem,C:\AllowedPath"
                   value={argsText}
                   onChange={(e) => setArgsText(e.target.value)}
-                  className="min-h-20 font-mono text-sm"
+                  className="min-h-20 text-code"
                   disabled={isInstalling}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   Enter one argument per line or use commas
                 </p>
               </div>
@@ -276,10 +276,10 @@ export function InstallCustomMcpDialog({
                   placeholder='{"API_KEY": "your-key-here"}'
                   value={envText}
                   onChange={(e) => setEnvText(e.target.value)}
-                  className="min-h-24 font-mono text-sm"
+                  className="min-h-24 text-code"
                   disabled={isInstalling}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   Optional environment variables as JSON
                 </p>
               </div>
@@ -292,10 +292,10 @@ export function InstallCustomMcpDialog({
                 placeholder="https://example.com/sse"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="font-mono text-sm"
+                className="text-code"
                 disabled={isInstalling}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 The SSE endpoint URL for the MCP server
               </p>
             </div>
@@ -331,7 +331,7 @@ export function InstallCustomMcpDialog({
           {/* Preview */}
           <div className="space-y-2">
             <Label>Configuration Preview</Label>
-            <div className="bg-muted/50 p-3 rounded-lg space-y-1 text-xs font-mono">
+            <div className="bg-muted/50 p-3 rounded-lg space-y-1 text-code-sm">
               <div className="text-muted-foreground"># Configuration</div>
               <div>Name: {name || '(not set)'}</div>
               <div>Transport: {transport}</div>

@@ -29,6 +29,16 @@ import { useAppStore } from '@/store/app-store.js';
 
 type PermissionPreset = 'safe' | 'standard' | 'advanced';
 
+const PERMISSION_LABEL: Record<string, string> = {
+  allow: 'Allow',
+  deny: 'Deny',
+  prompt: 'Prompt',
+};
+
+function formatPermission(permission: string): string {
+  return PERMISSION_LABEL[permission] ?? permission;
+}
+
 interface PresetConfig {
   label: string;
   description: string;
@@ -157,10 +167,8 @@ export function PermissionsSection() {
 
   return (
     <section className="space-y-4" data-permissions-section="">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Extension Permissions
-      </h4>
-      <p className="text-[11px] leading-snug text-muted-foreground">
+      <h2 className="text-h2 text-foreground">Extension Permissions</h2>
+      <p className="text-body-sm text-muted-foreground mt-1">
         Configure what capabilities extensions can access. Presets provide common configurations;
         use Advanced for granular control.
       </p>
@@ -168,7 +176,7 @@ export function PermissionsSection() {
       {!companyId ? (
         <Card>
           <CardContent className="flex items-center justify-center py-12">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-body text-muted-foreground">
               Select a workspace to manage permissions.
             </p>
           </CardContent>
@@ -185,7 +193,7 @@ export function PermissionsSection() {
       ) : authorityQuery.isError ? (
         <Card>
           <CardContent className="flex items-center justify-center py-12">
-            <p className="text-sm text-destructive">Failed to load permissions configuration.</p>
+            <p className="text-body text-destructive">Failed to load permissions configuration.</p>
           </CardContent>
         </Card>
       ) : (
@@ -193,7 +201,7 @@ export function PermissionsSection() {
           {/* Preset Cards */}
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-base">Permission Presets</CardTitle>
+              <CardTitle className="text-h3">Permission Presets</CardTitle>
               <CardDescription>
                 Choose a preset to quickly configure extension permissions.
               </CardDescription>
@@ -228,28 +236,28 @@ export function PermissionsSection() {
                           className={`block cursor-pointer ${isApplying ? 'opacity-50' : ''}`}
                         >
                           <div className="mb-2 flex items-center justify-between">
-                            <span className="text-sm font-semibold capitalize">{config.label}</span>
+                            <span className="text-body-strong capitalize">{config.label}</span>
                             {isSelected && (
                               <Badge variant="default" className="text-[10px]">
                                 Active
                               </Badge>
                             )}
                           </div>
-                          <p className="mb-3 text-[11px] text-muted-foreground">
+                          <p className="mb-3 text-caption text-muted-foreground">
                             {config.description}
                           </p>
 
                           {/* Allowed Paths */}
                           {config.defaultPaths.length > 0 ? (
                             <div className="space-y-1">
-                              <p className="text-[10px] uppercase text-muted-foreground">
+                              <p className="text-eyebrow-sm text-muted-foreground">
                                 Allowed Paths:
                               </p>
                               <div className="flex flex-wrap gap-1">
                                 {config.defaultPaths.map((path) => (
                                   <span
                                     key={path}
-                                    className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono"
+                                    className="rounded bg-muted px-1.5 py-0.5 text-code-sm"
                                   >
                                     {formatPath(path)}
                                   </span>
@@ -257,7 +265,7 @@ export function PermissionsSection() {
                               </div>
                             </div>
                           ) : (
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-caption text-muted-foreground">
                               User-defined paths only
                             </p>
                           )}
@@ -269,7 +277,7 @@ export function PermissionsSection() {
               </div>
 
               {createGrant.isError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-body text-destructive">
                   Failed to apply permission preset.
                 </div>
               )}
@@ -281,7 +289,7 @@ export function PermissionsSection() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-base">Advanced Authority Matrix</CardTitle>
+                  <CardTitle className="text-h3">Advanced Authority Matrix</CardTitle>
                   <CardDescription>
                     View and manage all authority grants with granular control.
                   </CardDescription>
@@ -298,8 +306,8 @@ export function PermissionsSection() {
               <CardContent className="space-y-4">
                 {/* Add custom path section */}
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Add Custom Path</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-label text-muted-foreground">Add Custom Path</p>
+                  <p className="text-caption text-muted-foreground">
                     Grant extensions access to specific filesystem paths. Use templates like{' '}
                     <code className="rounded bg-muted px-1 py-0.5">{'{{documents}}'}</code> or
                     browse to select a directory.
@@ -310,7 +318,7 @@ export function PermissionsSection() {
                       value={newPathInput}
                       onChange={(e) => setNewPathInput(e.target.value)}
                       disabled={isAddingPath || !companyId}
-                      className="h-9 text-sm"
+                      className="h-9 text-body"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && newPathInput.trim()) {
                           e.preventDefault();
@@ -339,7 +347,7 @@ export function PermissionsSection() {
                     </Button>
                   </div>
                   {createGrant.isError && (
-                    <p className="text-[10px] text-destructive">
+                    <p className="text-caption text-destructive">
                       Failed to add path. Please try again.
                     </p>
                   )}
@@ -347,12 +355,12 @@ export function PermissionsSection() {
 
                 {/* Existing grants list */}
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
+                  <p className="text-label text-muted-foreground">
                     Existing Grants ({employeeGrants.length})
                   </p>
                   {employeeGrants.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-body text-muted-foreground">
                         No custom authority grants configured. Use presets above for quick setup or
                         add custom paths.
                       </p>
@@ -366,17 +374,17 @@ export function PermissionsSection() {
                         >
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium truncate">
+                              <span className="text-body-strong truncate">
                                 {formatPath(grant.resourceId)}
                               </span>
                               <Badge variant="outline">{grant.resourceKind}</Badge>
-                              <Badge variant="secondary">{grant.permission}</Badge>
+                              <Badge variant="secondary">{formatPermission(grant.permission)}</Badge>
                             </div>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-2 text-xs"
+                            className="h-7 px-2 text-button-sm"
                             onClick={() => deleteGrant.mutate(grant.id)}
                             disabled={deleteGrant.isPending}
                           >
@@ -395,4 +403,3 @@ export function PermissionsSection() {
     </section>
   );
 }
-

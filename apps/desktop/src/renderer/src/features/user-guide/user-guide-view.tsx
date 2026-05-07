@@ -219,7 +219,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
           }
         >
           <MissionInsetSurface className="px-4 py-4">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-3 text-body text-muted-foreground">
               <Rocket className="h-4 w-4 text-brand" />
               Team-X recommends a simple starting sequence:
               <span className="font-medium text-foreground">provider</span>
@@ -236,7 +236,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
 
       {saveError ? (
         <MissionInsetSurface tone="danger" className="px-4 py-4">
-          <div className="flex items-center gap-3 text-sm text-red-100">
+          <div className="flex items-center gap-3 text-body text-red-100">
             <ShieldCheck className="h-4 w-4 text-red-200" />
             {saveError}
           </div>
@@ -276,7 +276,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
         >
           <div className="space-y-2">
             {sections.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 No guide sections match the current search. Clear the filter to restore the full
                 track.
               </p>
@@ -296,11 +296,11 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                     )}
                     data-user-guide-section-nav={section.id}
                   >
-                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    <span className="text-eyebrow text-muted-foreground">
                       {section.category}
                     </span>
-                    <span className="text-sm font-medium">{section.title}</span>
-                    <span className="text-xs leading-5">{section.summary}</span>
+                    <span className="text-body-strong">{section.title}</span>
+                    <span className="text-caption">{section.summary}</span>
                   </button>
                 );
               })
@@ -320,7 +320,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                   return (
                     <p
                       key={`${selectedSection.id}:paragraph:${index}`}
-                      className="text-sm leading-7 text-muted-foreground"
+                      className="text-body leading-7 text-muted-foreground"
                     >
                       {block.text}
                     </p>
@@ -331,7 +331,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                   return (
                     <ul
                       key={`${selectedSection.id}:bullets:${index}`}
-                      className="space-y-2 text-sm leading-6 text-muted-foreground"
+                      className="space-y-2 text-body text-muted-foreground"
                     >
                       {block.items.map((item) => (
                         <li key={item} className="flex gap-3">
@@ -352,8 +352,8 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                       block.tone === 'warning' && 'border-amber-500/20 bg-amber-500/8',
                     )}
                   >
-                    <p className="text-sm font-medium text-foreground">{block.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{block.text}</p>
+                    <p className="text-body-strong text-foreground">{block.title}</p>
+                    <p className="mt-2 text-body text-muted-foreground">{block.text}</p>
                   </MissionInsetSurface>
                 );
               })}
@@ -378,7 +378,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
             }
           >
             {sectionTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 This section does not have checklist items yet.
               </p>
             ) : (
@@ -404,13 +404,13 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-medium text-foreground">{task.title}</p>
+                            <p className="text-body-strong text-foreground">{task.title}</p>
                             <MissionPill tone={task.priority === 'core' ? 'accent' : 'default'}>
                               {task.priority}
                             </MissionPill>
                             <MissionPill>{task.kind}</MissionPill>
                           </div>
-                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          <p className="mt-2 text-body text-muted-foreground">
                             {task.description}
                           </p>
                           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -460,8 +460,8 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                   data-user-guide-action={action.id}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">{action.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    <p className="text-body-strong text-foreground">{action.label}</p>
+                    <p className="mt-1 text-caption text-muted-foreground">
                       {action.description}
                     </p>
                   </div>
@@ -478,8 +478,8 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                     data-user-guide-action={action.id}
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">{action.label}</p>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      <p className="text-body-strong text-foreground">{action.label}</p>
+                      <p className="mt-1 text-caption text-muted-foreground">
                         {action.description}
                       </p>
                     </div>
@@ -493,7 +493,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
             title="Signal health"
             description="Live workspace signals used for auto-detected onboarding tasks."
           >
-            <div className="space-y-2 text-sm text-muted-foreground">
+            <div className="space-y-2 text-body text-muted-foreground">
               <div className="flex items-center justify-between">
                 <span>Enabled provider</span>
                 <MissionPill tone={signals.hasEnabledProvider ? 'accent' : 'warning'}>

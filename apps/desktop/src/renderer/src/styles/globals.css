@@ -69,10 +69,37 @@
     @apply border-border;
   }
 
+  /*
+   * Body baseline — anchors the entire renderer at `text-body`
+   * (14px / 1.5 / Inter / 400). Every untagged element inherits this,
+   * so a stray `<p>` looks identical to a `<p className="text-body">`.
+   * Components that want a different role MUST opt in explicitly with
+   * a semantic token (text-h1, text-body-sm, text-caption, etc.).
+   */
   body {
-    @apply bg-black text-foreground;
+    @apply bg-black text-foreground text-body;
     font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /*
+   * Base heading defaults — untagged <h1>..<h4> get sane scale even
+   * without an explicit className. Existing className overrides win
+   * (utilities are loaded after base), so this is a safety net for
+   * any future additions, not a forced cascade. The role-to-class
+   * mapping in the typography spec is still the source of truth.
+   */
+  h1 {
+    @apply text-h1;
+  }
+  h2 {
+    @apply text-h2;
+  }
+  h3 {
+    @apply text-h3;
+  }
+  h4 {
+    @apply text-h4;
   }
 
   ::selection {
@@ -300,6 +327,88 @@
 }
 
 @layer components {
+  /*
+   * Typography component classes — roles that need properties beyond
+   * what Tailwind's fontSize tuple covers (font-family, text-transform,
+   * font-variant-numeric). The scalar fontSize roles (h1..h4, body,
+   * body-sm, caption, label, button*, menu-item) live in
+   * `tailwind.config.ts` under theme.extend.fontSize and generate
+   * `text-h1`, `text-body`, etc. utilities directly.
+   *
+   * Single source of truth for: eyebrow labels, menu group labels,
+   * keyboard shortcuts, inline code, and mission-control numeric
+   * displays. Replaces the 9 ad-hoc `text-[Npx] uppercase tracking-[Xem]`
+   * recipes that drifted across the renderer pre-spec.
+   */
+  .text-eyebrow {
+    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.6875rem; /* 11px */
+    line-height: 1.4;
+    letter-spacing: 0.18em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .text-eyebrow-sm {
+    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.625rem; /* 10px */
+    line-height: 1.4;
+    letter-spacing: 0.18em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .text-menu-label {
+    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.6875rem; /* 11px */
+    line-height: 1.4;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .text-shortcut {
+    font-family: "JetBrains Mono Variable", ui-monospace, monospace;
+    font-size: 0.6875rem; /* 11px */
+    line-height: 1;
+    letter-spacing: 0.1em;
+    font-weight: 500;
+  }
+
+  .text-code {
+    font-family: "JetBrains Mono Variable", ui-monospace, monospace;
+    font-size: 0.8125rem; /* 13px */
+    line-height: 1.5;
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+
+  .text-code-sm {
+    font-family: "JetBrains Mono Variable", ui-monospace, monospace;
+    font-size: 0.75rem; /* 12px */
+    line-height: 1.5;
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+
+  .text-numeric {
+    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 1.5rem; /* 24px */
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-numeric-lg {
+    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-size: 2rem; /* 32px */
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
   .mission-app-shell {
     background-image: radial-gradient(
         circle at top left,

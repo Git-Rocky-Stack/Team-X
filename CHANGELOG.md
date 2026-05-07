@@ -23,6 +23,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.10] — 2026-05-06 — Typography cascade · orchestrator retry · settings UX
+
+Three-part release: a workspace-wide typography master format that
+collapses ~1,500 ad-hoc `text-*`/`tracking-*` classes onto 20 semantic
+tokens, a transparent retry path in the orchestrator that absorbs
+transient `fetch failed` flakes against the local Ollama daemon, and
+five surgical Settings UX fixes covering broken switches, invisible
+checkboxes, and a chooser whose `Button` wrapper was outranking the
+`.brand-selected` primitive. Tests **1978/1978** passing (up from 1959
+— +18 new for orchestrator retry + +1 for proactive persistence
+regression). Typecheck clean across all four `tsconfig` projects.
+
+### Added
+
+- **Orchestrator transient-fetch retry** (`apps/desktop/src/main/orchestrator/`).
+  New `transient-errors.ts` module classifies undici `TypeError("fetch
+  failed")`, `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, and the undici
+  `UND_ERR_*` codes by walking up to 5 levels of `error.cause`. The
+  predicate short-circuits on `AbortError` so user-cancelled runs never
+  hit the retry path. `runAgent` now wraps the stream-draining block in
+  a 2-attempt loop (1 initial + 1 retry, 200 ms backoff) that fires
+  **only** when zero chunks have streamed — preventing duplicated
+  output to an open message bubble. When retries exhaust, the
+  user-visible error becomes `"Provider connection dropped. Please
+  retry, or switch to a different provider in Settings."` with the
+  original error preserved on `Error.cause` for forensics. Repro:
+  three `fetch failed` runs in the user's runs table — all <150 ms,
+  all isolated incidents during otherwise-successful sessions against
+  `ollama-local + gemma4:31b-cloud` — would each have been absorbed.
+- **18 new orchestrator tests** — 12 `transient-errors.test.ts` (positive
+  matches: bare TypeError, surrounding whitespace, cause-chain depth 1+2,
+  undici codes, ETIMEDOUT; negatives: AbortError, named AbortError,
+  HTTP-status errors, unrelated errors, non-Error throws,
+  self-referential cause loop) plus 6 `run-agent.test.ts` retry-path
+  cases (success-after-retry without event duplication, exhausted
+  retries with friendly message, no-retry-after-chunks-streamed,
+  no-retry-on-HTTP-status, no-retry-on-pre-aborted-signal, original
+  error preserved as `cause`).
+
+### Changed
+
+- **Typography master-format cascade**. `tailwind.config.ts` gains 13
+  `theme.extend.fontSize` semantic tokens generating `text-display`,
+  `text-h1`–`text-h4`, `text-body`, `text-body-strong`, `text-body-sm`,
+  `text-caption`, `text-label`, `text-button`, `text-button-sm`, and
+  `text-menu-item` — each tuple specifying size + line height +
+  letter-spacing + font weight together. `globals.css` adds 8 component
+  utilities: `.text-eyebrow` (11 px uppercase 0.18em),
+  `.text-eyebrow-sm`, `.text-menu-label`, `.text-shortcut`, `.text-code`
+  (13 px mono), `.text-code-sm`, `.text-numeric` (24 px tabular-nums),
+  `.text-numeric-lg` (32 px). Twelve shadcn primitives refactored to
+  consume the new tokens at the bottom of the cascade — `Button` now
+  uses `text-button`, `CardTitle` `text-h3`, `CardDescription`
+  `text-body-sm`, `Dialog`/`Sheet` titles `text-h3`, `DropdownMenuItem`
+  `text-menu-item`, `Input`/`Textarea` drop the responsive
+  `md:text-sm` jump in favour of `text-body`, `Label` `text-label
+  leading-none`, `TabsTrigger` `text-button-sm`, `AlertTitle`
+  `text-h4`, `AlertDescription` `text-body-sm`,
+  `SelectTrigger`/`SelectLabel`/`SelectItem`, and `Badge`
+  `text-caption font-semibold`. Top-of-cascade shells (`top-bar.tsx`,
+  `sidenav.tsx`, `mission-shell.tsx`, `mission-control-dashboard.tsx`,
+  `settings-view.tsx`, `audit-view.tsx`, `extensions-section.tsx`,
+  `permissions-section.tsx`, plus ~90 feature files) consolidated to
+  the canonical token set. Net effect: 9 different "eyebrow" recipes
+  collapsed to one `text-eyebrow` token; 6 different `tracking-*`
+  patterns baked into the per-token definitions; broken hierarchy
+  fixed (Settings page heading was 14 px / same size as buttons —
+  now correctly `text-h1` at 28 px).
+
+### Fixed
+
+- **Enhanced AI Settings — 7 hand-rolled toggles invisible in dark mode**
+  (`enhanced-ai-section.tsx`). The off-state used `bg-surface-100` for
+  the track and `bg-background` for the thumb; both resolve to
+  near-black in AMOLED, rendering as a featureless black blob.
+  Replaced all seven (Query Expansion, Semantic Chunking, Long-Term
+  Memory, Knowledge Graph, Multi-Turn Planning, Streaming Responses,
+  Distributed Tracing) with the canonical `<Switch>` primitive, which
+  uses `bg-input` (`HSL 0 0% 14.9%`) for a visible mid-gray track
+  matching the rest of the app. Multi-Turn Planning and Distributed
+  Tracing keep `className="mt-5"` to preserve title-text alignment in
+  their `items-start` rows. Dropped the now-unused `handleToggle`
+  helper.
+- **Active Authority Grants permission labels lower-case**
+  (`extensions-section.tsx`, `permissions-section.tsx`). Permission
+  badges rendered the raw `'allow' | 'deny' | 'prompt'` enum values.
+  Added typed `PERMISSION_LABEL: Record<AuthorityPermission, string>`
+  in extensions-section (TypeScript exhaustiveness for free) and a
+  `formatPermission(permission: string): string` helper in
+  permissions-section (respecting that file's no-shared-types import
+  rule). Both badges now render `Allow`, `Deny`, `Prompt`.
+- **Copilot Allowed Categories checkboxes rendering browser-blue**
+  (`copilot-section.tsx`). Native `<input type="checkbox">` was
+  inheriting Chromium's default check colour. Added `accent-brand`
+  (the same canonical pattern already in `call-meeting-dialog.tsx`),
+  which maps the CSS `accent-color` property to the registered
+  `brand: '#AA2024'` token.
+- **Proactive Mode toggle didn't persist** (`handlers.ts`,
+  `proactive-handlers.test.ts`). The IPC handler called
+  `proactiveTriggerService.setEnabled` which only mutated an in-memory
+  per-company `disabledCompanies` Set; the renderer's getter read
+  `proactive_enabled` from the SQLite settings table which stayed
+  `false`. After the optimistic switch flipped, react-query
+  invalidation refetched the unchanged DB value and the
+  `useEffect`/optimistic reset snapped the thumb back. Fix: handler
+  now persists via `settingsRepo.setProactive({ enabled })` first,
+  then forwards to the trigger service. Both sources of truth move
+  together; on a subsequent load the global gate `isEnabled()`
+  (`settings.enabled AND NOT disabledCompanies.has(companyId)`) finally
+  returns `true`. New regression test asserts both `setProactive` calls
+  fire (ON and OFF) for the toggle UX.
+- **Autonomy Policy chooser only showed a thin red ring**
+  (`extensions-section.tsx`). Wrapping `<Button variant="outline">`
+  applied utilities `border-input` (mid-gray) and `bg-background`
+  (black). Tailwind's layer order is `base < components < utilities`,
+  so those utilities outranked `.brand-selected`'s component-layer
+  border-color and background-color rules — only the box-shadow
+  (which `Button` doesn't set) made it through, leaving a lonely 1 px
+  inset red ring on a black box with a gray border. Replaced with a
+  plain `<button>` matching the Runtime Strategy chooser pattern
+  verbatim. The selected state now shows the full thicker red bezel,
+  translucent red fill, and 12 px outer red glow that
+  `.brand-selected` was always meant to deliver.
+
+---
+
 ## [2.0.9] — 2026-05-04 — Biome auto-fix sweep
 
 Cleaned up the long-standing Biome lint backlog. **160 files auto-fixed**

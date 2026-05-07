@@ -90,7 +90,7 @@ export function ChatView({ companyId, employees }: ChatViewProps) {
           badge={
             <Badge
               variant="outline"
-              className="border-white/10 bg-black/20 text-[10px] font-mono text-muted-foreground"
+              className="border-white/10 bg-black/20 text-eyebrow-sm font-mono text-muted-foreground"
             >
               Live thread sync
             </Badge>
@@ -163,7 +163,7 @@ export function ChatView({ companyId, employees }: ChatViewProps) {
         badge={
           <Badge
             variant="outline"
-            className="border-white/10 bg-black/20 text-[10px] font-mono text-muted-foreground"
+            className="border-white/10 bg-black/20 text-eyebrow-sm font-mono text-muted-foreground"
           >
             Drawer-backed threads
           </Badge>
@@ -212,7 +212,7 @@ export function ChatView({ companyId, employees }: ChatViewProps) {
         badge={
           <Badge
             variant="outline"
-            className="border-white/10 bg-black/20 text-[10px] font-mono text-muted-foreground"
+            className="border-white/10 bg-black/20 text-eyebrow-sm font-mono text-muted-foreground"
           >
             Thread index
           </Badge>

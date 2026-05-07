@@ -41,7 +41,7 @@ export function GoalRow({ goal, projectCount, onClick, isActive }: GoalRowProps)
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <h4 className="truncate text-sm font-medium text-foreground">{goal.title}</h4>
+          <h4 className="truncate text-body-strong text-foreground">{goal.title}</h4>
           <Badge
             variant="outline"
             className={`shrink-0 border-0 text-[10px] ${statusConfig.color}`}
@@ -58,12 +58,12 @@ export function GoalRow({ goal, projectCount, onClick, isActive }: GoalRowProps)
                 style={{ width: `${goal.progressPct}%` }}
               />
             </div>
-            <span className="text-[10px] font-medium text-muted-foreground">
+            <span className="text-caption font-medium text-muted-foreground">
               {goal.progressPct}%
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-3 text-caption text-muted-foreground">
             <span className="flex items-center gap-1">
               <FolderKanban className="h-3 w-3" />
               {projectCount}

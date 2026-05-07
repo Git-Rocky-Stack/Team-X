@@ -41,7 +41,7 @@ function renderContent(content: string) {
       <pre
         // biome-ignore lint/suspicious/noArrayIndexKey: stable content list
         key={i}
-        className="my-1 overflow-x-auto rounded-md bg-background/80 px-3 py-2 font-mono text-[11px] leading-relaxed"
+        className="my-1 overflow-x-auto rounded-md bg-background/80 px-3 py-2 text-code-sm leading-relaxed"
       >
         {part.value}
       </pre>
@@ -70,11 +70,11 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
       <div className={cn('min-w-0', isUser ? 'max-w-[88%]' : 'max-w-[96%]')}>
         {showSenderName && senderName && (
           <div className="mb-1 flex items-center gap-1.5 px-1">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="text-eyebrow-sm text-muted-foreground">
               {senderName}
             </span>
             {message.isAgentInitiated && (
-              <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-amber-500">
+              <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-eyebrow-sm text-amber-500">
                 <Bot className="h-2.5 w-2.5" />
                 AI
               </span>
@@ -83,7 +83,7 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
         )}
         <div
           className={cn(
-            'mission-chrome-panel rounded-[20px] border px-4 py-3 text-sm leading-7 shadow-none break-words',
+            'mission-chrome-panel rounded-[20px] border px-4 py-3 text-body leading-7 shadow-none break-words',
             isUser
               ? 'border-brand/20 bg-brand/10 text-foreground'
               : 'border-white/10 bg-black/20 text-foreground',
@@ -104,10 +104,10 @@ interface StreamingBubbleProps {
 function StreamingBubble({ text, employeeName }: StreamingBubbleProps) {
   return (
     <div className="flex justify-start">
-      <div className="mission-chrome-panel max-w-[96%] rounded-[20px] border border-white/10 bg-black/20 px-4 py-3 text-sm leading-7 text-foreground break-words">
+      <div className="mission-chrome-panel max-w-[96%] rounded-[20px] border border-white/10 bg-black/20 px-4 py-3 text-body leading-7 text-foreground break-words">
         {text.length > 0 ? (
           <>
-            <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="mb-2 flex items-center gap-2 text-eyebrow-sm text-muted-foreground">
               <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
               Live stream
             </div>
@@ -115,7 +115,7 @@ function StreamingBubble({ text, employeeName }: StreamingBubbleProps) {
             <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-brand align-text-bottom" />
           </>
         ) : (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5 text-caption text-muted-foreground">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
             {employeeName} is thinking...
           </span>
@@ -160,12 +160,12 @@ export function MessageList({
       <div className="flex flex-col gap-4">
         {visibleMessages.length === 0 && !isStreaming && (
           <div className="mission-state-block rounded-[24px] border border-dashed border-white/10 px-6 py-10 text-center">
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-body-strong text-foreground">
               {isAgentThread
                 ? 'No messages in this conversation yet.'
                 : `Start a conversation with ${employeeName}.`}
             </p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            <p className="mt-2 text-body text-muted-foreground">
               New messages will appear here in the live transcript as soon as the thread updates.
             </p>
           </div>

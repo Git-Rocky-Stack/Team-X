@@ -46,7 +46,7 @@ export function CardsView({ employees, isLoading, isError, onRetry }: CardsViewP
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
         <AlertCircle className="h-8 w-8 text-red-500" />
-        <p className="text-sm font-medium text-muted-foreground">Failed to load employees</p>
+        <p className="text-body-strong text-muted-foreground">Failed to load employees</p>
         {onRetry && (
           <Button variant="outline" size="sm" onClick={onRetry} className="gap-1.5">
             <RefreshCw className="h-3.5 w-3.5" />

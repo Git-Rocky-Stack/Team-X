@@ -61,23 +61,23 @@ function ArtifactCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">{artifact.title}</span>
+            <span className="text-body-strong text-foreground">{artifact.title}</span>
             <MissionPill tone="accent">{kindLabel(artifact)}</MissionPill>
             <MissionPill>{artifact.outcomeKind}</MissionPill>
             <MissionPill>{sourceLabel(artifact.sourceKind)}</MissionPill>
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             {artifact.summary?.trim().length
               ? artifact.summary
               : 'Explicit outcome recorded for operator review.'}
           </p>
         </div>
-        <div className="text-right text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+        <div className="text-right text-eyebrow text-muted-foreground">
           {formatTimestamp(artifact.createdAt)}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
         {artifact.ticketId ? <MissionPill mono>{artifact.ticketId}</MissionPill> : null}
         {artifact.fileId ? <MissionPill mono>{artifact.fileId}</MissionPill> : null}
         {artifact.approvalItemId ? <MissionPill mono>{artifact.approvalItemId}</MissionPill> : null}
@@ -87,7 +87,7 @@ function ArtifactCard({
       <MissionControlRow density="compact" className="gap-2">
         <button
           type="button"
-          className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand"
+          className="rounded-full border border-white/10 px-3 py-2 text-button-sm uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand"
           onClick={onTogglePreview}
         >
           {previewOpen ? 'Hide preview' : 'Preview'}
@@ -95,7 +95,7 @@ function ArtifactCard({
         {canOpen ? (
           <button
             type="button"
-            className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand"
+            className="rounded-full border border-white/10 px-3 py-2 text-button-sm uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand"
             onClick={onOpen}
           >
             {artifact.ticketId ? 'Open ticket' : 'Open files'}
@@ -104,7 +104,7 @@ function ArtifactCard({
       </MissionControlRow>
 
       {previewOpen ? (
-        <div className="grid gap-2 rounded-[18px] border border-white/8 bg-black/20 p-3 text-xs text-muted-foreground">
+        <div className="grid gap-2 rounded-[18px] border border-white/8 bg-black/20 p-3 text-caption text-muted-foreground">
           {previewEntries.length > 0 ? (
             previewEntries.map(([key, value]) => (
               <div key={key} className="flex items-start justify-between gap-3">
@@ -261,7 +261,7 @@ export function ArtifactsPanel({ companyId }: { companyId: string }) {
         )}
       </div>
 
-      <MissionInsetSurface className="grid gap-3 p-4 text-sm leading-6 text-muted-foreground md:grid-cols-3">
+      <MissionInsetSurface className="grid gap-3 p-4 text-body text-muted-foreground md:grid-cols-3">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-foreground">
             <Workflow className="h-4 w-4" />

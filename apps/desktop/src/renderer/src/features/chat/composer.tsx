@@ -49,7 +49,7 @@ export function Composer({
   return (
     <div className="border-t border-white/10 bg-black/20 px-5 py-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="min-h-4 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="min-h-4 text-eyebrow text-muted-foreground">
           {queuedCount > 0
             ? `${queuedCount} queued follow-up${queuedCount === 1 ? '' : 's'}`
             : isBusy
@@ -79,7 +79,7 @@ export function Composer({
             placeholder={
               queueMode ? 'Message... (Ctrl+Enter to queue)' : 'Message... (Ctrl+Enter to send)'
             }
-            className="min-h-16 max-h-48 resize-none border-white/10 bg-black/20 text-sm scrollbar-thin"
+            className="min-h-16 max-h-48 resize-none border-white/10 bg-black/20 text-body scrollbar-thin"
             rows={1}
           />
           <Button
@@ -93,12 +93,12 @@ export function Composer({
           </Button>
         </div>
         <div className="mt-3 flex items-center justify-between gap-2">
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             {queueMode
               ? 'Queue mode active while the current reply completes.'
               : 'Send with Ctrl/Cmd+Enter.'}
           </p>
-          <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-mono text-muted-foreground">
+          <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-eyebrow-sm font-mono text-muted-foreground">
             {queueMode ? 'Queue' : 'Live'}
           </span>
         </div>

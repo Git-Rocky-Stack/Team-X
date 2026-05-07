@@ -215,18 +215,18 @@ export function CopilotSidebar() {
           <MissionSheetHeader
             eyebrow="Copilot command"
             icon={Sparkles}
-            title={<SheetTitle className="text-base">Copilot</SheetTitle>}
+            title={<SheetTitle className="text-h3">Copilot</SheetTitle>}
             badge={
               <Badge
                 variant="outline"
-                className="border-white/10 bg-black/20 px-2 py-1 font-mono text-[10px] text-muted-foreground"
+                className="border-white/10 bg-black/20 px-2 py-1 font-mono text-eyebrow-sm text-muted-foreground"
                 data-copilot-active-count={activeCount}
               >
                 {activeCount} active
               </Badge>
             }
             description={
-              <SheetDescription className="m-0 text-sm leading-6">
+              <SheetDescription className="m-0 text-body">
                 Review proactive insights, export the current queue, or route a free-form request
                 into the existing chat transcript flow.
               </SheetDescription>
@@ -242,7 +242,7 @@ export function CopilotSidebar() {
                 >
                   <div className="space-y-4">
                     <div>
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">
                         Category
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -262,7 +262,7 @@ export function CopilotSidebar() {
                     </div>
 
                     <div>
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">
                         Severity
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -282,7 +282,7 @@ export function CopilotSidebar() {
                     </div>
 
                     <div>
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">
                         Export
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -316,7 +316,7 @@ export function CopilotSidebar() {
                       </div>
                       {exportMutation.isSuccess && (
                         <p
-                          className="mt-3 text-xs leading-5 text-muted-foreground"
+                          className="mt-3 text-caption text-muted-foreground"
                           data-copilot-export-status=""
                         >
                           Exported {exportMutation.data.rowCount} insight
@@ -326,7 +326,7 @@ export function CopilotSidebar() {
                         </p>
                       )}
                       {exportMutation.isError && (
-                        <p className="mt-3 text-xs text-destructive" data-copilot-export-error="">
+                        <p className="mt-3 text-caption text-destructive" data-copilot-export-error="">
                           Export failed. Try again.
                         </p>
                       )}
@@ -336,7 +336,7 @@ export function CopilotSidebar() {
 
                 {feedbackSuggestion && !isLoading && !isError && (
                   <MissionInsetSurface className="p-4" data-copilot-feedback-suggestion="">
-                    <p className="text-xs font-medium leading-5 text-foreground">
+                    <p className="text-caption text-foreground">
                       {formatFeedbackSuggestionPrompt(feedbackSuggestion)}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -417,7 +417,7 @@ export function CopilotSidebar() {
             <MissionInsetSurface className="p-4">
               <label
                 htmlFor="copilot-ask-input"
-                className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground"
+                className="text-eyebrow-sm text-muted-foreground"
               >
                 Ask the copilot
               </label>
@@ -432,7 +432,7 @@ export function CopilotSidebar() {
                   }}
                   onKeyDown={onAskKeyDown}
                   placeholder="Why is the frontend team behind?"
-                  className="flex-1 resize-none border-white/10 bg-black/20 text-sm"
+                  className="flex-1 resize-none border-white/10 bg-black/20 text-body"
                   data-copilot-ask-input=""
                   disabled={!companyId || askMutation.isPending}
                 />
@@ -453,14 +453,14 @@ export function CopilotSidebar() {
               </div>
               {askErrorMessage && (
                 <p
-                  className="mt-2 text-xs leading-5 text-destructive"
+                  className="mt-2 text-caption text-destructive"
                   role="alert"
                   data-copilot-ask-error=""
                 >
                   {askErrorMessage}
                 </p>
               )}
-              <p className="mt-2 text-[10px] text-muted-foreground">Cmd/Ctrl+Enter to submit.</p>
+              <p className="mt-2 text-caption text-muted-foreground">Cmd/Ctrl+Enter to submit.</p>
             </MissionInsetSurface>
           </div>
         </div>

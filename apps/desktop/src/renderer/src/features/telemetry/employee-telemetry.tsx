@@ -185,7 +185,7 @@ export function EmployeeTelemetry({ companyId, kindFilter }: Props) {
       className="overflow-hidden"
     >
       <MissionInsetSurface className="overflow-hidden rounded-[20px] bg-black/15">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
             <tr className="border-b border-white/10 bg-black/20">
               <Th col="name" label="Employee" onClick={toggleSort}>
@@ -216,7 +216,7 @@ export function EmployeeTelemetry({ companyId, kindFilter }: Props) {
               >
                 <td className="px-4 py-3">
                   <div className="font-medium text-foreground">{row.name}</div>
-                  <div className="text-xs text-muted-foreground">{row.title}</div>
+                  <div className="text-caption text-muted-foreground">{row.title}</div>
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">{row.totalRuns}</td>
                 <td className="px-4 py-3 text-right tabular-nums">
@@ -248,7 +248,7 @@ function Th({
   children: ReactNode;
 }) {
   return (
-    <th className={`px-4 py-3 text-xs font-medium ${right ? 'text-right' : 'text-left'}`}>
+    <th className={`px-4 py-3 text-label ${right ? 'text-right' : 'text-left'}`}>
       <button
         type="button"
         className={`inline-flex items-center text-muted-foreground transition-colors hover:text-foreground ${

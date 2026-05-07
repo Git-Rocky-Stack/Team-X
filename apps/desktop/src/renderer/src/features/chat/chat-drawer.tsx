@@ -94,7 +94,7 @@ function TicketThreadPreviewPanel({ ticketId, employees, onClose }: TicketThread
         <TicketDetailPanel ticketId={ticketId} employees={employees} onClose={onClose} />
       ) : (
         <div
-          className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground"
+          className="flex h-full items-center justify-center px-6 text-center text-body text-muted-foreground"
           data-thread-ticket-preview-state="loading"
         >
           Loading ticket detail...
@@ -441,9 +441,9 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
               <MissionSheetHeader
                 eyebrow="Communication index"
                 icon={List}
-                title={<SheetTitle className="text-base font-semibold">Threads</SheetTitle>}
+                title={<SheetTitle className="text-h3">Threads</SheetTitle>}
                 badge={
-                  <MissionPill className="text-[10px]" mono>
+                  <MissionPill className="text-eyebrow-sm" mono>
                     {threads.length} threads
                   </MissionPill>
                 }
@@ -462,7 +462,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 eyebrow="Copilot transcript"
                 icon={Sparkles}
                 title={
-                  <SheetTitle className="flex items-center gap-2 text-base font-semibold">
+                  <SheetTitle className="flex items-center gap-2 text-h3">
                     <span className="truncate">
                       {activeThread?.subject ?? 'Copilot conversation'}
                     </span>
@@ -515,19 +515,19 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                         className="h-4 w-4 shrink-0 animate-spin text-brand"
                         aria-hidden="true"
                       />
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-caption text-muted-foreground">
                         Copilot is reasoning. The persisted transcript refreshes as each step lands.
                       </span>
                     </>
                   ) : copilotResult?.kind === 'failed' ? (
                     <>
                       <Sparkles className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
-                      <span className="text-xs text-red-300">{copilotResult.payload.message}</span>
+                      <span className="text-caption text-red-300">{copilotResult.payload.message}</span>
                     </>
                   ) : (
                     <>
                       <Eye className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-caption text-muted-foreground">
                         Copilot transcript is read only in the drawer.
                       </span>
                     </>
@@ -542,7 +542,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 icon={Bot}
                 iconClassName="border-amber-500/20 bg-amber-500/10 text-amber-300"
                 title={
-                  <SheetTitle className="text-base font-semibold">{agentThreadNames}</SheetTitle>
+                  <SheetTitle className="text-h3">{agentThreadNames}</SheetTitle>
                 }
                 description="Observe the employee-to-employee thread without interrupting the active exchange."
                 leadingAction={
@@ -577,7 +577,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
               <div className="border-t border-white/10 bg-black/20 px-4 py-3">
                 <MissionInsetSurface className="flex items-center gap-2 px-3 py-3">
                   <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-caption text-muted-foreground">
                     Observing agent conversation. This transcript is read only.
                   </span>
                 </MissionInsetSurface>
@@ -588,7 +588,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
               <MissionSheetHeader
                 eyebrow="Direct line"
                 title={
-                  <SheetTitle className="flex items-center gap-2 text-base font-semibold">
+                  <SheetTitle className="flex items-center gap-2 text-h3">
                     {employee.name}
                     <span
                       className={cn(
@@ -600,7 +600,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 }
                 description={<span className="truncate">{employee.title}</span>}
                 leadingAction={
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black/20 text-xs font-semibold text-foreground/80">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black/20 text-caption font-semibold text-foreground/80">
                     {initials(employee.name)}
                   </div>
                 }
@@ -614,11 +614,11 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 }
                 badge={
                   <div className="flex flex-wrap gap-2">
-                    <MissionPill className="px-2.5 py-1 text-[10px]" mono>
+                    <MissionPill className="px-2.5 py-1 text-eyebrow-sm" mono>
                       {displayStatus}
                     </MissionPill>
                     {queuedCount > 0 ? (
-                      <MissionPill className="px-2.5 py-1 text-[10px]" mono>
+                      <MissionPill className="px-2.5 py-1 text-eyebrow-sm" mono>
                         {queuedCount} queued
                       </MissionPill>
                     ) : null}

@@ -354,7 +354,7 @@ export function BoardMessageQueue() {
         aria-expanded={open}
         data-board-message-queue-button=""
         className={cn(
-          'group flex h-11 shrink-0 items-center gap-2 rounded-[18px] border px-3 text-xs font-semibold',
+          'group flex h-11 shrink-0 items-center gap-2 rounded-[18px] border px-3 text-button-sm',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
           hasUnread
             ? 'brand-selected'
@@ -380,7 +380,7 @@ export function BoardMessageQueue() {
         <Badge
           variant="outline"
           className={cn(
-            'min-w-7 justify-center border px-2 py-0 text-[10px] tabular-nums',
+            'min-w-7 justify-center border px-2 py-0 text-eyebrow-sm tabular-nums',
             hasUnread
               ? 'border-brand/55 bg-brand/15 text-red-50'
               : 'border-white/10 bg-black text-muted-foreground',
@@ -400,9 +400,9 @@ export function BoardMessageQueue() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Inbox className="h-4 w-4 text-brand" />
-                <h3 className="text-sm font-semibold text-foreground">Board Message Queue</h3>
+                <h3 className="text-h3 text-foreground">Board Message Queue</h3>
               </div>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              <p className="mt-1 text-body-sm text-muted-foreground">
                 Messages and tickets that need your attention.
               </p>
             </div>
@@ -420,7 +420,7 @@ export function BoardMessageQueue() {
             <Badge
               variant="outline"
               className={cn(
-                'border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em]',
+                'border px-2.5 py-1 text-eyebrow-sm',
                 hasUnread
                   ? 'border-brand/45 bg-brand/10 text-red-50'
                   : 'border-white/10 bg-black text-muted-foreground',
@@ -434,7 +434,7 @@ export function BoardMessageQueue() {
                 variant="outline"
                 size="sm"
                 onClick={handleRefresh}
-                className="h-8 border-white/10 bg-black px-2.5 text-xs text-muted-foreground hover:border-white/20 hover:bg-black hover:text-foreground"
+                className="h-8 border-white/10 bg-black px-2.5 text-button-sm text-muted-foreground hover:border-white/20 hover:bg-black hover:text-foreground"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Refresh
@@ -444,7 +444,7 @@ export function BoardMessageQueue() {
                 variant="outline"
                 size="sm"
                 onClick={markAllChecked}
-                className="h-8 border-brand/25 bg-black px-2.5 text-xs text-red-50 hover:border-brand/45 hover:bg-black"
+                className="h-8 border-brand/25 bg-black px-2.5 text-button-sm text-red-50 hover:border-brand/45 hover:bg-black"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 Mark checked
@@ -456,10 +456,8 @@ export function BoardMessageQueue() {
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
                 <Inbox className="h-8 w-8 text-white/25" />
-                <p className="mt-3 text-sm font-semibold text-foreground">
-                  No board messages waiting.
-                </p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                <p className="mt-3 text-body-strong text-foreground">No board messages waiting.</p>
+                <p className="mt-1 text-body-sm text-muted-foreground">
                   New employee messages, escalated tickets, and review requests will show here.
                 </p>
               </div>
@@ -493,18 +491,18 @@ export function BoardMessageQueue() {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2">
-                          <span className="truncate text-sm font-semibold text-foreground">
+                          <span className="truncate text-body-strong text-foreground">
                             {item.title}
                           </span>
                           {unread ? (
                             <span className="h-2 w-2 shrink-0 rounded-full bg-brand shadow-[0_0_10px_hsl(var(--brand))]" />
                           ) : null}
                         </span>
-                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        <span className="mt-1 block text-caption text-muted-foreground">
                           {item.description}
                         </span>
                       </span>
-                      <span className="shrink-0 pt-0.5 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      <span className="shrink-0 pt-0.5 text-eyebrow-sm text-muted-foreground">
                         {itemRelativeTime(item.timestamp)}
                       </span>
                     </button>

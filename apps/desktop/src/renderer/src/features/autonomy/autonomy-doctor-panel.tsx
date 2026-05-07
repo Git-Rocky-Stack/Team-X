@@ -74,10 +74,10 @@ export function AutonomyDoctorPanel({ companyId }: { companyId: string }) {
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <StatusIcon className="h-4 w-4 text-muted-foreground" />
-            <div className="text-sm font-semibold text-foreground">Autonomy Doctor</div>
+            <h2 className="text-h2 text-foreground">Autonomy Doctor</h2>
             <MissionPill tone={statusTone(report.status)}>{report.status}</MissionPill>
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Last checked {formatTimestamp(report.generatedAt)}.
           </p>
         </div>
@@ -132,16 +132,16 @@ export function AutonomyDoctorPanel({ companyId }: { companyId: string }) {
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <CheckIcon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-semibold text-foreground">{check.label}</span>
+                    <span className="text-body-strong text-foreground">{check.label}</span>
                     <MissionPill tone={statusTone(check.status)}>{check.status}</MissionPill>
                   </div>
-                  <p className="text-xs leading-5 text-muted-foreground">{check.summary}</p>
+                  <p className="text-caption text-muted-foreground">{check.summary}</p>
                 </div>
                 <MissionPill mono>{formatTimestamp(check.checkedAt)}</MissionPill>
               </div>
 
               {check.findings.length === 0 ? (
-                <div className="rounded-md border border-white/10 bg-black/10 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                <div className="rounded-md border border-white/10 bg-black/10 px-3 py-2 text-caption text-muted-foreground">
                   No findings for this check.
                 </div>
               ) : (
@@ -155,20 +155,20 @@ export function AutonomyDoctorPanel({ companyId }: { companyId: string }) {
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold text-foreground">
+                            <span className="text-body-strong text-foreground">
                               {finding.title}
                             </span>
                             <MissionPill tone={severityTone(finding.severity)}>
                               {finding.severity}
                             </MissionPill>
                           </div>
-                          <p className="text-xs leading-5 text-muted-foreground">
+                          <p className="text-caption text-muted-foreground">
                             {finding.detail}
                           </p>
                         </div>
                       </div>
                       {finding.action ? (
-                        <p className="mt-2 text-xs leading-5 text-foreground">{finding.action}</p>
+                        <p className="mt-2 text-caption text-foreground">{finding.action}</p>
                       ) : null}
                       {finding.refs.length > 0 ? (
                         <div className="mt-2 flex flex-wrap gap-2">

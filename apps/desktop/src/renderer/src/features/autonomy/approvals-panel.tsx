@@ -15,7 +15,7 @@ import { useApprovals, useReviewApproval } from '@/hooks/use-approvals.js';
 import { useInstalledExtensions } from '@/hooks/use-extensions.js';
 
 const FIELD_CLASSNAME =
-  'min-h-[96px] w-full rounded-[16px] border border-white/10 bg-black/20 px-3 py-3 text-sm text-foreground outline-none transition focus:border-brand/30';
+  'min-h-[96px] w-full rounded-[16px] border border-white/10 bg-black/20 px-3 py-3 text-body text-foreground outline-none transition focus:border-brand/30';
 
 type KindFilter = 'all' | 'authority-request' | 'budget-exception';
 type StatusFilter = 'all' | 'pending' | 'approved' | 'denied';
@@ -163,8 +163,8 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
 
       <MissionInsetSurface className="space-y-4 p-4">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-foreground">Unified Approval Queue</h3>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <h3 className="text-h3 text-foreground">Unified Approval Queue</h3>
+          <p className="text-caption text-muted-foreground">
             Budget exceptions and extension authority reviews now resolve through the same inbox and
             audit trail.
           </p>
@@ -172,7 +172,7 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
 
         <div className="space-y-3">
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="text-eyebrow text-muted-foreground">
               Kind
             </div>
             <MissionControlRow className="gap-2">
@@ -190,7 +190,7 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
           </div>
 
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="text-eyebrow text-muted-foreground">
               Status
             </div>
             <MissionControlRow className="gap-2">
@@ -226,23 +226,23 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-foreground">{item.summary}</span>
+                    <span className="text-body-strong text-foreground">{item.summary}</span>
                     <MissionPill tone={kindTone(item.kind)}>{kindLabel(item.kind)}</MissionPill>
                     <MissionPill tone={statusTone(item.status)}>{item.status}</MissionPill>
                     <MissionPill>{item.priority}</MissionPill>
                   </div>
-                  <p className="text-xs leading-5 text-muted-foreground">
+                  <p className="text-caption text-muted-foreground">
                     {describeItem(item, extensionNameById)}
                   </p>
                 </div>
-                <div className="text-xs leading-5 text-muted-foreground">
+                <div className="text-caption text-muted-foreground">
                   <div>Created {formatTimestamp(item.createdAt)}</div>
                   <div>Resolved {formatTimestamp(item.resolvedAt)}</div>
                 </div>
               </div>
 
               {item.latestDecision?.rationale ? (
-                <div className="rounded-[16px] border border-white/10 bg-black/20 px-3 py-3 text-sm text-muted-foreground">
+                <div className="rounded-[16px] border border-white/10 bg-black/20 px-3 py-3 text-body text-muted-foreground">
                   <span className="font-semibold text-foreground">Latest rationale:</span>{' '}
                   {item.latestDecision.rationale}
                 </div>
@@ -260,7 +260,7 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
                     {item.kind === 'budget-exception' ? (
                       <button
                         type="button"
-                        className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground transition hover:border-brand/30 hover:text-brand disabled:opacity-50"
+                        className="rounded-full border border-white/10 px-3 py-2 text-button-sm uppercase tracking-[0.14em] text-muted-foreground transition hover:border-brand/30 hover:text-brand disabled:opacity-50"
                         onClick={() => submitDecision(item, 'dismissed')}
                         disabled={reviewApproval.isPending}
                       >
@@ -269,7 +269,7 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
                     ) : null}
                     <button
                       type="button"
-                      className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand disabled:opacity-50"
+                      className="rounded-full border border-white/10 px-3 py-2 text-button-sm uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand disabled:opacity-50"
                       onClick={() => submitDecision(item, 'denied')}
                       disabled={reviewApproval.isPending}
                     >
@@ -277,7 +277,7 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
                     </button>
                     <button
                       type="button"
-                      className="rounded-full border border-brand/30 bg-brand/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand transition hover:border-brand/60 disabled:opacity-50"
+                      className="rounded-full border border-brand/30 bg-brand/10 px-3 py-2 text-button-sm uppercase tracking-[0.14em] text-brand transition hover:border-brand/60 disabled:opacity-50"
                       onClick={() => submitDecision(item, 'approved')}
                       disabled={reviewApproval.isPending}
                     >

@@ -64,7 +64,7 @@ export function TicketCard({ ticket, employees, onClick }: TicketCardProps) {
     >
       <Card className="mission-chrome-panel group cursor-pointer rounded-[20px] border border-white/10 bg-black/10 p-3.5 transition-all hover:-translate-y-0.5 hover:border-brand/20 hover:shadow-[0_24px_60px_-42px_hsl(var(--mission-red)/0.85)]">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+          <h4 className="line-clamp-2 text-body-strong leading-snug text-foreground">
             {ticket.title}
           </h4>
           <Badge
@@ -77,7 +77,7 @@ export function TicketCard({ ticket, employees, onClick }: TicketCardProps) {
         </div>
 
         {ticket.description ? (
-          <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
+          <p className="mt-2 line-clamp-2 text-caption text-muted-foreground">
             {ticket.description}
           </p>
         ) : null}
@@ -89,10 +89,10 @@ export function TicketCard({ ticket, employees, onClick }: TicketCardProps) {
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[10px] border border-white/10 bg-brand/10 text-[10px] font-semibold text-brand">
                   {assignee.name.charAt(0).toUpperCase()}
                 </div>
-                <span className="truncate text-[11px] text-muted-foreground">{assignee.name}</span>
+                <span className="truncate text-caption text-muted-foreground">{assignee.name}</span>
               </div>
             ) : (
-              <span className="text-[11px] italic text-muted-foreground/70">Unassigned</span>
+              <span className="text-caption italic text-muted-foreground/70">Unassigned</span>
             )}
           </div>
 

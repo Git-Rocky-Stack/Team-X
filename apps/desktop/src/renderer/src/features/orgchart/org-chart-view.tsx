@@ -123,8 +123,8 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
         data-org-chart-state="no-company"
       >
         <GitBranch className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-        <h2 className="mt-4 text-lg font-semibold text-foreground">No workspace selected</h2>
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+        <h2 className="mt-4 text-h3 text-foreground">No workspace selected</h2>
+        <p className="mt-2 max-w-sm text-body text-muted-foreground">
           Choose or create a workspace to view its reporting structure.
         </p>
       </section>
@@ -139,7 +139,7 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
         data-org-chart-state="loading"
       >
         <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden="true" />
-        <p className="mt-3 text-sm text-muted-foreground">Loading org chart...</p>
+        <p className="mt-3 text-body text-muted-foreground">Loading org chart...</p>
       </section>
     );
   }
@@ -152,10 +152,10 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
         data-org-chart-state="error"
       >
         <AlertCircle className="h-8 w-8 text-red-400" aria-hidden="true" />
-        <h2 className="mt-4 text-lg font-semibold text-foreground">Org chart could not load</h2>
+        <h2 className="mt-4 text-h3 text-foreground">Org chart could not load</h2>
         <button
           type="button"
-          className="mt-4 rounded-md border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-surface-100"
+          className="mt-4 rounded-md border border-border px-3 py-1.5 text-button text-foreground transition-colors hover:bg-surface-100"
           data-org-chart-retry=""
           onClick={() => refetch()}
         >
@@ -173,8 +173,8 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
         data-org-chart-state="empty"
       >
         <GitBranch className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-        <h2 className="mt-4 text-lg font-semibold text-foreground">No employees yet</h2>
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+        <h2 className="mt-4 text-h3 text-foreground">No employees yet</h2>
+        <p className="mt-2 max-w-sm text-body text-muted-foreground">
           Hire your first role to build the org chart.
         </p>
       </section>
@@ -189,8 +189,8 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
             <GitBranch className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-foreground">Org chart</h2>
-            <p className="text-xs text-muted-foreground">
+            <h1 className="text-h1 text-foreground">Org chart</h1>
+            <p className="text-caption text-muted-foreground">
               Reporting lines are shown from company roots down.
             </p>
           </div>
@@ -219,7 +219,7 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
 
       {toast ? (
         <output
-          className="fixed bottom-4 right-4 z-50 max-w-md rounded-md border border-border bg-surface-100 px-4 py-3 text-sm text-foreground shadow-lg"
+          className="fixed bottom-4 right-4 z-50 max-w-md rounded-md border border-border bg-surface-100 px-4 py-3 text-body text-foreground shadow-lg"
           data-org-chart-toast=""
         >
           {toast}

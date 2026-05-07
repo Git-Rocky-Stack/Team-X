@@ -100,8 +100,14 @@ describe('PermissionsSection component', () => {
       expect(permissionsSectionSrc).toContain('name="preset"');
     });
 
-    it('highlights selected preset with border-primary class', () => {
-      expect(permissionsSectionSrc).toContain("'border-primary bg-primary/5'");
+    it('highlights selected preset with the brand-selected primitive', () => {
+      // The active-state visual is owned by the `.brand-selected` reusable
+      // primitive defined in `apps/desktop/src/renderer/src/styles/globals.css`
+      // (the canonical "select one of N" chooser style per CLAUDE.md). Pin the
+      // class name here so accidental drift back to the old `border-primary
+      // bg-primary/5` literal — or any other ad-hoc selection styling — fails
+      // CI before reaching review.
+      expect(permissionsSectionSrc).toContain("'brand-selected'");
     });
 
     it('calls applyPreset when preset is selected', () => {
@@ -143,7 +149,9 @@ describe('PermissionsSection component', () => {
     it('renders grant list items with resource info', () => {
       expect(permissionsSectionSrc).toContain('{formatPath(grant.resourceId)}');
       expect(permissionsSectionSrc).toContain('{grant.resourceKind}');
-      expect(permissionsSectionSrc).toContain('{grant.permission}');
+      // Permission flows through `formatPermission` so the badge renders
+      // 'Allow' / 'Deny' / 'Prompt' rather than the raw lowercase enum.
+      expect(permissionsSectionSrc).toContain('{formatPermission(grant.permission)}');
     });
 
     it('provides Remove button for each grant', () => {

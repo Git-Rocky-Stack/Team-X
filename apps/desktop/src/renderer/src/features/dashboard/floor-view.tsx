@@ -92,7 +92,7 @@ function FloorCell({ employee }: FloorCellProps) {
         />
       </div>
       <div className="w-full text-center">
-        <p className="truncate text-xs font-medium text-foreground">{employee.name}</p>
+        <p className="truncate text-body-strong text-foreground">{employee.name}</p>
         <p className="truncate text-[10px] text-muted-foreground">{employee.title}</p>
       </div>
       <span className="rounded-full bg-black px-2 py-0.5 text-[9px] font-medium text-muted-foreground">
@@ -115,8 +115,8 @@ export function FloorView({ employees }: FloorViewProps) {
   if (employees.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-lg font-medium text-muted-foreground">No employees yet</p>
-        <p className="mt-1 text-sm text-muted-foreground/70">
+        <p className="text-h3 text-muted-foreground">No employees yet</p>
+        <p className="mt-1 text-body text-muted-foreground/70">
           Hire employees to see the office floor.
         </p>
       </div>
@@ -137,7 +137,7 @@ export function FloorView({ employees }: FloorViewProps) {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex items-center gap-4 text-caption text-muted-foreground">
         <span>
           {employees.length} employee{employees.length !== 1 ? 's' : ''}
         </span>
@@ -167,7 +167,7 @@ export function FloorView({ employees }: FloorViewProps) {
 
       {[...grouped.entries()].map(([level, group]) => (
         <div key={level}>
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <h3 className="mb-3 text-eyebrow text-muted-foreground">
             {levelLabel(level)} ({group.length})
           </h3>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">

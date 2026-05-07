@@ -72,10 +72,10 @@ function EmptyState() {
       className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground"
     >
       <Terminal className="h-8 w-8" aria-hidden="true" />
-      <p className="text-sm font-medium">No commands yet</p>
-      <p className="text-xs text-muted-foreground/70">
+      <p className="text-body-strong">No commands yet</p>
+      <p className="text-caption text-muted-foreground/70">
         Press{' '}
-        <kbd className="rounded border border-border bg-black px-1.5 py-0.5 font-mono text-[10px]">
+        <kbd className="rounded border border-border bg-black px-1.5 py-0.5 text-code-sm">
           Ctrl+K
         </kbd>{' '}
         to get started.
@@ -90,8 +90,8 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
       data-testid="commands-error-state"
       className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 p-6 text-center"
     >
-      <p className="text-sm font-medium text-red-400">Failed to load command history</p>
-      <p className="max-w-sm text-xs text-muted-foreground">{message}</p>
+      <p className="text-body-strong text-red-400">Failed to load command history</p>
+      <p className="max-w-sm text-caption text-muted-foreground">{message}</p>
       <Button type="button" size="sm" variant="outline" onClick={onRetry}>
         Retry
       </Button>
@@ -127,26 +127,26 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
       title={`Click to copy: ${previewText}`}
       className="group flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-black focus-visible:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
     >
-      <span className="w-20 shrink-0 text-xs text-muted-foreground">
+      <span className="w-20 shrink-0 text-caption text-muted-foreground">
         {formatTimeAgo(entry.executedAt)}
       </span>
 
-      <span className="w-16 shrink-0 truncate text-xs font-medium text-foreground">
+      <span className="w-16 shrink-0 truncate text-caption font-medium text-foreground">
         {actorLabel}
       </span>
 
-      <Badge variant="outline" className="shrink-0 border-brand/35 bg-black text-xs text-brand">
+      <Badge variant="outline" className="shrink-0 border-brand/35 bg-black text-brand">
         {label}
       </Badge>
 
-      <span className="ml-1 min-w-0 flex-1 truncate text-sm text-foreground/80">{truncated}</span>
+      <span className="ml-1 min-w-0 flex-1 truncate text-body text-foreground/80">{truncated}</span>
 
       <Badge
         variant="outline"
         className={
           outcomeOk
-            ? 'shrink-0 border-emerald-500/30 bg-black text-xs text-emerald-400'
-            : 'shrink-0 border-red-500/30 bg-black text-xs text-red-400'
+            ? 'shrink-0 border-emerald-500/30 bg-black text-emerald-400'
+            : 'shrink-0 border-red-500/30 bg-black text-red-400'
         }
       >
         {outcomeOk ? 'ok' : 'error'}
@@ -193,9 +193,9 @@ export function CommandsView({ companyId }: CommandsViewProps) {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="flex items-center gap-2">
             <Terminal className="h-4 w-4 text-brand" />
-            <CardTitle className="text-sm font-medium">Recent Commands</CardTitle>
+            <CardTitle>Recent Commands</CardTitle>
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-caption text-muted-foreground">
             {rows.length > 0 ? `${rows.length} shown` : 'Cmd+K / Ctrl+K'}
           </span>
         </CardHeader>

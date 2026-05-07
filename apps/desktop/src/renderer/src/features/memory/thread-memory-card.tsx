@@ -60,7 +60,7 @@ export function ThreadMemoryCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">{title}</span>
+              <span className="text-body-strong text-foreground">{title}</span>
               <MissionPill tone={freshnessTone(digest?.freshness)}>
                 {digest?.freshness ?? 'no digest'}
               </MissionPill>
@@ -70,7 +70,7 @@ export function ThreadMemoryCard({
                 </MissionPill>
               ) : null}
             </div>
-            <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+            <p className="line-clamp-2 text-caption text-muted-foreground">
               {digestQuery.isLoading || checkpointsQuery.isLoading
                 ? 'Loading condensed memory for this thread...'
                 : digestQuery.isError || checkpointsQuery.isError
@@ -83,7 +83,7 @@ export function ThreadMemoryCard({
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 shrink-0 border-white/10 bg-black/10 px-3 text-xs hover:bg-black/20"
+            className="h-8 shrink-0 border-white/10 bg-black/10 px-3 text-button-sm hover:bg-black/20"
             onClick={() => openAutonomyMemory(threadId)}
             data-thread-memory-open=""
           >
@@ -109,7 +109,7 @@ export function ThreadMemoryCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">{title}</span>
+            <span className="text-body-strong text-foreground">{title}</span>
             <MissionPill tone={freshnessTone(digest?.freshness)}>
               {digest?.freshness ?? 'no digest'}
             </MissionPill>
@@ -120,7 +120,7 @@ export function ThreadMemoryCard({
             ) : null}
             {latestResumeLabel ? <MissionPill>{latestResumeLabel}</MissionPill> : null}
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">{description}</p>
+          <p className="text-caption text-muted-foreground">{description}</p>
         </div>
 
         <Button
@@ -136,46 +136,46 @@ export function ThreadMemoryCard({
       </div>
 
       {digestQuery.isLoading || checkpointsQuery.isLoading ? (
-        <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3 text-xs text-muted-foreground">
+        <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3 text-caption text-muted-foreground">
           Loading condensed memory for this thread...
         </div>
       ) : digestQuery.isError || checkpointsQuery.isError ? (
-        <div className="rounded-[18px] border border-red-500/20 bg-red-500/8 px-4 py-3 text-xs text-red-200">
+        <div className="rounded-[18px] border border-red-500/20 bg-red-500/8 px-4 py-3 text-caption text-red-200">
           Team-X could not read the latest digest or checkpoint trail for this thread.
         </div>
       ) : (
         <>
-          <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3 text-sm leading-6 text-foreground/90">
+          <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3 text-body text-foreground/90">
             {previewSummary}
           </div>
 
           {latestResumeHint ? (
-            <div className="rounded-[16px] border border-white/8 bg-black/15 px-4 py-2.5 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="rounded-[16px] border border-white/8 bg-black/15 px-4 py-2.5 text-eyebrow text-muted-foreground">
               {latestResumeHint}
             </div>
           ) : null}
 
           <div className="grid gap-2 md:grid-cols-3">
             <div className="rounded-[16px] border border-white/8 bg-black/15 px-3 py-2.5">
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-eyebrow-sm text-muted-foreground">
                 <BrainCircuit className="h-3.5 w-3.5 text-brand" />
                 Digest
               </div>
-              <div className="mt-2 text-sm font-medium text-foreground">
+              <div className="mt-2 text-body-strong text-foreground">
                 {digest ? `${digest.estimatedTokens} est. tokens` : 'Pending'}
               </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
+              <div className="mt-1 text-caption text-muted-foreground">
                 {formatMemoryTimestamp(digest?.updatedAt ?? null)}
               </div>
             </div>
 
             <div className="rounded-[16px] border border-white/8 bg-black/15 px-3 py-2.5">
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-eyebrow-sm text-muted-foreground">
                 <ShieldCheck className="h-3.5 w-3.5 text-brand" />
                 Checkpoints
               </div>
-              <div className="mt-2 text-sm font-medium text-foreground">{checkpoints.length}</div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
+              <div className="mt-2 text-body-strong text-foreground">{checkpoints.length}</div>
+              <div className="mt-1 text-caption text-muted-foreground">
                 {latestCheckpoint
                   ? formatMemoryTimestamp(latestCheckpoint.createdAt)
                   : 'No resumable state yet'}
@@ -183,11 +183,11 @@ export function ThreadMemoryCard({
             </div>
 
             <div className="rounded-[16px] border border-white/8 bg-black/15 px-3 py-2.5">
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="flex items-center gap-1.5 text-eyebrow-sm text-muted-foreground">
                 <Clock3 className="h-3.5 w-3.5 text-brand" />
                 Next action
               </div>
-              <div className="mt-2 text-sm font-medium text-foreground">
+              <div className="mt-2 text-body-strong text-foreground">
                 {latestCheckpoint?.nextAction ?? 'Open full memory view'}
               </div>
             </div>

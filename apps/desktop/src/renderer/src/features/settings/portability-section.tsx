@@ -313,9 +313,7 @@ export function PortabilitySection() {
   return (
     <section className="space-y-3" data-settings-portability="">
       <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Portability & Templates
-        </h4>
+        <h2 className="text-h2 text-foreground">Portability & Templates</h2>
         {(exportWorkspace.isPending ||
           exportTemplate.isPending ||
           installTemplate.isPending ||
@@ -324,7 +322,7 @@ export function PortabilitySection() {
         )}
       </div>
 
-      <p className="text-[11px] leading-snug text-muted-foreground">
+      <p className="text-body-sm text-muted-foreground mt-1">
         Export the active workspace, save reusable templates, preview external Team-X packages
         before importing them, and keep sharing posture visible as a real operator concern.
       </p>
@@ -333,8 +331,8 @@ export function PortabilitySection() {
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-foreground">Sharing posture</div>
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              <div className="text-body-strong text-foreground">Sharing posture</div>
+              <p className="mt-1 text-caption text-muted-foreground">
                 Choose the workspace’s intended sharing mode, then check what is already ready and
                 what still blocks invited or cloud operation.
               </p>
@@ -345,7 +343,7 @@ export function PortabilitySection() {
           </div>
 
           {!activeCompany ? (
-            <p className="mt-3 text-[11px] text-muted-foreground">
+            <p className="mt-3 text-caption text-muted-foreground">
               Select an active workspace before adjusting its sharing posture.
             </p>
           ) : sharingReadinessQuery.isLoading ? (
@@ -354,7 +352,7 @@ export function PortabilitySection() {
               <Skeleton className="h-16 rounded-lg" />
             </div>
           ) : sharingReadinessQuery.isError || !sharingReadiness ? (
-            <p className="mt-3 text-[11px] text-destructive">
+            <p className="mt-3 text-caption text-destructive">
               Failed to resolve sharing readiness for this workspace.
             </p>
           ) : (
@@ -378,19 +376,17 @@ export function PortabilitySection() {
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-sm font-medium text-foreground">
-                          {modeLabel(mode)}
-                        </div>
+                        <div className="text-body-strong text-foreground">{modeLabel(mode)}</div>
                         <span
-                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${readinessTone(readiness?.readiness ?? 'blocked')}`}
+                          className={`rounded-full border px-2 py-0.5 text-eyebrow-sm ${readinessTone(readiness?.readiness ?? 'blocked')}`}
                         >
                           {readiness?.readiness ?? 'blocked'}
                         </span>
                       </div>
-                      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                      <p className="mt-2 text-caption text-muted-foreground">
                         {modeDescription(mode)}
                       </p>
-                      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                      <p className="mt-2 text-caption text-muted-foreground">
                         {readiness?.summary ?? 'Readiness unavailable.'}
                       </p>
                     </button>
@@ -399,7 +395,7 @@ export function PortabilitySection() {
               </div>
 
               <div className="mt-3 rounded-lg border border-white/10 bg-background/70 px-3 py-3">
-                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
                   <span>Configured {modeLabel(sharingReadiness.configuredMode)}</span>
                   <span>Effective {modeLabel(sharingReadiness.effectiveMode)}</span>
                   <span>{sharingReadiness.operatorCount} operators</span>
@@ -414,13 +410,13 @@ export function PortabilitySection() {
                   </span>
                 </div>
                 {sharingReadiness.missingRequirements.length > 0 ? (
-                  <ul className="mt-3 space-y-1 text-[11px] leading-snug text-muted-foreground">
+                  <ul className="mt-3 space-y-1 text-caption text-muted-foreground">
                     {sharingReadiness.missingRequirements.map((requirement) => (
                       <li key={requirement}>- {requirement}</li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-[11px] leading-snug text-emerald-600">
+                  <p className="mt-3 text-caption text-emerald-600">
                     The currently selected sharing posture is ready on this workspace.
                   </p>
                 )}
@@ -432,10 +428,8 @@ export function PortabilitySection() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-foreground">
-                      Linked workspace shell
-                    </div>
-                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                    <div className="text-body-strong text-foreground">Linked workspace shell</div>
+                    <p className="mt-1 text-caption text-muted-foreground">
                       This local shell reserves durable link metadata now so hosted auth and sync
                       can land without reframing the product later.
                     </p>
@@ -451,14 +445,14 @@ export function PortabilitySection() {
                     <Skeleton className="h-12 rounded-lg" />
                   </div>
                 ) : cloudLinkQuery.isError || !cloudLink ? (
-                  <p className="mt-3 text-[11px] text-destructive">
+                  <p className="mt-3 text-caption text-destructive">
                     Failed to load linked-workspace posture for this workspace.
                   </p>
                 ) : (
                   <>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-caption">
                       <span
-                        className={`rounded-full border px-2 py-0.5 font-semibold uppercase tracking-[0.16em] ${cloudLinkTone(cloudLink.state)}`}
+                        className={`rounded-full border px-2 py-0.5 text-eyebrow-sm ${cloudLinkTone(cloudLink.state)}`}
                       >
                         {cloudLinkStateLabel(cloudLink.state)}
                       </span>
@@ -470,7 +464,7 @@ export function PortabilitySection() {
                       </span>
                     </div>
 
-                    <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+                    <p className="mt-3 text-caption text-muted-foreground">
                       {cloudLink.state === 'linked'
                         ? 'Workspace is linked locally and ready for the first hosted auth/sync follow-through.'
                         : cloudLink.state === 'sync-degraded'
@@ -509,17 +503,17 @@ export function PortabilitySection() {
                     </div>
 
                     {linkWorkspace.isError ? (
-                      <p className="mt-3 text-[11px] text-destructive">
+                      <p className="mt-3 text-caption text-destructive">
                         Failed to link workspace: {String(linkWorkspace.error)}
                       </p>
                     ) : null}
                     {reconnectWorkspace.isError ? (
-                      <p className="mt-3 text-[11px] text-destructive">
+                      <p className="mt-3 text-caption text-destructive">
                         Failed to reconnect workspace: {String(reconnectWorkspace.error)}
                       </p>
                     ) : null}
                     {unlinkWorkspace.isError ? (
-                      <p className="mt-3 text-[11px] text-destructive">
+                      <p className="mt-3 text-caption text-destructive">
                         Failed to unlink workspace: {String(unlinkWorkspace.error)}
                       </p>
                     ) : null}
@@ -533,10 +527,8 @@ export function PortabilitySection() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-foreground">
-                      Shared operator invites
-                    </div>
-                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                    <div className="text-body-strong text-foreground">Shared operator invites</div>
+                    <p className="mt-1 text-caption text-muted-foreground">
                       Queue invited or cloud operators in Autonomy &gt; Access before expecting
                       shared posture to become actionable.
                     </p>
@@ -559,11 +551,11 @@ export function PortabilitySection() {
                     <Skeleton className="h-12 rounded-lg" />
                   </div>
                 ) : invitesQuery.isError ? (
-                  <p className="mt-3 text-[11px] text-destructive">
+                  <p className="mt-3 text-caption text-destructive">
                     Failed to load shared operator invites for this workspace.
                   </p>
                 ) : invites.length === 0 ? (
-                  <p className="mt-3 text-[11px] text-muted-foreground">
+                  <p className="mt-3 text-caption text-muted-foreground">
                     No operator invites are queued yet. This workspace can still export or template
                     cleanly, but invited and cloud posture remain preparatory until shared operators
                     are actually queued.
@@ -575,7 +567,7 @@ export function PortabilitySection() {
                         key={invite.id}
                         className="rounded-lg border border-white/10 bg-black/10 px-3 py-3"
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-caption">
                           <div className="min-w-0 text-foreground">
                             <div className="truncate font-medium">
                               {invite.displayName?.trim() ? invite.displayName : invite.email}
@@ -591,7 +583,7 @@ export function PortabilitySection() {
                       </div>
                     ))}
                     {invites.length > 3 ? (
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-caption text-muted-foreground">
                         {invites.length - 3} more invites are visible in Autonomy &gt; Access.
                       </p>
                     ) : null}
@@ -600,7 +592,7 @@ export function PortabilitySection() {
               </div>
 
               {updateSharingMode.isError ? (
-                <p className="mt-3 text-[11px] text-destructive">
+                <p className="mt-3 text-caption text-destructive">
                   Failed to save sharing posture: {String(updateSharingMode.error)}
                 </p>
               ) : null}
@@ -611,10 +603,10 @@ export function PortabilitySection() {
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-foreground">
+              <div className="text-body-strong text-foreground">
                 Export active workspace package
               </div>
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              <p className="mt-1 text-caption text-muted-foreground">
                 {activeCompany
                   ? `${activeCompany.name} will export as a portable workspace package with secrets redacted and live operating state preserved.`
                   : 'Select an active workspace before exporting a portable package.'}
@@ -630,12 +622,12 @@ export function PortabilitySection() {
             </Button>
           </div>
           {exportWorkspace.isSuccess ? (
-            <p className="mt-3 text-[11px] text-emerald-600">
+            <p className="mt-3 text-caption text-emerald-600">
               Workspace package saved to {exportWorkspace.data.packagePath}
             </p>
           ) : null}
           {exportWorkspace.isError ? (
-            <p className="mt-3 text-[11px] text-destructive">
+            <p className="mt-3 text-caption text-destructive">
               Failed to export workspace package: {String(exportWorkspace.error)}
             </p>
           ) : null}
@@ -644,10 +636,10 @@ export function PortabilitySection() {
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-foreground">
+              <div className="text-body-strong text-foreground">
                 Save active workspace as template
               </div>
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              <p className="mt-1 text-caption text-muted-foreground">
                 {activeCompany
                   ? `${activeCompany.name} will export into the local template library with live project and ticket state stripped out by default.`
                   : 'Select an active workspace before exporting a reusable template.'}
@@ -663,12 +655,12 @@ export function PortabilitySection() {
             </Button>
           </div>
           {exportTemplate.isSuccess ? (
-            <p className="mt-3 text-[11px] text-emerald-600">
+            <p className="mt-3 text-caption text-emerald-600">
               Template saved to {exportTemplate.data.packagePath}
             </p>
           ) : null}
           {exportTemplate.isSuccess && exportTemplate.data.manifest.compatibility.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+            <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
               {exportTemplate.data.manifest.compatibility.map((entry) => (
                 <span
                   key={entry}
@@ -680,17 +672,17 @@ export function PortabilitySection() {
             </div>
           ) : null}
           {exportTemplate.isError ? (
-            <p className="mt-3 text-[11px] text-destructive">
+            <p className="mt-3 text-caption text-destructive">
               Failed to save template: {String(exportTemplate.error)}
             </p>
           ) : null}
         </div>
 
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
-          <div className="text-sm font-medium text-foreground">
+          <div className="text-body-strong text-foreground">
             Preview package from path or GitHub
           </div>
-          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+          <p className="mt-1 text-caption text-muted-foreground">
             Preview local packages, GitHub URLs, or shorthand refs before importing a workspace
             package or installing a template into the local library.
           </p>
@@ -699,12 +691,12 @@ export function PortabilitySection() {
               value={packageRef}
               onChange={(event) => setPackageRef(event.target.value)}
               placeholder="C:\\templates\\ops.teamx-package.json or owner/repo/path.teamx-package.json#main"
-              className="font-mono text-xs"
+              className="text-code-sm"
             />
           </div>
 
           {trimmedPackageRef.length === 0 ? (
-            <p className="mt-3 text-[11px] text-muted-foreground">
+            <p className="mt-3 text-caption text-muted-foreground">
               Paste a `.teamx-package.json` path, GitHub blob/raw URL, `gh:owner/repo/path#ref`, or
               `owner/repo@ref:path` shorthand to inspect the manifest before any action runs.
             </p>
@@ -714,7 +706,7 @@ export function PortabilitySection() {
               <Skeleton className="h-12 rounded-lg" />
             </div>
           ) : packagePreviewQuery.isError || !packagePreview ? (
-            <p className="mt-3 text-[11px] text-destructive">
+            <p className="mt-3 text-caption text-destructive">
               Failed to preview package: {String(packagePreviewQuery.error)}
             </p>
           ) : (
@@ -725,20 +717,20 @@ export function PortabilitySection() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <div className="text-sm font-medium text-foreground">Manifest Preview</div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
+                    <div className="text-body-strong text-foreground">Manifest Preview</div>
+                    <p className="mt-1 text-caption text-muted-foreground">
                       {previewSummary(packagePreview)}
                     </p>
-                    <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground/80">
+                    <p className="mt-1 truncate text-code-sm text-muted-foreground/80">
                       <span className="truncate">{packageSourceLabel(packagePreview)}</span>
                     </p>
                   </div>
-                  <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  <span className="rounded-full border border-white/10 px-2 py-0.5 text-eyebrow-sm text-muted-foreground">
                     {packageModeLabel(packagePreview.manifest.mode)}
                   </span>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
                   <span>{packagePreview.manifest.sections.length} sections</span>
                   <span>{packagePreview.manifest.redactions.length} redactions</span>
                   <span>{runtimeProfileCount} runtime profiles</span>
@@ -747,7 +739,7 @@ export function PortabilitySection() {
                   </span>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
                   {packagePreview.manifest.sections.map((section) => (
                     <span
                       key={section}
@@ -760,10 +752,8 @@ export function PortabilitySection() {
 
                 {packagePreview.manifest.compatibility.length > 0 ? (
                   <div className="mt-3">
-                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      Compatibility
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    <div className="text-eyebrow text-muted-foreground">Compatibility</div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-caption text-muted-foreground">
                       {packagePreview.manifest.compatibility.map((entry) => (
                         <span
                           key={entry}
@@ -782,10 +772,8 @@ export function PortabilitySection() {
                     data-portability-import-plan=""
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm font-medium text-foreground">
-                        Dry-run install plan
-                      </div>
-                      <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      <div className="text-body-strong text-foreground">Dry-run install plan</div>
+                      <div className="flex flex-wrap gap-1 text-eyebrow-sm text-muted-foreground">
                         <span>{packagePreview.plan.totals.create} create</span>
                         <span>{packagePreview.plan.totals.rename} rename</span>
                         <span>{packagePreview.plan.totals.replace} replace</span>
@@ -799,16 +787,14 @@ export function PortabilitySection() {
                           className="rounded-lg border border-white/10 bg-background/70 px-3 py-2"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <div className="text-xs font-medium text-foreground">{item.label}</div>
+                            <div className="text-body-strong text-foreground">{item.label}</div>
                             <span
-                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${actionTone(item.action)}`}
+                              className={`rounded-full border px-2 py-0.5 text-eyebrow-sm ${actionTone(item.action)}`}
                             >
                               {item.action}
                             </span>
                           </div>
-                          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-                            {item.detail}
-                          </p>
+                          <p className="mt-1 text-caption text-muted-foreground">{item.detail}</p>
                         </div>
                       ))}
                     </div>
@@ -821,16 +807,16 @@ export function PortabilitySection() {
                     data-portability-runtime-template-diagnostics=""
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm font-medium text-foreground">
+                      <div className="text-body-strong text-foreground">
                         Runtime template diagnostics
                       </div>
-                      <span className="rounded-full border border-brand/20 bg-brand/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
+                      <span className="rounded-full border border-brand/20 bg-brand/10 px-2 py-0.5 text-eyebrow-sm text-brand">
                         {runtimeProfileCount} runtime profile
                         {runtimeProfileCount === 1 ? '' : 's'}
                       </span>
                     </div>
                     {runtimeProfileKinds.length > 0 ? (
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                      <div className="mt-2 flex flex-wrap gap-2 text-caption text-muted-foreground">
                         {runtimeProfileKinds.map((kind) => (
                           <span
                             key={kind}
@@ -842,7 +828,7 @@ export function PortabilitySection() {
                       </div>
                     ) : null}
                     {runtimeTemplateNotes.length > 0 ? (
-                      <ul className="mt-3 space-y-1 text-[11px] leading-snug text-muted-foreground">
+                      <ul className="mt-3 space-y-1 text-caption text-muted-foreground">
                         {runtimeTemplateNotes.map((note) => (
                           <li key={note}>- {note}</li>
                         ))}
@@ -853,10 +839,8 @@ export function PortabilitySection() {
 
                 {packagePreview.warnings.length > 0 ? (
                   <div className="mt-3">
-                    <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                      Warnings
-                    </div>
-                    <ul className="mt-2 space-y-1 text-[11px] leading-snug text-muted-foreground">
+                    <div className="text-eyebrow text-muted-foreground">Warnings</div>
+                    <ul className="mt-2 space-y-1 text-caption text-muted-foreground">
                       {packagePreview.warnings.map((warning) => (
                         <li key={warning}>- {warning}</li>
                       ))}
@@ -870,14 +854,12 @@ export function PortabilitySection() {
                     data-portability-secret-wizard=""
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm font-medium text-foreground">
-                        Missing secret wizard
-                      </div>
-                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">
+                      <div className="text-body-strong text-foreground">Missing secret wizard</div>
+                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-eyebrow-sm text-amber-300">
                         {secretBindings.length} bound
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                    <p className="mt-1 text-caption text-muted-foreground">
                       Bind runtime provider API keys before install/import, or leave fields empty
                       and reconfigure them later in Settings and Autonomy.
                     </p>
@@ -889,14 +871,14 @@ export function PortabilitySection() {
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="min-w-0">
-                              <div className="truncate text-xs font-medium text-foreground">
+                              <div className="truncate text-body-strong text-foreground">
                                 {secret.label}
                               </div>
-                              <div className="truncate font-mono text-[10px] text-muted-foreground">
+                              <div className="truncate text-code-sm text-muted-foreground">
                                 {secret.path}
                               </div>
                             </div>
-                            <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                            <span className="rounded-full border border-white/10 px-2 py-0.5 text-eyebrow-sm text-muted-foreground">
                               {secret.bindable ? 'bindable' : 'manual'}
                             </span>
                           </div>
@@ -911,11 +893,11 @@ export function PortabilitySection() {
                                 }))
                               }
                               placeholder={`Bind ${secret.providerId ?? 'provider'} API key`}
-                              className="mt-2 text-xs"
+                              className="mt-2 text-body-sm"
                               data-portability-secret-input={secret.id}
                             />
                           ) : (
-                            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                            <p className="mt-2 text-caption text-muted-foreground">
                               This redacted field has no provider mapping in the package. Re-enter
                               the value in the owning extension, runtime, or authority surface after
                               import.
@@ -930,8 +912,8 @@ export function PortabilitySection() {
 
               {packagePreview.manifest.mode === 'workspace-export' ? (
                 <div className="rounded-lg border border-white/10 bg-background/70 px-3 py-3">
-                  <div className="text-sm font-medium text-foreground">Import as new workspace</div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
+                  <div className="text-body-strong text-foreground">Import as new workspace</div>
+                  <p className="mt-1 text-caption text-muted-foreground">
                     Import stays non-destructive. Team-X will create a fresh workspace copy with new
                     local ids while preserving origin metadata.
                   </p>
@@ -951,11 +933,11 @@ export function PortabilitySection() {
                         if (!importSlugDirty) setImportSlugDirty(true);
                       }}
                       placeholder={packagePreview.suggestedSlug}
-                      className="font-mono text-xs"
+                      className="text-code-sm"
                     />
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-caption text-muted-foreground">
                       Suggested slug defaults to {packagePreview.suggestedSlug} when the source slug
                       is already taken locally.
                     </p>
@@ -973,27 +955,25 @@ export function PortabilitySection() {
                     </Button>
                   </div>
                   {importPackage.isSuccess ? (
-                    <p className="mt-3 text-[11px] text-emerald-600">
+                    <p className="mt-3 text-caption text-emerald-600">
                       Workspace imported and switched to {importName.trim() || importSlug.trim()}.
                     </p>
                   ) : null}
                   {importPackage.isError ? (
-                    <p className="mt-3 text-[11px] text-destructive">
+                    <p className="mt-3 text-caption text-destructive">
                       Failed to import workspace package: {String(importPackage.error)}
                     </p>
                   ) : null}
                 </div>
               ) : (
                 <div className="rounded-lg border border-white/10 bg-background/70 px-3 py-3">
-                  <div className="text-sm font-medium text-foreground">
-                    Install into local library
-                  </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
+                  <div className="text-body-strong text-foreground">Install into local library</div>
+                  <p className="mt-1 text-caption text-muted-foreground">
                     Template packages become visible in the workspace switcher after installation,
                     but they stay local-first and never overwrite existing workspaces.
                   </p>
                   <div className="mt-3 flex items-center justify-between gap-3">
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-caption text-muted-foreground">
                       Installed templates show up in the local template library below and in the
                       workspace switcher create flow.
                     </p>
@@ -1011,12 +991,12 @@ export function PortabilitySection() {
                     </Button>
                   </div>
                   {installTemplate.isSuccess ? (
-                    <p className="mt-3 text-[11px] text-emerald-600">
+                    <p className="mt-3 text-caption text-emerald-600">
                       Template installed to {installTemplate.data.template.packagePath}
                     </p>
                   ) : null}
                   {installTemplate.isError ? (
-                    <p className="mt-3 text-[11px] text-destructive">
+                    <p className="mt-3 text-caption text-destructive">
                       Failed to install template: {String(installTemplate.error)}
                     </p>
                   ) : null}
@@ -1027,8 +1007,8 @@ export function PortabilitySection() {
         </div>
 
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
-          <div className="text-sm font-medium text-foreground">Local template library</div>
-          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+          <div className="text-body-strong text-foreground">Local template library</div>
+          <p className="mt-1 text-caption text-muted-foreground">
             Template-backed workspace creation lives in the workspace switcher. This library keeps
             the reusable operating models visible and local-first.
           </p>
@@ -1039,11 +1019,11 @@ export function PortabilitySection() {
               <Skeleton className="h-16 rounded-lg" />
             </div>
           ) : templatesQuery.isError ? (
-            <p className="mt-3 text-[11px] text-destructive">
+            <p className="mt-3 text-caption text-destructive">
               Failed to load the local template library.
             </p>
           ) : (templatesQuery.data?.length ?? 0) === 0 ? (
-            <p className="mt-3 text-[11px] text-muted-foreground">
+            <p className="mt-3 text-caption text-muted-foreground">
               No local templates yet. Save the active workspace as a template or install an external
               template package to seed this library.
             </p>
@@ -1056,20 +1036,18 @@ export function PortabilitySection() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-foreground">
+                      <div className="truncate text-body-strong text-foreground">
                         {template.company.name}
                       </div>
-                      <div className="truncate text-[11px] text-muted-foreground">
+                      <div className="truncate text-caption text-muted-foreground">
                         {template.company.slug} · exported{' '}
                         {new Date(template.manifest.exportedAt).toLocaleString()}
                       </div>
                     </div>
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                      Template
-                    </div>
+                    <div className="text-eyebrow-sm text-muted-foreground">Template</div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                  <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
                     <span>{template.employeeCount} employees</span>
                     <span>{template.runtimeProfileCount} runtimes</span>
                     <span>{template.routineCount} routines</span>
@@ -1078,7 +1056,7 @@ export function PortabilitySection() {
                   </div>
 
                   {template.manifest.compatibility.length > 0 ? (
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
                       {template.manifest.compatibility.slice(0, 4).map((entry) => (
                         <span
                           key={entry}
@@ -1090,7 +1068,7 @@ export function PortabilitySection() {
                     </div>
                   ) : null}
 
-                  <p className="mt-3 truncate font-mono text-[10px] text-muted-foreground/75">
+                  <p className="mt-3 truncate text-code-sm text-muted-foreground/75">
                     {template.packagePath}
                   </p>
                 </div>

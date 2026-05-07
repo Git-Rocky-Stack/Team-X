@@ -34,7 +34,7 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
     <button type="button" onClick={onClick} className="w-full text-left">
       <Card className="group cursor-pointer border-border/50 bg-surface-50 p-3 transition-all hover:border-border hover:shadow-md">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="text-sm font-medium leading-snug text-foreground line-clamp-2">
+          <h4 className="text-body-strong leading-snug text-foreground line-clamp-2">
             {project.title}
           </h4>
           <Badge
@@ -47,7 +47,7 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
         </div>
 
         {project.description && (
-          <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">{project.description}</p>
+          <p className="mt-1.5 text-caption text-muted-foreground line-clamp-2">{project.description}</p>
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -56,17 +56,17 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand/20 text-[10px] font-bold text-brand">
                 {lead.name.charAt(0).toUpperCase()}
               </div>
-              <span className="text-[11px] text-muted-foreground">{lead.name}</span>
+              <span className="text-caption text-muted-foreground">{lead.name}</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 text-muted-foreground/50">
               <User className="h-3.5 w-3.5" />
-              <span className="text-[11px]">No lead</span>
+              <span className="text-caption">No lead</span>
             </div>
           )}
           {targetDate && (
             <div
-              className={`flex items-center gap-1.5 text-[11px] ${
+              className={`flex items-center gap-1.5 text-caption ${
                 isOverdue ? 'text-red-400' : 'text-muted-foreground'
               }`}
             >

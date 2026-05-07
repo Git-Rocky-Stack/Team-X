@@ -36,7 +36,7 @@ export function ProjectsView({ companyId, employees }: ProjectsViewProps) {
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-2">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-            <p className="text-xs text-muted-foreground">Loading projects...</p>
+            <p className="text-caption text-muted-foreground">Loading projects...</p>
           </div>
         </div>
       </div>
@@ -49,11 +49,11 @@ export function ProjectsView({ companyId, employees }: ProjectsViewProps) {
         <ProjectsSubtabs />
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-center">
-            <p className="text-sm font-medium text-muted-foreground">Failed to load projects</p>
+            <p className="text-body-strong text-muted-foreground">Failed to load projects</p>
             <button
               type="button"
               onClick={() => refetch()}
-              className="rounded-md bg-brand px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand/90"
+              className="rounded-md bg-brand px-4 py-1.5 text-button-sm text-white transition-colors hover:bg-brand/90"
             >
               Retry
             </button>

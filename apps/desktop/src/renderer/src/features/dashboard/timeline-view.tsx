@@ -143,7 +143,7 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
         <AlertCircle className="h-8 w-8 text-red-500" />
-        <p className="text-sm font-medium text-muted-foreground">Failed to load timeline</p>
+        <p className="text-body-strong text-muted-foreground">Failed to load timeline</p>
       </div>
     );
   }
@@ -151,8 +151,8 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
   if (filteredEvents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-lg font-medium text-muted-foreground">No activity yet</p>
-        <p className="mt-1 text-sm text-muted-foreground/70">
+        <p className="text-h3 text-muted-foreground">No activity yet</p>
+        <p className="mt-1 text-body text-muted-foreground/70">
           Events will appear here as your team works.
         </p>
       </div>
@@ -164,7 +164,7 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
       {[...groups.entries()].map(([dateLabel, dateEvents]) => (
         <div key={dateLabel}>
           <div className="sticky top-0 z-10 mb-3 bg-black">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-eyebrow text-muted-foreground">
               {dateLabel}
             </span>
           </div>
@@ -176,10 +176,10 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
                 </div>
                 <div className="flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-black">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-foreground">
+                    <p className="text-body text-foreground">
                       {eventDescription(event, employeeMap)}
                     </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-caption text-muted-foreground">
                       {formatTime(event.createdAt)}
                     </p>
                   </div>

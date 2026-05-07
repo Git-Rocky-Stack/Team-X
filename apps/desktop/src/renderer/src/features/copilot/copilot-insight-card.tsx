@@ -192,7 +192,7 @@ export function CopilotInsightCard({
             <Badge
               variant="outline"
               className={cn(
-                'h-6 rounded-full px-2 text-[10px] font-mono uppercase tracking-wider',
+                'h-6 rounded-full px-2 text-eyebrow-sm font-mono',
                 severityMeta.badgeBg,
                 severityMeta.badgeText,
                 'border-transparent',
@@ -202,7 +202,7 @@ export function CopilotInsightCard({
             </Badge>
             <Badge
               variant="outline"
-              className="h-6 rounded-full border-white/10 bg-black/20 px-2 text-[10px] font-mono text-muted-foreground"
+              className="h-6 rounded-full border-white/10 bg-black/20 px-2 text-eyebrow-sm font-mono text-muted-foreground"
             >
               {categoryMeta.label}
             </Badge>
@@ -210,8 +210,8 @@ export function CopilotInsightCard({
 
           <h3
             className={cn(
-              'mt-1.5 font-medium leading-snug text-foreground',
-              isDashboard ? 'text-sm' : 'text-sm',
+              'mt-1.5 leading-snug text-foreground',
+              isDashboard ? 'text-body-strong' : 'text-body-strong',
             )}
           >
             {insight.title}
@@ -219,7 +219,7 @@ export function CopilotInsightCard({
 
           <p
             className={cn(
-              'mt-1 text-xs leading-relaxed text-muted-foreground',
+              'mt-1 text-caption text-muted-foreground',
               isDashboard && 'line-clamp-2',
             )}
           >
@@ -234,7 +234,7 @@ export function CopilotInsightCard({
                 variant="outline"
                 disabled={executeMutation.isPending}
                 onClick={onActionClick}
-                className="h-8 rounded-[16px] border-white/10 bg-black/10 text-xs text-foreground hover:bg-black/20"
+                className="h-8 rounded-[16px] border-white/10 bg-black/10 text-button-sm text-foreground hover:bg-black/20"
               >
                 {insight.actionSuggestion}
               </Button>

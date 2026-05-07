@@ -221,7 +221,7 @@ export function TelemetryView() {
         badge={
           <Badge
             variant="outline"
-            className="border-white/10 bg-black/20 text-[10px] font-mono text-muted-foreground"
+            className="border-white/10 bg-black/20 text-code-sm text-muted-foreground"
           >
             {activeSubviewCopy.title}
           </Badge>
@@ -274,7 +274,7 @@ export function TelemetryView() {
             <TelemetrySubtabs />
           </MissionControlRow>
           <MissionControlRow density="compact" className="justify-between px-2 py-2 xl:justify-end">
-            <span className="px-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            <span className="px-2 text-eyebrow-sm text-muted-foreground">
               Kind
             </span>
             <TelemetryKindFilterChips active={kindFilter} onChange={setKindFilter} />

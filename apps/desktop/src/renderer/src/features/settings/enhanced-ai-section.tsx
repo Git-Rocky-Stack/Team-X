@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge.js';
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
+import { Switch } from '@/components/ui/switch.js';
 import { useEnhancedAiConfig, useSetEnhancedAiConfig } from '@/hooks/use-enhanced-ai.js';
 import { useProviders } from '@/hooks/use-providers.js';
 
@@ -54,9 +55,7 @@ export function EnhancedAiSection() {
   if (configLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Enhanced AI
-        </h4>
+        <h2 className="text-h2 text-foreground">Enhanced AI</h2>
         <Skeleton className="h-48 rounded-lg" />
       </section>
     );
@@ -65,10 +64,8 @@ export function EnhancedAiSection() {
   if (configError || !config) {
     return (
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Enhanced AI
-        </h4>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <h2 className="text-h2 text-foreground">Enhanced AI</h2>
+        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
           Failed to load Enhanced AI configuration.
         </div>
       </section>
@@ -85,13 +82,6 @@ export function EnhancedAiSection() {
     setConfig.mutate({ [key]: value } as SettingsSetEnhancedAiConfigRequest);
   }
 
-  function handleToggle(key: keyof SettingsGetEnhancedAiConfigResponse) {
-    if (!draft) return;
-    const next = !draft[key];
-    setDraft({ ...draft, [key]: next });
-    setConfig.mutate({ [key]: next } as SettingsSetEnhancedAiConfigRequest);
-  }
-
   // "LLM Detected" reflects whether the orchestrator can actually route a
   // call right now — i.e. at least one configured provider is enabled.
   // The Enhanced AI llmProvider field is a routing preference ('auto' is
@@ -104,9 +94,7 @@ export function EnhancedAiSection() {
     <section className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Enhanced AI
-        </h4>
+        <h2 className="text-h2 text-foreground">Enhanced AI</h2>
         {setConfig.isPending && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
@@ -153,13 +141,10 @@ export function EnhancedAiSection() {
         className="rounded-lg border border-border bg-surface-50 p-4 space-y-3"
         aria-disabled={llmDisabled}
       >
-        <p className="text-xs font-semibold text-foreground">LLM Provider</p>
+        <h3 className="text-h3 text-foreground">LLM Provider</h3>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <div className="space-y-1">
-            <label
-              htmlFor="ai-llm-provider"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="ai-llm-provider" className="text-label text-muted-foreground">
               Provider
             </label>
             <Input
@@ -169,14 +154,14 @@ export function EnhancedAiSection() {
               onBlur={() => commit('llmProvider', draft.llmProvider.trim() || 'auto')}
               disabled={setConfig.isPending}
               placeholder="auto"
-              className="h-8 text-xs"
+              className="h-8 text-body-sm"
             />
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               &apos;auto&apos; or provider id (e.g. &apos;openai&apos;, &apos;anthropic&apos;)
             </p>
           </div>
           <div className="space-y-1">
-            <label htmlFor="ai-llm-model" className="text-[11px] font-medium text-muted-foreground">
+            <label htmlFor="ai-llm-model" className="text-label text-muted-foreground">
               Model
             </label>
             <Input
@@ -186,15 +171,12 @@ export function EnhancedAiSection() {
               onBlur={() => commit('llmModel', draft.llmModel.trim() || 'auto')}
               disabled={setConfig.isPending}
               placeholder="gpt-4"
-              className="h-8 text-xs"
+              className="h-8 text-body-sm"
             />
-            <p className="text-[10px] text-muted-foreground">&apos;auto&apos; or model name</p>
+            <p className="text-caption text-muted-foreground">&apos;auto&apos; or model name</p>
           </div>
           <div className="space-y-1">
-            <label
-              htmlFor="ai-llm-max-tokens"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="ai-llm-max-tokens" className="text-label text-muted-foreground">
               Max Tokens
             </label>
             <Input
@@ -219,9 +201,9 @@ export function EnhancedAiSection() {
                 commit('llmMaxTokens', next);
               }}
               disabled={setConfig.isPending}
-              className="h-8 text-xs font-mono"
+              className="h-8 text-code-sm"
             />
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               Max tokens per completion ({LLM_MAX_TOKENS_MIN}–{LLM_MAX_TOKENS_MAX})
             </p>
           </div>
@@ -229,13 +211,10 @@ export function EnhancedAiSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-4">
-              <label
-                htmlFor="ai-llm-temperature"
-                className="text-[11px] font-medium text-muted-foreground"
-              >
+              <label htmlFor="ai-llm-temperature" className="text-label text-muted-foreground">
                 Temperature
               </label>
-              <span className="text-[11px] font-mono text-foreground tabular-nums">
+              <span className="text-code-sm text-foreground tabular-nums">
                 {draft.llmTemperature.toFixed(1)}
               </span>
             </div>
@@ -258,7 +237,7 @@ export function EnhancedAiSection() {
               aria-valuemax={LLM_TEMPERATURE_MAX}
               aria-valuenow={draft.llmTemperature}
             />
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               Sampling temperature (0 = focused, 2 = creative)
             </p>
           </div>
@@ -270,156 +249,88 @@ export function EnhancedAiSection() {
         className="rounded-lg border border-border bg-surface-50 p-4 space-y-4"
         aria-disabled={llmDisabled}
       >
-        <p className="text-xs font-semibold text-foreground">Additional AI Settings</p>
+        <h3 className="text-h3 text-foreground">Additional AI Settings</h3>
 
         {/* Query Expansion */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-foreground">Query Expansion</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+            <p className="text-body-strong text-foreground">Query Expansion</p>
+            <p className="text-caption text-muted-foreground mt-0.5 leading-snug">
               Generate semantic variations for better retrieval recall.
             </p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={draft.queryExpansionEnabled}
-            aria-label="Toggle query expansion"
-            onClick={() => handleToggle('queryExpansionEnabled')}
+          <Switch
+            checked={draft.queryExpansionEnabled}
+            onCheckedChange={(checked) => commit('queryExpansionEnabled', checked)}
             disabled={setConfig.isPending}
-            className={`
-              relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-              focus-visible:ring-offset-2 focus-visible:ring-offset-background
-              disabled:cursor-not-allowed disabled:opacity-50
-              ${draft.queryExpansionEnabled ? 'bg-brand' : 'bg-surface-100 border border-border'}
-            `}
-          >
-            <span
-              aria-hidden="true"
-              className={`
-                inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow transition-transform
-                ${draft.queryExpansionEnabled ? 'translate-x-5' : 'translate-x-1'}
-              `}
-            />
-          </button>
+            aria-label="Toggle query expansion"
+          />
         </div>
 
         {/* Semantic Chunking */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-foreground">Semantic Chunking</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+            <p className="text-body-strong text-foreground">Semantic Chunking</p>
+            <p className="text-caption text-muted-foreground mt-0.5 leading-snug">
               Structure-aware content splitting for better context.
             </p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={draft.semanticChunkingEnabled}
-            aria-label="Toggle semantic chunking"
-            onClick={() => handleToggle('semanticChunkingEnabled')}
+          <Switch
+            checked={draft.semanticChunkingEnabled}
+            onCheckedChange={(checked) => commit('semanticChunkingEnabled', checked)}
             disabled={setConfig.isPending}
-            className={`
-              relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-              focus-visible:ring-offset-2 focus-visible:ring-offset-background
-              disabled:cursor-not-allowed disabled:opacity-50
-              ${draft.semanticChunkingEnabled ? 'bg-brand' : 'bg-surface-100 border border-border'}
-            `}
-          >
-            <span
-              aria-hidden="true"
-              className={`
-                inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow transition-transform
-                ${draft.semanticChunkingEnabled ? 'translate-x-5' : 'translate-x-1'}
-              `}
-            />
-          </button>
+            aria-label="Toggle semantic chunking"
+          />
         </div>
 
         {/* Long-Term Memory */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-foreground">Long-Term Memory</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+            <p className="text-body-strong text-foreground">Long-Term Memory</p>
+            <p className="text-caption text-muted-foreground mt-0.5 leading-snug">
               Extract and store facts across conversations with freshness tracking.
             </p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={draft.longTermMemoryEnabled}
-            aria-label="Toggle long-term memory"
-            onClick={() => handleToggle('longTermMemoryEnabled')}
+          <Switch
+            checked={draft.longTermMemoryEnabled}
+            onCheckedChange={(checked) => commit('longTermMemoryEnabled', checked)}
             disabled={setConfig.isPending}
-            className={`
-              relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-              focus-visible:ring-offset-2 focus-visible:ring-offset-background
-              disabled:cursor-not-allowed disabled:opacity-50
-              ${draft.longTermMemoryEnabled ? 'bg-brand' : 'bg-surface-100 border border-border'}
-            `}
-          >
-            <span
-              aria-hidden="true"
-              className={`
-                inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow transition-transform
-                ${draft.longTermMemoryEnabled ? 'translate-x-5' : 'translate-x-1'}
-              `}
-            />
-          </button>
+            aria-label="Toggle long-term memory"
+          />
         </div>
 
         {/* Knowledge Graph */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-foreground">Knowledge Graph</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+            <p className="text-body-strong text-foreground">Knowledge Graph</p>
+            <p className="text-caption text-muted-foreground mt-0.5 leading-snug">
               Cross-thread entity relationships and context linking.
             </p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={draft.knowledgeGraphEnabled}
-            aria-label="Toggle knowledge graph"
-            onClick={() => handleToggle('knowledgeGraphEnabled')}
+          <Switch
+            checked={draft.knowledgeGraphEnabled}
+            onCheckedChange={(checked) => commit('knowledgeGraphEnabled', checked)}
             disabled={setConfig.isPending}
-            className={`
-              relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-              focus-visible:ring-offset-2 focus-visible:ring-offset-background
-              disabled:cursor-not-allowed disabled:opacity-50
-              ${draft.knowledgeGraphEnabled ? 'bg-brand' : 'bg-surface-100 border border-border'}
-            `}
-          >
-            <span
-              aria-hidden="true"
-              className={`
-                inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow transition-transform
-                ${draft.knowledgeGraphEnabled ? 'translate-x-5' : 'translate-x-1'}
-              `}
-            />
-          </button>
+            aria-label="Toggle knowledge graph"
+          />
         </div>
 
         {/* Multi-Turn Planning */}
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-foreground">Multi-Turn Planning</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug mb-2">
+            <p className="text-body-strong text-foreground">Multi-Turn Planning</p>
+            <p className="text-caption text-muted-foreground mt-0.5 leading-snug mb-2">
               Decompose complex queries into execution plans.
             </p>
             <div className="space-y-1">
               <div className="flex items-center justify-between gap-2">
                 <label
                   htmlFor="ai-planning-threshold"
-                  className="text-[10px] text-muted-foreground"
+                  className="text-caption text-muted-foreground"
                 >
                   Threshold
                 </label>
-                <span className="text-[10px] font-mono text-foreground tabular-nums">
+                <span className="text-caption font-mono text-foreground tabular-nums">
                   {draft.planningThreshold} chars
                 </span>
               </div>
@@ -449,84 +360,51 @@ export function EnhancedAiSection() {
                   commit('planningThreshold', next);
                 }}
                 disabled={!draft.planningEnabled || setConfig.isPending}
-                className="h-7 text-xs font-mono"
+                className="h-7 text-code-sm"
               />
             </div>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={draft.planningEnabled}
-            aria-label="Toggle multi-turn planning"
-            onClick={() => handleToggle('planningEnabled')}
+          <Switch
+            checked={draft.planningEnabled}
+            onCheckedChange={(checked) => commit('planningEnabled', checked)}
             disabled={setConfig.isPending}
-            className={`
-              relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors mt-5
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-              focus-visible:ring-offset-2 focus-visible:ring-offset-background
-              disabled:cursor-not-allowed disabled:opacity-50
-              ${draft.planningEnabled ? 'bg-brand' : 'bg-surface-100 border border-border'}
-            `}
-          >
-            <span
-              aria-hidden="true"
-              className={`
-                inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow transition-transform
-                ${draft.planningEnabled ? 'translate-x-5' : 'translate-x-1'}
-              `}
-            />
-          </button>
+            aria-label="Toggle multi-turn planning"
+            className="mt-5"
+          />
         </div>
 
         {/* Streaming Responses */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-foreground">Streaming Responses</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+            <p className="text-body-strong text-foreground">Streaming Responses</p>
+            <p className="text-caption text-muted-foreground mt-0.5 leading-snug">
               Real-time token streaming for faster perceived response.
             </p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={draft.streamingEnabled}
-            aria-label="Toggle streaming responses"
-            onClick={() => handleToggle('streamingEnabled')}
+          <Switch
+            checked={draft.streamingEnabled}
+            onCheckedChange={(checked) => commit('streamingEnabled', checked)}
             disabled={setConfig.isPending}
-            className={`
-              relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-              focus-visible:ring-offset-2 focus-visible:ring-offset-background
-              disabled:cursor-not-allowed disabled:opacity-50
-              ${draft.streamingEnabled ? 'bg-brand' : 'bg-surface-100 border border-border'}
-            `}
-          >
-            <span
-              aria-hidden="true"
-              className={`
-                inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow transition-transform
-                ${draft.streamingEnabled ? 'translate-x-5' : 'translate-x-1'}
-              `}
-            />
-          </button>
+            aria-label="Toggle streaming responses"
+          />
         </div>
 
         {/* Distributed Tracing */}
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-foreground">Distributed Tracing</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug mb-2">
+            <p className="text-body-strong text-foreground">Distributed Tracing</p>
+            <p className="text-caption text-muted-foreground mt-0.5 leading-snug mb-2">
               Request lifecycle tracking and observability.
             </p>
             <div className="space-y-1">
               <div className="flex items-center justify-between gap-2">
                 <label
                   htmlFor="ai-tracing-sample-rate"
-                  className="text-[10px] text-muted-foreground"
+                  className="text-caption text-muted-foreground"
                 >
                   Sample Rate
                 </label>
-                <span className="text-[10px] font-mono text-foreground tabular-nums">
+                <span className="text-caption font-mono text-foreground tabular-nums">
                   {Math.round(draft.tracingSampleRate * 100)}%
                 </span>
               </div>
@@ -551,42 +429,26 @@ export function EnhancedAiSection() {
               />
             </div>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={draft.tracingEnabled}
-            aria-label="Toggle distributed tracing"
-            onClick={() => handleToggle('tracingEnabled')}
+          <Switch
+            checked={draft.tracingEnabled}
+            onCheckedChange={(checked) => commit('tracingEnabled', checked)}
             disabled={setConfig.isPending}
-            className={`
-              relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors mt-5
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-              focus-visible:ring-offset-2 focus-visible:ring-offset-background
-              disabled:cursor-not-allowed disabled:opacity-50
-              ${draft.tracingEnabled ? 'bg-brand' : 'bg-surface-100 border border-border'}
-            `}
-          >
-            <span
-              aria-hidden="true"
-              className={`
-                inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow transition-transform
-                ${draft.tracingEnabled ? 'translate-x-5' : 'translate-x-1'}
-              `}
-            />
-          </button>
+            aria-label="Toggle distributed tracing"
+            className="mt-5"
+          />
         </div>
       </div>
 
       {/* Save error banner */}
       {setConfig.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
           <span className="min-w-0 truncate">Failed to save: {String(setConfig.error)}</span>
         </div>
       )}
 
       {/* Info banner for LLM */}
       {!detectionPending && !hasEnabledProvider && (
-        <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+        <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-body text-amber-400">
           <span className="min-w-0">
             Enable an LLM provider in Provider settings to enable Enhanced AI features.
           </span>

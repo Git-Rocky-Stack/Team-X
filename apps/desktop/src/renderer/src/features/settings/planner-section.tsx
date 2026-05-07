@@ -50,9 +50,7 @@ export function PlannerSection() {
   if (isLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Task Planner
-        </h4>
+        <h2 className="text-h2 text-foreground">Task Planner</h2>
         <Skeleton className="h-48 rounded-lg" />
       </section>
     );
@@ -61,10 +59,8 @@ export function PlannerSection() {
   if (isError || !data) {
     return (
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Task Planner
-        </h4>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <h2 className="text-h2 text-foreground">Task Planner</h2>
+        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
           Failed to load task planner settings.
         </div>
       </section>
@@ -94,16 +90,14 @@ export function PlannerSection() {
     <section className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Task Planner
-        </h4>
+        <h2 className="text-h2 text-foreground">Task Planner</h2>
         {setPlanner.isPending && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
       </div>
 
       {/* Description */}
-      <p className="text-[11px] text-muted-foreground leading-snug">
+      <p className="text-body-sm text-muted-foreground mt-1">
         Guardrails for the write-side agentic tools that decompose projects into tickets, delegate
         subtasks, and review deliverables. Tighter caps reduce blast radius; wider caps allow larger
         plans.
@@ -114,15 +108,10 @@ export function PlannerSection() {
         {/* Max tickets */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="planner-max-tickets"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="planner-max-tickets" className="text-label text-muted-foreground">
               Max Tickets per Plan
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
-              {draft.maxTickets}
-            </span>
+            <span className="text-code-sm text-foreground tabular-nums">{draft.maxTickets}</span>
           </div>
           <Input
             id="planner-max-tickets"
@@ -141,9 +130,9 @@ export function PlannerSection() {
               commitNumeric('maxTickets', next);
             }}
             disabled={setPlanner.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Maximum subtasks emitted per <span className="font-mono">decompose_project</span> call (
             {maxTickets.min}–{maxTickets.max}, default {maxTickets.default}).
           </p>
@@ -152,15 +141,10 @@ export function PlannerSection() {
         {/* Max depth */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="planner-max-depth"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="planner-max-depth" className="text-label text-muted-foreground">
               Max Nesting Depth
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
-              {draft.maxDepth}
-            </span>
+            <span className="text-code-sm text-foreground tabular-nums">{draft.maxDepth}</span>
           </div>
           <Input
             id="planner-max-depth"
@@ -179,9 +163,9 @@ export function PlannerSection() {
               commitNumeric('maxDepth', next);
             }}
             disabled={setPlanner.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Maximum subtask tree depth ({maxDepth.min}–{maxDepth.max}, default {maxDepth.default}).
             Deeper plans produce finer-grained tickets.
           </p>
@@ -190,13 +174,10 @@ export function PlannerSection() {
         {/* Approval level */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="planner-approval-level"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="planner-approval-level" className="text-label text-muted-foreground">
               Approval Level
             </label>
-            <span className="text-[11px] font-mono text-foreground">
+            <span className="text-code-sm text-foreground">
               {LEVEL_LABELS[draft.approvalLevel]}
             </span>
           </div>
@@ -205,7 +186,7 @@ export function PlannerSection() {
             value={draft.approvalLevel}
             onChange={(e) => commitLevel(e.target.value as PlannerApprovalLevel)}
             disabled={setPlanner.isPending}
-            className="h-8 w-full rounded-md border border-border bg-background px-3 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="h-8 w-full rounded-md border border-border bg-background px-3 text-code-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           >
             {PLANNER_APPROVAL_LEVELS.map((level) => (
               <option key={level} value={level}>
@@ -213,7 +194,7 @@ export function PlannerSection() {
               </option>
             ))}
           </select>
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Minimum employee level allowed to run{' '}
             <span className="font-mono">decompose_project</span>. Employees below this level cannot
             create plans.
@@ -225,11 +206,11 @@ export function PlannerSection() {
           <div className="flex items-center justify-between gap-4">
             <label
               htmlFor="planner-escalation-threshold"
-              className="text-[11px] font-medium text-muted-foreground"
+              className="text-label text-muted-foreground"
             >
               Escalation Threshold
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
+            <span className="text-code-sm text-foreground tabular-nums">
               {draft.escalationThreshold}
             </span>
           </div>
@@ -258,9 +239,9 @@ export function PlannerSection() {
               commitNumeric('escalationThreshold', next);
             }}
             disabled={setPlanner.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Consecutive delegation/review failures before{' '}
             <span className="font-mono">task.escalated</span> fires ({escalationThreshold.min}–
             {escalationThreshold.max}, default {escalationThreshold.default}).
@@ -270,7 +251,7 @@ export function PlannerSection() {
 
       {/* Save error banner */}
       {setPlanner.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
           <span className="min-w-0 truncate">Failed to save: {String(setPlanner.error)}</span>
         </div>
       )}

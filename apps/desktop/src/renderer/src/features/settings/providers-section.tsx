@@ -21,8 +21,8 @@ export function ProvidersSection() {
     <section>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">AI Providers</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <h2 className="text-h2 text-foreground">AI Providers</h2>
+          <p className="text-body-sm text-muted-foreground mt-1">
             Configure LLM providers and API keys for your agents.
           </p>
         </div>
@@ -39,15 +39,15 @@ export function ProvidersSection() {
         </div>
       ) : isError ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-sm text-destructive">Failed to load providers.</p>
+          <p className="text-body text-destructive">Failed to load providers.</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
             Retry
           </Button>
         </div>
       ) : providers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-sm text-muted-foreground">No providers configured.</p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
+          <p className="text-body text-muted-foreground">No providers configured.</p>
+          <p className="text-caption text-muted-foreground/70 mt-1">
             Add a provider to start running AI agents.
           </p>
         </div>

@@ -55,10 +55,10 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="flex-1 min-w-0">
-          <h3 className="truncate text-sm font-semibold text-foreground">
+          <h3 className="truncate text-h3 text-foreground">
             {detail.agenda || 'Meeting'}
           </h3>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 text-caption text-muted-foreground">
             <span className="flex items-center gap-1">
               <Users2 className="h-3 w-3" />
               {detail.attendees.length} attendees
@@ -81,7 +81,7 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
             type="button"
             onClick={handleEnd}
             disabled={endMeeting.isPending}
-            className="flex items-center gap-1.5 rounded-lg bg-red-600/80 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg bg-red-600/80 px-3 py-1.5 text-button-sm text-white transition-colors hover:bg-red-600 disabled:opacity-50"
           >
             <Square className="h-3 w-3" />
             {endMeeting.isPending ? 'Ending...' : 'End Meeting'}
@@ -92,11 +92,11 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
       {/* Minutes (shown after meeting ends) */}
       {!isActive && detail.minutesMd && (
         <div className="border-b border-border bg-muted/20 px-4 py-3">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-caption font-medium text-muted-foreground">
             <FileText className="h-3 w-3" />
             Minutes
           </div>
-          <div className="mt-2 max-h-32 overflow-y-auto text-xs text-foreground/80 whitespace-pre-wrap">
+          <div className="mt-2 max-h-32 overflow-y-auto text-caption text-foreground/80 whitespace-pre-wrap">
             {detail.minutesMd}
           </div>
         </div>
@@ -105,7 +105,7 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {detail.messages.length === 0 ? (
-          <p className="text-center text-xs text-muted-foreground/60 py-8">No messages yet.</p>
+          <p className="text-center text-caption text-muted-foreground/60 py-8">No messages yet.</p>
         ) : (
           <div className="space-y-3">
             {detail.messages.map((msg) => {
@@ -114,7 +114,7 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
               return (
                 <div key={msg.id} className={isSystem ? 'text-center' : ''}>
                   {isSystem ? (
-                    <p className="text-[11px] italic text-muted-foreground/60">{msg.content}</p>
+                    <p className="text-caption italic text-muted-foreground/60">{msg.content}</p>
                   ) : (
                     <div
                       className={`rounded-lg px-3 py-2 ${
@@ -123,10 +123,10 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
                           : 'bg-muted/30 border border-border'
                       }`}
                     >
-                      <p className="text-[10px] font-medium text-muted-foreground mb-0.5">
+                      <p className="text-eyebrow-sm text-muted-foreground mb-0.5">
                         {isUser ? 'Rocky' : msg.authorId.slice(0, 8)}
                       </p>
-                      <p className="text-sm text-foreground whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-body text-foreground whitespace-pre-wrap">{msg.content}</p>
                     </div>
                   )}
                 </div>
@@ -141,7 +141,7 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
         <div className="border-t border-border px-4 py-3">
           <div className="flex items-end gap-2">
             <textarea
-              className="flex-1 resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-brand"
+              className="flex-1 resize-none rounded-lg border border-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-brand"
               rows={2}
               placeholder="Interject in the meeting..."
               value={message}
@@ -157,7 +157,7 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
               <Send className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground/50">
+          <div className="mt-1 flex items-center gap-1 text-caption text-muted-foreground/50">
             <Clock className="h-2.5 w-2.5" />
             Press Enter to send, Shift+Enter for new line
           </div>

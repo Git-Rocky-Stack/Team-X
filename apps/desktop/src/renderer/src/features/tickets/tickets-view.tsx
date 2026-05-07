@@ -201,7 +201,7 @@ export function TicketsView({ companyId, employees }: TicketsViewProps) {
             badge={
               <Badge
                 variant="outline"
-                className="border-white/10 bg-black/20 font-mono text-[10px] text-muted-foreground"
+                className="border-white/10 bg-black/20 font-mono text-eyebrow-sm text-muted-foreground"
               >
                 {tickets.length} tickets
               </Badge>

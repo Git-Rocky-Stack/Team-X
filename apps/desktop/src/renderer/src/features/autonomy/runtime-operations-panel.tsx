@@ -36,20 +36,20 @@ function RuntimeSessionCard({ session }: { session: RuntimeSession }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-sm font-semibold text-foreground">
+            <span className="truncate text-body-strong text-foreground">
               {session.employeeId}
             </span>
             <MissionPill tone={statusTone(session.status)}>{session.status}</MissionPill>
             <MissionPill>{session.adapterKind}</MissionPill>
           </div>
-          <p className="break-all text-xs leading-5 text-muted-foreground">
+          <p className="break-all text-caption text-muted-foreground">
             {session.workspacePath ?? session.endpointUrl ?? 'No external workspace path exposed'}
           </p>
         </div>
         <MissionPill mono>{heartbeatContract}</MissionPill>
       </div>
 
-      <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+      <div className="grid gap-2 text-caption text-muted-foreground sm:grid-cols-2">
         <div>
           <span className="font-semibold text-foreground">Last heartbeat:</span>{' '}
           {formatTimestamp(session.lastHeartbeatAt)}
@@ -69,7 +69,7 @@ function RuntimeSessionCard({ session }: { session: RuntimeSession }) {
       </div>
 
       {session.failureReason ? (
-        <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-200">
+        <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-caption text-amber-200">
           {session.failureReason}
         </div>
       ) : null}
@@ -83,12 +83,12 @@ function TicketCheckoutRow({ checkout }: { checkout: TicketCheckout }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="break-all text-sm font-semibold text-foreground">
+            <span className="break-all text-body-strong text-foreground">
               {checkout.ticketId}
             </span>
             <MissionPill tone={statusTone(checkout.status)}>{checkout.status}</MissionPill>
           </div>
-          <p className="break-all text-xs leading-5 text-muted-foreground">
+          <p className="break-all text-caption text-muted-foreground">
             Claimed by {checkout.employeeId}
             {checkout.runtimeSessionId ? ` through ${checkout.runtimeSessionId}` : ''}
           </p>
@@ -132,8 +132,8 @@ export function RuntimeOperationsPanel({ companyId }: { companyId: string }) {
     <div className="space-y-4" data-runtime-operations-panel="">
       <MissionControlRow className="justify-between gap-3">
         <div className="space-y-1">
-          <div className="text-sm font-semibold text-foreground">Runtime Operations</div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <h2 className="text-h2 text-foreground">Runtime Operations</h2>
+          <p className="text-caption text-muted-foreground">
             Heartbeats, checkout leases, and budget hard-stops are now visible from the same
             workspace control plane.
           </p>
@@ -185,7 +185,7 @@ export function RuntimeOperationsPanel({ companyId }: { companyId: string }) {
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
           <div className="space-y-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="text-eyebrow text-muted-foreground">
               Live Runtime Sessions
             </div>
             {sessions.map((session) => (
@@ -193,11 +193,11 @@ export function RuntimeOperationsPanel({ companyId }: { companyId: string }) {
             ))}
           </div>
           <div className="space-y-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="text-eyebrow text-muted-foreground">
               Active Ticket Checkouts
             </div>
             {activeCheckouts.length === 0 ? (
-              <MissionInsetSurface className="p-4 text-sm leading-6 text-muted-foreground">
+              <MissionInsetSurface className="p-4 text-body text-muted-foreground">
                 No ticket checkout lease is currently active.
               </MissionInsetSurface>
             ) : (

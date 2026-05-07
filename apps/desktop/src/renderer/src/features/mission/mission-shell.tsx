@@ -73,9 +73,7 @@ export function MissionHero({
           {(eyebrow || badge) && (
             <div className="flex flex-wrap items-center gap-3">
               {eyebrow ? (
-                <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                  {eyebrow}
-                </span>
+                <span className="text-eyebrow text-muted-foreground">{eyebrow}</span>
               ) : null}
               {badge}
             </div>
@@ -90,13 +88,9 @@ export function MissionHero({
 
             <div className="space-y-3">
               <div className="space-y-2">
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground lg:text-[2rem]">
-                  {title}
-                </h1>
+                <h1 className="text-display text-foreground">{title}</h1>
                 {description ? (
-                  <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-[15px]">
-                    {description}
-                  </p>
+                  <p className="max-w-3xl text-body text-muted-foreground">{description}</p>
                 ) : null}
               </div>
 
@@ -132,9 +126,9 @@ export function MissionPill({
   return (
     <span
       className={cn(
-        'mission-pill inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] leading-none',
+        'mission-pill inline-flex items-center gap-1.5 rounded-full border px-3 py-1 leading-none',
+        uppercase ? 'text-eyebrow' : 'text-caption',
         mono && 'font-mono',
-        uppercase && 'font-semibold uppercase tracking-[0.22em]',
         tone === 'accent'
           ? 'border-brand/30 bg-black text-brand'
           : tone === 'warning'
@@ -191,13 +185,13 @@ export function MissionSectionCard({
             {(title || badge) && (
               <div className="flex flex-wrap items-center gap-2">
                 {title ? (
-                  <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
+                  <CardTitle className="text-h3 text-foreground">{title}</CardTitle>
                 ) : null}
                 {badge}
               </div>
             )}
             {description ? (
-              <CardDescription className="text-sm text-muted-foreground">
+              <CardDescription className="text-body-sm text-muted-foreground">
                 {description}
               </CardDescription>
             ) : null}
@@ -276,8 +270,8 @@ export function MissionSegmentedButton({
     <button
       type={type}
       className={cn(
-        'mission-segmented-button rounded-[18px] border font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50',
-        compact ? 'px-3 py-2 text-[11px]' : 'px-3.5 py-2 text-xs',
+        'mission-segmented-button rounded-[18px] border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50',
+        compact ? 'px-3 py-2 text-button-sm' : 'px-3.5 py-2 text-button-sm',
         active
           ? 'border-brand/30 bg-black text-brand shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)]'
           : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground',
@@ -392,16 +386,14 @@ export function MissionSheetHeader({
         ) : null}
         <div className="min-w-0 flex-1">
           {eyebrow ? (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-              {eyebrow}
-            </p>
+            <p className="text-eyebrow-sm text-muted-foreground">{eyebrow}</p>
           ) : null}
           <div className="mt-1 flex items-center gap-2">
             {title}
             {badge}
           </div>
           {description ? (
-            <div className="mt-1 text-sm leading-6 text-muted-foreground">{description}</div>
+            <div className="mt-1 text-body-sm text-muted-foreground">{description}</div>
           ) : null}
         </div>
         {trailingAction}
@@ -445,13 +437,13 @@ export function MissionStateBlock({
       <div className="space-y-1">
         <p
           className={cn(
-            'text-sm font-medium',
+            'text-body-strong',
             tone === 'danger' ? 'text-red-100' : 'text-foreground',
           )}
         >
           {title}
         </p>
-        <p className="max-w-md text-sm leading-6 text-muted-foreground">{description}</p>
+        <p className="max-w-md text-body-sm text-muted-foreground">{description}</p>
       </div>
       {action}
     </div>
@@ -483,14 +475,14 @@ export function MissionMetricTile({
 
   const content = (
     <>
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+      <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
         {Icon ? <Icon className="h-4 w-4 text-brand" /> : null}
         {label}
       </div>
       <div className="flex items-end justify-between gap-3">
-        <span className="text-2xl font-semibold tracking-tight text-foreground">{value}</span>
+        <span className="text-numeric text-foreground">{value}</span>
       </div>
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className="text-caption text-muted-foreground">{hint}</p> : null}
     </>
   );
 

@@ -184,10 +184,10 @@ function SummaryTile({ label, value, icon: Icon }: SummaryTileProps) {
   return (
     <div className="flex min-h-20 items-center justify-between rounded-md border border-border/60 bg-background px-4 py-3">
       <div className="min-w-0">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-eyebrow text-muted-foreground">
           {label}
         </p>
-        <p className="mt-1 text-2xl font-semibold text-foreground">{value}</p>
+        <p className="mt-1 text-numeric text-foreground">{value}</p>
       </div>
       <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
     </div>
@@ -239,7 +239,7 @@ function ScheduleCard({
               </span>
             )}
           </div>
-          <p className={`mt-1 min-w-0 break-words text-xs font-semibold ${statusClass(item)}`}>
+          <p className={`mt-1 min-w-0 break-words text-caption font-semibold ${statusClass(item)}`}>
             {item.title}
           </p>
         </div>
@@ -270,7 +270,7 @@ function ScheduleCard({
           </div>
         )}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {compact ? formatTime(item.startsAt) : formatDateTime(item.startsAt)}
@@ -283,10 +283,10 @@ function ScheduleCard({
         )}
       </div>
       {!compact && linked && (
-        <p className="mt-2 truncate text-[11px] text-muted-foreground">{linked}</p>
+        <p className="mt-2 truncate text-caption text-muted-foreground">{linked}</p>
       )}
       {!compact && item.description && (
-        <p className="mt-2 line-clamp-2 break-words text-[11px] leading-5 text-muted-foreground">
+        <p className="mt-2 line-clamp-2 break-words text-caption text-muted-foreground">
           {item.description}
         </p>
       )}
@@ -422,7 +422,7 @@ export function ScheduleView({
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-2">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-          <p className="text-xs text-muted-foreground">Loading schedule...</p>
+          <p className="text-caption text-muted-foreground">Loading schedule...</p>
         </div>
       </div>
     );
@@ -432,7 +432,7 @@ export function ScheduleView({
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-sm font-medium text-muted-foreground">Failed to load schedule</p>
+          <p className="text-body-strong text-muted-foreground">Failed to load schedule</p>
           <Button type="button" size="sm" onClick={() => refetch()}>
             Retry
           </Button>
@@ -446,8 +446,8 @@ export function ScheduleView({
       <div className="border-b border-border/70 bg-background px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-foreground">Team Schedule</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <h2 className="text-h2 text-foreground">Team Schedule</h2>
+            <p className="mt-0.5 text-caption text-muted-foreground">
               {formatDay(weekStart)} - {formatDay(addDays(weekStart, 6))}
             </p>
           </div>
@@ -465,7 +465,7 @@ export function ScheduleView({
               <button
                 type="button"
                 onClick={() => setWeekStart(startOfWeek(Date.now()))}
-                className="border-x border-border/70 px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-100"
+                className="border-x border-border/70 px-3 py-2 text-button-sm text-foreground transition-colors hover:bg-surface-100"
               >
                 Today
               </button>
@@ -508,22 +508,22 @@ export function ScheduleView({
                 >
                   <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-foreground">
+                      <p className="truncate text-caption font-semibold text-foreground">
                         {formatDay(day)}
                       </p>
                       {isToday && (
-                        <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
+                        <p className="mt-0.5 text-eyebrow-sm text-brand">
                           Today
                         </p>
                       )}
                     </div>
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-eyebrow-sm text-muted-foreground">
                       {dayItems.length}
                     </span>
                   </div>
                   <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
                     {dayItems.length === 0 ? (
-                      <div className="flex min-h-24 flex-1 items-center justify-center rounded-md border border-dashed border-border/50 px-3 text-center text-[11px] text-muted-foreground/70">
+                      <div className="flex min-h-24 flex-1 items-center justify-center rounded-md border border-dashed border-border/50 px-3 text-center text-caption text-muted-foreground/70">
                         Clear
                       </div>
                     ) : (
@@ -553,7 +553,7 @@ export function ScheduleView({
           {formOpen && (
             <form onSubmit={handleSubmit} className="border-b border-border/70 p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h4 className="text-sm font-semibold text-foreground">Schedule Work</h4>
+                <h4 className="text-h4 text-foreground">Schedule Work</h4>
                 <button
                   type="button"
                   onClick={() => {
@@ -572,7 +572,7 @@ export function ScheduleView({
                 <div>
                   <label
                     htmlFor="schedule-title"
-                    className="text-xs font-medium text-muted-foreground"
+                    className="text-label text-muted-foreground"
                   >
                     Title *
                   </label>
@@ -581,7 +581,7 @@ export function ScheduleView({
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Follow up on launch readiness"
-                    className="mt-1 text-sm"
+                    className="mt-1 text-body"
                   />
                 </div>
 
@@ -589,7 +589,7 @@ export function ScheduleView({
                   <div>
                     <label
                       htmlFor="schedule-kind"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Type
                     </label>
@@ -597,7 +597,7 @@ export function ScheduleView({
                       id="schedule-kind"
                       value={kind}
                       onChange={(e) => setKind(e.target.value as ScheduleItemKind)}
-                      className="mission-select mt-1 w-full px-3 py-2 text-sm"
+                      className="mission-select mt-1 w-full px-3 py-2 text-body"
                     >
                       {KINDS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -609,7 +609,7 @@ export function ScheduleView({
                   <div>
                     <label
                       htmlFor="schedule-priority"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Priority
                     </label>
@@ -617,7 +617,7 @@ export function ScheduleView({
                       id="schedule-priority"
                       value={priority}
                       onChange={(e) => setPriority(e.target.value as TicketPriority)}
-                      className="mission-select mt-1 w-full px-3 py-2 text-sm"
+                      className="mission-select mt-1 w-full px-3 py-2 text-body"
                     >
                       {PRIORITIES.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -632,7 +632,7 @@ export function ScheduleView({
                   <div>
                     <label
                       htmlFor="schedule-start-date"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Start date *
                     </label>
@@ -641,13 +641,13 @@ export function ScheduleView({
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="mt-1 text-sm"
+                      className="mt-1 text-body"
                     />
                   </div>
                   <div>
                     <label
                       htmlFor="schedule-start-time"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Start time
                     </label>
@@ -656,7 +656,7 @@ export function ScheduleView({
                       type="time"
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
-                      className="mt-1 text-sm"
+                      className="mt-1 text-body"
                     />
                   </div>
                 </div>
@@ -665,7 +665,7 @@ export function ScheduleView({
                   <div>
                     <label
                       htmlFor="schedule-end-date"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       End date
                     </label>
@@ -674,13 +674,13 @@ export function ScheduleView({
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="mt-1 text-sm"
+                      className="mt-1 text-body"
                     />
                   </div>
                   <div>
                     <label
                       htmlFor="schedule-end-time"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       End time
                     </label>
@@ -689,7 +689,7 @@ export function ScheduleView({
                       type="time"
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
-                      className="mt-1 text-sm"
+                      className="mt-1 text-body"
                     />
                   </div>
                 </div>
@@ -698,7 +698,7 @@ export function ScheduleView({
                   <div>
                     <label
                       htmlFor="schedule-reminder-date"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Reminder date
                     </label>
@@ -707,13 +707,13 @@ export function ScheduleView({
                       type="date"
                       value={reminderDate}
                       onChange={(e) => setReminderDate(e.target.value)}
-                      className="mt-1 text-sm"
+                      className="mt-1 text-body"
                     />
                   </div>
                   <div>
                     <label
                       htmlFor="schedule-reminder-time"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Reminder time
                     </label>
@@ -722,7 +722,7 @@ export function ScheduleView({
                       type="time"
                       value={reminderTime}
                       onChange={(e) => setReminderTime(e.target.value)}
-                      className="mt-1 text-sm"
+                      className="mt-1 text-body"
                     />
                   </div>
                 </div>
@@ -730,7 +730,7 @@ export function ScheduleView({
                 <div>
                   <label
                     htmlFor="schedule-assignee"
-                    className="text-xs font-medium text-muted-foreground"
+                    className="text-label text-muted-foreground"
                   >
                     Assign wakeup
                   </label>
@@ -738,7 +738,7 @@ export function ScheduleView({
                     id="schedule-assignee"
                     value={assigneeId}
                     onChange={(e) => setAssigneeId(e.target.value)}
-                    className="mission-select mt-1 w-full px-3 py-2 text-sm"
+                    className="mission-select mt-1 w-full px-3 py-2 text-body"
                   >
                     <option value="">No assignee</option>
                     {employees.map((employee) => (
@@ -753,7 +753,7 @@ export function ScheduleView({
                   <div>
                     <label
                       htmlFor="schedule-link-kind"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Link to
                     </label>
@@ -764,7 +764,7 @@ export function ScheduleView({
                         setLinkKind(e.target.value as LinkKind);
                         setLinkId('');
                       }}
-                      className="mission-select mt-1 w-full px-3 py-2 text-sm"
+                      className="mission-select mt-1 w-full px-3 py-2 text-body"
                     >
                       <option value="none">Nothing</option>
                       <option value="ticket">Ticket</option>
@@ -775,7 +775,7 @@ export function ScheduleView({
                   <div>
                     <label
                       htmlFor="schedule-link-id"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Item
                     </label>
@@ -784,7 +784,7 @@ export function ScheduleView({
                       value={linkId}
                       onChange={(e) => setLinkId(e.target.value)}
                       disabled={linkKind === 'none' || linkOptions.length === 0}
-                      className="mission-select mt-1 w-full px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      className="mission-select mt-1 w-full px-3 py-2 text-body disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Select item</option>
                       {linkOptions.map((option) => (
@@ -799,7 +799,7 @@ export function ScheduleView({
                 <div>
                   <label
                     htmlFor="schedule-description"
-                    className="text-xs font-medium text-muted-foreground"
+                    className="text-label text-muted-foreground"
                   >
                     Notes
                   </label>
@@ -808,7 +808,7 @@ export function ScheduleView({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Context, acceptance criteria, or handoff notes..."
-                    className="mt-1 min-h-[88px] text-sm"
+                    className="mt-1 min-h-[88px] text-body"
                   />
                 </div>
 
@@ -838,12 +838,12 @@ export function ScheduleView({
 
           <div className="flex min-h-0 flex-col">
             <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
-              <h4 className="text-sm font-semibold text-foreground">Agenda</h4>
-              <span className="text-xs text-muted-foreground">{agendaItems.length}</span>
+              <h4 className="text-h4 text-foreground">Agenda</h4>
+              <span className="text-caption text-muted-foreground">{agendaItems.length}</span>
             </div>
             <div className="flex max-h-[720px] min-h-0 flex-col gap-2 overflow-y-auto p-3">
               {agendaItems.length === 0 ? (
-                <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed border-border/60 px-4 text-center text-xs text-muted-foreground">
+                <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed border-border/60 px-4 text-center text-caption text-muted-foreground">
                   Nothing scheduled
                 </div>
               ) : (

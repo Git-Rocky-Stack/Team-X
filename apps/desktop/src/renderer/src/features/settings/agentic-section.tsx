@@ -45,9 +45,7 @@ export function AgenticSection() {
   if (isLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Agentic Loop
-        </h4>
+        <h2 className="text-h2 text-foreground">Agentic Loop</h2>
         <Skeleton className="h-36 rounded-lg" />
       </section>
     );
@@ -56,10 +54,8 @@ export function AgenticSection() {
   if (isError || !data) {
     return (
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Agentic Loop
-        </h4>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <h2 className="text-h2 text-foreground">Agentic Loop</h2>
+        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
           Failed to load agentic loop settings.
         </div>
       </section>
@@ -87,16 +83,14 @@ export function AgenticSection() {
     <section className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Agentic Loop
-        </h4>
+        <h2 className="text-h2 text-foreground">Agentic Loop</h2>
         {setAgentic.isPending && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
       </div>
 
       {/* Description */}
-      <p className="text-[11px] text-muted-foreground leading-snug">
+      <p className="text-body-sm text-muted-foreground mt-1">
         Budget caps for the ReAct agentic loop triggered by complex requests from the command
         palette. Tighter caps mean faster termination; wider caps allow deeper reasoning at the cost
         of tokens and wall-clock time.
@@ -107,15 +101,10 @@ export function AgenticSection() {
         {/* Max steps */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="agentic-max-steps"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="agentic-max-steps" className="text-label text-muted-foreground">
               Max Steps
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
-              {draft.maxSteps}
-            </span>
+            <span className="text-code-sm text-foreground tabular-nums">{draft.maxSteps}</span>
           </div>
           <Input
             id="agentic-max-steps"
@@ -134,9 +123,9 @@ export function AgenticSection() {
               commit('maxSteps', next);
             }}
             disabled={setAgentic.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Maximum ReAct steps before the loop terminates with{' '}
             <span className="font-mono">budget_exhausted</span> ({maxSteps.min}–{maxSteps.max},
             default {maxSteps.default}).
@@ -146,13 +135,10 @@ export function AgenticSection() {
         {/* Max tokens */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="agentic-max-tokens"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="agentic-max-tokens" className="text-label text-muted-foreground">
               Max Tokens
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
+            <span className="text-code-sm text-foreground tabular-nums">
               {draft.maxTokens.toLocaleString()}
             </span>
           </div>
@@ -173,9 +159,9 @@ export function AgenticSection() {
               commit('maxTokens', next);
             }}
             disabled={setAgentic.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Token budget across all steps ({maxTokens.min.toLocaleString()}–
             {maxTokens.max.toLocaleString()}, default {maxTokens.default.toLocaleString()}).
           </p>
@@ -184,13 +170,10 @@ export function AgenticSection() {
         {/* Timeout ms */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="agentic-timeout-ms"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="agentic-timeout-ms" className="text-label text-muted-foreground">
               Timeout
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
+            <span className="text-code-sm text-foreground tabular-nums">
               {Math.round(draft.timeoutMs / 1000).toLocaleString()}s
             </span>
           </div>
@@ -211,9 +194,9 @@ export function AgenticSection() {
               commit('timeoutMs', next);
             }}
             disabled={setAgentic.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Wall-clock timeout in milliseconds ({timeoutMs.min.toLocaleString()}–
             {timeoutMs.max.toLocaleString()}, default {timeoutMs.default.toLocaleString()} —
             approximately {timeoutMinSec}s to {timeoutMaxSec}s).
@@ -223,7 +206,7 @@ export function AgenticSection() {
 
       {/* Save error banner */}
       {setAgentic.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
           <span className="min-w-0 truncate">Failed to save: {String(setAgentic.error)}</span>
         </div>
       )}

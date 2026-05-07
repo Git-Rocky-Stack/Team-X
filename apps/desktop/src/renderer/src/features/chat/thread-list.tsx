@@ -113,28 +113,28 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium text-foreground">
+          <span className="truncate text-body-strong text-foreground">
             {threadDisplayName(thread, employees)}
           </span>
-          <MissionPill className="shrink-0 px-2 py-1 text-[10px]" mono>
+          <MissionPill className="shrink-0 px-2 py-1 text-eyebrow-sm" mono>
             {formatTimestamp(thread.lastMessageAt)}
           </MissionPill>
         </div>
         {kind === 'copilot' && <SystemAgentBadge size="sm" className="mt-2" />}
         {kind === 'agent' && (
-          <MissionPill tone="warning" className="mt-2 px-2 py-1 text-[10px]">
+          <MissionPill tone="warning" className="mt-2 px-2 py-1 text-eyebrow-sm">
             <Bot className="h-2.5 w-2.5" />
             Agent conversation
           </MissionPill>
         )}
         {kind === 'ticket' && (
-          <MissionPill tone="accent" className="mt-2 px-2 py-1 text-[10px]">
+          <MissionPill tone="accent" className="mt-2 px-2 py-1 text-eyebrow-sm">
             <TicketCheck className="h-2.5 w-2.5" />
             Ticket thread
           </MissionPill>
         )}
         {kind === 'regular' && (
-          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          <p className="mt-2 text-caption text-muted-foreground">
             Direct thread ready to open in the communication drawer.
           </p>
         )}
@@ -151,10 +151,10 @@ interface SectionHeaderProps {
 function SectionHeader({ title, count }: SectionHeaderProps) {
   return (
     <div className="flex items-center gap-2 px-1 pb-1">
-      <h4 className="flex-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+      <h4 className="flex-1 text-eyebrow-sm text-muted-foreground">
         {title}
       </h4>
-      <MissionPill className="px-2 py-1 text-[10px] tabular-nums" mono>
+      <MissionPill className="px-2 py-1 text-eyebrow-sm tabular-nums" mono>
         {count}
       </MissionPill>
     </div>
@@ -177,7 +177,7 @@ export function ThreadList({
   if (threads.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center px-4 py-12">
-        <p className="max-w-sm text-center text-sm leading-6 text-muted-foreground">
+        <p className="max-w-sm text-center text-body text-muted-foreground">
           No threads yet. Start a conversation with an employee.
         </p>
       </div>

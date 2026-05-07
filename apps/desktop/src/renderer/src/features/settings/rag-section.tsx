@@ -92,9 +92,7 @@ export function RagSection() {
   if (configLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          RAG (Retrieval-Augmented Generation)
-        </h4>
+        <h2 className="text-h2 text-foreground">RAG (Retrieval-Augmented Generation)</h2>
         <Skeleton className="h-48 rounded-lg" />
       </section>
     );
@@ -103,10 +101,8 @@ export function RagSection() {
   if (configError || !config) {
     return (
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          RAG (Retrieval-Augmented Generation)
-        </h4>
-        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <h2 className="text-h2 text-foreground">RAG (Retrieval-Augmented Generation)</h2>
+        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
           <AlertTriangle className="h-3.5 w-3.5" />
           Failed to load RAG configuration.
         </div>
@@ -157,9 +153,7 @@ export function RagSection() {
     <section className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          RAG (Retrieval-Augmented Generation)
-        </h4>
+        <h2 className="text-h2 text-foreground">RAG (Retrieval-Augmented Generation)</h2>
         {setConfig.isPending && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
@@ -195,11 +189,11 @@ export function RagSection() {
         <div className="min-w-0 flex-1">
           <label
             htmlFor="rag-enabled-toggle"
-            className="text-xs font-medium text-foreground cursor-pointer"
+            className="text-body-strong text-foreground cursor-pointer"
           >
             Enable RAG
           </label>
-          <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+          <p className="text-caption text-muted-foreground mt-0.5 leading-snug">
             Injects relevant context from past messages, tickets, and meetings into agent prompts.
           </p>
         </div>
@@ -234,13 +228,10 @@ export function RagSection() {
         className={`rounded-lg border border-border bg-surface-50 p-4 space-y-3 transition-opacity ${disabledKnobs ? 'opacity-60' : ''}`}
         aria-disabled={disabledKnobs}
       >
-        <p className="text-xs font-semibold text-foreground">Embedding Provider</p>
+        <h3 className="text-h3 text-foreground">Embedding Provider</h3>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <div className="space-y-1">
-            <label
-              htmlFor="rag-embedding-provider"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="rag-embedding-provider" className="text-label text-muted-foreground">
               Provider
             </label>
             <Input
@@ -250,17 +241,14 @@ export function RagSection() {
               onBlur={() => commit('embeddingProvider', draft.embeddingProvider.trim() || 'auto')}
               disabled={disabledKnobs || setConfig.isPending}
               placeholder="auto"
-              className="h-8 text-xs"
+              className="h-8 text-body-sm"
             />
-            <p className="text-[10px] text-muted-foreground/70">
+            <p className="text-caption text-muted-foreground/70">
               &apos;auto&apos; or provider id (e.g. &apos;ollama-local&apos;)
             </p>
           </div>
           <div className="space-y-1">
-            <label
-              htmlFor="rag-embedding-model"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="rag-embedding-model" className="text-label text-muted-foreground">
               Model
             </label>
             <Input
@@ -270,15 +258,12 @@ export function RagSection() {
               onBlur={() => commit('embeddingModel', draft.embeddingModel.trim() || 'auto')}
               disabled={disabledKnobs || setConfig.isPending}
               placeholder="nomic-embed-text"
-              className="h-8 text-xs"
+              className="h-8 text-body-sm"
             />
-            <p className="text-[10px] text-muted-foreground/70">&apos;auto&apos; or model name</p>
+            <p className="text-caption text-muted-foreground/70">&apos;auto&apos; or model name</p>
           </div>
           <div className="space-y-1">
-            <label
-              htmlFor="rag-embedding-dimension"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="rag-embedding-dimension" className="text-label text-muted-foreground">
               Dimension
             </label>
             <Input
@@ -303,9 +288,9 @@ export function RagSection() {
                 commit('embeddingDimension', next);
               }}
               disabled={disabledKnobs || setConfig.isPending}
-              className="h-8 text-xs font-mono"
+              className="h-8 text-code-sm"
             />
-            <p className="text-[10px] text-muted-foreground/70">
+            <p className="text-caption text-muted-foreground/70">
               Must match provider output (e.g. 768, 1536)
             </p>
           </div>
@@ -317,17 +302,15 @@ export function RagSection() {
         className={`rounded-lg border border-border bg-surface-50 p-4 space-y-4 transition-opacity ${disabledKnobs ? 'opacity-60' : ''}`}
         aria-disabled={disabledKnobs}
       >
-        <p className="text-xs font-semibold text-foreground">Retrieval</p>
+        <h3 className="text-h3 text-foreground">Retrieval</h3>
 
         {/* Top-K */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label htmlFor="rag-top-k" className="text-[11px] font-medium text-muted-foreground">
+            <label htmlFor="rag-top-k" className="text-label text-muted-foreground">
               Top-K
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
-              {draft.ragTopK}
-            </span>
+            <span className="text-code-sm text-foreground tabular-nums">{draft.ragTopK}</span>
           </div>
           <Input
             id="rag-top-k"
@@ -346,9 +329,9 @@ export function RagSection() {
               commit('ragTopK', next);
             }}
             disabled={disabledKnobs || setConfig.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Number of relevant chunks to retrieve per query (1–{RAG_TOP_K_MAX}).
           </p>
         </div>
@@ -356,13 +339,10 @@ export function RagSection() {
         {/* Threshold */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="rag-threshold"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="rag-threshold" className="text-label text-muted-foreground">
               Threshold
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
+            <span className="text-code-sm text-foreground tabular-nums">
               {draft.ragThreshold.toFixed(2)}
             </span>
           </div>
@@ -385,7 +365,7 @@ export function RagSection() {
             aria-valuemax={RAG_THRESHOLD_MAX}
             aria-valuenow={draft.ragThreshold}
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Cosine similarity cutoff — higher = stricter match.
           </p>
         </div>
@@ -393,15 +373,10 @@ export function RagSection() {
         {/* Max tokens */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="rag-max-tokens"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="rag-max-tokens" className="text-label text-muted-foreground">
               Max tokens
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
-              {draft.ragMaxTokens}
-            </span>
+            <span className="text-code-sm text-foreground tabular-nums">{draft.ragMaxTokens}</span>
           </div>
           <Input
             id="rag-max-tokens"
@@ -420,9 +395,9 @@ export function RagSection() {
               commit('ragMaxTokens', next);
             }}
             disabled={disabledKnobs || setConfig.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Maximum token budget for injected context ({RAG_MAX_TOKENS_MIN}–{RAG_MAX_TOKENS_MAX}).
           </p>
         </div>
@@ -430,7 +405,7 @@ export function RagSection() {
 
       {/* Save error banner */}
       {setConfig.isError && (
-        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span className="min-w-0 truncate">Failed to save: {String(setConfig.error)}</span>
         </div>
@@ -439,7 +414,7 @@ export function RagSection() {
       {/* Stats card */}
       <div className="rounded-lg border border-border bg-surface-50 p-4">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-foreground">Index Stats</p>
+          <h3 className="text-h3 text-foreground">Index Stats</h3>
           {statsLoading && !stats ? (
             <Badge
               variant="outline"
@@ -476,40 +451,38 @@ export function RagSection() {
           )}
         </div>
         {!hasCompany ? (
-          <p className="text-[11px] text-muted-foreground">Select a company to view index stats.</p>
+          <p className="text-caption text-muted-foreground">
+            Select a company to view index stats.
+          </p>
         ) : statsLoading ? (
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-2 text-caption text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
             Loading stats…
           </div>
         ) : stats ? (
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                Chunks Indexed
-              </p>
-              <p className="text-sm font-semibold text-foreground tabular-nums mt-0.5">
+              <p className="text-eyebrow-sm text-muted-foreground">Chunks Indexed</p>
+              <p className="text-body-strong text-foreground tabular-nums mt-0.5">
                 {stats.embeddingCount.toLocaleString()}
               </p>
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                Last Indexed
-              </p>
-              <p className="text-sm font-medium text-foreground mt-0.5">
+              <p className="text-eyebrow-sm text-muted-foreground">Last Indexed</p>
+              <p className="text-body-strong text-foreground mt-0.5">
                 {formatRelative(stats.lastIndexedAt)}
               </p>
             </div>
           </div>
         ) : (
-          <p className="text-[11px] text-muted-foreground">No stats available.</p>
+          <p className="text-caption text-muted-foreground">No stats available.</p>
         )}
       </div>
 
       {/* Action buttons */}
       <div className="rounded-lg border border-border bg-surface-50 p-4 space-y-2">
-        <p className="text-xs font-semibold text-foreground">Maintenance</p>
-        <p className="text-[11px] text-muted-foreground leading-snug">
+        <h3 className="text-h3 text-foreground">Maintenance</h3>
+        <p className="text-caption text-muted-foreground">
           Rebuild re-indexes every eligible source. Delete wipes all embeddings without re-indexing.
           Both actions are destructive and cannot be undone.
         </p>
@@ -517,18 +490,18 @@ export function RagSection() {
         {/* Rebuild row */}
         <div className="flex items-center justify-between gap-2 pt-1">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-foreground">Rebuild Index</p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-body-strong text-foreground">Rebuild Index</p>
+            <p className="text-caption text-muted-foreground">
               Wipe and re-embed every eligible source for this company.
             </p>
           </div>
           {confirmAction === 'rebuild' ? (
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] text-amber-400 mr-1">Rebuild all?</span>
+              <span className="text-caption text-amber-400 mr-1">Rebuild all?</span>
               <Button
                 size="sm"
                 variant="destructive"
-                className="h-7 px-2.5 text-[11px]"
+                className="h-7 px-2.5 text-caption"
                 onClick={handleRebuildConfirm}
                 disabled={rebuildRag.isPending || !hasCompany}
               >
@@ -537,7 +510,7 @@ export function RagSection() {
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 px-2.5 text-[11px]"
+                className="h-7 px-2.5 text-caption"
                 onClick={() => setConfirmAction(null)}
               >
                 Cancel
@@ -547,7 +520,7 @@ export function RagSection() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 px-2.5 text-[11px] gap-1.5 shrink-0"
+              className="h-7 px-2.5 text-caption gap-1.5 shrink-0"
               onClick={() => {
                 setRebuildFeedback(null);
                 setConfirmAction('rebuild');
@@ -567,18 +540,18 @@ export function RagSection() {
         {/* Delete row */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-foreground">Delete All Embeddings</p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-body-strong text-foreground">Delete All Embeddings</p>
+            <p className="text-caption text-muted-foreground">
               Wipe every embedding row. No re-index.
             </p>
           </div>
           {confirmAction === 'delete' ? (
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] text-red-400 mr-1">Delete all?</span>
+              <span className="text-caption text-red-400 mr-1">Delete all?</span>
               <Button
                 size="sm"
                 variant="destructive"
-                className="h-7 px-2.5 text-[11px]"
+                className="h-7 px-2.5 text-caption"
                 onClick={handleDeleteConfirm}
                 disabled={deleteRag.isPending || !hasCompany}
               >
@@ -587,7 +560,7 @@ export function RagSection() {
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 px-2.5 text-[11px]"
+                className="h-7 px-2.5 text-caption"
                 onClick={() => setConfirmAction(null)}
               >
                 Cancel
@@ -597,7 +570,7 @@ export function RagSection() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 px-2.5 text-[11px] gap-1.5 shrink-0 hover:text-destructive hover:border-destructive/50"
+              className="h-7 px-2.5 text-caption gap-1.5 shrink-0 hover:text-destructive hover:border-destructive/50"
               onClick={() => {
                 setDeleteFeedback(null);
                 setConfirmAction('delete');
@@ -616,25 +589,25 @@ export function RagSection() {
 
         {/* Action feedback banners */}
         {rebuildFeedback && (
-          <div className="mt-2 flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-xs text-green-400">
+          <div className="mt-2 flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-body text-green-400">
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
             {rebuildFeedback}
           </div>
         )}
         {rebuildRag.isError && (
-          <div className="mt-2 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
+          <div className="mt-2 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-body text-red-400">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate">Rebuild failed: {String(rebuildRag.error)}</span>
           </div>
         )}
         {deleteFeedback && (
-          <div className="mt-2 flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-xs text-green-400">
+          <div className="mt-2 flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-body text-green-400">
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
             {deleteFeedback}
           </div>
         )}
         {deleteRag.isError && (
-          <div className="mt-2 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-xs text-red-400">
+          <div className="mt-2 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-body text-red-400">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate">Delete failed: {String(deleteRag.error)}</span>
           </div>

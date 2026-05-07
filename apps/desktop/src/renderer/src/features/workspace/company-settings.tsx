@@ -219,9 +219,9 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
           <MissionSheetHeader
             eyebrow="Workspace control"
             icon={Building2}
-            title={<SheetTitle className="text-base">Company settings</SheetTitle>}
+            title={<SheetTitle className="text-h3">Company settings</SheetTitle>}
             description={
-              <SheetDescription className="m-0 text-sm leading-6">
+              <SheetDescription className="m-0 text-body">
                 Keep workspace identity current, tune the visible theme, and manage lifecycle
                 actions from one control sheet.
               </SheetDescription>
@@ -229,13 +229,13 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
           />
 
           {!company ? (
-            <div className="px-5 py-8 text-sm text-muted-foreground">No workspace selected.</div>
+            <div className="px-5 py-8 text-body text-muted-foreground">No workspace selected.</div>
           ) : (
             <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-thin">
               <MissionInsetSurface className="p-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">General</h3>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  <h3 className="text-h3 text-foreground">General</h3>
+                  <p className="mt-1 text-body text-muted-foreground">
                     Name, slug, icon, and theme apply to this workspace.
                   </p>
                 </div>
@@ -244,7 +244,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                   <div className="space-y-1.5">
                     <label
                       htmlFor="company-settings-name"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Workspace name
                     </label>
@@ -261,7 +261,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                     {nameError ? (
                       <p
                         id="company-settings-name-error"
-                        className="text-xs text-destructive"
+                        className="text-caption text-destructive"
                         data-company-settings-error="name"
                       >
                         {nameError}
@@ -272,7 +272,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                   <div className="space-y-1.5">
                     <label
                       htmlFor="company-settings-slug"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Slug
                     </label>
@@ -289,7 +289,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                     {slugError ? (
                       <p
                         id="company-settings-slug-error"
-                        className="text-xs text-destructive"
+                        className="text-caption text-destructive"
                         data-company-settings-error="slug"
                       >
                         {slugError}
@@ -300,7 +300,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                   <div className="space-y-1.5">
                     <label
                       htmlFor="company-settings-icon"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Icon
                     </label>
@@ -316,7 +316,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                   </div>
 
                   <fieldset className="space-y-2 border-0 p-0">
-                    <legend className="text-xs font-medium text-muted-foreground">Theme</legend>
+                    <legend className="text-label text-muted-foreground">Theme</legend>
                     <div className="flex gap-2">
                       {(['dark', 'light'] as ThemeChoice[]).map((choice) => {
                         const isSelected = theme === choice;
@@ -325,7 +325,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                             key={choice}
                             data-company-settings-theme={choice}
                             className={cn(
-                              'flex-1 cursor-pointer rounded-[18px] border px-3 py-3 text-center text-xs font-semibold capitalize transition-colors',
+                              'flex-1 cursor-pointer rounded-[18px] border px-3 py-3 text-center text-button-sm capitalize transition-colors',
                               'focus-within:outline-none focus-within:ring-2 focus-within:ring-brand',
                               isSelected
                                 ? 'border-brand/30 bg-black text-brand'
@@ -350,7 +350,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                   <div className="space-y-1.5">
                     <label
                       htmlFor="company-settings-provider"
-                      className="text-xs font-medium text-muted-foreground"
+                      className="text-label text-muted-foreground"
                     >
                       Default provider
                     </label>
@@ -359,7 +359,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       value={defaultProviderId}
                       onChange={(e) => setDefaultProviderId(e.target.value)}
                       data-company-settings-field="defaultProviderId"
-                      className="h-10 w-full rounded-md border border-white/10 bg-black px-3 text-sm text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30"
+                      className="h-10 w-full rounded-md border border-white/10 bg-black px-3 text-body text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30"
                     >
                       <option value="">Use system defaults</option>
                       {providers?.map((provider) => (
@@ -368,7 +368,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-caption text-muted-foreground">
                       Default LLM provider for all employees. Employees can override this in their
                       profile.
                     </p>
@@ -394,8 +394,8 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 text-destructive" aria-hidden="true" />
                   <div>
-                    <h3 className="text-sm font-semibold text-foreground">Danger zone</h3>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    <h3 className="text-h3 text-foreground">Danger zone</h3>
+                    <p className="mt-1 text-body text-muted-foreground">
                       Archive removes this workspace from active use. Delete is permanent.
                     </p>
                   </div>
@@ -415,11 +415,11 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                   </Button>
 
                   <details className="rounded-[20px] border border-destructive/25 bg-black p-3">
-                    <summary className="cursor-pointer text-xs font-medium text-destructive">
+                    <summary className="cursor-pointer text-label text-destructive">
                       Permanently delete this workspace
                     </summary>
                     <div className="mt-3 space-y-3">
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-caption text-muted-foreground">
                         Type <span className="font-semibold text-foreground">{company.name}</span>{' '}
                         to confirm.
                       </p>
@@ -447,7 +447,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
               </MissionInsetSurface>
 
               {submitError ? (
-                <p className="mt-4 text-xs text-destructive" data-company-settings-error="submit">
+                <p className="mt-4 text-caption text-destructive" data-company-settings-error="submit">
                   {submitError}
                 </p>
               ) : null}

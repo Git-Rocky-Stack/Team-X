@@ -107,10 +107,10 @@ function ScenarioResultRow({ result }: { result: AutonomyBenchmarkScenarioResult
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <StatusIcon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">{result.label}</span>
+            <span className="text-body-strong text-foreground">{result.label}</span>
             <MissionPill tone={resultTone(result.status)}>{result.status}</MissionPill>
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             {formatMs(result.metrics.latencyMs)} latency, {result.metrics.tokenCount} tokens,{' '}
             {formatCost(result.metrics.costUsd)} simulated spend.
           </p>
@@ -121,7 +121,7 @@ function ScenarioResultRow({ result }: { result: AutonomyBenchmarkScenarioResult
       <EvidencePills result={result} />
 
       {result.evidence.notes.length > 0 ? (
-        <div className="space-y-1 text-xs leading-5 text-muted-foreground">
+        <div className="space-y-1 text-caption text-muted-foreground">
           {result.evidence.notes.slice(0, 2).map((note) => (
             <p key={note}>{note}</p>
           ))}
@@ -129,7 +129,7 @@ function ScenarioResultRow({ result }: { result: AutonomyBenchmarkScenarioResult
       ) : null}
 
       {result.error ? (
-        <div className="rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs leading-5 text-red-100">
+        <div className="rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-caption text-red-100">
           {result.error}
         </div>
       ) : null}
@@ -158,10 +158,10 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <Gauge className="h-4 w-4 text-muted-foreground" />
-            <div className="text-sm font-semibold text-foreground">Autonomy Benchmarks</div>
+            <h2 className="text-h2 text-foreground">Autonomy Benchmarks</h2>
             <MissionPill>control-plane-simulated</MissionPill>
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Repeatable scenario replay for checkout conflicts, stale recovery, budget stops, missing
             secrets, artifact evidence, template kickoff, and reboot resume.
           </p>
@@ -195,14 +195,14 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <MissionInsetSurface className="space-y-4 p-4">
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="text-eyebrow text-muted-foreground">
               Runtime Targets
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {RUNTIME_PROFILE_KINDS.map((kind) => (
                 <label
                   key={kind}
-                  className="flex min-h-11 items-center gap-3 rounded-md border border-white/10 bg-black/10 px-3 py-2 text-sm text-foreground"
+                  className="flex min-h-11 items-center gap-3 rounded-md border border-white/10 bg-black/10 px-3 py-2 text-body text-foreground"
                   data-autonomy-benchmark-runtime={kind}
                 >
                   <input
@@ -217,14 +217,14 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
           </div>
 
           <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="text-eyebrow text-muted-foreground">
               Scenario Set
             </div>
             <div className="grid gap-2">
               {AUTONOMY_BENCHMARK_SCENARIO_IDS.map((scenarioId) => (
                 <label
                   key={scenarioId}
-                  className="flex min-h-11 items-center gap-3 rounded-md border border-white/10 bg-black/10 px-3 py-2 text-sm text-foreground"
+                  className="flex min-h-11 items-center gap-3 rounded-md border border-white/10 bg-black/10 px-3 py-2 text-body text-foreground"
                   data-autonomy-benchmark-scenario={scenarioId}
                 >
                   <input
@@ -288,7 +288,7 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
                   data-autonomy-benchmark-runtime-group={runtimeKind}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-sm font-semibold text-foreground">{runtimeKind}</div>
+                    <div className="text-body-strong text-foreground">{runtimeKind}</div>
                     <MissionPill
                       tone={
                         results.every((result) => result.status === 'passed') ? 'accent' : 'danger'

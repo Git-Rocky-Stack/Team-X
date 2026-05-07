@@ -26,7 +26,7 @@ type SkillInstallSource = 'local' | 'url';
 const LAST_LOCAL_SKILL_PATH_KEY = 'teamx.lastLocalSkillPath';
 
 const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 function formatInstallError(message: string | null): string | null {
   if (!message) return null;
@@ -181,8 +181,8 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
             >
               <FolderOpen className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <span>
-                <span className="block text-sm font-medium">Local Folder</span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-body-strong">Local Folder</span>
+                <span className="block text-caption text-muted-foreground">
                   Browse or type any folder path.
                 </span>
               </span>
@@ -201,8 +201,8 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
             >
               <Globe2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <span>
-                <span className="block text-sm font-medium">Public URL</span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-body-strong">Public URL</span>
+                <span className="block text-caption text-muted-foreground">
                   GitHub, raw GitHub, or direct manifest URL.
                 </span>
               </span>
@@ -211,10 +211,7 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
 
           {source === 'local' ? (
             <div className="space-y-1.5">
-              <label
-                htmlFor="skill-folder-path"
-                className="text-xs font-medium text-muted-foreground"
-              >
+              <label htmlFor="skill-folder-path" className="text-label text-muted-foreground">
                 Folder Path
               </label>
               <div className="flex gap-2">
@@ -226,7 +223,7 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
                     setDirectoryError(null);
                   }}
                   placeholder="C:\\path\\to\\team-x-skill"
-                  className="font-mono text-sm"
+                  className="text-code"
                   data-skill-folder-path=""
                 />
                 <Button
@@ -240,7 +237,7 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
                   Browse
                 </Button>
               </div>
-              <p className="text-[11px] leading-snug text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 Team-X snapshots the manifest and referenced prompt files into workspace app data,
                 then applies the current autonomy policy automatically. The field is editable; the
                 last successful folder is remembered as your local default.
@@ -248,10 +245,7 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
             </div>
           ) : (
             <div className="space-y-1.5">
-              <label
-                htmlFor="skill-source-url"
-                className="text-xs font-medium text-muted-foreground"
-              >
+              <label htmlFor="skill-source-url" className="text-label text-muted-foreground">
                 Public URL
               </label>
               <Input
@@ -259,10 +253,10 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
                 value={sourceUrl}
                 onChange={(event) => setSourceUrl(event.target.value)}
                 placeholder="https://github.com/acme/team-x-skills/tree/main/ops-briefing"
-                className="font-mono text-sm"
+                className="text-code"
                 data-skill-source-url-input=""
               />
-              <p className="text-[11px] leading-snug text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 Supports GitHub repo, tree, blob, raw GitHub, and direct HTTPS manifest URLs. Folder
                 URLs are checked for `teamx-skill.json` and `team-x-skill.json`.
               </p>
@@ -270,13 +264,13 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
           )}
 
           {directoryError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-body text-destructive">
               {directoryError}
             </div>
           )}
 
           {activeError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-body text-destructive">
               {activeError}
             </div>
           )}

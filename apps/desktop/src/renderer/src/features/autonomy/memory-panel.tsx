@@ -154,11 +154,11 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">Thread Memory</span>
+              <h2 className="text-h2 text-foreground">Thread Memory</h2>
               <MissionPill tone="accent">{selectedThread.kind}</MissionPill>
               {selectedThread.isSystemAgent ? <MissionPill>system agent</MissionPill> : null}
             </div>
-            <p className="text-xs leading-5 text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               Inspect the latest digest, resumable checkpoints, and packed-context composition for
               one live thread at a time.
             </p>
@@ -188,13 +188,13 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
 
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
           <label className="space-y-2">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="text-eyebrow text-muted-foreground">
               Focus thread
             </span>
             <select
               value={selectedThreadId}
               onChange={(event) => setSelectedThreadId(event.target.value)}
-              className="w-full rounded-[16px] border border-white/10 bg-black/20 px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+              className="w-full rounded-[16px] border border-white/10 bg-black/20 px-4 py-3 text-body text-foreground outline-none transition focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
               data-memory-thread-select=""
             >
               {threads.map((thread) => (
@@ -206,7 +206,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
           </label>
 
           <div className="space-y-2">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="text-eyebrow text-muted-foreground">
               Pack budget
             </span>
             <MissionControlRow className="gap-2">
@@ -266,8 +266,8 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
           <MissionInsetSurface className="space-y-4 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-sm font-semibold text-foreground">Latest Digest</div>
-                <div className="text-xs text-muted-foreground">
+                <h3 className="text-h3 text-foreground">Latest Digest</h3>
+                <div className="text-caption text-muted-foreground">
                   Updated {formatMemoryTimestamp(digest?.updatedAt ?? null)}
                 </div>
               </div>
@@ -291,7 +291,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
               />
             ) : digest ? (
               <div className="space-y-4">
-                <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 text-sm leading-6 text-foreground/90">
+                <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 text-body text-foreground/90">
                   {digest.summary}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -300,7 +300,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                       <MissionPill key={fact.id}>{fact.fact}</MissionPill>
                     ))
                   ) : (
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-caption text-muted-foreground">
                       No pinned facts were captured for this digest yet.
                     </span>
                   )}
@@ -318,8 +318,8 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
           <MissionInsetSurface className="space-y-4 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <div className="text-sm font-semibold text-foreground">Packed Context</div>
-                <div className="text-xs text-muted-foreground">
+                <h3 className="text-h3 text-foreground">Packed Context</h3>
+                <div className="text-caption text-muted-foreground">
                   Budget {effectiveTargetTokenBudget.toLocaleString()} with {recentTurnLimit} recent
                   turns
                 </div>
@@ -345,7 +345,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
             ) : packedContext ? (
               <div className="space-y-4">
                 {packedResumeHint ? (
-                  <div className="rounded-[16px] border border-white/8 bg-black/15 px-4 py-2.5 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <div className="rounded-[16px] border border-white/8 bg-black/15 px-4 py-2.5 text-eyebrow text-muted-foreground">
                     {packedResumeHint}
                   </div>
                 ) : null}
@@ -370,7 +370,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                   />
                 </div>
 
-                <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 text-sm leading-6 text-foreground/90">
+                <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 text-body text-foreground/90">
                   {packedContext.systemAddendum.trim().length > 0
                     ? packedContext.systemAddendum
                     : 'No system addendum was needed for this pack.'}
@@ -383,14 +383,14 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="text-eyebrow text-muted-foreground">
                     Dropped blocks
                   </div>
                   {packedContext.droppedBlocks.length > 0 ? (
                     packedContext.droppedBlocks.slice(0, 6).map((drop) => (
                       <div
                         key={`${drop.blockId}-${drop.reason}`}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-white/8 bg-black/15 px-3 py-2 text-xs text-muted-foreground"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-white/8 bg-black/15 px-3 py-2 text-caption text-muted-foreground"
                         data-memory-dropped-block={drop.blockId}
                       >
                         <span className="font-semibold uppercase tracking-[0.14em] text-foreground/80">
@@ -400,7 +400,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                       </div>
                     ))
                   ) : (
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-caption text-muted-foreground">
                       Nothing was dropped at this target budget.
                     </span>
                   )}
@@ -413,8 +413,8 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
         <MissionInsetSurface className="space-y-4 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-sm font-semibold text-foreground">Run Checkpoints</div>
-              <div className="text-xs text-muted-foreground">
+              <h3 className="text-h3 text-foreground">Run Checkpoints</h3>
+              <div className="text-caption text-muted-foreground">
                 Newest first, with resumable blockers and next actions ({checkpointHistoryLimit}{' '}
                 visible)
               </div>
@@ -467,20 +467,20 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                         </MissionPill>
                       ) : null}
                     </div>
-                    <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    <span className="text-eyebrow text-muted-foreground">
                       {formatMemoryTimestamp(checkpoint.createdAt)}
                     </span>
                   </div>
-                  <div className="text-sm leading-6 text-foreground/90">
+                  <div className="text-body text-foreground/90">
                     {checkpoint.progressSummary}
                   </div>
                   {checkpoint.resumeOrigin ? (
-                    <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <div className="text-eyebrow text-muted-foreground">
                       {resumeOriginHint(checkpoint.resumeOrigin)}
                     </div>
                   ) : null}
                   {checkpoint.blockers.length > 0 ? (
-                    <div className="space-y-2 text-xs text-muted-foreground">
+                    <div className="space-y-2 text-caption text-muted-foreground">
                       {checkpoint.blockers.map((blocker, index) => (
                         <div
                           key={`${checkpoint.id}-${blocker.kind}-${index}`}
@@ -495,7 +495,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                     </div>
                   ) : null}
                   {checkpoint.nextAction ? (
-                    <div className="text-xs leading-5 text-muted-foreground">
+                    <div className="text-caption text-muted-foreground">
                       <span className="font-semibold uppercase tracking-[0.14em] text-foreground/80">
                         Next:
                       </span>{' '}

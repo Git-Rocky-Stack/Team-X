@@ -165,7 +165,7 @@ export function CostBreakdown({ companyId, kindFilter }: Props) {
         description="Inspect provider spend and model mix across a selectable time horizon."
       >
         <MissionControlRow className="justify-between gap-3 px-3 py-3">
-          <span className="px-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          <span className="px-2 text-eyebrow-sm text-muted-foreground">
             Period
           </span>
           <div className="flex flex-wrap items-center gap-2">
@@ -202,7 +202,7 @@ export function CostBreakdown({ companyId, kindFilter }: Props) {
               description="Aggregate spend split by provider for the selected period."
             >
               {providerData.every((provider) => provider.cost === 0) ? (
-                <MissionInsetSurface className="flex min-h-[260px] items-center justify-center border-dashed text-sm text-muted-foreground">
+                <MissionInsetSurface className="flex min-h-[260px] items-center justify-center border-dashed text-body text-muted-foreground">
                   All runs are on free providers for this period.
                 </MissionInsetSurface>
               ) : (
@@ -294,22 +294,22 @@ export function CostBreakdown({ companyId, kindFilter }: Props) {
             className="overflow-hidden"
           >
             <MissionInsetSurface className="overflow-hidden rounded-[20px] bg-black/15">
-              <table className="w-full text-sm">
+              <table className="w-full text-body">
                 <thead>
                   <tr className="border-b border-white/10 bg-black/20">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+                    <th className="px-4 py-3 text-left text-label text-muted-foreground">
                       Provider
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+                    <th className="px-4 py-3 text-left text-label text-muted-foreground">
                       Model
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">
+                    <th className="px-4 py-3 text-right text-label text-muted-foreground">
                       Runs
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">
+                    <th className="px-4 py-3 text-right text-label text-muted-foreground">
                       Tokens
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">
+                    <th className="px-4 py-3 text-right text-label text-muted-foreground">
                       Cost
                     </th>
                   </tr>
@@ -321,7 +321,7 @@ export function CostBreakdown({ companyId, kindFilter }: Props) {
                       className="border-b border-white/10 transition-colors last:border-b-0 hover:bg-surface-100/20"
                     >
                       <td className="px-4 py-3 font-medium text-foreground">{row.provider}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                      <td className="px-4 py-3 text-code-sm text-muted-foreground">
                         {row.model}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">{row.totalRuns}</td>

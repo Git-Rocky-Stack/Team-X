@@ -101,8 +101,8 @@ export function SkillsMarketplace({
       {/* Header with title and actions */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Skills Marketplace</h3>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-h2 text-foreground">Skills Marketplace</h2>
+          <p className="text-body text-muted-foreground">
             Browse and enable AI capabilities for your agents
           </p>
         </div>
@@ -160,7 +160,7 @@ export function SkillsMarketplace({
                     checked={showOnlyPopular}
                     onCheckedChange={setShowOnlyPopular}
                   />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-body text-muted-foreground">
                     {showOnlyPopular ? 'Popular skills' : 'All skills'}
                   </span>
                 </div>
@@ -174,7 +174,7 @@ export function SkillsMarketplace({
                     checked={showOnlyEnabled}
                     onCheckedChange={setShowOnlyEnabled}
                   />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-body text-muted-foreground">
                     {showOnlyEnabled ? 'Enabled skills' : 'All skills'}
                   </span>
                 </div>
@@ -182,7 +182,7 @@ export function SkillsMarketplace({
             </div>
 
             {/* Results summary */}
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between text-body text-muted-foreground">
               <span>Showing {filteredSkills.length} skill(s)</span>
               <div className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
@@ -202,8 +202,8 @@ export function SkillsMarketplace({
         <Card>
           <CardContent className="py-12 text-center">
             <Globe className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium mb-2">No skills found</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-h3 mb-2">No skills found</p>
+            <p className="text-body text-muted-foreground">
               Try adjusting your filters or search terms
             </p>
           </CardContent>
@@ -263,7 +263,7 @@ function SkillCard({ skill, isInstalled, isEnabled, onToggle }: SkillCardProps) 
             {/* Title and description */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-base truncate">{skill.name}</CardTitle>
+                <CardTitle className="text-h3 truncate">{skill.name}</CardTitle>
                 {skill.popular && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />}
                 {skill.new && <Zap className="h-3.5 w-3.5 text-blue-500" />}
               </div>
@@ -303,7 +303,7 @@ function SkillCard({ skill, isInstalled, isEnabled, onToggle }: SkillCardProps) 
 
         {/* Tools collapsible */}
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-          <CollapsibleTrigger className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left">
+          <CollapsibleTrigger className="text-caption text-muted-foreground hover:text-foreground transition-colors w-full text-left">
             <div className="flex items-center justify-between">
               <span>View {skill.tools.length} tool(s)</span>
               <span>{isExpanded ? '▼' : '▶'}</span>
@@ -312,9 +312,9 @@ function SkillCard({ skill, isInstalled, isEnabled, onToggle }: SkillCardProps) 
           <CollapsibleContent>
             <div className="mt-3 space-y-1">
               {skill.tools.map((tool) => (
-                <div key={tool} className="text-xs text-muted-foreground flex items-center gap-2">
+                <div key={tool} className="text-caption text-muted-foreground flex items-center gap-2">
                   <Check className="h-3 w-3 text-green-500" />
-                  <code className="bg-muted px-1.5 py-0.5 rounded">{tool}</code>
+                  <code className="bg-muted px-1.5 py-0.5 rounded text-code-sm">{tool}</code>
                 </div>
               ))}
             </div>
@@ -323,7 +323,7 @@ function SkillCard({ skill, isInstalled, isEnabled, onToggle }: SkillCardProps) 
 
         {/* Installation status */}
         {!isInstalled && (
-          <div className="text-xs text-muted-foreground italic">
+          <div className="text-caption text-muted-foreground italic">
             Not installed - click switch to install and enable
           </div>
         )}
@@ -333,11 +333,11 @@ function SkillCard({ skill, isInstalled, isEnabled, onToggle }: SkillCardProps) 
       {skill.longDescription && (
         <CardFooter className="pt-0">
           <Collapsible>
-            <CollapsibleTrigger className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <CollapsibleTrigger className="text-caption text-muted-foreground hover:text-foreground transition-colors">
               Learn more →
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+              <p className="text-caption text-muted-foreground mt-2 leading-relaxed">
                 {skill.longDescription}
               </p>
             </CollapsibleContent>

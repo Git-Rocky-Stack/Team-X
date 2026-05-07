@@ -63,12 +63,12 @@ export function PromoteDialog({
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <label className="block text-sm font-medium text-foreground" htmlFor="promote-role">
+          <label className="block text-body-strong text-foreground" htmlFor="promote-role">
             New role
           </label>
           <select
             id="promote-role"
-            className="w-full rounded-md border border-border bg-surface-100 px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand"
+            className="w-full rounded-md border border-border bg-surface-100 px-3 py-2 text-body text-foreground outline-none focus:ring-2 focus:ring-brand"
             value={roleId}
             onChange={(event) => setRoleId(event.target.value)}
             data-promote-role-select=""
@@ -85,12 +85,12 @@ export function PromoteDialog({
           </select>
 
           {selectedRole ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               {selectedRole.name} moves this row to {selectedRole.level}.
             </p>
           ) : null}
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? <p className="text-body text-red-400">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -34,9 +34,7 @@ export function ConcurrencySection() {
   if (isLoading) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Concurrency
-        </h4>
+        <h2 className="text-h2 text-foreground">Concurrency</h2>
         <Skeleton className="h-40 rounded-lg" />
       </section>
     );
@@ -45,10 +43,8 @@ export function ConcurrencySection() {
   if (isError || !data || !draft) {
     return (
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Concurrency
-        </h4>
-        <div className="rounded-lg border border-border bg-surface-50 px-4 py-3 text-xs text-muted-foreground">
+        <h2 className="text-h2 text-foreground">Concurrency</h2>
+        <div className="rounded-lg border border-border bg-surface-50 px-4 py-3 text-body text-muted-foreground">
           Failed to load concurrency settings.
         </div>
       </section>
@@ -107,9 +103,7 @@ export function ConcurrencySection() {
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Concurrency
-        </h4>
+        <h2 className="text-h2 text-foreground">Concurrency</h2>
         {setConcurrency.isPending && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
@@ -118,13 +112,10 @@ export function ConcurrencySection() {
       <div className="rounded-lg border border-border bg-surface-50 p-4 space-y-4">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="orchestrator-slots"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="orchestrator-slots" className="text-label text-muted-foreground">
               Orchestrator Slots
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
+            <span className="text-code-sm text-foreground tabular-nums">
               {draft.orchestratorSlots}
             </span>
           </div>
@@ -144,9 +135,9 @@ export function ConcurrencySection() {
             }
             onBlur={() => commitSlots(current.orchestratorSlots)}
             disabled={setConcurrency.isPending}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Maximum concurrent agent work items across all providers ({slotClamp.min}–
             {slotClamp.max}, default {slotClamp.default}).
           </p>
@@ -154,14 +145,14 @@ export function ConcurrencySection() {
 
         <div className="space-y-2">
           <div>
-            <p className="text-xs font-medium text-foreground">Per-Provider Kind Caps</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-body-strong text-foreground">Per-Provider Kind Caps</p>
+            <p className="text-caption text-muted-foreground mt-0.5">
               Maximum concurrent requests per provider kind for configured provider kinds.
             </p>
           </div>
 
           {visibleKinds.length === 0 ? (
-            <div className="rounded-md border border-dashed border-border px-3 py-3 text-[11px] text-muted-foreground">
+            <div className="rounded-md border border-dashed border-border px-3 py-3 text-caption text-muted-foreground">
               No provider kinds configured yet.
             </div>
           ) : (
@@ -177,14 +168,12 @@ export function ConcurrencySection() {
                     <div className="mb-1.5 flex items-center justify-between gap-4">
                       <label
                         htmlFor={`provider-cap-${kind}`}
-                        className="text-[11px] font-mono text-muted-foreground"
+                        className="text-code-sm text-muted-foreground"
                       >
                         {kind}
                         {providerCount > 1 ? ` ×${providerCount}` : ''}
                       </label>
-                      <span className="text-[11px] font-mono text-foreground tabular-nums">
-                        {capValue}
-                      </span>
+                      <span className="text-code-sm text-foreground tabular-nums">{capValue}</span>
                     </div>
                     <Input
                       id={`provider-cap-${kind}`}
@@ -205,7 +194,7 @@ export function ConcurrencySection() {
                       }
                       onBlur={() => commitProviderCap(kind, capValue)}
                       disabled={setConcurrency.isPending}
-                      className="h-8 text-xs font-mono"
+                      className="h-8 text-code-sm"
                     />
                   </div>
                 );

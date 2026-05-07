@@ -27,7 +27,7 @@ interface ImportMcpDialogProps {
 }
 
 const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 type ImportMode = 'template' | 'manual';
 
@@ -156,7 +156,7 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label htmlFor="mcp-import-mode" className="text-xs font-medium text-muted-foreground">
+            <label htmlFor="mcp-import-mode" className="text-label text-muted-foreground">
               Source
             </label>
             <select
@@ -173,7 +173,7 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
           {mode === 'template' ? (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label htmlFor="mcp-template" className="text-xs font-medium text-muted-foreground">
+                <label htmlFor="mcp-template" className="text-label text-muted-foreground">
                   Template
                 </label>
                 <select
@@ -196,17 +196,17 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
               </div>
 
               {templatesQuery.isLoading ? (
-                <p className="text-xs text-muted-foreground">Loading built-in templates...</p>
+                <p className="text-body text-muted-foreground">Loading built-in templates...</p>
               ) : templatesQuery.isError ? (
-                <p className="text-xs text-destructive">Failed to load built-in MCP templates.</p>
+                <p className="text-body text-destructive">Failed to load built-in MCP templates.</p>
               ) : selectedTemplate ? (
                 <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-sm font-medium text-foreground">
+                      <div className="text-body-strong text-foreground">
                         {selectedTemplate.name}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-body-sm text-muted-foreground">
                         {selectedTemplate.sourceRef}
                       </div>
                     </div>
@@ -215,17 +215,17 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
                       {selectedTemplate.installed && <Badge variant="secondary">Installed</Badge>}
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                  <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
                     <span>{selectedTemplate.requestedCapabilities.length} capabilities</span>
                     <span>{selectedTemplate.lastHealth ?? 'not yet connected'}</span>
                   </div>
-                  <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+                  <p className="mt-3 text-caption text-muted-foreground">
                     Built-in templates are copied into the current workspace as real MCP rows, so
                     you can enable, disable, and remove them independently afterward.
                   </p>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-body text-muted-foreground">
                   Choose a built-in template to review its runtime shape before installing it.
                 </p>
               )}
@@ -233,7 +233,7 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
           ) : (
             <>
               <div className="space-y-1.5">
-                <label htmlFor="mcp-name" className="text-xs font-medium text-muted-foreground">
+                <label htmlFor="mcp-name" className="text-label text-muted-foreground">
                   Server Name
                 </label>
                 <Input
@@ -245,10 +245,7 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
               </div>
 
               <div className="space-y-1.5">
-                <label
-                  htmlFor="mcp-transport"
-                  className="text-xs font-medium text-muted-foreground"
-                >
+                <label htmlFor="mcp-transport" className="text-label text-muted-foreground">
                   Transport
                 </label>
                 <select
@@ -265,10 +262,7 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
               {transport === 'stdio' ? (
                 <>
                   <div className="space-y-1.5">
-                    <label
-                      htmlFor="mcp-command"
-                      className="text-xs font-medium text-muted-foreground"
-                    >
+                    <label htmlFor="mcp-command" className="text-label text-muted-foreground">
                       Command
                     </label>
                     <Input
@@ -276,12 +270,12 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
                       value={command}
                       onChange={(event) => setCommand(event.target.value)}
                       placeholder="npx"
-                      className="font-mono text-sm"
+                      className="text-code"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label htmlFor="mcp-args" className="text-xs font-medium text-muted-foreground">
+                    <label htmlFor="mcp-args" className="text-label text-muted-foreground">
                       Args
                     </label>
                     <Textarea
@@ -289,28 +283,28 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
                       value={argsText}
                       onChange={(event) => setArgsText(event.target.value)}
                       placeholder="-y,@modelcontextprotocol/server-filesystem,C:\\Projects"
-                      className="min-h-20 font-mono text-sm"
+                      className="min-h-20 text-code"
                     />
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-caption text-muted-foreground">
                       Enter one arg per line or use commas.
                     </p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label htmlFor="mcp-env" className="text-xs font-medium text-muted-foreground">
+                    <label htmlFor="mcp-env" className="text-label text-muted-foreground">
                       Environment JSON
                     </label>
                     <Textarea
                       id="mcp-env"
                       value={envText}
                       onChange={(event) => setEnvText(event.target.value)}
-                      className="min-h-24 font-mono text-sm"
+                      className="min-h-24 text-code"
                     />
                   </div>
                 </>
               ) : (
                 <div className="space-y-1.5">
-                  <label htmlFor="mcp-url" className="text-xs font-medium text-muted-foreground">
+                  <label htmlFor="mcp-url" className="text-label text-muted-foreground">
                     SSE URL
                   </label>
                   <Input
@@ -318,7 +312,7 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
                     value={url}
                     onChange={(event) => setUrl(event.target.value)}
                     placeholder="https://example.com/sse"
-                    className="font-mono text-sm"
+                    className="text-code"
                   />
                 </div>
               )}
@@ -326,30 +320,30 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
           )}
 
           {mode === 'manual' && testConnection.isSuccess && testConnection.data.ok && (
-            <p className="text-xs text-emerald-600">
+            <p className="text-body text-emerald-600">
               Connection ok. Detected {testConnection.data.toolCount ?? 0} tool(s).
             </p>
           )}
           {mode === 'manual' && testConnection.isError && (
-            <p className="text-xs text-destructive">Failed to test MCP connection.</p>
+            <p className="text-body text-destructive">Failed to test MCP connection.</p>
           )}
           {mode === 'manual' && testConnection.isSuccess && testConnection.data.ok === false && (
-            <p className="text-xs text-destructive">
+            <p className="text-body text-destructive">
               {testConnection.data.error ?? 'MCP connection test failed.'}
             </p>
           )}
           {mode === 'template' && selectedTemplate?.installed && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-body text-muted-foreground">
               This template is already installed in the current workspace.
             </p>
           )}
           {mode === 'manual' && addMcpServer.isError && (
-            <p className="text-xs text-destructive">
+            <p className="text-body text-destructive">
               Failed to import the MCP server. Check the transport settings and try again.
             </p>
           )}
           {mode === 'template' && installTemplate.isError && (
-            <p className="text-xs text-destructive">
+            <p className="text-body text-destructive">
               Failed to install the selected template into this workspace.
             </p>
           )}

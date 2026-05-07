@@ -73,7 +73,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
   if (isLoading || !detail) {
     return (
       <div
-        className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground"
+        className="flex h-full items-center justify-center px-6 text-center text-body text-muted-foreground"
         data-ticket-detail-state="loading"
       >
         Loading ticket detail...
@@ -124,14 +124,14 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+            <span className="text-eyebrow-sm text-muted-foreground">
               Detail rail
             </span>
-            <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+            <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-eyebrow-sm font-mono text-muted-foreground">
               {detail.id.slice(0, 8)}
             </span>
           </div>
-          <h2 className="mt-2 truncate text-base font-semibold text-foreground">{detail.title}</h2>
+          <h2 className="mt-2 truncate text-h3 text-foreground">{detail.title}</h2>
         </div>
 
         <button
@@ -162,16 +162,16 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
             <div className="flex h-6 w-6 items-center justify-center rounded-[10px] border border-white/10 bg-brand/10 text-[10px] font-semibold text-brand">
               {assignee.name.charAt(0).toUpperCase()}
             </div>
-            <span className="text-[11px] text-muted-foreground">{assignee.name}</span>
+            <span className="text-caption text-muted-foreground">{assignee.name}</span>
           </div>
         ) : (
-          <span className="ml-auto text-[11px] italic text-muted-foreground/70">Unassigned</span>
+          <span className="ml-auto text-caption italic text-muted-foreground/70">Unassigned</span>
         )}
       </div>
 
       {detail.description ? (
         <div className="border-b border-white/10 px-5 py-4">
-          <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+          <p className="whitespace-pre-wrap text-body text-muted-foreground">
             {detail.description}
           </p>
         </div>
@@ -193,7 +193,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+            <span className="text-eyebrow-sm text-muted-foreground">
               Participants ({participants.length})
             </span>
           </div>
@@ -203,7 +203,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
           <select
             value={selectedParticipantId}
             onChange={(event) => setSelectedParticipantId(event.target.value)}
-            className="h-9 min-w-0 flex-1 rounded-[12px] border border-white/10 bg-black/15 px-2.5 text-xs text-foreground outline-none transition-colors focus:border-brand/60"
+            className="h-9 min-w-0 flex-1 rounded-[12px] border border-white/10 bg-black/15 px-2.5 text-menu-item text-foreground outline-none transition-colors focus:border-brand/60"
             aria-label="Add ticket participant"
             disabled={addableEmployees.length === 0 || addParticipant.isPending}
           >
@@ -242,8 +242,8 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
                     {participant.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <div className="truncate text-[11px] text-foreground">{participant.name}</div>
-                    <div className="truncate text-[10px] text-muted-foreground">
+                    <div className="truncate text-caption text-foreground">{participant.name}</div>
+                    <div className="truncate text-caption text-muted-foreground">
                       {isAssignee ? 'Owner' : participant.title}
                     </div>
                   </div>
@@ -263,7 +263,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
             })}
           </div>
         ) : (
-          <p className="mt-3 text-[11px] italic text-muted-foreground/70">
+          <p className="mt-3 text-caption italic text-muted-foreground/70">
             No employee participants yet.
           </p>
         )}
@@ -271,13 +271,13 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
 
       <div className="border-b border-white/10 px-5 py-3">
         <div className="mb-2 flex items-center justify-between gap-3">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+          <span className="text-eyebrow-sm text-muted-foreground">
             Attachments ({attachments.length})
           </span>
           <Button
             size="sm"
             variant="outline"
-            className="h-7 border-white/10 bg-black/10 px-2.5 text-[10px] text-foreground hover:bg-black/20"
+            className="h-7 border-white/10 bg-black/10 px-2.5 text-button-sm text-foreground hover:bg-black/20"
             onClick={() => setShowAttachPicker(!showAttachPicker)}
           >
             <Paperclip className="mr-1 h-3 w-3" />
@@ -296,7 +296,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
                 <button
                   type="button"
                   key={vaultFile.id}
-                  className="flex w-full items-center gap-2 rounded-[12px] px-2 py-1.5 text-[11px] transition-colors hover:bg-surface-100"
+                  className="flex w-full items-center gap-2 rounded-[12px] px-2 py-1.5 text-caption transition-colors hover:bg-surface-100"
                   onClick={() => {
                     attachFile.mutate({ ticketId, fileId: vaultFile.id });
                     setShowAttachPicker(false);
@@ -309,7 +309,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
             {vaultFiles.filter(
               (vaultFile) => !attachments.some((attachment) => attachment.fileId === vaultFile.id),
             ).length === 0 ? (
-              <p className="px-2 py-1 text-[10px] italic text-muted-foreground/70">
+              <p className="px-2 py-1 text-caption italic text-muted-foreground/70">
                 All vault files are already attached.
               </p>
             ) : null}
@@ -324,7 +324,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
                 className="flex items-center gap-1.5 rounded-[14px] border border-white/10 bg-black/15 px-2.5 py-1.5"
               >
                 <FileText className="h-3 w-3 text-muted-foreground/70" />
-                <span className="max-w-[140px] truncate text-[11px]">
+                <span className="max-w-[140px] truncate text-caption">
                   {attachment.fileName ?? 'File'}
                 </span>
                 <button
@@ -345,7 +345,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
         {detail.messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-[22px] border border-dashed border-white/10 bg-black/10 py-12 text-center">
             <MessageSquare className="h-8 w-8 text-muted-foreground/40" />
-            <p className="mt-3 text-sm text-muted-foreground">No discussion yet.</p>
+            <p className="mt-3 text-body text-muted-foreground">No discussion yet.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -358,7 +358,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
               return (
                 <div
                   key={message.id}
-                  className={`rounded-[18px] border px-3.5 py-3 text-xs leading-6 ${
+                  className={`rounded-[18px] border px-3.5 py-3 text-caption ${
                     isSystem
                       ? 'border-white/10 bg-black/10 text-center italic text-muted-foreground'
                       : isUser
@@ -367,7 +367,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
                   }`}
                 >
                   {isSystem ? null : (
-                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    <div className="mb-1 text-eyebrow-sm text-muted-foreground">
                       {isUser ? 'You' : authorName}
                     </div>
                   )}
@@ -388,7 +388,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
               onChange={(e) => setComment(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Add a comment..."
-              className="min-h-[72px] resize-none border-white/10 bg-black/15 text-sm"
+              className="min-h-[72px] resize-none border-white/10 bg-black/15 text-body"
             />
             <div className="flex items-center justify-between gap-3">
               <Button
@@ -413,7 +413,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
             </div>
           </div>
         ) : (
-          <div className="text-center text-xs text-muted-foreground/70">
+          <div className="text-center text-caption text-muted-foreground/70">
             Ticket closed
             {detail.closedAt ? (
               <span> on {new Date(detail.closedAt).toLocaleDateString()}</span>

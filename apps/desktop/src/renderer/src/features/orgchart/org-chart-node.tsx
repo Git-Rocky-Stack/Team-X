@@ -103,7 +103,7 @@ export function OrgChartNode({
           onKeyDown={handleKeyDown}
           className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-200 text-xs font-semibold text-foreground/80">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-200 text-caption font-semibold text-foreground/80">
             {initials(employee.name)}
           </div>
 
@@ -117,23 +117,23 @@ export function OrgChartNode({
               ) : (
                 <span className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               )}
-              <span className="truncate text-sm font-medium text-foreground">{employee.name}</span>
+              <span className="truncate text-body-strong text-foreground">{employee.name}</span>
               <span
                 className={cn(
-                  'shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase',
+                  'shrink-0 rounded-md border px-1.5 py-0.5 text-eyebrow-sm',
                   levelClass,
                 )}
               >
                 {normalizedLevel}
               </span>
             </div>
-            <p className="mt-0.5 truncate pl-5 text-xs text-muted-foreground">{employee.title}</p>
+            <p className="mt-0.5 truncate pl-5 text-caption text-muted-foreground">{employee.title}</p>
           </div>
         </button>
 
         <div
           className={cn(
-            'hidden shrink-0 items-center gap-1 text-[10px] text-muted-foreground group-hover:flex group-focus-within:flex',
+            'hidden shrink-0 items-center gap-1 text-caption text-muted-foreground group-hover:flex group-focus-within:flex',
             actionsOpen && 'flex',
           )}
           data-org-chart-actions={employee.id}
@@ -172,7 +172,7 @@ export function OrgChartNode({
           </button>
           <select
             aria-label={`Reassign manager for ${employee.name}`}
-            className="max-w-40 rounded-md border border-border bg-surface-100 px-2 py-1 text-[10px] text-foreground outline-none"
+            className="max-w-40 rounded-md border border-border bg-surface-100 px-2 py-1 text-caption text-foreground outline-none"
             data-org-chart-manager-select=""
             defaultValue=""
             onChange={(event) => {

@@ -158,7 +158,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
 
   // Shared input styling to match native selects with the Input component
   const selectClass =
-    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -170,15 +170,15 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
           role="presentation"
         />
         <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background p-6 shadow-xl">
-          <h2 className="text-base font-semibold text-foreground">Add Provider</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <h2 className="text-h3 text-foreground">Add Provider</h2>
+          <p className="mt-1 text-body-sm text-muted-foreground">
             Register a new LLM provider for your agents to use.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
             {/* Kind */}
             <div>
-              <label htmlFor="provider-kind" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="provider-kind" className="text-label text-muted-foreground">
                 Provider Type *
               </label>
               <select
@@ -197,7 +197,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
 
             {/* Name */}
             <div>
-              <label htmlFor="provider-name" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="provider-name" className="text-label text-muted-foreground">
                 Display Name *
               </label>
               <Input
@@ -205,13 +205,13 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. My OpenAI Account"
-                className="mt-1 text-sm"
+                className="mt-1 text-body"
               />
             </div>
 
             {/* Privacy Tier */}
             <div>
-              <label htmlFor="provider-tier" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="provider-tier" className="text-label text-muted-foreground">
                 Privacy Tier
               </label>
               <select
@@ -231,7 +231,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
             {/* API Key (conditional) */}
             {kindMeta?.needsKey && (
               <div>
-                <label htmlFor="provider-key" className="text-xs font-medium text-muted-foreground">
+                <label htmlFor="provider-key" className="text-label text-muted-foreground">
                   API Key
                 </label>
                 <Input
@@ -240,9 +240,9 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="sk-..."
-                  className="mt-1 text-sm font-mono"
+                  className="mt-1 text-code"
                 />
-                <p className="mt-1 text-[11px] text-muted-foreground/70">
+                <p className="mt-1 text-caption text-muted-foreground/70">
                   Stored in your OS keychain. Never saved to disk.
                 </p>
               </div>
@@ -251,7 +251,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
             {/* Base URL (conditional) */}
             {kindMeta?.needsBaseUrl && (
               <div>
-                <label htmlFor="provider-url" className="text-xs font-medium text-muted-foreground">
+                <label htmlFor="provider-url" className="text-label text-muted-foreground">
                   Base URL *
                 </label>
                 <Input
@@ -259,7 +259,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
                   placeholder="https://my-llm-server.example.com/v1"
-                  className="mt-1 text-sm font-mono"
+                  className="mt-1 text-code"
                 />
               </div>
             )}
@@ -283,7 +283,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
             </div>
 
             {addMut.isError && (
-              <p className="text-xs text-destructive mt-1">
+              <p className="text-body text-destructive mt-1">
                 Failed to add provider. Check your inputs and try again.
               </p>
             )}

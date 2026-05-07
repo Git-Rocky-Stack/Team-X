@@ -56,7 +56,7 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <h2 className="flex-1 truncate text-sm font-semibold text-foreground">{detail.title}</h2>
+        <h2 className="flex-1 truncate text-h3 text-foreground">{detail.title}</h2>
         <button
           type="button"
           onClick={() => {
@@ -80,7 +80,7 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            <span className="text-eyebrow-sm text-muted-foreground/70">
               Progress
             </span>
             <div className="flex items-center gap-2">
@@ -90,36 +90,36 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
                   style={{ width: `${detail.progressPct}%` }}
                 />
               </div>
-              <span className="text-xs font-semibold text-foreground">{detail.progressPct}%</span>
+              <span className="text-caption font-semibold text-foreground">{detail.progressPct}%</span>
             </div>
           </div>
 
           {detail.description && (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              <span className="text-eyebrow-sm text-muted-foreground/70">
                 Description
               </span>
-              <p className="text-xs leading-relaxed text-muted-foreground">{detail.description}</p>
+              <p className="text-caption text-muted-foreground">{detail.description}</p>
             </div>
           )}
 
           {detail.targetDate && (
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              <span className="text-eyebrow-sm text-muted-foreground/70">
                 Target Date
               </span>
-              <p className="text-xs text-foreground">
+              <p className="text-caption text-foreground">
                 {new Date(detail.targetDate).toLocaleDateString()}
               </p>
             </div>
           )}
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            <span className="text-eyebrow-sm text-muted-foreground/70">
               Projects ({detail.projects.length})
             </span>
             {detail.projects.length === 0 ? (
-              <p className="text-xs text-muted-foreground/50">No projects linked to this goal.</p>
+              <p className="text-caption text-muted-foreground/50">No projects linked to this goal.</p>
             ) : (
               <div className="flex flex-col gap-1.5">
                 {detail.projects.map((project) => {
@@ -135,10 +135,10 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
                     >
                       <FolderKanban className={`h-3.5 w-3.5 ${projectStatusColor}`} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-foreground">
+                        <p className="truncate text-caption font-medium text-foreground">
                           {project.title}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-caption text-muted-foreground">
                           {project.status}
                           {lead ? ` \u00B7 ${lead.name}` : ''}
                         </p>
@@ -150,7 +150,7 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
             )}
           </div>
 
-          <div className="text-[10px] text-muted-foreground/50">
+          <div className="text-caption text-muted-foreground/50">
             Created {new Date(detail.createdAt).toLocaleDateString()}
           </div>
         </div>

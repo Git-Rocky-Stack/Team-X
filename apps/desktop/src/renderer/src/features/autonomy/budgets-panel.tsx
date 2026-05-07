@@ -31,9 +31,8 @@ import { useRoutines } from '@/hooks/use-routines.js';
 import { useRuntimeProfiles } from '@/hooks/use-runtime-profiles.js';
 
 const FIELD_CLASSNAME =
-  'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';
-const LABEL_CLASSNAME =
-  'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
+  'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-body text-foreground outline-none transition focus:border-brand/30';
+const LABEL_CLASSNAME = 'text-eyebrow text-muted-foreground';
 
 interface BudgetPolicyDraft {
   scopeKind: BudgetScopeKind;
@@ -123,13 +122,13 @@ function PolicyCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">{scopeLabel}</span>
+            <span className="text-body-strong text-foreground">{scopeLabel}</span>
             <MissionPill tone="accent">{policy.scopeKind}</MissionPill>
             <MissionPill tone={alertTone(policy.alertLevel)}>{policy.alertLevel}</MissionPill>
             <MissionPill>{policy.enabled ? 'enabled' : 'disabled'}</MissionPill>
             {policy.autoPause ? <MissionPill tone="warning">auto-pause</MissionPill> : null}
           </div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Hard cap {formatUsd(policy.hardCapUsd)}. Current spend{' '}
             {formatUsd(policy.currentSpendUsd)}.
             {policy.approvalSpendUsd ? ` Approval gate ${formatUsd(policy.approvalSpendUsd)}.` : ''}
@@ -138,7 +137,7 @@ function PolicyCard({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-full border border-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand disabled:opacity-50"
+            className="rounded-full border border-white/10 px-3 py-2 text-button-sm uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand disabled:opacity-50"
             onClick={() => onToggleEnabled(policy)}
             disabled={updating}
           >
@@ -267,8 +266,8 @@ export function BudgetsPanel({
     <div className="space-y-4" data-budgets-panel="">
       <MissionInsetSurface className="space-y-4 p-4">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-foreground">Create Budget Policy</h3>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <h3 className="text-h3 text-foreground">Create Budget Policy</h3>
+          <p className="text-caption text-muted-foreground">
             Budget policy uses real run spend from the current workspace. Company, employee,
             runtime, and routine scopes all roll up from the same ledger.
           </p>
@@ -345,7 +344,7 @@ export function BudgetsPanel({
               placeholder="18"
             />
           </label>
-          <label className="flex items-center gap-3 rounded-[18px] border border-white/10 bg-black/20 px-4 py-3 text-sm text-foreground">
+          <label className="flex items-center gap-3 rounded-[18px] border border-white/10 bg-black/20 px-4 py-3 text-body text-foreground">
             <input
               type="checkbox"
               checked={draft.autoPause}
@@ -359,13 +358,13 @@ export function BudgetsPanel({
             {errorMessage ? (
               <MissionPill tone="danger">{errorMessage}</MissionPill>
             ) : (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-caption text-muted-foreground">
                 Company scope uses the active workspace id automatically.
               </span>
             )}
             <button
               type="submit"
-              className="rounded-full border border-brand/30 bg-brand/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand transition hover:border-brand/60 disabled:opacity-50"
+              className="rounded-full border border-brand/30 bg-brand/10 px-4 py-2 text-button-sm uppercase tracking-[0.16em] text-brand transition hover:border-brand/60 disabled:opacity-50"
               disabled={createPolicy.isPending}
             >
               {createPolicy.isPending ? 'Saving...' : 'Save Policy'}
@@ -449,8 +448,8 @@ export function BudgetsPanel({
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
             <MissionInsetSurface className="space-y-3 p-4">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-foreground">Recent Spend Ledger</h3>
-                <p className="text-xs leading-5 text-muted-foreground">
+                <h3 className="text-h3 text-foreground">Recent Spend Ledger</h3>
+                <p className="text-caption text-muted-foreground">
                   Every row comes from completed runs and keeps scope attribution for company,
                   employee, runtime, and routine governance.
                 </p>
@@ -472,7 +471,7 @@ export function BudgetsPanel({
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold text-foreground">
+                            <span className="text-body-strong text-foreground">
                               {buildScopeLabel(
                                 entry.scopeKind,
                                 entry.scopeRefId,
@@ -485,11 +484,11 @@ export function BudgetsPanel({
                             <MissionPill>{entry.scopeKind}</MissionPill>
                             <MissionPill>{entry.runKind}</MissionPill>
                           </div>
-                          <p className="text-xs leading-5 text-muted-foreground">
+                          <p className="text-caption text-muted-foreground">
                             {entry.provider} / {entry.model} • {formatTimestamp(entry.occurredAt)}
                           </p>
                         </div>
-                        <div className="text-sm font-semibold text-foreground">
+                        <div className="text-body-strong text-foreground">
                           {formatUsd(entry.amountUsd)}
                         </div>
                       </div>
@@ -502,10 +501,10 @@ export function BudgetsPanel({
             <div className="space-y-4">
               <MissionInsetSurface className="space-y-3 p-4">
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">
+                  <h3 className="text-h3 text-foreground">
                     Pending Budget Approvals
                   </h3>
-                  <p className="text-xs leading-5 text-muted-foreground">
+                  <p className="text-caption text-muted-foreground">
                     These approval items are raised automatically when spend crosses an approval
                     gate and future autonomy should stop until an operator reviews it. The same
                     queue is actionable from Autonomy {'>'} Approvals.
@@ -528,12 +527,12 @@ export function BudgetsPanel({
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-semibold text-foreground">
+                              <span className="text-body-strong text-foreground">
                                 {approval.summary}
                               </span>
                               <MissionPill tone="warning">{approval.priority}</MissionPill>
                             </div>
-                            <p className="text-xs leading-5 text-muted-foreground">
+                            <p className="text-caption text-muted-foreground">
                               Created {formatTimestamp(approval.createdAt)}
                             </p>
                           </div>
@@ -547,8 +546,8 @@ export function BudgetsPanel({
 
               <MissionInsetSurface className="space-y-3 p-4">
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Provider Mix</h3>
-                  <p className="text-xs leading-5 text-muted-foreground">
+                  <h3 className="text-h3 text-foreground">Provider Mix</h3>
+                  <p className="text-caption text-muted-foreground">
                     Company-scope spend is aggregated into a monthly provider mix for fast drift
                     checks.
                   </p>
@@ -557,7 +556,7 @@ export function BudgetsPanel({
                   overview.providerMix.map((row) => (
                     <div
                       key={row.provider}
-                      className="flex items-center justify-between gap-3 text-sm"
+                      className="flex items-center justify-between gap-3 text-body"
                     >
                       <span className="text-muted-foreground">{row.provider}</span>
                       <span className="font-semibold text-foreground">

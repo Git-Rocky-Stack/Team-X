@@ -135,8 +135,8 @@ export function McpMarketplace({
       {/* Header with title and actions */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">MCP Server Marketplace</h3>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-h2 text-foreground">MCP Server Marketplace</h2>
+          <p className="text-body text-muted-foreground">
             Connect powerful external services and databases to your agents
           </p>
         </div>
@@ -198,7 +198,7 @@ export function McpMarketplace({
                     checked={showOnlyPopular}
                     onCheckedChange={setShowOnlyPopular}
                   />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-body text-muted-foreground">
                     {showOnlyPopular ? 'Popular MCPs' : 'All MCPs'}
                   </span>
                 </div>
@@ -212,7 +212,7 @@ export function McpMarketplace({
                     checked={showOnlyEnabled}
                     onCheckedChange={setShowOnlyEnabled}
                   />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-body text-muted-foreground">
                     {showOnlyEnabled ? 'Enabled MCPs' : 'All MCPs'}
                   </span>
                 </div>
@@ -220,7 +220,7 @@ export function McpMarketplace({
             </div>
 
             {/* Results summary */}
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between text-body text-muted-foreground">
               <span>Showing {filteredMcps.length} MCP server(s)</span>
               <div className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
@@ -240,8 +240,8 @@ export function McpMarketplace({
         <Card>
           <CardContent className="py-12 text-center">
             <Database className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium mb-2">No MCP servers found</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-h3 mb-2">No MCP servers found</p>
+            <p className="text-body text-muted-foreground">
               Try adjusting your filters or search terms
             </p>
           </CardContent>
@@ -330,7 +330,7 @@ function McpTemplateCard({
             {/* Title and description */}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-base truncate">{template.name}</CardTitle>
+                <CardTitle className="text-h3 truncate">{template.name}</CardTitle>
                 {template.popular && (
                   <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
                 )}
@@ -395,7 +395,7 @@ function McpTemplateCard({
         </div>
 
         {/* Tool count and status */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center justify-between text-caption text-muted-foreground">
           <span>{template.toolCount} tools available</span>
           {connectionStatus && (
             <Badge
@@ -411,16 +411,16 @@ function McpTemplateCard({
 
         {/* Configuration details (collapsible) */}
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-          <CollapsibleTrigger className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left">
+          <CollapsibleTrigger className="text-caption text-muted-foreground hover:text-foreground transition-colors w-full text-left">
             <div className="flex items-center justify-between">
               <span>View configuration details</span>
               <span>{isExpanded ? '▼' : '▶'}</span>
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-3 space-y-2 text-xs">
+            <div className="mt-3 space-y-2 text-caption">
               <div className="bg-muted/50 p-2 rounded">
-                <div className="font-mono text-[10px] break-all">
+                <div className="text-code-sm break-all">
                   <span className="text-muted-foreground">$</span> {template.command}{' '}
                   {template.args.join(' ')}
                 </div>
@@ -431,7 +431,7 @@ function McpTemplateCard({
                   <div className="space-y-1">
                     {Object.entries(template.env).map(([key, value]) => (
                       <div key={key} className="flex items-center gap-2">
-                        <code className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{key}</code>
+                        <code className="bg-muted px-1.5 py-0.5 rounded text-code-sm">{key}</code>
                         <span className="text-muted-foreground">{value ? '***' : '(empty)'}</span>
                       </div>
                     ))}
@@ -441,7 +441,7 @@ function McpTemplateCard({
               {template.autoConfigure && (
                 <Alert>
                   <Check className="h-3 w-3" />
-                  <AlertDescription className="text-xs">
+                  <AlertDescription className="text-caption">
                     Auto-configured with safe default paths for your operating system
                   </AlertDescription>
                 </Alert>
@@ -454,7 +454,7 @@ function McpTemplateCard({
         {showApiKeyWarning && (
           <Alert variant="warning">
             <AlertCircle className="h-3 w-3" />
-            <AlertDescription className="text-xs">
+            <AlertDescription className="text-caption">
               API key required. Configure {template.apiKeyName ?? 'the required API key'}.
             </AlertDescription>
           </Alert>
@@ -462,7 +462,7 @@ function McpTemplateCard({
 
         {/* Installation status */}
         {!isInstalled && (
-          <div className="text-xs text-muted-foreground italic">
+          <div className="text-caption text-muted-foreground italic">
             Not installed - click to add this MCP server
           </div>
         )}
@@ -472,11 +472,11 @@ function McpTemplateCard({
       <CardFooter className="pt-0 flex justify-between">
         {template.longDescription && (
           <Collapsible>
-            <CollapsibleTrigger className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <CollapsibleTrigger className="text-caption text-muted-foreground hover:text-foreground transition-colors">
               Learn more →
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+              <p className="text-caption text-muted-foreground mt-2 leading-relaxed">
                 {template.longDescription}
               </p>
             </CollapsibleContent>

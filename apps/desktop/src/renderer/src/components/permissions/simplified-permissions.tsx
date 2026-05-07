@@ -62,11 +62,11 @@ export function SimplifiedPermissions({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h3 className="text-lg font-semibold flex items-center gap-2">
+        <h2 className="text-h2 text-foreground flex items-center gap-2">
           <Shield className="h-5 w-5 text-green-500" />
           Agent Permissions
-        </h3>
-        <p className="text-sm text-muted-foreground">
+        </h2>
+        <p className="text-body text-muted-foreground">
           Choose how much access agents have to your system. Safe defaults are recommended for most
           users.
         </p>
@@ -75,7 +75,7 @@ export function SimplifiedPermissions({
       {/* Permission Presets */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Permission Presets</CardTitle>
+          <CardTitle className="text-h3">Permission Presets</CardTitle>
           <CardDescription>
             Choose the security level that matches your comfort level
           </CardDescription>
@@ -132,7 +132,7 @@ export function SimplifiedPermissions({
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-body text-muted-foreground mt-1">
                               {preset.description}
                             </p>
                           </div>
@@ -175,7 +175,7 @@ export function SimplifiedPermissions({
                         {preset.warnings.length > 0 && isExpanded && (
                           <Alert variant="warning" className="mt-3">
                             <AlertTriangle className="h-4 w-4" />
-                            <AlertDescription className="text-xs">
+                            <AlertDescription className="text-caption">
                               <div className="font-medium mb-1">Important:</div>
                               <ul className="space-y-1">
                                 {preset.warnings.map((warning) => (
@@ -206,7 +206,7 @@ export function SimplifiedPermissions({
         <CardHeader>
           <Collapsible>
             <CollapsibleTrigger className="w-full">
-              <CardTitle className="text-base flex items-center justify-between">
+              <CardTitle className="text-h3 flex items-center justify-between">
                 <span>Permission Details</span>
                 <ChevronDown className="h-4 w-4" />
               </CardTitle>
@@ -219,14 +219,14 @@ export function SimplifiedPermissions({
           <CardContent className="space-y-4">
             {/* Capabilities */}
             <div>
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <h4 className="text-h4 mb-3 flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 Capabilities
               </h4>
               <div className="grid gap-3 sm:grid-cols-2">
                 {/* Allowed Capabilities */}
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-green-600 dark:text-green-400">
+                  <div className="text-label text-green-600 dark:text-green-400">
                     ✓ Allowed
                   </div>
                   <div className="space-y-1">
@@ -234,14 +234,14 @@ export function SimplifiedPermissions({
                       selectedPreset.capabilities.allowed.map((cap) => (
                         <div
                           key={cap}
-                          className="flex items-center gap-2 text-xs bg-green-50/50 dark:bg-green-950/20 px-2 py-1 rounded"
+                          className="flex items-center gap-2 text-caption bg-green-50/50 dark:bg-green-950/20 px-2 py-1 rounded"
                         >
                           <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
                           {cap}
                         </div>
                       ))
                     ) : (
-                      <div className="text-xs text-muted-foreground italic">
+                      <div className="text-caption text-muted-foreground italic">
                         No capabilities allowed
                       </div>
                     )}
@@ -250,7 +250,7 @@ export function SimplifiedPermissions({
 
                 {/* Denied Capabilities */}
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-red-600 dark:text-red-400">
+                  <div className="text-label text-red-600 dark:text-red-400">
                     ✗ Not Allowed
                   </div>
                   <div className="space-y-1">
@@ -258,14 +258,14 @@ export function SimplifiedPermissions({
                       selectedPreset.capabilities.denied.map((cap) => (
                         <div
                           key={cap}
-                          className="flex items-center gap-2 text-xs bg-red-50/50 dark:bg-red-950/20 px-2 py-1 rounded"
+                          className="flex items-center gap-2 text-caption bg-red-50/50 dark:bg-red-950/20 px-2 py-1 rounded"
                         >
                           <X className="h-3 w-3 text-red-600 dark:text-red-400" />
                           {cap}
                         </div>
                       ))
                     ) : (
-                      <div className="text-xs text-muted-foreground italic">
+                      <div className="text-caption text-muted-foreground italic">
                         All capabilities allowed
                       </div>
                     )}
@@ -276,14 +276,14 @@ export function SimplifiedPermissions({
 
             {/* Paths */}
             <div>
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <h4 className="text-h4 mb-3 flex items-center gap-2">
                 <FolderOpen className="h-4 w-4" />
                 File Access
               </h4>
               <div className="grid gap-3 sm:grid-cols-2">
                 {/* Allowed Paths */}
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-green-600 dark:text-green-400">
+                  <div className="text-label text-green-600 dark:text-green-400">
                     ✓ Can Access
                   </div>
                   <div className="space-y-1">
@@ -291,18 +291,18 @@ export function SimplifiedPermissions({
                       selectedPreset.paths.allowed.map((path) => (
                         <div
                           key={path}
-                          className="text-xs bg-green-50/50 dark:bg-green-950/20 px-2 py-1 rounded"
+                          className="text-caption bg-green-50/50 dark:bg-green-950/20 px-2 py-1 rounded"
                         >
-                          <div className="font-mono text-[10px] text-muted-foreground">
+                          <div className="text-code-sm text-muted-foreground">
                             {getUserFriendlyPathName(path)}
                           </div>
-                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                          <div className="text-code-sm text-muted-foreground mt-0.5">
                             {expandPathPlaceholders(path)}
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-xs text-muted-foreground italic">
+                      <div className="text-caption text-muted-foreground italic">
                         {selectedPreset.level === 'advanced'
                           ? 'Choose specific paths below'
                           : 'No file access allowed'}
@@ -313,7 +313,7 @@ export function SimplifiedPermissions({
 
                 {/* Denied Paths */}
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-red-600 dark:text-red-400">
+                  <div className="text-label text-red-600 dark:text-red-400">
                     ✗ Cannot Access
                   </div>
                   <div className="space-y-1">
@@ -321,18 +321,18 @@ export function SimplifiedPermissions({
                       selectedPreset.paths.denied.map((path) => (
                         <div
                           key={path}
-                          className="text-xs bg-red-50/50 dark:bg-red-950/20 px-2 py-1 rounded"
+                          className="text-caption bg-red-50/50 dark:bg-red-950/20 px-2 py-1 rounded"
                         >
-                          <div className="font-mono text-[10px] text-muted-foreground">
+                          <div className="text-code-sm text-muted-foreground">
                             {getUserFriendlyPathName(path)}
                           </div>
-                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                          <div className="text-code-sm text-muted-foreground mt-0.5">
                             {expandPathPlaceholders(path)}
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-xs text-muted-foreground italic">
+                      <div className="text-caption text-muted-foreground italic">
                         No paths explicitly blocked
                       </div>
                     )}
@@ -345,7 +345,7 @@ export function SimplifiedPermissions({
             {selectedPreset.longDescription && (
               <Alert>
                 <Info className="h-4 w-4" />
-                <AlertDescription className="text-xs">
+                <AlertDescription className="text-caption">
                   {selectedPreset.longDescription}
                 </AlertDescription>
               </Alert>
@@ -363,7 +363,7 @@ export function SimplifiedPermissions({
                 <Settings2 className="h-4 w-4" />
                 Advanced Permission Matrix
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 {showAdvanced
                   ? 'Hide advanced options and use simple presets'
                   : 'Show detailed permission matrix for fine-grained control'}
@@ -375,7 +375,7 @@ export function SimplifiedPermissions({
           {showAdvanced && (
             <Alert variant="warning" className="mt-4">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
+              <AlertDescription className="text-caption">
                 Advanced permissions require technical understanding of security implications. Most
                 users should use the presets above.
               </AlertDescription>
@@ -387,7 +387,7 @@ export function SimplifiedPermissions({
       {/* Safety Notice */}
       <Alert>
         <Shield className="h-4 w-4" />
-        <AlertDescription className="text-xs">
+        <AlertDescription className="text-caption">
           <strong>Security First:</strong> Team-X uses a permission system to keep your data safe.
           Start with Safe Mode and increase permissions only as needed. You can change permissions
           at any time from this panel.

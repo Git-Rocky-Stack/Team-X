@@ -100,6 +100,46 @@ export default {
         sans: ['Inter Variable', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono Variable', 'monospace'],
       },
+      /*
+       * Master typography scale — single source of truth for every text
+       * role in the renderer. Each token is a Tailwind v3 fontSize tuple:
+       *   [size, { lineHeight, letterSpacing, fontWeight }]
+       * which means a single class (e.g. `text-h1`, `text-body`) carries
+       * size, line-height, tracking, AND weight in one shot. No more
+       * per-component re-declaring `leading-X tracking-[Yem] font-Z`.
+       *
+       * Roles that also need font-family / text-transform / tabular-nums
+       * (eyebrow, shortcut, code, numeric) live as component classes in
+       * `globals.css` — Tailwind's fontSize tuple does not cover those
+       * properties. See globals.css for `.text-eyebrow*`, `.text-code*`,
+       * `.text-shortcut`, `.text-numeric*`, `.text-menu-label`.
+       *
+       * The defaults from Tailwind (text-xs, text-sm, text-base, etc.)
+       * are intentionally preserved as escape hatches; new code should
+       * reach for the semantic tokens below. See CLAUDE.md typography
+       * section and the typography-audit decisions for the rationale.
+       */
+      fontSize: {
+        display: [
+          '2.25rem',
+          { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' },
+        ],
+        h1: ['1.75rem', { lineHeight: '1.15', letterSpacing: '-0.015em', fontWeight: '700' }],
+        h2: ['1.375rem', { lineHeight: '1.2', letterSpacing: '-0.01em', fontWeight: '600' }],
+        h3: ['1.125rem', { lineHeight: '1.25', letterSpacing: '-0.005em', fontWeight: '600' }],
+        h4: ['1rem', { lineHeight: '1.375', letterSpacing: '0', fontWeight: '600' }],
+        body: ['0.875rem', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '400' }],
+        'body-strong': [
+          '0.875rem',
+          { lineHeight: '1.5', letterSpacing: '0', fontWeight: '500' },
+        ],
+        'body-sm': ['0.8125rem', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '400' }],
+        caption: ['0.75rem', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '400' }],
+        label: ['0.75rem', { lineHeight: '1.4', letterSpacing: '0.005em', fontWeight: '500' }],
+        button: ['0.875rem', { lineHeight: '1', letterSpacing: '0', fontWeight: '500' }],
+        'button-sm': ['0.8125rem', { lineHeight: '1', letterSpacing: '0', fontWeight: '500' }],
+        'menu-item': ['0.8125rem', { lineHeight: '1.4', letterSpacing: '0', fontWeight: '400' }],
+      },
       spacing: {
         18: '4.5rem',
         88: '22rem',

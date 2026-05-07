@@ -82,9 +82,7 @@ export function CopilotSection() {
   if (isLoading || !draft) {
     return (
       <section className="space-y-3" aria-busy="true">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Copilot
-        </h4>
+        <h2 className="text-h2 text-foreground">Copilot</h2>
         <Skeleton className="h-56 rounded-lg" />
       </section>
     );
@@ -93,10 +91,8 @@ export function CopilotSection() {
   if (isError || !data) {
     return (
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Copilot
-        </h4>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <h2 className="text-h2 text-foreground">Copilot</h2>
+        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
           Failed to load copilot settings.
         </div>
       </section>
@@ -143,16 +139,14 @@ export function CopilotSection() {
     <section className="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Copilot
-        </h4>
+        <h2 className="text-h2 text-foreground">Copilot</h2>
         {(setCopilot.isPending || setCopilotWeights.isPending) && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
       </div>
 
       {/* Description */}
-      <p className="text-[11px] text-muted-foreground leading-snug">
+      <p className="text-body-sm text-muted-foreground mt-1">
         The copilot analyzer watches company activity and proposes actionable insights on a
         schedule. Turn it off, change its cadence, or narrow the categories it reports on.
       </p>
@@ -162,13 +156,10 @@ export function CopilotSection() {
         {/* Enabled toggle */}
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5">
-            <label
-              htmlFor="copilot-enabled"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="copilot-enabled" className="text-label text-muted-foreground">
               Analyzer Enabled
             </label>
-            <p className="text-[10px] text-muted-foreground/70">
+            <p className="text-caption text-muted-foreground/70">
               When off, every scheduled and event-triggered tick short-circuits.
             </p>
           </div>
@@ -196,13 +187,10 @@ export function CopilotSection() {
         {/* Interval minutes */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="copilot-interval-minutes"
-              className="text-[11px] font-medium text-muted-foreground"
-            >
+            <label htmlFor="copilot-interval-minutes" className="text-label text-muted-foreground">
               Scheduled Interval (minutes)
             </label>
-            <span className="text-[11px] font-mono text-foreground tabular-nums">
+            <span className="text-code-sm text-foreground tabular-nums">
               {draft.intervalMinutes}
             </span>
           </div>
@@ -226,9 +214,9 @@ export function CopilotSection() {
               commitIntervalMinutes(next);
             }}
             disabled={setCopilot.isPending || !companyId}
-            className="h-8 text-xs font-mono"
+            className="h-8 text-code-sm"
           />
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             How often the analyzer tick fires ({intervalMinutes.min}–{intervalMinutes.max}, default{' '}
             {intervalMinutes.default}). Saves restart the per-company timer immediately.
           </p>
@@ -237,10 +225,8 @@ export function CopilotSection() {
         {/* Categories */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-[11px] font-medium text-muted-foreground">
-              Allowed Categories
-            </span>
-            <span className="text-[10px] font-mono text-foreground/70 tabular-nums">
+            <span className="text-label text-muted-foreground">Allowed Categories</span>
+            <span className="text-code-sm text-foreground/70 tabular-nums">
               {draft.categories.length}/{COPILOT_CATEGORIES.length}
             </span>
           </div>
@@ -250,7 +236,7 @@ export function CopilotSection() {
               return (
                 <label
                   key={cat}
-                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] transition-colors ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-caption transition-colors ${
                     checked
                       ? 'border-[#FFAA2024]/50 bg-[#FFAA2024]/10 text-foreground'
                       : 'border-border bg-surface-50 text-muted-foreground hover:text-foreground'
@@ -261,14 +247,14 @@ export function CopilotSection() {
                     checked={checked}
                     onChange={() => toggleCategory(cat)}
                     disabled={setCopilot.isPending || !companyId}
-                    className="h-3 w-3 rounded border-border"
+                    className="h-3 w-3 rounded border-border accent-brand"
                   />
                   <span>{CATEGORY_LABELS[cat]}</span>
                 </label>
               );
             })}
           </div>
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             The analyzer only proposes insights in categories you enable. Clearing every category
             falls back to the full set.
           </p>
@@ -277,11 +263,9 @@ export function CopilotSection() {
         {/* Category weighting */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-[11px] font-medium text-muted-foreground">
-              Category weighting
-            </span>
+            <span className="text-label text-muted-foreground">Category weighting</span>
             {weightsQuery.isFetching && (
-              <span className="text-[10px] font-mono text-muted-foreground/70">Loading</span>
+              <span className="text-caption font-mono text-muted-foreground/70">Loading</span>
             )}
           </div>
           <div className="grid grid-cols-1 gap-2">
@@ -295,11 +279,11 @@ export function CopilotSection() {
                 >
                   <label
                     htmlFor={`copilot-weight-${cat}`}
-                    className="min-w-0 text-[11px] font-medium text-muted-foreground"
+                    className="min-w-0 text-label text-muted-foreground"
                   >
                     {CATEGORY_LABELS[cat]}
                   </label>
-                  <span className="text-right text-[11px] font-mono text-foreground tabular-nums">
+                  <span className="text-right text-code-sm text-foreground tabular-nums">
                     {formatCopilotWeightLabel(value)}
                   </span>
                   <Input
@@ -323,13 +307,13 @@ export function CopilotSection() {
                       !companyId ||
                       !weightDraft
                     }
-                    className="h-8 text-xs font-mono"
+                    className="h-8 text-code-sm"
                   />
                 </div>
               );
             })}
           </div>
-          <p className="text-[10px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             Lower noisy categories toward 0.0x or boost useful ones up to 2.0x.
           </p>
         </div>
@@ -337,13 +321,13 @@ export function CopilotSection() {
 
       {/* Save error banner */}
       {setCopilot.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
           <span className="min-w-0 truncate">Failed to save: {String(setCopilot.error)}</span>
         </div>
       )}
 
       {setCopilotWeights.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
           <span className="min-w-0 truncate">
             Failed to save category weights: {String(setCopilotWeights.error)}
           </span>

@@ -143,7 +143,7 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
                 )}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">{role.name}</span>
+                  <span className="text-body-strong text-foreground">{role.name}</span>
                   <Badge variant="secondary" className="text-[10px] uppercase">
                     {role.levelLabel}
                   </Badge>
@@ -152,7 +152,7 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
                   {role.responsibilities.map((r) => (
                     <li
                       key={r}
-                      className="text-xs leading-relaxed text-muted-foreground before:mr-1.5 before:content-['•']"
+                      className="text-caption text-muted-foreground before:mr-1.5 before:content-['•']"
                     >
                       {r}
                     </li>
@@ -167,7 +167,7 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
         {selectedRole && (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <label htmlFor="hire-name" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="hire-name" className="text-label text-muted-foreground">
                 Employee name
               </label>
               <Input
@@ -179,14 +179,14 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="hire-manager" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="hire-manager" className="text-label text-muted-foreground">
                 Reports to (optional)
               </label>
               <select
                 id="hire-manager"
                 value={managerId}
                 onChange={(e) => setManagerId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 data-hire-manager-select=""
               >
                 <option value="">No manager</option>
@@ -200,7 +200,7 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
           </div>
         )}
 
-        {submitError ? <p className="text-xs text-destructive">{submitError}</p> : null}
+        {submitError ? <p className="text-caption text-destructive">{submitError}</p> : null}
 
         <DialogFooter>
           <Button variant="ghost" onClick={handleClose}>

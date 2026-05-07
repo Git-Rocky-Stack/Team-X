@@ -36,7 +36,7 @@ interface EmployeeProfileDialogProps {
 }
 
 const fieldClass =
-  'h-10 w-full rounded-md border border-border bg-surface-100 px-3 text-sm text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30';
+  'h-10 w-full rounded-md border border-border bg-surface-100 px-3 text-body text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30';
 
 export function EmployeeProfileDialog({
   companyId,
@@ -132,7 +132,7 @@ export function EmployeeProfileDialog({
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm font-medium text-foreground">
+            <label className="space-y-2 text-body-strong text-foreground">
               <span>Name</span>
               <input
                 className={fieldClass}
@@ -143,7 +143,7 @@ export function EmployeeProfileDialog({
               />
             </label>
 
-            <label className="space-y-2 text-sm font-medium text-foreground">
+            <label className="space-y-2 text-body-strong text-foreground">
               <span>Display title</span>
               <input
                 className={fieldClass}
@@ -154,7 +154,7 @@ export function EmployeeProfileDialog({
               />
             </label>
 
-            <label className="space-y-2 text-sm font-medium text-foreground">
+            <label className="space-y-2 text-body-strong text-foreground">
               <span>Role</span>
               <select
                 className={fieldClass}
@@ -174,7 +174,7 @@ export function EmployeeProfileDialog({
               </select>
             </label>
 
-            <label className="space-y-2 text-sm font-medium text-foreground">
+            <label className="space-y-2 text-body-strong text-foreground">
               <span>Reports to</span>
               <select
                 className={fieldClass}
@@ -195,7 +195,7 @@ export function EmployeeProfileDialog({
               </select>
             </label>
 
-            <label className="space-y-2 text-sm font-medium text-foreground">
+            <label className="space-y-2 text-body-strong text-foreground">
               <span>Provider preference</span>
               <input
                 className={fieldClass}
@@ -207,7 +207,7 @@ export function EmployeeProfileDialog({
               />
             </label>
 
-            <label className="space-y-2 text-sm font-medium text-foreground">
+            <label className="space-y-2 text-body-strong text-foreground">
               <span>Model preference</span>
               <input
                 className={fieldClass}
@@ -221,7 +221,7 @@ export function EmployeeProfileDialog({
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm font-medium text-foreground md:col-span-2">
+            <label className="space-y-2 text-body-strong text-foreground md:col-span-2">
               <span>Runtime profile</span>
               <select
                 className={fieldClass}
@@ -246,7 +246,7 @@ export function EmployeeProfileDialog({
             </label>
           </div>
 
-          <label className="block space-y-2 text-sm font-medium text-foreground">
+          <label className="block space-y-2 text-body-strong text-foreground">
             <span>Avatar URL</span>
             <input
               className={fieldClass}
@@ -259,13 +259,13 @@ export function EmployeeProfileDialog({
           </label>
 
           {selectedRole ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               Selected role level:{' '}
               <span className="font-medium text-foreground">{selectedRole.level}</span>
             </p>
           ) : null}
 
-          {error ? <p className="text-sm text-red-300">{error}</p> : null}
+          {error ? <p className="text-body text-red-300">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

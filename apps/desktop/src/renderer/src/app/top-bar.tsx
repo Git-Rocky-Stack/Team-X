@@ -62,22 +62,17 @@ export function TopBar() {
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span
-                className="text-sm font-semibold tracking-[0.02em]"
-                data-testid="app-brand-name"
-              >
+              <span className="text-h4 text-foreground" data-testid="app-brand-name">
                 Strategia-X
               </span>
               <Badge
                 variant="outline"
-                className="border-white/10 bg-black px-1.5 py-0 text-[10px] font-mono uppercase tracking-[0.22em]"
+                className="border-white/10 bg-black px-1.5 py-0 font-mono text-eyebrow-sm"
               >
                 Phase 6
               </Badge>
             </div>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
-              Operational command shell
-            </p>
+            <p className="mt-1 text-eyebrow text-muted-foreground">Operational command shell</p>
           </div>
         </div>
 
@@ -97,7 +92,7 @@ export function TopBar() {
                   disabled={tab.disabled}
                   onClick={() => setActiveView(tab.view)}
                   className={cn(
-                    'group flex shrink-0 items-center gap-2 rounded-[18px] px-3.5 py-2 text-xs font-semibold transition-all',
+                    'group flex shrink-0 items-center gap-2 rounded-[18px] px-3.5 py-2 text-button-sm transition-all',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                     isActive
                       ? 'border border-brand/30 bg-black text-brand shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)]'
@@ -120,14 +115,14 @@ export function TopBar() {
               title="Copilot (Cmd+Shift+K)"
               data-copilot-toolbar-toggle=""
               className={cn(
-                'group flex shrink-0 items-center gap-2 rounded-[18px] px-3.5 py-2 text-xs font-semibold transition-all',
+                'group flex shrink-0 items-center gap-2 rounded-[18px] px-3.5 py-2 text-button-sm transition-all',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
                 copilotSidebarOpen
                   ? 'border border-brand/30 bg-black text-brand shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)]'
                   : 'border border-transparent text-brand hover:border-brand/25 hover:bg-black',
               )}
             >
-              <span className="hidden text-sm font-semibold lg:inline">Copilot</span>
+              <span className="hidden text-button lg:inline">Copilot</span>
             </button>
           </MissionControlRow>
         </nav>

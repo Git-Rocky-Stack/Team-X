@@ -7889,6 +7889,15 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (!proactiveTriggerService) {
         throw new Error('[ipc] proactive.setEnabled: proactiveTriggerService dep is required');
       }
+      // Persist to the settings table FIRST so `settings.getProactive()`
+      // returns the value the renderer just toggled. Without this, the
+      // optimistic Switch in the renderer snaps back when react-query
+      // invalidates ['settings','proactive'] and refetches the unchanged
+      // DB value. The trigger service's per-company `disabledCompanies`
+      // Set is in-memory only — it tracks per-company *overrides* on top
+      // of the global flag, but the global flag itself lives in the DB.
+      // Both sources of truth must move together.
+      settingsRepo.setProactive({ enabled });
       proactiveTriggerService.setEnabled({ companyId, enabled });
     },
 

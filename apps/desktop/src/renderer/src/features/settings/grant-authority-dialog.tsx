@@ -24,7 +24,7 @@ interface GrantAuthorityDialogProps {
 }
 
 const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 const COMMON_CAPABILITIES = [
   'browse',
@@ -142,10 +142,7 @@ export function GrantAuthorityDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label
-              htmlFor="authority-scope-kind"
-              className="text-xs font-medium text-muted-foreground"
-            >
+            <label htmlFor="authority-scope-kind" className="text-label text-muted-foreground">
               Grant Scope
             </label>
             <select
@@ -164,10 +161,7 @@ export function GrantAuthorityDialog({
 
           {scopeKind === 'employee' && (
             <div className="space-y-1.5">
-              <label
-                htmlFor="authority-employee"
-                className="text-xs font-medium text-muted-foreground"
-              >
+              <label htmlFor="authority-employee" className="text-label text-muted-foreground">
                 Employee
               </label>
               <select
@@ -187,10 +181,7 @@ export function GrantAuthorityDialog({
           )}
 
           <div className="space-y-1.5">
-            <label
-              htmlFor="authority-resource-kind"
-              className="text-xs font-medium text-muted-foreground"
-            >
+            <label htmlFor="authority-resource-kind" className="text-label text-muted-foreground">
               Resource Type
             </label>
             <select
@@ -207,10 +198,7 @@ export function GrantAuthorityDialog({
 
           {resourceKind === 'capability' ? (
             <div className="space-y-1.5">
-              <label
-                htmlFor="authority-capability"
-                className="text-xs font-medium text-muted-foreground"
-              >
+              <label htmlFor="authority-capability" className="text-label text-muted-foreground">
                 Capability
               </label>
               <select
@@ -234,7 +222,7 @@ export function GrantAuthorityDialog({
             <div className="space-y-1.5">
               <label
                 htmlFor="authority-custom-capability"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-label text-muted-foreground"
               >
                 Custom Capability
               </label>
@@ -243,17 +231,14 @@ export function GrantAuthorityDialog({
                 value={customCapability}
                 onChange={(event) => setCustomCapability(event.target.value)}
                 placeholder="tool.or.capability"
-                className="font-mono text-sm"
+                className="text-code"
                 data-authority-custom-capability=""
               />
             </div>
           ) : null}
 
           <div className="space-y-1.5">
-            <label
-              htmlFor="authority-permission"
-              className="text-xs font-medium text-muted-foreground"
-            >
+            <label htmlFor="authority-permission" className="text-label text-muted-foreground">
               Permission
             </label>
             <select
@@ -271,7 +256,7 @@ export function GrantAuthorityDialog({
 
           {resourceKind === 'path' ? (
             <div className="space-y-1.5">
-              <label htmlFor="authority-path" className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="authority-path" className="text-label text-muted-foreground">
                 Absolute Path
               </label>
               <Input
@@ -279,14 +264,14 @@ export function GrantAuthorityDialog({
                 value={resourceId}
                 onChange={(event) => setResourceId(event.target.value)}
                 placeholder="C:\\Projects\\Client-X"
-                className="font-mono text-sm"
+                className="text-code"
                 data-authority-path=""
               />
             </div>
           ) : null}
 
           {createGrant.isError && (
-            <p className="text-xs text-destructive">
+            <p className="text-body text-destructive">
               Failed to save authority grant. Check the scope and resource, then try again.
             </p>
           )}

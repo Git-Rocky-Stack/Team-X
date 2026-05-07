@@ -56,10 +56,10 @@ export function ProjectsKanban({ projects, employees, onCreateClick }: ProjectsK
           >
             <div className="flex items-center justify-between px-3 py-2.5">
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <h3 className="text-eyebrow text-muted-foreground">
                   {col.label}
                 </h3>
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-eyebrow-sm text-muted-foreground">
                   {colProjects.length}
                 </span>
               </div>
@@ -78,7 +78,7 @@ export function ProjectsKanban({ projects, employees, onCreateClick }: ProjectsK
             <ScrollArea className="flex-1 px-2 pb-2">
               <div className="flex flex-col gap-2">
                 {colProjects.length === 0 && (
-                  <div className="flex h-20 items-center justify-center rounded-md border border-dashed border-border/40 text-[11px] text-muted-foreground/50">
+                  <div className="flex h-20 items-center justify-center rounded-md border border-dashed border-border/40 text-caption text-muted-foreground/50">
                     {col.status === 'planning' ? 'No projects yet' : 'None'}
                   </div>
                 )}

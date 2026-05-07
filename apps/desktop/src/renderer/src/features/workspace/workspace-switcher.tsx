@@ -113,17 +113,17 @@ export function WorkspaceSwitcher() {
               <Building2 className="h-4 w-4" />
             </span>
             <span className="min-w-0">
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              <span className="block text-eyebrow-sm text-muted-foreground">
                 Workspace
               </span>
               {triggerLabel === null ? (
                 <Skeleton className="h-3.5 w-24" />
               ) : (
-                <span className="mt-1 block max-w-[220px] truncate text-sm font-semibold text-foreground">
+                <span className="mt-1 block max-w-[220px] truncate text-body-strong text-foreground">
                   {triggerLabel}
                 </span>
               )}
-              <span className="mt-0.5 block text-[11px] text-muted-foreground">
+              <span className="mt-0.5 block text-caption text-muted-foreground">
                 {isError
                   ? 'Reload workspace controls'
                   : activeCompany
@@ -141,10 +141,10 @@ export function WorkspaceSwitcher() {
           data-workspace-switcher-content=""
         >
           <DropdownMenuLabel className="px-3 py-2">
-            <span className="block text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+            <span className="block text-eyebrow-sm text-muted-foreground">
               Mission scope
             </span>
-            <span className="mt-1 block text-sm font-semibold text-foreground">Workspaces</span>
+            <span className="mt-1 block text-body-strong text-foreground">Workspaces</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="bg-white/10" />
 

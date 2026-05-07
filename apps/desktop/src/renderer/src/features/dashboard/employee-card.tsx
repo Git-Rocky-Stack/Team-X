@@ -86,15 +86,15 @@ export function EmployeeCard({ employee, live }: EmployeeCardProps) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-foreground">{employee.name}</span>
+            <span className="truncate text-body-strong text-foreground">{employee.name}</span>
             <span
               className={cn('h-2 w-2 shrink-0 rounded-full', statusColor(displayStatus))}
               title={statusLabel(displayStatus)}
             />
           </div>
-          <span className="block truncate text-xs text-muted-foreground">{employee.title}</span>
+          <span className="block truncate text-caption text-muted-foreground">{employee.title}</span>
         </div>
-        <span className="shrink-0 rounded-md bg-black px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <span className="shrink-0 rounded-md bg-black px-2 py-0.5 text-eyebrow-sm text-muted-foreground">
           {employee.level}
         </span>
       </div>
@@ -113,7 +113,7 @@ export function EmployeeCard({ employee, live }: EmployeeCardProps) {
 
       {/* Idle state — subtle hint */}
       {displayStatus === 'idle' && (
-        <p className="text-xs text-muted-foreground/60">Ready for work</p>
+        <p className="text-caption text-muted-foreground/60">Ready for work</p>
       )}
     </button>
   );

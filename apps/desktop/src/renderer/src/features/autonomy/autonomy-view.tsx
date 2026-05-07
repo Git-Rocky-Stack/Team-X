@@ -92,11 +92,10 @@ const AUTONOMY_SUBVIEWS: Array<{
 ];
 
 const ACCESS_FIELD_CLASSNAME =
-  'h-10 w-full rounded-md border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-white/20';
+  'h-10 w-full rounded-md border border-white/10 bg-black/20 px-3 text-body text-foreground outline-none transition placeholder:text-muted-foreground focus:border-white/20';
 const ACCESS_TEXTAREA_CLASSNAME =
-  'min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-white/20';
-const ACCESS_LABEL_CLASSNAME =
-  'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
+  'min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-body text-foreground outline-none transition placeholder:text-muted-foreground focus:border-white/20';
+const ACCESS_LABEL_CLASSNAME = 'text-eyebrow text-muted-foreground';
 const OPERATOR_INVITE_AUTH_MODE_OPTIONS: SharedOperatorAuthMode[] = ['invited', 'cloud'];
 const OPERATOR_INVITE_ROLE_OPTIONS: OperatorMembershipRole[] = ['operator', 'reviewer', 'admin'];
 
@@ -371,7 +370,7 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-body-strong text-foreground">
                     {entry.operator.displayName}
                   </span>
                   <MissionPill tone="accent">{entry.membership.role}</MissionPill>
@@ -379,11 +378,11 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
                   <MissionPill>{membershipSourceLabel(entry)}</MissionPill>
                   {entry.operator.id === 'rocky' ? <MissionPill>local owner</MissionPill> : null}
                 </div>
-                <p className="text-xs leading-5 text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   {entry.operator.email?.trim() ? entry.operator.email : authModeDescription(entry)}
                 </p>
                 {sourceDescription ? (
-                  <p className="text-xs leading-5 text-muted-foreground">{sourceDescription}</p>
+                  <p className="text-caption text-muted-foreground">{sourceDescription}</p>
                 ) : null}
               </div>
               <div className="flex max-w-xl flex-wrap items-center justify-end gap-2">
@@ -392,7 +391,7 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
                     <MissionPill key={privilege}>{privilege}</MissionPill>
                   ))
                 ) : (
-                  <span className="text-xs leading-5 text-muted-foreground">
+                  <span className="text-caption text-muted-foreground">
                     No elevated governance capabilities are assigned to this membership.
                   </span>
                 )}
@@ -588,19 +587,19 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
               <div className="space-y-4">
                 <MissionInsetSurface className="space-y-4 p-4" data-cloud-link-card="">
                   <div className="space-y-1">
-                    <div className="text-sm font-semibold text-foreground">Linked Workspace</div>
-                    <p className="text-xs leading-5 text-muted-foreground">
+                    <div className="text-body-strong text-foreground">Linked Workspace</div>
+                    <p className="text-caption text-muted-foreground">
                       Explicitly link or unlink this workspace before the hosted identity and sync
                       layers land. This slice is local-only but durable, so the operator posture is
                       honest now instead of placeholder copy.
                     </p>
                   </div>
                   {cloudLinkQuery.isLoading ? (
-                    <p className="text-xs leading-5 text-muted-foreground">
+                    <p className="text-caption text-muted-foreground">
                       Resolving linked-workspace posture...
                     </p>
                   ) : cloudLinkQuery.isError || !cloudLink ? (
-                    <p className="text-xs leading-5 text-red-200">
+                    <p className="text-caption text-red-200">
                       Linked-workspace posture could not be loaded for this workspace.
                     </p>
                   ) : (
@@ -612,19 +611,19 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                         <MissionPill>{cloudLink.isLinked ? 'linked' : 'unlinked'}</MissionPill>
                         <MissionPill>{cloudLink.deviceId}</MissionPill>
                       </div>
-                      <p className="text-xs leading-5 text-muted-foreground">
+                      <p className="text-caption text-muted-foreground">
                         {cloudLinkDescription(cloudLink)}
                       </p>
                       <div className="grid gap-3 md:grid-cols-2">
                         <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-3">
                           <div className={ACCESS_LABEL_CLASSNAME}>Cloud Workspace Id</div>
-                          <div className="mt-2 break-all text-xs text-foreground">
+                          <div className="mt-2 break-all text-caption text-foreground">
                             {cloudLink.cloudWorkspaceId ?? 'Not reserved yet'}
                           </div>
                         </div>
                         <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-3">
                           <div className={ACCESS_LABEL_CLASSNAME}>Last Sync</div>
-                          <div className="mt-2 text-xs text-foreground">
+                          <div className="mt-2 text-caption text-foreground">
                             {cloudLink.lastSyncAt
                               ? new Date(cloudLink.lastSyncAt).toLocaleString()
                               : 'No successful sync recorded yet'}
@@ -632,31 +631,31 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                         </div>
                       </div>
                       {cloudLink.lastSyncError ? (
-                        <p className="text-xs leading-5 text-red-200">{cloudLink.lastSyncError}</p>
+                        <p className="text-caption text-red-200">{cloudLink.lastSyncError}</p>
                       ) : null}
                       {linkWorkspaceMutation.isError ? (
-                        <p className="text-xs leading-5 text-red-200">
+                        <p className="text-caption text-red-200">
                           {linkWorkspaceMutation.error instanceof Error
                             ? linkWorkspaceMutation.error.message
                             : 'Workspace link failed.'}
                         </p>
                       ) : null}
                       {unlinkWorkspaceMutation.isError ? (
-                        <p className="text-xs leading-5 text-red-200">
+                        <p className="text-caption text-red-200">
                           {unlinkWorkspaceMutation.error instanceof Error
                             ? unlinkWorkspaceMutation.error.message
                             : 'Workspace unlink failed.'}
                         </p>
                       ) : null}
                       {reconnectWorkspaceMutation.isError ? (
-                        <p className="text-xs leading-5 text-red-200">
+                        <p className="text-caption text-red-200">
                           {reconnectWorkspaceMutation.error instanceof Error
                             ? reconnectWorkspaceMutation.error.message
                             : 'Workspace reconnect failed.'}
                         </p>
                       ) : null}
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-xs leading-5 text-muted-foreground">
+                        <p className="text-caption text-muted-foreground">
                           Link reserves stable local cloud ids now. Hosted auth and event sync land
                           in the next shared/cloud slices.
                         </p>
@@ -703,10 +702,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                 </MissionInsetSurface>
                 <MissionInsetSurface className="space-y-4 p-4" data-operator-invites="">
                   <div className="space-y-1">
-                    <div className="text-sm font-semibold text-foreground">
+                    <div className="text-body-strong text-foreground">
                       Queue Operator Invite
                     </div>
-                    <p className="text-xs leading-5 text-muted-foreground">
+                    <p className="text-caption text-muted-foreground">
                       Linked workspaces queue hosted invites automatically. Unlinked workspaces keep
                       local placeholders until shared/cloud auth is fully active.
                     </p>
@@ -789,14 +788,14 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       />
                     </label>
                     {createInviteMutation.isError ? (
-                      <p className="text-xs leading-5 text-red-200">
+                      <p className="text-caption text-red-200">
                         {createInviteMutation.error instanceof Error
                           ? createInviteMutation.error.message
                           : 'The operator invite could not be created.'}
                       </p>
                     ) : null}
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-xs leading-5 text-muted-foreground">
+                      <p className="text-caption text-muted-foreground">
                         Pending invites do not create membership yet. They make the intended shared
                         operator posture explicit now.
                       </p>
@@ -807,7 +806,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                   </form>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-semibold text-foreground">
+                      <div className="text-body-strong text-foreground">
                         Invite Queue ({invites.length})
                       </div>
                       <MissionPill tone={pendingInvites.length > 0 ? 'warning' : 'accent'}>
@@ -815,15 +814,15 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       </MissionPill>
                     </div>
                     {invitesQuery.isLoading ? (
-                      <p className="text-xs leading-5 text-muted-foreground">
+                      <p className="text-caption text-muted-foreground">
                         Loading operator invites...
                       </p>
                     ) : invitesQuery.isError ? (
-                      <p className="text-xs leading-5 text-red-200">
+                      <p className="text-caption text-red-200">
                         Operator invites could not be loaded for this workspace.
                       </p>
                     ) : invites.length === 0 ? (
-                      <p className="text-xs leading-5 text-muted-foreground">
+                      <p className="text-caption text-muted-foreground">
                         No operator invites have been queued for this workspace yet.
                       </p>
                     ) : (
@@ -844,7 +843,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div className="space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-sm font-semibold text-foreground">
+                                    <span className="text-body-strong text-foreground">
                                       {invite.displayName?.trim()
                                         ? invite.displayName
                                         : invite.email}
@@ -856,24 +855,24 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                       {invite.status}
                                     </MissionPill>
                                   </div>
-                                  <p className="text-xs leading-5 text-muted-foreground">
+                                  <p className="text-caption text-muted-foreground">
                                     {invite.email}
                                   </p>
                                   {invite.sourceKind === 'hosted' ? (
-                                    <p className="text-xs leading-5 text-muted-foreground">
+                                    <p className="text-caption text-muted-foreground">
                                       {invite.cloudWorkspaceId?.trim()
                                         ? `Hosted invite tracked for ${invite.cloudWorkspaceId}.`
                                         : 'Hosted invite tracked for the linked workspace.'}
                                     </p>
                                   ) : null}
                                   {invite.note ? (
-                                    <p className="text-xs leading-5 text-muted-foreground">
+                                    <p className="text-caption text-muted-foreground">
                                       {invite.note}
                                     </p>
                                   ) : null}
                                 </div>
                                 <div className="space-y-2 text-right">
-                                  <p className="text-xs leading-5 text-muted-foreground">
+                                  <p className="text-caption text-muted-foreground">
                                     Created {new Date(invite.createdAt).toLocaleString()}
                                   </p>
                                   {invite.status === 'pending' ? (
@@ -952,7 +951,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             description="Current workspace supervision footing"
           >
             <MissionInsetSurface className="p-4">
-              <div className="space-y-3 text-sm text-muted-foreground">
+              <div className="space-y-3 text-body text-muted-foreground">
                 <div className="flex items-center justify-between gap-3">
                   <span>Posture</span>
                   <span className="font-semibold uppercase tracking-[0.16em] text-foreground">
@@ -990,20 +989,20 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                 </MissionPill>
                 <MissionPill>{cloudLink?.cloudWorkspaceId ?? 'no workspace id'}</MissionPill>
               </div>
-              <p className="text-xs leading-5 text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 {cloudLinkDescription(cloudLink)}
               </p>
             </MissionInsetSurface>
-            <p className="text-xs leading-5 text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               {postureDescription(accessSummary)}
             </p>
             <MissionInsetSurface className="p-4">
               {sharingReadinessQuery.isLoading ? (
-                <p className="text-xs leading-5 text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   Resolving sharing readiness...
                 </p>
               ) : sharingReadinessQuery.isError || !sharingReadiness ? (
-                <p className="text-xs leading-5 text-red-200">
+                <p className="text-caption text-red-200">
                   Sharing readiness is unavailable for this workspace.
                 </p>
               ) : (
@@ -1019,19 +1018,19 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       {sharingReadiness.readiness}
                     </MissionPill>
                   </div>
-                  <p className="text-xs leading-5 text-muted-foreground">
+                  <p className="text-caption text-muted-foreground">
                     {sharingReadiness.lastExportedAt
                       ? `Last export ${new Date(sharingReadiness.lastExportedAt).toLocaleString()}`
                       : 'No workspace export or template has been recorded yet.'}
                   </p>
                   {sharingReadiness.missingRequirements.length > 0 ? (
-                    <div className="space-y-1 text-xs leading-5 text-muted-foreground">
+                    <div className="space-y-1 text-caption text-muted-foreground">
                       {sharingReadiness.missingRequirements.map((requirement) => (
                         <p key={requirement}>- {requirement}</p>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs leading-5 text-emerald-300">
+                    <p className="text-caption text-emerald-300">
                       The configured sharing posture is ready on this workspace.
                     </p>
                   )}
@@ -1073,7 +1072,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             title="What Lands Next"
             description="The next autonomy slices build on this shell"
           >
-            <MissionInsetSurface className="space-y-3 p-4 text-sm leading-6 text-muted-foreground">
+            <MissionInsetSurface className="space-y-3 p-4 text-body text-muted-foreground">
               <p>
                 Runtime profiles, routines, budgets, approvals, and artifacts are now active slices
                 of the control plane.

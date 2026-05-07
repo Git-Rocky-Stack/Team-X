@@ -34,7 +34,7 @@ export function SystemAgentBadge({ size = 'sm', className }: SystemAgentBadgePro
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full bg-brand/15 font-medium text-brand',
-        size === 'sm' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs',
+        size === 'sm' ? 'px-1.5 py-0.5 text-eyebrow-sm' : 'px-2 py-1 text-caption',
         className,
       )}
       aria-label="Copilot conversation"

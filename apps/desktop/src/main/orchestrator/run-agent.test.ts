@@ -894,4 +894,298 @@ describe('runAgent', () => {
       expect(events.map((e) => e.type)).toEqual(['work.started', 'tool.called', 'work.completed']);
     });
   });
+
+  describe('transient-failure retry', () => {
+    /**
+     * Build a provider that throws on its first N invocations and then
+     * starts succeeding on invocation N+1. Each call returns a fresh
+     * generator, mirroring how `makeOllamaStream` etc. behave when the
+     * orchestrator drives them across attempts. The returned `getCalls`
+     * accessor lets tests assert how many times the provider was
+     * actually invoked — which IS the retry-loop's behaviour under test.
+     */
+    function buildFlakyProvider(args: {
+      failuresBeforeSuccess: number;
+      failureError: Error;
+      successDeltas: string[];
+      successUsage: StreamUsage;
+    }): { provider: ProviderStreamFn; getCalls: () => number } {
+      let calls = 0;
+      const provider: ProviderStreamFn = async function* () {
+        calls += 1;
+        if (calls <= args.failuresBeforeSuccess) {
+          throw args.failureError;
+        }
+        for (const delta of args.successDeltas) {
+          yield { delta };
+        }
+        yield { done: true, usage: args.successUsage };
+      };
+      return { provider, getCalls: () => calls };
+    }
+
+    /** Provider that yields one chunk, then throws on the same generator. */
+    function buildPostChunkFailureProvider(err: Error): {
+      provider: ProviderStreamFn;
+      getCalls: () => number;
+    } {
+      let calls = 0;
+      const provider: ProviderStreamFn = async function* () {
+        calls += 1;
+        yield { delta: 'partial' };
+        throw err;
+      };
+      return { provider, getCalls: () => calls };
+    }
+
+    it('retries once on a transient pre-stream "fetch failed" and recovers', async () => {
+      const { provider, getCalls } = buildFlakyProvider({
+        failuresBeforeSuccess: 1,
+        failureError: new TypeError('fetch failed'),
+        successDeltas: ['Hello', ', world!'],
+        successUsage: { promptTokens: 6, completionTokens: 7 },
+      });
+
+      const result = await runAgent(
+        {
+          bus: f.bus,
+          messages: f.messages,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider,
+          providerName: 'flaky-provider',
+          model: 'flaky-model',
+        },
+      );
+
+      expect(getCalls()).toBe(2); // 1 failure + 1 success
+      expect(result.promptTokens).toBe(6);
+      expect(result.completionTokens).toBe(7);
+
+      // Exactly one message row, exactly one runs row — no duplication
+      // from the retried attempt.
+      const msgs = f.messages.listByThread(f.threadId);
+      expect(msgs).toHaveLength(1);
+      expect(msgs[0]?.content).toBe('Hello, world!');
+
+      const runs = f.runs.listByEmployee(f.employeeId);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]?.status).toBe('success');
+      expect(runs[0]?.error).toBeNull();
+
+      // No work.failed emitted — the user-visible event sequence looks
+      // identical to a clean first-attempt success.
+      const events = f.bus.replaySince(0);
+      expect(events.map((e) => e.type)).toEqual([
+        'work.started',
+        'token.delta',
+        'token.delta',
+        'work.completed',
+      ]);
+    });
+
+    it('exhausts retries and surfaces a friendly "connection dropped" error', async () => {
+      const { provider, getCalls } = buildFlakyProvider({
+        failuresBeforeSuccess: Number.POSITIVE_INFINITY, // every attempt fails
+        failureError: new TypeError('fetch failed'),
+        successDeltas: [],
+        successUsage: { promptTokens: 0, completionTokens: 0 },
+      });
+
+      await expect(
+        runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'flaky-provider',
+            model: 'flaky-model',
+          },
+        ),
+      ).rejects.toThrow(/provider connection dropped/i);
+
+      // 1 initial + 1 retry = 2 invocations, then we give up.
+      expect(getCalls()).toBe(2);
+
+      const runs = f.runs.listByEmployee(f.employeeId);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]?.status).toBe('error');
+      expect(runs[0]?.error).toMatch(/provider connection dropped/i);
+
+      // The renderer-visible event for the retry-exhausted case is the
+      // same single `work.failed` it would have seen in any other
+      // failure mode — only the message text changes.
+      const events = f.bus.replaySince(0);
+      expect(events.map((e) => e.type)).toEqual(['work.started', 'work.failed']);
+    });
+
+    it('does NOT retry once any chunk has streamed', async () => {
+      const { provider, getCalls } = buildPostChunkFailureProvider(
+        new TypeError('fetch failed'),
+      );
+
+      await expect(
+        runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+          },
+        ),
+      ).rejects.toThrow('fetch failed');
+
+      // Only one invocation — the post-chunk path is not retry-eligible
+      // because retrying would duplicate the already-streamed content
+      // into the open message bubble.
+      expect(getCalls()).toBe(1);
+
+      const runs = f.runs.listByEmployee(f.employeeId);
+      expect(runs[0]?.status).toBe('error');
+      // The raw error survives — no "connection dropped" rewrite when
+      // chunks already streamed (we trust the renderer to handle the
+      // partial reply explicitly).
+      expect(runs[0]?.error).toBe('fetch failed');
+    });
+
+    it('does NOT retry non-transient errors', async () => {
+      const { provider, getCalls } = buildFlakyProvider({
+        failuresBeforeSuccess: 1,
+        failureError: new Error('[provider-router/ollama] Ollama returned HTTP 400: bad input'),
+        successDeltas: ['unused'],
+        successUsage: { promptTokens: 1, completionTokens: 1 },
+      });
+
+      await expect(
+        runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+          },
+        ),
+      ).rejects.toThrow(/HTTP 400/);
+
+      // Single invocation — HTTP-status errors are explicit provider
+      // responses, not transport flakes.
+      expect(getCalls()).toBe(1);
+    });
+
+    it('does NOT retry when the user abort signal is already aborted', async () => {
+      const { provider, getCalls } = buildFlakyProvider({
+        failuresBeforeSuccess: 1,
+        failureError: new TypeError('fetch failed'),
+        successDeltas: ['unused'],
+        successUsage: { promptTokens: 1, completionTokens: 1 },
+      });
+
+      const ac = new AbortController();
+      ac.abort(); // pre-aborted
+
+      await expect(
+        runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+            signal: ac.signal,
+          },
+        ),
+      ).rejects.toThrow();
+
+      // Only the initial invocation — the retry path checks the signal
+      // and the captured abortKind before sleeping.
+      expect(getCalls()).toBe(1);
+
+      const runs = f.runs.listByEmployee(f.employeeId);
+      expect(runs[0]?.status).toBe('cancelled');
+    });
+
+    it('preserves the original error as `cause` when retries exhaust', async () => {
+      const rootError = new TypeError('fetch failed');
+      const { provider } = buildFlakyProvider({
+        failuresBeforeSuccess: Number.POSITIVE_INFINITY,
+        failureError: rootError,
+        successDeltas: [],
+        successUsage: { promptTokens: 0, completionTokens: 0 },
+      });
+
+      let thrown: unknown = null;
+      try {
+        await runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+          },
+        );
+      } catch (err) {
+        thrown = err;
+      }
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toMatch(/provider connection dropped/i);
+      // Original error survives on `.cause` for forensic logging.
+      expect((thrown as Error & { cause?: unknown }).cause).toBe(rootError);
+    });
+  });
 });

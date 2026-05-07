@@ -68,16 +68,16 @@ export class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Error Message:</h4>
-                <pre className="rounded-md bg-destructive/10 p-3 text-xs text-destructive overflow-auto max-h-32">
+                <h4 className="text-h4">Error Message:</h4>
+                <pre className="rounded-md bg-destructive/10 p-3 text-code-sm text-destructive overflow-auto max-h-32">
                   {this.state.error?.toString()}
                 </pre>
               </div>
 
               {this.state.errorInfo && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Component Stack:</h4>
-                  <pre className="rounded-md bg-muted p-3 text-xs overflow-auto max-h-48">
+                  <h4 className="text-h4">Component Stack:</h4>
+                  <pre className="rounded-md bg-muted p-3 text-code-sm overflow-auto max-h-48">
                     {this.state.errorInfo.componentStack}
                   </pre>
                 </div>
@@ -98,7 +98,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 </Button>
               </div>
 
-              <div className="text-xs text-muted-foreground">
+              <div className="text-caption text-muted-foreground">
                 <strong>Debug info:</strong> Check the browser console (F12 → Console) for more
                 details. Open an issue with the error message and component stack above.
               </div>

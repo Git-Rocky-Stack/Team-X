@@ -47,9 +47,7 @@ export function PrivacySection() {
   if (isLoading || !data) {
     return (
       <section className="space-y-3">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Privacy Tier
-        </h4>
+        <h2 className="text-h2 text-foreground">Privacy Tier</h2>
         <Skeleton className="h-24 rounded-lg" />
       </section>
     );
@@ -60,9 +58,7 @@ export function PrivacySection() {
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Privacy Tier
-        </h4>
+        <h2 className="text-h2 text-foreground">Privacy Tier</h2>
         {setPrivacy.isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
       </div>
 
@@ -85,8 +81,8 @@ export function PrivacySection() {
                 }
               `}
             >
-              <span className="text-xs font-semibold">{opt.label}</span>
-              <span className="text-[11px] mt-0.5 leading-snug opacity-70">{opt.description}</span>
+              <span className="text-body-strong">{opt.label}</span>
+              <span className="text-caption mt-0.5 opacity-70">{opt.description}</span>
             </button>
           );
         })}
@@ -98,17 +94,17 @@ export function PrivacySection() {
           {availableProviders.map((p) => (
             <div key={p.id} className="flex items-center justify-between px-4 py-2">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-xs font-medium text-foreground truncate">{p.name}</span>
+                <span className="text-body-strong text-foreground truncate">{p.name}</span>
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono shrink-0">
                   {p.kind}
                 </Badge>
               </div>
               {p.allowed ? (
-                <span className="flex items-center gap-1 text-[11px] text-green-400 shrink-0">
+                <span className="flex items-center gap-1 text-caption text-green-400 shrink-0">
                   <CheckCircle2 className="h-3 w-3" /> Allowed
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-[11px] text-destructive shrink-0">
+                <span className="flex items-center gap-1 text-caption text-destructive shrink-0">
                   <XCircle className="h-3 w-3" /> Blocked
                 </span>
               )}

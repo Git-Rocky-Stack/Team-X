@@ -250,14 +250,14 @@ export function InstallCustomSkillDialog({
                     placeholder="https://github.com/username/team-x-skills/tree/main/my-skill"
                     value={url}
                     onChange={(e) => handleUrlChange(e.target.value)}
-                    className="pl-9 font-mono text-sm"
+                    className="pl-9 text-code"
                     disabled={isInstalling}
                   />
                   {isValidating && (
                     <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   Supports GitHub repositories, direct manifest URLs, or any HTTPS link
                 </p>
               </div>
@@ -275,7 +275,7 @@ export function InstallCustomSkillDialog({
                       placeholder="C:\\path\\to\\team-x-skill"
                       value={localPath}
                       onChange={(e) => handleLocalPathChange(e.target.value)}
-                      className="pl-9 font-mono text-sm"
+                      className="pl-9 text-code"
                       disabled={isInstalling}
                     />
                     {isValidating && (
@@ -291,7 +291,7 @@ export function InstallCustomSkillDialog({
                     Browse
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   Select a folder containing teamx-skill.json or team-x-skill.json
                 </p>
               </div>
@@ -325,12 +325,12 @@ export function InstallCustomSkillDialog({
                   <div className="space-y-4">
                     {/* Name and description */}
                     <div>
-                      <h5 className="font-semibold text-lg mb-1">{preview.name}</h5>
-                      <p className="text-sm text-muted-foreground">{preview.description}</p>
+                      <h5 className="text-h3 mb-1">{preview.name}</h5>
+                      <p className="text-body text-muted-foreground">{preview.description}</p>
                     </div>
 
                     {/* Metadata */}
-                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap gap-3 text-caption text-muted-foreground">
                       {preview.version && (
                         <span className="flex items-center gap-1">
                           <Badge variant="secondary">v{preview.version}</Badge>
@@ -342,7 +342,7 @@ export function InstallCustomSkillDialog({
 
                     {/* Tools */}
                     <div>
-                      <h6 className="text-sm font-medium mb-2">Included Tools</h6>
+                      <h6 className="text-body-strong mb-2">Included Tools</h6>
                       <div className="flex flex-wrap gap-2">
                         {preview.tools.map((tool) => (
                           <Badge key={tool} variant="outline" className="font-mono text-xs">
@@ -354,7 +354,7 @@ export function InstallCustomSkillDialog({
 
                     {/* Capabilities */}
                     <div>
-                      <h6 className="text-sm font-medium mb-2">Required Capabilities</h6>
+                      <h6 className="text-body-strong mb-2">Required Capabilities</h6>
                       <div className="flex flex-wrap gap-2">
                         {preview.capabilities.map((capability) => (
                           <Badge key={capability} variant="secondary" className="text-xs">
@@ -367,7 +367,7 @@ export function InstallCustomSkillDialog({
                     {/* Installation notice */}
                     <Alert>
                       <Sparkles className="h-4 w-4" />
-                      <AlertDescription className="text-xs">
+                      <AlertDescription className="text-caption">
                         This skill will be installed and available for your agents to use. You can
                         enable or disable it anytime from the Skills Marketplace.
                       </AlertDescription>

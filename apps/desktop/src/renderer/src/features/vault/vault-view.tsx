@@ -137,7 +137,7 @@ export function VaultView({ companyId }: VaultViewProps) {
   if (!companyId) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-lg font-medium text-muted-foreground">No company selected</p>
+        <p className="text-h3 text-muted-foreground">No company selected</p>
       </div>
     );
   }
@@ -149,9 +149,9 @@ export function VaultView({ companyId }: VaultViewProps) {
         <div className="flex items-center gap-3">
           <HardDrive className="h-5 w-5 text-brand" />
           <div>
-            <h2 className="text-sm font-semibold">File Vault</h2>
+            <h1 className="text-h1 text-foreground">File Vault</h1>
             {stats && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 {stats.fileCount} file{stats.fileCount !== 1 ? 's' : ''} &middot;{' '}
                 {formatBytes(stats.totalBytes)}
               </p>
@@ -165,7 +165,7 @@ export function VaultView({ companyId }: VaultViewProps) {
               placeholder="Search files..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 w-56 pl-8 text-xs"
+              className="h-8 w-56 pl-8 text-caption"
             />
           </div>
           <Button size="sm" className="h-8 gap-1.5" onClick={handleUpload}>
@@ -186,10 +186,10 @@ export function VaultView({ companyId }: VaultViewProps) {
           ) : displayFiles.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <FileArchive className="mb-3 h-10 w-10 text-muted-foreground/50" />
-              <p className="text-sm font-medium text-muted-foreground">
+              <p className="text-body-strong text-muted-foreground">
                 {searchQuery ? 'No matching files' : 'No files in vault'}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground/70">
+              <p className="mt-1 text-caption text-muted-foreground/70">
                 {searchQuery ? 'Try a different search term.' : 'Upload files to get started.'}
               </p>
             </div>
@@ -211,8 +211,8 @@ export function VaultView({ companyId }: VaultViewProps) {
                   >
                     <Icon className="h-8 w-8 shrink-0 text-muted-foreground/70" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{file.originalName}</p>
-                      <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                      <p className="truncate text-body-strong">{file.originalName}</p>
+                      <div className="mt-0.5 flex items-center gap-2 text-caption text-muted-foreground">
                         <span>{formatBytes(file.sizeBytes)}</span>
                         <span>&middot;</span>
                         <span>{getMimeLabel(file.mimeType)}</span>
@@ -242,8 +242,8 @@ export function VaultView({ companyId }: VaultViewProps) {
             <div className="p-6">
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{selectedFile.originalName}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
+                  <p className="truncate text-body-strong">{selectedFile.originalName}</p>
+                  <p className="mt-0.5 text-caption text-muted-foreground">
                     {getMimeLabel(selectedFile.mimeType)}
                   </p>
                 </div>
@@ -262,14 +262,14 @@ export function VaultView({ companyId }: VaultViewProps) {
                 <DetailRow label="Uploaded" value={formatDate(selectedFile.createdAt)} />
                 <DetailRow label="Modified" value={formatDate(selectedFile.updatedAt)} />
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1">SHA256</p>
-                  <p className="break-all font-mono text-[10px] text-muted-foreground/80 bg-surface-50 rounded p-2">
+                  <p className="text-label text-muted-foreground mb-1">SHA256</p>
+                  <p className="break-all text-code-sm text-muted-foreground/80 bg-surface-50 rounded p-2">
                     {selectedFile.sha256}
                   </p>
                 </div>
                 {selectedFile.tags.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Tags</p>
+                    <p className="text-label text-muted-foreground mb-1">Tags</p>
                     <div className="flex flex-wrap gap-1">
                       {selectedFile.tags.map((tag) => (
                         <Badge key={tag} variant="outline" className="text-[10px]">
@@ -303,7 +303,7 @@ export function VaultView({ companyId }: VaultViewProps) {
                 </Button>
                 {verifyMutation.data && (
                   <div
-                    className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${
+                    className={`flex items-center gap-1.5 rounded px-2 py-1 text-caption ${
                       verifyMutation.data.ok
                         ? 'bg-green-500/10 text-green-400'
                         : 'bg-red-500/10 text-red-400'
@@ -342,8 +342,8 @@ export function VaultView({ companyId }: VaultViewProps) {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-sm">{value}</p>
+      <p className="text-label text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-body">{value}</p>
     </div>
   );
 }

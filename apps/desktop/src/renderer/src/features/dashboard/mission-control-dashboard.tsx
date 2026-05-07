@@ -144,17 +144,17 @@ function HeroMetric({
 
   const content = (
     <>
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+      <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
         <Icon className="h-4 w-4 text-brand" />
         {label}
       </div>
       <div className="flex items-end justify-between gap-3">
-        <span className="text-2xl font-semibold tracking-normal text-foreground">{value}</span>
+        <span className="text-numeric text-foreground">{value}</span>
         {onClick && (
           <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         )}
       </div>
-      <p className="text-xs text-muted-foreground">{hint}</p>
+      <p className="text-caption text-muted-foreground">{hint}</p>
     </>
   );
 
@@ -192,14 +192,14 @@ function PrimaryPanel({
       <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
+            <CardTitle className="text-foreground">{title}</CardTitle>
             {countLabel && (
               <Badge variant="outline" className="border-border/80 bg-black text-[10px] font-mono">
                 {countLabel}
               </Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-body text-muted-foreground">{description}</p>
         </div>
         {actions}
       </CardHeader>
@@ -259,7 +259,7 @@ function PanelMessageState({
       <div className="space-y-1">
         <p
           className={cn(
-            'text-sm font-medium',
+            'text-body-strong',
             tone === 'danger' ? 'text-red-100' : 'text-foreground',
           )}
         >
@@ -267,7 +267,7 @@ function PanelMessageState({
         </p>
         <p
           className={cn(
-            'max-w-md text-sm',
+            'max-w-md text-body',
             tone === 'danger' ? 'text-red-200/85' : 'text-muted-foreground',
           )}
         >
@@ -319,7 +319,7 @@ function RuntimeMetricCell({
         tone === 'default' && 'border-white/10',
       )}
     >
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+      <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
         <Icon
           className={cn(
             'h-4 w-4',
@@ -331,8 +331,8 @@ function RuntimeMetricCell({
         />
         {label}
       </div>
-      <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p>
+      <p className="mt-2 text-numeric text-foreground">{value}</p>
+      <p className="mt-1 text-caption text-muted-foreground">{hint}</p>
     </div>
   );
 }
@@ -372,7 +372,7 @@ function RuntimeOperationsBand({
     >
       <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
         <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-eyebrow text-muted-foreground">
             <HardDrive className="h-4 w-4 text-brand" />
             External Runtime Operations
             <Badge
@@ -392,8 +392,8 @@ function RuntimeOperationsBand({
               </Badge>
             )}
           </div>
-          <CardTitle className="text-lg text-foreground">Heartbeat and checkout pulse</CardTitle>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+          <CardTitle className="text-foreground">Heartbeat and checkout pulse</CardTitle>
+          <p className="max-w-3xl text-body text-muted-foreground">
             External agents, active leases, heartbeat freshness, managed workspaces, and budget stop
             posture.
           </p>
@@ -492,7 +492,7 @@ function RuntimeOperationsBand({
 
             {summary.recentSessions.length === 0 ? (
               <div
-                className="rounded-2xl border border-dashed border-white/10 bg-black p-5 text-sm leading-6 text-muted-foreground"
+                className="rounded-2xl border border-dashed border-white/10 bg-black p-5 text-body text-muted-foreground"
                 data-dashboard-runtime-empty=""
               >
                 No external runtime session is active for this workspace.
@@ -537,14 +537,14 @@ function RuntimeOperationsBand({
                         </Badge>
                       )}
                     </div>
-                    <p className="mt-3 break-all text-sm font-semibold text-foreground">
+                    <p className="mt-3 break-all text-body-strong text-foreground">
                       {session.currentTicketId ?? session.currentRunId ?? session.employeeId}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-caption text-muted-foreground">
                       Last heartbeat {formatRuntimeHeartbeat(session.lastHeartbeatAt)}
                     </p>
                     {session.failureReason && (
-                      <p className="mt-2 text-xs leading-5 text-amber-200">
+                      <p className="mt-2 text-caption text-amber-200">
                         {truncateText(session.failureReason, 120)}
                       </p>
                     )}
@@ -756,7 +756,7 @@ export function MissionControlDashboard({
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="max-w-3xl space-y-3">
-                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-eyebrow text-muted-foreground">
                   <LayoutPanelTop className="h-4 w-4 text-brand" />
                   Mission Control
                   {company?.slug && (
@@ -777,10 +777,10 @@ export function MissionControlDashboard({
                   )}
                 </div>
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-semibold tracking-normal text-foreground sm:text-[2.35rem]">
+                  <h1 className="text-display text-foreground">
                     {company?.name ?? 'Select a workspace to open the control surface'}
                   </h1>
-                  <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[15px]">
+                  <p className="max-w-2xl text-body text-muted-foreground">
                     {company?.settings?.mission ??
                       'Track live execution, queue pressure, and operational telemetry from one surface without leaving the dashboard.'}
                   </p>
@@ -842,7 +842,7 @@ export function MissionControlDashboard({
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
                   <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
                     {visiblePrimaryPanelCount(layout)} / 2 live panels
                   </Badge>
@@ -898,7 +898,7 @@ export function MissionControlDashboard({
                   )}
                 </div>
                 {dashboardLayout.error && (
-                  <p className="text-xs text-red-200" data-dashboard-layout-error="" role="alert">
+                  <p className="text-caption text-red-200" data-dashboard-layout-error="" role="alert">
                     {dashboardLayout.error}
                   </p>
                 )}
@@ -1078,10 +1078,10 @@ export function MissionControlDashboard({
             <CardContent className="flex min-h-[18rem] flex-col items-center justify-center gap-4 text-center">
               <AlertTriangle className="h-10 w-10 text-red-300" />
               <div className="space-y-1">
-                <h2 className="text-lg font-semibold text-foreground">
+                <h2 className="text-h3 text-foreground">
                   Dashboard data could not load
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-body text-muted-foreground">
                   The mission-control shell is ready, but the employee roster query failed.
                 </p>
               </div>
@@ -1180,7 +1180,7 @@ export function MissionControlDashboard({
                   ) : (
                     <div className="grid gap-3" data-dashboard-panel-state="agent-runs-ready">
                       {agentRunsQuery.hasHistoryWarning && (
-                        <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-black p-4 text-sm text-amber-100">
+                        <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-black p-4 text-body text-amber-100">
                           <div className="space-y-1">
                             <p className="font-medium">Run history refresh failed</p>
                             <p className="text-amber-100/80">
@@ -1218,7 +1218,7 @@ export function MissionControlDashboard({
                           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div className="space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-sm font-semibold text-foreground">
+                                <p className="text-body-strong text-foreground">
                                   {truncateText(run.label, 72)}
                                 </p>
                                 <Badge
@@ -1236,7 +1236,7 @@ export function MissionControlDashboard({
                                   {run.status}
                                 </Badge>
                               </div>
-                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
                                 <span>{formatAgentRunPhase(run.latestPhase)}</span>
                                 {run.stepCount > 0 && (
                                   <>
@@ -1252,12 +1252,12 @@ export function MissionControlDashboard({
                                 <span>{formatUsd(run.costUsd)}</span>
                               </div>
                               {run.failureReason && (
-                                <p className="text-xs text-red-300">
+                                <p className="text-caption text-red-300">
                                   {truncateText(run.failureReason, 120)}
                                 </p>
                               )}
                             </div>
-                            <div className="flex flex-col items-start gap-2 text-xs text-muted-foreground md:items-end">
+                            <div className="flex flex-col items-start gap-2 text-caption text-muted-foreground md:items-end">
                               <span>
                                 {run.durationMs
                                   ? `${Math.max(1, Math.round(run.durationMs / 1000))}s total`
@@ -1365,7 +1365,7 @@ export function MissionControlDashboard({
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <p className="text-sm font-semibold text-foreground">
+                                    <p className="text-body-strong text-foreground">
                                       {row.name}
                                     </p>
                                     <Badge
@@ -1378,9 +1378,9 @@ export function MissionControlDashboard({
                                       {liveStatusLabel(row.liveStatus)}
                                     </Badge>
                                   </div>
-                                  <p className="text-xs text-muted-foreground">{row.title}</p>
+                                  <p className="text-caption text-muted-foreground">{row.title}</p>
                                   {row.liveActivity && (
-                                    <p className="text-xs text-foreground/75">
+                                    <p className="text-caption text-foreground/75">
                                       {truncateText(row.liveActivity, 120)}
                                     </p>
                                   )}
@@ -1450,7 +1450,7 @@ export function MissionControlDashboard({
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-normal text-muted-foreground">
+                                <div className="flex flex-wrap items-center gap-2 text-eyebrow text-muted-foreground">
                                   <span>Open {row.counts.open}</span>
                                   <span>In progress {row.counts.inProgress}</span>
                                   <span>Blocked {row.counts.blocked}</span>
@@ -1474,7 +1474,7 @@ export function MissionControlDashboard({
                 >
                   <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-black p-8 text-center">
                     <LayoutPanelTop className="h-8 w-8 text-brand" />
-                    <p className="max-w-lg text-sm text-muted-foreground">
+                    <p className="max-w-lg text-body text-muted-foreground">
                       The mission-control shell is still active below, but the live board row is
                       hidden for this workspace.
                     </p>
@@ -1495,18 +1495,18 @@ export function MissionControlDashboard({
               <div className="h-full">
                 <Card className="mission-panel h-full rounded-[24px] border-white/10 bg-transparent shadow-none">
                   <CardHeader className="pb-4">
-                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                    <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
                       <Sparkles className="h-4 w-4 text-brand" />
                       Copilot Insights
                     </div>
-                    <CardTitle className="text-lg text-foreground">Secondary rail</CardTitle>
+                    <CardTitle className="text-foreground">Secondary rail</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div
                       className="rounded-2xl border border-white/10 bg-black p-4"
                       data-dashboard-secondary-panel="copilot"
                     >
-                      <p className="mb-3 text-xs text-muted-foreground">
+                      <p className="mb-3 text-caption text-muted-foreground">
                         Keep live findings visible without letting them outrank the work boards.
                       </p>
                       <div className="[&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0 [&_[data-copilot-widget-count]]:border-white/10 [&_[data-copilot-widget-count]]:bg-black [&_[data-copilot-widget-view-all]]:border-white/10 [&_[data-copilot-widget-view-all]]:bg-black [&_[data-copilot-widget-view-all]]:hover:bg-black">
@@ -1523,11 +1523,11 @@ export function MissionControlDashboard({
               >
                 <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                    <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
                       <Radar className="h-4 w-4 text-brand" />
                       Recent Commands
                     </div>
-                    <CardTitle className="text-lg text-foreground">Command stream</CardTitle>
+                    <CardTitle className="text-foreground">Command stream</CardTitle>
                   </div>
                   <Button
                     type="button"
@@ -1601,11 +1601,11 @@ export function MissionControlDashboard({
                             >
                               {intentLabel(entry.intent)}
                             </Badge>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-caption text-muted-foreground">
                               {formatTimeAgo(entry.executedAt)}
                             </span>
                           </div>
-                          <p className="text-sm text-foreground">{truncateText(entry.text, 96)}</p>
+                          <p className="text-body text-foreground">{truncateText(entry.text, 96)}</p>
                         </div>
                         <ArrowRight className="mt-1 h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                       </button>
@@ -1620,11 +1620,11 @@ export function MissionControlDashboard({
               >
                 <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
+                    <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
                       <Gauge className="h-4 w-4 text-brand" />
                       Telemetry Snapshot
                     </div>
-                    <CardTitle className="text-lg text-foreground">Execution pulse</CardTitle>
+                    <CardTitle className="text-foreground">Execution pulse</CardTitle>
                   </div>
                   <Button
                     type="button"
@@ -1682,40 +1682,40 @@ export function MissionControlDashboard({
                     <>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
+                          <p className="text-eyebrow text-muted-foreground">
                             Total runs
                           </p>
-                          <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
+                          <p className="mt-2 text-numeric text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.totalRuns)}
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
+                          <p className="text-eyebrow text-muted-foreground">
                             Total tokens
                           </p>
-                          <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
+                          <p className="mt-2 text-numeric text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.totalTokens)}
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
+                          <p className="text-eyebrow text-muted-foreground">
                             Avg latency
                           </p>
-                          <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
+                          <p className="mt-2 text-numeric text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.avgLatencyMs)}ms
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
+                          <p className="text-eyebrow text-muted-foreground">
                             Total cost
                           </p>
-                          <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">
+                          <p className="mt-2 text-numeric text-foreground">
                             {formatUsd(telemetryStatsQuery.data?.totalCostUsd)}
                           </p>
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-white/10 bg-black p-4 text-sm text-muted-foreground">
+                      <div className="rounded-2xl border border-white/10 bg-black p-4 text-body text-muted-foreground">
                         Current window: {formatCompactNumber(todayUsage?.totalRuns ?? 0)} runs,{' '}
                         {formatCompactNumber(todayUsage?.totalTokens ?? 0)} tokens,{' '}
                         {formatUsd(todayUsage?.costUsd)} cost.
@@ -1734,7 +1734,7 @@ export function MissionControlDashboard({
                         data-dashboard-autonomy-snapshot=""
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">
+                          <p className="text-eyebrow text-muted-foreground">
                             Autonomy snapshot
                           </p>
                           <Badge
@@ -1748,12 +1748,12 @@ export function MissionControlDashboard({
                             {pendingApprovalCount} pending
                           </Badge>
                         </div>
-                        <p className="mt-2 text-sm text-foreground">
+                        <p className="mt-2 text-body text-foreground">
                           {budgetOverview
                             ? `${budgetOverview.activePolicyCount} active policies, ${budgetOverview.warningCount} warnings, ${budgetOverview.exceededCount} exceeded.`
                             : 'Open autonomy to review runtime, routine, and budget posture.'}
                         </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="mt-1 text-caption text-muted-foreground">
                           {enabledRoutineCount} active routines shaping the queue. Operator posture
                           is {operatorPosture}.
                         </p>

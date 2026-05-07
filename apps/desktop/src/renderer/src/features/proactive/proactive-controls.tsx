@@ -130,7 +130,7 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Bot className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Proactive Mode</h3>
+          <h3 className="text-h3">Proactive Mode</h3>
         </div>
         <Skeleton className="h-24 w-full" />
       </Card>
@@ -143,9 +143,9 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Bot className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Proactive Mode</h3>
+          <h3 className="text-h3">Proactive Mode</h3>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-caption text-red-400">
           <AlertTriangle className="h-3.5 w-3.5" />
           Failed to load proactive settings.
         </div>
@@ -161,7 +161,7 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Proactive Mode</h3>
+          <h3 className="text-h3">Proactive Mode</h3>
         </div>
         <Switch
           checked={isEnabled}
@@ -171,7 +171,7 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
       </div>
 
       {/* Status description */}
-      <p className="text-xs text-muted-foreground mb-4">
+      <p className="text-caption text-muted-foreground mb-4">
         {isEnabled
           ? 'Agents will actively recognize opportunities and act without explicit commands.'
           : 'Proactive mode is disabled. Agents will only respond to direct commands.'}
@@ -179,8 +179,8 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
 
       {/* Autonomy mode badge */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-xs text-muted-foreground">Autonomy:</span>
-        <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium capitalize">
+        <span className="text-caption text-muted-foreground">Autonomy:</span>
+        <span className="rounded-md bg-muted px-2 py-0.5 text-label capitalize">
           {settings.autonomyMode}
         </span>
       </div>
@@ -191,21 +191,21 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
           {stateLoading || !state ? (
             <Skeleton className="h-16 w-full" />
           ) : stateError ? (
-            <div className="flex items-center gap-2 rounded border border-red-400/30 bg-red-500/10 px-2 py-1.5 text-xs text-red-400">
+            <div className="flex items-center gap-2 rounded border border-red-400/30 bg-red-500/10 px-2 py-1.5 text-caption text-red-400">
               <AlertTriangle className="h-3 w-3" />
               Failed to load work status
             </div>
           ) : (
             <div className="rounded-lg bg-muted/50 p-3 space-y-2">
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-caption">
                 <span className="text-muted-foreground">Active Work</span>
                 <span className="font-semibold">{state.activeWork}</span>
               </div>
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-caption">
                 <span className="text-muted-foreground">Queued Work</span>
                 <span className="font-semibold">{state.queuedWork}</span>
               </div>
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-caption">
                 <span className="text-muted-foreground">Last Scan</span>
                 <span className="font-semibold">{formatTimestamp(state.lastScanAt)}</span>
               </div>
@@ -237,7 +237,7 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
 
       {/* Disabled state message */}
       {!isEnabled && (
-        <div className="rounded-lg bg-muted/50 p-3 text-center text-xs text-muted-foreground">
+        <div className="rounded-lg bg-muted/50 p-3 text-center text-caption text-muted-foreground">
           Enable proactive mode to allow agents to work autonomously
         </div>
       )}

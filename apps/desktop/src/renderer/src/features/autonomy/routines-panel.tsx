@@ -27,11 +27,10 @@ import {
 } from '@/hooks/use-routines.js';
 
 const FIELD_CLASSNAME =
-  'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-sm text-foreground outline-none transition focus:border-brand/30';
-const LABEL_CLASSNAME =
-  'text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground';
+  'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-body text-foreground outline-none transition focus:border-brand/30';
+const LABEL_CLASSNAME = 'text-eyebrow text-muted-foreground';
 const TEXTAREA_CLASSNAME =
-  'min-h-[120px] w-full rounded-[18px] border border-white/10 bg-black/20 px-3 py-3 text-sm text-foreground outline-none transition focus:border-brand/30';
+  'min-h-[120px] w-full rounded-[18px] border border-white/10 bg-black/20 px-3 py-3 text-body text-foreground outline-none transition focus:border-brand/30';
 
 type RoutineTriggerValue = Routine['triggerKind'];
 
@@ -292,7 +291,7 @@ function RoutineCard({
     <MissionInsetSurface className="space-y-4 p-4" data-routine-card={routine.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
-          <div className="text-sm font-semibold text-foreground">{routine.name}</div>
+          <div className="text-body-strong text-foreground">{routine.name}</div>
           <div className="flex flex-wrap gap-2">
             <MissionPill tone="accent">{routine.triggerKind}</MissionPill>
             <MissionPill>{routine.enabled ? 'enabled' : 'paused'}</MissionPill>
@@ -379,12 +378,12 @@ function RoutineCard({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs leading-5 text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           {routine.lastRunMessage?.trim() || 'Recurring Routines create visible work.'}
         </p>
         <button
           type="button"
-          className="rounded-full border border-brand/35 bg-brand/15 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-brand transition hover:border-brand/60 hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full border border-brand/35 bg-brand/15 px-4 py-2 text-button-sm tracking-[0.18em] text-brand transition hover:border-brand/60 hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={saving}
           onClick={() => onSave(routine, draft)}
         >
@@ -469,8 +468,8 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
 
       <MissionInsetSurface className="space-y-4 p-4">
         <div className="space-y-1">
-          <div className="text-sm font-semibold text-foreground">Create Routine</div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <h3 className="text-h3 text-foreground">Create Routine</h3>
+          <p className="text-caption text-muted-foreground">
             Routines create explicit ticket work through the existing assignment and orchestrator
             path.
           </p>
@@ -517,7 +516,7 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
         <div className="flex justify-end">
           <button
             type="button"
-            className="rounded-full border border-brand/35 bg-brand/15 px-4 py-2 text-xs font-semibold tracking-[0.18em] text-brand transition hover:border-brand/60 hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-brand/35 bg-brand/15 px-4 py-2 text-button-sm tracking-[0.18em] text-brand transition hover:border-brand/60 hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={createRoutine.isPending}
             onClick={() =>
               createRoutine.mutate(
@@ -575,8 +574,8 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
 
       <MissionInsetSurface className="space-y-4 p-4">
         <div className="space-y-1">
-          <div className="text-sm font-semibold text-foreground">Recent Routine Runs</div>
-          <p className="text-xs leading-5 text-muted-foreground">
+          <h3 className="text-h3 text-foreground">Recent Routine Runs</h3>
+          <p className="text-caption text-muted-foreground">
             Manual and scheduled routine attempts are persisted here even when materialization
             fails.
           </p>
@@ -594,7 +593,7 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">{run.routineId}</span>
+                      <span className="text-body-strong text-foreground">{run.routineId}</span>
                       <MissionPill
                         tone={
                           run.status === 'success'
@@ -608,12 +607,12 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
                       </MissionPill>
                       <MissionPill>{run.reason}</MissionPill>
                     </div>
-                    <p className="text-xs leading-5 text-muted-foreground">
+                    <p className="text-caption text-muted-foreground">
                       Started {new Date(run.startedAt).toLocaleString()}
                       {run.ticketId ? ` • ticket ${run.ticketId}` : ''}
                     </p>
                   </div>
-                  <div className="max-w-xl text-xs leading-5 text-muted-foreground">
+                  <div className="max-w-xl text-caption text-muted-foreground">
                     {run.errorMessage?.trim() ||
                       run.message?.trim() ||
                       'Routine run recorded with no additional message.'}
