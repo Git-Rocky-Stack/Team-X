@@ -91,7 +91,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
   };
   const approvalInboxService = {
     listItems: vi.fn(() => []),
-    reviewItem: vi.fn(() => ({
+    reviewItem: vi.fn(async () => ({
       item: {
         id: 'request-1',
         companyId: 'company-1',

@@ -439,12 +439,21 @@ const FIXTURE_DECOMPOSED_PLAN: DecomposedPlan = Object.freeze({
 }) as DecomposedPlan;
 
 const FIXTURE_DELEGATION: DelegationResult = Object.freeze({
-  ticketId: 'tkt-test-1',
+  pendingDelegationId: 'pd-test-1',
   assigneeId: 'emp-test-swe',
   assigneeName: 'Mateo Reyes',
-  status: 'created',
+  // C4 (audit 2026-05-07) — delegate_subtask parks a pending row;
+  // the operator approves it from the inbox to materialize a ticket.
+  status: 'pending_approval' as const,
   fallbackUsed: false,
   attemptCount: 1,
+  assigneeScore: 0.65,
+  scoreBreakdown: Object.freeze({
+    roleFit: 0.5,
+    load: 0.0,
+    availability: 1,
+    pastPerformance: 0.5,
+  }),
 }) as DelegationResult;
 
 const FIXTURE_REVIEW: ReviewResult = Object.freeze({

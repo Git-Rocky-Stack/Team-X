@@ -1,0 +1,23 @@
+-- C3 (audit 2026-05-07) — Anthropic prompt-caching cost attribution.
+-- The runs row historically carried only prompt_tokens / completion_tokens,
+-- which collapsed cache reads, cache writes, and fresh input into a single
+-- bucket. With Anthropic ephemeral caching enabled at the adapter, the
+-- API now reports four distinct token counts per call:
+--
+--   input_tokens                  → fresh (uncached) input
+--   cache_read_input_tokens       → discounted re-use of a prior prefix (~10% rate)
+--   cache_creation_input_tokens   → premium first-time caching of a prefix (~125% rate)
+--   output_tokens                 → completion tokens
+--
+-- Storing the cache portions on the runs row lets the Telemetry tab
+-- explain WHY a row is cheap or expensive (cache-hit vs cache-miss vs
+-- cache-write) and lets future budget governance attribute spend to
+-- the cache-write turns specifically.
+--
+-- Both columns default to 0 so legacy `kind='work'` rows written before
+-- this migration remain readable. Local providers (ollama/*) write 0 to
+-- both even after the migration — they don't have a per-token cache
+-- pricing model.
+ALTER TABLE `runs` ADD COLUMN `cache_read_tokens` integer DEFAULT 0 NOT NULL;
+--> statement-breakpoint
+ALTER TABLE `runs` ADD COLUMN `cache_write_tokens` integer DEFAULT 0 NOT NULL;

@@ -29,6 +29,7 @@ import {
   blob,
   index,
   integer,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -697,16 +698,31 @@ export const messages = sqliteTable('messages', {
  * Deliberately not FK-constrained on company_id so we can retain history after
  * a company is soft-deleted.
  */
-export const events = sqliteTable('events', {
-  id: text('id').primaryKey(),
-  companyId: text('company_id').notNull(),
-  actorId: text('actor_id').notNull(),
-  /** user | employee | system | orchestrator | provider. */
-  actorKind: text('actor_kind').notNull(),
-  eventType: text('event_type').notNull(),
-  payloadJson: text('payload_json').notNull(),
-  createdAt: integer('created_at').notNull(),
-});
+export const events = sqliteTable(
+  'events',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id').notNull(),
+    actorId: text('actor_id').notNull(),
+    /** user | employee | system | orchestrator | provider. */
+    actorKind: text('actor_kind').notNull(),
+    eventType: text('event_type').notNull(),
+    payloadJson: text('payload_json').notNull(),
+    createdAt: integer('created_at').notNull(),
+    /**
+     * W3C-format trace ID (32-char hex) propagated by the orchestrator
+     * across every event emitted during a single logical request. Lets
+     * the dashboard reconstruct an end-to-end run by selecting
+     * `events WHERE trace_id = ?` and joining the same value against the
+     * `runs.trace_id` column. Nullable for legacy rows written before
+     * migration 0035. Audit 2026-05-07 H4.
+     */
+    traceId: text('trace_id'),
+  },
+  (table) => ({
+    traceIdx: index('idx_events_trace_id').on(table.traceId),
+  }),
+);
 
 /** One row per LLM call. Cost + tokens + latency for the Telemetry tab. */
 export const runs = sqliteTable('runs', {
@@ -715,8 +731,27 @@ export const runs = sqliteTable('runs', {
   threadId: text('thread_id'),
   provider: text('provider').notNull(),
   model: text('model').notNull(),
+  /**
+   * FRESH input tokens — i.e. `response.usage.input_tokens` after
+   * Anthropic prompt caching is enabled (C3, audit 2026-05-07). Cache
+   * read and cache write portions are tracked in their own columns
+   * below so the Telemetry tab can break a run's cost down by source.
+   * For non-Anthropic / non-cached calls, this is the full input count.
+   */
   promptTokens: integer('prompt_tokens').notNull().default(0),
   completionTokens: integer('completion_tokens').notNull().default(0),
+  /**
+   * Anthropic prompt-caching: tokens served from a previously cached
+   * prefix at the discounted rate (~10% of base input). Added by
+   * migration 0033. Defaults to 0 so legacy rows remain readable.
+   */
+  cacheReadTokens: integer('cache_read_tokens').notNull().default(0),
+  /**
+   * Anthropic prompt-caching: tokens written to the ephemeral cache
+   * this turn at the premium rate (~125% of base input). Added by
+   * migration 0033. Defaults to 0 so legacy rows remain readable.
+   */
+  cacheWriteTokens: integer('cache_write_tokens').notNull().default(0),
   latencyMs: integer('latency_ms').notNull().default(0),
   /** Decimal string to avoid float drift on sub-cent values. */
   costUsd: text('cost_usd').notNull().default('0'),
@@ -735,6 +770,13 @@ export const runs = sqliteTable('runs', {
    * schema-wide rewrite.
    */
   kind: text('kind').notNull().default('work'),
+  /**
+   * W3C-format trace ID (32-char hex) propagated by the orchestrator that
+   * opened this run. Joined against `events.trace_id` to reconstruct an
+   * end-to-end agentic / chat / copilot run from logs. Nullable for legacy
+   * rows written before migration 0035. Audit 2026-05-07 H4.
+   */
+  traceId: text('trace_id'),
 });
 
 /** Narrow union matching the `runs.kind` values any writer is allowed to emit. */
@@ -1024,6 +1066,90 @@ export const tickets = sqliteTable(
   (table) => ({
     goalIdx: index('idx_tickets_goal').on(table.goalId),
     parentTicketIdx: index('idx_tickets_parent').on(table.parentTicketId),
+  }),
+);
+
+/**
+ * C4 (audit 2026-05-07) — pending delegations holding table.
+ *
+ * `delegate_subtask` writes here instead of inserting directly into
+ * `tickets`. The approval-inbox-service materializes these into real
+ * tickets on operator approval (or closes them with a rejection event).
+ *
+ * Storing the full delegation state (assignee, project linkage,
+ * priority, score breakdown) means materialization on approve reuses
+ * the existing `tickets.create` + `queueDelegatedTicket` paths without
+ * holding any data in memory across the approval window. The four
+ * scoring component columns (`role_fit`, `load_ratio`, `availability`,
+ * `past_performance`) carry the audit's "WHY this assignee?" answer
+ * that was previously absent from `task.delegated`.
+ */
+export const pendingDelegations = sqliteTable(
+  'pending_delegations',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id),
+    /** Provenance: id from the prior `decompose_project` call. */
+    planId: text('plan_id').notNull(),
+    subtaskTitle: text('subtask_title').notNull(),
+    description: text('description').notNull().default(''),
+    /** low | medium | high | critical. */
+    priority: text('priority').notNull().default('medium'),
+    /** Chosen candidate from the fallback chain. */
+    assigneeId: text('assignee_id')
+      .notNull()
+      .references(() => employees.id),
+    /** Denormalized for inbox display so we don't re-join on render. */
+    assigneeName: text('assignee_name').notNull().default(''),
+    parentProjectId: text('parent_project_id').references(() => projects.id),
+    subtaskType: text('subtask_type'),
+    /** 1 if a fallback was selected over the primary, else 0. */
+    fallbackUsed: integer('fallback_used').notNull().default(0),
+    /** 1-indexed position in the chain that won. */
+    attemptCount: integer('attempt_count').notNull().default(1),
+    /** Final aggregate score in [0, 1]. */
+    score: real('score').notNull().default(0),
+    /** Capability + role-spec match component (0..1). */
+    roleFit: real('role_fit').notNull().default(0),
+    /** Open-ticket load-ratio component (0..1, 0 = empty desk). */
+    loadRatio: real('load_ratio').notNull().default(0),
+    /** Meeting / availability component (0 = busy, 1 = free). */
+    availability: real('availability').notNull().default(0),
+    /** Historical-completion-time component (0..1, higher = faster). */
+    pastPerformance: real('past_performance').notNull().default(0),
+    /** Actor who invoked the tool (employee or system-agent). */
+    reporterId: text('reporter_id').notNull(),
+    reporterKind: text('reporter_kind').notNull().default('agent'),
+    /** JSON-encoded string[] of label tags. */
+    labelsJson: text('labels_json').notNull().default('[]'),
+    /** JSON-encoded string[] of blocking ticket ids. */
+    dependenciesJson: text('dependencies_json').notNull().default('[]'),
+    /** Target hours to resolution. Null = no SLA. */
+    slaHours: integer('sla_hours'),
+    dueAt: integer('due_at'),
+    /** pending | approved | rejected. */
+    status: text('status').notNull().default('pending'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    resolvedAt: integer('resolved_at'),
+    resolvedByOperatorId: text('resolved_by_operator_id'),
+    rationale: text('rationale'),
+    /**
+     * Set on approve when the row was materialized into a real ticket.
+     * No FK to `tickets` — see migration 0034 comments. Logical
+     * integrity is enforced by approval-inbox-service.
+     */
+    ticketId: text('ticket_id'),
+  },
+  (table) => ({
+    companyIdx: index('idx_pending_delegations_company').on(table.companyId),
+    companyStatusIdx: index('idx_pending_delegations_company_status').on(
+      table.companyId,
+      table.status,
+    ),
+    planIdx: index('idx_pending_delegations_plan').on(table.planId),
   }),
 );
 

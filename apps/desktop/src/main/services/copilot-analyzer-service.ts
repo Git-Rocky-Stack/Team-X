@@ -64,7 +64,7 @@ import type {
   DashboardEvent,
   EventType,
 } from '@team-x/shared-types';
-import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
+import { COPILOT_CATEGORY_WEIGHTS_DEFAULT, generateTraceId } from '@team-x/shared-types';
 import { z } from 'zod';
 
 import type {
@@ -569,6 +569,12 @@ export function createCopilotAnalyzerService(
     const tickRunId = newId();
     const startedAt = now();
 
+    // H4 (audit 2026-05-07): one trace ID per tick. Threaded onto the
+    // copilot runs row AND every safeEmit / safeEmitAnalyzed call below
+    // so the dashboard can JOIN runs ⋈ events on trace_id to render the
+    // full lifecycle of a single copilot tick.
+    const traceId = generateTraceId();
+
     // Settings gate — a disabled analyzer or an empty category set still
     // emits `copilot.analyzed` so subscribers see the no-op explicitly.
     if (!settings.enabled || settings.categories.length === 0) {
@@ -584,7 +590,7 @@ export function createCopilotAnalyzerService(
         costUsd: 0,
         durationMs: 0,
       };
-      safeEmitAnalyzed(companyId, companyId, payload);
+      safeEmitAnalyzed(companyId, companyId, payload, traceId);
       return {
         runId: tickRunId,
         reason,
@@ -614,7 +620,7 @@ export function createCopilotAnalyzerService(
         costUsd: 0,
         durationMs: 0,
       };
-      safeEmitAnalyzed(companyId, companyId, payload);
+      safeEmitAnalyzed(companyId, companyId, payload, traceId);
       return {
         runId: tickRunId,
         reason,
@@ -647,7 +653,7 @@ export function createCopilotAnalyzerService(
           costUsd: 0,
           durationMs: 0,
         };
-        safeEmitAnalyzed(companyId, systemCopilotId, payload);
+        safeEmitAnalyzed(companyId, systemCopilotId, payload, traceId);
         return {
           runId: tickRunId,
           reason,
@@ -676,7 +682,7 @@ export function createCopilotAnalyzerService(
         costUsd: 0,
         durationMs: 0,
       };
-      safeEmitAnalyzed(companyId, systemCopilotId, payload);
+      safeEmitAnalyzed(companyId, systemCopilotId, payload, traceId);
       return {
         runId: tickRunId,
         reason: 'company_paused',
@@ -698,12 +704,18 @@ export function createCopilotAnalyzerService(
     try {
       const stale = deps.copilotInsightsRepo.listStale(tickNow);
       for (const row of stale) {
-        safeEmit<CopilotExpiredPayload>(companyId, systemCopilotId, 'copilot.expired', {
-          insightId: row.id,
-          runId: tickRunId,
-          category: row.category as CopilotCategory,
-          title: row.title,
-        });
+        safeEmit<CopilotExpiredPayload>(
+          companyId,
+          systemCopilotId,
+          'copilot.expired',
+          {
+            insightId: row.id,
+            runId: tickRunId,
+            category: row.category as CopilotCategory,
+            title: row.title,
+          },
+          traceId,
+        );
       }
       expiredCount = deps.copilotInsightsRepo.expireStale(tickNow);
     } catch (err) {
@@ -741,7 +753,7 @@ export function createCopilotAnalyzerService(
         costUsd: 0,
         durationMs: now() - startedAt,
       };
-      safeEmitAnalyzed(companyId, systemCopilotId, payload);
+      safeEmitAnalyzed(companyId, systemCopilotId, payload, traceId);
       return {
         runId: tickRunId,
         reason,
@@ -764,6 +776,7 @@ export function createCopilotAnalyzerService(
         provider: resolved.provider,
         model: resolved.model,
         kind: 'copilot',
+        traceId,
       });
     } catch (err) {
       logger.warn('[copilot-analyzer] runs.start failed', err);
@@ -850,14 +863,20 @@ export function createCopilotAnalyzerService(
             mergedCount++;
           } else {
             insertedCount++;
-            safeEmit<CopilotInsightPayload>(companyId, systemCopilotId, 'copilot.insight', {
-              insightId: result.id,
-              runId: tickRunId,
-              category: draft.category,
-              severity: draft.severity,
-              title: draft.title,
-              expiresAt,
-            });
+            safeEmit<CopilotInsightPayload>(
+              companyId,
+              systemCopilotId,
+              'copilot.insight',
+              {
+                insightId: result.id,
+                runId: tickRunId,
+                category: draft.category,
+                severity: draft.severity,
+                title: draft.title,
+                expiresAt,
+              },
+              traceId,
+            );
           }
         } catch (err) {
           logger.warn('[copilot-analyzer] upsertWithDedup failed for draft', err);
@@ -930,9 +949,16 @@ export function createCopilotAnalyzerService(
     };
   }
 
-  function safeEmit<T>(companyId: string, actorId: string, type: EventType, payload: T): void {
+  function safeEmit<T>(
+    companyId: string,
+    actorId: string,
+    type: EventType,
+    payload: T,
+    /** H4 — propagate the tick's trace ID onto the persisted event. */
+    traceId?: string,
+  ): void {
     try {
-      deps.bus.emit<T>({ type, companyId, actorId, actorKind: 'employee', payload });
+      deps.bus.emit<T>({ type, companyId, actorId, actorKind: 'employee', payload, traceId });
     } catch (err) {
       logger.warn(`[copilot-analyzer] ${type} emit failed`, err);
     }
@@ -942,8 +968,10 @@ export function createCopilotAnalyzerService(
     companyId: string,
     actorId: string,
     payload: CopilotAnalyzedPayload,
+    /** H4 — propagate the tick's trace ID onto the persisted event. */
+    traceId?: string,
   ): void {
-    safeEmit<CopilotAnalyzedPayload>(companyId, actorId, 'copilot.analyzed', payload);
+    safeEmit<CopilotAnalyzedPayload>(companyId, actorId, 'copilot.analyzed', payload, traceId);
   }
 
   function start(companyId: string): void {

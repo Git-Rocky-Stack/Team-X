@@ -12,6 +12,7 @@ function buildReq(userText: string, extraSystem = 'SYS'): LoopCompleteRequest {
   return {
     system: extraSystem,
     messages: [{ role: 'user', content: userText }],
+    tools: [],
     signal: new AbortController().signal,
   };
 }
@@ -22,9 +23,14 @@ describe('createTestAgenticCompleteFn', () => {
     const a = await complete(buildReq('why is the frontend team behind?'));
     const b = await complete(buildReq('why is the frontend team behind?'));
     const c = await complete(buildReq('why is the frontend team behind?'));
-    expect(a.text).toContain('query_employees');
-    expect(b.text).toContain('query_tickets');
-    expect(c.text).toContain('final_answer');
+    // Step 1: tool-call to query_employees, no final answer yet.
+    expect(a.toolCalls.map((t) => t.toolName)).toContain('query_employees');
+    expect(a.text).toContain('first list the frontend team');
+    // Step 2: tool-call to query_tickets.
+    expect(b.toolCalls.map((t) => t.toolName)).toContain('query_tickets');
+    // Step 3: final-answer (no tool-calls).
+    expect(c.toolCalls).toHaveLength(0);
+    expect(c.text).toMatch(/3 open tickets/);
   });
 
   it('clamps to the final script entry after exhaustion', async () => {
@@ -33,27 +39,43 @@ describe('createTestAgenticCompleteFn', () => {
       await complete(buildReq('why is the frontend team behind?'));
     }
     const extra = await complete(buildReq('why is the frontend team behind?'));
-    expect(extra.text).toContain('final_answer');
+    expect(extra.toolCalls).toHaveLength(0);
+    expect(extra.text).toMatch(/3 open tickets/);
   });
 
-  it('falls back to a single final_answer when no script matches', async () => {
+  it('falls back to a single final-answer when no script matches', async () => {
     const complete = createTestAgenticCompleteFn();
     const r = await complete(buildReq('what the model has never seen before'));
-    expect(r.text).toContain('final_answer');
-    expect(r.text).toContain('canned response');
+    expect(r.toolCalls).toHaveLength(0);
+    expect(r.text).toMatch(/canned response/);
   });
 
-  it('honors a sentinel override on the first user message', async () => {
+  it('honors a structured sentinel override on the first user message', async () => {
     const complete = createTestAgenticCompleteFn();
     const payload = JSON.stringify([
-      '{"action":"query_employees","args":{}}',
-      '{"action":"final_answer","answer":"sentinel-done"}',
+      { text: '', toolCalls: [{ toolName: 'query_employees', args: {} }] },
+      { text: 'sentinel-done' },
     ]);
     const req = buildReq(`hello ${ECHO_AGENT_SENTINEL}${payload}`);
     const r1 = await complete(req);
     const r2 = await complete(req);
-    expect(r1.text).toContain('query_employees');
-    expect(r2.text).toContain('sentinel-done');
+    expect(r1.toolCalls.map((t) => t.toolName)).toContain('query_employees');
+    expect(r2.toolCalls).toHaveLength(0);
+    expect(r2.text).toBe('sentinel-done');
+  });
+
+  it('honors a legacy-string sentinel override (back-compat with pre-C2 specs)', async () => {
+    const complete = createTestAgenticCompleteFn();
+    const payload = JSON.stringify([
+      '{"action":"query_employees","args":{}}',
+      '{"action":"final_answer","answer":"legacy-done"}',
+    ]);
+    const req = buildReq(`hello ${ECHO_AGENT_SENTINEL}${payload}`);
+    const r1 = await complete(req);
+    const r2 = await complete(req);
+    expect(r1.toolCalls.map((t) => t.toolName)).toContain('query_employees');
+    expect(r2.toolCalls).toHaveLength(0);
+    expect(r2.text).toBe('legacy-done');
   });
 
   it('rejects pre-aborted requests without consuming script state', async () => {
@@ -64,13 +86,14 @@ describe('createTestAgenticCompleteFn', () => {
       complete({
         system: 'x',
         messages: [{ role: 'user', content: 'why is the frontend team behind?' }],
+        tools: [],
         signal: ac.signal,
       }),
     ).rejects.toThrow();
 
     // Subsequent call with a fresh signal still gets script index 0.
     const r = await complete(buildReq('why is the frontend team behind?'));
-    expect(r.text).toContain('query_employees');
+    expect(r.toolCalls.map((t) => t.toolName)).toContain('query_employees');
   });
 
   it('records the test provider and model identity on every completion', async () => {
@@ -86,18 +109,18 @@ describe('createTestAgenticCompleteFn', () => {
   it('options.fixtures override canned table entries', async () => {
     const complete = createTestAgenticCompleteFn({
       fixtures: {
-        'why is the frontend team behind?': ['{"action":"final_answer","answer":"overridden"}'],
+        'why is the frontend team behind?': [{ text: 'overridden' }],
       },
     });
     const r = await complete(buildReq('why is the frontend team behind?'));
-    expect(r.text).toContain('overridden');
+    expect(r.text).toBe('overridden');
+    expect(r.toolCalls).toHaveLength(0);
   });
 
   it('rejects a malformed sentinel JSON array and falls through to fallback', async () => {
     const complete = createTestAgenticCompleteFn();
     const r = await complete(buildReq(`${ECHO_AGENT_SENTINEL}{not-an-array}`));
-    // Falls through to canned lookup, which for 'foo __echo_agent__:...' will
-    // not match, so the fallback fires.
-    expect(r.text).toContain('final_answer');
+    expect(r.toolCalls).toHaveLength(0);
+    expect(r.text).toMatch(/canned response/);
   });
 });

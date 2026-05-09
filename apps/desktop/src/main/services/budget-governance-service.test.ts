@@ -287,12 +287,13 @@ describe('budget governance service', () => {
         createGrant: () => '',
       } as never,
     });
-    approvalService.reviewItem({
+    await approvalService.reviewItem({
       companyId: 'company-1',
       itemId: pendingItem?.id ?? '',
       kind: 'budget-exception',
       decision: 'approved',
       rationale: 'Keep running this month.',
+      operatorId: 'operator-1',
     });
 
     const admission = await service.assertExecutionAllowed({

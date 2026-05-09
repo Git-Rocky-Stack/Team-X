@@ -1,12 +1,20 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 /**
  * McpHost unit tests — exercises the singleton MCP connection pool's
  * business logic: tool-call enforcement (tools_allowed / tools_denied),
- * per-company tool filtering, server routing, and connection lifecycle.
+ * per-company tool filtering, server routing, connection lifecycle, and
+ * the C5 security gates (audit 2026-05-07): hash-pinned executable
+ * allowlist, env scrubbing, and cwd pinning.
  *
  * The MCP SDK is fully mocked — no real stdio/SSE connections. The
- * focus is on the trust boundary: agents cannot bypass tool restrictions.
+ * focus is on the trust boundary: agents cannot bypass tool restrictions
+ * AND a hostile / misconfigured MCP server cannot inherit secrets from
+ * the parent process or escape the per-server cwd.
  */
 
 // ---------------------------------------------------------------------------
@@ -27,8 +35,24 @@ vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
   })),
 }));
 
+// Capture stdio transport constructor args so the C5 gates' end-state
+// (scrubbed env, pinned cwd, resolved command path) is observable in
+// tests. `vi.hoisted` is required because `vi.mock` is hoisted ABOVE
+// non-vi.hoisted top-level code; without it the factory closes over
+// uninitialized references.
+const { stdioTransportCalls } = vi.hoisted(() => ({
+  stdioTransportCalls: [] as Array<{
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+    cwd?: string;
+  }>,
+}));
 vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
-  StdioClientTransport: vi.fn(),
+  StdioClientTransport: vi.fn(function (this: object, params: unknown) {
+    stdioTransportCalls.push(params as (typeof stdioTransportCalls)[number]);
+    Object.assign(this, { params });
+  }),
 }));
 
 vi.mock('@modelcontextprotocol/sdk/client/sse.js', () => ({
@@ -36,6 +60,27 @@ vi.mock('@modelcontextprotocol/sdk/client/sse.js', () => ({
 }));
 
 import { type McpHostDeps, type McpServerConfig, createMcpHost } from './mcp-host.js';
+import type { McpExecutableAllowlist } from './mcp-security.js';
+
+// ---------------------------------------------------------------------------
+// Test fixtures: a real on-disk fake-binary so the C5 sha256 + file-exists
+// gates have something to validate against without mocking node:fs.
+// ---------------------------------------------------------------------------
+
+let tmpRoot: string;
+let fakeBinaryPath: string;
+let userDataDir: string;
+
+beforeAll(() => {
+  tmpRoot = mkdtempSync(join(tmpdir(), 'mcp-host-test-'));
+  fakeBinaryPath = join(tmpRoot, 'fake-mcp.sh');
+  writeFileSync(fakeBinaryPath, '#!/bin/sh\necho ok\n', 'utf8');
+  userDataDir = join(tmpRoot, 'userData');
+});
+
+afterAll(() => {
+  rmSync(tmpRoot, { recursive: true, force: true });
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,15 +107,52 @@ function makeFakeBus(): McpHostDeps['bus'] {
   return { emit: vi.fn(), subscribe: vi.fn() } as unknown as McpHostDeps['bus'];
 }
 
+/**
+ * Build an in-memory allowlist that authorizes the test fixture
+ * binary. Tests that exercise the rejection paths inject a different
+ * allowlist (or none) explicitly.
+ */
+function makeAllowlist(entries?: { command: string; sha256?: string }[]): McpExecutableAllowlist {
+  const list = entries ?? [{ command: fakeBinaryPath }];
+  return { entries: () => list };
+}
+
+/** Default deps used by every test that needs a working host. */
+function makeBaseDeps(
+  overrides: Partial<McpHostDeps> = {},
+): McpHostDeps & {
+  mcpServersRepo: ReturnType<typeof makeFakeRepos>['mcpServersRepo'];
+  toolCallsRepo: ReturnType<typeof makeFakeRepos>['toolCallsRepo'];
+} {
+  const repos = makeFakeRepos();
+  return {
+    mcpServersRepo: repos.mcpServersRepo,
+    toolCallsRepo: repos.toolCallsRepo,
+    bus: makeFakeBus(),
+    userDataDir,
+    executableAllowlist: makeAllowlist(),
+    ...overrides,
+  };
+}
+
 const SERVER_CONFIG: McpServerConfig = {
   id: 'srv-1',
   companyId: null,
   name: 'test-mcp',
   transport: 'stdio',
-  configJson: JSON.stringify({ command: 'echo', args: ['hello'] }),
+  // C5: command MUST be an absolute path on the allowlist. The fixture
+  // path is set up in beforeAll above and the allowlist authorizes it.
+  configJson: '', // populated below in beforeAll once fakeBinaryPath is known
   enabled: true,
   lastHealth: null,
 };
+
+beforeAll(() => {
+  SERVER_CONFIG.configJson = JSON.stringify({
+    command: fakeBinaryPath,
+    args: ['hello'],
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -92,6 +174,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.connectToServer(SERVER_CONFIG);
 
@@ -109,6 +193,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.connectToServer(SERVER_CONFIG);
       await host.connectToServer(SERVER_CONFIG);
@@ -124,6 +210,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.connectToServer(SERVER_CONFIG);
       expect(host.listServers()).toHaveLength(1);
@@ -141,6 +229,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.connectToServer({ ...SERVER_CONFIG, id: 's1' });
       await host.connectToServer({ ...SERVER_CONFIG, id: 's2', name: 'second' });
@@ -163,6 +253,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.connectToServer({ ...SERVER_CONFIG, companyId: null });
 
@@ -181,6 +273,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.connectToServer({ ...SERVER_CONFIG, companyId: 'company-123' });
 
@@ -199,6 +293,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.connectToServer({ ...SERVER_CONFIG, companyId: 'company-other' });
 
@@ -218,6 +314,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.connectToServer(SERVER_CONFIG);
 
@@ -232,6 +330,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.connectToServer(SERVER_CONFIG);
 
@@ -249,6 +349,8 @@ describe('McpHost', () => {
         mcpServersRepo: repos.mcpServersRepo,
         toolCallsRepo: repos.toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
         now: () => 1000,
       });
       await host.connectToServer(SERVER_CONFIG);
@@ -287,6 +389,8 @@ describe('McpHost', () => {
         mcpServersRepo: repos.mcpServersRepo,
         toolCallsRepo: repos.toolCallsRepo,
         bus,
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
         now: () => 1000,
       });
       await host.connectToServer(SERVER_CONFIG);
@@ -443,6 +547,8 @@ describe('McpHost', () => {
         mcpServersRepo: repos.mcpServersRepo,
         toolCallsRepo: repos.toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
         now: () => clock,
       });
       await host.connectToServer({ ...SERVER_CONFIG, id: 'srv-slow' });
@@ -471,7 +577,7 @@ describe('McpHost', () => {
           companyId: null,
           name: 'mcp-a',
           transport: 'stdio',
-          configJson: '{"command":"echo"}',
+          configJson: JSON.stringify({ command: fakeBinaryPath }),
           enabled: true,
           lastHealth: null,
         },
@@ -480,7 +586,7 @@ describe('McpHost', () => {
           companyId: null,
           name: 'mcp-b',
           transport: 'stdio',
-          configJson: '{"command":"echo"}',
+          configJson: JSON.stringify({ command: fakeBinaryPath }),
           enabled: true,
           lastHealth: null,
         },
@@ -491,6 +597,8 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.initialize();
 
@@ -505,7 +613,7 @@ describe('McpHost', () => {
           companyId: null,
           name: 'mcp-ok',
           transport: 'stdio',
-          configJson: '{"command":"echo"}',
+          configJson: JSON.stringify({ command: fakeBinaryPath }),
           enabled: true,
           lastHealth: null,
         },
@@ -514,7 +622,7 @@ describe('McpHost', () => {
           companyId: null,
           name: 'mcp-fail',
           transport: 'stdio',
-          configJson: '{"command":"echo"}',
+          configJson: JSON.stringify({ command: fakeBinaryPath }),
           enabled: true,
           lastHealth: null,
         },
@@ -530,12 +638,237 @@ describe('McpHost', () => {
         mcpServersRepo,
         toolCallsRepo,
         bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
       });
       await host.initialize();
 
       // Only the first server should be connected
       expect(host.listServers()).toHaveLength(1);
       expect(host.listServers()[0]?.name).toBe('mcp-ok');
+    });
+  });
+
+  // -----------------------------------------------------------------
+  // C5 — child-process security gates (audit 2026-05-07).
+  //
+  // Pre-C5 the SDK spawned MCP servers with the parent's full env and
+  // an inherited cwd. These tests pin the post-C5 invariants:
+  //   - executable allowlist enforced (hash-pinned)
+  //   - bare names refused
+  //   - empty allowlist = fail-closed
+  //   - process.env never inherited wholesale; PATH + tiny survival set only
+  //   - cwd pinned under <userData>/mcp-runtimes/<serverId>
+  //   - sha256 mismatch = refusal
+  //   - rejections emit `authority.violation` with the structured reason
+  // -----------------------------------------------------------------
+
+  describe('C5 — stdio spawn security gates', () => {
+    beforeEach(() => {
+      stdioTransportCalls.length = 0;
+    });
+
+    it('refuses to spawn when the executableAllowlist is empty (fail-closed)', async () => {
+      const repos = makeFakeRepos();
+      const bus = makeFakeBus();
+      const host = createMcpHost({
+        mcpServersRepo: repos.mcpServersRepo,
+        toolCallsRepo: repos.toolCallsRepo,
+        bus,
+        userDataDir,
+        executableAllowlist: makeAllowlist([]), // empty
+      });
+
+      await expect(host.connectToServer(SERVER_CONFIG)).rejects.toThrow(/allowlist is empty/);
+      expect(stdioTransportCalls).toHaveLength(0);
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'authority.violation',
+          actorKind: 'system',
+          payload: expect.objectContaining({
+            resourceKind: 'mcp-spawn',
+            reason: 'allowlist-empty',
+          }),
+        }),
+      );
+    });
+
+    it('refuses bare-name commands like "node" — PATH lookup is attacker-controlled', async () => {
+      const repos = makeFakeRepos();
+      const host = createMcpHost({
+        mcpServersRepo: repos.mcpServersRepo,
+        toolCallsRepo: repos.toolCallsRepo,
+        bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist([{ command: fakeBinaryPath }]),
+      });
+
+      const bareConfig: McpServerConfig = {
+        ...SERVER_CONFIG,
+        id: 'srv-bare',
+        configJson: JSON.stringify({ command: 'node' }),
+      };
+      await expect(host.connectToServer(bareConfig)).rejects.toThrow(/absolute path/);
+      expect(stdioTransportCalls).toHaveLength(0);
+    });
+
+    it('refuses absolute paths that are not in the allowlist', async () => {
+      const repos = makeFakeRepos();
+      const bus = makeFakeBus();
+      const host = createMcpHost({
+        mcpServersRepo: repos.mcpServersRepo,
+        toolCallsRepo: repos.toolCallsRepo,
+        bus,
+        userDataDir,
+        executableAllowlist: makeAllowlist([{ command: fakeBinaryPath }]),
+      });
+
+      const evilPath = process.platform === 'win32' ? 'C:\\evil\\malware.exe' : '/tmp/evil';
+      const evilConfig: McpServerConfig = {
+        ...SERVER_CONFIG,
+        id: 'srv-evil',
+        configJson: JSON.stringify({ command: evilPath }),
+      };
+      await expect(host.connectToServer(evilConfig)).rejects.toThrow(/not in the allowlist/);
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({ reason: 'not-in-allowlist' }),
+        }),
+      );
+    });
+
+    it('refuses on sha256 mismatch when an entry pins a hash', async () => {
+      const repos = makeFakeRepos();
+      const bus = makeFakeBus();
+      const host = createMcpHost({
+        mcpServersRepo: repos.mcpServersRepo,
+        toolCallsRepo: repos.toolCallsRepo,
+        bus,
+        userDataDir,
+        // Pin a hash that won't match the fixture content.
+        executableAllowlist: makeAllowlist([
+          { command: fakeBinaryPath, sha256: 'deadbeef'.repeat(8) },
+        ]),
+      });
+
+      await expect(host.connectToServer({ ...SERVER_CONFIG, id: 'srv-pin' })).rejects.toThrow(
+        /sha256/,
+      );
+      expect(bus.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({ reason: 'sha256-mismatch' }),
+        }),
+      );
+    });
+
+    it('passes a SCRUBBED env to the stdio transport — no process.env secrets', async () => {
+      // Plant an obvious secret in process.env to prove it does not leak.
+      const sentinelKey = 'C5_TEST_OPENAI_API_KEY';
+      const sentinelValue = 'sk-leak-' + Date.now();
+      process.env[sentinelKey] = sentinelValue;
+
+      try {
+        const host = createMcpHost({
+          mcpServersRepo: makeFakeRepos().mcpServersRepo,
+          toolCallsRepo: makeFakeRepos().toolCallsRepo,
+          bus: makeFakeBus(),
+          userDataDir,
+          executableAllowlist: makeAllowlist(),
+        });
+        mockListTools.mockResolvedValueOnce({ tools: [] });
+        await host.connectToServer(SERVER_CONFIG);
+
+        expect(stdioTransportCalls).toHaveLength(1);
+        const env = stdioTransportCalls[0]?.env ?? {};
+        // The parent's secret never reaches the child's env.
+        expect(env).not.toHaveProperty(sentinelKey);
+        // PATH (or Path on Windows) DOES land — without it the child
+        // can't find its language runtime.
+        expect(env.PATH || env.Path).toBeTruthy();
+      } finally {
+        delete process.env[sentinelKey];
+      }
+    });
+
+    it('merges user-supplied env on top of the scrubbed defaults', async () => {
+      const host = createMcpHost({
+        mcpServersRepo: makeFakeRepos().mcpServersRepo,
+        toolCallsRepo: makeFakeRepos().toolCallsRepo,
+        bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
+      });
+      mockListTools.mockResolvedValueOnce({ tools: [] });
+
+      const config: McpServerConfig = {
+        ...SERVER_CONFIG,
+        id: 'srv-userenv',
+        configJson: JSON.stringify({
+          command: fakeBinaryPath,
+          env: { CUSTOM_FLAG: '1', NODE_ENV: 'production' },
+        }),
+      };
+      await host.connectToServer(config);
+      expect(stdioTransportCalls).toHaveLength(1);
+      const env = stdioTransportCalls[0]?.env ?? {};
+      expect(env.CUSTOM_FLAG).toBe('1');
+      expect(env.NODE_ENV).toBe('production');
+    });
+
+    it('pins the child cwd to <userData>/mcp-runtimes/<serverId> and creates it on demand', async () => {
+      const host = createMcpHost({
+        mcpServersRepo: makeFakeRepos().mcpServersRepo,
+        toolCallsRepo: makeFakeRepos().toolCallsRepo,
+        bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist(),
+      });
+      mockListTools.mockResolvedValueOnce({ tools: [] });
+      await host.connectToServer({ ...SERVER_CONFIG, id: 'srv-cwd' });
+
+      expect(stdioTransportCalls).toHaveLength(1);
+      const cwd = stdioTransportCalls[0]?.cwd;
+      expect(cwd).toBe(join(userDataDir, 'mcp-runtimes', 'srv-cwd'));
+      // The directory was actually created.
+      expect(existsSync(cwd!)).toBe(true);
+    });
+
+    it('refuses to spawn when userDataDir dep is unwired', async () => {
+      const host = createMcpHost({
+        mcpServersRepo: makeFakeRepos().mcpServersRepo,
+        toolCallsRepo: makeFakeRepos().toolCallsRepo,
+        bus: makeFakeBus(),
+        // userDataDir intentionally omitted
+        executableAllowlist: makeAllowlist(),
+      });
+      await expect(host.connectToServer(SERVER_CONFIG)).rejects.toThrow(/userDataDir/);
+    });
+
+    it('refuses to spawn when executableAllowlist dep is unwired', async () => {
+      const host = createMcpHost({
+        mcpServersRepo: makeFakeRepos().mcpServersRepo,
+        toolCallsRepo: makeFakeRepos().toolCallsRepo,
+        bus: makeFakeBus(),
+        userDataDir,
+        // executableAllowlist intentionally omitted
+      });
+      await expect(host.connectToServer(SERVER_CONFIG)).rejects.toThrow(/executableAllowlist/);
+    });
+
+    it('records the failed health state so the operator can see WHY', async () => {
+      const repos = makeFakeRepos();
+      const host = createMcpHost({
+        mcpServersRepo: repos.mcpServersRepo,
+        toolCallsRepo: repos.toolCallsRepo,
+        bus: makeFakeBus(),
+        userDataDir,
+        executableAllowlist: makeAllowlist([]), // empty → reject
+      });
+      await expect(host.connectToServer(SERVER_CONFIG)).rejects.toThrow();
+      expect(repos.mcpServersRepo.updateHealth).toHaveBeenCalledWith(
+        SERVER_CONFIG.id,
+        expect.stringMatching(/error: .*allowlist is empty/),
+      );
     });
   });
 });

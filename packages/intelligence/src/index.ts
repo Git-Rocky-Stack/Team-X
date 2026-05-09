@@ -36,8 +36,10 @@ export * from './service/index.js';
 export * from './loop/types.js';
 export {
   buildSystemPrompt,
+  buildProviderToolDescriptors,
   DEFAULT_SYSTEM_PREFIX,
-  NUDGE_PROMPT,
+  FEW_SHOT_EXAMPLES,
+  TRUST_BOUNDARIES,
   type BuildSystemPromptOptions,
   type PromptTool,
 } from './loop/prompt.js';
@@ -47,7 +49,11 @@ export {
   type ToolInvocationResult,
   type ToolRegistry,
 } from './loop/tool-registry.js';
-export { createAgenticLoop } from './loop/loop.js';
+export {
+  createAgenticLoop,
+  escapeFencedCloseTags,
+  formatToolObservation,
+} from './loop/loop.js';
 
 // M30 — Multi-turn planning (Phase 3)
 export * from './loop/planning.js';

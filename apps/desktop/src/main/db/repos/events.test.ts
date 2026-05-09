@@ -354,4 +354,76 @@ describe('events repo', () => {
       expect(page3[0]?.id).toBe(ids[0]);
     });
   });
+
+  // ---------------------------------------------------------------------
+  // H4 audit 2026-05-07 — traceId propagation
+  // ---------------------------------------------------------------------
+
+  describe('traceId (H4 audit 2026-05-07)', () => {
+    it('persists a traceId supplied on append() and surfaces it on the row', () => {
+      const { id } = events.append({
+        companyId: 'co-1',
+        actorId: 'orchestrator',
+        actorKind: 'orchestrator',
+        eventType: 'agent.step',
+        payload: {},
+        traceId: '0123456789abcdef0123456789abcdef',
+      });
+      const row = events.since(0).find((e) => e.id === id);
+      expect(row?.traceId).toBe('0123456789abcdef0123456789abcdef');
+    });
+
+    it('leaves traceId null when no value is supplied (back-compat for legacy callers)', () => {
+      const { id } = events.append({
+        companyId: 'co-1',
+        actorId: 'orchestrator',
+        actorKind: 'orchestrator',
+        eventType: 'agent.step',
+        payload: {},
+      });
+      const row = events.since(0).find((e) => e.id === id);
+      expect(row?.traceId).toBeNull();
+    });
+
+    it('listByTraceId returns every event sharing a trace ID, oldest-first', () => {
+      const traceA = '11112222333344445555666677778888';
+      const traceB = '99998888777766665555444433332222';
+      const { id: a1 } = events.append({
+        companyId: 'co-1',
+        actorId: 'a',
+        actorKind: 'orchestrator',
+        eventType: 'work.started',
+        payload: {},
+        traceId: traceA,
+      });
+      const { id: a2 } = events.append({
+        companyId: 'co-1',
+        actorId: 'a',
+        actorKind: 'orchestrator',
+        eventType: 'work.completed',
+        payload: {},
+        traceId: traceA,
+      });
+      events.append({
+        companyId: 'co-1',
+        actorId: 'a',
+        actorKind: 'orchestrator',
+        eventType: 'work.started',
+        payload: {},
+        traceId: traceB,
+      });
+      events.append({
+        companyId: 'co-1',
+        actorId: 'a',
+        actorKind: 'orchestrator',
+        eventType: 'work.started',
+        payload: {},
+      }); // no trace
+
+      const aRows = events.listByTraceId(traceA);
+      expect(aRows.map((r) => r.id)).toEqual([a1, a2]);
+      expect(events.listByTraceId(traceB)).toHaveLength(1);
+      expect(events.listByTraceId('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toHaveLength(0);
+    });
+  });
 });

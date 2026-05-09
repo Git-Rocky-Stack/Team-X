@@ -293,6 +293,52 @@ describe('event bus (integration with events repo)', () => {
     expect(event.payload.threadId).toBe('t1');
     expect(event.payload.messageId).toBe('m1');
   });
+
+  // -------------------------------------------------------------------------
+  // H4 audit 2026-05-07 — traceId propagation
+  // -------------------------------------------------------------------------
+
+  it('emit propagates traceId to repo.append, the returned event, and replaySince', () => {
+    const bus = createEventBus({ repo });
+    const traceId = '0123456789abcdef0123456789abcdef';
+    const subscriber = vi.fn<[DashboardEvent], void>();
+    bus.subscribe(subscriber);
+
+    const event = bus.emit({
+      type: 'work.queued',
+      companyId: 'co-1',
+      actorId: 'orchestrator',
+      actorKind: 'orchestrator',
+      payload: {},
+      traceId,
+    });
+
+    // Returned event carries the trace ID.
+    expect(event.traceId).toBe(traceId);
+    // Subscriber received the same trace ID.
+    expect(subscriber).toHaveBeenCalledTimes(1);
+    expect(subscriber.mock.calls[0]?.[0]?.traceId).toBe(traceId);
+    // Persisted row carries the trace ID.
+    const rows = repo.since(0);
+    expect(rows[0]?.traceId).toBe(traceId);
+    // replaySince surfaces the trace ID on the rehydrated event.
+    const replayed = bus.replaySince(0);
+    expect(replayed[0]?.traceId).toBe(traceId);
+  });
+
+  it('emit() without traceId surfaces null on the returned event and replay (legacy callers)', () => {
+    const bus = createEventBus({ repo });
+    const event = bus.emit({
+      type: 'work.queued',
+      companyId: 'co-1',
+      actorId: 'orchestrator',
+      actorKind: 'orchestrator',
+      payload: {},
+    });
+    expect(event.traceId).toBeNull();
+    const replayed = bus.replaySince(0);
+    expect(replayed[0]?.traceId).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

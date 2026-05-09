@@ -50,12 +50,37 @@ export interface StartRunInput {
    * Phase-1 telemetry shape.
    */
   kind?: 'work' | 'agentic' | 'copilot';
+  /**
+   * W3C-format trace ID propagated by the orchestrator that opened this
+   * run. Persisted into `runs.trace_id` (migration 0035) so the dashboard
+   * can JOIN runs ↔ events on `trace_id` for end-to-end forensic
+   * reconstruction. Optional only because legacy callers and tests pre-H4
+   * may not supply it; new orchestrator code MUST. Audit 2026-05-07 H4.
+   */
+  traceId?: string;
 }
 
 export interface FinishRunInput {
   status: 'success' | 'error' | 'cancelled';
+  /**
+   * Fresh (non-cached, non-cache-write) input tokens. With Anthropic
+   * prompt caching enabled (C3, audit 2026-05-07), this is the
+   * `response.usage.input_tokens` value the SDK already reports.
+   */
   promptTokens: number;
   completionTokens: number;
+  /**
+   * Anthropic prompt-caching: tokens served from a previously cached
+   * prefix this turn. Optional so non-cache-aware callers (Ollama,
+   * OpenAI without caching) can keep calling without setting the
+   * field. Defaults to 0 at the SQL layer.
+   */
+  cacheReadTokens?: number;
+  /**
+   * Anthropic prompt-caching: tokens written to the cache this turn.
+   * Optional for the same reason as `cacheReadTokens`.
+   */
+  cacheWriteTokens?: number;
   latencyMs: number;
   /** Decimal string — pass through from telemetry-core.calcCostUsd(). */
   costUsd: string;
@@ -76,10 +101,15 @@ export interface RecentRunRow {
   error: string | null;
   promptTokens: number;
   completionTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
   costUsd: string;
   toolCallsCount: number;
   startedAt: number;
   endedAt: number | null;
+  /** W3C trace ID — present iff the orchestrator that opened the run
+      supplied one (i.e. all post-H4 / migration 0035 runs). */
+  traceId: string | null;
 }
 
 export const INTERRUPTED_WORK_RUN_MESSAGE =
@@ -115,6 +145,8 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
           model: input.model,
           promptTokens: 0,
           completionTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
           latencyMs: 0,
           costUsd: '0',
           toolCallsCount: 0,
@@ -123,6 +155,7 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
           status: 'running',
           error: null,
           kind: input.kind ?? 'work',
+          traceId: input.traceId ?? null,
         })
         .run();
       return id;
@@ -139,6 +172,8 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
           status: input.status,
           promptTokens: input.promptTokens,
           completionTokens: input.completionTokens,
+          cacheReadTokens: input.cacheReadTokens ?? 0,
+          cacheWriteTokens: input.cacheWriteTokens ?? 0,
           latencyMs: input.latencyMs,
           costUsd: input.costUsd,
           toolCallsCount: input.toolCallsCount ?? 0,
@@ -206,6 +241,18 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
     },
 
     /**
+     * Return every run row sharing the given W3C trace ID — typically a
+     * single row, but the contract supports a 1:N shape so a future
+     * orchestrator can attach multiple sub-runs to one logical trace
+     * (e.g. an agentic loop that spawns a copilot side-call). Backed by
+     * the `idx_runs_trace_id` index from migration 0035 so this query
+     * is cheap on a large `runs` table. Audit 2026-05-07 H4.
+     */
+    listByTraceId(traceId: string): RunRow[] {
+      return db.select().from(runs).where(eq(runs.traceId, traceId)).all();
+    },
+
+    /**
      * Newest-first recent run summaries for one company. Joins
      * employees + threads so dashboard callers can render a durable
      * run card without follow-up lookups.
@@ -227,10 +274,13 @@ export function createRunsRepo<TRunResult>(db: RunsDb<TRunResult>) {
           error: runs.error,
           promptTokens: runs.promptTokens,
           completionTokens: runs.completionTokens,
+          cacheReadTokens: runs.cacheReadTokens,
+          cacheWriteTokens: runs.cacheWriteTokens,
           costUsd: runs.costUsd,
           toolCallsCount: runs.toolCallsCount,
           startedAt: runs.startedAt,
           endedAt: runs.endedAt,
+          traceId: runs.traceId,
         })
         .from(runs)
         .innerJoin(employees, eq(runs.employeeId, employees.id))

@@ -132,6 +132,8 @@ interface EmittedEvent {
   actorId: string;
   actorKind: string;
   payload: unknown;
+  /** H4 audit 2026-05-07 — captured so the test can pin traceId propagation. */
+  traceId?: string;
 }
 
 class FakeEventBus implements AgenticLoopEventBus {
@@ -142,6 +144,7 @@ class FakeEventBus implements AgenticLoopEventBus {
     actorId: string;
     actorKind: string;
     payload: T;
+    traceId?: string;
   }): {
     id: string;
     type: EventType;
@@ -150,6 +153,7 @@ class FakeEventBus implements AgenticLoopEventBus {
     actorKind: string;
     payload: T;
     createdAt: number;
+    traceId?: string | null;
   } {
     this.emitted.push({
       type: input.type,
@@ -157,6 +161,7 @@ class FakeEventBus implements AgenticLoopEventBus {
       actorId: input.actorId,
       actorKind: input.actorKind,
       payload: input.payload,
+      traceId: input.traceId,
     });
     return {
       id: `evt-${this.emitted.length}`,
@@ -166,6 +171,7 @@ class FakeEventBus implements AgenticLoopEventBus {
       actorKind: input.actorKind as never,
       payload: input.payload,
       createdAt: Date.now(),
+      traceId: input.traceId ?? null,
     };
   }
 }
@@ -213,6 +219,71 @@ const DEFAULT_ANSWER_SCRIPT: readonly string[] = Object.freeze([
   '{"action":"final_answer","answer":"hello from test"}',
 ]);
 
+/**
+ * Translate a legacy hand-rolled JSON action string (pre-C2) into the
+ * post-C2 structured `LoopProviderCompletion` shape. Tests in this file
+ * keep their string-based scripts; this shim does the conversion at the
+ * provider boundary so we don't touch every fixture.
+ *
+ * Recognized inputs:
+ *   - `'{"action":"final_answer","answer":"<text>"}'`
+ *       → `{ text: '<text>', toolCalls: [] }`
+ *   - `'<plan text>\n{"action":"<tool>","args":{...}}'`
+ *       → `{ text: '<plan text>', toolCalls: [{ toolName, args, toolCallId }] }`
+ *   - `'{"action":"<tool>","args":{...}}'` (no preamble)
+ *       → `{ text: '', toolCalls: [{ ... }] }`
+ */
+function translateLegacyScriptEntry(
+  entry: string,
+  index: number,
+): { text: string; toolCalls: Array<{ toolCallId: string; toolName: string; args: Record<string, unknown> }> } {
+  const trimmed = entry.trim();
+  // Locate the trailing JSON object (last balanced {...}).
+  const lastClose = trimmed.lastIndexOf('}');
+  let jsonStart = -1;
+  if (lastClose >= 0) {
+    let depth = 0;
+    for (let i = lastClose; i >= 0; i--) {
+      const ch = trimmed[i];
+      if (ch === '}') depth++;
+      else if (ch === '{') {
+        depth--;
+        if (depth === 0) {
+          jsonStart = i;
+          break;
+        }
+      }
+    }
+  }
+  if (jsonStart < 0) {
+    return { text: trimmed, toolCalls: [] };
+  }
+  const preface = trimmed.slice(0, jsonStart).trim();
+  const candidate = trimmed.slice(jsonStart);
+  let parsed: { action?: string; answer?: string; args?: Record<string, unknown> };
+  try {
+    parsed = JSON.parse(candidate);
+  } catch {
+    return { text: trimmed, toolCalls: [] };
+  }
+  if (parsed.action === 'final_answer') {
+    return { text: parsed.answer ?? '', toolCalls: [] };
+  }
+  if (typeof parsed.action === 'string') {
+    return {
+      text: preface,
+      toolCalls: [
+        {
+          toolCallId: `tc_${index}`,
+          toolName: parsed.action,
+          args: (parsed.args ?? {}) as Record<string, unknown>,
+        },
+      ],
+    };
+  }
+  return { text: trimmed, toolCalls: [] };
+}
+
 function buildCompleteFn(script: readonly string[], completeThrows: boolean): LoopCompleteFn {
   let idx = 0;
   return async function complete(req: LoopCompleteRequest): Promise<LoopProviderCompletion> {
@@ -222,10 +293,13 @@ function buildCompleteFn(script: readonly string[], completeThrows: boolean): Lo
     if (completeThrows) {
       throw new Error('boom');
     }
-    const text = script[Math.min(idx, script.length - 1)] ?? DEFAULT_ANSWER_SCRIPT[0] ?? '';
+    const entry = script[Math.min(idx, script.length - 1)] ?? DEFAULT_ANSWER_SCRIPT[0] ?? '';
+    const callIndex = idx;
     idx += 1;
+    const { text, toolCalls } = translateLegacyScriptEntry(entry, callIndex);
     return {
       text,
+      toolCalls,
       usage: { promptTokens: 10, completionTokens: 5 },
       provider: 'fake',
       model: 'fake-model',
@@ -451,7 +525,8 @@ describe('createAgenticLoopService', () => {
         );
       });
       return {
-        text: '{"action":"final_answer","answer":"never reached"}',
+        text: 'never reached',
+        toolCalls: [],
         usage: { promptTokens: 1, completionTokens: 1 },
         provider: 'fake',
         model: 'fake-model',
@@ -621,7 +696,14 @@ describe('createAgenticLoopService', () => {
     fixture.deps.resolveComplete = async () => ({
       complete: async () => {
         await pending;
-        return { text: '{"action":"final_answer","answer":"late"}' } as LoopProviderCompletion;
+        return {
+          text: 'late',
+          toolCalls: [],
+          usage: { promptTokens: 1, completionTokens: 1 },
+          provider: 'slow',
+          model: 'slow-model',
+          costUsd: 0,
+        } satisfies LoopProviderCompletion;
       },
       provider: 'slow',
       model: 'slow-model',
@@ -827,5 +909,64 @@ describe('createAgenticLoopService', () => {
       }),
     ).rejects.toThrow(/belongs to company "co-other"/);
     expect(fixture.threads.created).toHaveLength(0);
+  });
+
+  // ---------------------------------------------------------------------
+  // H4 audit 2026-05-07 — traceId propagation
+  // ---------------------------------------------------------------------
+
+  describe('H4 — traceId propagation (audit 2026-05-07)', () => {
+    it('generates ONE 32-hex traceId per start() and threads it onto runs.start AND every emitted event', async () => {
+      const service = createAgenticLoopService(fx.deps);
+      const { runId } = await service.start({ companyId: fx.companyId, userText: 'ping' });
+      await service.waitForRun(runId);
+
+      // The runs row carries the trace ID.
+      const startedRun = fx.runsRepo.started[0];
+      expect(startedRun).toBeDefined();
+      const trace = startedRun?.input.traceId;
+      expect(trace).toMatch(/^[0-9a-f]{32}$/);
+
+      // Every event emitted during the run carries the SAME trace ID.
+      // This is the audit's "reconstruct end-to-end run from logs"
+      // requirement — runs.trace_id ⋈ events.trace_id must match across
+      // every row produced by this single logical request.
+      expect(fx.bus.emitted.length).toBeGreaterThan(0);
+      for (const evt of fx.bus.emitted) {
+        expect(evt.traceId).toBe(trace);
+      }
+
+      // The state snapshot exposes the same trace ID.
+      const snapshot = service.getRun(runId);
+      expect(snapshot?.traceId).toBe(trace);
+    });
+
+    it('mints a different traceId for each independent start() call (no leakage across runs)', async () => {
+      const service = createAgenticLoopService(fx.deps);
+      const { runId: r1 } = await service.start({ companyId: fx.companyId, userText: 'one' });
+      await service.waitForRun(r1);
+      const { runId: r2 } = await service.start({ companyId: fx.companyId, userText: 'two' });
+      await service.waitForRun(r2);
+
+      const traces = fx.runsRepo.started.map((r) => r.input.traceId);
+      expect(traces).toHaveLength(2);
+      expect(traces[0]).toMatch(/^[0-9a-f]{32}$/);
+      expect(traces[1]).toMatch(/^[0-9a-f]{32}$/);
+      expect(traces[0]).not.toBe(traces[1]);
+    });
+
+    it('propagates the trace ID through the loop and back onto LoopRun.traceId (via state)', async () => {
+      const service = createAgenticLoopService(fx.deps);
+      const { runId } = await service.start({ companyId: fx.companyId, userText: 'echo' });
+      await service.waitForRun(runId);
+
+      // The state's traceId came from the orchestrator and was passed
+      // to LoopDeps.traceId at construction time. The loop echoes it
+      // onto LoopRun.traceId — which is exactly the same value here
+      // because the service is the only generator.
+      const startedTrace = fx.runsRepo.started[0]?.input.traceId;
+      const stateTrace = service.getRun(runId)?.traceId;
+      expect(stateTrace).toBe(startedTrace);
+    });
   });
 });

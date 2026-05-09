@@ -71,6 +71,10 @@ describe('runs repo', () => {
       expect(row?.latencyMs).toBe(0);
       expect(row?.costUsd).toBe('0');
       expect(row?.toolCallsCount).toBe(0);
+      // C3 — cache columns must default to 0 so legacy callers that
+      // omit them in finish() don't trip the NOT NULL constraint.
+      expect(row?.cacheReadTokens).toBe(0);
+      expect(row?.cacheWriteTokens).toBe(0);
     });
 
     it('stores startedAt as a positive integer in ms and leaves endedAt null', () => {
@@ -175,6 +179,38 @@ describe('runs repo', () => {
           costUsd: '0',
         }),
       ).not.toThrow();
+    });
+
+    it('records Anthropic prompt-cache token counts when the call surfaces them (C3)', () => {
+      const id = runs.start({ employeeId: 'e', provider: 'anthropic', model: 'claude-sonnet-4-6' });
+      runs.finish(id, {
+        status: 'success',
+        promptTokens: 200, // fresh input
+        completionTokens: 50, // output
+        cacheReadTokens: 4000, // discounted re-use
+        cacheWriteTokens: 1000, // premium first-time caching
+        latencyMs: 800,
+        costUsd: '0.0234',
+      });
+      const row = runs.listByEmployee('e').find((r) => r.id === id);
+      expect(row?.promptTokens).toBe(200);
+      expect(row?.completionTokens).toBe(50);
+      expect(row?.cacheReadTokens).toBe(4000);
+      expect(row?.cacheWriteTokens).toBe(1000);
+    });
+
+    it('defaults cache columns to 0 when finish() omits them (legacy callers)', () => {
+      const id = runs.start({ employeeId: 'e', provider: 'ollama-local', model: 'gemma3:27b' });
+      runs.finish(id, {
+        status: 'success',
+        promptTokens: 100,
+        completionTokens: 50,
+        latencyMs: 400,
+        costUsd: '0',
+      });
+      const row = runs.listByEmployee('e').find((r) => r.id === id);
+      expect(row?.cacheReadTokens).toBe(0);
+      expect(row?.cacheWriteTokens).toBe(0);
     });
   });
 
@@ -298,6 +334,8 @@ describe('runs repo', () => {
         status: 'success',
         promptTokens: 10,
         completionTokens: 20,
+        cacheReadTokens: 750, // C3 — exercise the recentRuns projection
+        cacheWriteTokens: 250,
         latencyMs: 100,
         costUsd: '0.01',
       });
@@ -332,6 +370,13 @@ describe('runs repo', () => {
       expect(recent[0]?.employeeName).toBe('Iris');
       expect(recent[0]?.threadSubject).toBe('Quarterly release review');
       expect(recent[1]?.runId).toBe(olderRunId);
+      // C3 — cache columns flow through the recentRuns projection so
+      // the dashboard can render per-row cost-explainer drill-down.
+      expect(recent[1]?.cacheReadTokens).toBe(750);
+      expect(recent[1]?.cacheWriteTokens).toBe(250);
+      // The newer (still-running) row had no finish() call yet.
+      expect(recent[0]?.cacheReadTokens).toBe(0);
+      expect(recent[0]?.cacheWriteTokens).toBe(0);
     });
 
     it('respects the limit and kind filter', () => {
@@ -372,6 +417,67 @@ describe('runs repo', () => {
       expect(recent).toHaveLength(1);
       expect(recent[0]?.status).toBe('running');
       expect(recent[0]?.model).toBe('gpt-5.4-mini');
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // H4 audit 2026-05-07 — traceId propagation
+  // ---------------------------------------------------------------------
+
+  describe('traceId (H4 audit 2026-05-07)', () => {
+    it('persists a traceId supplied on start() and surfaces it on the row', () => {
+      const id = runs.start({
+        employeeId: 'e',
+        provider: 'p',
+        model: 'm',
+        traceId: '0123456789abcdef0123456789abcdef',
+      });
+      const row = runs.getById(id);
+      expect(row?.traceId).toBe('0123456789abcdef0123456789abcdef');
+    });
+
+    it('leaves traceId null when no value is supplied (back-compat for legacy callers)', () => {
+      const id = runs.start({ employeeId: 'e', provider: 'p', model: 'm' });
+      const row = runs.getById(id);
+      expect(row?.traceId).toBeNull();
+    });
+
+    it('listByTraceId returns every run sharing a trace ID', () => {
+      const traceA = '11112222333344445555666677778888';
+      const traceB = '99998888777766665555444433332222';
+      const a1 = runs.start({ employeeId: 'e', provider: 'p', model: 'm', traceId: traceA });
+      const a2 = runs.start({ employeeId: 'e', provider: 'p', model: 'm', traceId: traceA });
+      runs.start({ employeeId: 'e', provider: 'p', model: 'm', traceId: traceB });
+      runs.start({ employeeId: 'e', provider: 'p', model: 'm' }); // no trace
+
+      const aRows = runs.listByTraceId(traceA);
+      expect(aRows.map((r) => r.id).sort()).toEqual([a1, a2].sort());
+      expect(runs.listByTraceId(traceB)).toHaveLength(1);
+      expect(runs.listByTraceId('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toHaveLength(0);
+    });
+
+    it('recentRuns surfaces traceId in the projection', async () => {
+      const companyId = companies.create({ name: 'Acme', slug: 'acme' });
+      const employeeId = employees.create({
+        companyId,
+        rolePackId: 'pack',
+        roleId: 'ops',
+        roleMdSha: 'sha',
+        level: 'lead',
+        name: 'Iris',
+        title: 'Operations Lead',
+      });
+      const trace = '0123456789abcdef0123456789abcdef';
+      runs.start({
+        employeeId,
+        provider: 'p',
+        model: 'm',
+        traceId: trace,
+      });
+
+      const recent = runs.recentRuns(companyId, 5);
+      expect(recent).toHaveLength(1);
+      expect(recent[0]?.traceId).toBe(trace);
     });
   });
 });

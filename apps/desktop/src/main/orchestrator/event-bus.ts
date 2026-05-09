@@ -71,6 +71,14 @@ export interface EmitInput<T = unknown> {
   actorId: string;
   actorKind: ActorKind;
   payload: T;
+  /**
+   * Optional W3C trace ID. Persisted into `events.trace_id` and echoed
+   * onto the fanned-out `DashboardEvent` so subscribers can correlate
+   * with `runs.trace_id`. Propagated by post-H4 orchestrator code; absent
+   * for emit calls that fall outside a logical orchestrator request
+   * (e.g. one-shot system events). Audit 2026-05-07 H4.
+   */
+  traceId?: string;
 }
 
 /** A subscriber function. The bus calls it synchronously on every emit. */
@@ -150,6 +158,7 @@ function parseRow(row: EventRow): DashboardEvent {
     actorKind: row.actorKind as ActorKind,
     payload,
     createdAt: row.createdAt,
+    traceId: row.traceId,
   };
 }
 
@@ -175,6 +184,7 @@ export function createEventBus(options: EventBusOptions): EventBus {
         actorKind: input.actorKind,
         eventType: input.type,
         payload: input.payload,
+        traceId: input.traceId,
       });
 
       const event: DashboardEvent<T> = {
@@ -185,6 +195,7 @@ export function createEventBus(options: EventBusOptions): EventBus {
         actorKind: input.actorKind,
         payload: input.payload,
         createdAt,
+        traceId: input.traceId ?? null,
       };
 
       // Snapshot the listener set so a subscribe/unsubscribe happening

@@ -456,7 +456,8 @@ const TEST_MODE_MODEL = 'test-canned-v1';
  *
  * - `__ECHO_SYSTEM__`        → the reply is the verbatim system prompt
  *                              (used by `rag-flow.spec.ts` to assert
- *                              on `[Source: ...]` RAG attributions).
+ *                              on `<message id="...">` trust-fenced RAG
+ *                              attributions emitted by formatEvidenceLine).
  * - `__ECHO_TEXT__:<payload>` → the reply is `<payload>` (everything
  *                              after the colon through end-of-line).
  *                              Used to seed the embeddings index with a

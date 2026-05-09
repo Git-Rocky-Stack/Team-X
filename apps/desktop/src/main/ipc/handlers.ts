@@ -992,10 +992,11 @@ export interface IpcBudgetGovernanceService {
 
 export interface IpcApprovalInboxService {
   listItems(input: ListApprovalItemsRequest): ApprovalItem[];
-  reviewItem(input: ReviewApprovalItemRequest & { operatorId: string }): {
+  reviewItem(input: ReviewApprovalItemRequest & { operatorId: string }): Promise<{
     item: ApprovalItem;
     grantId: string | null;
-  };
+    ticketId?: string | null;
+  }>;
 }
 
 export interface IpcArtifactService {
@@ -3587,7 +3588,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       const operatorId = operatorAccessService
         ? operatorAccessService.resolveOperatorIdForCompany(req.companyId, req.operatorId)
         : HUMAN_USER_ID;
-      const result = approvalInboxService.reviewItem({
+      const result = await approvalInboxService.reviewItem({
         companyId: req.companyId,
         itemId: req.itemId,
         kind: req.kind,

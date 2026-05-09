@@ -699,7 +699,7 @@ describe('intelligence eval harness - latency gates', () => {
       ),
     );
 
-    expect(measured.result).toContain('## Relevant Context');
+    expect(measured.result).toContain('## Retrieved Evidence');
     expect(measured.durationMs).toBeLessThanOrEqual(10);
   });
 
@@ -715,12 +715,15 @@ describe('intelligence eval harness - latency gates', () => {
       complete({
         system: 'You are the system agent.',
         messages: [{ role: 'user', content: 'what is my team doing right now' }],
+        tools: [],
         signal: new AbortController().signal,
       }),
     );
 
     const firstTokenMs = measured.durationMs;
-    expect(measured.result.text).toContain('query_employees');
+    // Native tool-use surfaces the tool invocation as a structured
+    // toolCalls entry rather than embedded JSON in `text`.
+    expect(measured.result.toolCalls.map((t) => t.toolName)).toContain('query_employees');
     expect(firstTokenMs).toBeLessThanOrEqual(14);
     expect(measured.durationMs).toBeLessThanOrEqual(14);
   });

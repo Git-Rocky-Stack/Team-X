@@ -87,7 +87,25 @@ function defaultOperatorDisplayName(invite: OperatorInvite): string {
   return localPart && localPart.length > 0 ? localPart : 'Invited Operator';
 }
 
-function membershipCapabilitiesForRole(role: OperatorMembershipRole) {
+/**
+ * Role → capability flags. Owner and admin get the full
+ * approve/manage set; every other role (`operator`, `reviewer`, etc.)
+ * starts with no privilege flags. Granular per-capability grants are
+ * applied separately by the operator UI; this helper is the
+ * baseline mapping used everywhere a membership is upserted.
+ *
+ * Exported for direct unit-test coverage (C6, audit 2026-05-07) — the
+ * audit's original complaint was that this helper was declared but not
+ * applied uniformly. Pinning it as part of the module's public surface
+ * makes it visible to grep + test, so a future change that forgets to
+ * call it stands out.
+ */
+export function membershipCapabilitiesForRole(role: OperatorMembershipRole): {
+  canApproveBudget: boolean;
+  canApproveAuthority: boolean;
+  canManageRoutines: boolean;
+  canManageRuntimes: boolean;
+} {
   if (role === 'owner' || role === 'admin') {
     return {
       canApproveBudget: true,
@@ -197,6 +215,23 @@ export function createOperatorAccessService({
     return created;
   }
 
+  /**
+   * Idempotent upsert of an operator membership row.
+   *
+   * C6 (audit 2026-05-07): the previous version of this function
+   * hard-coded all four capability flags to `true`, which silently
+   * granted admin powers to any non-owner / non-admin invite that
+   * came through this path. The fix routes every capability decision
+   * through `membershipCapabilitiesForRole(role)` — the same helper
+   * `acceptInvite` has been using all along — so role and capabilities
+   * stay in lockstep.
+   *
+   * In current code this is only called via `ensureLocalOwnerForCompany`
+   * with `role: 'owner'`, which still maps to all-true, so behavior
+   * for the local owner is unchanged. The fix is defense-in-depth:
+   * a future caller passing `'reviewer'` or `'operator'` cannot
+   * inadvertently receive admin privileges.
+   */
   function ensureMembership(
     operatorId: string,
     companyId: string,
@@ -206,10 +241,7 @@ export function createOperatorAccessService({
       operatorId,
       companyId,
       role,
-      canApproveBudget: true,
-      canApproveAuthority: true,
-      canManageRoutines: true,
-      canManageRuntimes: true,
+      ...membershipCapabilitiesForRole(role),
     });
   }
 

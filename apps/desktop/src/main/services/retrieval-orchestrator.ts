@@ -105,6 +105,41 @@ const SOURCE_LABELS: Record<EmbeddingSourceType, string> = {
   vault_file: 'vault',
 };
 
+/**
+ * XML-style tag names per source type. The system prompt's
+ * `TRUST_BOUNDARIES` rule (in `@team-x/intelligence` `loop/prompt.ts`)
+ * names exactly these tags. Keep the two lists in sync — adding a new
+ * source type here REQUIRES updating both `TRUST_BOUNDARIES` and the
+ * close-tag escape regex in `loop.ts`'s `escapeFencedCloseTags`.
+ */
+const EVIDENCE_TAGS: Record<EmbeddingSourceType, string> = {
+  message: 'message',
+  ticket: 'ticket',
+  meeting_minutes: 'meeting',
+  goal: 'goal',
+  project: 'project',
+  vault_file: 'vault_file',
+};
+
+/**
+ * Defense against fence-breakout. Retrieved content can include any
+ * literal text — including a `</vault_file>` close tag that would
+ * prematurely terminate the fenced block, letting the rest of the
+ * content be interpreted as instructions. We rewrite any literal close
+ * tag for our trust-boundary fences with an inert `<\/tag>` form that
+ * the model still reads correctly but the parser-eye won't close on.
+ *
+ * Mirror of `escapeFencedCloseTags` in `@team-x/intelligence`
+ * `loop/loop.ts` — kept in sync by hand because cross-package import
+ * cycles aren't worth the coupling for one regex.
+ */
+function escapeEvidenceCloseTags(text: string): string {
+  return text.replace(
+    /<\/(observation|context|message|vault_file|ticket|meeting|goal|project)>/gi,
+    '<\\/$1>',
+  );
+}
+
 const SOURCE_AUTHORITY: Record<EmbeddingSourceType, number> = {
   message: 0.05,
   meeting_minutes: 0.35,
@@ -297,9 +332,10 @@ function fitEntryToBudget(
   if (countTokens(fullLine) <= remainingTokens) return entry;
   if (remainingTokens < 8) return null;
 
-  const label = SOURCE_LABELS[entry.sourceType] ?? entry.sourceType;
-  const prefix = `[Source: ${label} ${entry.sourceId}] `;
-  const maxChars = Math.max(0, remainingTokens * 4 - prefix.length - 3);
+  // Compute the actual wrapper overhead (open tag + newlines + close tag)
+  // for THIS entry's source type so truncation math doesn't over-reserve.
+  const wrapperLength = formatEvidenceLine({ ...entry, contentText: '' }).length;
+  const maxChars = Math.max(0, remainingTokens * 4 - wrapperLength - 3);
   if (maxChars < 24) return null;
 
   let nextContent = entry.contentText.slice(0, maxChars).trim();
@@ -312,11 +348,29 @@ function fitEntryToBudget(
   return null;
 }
 
+/**
+ * Render a retrieved evidence entry into the trust-fenced XML form the
+ * agent's system prompt is told to treat as DATA, not instructions.
+ *
+ * Format: `<{tag} id="{sourceId}" trust="untrusted">{content}</{tag}>`
+ *
+ * The tag is per-source-type so the model can quickly reason about
+ * provenance ("this is a vault file the user uploaded" vs "this is a
+ * meeting transcript"). The `trust="untrusted"` attribute is redundant
+ * with the tag name but is the keyword the system prompt's trust rule
+ * matches on, so it stays even when the tag is self-explanatory.
+ *
+ * Content is run through `escapeEvidenceCloseTags` to neutralize a
+ * fence-breakout attack where retrieved text contains a literal
+ * `</vault_file>` close tag.
+ */
 export function formatEvidenceLine(
   entry: Pick<RetrievalEvidenceEntry, 'sourceType' | 'sourceId' | 'contentText'>,
 ): string {
-  const label = SOURCE_LABELS[entry.sourceType] ?? entry.sourceType;
-  return `[Source: ${label} ${entry.sourceId}] ${entry.contentText}`;
+  const tag = EVIDENCE_TAGS[entry.sourceType] ?? 'context';
+  const safeId = String(entry.sourceId).replace(/"/g, '&quot;');
+  const safeContent = escapeEvidenceCloseTags(entry.contentText);
+  return `<${tag} id="${safeId}" trust="untrusted">\n${safeContent}\n</${tag}>`;
 }
 
 function buildStructuredCandidates(

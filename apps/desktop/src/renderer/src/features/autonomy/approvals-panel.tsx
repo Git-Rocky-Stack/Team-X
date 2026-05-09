@@ -17,7 +17,7 @@ import { useInstalledExtensions } from '@/hooks/use-extensions.js';
 const FIELD_CLASSNAME =
   'min-h-[96px] w-full rounded-[16px] border border-white/10 bg-black/20 px-3 py-3 text-body text-foreground outline-none transition focus:border-brand/30';
 
-type KindFilter = 'all' | 'authority-request' | 'budget-exception';
+type KindFilter = 'all' | 'authority-request' | 'budget-exception' | 'delegation-request';
 type StatusFilter = 'all' | 'pending' | 'approved' | 'denied';
 
 function formatTimestamp(value: number | null): string {
@@ -28,12 +28,14 @@ function formatTimestamp(value: number | null): string {
 function kindLabel(kind: ApprovalItemKind): string {
   if (kind === 'authority-request') return 'Authority';
   if (kind === 'budget-exception') return 'Budget';
+  if (kind === 'delegation-request') return 'Delegation';
   return kind;
 }
 
 function kindTone(kind: ApprovalItemKind): 'accent' | 'warning' | 'danger' | 'default' {
   if (kind === 'authority-request') return 'accent';
   if (kind === 'budget-exception') return 'warning';
+  if (kind === 'delegation-request') return 'warning';
   return 'default';
 }
 
@@ -65,6 +67,36 @@ function describeItem(item: ApprovalItem, extensionNameById: Map<string, string>
     const approvalUsd =
       typeof payload.requireApprovalAboveUsd === 'string' ? payload.requireApprovalAboveUsd : null;
     return `${scopeKind} scope ${scopeRefId}${currentSpendUsd ? ` is at $${Number(currentSpendUsd).toFixed(2)}` : ''}${approvalUsd ? ` with an approval gate at $${Number(approvalUsd).toFixed(2)}` : ''}.`;
+  }
+
+  if (item.kind === 'delegation-request') {
+    // C4 (audit 2026-05-07) — delegate_subtask parks delegations here
+    // and the operator approves them to materialize tickets. Surface
+    // the four-component score breakdown so the operator can read
+    // "WHY this assignee?" before clicking approve.
+    const assigneeName =
+      typeof payload.assigneeName === 'string' && payload.assigneeName.length > 0
+        ? payload.assigneeName
+        : typeof payload.assigneeId === 'string'
+          ? payload.assigneeId
+          : 'unknown assignee';
+    const subtaskTitle =
+      typeof payload.subtaskTitle === 'string' ? payload.subtaskTitle : 'subtask';
+    const score = typeof payload.assigneeScore === 'number' ? payload.assigneeScore : null;
+    const breakdown =
+      payload.scoreBreakdown && typeof payload.scoreBreakdown === 'object'
+        ? (payload.scoreBreakdown as Record<string, unknown>)
+        : null;
+    const fmt = (n: unknown) => (typeof n === 'number' ? n.toFixed(2) : '—');
+    const breakdownTrail = breakdown
+      ? ` (role_fit ${fmt(breakdown.roleFit)} · load ${fmt(breakdown.load)} · availability ${fmt(breakdown.availability)} · past_performance ${fmt(breakdown.pastPerformance)})`
+      : '';
+    const fallbackTrail =
+      payload.fallbackUsed === true
+        ? ` — fallback selected on attempt ${typeof payload.attemptCount === 'number' ? payload.attemptCount : '?'}`
+        : '';
+    const scoreTrail = score !== null ? ` Score ${score.toFixed(2)}.` : '';
+    return `Assign "${subtaskTitle}" to ${assigneeName}.${scoreTrail}${breakdownTrail}${fallbackTrail}`;
   }
 
   return item.summary;
@@ -176,7 +208,14 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
               Kind
             </div>
             <MissionControlRow className="gap-2">
-              {(['all', 'authority-request', 'budget-exception'] as const).map((value) => (
+              {(
+                [
+                  'all',
+                  'authority-request',
+                  'budget-exception',
+                  'delegation-request',
+                ] as const
+              ).map((value) => (
                 <MissionSegmentedButton
                   key={value}
                   active={kindFilter === value}

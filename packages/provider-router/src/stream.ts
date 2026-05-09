@@ -8,16 +8,67 @@
  * (the orchestrator) without making real network calls.
  */
 
-export type StreamRole = 'system' | 'user' | 'assistant';
+export type StreamRole = 'system' | 'user' | 'assistant' | 'tool';
+
+/**
+ * Structured message content part — mirrors the Vercel AI SDK `CoreMessage`
+ * content shape so a tool-call → tool-result round-trip can flow through
+ * `ProviderStreamFn` without translation.
+ *
+ * Most callers send `{ role: 'user' | 'assistant', content: '<string>' }`
+ * and never hit this union. The agentic loop's native tool-use wrapper
+ * (post-C2) builds structured assistant + tool messages so the model's
+ * prior tool-call commitments are preserved verbatim across turns.
+ */
+export type StreamContentPart =
+  | { type: 'text'; text: string }
+  | {
+      type: 'tool-call';
+      toolCallId: string;
+      toolName: string;
+      args: Record<string, unknown>;
+    }
+  | {
+      type: 'tool-result';
+      toolCallId: string;
+      toolName: string;
+      result: unknown;
+    };
 
 export interface StreamMessage {
   role: StreamRole;
-  content: string;
+  content: string | StreamContentPart[];
 }
 
 export interface StreamUsage {
+  /**
+   * Fresh (non-cached, non-cache-write) input tokens. For non-Anthropic
+   * providers and Anthropic calls without `cacheControl`, this is the
+   * full input count. For Anthropic calls with prompt caching enabled,
+   * this is `response.usage.input_tokens` — fresh-only — and the cache
+   * portions are reported separately.
+   */
   promptTokens: number;
   completionTokens: number;
+  /**
+   * Anthropic prompt-caching: number of input tokens served from a
+   * previously cached prefix at the discounted (~10% of base) rate.
+   * Undefined when caching is disabled or the provider does not support
+   * it. Treated as zero by `calcCostUsd` for cost attribution.
+   *
+   * Source: `providerMetadata.anthropic.cacheReadInputTokens` →
+   *         `response.usage.cache_read_input_tokens` upstream.
+   */
+  cachedInputTokens?: number;
+  /**
+   * Anthropic prompt-caching: number of input tokens written to the
+   * ephemeral cache this turn at the premium (~125% of base) rate.
+   * Undefined when caching is disabled or unsupported.
+   *
+   * Source: `providerMetadata.anthropic.cacheCreationInputTokens` →
+   *         `response.usage.cache_creation_input_tokens` upstream.
+   */
+  cacheWriteTokens?: number;
 }
 
 // ---------------------------------------------------------------------------

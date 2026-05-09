@@ -41,6 +41,8 @@ export type EventType =
   | 'agent.wakeup'
   | 'plan.proposed'
   | 'plan.approved'
+  | 'task.delegation_pending'
+  | 'task.delegation_rejected'
   | 'task.delegated'
   | 'task.escalated'
   | 'review.requested'
@@ -131,6 +133,14 @@ export interface DashboardEvent<T = unknown> {
   actorKind: ActorKind;
   payload: T;
   createdAt: number;
+  /**
+   * W3C-format trace ID propagated by the orchestrator that emitted this
+   * event. Present on events emitted by post-H4 orchestrator code; null
+   * for legacy rows or events emitted outside an orchestrator-managed
+   * request. Used by the dashboard to JOIN `runs ⋈ events ON traceId`
+   * for end-to-end forensic reconstruction. Audit 2026-05-07 H4.
+   */
+  traceId?: string | null;
 }
 
 export interface TokenDeltaPayload {
@@ -426,6 +436,36 @@ export interface PlanApprovedPayload {
   ticketIds: string[];
 }
 
+/**
+ * Per-candidate score component breakdown captured at delegation time.
+ *
+ * Mirrors the four-term workload-scoring formula in
+ * `apps/desktop/src/main/services/agentic-tools-write.ts`:
+ *
+ *   score = 0.4 · roleFit
+ *         + 0.3 · (1 - loadRatio)
+ *         + 0.2 · availability
+ *         + 0.1 · pastPerformance
+ *
+ * Each field is in `[0, 1]`. Persisting the components alongside the
+ * final score makes audit-time forensics possible — Rocky can ask
+ * "WHY did Lucas get this ticket?" and read the four numbers off the
+ * audit row instead of re-running the deterministic scorer.
+ *
+ * Added by C4 (audit 2026-05-07). The audit explicitly called out that
+ * `task.delegated` previously omitted all four numbers.
+ */
+export interface DelegationScoreBreakdown {
+  /** Capability + role-spec match component (0..1). */
+  roleFit: number;
+  /** Open-ticket load ratio component (0..1, lower is better). */
+  load: number;
+  /** Meeting / availability component (0 = in meeting, 1 = free). */
+  availability: number;
+  /** Historical completion-time component (0..1, higher = faster). */
+  pastPerformance: number;
+}
+
 export interface TaskDelegatedPayload {
   ticketId: string;
   planId: string;
@@ -434,6 +474,57 @@ export interface TaskDelegatedPayload {
   parentProjectId: string | null;
   fallbackUsed: boolean;
   attemptCount: number;
+  /**
+   * Pending-delegation row id that this materialization promoted from.
+   * Null when the event was emitted by a legacy code path (pre-C4) that
+   * inserted directly into `tickets`. Always set for C4-and-later
+   * materializations issued by the approval-inbox service.
+   */
+  pendingDelegationId?: string | null;
+  /**
+   * Score breakdown captured at delegation time. Optional only because
+   * legacy callers from before audit 2026-05-07 (C4) may not supply it.
+   * New code MUST include it.
+   */
+  scoreBreakdown?: DelegationScoreBreakdown;
+  /** Final aggregate score in [0, 1]. Optional for the same reason. */
+  assigneeScore?: number;
+}
+
+/**
+ * Emitted by `delegate_subtask` when a delegation is parked in the
+ * `pending_delegations` table awaiting operator approval. The C4 fix
+ * (audit 2026-05-07) moved the amber gate from the command-palette
+ * layer to the tool registry — the loop never inserts directly into
+ * `tickets` anymore. The full score breakdown is captured here so the
+ * audit log answers "WHY this assignee?" without re-running the scorer.
+ */
+export interface TaskDelegationPendingPayload {
+  pendingDelegationId: string;
+  planId: string;
+  subtaskTitle: string;
+  assigneeId: string;
+  assigneeName: string;
+  parentProjectId: string | null;
+  priority: string;
+  fallbackUsed: boolean;
+  attemptCount: number;
+  scoreBreakdown: DelegationScoreBreakdown;
+  assigneeScore: number;
+}
+
+/**
+ * Emitted when an operator denies a pending delegation in the inbox.
+ * The pending row is closed; no ticket was created. Includes the
+ * operator id and optional rationale so the audit log records the why.
+ */
+export interface TaskDelegationRejectedPayload {
+  pendingDelegationId: string;
+  planId: string;
+  subtaskTitle: string;
+  assigneeId: string;
+  rejectedByOperatorId: string;
+  rationale: string | null;
 }
 
 export interface TaskEscalatedPayload {

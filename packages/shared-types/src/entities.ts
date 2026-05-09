@@ -803,6 +803,14 @@ export const APPROVAL_ITEM_KINDS = [
   'budget-exception',
   'deliverable-review',
   'artifact-publish',
+  /**
+   * C4 (audit 2026-05-07) — write-side amber gate moved to the tool layer.
+   * `delegate_subtask` no longer inserts into `tickets` directly; it parks
+   * the delegation in `pending_delegations` and surfaces it here for
+   * operator approval. Materialization on approve creates the actual
+   * ticket and emits `task.delegated` with the full score breakdown.
+   */
+  'delegation-request',
 ] as const;
 export type ApprovalItemKind = (typeof APPROVAL_ITEM_KINDS)[number];
 
@@ -825,6 +833,8 @@ export const APPROVAL_SUBJECT_KINDS = [
   'routine',
   'deliverable',
   'artifact',
+  /** C4 (audit 2026-05-07) — `pending_delegations` row id. */
+  'pending-delegation',
 ] as const;
 export type ApprovalSubjectKind = (typeof APPROVAL_SUBJECT_KINDS)[number];
 

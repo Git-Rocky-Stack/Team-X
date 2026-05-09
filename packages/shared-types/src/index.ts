@@ -9,3 +9,4 @@ export * from './rag.js';
 export * from './command.js';
 export * from './copilot.js';
 export * from './capabilities.js';
+export * from './trace.js';

@@ -9,6 +9,7 @@ import {
   LOCAL_OWNER_OPERATOR_ID,
   LOCAL_OWNER_OPERATOR_NAME,
   createOperatorAccessService,
+  membershipCapabilitiesForRole,
 } from './operator-access-service.js';
 
 let ctx: TestDbHandle;
@@ -258,6 +259,117 @@ describe('operator access service', () => {
     );
   });
 
+  // -------------------------------------------------------------------
+  // C6 (audit 2026-05-07) — operator invite must NOT auto-grant full
+  // admin capabilities. The role-to-capability mapping is the single
+  // source of truth; `ensureMembership` and `acceptInvite` both honor it.
+  // -------------------------------------------------------------------
+
+  describe('C6 — role-to-capability mapping is the source of truth', () => {
+    it('membershipCapabilitiesForRole grants the full set ONLY to owner + admin', () => {
+      const owner = membershipCapabilitiesForRole('owner');
+      expect(owner).toEqual({
+        canApproveBudget: true,
+        canApproveAuthority: true,
+        canManageRoutines: true,
+        canManageRuntimes: true,
+      });
+      const admin = membershipCapabilitiesForRole('admin');
+      expect(admin).toEqual(owner);
+
+      // Every non-owner / non-admin role gets the empty privilege set.
+      // The audit's specific concern was a `reviewer` invite silently
+      // gaining admin powers — that is the case the next assertions pin.
+      const reviewer = membershipCapabilitiesForRole('reviewer');
+      expect(reviewer).toEqual({
+        canApproveBudget: false,
+        canApproveAuthority: false,
+        canManageRoutines: false,
+        canManageRuntimes: false,
+      });
+      const operator = membershipCapabilitiesForRole('operator');
+      expect(operator).toEqual(reviewer);
+    });
+
+    it('ensureLocalOwnerForCompany applies the helper (caps come from the mapping, not hardcoded literals)', () => {
+      // Owner happens to map to all-true today; the regression we are
+      // protecting against is hardcoded literals replacing the helper.
+      // The post-C6 path runs through `membershipCapabilitiesForRole`
+      // for EVERY role, including owner.
+      service.ensureLocalOwnerForCompany('company-alpha');
+      const entries = service.listByCompany('company-alpha');
+      const owner = entries.find((e) => e.membership.role === 'owner');
+      expect(owner?.membership).toMatchObject(membershipCapabilitiesForRole('owner'));
+    });
+
+    it('acceptInvite for `reviewer` produces all-false capability flags (audit-cited regression)', () => {
+      service.ensureLocalOwnerForCompany('company-alpha');
+      const invite = service.createInvite({
+        companyId: 'company-alpha',
+        email: 'reviewer@strategia-x.com',
+        displayName: 'Reviewer',
+        authMode: 'invited',
+        role: 'reviewer',
+      });
+      const accepted = service.acceptInvite(invite.id);
+
+      const entries = service.listByCompany('company-alpha');
+      const reviewer = entries.find((e) => e.operator.id === accepted.operatorId);
+      expect(reviewer).toBeDefined();
+      expect(reviewer?.membership).toMatchObject({
+        role: 'reviewer',
+        canApproveBudget: false,
+        canApproveAuthority: false,
+        canManageRoutines: false,
+        canManageRuntimes: false,
+      });
+    });
+
+    it('acceptInvite for `operator` produces all-false capability flags', () => {
+      service.ensureLocalOwnerForCompany('company-alpha');
+      const invite = service.createInvite({
+        companyId: 'company-alpha',
+        email: 'ops-only@strategia-x.com',
+        displayName: 'Ops-Only',
+        authMode: 'invited',
+        role: 'operator',
+      });
+      const accepted = service.acceptInvite(invite.id);
+
+      const entries = service.listByCompany('company-alpha');
+      const ops = entries.find((e) => e.operator.id === accepted.operatorId);
+      expect(ops?.membership).toMatchObject({
+        role: 'operator',
+        canApproveBudget: false,
+        canApproveAuthority: false,
+        canManageRoutines: false,
+        canManageRuntimes: false,
+      });
+    });
+
+    it('acceptInvite for `admin` keeps the full capability set (helper grants admin = owner)', () => {
+      service.ensureLocalOwnerForCompany('company-alpha');
+      const invite = service.createInvite({
+        companyId: 'company-alpha',
+        email: 'admin@strategia-x.com',
+        displayName: 'New Admin',
+        authMode: 'invited',
+        role: 'admin',
+      });
+      const accepted = service.acceptInvite(invite.id);
+
+      const entries = service.listByCompany('company-alpha');
+      const admin = entries.find((e) => e.operator.id === accepted.operatorId);
+      expect(admin?.membership).toMatchObject({
+        role: 'admin',
+        canApproveBudget: true,
+        canApproveAuthority: true,
+        canManageRoutines: true,
+        canManageRuntimes: true,
+      });
+    });
+  });
+
   it('creates hosted invites and hosted memberships when the workspace is linked', () => {
     const hostedService = createOperatorAccessService({
       companiesRepo,
@@ -323,6 +435,14 @@ describe('operator access service', () => {
             sourceKind: 'hosted',
             cloudWorkspaceId: 'workspace_company-alpha',
             hostedInviteId: invite.hostedInviteId,
+            // C6 (audit 2026-05-07) — hosted reviewer must NOT receive
+            // admin-level capability flags. The audit explicitly called
+            // out reviewer/operator invites silently inheriting full
+            // admin powers; this assertion pins the corrected behavior.
+            canApproveBudget: false,
+            canApproveAuthority: false,
+            canManageRoutines: false,
+            canManageRuntimes: false,
           }),
         }),
       ]),

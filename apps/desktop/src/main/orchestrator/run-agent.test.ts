@@ -243,12 +243,19 @@ describe('runAgent', () => {
       expect(run?.error).toBeNull();
 
       // -- Cost calc was invoked exactly once with the right arguments --
+      // C3 (audit 2026-05-07): the cost calculator now also receives
+      // optional `cachedInputTokens` / `cacheWriteTokens` for
+      // Anthropic prompt-caching attribution. The fake provider in
+      // this fixture does not surface cache stats (legacy single-
+      // turn happy path), so both default to 0.
       expect(f.costCalls).toEqual([
         {
           provider: 'fake-provider',
           model: 'fake-model',
           promptTokens: 10,
           completionTokens: 5,
+          cachedInputTokens: 0,
+          cacheWriteTokens: 0,
         },
       ]);
 
@@ -938,6 +945,93 @@ describe('runAgent', () => {
       return { provider, getCalls: () => calls };
     }
 
+    /**
+     * H5 audit 2026-05-07 — 429 path. Build a 429 error whose
+     * `Retry-After` header is 0 seconds so the test does not have to
+     * wait the default 1s exponential backoff. Behavioral parity with
+     * the network-flake retry test above; the only difference is the
+     * error shape and the implicit backoff policy chosen by
+     * `getProviderRetryBackoffMs`.
+     */
+    function buildHttp429Error(): Error {
+      return Object.assign(new Error('HTTP 429 Too Many Requests'), {
+        status: 429,
+        // 0-second wait → tests resolve quickly; verifies the
+        // Retry-After parsing path is wired into the backoff helper.
+        headers: { 'retry-after': '0' },
+      });
+    }
+
+    it('retries on HTTP 429 (audit H5) with Retry-After=0 and recovers', async () => {
+      const { provider, getCalls } = buildFlakyProvider({
+        failuresBeforeSuccess: 1,
+        failureError: buildHttp429Error(),
+        successDeltas: ['ok'],
+        successUsage: { promptTokens: 1, completionTokens: 1 },
+      });
+
+      const result = await runAgent(
+        {
+          bus: f.bus,
+          messages: f.messages,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider,
+          providerName: 'rate-limited-provider',
+          model: 'rate-limited-model',
+        },
+      );
+
+      expect(getCalls()).toBe(2); // 1 × 429 + 1 success
+      expect(result.completionTokens).toBe(1);
+      const runs = f.runs.listByEmployee(f.employeeId);
+      expect(runs[0]?.status).toBe('success');
+      expect(runs[0]?.error).toBeNull();
+    });
+
+    it('retries on HTTP 429 (audit H5) up to MAX_PROVIDER_ATTEMPTS before giving up', async () => {
+      const { provider, getCalls } = buildFlakyProvider({
+        failuresBeforeSuccess: Number.POSITIVE_INFINITY, // every attempt 429s
+        failureError: buildHttp429Error(),
+        successDeltas: [],
+        successUsage: { promptTokens: 0, completionTokens: 0 },
+      });
+
+      await expect(
+        runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'rate-limited-provider',
+            model: 'rate-limited-model',
+          },
+        ),
+      ).rejects.toThrow();
+
+      // 1 initial + 2 retries = 3 invocations under MAX_PROVIDER_ATTEMPTS=3.
+      expect(getCalls()).toBe(3);
+
+      const runs = f.runs.listByEmployee(f.employeeId);
+      expect(runs[0]?.status).toBe('error');
+    });
+
     it('retries once on a transient pre-stream "fetch failed" and recovers', async () => {
       const { provider, getCalls } = buildFlakyProvider({
         failuresBeforeSuccess: 1,
@@ -1020,8 +1114,12 @@ describe('runAgent', () => {
         ),
       ).rejects.toThrow(/provider connection dropped/i);
 
-      // 1 initial + 1 retry = 2 invocations, then we give up.
-      expect(getCalls()).toBe(2);
+      // H5 (audit 2026-05-07): MAX_PROVIDER_ATTEMPTS bumped from 2 → 3 so
+      // HTTP 429 cascades have two retries' worth of exponential backoff.
+      // Network-layer flakes inherit the same loop boundary — at 200ms
+      // each, the extra retry adds at most 200ms on the rare double-flake.
+      // 1 initial + 2 retries = 3 invocations, then we give up.
+      expect(getCalls()).toBe(3);
 
       const runs = f.runs.listByEmployee(f.employeeId);
       expect(runs).toHaveLength(1);
@@ -1186,6 +1284,85 @@ describe('runAgent', () => {
       expect((thrown as Error).message).toMatch(/provider connection dropped/i);
       // Original error survives on `.cause` for forensic logging.
       expect((thrown as Error & { cause?: unknown }).cause).toBe(rootError);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // H4 audit 2026-05-07 — traceId propagation
+  // ---------------------------------------------------------------------
+
+  describe('H4 — traceId propagation (audit 2026-05-07)', () => {
+    it('mints a 32-hex traceId, threads it onto runs.start, RunAgentResult, and every emitted event', async () => {
+      const provider = fakeProvider(['hi', '!'], { promptTokens: 1, completionTokens: 1 });
+      const result = await runAgent(
+        {
+          bus: f.bus,
+          messages: f.messages,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 'You are a CEO.',
+          messages: baseHistory,
+          provider,
+          providerName: 'fake',
+          model: 'fake-model',
+        },
+      );
+
+      // Result carries a valid trace ID.
+      expect(result.traceId).toMatch(/^[0-9a-f]{32}$/);
+
+      // The runs row carries the same trace ID.
+      const runRow = f.runs.listByEmployee(f.employeeId)[0];
+      expect(runRow?.traceId).toBe(result.traceId);
+
+      // Every event emitted during the run shares the trace ID — the
+      // audit's "reconstruct end-to-end run from logs" requirement.
+      const events = f.bus.replaySince(0);
+      expect(events.length).toBeGreaterThan(0);
+      for (const e of events) {
+        expect(e.traceId).toBe(result.traceId);
+      }
+    });
+
+    it('two independent runAgent calls produce two distinct traceIds (no leakage)', async () => {
+      const p1 = fakeProvider(['a'], { promptTokens: 1, completionTokens: 1 });
+      const p2 = fakeProvider(['b'], { promptTokens: 1, completionTokens: 1 });
+
+      const r1 = await runAgent(
+        { bus: f.bus, messages: f.messages, runs: f.runs, calcCost: f.calcCost },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider: p1,
+          providerName: 'p',
+          model: 'm',
+        },
+      );
+      const r2 = await runAgent(
+        { bus: f.bus, messages: f.messages, runs: f.runs, calcCost: f.calcCost },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider: p2,
+          providerName: 'p',
+          model: 'm',
+        },
+      );
+
+      expect(r1.traceId).toMatch(/^[0-9a-f]{32}$/);
+      expect(r2.traceId).toMatch(/^[0-9a-f]{32}$/);
+      expect(r1.traceId).not.toBe(r2.traceId);
     });
   });
 });

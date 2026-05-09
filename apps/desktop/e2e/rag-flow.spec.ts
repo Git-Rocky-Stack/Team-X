@@ -17,11 +17,13 @@
  *      marker) into the embeddings table.
  *   4. Turn 2: send `__ECHO_SYSTEM__` — the test-mode provider replies
  *      with the fully-resolved system prompt. `composeSystemPromptWithRag`
- *      retrieves the indexed chunk and appends a `## Relevant Context`
- *      block with `[Source: message <id>] <marker>` attribution.
- *   5. Assert the streamed reply contains both `[Source: ` (attribution
- *      tag emitted by `composeSystemPromptWithRag`) AND the distinctive
- *      marker (proof the ticket's content made it into the prompt).
+ *      retrieves the indexed chunk and appends a `## Retrieved Evidence`
+ *      block with `<message id="<id>" trust="untrusted">…<marker>…</message>`
+ *      trust-fenced attribution.
+ *   5. Assert the streamed reply contains both `<message id="` (the trust
+ *      fence opening tag emitted by `formatEvidenceLine`) AND the
+ *      distinctive marker (proof the ticket's content made it into the
+ *      prompt).
  *
  * If this test passes, it means every layer of M29 is wired correctly
  * end-to-end: embedText factory, Ollama/OpenAI adapter contract, RagService
@@ -131,7 +133,7 @@ test.describe('Team-X rag-flow', () => {
     rmSync(userDataDir, { recursive: true, force: true });
   });
 
-  test('indexes assistant reply then injects [Source: ...] on next turn', async () => {
+  test('indexes assistant reply then injects <message id="..."> on next turn', async () => {
     const log = (msg: string) => console.log(`[e2e:rag] ${msg}`);
     log('test body entered');
 
@@ -225,21 +227,22 @@ test.describe('Team-X rag-flow', () => {
     // --- 5. Turn 2: ask for the system prompt and assert retrieval -------
     // `__ECHO_SYSTEM__` causes the test-mode provider to reply with the
     // verbatim system prompt. composeSystemPromptWithRag prepends a
-    // `## Relevant Context` block containing `[Source: message <id>]
-    // <RAG_MARKER>` — proving retrieval + injection both worked.
+    // `## Retrieved Evidence` block containing
+    // `<message id="<id>" trust="untrusted">…<RAG_MARKER>…</message>` —
+    // proving retrieval + trust-fenced injection both worked.
     await composer.fill('__ECHO_SYSTEM__ probe');
     await composer.press('Control+Enter');
     log('echo-system probe sent');
 
     // The assistant reply now contains the full system prompt (long).
-    // Wait for both signals: the `[Source: ` tag AND the marker.
-    const assistantBubbles = window.locator('text=/\\[Source:\\s/');
+    // Wait for both signals: the trust fence opening tag AND the marker.
+    const assistantBubbles = window.locator('text=/<message id="/');
     await expect(assistantBubbles.first()).toBeVisible({ timeout: 20_000 });
-    log('[Source: ...] attribution visible ✓');
+    log('<message id="..."> trust fence visible ✓');
 
     // The retrieved content — the marker from turn 1 — should appear
-    // somewhere inside the echoed system prompt (inside the Relevant
-    // Context block).
+    // somewhere inside the echoed system prompt (inside the Retrieved
+    // Evidence block).
     await expect(window.getByText(new RegExp(RAG_MARKER)).first()).toBeVisible({
       timeout: 10_000,
     });

@@ -27,6 +27,14 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { McpServersRepo, ToolCallsRepo } from '../db/repos/mcp-servers.js';
 import type { EventBus } from '../orchestrator/event-bus.js';
 
+import {
+  type McpExecutableAllowlist,
+  ensureCwdExists,
+  resolveCwd,
+  scrubEnv,
+  validateExecutable,
+} from './mcp-security.js';
+
 export type McpTransportType = 'stdio' | 'sse';
 
 export interface McpServerConfig {
@@ -68,6 +76,24 @@ export interface McpHostDeps {
   mcpServersRepo: McpServersRepo;
   toolCallsRepo: ToolCallsRepo;
   bus: EventBus;
+  /**
+   * C5 (audit 2026-05-07) — required for stdio MCP servers. The host
+   * pins the child-process cwd to `<userDataDir>/mcp-runtimes/<id>/`
+   * to keep transient state out of the spawning process's cwd.
+   *
+   * Optional only because some test paths (SSE-only setups) never
+   * spawn stdio. Stdio connect attempts when this is missing fail
+   * with a clear error rather than silently spawning into a wrong dir.
+   */
+  userDataDir?: string;
+  /**
+   * C5 (audit 2026-05-07) — required for stdio MCP servers. The host
+   * refuses to spawn any binary not in this allowlist. Empty allowlist
+   * = no MCP server can spawn (fail-closed).
+   *
+   * Optional for the same reason as `userDataDir`.
+   */
+  executableAllowlist?: McpExecutableAllowlist;
   now?: () => number;
 }
 
@@ -103,6 +129,43 @@ export function createMcpHost(deps: McpHostDeps) {
   }
 
   /**
+   * Surface a connect-time security violation on the bus. Distinct
+   * from `emitAuthorityViolation` (tool-call-level) because the
+   * subject here is the spawn config itself: refused command, refused
+   * cwd, refused env, sha256 mismatch, etc.
+   *
+   * Uses `actorKind: 'system'` and the operator's authority context
+   * because configuring an MCP server is an operator action, not an
+   * employee action. The renderer's audit log surfaces this so an
+   * operator who just pasted in a config sees WHY it didn't connect.
+   */
+  function emitMcpSpawnViolation(
+    config: McpServerConfig,
+    reason: string,
+    detail: string,
+  ): void {
+    try {
+      deps.bus.emit({
+        type: 'authority.violation',
+        companyId: config.companyId ?? 'global',
+        actorId: 'system',
+        actorKind: 'system',
+        payload: {
+          resourceKind: 'mcp-spawn',
+          resourceId: config.id,
+          serverId: config.id,
+          serverName: config.name,
+          runId: null,
+          reason,
+          detail,
+        },
+      });
+    } catch (err) {
+      console.error(`[mcp] failed to emit spawn-violation for ${config.name}:`, err);
+    }
+  }
+
+  /**
    * Load all enabled servers from DB and connect to them.
    * Call this on main process startup after migrations run.
    */
@@ -133,10 +196,28 @@ export function createMcpHost(deps: McpHostDeps) {
       return; // Already connected
     }
 
-    const transport =
-      (config.transport as McpTransportType) === 'stdio'
-        ? createStdioTransport(config.configJson)
-        : createSseTransport(config.configJson);
+    let transport;
+    if ((config.transport as McpTransportType) === 'stdio') {
+      try {
+        transport = createStdioTransport(config);
+      } catch (err) {
+        // Security-gate failures are recorded as authority violations
+        // before they bubble — operators see WHY their config was
+        // refused without having to dig into electron logs.
+        const message = err instanceof Error ? err.message : String(err);
+        // The error object carries a structured `reason` when it came
+        // from the security helpers; otherwise default to `spawn-error`.
+        const reason =
+          err instanceof Error && (err as Error & { reason?: string }).reason
+            ? ((err as Error & { reason?: string }).reason as string)
+            : 'spawn-error';
+        emitMcpSpawnViolation(config, reason, message);
+        deps.mcpServersRepo.updateHealth(config.id, `error: ${message}`);
+        throw err;
+      }
+    } else {
+      transport = createSseTransport(config.configJson);
+    }
 
     const client = new Client({
       name: 'team-x-mcp-host',
@@ -166,16 +247,63 @@ export function createMcpHost(deps: McpHostDeps) {
     }
   }
 
-  function createStdioTransport(configJson: string): StdioClientTransport {
-    const config = JSON.parse(configJson) as {
+  /**
+   * Build a stdio transport for a server with the C5 security gates
+   * applied (audit 2026-05-07):
+   *
+   *   1. The command must be on the operator-managed allowlist
+   *      (hash-pinned). Bare names are refused — see `validateExecutable`.
+   *   2. The child process gets a scrubbed env. Default behavior is
+   *      "PATH + a tiny survival set"; the operator's `env` block in
+   *      configJson is merged on top.
+   *   3. The cwd is pinned to `<userData>/mcp-runtimes/<serverId>/`.
+   *      The directory is created on demand so the spawning never
+   *      lands in the user's home directory or %CD%.
+   *
+   * All three gates throw with a structured `reason` string so
+   * `connectToServer` can surface a meaningful audit event.
+   */
+  function createStdioTransport(config: McpServerConfig): StdioClientTransport {
+    const parsed = JSON.parse(config.configJson) as {
       command: string;
       args?: string[];
       env?: Record<string, string>;
     };
+
+    // --- Gate 1: executable allowlist ---
+    if (!deps.executableAllowlist) {
+      const err = new Error(
+        '[mcp] cannot spawn stdio MCP server: executableAllowlist dep is unwired (C5)',
+      ) as Error & { reason?: string };
+      err.reason = 'allowlist-unwired';
+      throw err;
+    }
+    const validated = validateExecutable(parsed.command, deps.executableAllowlist);
+    if (!validated.ok) {
+      const err = new Error(`[mcp] ${validated.message}`) as Error & { reason?: string };
+      err.reason = validated.reason;
+      throw err;
+    }
+
+    // --- Gate 2: env scrub ---
+    const scrubbedEnv = scrubEnv(parsed.env);
+
+    // --- Gate 3: cwd pin ---
+    if (!deps.userDataDir) {
+      const err = new Error(
+        '[mcp] cannot spawn stdio MCP server: userDataDir dep is unwired (C5)',
+      ) as Error & { reason?: string };
+      err.reason = 'userdatadir-unwired';
+      throw err;
+    }
+    const cwd = resolveCwd(deps.userDataDir, config.id);
+    ensureCwdExists(cwd);
+
     return new StdioClientTransport({
-      command: config.command,
-      args: config.args ?? [],
-      env: config.env,
+      command: validated.resolvedPath,
+      args: parsed.args ?? [],
+      env: scrubbedEnv,
+      cwd,
     });
   }
 

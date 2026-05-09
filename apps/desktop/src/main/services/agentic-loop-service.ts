@@ -77,6 +77,7 @@ import type {
   DashboardEvent,
   EventType,
 } from '@team-x/shared-types';
+import { generateTraceId } from '@team-x/shared-types';
 
 // ---------------------------------------------------------------------------
 // Narrow structural contracts — mirror the meeting-service pattern so
@@ -148,6 +149,13 @@ export interface AgenticLoopRunsRepoStartInput {
   model: string;
   threadId?: string;
   kind?: 'work' | 'agentic' | 'copilot';
+  /**
+   * W3C-format trace ID propagated by the orchestrator that opened this
+   * run. Threaded into `runs.start` and onto every event emitted during
+   * the run so `runs.trace_id ⋈ events.trace_id` reconstructs the
+   * end-to-end flow. Audit 2026-05-07 H4.
+   */
+  traceId?: string;
 }
 
 export interface AgenticLoopRunsRepoFinishInput {
@@ -172,6 +180,12 @@ export interface AgenticLoopEventBus {
     actorId: string;
     actorKind: ActorKind;
     payload: T;
+    /**
+     * Optional W3C trace ID. Propagated to `events.trace_id` so the
+     * dashboard can join `runs ⋈ events ON trace_id` for end-to-end
+     * forensic reconstruction. Audit 2026-05-07 H4.
+     */
+    traceId?: string;
   }): DashboardEvent<T>;
 }
 
@@ -292,6 +306,13 @@ export interface AgenticLoopRunState {
   completionTokens: number;
   costUsd: number;
   toolCallsCount: number;
+  /**
+   * W3C-format trace ID generated at run-start. Threaded through every
+   * `runs.*` write and every `bus.emit` for the duration of the run so
+   * the dashboard can JOIN runs ↔ events on trace_id for end-to-end
+   * forensic reconstruction. Audit 2026-05-07 H4.
+   */
+  readonly traceId: string;
 }
 
 export interface StartArgs {
@@ -543,6 +564,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
             costUsd: state.costUsd,
             durationMs: latencyMs,
           },
+          traceId: state.traceId,
         });
       } catch (err) {
         logger.warn('[agentic-loop] agentic.completed emit failed', err);
@@ -565,6 +587,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
             costUsd: state.costUsd,
             durationMs: latencyMs,
           },
+          traceId: state.traceId,
         });
       } catch (err) {
         logger.warn('[agentic-loop] agentic.failed emit failed', err);
@@ -649,6 +672,13 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       content: args.userText,
     });
 
+    // H4 (audit 2026-05-07) — generate the trace ID ONCE at run-start.
+    // Every event below, every runs.start / runs.finish, and the loop
+    // itself carry this same id so a future timeline reconstruction can
+    // SELECT * FROM events WHERE trace_id = ? — and JOIN against the
+    // runs row written below — to render the entire flow.
+    const traceId = generateTraceId();
+
     try {
       deps.bus.emit({
         type: 'message.persisted',
@@ -656,6 +686,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
         actorId: deps.humanUserId,
         actorKind: 'user',
         payload: { threadId, messageId: userMessageId },
+        traceId,
       });
     } catch (err) {
       logger.warn('[agentic-loop] message.persisted emit failed', err);
@@ -678,6 +709,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       model: resolved.model,
       threadId,
       kind: 'agentic',
+      traceId,
     });
 
     const controller = new AbortController();
@@ -700,6 +732,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       completionTokens: 0,
       costUsd: 0,
       toolCallsCount: 0,
+      traceId,
     };
 
     const budgets = resolveBudgets();
@@ -726,6 +759,10 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       maxTokens: budgets.maxTokens,
       timeoutMs: budgets.timeoutMs,
       now,
+      // H4 — propagate the orchestrator-generated trace into the loop so
+      // LoopRun.traceId echoes back. Lets us pin the loop's perspective
+      // of the trace in tests independently of the runs/events writes.
+      traceId,
     });
 
     const onStep = (step: LoopStep): void => {
@@ -769,6 +806,7 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
             provider: step.telemetry.provider,
             model: step.telemetry.model,
           },
+          traceId,
         });
       } catch (err) {
         logger.warn('[agentic-loop] agent.step emit failed', err);

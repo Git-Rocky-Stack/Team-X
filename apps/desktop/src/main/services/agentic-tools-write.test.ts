@@ -187,6 +187,90 @@ function makeDeps(opts: MakeDepsOpts = {}): {
     },
   } as unknown as AgenticToolsWriteDeps['projectsRepo'];
 
+  // C4 (audit 2026-05-07) — `delegate_subtask` writes here instead of
+  // calling `ticketsRepo.create()` directly. The fake mirrors the
+  // production `pendingDelegationsRepo` interface.
+  type PendingRow = {
+    id: string;
+    companyId: string;
+    planId: string;
+    subtaskTitle: string;
+    description: string;
+    priority: string;
+    assigneeId: string;
+    assigneeName: string;
+    parentProjectId: string | null;
+    fallbackUsed: number;
+    attemptCount: number;
+    score: number;
+    roleFit: number;
+    loadRatio: number;
+    availability: number;
+    pastPerformance: number;
+    reporterId: string;
+    reporterKind: string;
+    status: 'pending' | 'approved' | 'rejected';
+    ticketId: string | null;
+  };
+  const pendingDelegationRows: PendingRow[] = [];
+  let pendingIdCounter = 0;
+  const pendingDelegationsRepo = {
+    create: (input: {
+      companyId: string;
+      planId: string;
+      subtaskTitle: string;
+      description?: string;
+      priority?: string;
+      assigneeId: string;
+      assigneeName?: string;
+      parentProjectId?: string | null;
+      fallbackUsed?: boolean;
+      attemptCount?: number;
+      score: number;
+      roleFit: number;
+      loadRatio: number;
+      availability: number;
+      pastPerformance: number;
+      reporterId: string;
+      reporterKind?: string;
+    }) => {
+      const id = `pd-${++pendingIdCounter}`;
+      pendingDelegationRows.push({
+        id,
+        companyId: input.companyId,
+        planId: input.planId,
+        subtaskTitle: input.subtaskTitle,
+        description: input.description ?? '',
+        priority: input.priority ?? 'medium',
+        assigneeId: input.assigneeId,
+        assigneeName: input.assigneeName ?? '',
+        parentProjectId: input.parentProjectId ?? null,
+        fallbackUsed: input.fallbackUsed ? 1 : 0,
+        attemptCount: input.attemptCount ?? 1,
+        score: input.score,
+        roleFit: input.roleFit,
+        loadRatio: input.loadRatio,
+        availability: input.availability,
+        pastPerformance: input.pastPerformance,
+        reporterId: input.reporterId,
+        reporterKind: input.reporterKind ?? 'agent',
+        status: 'pending',
+        ticketId: null,
+      });
+      return id;
+    },
+    getById: (id: string) => pendingDelegationRows.find((r) => r.id === id) ?? null,
+    listByCompany: (cid: string) => pendingDelegationRows.filter((r) => r.companyId === cid),
+    listPendingByCompany: (cid: string) =>
+      pendingDelegationRows.filter((r) => r.companyId === cid && r.status === 'pending'),
+    markApproved: () => {
+      throw new Error('not implemented in test fake');
+    },
+    markRejected: () => {
+      throw new Error('not implemented in test fake');
+    },
+  } as unknown as AgenticToolsWriteDeps['pendingDelegationsRepo'];
+
   const busCalls: FakeBusCall[] = [];
   const bus: WriteSideEventBus = {
     emit(input) {
@@ -223,6 +307,7 @@ function makeDeps(opts: MakeDepsOpts = {}): {
     employeesRepo,
     ticketsRepo,
     projectsRepo,
+    pendingDelegationsRepo,
     bus,
     orchestrator,
     providerComplete,
@@ -241,7 +326,14 @@ function makeDeps(opts: MakeDepsOpts = {}): {
     now: () => 1_700_000_000_000,
   };
 
-  return { deps, busCalls, ticketsByCo, links, ids: idCounter };
+  return {
+    deps,
+    busCalls,
+    ticketsByCo,
+    links,
+    ids: idCounter,
+    pendingDelegationRows,
+  };
 }
 
 function makeCtx(signal?: AbortSignal): ToolContext {
@@ -676,36 +768,57 @@ describe('delegate_subtask', () => {
     });
   }
 
-  it('creates the ticket and emits task.delegated on the happy path', async () => {
-    const { deps, busCalls } = setup();
+  it('parks the delegation in pending_delegations and emits task.delegation_pending (C4)', async () => {
+    // Pre-C4 expectation: tool inserted a ticket and emitted
+    // ticket.created + ticket.assigned + task.delegated.
+    // Post-C4 expectation: tool writes a pending_delegations row,
+    // emits ONLY task.delegation_pending with the score breakdown,
+    // and never touches ticketsRepo / orchestrator.queueDelegatedTicket.
+    const { deps, busCalls, pendingDelegationRows } = setup();
     const tool = buildDelegateSubtaskTool(deps);
     const result = (await tool.execute(
       { planId: 'p1', subtaskTitle: 'Build auth', assigneeId: 'e1' },
       makeCtx(),
     )) as DelegationResult;
-    expect(result.ticketId).toMatch(/^t-/);
+    expect(result.pendingDelegationId).toMatch(/^pd-/);
     expect(result.assigneeId).toBe('e1');
-    expect(result.status).toBe('created');
-    expect(result.executionQueued).toBe(true);
-    expect(result.threadId).toBe(`thread-${result.ticketId}`);
+    expect(result.status).toBe('pending_approval');
     expect(result.fallbackUsed).toBe(false);
-    expect(deps.orchestrator.queueDelegatedTicket).toHaveBeenCalledWith({
-      ticketId: result.ticketId,
-      employeeId: 'e1',
-      companyId: 'co-1',
-      actorId: 'emp-actor',
-      actorKind: 'agent',
-    });
-    expect(busCalls.map((c) => c.type)).toEqual([
-      'ticket.created',
-      'ticket.assigned',
-      'task.delegated',
-    ]);
-    expect(busCalls.some((c) => c.type === 'task.delegated')).toBe(true);
+    expect(typeof result.assigneeScore).toBe('number');
+    expect(result.scoreBreakdown).toEqual(
+      expect.objectContaining({
+        roleFit: expect.any(Number),
+        load: expect.any(Number),
+        availability: expect.any(Number),
+        pastPerformance: expect.any(Number),
+      }),
+    );
+    expect(pendingDelegationRows).toHaveLength(1);
+    expect(pendingDelegationRows[0]?.assigneeId).toBe('e1');
+    expect(pendingDelegationRows[0]?.status).toBe('pending');
+    // The tool never queues the assignee directly anymore — that
+    // happens inside the inbox service on operator approve.
+    expect(deps.orchestrator.queueDelegatedTicket).not.toHaveBeenCalled();
+    // Bus emits exactly one pending event with the score breakdown.
+    expect(busCalls.map((c) => c.type)).toEqual(['task.delegation_pending']);
+    const pending = busCalls[0]?.payload as Record<string, unknown>;
+    expect(pending).toEqual(
+      expect.objectContaining({
+        pendingDelegationId: result.pendingDelegationId,
+        planId: 'p1',
+        assigneeId: 'e1',
+        scoreBreakdown: expect.objectContaining({
+          roleFit: expect.any(Number),
+          load: expect.any(Number),
+          availability: expect.any(Number),
+          pastPerformance: expect.any(Number),
+        }),
+      }),
+    );
   });
 
   it('falls back to next assignee when the primary is over the load cap', async () => {
-    const { deps, busCalls } = makeDeps({
+    const { deps, busCalls, pendingDelegationRows } = makeDeps({
       employees: [
         {
           id: 'e1',
@@ -742,35 +855,18 @@ describe('delegate_subtask', () => {
       makeCtx(),
     )) as DelegationResult;
     expect(result.assigneeId).toBe('e2');
-    expect(result.executionQueued).toBe(true);
     expect(result.fallbackUsed).toBe(true);
     expect(result.attemptCount).toBe(2);
-    expect(deps.orchestrator.queueDelegatedTicket).toHaveBeenCalledWith({
-      ticketId: result.ticketId,
-      employeeId: 'e2',
-      companyId: 'co-1',
-      actorId: 'emp-actor',
-      actorKind: 'agent',
-    });
-    expect(busCalls.some((c) => c.type === 'task.delegated')).toBe(true);
-  });
-
-  it('surfaces a queue failure instead of silently creating dormant work', async () => {
-    const { deps, busCalls } = setup();
-    vi.mocked(deps.orchestrator.queueDelegatedTicket).mockRejectedValueOnce(
-      new Error('orchestrator offline'),
-    );
-    const tool = buildDelegateSubtaskTool(deps);
-    const result = await tool.execute(
-      { planId: 'p1', subtaskTitle: 'Build auth', assigneeId: 'e1' },
-      makeCtx(),
-    );
-
-    expect(result).toMatchObject({
-      error: 'assignee_queue_failed',
-      reason: expect.stringContaining('orchestrator offline'),
-    });
-    expect(busCalls.some((c) => c.type === 'task.escalated')).toBe(true);
+    // C4 — the tool no longer queues immediately.
+    expect(deps.orchestrator.queueDelegatedTicket).not.toHaveBeenCalled();
+    // Pending row reflects the fallback selection.
+    expect(pendingDelegationRows).toHaveLength(1);
+    expect(pendingDelegationRows[0]?.assigneeId).toBe('e2');
+    expect(pendingDelegationRows[0]?.fallbackUsed).toBe(1);
+    // Pending event fired with fallback flag set.
+    expect(busCalls.some((c) => c.type === 'task.delegation_pending')).toBe(true);
+    // C4 — task.delegated only fires after operator approval (in
+    // approval-inbox-service), not from the tool.
     expect(busCalls.some((c) => c.type === 'task.delegated')).toBe(false);
   });
 
@@ -791,8 +887,8 @@ describe('delegate_subtask', () => {
     expect(escalations.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('links the ticket to a parent project when parentProjectId is supplied', async () => {
-    const { deps, links } = setup();
+  it('captures the parentProjectId on the pending row for materialization-time linking', async () => {
+    const { deps, links, pendingDelegationRows } = setup();
     const tool = buildDelegateSubtaskTool(deps);
     const result = (await tool.execute(
       {
@@ -803,7 +899,12 @@ describe('delegate_subtask', () => {
       },
       makeCtx(),
     )) as DelegationResult;
-    expect(links).toContainEqual({ projectId: 'proj-1', ticketId: result.ticketId });
+    // C4 — projectsRepo.linkTicket is called by approval-inbox-service
+    // on approve, not by the tool. The pending row carries the
+    // parentProjectId so the link can be applied later.
+    expect(links).toEqual([]);
+    expect(pendingDelegationRows[0]?.parentProjectId).toBe('proj-1');
+    expect(result.pendingDelegationId).toMatch(/^pd-/);
   });
 });
 

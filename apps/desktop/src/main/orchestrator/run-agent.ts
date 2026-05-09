@@ -55,6 +55,7 @@ import type {
   WorkCompletedPayload,
   WorkStartedPayload,
 } from '@team-x/shared-types';
+import { generateTraceId } from '@team-x/shared-types';
 
 import type { AppendMessageInput } from '../db/repos/messages.js';
 import type { FinishRunInput, StartRunInput } from '../db/repos/runs.js';
@@ -63,7 +64,7 @@ import type { EventBus } from './event-bus.js';
 import {
   MAX_PROVIDER_ATTEMPTS,
   PROVIDER_CONNECTION_DROPPED_MESSAGE,
-  PROVIDER_RETRY_BACKOFF_MS,
+  getProviderRetryBackoffMs,
   isTransientFetchFailure,
 } from './transient-errors.js';
 
@@ -90,12 +91,20 @@ export interface RunsRepoLike {
  * implementation in T31 wraps `@team-x/telemetry-core`'s `calcCostUsd`,
  * which returns `{ usd: number, … }` — the wrapper formats the number
  * to a string at the boundary so all internal storage stays decimal.
+ *
+ * Cache token fields (C3, audit 2026-05-07): when an Anthropic call
+ * returns prompt-cache stats, callers thread `cachedInputTokens` and
+ * `cacheWriteTokens` through so the cost calc applies the correct
+ * per-rate column. Both default to undefined (= zero) for non-cached
+ * providers.
  */
 export type CostCalculator = (args: {
   provider: string;
   model: string;
   promptTokens: number;
   completionTokens: number;
+  cachedInputTokens?: number;
+  cacheWriteTokens?: number;
 }) => string;
 
 export interface RunAgentDeps {
@@ -174,10 +183,21 @@ export interface RunAgentInput {
 export interface RunAgentResult {
   runId: string;
   messageId: string;
+  /** Fresh (non-cached) input tokens — `usage.input_tokens` upstream. */
   promptTokens: number;
   completionTokens: number;
+  /** Cache-read tokens (Anthropic prompt caching). Zero if unsupported. */
+  cacheReadTokens: number;
+  /** Cache-write tokens (Anthropic prompt caching). Zero if unsupported. */
+  cacheWriteTokens: number;
   latencyMs: number;
   costUsd: string;
+  /**
+   * W3C-format trace ID minted at run start. Always present on success
+   * results. Lets the IPC handler thread it to logs / canary metrics
+   * without re-reading the runs row. Audit 2026-05-07 H4.
+   */
+  traceId: string;
 }
 
 function isAbortError(err: unknown): boolean {
@@ -258,11 +278,19 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
 
   // 1. Open the run row first. If telemetry persistence fails the
   //    caller learns about it before any provider call burns tokens.
+  //
+  // H4 (audit 2026-05-07): mint a single traceId for this turn and
+  // thread it onto runs.start AND every event emitted below. This is
+  // what the dashboard's reconstruction query relies on:
+  //     SELECT * FROM events WHERE trace_id = ?
+  // joined against the runs row written here.
+  const traceId = generateTraceId();
   const runId = deps.runs.start({
     employeeId: input.employeeId,
     provider: input.providerName,
     model: input.model,
     threadId: input.threadId,
+    traceId,
   });
 
   // Thread runId to tool execute callbacks built before this function.
@@ -294,6 +322,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     actorId: 'orchestrator',
     actorKind: 'orchestrator',
     payload: startedPayload,
+    traceId,
   });
 
   const startTime = now();
@@ -396,6 +425,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
             actorId: input.employeeId,
             actorKind: 'employee',
             payload: deltaPayload,
+            traceId,
           });
         } else if (chunk.kind === 'tool-call') {
           toolCallsCount++;
@@ -411,6 +441,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
             actorId: input.employeeId,
             actorKind: 'employee',
             payload: toolCalledPayload,
+            traceId,
           });
         } else if (chunk.kind === 'tool-result') {
           toolResults.push({
@@ -443,8 +474,14 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         // The `finally` below clears timers and removes the abort
         // listener; a fresh AbortController + listener pair is set up
         // at the top of the next iteration.
+        //
+        // H5 (audit 2026-05-07): backoff duration is now error-aware.
+        // Network-layer flakes use the fixed 200 ms (PROVIDER_RETRY_BACKOFF_MS);
+        // HTTP 429 uses Retry-After when present, exponential
+        // backoff (1s, 2s, 4s, … capped at 30s) otherwise.
+        const backoffMs = getProviderRetryBackoffMs(err, attempt);
         await new Promise<void>((resolve) => {
-          setTimeout(resolve, PROVIDER_RETRY_BACKOFF_MS);
+          setTimeout(resolve, backoffMs);
         });
         continue;
       }
@@ -510,6 +547,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         messageId,
         error: message,
       },
+      traceId,
     });
     throw timedOut
       ? new Error(message)
@@ -544,6 +582,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         messageId,
         error: message,
       },
+      traceId,
     });
     throw new Error(message);
   }
@@ -553,17 +592,23 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     if (toolOnlyReply !== null && usage !== null) {
       deps.messages.updateContent(messageId, toolOnlyReply);
       const latencyMs = Math.max(0, now() - startTime);
+      const cacheReadTokens = usage.cachedInputTokens ?? 0;
+      const cacheWriteTokens = usage.cacheWriteTokens ?? 0;
       const costUsd = deps.calcCost({
         provider: input.providerName,
         model: input.model,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
+        cachedInputTokens: cacheReadTokens,
+        cacheWriteTokens,
       });
 
       deps.runs.finish(runId, {
         status: 'success',
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
         latencyMs,
         costUsd,
         toolCallsCount,
@@ -588,6 +633,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
           latencyMs,
           costUsd: Number(costUsd),
         },
+        traceId,
       });
 
       return {
@@ -595,8 +641,11 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         messageId,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
         latencyMs,
         costUsd,
+        traceId,
       };
     }
 
@@ -608,17 +657,23 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       const genericMessage = "Done. I've taken care of that.";
       deps.messages.updateContent(messageId, genericMessage);
       const latencyMs = Math.max(0, now() - startTime);
+      const cacheReadTokens = usage.cachedInputTokens ?? 0;
+      const cacheWriteTokens = usage.cacheWriteTokens ?? 0;
       const costUsd = deps.calcCost({
         provider: input.providerName,
         model: input.model,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
+        cachedInputTokens: cacheReadTokens,
+        cacheWriteTokens,
       });
 
       deps.runs.finish(runId, {
         status: 'success',
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
         latencyMs,
         costUsd,
         toolCallsCount,
@@ -643,6 +698,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
           latencyMs,
           costUsd: Number(costUsd),
         },
+        traceId,
       });
 
       return {
@@ -650,8 +706,11 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         messageId,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
         latencyMs,
         costUsd,
+        traceId,
       };
     }
 
@@ -681,22 +740,29 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         messageId,
         error: message,
       },
+      traceId,
     });
     throw new Error(message);
   }
 
   const latencyMs = Math.max(0, now() - startTime);
+  const cacheReadTokens = usage.cachedInputTokens ?? 0;
+  const cacheWriteTokens = usage.cacheWriteTokens ?? 0;
   const costUsd = deps.calcCost({
     provider: input.providerName,
     model: input.model,
     promptTokens: usage.promptTokens,
     completionTokens: usage.completionTokens,
+    cachedInputTokens: cacheReadTokens,
+    cacheWriteTokens,
   });
 
   deps.runs.finish(runId, {
     status: 'success',
     promptTokens: usage.promptTokens,
     completionTokens: usage.completionTokens,
+    cacheReadTokens,
+    cacheWriteTokens,
     latencyMs,
     costUsd,
     toolCallsCount,
@@ -726,6 +792,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     actorId: 'orchestrator',
     actorKind: 'orchestrator',
     payload: completedPayload,
+    traceId,
   });
 
   return {
@@ -733,7 +800,10 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
     messageId,
     promptTokens: usage.promptTokens,
     completionTokens: usage.completionTokens,
+    cacheReadTokens,
+    cacheWriteTokens,
     latencyMs,
     costUsd,
+    traceId,
   };
 }

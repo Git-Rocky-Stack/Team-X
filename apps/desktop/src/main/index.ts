@@ -47,6 +47,7 @@ import {
   type LoopCompleteFn,
   type LoopMessage,
   type LoopProviderCompletion,
+  type LoopProviderToolCall,
   type RagRepo,
   type RagService,
   createEntityResolver,
@@ -54,7 +55,13 @@ import {
   createRagService,
   createSlotFiller,
 } from '@team-x/intelligence';
-import { type ToolSpec, buildProviderTools, createEmbedText } from '@team-x/provider-router';
+import {
+  type StreamContentPart,
+  type StreamMessage,
+  type ToolSpec,
+  buildProviderTools,
+  createEmbedText,
+} from '@team-x/provider-router';
 import { streamAgent } from '@team-x/provider-router';
 import type {
   EmbeddingSourceType,
@@ -103,6 +110,7 @@ import { createMeetingsRepo } from './db/repos/meetings.js';
 import { createMessagesRepo } from './db/repos/messages.js';
 import { createOperatorsRepo } from './db/repos/operators.js';
 import { createOrgEdgesRepo } from './db/repos/orgchart.js';
+import { createPendingDelegationsRepo } from './db/repos/pending-delegations.js';
 import { createProjectsRepo } from './db/repos/projects.js';
 import { createRoutinesRepo } from './db/repos/routines.js';
 import { createRunCheckpointsRepo } from './db/repos/run-checkpoints.js';
@@ -184,6 +192,10 @@ import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
+import {
+  createFileAllowlist,
+  defaultAllowlistPath as mcpDefaultAllowlistPath,
+} from './services/mcp-security.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
 import { detectHardware } from './services/profiler.js';
 import {
@@ -401,13 +413,32 @@ function resolveRolePacksRoot(): string {
 /**
  * Wrap `telemetry-core`'s `calcCostUsd` into the orchestrator's
  * `CostCalculator` shape. The orchestrator API uses
- * `(provider, model, in, out) -> string` so all storage stays
- * decimal-safe; `calcCostUsd` returns a number, so we format here at
- * the boundary. Six decimal places is enough for sub-cent precision
- * on the smallest Phase 1 model (claude-haiku at $0.0008/1k input).
+ * `(provider, model, tokens) -> string` so all storage stays decimal-safe;
+ * `calcCostUsd` returns a number, so we format here at the boundary.
+ * Six decimal places is enough for sub-cent precision on the smallest
+ * Phase 1 model (claude-haiku at $0.001/1k input).
+ *
+ * C3 (audit 2026-05-07): when the Anthropic adapter has prompt caching
+ * enabled, the `usage` chunk carries `cachedInputTokens` (cache read)
+ * and `cacheWriteTokens` (cache creation) alongside the fresh input
+ * count. We thread both into `calcCostUsd` via its object form so the
+ * read tokens get the discounted rate and the write tokens get the
+ * premium rate. Non-Anthropic / non-cached calls leave them undefined
+ * and the calculator falls back to the legacy fresh-only formula.
  */
-const calcCost: CostCalculator = ({ model, promptTokens, completionTokens }) => {
-  const result = calcCostUsd(model, promptTokens, completionTokens);
+const calcCost: CostCalculator = ({
+  model,
+  promptTokens,
+  completionTokens,
+  cachedInputTokens,
+  cacheWriteTokens,
+}) => {
+  const result = calcCostUsd(model, {
+    promptTokens,
+    completionTokens,
+    ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
+    ...(cacheWriteTokens !== undefined ? { cacheWriteTokens } : {}),
+  });
   return result.usd.toFixed(6);
 };
 
@@ -664,10 +695,19 @@ app
     });
 
     // ---- MCP Host initialization --------------------------------------------
+    // C5 (audit 2026-05-07) — wire the security gates:
+    //   - `userDataDir`         pins child-process cwd per server.
+    //   - `executableAllowlist` is a hash-pinned operator-managed list
+    //     at `<userDataDir>/mcp-allowlist.json`. The file is auto-created
+    //     EMPTY on first run, which is the explicit fail-closed state:
+    //     no MCP servers spawn until an operator adds an entry.
+    const mcpAllowlistPath = mcpDefaultAllowlistPath(userDataDir());
     const mcpHost = createMcpHost({
       mcpServersRepo,
       toolCallsRepo,
       bus,
+      userDataDir: userDataDir(),
+      executableAllowlist: createFileAllowlist(mcpAllowlistPath),
     });
     mcpHostInstance = mcpHost;
     // Initialize MCP connections (best-effort, failures logged per-server)
@@ -731,6 +771,8 @@ app
     });
     heartbeatServiceInstance.start(60 * 1000);
     const ticketsRepo = createTicketsRepo(db, agentWakeupQueueInstance);
+    // C4 (audit 2026-05-07) — write-side amber gate holding table.
+    const pendingDelegationsRepo = createPendingDelegationsRepo(db);
 
     budgetGovernanceServiceInstance = createBudgetGovernanceService({
       budgetsRepo,
@@ -756,10 +798,109 @@ app
       runtimeAuditNormalizer,
       budgetAdmissionGate: budgetGovernanceServiceInstance,
     });
+    /**
+     * C4 (audit 2026-05-07) — shared "materialize delegated ticket"
+     * helper. Both the approval-inbox-service (on operator approve) and
+     * the agentic-loop write-side orchestrator seam use this to
+     * provision a thread for the assigned ticket, emit the kickoff
+     * message, and enqueue the assignee's first reply turn. Lazily
+     * reads the mutable `orchestrator` so it's safe to declare here
+     * (before `orchestrator = buildOrchestrator(...)` runs further
+     * below).
+     */
+    const materializeDelegatedTicket = async (args: {
+      ticketId: string;
+      employeeId: string;
+      companyId: string;
+      actorId: string;
+      actorKind: string;
+    }): Promise<{ threadId: string; triggerMessageId: string }> => {
+      if (!orchestrator) {
+        throw new Error(
+          '[delegation] orchestrator is unavailable for delegated ticket pickup',
+        );
+      }
+      const ticket = ticketsRepo.getById(args.ticketId);
+      if (!ticket || ticket.companyId !== args.companyId) {
+        throw new Error(
+          `[delegation] delegated ticket "${args.ticketId}" is not available in company "${args.companyId}"`,
+        );
+      }
+      const assignee = employeesRepo.getById(args.employeeId);
+      if (!assignee || assignee.companyId !== args.companyId) {
+        throw new Error(
+          `[delegation] delegated assignee "${args.employeeId}" is not available in company "${args.companyId}"`,
+        );
+      }
+
+      let threadId = ticket.threadId;
+      if (!threadId) {
+        threadId = threadsRepo.create({
+          companyId: args.companyId,
+          kind: 'ticket',
+          subject: ticket.title,
+          createdBy: args.actorId,
+        });
+        ticketsRepo.setThreadId(args.ticketId, threadId);
+      }
+
+      const ensureMember = (memberId: string, memberKind: 'user' | 'employee'): void => {
+        const members = threadsRepo.listMembers(threadId);
+        const alreadyMember = members.some(
+          (member) => member.memberId === memberId && member.memberKind === memberKind,
+        );
+        if (!alreadyMember) {
+          threadsRepo.addMember({ threadId, memberId, memberKind });
+        }
+      };
+
+      ensureMember(HUMAN_USER_ID, 'user');
+      ensureMember(args.employeeId, 'employee');
+      if (args.actorKind === 'employee' && args.actorId !== args.employeeId) {
+        ensureMember(args.actorId, 'employee');
+      }
+
+      const actorRow =
+        args.actorKind === 'employee' ? employeesRepo.getById(args.actorId) : null;
+      const actorLabel = actorRow?.name ?? args.actorId;
+      const description = ticket.description.trim();
+      const triggerMessageId = messagesRepo.append({
+        threadId,
+        authorId: args.actorId,
+        authorKind: args.actorKind === 'user' ? 'user' : 'employee',
+        isAgentInitiated: args.actorKind !== 'user',
+        content: `Delegated by ${actorLabel}: **${ticket.title}**\n\n${description.length > 0 ? description : '(no description)'}\n\nBegin work now. Reply with your assessment, concrete next action, blockers, and expected handoff.`,
+      });
+
+      orchestrator
+        .enqueueAgentReply({
+          threadId,
+          employeeId: args.employeeId,
+          triggerMessageId,
+        })
+        .catch((err: unknown) => {
+          console.error(
+            `[delegation] delegated ticket pickup failed for ticket=${args.ticketId}:`,
+            err,
+          );
+        });
+
+      return { threadId, triggerMessageId };
+    };
+
     approvalInboxServiceInstance = createApprovalInboxService({
       budgetsRepo,
       authorityRepo,
       artifactService,
+      // C4 (audit 2026-05-07) — surface and materialize delegation
+      // requests in the operator inbox.
+      pendingDelegationsRepo,
+      ticketsRepo,
+      projectsRepo,
+      bus,
+      orchestrator: {
+        queueDelegatedTicket: materializeDelegatedTicket,
+      },
     });
 
     let routineTicketCreator:
@@ -1998,6 +2139,9 @@ app
           employeesRepo,
           ticketsRepo,
           projectsRepo,
+          // C4 (audit 2026-05-07) — `delegate_subtask` writes here
+          // instead of inserting tickets directly.
+          pendingDelegationsRepo,
           bus,
           orchestrator: writeOrchestrator,
           providerComplete: writeProviderComplete,
@@ -2034,8 +2178,26 @@ app
         }
         // Production — resolve the system-agent's configured provider
         // + model via the standard factory, then wrap `streamAgent`
-        // into a `LoopCompleteFn`. The wrapper accumulates delta
-        // chunks into a single text + records the final usage tallies.
+        // into a native-tool-use `LoopCompleteFn` (post-C2 migration,
+        // audit 2026-05-07). For each `complete()` call:
+        //
+        //   1. Translate the loop's structured `LoopMessage[]` (which
+        //      carries assistant tool-call parts and tool-result parts
+        //      for the round-trip) into provider-router `StreamMessage[]`
+        //      with structured content. The provider router casts
+        //      these to Vercel AI SDK `CoreMessage` shape internally.
+        //
+        //   2. Convert the loop's tool descriptors (JSON Schema) into
+        //      Vercel AI SDK CoreTool records via `buildProviderTools`,
+        //      using a NO-OP execute callback (see comment below). The
+        //      SDK emits `tool-call` events without auto-running them
+        //      — the loop dispatches via its zod-validated registry so
+        //      typed failure modes (invalid_args / timeout / threw) and
+        //      the <observation> trust-fence stay in one place.
+        //
+        //   3. Drain the stream, accumulating text deltas, tool-call
+        //      events, and the terminal usage record. Return both the
+        //      text and the structured `toolCalls` to the loop.
         const emp = employeesRepo.getById(systemAgentId);
         if (!emp) {
           throw new Error(`[agentic-loop] system-agent employee ${systemAgentId} not found`);
@@ -2043,39 +2205,108 @@ app
         const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
         const resolved = await factory.resolveForEmployee(emp);
         const { providerName, model, stream } = resolved;
-        const complete: LoopCompleteFn = async ({ system, messages, signal }) => {
+        const complete: LoopCompleteFn = async ({ system, messages, tools, signal }) => {
           let text = '';
           let promptTokens = 0;
           let completionTokens = 0;
-          const streamMessages = messages.map((m: LoopMessage) => ({
-            role: m.role,
-            content: m.content,
+          let cachedInputTokens: number | undefined;
+          let cacheWriteTokens: number | undefined;
+          const collectedToolCalls: LoopProviderToolCall[] = [];
+
+          // Translate structured LoopMessage[] → StreamMessage[].
+          const streamMessages: StreamMessage[] = messages.map((m: LoopMessage) => {
+            if (typeof m.content === 'string') {
+              return { role: m.role, content: m.content } as StreamMessage;
+            }
+            // Structured assistant or tool message — pass parts through
+            // verbatim. The Anthropic adapter casts to CoreMessage[]
+            // and the structured content matches CoreMessage's shape.
+            return {
+              role: m.role,
+              content: m.content as StreamContentPart[],
+            } as StreamMessage;
+          });
+
+          // Build the provider's tool surface. We use a NO-OP execute
+          // callback that throws — the SDK emits the tool-call event on
+          // `fullStream` BEFORE it would invoke execute, and we abort
+          // the stream after the model's first turn anyway via
+          // maxSteps:1 (the adapter's default). The throw in execute
+          // is belt-and-suspenders: if the SDK ever did invoke it,
+          // the error is captured and surfaced as a tool-call to the
+          // loop's registry instead of leaking provider state.
+          const toolSpecs: ToolSpec[] = tools.map((td) => ({
+            name: td.name,
+            description: td.description,
+            inputSchema: td.jsonSchema,
+            execute: (async (_args: unknown) => {
+              // Loop dispatches tools via its registry; SDK execute is
+              // never reached when maxSteps === 1.
+              throw new Error(
+                '[agentic-loop] provider attempted to execute tool — loop should dispatch instead.',
+              );
+            }) as ToolSpec['execute'],
           }));
+          const providerTools =
+            toolSpecs.length > 0 ? buildProviderTools(toolSpecs) : undefined;
+
           for await (const chunk of streamAgent({
             providerFactory: stream,
             system,
             messages: streamMessages,
+            tools: providerTools,
+            // maxSteps:1 — the loop owns multi-turn iteration. The SDK
+            // emits the model's first turn (text + tool-calls) and
+            // stops; the loop dispatches and re-enters complete().
+            maxSteps: 1,
+            signal,
           })) {
             if (signal.aborted) {
               throw new DOMException('Aborted', 'AbortError');
             }
             if (chunk.kind === 'delta') {
               text += chunk.delta;
+            } else if (chunk.kind === 'tool-call') {
+              collectedToolCalls.push({
+                toolCallId: chunk.toolCallId,
+                toolName: chunk.toolName,
+                args: chunk.args,
+              });
             } else if (chunk.kind === 'done') {
               promptTokens = chunk.usage.promptTokens;
               completionTokens = chunk.usage.completionTokens;
+              // C3 — Anthropic prompt-caching token counts surface here
+              // when caching is enabled at the adapter. Both fields are
+              // optional; a non-Anthropic provider (or Anthropic with
+              // cache disabled) leaves them undefined.
+              cachedInputTokens = chunk.usage.cachedInputTokens;
+              cacheWriteTokens = chunk.usage.cacheWriteTokens;
             }
+            // tool-result events are not produced (no execute) — ignore.
           }
+
+          // C3 — compute real cost per iteration so the loop's
+          // `LoopBudgetUsed.costUsd` accumulator and the agentic-loop
+          // service's run row reflect cache-aware spend. The wrapper
+          // returns a decimal string for storage; we parse to a number
+          // here because the LoopProviderCompletion.costUsd field is
+          // a numeric per-iteration accumulator.
+          const costUsdString = calcCost({
+            provider: providerName,
+            model,
+            promptTokens,
+            completionTokens,
+            ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
+            ...(cacheWriteTokens !== undefined ? { cacheWriteTokens } : {}),
+          });
+
           const completion: LoopProviderCompletion = {
             text,
+            toolCalls: collectedToolCalls,
             usage: { promptTokens, completionTokens },
             provider: providerName,
             model,
-            // Real cost attribution lands in T7 alongside the settings
-            // budget controls. Zero here keeps the runs row well-
-            // formed and the telemetry charts stable until we plumb
-            // the `calcCostUsd` helper through this boundary.
-            costUsd: 0,
+            costUsd: Number(costUsdString),
           };
           return completion;
         };
@@ -2264,6 +2495,8 @@ app
           let text = '';
           let promptTokens = 0;
           let completionTokens = 0;
+          let cachedInputTokens: number | undefined;
+          let cacheWriteTokens: number | undefined;
           for await (const chunk of streamAgent({
             providerFactory: stream,
             system,
@@ -2277,15 +2510,29 @@ app
             } else if (chunk.kind === 'done') {
               promptTokens = chunk.usage.promptTokens;
               completionTokens = chunk.usage.completionTokens;
+              // C3 — Anthropic prompt-caching surfaces these when the
+              // adapter has cache control on. Copilot ticks share their
+              // system prompt across iterations so caching pays off
+              // quickly here.
+              cachedInputTokens = chunk.usage.cachedInputTokens;
+              cacheWriteTokens = chunk.usage.cacheWriteTokens;
             }
           }
+          // C3 — real cost-per-call so the copilot run row attributes
+          // spend correctly.
+          const costUsdString = calcCost({
+            provider: providerName,
+            model,
+            promptTokens,
+            completionTokens,
+            ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
+            ...(cacheWriteTokens !== undefined ? { cacheWriteTokens } : {}),
+          });
           return {
             text,
             promptTokens,
             completionTokens,
-            // T7 plugs the real calcCostUsd wrapper; zero here keeps the
-            // runs row well-formed and telemetry charts stable.
-            costUsd: 0,
+            costUsd: Number(costUsdString),
             provider: providerName,
             model,
           };

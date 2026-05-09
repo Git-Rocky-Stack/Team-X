@@ -12,14 +12,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *   1. Construction: `createAnthropic` receives the apiKey (and
  *      optional baseURL) the caller supplied.
  *   2. Model binding: the returned `AnthropicProvider` callable is
- *      invoked with the caller's `model` string.
- *   3. Invocation: `streamText` is called with `{ model, system,
- *      messages }` matching what the caller handed to the generator.
- *   4. Streaming: each chunk produced by `textStream` is forwarded as
+ *      invoked with the caller's `model` string AND the cache control
+ *      flag (C3, audit 2026-05-07).
+ *   3. Invocation: `streamText` is called with the system prompt
+ *      hoisted into a cacheable system-role message (when caching is
+ *      on) or via the bare `system` parameter (when caching is off).
+ *   4. Streaming: each chunk produced by `fullStream` is forwarded as
  *      a `{ delta }` tuple, in order.
  *   5. Completion: the final `{ done: true, usage }` chunk carries the
- *      `promptTokens`/`completionTokens` pair resolved from
- *      `result.usage`.
+ *      `promptTokens` / `completionTokens` pair plus optional cache
+ *      token counts surfaced via `experimental_providerMetadata`.
  *   6. Error surfacing: a rejection from `streamText` bubbles out of
  *      the generator on the first `next()` so `runAgent`'s try/catch
  *      can close the run row.
@@ -43,7 +45,7 @@ const fakeModel = { __kind: 'fake-anthropic-model' } as const;
 /**
  * What the next `streamText` invocation should return. Tests reassign
  * this before calling the adapter so each case has deterministic
- * textStream + usage values. When `nextStreamTextError` is set, the
+ * fullStream + usage values. When `nextStreamTextError` is set, the
  * mocked `streamText` rejects instead.
  */
 interface FullStreamPart {
@@ -57,6 +59,7 @@ interface FullStreamPart {
 interface FakeStreamResult {
   fullStream: AsyncIterable<FullStreamPart>;
   usage: Promise<{ promptTokens: number; completionTokens: number; totalTokens: number }>;
+  experimental_providerMetadata?: Promise<unknown | undefined>;
 }
 let nextStreamTextResult: FakeStreamResult | null = null;
 let nextStreamTextError: Error | null = null;
@@ -109,19 +112,34 @@ async function drain(
   gen: AsyncGenerator<{
     delta?: string;
     done?: boolean;
-    usage?: { promptTokens: number; completionTokens: number };
+    usage?: {
+      promptTokens: number;
+      completionTokens: number;
+      cachedInputTokens?: number;
+      cacheWriteTokens?: number;
+    };
   }>,
 ): Promise<
   Array<{
     delta?: string;
     done?: boolean;
-    usage?: { promptTokens: number; completionTokens: number };
+    usage?: {
+      promptTokens: number;
+      completionTokens: number;
+      cachedInputTokens?: number;
+      cacheWriteTokens?: number;
+    };
   }>
 > {
   const out: Array<{
     delta?: string;
     done?: boolean;
-    usage?: { promptTokens: number; completionTokens: number };
+    usage?: {
+      promptTokens: number;
+      completionTokens: number;
+      cachedInputTokens?: number;
+      cacheWriteTokens?: number;
+    };
   }> = [];
   for await (const chunk of gen) out.push(chunk);
   return out;
@@ -141,6 +159,7 @@ describe('makeAnthropicStream', () => {
       nextStreamTextResult = {
         fullStream: iterableOf(['x']),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
       };
       const stream = makeAnthropicStream({ apiKey: 'sk-ant-test-123', model: 'claude-haiku-4-5' });
       await drain(stream({ system: '', messages: [] }));
@@ -153,6 +172,7 @@ describe('makeAnthropicStream', () => {
       nextStreamTextResult = {
         fullStream: iterableOf([]),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
       };
       const stream = makeAnthropicStream({
         apiKey: 'k',
@@ -170,6 +190,7 @@ describe('makeAnthropicStream', () => {
       nextStreamTextResult = {
         fullStream: iterableOf([]),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'm' });
       await drain(stream({ system: '', messages: [] }));
@@ -194,22 +215,43 @@ describe('makeAnthropicStream', () => {
   });
 
   describe('invocation', () => {
-    it('binds the model id via the provider factory on each call', async () => {
+    it('binds the model id with cacheControl: true via the provider factory by default', async () => {
       nextStreamTextResult = {
         fullStream: iterableOf(['ok']),
         usage: Promise.resolve({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-sonnet-4-6' });
       await drain(stream({ system: 's', messages: [{ role: 'user', content: 'hi' }] }));
 
+      // C3 — the second arg is the model settings object with
+      // `cacheControl: true` so the SDK adds the prompt-caching beta
+      // header and surfaces cache stats on the response.
       expect(calls.providerFactory).toHaveLength(1);
-      expect(calls.providerFactory[0]).toEqual(['claude-sonnet-4-6']);
+      expect(calls.providerFactory[0]).toEqual(['claude-sonnet-4-6', { cacheControl: true }]);
     });
 
-    it('calls streamText with model + system + messages unchanged', async () => {
+    it('honors enablePromptCache: false by binding the model with cacheControl disabled', async () => {
       nextStreamTextResult = {
         fullStream: iterableOf(['ok']),
         usage: Promise.resolve({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
+      };
+      const stream = makeAnthropicStream({
+        apiKey: 'k',
+        model: 'claude-haiku-4-5',
+        enablePromptCache: false,
+      });
+      await drain(stream({ system: 's', messages: [] }));
+
+      expect(calls.providerFactory[0]).toEqual(['claude-haiku-4-5', { cacheControl: false }]);
+    });
+
+    it('hoists the system prompt into a cacheable system-role message when caching is enabled', async () => {
+      nextStreamTextResult = {
+        fullStream: iterableOf(['ok']),
+        usage: Promise.resolve({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
       };
       const history = [
         { role: 'user' as const, content: 'first' },
@@ -223,20 +265,61 @@ describe('makeAnthropicStream', () => {
       expect(calls.streamText).toHaveLength(1);
       const arg = calls.streamText[0]?.[0] as {
         model: unknown;
-        system: string;
-        messages: unknown[];
+        system?: string;
+        messages: Array<{
+          role: string;
+          content: unknown;
+          experimental_providerMetadata?: unknown;
+        }>;
       };
       expect(arg.model).toBe(fakeModel);
+      // C3 — when caching is on, the bare `system` param is NOT passed
+      // (the SDK doesn't honor providerMetadata on it). Instead, the
+      // system text becomes the first message in the array with a
+      // `cacheControl: ephemeral` marker so the prompt-caching prefix
+      // covers the full system block.
+      expect(arg.system).toBeUndefined();
+      expect(arg.messages).toHaveLength(history.length + 1);
+      const sys = arg.messages[0];
+      expect(sys?.role).toBe('system');
+      expect(sys?.content).toBe('You are a CEO.');
+      expect(sys?.experimental_providerMetadata).toEqual({
+        anthropic: { cacheControl: { type: 'ephemeral' } },
+      });
+      // History is appended verbatim after the cacheable system message.
+      expect(arg.messages.slice(1)).toEqual(history);
+    });
+
+    it('uses the bare system parameter (no message hoisting) when caching is disabled', async () => {
+      nextStreamTextResult = {
+        fullStream: iterableOf(['ok']),
+        usage: Promise.resolve({ promptTokens: 1, completionTokens: 1, totalTokens: 2 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
+      };
+      const history = [{ role: 'user' as const, content: 'first' }];
+
+      const stream = makeAnthropicStream({
+        apiKey: 'k',
+        model: 'claude-opus-4-6',
+        enablePromptCache: false,
+      });
+      await drain(stream({ system: 'You are a CEO.', messages: history }));
+
+      const arg = calls.streamText[0]?.[0] as {
+        system?: string;
+        messages: unknown[];
+      };
       expect(arg.system).toBe('You are a CEO.');
       expect(arg.messages).toEqual(history);
     });
   });
 
   describe('streaming', () => {
-    it('yields each textStream chunk as a delta in order', async () => {
+    it('yields each fullStream text chunk as a delta in order', async () => {
       nextStreamTextResult = {
         fullStream: iterableOf(['Hel', 'lo, ', 'world!']),
         usage: Promise.resolve({ promptTokens: 12, completionTokens: 3, totalTokens: 15 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-haiku-4-5' });
       const chunks = await drain(stream({ system: '', messages: [] }));
@@ -251,23 +334,128 @@ describe('makeAnthropicStream', () => {
       nextStreamTextResult = {
         fullStream: iterableOf(['a', 'b']),
         usage: Promise.resolve({ promptTokens: 42, completionTokens: 7, totalTokens: 49 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-haiku-4-5' });
       const chunks = await drain(stream({ system: '', messages: [] }));
 
       const last = chunks.at(-1);
+      // Cache fields are absent when caching is enabled but the response
+      // did not carry providerMetadata (e.g., a turn whose prefix was
+      // shorter than the model's minimum cacheable size).
       expect(last).toEqual({ done: true, usage: { promptTokens: 42, completionTokens: 7 } });
     });
 
-    it('handles an empty textStream by still emitting a done chunk', async () => {
+    it('handles an empty fullStream by still emitting a done chunk', async () => {
       nextStreamTextResult = {
         fullStream: iterableOf([]),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-haiku-4-5' });
       const chunks = await drain(stream({ system: '', messages: [] }));
 
       expect(chunks).toEqual([{ done: true, usage: { promptTokens: 0, completionTokens: 0 } }]);
+    });
+  });
+
+  describe('cache token surfacing (C3)', () => {
+    it('forwards cacheReadInputTokens and cacheCreationInputTokens from providerMetadata', async () => {
+      nextStreamTextResult = {
+        fullStream: iterableOf(['ok']),
+        usage: Promise.resolve({ promptTokens: 100, completionTokens: 50, totalTokens: 150 }),
+        experimental_providerMetadata: Promise.resolve({
+          anthropic: {
+            cacheReadInputTokens: 4000,
+            cacheCreationInputTokens: 200,
+          },
+        }),
+      };
+      const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-sonnet-4-6' });
+      const chunks = await drain(stream({ system: 'sys', messages: [] }));
+
+      const last = chunks.at(-1);
+      expect(last).toEqual({
+        done: true,
+        usage: {
+          promptTokens: 100,
+          completionTokens: 50,
+          cachedInputTokens: 4000,
+          cacheWriteTokens: 200,
+        },
+      });
+    });
+
+    it('omits cache fields when providerMetadata returns null counts', async () => {
+      // Anthropic returns `null` (not the field absent) when caching is
+      // active but no cache rows touched on this turn. The adapter must
+      // treat null and missing the same: omit the field rather than
+      // forwarding null downstream.
+      nextStreamTextResult = {
+        fullStream: iterableOf(['ok']),
+        usage: Promise.resolve({ promptTokens: 50, completionTokens: 10, totalTokens: 60 }),
+        experimental_providerMetadata: Promise.resolve({
+          anthropic: {
+            cacheReadInputTokens: null,
+            cacheCreationInputTokens: null,
+          },
+        }),
+      };
+      const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-sonnet-4-6' });
+      const chunks = await drain(stream({ system: 'sys', messages: [] }));
+
+      const last = chunks.at(-1) as {
+        done?: boolean;
+        usage?: { cachedInputTokens?: number; cacheWriteTokens?: number };
+      };
+      expect(last?.usage?.cachedInputTokens).toBeUndefined();
+      expect(last?.usage?.cacheWriteTokens).toBeUndefined();
+    });
+
+    it('omits cache fields entirely when prompt caching is disabled', async () => {
+      nextStreamTextResult = {
+        fullStream: iterableOf(['ok']),
+        usage: Promise.resolve({ promptTokens: 100, completionTokens: 50, totalTokens: 150 }),
+        // SDK does not return providerMetadata at all when cacheControl
+        // is false on the model — the adapter shouldn't await it.
+        experimental_providerMetadata: Promise.resolve(undefined),
+      };
+      const stream = makeAnthropicStream({
+        apiKey: 'k',
+        model: 'claude-sonnet-4-6',
+        enablePromptCache: false,
+      });
+      const chunks = await drain(stream({ system: 'sys', messages: [] }));
+
+      const last = chunks.at(-1) as {
+        usage?: { cachedInputTokens?: number; cacheWriteTokens?: number };
+      };
+      expect(last?.usage?.cachedInputTokens).toBeUndefined();
+      expect(last?.usage?.cacheWriteTokens).toBeUndefined();
+    });
+
+    it('passes through a partial providerMetadata (only one cache field present)', async () => {
+      // Cache write only — covers the very first turn of a fresh prefix.
+      nextStreamTextResult = {
+        fullStream: iterableOf(['ok']),
+        usage: Promise.resolve({ promptTokens: 200, completionTokens: 30, totalTokens: 230 }),
+        experimental_providerMetadata: Promise.resolve({
+          anthropic: { cacheCreationInputTokens: 1000 },
+        }),
+      };
+      const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-sonnet-4-6' });
+      const chunks = await drain(stream({ system: 'sys', messages: [] }));
+
+      const last = chunks.at(-1) as {
+        usage?: {
+          promptTokens?: number;
+          completionTokens?: number;
+          cachedInputTokens?: number;
+          cacheWriteTokens?: number;
+        };
+      };
+      expect(last?.usage?.cacheWriteTokens).toBe(1000);
+      expect(last?.usage?.cachedInputTokens).toBeUndefined();
     });
   });
 
@@ -291,6 +479,7 @@ describe('makeAnthropicStream', () => {
       nextStreamTextResult = {
         fullStream: failing(),
         usage: Promise.resolve({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }),
+        experimental_providerMetadata: Promise.resolve(undefined),
       };
       const stream = makeAnthropicStream({ apiKey: 'k', model: 'claude-haiku-4-5' });
 

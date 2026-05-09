@@ -84,6 +84,7 @@ import {
 import { z } from 'zod';
 
 import type { createEmployeesRepo } from '../db/repos/employees.js';
+import type { PendingDelegationsRepo } from '../db/repos/pending-delegations.js';
 import type { createProjectsRepo } from '../db/repos/projects.js';
 import type { createTicketsRepo } from '../db/repos/tickets.js';
 
@@ -191,6 +192,8 @@ export type WriteSideToolName = (typeof WRITE_SIDE_TOOL_NAMES)[number];
 export type WriteSideEventType =
   | 'plan.proposed'
   | 'plan.approved'
+  | 'task.delegation_pending'
+  | 'task.delegation_rejected'
   | 'task.delegated'
   | 'task.escalated'
   | 'review.requested'
@@ -225,16 +228,30 @@ export interface DecomposedPlan {
   readonly truncated: boolean;
 }
 
-/** Result envelope for `delegate_subtask`. */
+/**
+ * Result envelope for `delegate_subtask`.
+ *
+ * C4 (audit 2026-05-07) — the tool no longer creates tickets directly.
+ * It writes a `pending_delegations` row that the operator must approve
+ * via the inbox. The materialization (ticket insert + queue + bus
+ * emits) happens in `approval-inbox-service.ts` on operator approval.
+ *
+ * The result therefore carries the pending-delegation id (not a ticket
+ * id), `status: 'pending_approval'`, and the four-component score
+ * breakdown so the LLM has visibility into the assignment rationale
+ * for its next-turn reasoning.
+ */
 export interface DelegationResult {
-  readonly ticketId: string;
+  readonly pendingDelegationId: string;
   readonly assigneeId: string;
   readonly assigneeName: string;
-  readonly status: 'created' | 'escalated';
-  readonly executionQueued: boolean;
-  readonly threadId: string;
+  readonly status: 'pending_approval';
   readonly fallbackUsed: boolean;
   readonly attemptCount: number;
+  /** Final aggregate score in [0, 1]. */
+  readonly assigneeScore: number;
+  /** Score breakdown for the chosen assignee (each in [0, 1]). */
+  readonly scoreBreakdown: ScoreBreakdown;
 }
 
 /** Result envelope for `review_deliverable`. */
@@ -428,8 +445,51 @@ export function scoreEmployee(
   subtask: SubtaskHint,
   ctx: ScoringContext,
 ): number {
-  if (employee.isSystem) return 0;
-  if (employee.status === 'archived' || employee.status === 'fired') return 0;
+  return scoreEmployeeWithBreakdown(employee, subtask, ctx).score;
+}
+
+/**
+ * Per-component score breakdown — the same four numbers folded into
+ * `scoreEmployee`'s scalar return, surfaced individually for delegation
+ * audit trails (C4 — audit 2026-05-07). All four are in `[0, 1]`.
+ *
+ * Naming matches the audit's exact callout (`role_fit`, `load`,
+ * `availability`, `past_performance`). The `load` value is the
+ * load-RATIO term (lower is better); the audit doc uses the term "load"
+ * to describe this ratio, so we surface it under that name here.
+ */
+export interface ScoreBreakdown {
+  /** Capability + role-spec match (0..1, higher = better match). */
+  readonly roleFit: number;
+  /** Open-ticket load ratio (0..1, lower = lighter desk = healthier). */
+  readonly load: number;
+  /** Meeting / availability (0 = in meeting, 1 = free). */
+  readonly availability: number;
+  /** Historical-completion-time component (0..1, higher = faster). */
+  readonly pastPerformance: number;
+}
+
+/**
+ * Like `scoreEmployee`, but additionally returns the four-component
+ * breakdown that flows into the final scalar. Used by `delegate_subtask`
+ * to populate the audit-event payload + the `pending_delegations` row
+ * with the exact components the audit explicitly called out as missing.
+ *
+ * Pure (no I/O), deterministic (same inputs → same outputs), and
+ * algorithmically identical to `scoreEmployee` — this is just the
+ * before-clamp tuple alongside the post-clamp scalar.
+ */
+export function scoreEmployeeWithBreakdown(
+  employee: ScorerEmployee,
+  subtask: SubtaskHint,
+  ctx: ScoringContext,
+): { score: number; breakdown: ScoreBreakdown } {
+  if (employee.isSystem || employee.status === 'archived' || employee.status === 'fired') {
+    return {
+      score: 0,
+      breakdown: { roleFit: 0, load: 1, availability: 0, pastPerformance: 0 },
+    };
+  }
 
   const roleFit = computeRoleFit(employee, subtask);
 
@@ -446,13 +506,17 @@ export function scoreEmployee(
     pastPerformance = ceiling <= 0 ? 0.5 : 1 - clamp01(ctx.avgCompletionMs / ceiling);
   }
 
-  const score =
+  const score = clamp01(
     SCORING_WEIGHTS.roleFit * roleFit +
-    SCORING_WEIGHTS.loadRatio * (1 - loadRatio) +
-    SCORING_WEIGHTS.availability * availability +
-    SCORING_WEIGHTS.pastPerformance * pastPerformance;
+      SCORING_WEIGHTS.loadRatio * (1 - loadRatio) +
+      SCORING_WEIGHTS.availability * availability +
+      SCORING_WEIGHTS.pastPerformance * pastPerformance,
+  );
 
-  return clamp01(score);
+  return {
+    score,
+    breakdown: { roleFit, load: loadRatio, availability, pastPerformance },
+  };
 }
 
 function clamp01(n: number): number {
@@ -582,6 +646,12 @@ export interface AgenticToolsWriteDeps {
   readonly employeesRepo: EmployeesRepo;
   readonly ticketsRepo: TicketsRepo;
   readonly projectsRepo: ProjectsRepo;
+  /**
+   * C4 (audit 2026-05-07) — the holding-table repo `delegate_subtask`
+   * writes to instead of `ticketsRepo` directly. Operator approval in
+   * the inbox materializes pending rows into real tickets.
+   */
+  readonly pendingDelegationsRepo: PendingDelegationsRepo;
   readonly bus: WriteSideEventBus;
   readonly orchestrator: WriteSideOrchestrator;
   readonly providerComplete: WriteSideCompleteFn;
@@ -959,16 +1029,24 @@ export function buildDelegateSubtaskTool(
   return {
     name: 'delegate_subtask',
     description:
-      'Create a ticket and assign it to a specific employee. Required: `planId` ' +
-      '(provenance from a prior `decompose_project` call), `subtaskTitle`, ' +
-      '`assigneeId`. Optional: `description`, `parentProjectId` (links the ticket ' +
-      'to a project), `priority` (low|medium|high|critical), `fallbackAssigneeIds` ' +
-      '(score-ordered list used when the primary assignee is unavailable), ' +
-      '`subtaskType` (design|implement|review|test|deploy|document|research). ' +
-      'Returns `{ticketId, assigneeId, assigneeName, status, fallbackUsed, attemptCount}`. ' +
-      'Emits `task.delegated` on success. On `planner_escalation_threshold` ' +
-      'consecutive failures, also emits `task.escalated` and reassigns to the ' +
-      "candidate's manager.",
+      'Park a delegation in the operator approval inbox. C4 (audit ' +
+      '2026-05-07) moved the amber gate from the command-palette layer to ' +
+      'this tool — no ticket is created until the operator approves it ' +
+      'in the inbox. Required: `planId` (provenance from a prior ' +
+      '`decompose_project` call), `subtaskTitle`, `assigneeId`. Optional: ' +
+      '`description`, `parentProjectId` (project linkage applied on ' +
+      'approval), `priority` (low|medium|high|critical), ' +
+      '`fallbackAssigneeIds` (score-ordered list used when the primary ' +
+      'assignee is unavailable), `subtaskType` ' +
+      '(design|implement|review|test|deploy|document|research). Returns ' +
+      '`{pendingDelegationId, assigneeId, assigneeName, status: ' +
+      "'pending_approval', fallbackUsed, attemptCount, assigneeScore, " +
+      'scoreBreakdown}`. Emits `task.delegation_pending` with the four ' +
+      'score components (role_fit, load, availability, past_performance). ' +
+      'On `planner_escalation_threshold` consecutive failures, also emits ' +
+      "`task.escalated` and reassigns to the candidate's manager. The " +
+      "ticket itself is not created — and no `task.delegated` event " +
+      'fires — until the operator approves the row from the inbox.',
     schema: delegateSubtaskSchema,
     async execute(args, ctx) {
       checkAborted(ctx);
@@ -1042,134 +1120,103 @@ export function buildDelegateSubtaskTool(
         };
       }
 
-      // Create the ticket.
-      const ticketId = deps.ticketsRepo.create({
-        companyId: deps.companyId,
+      // C4 (audit 2026-05-07) — compute the four-component score
+      // breakdown for the chosen candidate so the audit log can answer
+      // "WHY this assignee?" without re-running the deterministic
+      // scorer. The breakdown is captured into both the
+      // `pending_delegations` row and the `task.delegation_pending`
+      // event payload.
+      const chosenEmployee = deps.employeesRepo.getById(chosenId)!;
+      const chosenHint: SubtaskHint = {
         title: args.subtaskTitle,
+        type: args.subtaskType ?? deriveSubtaskType(args.subtaskTitle),
+      };
+      const { score: assigneeScore, breakdown: scoreBreakdown } = scoreEmployeeWithBreakdown(
+        {
+          id: chosenEmployee.id,
+          name: chosenEmployee.name,
+          title: chosenEmployee.title,
+          level: chosenEmployee.level,
+          status: chosenEmployee.status,
+          isSystem: chosenEmployee.isSystem,
+          capabilities: capabilitiesForEmployee(deps, chosenEmployee),
+        },
+        chosenHint,
+        {
+          openTicketCount: deps.workload.openTicketCount(chosenEmployee.id),
+          inMeeting: deps.workload.inMeeting(chosenEmployee.id),
+          avgCompletionMs: deps.workload.avgCompletionMs(
+            chosenEmployee.id,
+            chosenHint.type ?? 'implement',
+          ),
+          loadDenominator: planner.loadDenominator,
+          pastPerformanceCeilingMs: planner.pastPerformanceCeilingMs,
+        },
+      );
+
+      // Park the delegation in the operator approval inbox. The
+      // approval-inbox-service materializes it into a real ticket on
+      // operator approval — `ticketsRepo.create()` and
+      // `orchestrator.queueDelegatedTicket()` no longer run here.
+      const pendingDelegationId = deps.pendingDelegationsRepo.create({
+        companyId: deps.companyId,
+        planId: args.planId,
+        subtaskTitle: args.subtaskTitle,
         description: args.description ?? '',
         priority: args.priority ?? 'medium',
         assigneeId: chosenId,
+        assigneeName: chosenName,
+        parentProjectId: args.parentProjectId ?? null,
+        subtaskType: args.subtaskType ?? null,
+        fallbackUsed,
+        attemptCount: attempts,
+        score: assigneeScore,
+        roleFit: scoreBreakdown.roleFit,
+        loadRatio: scoreBreakdown.load,
+        availability: scoreBreakdown.availability,
+        pastPerformance: scoreBreakdown.pastPerformance,
         reporterId: deps.actorId,
         reporterKind: deps.actorKind ?? 'agent',
+        now: deps.now?.(),
       });
 
-      // Assign + set status to in-progress.
-      deps.ticketsRepo.assign(ticketId, chosenId);
-
-      // Link to project if one was supplied.
-      if (args.parentProjectId) {
-        try {
-          deps.projectsRepo.linkTicket(args.parentProjectId, ticketId);
-        } catch {
-          // Non-fatal — the ticket exists; project linkage failure is logged via bus.
-        }
-      }
-
-      let queuedThreadId: string;
-      try {
-        const pickup = await deps.orchestrator.queueDelegatedTicket({
-          ticketId,
-          employeeId: chosenId,
-          companyId: deps.companyId,
-          actorId: deps.actorId,
-          actorKind: deps.actorKind ?? 'agent',
-        });
-        queuedThreadId = pickup.threadId;
-      } catch (err) {
-        const reason = err instanceof Error ? err.message : String(err);
-        try {
-          deps.bus.emit({
-            type: 'task.escalated' satisfies EventType,
-            companyId: deps.companyId,
-            actorId: deps.actorId,
-            actorKind: deps.actorKind ?? 'agent',
-            payload: {
-              planId: args.planId,
-              originalAssigneeId: chosenId,
-              escalatedTo: deps.actorId,
-              reason: `Delegated ticket ${ticketId} was created, but the assignee could not be queued: ${reason}`,
-            },
-          });
-        } catch {
-          // non-fatal
-        }
-        return {
-          error: 'assignee_queue_failed',
-          reason: `Ticket "${ticketId}" was created for "${chosenId}", but the assignee could not be queued: ${reason}`,
-        };
-      }
-
-      const delegatedAt = deps.now?.() ?? Date.now();
-
+      // Emit the pending event with the score breakdown the audit
+      // explicitly called out as missing from `task.delegated`. The
+      // materialized `task.delegated` event (emitted later by
+      // approval-inbox-service on approve) carries the same breakdown.
       try {
         deps.bus.emit({
-          type: 'ticket.created' satisfies EventType,
+          type: 'task.delegation_pending' satisfies EventType,
           companyId: deps.companyId,
           actorId: deps.actorId,
           actorKind: deps.actorKind ?? 'agent',
           payload: {
-            ticketId,
-            companyId: deps.companyId,
-            title: args.subtaskTitle,
-            assigneeId: chosenId,
-            createdAt: delegatedAt,
-          },
-        });
-      } catch {
-        // non-fatal
-      }
-
-      try {
-        deps.bus.emit({
-          type: 'ticket.assigned' satisfies EventType,
-          companyId: deps.companyId,
-          actorId: deps.actorId,
-          actorKind: deps.actorKind ?? 'agent',
-          payload: {
-            ticketId,
-            companyId: deps.companyId,
-            assigneeId: chosenId,
-            previousAssigneeId: null,
-            threadId: queuedThreadId,
-            assignedAt: delegatedAt,
-          },
-        });
-      } catch {
-        // non-fatal
-      }
-
-      // Emit planner-level event.
-      try {
-        deps.bus.emit({
-          type: 'task.delegated' satisfies EventType,
-          companyId: deps.companyId,
-          actorId: deps.actorId,
-          actorKind: deps.actorKind ?? 'agent',
-          payload: {
-            ticketId,
+            pendingDelegationId,
             planId: args.planId,
+            subtaskTitle: args.subtaskTitle,
             assigneeId: chosenId,
             assigneeName: chosenName,
             parentProjectId: args.parentProjectId ?? null,
-            threadId: queuedThreadId,
-            executionQueued: true,
+            priority: args.priority ?? 'medium',
             fallbackUsed,
             attemptCount: attempts,
+            scoreBreakdown,
+            assigneeScore,
           },
         });
       } catch {
-        // non-fatal
+        // Bus emit failures are non-fatal — the pending row is the SoT.
       }
 
       return {
-        ticketId,
+        pendingDelegationId,
         assigneeId: chosenId,
         assigneeName: chosenName,
-        status: 'created',
-        executionQueued: true,
-        threadId: queuedThreadId,
+        status: 'pending_approval',
         fallbackUsed,
         attemptCount: attempts,
+        assigneeScore,
+        scoreBreakdown,
       };
     },
   };

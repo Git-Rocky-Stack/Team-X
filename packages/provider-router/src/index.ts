@@ -22,6 +22,7 @@ export {
   type ProviderStreamFn,
   type StreamAgentArgs,
   type StreamChunk,
+  type StreamContentPart,
   type StreamMessage,
   type StreamRole,
   type StreamToolCall,

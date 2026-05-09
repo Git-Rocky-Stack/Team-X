@@ -1,11 +1,32 @@
 {
-  "version": "2026-04-07",
+  "version": "2026-05-07",
   "currency": "USD",
   "unit": "per_1k_tokens",
+  "notes": "Cache rates follow Anthropic's published 5-minute ephemeral cache: write = 1.25x base input, read = 0.10x base input. Ollama and any local provider have zero rates across all four columns. Haiku 4.5 dated id pricing corrected from $0.0008/$0.004 to $0.001/$0.005 per 1k (audit 2026-05-07 C3).",
   "models": {
-    "claude-opus-4-6": { "in": 0.015, "out": 0.075 },
-    "claude-sonnet-4-6": { "in": 0.003, "out": 0.015 },
-    "claude-haiku-4-5-20251001": { "in": 0.0008, "out": 0.004 },
-    "ollama/*": { "in": 0, "out": 0 }
+    "claude-opus-4-6": {
+      "in": 0.015,
+      "out": 0.075,
+      "cachedIn": 0.0015,
+      "cacheWrite": 0.01875
+    },
+    "claude-sonnet-4-6": {
+      "in": 0.003,
+      "out": 0.015,
+      "cachedIn": 0.0003,
+      "cacheWrite": 0.00375
+    },
+    "claude-haiku-4-5-20251001": {
+      "in": 0.001,
+      "out": 0.005,
+      "cachedIn": 0.0001,
+      "cacheWrite": 0.00125
+    },
+    "ollama/*": {
+      "in": 0,
+      "out": 0,
+      "cachedIn": 0,
+      "cacheWrite": 0
+    }
   }
 }

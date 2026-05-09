@@ -49,6 +49,15 @@ export interface AppendEventInput {
   actorKind: ActorKind;
   eventType: string;
   payload: unknown;
+  /**
+   * W3C-format trace ID propagated by the orchestrator that emitted this
+   * event. Persisted into `events.trace_id` (migration 0035) so the
+   * dashboard can join `runs ⋈ events ON trace_id` for end-to-end
+   * forensic reconstruction. Optional only because legacy / pre-H4
+   * callers may not supply one; new orchestrator code MUST. Audit
+   * 2026-05-07 H4.
+   */
+  traceId?: string;
 }
 
 /**
@@ -95,6 +104,7 @@ export function createEventsRepo<TRunResult>(db: EventsDb<TRunResult>) {
           eventType: input.eventType,
           payloadJson: JSON.stringify(input.payload),
           createdAt,
+          traceId: input.traceId ?? null,
         })
         .run();
       return { id, createdAt };
@@ -134,6 +144,23 @@ export function createEventsRepo<TRunResult>(db: EventsDb<TRunResult>) {
         .where(and(...conditions))
         .orderBy(desc(events.createdAt), desc(events.id))
         .limit(limit)
+        .all();
+    },
+
+    /**
+     * Return every event sharing the given W3C trace ID, oldest-first.
+     * This is the H4 reconstruction query — the dashboard joins
+     * `runs.listByTraceId(traceId)` against this list to render an
+     * end-to-end agentic / chat / copilot run timeline. Backed by the
+     * `idx_events_trace_id` index from migration 0035 so this query is
+     * cheap on a large `events` table. Audit 2026-05-07 H4.
+     */
+    listByTraceId(traceId: string): EventRow[] {
+      return db
+        .select()
+        .from(events)
+        .where(eq(events.traceId, traceId))
+        .orderBy(asc(events.createdAt), asc(events.id))
         .all();
     },
   };
