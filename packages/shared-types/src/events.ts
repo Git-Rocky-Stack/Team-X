@@ -15,115 +15,156 @@ export const RUNTIME_AUDIT_EVENT_TYPES = [
 
 export type RuntimeAuditEventType = (typeof RUNTIME_AUDIT_EVENT_TYPES)[number];
 
-export type EventType =
-  | 'work.queued'
-  | 'work.started'
-  | 'token.delta'
-  | 'message.persisted'
-  | 'message.agent_to_agent'
-  | 'work.completed'
-  | 'work.failed'
-  | 'employee.status_changed'
-  | 'tool.called'
-  | 'tool.result'
-  | 'meeting.started'
-  | 'meeting.turn'
-  | 'meeting.interjection'
-  | 'meeting.ended'
-  | 'vault.file_created'
-  | 'vault.file_deleted'
-  | 'command.executed'
-  | 'agent.step'
-  | 'agentic.completed'
-  | 'agentic.failed'
-  | 'agent.improvementRun'
-  | 'wakeup.scheduled'
-  | 'agent.wakeup'
-  | 'plan.proposed'
-  | 'plan.approved'
-  | 'task.delegation_pending'
-  | 'task.delegation_rejected'
-  | 'task.delegated'
-  | 'task.escalated'
-  | 'review.requested'
-  | 'review.completed'
-  | 'copilot.insight'
-  | 'copilot.analyzed'
-  | 'copilot.expired'
-  | 'copilot.dismissed'
-  | 'copilot.weights.changed'
-  | 'company.archived'
-  | 'company.created'
-  | 'company.updated'
-  | 'company.deleted'
-  | 'company.linkStarted'
-  | 'company.linked'
-  | 'company.linkFailed'
-  | 'company.unlinked'
-  | 'company.reconnected'
-  | 'company.packageExported'
-  | 'company.packageImported'
-  | 'company.templateInstalled'
-  | 'employee.updated'
-  | 'employee.promoted'
-  | 'employee.managerSet'
-  | 'employee.hired'
-  | 'employee.fired'
-  | 'routine.created'
-  | 'routine.updated'
-  | 'routine.deleted'
-  | 'routine.runStarted'
-  | 'routine.runCompleted'
-  | 'routine.runFailed'
-  | 'schedule.created'
-  | 'schedule.updated'
-  | 'schedule.completed'
-  | 'schedule.deleted'
-  | 'budget.policyCreated'
-  | 'budget.policyUpdated'
-  | 'budget.policyDeleted'
-  | 'budget.warning'
-  | 'budget.exceeded'
-  | 'budget.approvalRequested'
-  | 'budget.companyPaused'
-  | 'approval.reviewed'
-  | 'ticket.created'
-  | 'ticket.updated'
-  | 'ticket.assigned'
-  | 'ticket.participantAdded'
-  | 'ticket.participantRemoved'
-  | 'ticket.closed'
-  | 'ticket.reopened'
-  | 'ticket.commentAdded'
-  | 'ticket.attachmentAdded'
-  | 'ticket.attachmentRemoved'
-  | 'mcp.added'
-  | 'mcp.removed'
-  | 'mcp.toggled'
-  | 'extension.installed'
-  | 'extension.removed'
-  | 'skill.assignmentUpdated'
-  | 'authority.grant.created'
-  | 'authority.grant.deleted'
-  | 'authority.request.reviewed'
-  | 'authority.violation'
-  | 'project.created'
-  | 'project.updated'
-  | 'project.deleted'
-  | 'project.ticketLinked'
-  | 'project.ticketUnlinked'
-  | 'goal.created'
-  | 'goal.updated'
-  | 'goal.deleted'
-  | 'proactive.goal_decomposed'
-  | 'proactive.work_queued'
-  | 'proactive.work_started'
-  | 'proactive.work_completed'
-  | 'proactive.blocked'
-  | 'proactive.error'
-  | 'proactive.enabled_changed'
-  | 'proactive.budget_blocked'
-  | RuntimeAuditEventType;
+/**
+ * Authoritative runtime-iterable list of every event type emitted onto the
+ * dashboard event bus. The `EventType` union below is derived from this
+ * array so every consumer sees the same closed set whether it works at
+ * compile time (type narrowing) or runtime (zod enum gating, repo filter
+ * validation, dashboard chip rendering).
+ *
+ * **Why a const array instead of a bare type union?** Audit 2026-05-07 H6
+ * surfaced that the agentic loop's `query_events.type` parameter was
+ * typed as `z.string().min(1)` because `EventType` had no runtime
+ * representation — a typo from the model (`'tikcet.created'`) silently
+ * matched zero rows with no error signal back to the LLM. Promoting the
+ * union to a const tuple lets `agentic-tools.ts` build a `z.enum(EVENT_TYPES)`
+ * schema, which converts typos into a clear validation error the loop can
+ * surface back to the model. Same pattern as `RUNTIME_AUDIT_EVENT_TYPES`.
+ *
+ * **Append-only.** New event types must be added to the end of the
+ * appropriate cluster. Removing an entry is a breaking change for any
+ * downstream consumer that switches exhaustively on `EventType`.
+ */
+export const EVENT_TYPES = [
+  // Work lifecycle
+  'work.queued',
+  'work.started',
+  'token.delta',
+  'message.persisted',
+  'message.agent_to_agent',
+  'work.completed',
+  'work.failed',
+  'employee.status_changed',
+  // Tool invocation
+  'tool.called',
+  'tool.result',
+  // Meeting lifecycle
+  'meeting.started',
+  'meeting.turn',
+  'meeting.interjection',
+  'meeting.ended',
+  // Vault + command
+  'vault.file_created',
+  'vault.file_deleted',
+  'command.executed',
+  // Agentic loop lifecycle
+  'agent.step',
+  'agentic.completed',
+  'agentic.failed',
+  'agent.improvementRun',
+  'wakeup.scheduled',
+  'agent.wakeup',
+  // Task planner write-side
+  'plan.proposed',
+  'plan.approved',
+  'task.delegation_pending',
+  'task.delegation_rejected',
+  'task.delegated',
+  'task.escalated',
+  'review.requested',
+  'review.completed',
+  // Copilot
+  'copilot.insight',
+  'copilot.analyzed',
+  'copilot.expired',
+  'copilot.dismissed',
+  'copilot.weights.changed',
+  // Company lifecycle
+  'company.archived',
+  'company.created',
+  'company.updated',
+  'company.deleted',
+  'company.linkStarted',
+  'company.linked',
+  'company.linkFailed',
+  'company.unlinked',
+  'company.reconnected',
+  'company.packageExported',
+  'company.packageImported',
+  'company.templateInstalled',
+  // Employee lifecycle
+  'employee.updated',
+  'employee.promoted',
+  'employee.managerSet',
+  'employee.hired',
+  'employee.fired',
+  // Routine + schedule
+  'routine.created',
+  'routine.updated',
+  'routine.deleted',
+  'routine.runStarted',
+  'routine.runCompleted',
+  'routine.runFailed',
+  'schedule.created',
+  'schedule.updated',
+  'schedule.completed',
+  'schedule.deleted',
+  // Budget governance
+  'budget.policyCreated',
+  'budget.policyUpdated',
+  'budget.policyDeleted',
+  'budget.warning',
+  'budget.exceeded',
+  'budget.approvalRequested',
+  'budget.companyPaused',
+  'approval.reviewed',
+  // Ticket lifecycle
+  'ticket.created',
+  'ticket.updated',
+  'ticket.assigned',
+  'ticket.participantAdded',
+  'ticket.participantRemoved',
+  'ticket.closed',
+  'ticket.reopened',
+  'ticket.commentAdded',
+  'ticket.attachmentAdded',
+  'ticket.attachmentRemoved',
+  // Extensibility
+  'mcp.added',
+  'mcp.removed',
+  'mcp.toggled',
+  'extension.installed',
+  'extension.removed',
+  'skill.assignmentUpdated',
+  // Authority
+  'authority.grant.created',
+  'authority.grant.deleted',
+  'authority.request.reviewed',
+  'authority.violation',
+  // Project + goal
+  'project.created',
+  'project.updated',
+  'project.deleted',
+  'project.ticketLinked',
+  'project.ticketUnlinked',
+  'goal.created',
+  'goal.updated',
+  'goal.deleted',
+  // Proactive system
+  'proactive.goal_decomposed',
+  'proactive.work_queued',
+  'proactive.work_started',
+  'proactive.work_completed',
+  'proactive.blocked',
+  'proactive.error',
+  'proactive.enabled_changed',
+  'proactive.budget_blocked',
+  // Runtime audit (spread last — preserves the existing
+  // `EventType = ... | RuntimeAuditEventType` ordering convention)
+  ...RUNTIME_AUDIT_EVENT_TYPES,
+] as const;
+
+export type EventType = (typeof EVENT_TYPES)[number];
 
 export interface DashboardEvent<T = unknown> {
   id: string;

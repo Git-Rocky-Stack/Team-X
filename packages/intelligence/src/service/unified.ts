@@ -365,20 +365,30 @@ export function createAiService(config: AiServiceConfig): AiService {
       });
     }
 
-    // Initialize query expansion if enabled
+    // Initialize query expansion if enabled.
+    //
+    // Why capture `config.llm?.complete` into a local: the closure passed to
+    // createQueryExpansionService must return Promise<string>, not
+    // Promise<string | undefined>. TS can't track the outer optional-chain's
+    // narrowing across the closure boundary, so we capture the resolved
+    // function once and let the closure reference the narrowed local. Same
+    // pattern as the memory + planner blocks below. Audit 2026-05-07
+    // pre-existing typecheck debt (handoff §6e) — H7-adjacent cleanup.
     if (config.rag?.enableExpansion) {
+      const completeFn = config.llm?.complete;
       queryExpansion = createQueryExpansionService({
-        llm: config.llm?.complete ? async (p) => config.llm?.complete(p) : undefined,
+        llm: completeFn ? async (p) => completeFn(p) : undefined,
         hydeEnabled: !!config.llm,
       });
     }
 
     // Initialize memory if LLM provided
     if (config.llm) {
+      const llm = config.llm;
       memory = createLongTermMemoryService({
         repo: createInMemoryMemoryRepo(),
         summarizeFn: async (conv, _ctx) => {
-          const response = await config.llm?.complete(`
+          const response = await llm.complete(`
 Summarize this conversation in 2-3 sentences.
 Focus on key decisions, facts, and action items.
 
@@ -395,7 +405,7 @@ Respond with JSON:
           return JSON.parse(response);
         },
         extractFactsFn: async (text, ctx) => {
-          const response = await config.llm?.complete(`
+          const response = await llm.complete(`
 Extract key facts from this text.
 Focus on: status updates, decisions, relationships, preferences.
 
@@ -434,8 +444,9 @@ Respond with JSON array:
 
     // Initialize planner
     if (config.llm && config.planning?.enablePlanning) {
+      const llm = config.llm;
       planner = createPlanExecutor({
-        llm: async (prompt) => config.llm?.complete(prompt),
+        llm: async (prompt) => llm.complete(prompt),
         trackingOptions: {
           autoRevise: true,
           maxRevisions: 3,

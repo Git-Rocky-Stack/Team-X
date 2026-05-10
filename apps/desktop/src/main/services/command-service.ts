@@ -41,7 +41,7 @@ import type {
   ResolvedEntity,
   SlotFiller,
 } from '@team-x/intelligence';
-import { INTENT_NAMES } from '@team-x/intelligence';
+import { DESTRUCTIVE_INTENTS, INTENT_NAMES } from '@team-x/intelligence';
 import type { CommandExecutedPayload, DashboardEvent } from '@team-x/shared-types';
 import { nanoid } from 'nanoid';
 
@@ -306,13 +306,11 @@ export interface CommandService {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Intents that refuse to execute without `confirmed: true`. */
-const DESTRUCTIVE_INTENTS: ReadonlySet<IntentName> = new Set<IntentName>([
-  'fire_employee',
-  'close_ticket',
-  'end_meeting',
-  'promote_employee',
-]);
+// `DESTRUCTIVE_INTENTS` (imported from `@team-x/intelligence`) is the canonical
+// destructive set used here for the `confirmed: true` gate at `execute()`.
+// Same set drives `slot-filler.ts:needs_confirmation` routing and the H7
+// elevated confidence threshold in `intent-classifier.ts:finalize()`.
+// De-duplicated as part of audit 2026-05-07 H7 — single source of truth.
 
 /** Max history rows retained per company (FIFO). */
 export const COMMAND_HISTORY_CAP = 20;

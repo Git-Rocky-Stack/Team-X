@@ -17,13 +17,15 @@ import { z } from 'zod';
 
 import { createAgenticLoop, escapeFencedCloseTags } from './loop.js';
 import { DEFAULT_SYSTEM_PREFIX } from './prompt.js';
-import type {
-  LoopCompleteFn,
-  LoopCompleteRequest,
-  LoopProviderCompletion,
-  LoopProviderToolCall,
-  LoopStep,
-  Tool,
+import {
+  DEFAULT_MAX_ITERATIONS,
+  DEFAULT_MAX_STEPS,
+  type LoopCompleteFn,
+  type LoopCompleteRequest,
+  type LoopProviderCompletion,
+  type LoopProviderToolCall,
+  type LoopStep,
+  type Tool,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -727,5 +729,314 @@ describe('createAgenticLoop — system prompt, telemetry, onStep, cancel', () =>
     if (!toolResult || toolResult.kind !== 'tool_result') throw new Error('expected tool_result');
     expect(toolResult.telemetry.tokensIn).toBe(0);
     expect(toolResult.telemetry.tokensOut).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// H9 — dual-budget split: maxIterations (operator-facing tool turns) vs
+// maxSteps (hard ceiling on emitted step entries) — audit 2026-05-07.
+//
+// Audit complaint: "Step budget arithmetic surprises. Default maxSteps=8,
+// but each ReAct iteration consumes 3 (plan + tool_call + tool_result) —
+// only ~2-3 actual tool turns before exhaustion." — `loop/loop.ts:282, 310, 378`.
+//
+// Resolution: the loop now exposes a separate `maxIterations` knob counted
+// once per while-loop pass (one LLM call + tool dispatches per pass). Default
+// `DEFAULT_MAX_ITERATIONS = 8` matches the operator's mental model of "8 tool
+// turns". `DEFAULT_MAX_STEPS` bumped 8 → 64 to act as a runaway-fan-out
+// safety net rather than the binding constraint. `LoopErrorReason` gains
+// `budget_iterations` so post-mortems can distinguish the two caps.
+// ---------------------------------------------------------------------------
+
+describe('createAgenticLoop — H9 audit (2026-05-07): dual-budget split (iterations vs steps)', () => {
+  describe('export surface', () => {
+    it('DEFAULT_MAX_ITERATIONS = 8 (operator-facing tool-turn cap)', () => {
+      expect(DEFAULT_MAX_ITERATIONS).toBe(8);
+    });
+
+    it('DEFAULT_MAX_STEPS = 64 (hard ceiling on emitted step entries)', () => {
+      expect(DEFAULT_MAX_STEPS).toBe(64);
+    });
+  });
+
+  describe('iteration counter (used.iterations)', () => {
+    it('increments exactly once per LLM call on a multi-iteration run', async () => {
+      // Two iterations: tool_call → tool_result → final_answer. Iteration count
+      // should be 2 (one LLM call per iteration); steps count should be larger
+      // (plan + tool_call + tool_result for iter 1, answer for iter 2 → 4 emitted).
+      const tool = makeQueryTool('query_employees');
+      const loop = createAgenticLoop({
+        complete: sequenceResponder(
+          { text: 'Step 1.', toolCalls: [tc('query_employees', { q: 'x' })] },
+          { text: 'Done.' },
+        ),
+        tools: [tool],
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('measure me');
+
+      expect(run.status).toBe('completed');
+      expect(run.used.iterations).toBe(2);
+      // Emitted step entries: plan + tool_call + tool_result + answer = 4.
+      // Iteration count is independent of step entry count — that's the H9
+      // dual-budget split. used.steps stays its historical "emitted-step
+      // entries" semantic; used.iterations is the new operator-facing count.
+      expect(run.used.steps).toBe(4);
+    });
+
+    it('does NOT increment on a provider error (increment is post-LLM-success)', async () => {
+      // The loop should not burn an iteration when the provider throws —
+      // operators expect "max 8 tool turns" to mean 8 successful LLM calls,
+      // not "8 attempts including failures". The increment lives AFTER the
+      // try/catch in loop.ts so a thrown completion doesn't tick.
+      const failingComplete: LoopCompleteFn = vi.fn(async () => {
+        throw new Error('provider exploded');
+      });
+      const loop = createAgenticLoop({
+        complete: failingComplete,
+        tools: [],
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('try once');
+
+      expect(run.status).toBe('failed');
+      expect(run.used.iterations).toBe(0);
+    });
+
+    it('answer-only run records iterations === 1', async () => {
+      // The model returns text + zero tool-calls on its first turn. One LLM
+      // call → one iteration → one emitted answer step.
+      const loop = createAgenticLoop({
+        complete: fixedResponder({ text: 'hello' }),
+        tools: [],
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('hi');
+
+      expect(run.status).toBe('completed');
+      expect(run.used.iterations).toBe(1);
+      expect(run.used.steps).toBe(1); // just the answer
+    });
+  });
+
+  describe('budget_iterations cap (operator-facing tool turns)', () => {
+    it('emits budget_iterations error when used.iterations reaches maxIterations', async () => {
+      // The audit's quoted scenario: an operator sets a tool-turn budget
+      // and expects exactly that many iterations. Pre-H9 they got
+      // floor(maxSteps / 3) ≈ 2-3 turns. Post-H9 maxIterations is the
+      // direct knob and the error reason is unambiguous.
+      const tool = makeQueryTool('query_employees');
+      const loop = createAgenticLoop({
+        complete: fixedResponder({
+          text: 'Looping.',
+          toolCalls: [tc('query_employees', { q: 'x' })],
+        }),
+        tools: [tool],
+        maxIterations: 3,
+        // maxSteps high enough that the step cap doesn't shadow the
+        // iteration cap (3 iterations × 3 step entries = 9 < 64).
+        maxSteps: 64,
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('endless');
+
+      expect(run.status).toBe('budget_exhausted');
+      const last = run.steps[run.steps.length - 1];
+      if (last.kind !== 'error') throw new Error('expected error step');
+      expect(last.reason).toBe('budget_iterations');
+      expect(last.message).toContain('Iteration budget of 3');
+      expect(run.used.iterations).toBe(3);
+    });
+
+    it('default budget yields exactly 8 tool turns before budget_iterations fires', async () => {
+      // Direct regression for the audit's complaint. With no maxIterations
+      // override (default 8) and no maxSteps override (default 64), an
+      // infinitely looping responder exhausts after exactly 8 iterations,
+      // not 2-3 as it would have pre-H9.
+      const tool = makeQueryTool('query_employees');
+      const loop = createAgenticLoop({
+        complete: fixedResponder({
+          text: 'Looping.',
+          toolCalls: [tc('query_employees', { q: 'x' })],
+        }),
+        tools: [tool],
+        // No budget overrides — exercise the defaults.
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('endless');
+
+      expect(run.status).toBe('budget_exhausted');
+      const last = run.steps[run.steps.length - 1];
+      if (last.kind !== 'error') throw new Error('expected error step');
+      expect(last.reason).toBe('budget_iterations');
+      expect(run.used.iterations).toBe(DEFAULT_MAX_ITERATIONS);
+      expect(run.used.iterations).toBe(8);
+    });
+
+    it('maxIterations: 1 still allows exactly one tool turn', async () => {
+      // Boundary: tightest meaningful iteration cap.
+      const tool = makeQueryTool('query_employees');
+      const loop = createAgenticLoop({
+        complete: fixedResponder({
+          text: 'Once.',
+          toolCalls: [tc('query_employees', { q: 'x' })],
+        }),
+        tools: [tool],
+        maxIterations: 1,
+        maxSteps: 64,
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('go');
+
+      expect(run.status).toBe('budget_exhausted');
+      const last = run.steps[run.steps.length - 1];
+      if (last.kind !== 'error') throw new Error('expected error step');
+      expect(last.reason).toBe('budget_iterations');
+      expect(run.used.iterations).toBe(1);
+    });
+  });
+
+  describe('budget_steps cap (hard ceiling, fan-out safety net)', () => {
+    it('still fires when a single iteration emits more steps than maxSteps allows', async () => {
+      // Pathological case: an iteration emits 1 plan + 5 parallel tool_calls +
+      // 5 tool_results = 11 step entries. With maxSteps: 5 the step cap fires
+      // mid-iteration before the iteration cap matters. budget_steps remains
+      // the right reason — operators should be able to tell "single iteration
+      // fan-out" from "too many tool turns".
+      const tool = makeQueryTool('query_employees');
+      const loop = createAgenticLoop({
+        complete: fixedResponder({
+          text: 'Five at once.',
+          toolCalls: [
+            tc('query_employees', { q: '1' }, 'tc1'),
+            tc('query_employees', { q: '2' }, 'tc2'),
+            tc('query_employees', { q: '3' }, 'tc3'),
+            tc('query_employees', { q: '4' }, 'tc4'),
+            tc('query_employees', { q: '5' }, 'tc5'),
+          ],
+        }),
+        tools: [tool],
+        // Iteration cap loose; step cap binding.
+        maxIterations: 8,
+        maxSteps: 5,
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('fan out');
+
+      expect(run.status).toBe('budget_exhausted');
+      const last = run.steps[run.steps.length - 1];
+      if (last.kind !== 'error') throw new Error('expected error step');
+      expect(last.reason).toBe('budget_steps');
+      // Iterations didn't fire — fan-out was within the first iteration.
+      expect(run.used.iterations).toBe(1);
+    });
+
+    it('with default maxSteps=64, iteration cap is the binding constraint for typical loops', async () => {
+      // Direct closure on the audit: the operator-facing "8 tool turns"
+      // intent now matches reality. The script emits 3 step entries per
+      // iteration (plan + tool_call + tool_result); 8 iterations × 3 = 24
+      // step entries, well under the 64-step ceiling, so budget_iterations
+      // — not budget_steps — is what fires. Exactly the inversion H9 was
+      // about: the OPERATOR knob fires first, not the safety net.
+      const tool = makeQueryTool('query_employees');
+      const loop = createAgenticLoop({
+        complete: fixedResponder({
+          text: 'Step n.',
+          toolCalls: [tc('query_employees', { q: 'x' })],
+        }),
+        tools: [tool],
+        // Both caps at defaults — exercise the H9 default settings.
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('endless');
+
+      expect(run.status).toBe('budget_exhausted');
+      const last = run.steps[run.steps.length - 1];
+      if (last.kind !== 'error') throw new Error('expected error step');
+      expect(last.reason).toBe('budget_iterations');
+      expect(run.used.iterations).toBe(8);
+      // 8 iterations × 3 emitted steps each = 24 emitted step entries
+      // (plan + tool_call + tool_result), then the final budget_iterations
+      // error step is also emitted → 25 total. Well under the 64 ceiling,
+      // proving the iteration cap binds first.
+      expect(run.used.steps).toBe(24);
+    });
+  });
+
+  describe('used.steps semantic preserved (regression pin for H9)', () => {
+    it('emitted-step counting still increments once per plan/tool_call/tool_result/answer', async () => {
+      // The H9 fix added `used.iterations` but did NOT change `used.steps`
+      // semantics — emitted-step counting works exactly as before. A
+      // 2-iteration run with text preamble in the first turn emits:
+      //   iter 1: plan + tool_call + tool_result = 3
+      //   iter 2: answer = 1
+      //   total = 4
+      // Tests that asserted on `used.steps` pre-H9 still pass.
+      const tool = makeQueryTool('query_employees');
+      const loop = createAgenticLoop({
+        complete: sequenceResponder(
+          { text: 'Reasoning.', toolCalls: [tc('query_employees', { q: 'x' })] },
+          { text: 'Final.' },
+        ),
+        tools: [tool],
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('go');
+
+      expect(run.status).toBe('completed');
+      expect(run.used.steps).toBe(4);
+      expect(run.used.iterations).toBe(2);
+
+      // Verify the kind sequence too — the same kinds in the same order
+      // as before H9. The pre-H9 budget_steps test at line 350 also relies
+      // on this granular emission.
+      const kinds = run.steps.map((s) => s.kind);
+      expect(kinds).toEqual(['plan', 'tool_call', 'tool_result', 'answer']);
+    });
+
+    it('budget_steps still fires when maxSteps is the binding constraint (pre-H9 behavior preserved)', async () => {
+      // The original budget_steps test at line 350 above (maxSteps: 3 with
+      // an infinite-tool-call responder) still exhausts via budget_steps,
+      // not budget_iterations — because maxSteps: 3 is hit before the
+      // default maxIterations: 8 cap. Pin the same scenario explicitly here
+      // under the H9 describe block so a future regression to swap the cap
+      // order trips immediately.
+      const tool = makeQueryTool('query_employees');
+      const loop = createAgenticLoop({
+        complete: fixedResponder({
+          text: 'Looping forever.',
+          toolCalls: [tc('query_employees', { q: 'x' })],
+        }),
+        tools: [tool],
+        maxSteps: 3, // tighter than maxIterations default 8
+        model: 'test-model',
+        idGen: deterministicIds(),
+      });
+
+      const run = await loop.run('endless');
+
+      expect(run.status).toBe('budget_exhausted');
+      const last = run.steps[run.steps.length - 1];
+      if (last.kind !== 'error') throw new Error('expected error step');
+      expect(last.reason).toBe('budget_steps');
+    });
   });
 });

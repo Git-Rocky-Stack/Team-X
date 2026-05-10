@@ -1,4 +1,9 @@
-import type { RetrievalHit } from '@team-x/intelligence';
+import type {
+  EntityContext,
+  QueryExpansionService,
+  RerankerService,
+  RetrievalHit,
+} from '@team-x/intelligence';
 import type { EmbeddingSourceType } from '@team-x/shared-types';
 
 import {
@@ -75,6 +80,46 @@ export interface RetrievalOrchestratorDeps {
   searchVault(companyId: string, query: string): readonly VaultSearchHit[];
   getVaultFile(id: string): VaultRetrievalRow | null;
   now?: () => number;
+  /**
+   * Optional query expansion service. When wired together with
+   * `entityContextProvider`, the latest user message is run through the
+   * intelligence package's `QueryExpansionService` to generate semantic
+   * variations + domain-synonym substitutions + entity-aware substitutions
+   * BEFORE the per-query retrieval loop runs. Expansions are merged with
+   * the base queries from `shapeRetrievalQueries`, deduped, and capped at
+   * `MAX_EXPANDED_QUERIES` (8) so total fan-out stays bounded.
+   *
+   * When absent, `retrieveEvidence` uses only the 3 base queries from
+   * `shapeRetrievalQueries` — current behavior preserved exactly.
+   *
+   * Audit 2026-05-07 H10.
+   */
+  queryExpansion?: QueryExpansionService;
+  /**
+   * Builds the per-company `EntityContext` consumed by the query expansion
+   * service. Wired in the composition root from the company's employees,
+   * projects, goals, and tickets repos. Required if `queryExpansion` is
+   * to actually expand (the QE service uses entity context to produce
+   * ID-substitution and synonym variants); when undefined, the orchestrator
+   * skips expansion entirely. Audit 2026-05-07 H10.
+   */
+  entityContextProvider?: (companyId: string) => EntityContext;
+  /**
+   * Optional cross-encoder reranker. After the orchestrator's composite
+   * scoring (vector + lexical + recency + authority) runs, the top
+   * `rerankerOptions.topN` candidates are sent through the reranker's
+   * cross-encoder; their scores are replaced with the reranker's
+   * `finalScore` (which itself blends original + cross-encoder scores).
+   * The remaining (low-score) candidates pass through unchanged. The
+   * combined list is then re-sorted before dedup-by-source + token
+   * budget fitting.
+   *
+   * When absent, the existing single-pass scoring is used — current
+   * behavior preserved. Audit 2026-05-07 H10.
+   */
+  reranker?: RerankerService;
+  /** Options for the reranker integration. `topN` defaults to `RERANKER_DEFAULT_TOP_N`. Audit H10. */
+  rerankerOptions?: { topN?: number };
 }
 
 export interface RetrieveEvidenceInput {
@@ -95,15 +140,6 @@ interface RankedCandidate {
   updatedAt: number | null;
   matchedQuery: string;
 }
-
-const SOURCE_LABELS: Record<EmbeddingSourceType, string> = {
-  message: 'message',
-  ticket: 'ticket',
-  meeting_minutes: 'meeting',
-  goal: 'goal',
-  project: 'project',
-  vault_file: 'vault',
-};
 
 /**
  * XML-style tag names per source type. The system prompt's
@@ -181,6 +217,25 @@ const STOPWORDS = new Set([
 const DEFAULT_MAX_QUERIES = 3;
 const DEFAULT_MAX_PER_SOURCE_TYPE = 2;
 const DEFAULT_LEXICAL_LIMIT = 4;
+
+/**
+ * Maximum total queries that flow through `vectorRetrieve` per
+ * `retrieveEvidence` call after H10 query expansion. Bounds fan-out:
+ * 3 base queries (`shapeRetrievalQueries`) + up to 5 expansion variants
+ * = 8. Above this we'd start paying meaningful cost on the vector
+ * search + structured candidate searches without much marginal recall.
+ * Audit 2026-05-07 H10.
+ */
+const MAX_EXPANDED_QUERIES = 8;
+
+/**
+ * Default top-N for the reranker. With `rag_top_k` defaulting to 5 in
+ * Settings, reranking 12 candidates and returning the top 5 hits the
+ * recommended "retrieve 20-50, rerank top 20, return top 10" sweet
+ * spot at our smaller retrieval scale. The composition root can override
+ * via `rerankerOptions.topN`. Audit 2026-05-07 H10.
+ */
+const RERANKER_DEFAULT_TOP_N = 12;
 
 function normalizeText(value: string): string {
   return value
@@ -474,15 +529,125 @@ function buildVaultCandidates(
 export function createRetrievalOrchestrator(deps: RetrievalOrchestratorDeps) {
   const now = deps.now ?? Date.now;
 
+  /**
+   * Compose the final query list for one `retrieveEvidence` call.
+   *
+   * Always starts with the 3 base queries from `shapeRetrievalQueries`
+   * (latest message / latest-2 combined / keyword condense). When
+   * `queryExpansion` AND `entityContextProvider` are both wired, the
+   * latest user message is also run through the intelligence package's
+   * `QueryExpansionService` to produce semantic + synonym + entity
+   * substitution variants. The final list is the union — deduped by
+   * normalized text and capped at `MAX_EXPANDED_QUERIES` so total
+   * vector-retrieval fan-out stays bounded.
+   *
+   * Failures in expansion (LLM unavailable, network error, malformed
+   * EntityContext) fall through silently — the base queries are still
+   * usable, and the orchestrator's job is retrieval, not expansion
+   * health. The caller's countTokens / topK budgets still bind.
+   *
+   * Audit 2026-05-07 H10.
+   */
+  async function composeQueryList(
+    input: RetrieveEvidenceInput,
+    baseQueries: readonly string[],
+  ): Promise<string[]> {
+    if (!deps.queryExpansion || !deps.entityContextProvider) {
+      return baseQueries.slice();
+    }
+    const latest = input.recentMessages[input.recentMessages.length - 1]?.content?.trim();
+    if (!latest) return baseQueries.slice();
+
+    let expansions: readonly string[] = [];
+    try {
+      const context = deps.entityContextProvider(input.companyId);
+      const expanded = await deps.queryExpansion.expand(latest, context);
+      expansions = expanded.expansions;
+    } catch {
+      // Expansion failure must not break retrieval. Fall back to base queries.
+      return baseQueries.slice();
+    }
+
+    return dedupeStrings([...baseQueries, ...expansions]).slice(0, MAX_EXPANDED_QUERIES);
+  }
+
+  /**
+   * After the composite scorer has run, optionally rerank the top-N
+   * candidates with a cross-encoder. The reranker re-scores the top
+   * slice and returns a list whose `finalScore` blends original +
+   * cross-encoder scores; we splice those re-scored entries back into
+   * the full list at their old positions, then re-sort. The tail
+   * (positions >= topN) keeps its original score so a low-confidence
+   * tail entry never gets a free promotion just because it dropped
+   * out of the rerank slice.
+   *
+   * Reranker failures (cross-encoder API down, mock throws) fall back
+   * to the original ordering — retrieval keeps working. Logged at
+   * console.warn so the composition root's logger picks it up; the
+   * orchestrator itself stays free of injected loggers (no dep growth).
+   *
+   * Audit 2026-05-07 H10.
+   */
+  async function applyReranker(
+    query: string,
+    scored: RetrievalEvidenceEntry[],
+  ): Promise<RetrievalEvidenceEntry[]> {
+    if (!deps.reranker || scored.length < 2) return scored;
+    const topN = Math.max(2, deps.rerankerOptions?.topN ?? RERANKER_DEFAULT_TOP_N);
+    const head = scored.slice(0, Math.min(topN, scored.length));
+    const tail = scored.slice(head.length);
+
+    let reranked: Awaited<ReturnType<RerankerService['rerank']>>;
+    try {
+      reranked = await deps.reranker.rerank(
+        query,
+        head.map((entry) => ({
+          // Synthetic id keyed by sourceType + sourceId + chunkIndex so the
+          // reranker's input has a stable handle that matches the source list.
+          id: `${entry.sourceType}:${entry.sourceId}:${entry.chunkIndex}`,
+          sourceId: entry.sourceId,
+          sourceType: entry.sourceType,
+          chunkIndex: entry.chunkIndex,
+          content: entry.contentText,
+          score: entry.score,
+        })),
+      );
+    } catch {
+      return scored;
+    }
+
+    // Map reranked finalScore back onto the head entries by synthetic id.
+    const finalScoreById = new Map<string, number>();
+    for (const r of reranked) {
+      finalScoreById.set(r.id, r.finalScore);
+    }
+    const headRescored = head.map((entry): RetrievalEvidenceEntry => {
+      const id = `${entry.sourceType}:${entry.sourceId}:${entry.chunkIndex}`;
+      const finalScore = finalScoreById.get(id);
+      if (finalScore === undefined) return entry;
+      const reasons = entry.reasons.includes('reranked')
+        ? entry.reasons
+        : [...entry.reasons, 'reranked'];
+      return { ...entry, score: finalScore, reasons };
+    });
+
+    return [...headRescored, ...tail].sort(compareEvidence);
+  }
+
   return {
     async retrieveEvidence(input: RetrieveEvidenceInput): Promise<RetrievalEvidencePack> {
-      const queries = shapeRetrievalQueries(
+      const baseQueries = shapeRetrievalQueries(
         input.recentMessages,
         input.config.maxQueries ?? DEFAULT_MAX_QUERIES,
       );
-      if (queries.length === 0) {
+      if (baseQueries.length === 0) {
         return { queries: [], entries: [] };
       }
+
+      // H10 — augment base queries with query expansion when wired.
+      // Falls back to base queries on expansion failure or when deps are
+      // absent. Audit 2026-05-07 H10.
+      const queries = await composeQueryList(input, baseQueries);
 
       const candidateList: RankedCandidate[] = [];
       const seenVectorHits = new Set<string>();
@@ -525,8 +690,14 @@ export function createRetrievalOrchestrator(deps: RetrievalOrchestratorDeps) {
       const scored = candidateList.map((candidate) => scoreCandidate(candidate, now()));
       scored.sort(compareEvidence);
 
+      // H10 — cross-encoder rerank pass over the top-N composite-scored
+      // candidates. Reorders by reranker finalScore; tail keeps original
+      // scores. Failures fall back to composite ordering. Audit 2026-05-07 H10.
+      const rerankQuery = queries[0] ?? '';
+      const finalScored = await applyReranker(rerankQuery, scored);
+
       const uniqueBySource = new Map<string, RetrievalEvidenceEntry>();
-      for (const entry of scored) {
+      for (const entry of finalScored) {
         const key = `${entry.sourceType}:${entry.sourceId}`;
         if (!uniqueBySource.has(key)) uniqueBySource.set(key, entry);
       }

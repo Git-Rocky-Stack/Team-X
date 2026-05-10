@@ -754,6 +754,97 @@ describe('query_events', () => {
 });
 
 // ---------------------------------------------------------------------------
+// query_events — H6 audit (2026-05-07): closed-enum schema for `type`
+//
+// The schema MUST reject any string outside `EVENT_TYPES` so that a
+// model typo flips from silent-empty to a structured `invalid_args`
+// tool result that the loop can show back to the model. These tests
+// pin the contract independent of the LLM round-trip — directly
+// `.safeParse`-ing the schema is the canonical surface, since the
+// loop's tool-registry calls `tool.schema.safeParse(rawArgs)` exactly
+// once before invoking `execute`.
+// ---------------------------------------------------------------------------
+
+describe('query_events — typed-enum schema (H6 audit 2026-05-07)', () => {
+  it('accepts a known canonical event type literal', () => {
+    const tool = buildQueryEventsTool(makeFakeDeps());
+    expect(tool.schema.safeParse({ type: 'ticket.created' }).success).toBe(true);
+    expect(tool.schema.safeParse({ type: 'work.completed' }).success).toBe(true);
+    expect(tool.schema.safeParse({ type: 'agentic.completed' }).success).toBe(true);
+    expect(tool.schema.safeParse({ type: 'employee.hired' }).success).toBe(true);
+    expect(tool.schema.safeParse({ type: 'meeting.ended' }).success).toBe(true);
+    expect(tool.schema.safeParse({ type: 'tool.called' }).success).toBe(true);
+  });
+
+  it('accepts a runtime-audit event literal (spread member)', () => {
+    // RUNTIME_AUDIT_EVENT_TYPES is spread into EVENT_TYPES — proves the
+    // const tuple's spread member survives the as-const narrowing.
+    const tool = buildQueryEventsTool(makeFakeDeps());
+    expect(tool.schema.safeParse({ type: 'runtime.session.started' }).success).toBe(true);
+    expect(tool.schema.safeParse({ type: 'runtime.execution.failed' }).success).toBe(true);
+  });
+
+  it('rejects a typo with a structured Zod issue (not silent-empty)', () => {
+    const tool = buildQueryEventsTool(makeFakeDeps());
+    const parsed = tool.schema.safeParse({ type: 'tikcet.created' });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      // Issue must be on `type` so the loop's `formatZodIssues` surfaces a
+      // path-scoped error the LLM can reason about.
+      const typeIssue = parsed.error.issues.find((i) => i.path[0] === 'type');
+      expect(typeIssue).toBeDefined();
+      expect(typeIssue?.code).toBe('invalid_enum_value');
+    }
+  });
+
+  it('rejects a free-form non-event string', () => {
+    const tool = buildQueryEventsTool(makeFakeDeps());
+    expect(tool.schema.safeParse({ type: 'arbitrary' }).success).toBe(false);
+    expect(tool.schema.safeParse({ type: '' }).success).toBe(false);
+    expect(tool.schema.safeParse({ type: 'ticket' }).success).toBe(false);
+  });
+
+  it('still accepts an absent `type` (filter is optional)', () => {
+    const tool = buildQueryEventsTool(makeFakeDeps());
+    expect(tool.schema.safeParse({}).success).toBe(true);
+    expect(tool.schema.safeParse({ since: 100 }).success).toBe(true);
+    expect(tool.schema.safeParse({ limit: 10 }).success).toBe(true);
+  });
+
+  it('passes a valid type through to the repo filter and returns matches', async () => {
+    const deps = makeFakeDeps({
+      events: [
+        {
+          id: 'ev1',
+          companyId: 'co-1',
+          actorId: 'e1',
+          eventType: 'ticket.created',
+          payloadJson: '{}',
+          createdAt: 100,
+        },
+        {
+          id: 'ev2',
+          companyId: 'co-1',
+          actorId: 'e1',
+          eventType: 'agentic.completed',
+          payloadJson: '{}',
+          createdAt: 200,
+        },
+      ],
+    });
+    const tool = buildQueryEventsTool(deps);
+    // Schema-validate first to mirror the loop's invocation path, then
+    // execute on the parsed args — proves typed args flow end-to-end.
+    const parsed = tool.schema.safeParse({ type: 'agentic.completed' });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      const result = await tool.execute(parsed.data, makeCtx());
+      expect(result.rows.map((r) => r.id)).toEqual(['ev2']);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // summarizePayload helper — exported surface
 // ---------------------------------------------------------------------------
 

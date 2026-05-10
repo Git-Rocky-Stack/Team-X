@@ -5,7 +5,7 @@ import type {
   Tool,
 } from '@team-x/intelligence';
 import type { EventType } from '@team-x/shared-types';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import {
@@ -549,6 +549,90 @@ describe('createAgenticLoopService', () => {
     expect(failed).toBeDefined();
     expect((failed?.payload as { reason: string }).reason).toBe('canceled');
     expect(fixture.runsRepo.finished[0]?.input.status).toBe('cancelled');
+  });
+
+  it('invokes budgetGovernance.recordRunSpend on a cancelled run (H8 audit 2026-05-07)', async () => {
+    // Audit 2026-05-07 H8 — pre-H8 the call site filtered out cancelled runs
+    // (`if (runStatus !== 'cancelled' && deps.budgetGovernance)`), so even a
+    // cancelled run with non-zero accumulated `state.costUsd` skipped the
+    // ledger entirely. Post-H8 the call site fires unconditionally when
+    // budgetGovernance is wired in; the function-side guard at
+    // `budget-governance-service.ts:625` is the single decision point.
+    //
+    // This test reuses the slow + signal-aware complete fn pattern from the
+    // sibling `stop() aborts an in-flight run` test, then injects a stub
+    // budgetGovernance dep that records every recordRunSpend call.
+    const slowComplete: LoopCompleteFn = async (req) => {
+      await new Promise<void>((resolve, reject) => {
+        const t = setTimeout(resolve, 500);
+        req.signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(t);
+            reject(new DOMException('Aborted', 'AbortError'));
+          },
+          { once: true },
+        );
+      });
+      return {
+        text: 'never reached',
+        toolCalls: [],
+        usage: { promptTokens: 1, completionTokens: 1 },
+        provider: 'fake',
+        model: 'fake-model',
+        costUsd: 0,
+      };
+    };
+    const fixture = buildFixture();
+    fixture.deps.resolveComplete = async () => ({
+      complete: slowComplete,
+      provider: 'fake',
+      model: 'fake-model',
+    });
+    const recordRunSpendCalls: string[] = [];
+    fixture.deps.budgetGovernance = {
+      assertExecutionAllowed: vi.fn(async () => ({ allowed: true, reason: null })),
+      recordRunSpend: vi.fn(async (runId: string) => {
+        recordRunSpendCalls.push(runId);
+      }),
+    };
+
+    const service = createAgenticLoopService(fixture.deps);
+    const { runId } = await service.start({
+      companyId: fixture.companyId,
+      userText: 'go',
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    service.stop(runId);
+    await service.waitForRun(runId);
+
+    expect(fixture.runsRepo.finished[0]?.input.status).toBe('cancelled');
+    expect(recordRunSpendCalls).toEqual([runId]);
+    expect(fixture.deps.budgetGovernance.recordRunSpend).toHaveBeenCalledTimes(1);
+    expect(fixture.deps.budgetGovernance.recordRunSpend).toHaveBeenCalledWith(runId);
+  });
+
+  it('still invokes budgetGovernance.recordRunSpend on a successful run (H8 regression pin)', async () => {
+    // Pre-H8 the success path already invoked recordRunSpend (the `runStatus !== 'cancelled'`
+    // filter let success through). This regression pin confirms the H8 call-site change
+    // didn't accidentally drop the success-path invocation.
+    const fixture = buildFixture();
+    const recordRunSpendCalls: string[] = [];
+    fixture.deps.budgetGovernance = {
+      assertExecutionAllowed: vi.fn(async () => ({ allowed: true, reason: null })),
+      recordRunSpend: vi.fn(async (runId: string) => {
+        recordRunSpendCalls.push(runId);
+      }),
+    };
+    const service = createAgenticLoopService(fixture.deps);
+    const { runId } = await service.start({
+      companyId: fixture.companyId,
+      userText: 'sum',
+    });
+    await service.waitForRun(runId);
+
+    expect(fixture.runsRepo.finished[0]?.input.status).toBe('success');
+    expect(recordRunSpendCalls).toEqual([runId]);
   });
 
   it('waits for orchestrator pause to clear before calling the provider', async () => {

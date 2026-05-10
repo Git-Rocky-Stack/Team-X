@@ -422,6 +422,14 @@ export interface AgentImprovementRunSummary {
   createdTicketIds: string[];
   inspectedEventCount: number;
   inspectedTicketCount: number;
+  /**
+   * H12 audit (2026-05-07): number of candidate signals suppressed by
+   * causation-chain dedup during this run. Deduped signals carry the same
+   * cause hash as a prior improvement ticket (open or closed), so the loop
+   * refuses to cycle on identical evidence. `0` for runs emitted before
+   * the H12 fix landed (back-compat: `numberFromPayload(payload, ..., 0)`).
+   */
+  dedupedCauseCount: number;
 }
 
 export interface AgentImprovementSnapshot {
@@ -451,6 +459,15 @@ export interface AgentImprovementRunResult {
   recommendations: AgentImprovementRecommendation[];
   createdTicketIds: string[];
   skippedExistingTicketIds: string[];
+  /**
+   * H12 audit (2026-05-07): cause hashes whose signals were suppressed
+   * during this run because an improvement ticket carrying the same hash
+   * already exists (open or closed). Each entry is the deterministic
+   * 8-hex-char hash of the sorted sourceRef set. The audit's "can cycle
+   * on identical signals" complaint is closed by refusing to re-create a
+   * ticket whose evidence set has already been seen.
+   */
+  dedupedCauseHashes: string[];
 }
 
 export interface RuntimeOperationsSnapshot {

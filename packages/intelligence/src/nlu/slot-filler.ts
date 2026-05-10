@@ -61,7 +61,7 @@
  */
 
 import type { ResolvedEntity } from './entity-resolver.js';
-import type { IntentName, IntentResult } from './intent-classifier.js';
+import { DESTRUCTIVE_INTENTS, type IntentName, type IntentResult } from './intent-classifier.js';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -161,17 +161,11 @@ const MISSING_SLOT_PROMPTS: Record<string, string> = {
   query: 'What should I search for?',
 };
 
-/**
- * Destructive intents. These route to `needs_confirmation` even when
- * every slot resolved uniquely. `assign_ticket` is NOT destructive
- * (reversible); `create_*` and `search_*` are NOT destructive.
- */
-const DESTRUCTIVE_INTENTS: ReadonlySet<IntentName> = new Set<IntentName>([
-  'fire_employee',
-  'close_ticket',
-  'end_meeting',
-  'promote_employee',
-]);
+// `DESTRUCTIVE_INTENTS` is the canonical destructive set imported from
+// `./intent-classifier.js` — see its doc-comment for membership criteria.
+// It drives both this file's `needs_confirmation` routing AND the H7 elevated
+// confidence threshold in `intent-classifier.ts:finalize()`. De-duplicated as
+// part of audit 2026-05-07 H7 so the two gates share one source of truth.
 
 // ---------------------------------------------------------------------------
 // Factory

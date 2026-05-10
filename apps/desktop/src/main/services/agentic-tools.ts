@@ -28,6 +28,7 @@
  */
 
 import type { Tool, ToolContext } from '@team-x/intelligence';
+import { EVENT_TYPES, type EventType } from '@team-x/shared-types';
 import { z } from 'zod';
 
 import type { createAuditRepo } from '../db/repos/audit.js';
@@ -275,8 +276,27 @@ const queryVaultSchema = z.object({
 });
 type QueryVaultArgs = z.infer<typeof queryVaultSchema>;
 
+/**
+ * `query_events.type` is a closed enum — audit 2026-05-07 H6.
+ *
+ * Prior to H6 the field was `z.string().min(1)` and any model typo
+ * (`'tikcet.created'`, `'agentic.complete'`) silently matched zero rows
+ * with no signal back to the LLM. The repo's `eventTypes` filter takes
+ * any string and returns `[]` on no match — perfect storm for a model
+ * that thinks its query "ran fine but returned nothing." Tightening to
+ * `z.enum(EVENT_TYPES)` flips silent-empty into a structured
+ * `invalid_args` tool result with the full set of valid literals in the
+ * Zod issue message, which the loop forwards back to the model so it
+ * can self-correct.
+ *
+ * The cast through `[EventType, ...EventType[]]` is required because Zod
+ * 3's `z.enum()` signature wants a non-empty mutable tuple, but our
+ * source-of-truth `EVENT_TYPES` is a `readonly` `as const` array. The
+ * runtime contents are byte-identical; only the TypeScript variance
+ * differs.
+ */
 const queryEventsSchema = z.object({
-  type: z.string().min(1).optional(),
+  type: z.enum([...EVENT_TYPES] as [EventType, ...EventType[]]).optional(),
   since: z.number().int().nonnegative().optional(),
   limit: limitSchema,
 });
@@ -473,7 +493,11 @@ export function buildQueryEventsTool(
     name: 'query_events',
     description:
       'List recent audit events in the current company, newest first. Optional filters: ' +
-      '`type` (event_type equality), `since` (Unix ms timestamp), `limit` (1-50). ' +
+      '`type` — MUST be one of the canonical event-type literals (e.g., ' +
+      '`work.completed`, `tool.called`, `ticket.created`, `agentic.completed`, ' +
+      '`employee.hired`, `meeting.ended`, `copilot.insight`); free-form strings ' +
+      'are rejected by the schema with the full enum surfaced in the error. ' +
+      '`since` (Unix ms timestamp), `limit` (1-50). ' +
       'Payload is summarised to a short preview. Returns id, type, actorId, actorName, payloadSummary, createdAt.',
     schema: queryEventsSchema,
     async execute(args, ctx) {

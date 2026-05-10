@@ -53,8 +53,85 @@ export type IntentName = (typeof INTENT_NAMES)[number];
 
 const INTENT_NAME_SET: ReadonlySet<string> = new Set(INTENT_NAMES);
 
-/** Minimum classifier-reported confidence for a non-complex intent. */
+/** Minimum classifier-reported confidence for a non-complex, non-destructive intent. */
 export const MIN_CONFIDENCE = 0.5;
+
+/**
+ * Elevated minimum confidence for destructive (high-blast-radius / state-mutating) intents.
+ *
+ * Why 0.8 (not the standard 0.5): the classifier is a small-/mid-LLM judgment and
+ * tokens like "fire", "close", "end", "promote" co-occur with both literal user
+ * commands ("Fire James") and incidental phrasings ("Fire this bug" referring to
+ * triaging an issue, "close this loop", "end this thread"). At the standard 0.5
+ * bar, an incidental phrasing can pass the gate at e.g. 0.55 confidence and
+ * route directly into a destructive command — the audit's exact concern. At 0.8,
+ * the classifier must actively be confident before an irreversible-or-disruptive
+ * action runs; everything below falls through to `complex_request`, where the
+ * agentic loop can ask the user a clarifying question instead of executing a
+ * guess. This is paired with the existing destructive-confirmation gates in
+ * `slot-filler.ts` (`needs_confirmation`) and `command-service.ts`
+ * (`req.confirmed !== true`) to form a layered defense.
+ *
+ * Why audit 2026-05-07 H7 — `intent-classifier.ts:57, 313-324` (formerly
+ * `apps/desktop/src/main/services/intent-classifier.ts` per the audit's path;
+ * the file lives in this package).
+ */
+export const DESTRUCTIVE_MIN_CONFIDENCE = 0.8;
+
+/**
+ * Destructive intents — runtime-iterable const tuple form (H6 pattern).
+ *
+ * The tuple is the source of truth for both `DestructiveIntentName` (compile-time
+ * union) and `DESTRUCTIVE_INTENTS` (runtime Set). The four members are the
+ * established system-wide destructive set, previously duplicated in
+ * `slot-filler.ts` (needs_confirmation routing) and
+ * `command-service.ts` (confirmed:true gate); both now import from here.
+ *
+ * Membership criteria (matches the existing system taxonomy — NOT expanded by H7):
+ *   - `fire_employee`     — irreversible employee archive (the audit's named example).
+ *   - `close_ticket`      — high-blast-radius state change; reversible only via a
+ *                            second `reopen_ticket` round-trip and resets ticket
+ *                            metadata along the way.
+ *   - `end_meeting`       — terminates a live meeting; not undoable in-session.
+ *   - `promote_employee`  — changes a person's role + level; user-visible and
+ *                            socially disruptive even if technically reversible.
+ *
+ * Adding a member is a one-symbol change here.
+ *
+ * Audit 2026-05-07 H7.
+ */
+export const DESTRUCTIVE_INTENT_NAMES = [
+  'fire_employee',
+  'close_ticket',
+  'end_meeting',
+  'promote_employee',
+] as const satisfies readonly IntentName[];
+
+export type DestructiveIntentName = (typeof DESTRUCTIVE_INTENT_NAMES)[number];
+
+/**
+ * Set form of `DESTRUCTIVE_INTENT_NAMES` for O(1) `has()` lookups in the
+ * confidence gate and in the downstream confirmation routers.
+ *
+ * Audit 2026-05-07 H7.
+ */
+export const DESTRUCTIVE_INTENTS: ReadonlySet<IntentName> = new Set<IntentName>(
+  DESTRUCTIVE_INTENT_NAMES,
+);
+
+/**
+ * Returns the minimum classifier confidence required for the given intent
+ * to be returned as-is (rather than re-labeled `complex_request`).
+ *
+ * Why exposed: tests pin the per-intent threshold without reaching into the
+ * `finalize()` closure, and downstream consumers (M32+ governance, telemetry
+ * dashboards) get the same answer the gate uses.
+ *
+ * Audit 2026-05-07 H7.
+ */
+export function getMinConfidenceFor(intent: IntentName): number {
+  return DESTRUCTIVE_INTENTS.has(intent) ? DESTRUCTIVE_MIN_CONFIDENCE : MIN_CONFIDENCE;
+}
 
 // ---------------------------------------------------------------------------
 // Per-intent slot schema — what the slot-filler (T3) eventually enforces.
@@ -313,7 +390,17 @@ export function createIntentClassifier(opts: IntentClassifierOptions): IntentCla
 function finalize(parsed: LlmResponse, rawText: string): IntentResult {
   // Confidence gate: low confidence is re-labeled as complex_request so the
   // palette can route it to the agentic loop rather than execute a guess.
-  if (parsed.intent !== 'complex_request' && parsed.confidence < MIN_CONFIDENCE) {
+  //
+  // Destructive intents (DESTRUCTIVE_INTENTS) clear an elevated bar
+  // (DESTRUCTIVE_MIN_CONFIDENCE = 0.8) instead of the standard MIN_CONFIDENCE
+  // (0.5). Why: a classifier judgment of e.g. 0.55 on `fire_employee` for
+  // "Fire this bug" is exactly the kind of incidental phrasing that should
+  // fall through to `complex_request` so the agentic loop can ask a
+  // clarifying question, not execute an archive against the wrong record.
+  // Audit 2026-05-07 H7 — see `DESTRUCTIVE_MIN_CONFIDENCE` doc-comment for
+  // the full rationale.
+  const minConfidence = getMinConfidenceFor(parsed.intent);
+  if (parsed.intent !== 'complex_request' && parsed.confidence < minConfidence) {
     return {
       intent: 'complex_request',
       entities: parsed.entities,

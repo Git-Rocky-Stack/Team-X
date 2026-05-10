@@ -30,6 +30,7 @@ import { buildProviderToolDescriptors, buildSystemPrompt } from './prompt.js';
 import { type ToolRegistry, createToolRegistry } from './tool-registry.js';
 import {
   type AgenticLoop,
+  DEFAULT_MAX_ITERATIONS,
   DEFAULT_MAX_STEPS,
   DEFAULT_MAX_TOKENS,
   DEFAULT_TIMEOUT_MS,
@@ -62,6 +63,10 @@ export function createAgenticLoop(deps: LoopDeps): AgenticLoop {
   const now = deps.now ?? Date.now;
 
   const budget: LoopBudget = {
+    // Operator-facing tool-turn cap (H9 audit 2026-05-07).
+    maxIterations: deps.maxIterations ?? DEFAULT_MAX_ITERATIONS,
+    // Hard ceiling on emitted step entries — safety net against runaway
+    // parallel fan-out within a single iteration. H9 audit 2026-05-07.
     maxSteps: deps.maxSteps ?? DEFAULT_MAX_STEPS,
     maxTokens: deps.maxTokens ?? DEFAULT_MAX_TOKENS,
     timeoutMs: deps.timeoutMs ?? DEFAULT_TIMEOUT_MS,
@@ -114,7 +119,18 @@ async function runLoop(ctx: RunContext): Promise<LoopRun> {
   const runId = ctx.idGen();
   const startTime = ctx.now();
   const steps: LoopStep[] = [];
-  const used: { steps: number; tokensIn: number; tokensOut: number; costUsd: number } = {
+  // `iterations` counts while-loop passes (one LLM call each) — the
+  // operator-facing budget. `steps` counts emitted LoopStep entries — the
+  // hard ceiling. See `LoopBudget` doc-comment for the dual-cap rationale
+  // (audit 2026-05-07 H9).
+  const used: {
+    iterations: number;
+    steps: number;
+    tokensIn: number;
+    tokensOut: number;
+    costUsd: number;
+  } = {
+    iterations: 0,
     steps: 0,
     tokensIn: 0,
     tokensOut: 0,
@@ -148,6 +164,7 @@ async function runLoop(ctx: RunContext): Promise<LoopRun> {
 
   const finalize = (status: LoopStatus, answer?: string): LoopRun => {
     const usedSnapshot: LoopBudgetUsed = {
+      iterations: used.iterations,
       steps: used.steps,
       tokensIn: used.tokensIn,
       tokensOut: used.tokensOut,
@@ -201,7 +218,19 @@ async function runLoop(ctx: RunContext): Promise<LoopRun> {
         'budget_exhausted',
       );
     }
-    // Step cap
+    // Iteration cap — operator-facing tool-turn budget (audit 2026-05-07 H9).
+    // Each loop pass = one LLM completion call + zero-or-more tool dispatches.
+    // This is the binding constraint in normal operation; the maxSteps ceiling
+    // below only fires for pathological per-iteration fan-out.
+    if (used.iterations >= ctx.budget.maxIterations) {
+      return emitErrorAndFinish(
+        'budget_iterations',
+        `Iteration budget of ${ctx.budget.maxIterations} tool turns exhausted.`,
+        'budget_exhausted',
+      );
+    }
+    // Step cap — hard ceiling on emitted step entries (safety net for
+    // runaway parallel fan-out within a single iteration). Audit H9.
     if (used.steps >= ctx.budget.maxSteps) {
       return emitErrorAndFinish(
         'budget_steps',
@@ -236,6 +265,12 @@ async function runLoop(ctx: RunContext): Promise<LoopRun> {
       return emitErrorAndFinish('provider_error', msg, 'failed');
     }
 
+    // Iteration accounting: increment AFTER the LLM call lands so a thrown
+    // provider error (handled in the catch above) doesn't burn an iteration.
+    // Each iteration corresponds to exactly one successful completion call;
+    // the operator's `maxIterations` budget caps tool-turn count, not
+    // attempted-LLM-call count. Audit 2026-05-07 H9.
+    used.iterations += 1;
     used.tokensIn += completion.usage.promptTokens;
     used.tokensOut += completion.usage.completionTokens;
     used.costUsd += completion.costUsd;

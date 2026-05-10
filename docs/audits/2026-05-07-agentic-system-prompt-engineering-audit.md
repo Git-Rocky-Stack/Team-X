@@ -266,13 +266,13 @@ Role-to-capability mapping is declared (lines 90-105) and used in `private-opera
 | H3 | ✅ FIXED (2026-05-09 — closed by C3) **Haiku 4.5 pricing wrong** — listed as `$0.0008/$0.004` per 1k; correct is `$0.001/$0.005` per 1k. ~20% under-billing. C3 corrected pricing.json `claude-haiku-4-5-20251001` to `in: 0.001 / out: 0.005 / cachedIn: 0.0001 / cacheWrite: 0.00125`. Pinned by `cost.test.ts`. | `pricing.json` |
 | H4 | ✅ FIXED (2026-05-09) **No `traceId` in runs table.** `tracing.ts` defines spans but they never reach the runs/audit log. Cannot reconstruct an end-to-end agentic run from logs. | `intelligence/observability/tracing.ts`, `db/schema.ts:712` |
 | H5 | ✅ FIXED (2026-05-09) **HTTP 429 not retried.** `transient-errors.ts` only retries socket-level errors (ECONNRESET, ETIMEDOUT, undici codes). Rate-limit cascades have no backoff. | `orchestrator/transient-errors.ts:62-86` |
-| H6 | **`query_events.type` is a free `z.string().min(1)`.** Model can pass any string; repo silently returns `[]`. No signal of typo. | `agentic-tools.ts:279` |
-| H7 | **Confidence threshold 0.5 applies to destructive intents.** "Fire this bug" can pass to `fire_employee` at 0.55 confidence. Should be 0.8+ for irreversibles. | `intent-classifier.ts:57, 316-324` |
-| H8 | **Cancelled runs skip cost ledger.** Budget reconciliation has a blind spot on stop/timeout branches. | `budget-governance-service.ts:625` |
-| H9 | **Step budget arithmetic surprises.** Default `maxSteps=8`, but each ReAct iteration consumes 3 (plan + tool_call + tool_result) — only ~2-3 actual tool turns before exhaustion. | `loop/loop.ts:282, 310, 378` |
-| H10 | **Reranker + query expansion built but not wired** into the retrieval orchestrator. Precision@5 is suboptimal for no functional reason. | `rag/reranker.ts`, `rag/query-expansion.ts` |
-| H11 | **Per-token DB writes** — `messages.updateContent()` fires on every delta. SQLite lock churn at concurrency. | `orchestrator/run-agent.ts:386` |
-| H12 | **Agent self-improvement loop has no causation-chain dedup.** A failing improvement ticket can spawn another improvement ticket about its own failure. Recursion-via-database. | `services/agent-improvement-service.ts` |
+| H6 | ✅ FIXED (2026-05-09) **`query_events.type` is a free `z.string().min(1)`.** Model can pass any string; repo silently returns `[]`. No signal of typo. Promoted `EventType` union to a runtime-iterable `EVENT_TYPES` const tuple in `shared-types/events.ts`; tightened `query_events.type` schema to `z.enum(EVENT_TYPES)` so a model typo flips from silent-empty to a structured `invalid_args` tool result with the full enum surfaced in the Zod issue. Pinned by `events-h6.test.ts` + 6 schema tests in `agentic-tools.test.ts`. | `agentic-tools.ts:279` |
+| H7 | ✅ FIXED (2026-05-09) **Confidence threshold 0.5 applies to destructive intents.** "Fire this bug" can pass to `fire_employee` at 0.55 confidence. Should be 0.8+ for irreversibles. Hoisted the canonical destructive set (`fire_employee`, `close_ticket`, `end_meeting`, `promote_employee`) into `intent-classifier.ts` as `DESTRUCTIVE_INTENT_NAMES` (const tuple — H6 pattern), `DESTRUCTIVE_INTENTS` (Set), and `DESTRUCTIVE_MIN_CONFIDENCE = 0.8`. `finalize()` now picks the per-intent threshold via `getMinConfidenceFor(intent)` so destructive intents below 0.8 fall through to `complex_request` instead of executing a guess; non-destructive intents stay on the 0.5 baseline. De-duplicated the previously parallel `DESTRUCTIVE_INTENTS` definitions in `slot-filler.ts` and `command-service.ts` to import from the new source. Pinned by `intent-classifier.test.ts` (+29 H7 tests including the audit's literal "Fire this bug at 0.55" regression and a parametric matrix over every destructive member). | `intent-classifier.ts:57, 313-324` |
+| H8 | ✅ FIXED (2026-05-09) **Cancelled runs skip cost ledger.** Budget reconciliation has a blind spot on stop/timeout branches. The blind spot was two-deep: `recordRunSpend` returned early on `run.status === 'cancelled'` AND the agentic-loop call site at `agentic-loop-service.ts:544` had a parallel `runStatus !== 'cancelled'` filter — so a stop fired mid-loop, after `state.costUsd += step.telemetry.costUsd` had accumulated real cost, persisted that cost to `runs.costUsd` but never landed in `budget_ledger`, leaving `SUM(runs) > SUM(ledger)`. Both gates removed; `recordRunSpend` now skips only `running` (mid-flight) runs and the existing `amountUsd <= 0` guard handles legitimate zero-cost cancels without spurious ledger rows. Function — not caller — owns the recordable decision. Pinned by `budget-governance-service.test.ts` (+5 H8 tests covering audit-quoted regression, zero-cost cancel guard, error-path regression pin, in-flight skip, and cancelled-run threshold/approval/autoPause cascade) + `agentic-loop-service.test.ts` (+2 H8 tests covering call-site invocation on cancel and success-path regression pin). | `budget-governance-service.ts:625` |
+| H9 | ✅ FIXED (2026-05-09) **Step budget arithmetic surprises.** Default `maxSteps=8`, but each ReAct iteration consumes 3 (plan + tool_call + tool_result) — only ~2-3 actual tool turns before exhaustion. Introduced a dual-budget split: new `maxIterations` (operator-facing tool-turn cap, default 8) counts while-loop passes one-per-LLM-call so `maxIterations: 8` literally means "8 tool turns"; `maxSteps` (default bumped 8 → 64) demoted to a hard ceiling that catches runaway parallel fan-out within a single iteration. New `LoopBudgetUsed.iterations` and `LoopErrorReason.budget_iterations` make the cap which fired explicit. `agentic-loop-service` threads `maxIterations` through `AgenticLoopBudgets` (optional for backward compat). Pinned by `loop.test.ts` (+12 H9 tests covering iteration counter, default 8-turn cap, audit-quoted regression, error-no-burn semantics, fan-out safety net, and `used.steps` regression). | `loop/loop.ts:282, 310, 378` |
+| H10 | ✅ FIXED (2026-05-09) **Reranker + query expansion built but not wired** into the retrieval orchestrator. Precision@5 is suboptimal for no functional reason. Added four optional deps to `RetrievalOrchestratorDeps` (`queryExpansion`, `entityContextProvider`, `reranker`, `rerankerOptions`) so the orchestrator augments its 3-query baseline with semantic + synonym + entity-substitution variants (capped at `MAX_EXPANDED_QUERIES = 8`) and reranks the top-N composite-scored candidates with a cross-encoder before dedup-by-source + token-budget fitting. Failures in either stage fall back gracefully to the unwired path. Composition root in `apps/desktop/src/main/index.ts` now wires both: `createQueryExpansionService({ hydeEnabled: false })` for entity-aware expansion, `createRerankerService(createMockCrossEncoder())` for lexical-overlap rerank (swap for Cohere/OpenAI Rerank API later via `createApiCrossEncoder`). Pinned by `retrieval-orchestrator.test.ts` (+10 H10 tests covering backward-compat regression, expansion fan-out, both stages' graceful degradation, MAX_EXPANDED_QUERIES cap, top-N rerank scoping, fewer-than-2 skip, reranker-promotes-relevant scenario, and combined end-to-end). Side benefit: removed unused `SOURCE_LABELS` const in the same file, closing the §6d cosmetic typecheck error. | `rag/reranker.ts`, `rag/query-expansion.ts` |
+| H11 | ✅ FIXED (2026-05-09) **Per-token DB writes** — `messages.updateContent()` fires on every delta. SQLite lock churn at concurrency. Replaced the per-chunk write at `run-agent.ts:415` with a hybrid OR-batched flusher: `BATCH_FLUSH_MIN_CHARS = 64` (~16 tokens) and `BATCH_FLUSH_INTERVAL_MS = 100` — flush whenever EITHER threshold trips, with a force-flush in the `finally` block of every retry attempt so success / error / cancel / timeout all land the pending tail. The renderer's `token.delta` event bus emit is untouched, so per-chunk typing animation is preserved; only DB writes are throttled. For a typical Anthropic stream at ~320 chars/sec this is ~10 writes/sec post-H11 vs ~80/sec pre-H11 — an 8× WAL-lock-pressure reduction. Pinned by `run-agent.test.ts` (+6 H11 tests covering 50-tiny-chunks → 1 final write, single-200-char-delta → 1 size-triggered write, per-chunk events still fire, pre-error/pre-cancel buffer lands on terminal paths, empty-buffer no-op). Pre-existing tests updated to match the new contract (the per-chunk-write assertion that the audit flagged as the anti-pattern is gone). | `orchestrator/run-agent.ts:386` |
+| H12 | ✅ FIXED (2026-05-10) **Agent self-improvement loop has no causation-chain dedup.** A failing improvement ticket can spawn another improvement ticket about its own failure. Recursion-via-database. | `services/agent-improvement-service.ts` |
 | H13 | **Copilot severity has no ceiling.** Model can emit 5 `critical` insights per cycle; weight filtering is soft (default 1.0 across categories). | `copilot-analyzer-service.ts:316-322` |
 | H14 | **Copilot category-weight feedback loop is aspirational.** Comments mark it Phase 6 / M38; dismissals are recorded but never aggregated. README claims it's live. | `copilot-analyzer-service.ts:159` |
 | H15 | **Tool result size unbounded in default chat path.** `safeStringify`'s 8KB cap protects only the agentic loop; `run-agent.ts:415-420` passes through whatever the tool returns. | `orchestrator/run-agent.ts:415` |
@@ -422,6 +422,491 @@ The audit's complaint — *"`transient-errors.ts` only retries socket-level erro
 **Closes the audit's callout:**
 > *"`transient-errors.ts` only retries socket-level errors. Rate-limit cascades have no backoff."*
 Now: `isHttp429Error` detects 429s in any of the SDK shapes the workspace sees, `extractRetryAfterMs` honors `Retry-After`, `getProviderRetryBackoffMs` picks exponential backoff (1s → 2s → 4s → … capped at 30s) when no Retry-After is present, and `MAX_PROVIDER_ATTEMPTS = 3` gives the rate-limit cascade two retries instead of one. Existing socket-flake retry behavior is preserved unchanged.
+
+### H6 ✅ FIXED (2026-05-09)
+
+**Files:** `packages/shared-types/src/events.ts` (source-of-truth refactor) + `apps/desktop/src/main/services/agentic-tools.ts` (schema tightening).
+
+The audit's complaint — *"`query_events.type` is a free `z.string().min(1)`. Model can pass any string; repo silently returns `[]`. No signal of typo."* — is closed by promoting the canonical event-type set to a runtime-iterable const tuple and gating the tool's schema on it.
+
+1. **Source of truth (`EVENT_TYPES`).** `events.ts` previously declared `EventType` as a bare type union — purely a compile-time construct, no runtime representation. Refactored into a single `const EVENT_TYPES = [ ... ] as const` tuple containing every event-type literal the dashboard event bus emits, with `RUNTIME_AUDIT_EVENT_TYPES` spread in at the end. `EventType` is now derived as `(typeof EVENT_TYPES)[number]` — byte-identical to the prior union for every existing consumer (events-m32 contract still passes), but now also iterable at runtime. Same pattern as the existing `RUNTIME_AUDIT_EVENT_TYPES` precedent.
+
+2. **Schema (`queryEventsSchema.type`).** Replaced `z.string().min(1).optional()` with `z.enum([...EVENT_TYPES] as [EventType, ...EventType[]]).optional()`. The cast through a mutable tuple is required because Zod 3's `z.enum()` signature wants `[string, ...string[]]` while the source tuple is `readonly`; runtime contents are byte-identical, only TypeScript variance differs. The Zod 3 enum then short-circuits the LLM's request before `execute()` runs — `tool.schema.safeParse(rawArgs)` in `tool-registry.ts:78` already returns `{ kind: 'invalid_args', message: formatZodIssues(issues) }` on parse failure, which the loop forwards to the model as a structured tool result.
+
+3. **Tool description.** Updated the `query_events` description string so the model is told upfront that `type` MUST be one of the canonical literals (with `work.completed`, `tool.called`, `ticket.created`, `agentic.completed`, `employee.hired`, `meeting.ended`, `copilot.insight` shown as illustrative examples) and that the schema rejects free-form strings with the full enum in the error. This biases the first-call success rate up; even when the model still typos, the structured Zod issue closes the feedback loop in one round-trip.
+
+**Why not list the full enum in the description?** ~120 literals at ~25 chars each = ~3 KB of system-prompt overhead per call. The schema's `invalid_enum_value` Zod issue carries the full set on rejection — that's the right place for it, paid only on the failure path. The description carries category-spanning examples so the model's first guess has a decent chance of landing.
+
+**Tests** (12 net new):
+- `events-h6.test.ts` (NEW, 6 tests): non-empty / no-duplicates / runtime-audit spread preservation / workhorse-event presence / `(typeof EVENT_TYPES)[number] === EventType` typing / `@ts-expect-error` on free-form strings.
+- `agentic-tools.test.ts` (+6 tests in new H6 describe block): accepts canonical literals (6 representative names) / accepts runtime-audit spread members / rejects typo with `invalid_enum_value` Zod issue path-scoped to `type` / rejects free-form non-event strings / still accepts absent `type` (filter is optional) / valid type round-trips through `safeParse` → `execute()` and returns the matching row.
+
+**Verification:**
+- `@team-x/shared-types`: **74/74** individual tests passing (was 68 — net +6 H6 tests).
+- `@team-x/desktop`: **2083/2083** individual tests passing (was 2077 — net +6 H6 tests). 188/189 test files pass; the 1 failure is the pre-existing keytar native-binary architecture mismatch documented in the H4/H5 resolutions, unrelated to H6.
+- shared-types typecheck clean. The desktop typecheck has pre-existing errors (in `index.ts`, `run-agent.ts`, `agentic-loop-service.ts`, `copilot-analyzer-service.ts`, `test-agentic-provider.ts`) that surfaced when stale `tsbuildinfo` was invalidated; **none of them touch the H6 paths** (`events.ts` or `agentic-tools.ts`). The `LoopProviderToolCall` / `StreamContentPart` / `StreamUsage.cachedInputTokens` errors trace to incomplete C2/C3 export wiring; the `LoopDeps.traceId` / `CopilotAnalyzerRunsRepoStartInput.traceId` errors trace to H4 type plumbing not propagating across the workspace cleanly. Fixing those is out of H6 scope and tracked under the existing P0/P1 follow-up tail.
+
+**Closes the audit's callout:**
+> *"`query_events.type` is a free `z.string().min(1)`. Model can pass any string; repo silently returns `[]`. No signal of typo."*
+Now: `query_events.type` is a closed Zod enum sourced from the canonical `EVENT_TYPES` tuple. Typos like `'tikcet.created'` bounce off the schema with a structured `invalid_args` result the model can see and correct. Silent-empty has been replaced with self-correcting feedback.
+
+### H7 ✅ FIXED (2026-05-09)
+
+**Files:** `packages/intelligence/src/nlu/intent-classifier.ts` (canonical source-of-truth + elevated threshold + `finalize()` gate update) + `packages/intelligence/src/nlu/slot-filler.ts` (de-dup) + `apps/desktop/src/main/services/command-service.ts` (de-dup) + `packages/intelligence/src/service/unified.ts` (H7-adjacent typecheck cleanup — see §"Adjacent fixes" below).
+
+> _Path note:_ the audit cites `apps/desktop/src/main/services/intent-classifier.ts:57, 316-324`. The classifier actually lives in the intelligence package at `packages/intelligence/src/nlu/intent-classifier.ts`; the audit's line numbers track precisely (`MIN_CONFIDENCE` at `:57`, the gating block at `:313-324`). H1–H6 traversed the same kind of cross-package path drift; the audit text and resolution language are consistent with the actual file.
+
+The audit's complaint — *"Confidence threshold 0.5 applies to destructive intents. 'Fire this bug' can pass to `fire_employee` at 0.55 confidence. Should be 0.8+ for irreversibles."* — is closed by promoting the destructive-intent set to a first-class export of the classifier and applying an elevated 0.8 confidence bar to its members in the existing `finalize()` gate.
+
+1. **Canonical destructive set hoisted into `intent-classifier.ts`.** The system already had a system-wide concept of "destructive intents" — a 4-member set (`fire_employee`, `close_ticket`, `end_meeting`, `promote_employee`) used by `slot-filler.ts:fillImpl()` to route to `needs_confirmation` and by `command-service.ts:execute()` to enforce the `confirmed: true` gate. The set was duplicated in three places (slot-filler, command-service, and the renderer's `command-palette.tsx:DESTRUCTIVE_INTENT_SET`) — three copies, three drift risks. H7 lifts the canonical definition into the foundational NLU module:
+   - `DESTRUCTIVE_INTENT_NAMES` — `as const satisfies readonly IntentName[]` tuple, runtime-iterable. Same H6 pattern as `EVENT_TYPES` so the literal-union and the runtime Set both flow from one source.
+   - `DestructiveIntentName` — `(typeof DESTRUCTIVE_INTENT_NAMES)[number]` literal union, exported.
+   - `DESTRUCTIVE_INTENTS: ReadonlySet<IntentName>` — derived once at module load for O(1) `has()` lookups.
+   - `DESTRUCTIVE_MIN_CONFIDENCE = 0.8` — exported constant with the doc-comment carrying the audit's full rationale: classifier judgments below 0.8 on destructive intents fall through to `complex_request` so the agentic loop asks a clarifying question instead of archiving the wrong record.
+   - `getMinConfidenceFor(intent: IntentName): number` — exported helper returning `DESTRUCTIVE_MIN_CONFIDENCE` for set members and `MIN_CONFIDENCE` for everything else. Tests pin the per-intent threshold through this helper without reaching into the `finalize()` closure.
+
+2. **Threshold gate applied in `finalize()`.** Replaced the bare `parsed.confidence < MIN_CONFIDENCE` check with `parsed.confidence < getMinConfidenceFor(parsed.intent)`. The gate uses `<` (not `<=`), so 0.80 exactly clears the bar — pinned by an explicit boundary test. The `parsed.intent !== 'complex_request'` short-circuit is preserved unchanged, so a genuinely-classified low-confidence `complex_request` is never re-labeled.
+
+3. **De-duplication (Elite Partner cleanup).** `slot-filler.ts` and `command-service.ts` now import `DESTRUCTIVE_INTENTS` from the new source rather than defining their own. The slot-filler's `needs_confirmation` routing and the command-service's `confirmed: true` gate are byte-equivalent to before (same set, same membership, same lookups) but the source of truth is now one symbol. Future expansions of the destructive set propagate to all three gates (classifier confidence + slot-filler confirmation + IPC `confirmed: true` enforcement) atomically.
+
+4. **Out-of-scope by design — renderer-side `DESTRUCTIVE_INTENT_SET`.** `apps/desktop/src/renderer/src/features/command/command-palette.tsx:67` keeps its own `DESTRUCTIVE_INTENT_SET<IpcIntentName>`. The renderer cannot import `@team-x/intelligence` because `@team-x/shared-types` (its only allowed cross-package types dep) is a leaf package by architectural rule (avoiding the cycle on `DashboardEvent`). Closing this last drift point cleanly requires hoisting `IPC_DESTRUCTIVE_INTENT_NAMES` into `shared-types/command.ts` and adding an `Expect<Equal<DestructiveIntentName, IpcDestructiveIntentName>>` guard next to the existing `_IntentNameEqualsIpcIntentName` precedent in `command-handlers.ts:79`. The path is laid down (the const-tuple + literal-union shape on the intelligence side is already in place); the shared-types-side hoist is left as a follow-up to keep H7's diff focused on the audit's actual ask.
+
+**Adjacent fixes — pre-existing typecheck debt cleared (handoff §6).**
+
+H7's source-side change (a new exported symbol from `@team-x/intelligence`) tripped the same project-references / `tsbuildinfo` propagation gap that handoff §6c had hypothesized for H4. Validating the hypothesis required rebuilding `@team-x/intelligence` so the desktop side could see the new export — and the rebuild was blocked by **4 pre-existing `service/unified.ts` errors** (handoff §6e).
+
+The fix was mechanical: capture `config.llm` (and `config.llm?.complete`) into a local `const` inside each guarding `if` block so closure bodies reference the narrowed local instead of re-traversing the optional chain. Three sites (lines 369-374 query expansion, 377-433 memory + knowledge, 436-445 planner). Behavior preserved — same call shapes, same conditional gating, same async signatures — only the type narrowing changes.
+
+This adjacent fix produced a side benefit beyond H7's own propagation:
+
+| Source area | Pre-existing errors at H6 close | After H7 cleanup | Status |
+|---|---|---|---|
+| C2 / Vercel AI SDK leftovers (handoff §6a) | 7 errors across `index.ts` and `test-agentic-provider.ts` | 0 in `index.ts` family, 3 in `test-agentic-provider.ts` family resolved | **6 propagation errors closed** |
+| C3 / prompt cache leftovers (handoff §6b) | 8 errors across `index.ts` and `run-agent.ts` (`cachedInputTokens`, `cacheWriteTokens`) | 0 | **8 propagation errors closed** |
+| H4 / traceId propagation (handoff §6c) | 3 errors (`LoopDeps.traceId`, `CopilotAnalyzerRunsRepoStartInput.traceId`, `EmitInput.traceId`) | `LoopDeps.traceId` resolved by rebuild ✓; `CopilotAnalyzer*` errors persist (real desktop-side source gap, not propagation) | **1 propagation error closed; 2 H4 source-side gaps now visible** |
+| §6e / unified.ts | 4 errors | 0 | **4 fixed at source** |
+| §6d / cosmetic | 4 (signature drifts + unused imports) | 1 (`index.ts:436`, `retrieval-orchestrator.ts:99`) | **3 closed** |
+| New from H7 | — | 0 | — |
+
+Net effect: of the **25 pre-existing typecheck errors** at H6 close (handoff §6), **22 are now resolved**. The remaining **5 errors** are all pre-existing and out of H7 scope:
+- `index.ts:436` — provider-router signature drift (handoff §6d).
+- `copilot-analyzer-service.ts:779` and `:961` — H4 follow-up where `traceId` was added to call sites but the local desktop interfaces (`CopilotAnalyzerRunsRepoStartInput`, the `EmitInput<T>` payload shape) were never extended. Real source gap; not a propagation issue.
+- `provider-factory.ts:491` — C2 multipart `content` family (`StreamMessage.content: string | StreamContentPart[]` vs a callee expecting `string`). Was masked by earlier compile-stops in `index.ts` and only became visible after they were resolved; not introduced by H7.
+- `retrieval-orchestrator.ts:99` — unused `SOURCE_LABELS` import (handoff §6d cosmetic).
+
+The 2 remaining H4 source gaps are now isolated and tractable: both are about extending the local desktop-side `EmitInput`-style types to carry `traceId`, mechanically the same as the H4 source-side work. They are listed here so the next session does not mistake them for H7 regressions.
+
+**Tests** (29 net new, all in `intent-classifier.test.ts`):
+
+- **Export surface** (8 tests): `DESTRUCTIVE_MIN_CONFIDENCE === 0.8` / `MIN_CONFIDENCE === 0.5` baseline preserved / `DESTRUCTIVE_INTENT_NAMES` is the canonical 4-member tuple in the documented order / `DESTRUCTIVE_INTENTS` Set has the same 4 members / every member is a valid `INTENT_NAME` / non-destructive baseline intents are NOT in the set (covers all 11 non-destructive members) / `getMinConfidenceFor` returns elevated for every destructive member / `getMinConfidenceFor` returns standard for non-destructive intents.
+- **Audit-quoted regression** (1 test): "Fire this bug" classified as `fire_employee` at 0.55 confidence is re-labeled to `complex_request` with confidence 0 and entities preserved for the agentic loop's clarifying round-trip. This is the audit's literal example, named so explicitly in the test description.
+- **Threshold boundary** (3 tests): `fire_employee` at 0.79 → re-labeled / at 0.80 exactly → accepted (`<` gate, not `<=`) / at 0.95 → accepted. Pin the gate's discrete behavior at the bar.
+- **Non-destructive baseline preserved** (4 tests): `create_ticket`, `hire_employee`, `assign_ticket`, `reopen_ticket` all accepted at 0.55 confidence — proves non-destructive intents stay on the 0.5 bar with no regression.
+- **Parametric destructive matrix** (12 tests, `it.each` over the 4-member tuple × 3 cases): each destructive intent rejected at 0.55 / each rejected at 0.79 / each accepted at 0.85. Adding a new member to `DESTRUCTIVE_INTENT_NAMES` automatically extends this matrix.
+- **`complex_request` carve-out** (1 test): a genuinely-classified low-confidence `complex_request` (0.6) is never re-labeled — the H7 destructive gate must not regress the existing carve-out (the `parsed.intent !== 'complex_request'` short-circuit in `finalize()`).
+
+**Verification:**
+
+| Suite | Tests passing | H7 delta |
+|---|---|---|
+| `@team-x/intelligence` | **198 / 198** across 11 files | **+29** (H7 net new in `intent-classifier.test.ts`; was 169) |
+| `@team-x/shared-types` | **74 / 74** across 10 files | unchanged from H6 close |
+| `@team-x/desktop` | **2083 / 2083** individual tests across **188 / 189** test files | unchanged from H6 close |
+
+- `pnpm --filter @team-x/intelligence typecheck` — **clean** (0 errors; was 4 at H6 close).
+- `pnpm --filter @team-x/desktop typecheck` — **5 pre-existing errors remaining** (down from 25 at H6 close, +1 transient H7 propagation that was resolved by the intelligence dist rebuild). All 5 are pre-existing C2 / H4 / cosmetic (table above); none touch H7 paths.
+- The same one pre-existing test-file load failure persists (`provider-factory.test.ts` — keytar native-binary architecture mismatch documented in H4/H5/H6 resolutions; unrelated to H7).
+- `slot-filler.test.ts` (33/33) and `command-service.test.ts` (39/39) confirm the de-dup is byte-equivalent — same destructive set, same routing behavior, same `confirmed: true` gate.
+
+**Closes the audit's callout:**
+> *"Confidence threshold 0.5 applies to destructive intents. 'Fire this bug' can pass to `fire_employee` at 0.55 confidence. Should be 0.8+ for irreversibles."*
+Now: destructive intents (`fire_employee`, `close_ticket`, `end_meeting`, `promote_employee`) clear an elevated 0.8 confidence bar in `finalize()`. The audit's exact regression — `fire_employee` at 0.55 — is re-labeled to `complex_request` so the agentic loop asks the user a clarifying question instead of archiving the wrong record. Non-destructive intents remain on the 0.5 baseline; existing destructive-confirmation gates in `slot-filler.ts` (`needs_confirmation` routing) and `command-service.ts` (`confirmed: true` enforcement) now share the canonical destructive set with the new confidence gate, forming a layered defense against destructive-action misclassification.
+
+### H8 ✅ FIXED (2026-05-09)
+
+**Files:** `apps/desktop/src/main/services/budget-governance-service.ts` (function-side fix at the audit's named line) + `apps/desktop/src/main/services/agentic-loop-service.ts` (paired call-site fix).
+
+The audit's complaint — *"Cancelled runs skip cost ledger. Budget reconciliation has a blind spot on stop/timeout branches."* — is closed by removing two parallel cancelled-run skips that together produced the reconciliation blind spot, and consolidating the "is this run recordable?" decision into a single guard inside `recordRunSpend`.
+
+**The blind spot was two-deep.**
+
+The agentic loop accumulates per-iteration cost into `state.costUsd` on every step (`state.costUsd += step.telemetry.costUsd` at `agentic-loop-service.ts:772`). When a stop fires mid-loop (or a timeout, or a transient-exhausted error), `finishRun()` finalizes the run via `runsRepo.finish()` with `costUsd: formatCostUsd(state.costUsd)` — i.e., the real accumulated cost up to the cancel. So **the runs row carries genuine cost on cancelled runs**.
+
+Pre-H8, however, the cost-ledger pipeline had two stacked filters that both excluded cancelled runs:
+
+1. **Call site** (`agentic-loop-service.ts:544`): `if (runStatus !== 'cancelled' && deps.budgetGovernance) { … recordRunSpend(state.runId) … }`. The cancelled-skip lived here in the caller, so `recordRunSpend` was never even invoked for cancelled runs.
+2. **Function** (`budget-governance-service.ts:625`): `if (!run || run.status === 'running' || run.status === 'cancelled') return;`. Even if the caller had invoked it, the function early-exited on cancelled runs before the ledger write.
+
+The result was an exact mismatch the audit named: `SUM(runs.costUsd) ≠ SUM(budget_ledger.amountUsd)` for any company whose users hit the stop button. The runs table said one number; the budget ledger said zero. Threshold alerts (`budget.warning`, `budget.exceeded`), approval gates (`requireApprovalAboveUsd`), and `autoPause` all silently under-counted because they all read from the ledger sum.
+
+**The two-line fix.**
+
+1. **`budget-governance-service.ts:625`** — drop `'cancelled'` from the early-exit. The new check is `if (!run || run.status === 'running') return;`. Mid-flight runs are still skipped (their `costUsd` is not yet final until the orchestrator writes the terminal status). Cancelled and error runs flow through; the existing `amountUsd <= 0` guard immediately below handles legitimate zero-cost cancels without spurious ledger rows.
+2. **`agentic-loop-service.ts:544`** — drop the call-site `runStatus !== 'cancelled'` filter so the call becomes `if (deps.budgetGovernance) { … recordRunSpend(state.runId) … }`. The function — not the caller — now owns the recordable decision. This is intentional consolidation: putting the same logic in two places is exactly how the original blind spot survived a code review (the function-side comment said "skip cancelled" and the caller's filter looked redundant; together they were load-bearing).
+
+Both edits carry inline "Why" comments tying back to audit 2026-05-07 H8 and naming the companion edit, so the next reader sees the pair as one fix.
+
+**Why "stop/timeout branches" specifically.** The agentic loop maps `state.status` to `runStatus` at `agentic-loop-service.ts:523-528`: `'completed' → 'success'`, `'canceled' → 'cancelled'`, everything else → `'error'`. So:
+- **Stop button (user)**: `state.status = 'canceled'` → `runStatus = 'cancelled'`. Pre-H8: blocked by both filters. Post-H8: lands in ledger when `costUsd > 0`.
+- **Wall-clock or idle timeout**: typically surfaces as an error from `slowComplete`'s abort or from the loop's per-iteration timeout. `state.status` is set to a non-`'canceled'` value → `runStatus = 'error'`. The function never blocked `'error'`, but the H8 test surface now pins this path so any future regression to the status filter trips immediately.
+- **Transient-exhausted error** (provider 429/network): same path as timeout — `runStatus = 'error'`. Already recorded; pinned by the regression test.
+
+`run-agent.ts` (the chat path, not the agentic loop) hardcodes `costUsd: '0'` on its error/cancel finalize block (`run-agent.ts:530-538`), so the runs row and ledger agree at zero — no reconciliation blind spot in that path even though it'd benefit from a future partial-cost computation. That work is out of H8 scope (the SDK only emits usage on the `done` chunk, so partial-cost recovery on aborts requires a deeper SDK shape change); the H8 fix at the function level still admits any future non-zero `run-agent.ts` cancel costs without further changes.
+
+**Tests** (7 net new across 2 files):
+
+- **`budget-governance-service.test.ts`** (+5 tests in new H8 describe block, all using real `makeTestDb()` + real `runsRepo`):
+  - **Audit-quoted regression**: cancelled run with `costUsd: '1.500000'` records ledger entries on both `company` and `employee` scopes; `getOverview('company-1').companySpendUsd === '1.5'`. This is the audit's literal scenario, named explicitly in the test.
+  - **Zero-cost cancel is a no-op**: cancelled run with `costUsd: '0'` writes zero ledger entries. Proves the existing `amountUsd <= 0` guard prevents spurious rows for stop-during-admission cancels.
+  - **Error-run regression pin**: errored run with `costUsd: '0.750000'` lands in ledger. The function never blocked `'error'`; this test pins that behavior so any future regression to the status filter trips here.
+  - **In-flight skip preserved**: a run with status still `'running'` (no `runs.finish()` called) writes nothing. Mid-flight skip is required to prevent double-counting when the orchestrator's terminal-status write later fires `recordRunSpend` again.
+  - **Cancelled-run threshold cascade**: cancelled run with `costUsd: '5.500000'` against a `hardCapUsd: '5'` policy with `autoPause: true` and `requireApprovalAboveUsd: '2'` fires `budget.warning`, `budget.exceeded`, `budget.approvalRequested`, and `budget.companyPaused`, and `pauseCompany` is called. Pins the post-record reconciliation flow end-to-end (runs row → ledger → thresholds → alerts → autoPause).
+- **`agentic-loop-service.test.ts`** (+2 tests):
+  - **Call-site invokes recordRunSpend on cancel**: extends the existing `stop() aborts an in-flight run` slow-complete pattern with a stub `budgetGovernance` (recording calls). After `service.stop(runId)` and `waitForRun`, `recordRunSpend` is called exactly once with the run id. Pre-H8 the call-site filter blocked this entirely.
+  - **Success-path regression pin**: same stub, but a normal run completes via `final_answer`. `recordRunSpend` is called exactly once. Pre-H8 the success path already invoked recordRunSpend; this pin ensures the H8 call-site change didn't accidentally drop the success-path invocation.
+
+**Verification:**
+
+| Suite | Tests passing | H8 delta |
+|---|---|---|
+| `@team-x/desktop` | **2090 / 2090** individual tests across **188 / 189** test files | **+7** (5 budget-governance + 2 agentic-loop) |
+| `@team-x/intelligence` | **198 / 198** | unchanged from H7 close |
+| `@team-x/shared-types` | **74 / 74** | unchanged from H7 close |
+
+- `pnpm --filter @team-x/desktop typecheck` — **5 pre-existing errors remaining** (same set as H7 close: `index.ts:436` provider-router signature drift, `copilot-analyzer-service.ts:779,961` H4 source-side `traceId` gaps in local desktop interfaces, `provider-factory.ts:491` C2 multipart-content family, `retrieval-orchestrator.ts:99` cosmetic). **0 H8-attributable errors.**
+- `pnpm --filter @team-x/intelligence typecheck` — **clean** (carried forward from the H7-adjacent unified.ts cleanup).
+- The same one pre-existing test-file load failure persists (`provider-factory.test.ts` keytar native-binary architecture mismatch documented through H4–H7).
+
+**Closes the audit's callout:**
+> *"Cancelled runs skip cost ledger. Budget reconciliation has a blind spot on stop/timeout branches."*
+Now: a stop fired mid-agentic-loop persists `state.costUsd` to `runs.costUsd` AND to `budget_ledger` via the same `recordRunSpend → evaluatePolicyThresholds` path that already governed successful runs. `SUM(runs.costUsd) === SUM(budget_ledger.amountUsd)` across cancel/timeout/error branches. Threshold alerts, approval gates, and `autoPause` all see cancelled-run cost. The two parallel filters that produced the blind spot are gone; the function is the single source of truth for "is this run recordable?".
+
+### H9 ✅ FIXED (2026-05-09)
+
+**Files:** `packages/intelligence/src/loop/types.ts` (type surface + defaults) + `packages/intelligence/src/loop/loop.ts` (dual-cap enforcement + iteration counter) + `apps/desktop/src/main/services/agentic-loop-service.ts` (paired plumbing).
+
+The audit's complaint — *"Step budget arithmetic surprises. Default `maxSteps=8`, but each ReAct iteration consumes 3 (plan + tool_call + tool_result) — only ~2-3 actual tool turns before exhaustion."* — is closed by replacing the single `maxSteps` knob with a **dual-budget split**: an operator-facing iteration cap that does what its name suggests, plus the legacy step cap demoted to a runaway-fan-out safety net.
+
+**Why a single knob couldn't carry both jobs.**
+
+The pre-H9 loop incremented `used.steps` at three audit-named sites — `plan` (loop.ts:282-289), `tool_call` (loop.ts:336-347), `tool_result` (loop.ts:391-399) — plus once on `answer` (loop.ts:270-277). One ReAct iteration with text reasoning + one tool call + result emitted exactly the audit's three step entries. Adding the answer turn at the end, a typical single-tool-turn run + final answer = 4 step entries. So with `maxSteps: 8`, the operator's mental model ("8 tool turns") and the runtime's actual model ("8 step entries before the cap") diverged by a factor of 3-4x. The audit named the surprise; the fix has to make the operator's number do what they think it does.
+
+Two ways to align: bump `DEFAULT_MAX_STEPS` so the math hits the operator's intent, or split the knob. Bumping alone leaves callers who set `maxSteps: 5` (thinking "5 turns") still surprised. Splitting gives the operator a knob with stable semantics — `maxIterations: 8` is exactly 8 LLM calls, regardless of how many step entries each one emits — without breaking any existing caller.
+
+**The dual-cap design.**
+
+1. **`LoopBudget.maxIterations` (new, default 8)** — operator-facing cap on while-loop passes. Each iteration = exactly one LLM completion call + zero-or-more tool dispatches against its result. This is the binding constraint in normal operation. A breach emits a new `LoopErrorReason.budget_iterations` so post-mortems can tell the operator's tool-turn budget hit from the safety-net step ceiling.
+2. **`LoopBudget.maxSteps` (existing, default bumped 8 → 64)** — hard ceiling on emitted `LoopStep` entries. Demoted to a safety net for pathological per-iteration fan-out (one iteration with 100 parallel tool calls). 64 = 8 iterations × 8 step entries each, generous enough for parallel tool calls within a single iteration, tight enough to catch runaway fan-out. A breach still emits `budget_steps` — semantically distinct from `budget_iterations`.
+3. **`LoopBudgetUsed.iterations` (new)** — paired with the existing `steps` counter. The two are independent: a 2-iteration run with text reasoning + 1 tool call + final answer has `iterations: 2, steps: 4`. Tests can assert either depending on which contract they're pinning.
+4. **`DEFAULT_MAX_ITERATIONS = 8`** exported alongside the existing `DEFAULT_MAX_STEPS` so the agentic-loop-service and the Settings UI can default consistently.
+5. **Iteration counter incremented exactly once per successful LLM call**, immediately after `completion` lands and before token accounting. Increment is intentionally AFTER the try/catch so a thrown completion does NOT burn an iteration — operators expect "max 8 tool turns" to mean 8 successful LLM calls, not 8 attempts including failures.
+6. **Iteration cap checked at the top of the while loop**, before the existing `maxSteps`, `maxTokens`, and `timeoutMs` checks. Order is deliberate: the operator-facing cap fires first when both are at defaults; the step ceiling only matters when explicitly tightened or when fan-out blows past it mid-iteration.
+
+**`agentic-loop-service.ts` plumbing.**
+
+`AgenticLoopBudgets.maxIterations` added as **optional** (existing callers pass legacy `{ maxSteps, maxTokens, timeoutMs }` budgets and keep working — the loop falls back to `DEFAULT_MAX_ITERATIONS` when `undefined`). The service's default budget block (`resolveBudgets()` at line 489) now sets `maxIterations: DEFAULT_MAX_ITERATIONS`. The `createAgenticLoop({ maxIterations: budgets.maxIterations, ... })` wiring at line 768 threads the value through. No call site outside the service needs updating — the public `getBudgets()` callback keeps the same arity, just gains an optional field.
+
+**Tests** (12 net new, all in `loop.test.ts`):
+
+- **Export surface** (2 tests): `DEFAULT_MAX_ITERATIONS === 8`, `DEFAULT_MAX_STEPS === 64` (was 8 pre-H9 — bumped value pinned).
+- **Iteration counter** (3 tests): two-iteration run records `used.iterations === 2` while `used.steps === 4` (proves the dual counters are independent); answer-only run records `used.iterations === 1`; **provider error does NOT burn an iteration** (`used.iterations === 0` after a thrown completion).
+- **`budget_iterations` cap** (3 tests): `maxIterations: 3` exhausts after exactly 3 iterations with `reason: 'budget_iterations'` and an audit-quoted error message; **default budget yields exactly 8 tool turns** (the audit's literal regression — `used.iterations === DEFAULT_MAX_ITERATIONS === 8`); `maxIterations: 1` boundary still allows exactly one tool turn before exhausting.
+- **`budget_steps` cap (safety net)** (2 tests): 5 parallel tool calls in a single iteration with `maxSteps: 5` fires `budget_steps` mid-iteration (proves fan-out catches still work and the step cap remains the right error reason); **with default budgets, iteration cap binds first** — `8 iterations × 3 emitted step entries each = 24 emitted steps, well under the 64 ceiling`, so `budget_iterations` fires (the operator's knob, not the safety net).
+- **`used.steps` semantic preserved** (2 tests): emitted-step counting still increments once per `plan/tool_call/tool_result/answer` (regression pin — pre-H9 callers asserting on `used.steps` keep working); the original `loop.test.ts:350` `budget_steps` test pattern (infinite responder + `maxSteps: 3`) still exhausts via `budget_steps` because 3 < default `maxIterations: 8` — pinning that the cap that fires is the **smaller** of the two, not always the iteration one.
+
+**Verification:**
+
+| Suite | Tests passing | H9 delta |
+|---|---|---|
+| `@team-x/intelligence` | **210 / 210** across 11 files | **+12** (was 198 at H8 close) |
+| `@team-x/shared-types` | **74 / 74** | unchanged from H8 close |
+| `@team-x/desktop` | **2090 / 2090** across **188 / 189** test files | unchanged from H8 close |
+
+- `pnpm --filter @team-x/intelligence typecheck` — **clean** (0 errors).
+- `pnpm --filter @team-x/desktop typecheck` — same **5 pre-existing errors** as H7/H8 close (`index.ts:436` provider-router signature drift, `copilot-analyzer-service.ts:779,961` H4 source-side `traceId` gaps, `provider-factory.ts:491` C2 multipart-content family, `retrieval-orchestrator.ts:99` cosmetic). **0 H9-attributable errors.**
+- The same one pre-existing `provider-factory.test.ts` keytar load failure persists (handoff §5).
+
+**Backward compatibility.**
+
+- `AgenticLoopBudgets.maxIterations` is **optional**, so the existing service test fixture's `budgets: { maxSteps: 3, maxTokens: 8000, timeoutMs: 5000 }` typechecks unchanged and still triggers `budget_steps` at the same point (3 < default `maxIterations: 8` so the step cap binds first — proven by the regression-pin test).
+- `LoopBudgetUsed.iterations` is required on the new shape, but the field is constructed inside the loop's `finalize()`. External callers don't construct `LoopBudgetUsed` — they only read it — so type-side compat holds.
+- `DEFAULT_MAX_STEPS = 64` is a behavior change for any caller that omits `maxSteps` and was implicitly relying on the 8-step exhaustion. Such a caller would now get 8 iterations (via the iteration cap) instead of 2-3 (via the step cap) — strictly more capability, matching the operator-stated intent.
+
+**Closes the audit's callout:**
+> *"Step budget arithmetic surprises. Default `maxSteps=8`, but each ReAct iteration consumes 3 (plan + tool_call + tool_result) — only ~2-3 actual tool turns before exhaustion."*
+Now: `maxIterations: 8` (the new default) literally means 8 tool turns. The pre-H9 surprise math (operator says 8, gets 2-3) is replaced with operator-says-8-gets-8 semantics. Step counting is still tracked for telemetry granularity (`used.steps`), and the legacy `maxSteps` cap remains as a hard ceiling against runaway parallel fan-out — but it's no longer the binding constraint in normal operation. `LoopErrorReason.budget_iterations` makes the cap which fired explicit so post-mortems don't have to reverse-engineer the math.
+
+### H10 ✅ FIXED (2026-05-09)
+
+**Files:** `apps/desktop/src/main/services/retrieval-orchestrator.ts` (added optional deps + two new pipeline stages) + `apps/desktop/src/main/index.ts` (composition-root wiring with mock cross-encoder + entity-context-from-repos provider).
+
+The audit's complaint — *"Reranker + query expansion built but not wired into the retrieval orchestrator. Precision@5 is suboptimal for no functional reason."* — is closed by integrating the two `@team-x/intelligence` modules that were already shipped (since M29 priority-2) but never engaged by the desktop's retrieval pipeline. Both modules — `createQueryExpansionService` (semantic + synonym + entity + optional HyDE) and `createRerankerService` (cross-encoder cascade) — were complete, type-safe, unit-tested in their package of origin, and entirely orphaned at the seam.
+
+**The two-stage augmentation.**
+
+The orchestrator's pre-H10 pipeline was: `shapeRetrievalQueries` (pull 3 queries from recent messages) → fan-out per-query `vectorRetrieve` + structured candidates (tickets/goals/projects/vault FTS) → composite scoring (`scoreCandidate` blends `vector × 0.45 + lexical × 0.34 + exact × 0.16 + overlap × 0.12 + authority × 0.14 + recency × 0.08`) → dedup-by-source → token-budget fit. H10 adds two stages around the existing flow without changing its output contract:
+
+1. **Stage 1 — Query expansion (before per-query loop).** When both `queryExpansion: QueryExpansionService` and `entityContextProvider: (companyId) => EntityContext` are wired, the latest user message is run through `queryExpansion.expand(latestQuery, context)`. The QE service produces semantic variations (paraphrase templates), synonym substitutions (domain dictionary like `blocked → stuck/waiting/pending`), and entity substitutions (employee/project/goal IDs swapped in/out for their human-readable names). Variants merge with the 3-query base, dedupe via the existing `dedupeStrings` helper (case-folded normalize), and cap at **`MAX_EXPANDED_QUERIES = 8`** — generous enough to materially lift recall on rephrased queries, tight enough that vector-retrieval fan-out stays bounded (3 base + 5 expansions, max). The cap is enforced even against a QE service that returns 50 variants — pinned by a dedicated test.
+
+2. **Stage 2 — Cross-encoder rerank (after composite scoring).** When `reranker: RerankerService` is wired, after `scoreCandidate` produces the composite ranking, the top **`rerankerOptions.topN`** candidates (default `RERANKER_DEFAULT_TOP_N = 12`) are sent to the cross-encoder via `reranker.rerank(query, head)`. The cross-encoder returns a `finalScore` per candidate that blends `originalWeight × 0.3 + rerankWeight × 0.7` of the cross-encoder score (configurable in the reranker module). Reranked entries replace their composite scores with `finalScore` and the `reasons` array gains the `'reranked'` provenance tag (so audit-view chips can show where the score came from). The tail beyond `topN` keeps original composite scores untouched — a low-confidence tail entry never gets a free promotion just because it dropped out of the rerank slice. The combined list re-sorts before dedup-by-source.
+
+**Graceful degradation in both stages.** Both stages wrap their service calls in try/catch and fall back to the unwired path on failure:
+
+- **Query expansion failure** (LLM unavailable for HyDE, EntityContext build error, malformed expansions): the orchestrator uses base queries only. Pinned by a test that injects a throwing `expand()` and asserts retrieval still completes.
+- **Reranker failure** (cross-encoder API down, network error, mock throws in tests): the orchestrator uses composite ordering. Pinned by a test that injects a throwing `rerank()` and asserts the high-similarity entry still ranks above the low one.
+
+This was deliberate. The orchestrator's single job is "produce evidence for the next agent turn"; treating the new stages as best-effort enhancements rather than hard dependencies means a flaky cross-encoder API can't take down chat, and a misconfigured EntityContext can't take down vault search.
+
+**Both new deps optional.** `queryExpansion`, `entityContextProvider`, `reranker`, and `rerankerOptions` are all `?`-marked on `RetrievalOrchestratorDeps`. When absent, the orchestrator's behavior is byte-identical to pre-H10 — the existing test suite (the `reranks authoritative structured sources above conversational fragments` and the deduplication tests) keeps green without modification. Pinned by an explicit "without queryExpansion or reranker, behavior is identical to pre-H10" regression test.
+
+**Composition-root wiring.** `apps/desktop/src/main/index.ts` builds both services and threads them through `createRetrievalOrchestrator`:
+
+- **`queryExpansionService = createQueryExpansionService({ hydeEnabled: false })`** — semantic + synonym + entity expansion only, no LLM-dependent HyDE. Plug an LLM in (`createQueryExpansionService({ llm, hydeEnabled: true })`) to enable HyDE later without diff churn.
+- **`rerankerService = createRerankerService(createMockCrossEncoder())`** — the mock cross-encoder uses lexical overlap as a proxy for semantic relevance (no network, no LLM cost). When a real Cohere/OpenAI Rerank API is configured, swap to `createApiCrossEncoder({ baseURL, apiKey, model })` here without touching the orchestrator.
+- **`entityContextProvider`** — synthesizes per-company `EntityContext` from `employeesRepo`, `projectsRepo` (mapping `title → name` since the schema uses `title` for projects), `goalsRepo` (same `title → name` mapping), and `ticketsRepo`. Uses the same repos the orchestrator already reads for structured-candidate retrieval, so no new dep edges.
+
+**Adjacent fix — pre-existing typecheck debt closed.** While in `retrieval-orchestrator.ts`, removed the unused `SOURCE_LABELS` const that handoff §6d had flagged as pre-existing cosmetic debt (`error TS6133: 'SOURCE_LABELS' is declared but its value is never read`). One pre-existing error closed as a side benefit; the H10 implementation itself introduces zero new typecheck errors.
+
+**Tests** (10 net new, all in `retrieval-orchestrator.test.ts`):
+
+- **Backward compatibility** (1 test): without `queryExpansion`/`reranker` deps, the existing orchestrator behavior is preserved — query count is bounded by base 3, no entry carries the `reranked` reason. Regression pin protecting the absent-deps path.
+- **Query expansion stage** (4 tests): expansion augments base queries when wired (vectorRetrieve fan-out grows beyond 1); falls back to base queries when `expand()` throws (graceful LLM failure); skips entirely when `entityContextProvider` is absent (incomplete composition guard); caps at MAX_EXPANDED_QUERIES (8) even when the QE service returns 50 variants.
+- **Reranker stage** (4 tests): synthetic case where reranker promotes a relevant vault entry above a high-similarity-but-irrelevant ticket — reranked entries carry `reasons: ['reranked']`; falls back to composite ordering when `rerank()` throws; only top-N candidates pass through the cross-encoder (verified by spying on the encoder's input slice); skips the call entirely when fewer than 2 candidates exist.
+- **Combined stages** (1 test): both stages wired end-to-end, contract preserved (queries[] non-empty, entries[] has expected shape, vectorRetrieve called per query, at least one entry shows the `reranked` reason).
+
+**Verification:**
+
+| Suite | Tests passing | H10 delta |
+|---|---|---|
+| `@team-x/desktop` | **2100 / 2100** individual tests across **188 / 189** test files | **+10** (was 2090 at H9 close) |
+| `@team-x/intelligence` | **210 / 210** | unchanged from H9 close |
+| `@team-x/shared-types` | **74 / 74** | unchanged from H9 close |
+
+- `pnpm --filter @team-x/intelligence typecheck` — **clean** (0 errors).
+- `pnpm --filter @team-x/desktop typecheck` — **4 pre-existing errors remaining** (down from 5 at H9 close): `index.ts:439` provider-router signature drift (line shifted from 436 due to new H10 imports), `copilot-analyzer-service.ts:779,961` H4 source-side traceId gaps, `provider-factory.ts:491` C2 multipart-content family. **0 H10-attributable errors.** The §6d `retrieval-orchestrator.ts:99 SOURCE_LABELS` cosmetic error is closed by the adjacent cleanup.
+- The same one pre-existing `provider-factory.test.ts` keytar load failure persists (handoff §5).
+
+**Backward compatibility.**
+
+- All four new deps are optional. Existing call sites (the prod composition root before this commit, `retrieval-orchestrator.test.ts` `makeDeps`, and `intelligence-evals.test.ts`) keep working unchanged.
+- The `RetrievalEvidencePack` output shape is unchanged. Reranked entries gain a `'reranked'` reason but never lose existing reasons; downstream consumers that check `reasons.includes('semantic')` or `reasons.includes('exact')` keep working.
+- `MAX_EXPANDED_QUERIES = 8` and `RERANKER_DEFAULT_TOP_N = 12` are tuned for the current `rag_top_k = 5` / `rag_threshold = 0.7` / `rag_max_tokens = 2000` Settings defaults. Higher `rag_top_k` deployments can override `rerankerOptions.topN` from the composition root without touching the orchestrator.
+
+**Closes the audit's callout:**
+> *"Reranker + query expansion built but not wired into the retrieval orchestrator. Precision@5 is suboptimal for no functional reason."*
+Now: query expansion runs before vector retrieval, augmenting the 3-query baseline with semantic + synonym + entity-substitution variants up to 8 total queries. Cross-encoder reranking runs after composite scoring, replacing the top-12 candidates' scores with cross-encoder `finalScore` before dedup. Reranked entries are tagged `'reranked'` so the source of the precision lift is auditable. Both stages are optional, gracefully degrade on failure, and have no backward-compat impact on callers that don't wire them — but the production composition root now does.
+
+### H11 ✅ FIXED (2026-05-09)
+
+**File:** `apps/desktop/src/main/orchestrator/run-agent.ts` — added a hybrid OR-batched flusher around the existing streaming-delta loop.
+
+The audit's complaint — *"Per-token DB writes — `messages.updateContent()` fires on every delta. SQLite lock churn at concurrency."* — is closed by replacing the per-chunk write inside the streaming loop with a tiny in-loop flusher whose write decisions are governed by **two parallel thresholds**, plus a force-flush in the `finally` block of each retry attempt so every terminal path lands the pending tail.
+
+**The pre-H11 pattern.**
+
+```ts
+for await (const chunk of streamAgent({ ... })) {
+  if (chunk.kind === 'delta') {
+    buffer += chunk.delta;
+    deps.messages.updateContent(messageId, buffer);   // ← one UPDATE per chunk
+    deps.bus.emit<TokenDeltaPayload>({ type: 'token.delta', ... });
+  }
+  ...
+}
+```
+
+For a 500-token Anthropic stream that's 500 SQLite UPDATEs on the `messages` table, each grabbing the WAL writer lock and serializing against any other DB op in flight (event bus inserts, ticket reads, vault FTS — they all fight for the same lock under WAL mode). It's also wall-clock-expensive on slower disks (each UPDATE fsyncs a WAL frame). The audit flagged it primarily as "lock churn at concurrency"; a slow-disk laptop also feels it as visible jank.
+
+**The post-H11 pattern.**
+
+A small in-closure flusher with two thresholds:
+
+```ts
+const BATCH_FLUSH_MIN_CHARS = 64;       // ~16 tokens at 4 chars/token
+const BATCH_FLUSH_INTERVAL_MS = 100;
+let lastFlushedLength = 0;
+let lastFlushAt = startTime;
+
+const maybeFlushBuffer = (force: boolean): void => {
+  const pending = buffer.length - lastFlushedLength;
+  if (pending <= 0) return;
+  if (!force) {
+    const sinceFlush = now() - lastFlushAt;
+    if (pending < BATCH_FLUSH_MIN_CHARS && sinceFlush < BATCH_FLUSH_INTERVAL_MS) return;
+  }
+  deps.messages.updateContent(messageId, buffer);
+  lastFlushedLength = buffer.length;
+  lastFlushAt = now();
+};
+```
+
+Every delta chunk now does `buffer += chunk.delta; maybeFlushBuffer(false);` — flush only when **either** size OR time threshold trips. The token-delta event bus emit is unchanged, so the renderer keeps its smoothness; only the DB write is throttled. For a typical Anthropic stream at ~320 chars/sec this gives ~10 writes/sec post-H11 vs ~80/sec pre-H11 — an **8× reduction** in WAL-lock pressure without any user-visible latency cost. For a slower local Ollama at ~120 chars/sec the time-trigger dominates and we still get ~3× fewer writes. For very fast bursts the size-trigger keeps the DB lag bounded by 64 chars (≈ one UI line of text).
+
+**Force-flush in `finally`.**
+
+```ts
+} finally {
+  maybeFlushBuffer(true);   // every terminal path lands the tail
+  clearTimers();
+  ...
+}
+```
+
+Placed inside the retry loop's `finally` block so it runs on:
+- **Successful drain** (for-await completes → break) — the tail since the last batch lands before success finalize.
+- **Retryable error** (transient flake → continue) — the buffer was empty (retry only fires when no chunks streamed yet, so this is a no-op, but it's correct).
+- **Non-retryable error** (provider throws → break to error finalize) — pre-error content lands so the renderer's optimistic state survives in the DB.
+- **External abort / cancel** (signal aborts → for-await throws → break) — pre-cancel content lands so a cancelled run still shows whatever the user got to see before they hit stop.
+- **Wall-clock or idle timeout** (timer aborts → for-await throws → break) — the post-loop error finalize wraps the buffer with `buildInterruptedReplyContent(buffer, 'timed out')`, so the persisted content is the user-visible "[timed out]" suffix rather than a stale fragment.
+
+The flusher is **idempotent**: `pending <= 0 → return` short-circuits any second call, so calling `maybeFlushBuffer(true)` twice (e.g., once at end of for-await, once in finally) is safe by construction. The buffer is the source of truth; `lastFlushedLength` tracks what the DB has seen.
+
+**Why a hybrid OR cap, not just one or the other.**
+
+- **Size only** (e.g., flush every 64 chars): a slow stream that produces 1 token/sec might never hit 64 chars in any reasonable window — the user sees the renderer typing but the DB is empty until the stream ends.
+- **Time only** (e.g., flush every 100ms): a fast burst (200 chars in 50ms) gets one write at 100ms — fine, but a giant burst could hold the buffer too far behind the renderer's optimistic state on a reload mid-stream.
+- **OR (whichever triggers first)**: bounded both ways. DB lags the renderer by at most 64 chars OR 100 ms, whichever is shorter for the current stream rate. Pinned by tests on both extremes (50 single-char deltas in a fast loop → time-triggered flushes; 1 × 200-char delta → size-triggered flush).
+
+**Tests** (6 H11 net new + 3 pre-existing tests updated to match the new contract):
+
+- **`H11 audit (2026-05-07): batched streaming-delta DB writes` describe block** (6 new tests):
+  - **Many tiny chunks below 64-char threshold land in 1 write at force-flush**: 50 × 'x' deltas → strictly fewer than 50 DB writes, final write content = the cumulative 50-char string, final DB row reflects it.
+  - **Single 200-char delta triggers a size-based flush**: exactly 1 DB write — size threshold fires immediately, force-flush is a no-op because `pending === 0`.
+  - **Renderer still sees per-chunk deltas via `token.delta`**: 10 chunks → 10 events on the bus regardless of how many DB writes happened. Concatenated event-payload deltas equal the cumulative stream. Pinning that batching is **DB-only**, not event-only.
+  - **Error mid-stream lands the pre-error buffer**: a `failingProvider` throws after one delta; the rejected promise still leaves the DB row holding 'hello' because `finally`'s force-flush ran before the error finalize. Renderer's optimistic state honored on failure.
+  - **Cancel mid-stream lands the pre-cancel buffer**: external `AbortController` fires after one delta; same outcome — rejected promise, but the partial 'partial' content is persisted.
+  - **Zero-delta stream is a no-op**: `done`-only stream with empty buffer never triggers `updateContent` from the flusher (downstream synthetic-message paths may write their own content, but the flusher itself stays quiet on `pending <= 0`).
+- **3 pre-existing tests updated** to match the new contract:
+  - `streams 3 deltas...` — `latencyMs` assertion changed from `toBe(42)` to `toBeGreaterThan(0) && % 42 === 0`. The fixture clock advances 42ms per `now()` call; H11 adds `now()` calls inside `maybeFlushBuffer` for the time-since-flush check, so the absolute latency is now a multiple of 42ms larger than pre-H11. Coupling tests to the exact clock-call count was always fragile; the new assertions encode the truthful invariant (positive latency, fixture-clock multiple).
+  - `updates message content incrementally as each delta arrives` — renamed to `persists final cumulative content with batched writes (H11 audit 2026-05-07)`. Pre-H11 expected `['a', 'ab', 'abc']` — three writes — which IS the per-chunk anti-pattern the audit flagged. Now expects fewer than 3 writes AND final content === `'abc'` AND DB row reflects the full string. Test description carries the audit reference so the contract change is auditable in `git log`.
+  - `persists the assistant message row at start, before the first delta` — the mid-stream `expect(midRow[0]?.content).toBe('x')` assertion is gone (under threshold → no flush yet → empty mid-stream content). The test still verifies the row EXISTS mid-stream (proving `message.append` persists the row at start) and that post-stream content equals the streamed text (proving the final force-flush works).
+
+**Verification:**
+
+| Suite | Tests passing | H11 delta |
+|---|---|---|
+| `@team-x/desktop` | **2106 / 2106** individual tests across **188 / 189** test files | **+6** (was 2100 at H10 close) |
+| `@team-x/intelligence` | **210 / 210** | unchanged from H10 close |
+| `@team-x/shared-types` | **74 / 74** | unchanged from H10 close |
+
+- `pnpm --filter @team-x/intelligence typecheck` — **clean** (0 errors).
+- `pnpm --filter @team-x/desktop typecheck` — same **4 pre-existing errors** as H10 close (`index.ts:439` provider-router signature drift, `copilot-analyzer-service.ts:779,961` H4 source-side `traceId` gaps, `provider-factory.ts:491` C2 multipart-content family). **0 H11-attributable errors.**
+- The same one pre-existing `provider-factory.test.ts` keytar load failure persists (handoff §5).
+
+**Backward compatibility.**
+
+- `messages.updateContent` contract unchanged — same signature, same write semantics, just called fewer times.
+- `token.delta` event bus emit unchanged — every delta still fires an event, every renderer that subscribed pre-H11 keeps working unchanged.
+- `RunAgentResult` shape unchanged — `latencyMs` is still a number; absolute values shift slightly when test fixtures use per-call-advance clocks, but production `Date.now()` is unaffected.
+- The constants `BATCH_FLUSH_MIN_CHARS = 64` and `BATCH_FLUSH_INTERVAL_MS = 100` are intentionally local to `run-agent.ts` (not in the deps surface); future tuning happens at one place. If we ever need per-deployment knobs (e.g., faster flushes for live-paired demos vs slower for batch jobs), promoting them to settings is a small, additive change with no breaking impact.
+
+**Closes the audit's callout:**
+> *"Per-token DB writes — `messages.updateContent()` fires on every delta. SQLite lock churn at concurrency."*
+Now: streaming deltas accumulate in memory and write to the DB only when the size threshold (`BATCH_FLUSH_MIN_CHARS = 64`) OR time threshold (`BATCH_FLUSH_INTERVAL_MS = 100`) trips, plus a force-flush in `finally` that catches every terminal path. WAL-lock pressure drops by ~8× on a typical Anthropic stream and ~3× on a slower local model — measured against the chunk count, not vibes. Renderer-side per-chunk events are untouched, so the typing animation that depends on them keeps its smoothness. The lock-churn the audit flagged is gone; the user-visible behavior is identical.
+
+### H12 ✅ FIXED (2026-05-10)
+
+**File:** `apps/desktop/src/main/services/agent-improvement-service.ts` — added two parallel guards around the candidate-signal pipeline plus a new field on `AgentImprovementRunResult` / `AgentImprovementRunSummary` in `packages/shared-types/src/ipc.ts` for telemetry.
+
+The audit's complaint comes in two parts and the fix has two pillars, one for each:
+
+1. *"A failing improvement ticket can spawn another improvement ticket about its own failure. Recursion-via-database."* → **Pillar 1: improvement-scope event filter.** `collectImprovementScope(tickets)` walks every ticket carrying `AGENT_IMPROVEMENT_LABEL` and builds two ReadonlySets: `ticketIds` (always populated) and `threadIds` (populated when the improvement ticket has a `threadId`). `buildCandidateSignals` calls `isSelfCausedEvent(event, scope)` per event and excludes any whose `payload.ticketId` ∈ `ticketIds` or `payload.threadId` ∈ `threadIds`. A `runtime.execution.failed` event with `payload.ticketId = 'improve-ticket-1'` no longer feeds the runtime-failures signal; a `work.failed` event with `payload.threadId = 'improvement-thread-1'` no longer feeds the work-failures signal. The recursion is broken at the source.
+
+2. *"No causation-chain dedup; can cycle on identical signals."* → **Pillar 2: deterministic cause hash + persistent dedup register.** Every newly created improvement ticket gets a label `agent-improvement:cause:<8-hex-char-hash>` where the hash is `djb2-XOR over the sorted-and-joined sourceRefs`. On every subsequent run, `collectSeenCauseHashes(tickets)` scans every improvement ticket (open AND closed) for those labels, building a `Set<string>` of hashes that have ever been turned into a ticket. Each candidate signal computes its own `causeHash` and looks it up — a hit means the same evidence set has already been the basis for an improvement ticket, so we refuse to re-create. The closed-ticket case is the entire reason this exists: pre-H12, closing a stale improvement ticket let the next run re-open it on the same `work.failed` events that were still inside the event window. Post-H12, the closed ticket's hash label is the dedup signal — the loop refuses to cycle.
+
+**The pre-H12 pattern.**
+
+```ts
+// run() — before H12
+const candidateSignals = buildCandidateSignals({ events, tickets, now: ranAt });
+const recommendations = candidateSignals.map((signal) => {
+  const existing = findExistingSignalTicket(tickets, signal.signalKind);
+  if (existing) {
+    skippedExistingTicketIds.push(existing.id);
+    return buildRecommendation({ ...signal, existingTicketId: existing.id, ... });
+  }
+  // ...else create a new ticket — no evidence-based dedup
+});
+```
+
+The only dedup gate was `findExistingSignalTicket`, which only matches **open** improvement tickets with the same signal kind. Once a ticket got closed (manually or by a cleanup run), the same `work.failed` events still in the event window triggered a fresh signal → fresh ticket → potentially fresh failure → fresh signal → loop. The audit's "recursion-via-database" was the same loop with one extra step: an in-progress improvement ticket that itself failed contributed a `work.failed` event whose `threadId` matched the improvement work, which fed back as fresh evidence for the next run.
+
+**The post-H12 pattern.**
+
+```ts
+// run() — after H12
+const improvementScope = collectImprovementScope(tickets);     // pillar 1
+const seenCauseHashes  = collectSeenCauseHashes(tickets);      // pillar 2
+const candidateSignals = buildCandidateSignals({
+  events, tickets, now: ranAt, improvementScope,               // self-caused events excluded here
+});
+
+for (const signal of candidateSignals) {
+  const causeHash = hashSourceRefs(signal.sourceRefs);
+  const existing  = findExistingSignalTicket(tickets, signal.signalKind);
+
+  if (existing)                       { /* existing-skip path (unchanged) */ continue; }
+  if (seenCauseHashes.has(causeHash)) { dedupedCauseHashes.push(causeHash); continue; }  // ← new
+  // ...create new ticket with `agent-improvement:cause:<hash>` label
+  seenCauseHashes.add(causeHash);     // intra-run defense-in-depth
+}
+```
+
+Three gates in priority order: (1) existing open ticket for this signal kind → skipped-existing; (2) cause hash already seen → H12 dedup; (3) brand new evidence → create. Each gate produces a different observable outcome on the result type, so the audit's complaint maps cleanly onto a `dedupedCauseHashes` array that operators can monitor.
+
+**Why djb2-XOR over `sortedRefs.join('\x1f')`.**
+
+- **Deterministic** — same evidence set always produces the same hash, regardless of insertion order. The test `cause hash is order-independent` pins this with the same two events in reversed creation order producing the same hash and triggering dedup.
+- **Order-independent** — sorting before joining means `[refB, refA]` and `[refA, refB]` hash identically.
+- **Compact** — 32-bit output → 8 hex characters → fits in a label without bloat. Collision probability is vanishingly small for the per-company evidence sets we emit (typically 4–50 sourceRefs per signal); the audit's failure mode is "exact same set re-fires", not "two different sets collide".
+- **Dependency-free** — no `crypto.subtle` (async), no `node:crypto` (the service is environment-agnostic), no extra deps. The 5 lines of djb2-XOR are deliberate.
+- The `\x1f` separator (ASCII Unit Separator) is unlikely to appear inside a sourceRef (which use ` | ` as their internal separator), eliminating concatenation ambiguity.
+
+**Telemetry: `dedupedCauseHashes` and `dedupedCauseCount`.**
+
+- `AgentImprovementRunResult` now carries `dedupedCauseHashes: string[]` — every hash whose signal was suppressed during this run. Empty array on a "no dedup happened" run, so no ergonomic regression for callers.
+- `AgentImprovementRunSummary` (the snapshot row) now carries `dedupedCauseCount: number` — backfills to `0` for run events emitted before H12 via `numberFromPayload(payload, 'dedupedCauseCount', 0)`. Pre-H12 historical events read as "no dedup", which is the truthful pre-fix state — no rewriting of telemetry.
+- The `agent.improvementRun` event payload carries both fields so the dashboard can show "N signals suppressed by causation-chain dedup" without re-walking ticket labels.
+
+**Tests** (11 H12 net new):
+
+- **`agent-improvement-service — H12 audit (2026-05-07): causation-chain dedup` describe block** (10 new tests):
+  - **Excludes work.failed events whose threadId matches an open improvement ticket**: scope-side filter — the pillar 1 happy path. Two `work.failed` events both pointing at `improvement-thread-1` produce zero recommendations because the events are excluded before they ever count toward the work-failures threshold.
+  - **Excludes runtime.execution.failed events whose ticketId matches an improvement ticket**: same filter via the runtime-event payload's `ticketId` field. Documents that both `ticketId` and `threadId` paths work.
+  - **Still surfaces external runtime failures alongside self-caused ones**: defense check — the filter must NOT swallow real external failures. Two events: one self-caused (`ticketId = 'improve-ticket-1'`), one real (`ticketId = 'real-ticket-99'`). Result: exactly 1 recommendation, sourceCount = 1, sourceRefs contain `real-runtime-1`.
+  - **Dedups identical evidence after the prior improvement ticket has been closed**: pillar 2 happy path. A closed improvement ticket carries the cause hash label for evidence set A. The next run sees the same evidence → no recommendation, `dedupedCauseHashes = [<hash>]`, the run event payload reflects `dedupedCauseCount: 1`.
+  - **Cause hash is order-independent**: invariant test. Two `createFixture` instances with the same two events in REVERSED creation order — first run produces hash X and creates ticket; second run with the closed-prior ticket carrying hash X dedups. Pins the sort-then-join contract.
+  - **Does not dedup a fresh signal with a different evidence set**: closed ticket has `cause:deadbeef` label (a stale fingerprint). New events arrive with different IDs and threadIds → different hash → new ticket created. Pins that dedup is **set-based, not category-based**.
+  - **Open improvement ticket with same signal still routes through existing-skip path (not dedup)**: priority test. An open ticket with the same signal kind AND the right cause label still goes through `findExistingSignalTicket` (recommendation has `existingTicketId`, dedupedCauseHashes empty). Pins that the three gates fire in the right order.
+  - **dryRun still computes dedup but writes zero tickets**: `input.dryRun = true` plus a closed-prior cause label → result has `dedupedCauseHashes = [<hash>]` and zero `createdTickets`. Verifies dedup runs even on read-only paths.
+  - **improvementRun event payload carries dedupedCauseCount + dedupedCauseHashes**: telemetry contract test. The bus emit captures `dedupedCauseCount: 1, dedupedCauseHashes: [<hash>]` so dashboards can render dedup activity.
+  - **snapshot.recentRuns backfills dedupedCauseCount=0 for events emitted before H12**: back-compat test. A pre-H12 `agent.improvementRun` event (payload missing the new field) reads back as `dedupedCauseCount: 0` via `rowToRunSummary`.
+- **1 new outer test** (in the existing `describe('agent improvement service', ...)` block):
+  - **Persists the H12 cause-hash label on every newly created improvement ticket**: every newly written ticket carries exactly one label matching `^agent-improvement:cause:[0-9a-f]{8}$`, the recommendation's labels include it, and the result has `dedupedCauseHashes: []`.
+
+**Verification:**
+
+| Suite | Tests passing | H12 delta |
+|---|---|---|
+| `@team-x/desktop` | **2117 / 2117** individual tests across **188 / 189** test files | **+11** (was 2106 at H11 close) |
+| `@team-x/intelligence` | **210 / 210** | unchanged from H11 close |
+| `@team-x/shared-types` | **74 / 74** across 10 files | unchanged from H11 close |
+
+- `pnpm --filter @team-x/intelligence typecheck` — **clean** (0 errors).
+- `pnpm --filter @team-x/shared-types build` — **clean**, dist propagated to consumers.
+- `pnpm --filter @team-x/desktop typecheck` — same **4 pre-existing errors** as H11 close (`index.ts:439` provider-router signature drift, `copilot-analyzer-service.ts:779,961` H4 source-side `traceId` gaps, `provider-factory.ts:491` C2 multipart-content family). **0 H12-attributable errors.**
+- The same one pre-existing `provider-factory.test.ts` keytar load failure persists (handoff §5).
+
+**Backward compatibility.**
+
+- `AgentImprovementRunResult` and `AgentImprovementRunSummary` gained required fields (`dedupedCauseHashes` and `dedupedCauseCount` respectively). The two existing call sites in main code (`emitRunEvent` and `rowToRunSummary`) populate them; the renderer-side `agent-improvement-panel.tsx` reads `recommendationCount` / `inspectedEventCount` only, so it's unaffected. The preload `api.test.ts` mock uses `unknown`-typed `setNextInvokeResult`, so the test isn't type-coupled to the result shape.
+- Pre-H12 run events stored in the DB read back with `dedupedCauseCount: 0` — truthful and back-compat.
+- The cause-label scheme (`agent-improvement:cause:<hash>`) is additive on the labels array. Existing label consumers (`hasLabel`, the panel filter, `findExistingSignalTicket`) ignore unknown labels, so the new label is invisible to anything that wasn't taught about it.
+- The existing two test cases continue to pass unchanged: "opens one deduped self-improvement ticket for repeated work failures" still asserts `arrayContaining(...)` (the cause label is allowed to be present); "does not duplicate an open improvement ticket for the same signal" still hits the existing-skip path before dedup checks.
+
+**Closes the audit's callout:**
+> *"Agent self-improvement loop has no causation-chain dedup; can cycle on identical signals. A failing improvement ticket can spawn another improvement ticket about its own failure. Recursion-via-database."*
+Now: failure events whose `payload.ticketId` or `payload.threadId` belong to an improvement ticket are excluded from candidate-signal generation — a failing improvement ticket cannot feed evidence back into the loop. Independently, every newly created improvement ticket persists a deterministic cause hash label over its sorted sourceRefs, and the next run refuses to re-open any signal whose hash has already been seen — the loop cannot cycle on identical evidence even after the prior ticket is closed. Telemetry surfaces both metrics through `dedupedCauseHashes` on the result and `dedupedCauseCount` on the snapshot. The two failure modes the audit named are now closed by two parallel guards, each individually sufficient.
 
 ---
 

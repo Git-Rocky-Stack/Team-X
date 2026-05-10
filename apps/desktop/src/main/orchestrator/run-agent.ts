@@ -331,6 +331,60 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
   let toolCallsCount = 0;
   const toolResults: CompletedToolResult[] = [];
 
+  // ---------------------------------------------------------------------
+  // H11 (audit 2026-05-07) — batched streaming-delta DB writes.
+  //
+  // Pre-H11: every provider delta chunk fired one
+  // `deps.messages.updateContent(messageId, buffer)` UPDATE on the
+  // SQLite `messages` table. For a 500-token response that's 500
+  // UPDATEs, each grabbing the WAL lock and serializing against any
+  // other DB op in flight (event bus inserts, ticket reads, vault
+  // FTS — they all fight for the writer lock under WAL). The audit
+  // flagged this as "lock churn at concurrency"; it's also a wall-clock
+  // cost on slower disks (every UPDATE fsyncs the WAL frame).
+  //
+  // Post-H11: a hybrid OR-batched flusher keeps the buffer in memory
+  // and writes to the DB only when EITHER:
+  //   - At least `BATCH_FLUSH_MIN_CHARS` characters have accumulated
+  //     since the last flush (size-triggered), OR
+  //   - At least `BATCH_FLUSH_INTERVAL_MS` ms have elapsed since the
+  //     last flush (time-triggered).
+  // Whichever fires first wins. Slow streams flush mostly on the timer;
+  // fast streams flush mostly on the char count. Either way, the DB
+  // lag behind the live stream is bounded.
+  //
+  // The `token.delta` event still fires on EVERY chunk — the renderer's
+  // typing animation is unaffected. Only DB writes are batched. The
+  // `finally` block at the bottom of each retry attempt force-flushes
+  // any pending tail so success/error/cancel/timeout paths all see
+  // a fully-persisted buffer when they finalize the run row.
+  //
+  // Defaults: 64 chars (~16 tokens at 4-char/token avg) and 100 ms.
+  // For a typical Anthropic stream at ~320 chars/sec this gives a
+  // ~10 writes/sec flush rate (vs ~80/sec pre-H11), an 8x reduction
+  // without any user-visible latency cost.
+  // ---------------------------------------------------------------------
+  const BATCH_FLUSH_MIN_CHARS = 64;
+  const BATCH_FLUSH_INTERVAL_MS = 100;
+  let lastFlushedLength = 0;
+  let lastFlushAt = startTime;
+
+  const maybeFlushBuffer = (force: boolean): void => {
+    const pending = buffer.length - lastFlushedLength;
+    if (pending <= 0) return;
+
+    if (!force) {
+      const sinceFlush = now() - lastFlushAt;
+      if (pending < BATCH_FLUSH_MIN_CHARS && sinceFlush < BATCH_FLUSH_INTERVAL_MS) {
+        return;
+      }
+    }
+
+    deps.messages.updateContent(messageId, buffer);
+    lastFlushedLength = buffer.length;
+    lastFlushAt = now();
+  };
+
   // Retry-loop result. `lastErr === null` means the stream drained
   // successfully on at least one attempt; `lastErr !== null` means we
   // exhausted retries (or hit a non-retryable failure on attempt 1).
@@ -412,7 +466,10 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         resetIdleTimer();
         if (chunk.kind === 'delta') {
           buffer += chunk.delta;
-          deps.messages.updateContent(messageId, buffer);
+          // H11 (audit 2026-05-07) — batched DB write, NOT per-chunk.
+          // Renderer still gets the full delta via the `token.delta`
+          // event below; only the SQLite UPDATE is throttled.
+          maybeFlushBuffer(false);
 
           const deltaPayload: TokenDeltaPayload = {
             threadId: input.threadId,
@@ -487,6 +544,15 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       }
       break;
     } finally {
+      // H11 (audit 2026-05-07) — force-flush any pending streamed text
+      // before this attempt exits. Covers every terminal path on this
+      // attempt: successful drain → break, retryable error → continue
+      // (next attempt only fires when no chunks streamed, so buffer is
+      // empty), non-retryable error → break to error finalize, abort →
+      // break to error finalize. Without this, the last 0-100ms of
+      // streamed content would be missing from `messages` content even
+      // though the renderer's optimistic state showed it.
+      maybeFlushBuffer(true);
       clearTimers();
       if (input.signal) {
         input.signal.removeEventListener('abort', externalAbortListener);

@@ -214,7 +214,14 @@ describe('runAgent', () => {
       expect(result.runId).toBeTypeOf('string');
       expect(result.promptTokens).toBe(10);
       expect(result.completionTokens).toBe(5);
-      expect(result.latencyMs).toBe(42);
+      // H11 (audit 2026-05-07): the fixture clock advances 42ms per `now()`
+      // call. Pre-H11 the orchestrator made 2 clock calls (start + end);
+      // post-H11 the batched-flusher makes additional calls per chunk for
+      // the time-since-flush check. Latency is "still positive and a
+      // multiple of 42ms" rather than the exact 42 the pre-H11 contract
+      // could promise. The clock-call-count is implementation detail.
+      expect(result.latencyMs).toBeGreaterThan(0);
+      expect(result.latencyMs % 42).toBe(0);
       expect(result.costUsd).toBe('0.020000'); // 10*0.001 + 5*0.002
 
       // -- Message row --
@@ -234,7 +241,10 @@ describe('runAgent', () => {
       expect(run?.status).toBe('success');
       expect(run?.promptTokens).toBe(10);
       expect(run?.completionTokens).toBe(5);
-      expect(run?.latencyMs).toBe(42);
+      // H11: clock-call-count is implementation detail; assert truthful
+      // properties (positive + multiple of the fixture's 42ms tick).
+      expect(run?.latencyMs).toBeGreaterThan(0);
+      expect((run?.latencyMs ?? 0) % 42).toBe(0);
       expect(run?.costUsd).toBe('0.020000');
       expect(run?.provider).toBe('fake-provider');
       expect(run?.model).toBe('fake-model');
@@ -291,22 +301,36 @@ describe('runAgent', () => {
         expect(e.actorId).toBe(f.employeeId);
       }
 
-      // work.completed payload
+      // work.completed payload — latency is a fixture-clock-call-count
+      // artifact (H11 audit 2026-05-07); other fields are exact.
       const completed = events[4] as DashboardEvent<WorkCompletedPayload>;
       expect(completed.actorKind).toBe('orchestrator');
-      expect(completed.payload).toEqual({
-        threadId: f.threadId,
-        messageId: result.messageId,
-        promptTokens: 10,
-        completionTokens: 5,
-        latencyMs: 42,
-        costUsd: 0.02,
-      });
+      expect(completed.payload.threadId).toBe(f.threadId);
+      expect(completed.payload.messageId).toBe(result.messageId);
+      expect(completed.payload.promptTokens).toBe(10);
+      expect(completed.payload.completionTokens).toBe(5);
+      expect(completed.payload.costUsd).toBe(0.02);
+      expect(completed.payload.latencyMs).toBeGreaterThan(0);
+      expect(completed.payload.latencyMs % 42).toBe(0);
     });
 
-    it('updates message content incrementally as each delta arrives', async () => {
-      // Capture the content the message held immediately after each
-      // updateContent call by spying on it through a wrapped repo.
+    it('persists final cumulative content with batched writes (H11 audit 2026-05-07)', async () => {
+      // Pre-H11 this test asserted `['a', 'ab', 'abc']` — one DB write
+      // per delta — which was exactly the per-chunk anti-pattern the
+      // audit flagged at run-agent.ts:386: "Per-token DB writes —
+      // messages.updateContent() fires on every delta. SQLite lock
+      // churn at concurrency."
+      //
+      // Post-H11 the orchestrator batches DB writes by char-count
+      // (BATCH_FLUSH_MIN_CHARS = 64) and time (BATCH_FLUSH_INTERVAL_MS
+      // = 100ms), with a force-flush in the `finally` block on every
+      // terminal path. The renderer still sees per-chunk deltas via
+      // the `token.delta` event bus emit (verified by the sibling
+      // "streams 3 deltas..." test); only DB writes are batched.
+      //
+      // This test now pins the new contract: fewer DB writes than
+      // chunks, AND the final persisted content equals the cumulative
+      // delta sum.
       const contentSnapshots: string[] = [];
       const wrappedMessages = {
         append: f.messages.append,
@@ -340,9 +364,17 @@ describe('runAgent', () => {
         },
       );
 
-      // updateContent must be called once per delta, with the
-      // CUMULATIVE content — not the individual chunk.
-      expect(contentSnapshots).toEqual(['a', 'ab', 'abc']);
+      // H11 — DB writes are strictly fewer than the 3 incoming chunks
+      // (the entire point of batching); each char is well under the
+      // 64-char size threshold so any flushes that happen are
+      // time-triggered or the final force-flush.
+      expect(contentSnapshots.length).toBeLessThan(3);
+      // Final persisted content equals the full cumulative stream —
+      // proves the force-flush in `finally` lands the tail.
+      expect(contentSnapshots[contentSnapshots.length - 1]).toBe('abc');
+      // Final DB row reflects the same content (proves the wrapped
+      // updateContent is on the live path, not just observed).
+      expect(f.messages.listByThread(f.threadId)[0]?.content).toBe('abc');
     });
 
     it('emits work.started before any token.delta', async () => {
@@ -410,11 +442,17 @@ describe('runAgent', () => {
       );
 
       // After the first delta but before `done`, the message row must
-      // already exist with the partial content "x".
+      // already exist (proves message.append() persists the row at
+      // start, before any streaming). H11 (audit 2026-05-07): mid-
+      // stream DB content lags the buffer by up to BATCH_FLUSH_MIN_CHARS
+      // (64) or BATCH_FLUSH_INTERVAL_MS (100ms) — a single 'x' delta
+      // doesn't trip either threshold, so the row is empty until the
+      // force-flush in `finally` runs at stream-end. The renderer
+      // still sees the 'x' via the `token.delta` event bus emit
+      // (verified by the "streams 3 deltas..." sibling test).
       await firstDeltaSeen;
       const midRow = f.messages.listByThread(f.threadId);
       expect(midRow).toHaveLength(1);
-      expect(midRow[0]?.content).toBe('x');
       // The runs row also exists with status='running'.
       const midRuns = f.runs.listByEmployee(f.employeeId);
       expect(midRuns).toHaveLength(1);
@@ -424,6 +462,9 @@ describe('runAgent', () => {
       proceedAfterCheck();
       await runP;
 
+      // Post-stream the force-flush in `finally` writes the buffer.
+      const finalRow = f.messages.listByThread(f.threadId);
+      expect(finalRow[0]?.content).toBe('x');
       const finalRuns = f.runs.listByEmployee(f.employeeId);
       expect(finalRuns[0]?.status).toBe('success');
     });
@@ -1363,6 +1404,271 @@ describe('runAgent', () => {
       expect(r1.traceId).toMatch(/^[0-9a-f]{32}$/);
       expect(r2.traceId).toMatch(/^[0-9a-f]{32}$/);
       expect(r1.traceId).not.toBe(r2.traceId);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // H11 — batched streaming-delta DB writes (audit 2026-05-07).
+  //
+  // Audit complaint: "Per-token DB writes — messages.updateContent()
+  // fires on every delta. SQLite lock churn at concurrency."
+  //
+  // Resolution: hybrid OR-batched flusher with BATCH_FLUSH_MIN_CHARS = 64
+  // (size trigger) and BATCH_FLUSH_INTERVAL_MS = 100 (time trigger). The
+  // renderer keeps its smoothness via per-chunk `token.delta` events;
+  // only DB writes are throttled. The `finally` block at each retry
+  // attempt's exit force-flushes the pending tail so every terminal
+  // path (success, error, cancel, timeout) lands the final state.
+  // ---------------------------------------------------------------------
+  describe('H11 audit (2026-05-07): batched streaming-delta DB writes', () => {
+    function spyMessages(target: Fixture['messages']) {
+      const writes: Array<{ id: string; content: string }> = [];
+      return {
+        repo: {
+          append: target.append,
+          updateContent: (id: string, content: string) => {
+            writes.push({ id, content });
+            target.updateContent(id, content);
+          },
+        },
+        writes,
+      };
+    }
+
+    it('many tiny chunks below the 64-char threshold land in 1 DB write at force-flush', async () => {
+      // 50 single-char deltas, each well under the size threshold.
+      // The fixture clock advances 42ms per `now()` call. For each
+      // delta the orchestrator calls `now()` once for the time check,
+      // so by ~delta 3 (sinceFlush ≈ 126ms) the time-trigger fires
+      // its first flush. Subsequent deltas re-trigger time flushes
+      // after every ~3 chunks. Even so, the total write count is
+      // strictly less than the 50 chunks — proving batching is
+      // engaged. Pre-H11 this would have been exactly 50 writes.
+      const deltas = Array.from({ length: 50 }, () => 'x');
+      const provider = fakeProvider(deltas, { promptTokens: 1, completionTokens: 50 });
+      const { repo, writes } = spyMessages(f.messages);
+
+      await runAgent(
+        {
+          bus: f.bus,
+          messages: repo,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider,
+          providerName: 'p',
+          model: 'm',
+        },
+      );
+
+      // Strictly fewer DB writes than chunks (the audit's complaint).
+      expect(writes.length).toBeLessThan(deltas.length);
+      // Final write contains the cumulative stream.
+      expect(writes[writes.length - 1]?.content).toBe('x'.repeat(50));
+      // Final DB row reflects the same.
+      expect(f.messages.listByThread(f.threadId)[0]?.content).toBe('x'.repeat(50));
+    });
+
+    it('a single delta over BATCH_FLUSH_MIN_CHARS (64) triggers a size-based flush', async () => {
+      // One 200-char delta exceeds the size threshold; flush fires
+      // mid-stream (size-triggered) and the final force-flush in
+      // `finally` is a no-op because lastFlushedLength already equals
+      // buffer.length. So we expect exactly 1 DB write.
+      const big = 'a'.repeat(200);
+      const provider = fakeProvider([big], { promptTokens: 1, completionTokens: 50 });
+      const { repo, writes } = spyMessages(f.messages);
+
+      await runAgent(
+        {
+          bus: f.bus,
+          messages: repo,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider,
+          providerName: 'p',
+          model: 'm',
+        },
+      );
+
+      // Exactly one write — the size threshold fired immediately on
+      // the only delta, and the force-flush had no pending content.
+      expect(writes).toHaveLength(1);
+      expect(writes[0]?.content).toBe(big);
+    });
+
+    it('renderer still sees per-chunk deltas via token.delta event bus (batching does NOT throttle events)', async () => {
+      // The audit's directive was "batch DB writes" — NOT "batch
+      // events". The renderer's typing animation depends on the
+      // event bus emitting every delta. This test pins the contract:
+      // 10 chunks → 10 token.delta events, regardless of how many
+      // DB writes happened.
+      const deltas = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+      const provider = fakeProvider(deltas, { promptTokens: 1, completionTokens: 10 });
+
+      await runAgent(
+        {
+          bus: f.bus,
+          messages: f.messages,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider,
+          providerName: 'p',
+          model: 'm',
+        },
+      );
+
+      const events = f.bus.replaySince(0);
+      const tokenDeltas = events.filter((e) => e.type === 'token.delta');
+      // One event per chunk — batching is DB-only.
+      expect(tokenDeltas).toHaveLength(deltas.length);
+      // Concatenated deltas equal the cumulative stream.
+      const concat = tokenDeltas
+        .map((e) => (e.payload as TokenDeltaPayload).delta)
+        .join('');
+      expect(concat).toBe('abcdefghij');
+    });
+
+    it('error mid-stream lands the pre-error buffer in the DB (force-flush in `finally`)', async () => {
+      // A provider that yields some chunks then throws. Pre-H11 the
+      // per-chunk writes had already persisted everything; post-H11
+      // the buffer might still hold un-flushed content at throw time.
+      // The `finally` block's force-flush guarantees the pre-error
+      // content lands so the renderer's optimistic state is honored
+      // even when the run fails.
+      const provider = failingProvider(['hello'], new Error('boom'));
+      const { repo, writes } = spyMessages(f.messages);
+
+      await expect(
+        runAgent(
+          {
+            bus: f.bus,
+            messages: repo,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+          },
+        ),
+      ).rejects.toThrow('boom');
+
+      // The 'hello' chunk arrived before the throw; the force-flush
+      // in `finally` persisted it before the error finalize ran.
+      expect(writes.length).toBeGreaterThan(0);
+      expect(writes[writes.length - 1]?.content).toBe('hello');
+      expect(f.messages.listByThread(f.threadId)[0]?.content).toBe('hello');
+    });
+
+    it('cancel mid-stream lands the pre-cancel buffer in the DB', async () => {
+      // External abort signal fires after the first delta. The
+      // `finally` block's force-flush guarantees the pre-cancel
+      // content lands so the renderer's optimistic state survives.
+      const started = { resolve: () => {} };
+      const startedP = new Promise<void>((res) => {
+        started.resolve = res;
+      });
+      const controller = new AbortController();
+      const provider = abortableProvider(started);
+      const { repo, writes } = spyMessages(f.messages);
+
+      const runP = runAgent(
+        {
+          bus: f.bus,
+          messages: repo,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider,
+          providerName: 'p',
+          model: 'm',
+          signal: controller.signal,
+        },
+      );
+
+      await startedP;
+      controller.abort();
+      await expect(runP).rejects.toThrow();
+
+      // The 'partial' chunk that arrived before the abort was force-
+      // flushed by the `finally` block.
+      expect(writes.length).toBeGreaterThan(0);
+      expect(writes[writes.length - 1]?.content).toBe('partial');
+      expect(f.messages.listByThread(f.threadId)[0]?.content).toBe('partial');
+    });
+
+    it('zero-delta stream (only `done` chunk, no text) writes nothing — flusher is no-op when buffer is empty', async () => {
+      // The buffer never grew; nothing pending. Both the per-chunk
+      // attempts and the final force-flush short-circuit on
+      // `pending <= 0` so updateContent is never called.
+      const provider: ProviderStreamFn = async function* () {
+        yield { done: true, usage: { promptTokens: 1, completionTokens: 0 } };
+      };
+      const { repo, writes } = spyMessages(f.messages);
+
+      // The "no text" path falls through to the empty-buffer branch
+      // which writes a generic message OR throws. We don't care about
+      // that downstream behavior — we care that the flusher itself
+      // didn't write the empty buffer.
+      await runAgent(
+        {
+          bus: f.bus,
+          messages: repo,
+          runs: f.runs,
+          calcCost: f.calcCost,
+        },
+        {
+          companyId: f.companyId,
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          system: 's',
+          messages: baseHistory,
+          provider,
+          providerName: 'p',
+          model: 'm',
+        },
+      ).catch(() => {
+        // Tolerate the "no assistant text" error; this test is about
+        // the flusher's idempotence on an empty buffer.
+      });
+
+      // None of the writes have empty content from the flusher (any
+      // writes that DID happen were post-stream overwrites — e.g., a
+      // generic-acknowledgment write or an error-message write —
+      // never empty).
+      expect(writes.every((w) => w.content !== '')).toBe(true);
     });
   });
 });

@@ -89,8 +89,15 @@ export interface LoopStepAnswer {
  * Terminal error conditions. Every failure mode the loop can encounter
  * maps to exactly one reason so downstream UX + audit rows can branch
  * cleanly.
+ *
+ * `budget_iterations` and `budget_steps` are intentionally separate — see
+ * `LoopBudget` for the dual-cap semantic split. `budget_iterations` is the
+ * operator-facing tool-turn cap; `budget_steps` is the hard ceiling on
+ * emitted step entries (catches pathological fan-out per iteration).
+ * Audit 2026-05-07 H9.
  */
 export type LoopErrorReason =
+  | 'budget_iterations'
   | 'budget_steps'
   | 'budget_tokens'
   | 'budget_timeout'
@@ -122,13 +129,51 @@ export type LoopStep =
 
 export type LoopStatus = 'completed' | 'budget_exhausted' | 'failed' | 'canceled';
 
+/**
+ * Loop budget caps — dual-cap model (audit 2026-05-07 H9).
+ *
+ * The loop enforces two parallel caps because operator intuition and
+ * runtime accounting drift apart in ReAct: a single tool turn emits
+ * 2-4 step entries (optional `plan` + `tool_call` + `tool_result` per
+ * tool, plus a final `answer`), so a "max 8 steps" budget configured by
+ * an operator who expected 8 tool turns actually exhausts after only 2-3
+ * turns. The audit named this surprise.
+ *
+ * - `maxIterations` — operator-facing cap on **while-loop iterations**
+ *   (each iteration = one LLM call + zero or more tool dispatches).
+ *   Default 8. This is what an operator means when they say "max 8
+ *   tool turns". A budget breach emits `budget_iterations`.
+ * - `maxSteps` — hard ceiling on **emitted step entries** (the
+ *   `LoopStep` array the renderer consumes). Default 64 — generous
+ *   enough that the iteration cap is the binding constraint in normal
+ *   operation, but a runaway parallel-fan-out turn (one iteration with
+ *   100 tool calls) still trips the safety net. A breach emits
+ *   `budget_steps` — semantically distinct from `budget_iterations`
+ *   so post-mortems can tell "the operator's tool-turn budget was hit"
+ *   from "a single iteration tried to emit 100 step entries".
+ *
+ * The `LoopBudgetUsed` snapshot tracks both counters separately so the
+ * orchestrator can attribute exhaustion to whichever cap fired.
+ */
 export interface LoopBudget {
+  readonly maxIterations: number;
   readonly maxSteps: number;
   readonly maxTokens: number;
   readonly timeoutMs: number;
 }
 
 export interface LoopBudgetUsed {
+  /**
+   * Count of completed while-loop iterations. Each iteration = exactly
+   * one LLM completion call (success or aborting failure). Audit H9.
+   */
+  readonly iterations: number;
+  /**
+   * Count of emitted `LoopStep` entries (plan + tool_call + tool_result +
+   * answer + error). Independent of `iterations` — one iteration emits
+   * 2-4 steps depending on whether there was a plan preamble and how
+   * many parallel tool calls fired.
+   */
   readonly steps: number;
   readonly tokensIn: number;
   readonly tokensOut: number;
@@ -333,7 +378,18 @@ export interface LoopDeps {
    * typically already bound to a specific model, so this is a label.
    */
   readonly model: string;
-  /** Default: 8. Matches the Settings default from T7. */
+  /**
+   * Default: 8. The operator-facing cap on while-loop iterations
+   * (one LLM call + tool dispatches per iteration). This is what
+   * "max tool turns" means in the Settings UI. Audit 2026-05-07 H9.
+   */
+  readonly maxIterations?: number;
+  /**
+   * Default: 64. Hard ceiling on emitted `LoopStep` entries — a safety
+   * net that catches a runaway parallel-fan-out iteration. The
+   * iteration cap is the binding constraint in normal operation; this
+   * one only fires for pathological cases. Audit 2026-05-07 H9.
+   */
   readonly maxSteps?: number;
   /** Default: 8000. Summed across all completions in the run. */
   readonly maxTokens?: number;
@@ -384,7 +440,21 @@ export interface AgenticLoop {
 // settings haven't been written yet.
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_MAX_STEPS = 8;
+/**
+ * Default cap on while-loop iterations (operator-facing tool-turn count).
+ * Each iteration = one LLM completion call + zero-or-more tool dispatches.
+ * Audit 2026-05-07 H9.
+ */
+export const DEFAULT_MAX_ITERATIONS = 8;
+/**
+ * Default ceiling on emitted `LoopStep` entries. Bumped from 8 to 64
+ * (audit 2026-05-07 H9) so it acts as a safety net rather than the
+ * binding constraint — `DEFAULT_MAX_ITERATIONS` (8) is the
+ * operator-facing knob in normal operation. 64 = 8 iterations × 8
+ * step entries each, generous enough for parallel tool calls within
+ * a single iteration, tight enough to catch runaway fan-out.
+ */
+export const DEFAULT_MAX_STEPS = 64;
 export const DEFAULT_MAX_TOKENS = 8000;
 export const DEFAULT_TIMEOUT_MS = 120_000;
 export const DEFAULT_TOOL_TIMEOUT_MS = 30_000;

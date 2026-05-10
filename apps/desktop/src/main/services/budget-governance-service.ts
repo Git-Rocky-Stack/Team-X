@@ -622,7 +622,25 @@ export function createBudgetGovernanceService(
 
   async function recordRunSpend(runId: string): Promise<void> {
     const run = runsRepo.getById(runId);
-    if (!run || run.status === 'running' || run.status === 'cancelled') return;
+    // Skip in-flight runs only — `runs.costUsd` is not yet final until the
+    // orchestrator writes status `success | error | cancelled`.
+    //
+    // Cancelled runs ARE recorded when `runs.costUsd > 0`. The agentic loop
+    // accumulates `state.costUsd` across every iteration's `step.telemetry.costUsd`
+    // (agentic-loop-service.ts:772), so a stop fired mid-loop persists real
+    // pre-cancel cost onto the runs row in `finishRun()`. Skipping the ledger
+    // entry on cancel left `SUM(runs.costUsd) > SUM(budget_ledger.amountUsd)`
+    // — the budget reconciliation blind spot the audit named at this line.
+    // The `amountUsd <= 0` guard below handles legitimate zero-cost cancels
+    // without a spurious ledger entry. Same path also captures error/timeout
+    // runs that accumulated cost before the error-finalize.
+    //
+    // Audit 2026-05-07 H8 — `budget-governance-service.ts:625`. See the
+    // companion call-site change in `agentic-loop-service.ts` (the same
+    // audit row removed the parallel `runStatus !== 'cancelled'` filter so
+    // the function — not the caller — owns the "is this run recordable?"
+    // decision).
+    if (!run || run.status === 'running') return;
     const amountUsd = Number(run.costUsd);
     if (!Number.isFinite(amountUsd) || amountUsd <= 0) return;
 

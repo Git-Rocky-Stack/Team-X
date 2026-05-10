@@ -57,6 +57,7 @@
 
 import {
   type AgenticLoop,
+  DEFAULT_MAX_ITERATIONS,
   DEFAULT_MAX_STEPS,
   DEFAULT_MAX_TOKENS,
   DEFAULT_TIMEOUT_MS,
@@ -194,6 +195,20 @@ export interface AgenticLoopOrchestratorLike {
 }
 
 export interface AgenticLoopBudgets {
+  /**
+   * Operator-facing cap on tool-turn iterations (one LLM call + tool
+   * dispatches per iteration). Default `DEFAULT_MAX_ITERATIONS = 8`.
+   * Optional so existing callers passing only `{ maxSteps, maxTokens,
+   * timeoutMs }` keep working — the service falls back to the default.
+   * Audit 2026-05-07 H9.
+   */
+  maxIterations?: number;
+  /**
+   * Hard ceiling on emitted `LoopStep` entries (safety net for runaway
+   * parallel fan-out within a single iteration). Default 64 — see
+   * `LoopBudget` doc-comment in `@team-x/intelligence` for the dual-cap
+   * rationale. Audit 2026-05-07 H9.
+   */
   maxSteps: number;
   maxTokens: number;
   timeoutMs: number;
@@ -486,6 +501,8 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
   function resolveBudgets(): AgenticLoopBudgets {
     if (deps.getBudgets) return deps.getBudgets();
     return {
+      // Operator-facing iteration cap — H9 audit 2026-05-07.
+      maxIterations: DEFAULT_MAX_ITERATIONS,
       maxSteps: DEFAULT_MAX_STEPS,
       maxTokens: DEFAULT_MAX_TOKENS,
       timeoutMs: DEFAULT_TIMEOUT_MS,
@@ -541,7 +558,17 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       logger.warn('[agentic-loop] runs.finish failed', err);
     }
 
-    if (runStatus !== 'cancelled' && deps.budgetGovernance) {
+    // Always invoke recordRunSpend when a budget-governance dep is wired in.
+    // Cancelled runs accumulate real cost in `state.costUsd` across every
+    // iteration's tool turns (state.costUsd += step.telemetry.costUsd above);
+    // the runs row written in `runsRepo.finish` carries that cost, and the
+    // ledger must capture it too or `SUM(runs) ≠ SUM(ledger)` for any company
+    // whose users hit the stop button. The function-side guard at
+    // budget-governance-service.ts skips zero-cost cancels and in-flight runs.
+    // Audit 2026-05-07 H8 — paired with the function-side change at
+    // `budget-governance-service.ts:625` so the cost-ledger decision lives in
+    // exactly one place.
+    if (deps.budgetGovernance) {
       void deps.budgetGovernance.recordRunSpend(state.runId).catch((err) => {
         logger.warn('[agentic-loop] budget recordRunSpend failed', err);
       });
@@ -755,6 +782,10 @@ export function createAgenticLoopService(deps: AgenticLoopServiceDeps): AgenticL
       complete: pauseAwareComplete,
       tools,
       model: resolved.model,
+      // Optional in `AgenticLoopBudgets` (callers may pass legacy 3-field
+      // budgets); the loop also defaults internally to DEFAULT_MAX_ITERATIONS
+      // if undefined. Audit 2026-05-07 H9.
+      maxIterations: budgets.maxIterations,
       maxSteps: budgets.maxSteps,
       maxTokens: budgets.maxTokens,
       timeoutMs: budgets.timeoutMs,

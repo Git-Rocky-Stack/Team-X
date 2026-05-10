@@ -18,6 +18,11 @@ export const AGENT_IMPROVEMENT_LABEL = 'agent-improvement';
 export const AGENT_SELF_IMPROVEMENT_LABEL = 'self-improvement';
 
 const AGENT_IMPROVEMENT_AUTO_LABEL = 'agent-improvement:auto-created';
+// H12 audit (2026-05-07): every auto-created improvement ticket carries a
+// deterministic cause hash label so future runs can recognize the same
+// evidence set even after the ticket has been closed. The hash is the
+// dedup key for the audit's "can cycle on identical signals" complaint.
+export const AGENT_IMPROVEMENT_CAUSE_LABEL_PREFIX = 'agent-improvement:cause:';
 const DEFAULT_EVENT_LIMIT = 200;
 const DEFAULT_HISTORY_LIMIT = 10;
 const MAX_EVENT_LIMIT = 500;
@@ -203,6 +208,10 @@ function rowToRunSummary(row: EventRowLike): AgentImprovementRunSummary {
     createdTicketIds,
     inspectedEventCount: numberFromPayload(payload, 'inspectedEventCount', 0),
     inspectedTicketCount: numberFromPayload(payload, 'inspectedTicketCount', 0),
+    // H12 audit (2026-05-07): backfill from the run event. Older events
+    // emitted before H12 simply report 0 dedup, which is the truthful
+    // pre-fix state — no rewrite of historical telemetry.
+    dedupedCauseCount: numberFromPayload(payload, 'dedupedCauseCount', 0),
   };
 }
 
@@ -236,13 +245,78 @@ function signalLabel(signalKind: AgentImprovementSignalKind): string {
   return _exhaustive;
 }
 
-function signalLabels(signalKind: AgentImprovementSignalKind): string[] {
+function signalLabels(signalKind: AgentImprovementSignalKind, causeHash: string): string[] {
   return unique([
     AGENT_IMPROVEMENT_LABEL,
     AGENT_SELF_IMPROVEMENT_LABEL,
     AGENT_IMPROVEMENT_AUTO_LABEL,
     signalLabel(signalKind),
+    `${AGENT_IMPROVEMENT_CAUSE_LABEL_PREFIX}${causeHash}`,
   ]);
+}
+
+// H12 audit (2026-05-07): deterministic 8-char hex hash over the sorted
+// sourceRefs of a candidate signal. Stable across runs, order-independent,
+// collision-tolerant for the small per-company evidence sets we emit
+// (typically 4-50 refs). djb2-XOR is fast, dependency-free, and the 32-bit
+// output is plenty for an in-process dedup key (the audit failure mode is
+// "exact same evidence set re-fires", not "two different sets collide").
+function hashSourceRefs(refs: readonly string[]): string {
+  const sorted = [...refs].sort();
+  const joined = sorted.join('\x1f');
+  let hash = 5381;
+  for (let i = 0; i < joined.length; i += 1) {
+    hash = ((hash << 5) + hash) ^ joined.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+// H12 audit (2026-05-07): collect every cause hash already attached to ANY
+// improvement ticket (open + closed). The closed-ticket case is the entire
+// reason this dedup exists — the audit's complaint is that closing a stale
+// improvement ticket lets the next run re-open it on the same evidence.
+function collectSeenCauseHashes(tickets: readonly TicketRowLike[]): Set<string> {
+  const seen = new Set<string>();
+  for (const ticket of tickets) {
+    if (!hasLabel(ticket, AGENT_IMPROVEMENT_LABEL)) continue;
+    for (const label of parseLabels(ticket.labelsJson)) {
+      if (label.startsWith(AGENT_IMPROVEMENT_CAUSE_LABEL_PREFIX)) {
+        seen.add(label.slice(AGENT_IMPROVEMENT_CAUSE_LABEL_PREFIX.length));
+      }
+    }
+  }
+  return seen;
+}
+
+// H12 audit (2026-05-07): build the set of ticket / thread ids that belong
+// to improvement work itself, so events caused by improvement work can be
+// excluded from candidate-signal generation. This breaks the audit's
+// "recursion-via-database" — a failing improvement ticket no longer spawns
+// another improvement ticket about its own failure.
+interface ImprovementScope {
+  ticketIds: ReadonlySet<string>;
+  threadIds: ReadonlySet<string>;
+}
+
+function collectImprovementScope(tickets: readonly TicketRowLike[]): ImprovementScope {
+  const ticketIds = new Set<string>();
+  const threadIds = new Set<string>();
+  for (const ticket of tickets) {
+    if (!hasLabel(ticket, AGENT_IMPROVEMENT_LABEL)) continue;
+    ticketIds.add(ticket.id);
+    if (ticket.threadId) threadIds.add(ticket.threadId);
+  }
+  return { ticketIds, threadIds };
+}
+
+function isSelfCausedEvent(event: EventRowLike, scope: ImprovementScope): boolean {
+  if (scope.ticketIds.size === 0 && scope.threadIds.size === 0) return false;
+  const payload = parsePayload(event);
+  const ticketId = typeof payload.ticketId === 'string' ? payload.ticketId : null;
+  if (ticketId && scope.ticketIds.has(ticketId)) return true;
+  const threadId = typeof payload.threadId === 'string' ? payload.threadId : null;
+  if (threadId && scope.threadIds.has(threadId)) return true;
+  return false;
 }
 
 function priorityFor(signalKind: AgentImprovementSignalKind, sourceCount: number): TicketPriority {
@@ -296,10 +370,11 @@ function buildRecommendation(args: {
   signalKind: AgentImprovementSignalKind;
   sourceCount: number;
   sourceRefs: string[];
+  causeHash: string;
   existingTicketId: string | null;
   createdTicketId: string | null;
 }): AgentImprovementRecommendation {
-  const labels = signalLabels(args.signalKind);
+  const labels = signalLabels(args.signalKind, args.causeHash);
   return {
     id: args.signalKind,
     signalKind: args.signalKind,
@@ -333,6 +408,7 @@ function buildCandidateSignals(args: {
   events: EventRowLike[];
   tickets: TicketRowLike[];
   now: number;
+  improvementScope: ImprovementScope;
 }): Array<{
   signalKind: AgentImprovementSignalKind;
   sourceCount: number;
@@ -341,8 +417,14 @@ function buildCandidateSignals(args: {
   const operationalTickets = args.tickets.filter(
     (ticket) => !hasLabel(ticket, AGENT_IMPROVEMENT_LABEL),
   );
-  const workFailures = args.events.filter((event) => event.eventType === 'work.failed');
-  const runtimeFailures = args.events.filter(
+  // H12 audit (2026-05-07): exclude failure events caused by improvement
+  // work itself. Without this filter, a failing improvement ticket spawns
+  // another improvement ticket about its own failure — recursion-via-DB.
+  const operationalEvents = args.events.filter(
+    (event) => !isSelfCausedEvent(event, args.improvementScope),
+  );
+  const workFailures = operationalEvents.filter((event) => event.eventType === 'work.failed');
+  const runtimeFailures = operationalEvents.filter(
     (event) =>
       event.eventType === 'runtime.execution.failed' || event.eventType === 'runtime.session.stale',
   );
@@ -412,6 +494,12 @@ function emitRunEvent(
         skippedExistingTicketIds: result.skippedExistingTicketIds,
         inspectedEventCount: result.inspectedEventCount,
         inspectedTicketCount: result.inspectedTicketCount,
+        // H12 audit (2026-05-07): surface the dedup metric so the dashboard
+        // can show "N signals were suppressed by causation-chain dedup" —
+        // gives the operator visibility into how often the loop would have
+        // cycled on identical evidence without the fix.
+        dedupedCauseCount: result.dedupedCauseHashes.length,
+        dedupedCauseHashes: result.dedupedCauseHashes,
       },
     });
   } catch (err) {
@@ -454,31 +542,69 @@ export function createAgentImprovementService(
       const ranAt = now();
       const events = deps.eventsRepo.listByCompany(input.companyId, undefined, eventLimit);
       const tickets = deps.ticketsRepo.listByCompany(input.companyId);
-      const candidateSignals = buildCandidateSignals({ events, tickets, now: ranAt });
+      // H12 audit (2026-05-07): the two pillars of the fix —
+      //   1. `improvementScope` lets buildCandidateSignals exclude failure
+      //      events whose ticketId/threadId originated on improvement work,
+      //      breaking the recursion-via-DB chain.
+      //   2. `seenCauseHashes` is the persistent dedup register keyed by
+      //      a deterministic hash of sorted sourceRefs. Hits skip both the
+      //      recommendation AND the ticket write so an identical signal
+      //      cannot cycle on the same evidence after a prior ticket closed.
+      const improvementScope = collectImprovementScope(tickets);
+      const seenCauseHashes = collectSeenCauseHashes(tickets);
+      const candidateSignals = buildCandidateSignals({
+        events,
+        tickets,
+        now: ranAt,
+        improvementScope,
+      });
       const createdTicketIds: string[] = [];
       const skippedExistingTicketIds: string[] = [];
+      const dedupedCauseHashes: string[] = [];
+      const recommendations: AgentImprovementRecommendation[] = [];
 
-      const recommendations = candidateSignals.map((signal) => {
+      for (const signal of candidateSignals) {
+        const causeHash = hashSourceRefs(signal.sourceRefs);
+
         const existing = findExistingSignalTicket(tickets, signal.signalKind);
         if (existing) {
           skippedExistingTicketIds.push(existing.id);
-          return buildRecommendation({
-            ...signal,
-            existingTicketId: existing.id,
-            createdTicketId: null,
-          });
+          recommendations.push(
+            buildRecommendation({
+              ...signal,
+              causeHash,
+              existingTicketId: existing.id,
+              createdTicketId: null,
+            }),
+          );
+          continue;
+        }
+
+        // H12 audit (2026-05-07): identical evidence was already turned into
+        // an improvement ticket in a prior run. The prior ticket may now be
+        // closed, but we refuse to re-open the same signal — that's the
+        // exact cycle the audit flagged. The run still surfaces the dedup
+        // count so operators can see it happened.
+        if (seenCauseHashes.has(causeHash)) {
+          dedupedCauseHashes.push(causeHash);
+          continue;
         }
 
         if (input.dryRun) {
-          return buildRecommendation({
-            ...signal,
-            existingTicketId: null,
-            createdTicketId: null,
-          });
+          recommendations.push(
+            buildRecommendation({
+              ...signal,
+              causeHash,
+              existingTicketId: null,
+              createdTicketId: null,
+            }),
+          );
+          continue;
         }
 
         const recommendation = buildRecommendation({
           ...signal,
+          causeHash,
           existingTicketId: null,
           createdTicketId: null,
         });
@@ -495,8 +621,13 @@ export function createAgentImprovementService(
           dependenciesJson: '[]',
         });
         createdTicketIds.push(ticketId);
-        return { ...recommendation, createdTicketId: ticketId };
-      });
+        // Mark this hash as seen for the rest of this run so a duplicate
+        // signal within the same run also dedups (defense-in-depth — the
+        // candidate list shouldn't produce duplicates today, but if a future
+        // signal kind is added that overlaps, we'd rather dedup than write).
+        seenCauseHashes.add(causeHash);
+        recommendations.push({ ...recommendation, createdTicketId: ticketId });
+      }
 
       const result: AgentImprovementRunResult = {
         companyId: input.companyId,
@@ -506,6 +637,7 @@ export function createAgentImprovementService(
         recommendations,
         createdTicketIds,
         skippedExistingTicketIds: unique(skippedExistingTicketIds),
+        dedupedCauseHashes: unique(dedupedCauseHashes),
       };
 
       emitRunEvent(deps, reporterId, result);

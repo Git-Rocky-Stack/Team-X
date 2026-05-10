@@ -52,7 +52,10 @@ import {
   type RagService,
   createEntityResolver,
   createIntentClassifier,
+  createMockCrossEncoder,
+  createQueryExpansionService,
   createRagService,
+  createRerankerService,
   createSlotFiller,
 } from '@team-x/intelligence';
 import {
@@ -1071,6 +1074,22 @@ app
     } else {
       console.log('[rag] disabled or unconfigured — running without RAG');
     }
+    // H10 (audit 2026-05-07) — wire query expansion + cross-encoder
+    // reranker into the retrieval orchestrator. Both were built but
+    // unwired; the orchestrator now augments the 3-query baseline with
+    // entity-aware semantic/synonym expansions and reranks the top
+    // composite-scored candidates with a cross-encoder before the
+    // dedupe-by-source + token-budget pass.
+    //
+    // The mock cross-encoder uses lexical overlap as its score (no
+    // network, no LLM cost). When a real Cohere/OpenAI rerank API is
+    // configured later, swap in `createApiCrossEncoder({ baseURL,
+    // apiKey, model })` here without touching the orchestrator. Same
+    // story for HyDE: the QE service is created without an LLM today
+    // (HyDE off); plug an LLM in to enable HyDE without diff churn.
+    const queryExpansionService = createQueryExpansionService({ hydeEnabled: false });
+    const rerankerService = createRerankerService(createMockCrossEncoder());
+
     const retrievalOrchestrator =
       ragService === null
         ? null
@@ -1082,6 +1101,39 @@ app
             searchVault: (companyId, query) =>
               vaultRepo.search(companyId, query).map((hit) => ({ id: hit.id, rank: hit.rank })),
             getVaultFile: (id) => vaultRepo.getById(id),
+            queryExpansion: queryExpansionService,
+            // H10 — synthesize per-company entity context from the same
+            // repos the orchestrator already reads. The QE service uses
+            // employee/project/goal names + IDs to substitute names with
+            // IDs in the query text and vice-versa, lifting recall on
+            // queries that mention people/projects by name without
+            // exact-token overlap with the indexed content.
+            entityContextProvider: (companyId) => ({
+              companyId,
+              employees: employeesRepo.listByCompany(companyId).map((e) => ({
+                id: e.id,
+                name: e.name,
+                aliases: [],
+              })),
+              projects: projectsRepo.listByCompany(companyId).map((p) => ({
+                id: p.id,
+                // Schema uses `title` for projects (and goals); `EntityContext.projects[i].name`
+                // is the QE service's field — we map title → name at the seam.
+                name: p.title,
+                aliases: [],
+              })),
+              goals: goalsRepo.listByCompany(companyId).map((g) => ({
+                id: g.id,
+                name: g.title,
+                aliases: [],
+              })),
+              tickets: ticketsRepo.listByCompany(companyId).map((t) => ({
+                id: t.id,
+                title: t.title,
+                tags: [],
+              })),
+            }),
+            reranker: rerankerService,
           });
 
     const contextAssemblerService = createContextAssemblerService({
