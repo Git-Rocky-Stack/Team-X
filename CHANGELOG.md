@@ -136,6 +136,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `teamx budget`, `teamx run`, or `teamx workspace` outside the
   intentional denial list in `cli-reference.md` and the CHANGELOG
   context above.
+- **FAQ "Can I share a workspace?" answer aligned to the actual
+  portability surface.** Earlier passes hedged the answer to avoid
+  inventing UI button names; this pass cross-references the real code
+  (`apps/desktop/src/main/services/operator-access-service.ts`,
+  `apps/desktop/src/main/db/repos/operators.ts`, the
+  `operator_memberships` + `operator_invites` tables in
+  `apps/desktop/src/main/db/schema.ts`, and `Settings → Portability`
+  in `portability-section.tsx`) to document what actually shipped:
+  - **Three sharing postures** not two: `local` (zero-login solo,
+    default), `invited` (local-first multi-operator, shipped), `cloud`
+    (workspace-side wiring is prepared but the hosted backend does
+    not exist yet — explicitly called out as "prepared, not yet
+    operational").
+  - **Invites are email-addressed AND token-based**, not "link-only" —
+    the earlier softening was wrong. The owner enters the operator's
+    email; Team-X mints a one-time `inviteToken`; the invitee redeems
+    it on their own install to create a local operator + membership
+    row. Nothing leaves the machine unless cloud posture is chosen
+    and a hosted backend exists to talk to.
+  - **Four membership roles** (`owner`, `admin`, `operator`,
+    `reviewer`), not three. `owner` and `admin` get all four
+    capability flags on by default (`canApproveBudget`,
+    `canApproveAuthority`, `canManageRoutines`, `canManageRuntimes`);
+    `operator` and `reviewer` start with everything off and need
+    explicit per-capability grants. Defaults sourced from
+    `membershipCapabilitiesForRole()`. Capability flags gate which
+    **human** operators can approve writes — they do not gate the AI
+    employees' own work.
+  - The UI path is **`Settings → Portability`** (the `Collaborators`
+    label invented in earlier drafts does not exist).
 
 ### Fixed
 

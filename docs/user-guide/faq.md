@@ -377,9 +377,28 @@ Cost reporting (token spend per employee, per ticket, per workspace) is per-work
 
 ### Can I share a workspace with another operator?
 
-Yes — **shared workspace** support shipped in v3.0.0 (workspace portability + shared operator invites). The exact UI lives under **Settings → Workspaces** and continues to evolve; sharing is link-based (signed export with portability posture) rather than email-invite-based, since Team-X is local-first and has no central account system.
+Yes. Workspace portability + shared-operator support shipped in v3.0.0. The UI lives under **Settings → Portability** (not "Collaborators"). Each workspace runs in one of three **sharing postures**:
 
-Permissions are role-based at the operator level (the human running the app), not at the AI-employee level — the AI employees inside a workspace work for whoever holds the workspace.
+| Posture | What it does | Status |
+|---|---|---|
+| **Local** | Zero-login local-first; one workstation owns the workspace. Default. | Shipped |
+| **Invited** | Local-first multi-operator: invite other humans by email with a token-based invite, redeem on their own machine, memberships persist locally on both sides. | Shipped |
+| **Cloud** | Hosted/shared supervision seam — workspace metadata is prepared so a hosted Team-X back-end could sync identities and state later. | **Prepared, not yet operational** — the workspace-side wiring exists, the hosted backend does not |
+
+Invites are **email-addressed and token-based** — you enter the operator's email and Team-X generates a one-time `inviteToken`. The invitee redeems the token on their own Team-X install to mint a local operator + membership row. Nothing leaves your machine unless you choose Cloud posture and a hosted backend exists to talk to.
+
+### What roles can a shared operator have?
+
+Every membership has one of four **operator-membership roles**:
+
+| Role | Default capability flags |
+|---|---|
+| **owner** | All four flags on: `canApproveBudget`, `canApproveAuthority`, `canManageRoutines`, `canManageRuntimes` |
+| **admin** | All four flags on (same defaults as owner) |
+| **operator** | All four flags off by default — grant explicitly per capability |
+| **reviewer** | All four flags off by default — read/comment-oriented; grant explicitly per capability |
+
+The defaults are produced by `membershipCapabilitiesForRole()` in `operator-access-service.ts`; the per-capability flags are granular grants the workspace owner can flip individually in the Portability UI. None of this gates AI-employee work itself — the AI employees in a workspace work for whoever holds the workspace, and the role flags just control which **human** operators can approve budgets, approve authority changes (hire/fire/promote), manage routines, and manage runtimes.
 
 ---
 
