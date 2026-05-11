@@ -4,7 +4,7 @@
 
 **Run an AI company. Not a prompt.**
 
-[![CI](https://github.com/strategia-x/team-x/actions/workflows/ci.yml/badge.svg)](https://github.com/strategia-x/team-x/actions/workflows/ci.yml)
+[![CI](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml/badge.svg)](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-1683%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
@@ -71,7 +71,7 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 
 ### Download
 
-Grab the latest release for your platform from [GitHub Releases](https://github.com/strategia-x/team-x/releases):
+Grab the latest release for your platform from [GitHub Releases](https://github.com/Git-Rocky-Stack/Team-X/releases):
 
 | Platform | File | Architecture |
 |----------|------|--------------|
@@ -83,8 +83,8 @@ Grab the latest release for your platform from [GitHub Releases](https://github.
 
 ```bash
 # Prerequisites: Node.js 20+, pnpm 9+
-git clone https://github.com/strategia-x/team-x.git
-cd team-x
+git clone https://github.com/Git-Rocky-Stack/Team-X.git
+cd Team-X
 pnpm install
 pnpm dev
 ```

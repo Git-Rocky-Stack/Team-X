@@ -5,7 +5,7 @@
   "author": "Strategia-X",
   "license": "MIT",
   "description": "The curated F10-quality default role library for Team-X. Hand-written role specifications for officers, senior management, management, supervisors, leads, and individual contributors across the modern software organization.",
-  "homepage": "https://github.com/strategia-x/team-x",
+  "homepage": "https://github.com/Git-Rocky-Stack/Team-X",
   "compatibleWith": ">=1.0.0",
   "levels": ["officer", "senior_management", "management", "supervisor", "lead", "ic"],
   "signed": true,

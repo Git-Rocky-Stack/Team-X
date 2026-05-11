@@ -17,8 +17,8 @@ Download the installer for your platform from the Team-X releases page:
 If you prefer to build from source:
 
 ```bash
-git clone https://github.com/strategia-x/team-x.git
-cd team-x
+git clone https://github.com/Git-Rocky-Stack/Team-X.git
+cd Team-X
 pnpm install
 pnpm dev
 ```

@@ -34,8 +34,8 @@ Thank you for your interest in contributing to Team-X. This guide covers everyth
 
 ```bash
 # Clone the repository
-git clone https://github.com/strategia-x/team-x.git
-cd team-x
+git clone https://github.com/Git-Rocky-Stack/Team-X.git
+cd Team-X
 
 # Install dependencies (triggers electron-rebuild postinstall)
 pnpm install

@@ -23,6 +23,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.0] — 2026-05-10 — Agentic prompt-engineering audit P1 closure (H6–H14) · orchestrator hardening
+
+Minor release closing nine P1 findings from the 2026-05-07 agentic-system
+prompt-engineering audit (H6 through H14) plus an orchestrator `run-agent`
+hardening pass. Each `H<n>` finding ships with implementation + a dedicated
+`describe` block (greppable on the string `audit 2026-05-07`) + audit-doc
+resolution entry. Every change is backward-compatible — new fields/deps
+optional, pre-H<n> callers unchanged.
+
+### Added
+
+- **H6 — Typed event payloads + runtime guards** in
+  `packages/shared-types/events` so event consumers can discriminate by
+  `kind` with full type narrowing instead of casting through `unknown`.
+- **H7 — Per-employee monthly token caps** in `budget-governance-service`,
+  Set-backed scope membership so cap evaluation is O(1) per check instead
+  of scanning the assignment list each turn.
+- **H10 — `work.failed` payload schema** in `agentic-loop-service`: every
+  failure now carries `threadId` / `employeeId` / `messageId` so downstream
+  audit, telemetry, and the self-improvement loop can attribute the failure
+  to the right surface without re-querying.
+- **H13 — Copilot insight severity ceiling** in
+  `copilot-analyzer-service.ts`. `MAX_CRITICAL_DRAFTS_PER_TICK = 2` plus a
+  pure `applyCriticalCeiling` helper bounds the critical-alert surface:
+  overflow critical drafts get downgraded to `warning` (signal preserved,
+  fatigue surface bounded). New `criticalProposed` /
+  `criticalDowngraded` telemetry counters on
+  `CopilotAnalyzerTickResult` and `CopilotAnalyzedPayload`, zero-init on
+  every early-exit path. **+11 tests** (7 helper + 4 service integration).
+- **H14 — Copilot category-weight feedback loop closure**. New pure
+  `aggregateCategoryWeightsFromDismissals` helper produces a complete
+  updated weights map + audit-trail of changed categories. New opt-in
+  `autoApplyDismissalFeedback` toggle on the dismiss handler: when ON,
+  the loop persists weights via `setCopilotWeights`, emits
+  `copilot.weights.changed` with `actorKind='employee'` /
+  `actorId='system-copilot'`, and returns `feedbackApplied` instead of
+  the advisory `feedbackSuggestion`. Defensive fallbacks — missing setter,
+  setter-throws, and empty aggregation all degrade to the advisory path
+  with `console.warn`. New `CopilotFeedbackApplied` type; mutually-exclusive
+  `feedbackApplied` vs `feedbackSuggestion` on `CopilotDismissResult`.
+  **+13 tests** (6 aggregator + 5 auto-apply integration + 2 advisory pins).
+
+### Changed
+
+- **H8 — Retrieval orchestrator** dedup-by-`ref` plus a freshness-bias
+  scoring term so identical citations from multiple sources collapse and
+  recent context outranks stale matches at equal cosine distance.
+- **H9 — Intelligence loop** now uses bounded exponential backoff with a
+  `max-attempts` guard so a flapping downstream can never spin the loop
+  indefinitely.
+- **H11 — Agentic tools** enforce a tool-result size cap on the default
+  chat path so a runaway tool response cannot blow the model context
+  budget — tools return a truncation marker instead of unbounded text.
+- **H12 — Agent-improvement service** dedupes by causation-chain root and
+  adds a recursion-via-DB block so self-improvement runs cannot chain into
+  themselves through the events table.
+- **Orchestrator run-agent hardening**
+  (`apps/desktop/src/main/orchestrator/run-agent.ts`). Companion tests
+  expanded by ~318 lines in `run-agent.test.ts`. Resolves audit follow-up
+  items in `docs/audits/2026-05-07-agentic-system-prompt-engineering-audit.md`.
+- **Release-marker freeze pinned to 3.1.0** across all 7 workspace
+  `package.json` files. Test guard
+  (`apps/desktop/src/renderer/src/app/top-bar.test.tsx`) updated in
+  lock-step so the freeze test pins to the new minor.
+- **Documentation URL canonicalization** — README, CONTRIBUTING,
+  getting-started docs, the static landing site (`docs/site/index.html`),
+  and `role-packs/strategia-official/pack.json` now point at
+  `github.com/Git-Rocky-Stack/Team-X` (the actual remote). Pre-3.1.0
+  references pointed at the placeholder `strategia-x/team-x` org/repo
+  pair and would 404. Clone-and-`cd` snippets corrected to
+  `cd Team-X` so they don't break on case-sensitive filesystems.
+
+### Fixed
+
+- Per H10, work-failure events that previously surfaced without
+  `threadId` are now always attributed to their originating thread.
+- Per H13, ticks that previously produced an unbounded number of
+  `severity: critical` insights are now capped at 2 per tick with the
+  surplus downgraded rather than dropped.
+
+---
+
 ## [3.0.0] — 2026-05-07 — Agentic system enhancement · settings UX repairs · system-employee top-up
 
 Major release in two halves: a four-fix sweep across Settings + system bootstrap that

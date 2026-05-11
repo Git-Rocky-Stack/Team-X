@@ -41,10 +41,10 @@ const DESKTOP_PACKAGE_JSON_PATH = join(currentDirname, '..', '..', '..', '..', '
 const REPO_ROOT_DIR = join(currentDirname, '..', '..', '..', '..', '..', '..');
 const REPO_ROOT_PACKAGE_JSON_PATH = join(REPO_ROOT_DIR, 'package.json');
 
-const APP_RELEASE_VERSION = '3.0.0';
-const PACKAGE_RELEASE_VERSION = '3.0.0';
-const SHARED_TYPES_RELEASE_VERSION = '3.0.0';
-const INTELLIGENCE_RELEASE_VERSION = '3.0.0';
+const APP_RELEASE_VERSION = '3.1.0';
+const PACKAGE_RELEASE_VERSION = '3.1.0';
+const SHARED_TYPES_RELEASE_VERSION = '3.1.0';
+const INTELLIGENCE_RELEASE_VERSION = '3.1.0';
 
 const RELEASE_PACKAGE_JSON_MARKERS = [
   { path: REPO_ROOT_PACKAGE_JSON_PATH, version: APP_RELEASE_VERSION },
