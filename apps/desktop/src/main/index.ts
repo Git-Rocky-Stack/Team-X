@@ -1448,7 +1448,7 @@ app
             listByCompany: (cid) =>
               embeddingsRepo
                 .listByCompany(cid)
-                .map((r) => ({ ...r, sourceType: r.sourceType as any })),
+                .map((r) => ({ ...r, sourceType: r.sourceType as EmbeddingSourceType })),
           },
           llmComplete,
         });
@@ -2375,12 +2375,14 @@ app
         isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
       },
       agenticLoopService: {
-        // biome-ignore lint/style/noNonNullAssertion: composition order
-        // guarantees `agenticLoopServiceInstance` is initialized before
-        // any IPC consumer of this dep struct can fire; the optional-
-        // chaining replacement biome's unsafe fix proposed would silently
-        // return undefined instead of throwing, which violates the
-        // ResolveProvider contract on `start`.
+        /*
+         * Composition order guarantees `agenticLoopServiceInstance` is
+         * initialized before any IPC consumer of this dep struct can fire;
+         * the optional-chaining alternative would silently return undefined
+         * instead of throwing, which violates the ResolveProvider contract
+         * on `start`.
+         */
+        // biome-ignore lint/style/noNonNullAssertion: see comment above — non-null is a composition-order invariant
         start: (args) => agenticLoopServiceInstance!.start(args),
       },
       authorityResolver: {

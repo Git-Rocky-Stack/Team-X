@@ -1126,6 +1126,7 @@ export function buildDelegateSubtaskTool(
       // scorer. The breakdown is captured into both the
       // `pending_delegations` row and the `task.delegation_pending`
       // event payload.
+      // biome-ignore lint/style/noNonNullAssertion: chosenId was just selected from the scored candidate list which the scorer enforces is non-empty and lookup-by-id consistent — null here would be a scorer invariant violation
       const chosenEmployee = deps.employeesRepo.getById(chosenId)!;
       const chosenHint: SubtaskHint = {
         title: args.subtaskTitle,

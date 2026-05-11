@@ -251,8 +251,7 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
   if (contentType === 'prose' || contentType === 'markdown' || contentType === 'mixed') {
     // Detect headings
     const headingRegex = /^(#{1,6})\s+(.+)$/gm;
-    let match;
-    while ((match = headingRegex.exec(text)) !== null) {
+    for (const match of text.matchAll(headingRegex)) {
       boundaries.push({
         position: match.index,
         type: 'heading',
@@ -263,7 +262,7 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
 
     // Detect code blocks (fenced)
     const fenceRegex = /`{3}([a-z]*)\n([\s\S]*?)```{3}/g;
-    while ((match = fenceRegex.exec(text)) !== null) {
+    for (const match of text.matchAll(fenceRegex)) {
       boundaries.push({
         position: match.index,
         type: 'code_block',
@@ -280,7 +279,7 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
 
     // Detect list items
     const listRegex = /^(\s*)([-*+]|\d+\.)\s+/gm;
-    while ((match = listRegex.exec(text)) !== null) {
+    for (const match of text.matchAll(listRegex)) {
       boundaries.push({
         position: match.index + (match[1] ?? '').length,
         type: 'list',
@@ -293,7 +292,7 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
     const tableRegex = /\|[^|\n]+\|/g;
     let inTable = false;
     let tableStart = 0;
-    while ((match = tableRegex.exec(text)) !== null) {
+    for (const match of text.matchAll(tableRegex)) {
       if (!inTable) {
         tableStart = match.index;
         inTable = true;
@@ -312,15 +311,15 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
 
     // Detect frontmatter (YAML/TOML)
     const frontmatterRegex = /^---\n([\s\S]*?)\n---\n/;
-    match = frontmatterRegex.exec(text);
-    if (match) {
+    const frontmatterMatch = text.match(frontmatterRegex);
+    if (frontmatterMatch) {
       boundaries.push({
         position: 0,
         type: 'frontmatter',
         strength: 1.0,
       });
       boundaries.push({
-        position: match[0].length,
+        position: frontmatterMatch[0].length,
         type: 'frontmatter',
         strength: 1.0,
       });
@@ -328,7 +327,7 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
 
     // Detect sentences (for prose)
     const sentenceRegex = /[.!?]+\s+(?=[A-Z]|["'])/g;
-    while ((match = sentenceRegex.exec(text)) !== null) {
+    for (const match of text.matchAll(sentenceRegex)) {
       boundaries.push({
         position: match.index + match[0].length,
         type: 'sentence',
@@ -338,7 +337,7 @@ export function detectBoundaries(text: string, contentType: ContentType): ChunkB
 
     // Detect paragraphs (double newlines)
     const paragraphRegex = /\n\n+/g;
-    while ((match = paragraphRegex.exec(text)) !== null) {
+    for (const match of text.matchAll(paragraphRegex)) {
       boundaries.push({
         position: match.index,
         type: 'paragraph',
@@ -622,8 +621,7 @@ async function chunkMarkdownWithCodeBlocks(
   const codeBlockRegex = /```[a-z]*\n([\s\S]*?)```/g;
   const codeBlocks: Array<{ start: number; end: number; content: string; language: string }> = [];
 
-  let match;
-  while ((match = codeBlockRegex.exec(text)) !== null) {
+  for (const match of text.matchAll(codeBlockRegex)) {
     codeBlocks.push({
       start: match.index,
       end: match.index + match[0].length,

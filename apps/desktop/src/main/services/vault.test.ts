@@ -445,9 +445,9 @@ describe('H16 audit (2026-05-07): vault path-traversal defense', () => {
     it('still rejects lexically-escaping candidates even when paths do not exist', async () => {
       const vaultDir = join(realRoot, 'vault');
       // Neither side exists on disk; the lexical layer must still fire.
-      const escape = join(realRoot, 'outside', 'evil.txt');
+      const attempt = join(realRoot, 'outside', 'evil.txt');
 
-      await expect(assertInsideVaultReal(vaultDir, escape)).rejects.toThrow(
+      await expect(assertInsideVaultReal(vaultDir, attempt)).rejects.toThrow(
         VaultPathTraversalError,
       );
     });

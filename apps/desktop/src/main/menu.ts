@@ -17,10 +17,11 @@ const PACKAGE_VERSION = app.getVersion();
  * and credits. Opens URLs in the default browser.
  */
 export function showAboutDialog(): void {
-  const win =
-    BrowserWindow.fromWebContents('about-strategia-x' as any) ??
-    BrowserWindow.getFocusedWindow() ??
-    BrowserWindow.getAllWindows()[0];
+  // BrowserWindow.fromWebContents expects a WebContents instance, not a
+  // string id — the previous call (`fromWebContents('about-strategia-x' as any)`)
+  // always returned null and only the fallback ever ran. The fallback is
+  // the correct behavior, so the broken first call is gone.
+  const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
 
   if (!win) return;
 

@@ -350,7 +350,7 @@ describe('isInside (C5)', () => {
 
   it('detects path-traversal escape attempts', () => {
     const parent = join(tmpRoot, 'parent');
-    const escape = join(tmpRoot, 'parent', '..', 'sibling');
-    expect(isInside(parent, escape)).toBe(false);
+    const attempt = join(tmpRoot, 'parent', '..', 'sibling');
+    expect(isInside(parent, attempt)).toBe(false);
   });
 });

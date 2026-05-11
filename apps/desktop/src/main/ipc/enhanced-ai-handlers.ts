@@ -10,7 +10,9 @@
  * for consistency and testability.
  */
 
-import type { EnhancedAiService } from '../services/enhanced-ai.js';
+import type { EmbeddingSourceType } from '@team-x/shared-types';
+
+import type { EnhancedAiService, ExecutionPlan } from '../services/enhanced-ai.js';
 
 export interface EnhancedAiHandlersDeps {
   /**
@@ -46,7 +48,7 @@ export interface EnhancedAiHandlers {
     answer: string;
     context: Array<{ sourceId: string; content: string; similarity: number }>;
     related?: Array<{ entity: string; relation: string }>;
-    plan?: any;
+    plan?: ExecutionPlan;
   }>;
 
   /**
@@ -89,7 +91,7 @@ export interface EnhancedAiHandlers {
    */
   createPlan(input: {
     query: string;
-  }): Promise<any>;
+  }): Promise<ExecutionPlan>;
 
   /**
    * `enhancedAi.getStats` — get service statistics.
@@ -134,7 +136,7 @@ export function buildEnhancedAiHandlers(deps: EnhancedAiHandlersDeps): EnhancedA
       }
       return service.indexWithSemanticChunking({
         companyId: input.companyId,
-        sourceType: input.sourceType as any,
+        sourceType: input.sourceType as EmbeddingSourceType,
         sourceId: input.sourceId,
         content: input.content,
       });

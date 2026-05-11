@@ -412,6 +412,7 @@ describe('proactive-trigger-service', () => {
 
       // Assert: agenticLoopService.start called with system-agent
       expect(fixture.agenticLoopService.starts).toHaveLength(1);
+      // biome-ignore lint/style/noNonNullAssertion: prior toHaveLength(1) would have failed the test if index 0 were undefined
       const startCall = fixture.agenticLoopService.starts[0]!;
       expect(startCall.companyId).toBe(fixture.companyId);
       expect(startCall.employeeId).toBe(fixture.systemAgentId);
@@ -423,6 +424,7 @@ describe('proactive-trigger-service', () => {
         (e) => e.type === 'proactive.goal_decomposed',
       );
       expect(decomposedEvents).toHaveLength(1);
+      // biome-ignore lint/style/noNonNullAssertion: prior toHaveLength(1) would have failed the test if index 0 were undefined
       const decomposedEvent = decomposedEvents[0]!;
       expect(decomposedEvent.companyId).toBe(fixture.companyId);
       expect((decomposedEvent.payload as { goalId: string }).goalId).toBe(goalId);
@@ -452,6 +454,7 @@ describe('proactive-trigger-service', () => {
 
       const blockedEvents = fixture.bus.emitted.filter((e) => e.type === 'proactive.blocked');
       expect(blockedEvents).toHaveLength(1);
+      // biome-ignore lint/style/noNonNullAssertion: prior toHaveLength(1) would have failed the test if index 0 were undefined
       const blockedEvent = blockedEvents[0]!;
       expect((blockedEvent.payload as { reason: string }).reason).toContain('autonomy');
     });
@@ -744,6 +747,7 @@ describe('proactive-trigger-service', () => {
       // Assert: event emitted
       const events = fixture.bus.emitted.filter((e) => e.type === 'proactive.enabled_changed');
       expect(events).toHaveLength(1);
+      // biome-ignore lint/style/noNonNullAssertion: prior toHaveLength(1) would have failed the test if index 0 were undefined
       const event = events[0]!;
       expect((event.payload as { enabled: boolean }).enabled).toBe(false);
     });

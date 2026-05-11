@@ -336,6 +336,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
       const queue: Array<{ nodeId: string; depth: number }> = [{ nodeId, depth: 0 }];
 
       while (queue.length > 0) {
+        // biome-ignore lint/style/noNonNullAssertion: queue.length > 0 guard proves shift() returns a value
         const { nodeId: currentId, depth } = queue.shift()!;
 
         if (depth >= maxDepth) continue;
@@ -628,6 +629,7 @@ export function createKnowledgeGraphService(options: {
       const visited = new Set<string>([fromNodeId]);
 
       while (queue.length > 0) {
+        // biome-ignore lint/style/noNonNullAssertion: queue.length > 0 guard proves shift() returns a value
         const { nodeId, path } = queue.shift()!;
 
         if (nodeId === toNodeId) {

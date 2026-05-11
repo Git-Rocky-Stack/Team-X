@@ -341,7 +341,9 @@ export function createPlanExecutor(options: {
       const response = await options.llm(prompt);
 
       try {
-        const parsed = JSON.parse(response);
+        // biome-ignore lint/suspicious/noExplicitAny: JSON.parse output is intentionally typed as any here because the LLM-emitted shape is unstable and downstream destructuring narrows per-field with fallbacks
+        const parsed = JSON.parse(response) as any;
+        // biome-ignore lint/suspicious/noExplicitAny: each step entry is destructured field-by-field below with fallbacks; widening to a strict type forces consumers of `args` to handle undefined where the runtime always supplies a Record
         const steps: PlanStep[] = (parsed.steps || []).map((s: any, i: number) => ({
           id: s.id || `step_${i + 1}`,
           description: s.description,
@@ -477,9 +479,13 @@ export function createPlanExecutor(options: {
               } else if (trackingOptions.autoRevise) {
                 step.status = 'failed';
                 // Auto-revise plan
-                plan = await this.revisePlan(plan, `Step failed: ${error}`, 'error_recovery');
+                const revisedPlan = await this.revisePlan(
+                  plan,
+                  `Step failed: ${error}`,
+                  'error_recovery',
+                );
                 // Restart execution with revised plan
-                return this.executePlan(plan, context);
+                return this.executePlan(revisedPlan, context);
               } else {
                 step.status = 'failed';
                 plan.status = 'failed';
@@ -723,8 +729,10 @@ export function createPlanAwareLoop(options: {
 }): {
   shouldCreatePlan: (query: string, estimatedSteps?: number) => boolean;
   wrapLoopExecution: (
+    // biome-ignore lint/suspicious/noExplicitAny: runLoop's return type varies per caller and is consumed opaquely by the wrapper
     runLoop: () => Promise<any>,
     query: string,
+    // biome-ignore lint/suspicious/noExplicitAny: same — result is opaque
   ) => Promise<{ result: any; plan?: ExecutionPlan }>;
 } {
   return {

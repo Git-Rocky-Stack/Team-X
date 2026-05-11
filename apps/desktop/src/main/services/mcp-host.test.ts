@@ -117,22 +117,6 @@ function makeAllowlist(entries?: { command: string; sha256?: string }[]): McpExe
   return { entries: () => list };
 }
 
-/** Default deps used by every test that needs a working host. */
-function makeBaseDeps(overrides: Partial<McpHostDeps> = {}): McpHostDeps & {
-  mcpServersRepo: ReturnType<typeof makeFakeRepos>['mcpServersRepo'];
-  toolCallsRepo: ReturnType<typeof makeFakeRepos>['toolCallsRepo'];
-} {
-  const repos = makeFakeRepos();
-  return {
-    mcpServersRepo: repos.mcpServersRepo,
-    toolCallsRepo: repos.toolCallsRepo,
-    bus: makeFakeBus(),
-    userDataDir,
-    executableAllowlist: makeAllowlist(),
-    ...overrides,
-  };
-}
-
 const SERVER_CONFIG: McpServerConfig = {
   id: 'srv-1',
   companyId: null,
@@ -828,6 +812,7 @@ describe('McpHost', () => {
       const cwd = stdioTransportCalls[0]?.cwd;
       expect(cwd).toBe(join(userDataDir, 'mcp-runtimes', 'srv-cwd'));
       // The directory was actually created.
+      // biome-ignore lint/style/noNonNullAssertion: prior expect(cwd).toBe(...) would have already failed the test if cwd were undefined; this assertion just satisfies the type narrowing for the existsSync call
       expect(existsSync(cwd!)).toBe(true);
     });
 

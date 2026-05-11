@@ -441,6 +441,7 @@ Use the decompose_project tool to generate the proposal.`;
       }
 
       // Simple round-robin assignment (could be improved with workload scoring)
+      // biome-ignore lint/style/noNonNullAssertion: the `employees.length === 0` guard above proves the indexed access is defined
       const assignedEmployee = employees[0]!;
 
       // Create a thread for the proactive work

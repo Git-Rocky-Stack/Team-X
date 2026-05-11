@@ -192,7 +192,7 @@ export function createMcpHost(deps: McpHostDeps) {
       return; // Already connected
     }
 
-    let transport;
+    let transport: StdioClientTransport | SSEClientTransport;
     if ((config.transport as McpTransportType) === 'stdio') {
       try {
         transport = createStdioTransport(config);

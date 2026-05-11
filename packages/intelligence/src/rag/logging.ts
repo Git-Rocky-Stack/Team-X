@@ -377,8 +377,20 @@ export interface LoggedRagServiceOptions {
 
 /**
  * Wrap a RAG service with logging.
+ *
+ * The wrapper monkey-patches `retrieve` and `indexSource` on the
+ * input service object — this is intentional so any consumer holding
+ * a reference to the original service still benefits from logging.
+ * The biome-ignore comments below mark the unavoidable casts at the
+ * monkey-patch boundary; the public API surface (the `T` return)
+ * remains fully typed.
  */
-export function createLoggedRagService<T extends { retrieve: Function; indexSource: Function }>(
+type RagServiceShape = {
+  retrieve: (...args: unknown[]) => Promise<Array<{ similarity: number; sourceType: string }>>;
+  indexSource: (...args: unknown[]) => Promise<number>;
+};
+
+export function createLoggedRagService<T extends RagServiceShape>(
   service: T,
   options: LoggedRagServiceOptions = {},
 ): T {
@@ -386,7 +398,8 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
 
   // Wrap retrieve method
   const originalRetrieve = service.retrieve.bind(service);
-  (service as any).retrieve = async (...args: any[]) => {
+  // biome-ignore lint/suspicious/noExplicitAny: monkey-patch reassigns the typed method to a logging wrapper; the surrounding generic T preserves the public surface
+  (service as any).retrieve = async (...args: unknown[]) => {
     const [input] = args as [{ companyId: string; query: string; topK: number; threshold: number }];
 
     const queryHash = hashQuery(input.query);
@@ -418,7 +431,8 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
       context.stats.totalRetrievals++;
       context.stats.totalLatencyMs += latencyMs;
 
-      // Log retrieval completion
+      // Log retrieval completion. Result row shape comes from the
+      // `RagServiceShape` constraint above (similarity + sourceType).
       context.logger.logRetrieval({
         event: 'retrieval_completed',
         companyId: input.companyId,
@@ -426,8 +440,8 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
         queryText: input.query.slice(0, 200),
         data: {
           resultCount: results.length,
-          scores: results.map((r: any) => r.similarity),
-          sourceTypes: results.map((r: any) => r.sourceType),
+          scores: results.map((r) => r.similarity),
+          sourceTypes: results.map((r) => r.sourceType),
           latencyMs,
         },
         metadata: {
@@ -463,7 +477,8 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
 
   // Wrap indexSource method
   const originalIndexSource = service.indexSource.bind(service);
-  (service as any).indexSource = async (...args: any[]) => {
+  // biome-ignore lint/suspicious/noExplicitAny: monkey-patch reassigns the typed method to a logging wrapper; the surrounding generic T preserves the public surface
+  (service as any).indexSource = async (...args: unknown[]) => {
     const [input] = args as [
       { companyId: string; sourceType: string; sourceId: string; content: string },
     ];
@@ -533,6 +548,7 @@ export function createLoggedRagService<T extends { retrieve: Function; indexSour
   };
 
   // Add stats method
+  // biome-ignore lint/suspicious/noExplicitAny: attaches a new diagnostic method onto the service object; the public T surface intentionally hides this internal helper from consumers
   (service as any).getLoggingStats = () => getLoggingSummary(context);
 
   return service;

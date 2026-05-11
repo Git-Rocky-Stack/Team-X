@@ -64,6 +64,24 @@ function createRagServiceFromDb(dbPath: string, options: Options): RagService {
     defaultTtl: 300000, // 5 minutes
   });
 
+  // Row shapes returned by the embedding SELECTs below. Both queries
+  // alias columns the same way so a single row type covers list +
+  // similarity-search paths; `distance` is only populated by the
+  // similarity query (joined from `embeddings_vec`).
+  type EmbeddingRow = {
+    id: string;
+    source_type: string;
+    source_id: string;
+    chunk_index: number;
+    content_text: string;
+    embedding: Buffer;
+    created_at: number;
+  };
+  type SimilarityRow = Omit<EmbeddingRow, 'embedding' | 'created_at'> & {
+    distance: number;
+  };
+  type SqlParam = string | number | Buffer | null;
+
   // Create repo interface
   const repo = {
     upsert(input) {
@@ -99,7 +117,7 @@ function createRagServiceFromDb(dbPath: string, options: Options): RagService {
         FROM embeddings
         WHERE company_id = ?
       `);
-      return stmt.all(companyId) as any[];
+      return stmt.all(companyId) as EmbeddingRow[];
     },
 
     similaritySearch: async (input) => {
@@ -114,13 +132,13 @@ function createRagServiceFromDb(dbPath: string, options: Options): RagService {
           LIMIT ?
         `);
 
-        const params: any[] = [input.companyId, 1 - input.threshold];
+        const params: SqlParam[] = [input.companyId, 1 - input.threshold];
         if (input.excludeSourceIds) {
           params.push(...input.excludeSourceIds);
         }
         params.push(input.topK);
 
-        const results = vecStmt.all(...params) as any[];
+        const results = vecStmt.all(...params) as SimilarityRow[];
 
         // Convert distance to similarity (sqlite-vec returns cosine distance)
         return results.map((r) => ({
@@ -381,7 +399,8 @@ async function main() {
   const args = process.argv.slice(2);
 
   const options: Options = {
-    format: (args.find((a) => a.startsWith('--format='))?.split('=')[1] || 'text') as any,
+    format: (args.find((a) => a.startsWith('--format='))?.split('=')[1] ||
+      'text') as Options['format'],
     outputFile: args.find((a) => a.startsWith('--output='))?.split('=')[1],
     topK: Number.parseInt(args.find((a) => a.startsWith('--top-k='))?.split('=')[1] || '10', 10),
     threshold: Number.parseFloat(

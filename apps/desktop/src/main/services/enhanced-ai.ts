@@ -19,6 +19,19 @@ import type { EmbeddingSourceType } from '@team-x/shared-types';
 import type { RagRepo, RagService } from '@team-x/intelligence';
 
 /**
+ * Multi-turn execution plan returned by `createPlan` / surfaced in
+ * `enhancedQuery` when `usePlanning` is on. The current implementation
+ * is a placeholder; the shape is intentionally narrow so consumers
+ * (renderer Plan-panel, eval scripts) can rely on the three top-level
+ * fields. Phase 6 expands `steps` into a tagged-union of step kinds.
+ */
+export interface ExecutionPlan {
+  id: string;
+  query: string;
+  steps: unknown[];
+}
+
+/**
  * Enhanced AI service options.
  */
 export interface EnhancedAiServiceOptions {
@@ -62,7 +75,7 @@ export interface EnhancedAiService {
     answer: string;
     context: Array<{ sourceId: string; content: string; similarity: number }>;
     related?: Array<{ entity: string; relation: string }>;
-    plan?: any;
+    plan?: ExecutionPlan;
   }>;
 
   /**
@@ -103,7 +116,7 @@ export interface EnhancedAiService {
   /**
    * Create execution plan for complex query.
    */
-  createPlan(query: string): Promise<any>;
+  createPlan(query: string): Promise<ExecutionPlan>;
 
   /**
    * Stream response chunks.

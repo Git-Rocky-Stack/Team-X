@@ -86,7 +86,7 @@ function extractDocumentIds(db: Database.Database, minCount: number): Partial<Do
         LIMIT ?
       `);
       const rows = stmt.all(sourceType, `%${term}%`, limit) as { source_id: string }[];
-      rows.forEach((r) => results.add(r.source_id));
+      for (const r of rows) results.add(r.source_id);
       if (results.size >= limit) break;
     }
     return Array.from(results);
