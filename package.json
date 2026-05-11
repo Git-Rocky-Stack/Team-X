@@ -7,7 +7,7 @@
   "license": "MIT",
   "author": "Rocky Elsalaymeh",
   "engines": {
-    "node": ">=20.11.0",
+    "node": ">=22.13.0",
     "pnpm": ">=9.0.0"
   },
   "scripts": {
