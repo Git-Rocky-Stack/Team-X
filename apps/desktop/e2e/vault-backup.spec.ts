@@ -35,6 +35,8 @@ import {
   test,
 } from '@playwright/test';
 
+import { getCiLaunchArgs } from './_launch-helpers.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -61,7 +63,7 @@ test.describe('Team-X Phase 4 vault-backup flow', () => {
     writeFileSync(testFilePath, '# Test Document\n\nThis is a test file for vault E2E.', 'utf-8');
 
     app = await electron.launch({
-      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`],
+      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`, ...getCiLaunchArgs()],
       env: {
         ...process.env,
         NODE_ENV: 'test',

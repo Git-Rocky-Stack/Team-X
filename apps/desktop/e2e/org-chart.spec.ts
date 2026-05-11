@@ -19,6 +19,8 @@ import {
   test,
 } from '@playwright/test';
 
+import { getCiLaunchArgs } from './_launch-helpers.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -34,7 +36,7 @@ test.describe('Team-X Phase 5.6 M-D org chart read-side', () => {
   test.beforeEach(async () => {
     userDataDir = mkdtempSync(join(tmpdir(), 'teamx-org-chart-e2e-'));
     app = await electron.launch({
-      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`],
+      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`, ...getCiLaunchArgs()],
       env: {
         ...process.env,
         NODE_ENV: 'test',
@@ -93,7 +95,7 @@ test.describe('Team-X Phase 5.6 M-D org chart read-side', () => {
   async function relaunchApp(): Promise<void> {
     await app.close();
     app = await electron.launch({
-      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`],
+      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`, ...getCiLaunchArgs()],
       env: {
         ...process.env,
         NODE_ENV: 'test',

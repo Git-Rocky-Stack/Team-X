@@ -51,6 +51,8 @@ import {
   test,
 } from '@playwright/test';
 
+import { getCiLaunchArgs } from './_launch-helpers.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -79,7 +81,7 @@ test.describe('Team-X smoke', () => {
   test.beforeEach(async () => {
     userDataDir = mkdtempSync(join(tmpdir(), 'teamx-e2e-'));
     app = await electron.launch({
-      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`],
+      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`, ...getCiLaunchArgs()],
       // Inherit the parent env so Electron can find node_modules, but
       // force NODE_ENV=test so provider-factory.isTestMode() → true
       // and main/index.ts selects the canned-reply resolver. Any dev

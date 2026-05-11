@@ -559,47 +559,6 @@ let copilotEventTriggerInstance: CopilotEventTrigger | null = null;
 
 configureStableUserDataPath(app, { logger: console });
 
-// Headless CI Linux launch hardening — closes the §7.1 backlog item from
-// `docs/handoffs/2026-05-11-cross-platform-ci-unblock.md`.
-//
-// On GitHub Actions ubuntu-latest under xvfb, Electron 31's GPU process
-// crashes during initialization (`viz_main_impl.cc(166): Exiting GPU
-// process due to errors during initialization`) because xvfb has no real
-// graphics device. The renderer process then hangs waiting for the GPU
-// channel to come up, `firstWindow` never fires, and every Playwright
-// spec times out at 30s. The four switches below are the well-established
-// remediation for headless-Linux Electron CI runs:
-//
-//   - disable-gpu              — skip GPU process entirely (no xvfb GPU)
-//   - disable-software-rasterizer — don't fall back to SwiftShader either;
-//                                   SW raster still negotiates a GPU
-//                                   channel that doesn't exist
-//   - no-sandbox               — chrome-sandbox requires setuid root, which
-//                                GitHub Actions runners can't grant; the
-//                                runner user is unprivileged and there is
-//                                no untrusted content in test mode anyway
-//   - disable-dev-shm-usage    — /dev/shm on CI is sized too small for
-//                                Electron's shmem IPC; fall back to /tmp
-//
-// Gated on `CI === 'true' && process.platform === 'linux'` so:
-//   - Local dev (any OS): untouched
-//   - macOS / Windows CI: untouched (GPU works there, sandbox is fine)
-//   - Linux CI: gets the flags automatically — no spec edits required,
-//                no env vars to remember, no per-spec drift risk
-//
-// `app.commandLine.appendSwitch` must run BEFORE `app.whenReady()` or
-// Electron has already initialized the GPU process and the switches are
-// ignored. That's why this lives here in the pre-whenReady block alongside
-// `configureStableUserDataPath`, not inside the `.then(async () => …)`
-// boot sequence below.
-if (process.env.CI === 'true' && process.platform === 'linux') {
-  app.commandLine.appendSwitch('disable-gpu');
-  app.commandLine.appendSwitch('disable-software-rasterizer');
-  app.commandLine.appendSwitch('no-sandbox');
-  app.commandLine.appendSwitch('disable-dev-shm-usage');
-  console.log('[main] headless CI Linux launch flags applied (GPU off, sandbox off)');
-}
-
 app
   .whenReady()
   .then(async () => {

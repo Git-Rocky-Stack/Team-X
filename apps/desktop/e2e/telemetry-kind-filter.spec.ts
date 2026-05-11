@@ -20,6 +20,8 @@ import {
   test,
 } from '@playwright/test';
 
+import { getCiLaunchArgs } from './_launch-helpers.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -42,7 +44,7 @@ test.describe('Team-X Phase 6 — M39 telemetry kind filter', () => {
   test.beforeEach(async () => {
     userDataDir = mkdtempSync(join(tmpdir(), 'teamx-telemetry-kind-e2e-'));
     app = await electron.launch({
-      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`],
+      args: [MAIN_ENTRY, `--user-data-dir=${userDataDir}`, ...getCiLaunchArgs()],
       env: {
         ...process.env,
         NODE_ENV: 'test',
