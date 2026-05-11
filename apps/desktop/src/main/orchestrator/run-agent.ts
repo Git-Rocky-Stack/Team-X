@@ -230,22 +230,87 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * H15 (audit 2026-05-07): default chat path tool-result size cap.
+ *
+ * Mirrors `safeStringify`'s 8000-char cap in `packages/intelligence/src/loop/loop.ts:506`
+ * so the same trust-boundary protection applies whether a tool result reaches the
+ * user via the agentic loop OR the default chat path. Without this, a chatty
+ * tool — or a hostile MCP server returning a multi-megabyte string in
+ * `result.message` — would write an unbounded payload straight into the
+ * `messages.content` SQLite row and into the renderer's message bubble.
+ *
+ * The cap is on the OUTBOUND user-visible string, not on the tool-result
+ * envelope, because:
+ *   1. The envelope carries metadata (toolName, toolCallId, success, …)
+ *      that is small and well-typed. Capping it would corrupt downstream
+ *      consumers.
+ *   2. Capping at the projection site means the truncation marker is
+ *      visible to the user — they see exactly what they got — rather than
+ *      a silent truncation inside an opaque object.
+ *
+ * Truncation marker matches `safeStringify`'s "…[truncated]" suffix so logs
+ * and UI render the same idiom across both paths.
+ */
+export const MAX_TOOL_RESULT_REPLY_CHARS = 8000;
+export const TOOL_RESULT_TRUNCATION_MARKER = '…[truncated]';
+
+/**
+ * Match `safeStringify`'s contract exactly: when content > max, return
+ * `slice(0, max) + marker` (final length = max + marker.length). The
+ * marker is a *tag* — not part of the content budget — so the helper
+ * never silently elides characters or produces a marker-only output
+ * when `max` is smaller than the marker.
+ */
+export function capToolResultString(
+  value: string,
+  max: number = MAX_TOOL_RESULT_REPLY_CHARS,
+): {
+  text: string;
+  truncated: boolean;
+} {
+  if (value.length <= max) return { text: value, truncated: false };
+  return {
+    text: `${value.slice(0, Math.max(0, max))}${TOOL_RESULT_TRUNCATION_MARKER}`,
+    truncated: true,
+  };
+}
+
 function synthesizeToolOnlyReply(toolResults: CompletedToolResult[]): string | null {
   for (let i = toolResults.length - 1; i >= 0; i--) {
     const entry = toolResults[i];
     if (!entry || !isRecord(entry.result) || entry.result.success !== true) continue;
 
     if (typeof entry.result.message === 'string' && entry.result.message.trim().length > 0) {
-      return entry.result.message.trim();
+      // H15 (audit 2026-05-07): cap the user-visible reply text before it
+      // is written to `messages.content` and emitted to the renderer.
+      const capped = capToolResultString(entry.result.message.trim());
+      if (capped.truncated) {
+        console.warn(
+          `[runAgent] H15: tool-result message from "${entry.toolName}" exceeded ` +
+            `${MAX_TOOL_RESULT_REPLY_CHARS} chars; truncated for user-visible reply.`,
+        );
+      }
+      return capped.text;
     }
 
     if (entry.toolName === 'send_message_to_colleague') {
-      const recipientName =
+      // H15 (audit 2026-05-07): recipientName is also tool-controlled — a
+      // misbehaving send_message_to_colleague tool could return a runaway
+      // string here and balloon the assistant reply via templating. Cap it.
+      const rawRecipient =
         typeof entry.result.recipientName === 'string' &&
         entry.result.recipientName.trim().length > 0
           ? entry.result.recipientName.trim()
           : 'the colleague';
-      return `I sent the message to ${recipientName}.`;
+      const cappedRecipient = capToolResultString(rawRecipient);
+      if (cappedRecipient.truncated) {
+        console.warn(
+          `[runAgent] H15: tool-result recipientName from "${entry.toolName}" exceeded ` +
+            `${MAX_TOOL_RESULT_REPLY_CHARS} chars; truncated for user-visible reply.`,
+        );
+      }
+      return `I sent the message to ${cappedRecipient.text}.`;
     }
   }
 

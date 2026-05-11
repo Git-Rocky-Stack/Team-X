@@ -22,7 +22,7 @@ import type {
   WorkCompletedPayload,
   WorkStartedPayload,
 } from '@team-x/shared-types';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import { createEmployeesRepo } from '../db/repos/employees.js';
@@ -33,7 +33,13 @@ import { createThreadsRepo } from '../db/repos/threads.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 
 import { createEventBus } from './event-bus.js';
-import { type CostCalculator, runAgent } from './run-agent.js';
+import {
+  MAX_TOOL_RESULT_REPLY_CHARS,
+  TOOL_RESULT_TRUNCATION_MARKER,
+  capToolResultString,
+  type CostCalculator,
+  runAgent,
+} from './run-agent.js';
 
 interface Fixture {
   ctx: TestDbHandle;
@@ -1669,6 +1675,314 @@ describe('runAgent', () => {
       // generic-acknowledgment write or an error-message write —
       // never empty).
       expect(writes.every((w) => w.content !== '')).toBe(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // H15 audit (2026-05-07): default chat path tool-result size cap.
+  //
+  // Mirrors `safeStringify`'s 8000-char cap (packages/intelligence/src/loop/loop.ts:506)
+  // so the same trust-boundary protection applies whether a tool result
+  // reaches the user via the agentic loop OR the default chat path.
+  // `synthesizeToolOnlyReply` is the projection site: anything it returns
+  // is written verbatim to `messages.content` and shown to the user.
+  // ---------------------------------------------------------------------
+  describe('H15 audit (2026-05-07): default-chat tool-result size cap', () => {
+    // -- Pure helper coverage --------------------------------------------
+    describe('capToolResultString', () => {
+      it('returns the input verbatim when length <= MAX', () => {
+        const under = 'hello world';
+        const cap = capToolResultString(under);
+        expect(cap.text).toBe(under);
+        expect(cap.truncated).toBe(false);
+      });
+
+      it('passes through an exact-cap-length string untouched', () => {
+        const exact = 'x'.repeat(MAX_TOOL_RESULT_REPLY_CHARS);
+        const cap = capToolResultString(exact);
+        expect(cap.text).toBe(exact);
+        expect(cap.text.length).toBe(MAX_TOOL_RESULT_REPLY_CHARS);
+        expect(cap.truncated).toBe(false);
+      });
+
+      it('truncates over-cap input to MAX content chars + marker (matches safeStringify contract)', () => {
+        const over = 'a'.repeat(MAX_TOOL_RESULT_REPLY_CHARS + 1000);
+        const cap = capToolResultString(over);
+        expect(cap.truncated).toBe(true);
+        // Output = MAX chars of original content + the truncation
+        // marker (a tag, not part of the budget). Mirrors the loop's
+        // `safeStringify` in packages/intelligence/src/loop/loop.ts.
+        expect(cap.text.length).toBe(
+          MAX_TOOL_RESULT_REPLY_CHARS + TOOL_RESULT_TRUNCATION_MARKER.length,
+        );
+        expect(cap.text.endsWith(TOOL_RESULT_TRUNCATION_MARKER)).toBe(true);
+        // The first MAX chars are the original content unmodified.
+        expect(cap.text.slice(0, MAX_TOOL_RESULT_REPLY_CHARS)).toBe(
+          'a'.repeat(MAX_TOOL_RESULT_REPLY_CHARS),
+        );
+      });
+
+      it('respects an explicit lower max argument', () => {
+        const cap = capToolResultString('abcdefghijklmnop', 10);
+        expect(cap.truncated).toBe(true);
+        // 10 content chars + marker.
+        expect(cap.text.length).toBe(10 + TOOL_RESULT_TRUNCATION_MARKER.length);
+        expect(cap.text.startsWith('abcdefghij')).toBe(true);
+        expect(cap.text.endsWith(TOOL_RESULT_TRUNCATION_MARKER)).toBe(true);
+      });
+
+      it('is a no-op on an empty string', () => {
+        const cap = capToolResultString('');
+        expect(cap.text).toBe('');
+        expect(cap.truncated).toBe(false);
+      });
+    });
+
+    // -- Service-level integration (the audit's named regression) --------
+    it('caps an oversized tool-result message before it lands in messages.content', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        // 12_000 chars — well past the 8000 cap. Pre-H15 this would
+        // have been written verbatim to the SQLite messages row and
+        // shown to the user. Audit 2026-05-07 H15.
+        const oversize = 'A'.repeat(12_000);
+        const provider: ProviderStreamFn = async function* () {
+          yield {
+            toolCall: {
+              toolCallId: 'call-1',
+              toolName: 'query_tickets',
+              args: { status: 'open' },
+            },
+          };
+          yield {
+            toolResult: {
+              toolCallId: 'call-1',
+              toolName: 'query_tickets',
+              result: { success: true, message: oversize },
+            },
+          };
+          yield { done: true, usage: { promptTokens: 20, completionTokens: 0 } };
+        };
+
+        await runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+          },
+        );
+
+        const messages = f.messages.listByThread(f.threadId);
+        const content = messages[0]?.content ?? '';
+        // Persisted content = MAX content chars + the truncation marker.
+        // Mirrors the loop's `safeStringify` shape so the same idiom
+        // renders identically across both paths.
+        expect(content.length).toBe(
+          MAX_TOOL_RESULT_REPLY_CHARS + TOOL_RESULT_TRUNCATION_MARKER.length,
+        );
+        expect(content.endsWith(TOOL_RESULT_TRUNCATION_MARKER)).toBe(true);
+        // Truncation surfaced via console.warn for diagnosability.
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining('H15: tool-result message from "query_tickets"'),
+        );
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('caps an oversized recipientName on send_message_to_colleague before templating', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        // 12_000-char "recipientName" — a misbehaving tool implementation
+        // could return this. Without the cap, the templated reply
+        // would balloon to "I sent the message to <12000 chars>." in
+        // messages.content. Audit 2026-05-07 H15.
+        const evilRecipient = 'R'.repeat(12_000);
+        const provider: ProviderStreamFn = async function* () {
+          yield {
+            toolCall: {
+              toolCallId: 'call-1',
+              toolName: 'send_message_to_colleague',
+              args: {
+                recipientEmployeeId: 'emp-x',
+                message: 'hi',
+              },
+            },
+          };
+          yield {
+            toolResult: {
+              toolCallId: 'call-1',
+              toolName: 'send_message_to_colleague',
+              result: { success: true, recipientName: evilRecipient },
+            },
+          };
+          yield { done: true, usage: { promptTokens: 20, completionTokens: 0 } };
+        };
+
+        await runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+          },
+        );
+
+        const messages = f.messages.listByThread(f.threadId);
+        const content = messages[0]?.content ?? '';
+        // recipient is capped (MAX content chars + marker), then the
+        // template wraps it: "I sent the message to <capped>." Total
+        // length = template overhead + MAX + marker.
+        const templateOverhead = 'I sent the message to '.length + '.'.length;
+        expect(content.length).toBe(
+          templateOverhead + MAX_TOOL_RESULT_REPLY_CHARS + TOOL_RESULT_TRUNCATION_MARKER.length,
+        );
+        expect(content.startsWith('I sent the message to ')).toBe(true);
+        expect(content.endsWith(`${TOOL_RESULT_TRUNCATION_MARKER}.`)).toBe(true);
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining(
+            'H15: tool-result recipientName from "send_message_to_colleague"',
+          ),
+        );
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('leaves an under-cap send_message_to_colleague reply byte-identical (regression pin)', async () => {
+      // The audit-fix MUST NOT change behavior for the common case.
+      // Mirrors the existing happy path at line ~838 — exact string
+      // match is the regression contract.
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const provider: ProviderStreamFn = async function* () {
+          yield {
+            toolCall: {
+              toolCallId: 'call-1',
+              toolName: 'send_message_to_colleague',
+              args: {
+                recipientEmployeeId: 'emp-cmo',
+                message: 'Please review the launch plan.',
+              },
+            },
+          };
+          yield {
+            toolResult: {
+              toolCallId: 'call-1',
+              toolName: 'send_message_to_colleague',
+              result: { success: true, recipientName: 'Mina Patel' },
+            },
+          };
+          yield { done: true, usage: { promptTokens: 20, completionTokens: 4 } };
+        };
+
+        await runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+          },
+        );
+
+        const messages = f.messages.listByThread(f.threadId);
+        // Byte-identical to the pre-H15 reply.
+        expect(messages[0]?.content).toBe('I sent the message to Mina Patel.');
+        // No truncation warning fired — under-cap inputs are silent.
+        expect(warn).not.toHaveBeenCalled();
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it('caps a message under the magnitude that would blow the SQLite messages row', async () => {
+      // Realistic worst-case scenario: an MCP filesystem tool returns a
+      // 1-MB file body in `result.message`. Pre-H15 the entire 1 MB
+      // would be persisted; post-H15 it is bounded.
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const oneMb = 'x'.repeat(1_000_000);
+        const provider: ProviderStreamFn = async function* () {
+          yield {
+            toolCall: {
+              toolCallId: 'call-1',
+              toolName: 'read_vault_file',
+              args: { path: 'huge.md' },
+            },
+          };
+          yield {
+            toolResult: {
+              toolCallId: 'call-1',
+              toolName: 'read_vault_file',
+              result: { success: true, message: oneMb },
+            },
+          };
+          yield { done: true, usage: { promptTokens: 20, completionTokens: 0 } };
+        };
+
+        await runAgent(
+          {
+            bus: f.bus,
+            messages: f.messages,
+            runs: f.runs,
+            calcCost: f.calcCost,
+          },
+          {
+            companyId: f.companyId,
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            system: 's',
+            messages: baseHistory,
+            provider,
+            providerName: 'p',
+            model: 'm',
+          },
+        );
+
+        const stored = f.messages.listByThread(f.threadId)[0]?.content ?? '';
+        // Bounded at MAX content chars + the truncation marker — far
+        // below the 1 MB tool output the SDK actually returned.
+        expect(stored.length).toBe(
+          MAX_TOOL_RESULT_REPLY_CHARS + TOOL_RESULT_TRUNCATION_MARKER.length,
+        );
+        expect(stored.endsWith(TOOL_RESULT_TRUNCATION_MARKER)).toBe(true);
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining('H15: tool-result message from "read_vault_file"'),
+        );
+      } finally {
+        warn.mockRestore();
+      }
     });
   });
 });

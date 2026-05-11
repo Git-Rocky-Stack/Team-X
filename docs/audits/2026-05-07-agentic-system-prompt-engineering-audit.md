@@ -275,7 +275,7 @@ Role-to-capability mapping is declared (lines 90-105) and used in `private-opera
 | H12 | ✅ FIXED (2026-05-10) **Agent self-improvement loop has no causation-chain dedup.** A failing improvement ticket can spawn another improvement ticket about its own failure. Recursion-via-database. | `services/agent-improvement-service.ts` |
 | H13 | ✅ FIXED (2026-05-10) **Copilot severity has no ceiling.** Model can emit 5 `critical` insights per cycle; weight filtering is soft (default 1.0 across categories). | `copilot-analyzer-service.ts:316-322` |
 | H14 | ✅ FIXED (2026-05-10) **Copilot category-weight feedback loop is aspirational.** Comments mark it Phase 6 / M38; dismissals are recorded but never aggregated. README claims it's live. | `copilot-analyzer-service.ts:159` |
-| H15 | **Tool result size unbounded in default chat path.** `safeStringify`'s 8KB cap protects only the agentic loop; `run-agent.ts:415-420` passes through whatever the tool returns. | `orchestrator/run-agent.ts:415` |
+| H15 | ✅ FIXED (2026-05-10) **Tool result size unbounded in default chat path.** `safeStringify`'s 8KB cap protects only the agentic loop; `run-agent.ts:415-420` passes through whatever the tool returns. Mirrored the loop's 8000-char cap into the default chat path via a new exported `capToolResultString(value, max = 8000)` pure helper + `MAX_TOOL_RESULT_REPLY_CHARS = 8000` + `TOOL_RESULT_TRUNCATION_MARKER = "…[truncated]"` constants. `synthesizeToolOnlyReply` now caps BOTH user-visible projection sites — the `entry.result.message` body AND the `send_message_to_colleague` `recipientName` template variable — before the string is written to `messages.content` and shown to the renderer. Truncation surfaces via `console.warn` carrying the tool name so the wire-up gap (a chatty MCP server, a runaway tool) is loudly diagnosable. Cap semantics match `safeStringify` exactly: output = `slice(0, MAX) + marker` (final length = MAX + marker.length), so the same idiom renders identically across both stacks. Pinned by `run-agent.test.ts` (+9 H15 tests: 5 pure-helper — under cap no-op, exact-at-cap pass-through, over-cap truncates with full content + marker, explicit lower max argument, empty string no-op; 4 service-level integration — 12K-char `query_tickets` message → bounded DB row with marker + console.warn, 12K-char `send_message_to_colleague` `recipientName` → bounded templated reply, the audit-quoted Mina Patel happy path byte-identical regression pin with zero warnings, 1 MB `read_vault_file` worst-case bounded at MAX + marker). | `orchestrator/run-agent.ts:233-275` |
 | H16 | **Vault path traversal partial defense.** `sanitizeFilename` defangs `../` but no `path.resolve(...).startsWith(vaultDir)` guard, no symlink check post-mkdir. | `services/vault.ts:203-279` |
 
 ### H1 ✅ FIXED (2026-05-09 — closed by C2)
@@ -1072,6 +1072,77 @@ Now: dismissals ARE aggregated — `aggregateCategoryWeightsFromDismissals` is a
 
 ---
 
+### H15 ✅ FIXED (2026-05-10)
+
+**File:** `apps/desktop/src/main/orchestrator/run-agent.ts`
+
+The audit named one number — *"`safeStringify`'s 8KB cap"* — and one path — *"`run-agent.ts:415-420` passes through whatever the tool returns"* — and pointed out the asymmetry: the agentic loop has the cap, the default chat path does not. The fix mirrors the loop's contract into the default chat path so the trust boundary is identical on both stacks.
+
+**The leak path, pre-H15.** A tool emits a `tool-result` chunk → `run-agent.ts` pushes it into the local `toolResults: CompletedToolResult[]` array (line ~503-508, drifted from the audit's literal :415-420 by intervening H4/H5/H11 inserts). When the model returns without assistant text but the run executed a tool with a successful result, `synthesizeToolOnlyReply` (line ~233) walks `toolResults` in reverse, finds `result.success === true`, and returns either `result.message.trim()` OR `"I sent the message to ${result.recipientName}."`. That string is then written verbatim to `messages.content` via `deps.messages.updateContent(messageId, toolOnlyReply)` (line ~659) AND emitted to the renderer. **Whatever bytes the tool put in `result.message` go straight into SQLite and onto the user's screen.** A 1-MB filesystem read result, a chatty MCP server that streams stdout into `message`, a runaway recipientName from a buggy `send_message_to_colleague` implementation — all unbounded.
+
+**Why the cap belongs at the projection site, not at receipt.** The `toolResults` array carries the full provider-emitted envelope: `toolCallId`, `toolName`, `result: unknown`. Other downstream consumers (telemetry, audit logging) need the envelope intact, and walking arbitrary `unknown` to cap nested string properties is brittle. The leak is at the user-visible boundary — the moment we project an arbitrary tool-controlled string into the renderer / DB. So the cap is at that boundary, exactly where the loop puts it via `safeStringify` for its `<observation>` fence.
+
+**The three things added.**
+
+1. **Constants** (exported from `run-agent.ts`):
+   ```ts
+   export const MAX_TOOL_RESULT_REPLY_CHARS = 8000;
+   export const TOOL_RESULT_TRUNCATION_MARKER = '…[truncated]';
+   ```
+   Same number as `safeStringify`'s `MAX = 8000`. Same marker idiom (`…[truncated]`). Cross-path consistency by construction.
+
+2. **Pure helper** `capToolResultString(value, max = MAX_TOOL_RESULT_REPLY_CHARS): { text, truncated }`. Independently testable. Matches `safeStringify`'s contract literally: under cap → pass-through; over cap → `slice(0, max) + marker`. Final length when truncated = `max + marker.length` (8012 chars in the default case). The marker is a tag, not part of the content budget — so it never silently eats characters of original content and never produces a marker-only output when `max < marker.length`.
+
+3. **Two-site application inside `synthesizeToolOnlyReply`**:
+   - The `entry.result.message` body (the common path — any tool returning `{ success: true, message: "..." }`).
+   - The `send_message_to_colleague` `recipientName` (the templated path — the model's reply is `"I sent the message to ${recipientName}."`, so an unbounded recipientName balloons the assistant reply just as effectively as an unbounded `message`).
+
+   Both sites log a tool-name-tagged `console.warn` on truncation so the wire-up gap surfaces loudly:
+   ```
+   [runAgent] H15: tool-result message from "query_tickets" exceeded 8000 chars; truncated for user-visible reply.
+   ```
+
+**Tests** (9 new, in `run-agent.test.ts` inside the `H15 audit (2026-05-07): default-chat tool-result size cap` describe block):
+
+*Pure helper coverage (5):*
+1. Under cap → input verbatim, `truncated: false`.
+2. Exact-at-cap (8000 chars) → input verbatim, `truncated: false`.
+3. Over cap → `slice(0, MAX) + marker`, `truncated: true`. Asserts the first MAX chars are byte-identical to the original input — no content elision before the marker.
+4. Explicit lower max=10 → `'abcdefghij' + marker`. Pins that the marker length is NOT counted against the content budget.
+5. Empty string → empty, `truncated: false`. Pins the edge case so callers don't have to guard.
+
+*Service-level integration (4):*
+6. 12K-char `query_tickets` `message` → `messages.content.length === MAX + marker.length`, ends with the marker, `console.warn` fired with `'H15: tool-result message from "query_tickets"'`.
+7. 12K-char `recipientName` on `send_message_to_colleague` → templated content = `'I sent the message to ' + (MAX chars + marker) + '.'`, total length `templateOverhead + MAX + marker.length`. Distinct `console.warn` mentions `recipientName`.
+8. Audit-quoted happy path (Mina Patel, recipientName 10 chars) → `messages.content` is byte-identical to `'I sent the message to Mina Patel.'`. **Zero** `console.warn` calls. This is the regression pin: the audit-fix is invisible to the common case.
+9. 1 MB `read_vault_file` `message` (worst-case-realistic for a vault tool) → bounded at MAX + marker.length regardless of the 1 MB input.
+
+**Backward compatibility.**
+
+- No type-shape changes. `RunAgentResult` is unchanged. `MessagesRepoLike` is unchanged.
+- `capToolResultString` and the constants are exported additions to `run-agent.ts`; no existing consumer is affected.
+- Under-cap inputs are byte-identical to pre-H15 behaviour — verified by test #8 against the audit's literal Mina Patel example which was already in the file at line ~838.
+- The `console.warn` is fired only on truncation. Quiet by default.
+
+**Cross-path equivalence.** With H15 closed, the section-5 whiteboard line *"Truncation safety on results — None (H15) | 8KB cut"* is now *"8KB cut ✅ FIXED H15 | 8KB cut"* — symmetric. Both the default chat path AND the agentic loop now bound user-visible tool-result strings at MAX + a uniform marker, and both surface the same `…[truncated]` idiom to the renderer.
+
+**Verification.**
+
+| Suite | Pre-H15 | Post-H15 | Net new |
+|---|---|---|---|
+| `@team-x/desktop` | 2141 / 2141 (188 / 189 files) | **2150 / 2150** (188 / 189 files) | **+9 H15** |
+| `@team-x/intelligence` | 210 / 210 | 210 / 210 | 0 |
+| `@team-x/shared-types` | 74 / 74 | 74 / 74 | 0 |
+| `@team-x/desktop typecheck` | 4 pre-existing | 4 pre-existing, unchanged | 0 H15-attributable |
+
+Pre-existing keytar test-load failure on `provider-factory.test.ts` persists across this campaign per handoff §5. Not H15-attributable. Typecheck errors all sit outside `run-agent.ts`.
+
+**Closes the audit's callout:**
+> *"Tool result size unbounded in default chat path. `safeStringify`'s 8KB cap protects only the agentic loop; `run-agent.ts:415-420` passes through whatever the tool returns."*
+Now: the default chat path applies the same 8000-char cap via `capToolResultString`, mirroring `safeStringify`'s contract exactly. Both user-visible projection sites in `synthesizeToolOnlyReply` — `result.message` AND `send_message_to_colleague` `recipientName` — are bounded before they reach `messages.content` or the renderer. Truncation is loudly diagnosable via tool-name-tagged `console.warn` rather than silent. Cross-path symmetry restored: both stacks bound results at MAX with the same `…[truncated]` idiom.
+
+---
+
 ## 4. Medium findings (P2)
 
 - **Evidence formatting carries no confidence/score** — model treats 0.30 and 0.95 retrievals identically (`retrieval-orchestrator.ts:315-319`). Add `(score: 0.93)` per line; the model will weight accordingly.
@@ -1098,7 +1169,7 @@ Now: dismissals ARE aggregated — `aggregateCategoryWeightsFromDismissals` is a
 | Parse-failure recovery | SDK-managed | One nudge → terminal failure |
 | Prompt caching | Not enabled | Not enabled |
 | Native streaming tool events | Yes | No |
-| Truncation safety on results | None (H15) | 8KB cut |
+| Truncation safety on results | 8KB cut ✅ FIXED H15 (2026-05-10) | 8KB cut |
 | Cancel mid-stream | Clean | Clean |
 
 The most leveraged single move is **converging the agentic loop onto the default-chat stack**: replace `LoopCompleteFn` with a tools-aware streaming call, drop the JSON contract from `prompt.ts`, and inherit native tool-use, structured outputs, and prompt-cache primitives in one motion. C1 (injection), C2 (hand-rolled JSON), and C3 (caching) all collapse together.
