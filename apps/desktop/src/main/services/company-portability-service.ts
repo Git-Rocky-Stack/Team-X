@@ -1,5 +1,29 @@
 import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import { isAbsolute, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+
+/**
+ * Cross-platform "is this a host-specific native filesystem path?" check.
+ * Node's `path.isAbsolute` is platform-aware: on Linux/macOS it returns
+ * false for `C:/Tools/foo`, on Windows it returns false for `/usr/bin/foo`.
+ * That breaks portability compatibility flags — a manifest exported from
+ * a Windows host has Windows paths regardless of which host re-imports it
+ * later. We want to flag a path as host-specific whenever it looks
+ * absolute on ANY platform.
+ *
+ * Covers:
+ *   - Windows drive-letter paths (`C:\foo`, `D:/bar`)
+ *   - Windows UNC paths (`\\server\share`)
+ *   - Unix absolute paths (`/usr/bin/foo`, `/var/log/baz`)
+ *   - Tilde-prefixed home paths (`~/foo` — POSIX shells expand this)
+ */
+function isHostSpecificNativePath(value: string): boolean {
+  if (value.length === 0) return false;
+  if (/^[a-z]:[\\/]/i.test(value)) return true; // Windows drive letter
+  if (value.startsWith('\\\\')) return true; // Windows UNC
+  if (value.startsWith('/')) return true; // Unix absolute
+  if (value.startsWith('~/') || value === '~') return true; // POSIX home
+  return false;
+}
 
 import {
   type AuthorityGrant,
@@ -620,7 +644,10 @@ function sanitizeRuntimeProfile(
   if (profile.executionMode === 'planned') {
     compatibility.add('planned-runtime-adapters-need-launcher-or-endpoint');
   }
-  if ((command && isAbsolute(command)) || (workingDirectory && isAbsolute(workingDirectory))) {
+  if (
+    (command && isHostSpecificNativePath(command)) ||
+    (workingDirectory && isHostSpecificNativePath(workingDirectory))
+  ) {
     compatibility.add('native-runtime-paths-may-require-manual-reconfiguration');
   }
   if (baseUrl || endpointUrl) {
