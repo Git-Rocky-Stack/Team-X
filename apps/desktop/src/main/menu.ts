@@ -47,7 +47,7 @@ export function showAboutDialog(): void {
     })
     .then((result) => {
       if (result.response === 0) {
-        void shell.openExternal('https://github.com/rocky-stack/strategia-x');
+        void shell.openExternal('https://github.com/Git-Rocky-Stack/Team-X');
       }
     });
 }
@@ -103,15 +103,15 @@ export function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
         },
         {
           label: 'Documentation',
-          click: () => void shell.openExternal('https://github.com/rocky-stack/strategia-x#readme'),
+          click: () => void shell.openExternal('https://github.com/Git-Rocky-Stack/Team-X#readme'),
         },
         {
           label: 'Report an Issue',
-          click: () => void shell.openExternal('https://github.com/rocky-stack/strategia-x/issues'),
+          click: () => void shell.openExternal('https://github.com/Git-Rocky-Stack/Team-X/issues'),
         },
         {
           label: 'View Source on GitHub',
-          click: () => void shell.openExternal('https://github.com/rocky-stack/strategia-x'),
+          click: () => void shell.openExternal('https://github.com/Git-Rocky-Stack/Team-X'),
         },
         {
           type: 'separator',
@@ -119,7 +119,7 @@ export function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
         {
           label: 'License (MIT)',
           click: () =>
-            void shell.openExternal('https://github.com/rocky-stack/strategia-x/blob/main/LICENSE'),
+            void shell.openExternal('https://github.com/Git-Rocky-Stack/Team-X/blob/main/LICENSE'),
         },
       ],
     },

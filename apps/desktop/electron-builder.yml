@@ -126,12 +126,32 @@ linux:
     - --class=team-x
   artifactName: Team-X-${version}-${arch}.${ext}
 
+# .deb-specific runtime dependencies. keytar (libsecret-1) is the
+# Linux backing store for the OS keychain — without it, the first
+# API-key access throws at runtime on minimal distros (Ubuntu Server,
+# Debian netinst, container images) that don't preinstall it. Ubuntu
+# Desktop and Fedora Workstation ship libsecret by default; declaring
+# it here guarantees apt resolves it everywhere else.
+#
+# AppImage users still need to install libsecret-1-0 manually — AppImage
+# is dep-free by design. Document this in the release notes / README.
+deb:
+  depends:
+    - libsecret-1-0
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+
 # ─── Publishing ───────────────────────────────────────────────────────
 # Publish to GitHub Releases. The release workflow creates a draft
 # release and electron-builder uploads artifacts to it.
 # Set to "null" for local-only builds (pnpm dist).
 publish:
   provider: github
-  owner: Rocky-Stack
+  owner: Git-Rocky-Stack
   repo: Team-X
   releaseType: draft

@@ -15,9 +15,23 @@ concurrency:
 
 jobs:
   check:
-    name: Lint · Typecheck · Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Matrix across Linux / macOS / Windows so cross-platform regressions
+    # (case-sensitivity, path separators, native ABI mismatches) surface
+    # daily instead of waiting for the release tag. The launch-readiness
+    # audit (2026-05-10) flagged that the keytar arch-mismatch class of
+    # bug was invisible to the prior ubuntu-only check job. `fail-fast:
+    # false` lets each OS finish so we see ALL the failures, not just
+    # the first.
+    name: Lint · Typecheck · Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
