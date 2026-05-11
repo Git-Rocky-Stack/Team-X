@@ -77,6 +77,18 @@ jobs:
       - name: Build + Package (${{ matrix.platform }})
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Mac signing + notarization — only effective on the macos-latest
+          # leg (electron-builder ignores these on win/linux). All five are
+          # optional: when any one is empty (secrets not yet configured),
+          # electron-builder skips signing entirely and produces an unsigned
+          # .dmg — matching the pre-2026-05 launch-readiness baseline. See
+          # docs/handoffs/2026-05-10-mac-codesigning-plan.md for the four-
+          # phase setup (Apple Developer enrollment → cert → secrets → this).
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm -F @team-x/desktop dist:${{ matrix.platform }}
 
       - name: Generate SHA256 checksums
