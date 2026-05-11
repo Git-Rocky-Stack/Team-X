@@ -188,9 +188,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
 
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
           <label className="space-y-2">
-            <span className="text-eyebrow text-muted-foreground">
-              Focus thread
-            </span>
+            <span className="text-eyebrow text-muted-foreground">Focus thread</span>
             <select
               value={selectedThreadId}
               onChange={(event) => setSelectedThreadId(event.target.value)}
@@ -206,9 +204,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
           </label>
 
           <div className="space-y-2">
-            <span className="text-eyebrow text-muted-foreground">
-              Pack budget
-            </span>
+            <span className="text-eyebrow text-muted-foreground">Pack budget</span>
             <MissionControlRow className="gap-2">
               {TOKEN_BUDGETS.map((budget) => (
                 <MissionSegmentedButton
@@ -383,9 +379,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="text-eyebrow text-muted-foreground">
-                    Dropped blocks
-                  </div>
+                  <div className="text-eyebrow text-muted-foreground">Dropped blocks</div>
                   {packedContext.droppedBlocks.length > 0 ? (
                     packedContext.droppedBlocks.slice(0, 6).map((drop) => (
                       <div
@@ -471,9 +465,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                       {formatMemoryTimestamp(checkpoint.createdAt)}
                     </span>
                   </div>
-                  <div className="text-body text-foreground/90">
-                    {checkpoint.progressSummary}
-                  </div>
+                  <div className="text-body text-foreground/90">{checkpoint.progressSummary}</div>
                   {checkpoint.resumeOrigin ? (
                     <div className="text-eyebrow text-muted-foreground">
                       {resumeOriginHint(checkpoint.resumeOrigin)}

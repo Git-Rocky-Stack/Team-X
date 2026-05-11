@@ -501,9 +501,7 @@ export function BudgetsPanel({
             <div className="space-y-4">
               <MissionInsetSurface className="space-y-3 p-4">
                 <div className="space-y-1">
-                  <h3 className="text-h3 text-foreground">
-                    Pending Budget Approvals
-                  </h3>
+                  <h3 className="text-h3 text-foreground">Pending Budget Approvals</h3>
                   <p className="text-caption text-muted-foreground">
                     These approval items are raised automatically when spend crosses an approval
                     gate and future autonomy should stop until an operator reviews it. The same

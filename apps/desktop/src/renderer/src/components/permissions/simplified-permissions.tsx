@@ -226,9 +226,7 @@ export function SimplifiedPermissions({
               <div className="grid gap-3 sm:grid-cols-2">
                 {/* Allowed Capabilities */}
                 <div className="space-y-2">
-                  <div className="text-label text-green-600 dark:text-green-400">
-                    ✓ Allowed
-                  </div>
+                  <div className="text-label text-green-600 dark:text-green-400">✓ Allowed</div>
                   <div className="space-y-1">
                     {selectedPreset.capabilities.allowed.length > 0 ? (
                       selectedPreset.capabilities.allowed.map((cap) => (
@@ -250,9 +248,7 @@ export function SimplifiedPermissions({
 
                 {/* Denied Capabilities */}
                 <div className="space-y-2">
-                  <div className="text-label text-red-600 dark:text-red-400">
-                    ✗ Not Allowed
-                  </div>
+                  <div className="text-label text-red-600 dark:text-red-400">✗ Not Allowed</div>
                   <div className="space-y-1">
                     {selectedPreset.capabilities.denied.length > 0 ? (
                       selectedPreset.capabilities.denied.map((cap) => (
@@ -283,9 +279,7 @@ export function SimplifiedPermissions({
               <div className="grid gap-3 sm:grid-cols-2">
                 {/* Allowed Paths */}
                 <div className="space-y-2">
-                  <div className="text-label text-green-600 dark:text-green-400">
-                    ✓ Can Access
-                  </div>
+                  <div className="text-label text-green-600 dark:text-green-400">✓ Can Access</div>
                   <div className="space-y-1">
                     {selectedPreset.paths.allowed.length > 0 ? (
                       selectedPreset.paths.allowed.map((path) => (
@@ -313,9 +307,7 @@ export function SimplifiedPermissions({
 
                 {/* Denied Paths */}
                 <div className="space-y-2">
-                  <div className="text-label text-red-600 dark:text-red-400">
-                    ✗ Cannot Access
-                  </div>
+                  <div className="text-label text-red-600 dark:text-red-400">✗ Cannot Access</div>
                   <div className="space-y-1">
                     {selectedPreset.paths.denied.length > 0 ? (
                       selectedPreset.paths.denied.map((path) => (

@@ -584,8 +584,7 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
       lastErr = err;
       lastAbortKind = abortKind;
 
-      const isAborted =
-        abortKind !== null || input.signal?.aborted === true || isAbortError(err);
+      const isAborted = abortKind !== null || input.signal?.aborted === true || isAbortError(err);
       const canRetry =
         !isAborted &&
         !chunkSeen &&

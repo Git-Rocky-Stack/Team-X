@@ -3,9 +3,9 @@ import type { AuditEvent, CopilotCategory, DashboardEvent } from '@team-x/shared
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  aggregateCategoryWeightsFromDismissals,
   type CopilotHandlersDeps,
   type CopilotInsightHandlerRow,
+  aggregateCategoryWeightsFromDismissals,
   buildCopilotHandlers,
 } from './copilot-handlers.js';
 
@@ -472,7 +472,10 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
       expect(result.weights.operational).toBe(0.5);
       expect(result.weights.cost).toBe(0.5);
       expect(result.weights.workflow).toBe(1); // below threshold
-      expect(result.changedCategories.map((c) => c.category).sort()).toEqual(['cost', 'operational']);
+      expect(result.changedCategories.map((c) => c.category).sort()).toEqual([
+        'cost',
+        'operational',
+      ]);
     });
 
     it('floors at 0 when current weight is already 0.5 and threshold is crossed again', () => {
@@ -528,9 +531,7 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
         now: () => 1_000_000_000,
         copilotInsightsRepo: {
           listActive: vi.fn(() => []),
-          getById: vi.fn(() =>
-            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
-          ),
+          getById: vi.fn(() => row({ id: 'i1', companyId: 'c1', category: 'operational' })),
           dismiss: vi.fn(),
         },
         auditRepo: {
@@ -599,9 +600,7 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
         now: () => 1_000_000_000,
         copilotInsightsRepo: {
           listActive: vi.fn(() => []),
-          getById: vi.fn(() =>
-            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
-          ),
+          getById: vi.fn(() => row({ id: 'i1', companyId: 'c1', category: 'operational' })),
           dismiss: vi.fn(),
         },
         auditRepo: {
@@ -653,9 +652,7 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
         now: () => 1_000_000_000,
         copilotInsightsRepo: {
           listActive: vi.fn(() => []),
-          getById: vi.fn(() =>
-            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
-          ),
+          getById: vi.fn(() => row({ id: 'i1', companyId: 'c1', category: 'operational' })),
           dismiss: vi.fn(),
         },
         auditRepo: {
@@ -692,9 +689,7 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
         now: () => 1_000_000_000,
         copilotInsightsRepo: {
           listActive: vi.fn(() => []),
-          getById: vi.fn(() =>
-            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
-          ),
+          getById: vi.fn(() => row({ id: 'i1', companyId: 'c1', category: 'operational' })),
           dismiss: vi.fn(),
         },
         auditRepo: {
@@ -736,9 +731,7 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
         now: () => 1_000_000_000,
         copilotInsightsRepo: {
           listActive: vi.fn(() => []),
-          getById: vi.fn(() =>
-            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
-          ),
+          getById: vi.fn(() => row({ id: 'i1', companyId: 'c1', category: 'operational' })),
           dismiss: vi.fn(),
         },
         auditRepo: {
@@ -771,9 +764,7 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
         now: () => 1_000_000_000,
         copilotInsightsRepo: {
           listActive: vi.fn(() => []),
-          getById: vi.fn(() =>
-            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
-          ),
+          getById: vi.fn(() => row({ id: 'i1', companyId: 'c1', category: 'operational' })),
           dismiss: vi.fn(),
         },
         auditRepo: {
@@ -804,9 +795,7 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
         now: () => 1_000_000_000,
         copilotInsightsRepo: {
           listActive: vi.fn(() => []),
-          getById: vi.fn(() =>
-            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
-          ),
+          getById: vi.fn(() => row({ id: 'i1', companyId: 'c1', category: 'operational' })),
           dismiss: vi.fn(),
         },
         auditRepo: {

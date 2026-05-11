@@ -174,9 +174,7 @@ function ConfidenceBar({ confidence, loading }: { confidence: number; loading: b
           style={{ width: `${pct * 100}%` }}
         />
       </div>
-      <span className="text-eyebrow-sm text-muted-foreground">
-        {Math.round(pct * 100)}%
-      </span>
+      <span className="text-eyebrow-sm text-muted-foreground">{Math.round(pct * 100)}%</span>
       {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-hidden />}
     </div>
   );
@@ -954,9 +952,7 @@ function StepLogView({
             budget-exhausted abort with no partial answer). */}
         {result?.kind === 'failed' && (
           <li role="alert" className="mt-1 rounded-md border border-red-500/60 bg-red-500/5 p-3">
-            <p className="text-eyebrow text-red-400">
-              Run failed — {result.payload.reason}
-            </p>
+            <p className="text-eyebrow text-red-400">Run failed — {result.payload.reason}</p>
             <p className="mt-1 text-body text-foreground">{result.payload.message}</p>
           </li>
         )}

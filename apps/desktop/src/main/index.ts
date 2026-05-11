@@ -200,6 +200,10 @@ import {
   defaultAllowlistPath as mcpDefaultAllowlistPath,
 } from './services/mcp-security.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
+import {
+  type ProactiveTriggerService,
+  createProactiveTriggerService,
+} from './services/proactive-trigger-service.js';
 import { detectHardware } from './services/profiler.js';
 import {
   buildEmbedAdapter,
@@ -208,10 +212,6 @@ import {
   isTestMode,
   makeFakeEmbedAdapter,
 } from './services/provider-factory.js';
-import {
-  type ProactiveTriggerService,
-  createProactiveTriggerService,
-} from './services/proactive-trigger-service.js';
 import { getProvidersService, seedDefaultProviders } from './services/providers.js';
 import { createRagIndexer } from './services/rag-indexer.js';
 import { rebuildCompanyRagSources } from './services/rag-rebuild.js';
@@ -819,9 +819,7 @@ app
       actorKind: string;
     }): Promise<{ threadId: string; triggerMessageId: string }> => {
       if (!orchestrator) {
-        throw new Error(
-          '[delegation] orchestrator is unavailable for delegated ticket pickup',
-        );
+        throw new Error('[delegation] orchestrator is unavailable for delegated ticket pickup');
       }
       const ticket = ticketsRepo.getById(args.ticketId);
       if (!ticket || ticket.companyId !== args.companyId) {
@@ -863,8 +861,7 @@ app
         ensureMember(args.actorId, 'employee');
       }
 
-      const actorRow =
-        args.actorKind === 'employee' ? employeesRepo.getById(args.actorId) : null;
+      const actorRow = args.actorKind === 'employee' ? employeesRepo.getById(args.actorId) : null;
       const actorLabel = actorRow?.name ?? args.actorId;
       const description = ticket.description.trim();
       const triggerMessageId = messagesRepo.append({
@@ -1642,17 +1639,13 @@ app
       proactiveTriggerService: {
         decomposeGoal: (args) => {
           if (!proactiveTriggerServiceInstance) {
-            return Promise.reject(
-              new Error('[main] proactiveTriggerService not yet initialized'),
-            );
+            return Promise.reject(new Error('[main] proactiveTriggerService not yet initialized'));
           }
           return proactiveTriggerServiceInstance.decomposeGoal(args);
         },
         scanForWork: (args) => {
           if (!proactiveTriggerServiceInstance) {
-            return Promise.reject(
-              new Error('[main] proactiveTriggerService not yet initialized'),
-            );
+            return Promise.reject(new Error('[main] proactiveTriggerService not yet initialized'));
           }
           return proactiveTriggerServiceInstance.scanForWork(args);
         },
@@ -1741,10 +1734,7 @@ app
         ensureSystemAgent({ db, companyId: company.id, roleLookup: roleLoader });
         ensureSystemCopilot({ db, companyId: company.id, roleLookup: roleLoader });
       } catch (err) {
-        console.error(
-          `[main] system-employee top-up failed for company ${company.id}:`,
-          err,
-        );
+        console.error(`[main] system-employee top-up failed for company ${company.id}:`, err);
       }
       routineServiceInstance?.start(company.id);
     }
@@ -2039,9 +2029,7 @@ app
             try {
               const closedAssigned = ticketsRepo
                 .listByAssignee(employeeId)
-                .filter(
-                  (t) => t.closedAt !== null && t.closedAt > t.createdAt,
-                );
+                .filter((t) => t.closedAt !== null && t.closedAt > t.createdAt);
               if (closedAssigned.length === 0) return null;
               const total = closedAssigned.reduce(
                 (sum, t) => sum + ((t.closedAt ?? 0) - t.createdAt),
@@ -2299,8 +2287,7 @@ app
               );
             }) as ToolSpec['execute'],
           }));
-          const providerTools =
-            toolSpecs.length > 0 ? buildProviderTools(toolSpecs) : undefined;
+          const providerTools = toolSpecs.length > 0 ? buildProviderTools(toolSpecs) : undefined;
 
           for await (const chunk of streamAgent({
             providerFactory: stream,
@@ -2388,6 +2375,12 @@ app
         isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
       },
       agenticLoopService: {
+        // biome-ignore lint/style/noNonNullAssertion: composition order
+        // guarantees `agenticLoopServiceInstance` is initialized before
+        // any IPC consumer of this dep struct can fire; the optional-
+        // chaining replacement biome's unsafe fix proposed would silently
+        // return undefined instead of throwing, which violates the
+        // ResolveProvider contract on `start`.
         start: (args) => agenticLoopServiceInstance!.start(args),
       },
       authorityResolver: {

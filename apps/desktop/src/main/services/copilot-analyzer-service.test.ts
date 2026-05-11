@@ -30,8 +30,6 @@ import type { CopilotInsightRow } from '../db/repos/copilot-insights.js';
 
 import * as analyzerModule from './copilot-analyzer-service.js';
 import {
-  MAX_CRITICAL_DRAFTS_PER_TICK,
-  applyCriticalCeiling,
   type CopilotAnalyzerCompaniesRepo,
   type CopilotAnalyzerCompleteFn,
   type CopilotAnalyzerEmployeesRepo,
@@ -44,6 +42,8 @@ import {
   type CopilotAnalyzerServiceDeps,
   type CopilotAnalyzerSettings,
   type InsightDraft,
+  MAX_CRITICAL_DRAFTS_PER_TICK,
+  applyCriticalCeiling,
   buildAnalysisPrompt,
   createCopilotAnalyzerService,
   parseDrafts,

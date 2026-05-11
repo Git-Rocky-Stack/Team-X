@@ -108,9 +108,7 @@ function SummaryCards({
             const top = topEventTypes[0];
             return top ? (
               <>
-                <div className="text-h3 text-zinc-100">
-                  {formatEventType(top.eventType)}
-                </div>
+                <div className="text-h3 text-zinc-100">{formatEventType(top.eventType)}</div>
                 <p className="text-caption text-zinc-500">{top.count} occurrences</p>
               </>
             ) : (
@@ -205,7 +203,10 @@ function EventRow({
         </span>
 
         {rowSummary ? (
-          <span className="ml-2 min-w-0 flex-1 truncate text-caption text-zinc-400" title={rowSummary}>
+          <span
+            className="ml-2 min-w-0 flex-1 truncate text-caption text-zinc-400"
+            title={rowSummary}
+          >
             {rowSummary}
           </span>
         ) : (

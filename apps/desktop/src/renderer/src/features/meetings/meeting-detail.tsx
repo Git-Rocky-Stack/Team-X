@@ -55,9 +55,7 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="flex-1 min-w-0">
-          <h3 className="truncate text-h3 text-foreground">
-            {detail.agenda || 'Meeting'}
-          </h3>
+          <h3 className="truncate text-h3 text-foreground">{detail.agenda || 'Meeting'}</h3>
           <div className="flex items-center gap-3 text-caption text-muted-foreground">
             <span className="flex items-center gap-1">
               <Users2 className="h-3 w-3" />

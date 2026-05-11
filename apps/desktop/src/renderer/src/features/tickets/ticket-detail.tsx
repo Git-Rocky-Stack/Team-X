@@ -124,9 +124,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-eyebrow-sm text-muted-foreground">
-              Detail rail
-            </span>
+            <span className="text-eyebrow-sm text-muted-foreground">Detail rail</span>
             <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-eyebrow-sm font-mono text-muted-foreground">
               {detail.id.slice(0, 8)}
             </span>

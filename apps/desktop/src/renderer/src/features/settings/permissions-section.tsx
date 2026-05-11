@@ -378,7 +378,9 @@ export function PermissionsSection() {
                                 {formatPath(grant.resourceId)}
                               </span>
                               <Badge variant="outline">{grant.resourceKind}</Badge>
-                              <Badge variant="secondary">{formatPermission(grant.permission)}</Badge>
+                              <Badge variant="secondary">
+                                {formatPermission(grant.permission)}
+                              </Badge>
                             </div>
                           </div>
                           <Button

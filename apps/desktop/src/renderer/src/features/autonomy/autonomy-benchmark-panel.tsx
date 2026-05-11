@@ -195,9 +195,7 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <MissionInsetSurface className="space-y-4 p-4">
           <div className="space-y-2">
-            <div className="text-eyebrow text-muted-foreground">
-              Runtime Targets
-            </div>
+            <div className="text-eyebrow text-muted-foreground">Runtime Targets</div>
             <div className="grid gap-2 sm:grid-cols-2">
               {RUNTIME_PROFILE_KINDS.map((kind) => (
                 <label
@@ -217,9 +215,7 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
           </div>
 
           <div className="space-y-2">
-            <div className="text-eyebrow text-muted-foreground">
-              Scenario Set
-            </div>
+            <div className="text-eyebrow text-muted-foreground">Scenario Set</div>
             <div className="grid gap-2">
               {AUTONOMY_BENCHMARK_SCENARIO_IDS.map((scenarioId) => (
                 <label

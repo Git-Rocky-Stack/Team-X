@@ -447,7 +447,10 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
               </MissionInsetSurface>
 
               {submitError ? (
-                <p className="mt-4 text-caption text-destructive" data-company-settings-error="submit">
+                <p
+                  className="mt-4 text-caption text-destructive"
+                  data-company-settings-error="submit"
+                >
                   {submitError}
                 </p>
               ) : null}

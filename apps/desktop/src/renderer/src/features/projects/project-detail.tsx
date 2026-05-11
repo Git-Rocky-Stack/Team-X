@@ -241,10 +241,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
         {isEditing ? (
           <form onSubmit={handleSave} className="flex flex-col gap-4 p-4">
             <div>
-              <label
-                htmlFor="project-edit-title"
-                className="text-label text-muted-foreground"
-              >
+              <label htmlFor="project-edit-title" className="text-label text-muted-foreground">
                 Title
               </label>
               <Input
@@ -272,10 +269,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label
-                  htmlFor="project-edit-status"
-                  className="text-label text-muted-foreground"
-                >
+                <label htmlFor="project-edit-status" className="text-label text-muted-foreground">
                   Status
                 </label>
                 <select
@@ -293,10 +287,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
               </div>
 
               <div>
-                <label
-                  htmlFor="project-edit-priority"
-                  className="text-label text-muted-foreground"
-                >
+                <label htmlFor="project-edit-priority" className="text-label text-muted-foreground">
                   Priority
                 </label>
                 <select
@@ -317,10 +308,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div>
-              <label
-                htmlFor="project-edit-lead"
-                className="text-label text-muted-foreground"
-              >
+              <label htmlFor="project-edit-lead" className="text-label text-muted-foreground">
                 Lead
               </label>
               <select
@@ -339,10 +327,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div>
-              <label
-                htmlFor="project-edit-goal"
-                className="text-label text-muted-foreground"
-              >
+              <label htmlFor="project-edit-goal" className="text-label text-muted-foreground">
                 Goal
               </label>
               <select
@@ -424,9 +409,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-eyebrow-sm text-muted-foreground/70">
-                Lead
-              </span>
+              <span className="text-eyebrow-sm text-muted-foreground/70">Lead</span>
               {lead ? (
                 <div className="flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/20 text-caption font-bold text-brand">
@@ -446,9 +429,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-eyebrow-sm text-muted-foreground/70">
-                Ticket Progress
-              </span>
+              <span className="text-eyebrow-sm text-muted-foreground/70">Ticket Progress</span>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 flex-1 rounded-full bg-muted">
                   <div

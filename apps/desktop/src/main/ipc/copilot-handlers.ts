@@ -467,8 +467,7 @@ export function buildCopilotHandlers(deps: CopilotHandlersDeps): CopilotHandlers
       });
       const dismissalsInWindow = historicalDismissals + 1;
       const currentWeights = deps.settingsRepo.getCopilotWeights().weights;
-      const currentWeight =
-        currentWeights[category] ?? COPILOT_CATEGORY_WEIGHTS_DEFAULT[category];
+      const currentWeight = currentWeights[category] ?? COPILOT_CATEGORY_WEIGHTS_DEFAULT[category];
       const feedbackSuggestion = buildCopilotFeedbackSuggestion({
         category,
         dismissalsInWindow,

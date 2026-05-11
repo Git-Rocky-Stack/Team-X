@@ -165,9 +165,7 @@ export function CostBreakdown({ companyId, kindFilter }: Props) {
         description="Inspect provider spend and model mix across a selectable time horizon."
       >
         <MissionControlRow className="justify-between gap-3 px-3 py-3">
-          <span className="px-2 text-eyebrow-sm text-muted-foreground">
-            Period
-          </span>
+          <span className="px-2 text-eyebrow-sm text-muted-foreground">Period</span>
           <div className="flex flex-wrap items-center gap-2">
             {RANGE_OPTIONS.map((option) => (
               <MissionSegmentedButton
@@ -300,18 +298,12 @@ export function CostBreakdown({ companyId, kindFilter }: Props) {
                     <th className="px-4 py-3 text-left text-label text-muted-foreground">
                       Provider
                     </th>
-                    <th className="px-4 py-3 text-left text-label text-muted-foreground">
-                      Model
-                    </th>
-                    <th className="px-4 py-3 text-right text-label text-muted-foreground">
-                      Runs
-                    </th>
+                    <th className="px-4 py-3 text-left text-label text-muted-foreground">Model</th>
+                    <th className="px-4 py-3 text-right text-label text-muted-foreground">Runs</th>
                     <th className="px-4 py-3 text-right text-label text-muted-foreground">
                       Tokens
                     </th>
-                    <th className="px-4 py-3 text-right text-label text-muted-foreground">
-                      Cost
-                    </th>
+                    <th className="px-4 py-3 text-right text-label text-muted-foreground">Cost</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -321,9 +313,7 @@ export function CostBreakdown({ companyId, kindFilter }: Props) {
                       className="border-b border-white/10 transition-colors last:border-b-0 hover:bg-surface-100/20"
                     >
                       <td className="px-4 py-3 font-medium text-foreground">{row.provider}</td>
-                      <td className="px-4 py-3 text-code-sm text-muted-foreground">
-                        {row.model}
-                      </td>
+                      <td className="px-4 py-3 text-code-sm text-muted-foreground">{row.model}</td>
                       <td className="px-4 py-3 text-right tabular-nums">{row.totalRuns}</td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {row.totalTokens.toLocaleString()}

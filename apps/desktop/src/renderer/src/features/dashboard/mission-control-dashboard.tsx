@@ -258,10 +258,7 @@ function PanelMessageState({
       <Icon className={cn('h-8 w-8', tone === 'danger' ? 'text-red-300' : 'text-brand')} />
       <div className="space-y-1">
         <p
-          className={cn(
-            'text-body-strong',
-            tone === 'danger' ? 'text-red-100' : 'text-foreground',
-          )}
+          className={cn('text-body-strong', tone === 'danger' ? 'text-red-100' : 'text-foreground')}
         >
           {title}
         </p>
@@ -898,7 +895,11 @@ export function MissionControlDashboard({
                   )}
                 </div>
                 {dashboardLayout.error && (
-                  <p className="text-caption text-red-200" data-dashboard-layout-error="" role="alert">
+                  <p
+                    className="text-caption text-red-200"
+                    data-dashboard-layout-error=""
+                    role="alert"
+                  >
                     {dashboardLayout.error}
                   </p>
                 )}
@@ -1078,9 +1079,7 @@ export function MissionControlDashboard({
             <CardContent className="flex min-h-[18rem] flex-col items-center justify-center gap-4 text-center">
               <AlertTriangle className="h-10 w-10 text-red-300" />
               <div className="space-y-1">
-                <h2 className="text-h3 text-foreground">
-                  Dashboard data could not load
-                </h2>
+                <h2 className="text-h3 text-foreground">Dashboard data could not load</h2>
                 <p className="text-body text-muted-foreground">
                   The mission-control shell is ready, but the employee roster query failed.
                 </p>
@@ -1365,9 +1364,7 @@ export function MissionControlDashboard({
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <p className="text-body-strong text-foreground">
-                                      {row.name}
-                                    </p>
+                                    <p className="text-body-strong text-foreground">{row.name}</p>
                                     <Badge
                                       variant="outline"
                                       className={cn(
@@ -1605,7 +1602,9 @@ export function MissionControlDashboard({
                               {formatTimeAgo(entry.executedAt)}
                             </span>
                           </div>
-                          <p className="text-body text-foreground">{truncateText(entry.text, 96)}</p>
+                          <p className="text-body text-foreground">
+                            {truncateText(entry.text, 96)}
+                          </p>
                         </div>
                         <ArrowRight className="mt-1 h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                       </button>
@@ -1682,33 +1681,25 @@ export function MissionControlDashboard({
                     <>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">
-                            Total runs
-                          </p>
+                          <p className="text-eyebrow text-muted-foreground">Total runs</p>
                           <p className="mt-2 text-numeric text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.totalRuns)}
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">
-                            Total tokens
-                          </p>
+                          <p className="text-eyebrow text-muted-foreground">Total tokens</p>
                           <p className="mt-2 text-numeric text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.totalTokens)}
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">
-                            Avg latency
-                          </p>
+                          <p className="text-eyebrow text-muted-foreground">Avg latency</p>
                           <p className="mt-2 text-numeric text-foreground">
                             {formatCompactNumber(telemetryStatsQuery.data?.avgLatencyMs)}ms
                           </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">
-                            Total cost
-                          </p>
+                          <p className="text-eyebrow text-muted-foreground">Total cost</p>
                           <p className="mt-2 text-numeric text-foreground">
                             {formatUsd(telemetryStatsQuery.data?.totalCostUsd)}
                           </p>
@@ -1734,9 +1725,7 @@ export function MissionControlDashboard({
                         data-dashboard-autonomy-snapshot=""
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-eyebrow text-muted-foreground">
-                            Autonomy snapshot
-                          </p>
+                          <p className="text-eyebrow text-muted-foreground">Autonomy snapshot</p>
                           <Badge
                             variant="outline"
                             className={cn(

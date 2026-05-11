@@ -231,7 +231,12 @@ export function makeAnthropicStream(options: AnthropicAdapterOptions): ProviderS
     let cacheWriteTokens: number | undefined;
     if (cacheEnabled) {
       const meta = (await result.experimental_providerMetadata) as
-        | { anthropic?: { cacheCreationInputTokens?: number | null; cacheReadInputTokens?: number | null } }
+        | {
+            anthropic?: {
+              cacheCreationInputTokens?: number | null;
+              cacheReadInputTokens?: number | null;
+            };
+          }
         | undefined;
       const anth = meta?.anthropic;
       if (anth) {

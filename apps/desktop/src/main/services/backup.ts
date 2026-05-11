@@ -404,9 +404,7 @@ export function createBackupService(deps: BackupServiceDeps) {
       const resolvedRoot = path.resolve(backupsDir);
       const relative = path.relative(resolvedRoot, resolved);
       const escapesRoot =
-        relative.length === 0 ||
-        relative.startsWith('..') ||
-        path.isAbsolute(relative);
+        relative.length === 0 || relative.startsWith('..') || path.isAbsolute(relative);
       if (escapesRoot) {
         throw new Error(
           `[backup] delete: refusing to delete path outside backups directory: ${backupPath}`,

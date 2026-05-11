@@ -702,9 +702,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                 </MissionInsetSurface>
                 <MissionInsetSurface className="space-y-4 p-4" data-operator-invites="">
                   <div className="space-y-1">
-                    <div className="text-body-strong text-foreground">
-                      Queue Operator Invite
-                    </div>
+                    <div className="text-body-strong text-foreground">Queue Operator Invite</div>
                     <p className="text-caption text-muted-foreground">
                       Linked workspaces queue hosted invites automatically. Unlinked workspaces keep
                       local placeholders until shared/cloud auth is fully active.
@@ -998,9 +996,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             </p>
             <MissionInsetSurface className="p-4">
               {sharingReadinessQuery.isLoading ? (
-                <p className="text-caption text-muted-foreground">
-                  Resolving sharing readiness...
-                </p>
+                <p className="text-caption text-muted-foreground">Resolving sharing readiness...</p>
               ) : sharingReadinessQuery.isError || !sharingReadiness ? (
                 <p className="text-caption text-red-200">
                   Sharing readiness is unavailable for this workspace.

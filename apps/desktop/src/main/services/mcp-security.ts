@@ -225,7 +225,7 @@ export function defaultAllowlistPath(userDataDir: string): string {
 export function loadAllowlistFile(path: string): McpAllowlistFile {
   if (!existsSync(path)) {
     const empty: McpAllowlistFile = { version: 1, entries: [] };
-    writeFileSync(path, JSON.stringify(empty, null, 2) + '\n', 'utf8');
+    writeFileSync(path, `${JSON.stringify(empty, null, 2)}\n`, 'utf8');
     return empty;
   }
   const raw = readFileSync(path, 'utf8');
@@ -242,7 +242,9 @@ export function loadAllowlistFile(path: string): McpAllowlistFile {
   }
   const obj = parsed as Record<string, unknown>;
   if (obj.version !== 1) {
-    throw new Error(`[mcp-security] allowlist file ${path} has unsupported version: ${obj.version}`);
+    throw new Error(
+      `[mcp-security] allowlist file ${path} has unsupported version: ${obj.version}`,
+    );
   }
   const entriesRaw = obj.entries;
   if (!Array.isArray(entriesRaw)) {
@@ -370,7 +372,9 @@ export function validateExecutable(
   const isAbsolute = (() => {
     if (process.platform === 'win32') {
       // C:\Path or \\server\share or \?\path
-      return /^[a-zA-Z]:[\\/]/.test(trimmed) || trimmed.startsWith('\\\\') || trimmed.startsWith('//');
+      return (
+        /^[a-zA-Z]:[\\/]/.test(trimmed) || trimmed.startsWith('\\\\') || trimmed.startsWith('//')
+      );
     }
     return trimmed.startsWith('/');
   })();
@@ -387,7 +391,8 @@ export function validateExecutable(
     return {
       ok: false,
       reason: 'allowlist-empty',
-      message: 'MCP executable allowlist is empty — no servers can spawn. Add an entry to mcp-allowlist.json to authorize a binary.',
+      message:
+        'MCP executable allowlist is empty — no servers can spawn. Add an entry to mcp-allowlist.json to authorize a binary.',
     };
   }
 

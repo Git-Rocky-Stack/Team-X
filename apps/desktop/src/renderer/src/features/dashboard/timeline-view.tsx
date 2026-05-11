@@ -164,9 +164,7 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
       {[...groups.entries()].map(([dateLabel, dateEvents]) => (
         <div key={dateLabel}>
           <div className="sticky top-0 z-10 mb-3 bg-black">
-            <span className="text-eyebrow text-muted-foreground">
-              {dateLabel}
-            </span>
+            <span className="text-eyebrow text-muted-foreground">{dateLabel}</span>
           </div>
           <div className="relative ml-4 border-l border-border pl-6">
             {dateEvents.map((event) => (

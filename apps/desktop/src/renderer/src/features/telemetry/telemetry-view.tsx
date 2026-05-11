@@ -274,9 +274,7 @@ export function TelemetryView() {
             <TelemetrySubtabs />
           </MissionControlRow>
           <MissionControlRow density="compact" className="justify-between px-2 py-2 xl:justify-end">
-            <span className="px-2 text-eyebrow-sm text-muted-foreground">
-              Kind
-            </span>
+            <span className="px-2 text-eyebrow-sm text-muted-foreground">Kind</span>
             <TelemetryKindFilterChips active={kindFilter} onChange={setKindFilter} />
           </MissionControlRow>
         </div>

@@ -290,9 +290,7 @@ export function createTestAgenticCompleteFn(
     const key = sentinel ? `__sentinel__:${first}` : first.trim().toLowerCase();
     const idx = callCount.get(key) ?? 0;
     const rawEntry = script[Math.min(idx, script.length - 1)] ?? FALLBACK_SCRIPT[0];
-    const entry: ScriptCompletion = rawEntry
-      ? resolveScriptEntry(rawEntry)
-      : { text: '' };
+    const entry: ScriptCompletion = rawEntry ? resolveScriptEntry(rawEntry) : { text: '' };
     callCount.set(key, idx + 1);
 
     const toolCalls: LoopProviderToolCall[] = (entry.toolCalls ?? []).map((tc) => {

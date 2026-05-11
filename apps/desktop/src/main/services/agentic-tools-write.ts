@@ -1045,7 +1045,7 @@ export function buildDelegateSubtaskTool(
       'score components (role_fit, load, availability, past_performance). ' +
       'On `planner_escalation_threshold` consecutive failures, also emits ' +
       "`task.escalated` and reassigns to the candidate's manager. The " +
-      "ticket itself is not created — and no `task.delegated` event " +
+      'ticket itself is not created — and no `task.delegated` event ' +
       'fires — until the operator approves the row from the inbox.',
     schema: delegateSubtaskSchema,
     async execute(args, ctx) {

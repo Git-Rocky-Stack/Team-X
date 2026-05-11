@@ -127,7 +127,9 @@ export function OrgChartNode({
                 {normalizedLevel}
               </span>
             </div>
-            <p className="mt-0.5 truncate pl-5 text-caption text-muted-foreground">{employee.title}</p>
+            <p className="mt-0.5 truncate pl-5 text-caption text-muted-foreground">
+              {employee.title}
+            </p>
           </div>
         </button>
 

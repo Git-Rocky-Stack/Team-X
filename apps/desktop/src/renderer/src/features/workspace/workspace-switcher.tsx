@@ -113,9 +113,7 @@ export function WorkspaceSwitcher() {
               <Building2 className="h-4 w-4" />
             </span>
             <span className="min-w-0">
-              <span className="block text-eyebrow-sm text-muted-foreground">
-                Workspace
-              </span>
+              <span className="block text-eyebrow-sm text-muted-foreground">Workspace</span>
               {triggerLabel === null ? (
                 <Skeleton className="h-3.5 w-24" />
               ) : (
@@ -141,9 +139,7 @@ export function WorkspaceSwitcher() {
           data-workspace-switcher-content=""
         >
           <DropdownMenuLabel className="px-3 py-2">
-            <span className="block text-eyebrow-sm text-muted-foreground">
-              Mission scope
-            </span>
+            <span className="block text-eyebrow-sm text-muted-foreground">Mission scope</span>
             <span className="mt-1 block text-body-strong text-foreground">Workspaces</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="bg-white/10" />

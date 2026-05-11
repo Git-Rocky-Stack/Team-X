@@ -312,7 +312,10 @@ function SkillCard({ skill, isInstalled, isEnabled, onToggle }: SkillCardProps) 
           <CollapsibleContent>
             <div className="mt-3 space-y-1">
               {skill.tools.map((tool) => (
-                <div key={tool} className="text-caption text-muted-foreground flex items-center gap-2">
+                <div
+                  key={tool}
+                  className="text-caption text-muted-foreground flex items-center gap-2"
+                >
                   <Check className="h-3 w-3 text-green-500" />
                   <code className="bg-muted px-1.5 py-0.5 rounded text-code-sm">{tool}</code>
                 </div>

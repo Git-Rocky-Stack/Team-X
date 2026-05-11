@@ -111,10 +111,7 @@ export function CreateTicketDialog({
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label
-                  htmlFor="ticket-priority"
-                  className="text-label text-muted-foreground"
-                >
+                <label htmlFor="ticket-priority" className="text-label text-muted-foreground">
                   Priority
                 </label>
                 <select
@@ -132,10 +129,7 @@ export function CreateTicketDialog({
               </div>
 
               <div className="flex-1">
-                <label
-                  htmlFor="ticket-assignee"
-                  className="text-label text-muted-foreground"
-                >
+                <label htmlFor="ticket-assignee" className="text-label text-muted-foreground">
                   Assign to
                 </label>
                 <select
@@ -155,10 +149,7 @@ export function CreateTicketDialog({
             </div>
 
             <div>
-              <label
-                htmlFor="ticket-due-date"
-                className="text-label text-muted-foreground"
-              >
+              <label htmlFor="ticket-due-date" className="text-label text-muted-foreground">
                 Due Date
               </label>
               <Input

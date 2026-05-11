@@ -52,9 +52,7 @@ function TicketRow({ ticket, onOpen }: { ticket: Ticket; onOpen: (ticketId: stri
             <MissionPill tone={priorityTone(ticket.priority)}>{ticket.priority}</MissionPill>
             <MissionPill>{ticket.status}</MissionPill>
           </div>
-          <p className="line-clamp-2 text-caption text-muted-foreground">
-            {ticket.description}
-          </p>
+          <p className="line-clamp-2 text-caption text-muted-foreground">{ticket.description}</p>
         </div>
         <MissionIconButton
           title="Open ticket"

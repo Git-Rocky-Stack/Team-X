@@ -118,9 +118,7 @@ function makeAllowlist(entries?: { command: string; sha256?: string }[]): McpExe
 }
 
 /** Default deps used by every test that needs a working host. */
-function makeBaseDeps(
-  overrides: Partial<McpHostDeps> = {},
-): McpHostDeps & {
+function makeBaseDeps(overrides: Partial<McpHostDeps> = {}): McpHostDeps & {
   mcpServersRepo: ReturnType<typeof makeFakeRepos>['mcpServersRepo'];
   toolCallsRepo: ReturnType<typeof makeFakeRepos>['toolCallsRepo'];
 } {
@@ -764,7 +762,7 @@ describe('McpHost', () => {
     it('passes a SCRUBBED env to the stdio transport — no process.env secrets', async () => {
       // Plant an obvious secret in process.env to prove it does not leak.
       const sentinelKey = 'C5_TEST_OPENAI_API_KEY';
-      const sentinelValue = 'sk-leak-' + Date.now();
+      const sentinelValue = `sk-leak-${Date.now()}`;
       process.env[sentinelKey] = sentinelValue;
 
       try {

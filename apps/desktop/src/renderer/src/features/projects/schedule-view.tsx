@@ -184,9 +184,7 @@ function SummaryTile({ label, value, icon: Icon }: SummaryTileProps) {
   return (
     <div className="flex min-h-20 items-center justify-between rounded-md border border-border/60 bg-background px-4 py-3">
       <div className="min-w-0">
-        <p className="text-eyebrow text-muted-foreground">
-          {label}
-        </p>
+        <p className="text-eyebrow text-muted-foreground">{label}</p>
         <p className="mt-1 text-numeric text-foreground">{value}</p>
       </div>
       <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
@@ -511,11 +509,7 @@ export function ScheduleView({
                       <p className="truncate text-caption font-semibold text-foreground">
                         {formatDay(day)}
                       </p>
-                      {isToday && (
-                        <p className="mt-0.5 text-eyebrow-sm text-brand">
-                          Today
-                        </p>
-                      )}
+                      {isToday && <p className="mt-0.5 text-eyebrow-sm text-brand">Today</p>}
                     </div>
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-eyebrow-sm text-muted-foreground">
                       {dayItems.length}
@@ -570,10 +564,7 @@ export function ScheduleView({
 
               <div className="grid gap-3">
                 <div>
-                  <label
-                    htmlFor="schedule-title"
-                    className="text-label text-muted-foreground"
-                  >
+                  <label htmlFor="schedule-title" className="text-label text-muted-foreground">
                     Title *
                   </label>
                   <Input
@@ -587,10 +578,7 @@ export function ScheduleView({
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   <div>
-                    <label
-                      htmlFor="schedule-kind"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-kind" className="text-label text-muted-foreground">
                       Type
                     </label>
                     <select
@@ -607,10 +595,7 @@ export function ScheduleView({
                     </select>
                   </div>
                   <div>
-                    <label
-                      htmlFor="schedule-priority"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-priority" className="text-label text-muted-foreground">
                       Priority
                     </label>
                     <select
@@ -663,10 +648,7 @@ export function ScheduleView({
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   <div>
-                    <label
-                      htmlFor="schedule-end-date"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-end-date" className="text-label text-muted-foreground">
                       End date
                     </label>
                     <Input
@@ -678,10 +660,7 @@ export function ScheduleView({
                     />
                   </div>
                   <div>
-                    <label
-                      htmlFor="schedule-end-time"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-end-time" className="text-label text-muted-foreground">
                       End time
                     </label>
                     <Input
@@ -728,10 +707,7 @@ export function ScheduleView({
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="schedule-assignee"
-                    className="text-label text-muted-foreground"
-                  >
+                  <label htmlFor="schedule-assignee" className="text-label text-muted-foreground">
                     Assign wakeup
                   </label>
                   <select
@@ -773,10 +749,7 @@ export function ScheduleView({
                     </select>
                   </div>
                   <div>
-                    <label
-                      htmlFor="schedule-link-id"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-link-id" className="text-label text-muted-foreground">
                       Item
                     </label>
                     <select

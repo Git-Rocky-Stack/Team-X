@@ -476,10 +476,7 @@ describe('agent-improvement-service — H12 audit (2026-05-07): causation-chain 
       id: 'closed-prior',
       status: 'done',
       closedAt: NOW - 500,
-      labelsJson: JSON.stringify([
-        AGENT_IMPROVEMENT_LABEL,
-        firstCauseLabel ?? '',
-      ]),
+      labelsJson: JSON.stringify([AGENT_IMPROVEMENT_LABEL, firstCauseLabel ?? '']),
     });
     const secondRun = createFixture({
       tickets: [closedFromFirstRun],

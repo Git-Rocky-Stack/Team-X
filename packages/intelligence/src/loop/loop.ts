@@ -326,9 +326,7 @@ async function runLoop(ctx: RunContext): Promise<LoopRun> {
 
     // Append the assistant's structured tool-call message to the transcript so
     // the next provider call sees a well-formed conversation.
-    const assistantParts: Array<
-      { type: 'text'; text: string } | LoopMessageToolCallPart
-    > = [];
+    const assistantParts: Array<{ type: 'text'; text: string } | LoopMessageToolCallPart> = [];
     if (text.length > 0) {
       assistantParts.push({ type: 'text', text });
     }

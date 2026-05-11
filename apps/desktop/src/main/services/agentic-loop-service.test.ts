@@ -236,7 +236,10 @@ const DEFAULT_ANSWER_SCRIPT: readonly string[] = Object.freeze([
 function translateLegacyScriptEntry(
   entry: string,
   index: number,
-): { text: string; toolCalls: Array<{ toolCallId: string; toolName: string; args: Record<string, unknown> }> } {
+): {
+  text: string;
+  toolCalls: Array<{ toolCallId: string; toolName: string; args: Record<string, unknown> }>;
+} {
   const trimmed = entry.trim();
   // Locate the trailing JSON object (last balanced {...}).
   const lastClose = trimmed.lastIndexOf('}');

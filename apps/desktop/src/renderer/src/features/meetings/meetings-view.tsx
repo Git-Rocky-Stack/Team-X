@@ -150,9 +150,7 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
               <div className="space-y-2">
                 {activeMeetings.length > 0 && (
                   <div>
-                    <p className="mb-1.5 text-eyebrow-sm text-muted-foreground/60">
-                      Active
-                    </p>
+                    <p className="mb-1.5 text-eyebrow-sm text-muted-foreground/60">Active</p>
                     <div className="space-y-1.5">
                       {activeMeetings.map((m) => (
                         <MeetingRow key={m.id} meeting={m} />
@@ -162,9 +160,7 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
                 )}
                 {pastMeetings.length > 0 && (
                   <div className={activeMeetings.length > 0 ? 'mt-4' : ''}>
-                    <p className="mb-1.5 text-eyebrow-sm text-muted-foreground/60">
-                      Past
-                    </p>
+                    <p className="mb-1.5 text-eyebrow-sm text-muted-foreground/60">Past</p>
                     <div className="space-y-1.5">
                       {pastMeetings.map((m) => (
                         <MeetingRow key={m.id} meeting={m} />

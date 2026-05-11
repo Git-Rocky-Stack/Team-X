@@ -34,10 +34,10 @@ import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
 
 import { createEventBus } from './event-bus.js';
 import {
+  type CostCalculator,
   MAX_TOOL_RESULT_REPLY_CHARS,
   TOOL_RESULT_TRUNCATION_MARKER,
   capToolResultString,
-  type CostCalculator,
   runAgent,
 } from './run-agent.js';
 
@@ -1181,9 +1181,7 @@ describe('runAgent', () => {
     });
 
     it('does NOT retry once any chunk has streamed', async () => {
-      const { provider, getCalls } = buildPostChunkFailureProvider(
-        new TypeError('fetch failed'),
-      );
+      const { provider, getCalls } = buildPostChunkFailureProvider(new TypeError('fetch failed'));
 
       await expect(
         runAgent(
@@ -1548,9 +1546,7 @@ describe('runAgent', () => {
       // One event per chunk — batching is DB-only.
       expect(tokenDeltas).toHaveLength(deltas.length);
       // Concatenated deltas equal the cumulative stream.
-      const concat = tokenDeltas
-        .map((e) => (e.payload as TokenDeltaPayload).delta)
-        .join('');
+      const concat = tokenDeltas.map((e) => (e.payload as TokenDeltaPayload).delta).join('');
       expect(concat).toBe('abcdefghij');
     });
 

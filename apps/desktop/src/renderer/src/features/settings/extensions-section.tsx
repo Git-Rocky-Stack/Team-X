@@ -515,11 +515,7 @@ export function ExtensionsSection() {
         onOpenChange={setSkillDialogOpen}
         companyId={companyId}
       />
-      <ImportMcpDialog
-        open={mcpDialogOpen}
-        onOpenChange={setMcpDialogOpen}
-        companyId={companyId}
-      />
+      <ImportMcpDialog open={mcpDialogOpen} onOpenChange={setMcpDialogOpen} companyId={companyId} />
     </section>
   );
 }

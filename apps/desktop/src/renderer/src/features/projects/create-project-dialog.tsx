@@ -115,10 +115,7 @@ export function CreateProjectDialog({
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label
-                  htmlFor="project-priority"
-                  className="text-label text-muted-foreground"
-                >
+                <label htmlFor="project-priority" className="text-label text-muted-foreground">
                   Priority
                 </label>
                 <select
@@ -175,10 +172,7 @@ export function CreateProjectDialog({
             </div>
 
             <div>
-              <label
-                htmlFor="project-target-date"
-                className="text-label text-muted-foreground"
-              >
+              <label htmlFor="project-target-date" className="text-label text-muted-foreground">
                 Target Date
               </label>
               <Input

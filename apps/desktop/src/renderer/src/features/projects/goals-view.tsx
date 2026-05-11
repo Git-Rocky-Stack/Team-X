@@ -39,9 +39,7 @@ export function GoalsView({ companyId, employees }: GoalsViewProps) {
       <div className={`flex-1 overflow-y-auto ${activeGoalId ? 'hidden lg:block' : ''}`}>
         <div className="p-4">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-h2 text-foreground">
-              Company Goals ({goals.length})
-            </h2>
+            <h2 className="text-h2 text-foreground">Company Goals ({goals.length})</h2>
             <button
               type="button"
               onClick={() => setCreateOpen(true)}

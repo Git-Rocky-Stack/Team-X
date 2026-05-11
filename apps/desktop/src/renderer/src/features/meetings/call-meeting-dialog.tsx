@@ -61,10 +61,7 @@ export function CallMeetingDialog({
 
         {/* Agenda */}
         <div className="mt-4">
-          <label
-            htmlFor="meeting-agenda"
-            className="block text-label text-muted-foreground"
-          >
+          <label htmlFor="meeting-agenda" className="block text-label text-muted-foreground">
             Agenda
           </label>
           <textarea
@@ -79,10 +76,7 @@ export function CallMeetingDialog({
 
         {/* Chair selection */}
         <div className="mt-3">
-          <label
-            htmlFor="meeting-chair"
-            className="block text-label text-muted-foreground"
-          >
+          <label htmlFor="meeting-chair" className="block text-label text-muted-foreground">
             Chair
           </label>
           <select

@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   type ClassifyCompleteFn,
-  DESTRUCTIVE_INTENT_NAMES,
   DESTRUCTIVE_INTENTS,
+  DESTRUCTIVE_INTENT_NAMES,
   DESTRUCTIVE_MIN_CONFIDENCE,
   INTENT_NAMES,
   type IntentName,

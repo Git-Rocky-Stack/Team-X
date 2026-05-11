@@ -17,8 +17,8 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import {
   EVENT_TYPES,
-  RUNTIME_AUDIT_EVENT_TYPES,
   type EventType,
+  RUNTIME_AUDIT_EVENT_TYPES,
   type RuntimeAuditEventType,
 } from './events.js';
 

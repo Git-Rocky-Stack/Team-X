@@ -56,9 +56,7 @@ export function ProjectsKanban({ projects, employees, onCreateClick }: ProjectsK
           >
             <div className="flex items-center justify-between px-3 py-2.5">
               <div className="flex items-center gap-2">
-                <h3 className="text-eyebrow text-muted-foreground">
-                  {col.label}
-                </h3>
+                <h3 className="text-eyebrow text-muted-foreground">{col.label}</h3>
                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-eyebrow-sm text-muted-foreground">
                   {colProjects.length}
                 </span>

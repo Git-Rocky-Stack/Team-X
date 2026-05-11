@@ -522,7 +522,9 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                   ) : copilotResult?.kind === 'failed' ? (
                     <>
                       <Sparkles className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
-                      <span className="text-caption text-red-300">{copilotResult.payload.message}</span>
+                      <span className="text-caption text-red-300">
+                        {copilotResult.payload.message}
+                      </span>
                     </>
                   ) : (
                     <>
@@ -541,9 +543,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 eyebrow="Autonomous exchange"
                 icon={Bot}
                 iconClassName="border-amber-500/20 bg-amber-500/10 text-amber-300"
-                title={
-                  <SheetTitle className="text-h3">{agentThreadNames}</SheetTitle>
-                }
+                title={<SheetTitle className="text-h3">{agentThreadNames}</SheetTitle>}
                 description="Observe the employee-to-employee thread without interrupting the active exchange."
                 leadingAction={
                   <MissionIconButton

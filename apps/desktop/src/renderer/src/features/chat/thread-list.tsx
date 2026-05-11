@@ -151,9 +151,7 @@ interface SectionHeaderProps {
 function SectionHeader({ title, count }: SectionHeaderProps) {
   return (
     <div className="flex items-center gap-2 px-1 pb-1">
-      <h4 className="flex-1 text-eyebrow-sm text-muted-foreground">
-        {title}
-      </h4>
+      <h4 className="flex-1 text-eyebrow-sm text-muted-foreground">{title}</h4>
       <MissionPill className="px-2 py-1 text-eyebrow-sm tabular-nums" mono>
         {count}
       </MissionPill>

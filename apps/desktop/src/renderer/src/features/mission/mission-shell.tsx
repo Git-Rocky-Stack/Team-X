@@ -184,9 +184,7 @@ export function MissionSectionCard({
           <div className="space-y-1">
             {(title || badge) && (
               <div className="flex flex-wrap items-center gap-2">
-                {title ? (
-                  <CardTitle className="text-h3 text-foreground">{title}</CardTitle>
-                ) : null}
+                {title ? <CardTitle className="text-h3 text-foreground">{title}</CardTitle> : null}
                 {badge}
               </div>
             )}
@@ -385,9 +383,7 @@ export function MissionSheetHeader({
           </div>
         ) : null}
         <div className="min-w-0 flex-1">
-          {eyebrow ? (
-            <p className="text-eyebrow-sm text-muted-foreground">{eyebrow}</p>
-          ) : null}
+          {eyebrow ? <p className="text-eyebrow-sm text-muted-foreground">{eyebrow}</p> : null}
           <div className="mt-1 flex items-center gap-2">
             {title}
             {badge}
@@ -436,10 +432,7 @@ export function MissionStateBlock({
       ) : null}
       <div className="space-y-1">
         <p
-          className={cn(
-            'text-body-strong',
-            tone === 'danger' ? 'text-red-100' : 'text-foreground',
-          )}
+          className={cn('text-body-strong', tone === 'danger' ? 'text-red-100' : 'text-foreground')}
         >
           {title}
         </p>

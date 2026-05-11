@@ -293,10 +293,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
 
         <div className="grid gap-4 py-2">
           <div className="space-y-1.5">
-            <label
-              htmlFor="create-company-mode"
-              className="text-label text-muted-foreground"
-            >
+            <label htmlFor="create-company-mode" className="text-label text-muted-foreground">
               Workspace source
             </label>
             <select
@@ -362,10 +359,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
           ) : null}
 
           <div className="space-y-1.5">
-            <label
-              htmlFor="create-company-name"
-              className="text-label text-muted-foreground"
-            >
+            <label htmlFor="create-company-name" className="text-label text-muted-foreground">
               Workspace name
             </label>
             <Input
@@ -393,10 +387,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
           </div>
 
           <div className="space-y-1.5">
-            <label
-              htmlFor="create-company-slug"
-              className="text-label text-muted-foreground"
-            >
+            <label htmlFor="create-company-slug" className="text-label text-muted-foreground">
               Slug
               <span className="ml-1 font-normal text-muted-foreground/70">
                 (URL-safe identifier — auto-suggested from name)

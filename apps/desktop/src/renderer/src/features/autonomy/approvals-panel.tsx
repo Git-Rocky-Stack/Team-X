@@ -204,17 +204,10 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
 
         <div className="space-y-3">
           <div className="space-y-2">
-            <div className="text-eyebrow text-muted-foreground">
-              Kind
-            </div>
+            <div className="text-eyebrow text-muted-foreground">Kind</div>
             <MissionControlRow className="gap-2">
               {(
-                [
-                  'all',
-                  'authority-request',
-                  'budget-exception',
-                  'delegation-request',
-                ] as const
+                ['all', 'authority-request', 'budget-exception', 'delegation-request'] as const
               ).map((value) => (
                 <MissionSegmentedButton
                   key={value}
@@ -229,9 +222,7 @@ export function ApprovalsPanel({ companyId }: { companyId: string }) {
           </div>
 
           <div className="space-y-2">
-            <div className="text-eyebrow text-muted-foreground">
-              Status
-            </div>
+            <div className="text-eyebrow text-muted-foreground">Status</div>
             <MissionControlRow className="gap-2">
               {(['pending', 'approved', 'denied', 'all'] as const).map((value) => (
                 <MissionSegmentedButton

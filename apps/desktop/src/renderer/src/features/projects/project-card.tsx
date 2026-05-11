@@ -47,7 +47,9 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
         </div>
 
         {project.description && (
-          <p className="mt-1.5 text-caption text-muted-foreground line-clamp-2">{project.description}</p>
+          <p className="mt-1.5 text-caption text-muted-foreground line-clamp-2">
+            {project.description}
+          </p>
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">

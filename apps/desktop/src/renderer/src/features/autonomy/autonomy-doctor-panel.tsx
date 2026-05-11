@@ -162,9 +162,7 @@ export function AutonomyDoctorPanel({ companyId }: { companyId: string }) {
                               {finding.severity}
                             </MissionPill>
                           </div>
-                          <p className="text-caption text-muted-foreground">
-                            {finding.detail}
-                          </p>
+                          <p className="text-caption text-muted-foreground">{finding.detail}</p>
                         </div>
                       </div>
                       {finding.action ? (

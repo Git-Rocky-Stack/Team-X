@@ -146,11 +146,7 @@ export function extractRetryAfterMs(err: unknown, nowMs?: number): number | null
 function pickRetryAfterValue(obj: Record<string, unknown>): unknown {
   // Direct field on the error object — some adapters set this.
   const direct =
-    obj['retryAfter'] ??
-    obj['retry_after'] ??
-    obj['retryAfterMs'] ??
-    obj['retry-after'] ??
-    null;
+    obj.retryAfter ?? obj.retry_after ?? obj.retryAfterMs ?? obj['retry-after'] ?? null;
   if (direct !== null && direct !== undefined) return direct;
 
   for (const key of ['headers', 'responseHeaders']) {
@@ -308,11 +304,7 @@ export const RATE_LIMIT_BACKOFF_CAP_MS = 30_000;
  *
  * H5 audit 2026-05-07.
  */
-export function getProviderRetryBackoffMs(
-  err: unknown,
-  attempt: number,
-  nowMs?: number,
-): number {
+export function getProviderRetryBackoffMs(err: unknown, attempt: number, nowMs?: number): number {
   if (isHttp429Error(err)) {
     const retryAfter = extractRetryAfterMs(err, nowMs);
     if (retryAfter !== null) {

@@ -202,9 +202,7 @@ export function StepCard({
             label="Planning"
             index={step.stepIndex}
           />
-          <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">
-            {d.text}
-          </p>
+          <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">{d.text}</p>
         </article>
       );
     }
@@ -278,9 +276,7 @@ export function StepCard({
             index={step.stepIndex}
             labelClassName="text-brand"
           />
-          <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">
-            {d.text}
-          </p>
+          <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">{d.text}</p>
         </article>
       );
     }
@@ -301,9 +297,7 @@ export function StepCard({
             labelClassName="text-red-400"
             detail={<code className="text-code-sm text-red-400">{d.reason}</code>}
           />
-          <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">
-            {d.message}
-          </p>
+          <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">{d.message}</p>
         </article>
       );
     }
@@ -324,9 +318,7 @@ export function StepCard({
             labelClassName="text-emerald-400"
             detail={
               d.ticketId ? (
-                <code className="text-code-sm text-emerald-400/80">
-                  {d.ticketId.slice(0, 8)}
-                </code>
+                <code className="text-code-sm text-emerald-400/80">{d.ticketId.slice(0, 8)}</code>
               ) : undefined
             }
           />
@@ -411,9 +403,7 @@ export function StepCard({
             {d.ticketId ? (
               <>
                 Ticket{' '}
-                <code className="text-code-sm text-amber-400/80">
-                  {d.ticketId.slice(0, 8)}
-                </code>{' '}
+                <code className="text-code-sm text-amber-400/80">{d.ticketId.slice(0, 8)}</code>{' '}
                 under review
               </>
             ) : (
@@ -468,14 +458,7 @@ function StepHeader({ icon, label, index, detail, labelClassName }: StepHeaderPr
       >
         {icon}
       </span>
-      <span
-        className={cn(
-          'text-eyebrow',
-          labelClassName ?? 'text-muted-foreground',
-        )}
-      >
-        {label}
-      </span>
+      <span className={cn('text-eyebrow', labelClassName ?? 'text-muted-foreground')}>{label}</span>
       {detail ? <span className="truncate">{detail}</span> : null}
       <span className="ml-auto shrink-0 text-eyebrow-sm tabular-nums text-muted-foreground">
         #{String(index + 1).padStart(2, '0')}

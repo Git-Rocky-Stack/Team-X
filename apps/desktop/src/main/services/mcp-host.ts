@@ -139,11 +139,7 @@ export function createMcpHost(deps: McpHostDeps) {
    * employee action. The renderer's audit log surfaces this so an
    * operator who just pasted in a config sees WHY it didn't connect.
    */
-  function emitMcpSpawnViolation(
-    config: McpServerConfig,
-    reason: string,
-    detail: string,
-  ): void {
+  function emitMcpSpawnViolation(config: McpServerConfig, reason: string, detail: string): void {
     try {
       deps.bus.emit({
         type: 'authority.violation',

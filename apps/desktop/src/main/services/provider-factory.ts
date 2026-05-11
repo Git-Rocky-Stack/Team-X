@@ -526,10 +526,7 @@ function extractTextContent(content: StreamMessage['content'] | undefined): stri
  * provider should stream back. Pure function so the sentinel-dispatch
  * rules are unit-testable in isolation.
  */
-function pickTestModeReply(
-  system: string,
-  messages: ReadonlyArray<StreamMessage>,
-): string {
+function pickTestModeReply(system: string, messages: ReadonlyArray<StreamMessage>): string {
   // Walk from the end so a follow-up user message wins over an older one.
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];

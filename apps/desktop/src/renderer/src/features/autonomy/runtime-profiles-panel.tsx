@@ -411,9 +411,7 @@ function RuntimeDiagnosticsGrid({
             key={`${row.label}-${row.value}`}
             className="rounded-[14px] border border-white/10 bg-black/10 px-3 py-2"
           >
-            <div className="text-eyebrow-sm text-muted-foreground">
-              {row.label}
-            </div>
+            <div className="text-eyebrow-sm text-muted-foreground">{row.label}</div>
             <div
               className={`mt-1 break-words text-caption ${
                 row.tone === 'accent'

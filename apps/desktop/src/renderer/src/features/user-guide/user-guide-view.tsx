@@ -296,9 +296,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                     )}
                     data-user-guide-section-nav={section.id}
                   >
-                    <span className="text-eyebrow text-muted-foreground">
-                      {section.category}
-                    </span>
+                    <span className="text-eyebrow text-muted-foreground">{section.category}</span>
                     <span className="text-body-strong">{section.title}</span>
                     <span className="text-caption">{section.summary}</span>
                   </button>
@@ -410,9 +408,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                             </MissionPill>
                             <MissionPill>{task.kind}</MissionPill>
                           </div>
-                          <p className="mt-2 text-body text-muted-foreground">
-                            {task.description}
-                          </p>
+                          <p className="mt-2 text-body text-muted-foreground">{task.description}</p>
                           <div className="mt-3 flex flex-wrap items-center gap-2">
                             {task.actionId ? (
                               <Button
@@ -461,9 +457,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                 >
                   <div className="min-w-0">
                     <p className="text-body-strong text-foreground">{action.label}</p>
-                    <p className="mt-1 text-caption text-muted-foreground">
-                      {action.description}
-                    </p>
+                    <p className="mt-1 text-caption text-muted-foreground">{action.description}</p>
                   </div>
                   <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
                 </button>

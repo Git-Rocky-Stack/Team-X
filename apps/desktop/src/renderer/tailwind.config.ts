@@ -120,19 +120,13 @@ export default {
        * section and the typography-audit decisions for the rationale.
        */
       fontSize: {
-        display: [
-          '2.25rem',
-          { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' },
-        ],
+        display: ['2.25rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
         h1: ['1.75rem', { lineHeight: '1.15', letterSpacing: '-0.015em', fontWeight: '700' }],
         h2: ['1.375rem', { lineHeight: '1.2', letterSpacing: '-0.01em', fontWeight: '600' }],
         h3: ['1.125rem', { lineHeight: '1.25', letterSpacing: '-0.005em', fontWeight: '600' }],
         h4: ['1rem', { lineHeight: '1.375', letterSpacing: '0', fontWeight: '600' }],
         body: ['0.875rem', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '400' }],
-        'body-strong': [
-          '0.875rem',
-          { lineHeight: '1.5', letterSpacing: '0', fontWeight: '500' },
-        ],
+        'body-strong': ['0.875rem', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '500' }],
         'body-sm': ['0.8125rem', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '400' }],
         caption: ['0.75rem', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '400' }],
         label: ['0.75rem', { lineHeight: '1.4', letterSpacing: '0.005em', fontWeight: '500' }],

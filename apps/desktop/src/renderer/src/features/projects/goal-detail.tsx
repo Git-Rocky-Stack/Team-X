@@ -80,9 +80,7 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-eyebrow-sm text-muted-foreground/70">
-              Progress
-            </span>
+            <span className="text-eyebrow-sm text-muted-foreground/70">Progress</span>
             <div className="flex items-center gap-2">
               <div className="h-2 flex-1 rounded-full bg-muted">
                 <div
@@ -90,24 +88,22 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
                   style={{ width: `${detail.progressPct}%` }}
                 />
               </div>
-              <span className="text-caption font-semibold text-foreground">{detail.progressPct}%</span>
+              <span className="text-caption font-semibold text-foreground">
+                {detail.progressPct}%
+              </span>
             </div>
           </div>
 
           {detail.description && (
             <div className="flex flex-col gap-1">
-              <span className="text-eyebrow-sm text-muted-foreground/70">
-                Description
-              </span>
+              <span className="text-eyebrow-sm text-muted-foreground/70">Description</span>
               <p className="text-caption text-muted-foreground">{detail.description}</p>
             </div>
           )}
 
           {detail.targetDate && (
             <div className="flex flex-col gap-1">
-              <span className="text-eyebrow-sm text-muted-foreground/70">
-                Target Date
-              </span>
+              <span className="text-eyebrow-sm text-muted-foreground/70">Target Date</span>
               <p className="text-caption text-foreground">
                 {new Date(detail.targetDate).toLocaleDateString()}
               </p>
@@ -119,7 +115,9 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
               Projects ({detail.projects.length})
             </span>
             {detail.projects.length === 0 ? (
-              <p className="text-caption text-muted-foreground/50">No projects linked to this goal.</p>
+              <p className="text-caption text-muted-foreground/50">
+                No projects linked to this goal.
+              </p>
             ) : (
               <div className="flex flex-col gap-1.5">
                 {detail.projects.map((project) => {

@@ -69,9 +69,7 @@ describe('isTransientFetchFailure', () => {
     });
 
     it('does not match adapter HTTP-status errors', () => {
-      const err = new Error(
-        '[provider-router/ollama] Ollama returned HTTP 400: prompt too long',
-      );
+      const err = new Error('[provider-router/ollama] Ollama returned HTTP 400: prompt too long');
       expect(isTransientFetchFailure(err)).toBe(false);
     });
 
@@ -133,12 +131,8 @@ describe('isHttp429Error (H5 audit 2026-05-07)', () => {
   });
 
   it('does NOT match other HTTP errors (400, 500, etc.)', () => {
-    expect(
-      isHttp429Error(Object.assign(new Error('Bad request'), { status: 400 })),
-    ).toBe(false);
-    expect(
-      isHttp429Error(Object.assign(new Error('server error'), { status: 500 })),
-    ).toBe(false);
+    expect(isHttp429Error(Object.assign(new Error('Bad request'), { status: 400 }))).toBe(false);
+    expect(isHttp429Error(Object.assign(new Error('server error'), { status: 500 }))).toBe(false);
     expect(isHttp429Error(new Error('HTTP 503 service unavailable'))).toBe(false);
   });
 
@@ -172,9 +166,7 @@ describe('isTransientFetchFailure — 429 path (H5 audit 2026-05-07)', () => {
       ),
     ).toBe(false);
     expect(
-      isTransientFetchFailure(
-        Object.assign(new Error('internal server error'), { status: 500 }),
-      ),
+      isTransientFetchFailure(Object.assign(new Error('internal server error'), { status: 500 })),
     ).toBe(false);
   });
 

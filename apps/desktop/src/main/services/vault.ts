@@ -253,7 +253,7 @@ function sanitizeFilename(name: string): string {
  */
 export class VaultPathTraversalError extends Error {
   readonly code = 'VAULT_PATH_TRAVERSAL';
-  constructor(message: string = 'Path escapes vault boundary') {
+  constructor(message = 'Path escapes vault boundary') {
     super(`[vault] ${message}`);
     this.name = 'VaultPathTraversalError';
   }
@@ -277,10 +277,7 @@ export function assertInsideVault(vaultDir: string, candidate: string): string {
   return resolvedCandidate;
 }
 
-export async function assertInsideVaultReal(
-  vaultDir: string,
-  candidate: string,
-): Promise<string> {
+export async function assertInsideVaultReal(vaultDir: string, candidate: string): Promise<string> {
   // Lexical check first — fast and deterministic regardless of FS state.
   const lexical = assertInsideVault(vaultDir, candidate);
 

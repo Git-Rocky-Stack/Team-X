@@ -112,7 +112,9 @@ describe('scrubEnv (C5)', () => {
     expect(DEFAULT_PROCESS_ENV_PASSTHROUGH).toContain('SystemRoot');
     expect(DEFAULT_PROCESS_ENV_PASSTHROUGH).toContain('HOME');
     // No keys that look like secrets.
-    expect(DEFAULT_PROCESS_ENV_PASSTHROUGH.find((k) => /TOKEN|SECRET|KEY/i.test(k))).toBeUndefined();
+    expect(
+      DEFAULT_PROCESS_ENV_PASSTHROUGH.find((k) => /TOKEN|SECRET|KEY/i.test(k)),
+    ).toBeUndefined();
   });
 });
 
@@ -235,7 +237,9 @@ describe('loadAllowlistFile / createFileAllowlist (C5)', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateExecutable (C5)', () => {
-  function staticAllowlist(entries: McpExecutableAllowlist['entries'] extends () => infer T ? T : never): McpExecutableAllowlist {
+  function staticAllowlist(
+    entries: McpExecutableAllowlist['entries'] extends () => infer T ? T : never,
+  ): McpExecutableAllowlist {
     return { entries: () => entries };
   }
 
@@ -249,10 +253,7 @@ describe('validateExecutable (C5)', () => {
   });
 
   it('rejects bare names like "node" or "npx" — PATH lookup is attacker-controlled', () => {
-    const out = validateExecutable(
-      'node',
-      staticAllowlist([{ command: '/usr/bin/node' }]),
-    );
+    const out = validateExecutable('node', staticAllowlist([{ command: '/usr/bin/node' }]));
     expect(out.ok).toBe(false);
     if (!out.ok) {
       expect(out.reason).toBe('bare-name-not-absolute');

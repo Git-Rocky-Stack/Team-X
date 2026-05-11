@@ -92,7 +92,9 @@ export function EmployeeCard({ employee, live }: EmployeeCardProps) {
               title={statusLabel(displayStatus)}
             />
           </div>
-          <span className="block truncate text-caption text-muted-foreground">{employee.title}</span>
+          <span className="block truncate text-caption text-muted-foreground">
+            {employee.title}
+          </span>
         </div>
         <span className="shrink-0 rounded-md bg-black px-2 py-0.5 text-eyebrow-sm text-muted-foreground">
           {employee.level}

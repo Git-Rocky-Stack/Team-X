@@ -319,15 +319,15 @@ describe('H16 audit (2026-05-07): vault path-traversal defense', () => {
       // mandatory trailing sep in the comparison, a naive startsWith
       // would let this slip through. This is the most common
       // path-containment bug in the wild.
-      expect(() =>
-        assertInsideVault('/var/lib/vault', '/var/lib/vault-shadow/secret.txt'),
-      ).toThrow(VaultPathTraversalError);
+      expect(() => assertInsideVault('/var/lib/vault', '/var/lib/vault-shadow/secret.txt')).toThrow(
+        VaultPathTraversalError,
+      );
     });
 
     it('rejects an escape via `..` segments (audit class 2)', () => {
-      expect(() =>
-        assertInsideVault('/var/lib/vault', '/var/lib/vault/../etc/passwd'),
-      ).toThrow(VaultPathTraversalError);
+      expect(() => assertInsideVault('/var/lib/vault', '/var/lib/vault/../etc/passwd')).toThrow(
+        VaultPathTraversalError,
+      );
     });
 
     it('rejects an absolute path that is not under vaultDir', () => {
@@ -419,9 +419,7 @@ describe('H16 audit (2026-05-07): vault path-traversal defense', () => {
       const leaf = join(vaultDir, 'ab', 'planted.txt');
       await writeFile(leaf, 'planted', 'utf-8');
 
-      await expect(assertInsideVaultReal(vaultDir, leaf)).rejects.toThrow(
-        VaultPathTraversalError,
-      );
+      await expect(assertInsideVaultReal(vaultDir, leaf)).rejects.toThrow(VaultPathTraversalError);
     });
 
     it('falls back to lexical when candidate path does not yet exist (pre-mkdir)', async () => {
@@ -502,7 +500,9 @@ describe('H16 audit (2026-05-07): vault path-traversal defense', () => {
       // know which subdir to plant the symlink at.
       const { createHash } = await import('node:crypto');
       const { readFile } = await import('node:fs/promises');
-      const sha = createHash('sha256').update(await readFile(sourceFile)).digest('hex');
+      const sha = createHash('sha256')
+        .update(await readFile(sourceFile))
+        .digest('hex');
       const shaPrefix = sha.slice(0, 2);
 
       const outsideDir = join(realRoot, 'escape-target');

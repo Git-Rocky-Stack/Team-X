@@ -70,9 +70,7 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
       <div className={cn('min-w-0', isUser ? 'max-w-[88%]' : 'max-w-[96%]')}>
         {showSenderName && senderName && (
           <div className="mb-1 flex items-center gap-1.5 px-1">
-            <span className="text-eyebrow-sm text-muted-foreground">
-              {senderName}
-            </span>
+            <span className="text-eyebrow-sm text-muted-foreground">{senderName}</span>
             {message.isAgentInitiated && (
               <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-eyebrow-sm text-amber-500">
                 <Bot className="h-2.5 w-2.5" />

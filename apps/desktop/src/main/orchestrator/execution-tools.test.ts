@@ -136,8 +136,7 @@ describe('execution tools', () => {
     expect(result.maxResults).toBe(200);
     expect(result.matches).toHaveLength(200);
     expect(result.truncated).toBe(true);
-  }, // Defensive bump for slow CI sandboxes; healthy paths run in <1 s.
-  15_000);
+  }, 15_000); // Defensive bump for slow CI sandboxes; healthy paths run in <1 s.
 
   it('creates markdown deliverables and stores them in the vault when wired', async () => {
     const vault = {

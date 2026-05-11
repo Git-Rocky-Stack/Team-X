@@ -242,9 +242,7 @@ export function CopilotSidebar() {
                 >
                   <div className="space-y-4">
                     <div>
-                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">
-                        Category
-                      </p>
+                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">Category</p>
                       <div className="flex flex-wrap gap-2">
                         {CATEGORY_FILTERS.map((category) => (
                           <MissionSegmentedButton
@@ -262,9 +260,7 @@ export function CopilotSidebar() {
                     </div>
 
                     <div>
-                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">
-                        Severity
-                      </p>
+                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">Severity</p>
                       <div className="flex flex-wrap gap-2">
                         {SEVERITY_FILTERS.map((severity) => (
                           <MissionSegmentedButton
@@ -282,9 +278,7 @@ export function CopilotSidebar() {
                     </div>
 
                     <div>
-                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">
-                        Export
-                      </p>
+                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">Export</p>
                       <div className="flex flex-wrap gap-2">
                         {COPILOT_EXPORT_SCOPES.map((scope) => (
                           <MissionSegmentedButton
@@ -326,7 +320,10 @@ export function CopilotSidebar() {
                         </p>
                       )}
                       {exportMutation.isError && (
-                        <p className="mt-3 text-caption text-destructive" data-copilot-export-error="">
+                        <p
+                          className="mt-3 text-caption text-destructive"
+                          data-copilot-export-error=""
+                        >
                           Export failed. Try again.
                         </p>
                       )}
@@ -415,10 +412,7 @@ export function CopilotSidebar() {
 
           <div className="shrink-0 border-t border-white/10 bg-black/20 px-4 py-4">
             <MissionInsetSurface className="p-4">
-              <label
-                htmlFor="copilot-ask-input"
-                className="text-eyebrow-sm text-muted-foreground"
-              >
+              <label htmlFor="copilot-ask-input" className="text-eyebrow-sm text-muted-foreground">
                 Ask the copilot
               </label>
               <div className="mt-2 flex items-start gap-3">

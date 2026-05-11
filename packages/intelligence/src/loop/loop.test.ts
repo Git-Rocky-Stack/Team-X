@@ -105,7 +105,11 @@ function makeClock(start = 1_000_000): { now: () => number; advance: (ms: number
   };
 }
 
-function tc(toolName: string, args: Record<string, unknown>, id = `tc_${toolName}`): LoopProviderToolCall {
+function tc(
+  toolName: string,
+  args: Record<string, unknown>,
+  id = `tc_${toolName}`,
+): LoopProviderToolCall {
   return { toolCallId: id, toolName, args };
 }
 
@@ -148,12 +152,7 @@ describe('createAgenticLoop — happy paths', () => {
 
     expect(run.status).toBe('completed');
     expect(run.answer).toBe('Found them. Done.');
-    expect(run.steps.map((s) => s.kind)).toEqual([
-      'plan',
-      'tool_call',
-      'tool_result',
-      'answer',
-    ]);
+    expect(run.steps.map((s) => s.kind)).toEqual(['plan', 'tool_call', 'tool_result', 'answer']);
 
     const toolCall = run.steps[1];
     if (toolCall.kind !== 'tool_call') throw new Error('expected tool_call');
