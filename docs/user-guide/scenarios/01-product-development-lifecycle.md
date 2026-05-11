@@ -851,7 +851,7 @@ DISCUSSION:
 
 **James (DevOps):**
 - Docker Compose for local dev ✅
-- Staging environment deployed (staging.teamflow-x.com) ✅
+- Staging environment deployed (staging.teamflow-analytics.com) ✅
 - Production pipeline ready (pending final QA sign-off)
 
 **Sarah (QA):**
@@ -891,9 +891,9 @@ CI/CD pipeline for TeamFlow Analytics:
 Pipeline stages:
 1. **Build**: Docker images for backend (FastAPI) and frontend (React)
 2. **Test**: Run unit + integration tests
-3. **Deploy Staging**: Deploy to staging.teamflow-x.com
+3. **Deploy Staging**: Deploy to staging.teamflow-analytics.com
 4. **Smoke Test**: Automated validation of staging
-5. **Deploy Production**: Manual gate, then deploy to teamflow-x.com
+5. **Deploy Production**: Manual gate, then deploy to teamflow-analytics.com
 
 Tech:
 - GitHub Actions for CI/CD
@@ -1039,8 +1039,8 @@ Deploying TeamFlow Analytics MVP to production...
 
 [Deployment successful!]
 
-Production URL: https://teamflow-x.com
-Staging URL: https://staging.teamflow-x.com
+Production URL: https://teamflow-analytics.com
+Staging URL: https://staging.teamflow-analytics.com
 
 Next: Monitor CloudWatch alarms for 1 hour.
 ```

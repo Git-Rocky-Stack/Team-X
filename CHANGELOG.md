@@ -32,6 +32,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `teamflow-x.com` / `discord.gg/teamflow-x` references that don't exist.
   Documentation file tree updated to remove the deleted integration-guide
   entry.
+- **Bundled `teamflow-x.com` placeholder purge across 12 docs files.**
+  The `teamflow-x.com` brand was a placeholder that crept into the docs
+  before the actual `Git-Rocky-Stack/Team-X` repo path / Strategia-X
+  branding was finalized; the docs-sync script was mirroring it to the
+  live website. Every reference is now corrected:
+  - **URLs:** `teamflow-x.com/download` → GitHub Releases page;
+    `docs.teamflow-x.com` → in-repo `docs/` tree;
+    `support.teamflow-x.com` / `status.teamflow-x.com` → dropped (don't
+    exist for a local-first app); `discord.gg/teamflow-x` → dropped (no
+    Discord); `github.com/teamflow-x/*` → `github.com/Git-Rocky-Stack/Team-X`.
+  - **Emails:** `support@`, `feedback@`, `migration@`, `accessibility@`,
+    `community@`, `developers@`, `sales@`, `templates-feedback@`,
+    `integrations@teamflow-x.com` — all rewritten as instructions to open
+    a GitHub issue (with topical labels: `accessibility`, `migration`,
+    `templates`) or a GitHub Discussion, since Team-X is open-source and
+    community-supported with no hosted support email.
+  - **Citations** in `docs/long-llms.txt` (APA + plain + BibTeX) updated
+    to cite v3.1 and point at the real GitHub repo.
+  - **Scenario disambiguation:** `scenarios/01-product-development-lifecycle.md`
+    used `teamflow-x.com` as the fictional company "TeamFlow Analytics"'s
+    domain in a case study. Renamed to `teamflow-analytics.com` so the
+    storytelling stays coherent but the domain is clearly not Team-X.
+    `scenarios/04-cross-functional-collaboration.md`'s placeholder
+    WebSocket endpoint renamed to `wss://api.example.com/...` (RFC 2606
+    reserved domain).
+  - **Cosmetic fictions stripped where adjacent:** `@teamflowx` Twitter
+    references dropped (no Twitter); "Sign up / Create Account" steps
+    softened to "Team-X is local-first — no account required"; FAQ's
+    credit-refund passage rewritten to point users at their actual LLM
+    provider's billing terms (Team-X charges nothing).
+  - Twelve files touched: `llms.txt`, `long-llms.txt`,
+    `user-guide/cli-reference.md`, `user-guide/video-scripts/README.md`,
+    `user-guide/accessibility-guide.md`, `user-guide/migration-guide.md`,
+    `user-guide/templates/README.md`, `user-guide/troubleshooting.md`,
+    `user-guide/faq.md`, `user-guide/getting-started/quick-start.md`,
+    `user-guide/scenarios/01-product-development-lifecycle.md`,
+    `user-guide/scenarios/04-cross-functional-collaboration.md`.
 
 ### Fixed
 

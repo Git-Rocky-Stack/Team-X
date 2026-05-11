@@ -33,7 +33,7 @@
 **Visual:** Download page, installer
 
 **Audio:**
-"First, download Team-X from teamflow-x.com/download. Select your operating system — Windows, macOS, or Linux. The download is about 100 megabytes.
+"First, download Team-X from github.com/Git-Rocky-Stack/Team-X/releases. Pick the build for your operating system — Windows, macOS, or Linux. The download is about 100 megabytes.
 
 Once downloaded, open the installer. On Windows, double-click the EXE file. On macOS, open the DMG file and drag Team-X to Applications. Follow the installation prompts.
 
@@ -365,7 +365,7 @@ For future videos:
 
 ---
 
-**Need video content in other languages?** Contact community@teamflow-x.com for localization support.
+**Need video content in other languages?** Open a discussion at [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) to coordinate localization with the community.
 
 ---
 

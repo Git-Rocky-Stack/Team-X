@@ -23,7 +23,7 @@ Team-X is your AI-powered workforce desktop application. Hire AI employees with 
 
 ### Download
 
-1. Visit [teamflow-x.com/download](https://teamflow-x.com/download)
+1. Visit [github.com/Git-Rocky-Stack/Team-X/releases](https://github.com/Git-Rocky-Stack/Team-X/releases)
 2. Select your operating system:
    - **Windows 10/11:** Download `Team-X-Setup-windows-x64.exe`
    - **macOS 11+ (Intel):** Download `Team-X-Setup-macos-x64.dmg`
@@ -471,9 +471,10 @@ Automate recurring work:
 
 ### Support
 
-- **Email Support:** support@teamflow-x.com
-- **Community Discord:** [discord.gg/teamflow-x](https://discord.gg/teamflow-x)
-- **GitHub Issues:** [github.com/teamflow-x/issues](https://github.com/teamflow-x/issues)
+- **GitHub Issues:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues) — Bug reports
+- **GitHub Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — Q&A and ideas
+
+Team-X is open-source and community-supported — there is no hosted support email or chat server.
 
 ### Keyboard Shortcuts
 

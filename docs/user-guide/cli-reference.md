@@ -568,7 +568,12 @@ jobs:
     steps:
       - name: Install Team-X CLI
         run: |
-          curl -sSL https://teamflow-x.com/install-cli.sh | bash
+          # Team-X has no hosted curl-installer — build from source:
+          git clone https://github.com/Git-Rocky-Stack/Team-X.git
+          cd Team-X && pnpm install --frozen-lockfile
+          # The `teamx` CLI is exposed by the `@team-x/intelligence` package.
+          pnpm -F @team-x/intelligence run build
+          echo "$PWD/packages/intelligence/dist" >> "$GITHUB_PATH"
       
       - name: Create review ticket
         run: |
@@ -705,12 +710,12 @@ TEAMX_WORKSPACE            Default workspace
 TEAMX_OUTPUT_FORMAT        Output format
 TEAMX_TIMEOUT              Timeout (seconds)
 
-For full documentation: docs.teamflow-x.com/cli
+For full documentation: github.com/Git-Rocky-Stack/Team-X/blob/main/docs/user-guide/cli-reference.md
 ```
 
 ---
 
-**Need more help?** Check the [Developer Guide](../developer-guide/api-reference.md) or contact support@teamflow-x.com.
+**Need more help?** Check the [Developer Reference](../developer-guide/api-reference.md) or open an issue at [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues).
 
 ---
 

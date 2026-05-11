@@ -598,18 +598,11 @@ Action items for next month:
 
 **During Migration:**
 
-- **Email:** migration@teamflow-x.com
-- **Discord:** [discord.gg/teamflow-x](https://discord.gg/teamflow-x)
-- **Documentation:** [docs.teamflow-x.com](https://docs.teamflow-x.com)
+- **Issues / bugs:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues) — apply the `migration` label
+- **Questions / discussion:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions)
+- **Documentation:** [github.com/Git-Rocky-Stack/Team-X/tree/main/docs](https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs)
 
-**Professional Services:**
-
-- **Guided migration:** Dedicated migration specialist
-- **Data migration service:** Bulk import/export
-- **Training:** Custom training programs
-- **Process design:** Workflow optimization
-
-**Contact:** sales@teamflow-x.com
+Team-X is open-source and community-supported — there is no paid migration service, training program, or sales channel. Migration tooling lives in the repo; contributions and improvements are welcome via pull request.
 
 ---
 

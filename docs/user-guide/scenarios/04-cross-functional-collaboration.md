@@ -419,7 +419,7 @@ documented in the presence API (#68)?
 
 **Mike (from Ticket #68):**
 ```
-WebSocket server is ready! Endpoint: `wss://api.teamflow-x.com/ws/collaboration`
+WebSocket server is ready! Endpoint: `wss://api.example.com/ws/collaboration`
 
 For joining threads, use the presence API:
 ```

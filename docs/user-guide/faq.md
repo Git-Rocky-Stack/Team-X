@@ -51,9 +51,9 @@ Team-X follows a **freemium model**:
 
 ### How do I install Team-X?
 
-1. Download the installer from [teamflow-x.com/download](https://teamflow-x.com/download)
+1. Download the installer from [github.com/Git-Rocky-Stack/Team-X/releases](https://github.com/Git-Rocky-Stack/Team-X/releases)
 2. Run the installer for your operating system
-3. Create an account or sign in
+3. Launch Team-X (no account or signup — Team-X is local-first)
 4. Complete the Workspace Setup Wizard
 
 See the [Quick Start Guide](./getting-started/quick-start.md) for detailed instructions.
@@ -116,12 +116,7 @@ Team-X uses a **credit-based system**:
 
 ### Can I get a refund?
 
-Unused credits are **refundable within 30 days** of purchase. Contact support@teamflow-x.com with:
-
-- Account email
-- Purchase receipt
-- Reason for refund
-- Credits to refund
+Team-X itself is free and open-source — there are no credits, subscriptions, or refunds to manage on the Team-X side. The cost you control is your LLM provider bill (Anthropic, OpenAI, etc.); for refund policy on those, see your provider's billing terms. Refund requests for provider charges go to the provider, not to Team-X.
 
 Used credits (consumed by AI work) are **non-refundable**.
 
@@ -601,17 +596,14 @@ No. Account merging is **not supported** due to security and data integrity conc
 - **Documentation:** [Comprehensive User Guide](./comprehensive-user-guide.md)
 - **Scenarios:** [Real-world examples](./scenarios/)
 - **Troubleshooting:** [Common issues](./troubleshooting.md)
-- **Community:** [Discord server](https://discord.gg/teamflow-x)
-- **Email Support:** support@teamflow-x.com
-- **Twitter:** [@teamflowx](https://twitter.com/teamflowx)
+- **Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — Q&A, ideas, show-and-tell
+- **Issues:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues) — Bug reports
 
 ### Feature Requests
 
 Have an idea for improving Team-X? We'd love to hear it:
 
-- **GitHub Discussions:** [github.com/teamflow-x/discussions](https://github.com/teamflow-x/discussions)
-- **Feature Request Form:** [teamflow-x.com/feedback](https://teamflow-x.com/feedback)
-- **Email:** feedback@teamflow-x.com
+- **GitHub Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — open a discussion in the "Ideas" category
 
 ---
 

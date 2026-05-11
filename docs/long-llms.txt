@@ -10,12 +10,11 @@
 **Type:** AI-powered workforce desktop application
 **Version:** 1.0.0
 **Status:** Production
-**Repository:** https://github.com/teamflow-x/team-x
-**Website:** https://teamflow-x.com
-**Documentation Root:** https://docs.teamflow-x.com
+**Repository:** https://github.com/Git-Rocky-Stack/Team-X
+**Documentation Root:** https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs
 **License:** MIT
-**Support:** support@teamflow-x.com
-**Community:** https://discord.gg/teamflow-x
+**Support:** https://github.com/Git-Rocky-Stack/Team-X/issues (open-source, community-supported — no hosted support email)
+**Community:** https://github.com/Git-Rocky-Stack/Team-X/discussions
 
 ---
 
@@ -330,7 +329,7 @@ Deliverables created during agent run:
 
 ### First-Time Setup (15 minutes)
 
-1. **Download:** Get installer from teamflow-x.com/download
+1. **Download:** Get installer from github.com/Git-Rocky-Stack/Team-X/releases
 2. **Install:** Run installer for your OS
 3. **Sign Up/Create Account:** Email/password or social login
 4. **Configure Workspace:** Name, budget, purpose
@@ -664,21 +663,19 @@ Error page shown, user not logged in
 ## Support Resources
 
 **Self-Service:**
-- Documentation: docs.teamflow-x.com
+- Documentation: github.com/Git-Rocky-Stack/Team-X/tree/main/docs
 - FAQ: docs/user-guide/faq.md
 - Troubleshooting: docs/user-guide/troubleshooting.md
 - Keyboard Shortcuts: docs/user-guide/keyboard-shortcuts.md
 
 **Community:**
-- Discord: discord.gg/teamflow-x
-- GitHub Discussions: github.com/teamflow-x/discussions
-- Stack Overflow: Tag questions with `teamflow-x`
+- GitHub Discussions: github.com/Git-Rocky-Stack/Team-X/discussions
+- Issue tracker: github.com/Git-Rocky-Stack/Team-X/issues
+- Releases: github.com/Git-Rocky-Stack/Team-X/releases
 
 **Direct Support:**
-- Email: support@teamflow-x.com
-- Response Time: < 24 hours for critical issues
-- Documentation: developers@teamflow-x.com
-- Sales: sales@teamflow-x.com
+
+Team-X is open-source and community-supported. There is no hosted support email, no SLA, and no sales motion — open a GitHub issue for bugs (preferred) or a discussion for questions. Response time depends on community engagement.
 
 ---
 
@@ -686,7 +683,7 @@ Error page shown, user not logged in
 
 **License:** MIT License
 **Copyright:** 2026 Team-X
-**Repository:** https://github.com/teamflow-x/team-x
+**Repository:** https://github.com/Git-Rocky-Stack/Team-X
 **License File:** LICENSE in repository root
 
 **Permissions:**
@@ -705,14 +702,14 @@ Error page shown, user not logged in
 
 **Cite Team-X as:**
 ```
-Team-X. (2026). AI-Powered Workforce Desktop Application (Version 1.0).
-Retrieved from https://teamflow-x.com
+Team-X. (2026). AI-Powered Workforce Desktop Application (Version 3.1).
+Retrieved from https://github.com/Git-Rocky-Stack/Team-X
 ```
 
 **APA Citation:**
 ```
 Team-X. (2026). Team-X: AI-powered workforce desktop application
-(Version 1.0) [Computer software]. https://teamflow-x.com
+(Version 3.1) [Computer software]. https://github.com/Git-Rocky-Stack/Team-X
 ```
 
 **BibTeX:**
@@ -720,9 +717,9 @@ Team-X. (2026). Team-X: AI-powered workforce desktop application
 @software{teamx_2026,
   author = {Team-X},
   title = {Team-X: AI-Powered Workforce Desktop Application},
-  version = {1.0},
+  version = {3.1},
   year = {2026},
-  url = {https://teamflow-x.com}
+  url = {https://github.com/Git-Rocky-Stack/Team-X}
 }
 ```
 
@@ -747,7 +744,7 @@ AI workforce, AI employees, autonomous agents, AI-powered team, virtual team, AI
 
 ## End of Extended Documentation Index
 
-For complete documentation, see: https://docs.teamflow-x.com
+For complete documentation, see: https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs
 
 ---
 

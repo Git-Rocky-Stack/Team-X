@@ -32,7 +32,7 @@
 1. **Verify download:**
    ```
    Check file size matches download page
-   Re-download from teamflow-x.com/download
+   Re-download from github.com/Git-Rocky-Stack/Team-X/releases
    ```
 
 2. **Run as administrator:**
@@ -709,11 +709,13 @@
 
 ## Still Need Help?
 
-### Contact Support
+### Open a GitHub issue
 
-**Email:** support@teamflow-x.com
+Team-X is open-source and community-supported — there is no support email or hosted help desk. Bugs and reproducible issues go in the issue tracker:
 
-**Include with your request:**
+**Issues:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues)
+
+**Include with your report:**
 - Operating system and version
 - Team-X version (Help → About)
 - Detailed description of issue
@@ -723,9 +725,7 @@
 
 ### Community Support
 
-- **Discord:** [discord.gg/teamflow-x](https://discord.gg/teamflow-x)
-- **GitHub Discussions:** [github.com/teamflow-x/discussions](https://github.com/teamflow-x/discussions)
-- **Twitter:** [@teamflowx](https://twitter.com/teamflowx)
+- **Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — Q&A, ideas, show-and-tell
 
 ### Documentation
 

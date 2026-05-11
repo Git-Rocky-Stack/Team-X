@@ -9,9 +9,8 @@
 **Project:** Team-X
 **Description:** AI-powered workforce desktop application
 **Version:** 1.0.0
-**Repository:** https://github.com/teamflow-x/team-x
-**Website:** https://teamflow-x.com
-**Documentation:** https://docs.teamflow-x.com
+**Repository:** https://github.com/Git-Rocky-Stack/Team-X
+**Documentation:** https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs
 
 ---
 
@@ -19,8 +18,7 @@
 
 **Getting Started:**
 - Quick Start Guide: docs/user-guide/getting-started/quick-start.md
-- Installation: https://teamflow-x.com/download
-- Account Creation: https://teamflow-x.com/signup
+- Installation: https://github.com/Git-Rocky-Stack/Team-X/releases (Team-X is local-first; no account or signup required)
 
 **Core Documentation:**
 - Comprehensive User Guide: docs/user-guide/comprehensive-user-guide.md
@@ -174,12 +172,13 @@ docs/
 
 ## Support Resources
 
-**Documentation:** docs.teamflow-x.com
-**Help Center:** support.teamflow-x.com
-**Community Discord:** discord.gg/teamflow-x
-**GitHub Issues:** github.com/teamflow-x/issues
-**Status Page:** status.teamflow-x.com
-**Email:** support@teamflow-x.com
+**Documentation:** github.com/Git-Rocky-Stack/Team-X/tree/main/docs
+**Source code:** github.com/Git-Rocky-Stack/Team-X
+**Issue tracker:** github.com/Git-Rocky-Stack/Team-X/issues
+**Discussions / Q&A:** github.com/Git-Rocky-Stack/Team-X/discussions
+**Releases:** github.com/Git-Rocky-Stack/Team-X/releases
+
+Team-X is open-source and community-supported. There is no hosted support, help center, status page, or email — open an issue on GitHub for bugs and a discussion for questions.
 
 ---
 

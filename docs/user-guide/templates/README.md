@@ -234,7 +234,7 @@ When using templates:
 3. **Share customizations** that benefit others
 4. **Report issues** with template structure or content
 
-**Provide feedback:** [templates-feedback@teamflow-x.com](mailto:templates-feedback@teamflow-x.com)
+**Provide feedback:** open an issue at [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues) with the `templates` label.
 
 ---
 
@@ -251,8 +251,8 @@ When using templates:
 - [Glossary](../glossary.md) — Terminology reference
 
 **Community:**
-- [Discord Server](https://discord.gg/teamflow-x) — Community discussion
-- [GitHub Discussions](https://github.com/teamflow-x/discussions) — Feature requests
+- [GitHub Discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — Community Q&A and feature requests
+- [GitHub Issues](https://github.com/Git-Rocky-Stack/Team-X/issues) — Bug reports and tracked work
 
 ---
 

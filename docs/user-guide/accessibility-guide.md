@@ -565,7 +565,8 @@ Testing:
 **If you encounter accessibility barriers:**
 
 ```
-Email: accessibility@teamflow-x.com
+Open an issue at: github.com/Git-Rocky-Stack/Team-X/issues
+Apply the `accessibility` label.
 
 Include:
 - Your assistive technology (screen reader, etc.)
@@ -579,7 +580,8 @@ Include:
 **If you need specific accommodations:**
 
 ```
-Email: accessibility@teamflow-x.com
+Open a discussion at: github.com/Git-Rocky-Stack/Team-X/discussions
+Tag with `accessibility`.
 
 Common accommodations:
 - Alternative formats for documentation
