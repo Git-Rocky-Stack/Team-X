@@ -213,6 +213,103 @@ function sanitizeFilename(name: string): string {
     .slice(0, 200);
 }
 
+/**
+ * H16 (audit 2026-05-07): vault path-traversal defense.
+ *
+ * `sanitizeFilename` above defangs separator chars from user-supplied
+ * filenames, but it is NOT a containment guard. Three classes of escape
+ * survive it:
+ *
+ *   1. A symlink planted at `<vaultDir>/<sha-prefix>` pointing to e.g.
+ *      `/etc`. The next `fs.mkdir(targetDir, { recursive: true })` follows
+ *      the symlink, and the subsequent `fs.copyFile` writes outside the
+ *      vault — `sanitizeFilename` never sees the directory component.
+ *   2. A `getCompanySlug` implementation that returns a string containing
+ *      `..` or an absolute-path prefix. `path.join(companiesBasePath,
+ *      slug, 'vault')` composes that escape silently. The callback is
+ *      dep-injected and varies per call site — we treat its output as
+ *      untrusted by construction.
+ *   3. Encoded traversal in `originalName` (e.g. `..%2fetc%2fpasswd`).
+ *      `sanitizeFilename` operates on raw chars; URI decoding by a
+ *      preceding layer is out of its scope.
+ *
+ * The fix is a defense-in-depth pair of helpers:
+ *
+ *   - `assertInsideVault(vaultDir, candidate)` — lexical containment via
+ *     `path.resolve` + `startsWith(vaultDir + sep)`. Fast, sync, no FS.
+ *     Catches classes (2) and (3).
+ *   - `assertInsideVaultReal(vaultDir, candidate)` — symlink-aware via
+ *     `fs.realpath` on BOTH sides; verifies the realpath of `candidate`
+ *     is still under the realpath of `vaultDir`. Catches class (1) and
+ *     defends against TOCTOU symlink races that occur between mkdir and
+ *     copyFile.
+ *
+ * Error messages are intentionally generic — no leakage of the resolved
+ * path or attempted escape target — so adversarial probing learns
+ * nothing about the boundary layout.
+ *
+ * Case handling: Windows is case-insensitive; POSIX is case-sensitive.
+ * Mirrors the pattern in `mcp-security.ts` (`pathsEqual` / `isInside`).
+ */
+export class VaultPathTraversalError extends Error {
+  readonly code = 'VAULT_PATH_TRAVERSAL';
+  constructor(message: string = 'Path escapes vault boundary') {
+    super(`[vault] ${message}`);
+    this.name = 'VaultPathTraversalError';
+  }
+}
+
+function pathStartsWith(child: string, parent: string): boolean {
+  if (process.platform === 'win32') {
+    const c = child.toLowerCase();
+    const p = parent.toLowerCase();
+    return c === p || c.startsWith(p + path.sep.toLowerCase());
+  }
+  return child === parent || child.startsWith(parent + path.sep);
+}
+
+export function assertInsideVault(vaultDir: string, candidate: string): string {
+  const resolvedVault = path.resolve(vaultDir);
+  const resolvedCandidate = path.resolve(candidate);
+  if (!pathStartsWith(resolvedCandidate, resolvedVault)) {
+    throw new VaultPathTraversalError();
+  }
+  return resolvedCandidate;
+}
+
+export async function assertInsideVaultReal(
+  vaultDir: string,
+  candidate: string,
+): Promise<string> {
+  // Lexical check first — fast and deterministic regardless of FS state.
+  const lexical = assertInsideVault(vaultDir, candidate);
+
+  // Symlink-aware check — only meaningful when both paths exist on disk.
+  // If `vaultDir` doesn't exist yet (first-ever write to a new company)
+  // OR `candidate` doesn't exist yet (pre-mkdir path), symlink injection
+  // at that level is structurally impossible: a symlink CANNOT be planted
+  // at a path that doesn't exist. The lexical check is sufficient for
+  // not-yet-existing paths; the post-mkdir caller is expected to re-run
+  // this helper AFTER creating the directory, which is when an attacker
+  // first has something to symlink.
+  let realVault: string;
+  let realCandidate: string;
+  try {
+    realVault = await fs.realpath(vaultDir);
+  } catch {
+    return lexical;
+  }
+  try {
+    realCandidate = await fs.realpath(candidate);
+  } catch {
+    return lexical;
+  }
+  if (!pathStartsWith(realCandidate, realVault)) {
+    throw new VaultPathTraversalError('Symlink escapes vault boundary');
+  }
+  return realCandidate;
+}
+
 function rowToVaultFile(row: FileVaultRow): VaultFile {
   let tags: string[] = [];
   try {
@@ -241,7 +338,17 @@ export function createVaultService(deps: VaultServiceDeps) {
   function getVaultDir(companyId: string): string {
     const slug = getCompanySlug(companyId);
     if (!slug) throw new Error(`[vault] Company not found: ${companyId}`);
-    return path.join(companiesBasePath, slug, 'vault');
+    const vaultDir = path.join(companiesBasePath, slug, 'vault');
+    // H16 (audit 2026-05-07): `getCompanySlug` is a dep-injected
+    // callback whose output we treat as untrusted (a buggy slug
+    // resolver, a corrupted company row, a path-encoded id). If the
+    // slug contains `..` or an absolute-path prefix, the composed
+    // vaultDir escapes companiesBasePath. Validating the OUTER
+    // boundary here closes audit class (2) so every downstream
+    // `assertInsideVault(vaultDir, ...)` operates on a vaultDir that
+    // is itself known to be a strict descendant of companiesBasePath.
+    assertInsideVault(companiesBasePath, vaultDir);
+    return vaultDir;
   }
 
   return {
@@ -274,10 +381,48 @@ export function createVaultService(deps: VaultServiceDeps) {
       const filename = `${sha256.slice(0, 8)}_${sanitizeFilename(originalName)}`;
       const vaultDir = getVaultDir(companyId);
       const targetDir = path.join(vaultDir, shaPrefix);
+
+      // H16 (audit 2026-05-07): lexical containment BEFORE mkdir catches
+      // class (2) — a getCompanySlug returning `..` or absolute-path-like
+      // strings that compose an escape via path.join.
+      assertInsideVault(vaultDir, targetDir);
+
       await fs.mkdir(targetDir, { recursive: true });
 
+      // H16 (audit 2026-05-07): symlink-aware check AFTER mkdir catches
+      // class (1) — a symlink planted at `<vaultDir>/<sha-prefix>`
+      // pointing outside the vault. fs.mkdir(recursive: true) follows
+      // existing symlinks silently; this realpath check is what stops
+      // the next fs.copyFile from writing into the symlink's target.
+      await assertInsideVaultReal(vaultDir, targetDir);
+
       const targetPath = path.join(targetDir, filename);
+
+      // Lexical check on the leaf — defense-in-depth even though
+      // `filename` is constructed from sanitizeFilename + sha8 (both
+      // safe by construction today). Pins the contract so a future
+      // refactor that admits a less-trusted filename source doesn't
+      // silently regress.
+      assertInsideVault(vaultDir, targetPath);
+
       await fs.copyFile(sourcePath, targetPath);
+
+      // Final symlink check on the written leaf — closes the TOCTOU
+      // window where an attacker could replace `targetPath` with a
+      // symlink AFTER the mkdir realpath check but BEFORE copyFile
+      // dereferences it. If this fires, the copy already wrote
+      // *somewhere*; unlink the leaf to avoid leaving a stale write.
+      try {
+        await assertInsideVaultReal(vaultDir, targetPath);
+      } catch (err) {
+        try {
+          await fs.unlink(targetPath);
+        } catch {
+          // Best effort — the leaf may have been the symlink itself,
+          // not a file we can unlink.
+        }
+        throw err;
+      }
 
       // Extract text for FTS5 indexing
       const extractedText = await extractText(targetPath, mimeType);
@@ -349,12 +494,21 @@ export function createVaultService(deps: VaultServiceDeps) {
       const vaultDir = getVaultDir(row.companyId);
       const absolutePath = path.join(vaultDir, row.vaultPath);
 
+      // H16 (audit 2026-05-07): a malicious or stale `row.vaultPath`
+      // from the DB (corruption, downgrade attack, restored backup
+      // from a compromised host) MUST NOT escape the vault on retrieve.
+      // Lexical AND symlink-aware containment before we hand the path
+      // back to a caller that will read it.
+      assertInsideVault(vaultDir, absolutePath);
+
       // Verify file exists on disk
       try {
         await fs.access(absolutePath);
       } catch {
         throw new Error(`[vault] File missing from disk: ${absolutePath}`);
       }
+
+      await assertInsideVaultReal(vaultDir, absolutePath);
 
       return { file: rowToVaultFile(row), absolutePath };
     },
@@ -369,6 +523,19 @@ export function createVaultService(deps: VaultServiceDeps) {
 
       const vaultDir = getVaultDir(row.companyId);
       const absolutePath = path.join(vaultDir, row.vaultPath);
+
+      // H16 (audit 2026-05-07): containment + symlink check before we
+      // open the file for hashing. An attacker who controls `row.vaultPath`
+      // could otherwise coerce `verify` into hashing `/etc/passwd` and
+      // returning `{ ok: false, actual: '<hash of /etc/passwd>' }` — a
+      // hash-oracle leak.
+      assertInsideVault(vaultDir, absolutePath);
+      try {
+        await assertInsideVaultReal(vaultDir, absolutePath);
+      } catch (err) {
+        if (err instanceof VaultPathTraversalError) throw err;
+        // Other realpath failures (ENOENT) fall through to FILE_MISSING below.
+      }
 
       try {
         const actual = await computeSha256(absolutePath);
@@ -391,6 +558,21 @@ export function createVaultService(deps: VaultServiceDeps) {
 
       const vaultDir = getVaultDir(row.companyId);
       const absolutePath = path.join(vaultDir, row.vaultPath);
+
+      // H16 (audit 2026-05-07): containment + symlink check before
+      // unlink. A malicious `row.vaultPath` (DB corruption, restored
+      // backup) MUST NOT let `remove` delete outside the vault. The
+      // symlink check matters because `fs.unlink` of a symlink deletes
+      // the LINK not the target — but an attacker who places a symlink
+      // at the leaf still wants to make us delete it, so refuse.
+      assertInsideVault(vaultDir, absolutePath);
+      try {
+        await assertInsideVaultReal(vaultDir, absolutePath);
+      } catch (err) {
+        if (err instanceof VaultPathTraversalError) throw err;
+        // Other realpath failures (ENOENT) fall through — the unlink
+        // try/catch below handles the missing-file case.
+      }
 
       // Delete from disk (ignore if already gone)
       try {

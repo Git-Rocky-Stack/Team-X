@@ -276,7 +276,7 @@ Role-to-capability mapping is declared (lines 90-105) and used in `private-opera
 | H13 | ✅ FIXED (2026-05-10) **Copilot severity has no ceiling.** Model can emit 5 `critical` insights per cycle; weight filtering is soft (default 1.0 across categories). | `copilot-analyzer-service.ts:316-322` |
 | H14 | ✅ FIXED (2026-05-10) **Copilot category-weight feedback loop is aspirational.** Comments mark it Phase 6 / M38; dismissals are recorded but never aggregated. README claims it's live. | `copilot-analyzer-service.ts:159` |
 | H15 | ✅ FIXED (2026-05-10) **Tool result size unbounded in default chat path.** `safeStringify`'s 8KB cap protects only the agentic loop; `run-agent.ts:415-420` passes through whatever the tool returns. Mirrored the loop's 8000-char cap into the default chat path via a new exported `capToolResultString(value, max = 8000)` pure helper + `MAX_TOOL_RESULT_REPLY_CHARS = 8000` + `TOOL_RESULT_TRUNCATION_MARKER = "…[truncated]"` constants. `synthesizeToolOnlyReply` now caps BOTH user-visible projection sites — the `entry.result.message` body AND the `send_message_to_colleague` `recipientName` template variable — before the string is written to `messages.content` and shown to the renderer. Truncation surfaces via `console.warn` carrying the tool name so the wire-up gap (a chatty MCP server, a runaway tool) is loudly diagnosable. Cap semantics match `safeStringify` exactly: output = `slice(0, MAX) + marker` (final length = MAX + marker.length), so the same idiom renders identically across both stacks. Pinned by `run-agent.test.ts` (+9 H15 tests: 5 pure-helper — under cap no-op, exact-at-cap pass-through, over-cap truncates with full content + marker, explicit lower max argument, empty string no-op; 4 service-level integration — 12K-char `query_tickets` message → bounded DB row with marker + console.warn, 12K-char `send_message_to_colleague` `recipientName` → bounded templated reply, the audit-quoted Mina Patel happy path byte-identical regression pin with zero warnings, 1 MB `read_vault_file` worst-case bounded at MAX + marker). | `orchestrator/run-agent.ts:233-275` |
-| H16 | **Vault path traversal partial defense.** `sanitizeFilename` defangs `../` but no `path.resolve(...).startsWith(vaultDir)` guard, no symlink check post-mkdir. | `services/vault.ts:203-279` |
+| H16 | ✅ FIXED (2026-05-11) **Vault path traversal partial defense.** `sanitizeFilename` defangs `../` but no `path.resolve(...).startsWith(vaultDir)` guard, no symlink check post-mkdir. Added a defense-in-depth pair: `assertInsideVault` (lexical containment via `path.resolve` + `pathStartsWith(parent + sep)`, mirrors `mcp-security.ts`'s case-aware POSIX/Windows pattern) and `assertInsideVaultReal` (symlink-aware via `fs.realpath` on BOTH sides — catches the canonical mkdir-followed-symlink injection and the TOCTOU race between mkdir and copyFile). The lexical helper guards the OUTER boundary inside `getVaultDir` so `companiesBasePath` is the true containment root regardless of what dep-injected `getCompanySlug` returns. The symlink helper guards the INNER boundary post-mkdir + post-copyFile inside `store`, and on every `retrieve` / `verify` / `remove` so a malicious `row.vaultPath` (DB corruption, restored backup from compromised host, downgrade attack) cannot escape. Error messages are deliberately generic — `VaultPathTraversalError` with code `VAULT_PATH_TRAVERSAL` — so adversarial probing learns nothing about the boundary layout; the resolved path is NEVER leaked back to the caller. The audit's specific concerns (no `startsWith` guard, no symlink check) are now both closed. Pinned by `vault.test.ts` (+19 H16 tests: 7 lexical helper — strict descendant, boundary self, sibling-prefix-no-confusion, `..` escape, absolute-path escape, generic-message verification, stable-error-code; 6 symlink-aware helper — legit nested file, leaf-symlink-to-outside, mkdir-followed-symlinked-directory, pre-existence lexical fallback ×2, lexical-still-fires-when-paths-don't-exist; 6 service-level — slug-returns-`..`, sha-prefix-symlinked, retrieve refuses escape, remove refuses escape with file-still-on-disk + DB-row-still-present assertions, verify refuses escape (no hash-oracle leak), legit happy-path regression pin). | `services/vault.ts:200-303` |
 
 ### H1 ✅ FIXED (2026-05-09 — closed by C2)
 
@@ -1140,6 +1140,130 @@ Pre-existing keytar test-load failure on `provider-factory.test.ts` persists acr
 **Closes the audit's callout:**
 > *"Tool result size unbounded in default chat path. `safeStringify`'s 8KB cap protects only the agentic loop; `run-agent.ts:415-420` passes through whatever the tool returns."*
 Now: the default chat path applies the same 8000-char cap via `capToolResultString`, mirroring `safeStringify`'s contract exactly. Both user-visible projection sites in `synthesizeToolOnlyReply` — `result.message` AND `send_message_to_colleague` `recipientName` — are bounded before they reach `messages.content` or the renderer. Truncation is loudly diagnosable via tool-name-tagged `console.warn` rather than silent. Cross-path symmetry restored: both stacks bound results at MAX with the same `…[truncated]` idiom.
+
+---
+
+### H16 ✅ FIXED (2026-05-11)
+
+**File:** `apps/desktop/src/main/services/vault.ts`
+
+**Final P1 finding — all 10 P1 audit findings now closed.**
+
+The audit's complaint was precise: *"`sanitizeFilename` defangs `../` but no `path.resolve(...).startsWith(vaultDir)` guard, no symlink check post-mkdir."* The fix adds both guards — and discovers a third class the audit didn't name but the test suite caught: the `getCompanySlug` outer boundary.
+
+**The attack surface, made concrete.** Pre-H16, `vault.ts` had exactly one defense: `sanitizeFilename` replacing separator chars (`/ \ : * ? "`) inside a single user-supplied filename. That stops `originalName = "../etc/passwd"` from composing a traversal because the slashes become underscores. But it does not stop three other classes:
+
+1. **Symlink injection at the sha-prefix directory.** An attacker (or compromised process with write access to `<companies>/<slug>/vault/`) replaces `<vaultDir>/ab` with a symlink to `/etc`. The next `store` call computes a sha whose first two hex chars are `ab`, runs `fs.mkdir(targetDir, { recursive: true })` (which silently follows the existing symlink), then `fs.copyFile(sourcePath, targetPath)` writes into `/etc/abc12345_<filename>`. `sanitizeFilename` is structurally incapable of seeing the directory component — it only sees `originalName`.
+
+2. **Untrusted slug composition.** `getVaultDir` calls `getCompanySlug(companyId)` — a dep-injected callback — and threads its return value straight into `path.join(companiesBasePath, slug, 'vault')`. If the resolver returns `"../../outside-co"` (buggy implementation, corrupted company row, path-encoded id), `path.join` silently composes an escape. Every downstream "is this under vaultDir" check passes vacuously because vaultDir itself is already outside companiesBasePath.
+
+3. **Malicious `row.vaultPath` on read.** `retrieve`, `verify`, `remove` all read `row.vaultPath` from SQLite and join it onto `vaultDir`. A corrupted or attacker-controlled row (DB-level write, restored backup from a compromised host, downgrade attack against a column with no constraint) can carry `"../../../etc/passwd"` straight through.
+
+**The fix — defense-in-depth pair + outer-boundary anchor.**
+
+```ts
+export class VaultPathTraversalError extends Error {
+  readonly code = 'VAULT_PATH_TRAVERSAL';
+  constructor(message = 'Path escapes vault boundary') {
+    super(`[vault] ${message}`);
+    this.name = 'VaultPathTraversalError';
+  }
+}
+
+function pathStartsWith(child, parent) {
+  if (process.platform === 'win32') {
+    const c = child.toLowerCase(), p = parent.toLowerCase();
+    return c === p || c.startsWith(p + path.sep.toLowerCase());
+  }
+  return child === parent || child.startsWith(parent + path.sep);
+}
+
+export function assertInsideVault(vaultDir, candidate) {
+  const resolvedVault = path.resolve(vaultDir);
+  const resolvedCandidate = path.resolve(candidate);
+  if (!pathStartsWith(resolvedCandidate, resolvedVault)) {
+    throw new VaultPathTraversalError();
+  }
+  return resolvedCandidate;
+}
+
+export async function assertInsideVaultReal(vaultDir, candidate) {
+  assertInsideVault(vaultDir, candidate);              // lexical first
+  // realpath only if both sides exist (symlink injection is impossible
+  // at a path that doesn't exist; lexical check is sufficient pre-mkdir)
+  let realVault, realCandidate;
+  try { realVault = await fs.realpath(vaultDir); } catch { return path.resolve(candidate); }
+  try { realCandidate = await fs.realpath(candidate); } catch { return path.resolve(candidate); }
+  if (!pathStartsWith(realCandidate, realVault)) {
+    throw new VaultPathTraversalError('Symlink escapes vault boundary');
+  }
+  return realCandidate;
+}
+```
+
+**Three boundaries, three guard placements.**
+
+1. **Outer (`getVaultDir`)** — `assertInsideVault(companiesBasePath, vaultDir)` runs once whenever a `vaultDir` is constructed. This is the slug-injection trap. The dep-injected callback is treated as untrusted by construction; every downstream check then operates on a `vaultDir` that is itself a strict descendant of `companiesBasePath`.
+
+2. **Inner write (`store`)** — `assertInsideVault(vaultDir, targetDir)` before `mkdir`; `assertInsideVaultReal(vaultDir, targetDir)` immediately AFTER `mkdir` (the symlink-injection trap); `assertInsideVault(vaultDir, targetPath)` before `copyFile`; `assertInsideVaultReal(vaultDir, targetPath)` after `copyFile` (the TOCTOU trap — closes the microsecond race between post-mkdir check and copyFile dereference; if it fires, the just-written leaf is unlinked best-effort so we don't leak a partial write outside the vault).
+
+3. **Inner read (`retrieve` / `verify` / `remove`)** — each path-touching method now runs `assertInsideVault` + `assertInsideVaultReal` before its FS operation. The `verify` case is particularly interesting: without the guard, an attacker who controls `row.vaultPath` could coerce the service into hashing an arbitrary file and returning `{ ok: false, actual: '<hash of /path/to/secret>' }` — a **hash-oracle leak**. The guard refuses BEFORE `computeSha256` ever opens the file.
+
+**Error-message discipline.** `VaultPathTraversalError` carries no information about the resolved path or the attempted escape target. An attacker probing for the boundary by repeatedly submitting candidates and observing the error gets exactly the same string every time: `"[vault] Path escapes vault boundary"` (or `"...Symlink escapes vault boundary"`). The code field `VAULT_PATH_TRAVERSAL` lets legitimate callers branch on this class without scraping `message`.
+
+**Case-handling.** Mirrors `mcp-security.ts`'s established pattern: Windows is case-insensitive (`C:\Foo` ≡ `c:\foo`), POSIX is case-sensitive. `pathStartsWith` lowercases both sides only on `win32`. Critically: the comparison appends `path.sep` to the parent before `startsWith` so `vault-shadow` does NOT pass as a child of `vault`.
+
+**Tests** (19 new, in `vault.test.ts` inside the `H16 audit (2026-05-07): vault path-traversal defense` describe block):
+
+*Pure helper coverage — `assertInsideVault` (lexical, 7):*
+1. Strict descendant → returns resolved path.
+2. Boundary case: vaultDir itself is "inside" (the root is a valid candidate).
+3. Sibling-prefix-no-confusion — `vault-shadow` is NOT inside `vault` (catches the classic missing-trailing-sep bug).
+4. `..`-escape rejection.
+5. Absolute-path escape rejection.
+6. Error-message audit — does NOT contain the attempted path string.
+7. Stable error code — `VAULT_PATH_TRAVERSAL`.
+
+*Pure helper coverage — `assertInsideVaultReal` (symlink-aware, 6):*
+1. Legit nested file → returns realpath.
+2. Leaf-symlink-to-outside rejection (canonical class 1).
+3. Leaf inside a symlinked directory — the mkdir-followed-symlink case the audit named.
+4–5. Pre-existence lexical fallback — pre-mkdir candidate and missing vaultDir both fall back to lexical check without throwing.
+6. Lexical-still-fires when neither side exists — defense-in-depth doesn't degrade.
+
+(Symlink tests skip cleanly when `EPERM` fires — Windows requires elevated permissions or Developer Mode for `fs.symlink`, so CI matrix legs without it stay green.)
+
+*Service-level integration (6):*
+1. `store()` refuses slug-returns-`..` (outer boundary, class 2). DB row is NOT created.
+2. `store()` refuses sha-prefix-symlinked (inner boundary, class 1). Critically asserts the escape target directory remains empty AND the DB row is NOT created.
+3. `retrieve()` refuses malicious `row.vaultPath` (class 3 — DB corruption / restored-backup attack).
+4. `remove()` refuses malicious `row.vaultPath` — and asserts BOTH the outside file remains on disk AND the DB row remains, because the guard throws before `unlink` AND before `vaultRepo.delete`.
+5. `verify()` refuses malicious `row.vaultPath` — closes the hash-oracle leak (`computeSha256` never opens the file).
+6. Happy-path regression pin: legit store/retrieve/verify/remove cycle works byte-identical to pre-H16. The audit-fix MUST NOT break the common case.
+
+**Verification.**
+
+| Suite | Pre-H16 | Post-H16 | Net new |
+|---|---|---|---|
+| `@team-x/desktop` | 2150 / 2150 (188 / 189 files) | **2168 / 2169** (187 / 189 files) | **+19 H16** (all 19 pass) |
+| `@team-x/intelligence` | 210 / 210 | 210 / 210 | 0 |
+| `@team-x/shared-types` | 74 / 74 | 74 / 74 | 0 |
+| `@team-x/desktop typecheck` | 4 pre-existing | 4 pre-existing, unchanged | 0 H16-attributable |
+
+The +1 file failure in `@team-x/desktop` is `role-loader.test.ts` — pack-hash mismatch from `a5f0ac7` (v3.1.0 prep edited `role-packs/strategia-official` without re-signing). **Verified non-H16 by `git stash` test**: failure reproduces with H16 changes reverted. Resolution: `pnpm sign:pack` in a follow-up; out of scope for this commit. The pre-existing keytar arch-mismatch on `provider-factory.test.ts` persists across the entire campaign per handoff §5.
+
+**Backward compatibility.**
+
+- No public type-shape changes. The exports are additive: `assertInsideVault`, `assertInsideVaultReal`, `VaultPathTraversalError`.
+- The legitimate happy path is byte-identical pre/post H16 — verified by test case #6 of the service-level set.
+- `getCompanySlug` callers whose implementations were correct see zero behavior change. Callers whose implementations were SILENTLY BROKEN (returning `..`-laced strings) will now throw at first `store` instead of silently writing outside the vault — that's the audit-fix surfacing the latent bug.
+
+**Closes the audit's callout:**
+> *"Vault path traversal partial defense. `sanitizeFilename` defangs `../` but no `path.resolve(...).startsWith(vaultDir)` guard, no symlink check post-mkdir."*
+
+Now: both named guards exist — `assertInsideVault` is the `path.resolve(...).startsWith(vaultDir + sep)` guard, applied at the outer boundary (`companiesBasePath` containment) AND the inner boundary (`vaultDir` containment) at every read and write site. `assertInsideVaultReal` is the symlink-aware post-mkdir guard, plus a defense-in-depth post-copyFile check that closes the TOCTOU window the audit didn't explicitly name. Error messages don't leak attempted paths; the error code is stable for caller-side branching. Hash-oracle leak via `verify` is closed.
+
+**P1 campaign complete.** This is the last of the 10 P1 (high-severity) findings from the 2026-05-07 agentic prompt engineering audit. H1–H16 all closed across 9 commits over 3 days (2026-05-09 → 2026-05-11).
 
 ---
 
