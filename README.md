@@ -204,8 +204,7 @@ Team-X includes comprehensive documentation across 50+ files and 15,000+ lines:
 - **[Templates](docs/user-guide/templates/README.md)** — Handoff documents, meeting agendas, ticket templates, routine templates
 
 ### Developer
-- **[API Reference](docs/developer-guide/api-reference.md)** — MCP server development, custom roles, REST API, webhooks, plugins
-- **[Integration Guide](docs/developer-guide/integration-guide.md)** — GitHub, GitLab, Slack, Discord, Jira, Notion integrations
+- **[Developer Reference](docs/developer-guide/api-reference.md)** — Architecture, MCP server development, role pack format, internal IPC surface
 
 ### Advanced
 - **[Migration Guide](docs/user-guide/migration-guide.md)** — Switching from other tools

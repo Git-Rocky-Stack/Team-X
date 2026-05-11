@@ -28,14 +28,14 @@
 - Troubleshooting: docs/user-guide/troubleshooting.md
 
 **Developers:**
-- Developer Guide: docs/developer-guide/api-reference.md
-- Integration Guide: docs/developer-guide/integration-guide.md
+- Developer Reference: docs/developer-guide/api-reference.md
 - MCP Protocol: https://modelcontextprotocol.io
+- Source code: https://github.com/Git-Rocky-Stack/Team-X
 
 **Community:**
-- Discord: https://discord.gg/teamflow-x
-- GitHub: https://github.com/teamflow-x
-- Support: support@teamflow-x.com
+- GitHub: https://github.com/Git-Rocky-Stack/Team-X
+- Issues: https://github.com/Git-Rocky-Stack/Team-X/issues
+- Releases: https://github.com/Git-Rocky-Stack/Team-X/releases
 
 ---
 
@@ -71,8 +71,7 @@ docs/
 │   ├── migration-guide.md                   # Platform migration
 │   └── cli-reference.md                      # CLI and Command Palette
 ├── developer-guide/
-│   ├── api-reference.md                     # REST API, MCP, plugins
-│   └── integration-guide.md                  # GitHub, Slack, Jira, etc.
+│   └── api-reference.md                     # Architecture, MCP, role packs, internal IPC
 └── README.md                                 # Project overview
 ```
 

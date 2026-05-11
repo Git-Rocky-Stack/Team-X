@@ -13,11 +13,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Developer reference rewritten to local-first reality.**
+  `docs/developer-guide/api-reference.md` previously described a fictional
+  hosted REST API at `api.teamflow-x.com` with webhooks, OAuth, and a
+  public plugin marketplace — none of which exist in Team-X. The
+  Strategia-X site-docs sync was mirroring this faithfully and would have
+  published roadmap content as shipped product. The page is now a truthful
+  reference covering Architecture, MCP server development (the real
+  extension point), role-pack format (real, against the actual
+  `@team-x/role-schema` YAML frontmatter), and the internal IPC surface.
+  A bold caveat at the top spells out what Team-X **doesn't** ship: no
+  hosted API, no webhooks, no OAuth, no plugin marketplace, no first-party
+  third-party-service integrations.
+- **README "Developer" links updated** to match the new single-page
+  developer reference and drop the deleted integration-guide entry.
+- **`docs/llms.txt` Developer + Community sections corrected** to point at
+  `github.com/Git-Rocky-Stack/Team-X` and drop the placeholder
+  `teamflow-x.com` / `discord.gg/teamflow-x` references that don't exist.
+  Documentation file tree updated to remove the deleted integration-guide
+  entry.
+
 ### Fixed
 
 ### Deprecated
 
 ### Removed
+
+- **`docs/developer-guide/integration-guide.md` deleted.** The page was
+  entirely premised on hosted webhook URLs (`api.teamflow-x.com/webhooks/*`)
+  and first-party integrations (GitHub PR auto-review, GitLab, Slack,
+  Discord, Jira, Notion) that Team-X has never shipped and is not on the
+  roadmap. Removing the source so the docs-sync script can't mirror
+  fictional surface area to the live Strategia-X site. CLI reference
+  (`docs/user-guide/cli-reference.md`) remains — it describes the real
+  CLI.
 
 ### Security
 
