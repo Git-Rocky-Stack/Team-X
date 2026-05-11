@@ -35,6 +35,34 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 import { buildTeamXApi } from './api.js';
 
+// Bump `ipcRenderer`'s per-emitter listener cap above Node's default of 10.
+//
+// The renderer architecture deliberately splits cross-process cache
+// invalidation across many narrowly-scoped React hooks — `useTicketEventSync`,
+// `useMeetingEventSync`, `useProjectEventSync`, `useGoalEventSync`,
+// `useEmployeeEventSync`, `useCompanyEventSync`, `useScheduleEventSync`,
+// `useVaultEventSync`, `useArtifactEventSync`, `useOrgChartEventSync`,
+// `useChatEventSync`, `useCopilot`, `useDashboardEvents`, plus the
+// `mission-control-dashboard`, `board-message-queue`, `proactive-controls`,
+// and `use-agent-step-stream` components — and each independently subscribes
+// to `events.dashboard` via `ipc.events.onDashboard`. This many-subscribers
+// pattern is enforced as the correct architecture by the cross-hook contract
+// in `apps/desktop/src/renderer/src/hooks/event-sync-hooks.test.ts`
+// (Invariant #11: every feature's cache invalidation runs in its own
+// dedicated effect with a `[companyId, qc]` dep array).
+//
+// Every subscriber correctly returns its `unsubscribe` from `useEffect`,
+// and `events.onDashboard` in `./api.ts` holds a stable wrapper ref so
+// `ipc.removeListener` actually detaches the same function — so this is
+// legitimate fan-out, not a leak.
+//
+// 50 gives ~3x headroom over today's ~17 subscription sites for future
+// event-sync hooks while keeping the leak-detector active for accidental
+// runaway accumulation. Bump (with a comment cite) if a new feature pushes
+// the count past ~40; replace with a renderer-side fan-out bus if it gets
+// any wider than that.
+ipcRenderer.setMaxListeners(50);
+
 // `ipcRenderer` from 'electron' structurally satisfies `IpcRendererLike`
 // (it has `invoke`, `on`, and `removeListener` with compatible signatures),
 // so the factory call type-checks with zero casts.
