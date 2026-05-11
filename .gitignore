@@ -1,6 +1,9 @@
 # deps
 node_modules/
 .pnpm-store/
+# pnpm-only workspace — npm/yarn lockfiles must never be tracked
+package-lock.json
+yarn.lock
 
 # build
 dist/
