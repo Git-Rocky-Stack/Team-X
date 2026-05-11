@@ -92,6 +92,13 @@ jobs:
       # ships most of these, but libasound2t64 + libgbm1 are sometimes
       # missing on minimal runners — install explicitly to keep the
       # job deterministic.
+      #
+      # `libsecret-1-0` is keytar's libsecret runtime dep on Linux. The
+      # `check` job above installs it for the same reason (see the
+      # Install keytar Linux runtime step there). The E2E job ALSO
+      # loads the main process which loads keytar — so it needs the
+      # same .so available, otherwise keytar's dlopen on import either
+      # throws or hangs and Electron never paints a window.
       - name: Install Electron runtime libraries
         run: |
           sudo apt-get update
@@ -111,7 +118,8 @@ jobs:
             libpango-1.0-0 \
             libcairo2 \
             libasound2t64 \
-            libgtk-3-0
+            libgtk-3-0 \
+            libsecret-1-0
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build desktop (main + preload + renderer)
@@ -121,10 +129,19 @@ jobs:
       # jobs on the same runner never collide on :99.
       - name: Run Playwright E2E smoke
         run: xvfb-run --auto-servernum pnpm -F @team-x/desktop test:e2e:run
-      - name: Upload Playwright report on failure
+      # `test-results/` is where Playwright writes traces, screenshots, and
+      # videos per the `outputDir` in `apps/desktop/playwright.config.ts`.
+      # The HTML reporter is intentionally disabled in CI (we only run
+      # `list` + `github` reporters), so there is no `playwright-report/`
+      # directory to upload — but the trace zips under `test-results/`
+      # are what we actually need to diagnose a failure: open the trace
+      # in `npx playwright show-trace <zip>` to see exactly what the
+      # renderer rendered (or didn't) at the moment of timeout.
+      - name: Upload Playwright traces on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: apps/desktop/playwright-report
+          name: playwright-traces
+          path: apps/desktop/test-results
           retention-days: 7
+          if-no-files-found: ignore
