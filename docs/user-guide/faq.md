@@ -7,7 +7,7 @@
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
-2. [Billing & Costs](#billing--costs)
+2. [Costs & Provider Spend](#costs--provider-spend)
 3. [Security & Privacy](#security--privacy)
 4. [Employees & Roles](#employees--roles)
 5. [Tickets & Work](#tickets--work)
@@ -15,7 +15,7 @@
 7. [Workspaces & Collaboration](#workspaces--collaboration)
 8. [Technical Issues](#technical-issues)
 9. [Best Practices](#best-practices)
-10. [Account & Settings](#account--settings)
+10. [Uninstalling & Data Export](#uninstalling--data-export)
 
 ---
 
@@ -38,16 +38,9 @@ Team-X is a desktop application that provides an AI-powered workforce. You hire 
 
 ### Is Team-X free?
 
-Team-X follows a **freemium model**:
+**Yes.** Team-X itself is free and open-source under the MIT license — there is no paid tier, no employee quota, no workspace quota, no routine quota, no MCP-server quota, and no priority support gate. Every feature is available to every user from day one.
 
-| Feature | Free Tier | Paid Tier |
-|---------|-----------|-----------|
-| Monthly Compute Budget | $10 included | Pay-as-you-go |
-| Employee Quota | 3 employees | Up to 50 employees |
-| Workspaces | 1 workspace | Unlimited workspaces |
-| Routines | 3 routines | Unlimited routines |
-| MCP Servers | 1 server | Unlimited servers |
-| Support | Community | Priority email |
+The cost you'll see comes from the **LLM providers your agents call** (Anthropic, OpenAI, Google, Groq, etc.) — those bills go to you, from the provider, at the provider's standard rates. Team-X tracks each call's token use and computed cost in the Telemetry tab so you can see exactly what each ticket and each employee is costing your provider account. Run agents on local **Ollama** models if you'd rather pay nothing at all.
 
 ### How do I install Team-X?
 
@@ -69,60 +62,50 @@ Employees explain their work in plain language, making it accessible to everyone
 
 ---
 
-## Billing & Costs
+## Costs & Provider Spend
 
-### How does billing work?
+### Where does the cost come from?
 
-Team-X uses a **credit-based system**:
+Team-X is free. The cost you'll see is the bill from the **LLM provider your agents call** — Anthropic, OpenAI, Google, Groq, OpenRouter, Together, Fireworks, or any OpenAI-compatible endpoint you've configured. You pay the provider directly, at the provider's standard rates. Team-X just routes the request and tracks the tokens.
 
-1. **Purchase credits** ($10, $50, $100, $500 packages)
-2. **Credits are consumed** as AI employees work (based on provider API costs)
-3. **Pause anytime** — no subscription, pay only for what you use
+If you run agents on local **Ollama** models, there is no provider bill at all — everything stays on-device.
 
-**Provider Cost Breakdown (approximate):**
+### What does a typical run actually cost?
 
-| Provider | Model | Cost per 1M tokens | Typical Ticket |
-|----------|-------|-------------------|----------------|
-| Anthropic | Claude Opus 4.7 | $15.00 | $0.50 - $3.00 |
-| Anthropic | Claude Sonnet 4.6 | $3.00 | $0.10 - $0.75 |
-| OpenAI | GPT-4o | $5.00 | $0.25 - $1.50 |
-| OpenAI | GPT-4o-mini | $0.15 | $0.01 - $0.10 |
-| Ollama | Local (free) | $0.00 | $0.00 |
+Cost is a function of (provider × model × tokens used), nothing else. The Telemetry tab in the app shows per-ticket, per-employee, and per-provider cost in real time, computed from the live `@team-x/telemetry-core` pricing table.
 
-### What if I run out of credits?
+Rough order-of-magnitude (check your provider's pricing page for current rates):
 
-- **Work pauses automatically** when budget exhausted
-- **No unexpected charges** — you control spend
-- **Purchase more credits** to resume work
-- **Set budget alerts** at 50%, 75%, 90% consumption
+| Provider | Model class | Order of magnitude per ticket |
+|---|---|---|
+| Anthropic | High-tier (Opus class) | $$ |
+| Anthropic | Balanced (Sonnet class) | $ |
+| OpenAI | High-tier (GPT-4-class) | $$ |
+| OpenAI | Mini/efficient | ¢ |
+| Ollama | Anything local | $0.00 |
 
-### How do I control costs?
+Token counts dominate cost more than the choice of model — a 200-message thread on a cheap model can outspend a one-shot call on an expensive model. Watch the Telemetry tab.
 
-**Built-in cost controls:**
+### How do I control spend?
 
-1. **Monthly Budget Cap:** Set maximum spend per workspace
-2. **Per-Ticket Budget:** Set limits on individual tickets
-3. **Approval Workflows:** Require approval for budget overrides
-4. **Provider Selection:** Choose less expensive models for routine tasks
-5. **Routine Scheduling:** Reduce frequency of automated tasks
+Team-X has **budget governance** built in (and as of v3.1.0, per-employee monthly token caps via H7 in the audit campaign):
 
-**Cost optimization tips:**
+1. **Monthly workspace budget cap** — Settings → Runtime → Budget. Work pauses when exceeded.
+2. **Per-employee token caps** — Set a monthly token ceiling on any employee (officer/management/IC alike).
+3. **Approval gates on write-side runs** — Task Planner decompositions, role promotions, and ticket creates pass through an amber confirmation gate in the Command Palette.
+4. **Provider/model selection** — Filter agents by privacy tier (Local / Open-Source Cloud / Proprietary Cloud) to keep cost classes consistent.
+5. **Routine scheduling** — Slow down automated work that doesn't need to run every 5 minutes.
 
-- Use GPT-4o-mini or Claude Sonnet for routine tasks
-- Use local Ollama models for simple work
-- Set aggressive budget caps on experimental work
-- Review Copilot cost insights weekly
-- Pause unused employees (they don't cost when idle)
+**Cost-optimization tips:**
 
-### Can I get a refund?
+- Use a mid-tier model (Sonnet-class, GPT-4o-mini-class) for routine tasks; reserve the high tier for complex tickets.
+- Run a local Ollama model for anything that doesn't need a frontier model — RAG indexing, classification, summarization all work well locally.
+- Pause unused employees — they cost nothing when idle, but a runaway routine on a forgotten employee can quietly burn budget.
+- Set aggressive caps on experimental routines and review the Copilot's cost-insight category weekly.
 
-Team-X itself is free and open-source — there are no credits, subscriptions, or refunds to manage on the Team-X side. The cost you control is your LLM provider bill (Anthropic, OpenAI, etc.); for refund policy on those, see your provider's billing terms. Refund requests for provider charges go to the provider, not to Team-X.
+### Can I get a refund from Team-X?
 
-Used credits (consumed by AI work) are **non-refundable**.
-
-### Do credits expire?
-
-Unused credits expire after **12 months** of inactivity. This resets each time you purchase or use credits.
+Team-X charges nothing — there is nothing to refund on the Team-X side. Refund questions about your LLM provider bill go to your provider (Anthropic, OpenAI, etc.) under their terms.
 
 ---
 
@@ -377,40 +360,26 @@ A workspace is a **company container** — where employees work, tickets are tra
 
 ### Can I have multiple workspaces?
 
-| Tier | Workspaces |
-|------|------------|
-| Free | 1 workspace |
-| Basic | 3 workspaces |
-| Pro | 10 workspaces |
-| Enterprise | Unlimited workspaces |
+**Yes — unlimited.** Team-X is free and open-source; there are no per-workspace tiers or quotas. Create as many workspaces as you need.
 
 **Use cases for multiple workspaces:**
 - **Agency:** One workspace per client
 - **Portfolio:** One workspace per product
 - **Environments:** Dev, staging, production workspaces
 
+Switch between workspaces from the **Workspace Switcher** in the top bar; create a new one from **Settings → Workspaces → Create Workspace**.
+
 ### Can employees work across workspaces?
 
-Yes. Employees can be granted access to multiple workspaces:
+Each employee is scoped to a single workspace by design — the org chart, ticket queue, and budget controls live at the workspace level. If you need parallel work across multiple workspaces, hire equivalent employees in each one (role packs make this fast).
 
-**Multi-workspace employee:**
-- **Assign to workspaces:** Add employee to multiple workspaces
-- **Allocation tracking:** Track time spent per workspace
-- **Cost allocation:** Salary charged to workspaces based on allocation
+Cost reporting (token spend per employee, per ticket, per workspace) is per-workspace; there is no shared salary or cross-workspace billing because Team-X charges nothing — your actual bill is the provider's, against the API key you've configured.
 
-### How do I invite team members to my workspace?
+### Can I share a workspace with another operator?
 
-Team-X supports **two collaboration models:**
+Yes — **shared workspace** support shipped in v3.0.0 (workspace portability + shared operator invites). The exact UI lives under **Settings → Workspaces** and continues to evolve; sharing is link-based (signed export with portability posture) rather than email-invite-based, since Team-X is local-first and has no central account system.
 
-1. **Operator-to-Operator:** Multiple human operators managing one workspace
-   - Invite via email
-   - Role-based permissions (Owner, Admin, Viewer)
-
-2. **Shared Workspace:** Team members view and interact with tickets
-   - Read-only or read-write access
-   - Cannot hire/fire employees or modify budgets
-
-**Invite team members:** Settings → Collaborators → Invite
+Permissions are role-based at the operator level (the human running the app), not at the AI-employee level — the AI employees inside a workspace work for whoever holds the workspace.
 
 ---
 
@@ -542,50 +511,48 @@ Team-X supports **two collaboration models:**
 
 ---
 
-## Account & Settings
+## Uninstalling & Data Export
 
-### How do I cancel my account?
+Team-X is local-first — there is no account, no login, no email, and no remote service to cancel. Everything lives on your machine: workspace data (SQLite), file vault (filesystem blobs), and provider API keys (OS keychain via keytar).
 
-**Cancel anytime:**
+### How do I back up my workspace?
 
-1. Navigate to **Settings → Account → Cancel Account**
-2. Confirm cancellation
-3. Download your data (provided as ZIP)
-4. Account closes within 24 hours
+Use the built-in backup tool:
 
-**What happens when you cancel:**
-- No further charges
-- Access to workspace for 30 days (data export period)
-- After 30 days: Data deleted permanently
+1. Open **Settings → Data → Create Backup**
+2. Team-X writes a signed archive (SQLite DB + vault files + manifest) to disk
+3. Save the archive anywhere — external drive, cloud sync folder, encrypted bundle
 
-### Can I export my data?
+To restore on a new machine: install Team-X, then **Settings → Data → Restore from Backup** and point at the archive. Manifest validation catches tampering or corruption.
 
-Yes. **Data export options:**
+Backups can also be deleted from the same panel (v3.0.0 added a per-row delete button with a path-traversal-safe guard).
 
-1. **Workspace export:** Settings → Data → Export Workspace
-   - Includes: Tickets, employees, projects, audit trail
-   - Format: JSON + attachments
+### Can I export my data without using a backup?
 
-2. **Artifact export:** Files → Export All Artifacts
-   - Includes: All deliverables and files created by employees
-   - Format: Original file formats
+Yes — backups are the primary path because they round-trip cleanly, but you can also:
 
-3. **Account closure export:** Provided automatically on cancellation
+- **Files → Export All Artifacts** for everything employees have produced (original file formats preserved)
+- Manually copy the workspace database from your OS-specific Team-X data directory
+- Use the file vault directly — vault files are stored as plain SHA256-verified blobs on disk
 
-### How do I change my email?
+### How do I uninstall Team-X?
 
-1. Navigate to **Settings → Account → Email**
-2. Enter new email address
-3. Verify new email (confirmation sent)
-4. Email updated
+1. **Create a backup first** (Settings → Data → Create Backup) if you want to preserve anything.
+2. Uninstall via your OS:
+   - **Windows:** Settings → Apps → Team-X → Uninstall
+   - **macOS:** Drag Team-X from Applications to Trash
+   - **Linux:** Use your distro's package manager, or remove the AppImage / .deb you installed
+3. Optionally remove local data:
+   - **Windows:** `%APPDATA%\Team-X` and `%LOCALAPPDATA%\Team-X`
+   - **macOS:** `~/Library/Application Support/Team-X`
+   - **Linux:** `~/.config/Team-X` and `~/.local/share/Team-X`
+4. Provider API keys persist in your OS keychain (keytar). To remove them: Windows Credential Manager → search "Team-X"; macOS Keychain Access → search "Team-X"; Linux Secret Service / `secret-tool`.
 
-**Note:** Email is your login ID. Changing email affects login credentials.
+There is no remote data to delete — Team-X never had any.
 
-### Can I merge accounts?
+### Can I run multiple Team-X workspaces side-by-side?
 
-No. Account merging is **not supported** due to security and data integrity concerns.
-
-**Alternative:** Export data from one account, import to another (manual process).
+Yes. The **Workspace Switcher** (added in v1.1.0) lets you run multiple companies side-by-side with isolated employees, tickets, budgets, and data. Open **Settings → Workspaces → Create Workspace** to add another, or use the workspace switcher in the top bar to flip between them. Nothing to merge or migrate — each workspace is a separate company row in the same local database.
 
 ---
 

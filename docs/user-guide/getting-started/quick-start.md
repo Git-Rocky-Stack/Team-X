@@ -81,11 +81,9 @@ When you first sign in, you'll see the **Workspace Setup Wizard**:
 │  ○ Personal Projects                                                │
 │  ○ Other                                                           │
 │                                                                     │
-│  Monthly Budget:                                                    │
-│  [$100______________] (recommended for new users)                   │
-│                                                                     │
-│  Employee Quota:                                                    │
-│  [5 employees] (basic tier)                                         │
+│  Monthly Budget Cap:                                                │
+│  [$100______________] (caps your LLM provider spend; recommended    │
+│                       starting point for new users)                 │
 │                                                                     │
 │                      [Cancel]           [Create Workspace] →        │
 └─────────────────────────────────────────────────────────────────────┘

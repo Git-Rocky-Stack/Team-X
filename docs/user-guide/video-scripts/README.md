@@ -41,18 +41,20 @@ Installation takes about a minute. When complete, launch Team-X."
 
 ---
 
-**[2:00-4:00] Account Setup**
+**[2:00-4:00] Workspace Setup**
 
-**Visual:** Sign up/sign in screen, workspace setup wizard
+**Visual:** Workspace Setup Wizard, provider keys settings
 
 **Audio:**
-"When you first launch Team-X, you'll see the sign-in screen. Create an account with your email and password, or sign in with Google or GitHub if you prefer.
+"When you first launch Team-X, it opens directly to the Workspace Setup Wizard — no sign-in, no account, nothing leaves your machine. Team-X is a local-first app: your tickets, employees, and conversations all live on this device in a local SQLite database.
 
-After signing in, you'll see the Workspace Setup Wizard. Enter your workspace name — this could be your company name or project name. For this demo, I'll use 'My Startup.'
+Enter your workspace name — this could be your company name or project name. For this demo, I'll use 'My Startup.'
 
-Set your monthly budget. For new users, I recommend $100. This prevents overspending while you're learning.
+Set a monthly budget cap. For new users, I recommend $100. This isn't a charge to Team-X — it's a ceiling on what your LLM provider can bill you for, and Team-X will pause work when the workspace hits the cap.
 
-Finally, choose your purpose: Product Development, Agency Work, Personal Projects, or Other. Click Create Workspace."
+Finally, choose your purpose: Product Development, Agency Work, Personal Projects, or Other. Click Create Workspace.
+
+Then head to Settings → Providers and drop in your Anthropic, OpenAI, Google, Groq, or any other supported LLM provider's API key. Or point at a local Ollama daemon for runs that cost nothing at all. Team-X stores keys in your OS keychain via keytar — never in plain text."
 
 ---
 

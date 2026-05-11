@@ -100,9 +100,9 @@ Security Policy:
 - Audit logging enabled for all workspaces
 
 Employee Policy:
-- Max 10 employees per workspace (basic tier)
-- Roles must be approved before hiring
-- Timesheet logging required for client work
+- Right-size each workspace: hire the smallest team that can do the work (Team-X has no employee quota, so it's purely an operator-discipline question)
+- Roles must be approved by the workspace owner before hiring
+- Token-spend logging is automatic per ticket and per employee — review weekly for client work
 
 Documentation Policy:
 - All client workspaces must have:
@@ -196,9 +196,11 @@ Capacity Tracking:
 - Availability: Can take on additional work
 
 Cost Allocation:
-- Strategia-X: 85% of salary charged
-- Client A: 10% of salary charged
-- Client B: 5% of salary charged
+- Strategia-X: 85% of token spend (computed from tickets tagged to this workspace)
+- Client A: 10% of token spend
+- Client B: 5% of token spend
+
+Note: Team-X charges nothing — these percentages are how the operator allocates the *LLM provider's* monthly bill across the workspaces the same employee worked in. Telemetry per workspace makes the split straightforward.
 ```
 
 ---

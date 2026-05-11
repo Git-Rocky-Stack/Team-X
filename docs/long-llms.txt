@@ -331,12 +331,13 @@ Deliverables created during agent run:
 
 1. **Download:** Get installer from github.com/Git-Rocky-Stack/Team-X/releases
 2. **Install:** Run installer for your OS
-3. **Sign Up/Create Account:** Email/password or social login
-4. **Configure Workspace:** Name, budget, purpose
-5. **Hire First Employee:** Select role (Full Stack Engineer recommended)
-6. **Create First Ticket:** Title, description, assignee
-7. **Run Agent:** Watch agent work autonomously
-8. **Review Results:** Check artifacts, approve work
+3. **Launch Team-X:** Opens directly to the Workspace Setup Wizard — no account, no signup (Team-X is local-first; nothing leaves your machine except direct LLM provider calls)
+4. **Configure Workspace:** Name, monthly budget cap, purpose
+5. **Configure Provider Keys:** Settings → Providers — add your Anthropic / OpenAI / Google / Groq key, or point at a local Ollama daemon for $0 runs
+6. **Hire First Employee:** Select role (Full Stack Engineer recommended)
+7. **Create First Ticket:** Title, description, assignee
+8. **Run Agent:** Watch agent work autonomously
+9. **Review Results:** Check artifacts, approve work
 
 ### Daily Workflow (5-10 minutes)
 

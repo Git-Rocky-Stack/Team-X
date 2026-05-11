@@ -69,6 +69,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `user-guide/faq.md`, `user-guide/getting-started/quick-start.md`,
     `user-guide/scenarios/01-product-development-lifecycle.md`,
     `user-guide/scenarios/04-cross-functional-collaboration.md`.
+- **Pricing, signup, and fictional CLI deep-clean (follow-up to the
+  brand-placeholder purge).** The same content-drift problem extended
+  past URLs and emails into entirely fictional product surface: a
+  freemium/credit-purchase billing model, a hosted-account
+  signup-and-login flow, and a 530-line CLI documenting a `teamx`
+  binary that doesn't exist. Sweep:
+  - **`faq.md` "Billing & Costs" rewritten as "Costs & Provider Spend".**
+    The fictional credit-based system (`$10/$50/$100/$500 credit
+    packages`, `12-month expiration`, refund flow, freemium tier table
+    with employee quotas) is gone. Replaced with the honest model:
+    Team-X is free; the cost you see is your LLM provider's bill;
+    Team-X's job is to route the request, count the tokens, and enforce
+    the budget caps (workspace cap, per-employee monthly token cap from
+    H7, write-side amber gate). The "Is Team-X free?" tier table is
+    gone too.
+  - **`faq.md` "Account & Settings" rewritten as
+    "Uninstalling & Data Export".** Replaced "cancel my account",
+    "change my email", "merge accounts" — none of which exist for a
+    local-first app — with the real story: back up via Settings → Data,
+    uninstall via the OS, optionally wipe local data directories,
+    remove keychain entries via OS tools. Multi-workspace section
+    rewritten to remove the fictional Free/Basic/Pro/Enterprise tier
+    table; cross-workspace "salary allocation" replaced with how token
+    spend actually flows.
+  - **`faq.md` collaboration question** softened: the v3.0.0 shared
+    workspace + operator invite flows are real, but the documented UI
+    (`Settings → Collaborators → Invite`, "Invite via email") was made
+    up. Rewritten to point users at `Settings → Workspaces` for the
+    current (link-based) sharing surface.
+  - **`long-llms.txt` first-time setup flow:** step 3
+    "Sign Up/Create Account: Email/password or social login" replaced
+    with "Launch Team-X — opens directly to the Workspace Setup Wizard;
+    no account, no signup". New step 5 added explicitly calling out
+    provider key configuration as part of first-boot.
+  - **`video-scripts/README.md` `[2:00-4:00]` narration:** previously
+    "Create an account with your email and password, or sign in with
+    Google or GitHub". Rewritten as a local-first, no-account narration
+    that includes the provider-key step honestly.
+  - **`cli-reference.md` rewritten from 717 lines to 236 lines.** The
+    Command Palette section (which describes real natural-language
+    commands) is kept verbatim. The 530-line "CLI Tool" section
+    documenting a fictional `teamx` binary (with `teamx ticket`,
+    `teamx employee`, `teamx budget`, `teamx run`, `teamx workspace`
+    subcommands, a `Connect-TeamX` PowerShell module, a `teamx` Python
+    SDK, `TEAMX_API_KEY` / `TEAMX_WORKSPACE` env vars, and a
+    `curl https://teamflow-x.com/install-cli.sh | bash` installer) is
+    gone. Replaced with a short honest section on the actual developer
+    CLI: `ai-cli` (bin `team-x-ai`) in `@team-x/intelligence`, with
+    its real five commands (`info`, `knowledge`, `memory`, `eval`,
+    `trace`) and an explicit denial list spelling out everything the
+    CLI does NOT support. Pointer added to MCP servers as the right
+    extension point for scripted workflows.
+  - **`quick-start.md` workspace creation mock-up:** removed the
+    fictional "Employee Quota: [5 employees] (basic tier)" line; the
+    Monthly Budget line clarifies the cap applies to *provider* spend,
+    not a Team-X charge.
+  - **`scenarios/06-multi-workspace-operations.md`:** removed
+    "Max 10 employees per workspace (basic tier)" and rewrote the
+    cross-workspace "salary allocation" passage to clarify that the
+    percentages allocate the operator's *LLM provider* bill, not a
+    Team-X salary system that doesn't exist.
+
+  Verification: zero matches remain for `freemium`, `credit-based`,
+  `purchase credit`, `TEAMX_API_KEY`, `teamx ticket`, `teamx employee`,
+  `teamx budget`, `teamx run`, or `teamx workspace` outside the
+  intentional denial list in `cli-reference.md` and the CHANGELOG
+  context above.
 
 ### Fixed
 
