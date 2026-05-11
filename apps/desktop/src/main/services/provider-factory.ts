@@ -65,6 +65,7 @@
 import {
   type EmbedAdapter,
   type ProviderStreamFn,
+  type StreamMessage,
   makeAnthropicStream,
   makeFireworksStream,
   makeGoogleStream,
@@ -504,19 +505,36 @@ function testModeStream(): ProviderStreamFn {
 }
 
 /**
+ * Flatten a `StreamMessage.content` value to its plain-text representation
+ * for sentinel-substring inspection. C2 (audit 2026-05-07) native-tool-use
+ * messages may carry `StreamContentPart[]` (tool-call / tool-result blocks
+ * interleaved with text); test-mode sentinels are only ever typed into chat
+ * by a human and therefore only ever live on `text` parts. Tool blocks are
+ * dropped so they cannot accidentally trigger a sentinel match.
+ */
+function extractTextContent(content: StreamMessage['content'] | undefined): string {
+  if (content === undefined) return '';
+  if (typeof content === 'string') return content;
+  return content
+    .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+    .map((part) => part.text)
+    .join('');
+}
+
+/**
  * Inspect the final user message and decide what the test-mode
  * provider should stream back. Pure function so the sentinel-dispatch
  * rules are unit-testable in isolation.
  */
 function pickTestModeReply(
   system: string,
-  messages: ReadonlyArray<{ role: string; content: string }>,
+  messages: ReadonlyArray<StreamMessage>,
 ): string {
   // Walk from the end so a follow-up user message wins over an older one.
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (!m || m.role !== 'user') continue;
-    const content = m.content ?? '';
+    const content = extractTextContent(m.content);
     if (content.includes(TEST_MODE_ECHO_SYSTEM)) {
       // Prefix the system prompt with a stable marker so the spec can
       // distinguish it from the default canned reply without coupling

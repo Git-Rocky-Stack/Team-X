@@ -98,6 +98,11 @@ export interface CopilotAnalyzerRunsRepoStartInput {
   model: string;
   threadId?: string;
   kind?: 'work' | 'agentic' | 'copilot';
+  /**
+   * W3C-format trace ID — mirrors `StartRunInput.traceId` so the analyzer's
+   * DI surface can propagate H4 trace correlation. Audit 2026-05-07 H4.
+   */
+  traceId?: string;
 }
 
 export interface CopilotAnalyzerRunsRepoFinishInput {
@@ -142,6 +147,12 @@ export interface CopilotAnalyzerEventBus {
     actorId: string;
     actorKind: ActorKind;
     payload: T;
+    /**
+     * Optional W3C trace ID — mirrors `EmitInput.traceId` on the real bus so
+     * the analyzer's DI surface can propagate H4 trace correlation to
+     * `events.trace_id`. Audit 2026-05-07 H4.
+     */
+    traceId?: string;
   }): DashboardEvent<T>;
 }
 
