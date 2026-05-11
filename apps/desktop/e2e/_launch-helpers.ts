@@ -75,11 +75,6 @@
 export function getCiLaunchArgs(): string[] {
   const isLinuxCi = process.platform === 'linux' && process.env.CI === 'true';
   return isLinuxCi
-    ? [
-        '--no-sandbox',
-        '--disable-gpu',
-        '--disable-software-rasterizer',
-        '--disable-dev-shm-usage',
-      ]
+    ? ['--no-sandbox', '--disable-gpu', '--disable-software-rasterizer', '--disable-dev-shm-usage']
     : [];
 }
