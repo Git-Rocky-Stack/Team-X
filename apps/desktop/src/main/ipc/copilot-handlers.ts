@@ -50,15 +50,17 @@ import type {
   CopilotDismissArgs,
   CopilotDismissResult,
   CopilotDismissedPayload,
+  CopilotFeedbackApplied,
   CopilotFeedbackSuggestion,
   CopilotInsight,
   CopilotInsightListArgs,
   CopilotInsightListResult,
   CopilotSeverity,
+  CopilotWeightsChangedPayload,
   DashboardEvent,
   EventType,
 } from '@team-x/shared-types';
-import { COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
+import { COPILOT_CATEGORIES, COPILOT_CATEGORY_WEIGHTS_DEFAULT } from '@team-x/shared-types';
 
 // ---------------------------------------------------------------------------
 // Dependency shapes — structurally narrow so tests pass plain fakes
@@ -148,6 +150,17 @@ export interface CopilotHandlerAuditRepo {
 
 export interface CopilotHandlerSettingsRepo {
   getCopilotWeights(): { weights: Record<CopilotCategory, number> };
+  /**
+   * H14 (audit 2026-05-07): persist a partial-weights patch and return
+   * the resulting full weights map. Optional on the dep surface so the
+   * pre-H14 advisory path keeps working with fakes that have not been
+   * extended; the auto-apply path requires it AND throws a typed error
+   * if it is missing — surfacing the dep gap loudly.
+   */
+  setCopilotWeights?(input: {
+    companyId: string;
+    weights: Partial<Record<CopilotCategory, number>>;
+  }): { weights: Record<CopilotCategory, number> };
 }
 
 /**
@@ -187,6 +200,19 @@ export interface CopilotHandlersDeps {
    * lands without touching this file.
    */
   agenticLoopStart?: CopilotAgenticLoopStart;
+  /**
+   * H14 (audit 2026-05-07): pluggable read-time getter for the
+   * "auto-apply dismissal feedback" toggle. Default (`undefined` → OFF)
+   * preserves the existing advisory UX — the dismiss handler returns
+   * `feedbackSuggestion` and the user clicks Apply manually. When this
+   * returns `true`, the handler closes the loop autonomously: the
+   * suggested weight is persisted via `setCopilotWeights`, a
+   * `copilot.weights.changed` bus event fires, and the response carries
+   * `feedbackApplied` instead of `feedbackSuggestion`. The toggle is
+   * read at call time (not factory-build time) so an operator can flip
+   * it without restarting the app.
+   */
+  autoApplyDismissalFeedback?: () => boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +242,16 @@ const DISMISSAL_FEEDBACK_WINDOW_MS = DISMISSAL_FEEDBACK_WINDOW_DAYS * 24 * 60 * 
  * destructive intent from the palette.
  */
 const HUMAN_ACTOR_ID = 'rocky';
+
+/**
+ * H14 (audit 2026-05-07): hard-coded actor id for `copilot.weights.changed`
+ * events emitted by the auto-apply feedback loop. The mutation is
+ * caused by the LOOP, not by a direct user click, so the audit row
+ * reads `actorKind='employee'` + `actorId='system-copilot'`. Renderer
+ * surfaces (audit chip, toast banner) distinguish auto-applies from
+ * manual applies by inspecting these two fields.
+ */
+const SYSTEM_COPILOT_ACTOR_ID = 'system-copilot';
 
 /**
  * Project a repo row onto the JSON-safe wire shape. Runtime-identical
@@ -259,6 +295,74 @@ export function buildCopilotFeedbackSuggestion(args: {
     suggestedWeight,
     reason: `You dismissed ${args.dismissalsInWindow} ${args.category} insights in the last 7 days.`,
   };
+}
+
+/**
+ * H14 (audit 2026-05-07): sweep-all-categories aggregator that turns a
+ * dismissal-counts-by-category snapshot into a complete updated weights
+ * map. The closing-the-loop step the audit named: dismissals were
+ * already RECORDED (audit log + `copilot.dismissed` event) and the
+ * per-dismissal `buildCopilotFeedbackSuggestion` already produced a
+ * single-category recommendation, but the loop never aggregated the
+ * recommendation into actionable weights — the user had to click
+ * Apply for each one. This helper crystallizes the aggregation:
+ *
+ * For each known category, if `dismissalCountsByCategory[cat]`
+ * triggers a non-null `buildCopilotFeedbackSuggestion`, the new weight
+ * replaces the current. Untouched categories keep their current
+ * weight. The output `changedCategories` array is the audit trail —
+ * what was lowered, by how much, and why.
+ *
+ * Pure / hoisted / dependency-free → trivially unit-testable. The
+ * dismiss handler invokes it in the auto-apply path (when the
+ * `autoApplyDismissalFeedback` toggle is ON) so the persisted weights
+ * reflect the full multi-category state, not just the category whose
+ * dismissal happened to be the one to cross the threshold.
+ */
+export function aggregateCategoryWeightsFromDismissals(args: {
+  currentWeights: Record<CopilotCategory, number>;
+  dismissalCountsByCategory: Partial<Record<CopilotCategory, number>>;
+}): {
+  weights: Record<CopilotCategory, number>;
+  changedCategories: Array<{
+    category: CopilotCategory;
+    previousWeight: number;
+    newWeight: number;
+    dismissalsInWindow: number;
+    reason: string;
+  }>;
+} {
+  const nextWeights = { ...args.currentWeights };
+  const changedCategories: Array<{
+    category: CopilotCategory;
+    previousWeight: number;
+    newWeight: number;
+    dismissalsInWindow: number;
+    reason: string;
+  }> = [];
+
+  for (const category of COPILOT_CATEGORIES) {
+    const dismissalsInWindow = args.dismissalCountsByCategory[category] ?? 0;
+    if (dismissalsInWindow === 0) continue;
+    const currentWeight =
+      args.currentWeights[category] ?? COPILOT_CATEGORY_WEIGHTS_DEFAULT[category];
+    const suggestion = buildCopilotFeedbackSuggestion({
+      category,
+      dismissalsInWindow,
+      currentWeight,
+    });
+    if (suggestion === null) continue;
+    nextWeights[category] = suggestion.suggestedWeight;
+    changedCategories.push({
+      category,
+      previousWeight: currentWeight,
+      newWeight: suggestion.suggestedWeight,
+      dismissalsInWindow,
+      reason: suggestion.reason,
+    });
+  }
+
+  return { weights: nextWeights, changedCategories };
 }
 
 function readDismissedCategory(event: Pick<AuditEvent, 'payloadJson'>): CopilotCategory | null {
@@ -361,12 +465,13 @@ export function buildCopilotHandlers(deps: CopilotHandlersDeps): CopilotHandlers
         category,
         now: t,
       });
+      const dismissalsInWindow = historicalDismissals + 1;
+      const currentWeights = deps.settingsRepo.getCopilotWeights().weights;
       const currentWeight =
-        deps.settingsRepo.getCopilotWeights().weights[category] ??
-        COPILOT_CATEGORY_WEIGHTS_DEFAULT[category];
+        currentWeights[category] ?? COPILOT_CATEGORY_WEIGHTS_DEFAULT[category];
       const feedbackSuggestion = buildCopilotFeedbackSuggestion({
         category,
-        dismissalsInWindow: historicalDismissals + 1,
+        dismissalsInWindow,
         currentWeight,
       });
 
@@ -384,9 +489,115 @@ export function buildCopilotHandlers(deps: CopilotHandlersDeps): CopilotHandlers
         payload,
       });
 
-      return feedbackSuggestion
-        ? { id: args.id, dismissedAt: t, feedbackSuggestion }
-        : { id: args.id, dismissedAt: t };
+      if (feedbackSuggestion === null) {
+        return { id: args.id, dismissedAt: t };
+      }
+
+      // H14 (audit 2026-05-07): if the auto-apply toggle is ON, close
+      // the loop autonomously. Aggregate per-category counts (the
+      // dismissed category's count is `dismissalsInWindow`; other
+      // categories may also have crossed the threshold concurrently,
+      // so we sweep them all), persist the new weights, emit
+      // `copilot.weights.changed` with the system-copilot actor (the
+      // mutation was caused by the LOOP, not a direct user action),
+      // and return `feedbackApplied` instead of `feedbackSuggestion`.
+      // If `setCopilotWeights` is missing from the dep — a
+      // composition-root wiring gap — fall back to the advisory path
+      // and surface the gap via console rather than silently swallow.
+      const autoApply = deps.autoApplyDismissalFeedback?.() === true;
+      if (autoApply) {
+        const setter = deps.settingsRepo.setCopilotWeights;
+        if (setter === undefined) {
+          console.warn(
+            '[copilot.dismiss] autoApplyDismissalFeedback returned true but settingsRepo.setCopilotWeights is missing — falling back to advisory suggestion. Wire setCopilotWeights at the composition root.',
+          );
+          return { id: args.id, dismissedAt: t, feedbackSuggestion };
+        }
+
+        // Sweep all categories so a concurrent threshold-cross in a
+        // different category lands in the same write. The dismissed
+        // category's count is the freshly-incremented one; any other
+        // category's count is whatever the audit log shows for the
+        // same window. We re-use the audit repo we already have.
+        const dismissalCountsByCategory: Partial<Record<CopilotCategory, number>> = {
+          [category]: dismissalsInWindow,
+        };
+        for (const otherCategory of COPILOT_CATEGORIES) {
+          if (otherCategory === category) continue;
+          const count = countRecentDismissalsForCategory({
+            auditRepo: deps.auditRepo,
+            companyId: existing.companyId,
+            category: otherCategory,
+            now: t,
+          });
+          if (count > 0) dismissalCountsByCategory[otherCategory] = count;
+        }
+
+        const aggregation = aggregateCategoryWeightsFromDismissals({
+          currentWeights,
+          dismissalCountsByCategory,
+        });
+
+        // Defensive: aggregation must include the dismissed category
+        // (we just confirmed `feedbackSuggestion` is non-null, which
+        // means the same logic in the aggregator must produce a
+        // change for this category). If not, the advisory path is
+        // the safe fallback.
+        if (aggregation.changedCategories.length === 0) {
+          return { id: args.id, dismissedAt: t, feedbackSuggestion };
+        }
+
+        try {
+          const persisted = setter({
+            companyId: existing.companyId,
+            weights: aggregation.weights,
+          });
+          deps.bus.emit<CopilotWeightsChangedPayload>({
+            type: 'copilot.weights.changed',
+            companyId: existing.companyId,
+            // The loop closes itself — the actor is the system copilot,
+            // not the human who dismissed the row. The renderer
+            // distinguishes auto-apply from manual apply by inspecting
+            // `actorKind === 'employee'` on the audit row.
+            actorId: SYSTEM_COPILOT_ACTOR_ID,
+            actorKind: 'employee',
+            payload: {
+              weights: persisted.weights,
+              changedKeys: aggregation.changedCategories.map((c) => c.category),
+              changedAt: t,
+            },
+          });
+        } catch (err) {
+          console.warn(
+            '[copilot.dismiss] auto-apply persistence failed; falling back to advisory suggestion:',
+            err,
+          );
+          return { id: args.id, dismissedAt: t, feedbackSuggestion };
+        }
+
+        // The dismissed category's row is the one the user just acted
+        // on, so it's the most informative element for the renderer's
+        // toast/banner. If multiple categories crossed at once, the
+        // emitted bus event already carries the full set.
+        const primary =
+          aggregation.changedCategories.find((c) => c.category === category) ??
+          aggregation.changedCategories[0];
+        if (primary === undefined) {
+          // unreachable — guarded above — but typescript-strict guard
+          return { id: args.id, dismissedAt: t, feedbackSuggestion };
+        }
+        const feedbackApplied: CopilotFeedbackApplied = {
+          category: primary.category,
+          dismissalsInWindow: primary.dismissalsInWindow,
+          windowDays: feedbackSuggestion.windowDays,
+          previousWeight: primary.previousWeight,
+          newWeight: primary.newWeight,
+          reason: primary.reason,
+        };
+        return { id: args.id, dismissedAt: t, feedbackApplied };
+      }
+
+      return { id: args.id, dismissedAt: t, feedbackSuggestion };
     },
 
     async ask(args: CopilotAskArgs): Promise<CopilotAskResult> {

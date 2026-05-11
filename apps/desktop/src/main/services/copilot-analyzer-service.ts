@@ -156,7 +156,17 @@ export interface CopilotAnalyzerSettings {
   intervalMinutes: number;
   /** Subset of categories the analyzer is allowed to propose. Empty = nothing emitted. */
   categories: readonly CopilotCategory[];
-  /** Feedback-derived category multipliers. Phase 6 M38, default 1.0 for every category. */
+  /**
+   * Feedback-derived category multipliers; default 1.0 for every
+   * category. Lowered manually via `settings.setCopilotWeights` (the
+   * advisory path the dismiss handler returns as `feedbackSuggestion`),
+   * or automatically when the dismiss handler's `autoApplyDismissalFeedback`
+   * toggle is ON — H14 (audit 2026-05-07) closed the previously-aspirational
+   * Phase-6/M38 feedback loop by adding `aggregateCategoryWeightsFromDismissals`
+   * + an opt-in auto-apply path in the dismiss handler that persists
+   * the new weights via `settingsRepo.setCopilotWeights` and emits
+   * `copilot.weights.changed` with the system-copilot actor.
+   */
   categoryWeights: CopilotCategoryWeights;
 }
 
@@ -245,6 +255,18 @@ export interface CopilotAnalyzerTickResult {
   insightsGenerated: number;
   insightsMerged: number;
   insightsExpired: number;
+  /**
+   * H13 (audit 2026-05-07): count of `critical`-severity drafts the
+   * model emitted in this tick (pre-ceiling, pre-weight). 0 on every
+   * early-exit path. Surfaces over-eager severity inflation to ops.
+   */
+  criticalProposed: number;
+  /**
+   * H13 (audit 2026-05-07): count of `critical` drafts that hit the
+   * `MAX_CRITICAL_DRAFTS_PER_TICK` ceiling and were downgraded to
+   * `warning` before persistence. 0 on every early-exit path.
+   */
+  criticalDowngraded: number;
   status: 'success' | 'error' | 'cancelled';
   errorMessage: string | null;
 }
@@ -315,11 +337,60 @@ const MAX_EXPIRES_IN_HOURS = 168; // 1 week
 const MIN_EXPIRES_IN_HOURS = 1;
 const MAX_WEIGHTED_DRAFTS_PER_TICK = 5;
 
+/**
+ * H13 (audit 2026-05-07): per-tick ceiling on `critical`-severity
+ * insights. Without this, the model can emit 5 critical drafts per
+ * cycle and every one lands as critical (the existing
+ * MAX_WEIGHTED_DRAFTS_PER_TICK caps total drafts, not per-severity,
+ * and default category weights of 1.0 mean weight-based filtering is
+ * a no-op). Two is the operator-facing alert-fatigue budget: more
+ * than two simultaneous "critical" cards turns the affordance into
+ * noise and trains the user to dismiss without reading. Drafts beyond
+ * the ceiling are downgraded to `warning` rather than dropped — the
+ * model's intent that something is unusual is preserved, only its
+ * priority is bounded.
+ */
+export const MAX_CRITICAL_DRAFTS_PER_TICK = 2;
+
 const SEVERITY_BASE_SCORE: Record<CopilotSeverity, number> = {
   critical: 1,
   warning: 0.7,
   info: 0.4,
 };
+
+/**
+ * H13 (audit 2026-05-07): apply the per-tick critical ceiling.
+ * Iterates drafts in the model's emitted order so the FIRST `max`
+ * critical drafts retain their severity (model's stated priority
+ * respected), and any subsequent critical drafts get downgraded to
+ * `warning`. All non-critical drafts pass through untouched.
+ *
+ * Returns telemetry alongside the rewritten draft array so callers
+ * can persist `criticalProposed` and `criticalDowngraded` onto the
+ * tick's `runs` row + `copilot.analyzed` payload — making over-eager
+ * model behavior visible to ops without silently swallowing it.
+ *
+ * Pure / hoisted / dependency-free → trivially unit-testable.
+ */
+export function applyCriticalCeiling(
+  drafts: readonly InsightDraft[],
+  max: number = MAX_CRITICAL_DRAFTS_PER_TICK,
+): { drafts: InsightDraft[]; criticalProposed: number; criticalDowngraded: number } {
+  let criticalProposed = 0;
+  let criticalDowngraded = 0;
+  let criticalSeen = 0;
+  const result: InsightDraft[] = drafts.map((draft) => {
+    if (draft.severity !== 'critical') return draft;
+    criticalProposed += 1;
+    if (criticalSeen < max) {
+      criticalSeen += 1;
+      return draft;
+    }
+    criticalDowngraded += 1;
+    return { ...draft, severity: 'warning' };
+  });
+  return { drafts: result, criticalProposed, criticalDowngraded };
+}
 
 function defaultSettings(): CopilotAnalyzerSettings {
   return {
@@ -585,6 +656,8 @@ export function createCopilotAnalyzerService(
         insightsGenerated: 0,
         insightsMerged: 0,
         insightsExpired: 0,
+        criticalProposed: 0,
+        criticalDowngraded: 0,
         tokensIn: 0,
         tokensOut: 0,
         costUsd: 0,
@@ -598,6 +671,8 @@ export function createCopilotAnalyzerService(
         insightsGenerated: 0,
         insightsMerged: 0,
         insightsExpired: 0,
+        criticalProposed: 0,
+        criticalDowngraded: 0,
         status: 'success',
         errorMessage: null,
       };
@@ -615,6 +690,8 @@ export function createCopilotAnalyzerService(
         insightsGenerated: 0,
         insightsMerged: 0,
         insightsExpired: 0,
+        criticalProposed: 0,
+        criticalDowngraded: 0,
         tokensIn: 0,
         tokensOut: 0,
         costUsd: 0,
@@ -628,6 +705,8 @@ export function createCopilotAnalyzerService(
         insightsGenerated: 0,
         insightsMerged: 0,
         insightsExpired: 0,
+        criticalProposed: 0,
+        criticalDowngraded: 0,
         status: 'error',
         errorMessage: 'system-copilot missing',
       };
@@ -648,6 +727,8 @@ export function createCopilotAnalyzerService(
           insightsGenerated: 0,
           insightsMerged: 0,
           insightsExpired: 0,
+          criticalProposed: 0,
+          criticalDowngraded: 0,
           tokensIn: 0,
           tokensOut: 0,
           costUsd: 0,
@@ -661,6 +742,8 @@ export function createCopilotAnalyzerService(
           insightsGenerated: 0,
           insightsMerged: 0,
           insightsExpired: 0,
+          criticalProposed: 0,
+          criticalDowngraded: 0,
           status: 'error',
           errorMessage: admission.reason ?? 'Copilot analysis blocked by budget policy.',
         };
@@ -677,6 +760,8 @@ export function createCopilotAnalyzerService(
         insightsGenerated: 0,
         insightsMerged: 0,
         insightsExpired: 0,
+        criticalProposed: 0,
+        criticalDowngraded: 0,
         tokensIn: 0,
         tokensOut: 0,
         costUsd: 0,
@@ -690,6 +775,8 @@ export function createCopilotAnalyzerService(
         insightsGenerated: 0,
         insightsMerged: 0,
         insightsExpired: 0,
+        criticalProposed: 0,
+        criticalDowngraded: 0,
         status: 'success',
         errorMessage: null,
       };
@@ -748,6 +835,8 @@ export function createCopilotAnalyzerService(
         insightsGenerated: 0,
         insightsMerged: 0,
         insightsExpired: expiredCount,
+        criticalProposed: 0,
+        criticalDowngraded: 0,
         tokensIn: 0,
         tokensOut: 0,
         costUsd: 0,
@@ -761,6 +850,8 @@ export function createCopilotAnalyzerService(
         insightsGenerated: 0,
         insightsMerged: 0,
         insightsExpired: expiredCount,
+        criticalProposed: 0,
+        criticalDowngraded: 0,
         status: 'error',
         errorMessage: msg,
       };
@@ -788,6 +879,11 @@ export function createCopilotAnalyzerService(
     let insertedCount = 0;
     let mergedCount = 0;
     let proposedCount = 0;
+    // H13 (audit 2026-05-07): per-tick severity-ceiling counters.
+    // Hoisted so error/cancel paths still report 0 instead of leaking
+    // an undefined; populated in the success path post-`applyCriticalCeiling`.
+    let criticalProposedCount = 0;
+    let criticalDowngradedCount = 0;
     let terminalStatus: 'success' | 'error' | 'cancelled' = 'success';
     let terminalReason: CopilotAnalyzedReason = reason;
     let errorMessage: string | null = null;
@@ -830,10 +926,18 @@ export function createCopilotAnalyzerService(
       }
 
       proposedCount = drafts.length;
-      const weightedDrafts = weightInsightDrafts(
-        drafts.filter((draft) => settings.categories.includes(draft.category)),
-        settings.categoryWeights,
-      );
+      // H13 (audit 2026-05-07): apply the per-tick `critical` ceiling
+      // BEFORE weight scoring so the model's stated severity is bounded
+      // even when category weights default to 1.0 (which makes the
+      // weight-based filter a no-op). Order: category-allowlist filter
+      // → critical ceiling → weight scoring + total cap. Telemetry
+      // hoisted to the run-level counters so analyzed payload + tick
+      // result both surface "model emitted N criticals, downgraded M".
+      const allowedDrafts = drafts.filter((draft) => settings.categories.includes(draft.category));
+      const ceiling = applyCriticalCeiling(allowedDrafts);
+      criticalProposedCount = ceiling.criticalProposed;
+      criticalDowngradedCount = ceiling.criticalDowngraded;
+      const weightedDrafts = weightInsightDrafts(ceiling.drafts, settings.categoryWeights);
 
       // Dedup pass — emit `copilot.insight` only for inserts (dedup
       // misses). Merges are silent per design: the card title is
@@ -930,6 +1034,9 @@ export function createCopilotAnalyzerService(
       insightsGenerated: insertedCount,
       insightsMerged: mergedCount,
       insightsExpired: expiredCount,
+      // H13 (audit 2026-05-07): per-tick severity-ceiling counters.
+      criticalProposed: criticalProposedCount,
+      criticalDowngraded: criticalDowngradedCount,
       tokensIn: promptTokens,
       tokensOut: completionTokens,
       costUsd,
@@ -944,6 +1051,9 @@ export function createCopilotAnalyzerService(
       insightsGenerated: insertedCount,
       insightsMerged: mergedCount,
       insightsExpired: expiredCount,
+      // H13 (audit 2026-05-07): per-tick severity-ceiling counters.
+      criticalProposed: criticalProposedCount,
+      criticalDowngraded: criticalDowngradedCount,
       status: terminalStatus,
       errorMessage,
     };

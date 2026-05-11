@@ -273,8 +273,8 @@ Role-to-capability mapping is declared (lines 90-105) and used in `private-opera
 | H10 | ✅ FIXED (2026-05-09) **Reranker + query expansion built but not wired** into the retrieval orchestrator. Precision@5 is suboptimal for no functional reason. Added four optional deps to `RetrievalOrchestratorDeps` (`queryExpansion`, `entityContextProvider`, `reranker`, `rerankerOptions`) so the orchestrator augments its 3-query baseline with semantic + synonym + entity-substitution variants (capped at `MAX_EXPANDED_QUERIES = 8`) and reranks the top-N composite-scored candidates with a cross-encoder before dedup-by-source + token-budget fitting. Failures in either stage fall back gracefully to the unwired path. Composition root in `apps/desktop/src/main/index.ts` now wires both: `createQueryExpansionService({ hydeEnabled: false })` for entity-aware expansion, `createRerankerService(createMockCrossEncoder())` for lexical-overlap rerank (swap for Cohere/OpenAI Rerank API later via `createApiCrossEncoder`). Pinned by `retrieval-orchestrator.test.ts` (+10 H10 tests covering backward-compat regression, expansion fan-out, both stages' graceful degradation, MAX_EXPANDED_QUERIES cap, top-N rerank scoping, fewer-than-2 skip, reranker-promotes-relevant scenario, and combined end-to-end). Side benefit: removed unused `SOURCE_LABELS` const in the same file, closing the §6d cosmetic typecheck error. | `rag/reranker.ts`, `rag/query-expansion.ts` |
 | H11 | ✅ FIXED (2026-05-09) **Per-token DB writes** — `messages.updateContent()` fires on every delta. SQLite lock churn at concurrency. Replaced the per-chunk write at `run-agent.ts:415` with a hybrid OR-batched flusher: `BATCH_FLUSH_MIN_CHARS = 64` (~16 tokens) and `BATCH_FLUSH_INTERVAL_MS = 100` — flush whenever EITHER threshold trips, with a force-flush in the `finally` block of every retry attempt so success / error / cancel / timeout all land the pending tail. The renderer's `token.delta` event bus emit is untouched, so per-chunk typing animation is preserved; only DB writes are throttled. For a typical Anthropic stream at ~320 chars/sec this is ~10 writes/sec post-H11 vs ~80/sec pre-H11 — an 8× WAL-lock-pressure reduction. Pinned by `run-agent.test.ts` (+6 H11 tests covering 50-tiny-chunks → 1 final write, single-200-char-delta → 1 size-triggered write, per-chunk events still fire, pre-error/pre-cancel buffer lands on terminal paths, empty-buffer no-op). Pre-existing tests updated to match the new contract (the per-chunk-write assertion that the audit flagged as the anti-pattern is gone). | `orchestrator/run-agent.ts:386` |
 | H12 | ✅ FIXED (2026-05-10) **Agent self-improvement loop has no causation-chain dedup.** A failing improvement ticket can spawn another improvement ticket about its own failure. Recursion-via-database. | `services/agent-improvement-service.ts` |
-| H13 | **Copilot severity has no ceiling.** Model can emit 5 `critical` insights per cycle; weight filtering is soft (default 1.0 across categories). | `copilot-analyzer-service.ts:316-322` |
-| H14 | **Copilot category-weight feedback loop is aspirational.** Comments mark it Phase 6 / M38; dismissals are recorded but never aggregated. README claims it's live. | `copilot-analyzer-service.ts:159` |
+| H13 | ✅ FIXED (2026-05-10) **Copilot severity has no ceiling.** Model can emit 5 `critical` insights per cycle; weight filtering is soft (default 1.0 across categories). | `copilot-analyzer-service.ts:316-322` |
+| H14 | ✅ FIXED (2026-05-10) **Copilot category-weight feedback loop is aspirational.** Comments mark it Phase 6 / M38; dismissals are recorded but never aggregated. README claims it's live. | `copilot-analyzer-service.ts:159` |
 | H15 | **Tool result size unbounded in default chat path.** `safeStringify`'s 8KB cap protects only the agentic loop; `run-agent.ts:415-420` passes through whatever the tool returns. | `orchestrator/run-agent.ts:415` |
 | H16 | **Vault path traversal partial defense.** `sanitizeFilename` defangs `../` but no `path.resolve(...).startsWith(vaultDir)` guard, no symlink check post-mkdir. | `services/vault.ts:203-279` |
 
@@ -907,6 +907,168 @@ Three gates in priority order: (1) existing open ticket for this signal kind →
 **Closes the audit's callout:**
 > *"Agent self-improvement loop has no causation-chain dedup; can cycle on identical signals. A failing improvement ticket can spawn another improvement ticket about its own failure. Recursion-via-database."*
 Now: failure events whose `payload.ticketId` or `payload.threadId` belong to an improvement ticket are excluded from candidate-signal generation — a failing improvement ticket cannot feed evidence back into the loop. Independently, every newly created improvement ticket persists a deterministic cause hash label over its sorted sourceRefs, and the next run refuses to re-open any signal whose hash has already been seen — the loop cannot cycle on identical evidence even after the prior ticket is closed. Telemetry surfaces both metrics through `dedupedCauseHashes` on the result and `dedupedCauseCount` on the snapshot. The two failure modes the audit named are now closed by two parallel guards, each individually sufficient.
+
+### H13 ✅ FIXED (2026-05-10)
+
+**File:** `apps/desktop/src/main/services/copilot-analyzer-service.ts`
+
+**The complaint, restated.** The audit names two failure modes in one row:
+
+1. *"Model can emit 5 `critical` insights per cycle"* — `MAX_WEIGHTED_DRAFTS_PER_TICK = 5` caps the **total** drafts the analyzer persists, but it does **not** cap per-severity. The LLM can emit five drafts all marked `severity: 'critical'`, every one passes the weight gate (every `SEVERITY_BASE_SCORE['critical'] * 1.0 = 1.0`), and all five land as critical cards — turning the affordance into noise and training the operator to dismiss without reading.
+2. *"Weight filtering is soft (default 1.0 across categories)"* — `COPILOT_CATEGORY_WEIGHTS_DEFAULT` is 1.0 across all five categories. The score formula `severityBase * categoryWeight` reduces to `severityBase` in default operation, so the operator-tunable knob the audit found is structurally a no-op.
+
+The fix targets failure mode (1) directly with a structural ceiling and improves observability of (2) so an operator can **see** the LLM's severity inflation without invoking the weights. The full fix has two pillars, plus telemetry, plus zero-leak back-compat across every early-exit path in the tick.
+
+**Pillar 1 — `MAX_CRITICAL_DRAFTS_PER_TICK = 2` (operator-facing alert-fatigue budget).** A new const is exported alongside the existing `MAX_WEIGHTED_DRAFTS_PER_TICK`. Two is chosen deliberately: it preserves the affordance's signal value (an operator scanning the dashboard can react to a small number of urgent items) without crossing the threshold where attention costs invert. The constant is exported so a future operator-tunable setting can override it parametrically without code changes.
+
+**Pillar 2 — `applyCriticalCeiling(drafts, max?)` pure helper.** A new exported helper that iterates drafts in the model's emitted order and:
+
+- The **first `max` critical drafts** pass through unchanged (the model's stated priority is respected for the slots that fit).
+- Subsequent critical drafts are **downgraded to `warning`** (signal preserved — the model's intent that "this is unusual" is kept, only the priority is bounded).
+- Non-critical drafts pass through untouched and **do not consume ceiling slots** (a warning between two criticals does not occupy a critical slot).
+- Telemetry is returned alongside: `{ drafts, criticalProposed, criticalDowngraded }`.
+
+**Wiring.** In `runTick`, the ceiling fires **after** the category-allowlist filter and **before** `weightInsightDrafts`. Order matters: the allowlist comes first because a critical draft in a disabled category was never going to land, so the operator's "this category is irrelevant" setting takes precedence over "the model marked this critical." After the ceiling, weight scoring + total-cap apply as before. The model's preferences are respected, the operator's preferences are respected, and the alert-fatigue surface is hard-bounded.
+
+**Telemetry — surfaces over-eager severity inflation to ops.** Two new required fields on `CopilotAnalyzedPayload` (shared-types) and `CopilotAnalyzerTickResult` (service):
+- `criticalProposed: number` — count of critical drafts the model emitted (post-allowlist filter, pre-ceiling).
+- `criticalDowngraded: number` — count of critical drafts that hit the ceiling and were rewritten to `warning`.
+
+Together these answer the operational question *"is the LLM being over-eager about critical?"* without requiring the operator to reason about category weights — which the audit correctly flagged as a no-op in default config. A run with `criticalProposed=5, criticalDowngraded=3` is a clear signal to either tune the prompt, lower the temperature, or accept that the model's idea of "critical" is calibrated higher than the operator's.
+
+**Tests — `H13 audit (2026-05-07): severity ceiling` describe block (apps/desktop/src/main/services/copilot-analyzer-service.test.ts).** 11 net new tests split across two nested describes:
+
+*`applyCriticalCeiling` — pure helper (7 tests):*
+- `exports the ceiling constant as 2` — pins the operator-facing alert-fatigue budget. Changing it requires a follow-up audit closure.
+- `passes the first MAX_CRITICAL drafts through unchanged` — happy path.
+- `downgrades the audit-quoted regression: 5 critical drafts in one tick → 2 critical, 3 warning` — pins the audit's literal regression scenario.
+- `preserves non-critical drafts untouched and does not consume ceiling slots for them` — the warning-sandwich case (W between two criticals must not steal a slot from a third critical).
+- `emits zero counters when the model proposes no criticals` — structural pass-through.
+- `honours an injected max parameter for explicit configuration` — parametric path pinned for a future operator-tunable cap.
+- `does not mutate the input array` — purity invariant.
+
+*`runTick wiring` — service-level integration (4 tests):*
+- `downgrades overflow critical drafts before persistence and surfaces telemetry` — three criticals → two persisted as critical, one persisted as warning, both `result` and the `copilot.analyzed` payload mirror `criticalProposed=3, criticalDowngraded=1`.
+- `emits zero counters and zero downgrades when no critical drafts are proposed` — back-compat for non-critical-only ticks.
+- `reports zero counters on the early-exit "company paused" path (back-compat)` — pins the every-early-exit-zero-init contract for the company-paused branch (one of five early-exit paths in `runTick`).
+- `counts critical drafts AFTER the category-allowlist filter drops them` — pins the post-allowlist contract: `criticalProposed` answers "criticals the operator's settings ALLOWED", not "criticals the model emitted into a closed category." A future regression that flips this would change the semantic of the metric, so the test exists explicitly to lock the current behaviour.
+
+**Verification.**
+
+| Suite | Pre-H13 | Post-H13 | Delta |
+|---|---|---|---|
+| `@team-x/desktop` | 2117 / 2117 | **2128 / 2128** (188 / 189 files) | **+11** |
+| `@team-x/intelligence` | 210 / 210 | 210 / 210 | unchanged |
+| `@team-x/shared-types` | 74 / 74 (10 files) | 74 / 74 (10 files) | unchanged |
+
+- `pnpm --filter @team-x/intelligence typecheck` — **clean**.
+- `pnpm --filter @team-x/shared-types build` — **clean**, dist propagated.
+- `pnpm --filter @team-x/desktop typecheck` — same **4 pre-existing errors** as H11/H12 close (`index.ts:439` provider-router signature drift, `copilot-analyzer-service.ts:860,1061` H4 source-side `traceId` gaps — line numbers shifted from `:779,961` because H13 added ~80 lines for the helper + JSDoc + ceiling wiring; `provider-factory.ts:491` C2 multipart-content family). **0 H13-attributable errors.**
+- The same one pre-existing `provider-factory.test.ts` keytar load failure persists (handoff §5).
+
+**Backward compatibility.**
+
+- `CopilotAnalyzedPayload` gained two required fields (`criticalProposed`, `criticalDowngraded`). All six payload-construction sites in `copilot-analyzer-service.ts` (five early-exit zero-init paths + one main success path) populate them. The renderer's audit-event chip (`audit-event-chip-helpers.ts:589`) reads payload fields via `typeof payload.X === 'number'` guards, so missing fields on pre-H13 historical events render gracefully without surfacing the new counters — pre-H13 events stay readable.
+- `CopilotAnalyzerTickResult` gained the same two required fields. The IPC handler's structural subset interface `CopilotAnalyzerHandlerLike` (copilot-handlers.ts:116) declares only the four `insights*` fields it consumes — TypeScript's structural typing accepts the richer return without modification (extra properties are fine).
+- `CopilotConfigureResult` (shared-types/src/copilot.ts:199) is an IPC echo subset by design, intentionally narrower than the full tick result. No update needed.
+- The 12 pre-H13 tests in `copilot-analyzer-service.test.ts` continue to pass unchanged: none of them assert the absence of the new fields, only the presence of the existing ones.
+
+**Closes the audit's callout:**
+> *"Copilot severity has no ceiling. Model can emit 5 `critical` insights per cycle; weight filtering is soft (default 1.0 across categories)."*
+Now: a hard structural ceiling caps `critical`-severity drafts at `MAX_CRITICAL_DRAFTS_PER_TICK = 2` per tick. Drafts beyond the cap are downgraded to `warning` rather than dropped — the model's intent is preserved; only its priority is bounded. The audit's literal "5 criticals per cycle" regression now produces 2 critical + 3 warning cards, and the telemetry (`criticalProposed=5, criticalDowngraded=3`) surfaces the LLM's over-eagerness to ops without depending on the soft category-weight knob the audit correctly flagged as a no-op in default config. Pinned by 7 helper unit tests + 4 service-level integration tests including the audit-quoted regression and the post-allowlist-counter contract.
+
+### H14 ✅ FIXED (2026-05-10)
+
+**Files:** `apps/desktop/src/main/ipc/copilot-handlers.ts`, `apps/desktop/src/main/services/copilot-analyzer-service.ts` (comment), `packages/shared-types/src/copilot.ts`, `README.md`.
+
+**The complaint, restated.** The audit names three failures that compound:
+
+1. *"Comments mark it Phase 6 / M38"* — the comment at `copilot-analyzer-service.ts:159` literally said `categoryWeights: CopilotCategoryWeights — Phase 6 M38, default 1.0 for every category`. The comment promises a feedback loop that was never delivered.
+2. *"Dismissals are recorded but never aggregated"* — the dismiss handler counted dismissals over a 7-day window and built a `feedbackSuggestion` per dismissal, but nothing aggregated those per-dismissal suggestions into a complete updated weights map. There was no sweep-all-categories step that closes the loop.
+3. *"README claims it's live"* — line 56 of the top-level README said *"Repeated same-category dismissals can produce an advisory category-weight suggestion and `copilot.weights.changed` audit event when applied"*. The "when applied" qualifier was technically present, but the surrounding framing implied a working feedback loop. The audit reads it as overpromising.
+
+The fix is structural: ship the missing aggregation step, ship an opt-in auto-apply path, correct the comment, correct the README so the prose matches the code. **Three pillars** — each individually addresses one of the three failure modes the audit named.
+
+**Pillar 1 — `aggregateCategoryWeightsFromDismissals` pure helper (closes failure mode #2).** A new exported helper in `copilot-handlers.ts`:
+
+```typescript
+aggregateCategoryWeightsFromDismissals({ currentWeights, dismissalCountsByCategory })
+  → { weights: Record<CopilotCategory, number>; changedCategories: Array<{ ... }> }
+```
+
+The aggregator iterates every category in `COPILOT_CATEGORIES`, asks the existing `buildCopilotFeedbackSuggestion` whether that category's dismissal count crosses the threshold, and emits a complete updated weights map plus an audit-trail `changedCategories` array. The shape is "current weights stay the same except where the threshold was crossed" — a category that didn't move keeps its current value, a category that moved gets its `suggestedWeight`, and a category at floor (`current === 0`) is correctly a no-op (the underlying `buildCopilotFeedbackSuggestion` returns null when `suggested === current`). The output `changedCategories` carries the previous-weight, new-weight, dismissal count, and human-readable reason for each lowered category — the renderer can build a one-sentence toast from any element.
+
+**Pillar 2 — `autoApplyDismissalFeedback` opt-in toggle on the dismiss handler.** A new dep on `CopilotHandlersDeps`:
+
+```typescript
+autoApplyDismissalFeedback?: () => boolean;  // default undefined = OFF
+```
+
+The toggle is a getter (read at call time, not factory-build time) so an operator can flip it without restarting the app. When `false` / absent, the dismiss handler returns the existing `feedbackSuggestion` — the advisory UX is the unchanged baseline. When `true`, the handler:
+
+1. Sweeps every category in `COPILOT_CATEGORIES` for dismissal counts (the dismissed category gets the freshly-incremented count; other categories may have ALSO crossed concurrently if the user binge-dismissed across categories).
+2. Calls `aggregateCategoryWeightsFromDismissals` to compute the post-state weights map.
+3. Persists via `settingsRepo.setCopilotWeights({ companyId, weights })`.
+4. Emits `copilot.weights.changed` with `actorKind='employee'` + `actorId='system-copilot'` — the audit row reads "the LOOP changed weights", not "the user clicked Apply." The renderer's audit chip distinguishes auto from manual by inspecting these fields.
+5. Returns `feedbackApplied: { category, dismissalsInWindow, windowDays, previousWeight, newWeight, reason }` instead of `feedbackSuggestion` — the result shape itself signals the loop closed.
+
+The two response fields `feedbackSuggestion` and `feedbackApplied` are mutually exclusive — the type comment on `CopilotDismissResult` pins this contract.
+
+**Defensive fallbacks.** The auto-apply path defends against three composition-root failure modes:
+
+1. **Missing `setCopilotWeights` dep** — falls back to the advisory path with a `console.warn` so the wiring gap surfaces loudly.
+2. **`setCopilotWeights` throws** (disk full, locked DB, etc.) — falls back to advisory with a `console.warn` carrying the error; `copilot.weights.changed` is NOT emitted (no false-positive audit row).
+3. **Aggregation returns no changes** (race: another dismiss already lowered this category to floor between threshold check and aggregation) — falls back to advisory; defensive guard against silently emitting an empty `feedbackApplied`.
+
+**Pillar 3 — comment + README correction (closes failure modes #1 and #3).** The `copilot-analyzer-service.ts:159` comment now reads: *"Lowered manually via `settings.setCopilotWeights` (the advisory path the dismiss handler returns as `feedbackSuggestion`), or automatically when the dismiss handler's `autoApplyDismissalFeedback` toggle is ON — H14 (audit 2026-05-07) closed the previously-aspirational Phase-6/M38 feedback loop."* The "Phase 6 M38" reference is gone; the prose describes shipped behavior.
+
+The README line 56 now spells out **both** paths explicitly: *"Repeated same-category dismissals (≥3 in 7 days) close the loop two ways: by default an advisory category-weight suggestion is returned and the user clicks Apply (manual `copilot.weights.changed` audit row, `actorKind='user'`); when the `autoApplyDismissalFeedback` toggle is ON the dismiss handler aggregates dismissal counts across all categories, persists the new weights via `setCopilotWeights`, and emits `copilot.weights.changed` with `actorKind='employee'` + `actorId='system-copilot'` — the loop closes itself."*
+
+**Tests — `H14 audit (2026-05-07): feedback loop closure` describe block (apps/desktop/src/main/ipc/copilot-handlers.test.ts).** 13 net new tests across three nested describes:
+
+*`aggregateCategoryWeightsFromDismissals` — pure helper (6 tests):*
+- `lowers a single category that crosses the 3-dismissal threshold` — happy path, `operational: 1.0 → 0.5` with 4 dismissals; non-dismissed categories untouched; `changedCategories` carries reason text.
+- `does not lower categories below the 3-dismissal threshold` — 2 operational + 1 cost dismissals → no changes.
+- `lowers multiple categories in a single sweep when several cross concurrently` — operational(3) + cost(5) + workflow(2) → operational + cost both move, workflow stays.
+- `floors at 0 when current weight is already 0.5 and threshold is crossed again` — pins the audit-quoted floor behaviour.
+- `is a no-op when a category is already at 0` — pins the `suggested === current → null` propagation; no spurious zero-delta audit rows.
+- `does not mutate the input weights map` — purity invariant.
+
+*`dismiss handler — auto-apply path (5 tests):*
+- `persists new weights, emits copilot.weights.changed, and returns feedbackApplied when threshold crossed and toggle is ON` — full happy path; verifies the persisted args match the aggregator output, the bus emits the system-copilot-actor weights-changed event, and `feedbackApplied` carries the reason text.
+- `aggregates concurrent multi-category threshold crosses into a single weights write` — operational + cost both crossed in the same dismiss; one `setCopilotWeights` call lands BOTH; primary `feedbackApplied` is the dismissed category (operational); the bus event carries `changedKeys` for both.
+- `falls back to advisory suggestion when setCopilotWeights dep is missing (graceful degradation)` — composition-root wiring gap; advisory result + `console.warn` containing "setCopilotWeights is missing".
+- `falls back to advisory suggestion when setCopilotWeights throws` — disk-full simulation; advisory result + `console.warn`; verifies `copilot.weights.changed` is NOT emitted on the failure path (no false-positive audit row).
+- `does not auto-apply when below the 3-dismissal threshold even with toggle ON` — single-dismissal case; no setter call, no advisory either (no change to surface).
+
+*`dismiss handler — advisory path (regression pin) (2 tests):*
+- `returns feedbackSuggestion when toggle is OFF, even with setCopilotWeights wired` — proves the toggle is the gate, not the dep presence; the existing advisory UX is the unchanged baseline.
+- `returns feedbackSuggestion when toggle dep is omitted entirely (default OFF)` — pre-H14 callers (no toggle dep) keep the advisory behaviour byte-for-byte.
+
+**Verification.**
+
+| Suite | Pre-H14 | Post-H14 | Delta |
+|---|---|---|---|
+| `@team-x/desktop` | 2128 / 2128 | **2141 / 2141** (188 / 189 files) | **+13** |
+| `@team-x/intelligence` | 210 / 210 | 210 / 210 | unchanged |
+| `@team-x/shared-types` | 74 / 74 (10 files) | 74 / 74 (10 files) | unchanged |
+
+- `pnpm --filter @team-x/intelligence typecheck` — **clean**.
+- `pnpm --filter @team-x/shared-types build` — **clean**, dist propagated.
+- `pnpm --filter @team-x/desktop typecheck` — same **4 pre-existing errors** as H13 close (`index.ts:439` provider-router signature drift, `copilot-analyzer-service.ts:870,1071` H4 source-side `traceId` gaps — line numbers shifted from `:860,1061` because the H14 comment expansion at line 159 grew that file by ~10 lines; `provider-factory.ts:491` C2 multipart-content family). **0 H14-attributable errors.**
+- The same one pre-existing `provider-factory.test.ts` keytar load failure persists (handoff §5).
+
+**Backward compatibility.**
+
+- `CopilotDismissResult` gained an optional `feedbackApplied?: CopilotFeedbackApplied` sibling. The existing `feedbackSuggestion?` field is unchanged; pre-H14 renderer code that reads `feedbackSuggestion` continues to work in the default (toggle-OFF) configuration.
+- `CopilotHandlerSettingsRepo.setCopilotWeights` is **optional** on the dep surface — pre-H14 callers (and the existing 12 IPC test fakes that mock `setCopilotWeights: vi.fn()`) continue to compile. The auto-apply path checks `setter === undefined` at call time and falls back to advisory if absent, with a `console.warn` surfacing the wiring gap.
+- The `autoApplyDismissalFeedback` dep is optional on `CopilotHandlersDeps` — omitted = OFF = pre-H14 behaviour. None of the 12+ existing IPC handler tests need updating.
+- `COPILOT_CATEGORIES` (already exported from `shared-types/src/ipc.ts`, used by 8+ call sites in `apps/desktop/src/main/ipc/handlers.ts:6740`) is the iteration source for the aggregator — no new shared-types const required.
+- The 11 pre-existing `copilot-handlers.test.ts` tests (across `copilot.insights`, `copilot.dismiss`, `copilot.ask`, `copilot.configure`) continue to pass unchanged.
+
+**Closes the audit's callout:**
+> *"Copilot category-weight feedback loop is aspirational. Comments mark it Phase 6 / M38; dismissals are recorded but never aggregated. README claims it's live."*
+Now: dismissals ARE aggregated — `aggregateCategoryWeightsFromDismissals` is a pure sweep-all-categories helper that turns per-category dismissal counts into a complete updated weights map; the `autoApplyDismissalFeedback` toggle on the dismiss handler closes the loop autonomously when ON, persisting weights via `setCopilotWeights` and emitting `copilot.weights.changed` with the system-copilot actor; the comment at line 159 no longer references "Phase 6 M38" — it describes the shipped two-path behaviour; the README line 56 spells out both paths explicitly. The three failure modes the audit named are now closed by three parallel fixes, each individually addressing one mode.
 
 ---
 

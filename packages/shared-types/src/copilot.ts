@@ -152,14 +152,40 @@ export interface CopilotFeedbackSuggestion {
 }
 
 /**
+ * H14 (audit 2026-05-07): payload returned when the dismissal feedback
+ * loop is auto-applied. Mutually exclusive with `feedbackSuggestion`
+ * on `CopilotDismissResult` — if `feedbackApplied` is present, the new
+ * weight has already been persisted via `settings.setCopilotWeights`
+ * AND a `copilot.weights.changed` bus event has been emitted, so the
+ * renderer should treat this as the post-state, not a prompt.
+ *
+ * Pre-H14 callers will still receive `feedbackSuggestion` whenever the
+ * `autoApplyDismissalFeedback` toggle is OFF (default) — the advisory
+ * UX is preserved as the unchanged baseline.
+ */
+export interface CopilotFeedbackApplied {
+  category: CopilotCategory;
+  dismissalsInWindow: number;
+  windowDays: number;
+  previousWeight: number;
+  newWeight: number;
+  reason: string;
+}
+
+/**
  * Result shape for `copilot.dismiss`. Echoes the id + the server-side
  * dismissed-at timestamp so the renderer can optimistically project
  * the dismissal into its cache without a separate read-back.
+ *
+ * `feedbackSuggestion` and `feedbackApplied` are mutually exclusive.
+ * The advisory path (auto-apply OFF, the default) returns the former;
+ * the auto-apply path (audit 2026-05-07 H14) returns the latter.
  */
 export interface CopilotDismissResult {
   id: string;
   dismissedAt: number;
   feedbackSuggestion?: CopilotFeedbackSuggestion;
+  feedbackApplied?: CopilotFeedbackApplied;
 }
 
 // ---------------------------------------------------------------------------

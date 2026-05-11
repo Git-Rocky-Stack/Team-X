@@ -3,6 +3,7 @@ import type { AuditEvent, CopilotCategory, DashboardEvent } from '@team-x/shared
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  aggregateCategoryWeightsFromDismissals,
   type CopilotHandlersDeps,
   type CopilotInsightHandlerRow,
   buildCopilotHandlers,
@@ -407,6 +408,427 @@ describe('copilot.configure', () => {
       /test-only|settings\.setCopilot/,
     );
     expect(tick).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// H14 audit (2026-05-07): "Copilot category-weight feedback loop is
+// aspirational. Comments mark it Phase 6 / M38; dismissals are recorded but
+// never aggregated. README claims it's live."
+//
+// Three pillars to the fix:
+//   (1) `aggregateCategoryWeightsFromDismissals` — pure sweep-all-categories
+//       aggregator that turns dismissal counts into a complete updated
+//       weights map. Closes the missing aggregation step.
+//   (2) `autoApplyDismissalFeedback` toggle on the dismiss handler — when
+//       ON, the handler persists the new weights via `setCopilotWeights`,
+//       emits `copilot.weights.changed` with the system-copilot actor, and
+//       returns `feedbackApplied` instead of `feedbackSuggestion`. The loop
+//       closes itself.
+//   (3) Backward-compat — toggle defaults OFF; advisory UX preserved.
+// ---------------------------------------------------------------------------
+describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', () => {
+  // -------------------------------------------------------------------------
+  // Pure helper: aggregateCategoryWeightsFromDismissals
+  // -------------------------------------------------------------------------
+  describe('aggregateCategoryWeightsFromDismissals', () => {
+    it('lowers a single category that crosses the 3-dismissal threshold', () => {
+      const result = aggregateCategoryWeightsFromDismissals({
+        currentWeights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT },
+        dismissalCountsByCategory: { operational: 4 },
+      });
+
+      expect(result.weights.operational).toBe(0.5);
+      expect(result.weights.cost).toBe(1);
+      expect(result.weights.org).toBe(1);
+      expect(result.changedCategories).toEqual([
+        {
+          category: 'operational',
+          previousWeight: 1,
+          newWeight: 0.5,
+          dismissalsInWindow: 4,
+          reason: 'You dismissed 4 operational insights in the last 7 days.',
+        },
+      ]);
+    });
+
+    it('does not lower categories below the 3-dismissal threshold', () => {
+      const result = aggregateCategoryWeightsFromDismissals({
+        currentWeights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT },
+        dismissalCountsByCategory: { operational: 2, cost: 1 },
+      });
+
+      expect(result.weights.operational).toBe(1);
+      expect(result.weights.cost).toBe(1);
+      expect(result.changedCategories).toEqual([]);
+    });
+
+    it('lowers multiple categories in a single sweep when several cross concurrently', () => {
+      const result = aggregateCategoryWeightsFromDismissals({
+        currentWeights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT },
+        dismissalCountsByCategory: { operational: 3, cost: 5, workflow: 2 },
+      });
+
+      expect(result.weights.operational).toBe(0.5);
+      expect(result.weights.cost).toBe(0.5);
+      expect(result.weights.workflow).toBe(1); // below threshold
+      expect(result.changedCategories.map((c) => c.category).sort()).toEqual(['cost', 'operational']);
+    });
+
+    it('floors at 0 when current weight is already 0.5 and threshold is crossed again', () => {
+      // Mirrors the `buildCopilotFeedbackSuggestion` floor: ≤ 0.5 → 0.
+      const result = aggregateCategoryWeightsFromDismissals({
+        currentWeights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT, operational: 0.5 },
+        dismissalCountsByCategory: { operational: 3 },
+      });
+
+      expect(result.weights.operational).toBe(0);
+      expect(result.changedCategories[0]).toEqual({
+        category: 'operational',
+        previousWeight: 0.5,
+        newWeight: 0,
+        dismissalsInWindow: 3,
+        reason: 'You dismissed 3 operational insights in the last 7 days.',
+      });
+    });
+
+    it('is a no-op when a category is already at 0', () => {
+      // `buildCopilotFeedbackSuggestion` returns null when suggested ===
+      // current. The aggregator must propagate that — no spurious zero-delta
+      // changes in the audit trail.
+      const result = aggregateCategoryWeightsFromDismissals({
+        currentWeights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT, operational: 0 },
+        dismissalCountsByCategory: { operational: 5 },
+      });
+
+      expect(result.weights.operational).toBe(0);
+      expect(result.changedCategories).toEqual([]);
+    });
+
+    it('does not mutate the input weights map', () => {
+      const input = { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT };
+      const snapshot = { ...input };
+      aggregateCategoryWeightsFromDismissals({
+        currentWeights: input,
+        dismissalCountsByCategory: { operational: 3 },
+      });
+      expect(input).toEqual(snapshot);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Auto-apply path (toggle ON)
+  // -------------------------------------------------------------------------
+  describe('dismiss handler — auto-apply path', () => {
+    it('persists new weights, emits copilot.weights.changed, and returns feedbackApplied when threshold crossed and toggle is ON', async () => {
+      const setCopilotWeights = vi.fn(() => ({
+        weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT, operational: 0.5 },
+      }));
+      const deps = makeDeps({
+        now: () => 1_000_000_000,
+        copilotInsightsRepo: {
+          listActive: vi.fn(() => []),
+          getById: vi.fn(() =>
+            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
+          ),
+          dismiss: vi.fn(),
+        },
+        auditRepo: {
+          list: vi.fn(() => [
+            dismissedEvent('operational', 999_999_000),
+            dismissedEvent('operational', 999_998_000),
+          ]),
+        },
+        settingsRepo: {
+          getCopilotWeights: vi.fn(() => ({ weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT } })),
+          setCopilotWeights,
+        },
+        autoApplyDismissalFeedback: () => true,
+      });
+      const handlers = buildCopilotHandlers(deps);
+
+      const result = await handlers.dismiss({ id: 'i1' });
+
+      // Weights were persisted with the lowered value for the dismissed
+      // category. The full weights map is passed (not a partial) so the
+      // settings repo's full-replace contract sees a consistent shape.
+      expect(setCopilotWeights).toHaveBeenCalledTimes(1);
+      const persistedArgs = setCopilotWeights.mock.calls[0]?.[0];
+      expect(persistedArgs).toBeDefined();
+      expect(persistedArgs?.companyId).toBe('c1');
+      expect(persistedArgs?.weights.operational).toBe(0.5);
+
+      // The terminal result is `feedbackApplied`, NOT `feedbackSuggestion` —
+      // the loop closed itself.
+      expect(result.feedbackSuggestion).toBeUndefined();
+      expect(result.feedbackApplied).toEqual({
+        category: 'operational',
+        dismissalsInWindow: 3,
+        windowDays: 7,
+        previousWeight: 1,
+        newWeight: 0.5,
+        reason: 'You dismissed 3 operational insights in the last 7 days.',
+      });
+
+      // Two bus events fire: copilot.dismissed (always) AND
+      // copilot.weights.changed (auto-apply only).
+      const emit = vi.mocked(deps.bus.emit);
+      const events = emit.mock.calls.map((c) => c[0]);
+      const dismissed = events.find((e) => e.type === 'copilot.dismissed');
+      expect(dismissed?.actorKind).toBe('user');
+      expect(dismissed?.actorId).toBe('rocky');
+      const weightsChanged = events.find((e) => e.type === 'copilot.weights.changed');
+      expect(weightsChanged).toBeDefined();
+      expect(weightsChanged?.actorKind).toBe('employee');
+      expect(weightsChanged?.actorId).toBe('system-copilot');
+      const payload = weightsChanged?.payload as {
+        weights: Record<string, number>;
+        changedKeys: string[];
+        changedAt: number;
+      };
+      expect(payload.changedKeys).toEqual(['operational']);
+      expect(payload.weights.operational).toBe(0.5);
+      expect(payload.changedAt).toBe(1_000_000_000);
+    });
+
+    it('aggregates concurrent multi-category threshold crosses into a single weights write', async () => {
+      const setCopilotWeights = vi.fn(() => ({
+        weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT, operational: 0.5, cost: 0.5 },
+      }));
+      const deps = makeDeps({
+        now: () => 1_000_000_000,
+        copilotInsightsRepo: {
+          listActive: vi.fn(() => []),
+          getById: vi.fn(() =>
+            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
+          ),
+          dismiss: vi.fn(),
+        },
+        auditRepo: {
+          // The audit repo's `list` call is shape-agnostic — both the
+          // direct-category count AND the per-other-category sweep call
+          // through this same fn. Returning an oversized list with both
+          // operational AND cost dismissals exercises the multi-category
+          // aggregation pillar.
+          list: vi.fn(() => [
+            dismissedEvent('operational', 999_999_000),
+            dismissedEvent('operational', 999_998_000),
+            dismissedEvent('cost', 999_997_000),
+            dismissedEvent('cost', 999_996_000),
+            dismissedEvent('cost', 999_995_000),
+          ]),
+        },
+        settingsRepo: {
+          getCopilotWeights: vi.fn(() => ({ weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT } })),
+          setCopilotWeights,
+        },
+        autoApplyDismissalFeedback: () => true,
+      });
+      const handlers = buildCopilotHandlers(deps);
+
+      const result = await handlers.dismiss({ id: 'i1' });
+
+      expect(setCopilotWeights).toHaveBeenCalledTimes(1);
+      const persistedArgs = setCopilotWeights.mock.calls[0]?.[0];
+      expect(persistedArgs?.weights.operational).toBe(0.5);
+      expect(persistedArgs?.weights.cost).toBe(0.5);
+
+      const emit = vi.mocked(deps.bus.emit);
+      const weightsChanged = emit.mock.calls
+        .map((c) => c[0])
+        .find((e) => e.type === 'copilot.weights.changed');
+      const payload = weightsChanged?.payload as { changedKeys: string[] };
+      expect(payload.changedKeys.sort()).toEqual(['cost', 'operational']);
+
+      // The primary feedbackApplied row is the dismissed category, even
+      // when multiple crossed in the same write.
+      expect(result.feedbackApplied?.category).toBe('operational');
+    });
+
+    it('falls back to advisory suggestion when setCopilotWeights dep is missing (graceful degradation)', async () => {
+      // Composition-root wiring gap. The handler must NOT crash; it
+      // surfaces the gap via console + returns the advisory path.
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const deps = makeDeps({
+        now: () => 1_000_000_000,
+        copilotInsightsRepo: {
+          listActive: vi.fn(() => []),
+          getById: vi.fn(() =>
+            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
+          ),
+          dismiss: vi.fn(),
+        },
+        auditRepo: {
+          list: vi.fn(() => [
+            dismissedEvent('operational', 999_999_000),
+            dismissedEvent('operational', 999_998_000),
+          ]),
+        },
+        settingsRepo: {
+          getCopilotWeights: vi.fn(() => ({ weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT } })),
+          // setCopilotWeights intentionally undefined
+        },
+        autoApplyDismissalFeedback: () => true,
+      });
+      const handlers = buildCopilotHandlers(deps);
+
+      const result = await handlers.dismiss({ id: 'i1' });
+
+      expect(result.feedbackApplied).toBeUndefined();
+      expect(result.feedbackSuggestion?.category).toBe('operational');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/setCopilotWeights is missing/),
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('falls back to advisory suggestion when setCopilotWeights throws', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const setCopilotWeights = vi.fn(() => {
+        throw new Error('disk full');
+      });
+      const deps = makeDeps({
+        now: () => 1_000_000_000,
+        copilotInsightsRepo: {
+          listActive: vi.fn(() => []),
+          getById: vi.fn(() =>
+            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
+          ),
+          dismiss: vi.fn(),
+        },
+        auditRepo: {
+          list: vi.fn(() => [
+            dismissedEvent('operational', 999_999_000),
+            dismissedEvent('operational', 999_998_000),
+          ]),
+        },
+        settingsRepo: {
+          getCopilotWeights: vi.fn(() => ({ weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT } })),
+          setCopilotWeights,
+        },
+        autoApplyDismissalFeedback: () => true,
+      });
+      const handlers = buildCopilotHandlers(deps);
+
+      const result = await handlers.dismiss({ id: 'i1' });
+
+      expect(setCopilotWeights).toHaveBeenCalledTimes(1);
+      expect(result.feedbackApplied).toBeUndefined();
+      expect(result.feedbackSuggestion?.category).toBe('operational');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/auto-apply persistence failed/),
+        expect.any(Error),
+      );
+      // copilot.weights.changed must NOT have been emitted on the failure path
+      const emit = vi.mocked(deps.bus.emit);
+      const weightsChanged = emit.mock.calls
+        .map((c) => c[0])
+        .find((e) => e.type === 'copilot.weights.changed');
+      expect(weightsChanged).toBeUndefined();
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('does not auto-apply when below the 3-dismissal threshold even with toggle ON', async () => {
+      const setCopilotWeights = vi.fn();
+      const deps = makeDeps({
+        now: () => 1_000_000_000,
+        copilotInsightsRepo: {
+          listActive: vi.fn(() => []),
+          getById: vi.fn(() =>
+            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
+          ),
+          dismiss: vi.fn(),
+        },
+        auditRepo: {
+          list: vi.fn(() => [dismissedEvent('operational', 999_999_000)]),
+        },
+        settingsRepo: {
+          getCopilotWeights: vi.fn(() => ({ weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT } })),
+          setCopilotWeights,
+        },
+        autoApplyDismissalFeedback: () => true,
+      });
+      const handlers = buildCopilotHandlers(deps);
+
+      const result = await handlers.dismiss({ id: 'i1' });
+
+      // No suggestion → no apply → no setter call → no extra bus emit.
+      expect(setCopilotWeights).not.toHaveBeenCalled();
+      expect(result.feedbackApplied).toBeUndefined();
+      expect(result.feedbackSuggestion).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Advisory path back-compat (toggle OFF — the default)
+  // -------------------------------------------------------------------------
+  describe('dismiss handler — advisory path (regression pin)', () => {
+    it('returns feedbackSuggestion when toggle is OFF, even with setCopilotWeights wired', async () => {
+      const setCopilotWeights = vi.fn();
+      const deps = makeDeps({
+        now: () => 1_000_000_000,
+        copilotInsightsRepo: {
+          listActive: vi.fn(() => []),
+          getById: vi.fn(() =>
+            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
+          ),
+          dismiss: vi.fn(),
+        },
+        auditRepo: {
+          list: vi.fn(() => [
+            dismissedEvent('operational', 999_999_000),
+            dismissedEvent('operational', 999_998_000),
+          ]),
+        },
+        settingsRepo: {
+          getCopilotWeights: vi.fn(() => ({ weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT } })),
+          setCopilotWeights, // wired but should not be called
+        },
+        autoApplyDismissalFeedback: () => false,
+      });
+      const handlers = buildCopilotHandlers(deps);
+
+      const result = await handlers.dismiss({ id: 'i1' });
+
+      expect(setCopilotWeights).not.toHaveBeenCalled();
+      expect(result.feedbackApplied).toBeUndefined();
+      expect(result.feedbackSuggestion?.category).toBe('operational');
+      expect(result.feedbackSuggestion?.suggestedWeight).toBe(0.5);
+    });
+
+    it('returns feedbackSuggestion when toggle dep is omitted entirely (default OFF)', async () => {
+      const setCopilotWeights = vi.fn();
+      const deps = makeDeps({
+        now: () => 1_000_000_000,
+        copilotInsightsRepo: {
+          listActive: vi.fn(() => []),
+          getById: vi.fn(() =>
+            row({ id: 'i1', companyId: 'c1', category: 'operational' }),
+          ),
+          dismiss: vi.fn(),
+        },
+        auditRepo: {
+          list: vi.fn(() => [
+            dismissedEvent('operational', 999_999_000),
+            dismissedEvent('operational', 999_998_000),
+          ]),
+        },
+        settingsRepo: {
+          getCopilotWeights: vi.fn(() => ({ weights: { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT } })),
+          setCopilotWeights,
+        },
+        // autoApplyDismissalFeedback intentionally omitted — pre-H14 default
+      });
+      const handlers = buildCopilotHandlers(deps);
+
+      const result = await handlers.dismiss({ id: 'i1' });
+
+      expect(setCopilotWeights).not.toHaveBeenCalled();
+      expect(result.feedbackApplied).toBeUndefined();
+      expect(result.feedbackSuggestion).toBeDefined();
+    });
   });
 });
 

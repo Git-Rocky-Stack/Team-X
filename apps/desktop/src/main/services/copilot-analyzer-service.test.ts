@@ -30,6 +30,8 @@ import type { CopilotInsightRow } from '../db/repos/copilot-insights.js';
 
 import * as analyzerModule from './copilot-analyzer-service.js';
 import {
+  MAX_CRITICAL_DRAFTS_PER_TICK,
+  applyCriticalCeiling,
   type CopilotAnalyzerCompaniesRepo,
   type CopilotAnalyzerCompleteFn,
   type CopilotAnalyzerEmployeesRepo,
@@ -739,6 +741,251 @@ describe('copilot-analyzer-service — restart picks up new settings', () => {
     // proving restart is a real reschedule (not a no-op).
     expect(cleared).toHaveLength(1);
     expect(cleared[0]?.ref).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// H13 audit (2026-05-07): "Copilot severity has no ceiling. Model can emit 5
+// critical insights per cycle; weight filtering is soft (default 1.0 across
+// categories)."
+//
+// Two failure modes per the audit:
+//   (1) MAX_WEIGHTED_DRAFTS_PER_TICK caps TOTAL drafts at 5 — not per-severity,
+//       so 5/5 critical drafts all land critical.
+//   (2) Default category weights are 1.0 across the board, so weight-based
+//       filtering has no actual effect.
+//
+// The fix wires `applyCriticalCeiling` BEFORE `weightInsightDrafts`. Drafts
+// beyond the per-tick critical ceiling get downgraded to `warning` (signal
+// preserved, alert-fatigue surface bounded), and the count is surfaced as
+// telemetry on `CopilotAnalyzerTickResult.criticalProposed` /
+// `criticalDowngraded` and the matching fields on `CopilotAnalyzedPayload`.
+// ---------------------------------------------------------------------------
+describe('copilot-analyzer-service — H13 audit (2026-05-07): severity ceiling', () => {
+  // -------------------------------------------------------------------------
+  // Pure helper: applyCriticalCeiling
+  // -------------------------------------------------------------------------
+  describe('applyCriticalCeiling', () => {
+    it('exports the ceiling constant as 2', () => {
+      // Pinning the operator-facing alert-fatigue budget. Changing this is
+      // intentional and should require a follow-up audit closure.
+      expect(MAX_CRITICAL_DRAFTS_PER_TICK).toBe(2);
+    });
+
+    it('passes the first MAX_CRITICAL drafts through unchanged', () => {
+      const drafts: InsightDraft[] = [
+        draft('cost', 'critical', 'C-1'),
+        draft('operational', 'critical', 'C-2'),
+      ];
+      const result = applyCriticalCeiling(drafts);
+
+      expect(result.criticalProposed).toBe(2);
+      expect(result.criticalDowngraded).toBe(0);
+      expect(result.drafts.map((d) => d.severity)).toEqual(['critical', 'critical']);
+      expect(result.drafts.map((d) => d.title)).toEqual(['C-1', 'C-2']);
+    });
+
+    it('downgrades the audit-quoted regression: 5 critical drafts in one tick → 2 critical, 3 warning', () => {
+      // The audit's literal complaint: "Model can emit 5 critical insights
+      // per cycle". Pin the post-ceiling shape so a regression that loosens
+      // the cap is caught.
+      const drafts: InsightDraft[] = [
+        draft('cost', 'critical', 'C-1'),
+        draft('operational', 'critical', 'C-2'),
+        draft('workflow', 'critical', 'C-3'),
+        draft('org', 'critical', 'C-4'),
+        draft('anomaly', 'critical', 'C-5'),
+      ];
+      const result = applyCriticalCeiling(drafts);
+
+      expect(result.criticalProposed).toBe(5);
+      expect(result.criticalDowngraded).toBe(3);
+      expect(result.drafts.map((d) => d.severity)).toEqual([
+        'critical',
+        'critical',
+        'warning',
+        'warning',
+        'warning',
+      ]);
+      // Titles must be preserved on downgrade — only severity changes.
+      expect(result.drafts.map((d) => d.title)).toEqual(['C-1', 'C-2', 'C-3', 'C-4', 'C-5']);
+    });
+
+    it('preserves non-critical drafts untouched and does not consume ceiling slots for them', () => {
+      // Two warnings sandwiched between criticals must NOT count toward
+      // the ceiling. The third critical (after both ceiling slots are
+      // consumed by C-1 and C-2) must be the only downgrade.
+      const drafts: InsightDraft[] = [
+        draft('cost', 'critical', 'C-1'),
+        draft('operational', 'warning', 'W-1'),
+        draft('workflow', 'critical', 'C-2'),
+        draft('org', 'info', 'I-1'),
+        draft('anomaly', 'critical', 'C-3'),
+      ];
+      const result = applyCriticalCeiling(drafts);
+
+      expect(result.criticalProposed).toBe(3);
+      expect(result.criticalDowngraded).toBe(1);
+      expect(result.drafts.map((d) => d.severity)).toEqual([
+        'critical',
+        'warning',
+        'critical',
+        'info',
+        'warning', // the third critical, downgraded
+      ]);
+    });
+
+    it('emits zero counters when the model proposes no criticals', () => {
+      const drafts: InsightDraft[] = [
+        draft('operational', 'warning', 'W-1'),
+        draft('cost', 'info', 'I-1'),
+      ];
+      const result = applyCriticalCeiling(drafts);
+
+      expect(result.criticalProposed).toBe(0);
+      expect(result.criticalDowngraded).toBe(0);
+      expect(result.drafts).toEqual(drafts); // structural pass-through
+    });
+
+    it('honours an injected `max` parameter for explicit configuration', () => {
+      // A future operator-tunable cap can raise/lower the ceiling without
+      // needing a code change once we expose the setting. Pin the
+      // parametric path now.
+      const drafts: InsightDraft[] = [
+        draft('cost', 'critical', 'C-1'),
+        draft('operational', 'critical', 'C-2'),
+        draft('workflow', 'critical', 'C-3'),
+      ];
+      const lowered = applyCriticalCeiling(drafts, 1);
+      expect(lowered.criticalDowngraded).toBe(2);
+      expect(lowered.drafts.map((d) => d.severity)).toEqual(['critical', 'warning', 'warning']);
+
+      const raised = applyCriticalCeiling(drafts, 5);
+      expect(raised.criticalDowngraded).toBe(0);
+      expect(raised.drafts.map((d) => d.severity)).toEqual(['critical', 'critical', 'critical']);
+    });
+
+    it('does not mutate the input array', () => {
+      const drafts: InsightDraft[] = [
+        draft('cost', 'critical', 'C-1'),
+        draft('operational', 'critical', 'C-2'),
+        draft('workflow', 'critical', 'C-3'),
+      ];
+      const snapshot = drafts.map((d) => ({ ...d }));
+      applyCriticalCeiling(drafts);
+      expect(drafts).toEqual(snapshot);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Service-level integration: ceiling persists telemetry through tick
+  // -------------------------------------------------------------------------
+  describe('runTick wiring', () => {
+    it('downgrades overflow critical drafts before persistence and surfaces telemetry', async () => {
+      // Three critical drafts → ceiling = 2 → one downgrade. The
+      // upsertWithDedup call sequence captures the post-ceiling severity
+      // the dedup layer actually sees.
+      const { resolved } = resolvedFromScripts([
+        draftsJson([
+          { category: 'cost', severity: 'critical', title: 'Cost spike A' },
+          { category: 'operational', severity: 'critical', title: 'Ops drift B' },
+          { category: 'workflow', severity: 'critical', title: 'Workflow C' },
+        ]),
+      ]);
+      const { deps, bus, insightsRepo } = baseDeps({ resolveComplete: resolved });
+      const svc = createCopilotAnalyzerService(deps);
+
+      const result = await svc.tick('co-1');
+
+      expect(result.criticalProposed).toBe(3);
+      expect(result.criticalDowngraded).toBe(1);
+      // Three drafts proposed, three persisted (same total — only severity
+      // is rewritten, drafts are not dropped).
+      expect(result.insightsProposed).toBe(3);
+      expect(insightsRepo.upserts.map((u) => u.severity)).toEqual([
+        'critical',
+        'critical',
+        'warning',
+      ]);
+
+      // Terminal copilot.analyzed event mirrors the counters.
+      const analyzed = bus.emissions.find((e) => e.type === 'copilot.analyzed');
+      const payload = analyzed?.payload as CopilotAnalyzedPayload;
+      expect(payload.criticalProposed).toBe(3);
+      expect(payload.criticalDowngraded).toBe(1);
+    });
+
+    it('emits zero counters and zero downgrades when no critical drafts are proposed', async () => {
+      const { resolved } = resolvedFromScripts([
+        draftsJson([
+          { category: 'operational', severity: 'warning', title: 'W-1' },
+          { category: 'cost', severity: 'info', title: 'I-1' },
+        ]),
+      ]);
+      const { deps, bus } = baseDeps({ resolveComplete: resolved });
+      const svc = createCopilotAnalyzerService(deps);
+
+      const result = await svc.tick('co-1');
+
+      expect(result.criticalProposed).toBe(0);
+      expect(result.criticalDowngraded).toBe(0);
+      const analyzed = bus.emissions.find((e) => e.type === 'copilot.analyzed');
+      const payload = analyzed?.payload as CopilotAnalyzedPayload;
+      expect(payload.criticalProposed).toBe(0);
+      expect(payload.criticalDowngraded).toBe(0);
+    });
+
+    it('reports zero counters on the early-exit "company paused" path (back-compat)', async () => {
+      // Pre-H13 historical events lack the new fields — the back-compat
+      // contract is that every CodePath, including pause/no-op exits,
+      // emits 0 / 0. Pinning so a future refactor doesn't accidentally
+      // leak `undefined` into the analyzed payload's required fields.
+      const orchModule = makeFakeOrchestrator(true); // company paused
+      const { deps, bus } = baseDeps({ orchestrator: orchModule.orchestrator });
+      const svc = createCopilotAnalyzerService(deps);
+
+      const result = await svc.tick('co-1');
+
+      expect(result.reason).toBe('company_paused');
+      expect(result.criticalProposed).toBe(0);
+      expect(result.criticalDowngraded).toBe(0);
+      const analyzed = bus.emissions.find((e) => e.type === 'copilot.analyzed');
+      const payload = analyzed?.payload as CopilotAnalyzedPayload;
+      expect(payload.criticalProposed).toBe(0);
+      expect(payload.criticalDowngraded).toBe(0);
+    });
+
+    it('counts critical drafts AFTER the category-allowlist filter drops them', async () => {
+      // Edge case: a critical draft in a disabled category is filtered
+      // out by the allowlist BEFORE applyCriticalCeiling sees it. This
+      // means `criticalProposed` reflects the post-allowlist signal, not
+      // the raw model output. Pinning current behaviour so the contract
+      // is explicit: it's "criticals the operator's settings allowed",
+      // not "criticals the model emitted".
+      const { resolved } = resolvedFromScripts([
+        draftsJson([
+          { category: 'cost', severity: 'critical', title: 'Allowed crit' },
+          { category: 'workflow', severity: 'critical', title: 'Disallowed crit' },
+        ]),
+      ]);
+      const { deps } = baseDeps({
+        resolveComplete: resolved,
+        getSettings: () =>
+          ({
+            enabled: true,
+            intervalMinutes: 5,
+            categories: ['cost', 'operational', 'org', 'anomaly'], // workflow disabled
+            categoryWeights: makeWeights(),
+          }) as CopilotAnalyzerSettings,
+      });
+      const svc = createCopilotAnalyzerService(deps);
+
+      const result = await svc.tick('co-1');
+
+      expect(result.criticalProposed).toBe(1);
+      expect(result.criticalDowngraded).toBe(0);
+      expect(result.insightsGenerated).toBe(1);
+    });
   });
 });
 

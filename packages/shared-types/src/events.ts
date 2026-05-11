@@ -665,6 +665,19 @@ export interface CopilotAnalyzedPayload {
   insightsMerged: number;
   /** Rows that transitioned expired in this tick's sweep. */
   insightsExpired: number;
+  /**
+   * H13 (audit 2026-05-07): count of `critical`-severity drafts the
+   * model emitted in this tick (pre-ceiling, pre-weight). Surfaces
+   * over-eager severity inflation. Pre-H13 historical events lack
+   * this field — backfilled to 0 by `rowToAnalyzedPayload` readers.
+   */
+  criticalProposed: number;
+  /**
+   * H13 (audit 2026-05-07): count of `critical` drafts downgraded to
+   * `warning` after hitting the per-tick ceiling. Pre-H13 historical
+   * events lack this field — backfilled to 0 by readers.
+   */
+  criticalDowngraded: number;
   tokensIn: number;
   tokensOut: number;
   costUsd: number;
