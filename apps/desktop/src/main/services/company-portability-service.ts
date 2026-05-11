@@ -847,8 +847,19 @@ function resolveGithubUrl(input: string): CompanyPackageSourceRef | null {
 
 function resolveGithubShorthand(input: string): CompanyPackageSourceRef | null {
   const trimmed = input.trim();
+  // Bail out on filesystem paths so they fall through to the
+  // local-path branch instead of being mis-parsed as GitHub refs:
+  //   - Windows drive-letter:  `C:\...`, `D:/...`
+  //   - Backslash anywhere:    `...\foo\bar`
+  //   - Unix absolute path:    `/var/folders/...`, `/tmp/...`, `/home/...`
+  //     (without this, `/tmp/teamx-XXX/pkg.json` was parsed as
+  //     `owner=tmp, repo=teamx-XXX, ref=main, path=pkg.json` and the
+  //     downstream GitHub fetch returned 404 — surfaced by the cross-
+  //     platform CI matrix in 2026-05-11 once Ubuntu + macOS tests
+  //     finally ran)
   if (/^[a-z]:[\\/]/i.test(trimmed)) return null;
   if (trimmed.includes('\\')) return null;
+  if (trimmed.startsWith('/')) return null;
 
   let body = trimmed;
   if (body.startsWith('gh:')) body = body.slice(3);

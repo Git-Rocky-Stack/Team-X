@@ -41,6 +41,17 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
+      # keytar's load-time dynamic-linker resolves libsecret-1.so.0 on
+      # Linux. The .deb installer declares this as a runtime dep
+      # (electron-builder.yml linux.deb.depends), but the GitHub-hosted
+      # ubuntu-latest CI runner does not pre-install it. Without this,
+      # `pnpm test` fails when loading apps/desktop/src/main/services/
+      # provider-factory.test.ts with "libsecret-1.so.0: cannot open
+      # shared object file". macOS and Windows both ship keychain APIs
+      # natively so keytar loads with no extra deps there.
+      - name: Install keytar Linux runtime (libsecret)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-0
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       # Build the workspace packages' dist outputs before typecheck.
