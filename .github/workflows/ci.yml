@@ -34,9 +34,10 @@ jobs:
           - windows-latest
     steps:
       - uses: actions/checkout@v4
+      # pnpm version is read from root package.json `packageManager`
+      # field (single source of truth). Pinned to pnpm@9.15.9 — see
+      # package.json comment for the rationale.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
@@ -78,9 +79,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # pnpm version is read from root package.json `packageManager`
+      # field (single source of truth). Pinned to pnpm@9.15.9 — see
+      # package.json comment for the rationale.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'

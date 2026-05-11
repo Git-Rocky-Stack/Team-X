@@ -10,6 +10,7 @@
     "node": ">=22.13.0",
     "pnpm": ">=9.0.0"
   },
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

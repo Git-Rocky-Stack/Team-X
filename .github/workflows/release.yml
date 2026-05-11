@@ -34,9 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm version is read from root package.json `packageManager`
+      # field (single source of truth). Pinned to pnpm@9.15.9.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
