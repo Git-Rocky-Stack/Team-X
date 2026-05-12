@@ -11,6 +11,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Deprecated
+
+### Removed
+
+### Security
+
+---
+
+## [3.2.1] — 2026-05-12 — Release pipeline hardening · electron-updater enablement
+
+Patch release focused entirely on release engineering. **No user-facing
+functional changes** vs v3.2.0 — same desktop app, same role packs, same
+provider routing. What changed is everything downstream of `git tag`:
+the v3.2.0 ship surfaced four latent bugs in `release.yml` and
+`electron-builder.yml` that the cross-platform CI matrix had been
+masking. Three are closed here; the fourth (`mac.identity: null`
+removal) is still gated on Apple Developer enrollment landing
+externally.
+
+The single user-visible effect is that **auto-update now works**.
+v3.2.0 users who click "Check for Updates" in Settings will see v3.2.1
+offered as a differential download (~hundreds of KB vs the ~95 MB full
+installer), thanks to the `latest*.yml` discovery manifests and
+`.blockmap` files this release ships. The v3.2.0 release itself was
+backfilled with the same 7 files (sourced from the still-cached
+release.yml run 25707677222 artifact bundles) so the v3.2.0 → v3.2.1
+update path works retroactively, not just for releases tagged from this
+commit forward.
+
+Pipeline-side, this release validates end-to-end on real CI: every
+future `release.yml` run produces exactly 14 assets — 6 installers + 4
+`.blockmap` + 3 `latest*.yml` + 1 consolidated `SHA256SUMS.txt`.
+
+### Added
+
 - **`latest*.yml` + `*.blockmap` files in release assets**
   (`.github/workflows/release.yml`). The publish job's `files:` list now
   uploads the three electron-updater manifests (`latest.yml` for Windows,
@@ -22,8 +61,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the v3.2.0 release was backfilled with the same files (sourced from
   the still-cached release.yml run 25707677222 artifact bundles) so the
   v3.2.0 → v3.2.1 update path works retroactively.
-
-### Changed
 
 ### Fixed
 
@@ -48,12 +85,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `upload-artifact` paths and the publish `files:` list now both
   whitelist by name (`Team-X-*-Setup-*.exe`, `Team-X-*.dmg`, etc.) so
   unpacked debris cannot reach the release.
-
-### Deprecated
-
-### Removed
-
-### Security
+- **SHA256 step path correction for `upload-artifact@v4` prefix
+  stripping** (`.github/workflows/release.yml`). The first iteration of
+  the consolidated SHA step (above) hardcoded `artifacts/release/*/` as
+  the post-merge installer dir; the v3.2.1-test1 validation run failed
+  because `actions/upload-artifact@v4` silently strips the longest
+  common path prefix from upload patterns. Every per-OS pattern started
+  with `release/`, so that segment was stripped — files landed at
+  `artifacts/<version>/`, not `artifacts/release/<version>/`. Glob
+  corrected to `artifacts/*/`. Documented as a permanent gotcha in
+  `docs/handoffs/2026-05-12-v3.2.1-release-pipeline-validated.md` §5.1.
 
 ---
 
