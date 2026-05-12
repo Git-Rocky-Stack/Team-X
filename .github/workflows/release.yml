@@ -117,14 +117,29 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm -F @team-x/desktop dist:${{ matrix.platform }}
 
+      # Hash every artifact electron-builder produced so the published
+      # release lets users verify download integrity. `cd release/*/`
+      # navigates into the version-numbered dir (e.g. release/3.2.0/);
+      # `shopt -s nullglob` makes unmatched patterns expand to an empty
+      # list (otherwise bash would iterate the literal `*.dmg` string).
+      # macOS images may land in a `mac/` subdir, so we also include
+      # any installers found one level deep.
       - name: Generate SHA256 checksums
         shell: bash
         run: |
+          set -euo pipefail
+          shopt -s nullglob
           cd release/*/
-          for f in *.exe *.dmg *.AppImage *.deb *.blockmap *.yml 2>/dev/null; do
-            [ -f "$f" ] && sha256sum "$f" >> SHA256SUMS.txt
+          for f in *.exe *.dmg *.AppImage *.deb *.blockmap *.yml mac/*.dmg mac-arm64/*.dmg; do
+            if [ -f "$f" ]; then
+              sha256sum "$f" >> SHA256SUMS.txt
+            fi
           done
-          cat SHA256SUMS.txt 2>/dev/null || echo "No artifacts found"
+          if [ -f SHA256SUMS.txt ]; then
+            cat SHA256SUMS.txt
+          else
+            echo "No artifacts found to hash"
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

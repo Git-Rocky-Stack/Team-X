@@ -133,8 +133,38 @@ gates, no schema migrations.
   A bold caveat at the top spells out what Team-X **doesn't** ship: no
   hosted API, no webhooks, no OAuth, no plugin marketplace, no first-party
   third-party-service integrations.
+- **`docs/developer-guide/integration-guide.md` rewritten to factual
+  local-first integration surface.** The pre-v3.2.0 file documented a
+  fictional REST + webhook integration surface — hosted webhook URLs
+  at `api.teamflow-x.com/webhooks/*` plus first-party connectors for
+  GitHub PR auto-review, GitLab, Slack, Discord, Jira, and Notion —
+  none of which Team-X ships or is on the roadmap. The page was
+  deleted in this release, then restored with content sourced
+  directly from `API_ENDPOINTS.md`: the nine AI provider adapters
+  (Ollama, Anthropic, OpenAI, Google, OpenRouter, Groq, Together,
+  Fireworks, OpenAI-compatible) with the privacy-tier table and the
+  `settings.setPrivacy maxTier='local'` lockdown pattern; MCP server
+  registration over stdio + SSE plus health checks via
+  `mcp.testConnection`; skills extensions via
+  `extensions.installLocalSkill` and `extensions.installGithubSkill`
+  (GitHub source pinned by commit); workspace portability through
+  `companies.exportPackage` (`.tx-pack` archives with SHA-256
+  integrity) / `companies.previewImportPackage` /
+  `companies.importPackage`; audit log streaming via `audit.list`
+  (queryable, append-only) and `audit.export` (CSV / JSON for SIEM
+  ingest); and local full-machine backup via `backup.create` /
+  `backup.list` / `backup.restore`. A "What is intentionally not
+  here" section explicitly enumerates the absent surfaces (native
+  SaaS connectors, outbound webhooks, OAuth flow, managed cloud
+  bridge, SaaS rate limits) to preempt any drift back toward the
+  v3.1.x hallucinated content. Closes a parent-spoke gap where
+  the Team-X-Website still shipped a developer integration-guide
+  that the app repo no longer had — the upstream is now the source
+  of truth.
 - **README "Developer" links updated** to match the new single-page
-  developer reference and drop the deleted integration-guide entry.
+  developer reference; the entry is still scoped to
+  `api-reference.md` (the rewritten `integration-guide.md` is linked
+  from there rather than from the README directly).
 - **`docs/llms.txt` Developer + Community sections corrected** to point at
   `github.com/Git-Rocky-Stack/Team-X` and drop the placeholder
   `teamflow-x.com` / `discord.gg/teamflow-x` references that don't exist.
@@ -353,15 +383,6 @@ gates, no schema migrations.
 ### Deprecated
 
 ### Removed
-
-- **`docs/developer-guide/integration-guide.md` deleted.** The page was
-  entirely premised on hosted webhook URLs (`api.teamflow-x.com/webhooks/*`)
-  and first-party integrations (GitHub PR auto-review, GitLab, Slack,
-  Discord, Jira, Notion) that Team-X has never shipped and is not on the
-  roadmap. Removing the source so the docs-sync script can't mirror
-  fictional surface area to the live Strategia-X site. CLI reference
-  (`docs/user-guide/cli-reference.md`) remains — it describes the real
-  CLI.
 
 ### Security
 
