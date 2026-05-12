@@ -168,13 +168,15 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
 
-          # electron-builder writes to release/<version>/. After
-          # merge-multiple, that path lives at artifacts/release/<version>/.
-          # Glob the version dir so we don't hardcode it.
-          dirs=(artifacts/release/*/)
+          # electron-builder writes to release/<version>/ on the build runner,
+          # but upload-artifact@v4 strips the common path prefix (`release/`)
+          # from every uploaded path. After merge-multiple, files land at
+          # artifacts/<version>/, NOT artifacts/release/<version>/. Glob the
+          # version dir so the version itself isn't hardcoded.
+          dirs=(artifacts/*/)
           if [ ${#dirs[@]} -ne 1 ]; then
-            echo "Expected exactly one version dir under artifacts/release/, found: ${dirs[*]}"
-            ls -la artifacts/release/ || true
+            echo "Expected exactly one version dir under artifacts/, found: ${dirs[*]}"
+            ls -la artifacts/ || true
             exit 1
           fi
           cd "${dirs[0]}"
