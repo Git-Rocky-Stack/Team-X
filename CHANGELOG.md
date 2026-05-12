@@ -11,9 +11,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`latest*.yml` + `*.blockmap` files in release assets**
+  (`.github/workflows/release.yml`). The publish job's `files:` list now
+  uploads the three electron-updater manifests (`latest.yml` for Windows,
+  `latest-mac.yml`, `latest-linux.yml`) plus the four `.blockmap` files
+  (Win NSIS x64/arm64, Mac dmg x64/arm64) electron-builder produces.
+  Without these, electron-updater could not discover new versions and
+  every update fell back to a full installer download. Auto-update from
+  any release shipped from this commit forward is now functional, and
+  the v3.2.0 release was backfilled with the same files (sourced from
+  the still-cached release.yml run 25707677222 artifact bundles) so the
+  v3.2.0 → v3.2.1 update path works retroactively.
+
 ### Changed
 
 ### Fixed
+
+- **Consolidated `SHA256SUMS.txt` generation in publish job**
+  (`.github/workflows/release.yml`). The v3.2.0 ship generated a
+  per-OS `SHA256SUMS.txt` in each build job, then `actions/download-artifact`
+  with `merge-multiple: true` flattened the three bundles in the publish
+  job — last-write-wins on same-named files meant only one OS's hashes
+  survived (Linux won the v3.2.0 race; Win + Mac hashes had to be
+  reconstructed manually from the per-OS bundles before the draft was
+  published). The per-OS SHA step is now removed; a single
+  consolidated step runs in the publish job after `download-artifact`,
+  hashing every installer in one pass and sorting alphabetically.
+  Eliminates the merge collision structurally.
+- **Tightened release-asset upload glob to whitelist installer names**
+  (`.github/workflows/release.yml`). v3.2.0 used
+  `artifacts/**/*.exe` in the publish step's `files:` list, which
+  matched both the NSIS installers (what we ship) and the unpacked
+  binary at `win-unpacked/Team-X.exe` (~181 MB internal artifact). The
+  unpacked binary surfaced as a confusingly-named `Team-X.exe` asset
+  on the v3.2.0 release and was deleted manually. Per-OS
+  `upload-artifact` paths and the publish `files:` list now both
+  whitelist by name (`Team-X-*-Setup-*.exe`, `Team-X-*.dmg`, etc.) so
+  unpacked debris cannot reach the release.
 
 ### Deprecated
 

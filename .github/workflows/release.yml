@@ -117,42 +117,29 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm -F @team-x/desktop dist:${{ matrix.platform }}
 
-      # Hash every artifact electron-builder produced so the published
-      # release lets users verify download integrity. `cd release/*/`
-      # navigates into the version-numbered dir (e.g. release/3.2.0/);
-      # `shopt -s nullglob` makes unmatched patterns expand to an empty
-      # list (otherwise bash would iterate the literal `*.dmg` string).
-      # macOS images may land in a `mac/` subdir, so we also include
-      # any installers found one level deep.
-      - name: Generate SHA256 checksums
-        shell: bash
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          cd release/*/
-          for f in *.exe *.dmg *.AppImage *.deb *.blockmap *.yml mac/*.dmg mac-arm64/*.dmg; do
-            if [ -f "$f" ]; then
-              sha256sum "$f" >> SHA256SUMS.txt
-            fi
-          done
-          if [ -f SHA256SUMS.txt ]; then
-            cat SHA256SUMS.txt
-          else
-            echo "No artifacts found to hash"
-          fi
-
+      # Upload installers + electron-updater manifests + diff-update block
+      # maps. Whitelist by artifact-name pattern so the win-unpacked binary
+      # (`win-unpacked/Team-X.exe`, ~181 MB) does NOT get bundled — the v3.2.0
+      # ship used `release/**/*.exe` which dragged it in and surfaced as a
+      # stray `Team-X.exe` asset on the release. See
+      # docs/handoffs/2026-05-12-v3.2.0-release-shipped.md §4.3 for context.
+      #
+      # SHA256SUMS.txt is intentionally NOT generated here — it's produced
+      # once in the publish job below, AFTER download-artifact merges all
+      # three OS bundles. Per-OS generation in v3.2.0 was clobbered by
+      # `merge-multiple: true`, which last-write-wins on same-named files.
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.platform }}
           path: |
-            release/**/*.exe
-            release/**/*.dmg
-            release/**/*.AppImage
-            release/**/*.deb
-            release/**/*.blockmap
-            release/**/*.yml
-            release/**/SHA256SUMS.txt
+            release/**/Team-X-*-Setup-*.exe
+            release/**/Team-X-*.dmg
+            release/**/Team-X-*.AppImage
+            release/**/Team-X-*.deb
+            release/**/Team-X-*-Setup-*.exe.blockmap
+            release/**/Team-X-*.dmg.blockmap
+            release/**/latest*.yml
           retention-days: 7
 
   publish:
@@ -168,16 +155,59 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      # Generate the SHA256SUMS manifest AFTER merge so it covers every
+      # installer across all three OSes in one consolidated file. v3.2.0
+      # generated this per-OS in each build job, but `merge-multiple: true`
+      # then flattened the three bundles into one dir — last-write-wins on
+      # `SHA256SUMS.txt` meant only one OS's hashes survived. Generating
+      # here, post-merge, eliminates the collision structurally. See
+      # docs/handoffs/2026-05-12-v3.2.0-release-shipped.md §4.3.
+      - name: Generate consolidated SHA256SUMS.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          # electron-builder writes to release/<version>/. After
+          # merge-multiple, that path lives at artifacts/release/<version>/.
+          # Glob the version dir so we don't hardcode it.
+          dirs=(artifacts/release/*/)
+          if [ ${#dirs[@]} -ne 1 ]; then
+            echo "Expected exactly one version dir under artifacts/release/, found: ${dirs[*]}"
+            ls -la artifacts/release/ || true
+            exit 1
+          fi
+          cd "${dirs[0]}"
+
+          rm -f SHA256SUMS.txt
+          # Hash installers only — blockmaps and update manifests ship
+          # alongside as separate assets but aren't covered by the
+          # integrity manifest (electron-updater verifies them separately).
+          for f in Team-X-*-Setup-*.exe Team-X-*.dmg Team-X-*.AppImage Team-X-*.deb; do
+            if [ -f "$f" ]; then
+              sha256sum "$f" >> SHA256SUMS.txt
+            fi
+          done
+
+          sort -k 2 SHA256SUMS.txt -o SHA256SUMS.txt
+          echo "--- SHA256SUMS.txt ---"
+          cat SHA256SUMS.txt
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
           generate_release_notes: true
+          # Whitelist installer names — prevents stray `win-unpacked/Team-X.exe`
+          # from appearing as an asset. `latest*.yml` + `*.blockmap` are now
+          # uploaded for electron-updater auto-update and differential downloads.
           files: |
-            artifacts/**/*.exe
-            artifacts/**/*.dmg
-            artifacts/**/*.AppImage
-            artifacts/**/*.deb
+            artifacts/**/Team-X-*-Setup-*.exe
+            artifacts/**/Team-X-*.dmg
+            artifacts/**/Team-X-*.AppImage
+            artifacts/**/Team-X-*.deb
+            artifacts/**/*.blockmap
+            artifacts/**/latest*.yml
             artifacts/**/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
