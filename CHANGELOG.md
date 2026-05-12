@@ -13,6 +13,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+### Fixed
+
+### Deprecated
+
+### Removed
+
+### Security
+
+---
+
+## [3.2.0] — 2026-05-11 — Cross-platform CI launch readiness · P1 audit campaign closure (H16) · docs honesty pass
+
+Minor release across three themes. **Cross-platform CI matrix** —
+`Lint · Typecheck · Test` now matrixes across `ubuntu-latest` /
+`macos-latest` / `windows-latest`, joined by a dedicated
+`E2E smoke (Electron)` gate; every push to `main` is validated on every
+supported OS before it lands. **P1 audit campaign closure** — H16
+(vault path-traversal defense) closes the 2026-05-07 agentic-system
+prompt-engineering audit at 10 of 10 P1 findings shipped (H1–H16).
+**Docs honesty pass** — a comprehensive strip of fictional product
+surface (hosted API at `api.teamflow-x.com`, fictional `teamx` CLI,
+freemium tiers, hosted account flow, plugin marketplace) so the
+strategia-x.com docs sync cannot mirror roadmap content as shipped
+product. Every change is backward-compatible — additive APIs, opt-in
+gates, no schema migrations.
+
+### Added
+
+- **Cross-platform CI matrix** (`.github/workflows/ci.yml`).
+  The `Lint · Typecheck · Test` job now runs on `ubuntu-latest`,
+  `macos-latest`, and `windows-latest` in parallel with
+  `fail-fast: false` so a single-OS flake doesn't mask the others.
+  Timeout bumped 15 → 25 minutes (Windows runners are slower than
+  Linux). Win/Mac regressions that previously hid until release tag
+  now fail CI within ~20 minutes of the push.
+- **`E2E smoke (Electron)` CI gate.** Dedicated job that spawns
+  Electron under `xvfb` on `ubuntu-latest` to exercise all 22 e2e
+  specs end-to-end on every push to `main`. Pairs with the matrix
+  above as the second mandatory pre-land gate; the launch-readiness
+  goal of "every push validated on every supported OS, including a
+  real Electron smoke run" is now operational.
+- **Mac code-signing env-var scaffolding** in
+  `.github/workflows/release.yml`. The `Build + Package` step now
+  reads `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
+  `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID` from repo
+  secrets. When secrets are unset (current state), electron-builder
+  produces an unsigned `.dmg` with hardened-runtime entitlements —
+  identical to pre-Phase-4 behavior; macOS users see the
+  "developer cannot be verified" Gatekeeper dialog on first launch
+  but the `.dmg` works. When Apple Developer enrollment + cert +
+  secrets land, the next tag push automatically produces a signed
+  + notarized `.dmg` with no further workflow edits required. See
+  `docs/handoffs/2026-05-10-mac-codesigning-plan.md` for the full
+  4-phase plan.
+- **Linux `.deb` declares its `libsecret-1-0` runtime dependency**
+  (`apps/desktop/electron-builder.yml`). Previously a minimal Ubuntu
+  Server, Debian netinst, or container install would crash on the
+  first API-key access because `apt` had no signal to pull keytar's
+  backing store. `linux.deb.depends` now declares `libsecret-1-0`
+  alongside the standard Electron runtime libs (`libgtk-3-0`,
+  `libnotify4`, `libnss3`, `libxss1`, `libxtst6`, `xdg-utils`,
+  `libatspi2.0-0`). AppImage users still need to install
+  `libsecret-1-0` manually — AppImage is dep-free by design.
+
+### Changed
+
+- **Node 22 LTS adopted as the workspace floor.** `.nvmrc` bumped
+  from `20.11.0` → `22.22.2` and `engines.node` floor from
+  `>=20.11.0` → `>=22.13.0` to match the dep-tree floor introduced
+  by `@electron/rebuild@4.0.3` and `eslint-visitor-keys@5.0.1`.
+  Local dev that was already on Node 22 (via `fnm`) sees zero
+  change; Node 20 users get a clean engine-mismatch error from
+  `pnpm install` instead of opaque downstream failures.
+- **pnpm pinned to `9.15.9` via the `packageManager` field** in
+  root `package.json` as a single source of truth across all four
+  workflow blocks (`ci.yml × 2`, `conformance.yml`, `release.yml`).
+  Without this pin, corepack would auto-select the latest pnpm
+  (was hitting `11.0.9`), which silently skips Electron's
+  postinstall and breaks `electron.launch()` with
+  `"Electron failed to install correctly"`. Future bumps update one
+  field and all workflows + corepack follow automatically.
+- **`ipcRenderer.setMaxListeners(50)`** in
+  `apps/desktop/src/preload/index.ts`. 17+ React hooks
+  (`useTicketEventSync`, `useMeetingEventSync`,
+  `useProjectEventSync`, `useGoalEventSync`, `useEmployeeEventSync`,
+  `useCompanyEventSync`, `useScheduleEventSync`,
+  `useVaultEventSync`, `useArtifactEventSync`, `useOrgChartEventSync`,
+  `useChatEventSync`, `useCopilot`, `useDashboardEvents`, plus
+  `mission-control-dashboard`, `board-message-queue`,
+  `proactive-controls`, and `use-agent-step-stream`) subscribe to
+  `events.onDashboard` independently per Invariant #11 — every
+  feature owns a dedicated effect with its own `[companyId, qc]`
+  dep array, and `event-sync-hooks.test.ts` enforces this
+  many-subscribers pattern as the correct architecture. All
+  subscribers correctly return their unsubscribe from `useEffect`;
+  preload's helper holds a stable wrapper ref so `removeListener`
+  actually detaches. Node's default 10-listener `EventEmitter` cap
+  was just too low for the deliberate fan-out. 50 gives ~3×
+  headroom for future event-sync hooks while keeping the
+  leak-detector live for real runaway accumulation.
+- **GitHub owner/repo references corrected across the build + menu.**
+  `apps/desktop/electron-builder.yml` `publish.owner` switched from
+  `Rocky-Stack` → `Git-Rocky-Stack` (electron-updater would have
+  404'd on every update-manifest fetch);
+  `apps/desktop/src/main/menu.ts` 5 external links (Help →
+  Documentation / Report Issue / View Source / License, plus the
+  About dialog's View-on-GitHub button) switched from
+  `rocky-stack/strategia-x` → `Git-Rocky-Stack/Team-X`.
 - **Developer reference rewritten to local-first reality.**
   `docs/developer-guide/api-reference.md` previously described a fictional
   hosted REST API at `api.teamflow-x.com` with webhooks, OAuth, and a
@@ -169,6 +277,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cross-platform host-path detection in
+  `company-portability-service.ts`.** `sanitizeRuntimeProfile()` used
+  Node's `path.isAbsolute(...)` to decide whether a saved manifest
+  references a host-specific runtime path that would need manual
+  reconfiguration on re-import. But `path.isAbsolute` is platform-aware
+  — on Linux/macOS it returns `false` for `C:/Tools/foo`, and on
+  Windows it returns `false` for `/usr/bin/foo`. The
+  `native-runtime-paths-may-require-manual-reconfiguration`
+  compatibility flag fired only on Windows; the test asserted it on
+  every platform. New `isHostSpecificNativePath()` helper returns
+  `true` for any path style absolute on **any** platform (Windows
+  drive-letter, UNC, Unix absolute, POSIX home). Same fix's sibling:
+  `resolveGithubShorthand()` now bails out on Unix absolute paths too
+  — previously it would parse `/tmp/teamx-portability-XXX/...` as
+  `owner=tmp / repo=teamx-portability-XXX` and 404 against GitHub.
+  Portability manifests now produce the same compatibility-flag set
+  on every OS, which is the portability invariant the test was
+  written to enforce.
+- **Linux Electron headless launch in CI.** All 17 e2e specs
+  (18 launch sites — `org-chart.spec.ts` has 2) now spread
+  `...getCiLaunchArgs()` into `electron.launch({ args })`. On
+  `linux + CI=true` the helper returns `--no-sandbox`,
+  `--disable-gpu`, `--disable-software-rasterizer`, and
+  `--disable-dev-shm-usage`; on every other platform it returns
+  `[]`. These switches must be on the Chromium argv (not via
+  `app.commandLine.appendSwitch` from main JS) because Chromium parses
+  its argv during process bootstrap, before the main script loads —
+  `appendSwitch` arrives too late to influence the GPU process spawn
+  or sandbox enforcement decision. Local dev and production builds
+  (where `CI` is never set) get the unchanged pre-session args.
+- **`libsecret-1-0` installed on Ubuntu CI runners in both jobs.**
+  The `check` job already had it; the `E2E smoke (Electron)` job did
+  not. When keytar's import-time `dlopen` of `libsecret-1.so.0`
+  fails, Electron's main process hangs or dies early in bootstrap
+  — BEFORE the spec's stderr forwarding attaches, so the failure is
+  invisible (zero log evidence, 30s `firstWindow` timeout). The
+  workflow contract is now: every Electron-launching CI job on
+  `ubuntu-latest` installs **all** of `xvfb libnss3 libatk1.0-0
+  libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1
+  libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2
+  libasound2t64 libgtk-3-0 libsecret-1-0`.
+- **Playwright trace upload path corrected** from `playwright-report/`
+  (which CI never writes to — the HTML reporter is intentionally
+  disabled in CI in favor of the `list` + `github` reporters) →
+  `apps/desktop/test-results` (the actual `outputDir` per
+  `playwright.config.ts`). Every E2E failure since the cross-platform
+  matrix was introduced had been silently failing the upload step
+  with `"No files were found"`, so when traces were needed for
+  diagnosis they weren't there. Renamed artifact to
+  `playwright-traces` and added `if-no-files-found: ignore` so the
+  step stays non-fatal on green runs.
+- **Pre-build workspace packages before the typecheck step** in
+  `ci.yml`. apps/desktop's project-reference build reads dist `.d.ts`
+  from the four sibling packages (`shared-types`, `provider-router`,
+  `role-schema`, `intelligence`, `telemetry-core`). Without the
+  pre-build, CI typecheck saw stale composite outputs and reported
+  phantom errors that didn't reproduce locally.
+- **Four pre-existing typecheck errors cleared** (H4 follow-ups +
+  C2 family). `copilot-analyzer-service.ts` now propagates the H4
+  `traceId?` through `CopilotAnalyzerRunsRepoStartInput` and
+  `CopilotAnalyzerEventBus.emit`. `provider-factory.ts`
+  `pickTestModeReply` widened to accept `StreamMessage` with a new
+  `extractTextContent` helper that flattens content to text parts
+  only (tool blocks dropped so they cannot accidentally trigger a
+  sentinel match — closes audit 2026-05-07 C2). The
+  `packages/telemetry-core` composite build's stale dist `.d.ts`
+  was rebuilt (no source change required there). Workspace
+  typecheck is now 0 errors (was 4).
+- **Role-pack signature re-issued** for
+  `role-packs/strategia-official/pack.sig` after v3.1.0 prep edits
+  to the pack manifest. `pnpm sign:pack strategia-official`
+  regenerated the signature without changing any role-pack content.
+
 ### Deprecated
 
 ### Removed
@@ -183,6 +364,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CLI.
 
 ### Security
+
+- **H16 — Vault path-traversal defense** in
+  `apps/desktop/src/main/services/vault.ts`. Closes the final P1
+  from the 2026-05-07 agentic-system prompt-engineering audit and
+  brings the P1 campaign to **10 of 10 shipped (H1–H16)**. The audit
+  named two missing guards (`path.resolve(...).startsWith(vaultDir)`
+  containment and a symlink check post-`mkdir`); the fix adds both as
+  a defense-in-depth pair plus a third boundary the audit didn't
+  explicitly name but the test suite caught:
+  - **`assertInsideVault`** (lexical, sync): `path.resolve` both
+    sides + parent-prefix check with separator-aware boundary
+    handling, mirrors `mcp-security.ts`'s case-aware Windows/POSIX
+    pattern.
+  - **`assertInsideVaultReal`** (symlink-aware, async): runs lexical
+    first, then `fs.realpath` on **both** sides; falls back to
+    lexical when either side doesn't exist (symlink injection is
+    impossible at a non-existent path). Catches the canonical
+    `mkdir`-followed-symlink injection AND the TOCTOU window
+    between `mkdir` and `copyFile`.
+  - **Three placements:** outer (vault construction from
+    `getCompanySlug` — a slug returning `../../outside-co` throws
+    immediately instead of silently composing an escape), inner
+    write (lexical before `mkdir`, realpath after `mkdir`, lexical
+    before `copyFile`, realpath after `copyFile` — with a best-effort
+    unlink of the partial-write leaf if the post-copy guard fires),
+    inner read (`retrieve` / `verify` / `remove`). `verify`'s guard
+    specifically closes a **hash-oracle leak** — an attacker with
+    control of `row.vaultPath` could otherwise coerce the service
+    into returning the sha256 of an arbitrary file.
+  - **`VaultPathTraversalError`** (code `VAULT_PATH_TRAVERSAL`)
+    carries a generic message that does NOT leak the resolved /
+    attempted path so adversarial probing learns nothing about the
+    boundary layout.
+  - **+19 tests** (7 lexical, 6 symlink-aware, 6 service-level)
+    covering escape refusal at slug, sha-prefix symlink,
+    retrieve/remove/verify escape refusal (with assertions that the
+    outside file remains on disk AND the DB row stays consistent
+    with the refusal), plus a happy-path byte-identical regression
+    pin. Symlink tests skip on Windows EPERM (no Developer Mode) so
+    the CI matrix stays green.
+  - **Backward-compatible:** additive exports
+    (`assertInsideVault`, `assertInsideVaultReal`,
+    `VaultPathTraversalError`), no type-shape changes. Callers with
+    a correct `getCompanySlug` see zero behavior change; callers
+    with a silently broken `getCompanySlug` (returning `..`-laced
+    strings) now throw at first store — the audit fix surfacing
+    the latent bug rather than masking it.
 
 ---
 
