@@ -140,7 +140,7 @@ await invoke('mcp.addServer', {
 });
 ```
 
-The `configJson` is opaque to Team-X. It is forwarded verbatim to the transport layer. Environment-variable interpolation (`${env:NAME}`) is the transport's responsibility, not Team-X's. Credentials passed via `env` are never persisted; Team-X re-reads them from the host environment when the server is restarted.
+The `configJson` is opaque to Team-X. It is forwarded verbatim to the transport layer. Any environment-variable interpolation syntax (such as the `env` block in the example above) is the transport's responsibility, not Team-X's. Credentials passed via `env` are never persisted; Team-X re-reads them from the host environment when the server is restarted.
 
 ### Hand-rolled SSE registration
 
@@ -360,7 +360,7 @@ The integration surface stops at the boundary of your machine. If you need a hos
 
 ## See also
 
-- [API reference](./api-reference.md) — extension authoring patterns (MCP server skeleton, role pack schema, local IPC surface internals)
-- [Configuring providers](../user-guide/configuring-providers.md) — operator-facing walkthrough for adding Anthropic, OpenAI, Ollama, and OpenAI-compatible endpoints
-- [Backup and restore](../user-guide/backup-and-restore.md) — full-machine backup strategy in operator terms
-- [Autonomy control plane](../user-guide/autonomy-control-plane.md) — runtime profiles and the autonomy diagnostics that gate provider routing
+- [API reference](./api-reference.md): extension authoring patterns including MCP server skeleton, role pack schema, and local IPC surface internals.
+- [Configuring providers](../user-guide/configuring-providers.md): operator-facing walkthrough for adding Anthropic, OpenAI, Ollama, and OpenAI-compatible endpoints.
+- [Backup and restore](../user-guide/backup-and-restore.md): full-machine backup strategy in operator terms.
+- [Autonomy control plane](../user-guide/autonomy-control-plane.md): runtime profiles and the autonomy diagnostics that gate provider routing.
