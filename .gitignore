@@ -18,6 +18,7 @@ apps/desktop/build/*
 !apps/desktop/build/icon.ico
 !apps/desktop/build/installerIcon.ico
 !apps/desktop/build/uninstallerIcon.ico
+!apps/desktop/build/installerBanner.bmp
 !apps/desktop/build/license.html
 
 # env / secrets

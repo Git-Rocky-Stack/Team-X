@@ -43,7 +43,11 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
-      # Linux: Electron runtime libraries for headless build
+      # Linux: Electron runtime libraries for headless build + keytar's
+      # libsecret backing store. `pnpm test` loads keytar via
+      # provider-factory.test.ts and would fail to dlopen `libsecret-1.so.0`
+      # without `libsecret-1-0` installed. Mirrors the ci.yml `check` job's
+      # libsecret install — keep both in sync.
       - name: Install Electron runtime libraries (Linux)
         if: matrix.platform == 'linux'
         run: |
@@ -63,16 +67,38 @@ jobs:
             libpango-1.0-0 \
             libcairo2 \
             libasound2t64 \
-            libgtk-3-0
+            libgtk-3-0 \
+            libsecret-1-0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint + Typecheck + Test
-        run: |
-          pnpm lint
-          pnpm typecheck
-          pnpm test
+      # Build workspace packages' dist outputs before typecheck.
+      # apps/desktop's tsconfig declares each package as a composite project
+      # reference, so its `tsc --noEmit` step expects the referenced project's
+      # `dist/index.d.ts` to exist on disk. Fresh CI checkouts have no dist
+      # (gitignored), so materialize them explicitly. `tsc --build` resolves
+      # the reference graph and builds in dep order automatically. Mirrors
+      # the ci.yml `check` job's pre-build step — keep both in sync.
+      - name: Build workspace packages (composite refs)
+        run: pnpm exec tsc --build packages/shared-types packages/role-schema packages/provider-router packages/telemetry-core packages/intelligence
+
+      # Lint / Typecheck / Test as three separate steps so failures surface
+      # individually. A previous attempt combined them into a single
+      # multi-line `run:` block, which works under `bash -e` on Linux/macOS
+      # but NOT under pwsh on Windows — pwsh does not abort on the first
+      # failing command in a multi-line script, so a failed typecheck was
+      # silently followed by a (passing) `pnpm test`, and the step's exit
+      # code reflected only the last command. Three steps make every
+      # failure mode visible.
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
 
       - name: Build + Package (${{ matrix.platform }})
         env:
