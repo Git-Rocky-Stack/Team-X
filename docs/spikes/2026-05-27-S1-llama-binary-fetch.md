@@ -23,10 +23,10 @@ assumptions in that section before Phase 1 begins:
 
 ## Chosen release
 
-- **Tag:** `b9371`
-- **Repo:** `ggml-org/llama.cpp` (formerly `ggerganov/llama.cpp` — the original
-  org redirects, but new tooling and the manifest both pin the canonical
-  `ggml-org/...` URL)
+- **Tag:** [`b9371`](https://github.com/ggml-org/llama.cpp/releases/tag/b9371)
+- **Repo:** [`ggml-org/llama.cpp`](https://github.com/ggml-org/llama.cpp)
+  (formerly `ggerganov/llama.cpp` — the original org redirects, but new tooling
+  and the manifest both pin the canonical `ggml-org/...` URL)
 - **Published:** 2026-05-27T23:45:52Z (today)
 - **Why this tag:** Most recent stable `b<NNNN>` build on the official releases
   feed at the time of this spike. ggml-org publishes a numbered build per
@@ -37,6 +37,7 @@ assumptions in that section before Phase 1 begins:
 - **Highlights:** "`ggml-webgpu: remove legacy constants (#23672)`" headline
   change. The release page exposes 21 named assets across macOS / iOS / Linux /
   Android / Windows / UI / xcframework.
+- **Source:** <https://github.com/ggml-org/llama.cpp/releases/tag/b9371>
 
 > **Note on the rename.** The plan's draft (line 700) and the spec both refer to
 > `ggerganov/llama.cpp`. The repo is now hosted under the `ggml-org` org. The
@@ -167,6 +168,7 @@ service that reports the bundled version to Settings → Runtime.
   "binaries": {
     "win32-x64-cuda": {
       "asset": "llama-b9371-bin-win-cuda-13.3-x64.zip",
+      "archiveType": "zip",
       "sha256": "<pending-execution>",
       "sizeBytes": 158404562,
       "extractTo": "apps/desktop/resources/llama-server/win32-x64/cuda",
@@ -174,60 +176,70 @@ service that reports the bundled version to Settings → Runtime.
     },
     "win32-x64-cuda-runtime": {
       "asset": "cudart-llama-bin-win-cuda-13.3-x64.zip",
+      "archiveType": "zip",
       "sha256": "<pending-execution>",
       "sizeBytes": 390970417,
       "extractTo": "apps/desktop/resources/llama-server/win32-x64/cuda"
     },
     "win32-x64-rocm": {
       "asset": "llama-b9371-bin-win-hip-radeon-x64.zip",
+      "archiveType": "zip",
       "sha256": "<pending-execution>",
       "sizeBytes": 319772908,
       "extractTo": "apps/desktop/resources/llama-server/win32-x64/rocm"
     },
     "win32-x64-vulkan": {
       "asset": "llama-b9371-bin-win-vulkan-x64.zip",
+      "archiveType": "zip",
       "sha256": "<pending-execution>",
       "sizeBytes": 32997243,
       "extractTo": "apps/desktop/resources/llama-server/win32-x64/vulkan"
     },
     "win32-x64-cpu": {
       "asset": "llama-b9371-bin-win-cpu-x64.zip",
+      "archiveType": "zip",
       "sha256": "<pending-execution>",
       "sizeBytes": 16067262,
       "extractTo": "apps/desktop/resources/llama-server/win32-x64/cpu"
     },
     "win32-arm64-cpu": {
       "asset": "llama-b9371-bin-win-cpu-arm64.zip",
+      "archiveType": "zip",
       "sha256": "<pending-execution>",
       "sizeBytes": 9683520,
       "extractTo": "apps/desktop/resources/llama-server/win32-arm64/cpu"
     },
     "linux-x64-rocm": {
       "asset": "llama-b9371-bin-ubuntu-rocm-7.2-x64.tar.gz",
+      "archiveType": "tar.gz",
       "sha256": "<pending-execution>",
       "sizeBytes": 130049833,
       "extractTo": "apps/desktop/resources/llama-server/linux-x64/rocm"
     },
     "linux-x64-vulkan": {
       "asset": "llama-b9371-bin-ubuntu-vulkan-x64.tar.gz",
+      "archiveType": "tar.gz",
       "sha256": "<pending-execution>",
       "sizeBytes": 32156499,
       "extractTo": "apps/desktop/resources/llama-server/linux-x64/vulkan"
     },
     "linux-x64-cpu": {
       "asset": "llama-b9371-bin-ubuntu-x64.tar.gz",
+      "archiveType": "tar.gz",
       "sha256": "<pending-execution>",
       "sizeBytes": 14479873,
       "extractTo": "apps/desktop/resources/llama-server/linux-x64/cpu"
     },
     "darwin-arm64-metal": {
       "asset": "llama-b9371-bin-macos-arm64.tar.gz",
+      "archiveType": "tar.gz",
       "sha256": "<pending-execution>",
       "sizeBytes": 9806325,
       "extractTo": "apps/desktop/resources/llama-server/darwin-arm64/metal"
     },
     "darwin-x64-metal": {
       "asset": "llama-b9371-bin-macos-x64.tar.gz",
+      "archiveType": "tar.gz",
       "sha256": "<pending-execution>",
       "sizeBytes": 9899694,
       "extractTo": "apps/desktop/resources/llama-server/darwin-x64/metal"
@@ -255,6 +267,17 @@ service that reports the bundled version to Settings → Runtime.
   guard.
 - Each binary entry has `extractTo` pointing at the spec § 11 layout — the
   production fetch script extracts straight to this path without renaming.
+- `archiveType` declares the archive format explicitly so the Phase 2
+  production fetch script can dispatch to the correct extraction strategy
+  (`Expand-Archive` on Windows / `unzip` on POSIX for `"zip"`; `tar -xzf` for
+  `"tar.gz"`) directly from the schema instead of inferring from the asset
+  filename suffix. Filename-suffix matching is brittle (e.g. a future
+  `.tar.xz` or `.7z` flavor would silently break the inferrer); schema-driven
+  dispatch fails loud with a clear "unknown archiveType" error and forces a
+  manifest amendment when new formats appear. Side-bundle archives declared
+  via `requires:` (e.g. the cudart runtime) carry their own `archiveType` so
+  the fetch script can extract heterogeneous bundles into a shared
+  `extractTo` directory without special-casing.
 - `requires: [...]` declares ordered dependencies (CUDA runtime DLLs must
   extract into the same dir as the CUDA server). The fetch script processes
   these as a single atomic unit.
@@ -269,6 +292,11 @@ service that reports the bundled version to Settings → Runtime.
 The spec, plan, and earlier internal docs all reference the old URL. The old
 URL still 302-redirects, but pinning to the canonical `ggml-org/...` URL avoids
 a future-breaking dependency on the redirect.
+**Source:** <https://github.com/ggerganov/llama.cpp> redirects to
+<https://github.com/ggml-org/llama.cpp> — the redirect itself is the public
+record of the rename. The new canonical org homepage at
+<https://github.com/ggml-org/llama.cpp> hosts the active releases feed
+(including [b9371](https://github.com/ggml-org/llama.cpp/releases/tag/b9371)).
 **Action:** updated manifest format, spec & plan need amending in Phase 1 docs
 sweep.
 
