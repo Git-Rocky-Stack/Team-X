@@ -26,7 +26,9 @@ const ASSET = process.argv[2];
 
 if (!ASSET) {
   console.error('Usage: node scripts/spike-S1/fetch-test.mjs <asset-filename>');
-  console.error('  e.g. node scripts/spike-S1/fetch-test.mjs llama-b9371-bin-win-cuda-13.3-x64.zip');
+  console.error(
+    '  e.g. node scripts/spike-S1/fetch-test.mjs llama-b9371-bin-win-cuda-13.3-x64.zip',
+  );
   process.exit(2);
 }
 
@@ -51,7 +53,9 @@ await pipeline(res.body, createWriteStream(OUT_PATH));
 const downloadMs = Date.now() - t0;
 
 const sizeBytes = (await stat(OUT_PATH)).size;
-const sha256 = createHash('sha256').update(await readFile(OUT_PATH)).digest('hex');
+const sha256 = createHash('sha256')
+  .update(await readFile(OUT_PATH))
+  .digest('hex');
 
 console.log(
   JSON.stringify({
