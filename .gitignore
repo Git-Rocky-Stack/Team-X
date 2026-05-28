@@ -74,6 +74,8 @@ docs/Old.Claude-md-to-4-19-26.txt
 .spike-s1-cache/
 .spike-s2-cache/
 .spike-s3-cache/
+.spike-s4-cache/
+.spike-s4-bin/
 .spike-s5-cache/
 
 # local agent context
