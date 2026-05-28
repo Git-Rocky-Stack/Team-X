@@ -136,7 +136,7 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv);
 
 if (args.help || args.h) {
-  process.stderr.write(`Usage: node scripts/spike-S4/lifecycle-test.mjs --binary <path> --model <path> [options]
+  process.stdout.write(`Usage: node scripts/spike-S4/lifecycle-test.mjs --binary <path> --model <path> [options]
 
 Required:
   --binary <path>          Path to llama-server[.exe]
