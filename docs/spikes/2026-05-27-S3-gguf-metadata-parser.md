@@ -56,7 +56,7 @@ No fabricated data.
 | [`hyllama`](https://www.npmjs.com/package/hyllama) | 0.2.2 | MIT | [2024-04-19](https://www.npmjs.com/package/hyllama/v/0.2.2) | 50 ([hyparam/hyllama](https://github.com/hyparam/hyllama)) | [src/hyllama.js](https://github.com/hyparam/hyllama/blob/master/src/hyllama.js) | ✓ takes `ArrayBuffer` | ✗ (caller must supply bytes) | ✗ | Stale (no updates in 2+ years); ~200 LOC single-file parser — useful as reference, not as a dependency |
 | [`gguf`](https://www.npmjs.com/package/gguf) | 1.0.7 | MIT | [2024-07-30](https://www.npmjs.com/package/gguf/v/1.0.7) | — (no public GitHub link in `package.json`) | — | unknown | unknown | unknown | Squatted-name look; no source repo, no README. Skip. |
 | [`node-llama-cpp`](https://www.npmjs.com/package/node-llama-cpp) | 3.18.1 | MIT | [2026-03-17](https://www.npmjs.com/package/node-llama-cpp/v/3.18.1) | 2,072 ([withcatai/node-llama-cpp](https://github.com/withcatai/node-llama-cpp)) | [src/gguf/](https://github.com/withcatai/node-llama-cpp/tree/master/src/gguf) | ✓ via [`readGgufFileInfo`](https://node-llama-cpp.withcat.ai/api/functions/readGgufFileInfo) | ✓ HTTP support | ✓ shard-aware | Excellent parser but ships native bindings to llama.cpp — Team-X already vendors `llama.cpp-server` from S1, so we'd carry two copies of native code. Skip for parser; revisit later for inference if S4 outcomes change. |
-| Roll-our-own | — | (our MIT) | — | — | spike script: [`scripts/spike-S3/parse-gguf.mjs`](../../scripts/spike-S3/parse-gguf.mjs) | n/a | n/a | n/a | **SPIKE PARSER** — pure Node stdlib, zero deps, ~480 LOC. Validates the contract; not production. |
+| Roll-our-own | — | (our MIT) | — | — | spike script: [`scripts/spike-S3/parse-gguf.mjs`](../../scripts/spike-S3/parse-gguf.mjs) | n/a | n/a | n/a | **SPIKE PARSER** — pure Node stdlib, zero deps, ~870 LOC. Validates the contract; not production. |
 
 ### Library decision: `@huggingface/gguf` for Phase 3
 
@@ -217,6 +217,17 @@ differ only in `code` (granular: `BAD_MAGIC`, `BAD_VERSION`,
 the two-variant scheme from spec § 14 (`gguf-corrupt` for any structural
 break, `gguf-parse-failed` for unexpected runtime errors) without losing
 information.
+
+> **Note on the spike parser's emitted prefixes.** The throwaway script at
+> `scripts/spike-S3/parse-gguf.mjs` still emits **both** prefixes today —
+> `gguf-parse-failed` for header-too-short / unexpected-EOF cases and
+> `gguf-corrupt` for structural-break cases — as a faithful exercise of
+> the master plan's example error catalog. The "collapse to a single
+> `gguf-corrupt` variant with granular `code`" recommendation above is a
+> Phase 3 production change and is already queued under
+> `### Spec amendments (small)` (item 2, spec § 14). The spike
+> intentionally predates that collapse; do not read the two-prefix
+> script as a contradiction.
 
 ## Tool-capability detection strategy
 
@@ -380,9 +391,10 @@ older HF uploads (TheBloke-era models). v1 we did not encounter — it
 predates the GGUF format proper and is mostly converted away. The spike
 parser supports v1-v3; `@huggingface/gguf` does the same. No action.
 
-### F9. The roll-our-own parser is ~480 LOC; the library is ~600 LOC
+### F9. The roll-our-own parser is ~870 LOC; the library is comparable
 
-Comparable size. The library trades a few hundred lines for: actively
+Roughly comparable line count to `@huggingface/gguf`, with materially
+less feature coverage. The library trades those lines for: actively
 maintained safety limits, remote+local API, shard support, strict typing
 helpers, and a published test suite. Worth the ~365 KB unpacked size.
 
@@ -475,9 +487,9 @@ adopt the library.
 | `docs/spikes/S3-fixtures/01-llama-3.1-8b-q4km.head.gguf` … `11-llama-3.3-70b-q5km-split.head.gguf` | 11 × 262,144 | Production fixtures for Phase 3 unit tests |
 | `docs/spikes/S3-fixtures/12-corrupt-magic.head.gguf` | 262,144 | Corrupt-magic fixture (fixture 01 with first 4 bytes zeroed) |
 | `docs/spikes/S3-fixtures/manifest.json` | 5,122 | Per-fixture expected-metadata + provenance for the Phase 3 parser test harness |
-| `scripts/spike-S3/parse-gguf.mjs` | ~25 KB | Throwaway parser prototype + `--fetch` / `--parse` / `--report` / `--trim` CLI |
+| `scripts/spike-S3/parse-gguf.mjs` | ~29 KB | Throwaway parser prototype + `--fetch` / `--parse` / `--report` / `--trim` CLI |
 
-**Total commit size:** 3.0 MB fixtures + ~25 KB code + ~25 KB writeup =
+**Total commit size:** 3.0 MB fixtures + ~29 KB code + ~31 KB writeup =
 about 3.1 MB. The committed fixtures are the long-lived artifact;
 everything else can be deleted after Phase 3 lands and unit tests come
 online.
