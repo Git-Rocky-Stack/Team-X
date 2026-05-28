@@ -69,6 +69,12 @@ prebuilds/
 .loki/signals/
 docs/Old.Claude-md-to-4-19-26.txt
 
+# spike caches (Phase 0 spikes write large heads / reports here; only
+# the trimmed fixtures in docs/spikes/S{N}-fixtures/ should be tracked)
+.spike-s1-cache/
+.spike-s3-cache/
+.spike-s5-cache/
+
 # local agent context
 CLAUDE.md
 .gstack/
