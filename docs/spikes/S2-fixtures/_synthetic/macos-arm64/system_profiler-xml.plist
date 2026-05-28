@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Synthetic fixture: system_profiler SPDisplaysDataType -xml output (macOS / Apple Silicon)
+
+  Generated to mirror the structure documented by Apple for the system_profiler
+  -xml flag (which emits a standard plist with one <dict> per device under the
+  SPDisplaysDataType report). The textual sample at
+  docs/spikes/S2-fixtures/_synthetic/macos-arm64/system_profiler.txt was the
+  authoritative source for field values (Apple M2 Max, 38 GPU cores, Metal 3).
+
+  Apple plist format reference:
+    https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/PropertyLists/Introduction/Introduction.html
+  system_profiler -xml documentation:
+    https://ss64.com/mac/system_profiler.html
+  Plist DTD (Apple-hosted):
+    https://www.apple.com/DTDs/PropertyList-1.0.dtd
+
+  Why the XML variant exists in our fixtures:
+  The plain-text output has whitespace + colon-aligned key/value lines that
+  are brittle to parse (a future macOS version reformatting the indentation
+  silently breaks regexes). The plist is namespaced + typed (<string>,
+  <integer>, <real>) and survives those reformats. Spec § 12.1 table notes
+  "Plist available with `-xml`; prefer XML for parsing" — this fixture proves
+  the parser can consume the typed form without an additional plist library.
+
+  Key names exposed by SPDisplaysDataType in plist form (Apple-published):
+    sppci_model       — Chipset Model (the GPU's marketing name)
+    sppci_bus         — Bus (Built-In on Apple Silicon)
+    sppci_cores       — Total Number of Cores (GPU cores, not CPU)
+    sppci_vendor      — Vendor (e.g. "Apple (0x106b)")
+    spdisplays_mtlgpufamilysupport
+                      — Metal family / "Metal 3" / "Metal 4"
+    _name             — The display section header (same as sppci_model)
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<array>
+	<dict>
+		<key>_SPCommandLineArguments</key>
+		<array>
+			<string>/usr/sbin/system_profiler</string>
+			<string>-nospawn</string>
+			<string>-xml</string>
+			<string>SPDisplaysDataType</string>
+			<string>-detailLevel</string>
+			<string>full</string>
+		</array>
+		<key>_SPCompletionInterval</key>
+		<real>0.18</real>
+		<key>_SPResponseTime</key>
+		<real>0.20</real>
+		<key>_dataType</key>
+		<string>SPDisplaysDataType</string>
+		<key>_detailLevel</key>
+		<integer>-1</integer>
+		<key>_items</key>
+		<array>
+			<dict>
+				<key>_name</key>
+				<string>spdisplays_display</string>
+				<key>spdisplays_mtlgpufamilysupport</key>
+				<string>spdisplays_metal3</string>
+				<key>sppci_bus</key>
+				<string>spdisplays_builtin</string>
+				<key>sppci_cores</key>
+				<string>38</string>
+				<key>sppci_device_type</key>
+				<string>spdisplays_gpu</string>
+				<key>sppci_model</key>
+				<string>Apple M2 Max</string>
+				<key>sppci_vendor</key>
+				<string>sppci_vendor_Apple</string>
+			</dict>
+		</array>
+		<key>_parentDataType</key>
+		<string>SPHardwareDataType</string>
+		<key>_properties</key>
+		<dict/>
+		<key>_timeStamp</key>
+		<date>2026-05-27T00:00:00Z</date>
+		<key>_versionInfo</key>
+		<dict>
+			<key>com.apple.SystemProfiler.SPDisplaysReporter</key>
+			<string>1300</string>
+		</dict>
+	</dict>
+</array>
+</plist>

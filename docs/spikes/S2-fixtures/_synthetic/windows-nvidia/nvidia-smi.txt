@@ -1,0 +1,25 @@
+# Synthetic fixture: nvidia-smi --query-gpu CSV output (Windows / NVIDIA)
+#
+# Generated from public samples — NOT captured on Rocky's hardware. Replaced by
+# real captures in docs/spikes/S2-fixtures/windows-nvidia/ when Rocky runs the
+# S2 hardware runbook on his rig.
+#
+# Format reference: nvidia-smi --query-gpu reference,
+#   https://docs.nvidia.com/deploy/nvidia-smi/index.html
+#   (one row per GPU; fields comma-separated in the order given to --query-gpu;
+#    memory.total reported as `<int> MiB`; compute_cap as a `M.m` string)
+#
+# Devices and CUDA values modeled on this real public 4× RTX 5090 system_info
+# (Driver 575.57.08 / CUDA 12.9 / 32607 MiB per GPU):
+#   https://github.com/cloudrift-ai/deplodock/blob/main/results/rtx4900_rtx5900_pro6000_08_10_2025/rtx5090_x_4_cpatonn_GLM-4.5-Air-AWQ-4bit_system_info.txt
+#
+# RTX 5090 compute capability 12.0 per NVIDIA CUDA GPUs compute capability table:
+#   https://developer.nvidia.com/cuda-gpus
+#
+# Multi-GPU rows test the parser's row-splitting + per-row trim behavior; see
+# the parser contract in scripts/spike-S2/probe-windows.mjs.
+#
+# Command:
+#   nvidia-smi --query-gpu=name,memory.total,driver_version,compute_cap --format=csv,noheader
+NVIDIA GeForce RTX 5090, 32607 MiB, 575.57.08, 12.0
+NVIDIA GeForce RTX 5090, 32607 MiB, 575.57.08, 12.0
