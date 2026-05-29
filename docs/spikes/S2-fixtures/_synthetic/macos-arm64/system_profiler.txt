@@ -1,0 +1,56 @@
+# Synthetic fixture: system_profiler SPDisplaysDataType output (macOS / Apple Silicon)
+#
+# Captured verbatim from a publicly-shared Apple M2 Max (12-core CPU / 38-core
+# GPU / 96 GB unified memory) hardware capture; the SPDisplaysDataType section
+# is structurally identical to what `system_profiler SPDisplaysDataType`
+# returns on its own.
+#   Source: https://github.com/EntityFX/anybench/blob/master/results/apple-arm-m2-max-perf-auto/osx_hwinfo.log
+#
+# Apple's system_profiler reference (formats: -xml, -json; data types):
+#   https://ss64.com/mac/system_profiler.html
+#   https://support.apple.com/guide/system-information/welcome/mac
+#
+# Field semantics:
+# - "Chipset Model": the GPU's marketing name (Apple M2 Max here; an Intel Mac
+#   with discrete graphics would show e.g. "AMD Radeon Pro 5500M" — both
+#   parsed identically as the device name).
+# - "Type: GPU": confirms this is a GPU device (Type can also be Display).
+# - "Total Number of Cores": GPU core count, NOT CPU cores (the surrounding
+#   Hardware: block reports CPU cores).
+# - "Vendor": "Apple (0x106b)" on Apple Silicon, "AMD (0x1002)" or
+#   "NVIDIA (0x10de)" on Intel Macs with eGPU/discrete graphics.
+# - "Metal Support": "Metal 3" / "Metal 4" — used by the parser to drive the
+#   `metal.available` flag in GpuInventory.
+#
+# Apple Silicon VRAM:
+# Apple Silicon GPUs share unified memory with the CPU; there is no separate
+# VRAM line in SPDisplaysDataType output. The Phase 2 production probe will
+# read total system memory via `sysctl hw.memsize` and apportion ~70-75 % to
+# GPU work per Apple's published Metal best-practice guidance:
+#   https://developer.apple.com/documentation/metal/setting-resource-storage-modes
+# That apportionment happens OUTSIDE this fixture's responsibility — the
+# parser here only emits a single Metal device with name + metalSupport;
+# the Phase 2 service supplies vramMb from sysctl.
+#
+# Command:
+#   system_profiler SPDisplaysDataType
+
+Graphics/Displays:
+
+    Apple M2 Max:
+
+      Chipset Model: Apple M2 Max
+      Type: GPU
+      Bus: Built-In
+      Total Number of Cores: 38
+      Vendor: Apple (0x106b)
+      Metal Support: Metal 3
+      Displays:
+        PG42UQ:
+          Resolution: 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition)
+          UI Looks like: 3840 x 2160 @ 60.00Hz
+          Main Display: Yes
+          Mirror: Off
+          Online: Yes
+          Rotation: Supported
+          Television: Yes

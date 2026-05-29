@@ -1,0 +1,20 @@
+# Synthetic fixture: nvidia-smi --query-gpu CSV output (Linux / NVIDIA)
+#
+# Format reference: nvidia-smi --query-gpu reference,
+#   https://docs.nvidia.com/deploy/nvidia-smi/index.html
+#
+# Devices modeled on the publicly-documented NVIDIA A100-SXM4-80GB DGX node:
+#   https://github.com/NVIDIA/deepops/blob/master/docs/slurm-cluster/nvml.md
+#   (real A100-SXM4-80GB UUIDs / topology referenced in NVIDIA's deepops docs)
+#
+# A100 compute capability 8.0 per NVIDIA CUDA GPUs compute capability table:
+#   https://developer.nvidia.com/cuda-gpus
+#
+# Multi-GPU rows test the parser's row-splitting and the per-row trim behavior
+# (some real CSVs add a trailing space after commas — fixture intentionally
+# includes both spaced and non-spaced rows to stress the trim).
+#
+# Command:
+#   nvidia-smi --query-gpu=name,memory.total,driver_version,compute_cap --format=csv,noheader
+NVIDIA A100-SXM4-80GB, 81920 MiB, 535.183.06, 8.0
+NVIDIA A100-SXM4-80GB,81920 MiB,535.183.06,8.0

@@ -1,0 +1,18 @@
+# Synthetic fixture: nvidia-smi -L output (Windows / NVIDIA)
+#
+# Format reference (verbatim NVIDIA-published sample with the same line shape):
+#   https://github.com/NVIDIA/deepops/blob/master/docs/slurm-cluster/nvml.md
+#   (line shape: `GPU <idx>: <name> (UUID: GPU-<lowercase-uuid>)`)
+#
+# Format also documented in MLCommons' production nvidia-smi -L parser regex:
+#   https://github.com/mlcommons/inference_results_v5.0/blob/main/open/HPE/code/common/systems/accelerator.py
+#   (NVIDIA_SMI_GPU_REGEX = re.compile(r"GPU (\d+): ([\w\- ]+) \(UUID: (GPU-[0-9a-f\-]+)\)"))
+#
+# MIG sub-device lines are intentionally absent — Team-X v3.3.0 ignores MIG
+# partitions. Single non-MIG GPU lines are what we parse. Real RTX 5090 system
+# (not a datacenter MIG card) — see nvidia-smi.txt fixture for the source ref.
+#
+# Command:
+#   nvidia-smi -L
+GPU 0: NVIDIA GeForce RTX 5090 (UUID: GPU-1f6a3b9e-2c45-4e8a-9b1d-5e9c0f3a2b71)
+GPU 1: NVIDIA GeForce RTX 5090 (UUID: GPU-d4e8c2b1-7f93-4a56-a09c-3b18e7d2f546)

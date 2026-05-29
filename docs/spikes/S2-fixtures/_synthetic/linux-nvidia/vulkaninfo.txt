@@ -1,0 +1,71 @@
+# Synthetic fixture: vulkaninfo --summary output (Linux / NVIDIA)
+#
+# Generated from a verbatim public sample of `vulkaninfo --summary` on a Linux
+# NVIDIA GB10 (DGX Spark) system, with Vulkan 1.4.312:
+#   https://github.com/ggml-org/gha/blob/main/dgx-spark/howto-vulkan.txt
+#
+# vulkaninfo --summary format reference (Khronos source):
+#   https://github.com/KhronosGroup/Vulkan-Tools/blob/main/vulkaninfo/vulkaninfo.cpp
+#   https://vulkan.lunarg.com/doc/sdk/latest/linux/vulkaninfo.html
+#
+# Vulkan version history (the --summary format changed in 1.3.224+ when the
+# `GPU0:` per-device stanza header was added; older versions printed the same
+# fields under PhysicalDeviceProperties — Findings F2 in the writeup):
+#   https://www.lunarg.com/vulkan-sdk/
+#
+# NVIDIA GB10 is an integrated SoC GPU (Grace Hopper Spark superchip) — note
+# `deviceType = PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU` vs the discrete-NVIDIA
+# case in windows-nvidia/vulkaninfo.txt. The Phase 2 production probe accepts
+# both DISCRETE and INTEGRATED as Vulkan-eligible devices; CPU/Other are
+# excluded (those are llvmpipe / SwiftShader software fallbacks).
+#
+# Vulkan deviceType enum:
+#   https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceType.html
+#
+# Command:
+#   vulkaninfo --summary
+
+==========
+VULKANINFO
+==========
+
+Vulkan Instance Version: 1.4.312
+
+
+Instance Extensions: count = 18
+-------------------------------
+VK_EXT_acquire_drm_display             : extension revision 1
+VK_EXT_acquire_xlib_display            : extension revision 1
+VK_EXT_debug_report                    : extension revision 10
+VK_EXT_debug_utils                     : extension revision 2
+VK_EXT_direct_mode_display             : extension revision 1
+VK_EXT_display_surface_counter         : extension revision 1
+VK_EXT_surface_maintenance1            : extension revision 1
+VK_EXT_swapchain_colorspace            : extension revision 5
+VK_KHR_device_group_creation           : extension revision 1
+VK_KHR_display                         : extension revision 23
+VK_KHR_external_fence_capabilities     : extension revision 1
+VK_KHR_external_memory_capabilities    : extension revision 1
+VK_KHR_external_semaphore_capabilities : extension revision 1
+VK_KHR_get_display_properties2         : extension revision 1
+VK_KHR_get_physical_device_properties2 : extension revision 2
+VK_KHR_get_surface_capabilities2       : extension revision 1
+VK_KHR_surface                         : extension revision 25
+VK_KHR_surface_protected_capabilities  : extension revision 1
+
+Instance Layers: count = 2
+--------------------------
+VK_LAYER_NV_optimus               NVIDIA Optimus layer         1.4.312  version 1
+VK_LAYER_NV_present               NVIDIA Presentation Layer    1.4.312  version 1
+
+Devices:
+========
+GPU0:
+	apiVersion         = 1.4.312
+	driverVersion      = 580.126.9.0
+	vendorID           = 0x10de
+	deviceID           = 0x2e12
+	deviceType         = PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
+	deviceName         = NVIDIA GB10
+	driverName         = NVIDIA
+	driverInfo         = 580.126.09
