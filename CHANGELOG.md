@@ -10,6 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Local & Networked GGUF Support (Phase 1 — Foundation)**: scaffolded the
+  `@team-x/local-gguf-runtime` package and the shared TypeScript contracts in
+  `@team-x/shared-types` (`LocalGgufError` union, `LocalModel`, `GpuInventory`,
+  `GgufMetadata`, `AdvancedParams`, `BenchmarkResult`, `RemoteEndpoint`,
+  `WatchFolder`, `LocalGgufRuntimeSettings`, plus the `LocalGgufApi` bridge
+  surface and Hugging Face result shapes). Added Drizzle migration
+  `0036_local_gguf` with five new tables (`local_models`,
+  `local_model_advanced_params`, `local_model_benchmarks`,
+  `local_model_endpoints`, `local_model_watch_folders`), CHECK constraints
+  disambiguating source-type/path/endpoint, and indexes covering hot queries
+  plus FK-cascade paths. Added four Drizzle-native db repos (local-models,
+  local-model-advanced-params, local-model-endpoints, local-model-watch-folders)
+  and the `localGguf.*` runtime-settings accessor. Registered all five IPC
+  handler modules — library, runtime + pool, hf, benchmark, endpoint — as
+  typed stubs (every channel throws a not-implemented error; later phases swap
+  in the real services). Exposed the typed `window.teamx.localGguf` surface
+  through the preload bridge, and pinned the llama.cpp release (`b9371`,
+  Spike S1) at the repo root. No user-visible feature in this phase — pure
+  foundation.
 
 ### Changed
 
