@@ -305,6 +305,11 @@ export interface IpcRendererLike {
  * register layer in `main/ipc/register.ts` can be diff-matched against
  * this file when the IPC contract changes. Mirrors the keys of
  * `IpcContract` in `@team-x/shared-types/ipc.ts`.
+ *
+ * Exception: the `localGguf.*` channels are registered by the dedicated
+ * `registerLocalGguf*Handlers` functions wired in `main/index.ts`, not by
+ * `register.ts`. Diff-match those against the `LOCAL_GGUF_*_CHANNELS`
+ * tuples in `main/ipc/local-gguf-*-handlers.ts` instead.
  */
 const CHANNELS = {
   systemSelectDirectory: 'system.selectDirectory',
@@ -1264,7 +1269,9 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
  * Channel name constants — exported primarily for tests that want to
  * verify the preload invokes the right strings without string-comparing
  * literals. The main process's register layer has its own copy of the
- * same constants; if either side drifts, the renderer's invoke lands
- * on a ghost handler and the handler's `ipcMain.handle` never fires.
+ * same constants (for `localGguf.*`, the `LOCAL_GGUF_*_CHANNELS` tuples in
+ * `main/ipc/local-gguf-*-handlers.ts`); if either side drifts, the
+ * renderer's invoke lands on a ghost handler and the handler's
+ * `ipcMain.handle` never fires.
  */
 export { CHANNELS as PRELOAD_CHANNELS };
