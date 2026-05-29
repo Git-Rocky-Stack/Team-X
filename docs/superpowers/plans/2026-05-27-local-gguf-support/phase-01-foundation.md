@@ -625,6 +625,20 @@ export interface GpuDevice {
   name: string;
   vramMb: number;
   backend: GpuBackend;
+  // --- Optional shape extensions (Spike S2, confirmed on real hardware 2026-05-29).
+  // All optional → backward-compatible. See docs/spikes/2026-05-27-S2-gpu-probe-cross-platform.md
+  // "Shape adjustments to GpuInventory". Strict set (load-bearing for backend ranking):
+  computeCap?: string;   // nvidia-smi compute_cap, e.g. "5.2" (Maxwell) / "12.0". Gates CUDA-build compatibility (S2 F16, S4 F13).
+  gfxTarget?: string;    // rocminfo gfxNNNN, e.g. "gfx1100". Confirms HIP --device-targets match.
+  uuid?: string;         // nvidia-smi -L UUID (CUDA) / deviceUUID (Vulkan). Stable per-device key; coalesce by UUID, not index (S2 F17).
+  coreCount?: number;    // Apple Silicon GPU core count; drives n_gpu_layers heuristic on Metal.
+  metalSupport?: string; // system_profiler "Metal Support", e.g. "Metal 3"; gates shader-bundle compatibility.
+  // Liberal set (display + cross-vendor coalescing):
+  vendorId?: string;     // vulkaninfo vendorID, e.g. "0x10de". Cross-vendor coalescing key.
+  deviceId?: string;     // vulkaninfo deviceID, e.g. "0x17c2".
+  deviceType?: string;   // vulkaninfo deviceType, e.g. "PHYSICAL_DEVICE_TYPE_DISCRETE_GPU".
+  driverInfo?: string;   // vulkaninfo driverInfo, e.g. "582.28" — human-readable for Settings → Runtime.
+  apiVersion?: string;   // vulkaninfo apiVersion, e.g. "1.4.312".
 }
 
 export interface GpuInventory {

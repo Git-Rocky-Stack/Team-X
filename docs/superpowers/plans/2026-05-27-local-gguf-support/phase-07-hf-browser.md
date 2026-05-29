@@ -946,3 +946,20 @@ Quality gate per master plan § CR-6/CR-7. Perf assertions:
 | § 15 errors `hf-download-failed`, `hf-rate-limited` | Tasks 3, 5, 6 |
 | § 19 acceptance criterion #4 (HF search → download → in-library → chat) | Tasks 7, 14 |
 | Spike S5 carry-over | Tasks 3, 4, 5, 6 |
+
+---
+
+## Spike amendment (S5, 2026-05-29)
+
+**Add a typed auth error variant for HTTP 401/403.** Today the `HfClient`
+error handling maps every non-OK, non-429 response to `hf-download-failed`. S5
+found HF collapses *missing repo* and *private/gated repo* to a single **401**
+(and uses **403** for gated-but-known repos). The renderer should distinguish
+these from a generic download failure so it can prompt for an HF token + accept
+gating instead of showing a dead-end error. Add `hf-auth-required` (carrying
+`{ httpStatus: 401 | 403; repo: string }`) to `HfClientError`, and route 401/403
+to it in `search`, `modelCard`, and the download paths. See
+[S5 writeup](../../../spikes/2026-05-27-S5-hf-api-client.md). The canonical
+anonymous fixture is `TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF` (the
+`bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF` repo in earlier drafts 401s — it does
+not exist).

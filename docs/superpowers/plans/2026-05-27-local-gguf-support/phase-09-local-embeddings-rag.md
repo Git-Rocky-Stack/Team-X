@@ -413,3 +413,19 @@ Quality gate + Stage 1/2/4 review (Stage 3 NOT mandatory).
 | § 4.1.12 local embedding models | Tasks 2, 5 |
 | § 10 Defaults tab | Tasks 6, 7 |
 | § 19 acceptance criterion #7 (re-index on embedding swap) | Tasks 6, 7, 8 |
+
+---
+
+## Spike amendment (S4, 2026-05-29)
+
+**Embeddings require launching llama-server with `--pooling mean`.** On b9371,
+`/v1/embeddings` returns **HTTP 400** (`"Pooling type 'none' is not OAI
+compatible"`) when the server is started with `--embeddings` alone — a chat
+model loads with `pooling=none` by default. Relaunching with `--embeddings
+--pooling mean` makes the endpoint return **HTTP 200** with a proper vector
+(verified: 2048-dim on TinyLlama). So the embeddings head IS present in the
+build; the gate is the pooling flag, not a missing feature. The runtime should
+spawn the embedding server (or second instance) with an explicit `--pooling`
+(`mean`/`last`/`cls` per model), and treat a `pooling 'none'` 400 as a
+configuration signal, not "embeddings unsupported." See
+[S4 writeup F5](../../../spikes/2026-05-27-S4-llama-server-lifecycle.md).
