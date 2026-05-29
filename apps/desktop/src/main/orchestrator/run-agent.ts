@@ -607,6 +607,13 @@ export async function runAgent(deps: RunAgentDeps, input: RunAgentInput): Promis
         continue;
       }
       break;
+      // ESLint's no-unreachable CFG mis-flags this load-bearing `finally` as
+      // unreachable because BOTH the try block (ends in `break`) and the catch
+      // block (ends in `continue`/`break`) complete via an unconditional jump.
+      // The finally still runs on every path — it force-flushes the stream
+      // buffer and clears the timers/abort listener — so the block is reachable.
+      // Confirmed false positive; suppress only this line.
+      // eslint-disable-next-line no-unreachable
     } finally {
       // H11 (audit 2026-05-07) — force-flush any pending streamed text
       // before this attempt exits. Covers every terminal path on this
