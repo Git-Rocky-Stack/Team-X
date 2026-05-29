@@ -16,10 +16,12 @@ export const LOCAL_GGUF_BENCHMARK_CHANNELS = [
 ] as const;
 
 export function registerLocalGgufBenchmarkHandlers(ipc: IpcMain): void {
-  ipc.handle('localGguf.benchmark.run', async (): Promise<BenchmarkResult> =>
-    notImplemented('localGguf.benchmark.run'),
+  ipc.handle(
+    'localGguf.benchmark.run',
+    async (): Promise<BenchmarkResult> => notImplemented('localGguf.benchmark.run'),
   );
-  ipc.handle('localGguf.benchmark.history', async (): Promise<BenchmarkResult[]> =>
-    notImplemented('localGguf.benchmark.history'),
+  ipc.handle(
+    'localGguf.benchmark.history',
+    async (): Promise<BenchmarkResult[]> => notImplemented('localGguf.benchmark.history'),
   );
 }

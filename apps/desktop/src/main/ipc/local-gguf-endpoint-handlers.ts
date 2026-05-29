@@ -26,19 +26,24 @@ export const LOCAL_GGUF_ENDPOINT_CHANNELS = [
 ] as const;
 
 export function registerLocalGgufEndpointHandlers(ipc: IpcMain): void {
-  ipc.handle('localGguf.endpoint.list', async (): Promise<RemoteEndpoint[]> =>
-    notImplemented('localGguf.endpoint.list'),
+  ipc.handle(
+    'localGguf.endpoint.list',
+    async (): Promise<RemoteEndpoint[]> => notImplemented('localGguf.endpoint.list'),
   );
-  ipc.handle('localGguf.endpoint.add', async (): Promise<RemoteEndpoint> =>
-    notImplemented('localGguf.endpoint.add'),
+  ipc.handle(
+    'localGguf.endpoint.add',
+    async (): Promise<RemoteEndpoint> => notImplemented('localGguf.endpoint.add'),
   );
-  ipc.handle('localGguf.endpoint.remove', async (): Promise<void> =>
-    notImplemented('localGguf.endpoint.remove'),
+  ipc.handle(
+    'localGguf.endpoint.remove',
+    async (): Promise<void> => notImplemented('localGguf.endpoint.remove'),
   );
-  ipc.handle('localGguf.endpoint.test', async (): Promise<EndpointTestResult> =>
-    notImplemented('localGguf.endpoint.test'),
+  ipc.handle(
+    'localGguf.endpoint.test',
+    async (): Promise<EndpointTestResult> => notImplemented('localGguf.endpoint.test'),
   );
-  ipc.handle('localGguf.endpoint.update', async (): Promise<RemoteEndpoint> =>
-    notImplemented('localGguf.endpoint.update'),
+  ipc.handle(
+    'localGguf.endpoint.update',
+    async (): Promise<RemoteEndpoint> => notImplemented('localGguf.endpoint.update'),
   );
 }

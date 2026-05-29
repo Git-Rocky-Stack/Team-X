@@ -4,11 +4,10 @@
  * including UNC (\\\\NAS\\share) and mapped-drive paths.
  */
 
+import type { WatchFolder, WatchFolderStatus } from '@team-x/shared-types';
 import { asc, eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
-
-import type { WatchFolder, WatchFolderStatus } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
 import { localModelWatchFolders } from '../schema.js';
@@ -74,11 +73,7 @@ export function createLocalModelWatchFoldersRepo<TRunResult>(db: WatchFoldersDb<
     },
 
     /** Record a scan result; stamps last_scan_at = now. */
-    updateStatus(
-      id: string,
-      status: WatchFolderStatus,
-      lastScanError: string | null,
-    ): WatchFolder {
+    updateStatus(id: string, status: WatchFolderStatus, lastScanError: string | null): WatchFolder {
       const now = Date.now();
       db.update(localModelWatchFolders)
         .set({ status, lastScanAt: now, lastScanError, updatedAt: now })

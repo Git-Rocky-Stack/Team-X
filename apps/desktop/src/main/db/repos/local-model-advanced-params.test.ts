@@ -86,8 +86,9 @@ describe('localModelAdvancedParamsRepo', () => {
     expect(updated.nCtx).toBe(8192);
     expect(updated.nGpuLayers).toBe(35);
 
-    const count = ctx.raw.exec(`SELECT COUNT(*) FROM local_model_advanced_params WHERE model_id = '${modelId}'`)[0]
-      ?.values[0]?.[0];
+    const count = ctx.raw.exec(
+      `SELECT COUNT(*) FROM local_model_advanced_params WHERE model_id = '${modelId}'`,
+    )[0]?.values[0]?.[0];
     expect(count).toBe(1);
   });
 
@@ -118,10 +119,24 @@ describe('localModelAdvancedParamsRepo', () => {
 
   it('rejects an mmap value outside {0, 1, NULL}', () => {
     expect(() =>
-      ctx.raw.run('INSERT INTO local_model_advanced_params (model_id, mmap, updated_at) VALUES (?, 2, ?)', [
-        modelId,
-        Date.now(),
-      ]),
+      ctx.raw.run(
+        'INSERT INTO local_model_advanced_params (model_id, mmap, updated_at) VALUES (?, 2, ?)',
+        [modelId, Date.now()],
+      ),
     ).toThrow();
+  });
+
+  it('upsert throws a greppable error if the row vanishes between write and read-back', () => {
+    // The only way getByModelId can come back empty immediately after a
+    // successful upsert is a DB-layer fault. The defensive guard turns that
+    // silent corruption into a loud error instead of returning a bad row.
+    // We drive it with a db whose write succeeds but whose read-back is empty.
+    const noopRun = { run: () => undefined };
+    const fakeDb = {
+      insert: () => ({ values: () => ({ onConflictDoUpdate: () => noopRun }) }),
+      select: () => ({ from: () => ({ where: () => ({ get: () => undefined }) }) }),
+    } as unknown as Parameters<typeof createLocalModelAdvancedParamsRepo>[0];
+    const guardedRepo = createLocalModelAdvancedParamsRepo(fakeDb);
+    expect(() => guardedRepo.upsert('ghost', ALL_NULL)).toThrow(/not found after upsert/i);
   });
 });

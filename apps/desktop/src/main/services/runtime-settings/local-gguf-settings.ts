@@ -77,8 +77,7 @@ export function createLocalGgufSettingsAccessor(
           store.get<string | null>(KEYS.embeddingModelId) ??
           DEFAULT_LOCAL_GGUF_SETTINGS.embeddingModelId,
         hfTokenKeyRef:
-          store.get<string | null>(KEYS.hfTokenKeyRef) ??
-          DEFAULT_LOCAL_GGUF_SETTINGS.hfTokenKeyRef,
+          store.get<string | null>(KEYS.hfTokenKeyRef) ?? DEFAULT_LOCAL_GGUF_SETTINGS.hfTokenKeyRef,
         llamaBinariesVersion:
           store.get<string>(KEYS.llamaBinariesVersion) ??
           DEFAULT_LOCAL_GGUF_SETTINGS.llamaBinariesVersion,

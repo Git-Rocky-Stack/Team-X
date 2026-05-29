@@ -84,7 +84,8 @@ describe('localModelEndpointsRepo', () => {
       [e.id, Date.now(), Date.now()],
     );
     repo.remove(e.id);
-    const count = ctx.raw.exec("SELECT COUNT(*) FROM local_models WHERE id = 'm1'")[0]?.values[0]?.[0];
+    const count = ctx.raw.exec("SELECT COUNT(*) FROM local_models WHERE id = 'm1'")[0]
+      ?.values[0]?.[0];
     expect(count).toBe(0);
   });
 

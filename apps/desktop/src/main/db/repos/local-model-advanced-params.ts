@@ -8,10 +8,9 @@
  * schema declares them with `integer({ mode: 'boolean' })`.
  */
 
+import type { AdvancedParams } from '@team-x/shared-types';
 import { eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
-
-import type { AdvancedParams } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
 import { localModelAdvancedParams } from '../schema.js';
@@ -86,7 +85,8 @@ export function createLocalModelAdvancedParamsRepo<TRunResult>(db: AdvancedParam
         })
         .run();
       const row = getByModelId(modelId);
-      if (!row) throw new Error(`local_model_advanced_params row ${modelId} not found after upsert`);
+      if (!row)
+        throw new Error(`local_model_advanced_params row ${modelId} not found after upsert`);
       return row;
     },
 

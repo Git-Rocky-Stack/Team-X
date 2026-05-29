@@ -119,7 +119,12 @@ describe('localModelsRepo', () => {
       endpointId: 'ep-1',
     });
 
-    expect(repo.listBySourceType('file').map((m) => m.id).sort()).toEqual([m1.id, m2.id].sort());
+    expect(
+      repo
+        .listBySourceType('file')
+        .map((m) => m.id)
+        .sort(),
+    ).toEqual([m1.id, m2.id].sort());
     expect(repo.listBySourceType('remote-endpoint').map((m) => m.id)).toEqual([m3.id]);
   });
 
@@ -153,14 +158,16 @@ describe('localModelsRepo', () => {
 
   it('remove cascades to local_model_advanced_params', () => {
     const m = repo.insert(fileFixture('M1'));
-    ctx.raw.run('INSERT INTO local_model_advanced_params (model_id, n_ctx, updated_at) VALUES (?, 8192, ?)', [
-      m.id,
-      Date.now(),
-    ]);
-    const before = ctx.raw.exec('SELECT COUNT(*) FROM local_model_advanced_params')[0]?.values[0]?.[0];
+    ctx.raw.run(
+      'INSERT INTO local_model_advanced_params (model_id, n_ctx, updated_at) VALUES (?, 8192, ?)',
+      [m.id, Date.now()],
+    );
+    const before = ctx.raw.exec('SELECT COUNT(*) FROM local_model_advanced_params')[0]
+      ?.values[0]?.[0];
     expect(before).toBe(1);
     repo.remove(m.id);
-    const after = ctx.raw.exec('SELECT COUNT(*) FROM local_model_advanced_params')[0]?.values[0]?.[0];
+    const after = ctx.raw.exec('SELECT COUNT(*) FROM local_model_advanced_params')[0]
+      ?.values[0]?.[0];
     expect(after).toBe(0);
   });
 });

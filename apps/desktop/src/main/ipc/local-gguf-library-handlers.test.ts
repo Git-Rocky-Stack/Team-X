@@ -31,9 +31,12 @@ describe('localGguf library IPC handlers (Phase 1 stubs)', () => {
     expect(f.channels().sort()).toEqual([...LOCAL_GGUF_LIBRARY_CHANNELS].sort());
   });
 
-  it.each([...LOCAL_GGUF_LIBRARY_CHANNELS])('handler %s throws not-implemented', async (channel) => {
-    const f = makeFakeIpc();
-    registerLocalGgufLibraryHandlers(f.ipc);
-    await expect(f.invoke(channel)).rejects.toThrow(/not implemented/i);
-  });
+  it.each([...LOCAL_GGUF_LIBRARY_CHANNELS])(
+    'handler %s throws not-implemented',
+    async (channel) => {
+      const f = makeFakeIpc();
+      registerLocalGgufLibraryHandlers(f.ipc);
+      await expect(f.invoke(channel)).rejects.toThrow(/not implemented/i);
+    },
+  );
 });

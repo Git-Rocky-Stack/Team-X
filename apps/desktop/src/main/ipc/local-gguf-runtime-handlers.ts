@@ -31,33 +31,41 @@ export const LOCAL_GGUF_RUNTIME_CHANNELS = [
 ] as const;
 
 export function registerLocalGgufRuntimeHandlers(ipc: IpcMain): void {
-  ipc.handle('localGguf.runtime.gpuInventory', async (): Promise<GpuInventory> =>
-    notImplemented('localGguf.runtime.gpuInventory'),
+  ipc.handle(
+    'localGguf.runtime.gpuInventory',
+    async (): Promise<GpuInventory> => notImplemented('localGguf.runtime.gpuInventory'),
   );
-  ipc.handle('localGguf.runtime.reprobeGpu', async (): Promise<GpuInventory> =>
-    notImplemented('localGguf.runtime.reprobeGpu'),
+  ipc.handle(
+    'localGguf.runtime.reprobeGpu',
+    async (): Promise<GpuInventory> => notImplemented('localGguf.runtime.reprobeGpu'),
   );
-  ipc.handle('localGguf.runtime.settings', async (): Promise<LocalGgufRuntimeSettings> =>
-    notImplemented('localGguf.runtime.settings'),
+  ipc.handle(
+    'localGguf.runtime.settings',
+    async (): Promise<LocalGgufRuntimeSettings> => notImplemented('localGguf.runtime.settings'),
   );
-  ipc.handle('localGguf.runtime.setSettings', async (): Promise<LocalGgufRuntimeSettings> =>
-    notImplemented('localGguf.runtime.setSettings'),
+  ipc.handle(
+    'localGguf.runtime.setSettings',
+    async (): Promise<LocalGgufRuntimeSettings> => notImplemented('localGguf.runtime.setSettings'),
   );
-  ipc.handle('localGguf.runtime.binariesVersion', async (): Promise<string> =>
-    notImplemented('localGguf.runtime.binariesVersion'),
+  ipc.handle(
+    'localGguf.runtime.binariesVersion',
+    async (): Promise<string> => notImplemented('localGguf.runtime.binariesVersion'),
   );
   ipc.handle(
     'localGguf.pool.status',
     async (): Promise<{ loaded: LoadedModelHandle[]; maxConcurrent: number }> =>
       notImplemented('localGguf.pool.status'),
   );
-  ipc.handle('localGguf.pool.load', async (): Promise<LoadedModelHandle> =>
-    notImplemented('localGguf.pool.load'),
+  ipc.handle(
+    'localGguf.pool.load',
+    async (): Promise<LoadedModelHandle> => notImplemented('localGguf.pool.load'),
   );
-  ipc.handle('localGguf.pool.unload', async (): Promise<void> =>
-    notImplemented('localGguf.pool.unload'),
+  ipc.handle(
+    'localGguf.pool.unload',
+    async (): Promise<void> => notImplemented('localGguf.pool.unload'),
   );
-  ipc.handle('localGguf.pool.setMaxConcurrent', async (): Promise<void> =>
-    notImplemented('localGguf.pool.setMaxConcurrent'),
+  ipc.handle(
+    'localGguf.pool.setMaxConcurrent',
+    async (): Promise<void> => notImplemented('localGguf.pool.setMaxConcurrent'),
   );
 }

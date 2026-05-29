@@ -198,9 +198,10 @@ describe('migration 0036 — local gguf tables', () => {
 
   it('cascades advanced_params and benchmarks when the model is deleted', () => {
     insertFileModel('m1');
-    ctx.raw.run(`INSERT INTO local_model_advanced_params (model_id, n_ctx, updated_at) VALUES ('m1', 8192, ?)`, [
-      NOW,
-    ]);
+    ctx.raw.run(
+      `INSERT INTO local_model_advanced_params (model_id, n_ctx, updated_at) VALUES ('m1', 8192, ?)`,
+      [NOW],
+    );
     ctx.raw.run(
       `INSERT INTO local_model_benchmarks
         (id, model_id, prompt_eval_tok_s, gen_tok_s, ttft_ms, backend, n_ctx_used, n_gpu_layers_used, ran_at)
@@ -282,9 +283,10 @@ describe('migration 0036 — local gguf tables', () => {
   it('rejects an advanced_params boolean column outside {0, 1, NULL}', () => {
     insertFileModel('m1');
     expect(() =>
-      ctx.raw.run(`INSERT INTO local_model_advanced_params (model_id, mmap, updated_at) VALUES ('m1', 2, ?)`, [
-        NOW,
-      ]),
+      ctx.raw.run(
+        `INSERT INTO local_model_advanced_params (model_id, mmap, updated_at) VALUES ('m1', 2, ?)`,
+        [NOW],
+      ),
     ).toThrow();
   });
 

@@ -33,42 +33,53 @@ export const LOCAL_GGUF_LIBRARY_CHANNELS = [
 ] as const;
 
 export function registerLocalGgufLibraryHandlers(ipc: IpcMain): void {
-  ipc.handle('localGguf.library.list', async (): Promise<LocalModel[]> =>
-    notImplemented('localGguf.library.list'),
+  ipc.handle(
+    'localGguf.library.list',
+    async (): Promise<LocalModel[]> => notImplemented('localGguf.library.list'),
   );
-  ipc.handle('localGguf.library.get', async (): Promise<LocalModel | null> =>
-    notImplemented('localGguf.library.get'),
+  ipc.handle(
+    'localGguf.library.get',
+    async (): Promise<LocalModel | null> => notImplemented('localGguf.library.get'),
   );
-  ipc.handle('localGguf.library.addFile', async (): Promise<LocalModel> =>
-    notImplemented('localGguf.library.addFile'),
+  ipc.handle(
+    'localGguf.library.addFile',
+    async (): Promise<LocalModel> => notImplemented('localGguf.library.addFile'),
   );
-  ipc.handle('localGguf.library.addFolder', async (): Promise<WatchFolder> =>
-    notImplemented('localGguf.library.addFolder'),
+  ipc.handle(
+    'localGguf.library.addFolder',
+    async (): Promise<WatchFolder> => notImplemented('localGguf.library.addFolder'),
   );
-  ipc.handle('localGguf.library.removeModel', async (): Promise<void> =>
-    notImplemented('localGguf.library.removeModel'),
+  ipc.handle(
+    'localGguf.library.removeModel',
+    async (): Promise<void> => notImplemented('localGguf.library.removeModel'),
   );
-  ipc.handle('localGguf.library.removeFolder', async (): Promise<void> =>
-    notImplemented('localGguf.library.removeFolder'),
+  ipc.handle(
+    'localGguf.library.removeFolder',
+    async (): Promise<void> => notImplemented('localGguf.library.removeFolder'),
   );
   ipc.handle(
     'localGguf.library.scanFolder',
     async (): Promise<{ addedCount: number; removedCount: number }> =>
       notImplemented('localGguf.library.scanFolder'),
   );
-  ipc.handle('localGguf.library.setSystemPrompt', async (): Promise<LocalModel> =>
-    notImplemented('localGguf.library.setSystemPrompt'),
+  ipc.handle(
+    'localGguf.library.setSystemPrompt',
+    async (): Promise<LocalModel> => notImplemented('localGguf.library.setSystemPrompt'),
   );
-  ipc.handle('localGguf.library.setChatTemplate', async (): Promise<LocalModel> =>
-    notImplemented('localGguf.library.setChatTemplate'),
+  ipc.handle(
+    'localGguf.library.setChatTemplate',
+    async (): Promise<LocalModel> => notImplemented('localGguf.library.setChatTemplate'),
   );
-  ipc.handle('localGguf.library.setAdvancedParams', async (): Promise<AdvancedParams> =>
-    notImplemented('localGguf.library.setAdvancedParams'),
+  ipc.handle(
+    'localGguf.library.setAdvancedParams',
+    async (): Promise<AdvancedParams> => notImplemented('localGguf.library.setAdvancedParams'),
   );
-  ipc.handle('localGguf.library.resetAdvanced', async (): Promise<AdvancedParams> =>
-    notImplemented('localGguf.library.resetAdvanced'),
+  ipc.handle(
+    'localGguf.library.resetAdvanced',
+    async (): Promise<AdvancedParams> => notImplemented('localGguf.library.resetAdvanced'),
   );
-  ipc.handle('localGguf.library.listBySourceType', async (): Promise<LocalModel[]> =>
-    notImplemented('localGguf.library.listBySourceType'),
+  ipc.handle(
+    'localGguf.library.listBySourceType',
+    async (): Promise<LocalModel[]> => notImplemented('localGguf.library.listBySourceType'),
   );
 }

@@ -8,11 +8,10 @@
  * to any local_models rows that reference it (ON DELETE CASCADE).
  */
 
+import type { EndpointStatus, RemoteEndpoint } from '@team-x/shared-types';
 import { desc, eq } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
-
-import type { EndpointStatus, RemoteEndpoint } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
 import { localModelEndpoints } from '../schema.js';
