@@ -1,10 +1,11 @@
 # Spike S4 — llama-server lifecycle
 
-**Date:** 2026-05-27
+**Date:** 2026-05-27 (autonomous scaffolding) · 2026-05-29 (hardware capture)
 **Time-box:** 1 day
-**Decision:** **GO WITH CHANGES (pending hardware confirmation)**
-**Author:** Rocky Elsalaymeh (orchestrated via Claude Opus 4.7)
+**Decision:** **GO WITH CHANGES** — full lifecycle validated on real hardware across **three** Windows backends (CPU, Vulkan, CUDA 12.4) on a dual GTX TITAN X rig. All four phases (happy + F1/F2/F3) pass on every backend; the F3 hard gate (server survives context overflow) holds. The "changes" are the spec amendments below — none gating.
+**Author:** Rocky Elsalaymeh (orchestrated via Claude Opus 4.7 scaffolding; Claude Opus 4.8 hardware capture)
 **Companion runbook:** [`docs/spikes/S4-hardware-runbook.md`](./S4-hardware-runbook.md)
+**Hardware:** 2× NVIDIA GeForce GTX TITAN X (Maxwell GM200, sm_52, 12 GiB each), Intel Xeon Silver 4214R, Windows 11 Pro for Workstations (build 26200), driver 582.28 / CUDA 13.0. llama.cpp `b9371` (`f12cc6d0f`).
 
 ## Context
 
@@ -56,7 +57,7 @@ has two execution layers:
 | Layer                                | What it is                                                                                                          | Status                  |
 |---|---|---|
 | **Autonomous (this PR)**             | The lifecycle harness, the runbook, the design proposals (subprocess wrapper TS interface, port allocator strategy, failure-mode mapping). Everything that does not require a real `llama-server` process running on Rocky's hardware. | Shipped in this commit. |
-| **Hardware-driven (Rocky's followup)** | Real spawn timings, real ready-line patterns, real chat/embed latency, real exit codes, real port-release windows, real failure-mode stderr text — populated by Rocky running the runbook on at least Win CPU and ideally also Mac arm64 Metal. | `<!-- HARDWARE-AWAITING -->` markers throughout. |
+| **Hardware-driven (Rocky's followup)** | Real spawn timings, real ready-line patterns, real chat/embed latency, real exit codes, real port-release windows, real failure-mode stderr text. | ✅ **Done 2026-05-29** — captured on Win CPU + Win Vulkan + Win CUDA 12.4 (dual GTX TITAN X). Mac arm64 Metal deferred (no Mac this session). |
 
 The split exists because spawn timing, log-line wording, signal semantics,
 and exit codes all depend on the actual binary running on actual silicon
@@ -105,40 +106,60 @@ or (b) explicitly marked `<!-- HARDWARE-AWAITING -->`.
   harness so we can document the exact pattern that fired and Phase 2
   can move the same regex set into the production typed-error mapper.
 
-- **Spec amendments queued (3 small ones):**
+- **Hardware results (2026-05-29) — all four phases pass on all three backends.**
+  Happy path reaches ready and serves chat (HTTP 200) on Win CPU (999 ms),
+  Win Vulkan (1265 ms), and Win CUDA 12.4 (1141 ms warm). SIGTERM exits
+  cleanly with **port rebind in 3 ms** and **no SIGKILL escalation** on every
+  backend. F1 (bogus model) → exit 1, `failed to load model`. F2 (port
+  collision) → exit 1; **the real message is `couldn't bind HTTP server
+  socket`, which the original 7-pattern union did NOT match** — fixed (see
+  F4). F3 (context overflow) → **HTTP 400, server stays alive, OpenAI-shape
+  error** (`type: "exceed_context_size_error"`) — the hard gate holds. Real
+  GPU offload confirmed on both GPU backends (Vulkan: 1034 MiB resident in
+  TITAN X VRAM; CUDA: `ARCHS=500…` JIT-compiled to sm_52).
+
+- **Spec amendments queued:**
   1. **Plan line 1178 fixture URL fix** — same fix already queued by S5
-     (the `bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF` repo is fictional;
-     use TheBloke's verified-200 anonymous fixture). Verified again here
-     via a fresh HEAD request: `200 OK`, `Content-Length: 668788096`,
-     `ETag: 015c9bb0376d9c3c9dab434ecb3bd57961dce1921a5b1bf134c6f1b824c25c8d`.
-  2. **Spec § 12 add a `preflightBind` step.** The harness's F2 test
-     observed that some llama-server builds load the model BEFORE
-     attempting the port bind, paying ~5-15 s of model-load cost on a
-     port-collision failure. The production wrapper should preflight
-     the bind with its own throwaway `net.createServer().listen(port)`
-     before spawning the server — fail-fast without model-load cost.
-  3. **Spec § 14.1 typed-error union grow.** Add `server-ready-timeout`
-     as a distinct variant from `server-spawn-failed` — the ready-line
-     timeout is a discrete failure with a different UI message
-     ("Server didn't become ready — usually means the model is too
-     large for available RAM"). The harness today reports both as
-     spawn-related, but Phase 2 should split them.
+     (the `bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF` repo is fictional; use
+     TheBloke's verified-200 anonymous fixture). **Correction from the
+     hardware pass:** the value the predecessor recorded as "ETag (= SHA256)"
+     `015c9bb0…` is the HF **Xet/CAS ETag**, NOT the file's SHA256. HF returns
+     the file's true SHA256 in the **`X-Linked-ETag`** header =
+     `9fecc3b3cd76bba89d504f29b616eedf7da85b96540e490ca5824d3f7d2776a0`, which
+     is what `Get-FileHash`/`shasum` produce. The runbook's SHA256-verify step
+     must compare against `X-Linked-ETag`, not the plain `ETag`.
+  2. **Spec § 12 add a `preflightBind` step.** Still recommended — but
+     **reframed**: the original concern (builds loading the model *before*
+     binding, paying model-load cost on collision) is **NOT** observed in
+     b9371. b9371 binds the HTTP port FIRST and fast-fails on collision in
+     ~58 ms (CPU), far below model-load time (see F4). `preflightBind` remains
+     worthwhile for closing the allocate→spawn race window, not for avoiding
+     model-load cost.
+  3. **Spec § 14.1 typed-error union grow.** Add `server-ready-timeout` as a
+     distinct variant from `server-spawn-failed`. Plus a new variant for the
+     embeddings case: see F5 — embeddings DO work on b9371 but require launch
+     with `--pooling mean`; default `pooling=none` returns a 400 that Phase 9
+     must handle as configuration, not a missing feature.
 
 ## Lifecycle observations (real wall-clock — paste from runbook)
 
-The runbook produces one JSON report per phase per rig. Paste the values
-from the `happy` report into this table.
+Real `happy`-phase values from the 2026-05-29 capture on the dual GTX TITAN X
+rig. Three Windows backends were measured (the handoff's Mac arm64 Metal
+column is deferred — no Mac this session). GPU backends ran with
+`--n-gpu-layers 99`; CPU ran with default `-ngl 0`. n_ctx=2048, model load
+included.
 
-| Step                                                   | Win CPU (b9371)                | Mac arm64 Metal (b9371)        | Notes |
-|---|---|---|---|
-| Spawn → ready (TinyLlama 1.1B Q4_K_M, n_ctx=2048)      | `<!-- HARDWARE-AWAITING -->` ms | `<!-- HARDWARE-AWAITING -->` ms | Includes model load. Cold filesystem cache dominates first run. |
-| Single `/v1/chat/completions` (max_tokens=16)          | `<!-- HARDWARE-AWAITING -->` ms | `<!-- HARDWARE-AWAITING -->` ms | `seed=42, temperature=0` for reproducibility. |
-| Single `/v1/embeddings` (input="test sentence")        | `<!-- HARDWARE-AWAITING -->` ms | `<!-- HARDWARE-AWAITING -->` ms | Skipped if build was compiled without embedding head. Note in `notes` cell if so. |
-| SIGTERM → process exit                                 | `<!-- HARDWARE-AWAITING -->` ms | `<!-- HARDWARE-AWAITING -->` ms | On Win32 this is effectively `TerminateProcess` — see [Node signal docs](https://nodejs.org/api/process.html#signal-events). |
-| Port rebind after exit                                 | `<!-- HARDWARE-AWAITING -->` ms | `<!-- HARDWARE-AWAITING -->` ms | Probed via repeat `net.createServer().listen(port)` with 100 ms gap, 2.5 s budget. |
-| Escalated to SIGKILL                                   | `<!-- HARDWARE-AWAITING -->` (true/false) | `<!-- HARDWARE-AWAITING -->` (true/false) | Should be `false` in the happy case. `true` = finding. |
-| Ready pattern fired                                    | `<!-- HARDWARE-AWAITING -->` (one of 5 regex sources) | `<!-- HARDWARE-AWAITING -->` | Tells us which log-line variant b9371 currently emits. |
-| Exit code                                              | `<!-- HARDWARE-AWAITING -->` | `<!-- HARDWARE-AWAITING -->` | POSIX should be 0 on clean drain; Win32 typically non-zero due to `TerminateProcess`. |
+| Step | Win CPU (b9371) | Win Vulkan (b9371, ngl 99) | Win CUDA 12.4 (b9371, ngl 99) | Notes |
+|---|---|---|---|---|
+| Spawn → ready (TinyLlama 1.1B Q4_K_M)      | 999 ms | 1265 ms | **1141 ms warm / 23185 ms cold** | CUDA cold-start is dominated by one-time PTX→SASS JIT for sm_52 (Maxwell); the result is cached, so warm reloads match CPU/Vulkan. See F13. |
+| `spawn()` → child PID                       | 6 ms | 6 ms | 6 ms | Process handle is immediate; the cost is all in model load + (CUDA) JIT. |
+| Single `/v1/chat/completions` (max_tokens=16) | 384 ms | 206 ms | 287 ms | `seed=42, temperature=0`. First-token includes (Vulkan) shader warmup. All returned HTTP 200 with coherent output. |
+| Single `/v1/embeddings` (input="test sentence") | **400** (7 ms) | **400** (6 ms) | **400** (6 ms) | Default `pooling=none` is not OAI-compatible. With `--pooling mean` the endpoint returns **HTTP 200** + a 2048-dim vector (verified separately). See F5. |
+| SIGTERM → process exit                      | 192 ms | 234 ms | 186 ms | On Win32 this is effectively `TerminateProcess` — see [Node signal docs](https://nodejs.org/api/process.html#signal-events). |
+| Port rebind after exit                      | 3 ms | 3 ms | 3 ms | Probed via repeat `net.createServer().listen(port)`, 100 ms gap, 2.5 s budget. Releases essentially instantly on Windows. |
+| Escalated to SIGKILL                        | false | false | false | Clean `TerminateProcess` exit within the 5 s grace window on every backend. |
+| Ready pattern fired                         | `\bmodel loaded\b` | `\bmodel loaded\b` | `\bmodel loaded\b` | b9371 emits `srv  llama_server: model loaded` immediately followed by `server is listening on …`. Pattern #5 fires first. |
+| Exit code / signal                          | code=`null`, signal=`SIGTERM` | code=`null`, signal=`SIGTERM` | code=`null`, signal=`SIGTERM` | Node reports the SIGTERM-initiated stop as `signal=SIGTERM, code=null` on Win32 (not a numeric exit code). Clean — see F2. |
 
 ### Ready-pattern union (the 5 we watch for)
 
@@ -151,11 +172,14 @@ from the `happy` report into this table.
 | 5 | `model loaded`                       | Very old builds; also emitted as a model-load complete marker                                                                                           | Pre-listen fallback |
 
 The harness scans every line of both stdout and stderr — wherever the
-ready string fires first wins. After Rocky runs the happy phase the
-**Ready pattern fired** row above pins down which one b9371 actually
-emits, and Phase 2 can pin to that one as the primary with the others
-as fallbacks. (We keep all five in the wrapper anyway so an upstream
-log-line change doesn't break us silently.)
+ready string fires first wins. **Hardware confirmation (2026-05-29):** b9371
+(`f12cc6d0f`) emits `srv  llama_server: model loaded` immediately followed by
+`srv  llama_server: server is listening on http://127.0.0.1:<port>` and then
+`srv  update_slots: all slots are idle`. Pattern **#5 (`\bmodel loaded\b`)**
+fires first on every backend (CPU/Vulkan/CUDA). Phase 2 can pin #5 as the
+primary with #2 (`server is listening on`) as the strongest fallback — both
+appear in b9371. We keep all five in the wrapper so an upstream log-line
+change doesn't break us silently.
 
 ## Subprocess wrapper API (proposed)
 
@@ -378,35 +402,35 @@ runbook run.
 
 | Property                       | Expected                                                                  | Real signal                                              |
 |---|---|---|
-| Trigger                        | `llama-server -m C:\nonexistent\...\does-not-exist.gguf` (Win) / `/tmp/team-x-s4-does-not-exist.gguf` (POSIX) | `<!-- HARDWARE-AWAITING -->`                            |
-| Exit window                    | < 10 s (loader fast-fails on `fopen` failure)                             | `<!-- HARDWARE-AWAITING -->` ms                          |
-| Exit code                      | Non-zero (typically 1 on POSIX; varies on Win32)                          | `<!-- HARDWARE-AWAITING -->`                            |
-| Stderr regex that fires        | One of `/failed to load model/i`, `/no such file/i`, `/cannot open/i`, `/unable to allocate/i`, `/cannot find tensor/i`, `/llama_model_load.*failed/i`, `/gguf.*not a valid/i` | `<!-- HARDWARE-AWAITING -->`                            |
-| Stderr first 400 bytes         | (sourced from llama.cpp loader at [`src/llama-model-loader.cpp`](https://github.com/ggml-org/llama.cpp/blob/master/src/llama-model-loader.cpp)) | `<!-- HARDWARE-AWAITING -->`                            |
-| Maps to typed error            | `server-spawn-failed` → UI: "This model file is missing or corrupt"      | (mapping locked) |
+| Trigger                        | `llama-server -m C:\nonexistent\...\does-not-exist.gguf` (Win) / `/tmp/team-x-s4-does-not-exist.gguf` (POSIX) | ✅ as designed                            |
+| Exit window                    | < 10 s (loader fast-fails on `fopen` failure)                             | **65 ms** (CPU) / 247 ms (Vulkan) / 411 ms (CUDA) — fast-fail, well under budget |
+| Exit code                      | Non-zero (typically 1 on POSIX; varies on Win32)                          | **1** on all three backends                            |
+| Stderr regex that fires        | One of `/failed to load model/i`, `/no such file/i`, `/cannot open/i`, `/unable to allocate/i`, `/cannot find tensor/i`, `/llama_model_load.*failed/i`, `/gguf.*not a valid/i` | **`/failed to load model/i`** (all backends)                            |
+| Exit path                      | Loader fast-fails before HTTP init (`src/llama-model-loader.cpp`) | Confirmed: fails during model load, server never reaches bind/listen |
+| Maps to typed error            | `model-load-failed` → UI: "This model file is missing or corrupt"      | (mapping locked) |
 
 ### F2 — Port collision
 
 | Property                       | Expected                                                                  | Real signal                                              |
 |---|---|---|
-| Trigger                        | Bind a dummy `net.createServer()` on a free port, spawn `llama-server --port <same-port>` | `<!-- HARDWARE-AWAITING -->`                            |
-| Exit window                    | < 5 s if bind-before-load; up to 30 s if load-before-bind                | `<!-- HARDWARE-AWAITING -->` ms                          |
-| Exit code                      | Non-zero (typically 1)                                                    | `<!-- HARDWARE-AWAITING -->`                            |
-| Stderr regex that fires        | One of `/address already in use/i`, `/failed to bind/i`, `/bind:.*in use/i`, `/could not bind/i`, `/unable to bind/i`, `/EADDRINUSE/i`, `/WSAEADDRINUSE/i` | `<!-- HARDWARE-AWAITING -->`                            |
-| Stderr first 400 bytes         | (sourced from httplib's [`bind_to_port` implementation](https://github.com/yhirose/cpp-httplib/blob/master/httplib.h) wrapped by llama.cpp `tools/server/server.cpp`) | `<!-- HARDWARE-AWAITING -->`                            |
+| Trigger                        | Bind a dummy `net.createServer()` on a free port, spawn `llama-server --port <same-port>` | ✅ as designed                            |
+| Exit window                    | < 5 s if bind-before-load; up to 30 s if load-before-bind                | **58 ms** (CPU) / 223 ms (Vulkan) / 389 ms (CUDA) — **b9371 binds BEFORE loading the model** → fast-fail, no model-load cost. See F4. |
+| Exit code                      | Non-zero (typically 1)                                                    | **1** on all three backends                            |
+| Stderr regex that fires        | One of `/address already in use/i`, `/failed to bind/i`, `/bind:.*in use/i`, `/could not bind/i`, `/unable to bind/i`, `/EADDRINUSE/i`, `/WSAEADDRINUSE/i` | **none of the original 7** — the real message is `couldn't bind HTTP server socket` (contraction, not "could not"). Two patterns added: `/couldn'?t bind/i`, `/HTTP server error/i`. See F4. |
+| Real stderr (verbatim)         | (httplib [`bind_to_port`](https://github.com/yhirose/cpp-httplib/blob/master/httplib.h) wrapped by llama.cpp `tools/server/server.cpp`) | `srv start: couldn't bind HTTP server socket, hostname: 127.0.0.1, port: N` → `srv llama_server: exiting due to HTTP server error` |
 | Maps to typed error            | `port-bind-failed` → UI: "Port in use — Team-X will pick another" (silent retry) | (mapping locked) |
-| **Phase-2 follow-up**          | If F2's `exitMs` shows load-before-bind, add `preflightBind: true` as the default | See "Spec amendments" §3 |
+| **Phase-2 follow-up**          | b9371 binds-before-load, so `preflightBind` is for the race window, not model-load-cost avoidance | See "Spec amendments" §2 + F4 |
 
 ### F3 — Context overflow (request larger than configured n_ctx)
 
 | Property                       | Expected                                                                  | Real signal                                              |
 |---|---|---|
-| Trigger                        | Spawn with `-c 256`, POST a ~5000-token prompt to `/v1/chat/completions` | `<!-- HARDWARE-AWAITING -->`                            |
-| Server still alive after?      | **TRUE** (this is the hard gate — server MUST NOT crash)                 | `<!-- HARDWARE-AWAITING -->`                            |
-| HTTP status                    | 400 (or another 4xx)                                                      | `<!-- HARDWARE-AWAITING -->`                            |
-| Body shape                     | OpenAI-style `{"error":{"message":"...", "type":"...", "code":...}}` per [OpenAI error reference](https://platform.openai.com/docs/guides/error-codes/api-errors) | `<!-- HARDWARE-AWAITING -->`                            |
-| Body first 500 bytes           | (sourced from llama.cpp's `handle_completions_impl` early-rejection path in [tools/server/server.cpp](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/server.cpp)) | `<!-- HARDWARE-AWAITING -->`                            |
-| Maps to typed error            | `context-exceeded` → UI: "Message too long for this model's context window" + a "Shorten" button | (mapping locked) |
+| Trigger                        | Spawn with `-c 256`, POST a ~5000-token prompt to `/v1/chat/completions` | ✅ as designed (prompt tokenized to 13018 tokens) |
+| Server still alive after?      | **TRUE** (this is the hard gate — server MUST NOT crash)                 | ✅ **TRUE** on all three backends (`/health` responded after the rejected request) |
+| HTTP status                    | 400 (or another 4xx)                                                      | **400** on all three backends                            |
+| Body shape                     | OpenAI-style `{"error":{"message":"...", "type":"...", "code":...}}` per [OpenAI error reference](https://platform.openai.com/docs/guides/error-codes/api-errors) | **`openai-error`** shape confirmed (harness classifier) |
+| Body (verbatim)                | (llama.cpp's `handle_completions_impl` early-rejection path in [tools/server/server.cpp](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/server.cpp)) | `{"error":{"code":400,"message":"request (13018 tokens) exceeds the available context size (256 tokens), try increasing it","type":"exceed_context_size_error","n_prompt_tokens":13018,"n_ctx":256}}` |
+| Maps to typed error            | `context-exceeded` → UI: "Message too long for this model's context window" + a "Shorten" button | (mapping locked — note the structured `n_prompt_tokens`/`n_ctx` fields are directly usable by the UI) |
 
 If F3's "Server still alive" comes back FALSE on either rig, that is a
 **NO-GO blocker** — the spike decision must be downgraded and Phase 9
@@ -465,10 +489,19 @@ design.
    `bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF` (fictional) with
    [`TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF`](https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF)
    plus the lower-cased filename `tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf`.
-   Verified anonymous-200 via HEAD; ETag (= SHA256) =
-   `015c9bb0376d9c3c9dab434ecb3bd57961dce1921a5b1bf134c6f1b824c25c8d`.
-   This is the same amendment S5 queued — keeping it here makes S4 a
-   stand-alone reference.
+   **SHA256 correction (hardware pass):** the plain `ETag`
+   `015c9bb0…` the predecessor recorded is HF's **Xet/CAS hash**, not the file
+   SHA256. The download (668,788,096 bytes, GGUF magic verified) hashes to
+   `9fecc3b3cd76bba89d504f29b616eedf7da85b96540e490ca5824d3f7d2776a0`, which HF
+   serves in the **`X-Linked-ETag`** header. The runbook's SHA256-verify step
+   must compare against `X-Linked-ETag`. This refines the same amendment S5
+   queued.
+
+4. **Failure-mapper bind-pattern fix.** The production `failure-mapper.ts`
+   port-collision pattern set must include `/couldn'?t bind/i` and
+   `/HTTP server error/i` — the real b9371 message (`couldn't bind HTTP server
+   socket`) matched none of the original 7. Already applied to the spike
+   harness (F4).
 
 ## Findings & risks
 
@@ -499,6 +532,14 @@ clean drain through `httplib::Server::stop()` and the process exits 0.
 expectation and surfaces an exit-code mismatch only when it's truly
 unexpected (e.g. a SIGABRT on either platform).
 
+**Hardware confirmation (2026-05-29, Win32):** the happy-path `stop()` reported
+`exitCode=null, exitSignal=SIGTERM` on all three backends — Node surfaces the
+`TerminateProcess` stop as the SIGTERM signal, not a numeric code. Exit
+completed in 186–234 ms and **never escalated to SIGKILL** (well within the
+5 s grace). So on Windows the production supervisor should treat
+`{code:null, signal:'SIGTERM', escalatedToSigkill:false}` as the *expected*
+clean-stop signature, not an anomaly.
+
 ### F3. Port release is platform-dependent
 
 On Linux, `SO_REUSEADDR` is typically already enabled by httplib so the
@@ -508,28 +549,60 @@ can delay rebind by up to ~30 s if the previous listener had open
 client connections at exit. On Windows, `TerminateProcess` immediately
 releases the listener and rebind typically succeeds in under 50 ms.
 **Mitigation:** the supervisor retries the rebind for up to 2.5 s with
-100 ms gaps. The runbook's `portReleaseMs` field captures the real
-window.
+100 ms gaps. **Hardware confirmation (2026-05-29, Windows):** port rebind
+succeeded in **3 ms** on all three backends after the SIGTERM stop — Windows
+releases the listener essentially immediately, as predicted. The 2.5 s retry
+budget is comfortably oversized for Windows; it exists for the macOS
+TIME_WAIT case, which remains unmeasured (no Mac this session).
 
-### F4. Some builds load model before binding port
+### F4. b9371 binds the port BEFORE loading the model — and its bind-error message defeated the original pattern union
 
-The F2 test surfaces this: certain `b<NNNN>` builds invoke
-`llama_model_load_from_file` BEFORE `httplib::Server::bind_to_port`,
-which means a port-collision failure only fires AFTER the (slow) model
-load completes. That's a Phase-2 UX regression we mitigate via
-`preflightBind: true` — the supervisor attempts a throwaway
-`net.createServer().listen(port)` before spawn, failing fast in <1 ms.
+Two hardware findings here, both from the F2 capture (2026-05-29):
 
-### F5. Embeddings endpoint is build-conditional
+**(a) Bind happens first.** The original concern (some builds load the model
+*before* binding, paying model-load cost on a port collision) is **NOT**
+observed in b9371. The F2 failure fired in **58 ms on CPU** (223 ms Vulkan,
+389 ms CUDA) — far below the ~1 s model-load time. The verbatim startup
+sequence is `srv init: using N threads for HTTP server` → `srv start: binding
+port…` → `srv start: couldn't bind HTTP server socket` → exit, with **no
+`loading model` line at all**. So b9371 fast-fails on collision. `preflightBind`
+remains worthwhile for the allocate→spawn race window (F3 of the port
+allocator), but not for avoiding model-load cost on b9371.
 
-Not all `b<NNNN>` builds compile in the embeddings head. The harness
-passes `--embeddings` to llama-server; on a build without it, the
-server still starts (logs a warning), `/v1/embeddings` returns 404 or
-501, and the harness records that fact instead of failing. **Phase 9
-must route around this** — query `/v1/models` at supervisor startup;
-if the response doesn't include an embedding-capable model entry,
-disable the embeddings tab in the UI and surface a "this build doesn't
-support embeddings" tooltip.
+**(b) The real bind-error string is `couldn't bind HTTP server socket`** —
+emitted by llama.cpp's own `tools/server/server.cpp` wrapper around httplib,
+not an OS-level `EADDRINUSE`/`WSAEADDRINUSE` string. **None of the original 7
+F2 regex patterns matched it** (the closest, `/could not bind/i`, misses the
+contraction "couldn't"). The harness's F2 therefore reported `matched: null`
+on the first run — a real gap in the pattern union that the production
+`failure-mapper.ts` would have inherited. Fix: two patterns added to the
+union — `/couldn'?t bind/i` and `/HTTP server error/i` (the follow-on line is
+`llama_server: exiting due to HTTP server error`). Re-run confirmed
+`matched: couldn'?t bind` on all three backends. **This is exactly the class
+of bug the spike exists to catch before it reaches production.**
+
+### F5. Embeddings work on b9371 — but require `--pooling mean`, not just `--embeddings`
+
+**Corrected by the hardware pass.** The original assumption (the embeddings
+head might be compiled out, yielding 404/501) is **wrong for b9371** — the
+head is present. What actually happens: with only `--embeddings` passed (as
+the harness does), `/v1/embeddings` returns **HTTP 400** with
+`{"error":{"code":400,"message":"Pooling type 'none' is not OAI compatible.
+Please use a different pooling type","type":"invalid_request_error"}}`. The
+chat model loads with `pooling=none` by default, which the OpenAI-compat
+embeddings route rejects.
+
+**Verified fix:** relaunching with `--embeddings --pooling mean` makes
+`/v1/embeddings` return **HTTP 200** with a proper `{"object":"list","data":
+[{"embedding":[…2048 floats…]}]}` body (confirmed on CPU, 2026-05-29).
+
+**Phase 9 guidance (revised):** do NOT disable the embeddings UI based on a
+400. Instead, when the embeddings feature is requested, spawn the server (or a
+second server instance) with `--pooling mean` (or `last`/`cls` per model). The
+typed-error union should treat a `pooling 'none'` 400 as a configuration
+signal ("re-launch with pooling"), not a missing-feature signal. Probing
+`/v1/models` at startup is still useful for labeling, but the pooling flag is
+the real gate.
 
 ### F6. `process.kill('SIGTERM')` on Win32 returns synchronously but exit is async
 
@@ -604,49 +677,94 @@ harness uses the array form of `spawn(binary, [args...])` exclusively,
 which is the Node-documented safe pattern (see the
 [Node Security Best Practices](https://nodejs.org/en/learn/getting-started/security-best-practices#child-processes)).
 
+### F13. The prebuilt CUDA 12.4 build runs on Maxwell — via a ~23 s one-time PTX JIT (backend-ranking signal)
+
+The rig's GPUs are **Maxwell GM200 (sm_52)** — old enough that the assumption
+going in was "modern prebuilt CUDA binaries won't support it; Vulkan will be
+the only GPU path." The hardware pass **disproved that for the CUDA *12.4*
+build**: its `system_info` reports `CUDA : ARCHS = 500,610,700,750,800,860,890,900`.
+The `500` entry is `compute_50` PTX, which the driver JIT-compiles to sm_52 at
+first run. The server loaded, offloaded, and served chat at HTTP 200 — but the
+**first cold start took 23.2 s** (vs ~1.1 s warm), the entire delta being the
+PTX→SASS JIT. Subsequent loads hit the NVIDIA compute cache and matched
+CPU/Vulkan.
+
+Implications:
+- **The CUDA *13.3* build (S1's primary pin) would NOT work here** — CUDA 13
+  dropped Maxwell, and this rig's driver caps at CUDA 13.0 anyway. The **12.4**
+  build is the Maxwell-compatible one. S1's binary-selection logic and S2's
+  backend ranking should account for compute-capability → CUDA-build
+  compatibility (ties directly to S2 finding F16, the `computeCap` extension).
+- **Backend ranking on old NVIDIA cards is non-obvious:** CUDA *works* on
+  Maxwell but pays a one-time ~23 s JIT, while Vulkan is instantly ready and
+  equally functional. For Maxwell-class cards, **Vulkan may be the better
+  default** unless the JIT cache is pre-warmed at install time. Phase 2 § 12.2
+  ranking should treat "CUDA build supports this compute cap only via PTX JIT"
+  as a soft-demote signal, or pre-warm the JIT cache.
+
+### F14. b9371 changed the model-load logging — no more `offloaded N/N layers to GPU` line
+
+The legacy line Phase 2 might naively grep for offload confirmation —
+`load_tensors: offloaded N/N layers to GPU` — **is gone in b9371**. The new
+build auto-fits placement via a `-fit on` device-memory mechanism
+(`common_init_result: fitting params to device memory ...`) and does not print
+a per-buffer/per-layer offload breakdown at verbosity 3. **Phase 2 must NOT
+detect GPU offload by parsing for the old line.** Confirmed offload signals
+that DO work in b9371:
+- The `device_info` block lists devices as `CUDA0`/`CUDA1` or
+  `Vulkan0`/`Vulkan1` (vs `CPU` only) when a GPU backend + `-ngl > 0` is used.
+- `nvidia-smi` shows the `llama-server.exe` process resident in VRAM — measured
+  **1034 MiB on GPU1** for the Vulkan run, proving real offload (not silent CPU
+  fallback). This `nvidia-smi`-process check is the most robust offload
+  confirmation and is what Phase 2's health/telemetry path should use.
+
 ## Decision rationale
 
-**GO WITH CHANGES.** The autonomous layer of the spike — design contract,
-runbook, harness implementation — is complete and the design is locked.
-The hardware-driven layer is queued for Rocky's runbook execution. The
-spike clears Phase 1 unblock-ability subject to the three small amendments
-below; none of those are gating, all three are one-line edits.
+**GO WITH CHANGES.** Both layers are now complete: the autonomous design
+contract + harness, and the hardware-driven measurement layer (captured
+2026-05-29 across Win CPU, Win Vulkan, and Win CUDA 12.4 on a dual GTX
+TITAN X rig). **All four phases pass on all three backends, and the F3 hard
+gate — server survives a context-overflow request — holds everywhere.** The
+spike clears Phase 1 unblock-ability subject to the amendments below; none are
+gating.
 
-**The three changes baked into this GO:**
+**The changes baked into this GO:**
 
-1. **Plan line 1178 fixture URL fix** (same fix S5 already queued; we
-   verified HEAD-200 again for completeness).
-2. **Spec § 12 add a `preflightBind` step** to the supervisor lifecycle.
-3. **Spec § 14.1 grow** to add `server-ready-timeout`,
-   `model-load-failed`, `port-bind-failed`, `context-exceeded` as
-   discriminable typed-error variants alongside `server-spawn-failed`.
+1. **Plan line 1178 fixture URL fix** (same fix S5 queued) — **plus the SHA256
+   correction**: verify against HF's `X-Linked-ETag`
+   (`9fecc3b3…`, the true file SHA256), not the plain `ETag` (`015c9bb0…`, the
+   Xet/CAS hash). See TL;DR amendment 1 + F5.
+2. **Spec § 12 `preflightBind` step** — kept, but reframed: b9371 binds before
+   loading the model (fast-fails on collision in ~58 ms), so `preflightBind`
+   closes the allocate→spawn race window rather than avoiding model-load cost
+   (F4).
+3. **Spec § 14.1 grow** — add `server-ready-timeout`, `model-load-failed`,
+   `port-bind-failed`, `context-exceeded` alongside `server-spawn-failed`; and
+   treat the embeddings `pooling 'none'` 400 as a configuration signal
+   (re-launch with `--pooling mean`), not a missing feature (F5).
+4. **Failure-mapper pattern union fix** — add `/couldn'?t bind/i` and
+   `/HTTP server error/i`; the real b9371 bind-failure message defeated the
+   original 7 patterns (F4). Already applied to the harness on this branch.
 
-**The four spike risks resolved:**
+**The four spike risks — resolved on real hardware:**
 
-1. **Spawn + ready detection.** The 5-pattern union is forward/backward
-   compatible with any `b<NNNN>` build in S1's window. The actual
-   pattern that fired in b9371 gets pinned in this writeup's "Ready
-   pattern fired" cell after Rocky runs the happy phase.
+1. **Spawn + ready detection.** ✅ Pattern #5 (`\bmodel loaded\b`) fires first
+   on b9371, with #2 (`server is listening on`) as a same-build fallback. The
+   5-pattern union held; no new ready-pattern needed.
+2. **OpenAI-compat endpoints.** ✅ Chat returns HTTP 200 with coherent output
+   on all backends. Embeddings return 200 with `--pooling mean` (400 otherwise,
+   a config issue not a shape issue). Both match the OpenAI wire shape.
+3. **Clean termination + port release.** ✅ SIGTERM exits cleanly
+   (`signal=SIGTERM, code=null`, no SIGKILL escalation) and the port rebinds in
+   3 ms on every backend.
+4. **Failure-mode triage.** ✅ F1→`model-load-failed`, F2→`port-bind-failed`
+   (after the pattern fix), F3→`context-exceeded` with a structured OpenAI-shape
+   body (`exceed_context_size_error`, `n_prompt_tokens`, `n_ctx`). All three map
+   1-1 to spec § 14.1 variants.
 
-2. **OpenAI-compat endpoints.** The harness's chat + embed probes hit
-   the documented OpenAI shapes. Real latency numbers and HTTP status
-   codes get pasted in once Rocky runs the runbook.
-
-3. **Clean termination + port release.** The SIGTERM-vs-SIGKILL
-   escalation logic is locked, and the 2.5-s port-rebind probe
-   captures the real release window. Platform differences (POSIX clean
-   drain vs Win32 `TerminateProcess`) are documented and acceptable.
-
-4. **Failure-mode triage.** Three discrete failure modes; each maps
-   1-1 to a typed error in the spec § 14.1 union. The regex sources
-   that distinguish them move verbatim into
-   `packages/local-gguf-runtime/src/runtime/failure-mapper.ts` in
-   Phase 2.
-
-If the runbook surfaces a NO-GO signal (most likely candidate: F3's
-"server stays up" being false), the decision downgrades to NO-GO and
-Phase 9 grows a server-restart-on-crash supervisor task. Today: GO
-WITH CHANGES.
+The NO-GO candidate (F3 "server stays up" being false) **did not occur** —
+the server stayed alive after the overflow on CPU, Vulkan, and CUDA. Verdict:
+**GO WITH CHANGES**, hardware-confirmed.
 
 ## Spike contents (committed)
 
@@ -654,7 +772,7 @@ WITH CHANGES.
 |---|---|---|
 | `docs/spikes/2026-05-27-S4-llama-server-lifecycle.md`      | —       | This writeup |
 | `docs/spikes/S4-hardware-runbook.md`                       | ~14 KB  | Rocky's verbatim runbook for both rigs |
-| `scripts/spike-S4/lifecycle-test.mjs`                      | ~22 KB  | The lifecycle harness (real, not a stub) |
+| `scripts/spike-S4/lifecycle-test.mjs`                      | ~22 KB  | The lifecycle harness (real, not a stub). Patched 2026-05-29: F2 failure-pattern union gained `/couldn'?t bind/i` + `/HTTP server error/i` (F4). |
 | `.gitignore` (modified)                                    | —       | Added `.spike-s4-cache/` + `.spike-s4-bin/` to the spike-caches block |
 
 **Total commit size:** ~36 KB code + writeup. No fixtures committed.
@@ -670,22 +788,23 @@ Bash commands. The expected total wall-clock is ~15-20 minutes per rig:
 ~5-10 min for the GGUF download, ~5 s for the binary fetch + extract,
 then ~30-60 s of harness runtime across all four phases.
 
-The runbook ends with a "paste the JSON values into the writeup" step.
-After Rocky runs it on Win CPU (and optionally Mac Metal), commit the
-filled-in writeup with the message
-`docs(spike-S4): fill HARDWARE-AWAITING from <rig> run` and the
-co-authored trailer. That commit (or commits) closes the spike and
-unblocks Phase 1.
+**Done (2026-05-29):** the runbook was executed on Win CPU, Win Vulkan, and
+Win CUDA 12.4 (dual GTX TITAN X). All `<!-- HARDWARE-AWAITING -->` cells are
+filled with real measurements; the lifecycle table gained Vulkan + CUDA
+columns per the multi-GPU-rig instruction; four findings (F4 bind pattern +
+binds-before-load, F5 embeddings/pooling, F13 Maxwell CUDA JIT, F14 load-log
+change) and the SHA256 correction landed. Mac arm64 Metal remains a deferred
+follow-up (no Mac this session); the harness + runbook cover it unchanged.
 
 ---
 
-**Spike status (autonomous layer):** lifecycle harness real, runbook
-written, design contract locked at TS-validated interface, three small
-spec amendments queued, decision pre-recorded subject to hardware
-confirmation. **Recommendation: GO WITH CHANGES** — proceed to Phase 1
-foundation work; Rocky's runbook output backfills the measurement
-cells in this writeup before the Phase 2 server-lifecycle.ts
-implementation begins.
+**Spike status:** lifecycle harness real and **hardware-validated on three
+Windows backends**, runbook executed, design contract locked at TS-validated
+interface, spec amendments updated with hardware findings, F2 failure-pattern
+union patched on this branch. **Recommendation: GO WITH CHANGES** —
+hardware-confirmed. Proceed to Phase 1 foundation work; Phase 2's
+`server-lifecycle.ts` inherits the validated contract, the patched failure
+patterns, and the F13/F14 GPU-detection guidance.
 
 ## Source links
 

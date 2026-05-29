@@ -908,6 +908,13 @@ async function runF2PortCollision() {
       /unable to bind/i,
       /EADDRINUSE/i,
       /WSAEADDRINUSE/i,
+      // Real b9371 Windows message (hardware capture 2026-05-29, S4 finding):
+      // `srv start: couldn't bind HTTP server socket, hostname: 127.0.0.1, port: N`
+      // followed by `llama_server: exiting due to HTTP server error`. None of the
+      // generic OS-level strings above appear — llama.cpp's httplib wrapper emits
+      // its own message — so the union needs these two explicit patterns.
+      /couldn'?t bind/i,
+      /HTTP server error/i,
     ];
     let matchedFailurePattern = null;
     for (const re of failurePatterns) {
