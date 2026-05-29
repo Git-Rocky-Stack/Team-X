@@ -519,6 +519,47 @@ const CHANNELS = {
   proactiveDecomposeGoal: 'proactive.decomposeGoal',
   proactiveScanForWork: 'proactive.scanForWork',
   proactiveGetState: 'proactive.getState',
+  // Local & Networked GGUF Support (v3.3.0 — Phase 1 contract surface).
+  // library.* (Phase 3)
+  localGgufLibraryList: 'localGguf.library.list',
+  localGgufLibraryGet: 'localGguf.library.get',
+  localGgufLibraryAddFile: 'localGguf.library.addFile',
+  localGgufLibraryAddFolder: 'localGguf.library.addFolder',
+  localGgufLibraryRemoveModel: 'localGguf.library.removeModel',
+  localGgufLibraryRemoveFolder: 'localGguf.library.removeFolder',
+  localGgufLibraryScanFolder: 'localGguf.library.scanFolder',
+  localGgufLibrarySetSystemPrompt: 'localGguf.library.setSystemPrompt',
+  localGgufLibrarySetChatTemplate: 'localGguf.library.setChatTemplate',
+  localGgufLibrarySetAdvancedParams: 'localGguf.library.setAdvancedParams',
+  localGgufLibraryResetAdvanced: 'localGguf.library.resetAdvanced',
+  localGgufLibraryListBySourceType: 'localGguf.library.listBySourceType',
+  // runtime.* + pool.* (Phase 2)
+  localGgufRuntimeGpuInventory: 'localGguf.runtime.gpuInventory',
+  localGgufRuntimeReprobeGpu: 'localGguf.runtime.reprobeGpu',
+  localGgufRuntimeSettings: 'localGguf.runtime.settings',
+  localGgufRuntimeSetSettings: 'localGguf.runtime.setSettings',
+  localGgufRuntimeBinariesVersion: 'localGguf.runtime.binariesVersion',
+  localGgufPoolStatus: 'localGguf.pool.status',
+  localGgufPoolLoad: 'localGguf.pool.load',
+  localGgufPoolUnload: 'localGguf.pool.unload',
+  localGgufPoolSetMaxConcurrent: 'localGguf.pool.setMaxConcurrent',
+  // endpoint.* (Phase 5)
+  localGgufEndpointList: 'localGguf.endpoint.list',
+  localGgufEndpointAdd: 'localGguf.endpoint.add',
+  localGgufEndpointRemove: 'localGguf.endpoint.remove',
+  localGgufEndpointTest: 'localGguf.endpoint.test',
+  localGgufEndpointUpdate: 'localGguf.endpoint.update',
+  // hf.* (Phase 7)
+  localGgufHfSearch: 'localGguf.hf.search',
+  localGgufHfModelCard: 'localGguf.hf.modelCard',
+  localGgufHfStartDownload: 'localGguf.hf.startDownload',
+  localGgufHfPauseDownload: 'localGguf.hf.pauseDownload',
+  localGgufHfResumeDownload: 'localGguf.hf.resumeDownload',
+  localGgufHfCancelDownload: 'localGguf.hf.cancelDownload',
+  localGgufHfActiveDownloads: 'localGguf.hf.activeDownloads',
+  // benchmark.* (Phase 10)
+  localGgufBenchmarkRun: 'localGguf.benchmark.run',
+  localGgufBenchmarkHistory: 'localGguf.benchmark.history',
 } as const;
 
 function telemetryCompanyStatsRequest(
@@ -1047,6 +1088,174 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.proactiveScanForWork, req) as Promise<ProactiveScanForWorkResponse>,
       getState: (req: ProactiveGetStateRequest) =>
         ipc.invoke(CHANNELS.proactiveGetState, req) as Promise<ProactiveGetStateResponse>,
+    },
+    // Local & Networked GGUF Support (v3.3.0). Every method routes through
+    // the captured `ipc` to a `localGguf.*` channel whose handler is a
+    // Phase 1 not-implemented stub; the invoke rejects until the owning
+    // phase lands the real handler. Return casts pin each call to the
+    // `LocalGgufApi` contract in @team-x/shared-types via `ReturnType<…>`
+    // so no domain types need importing into this file.
+    localGguf: {
+      library: {
+        list: () =>
+          ipc.invoke(CHANNELS.localGgufLibraryList) as ReturnType<
+            TeamXApi['localGguf']['library']['list']
+          >,
+        get: (id: string) =>
+          ipc.invoke(CHANNELS.localGgufLibraryGet, id) as ReturnType<
+            TeamXApi['localGguf']['library']['get']
+          >,
+        addFile: (path: string) =>
+          ipc.invoke(CHANNELS.localGgufLibraryAddFile, path) as ReturnType<
+            TeamXApi['localGguf']['library']['addFile']
+          >,
+        addFolder: (path: string, recursive: boolean) =>
+          ipc.invoke(CHANNELS.localGgufLibraryAddFolder, path, recursive) as ReturnType<
+            TeamXApi['localGguf']['library']['addFolder']
+          >,
+        removeModel: (id: string) =>
+          ipc.invoke(CHANNELS.localGgufLibraryRemoveModel, id) as ReturnType<
+            TeamXApi['localGguf']['library']['removeModel']
+          >,
+        removeFolder: (id: string) =>
+          ipc.invoke(CHANNELS.localGgufLibraryRemoveFolder, id) as ReturnType<
+            TeamXApi['localGguf']['library']['removeFolder']
+          >,
+        scanFolder: (id: string) =>
+          ipc.invoke(CHANNELS.localGgufLibraryScanFolder, id) as ReturnType<
+            TeamXApi['localGguf']['library']['scanFolder']
+          >,
+        setSystemPrompt: (id: string, prompt: string | null) =>
+          ipc.invoke(CHANNELS.localGgufLibrarySetSystemPrompt, id, prompt) as ReturnType<
+            TeamXApi['localGguf']['library']['setSystemPrompt']
+          >,
+        setChatTemplate: (id: string, template: string | null) =>
+          ipc.invoke(CHANNELS.localGgufLibrarySetChatTemplate, id, template) as ReturnType<
+            TeamXApi['localGguf']['library']['setChatTemplate']
+          >,
+        setAdvancedParams: (
+          id: string,
+          params: Parameters<TeamXApi['localGguf']['library']['setAdvancedParams']>[1],
+        ) =>
+          ipc.invoke(CHANNELS.localGgufLibrarySetAdvancedParams, id, params) as ReturnType<
+            TeamXApi['localGguf']['library']['setAdvancedParams']
+          >,
+        resetAdvanced: (id: string) =>
+          ipc.invoke(CHANNELS.localGgufLibraryResetAdvanced, id) as ReturnType<
+            TeamXApi['localGguf']['library']['resetAdvanced']
+          >,
+        listBySourceType: (
+          sourceType: Parameters<TeamXApi['localGguf']['library']['listBySourceType']>[0],
+        ) =>
+          ipc.invoke(CHANNELS.localGgufLibraryListBySourceType, sourceType) as ReturnType<
+            TeamXApi['localGguf']['library']['listBySourceType']
+          >,
+      },
+      runtime: {
+        gpuInventory: () =>
+          ipc.invoke(CHANNELS.localGgufRuntimeGpuInventory) as ReturnType<
+            TeamXApi['localGguf']['runtime']['gpuInventory']
+          >,
+        reprobeGpu: () =>
+          ipc.invoke(CHANNELS.localGgufRuntimeReprobeGpu) as ReturnType<
+            TeamXApi['localGguf']['runtime']['reprobeGpu']
+          >,
+        settings: () =>
+          ipc.invoke(CHANNELS.localGgufRuntimeSettings) as ReturnType<
+            TeamXApi['localGguf']['runtime']['settings']
+          >,
+        setSettings: (partial: Parameters<TeamXApi['localGguf']['runtime']['setSettings']>[0]) =>
+          ipc.invoke(CHANNELS.localGgufRuntimeSetSettings, partial) as ReturnType<
+            TeamXApi['localGguf']['runtime']['setSettings']
+          >,
+        binariesVersion: () =>
+          ipc.invoke(CHANNELS.localGgufRuntimeBinariesVersion) as ReturnType<
+            TeamXApi['localGguf']['runtime']['binariesVersion']
+          >,
+      },
+      pool: {
+        status: () =>
+          ipc.invoke(CHANNELS.localGgufPoolStatus) as ReturnType<
+            TeamXApi['localGguf']['pool']['status']
+          >,
+        load: (id: string) =>
+          ipc.invoke(CHANNELS.localGgufPoolLoad, id) as ReturnType<
+            TeamXApi['localGguf']['pool']['load']
+          >,
+        unload: (id: string) =>
+          ipc.invoke(CHANNELS.localGgufPoolUnload, id) as ReturnType<
+            TeamXApi['localGguf']['pool']['unload']
+          >,
+        setMaxConcurrent: (n: number) =>
+          ipc.invoke(CHANNELS.localGgufPoolSetMaxConcurrent, n) as ReturnType<
+            TeamXApi['localGguf']['pool']['setMaxConcurrent']
+          >,
+      },
+      endpoint: {
+        list: () =>
+          ipc.invoke(CHANNELS.localGgufEndpointList) as ReturnType<
+            TeamXApi['localGguf']['endpoint']['list']
+          >,
+        add: (config: Parameters<TeamXApi['localGguf']['endpoint']['add']>[0]) =>
+          ipc.invoke(CHANNELS.localGgufEndpointAdd, config) as ReturnType<
+            TeamXApi['localGguf']['endpoint']['add']
+          >,
+        remove: (id: string) =>
+          ipc.invoke(CHANNELS.localGgufEndpointRemove, id) as ReturnType<
+            TeamXApi['localGguf']['endpoint']['remove']
+          >,
+        test: (id: string) =>
+          ipc.invoke(CHANNELS.localGgufEndpointTest, id) as ReturnType<
+            TeamXApi['localGguf']['endpoint']['test']
+          >,
+        update: (id: string, partial: Parameters<TeamXApi['localGguf']['endpoint']['update']>[1]) =>
+          ipc.invoke(CHANNELS.localGgufEndpointUpdate, id, partial) as ReturnType<
+            TeamXApi['localGguf']['endpoint']['update']
+          >,
+      },
+      hf: {
+        search: (query: string, filters: Record<string, unknown>) =>
+          ipc.invoke(CHANNELS.localGgufHfSearch, query, filters) as ReturnType<
+            TeamXApi['localGguf']['hf']['search']
+          >,
+        modelCard: (repoId: string) =>
+          ipc.invoke(CHANNELS.localGgufHfModelCard, repoId) as ReturnType<
+            TeamXApi['localGguf']['hf']['modelCard']
+          >,
+        startDownload: (repoId: string, filename: string, targetFolder: string) =>
+          ipc.invoke(
+            CHANNELS.localGgufHfStartDownload,
+            repoId,
+            filename,
+            targetFolder,
+          ) as ReturnType<TeamXApi['localGguf']['hf']['startDownload']>,
+        pauseDownload: (handleId: string) =>
+          ipc.invoke(CHANNELS.localGgufHfPauseDownload, handleId) as ReturnType<
+            TeamXApi['localGguf']['hf']['pauseDownload']
+          >,
+        resumeDownload: (handleId: string) =>
+          ipc.invoke(CHANNELS.localGgufHfResumeDownload, handleId) as ReturnType<
+            TeamXApi['localGguf']['hf']['resumeDownload']
+          >,
+        cancelDownload: (handleId: string) =>
+          ipc.invoke(CHANNELS.localGgufHfCancelDownload, handleId) as ReturnType<
+            TeamXApi['localGguf']['hf']['cancelDownload']
+          >,
+        activeDownloads: () =>
+          ipc.invoke(CHANNELS.localGgufHfActiveDownloads) as ReturnType<
+            TeamXApi['localGguf']['hf']['activeDownloads']
+          >,
+      },
+      benchmark: {
+        run: (modelId: string) =>
+          ipc.invoke(CHANNELS.localGgufBenchmarkRun, modelId) as ReturnType<
+            TeamXApi['localGguf']['benchmark']['run']
+          >,
+        history: (modelId: string) =>
+          ipc.invoke(CHANNELS.localGgufBenchmarkHistory, modelId) as ReturnType<
+            TeamXApi['localGguf']['benchmark']['history']
+          >,
+      },
     },
   };
 }

@@ -8,13 +8,7 @@ export type GpuBackend = 'cuda' | 'rocm' | 'vulkan' | 'metal' | 'cpu';
 
 export type SourceType = 'file' | 'folder-entry' | 'remote-endpoint';
 
-export type ModelStatus =
-  | 'cold'
-  | 'loading'
-  | 'loaded'
-  | 'error'
-  | 'unreachable'
-  | 'missing';
+export type ModelStatus = 'cold' | 'loading' | 'loaded' | 'error' | 'unreachable' | 'missing';
 
 export type EndpointStatus = 'unknown' | 'reachable' | 'unreachable' | 'auth-failed';
 
@@ -190,4 +184,117 @@ export function isLocalGgufError(value: unknown): value is LocalGgufError {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as { kind?: unknown };
   return typeof v.kind === 'string';
+}
+
+// ---------------------------------------------------------------------------
+// Hugging Face Hub browser types
+// ---------------------------------------------------------------------------
+//
+// Surfaced by the `localGguf.hf.*` channels. Phase 1 introduces them at the
+// contract level so the preload bridge and IPC stubs share one definition;
+// Phase 7 (HF browser) wires them to the real HfService. They live here in
+// shared-types — not inline in the handler module — so the main process,
+// preload, and renderer all type-check against a single source of truth.
+
+/** One row of a Hugging Face Hub model search result. */
+export interface HfSearchResult {
+  repoId: string;
+  downloads: number;
+  likes: number;
+  description: string;
+  tags: string[];
+}
+
+/** A Hugging Face model card with its downloadable file siblings. */
+export interface HfModelCard {
+  repoId: string;
+  description: string;
+  license: string | null;
+  siblings: Array<{ rfilename: string; sizeBytes: number | null }>;
+}
+
+/** Live progress for an in-flight Hugging Face download. */
+export interface DownloadProgress {
+  handleId: string;
+  repoId: string;
+  filename: string;
+  bytesReceived: number;
+  bytesTotal: number;
+  state: 'pending' | 'downloading' | 'paused' | 'completed' | 'cancelled' | 'failed';
+  errorMessage: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Bridge surface — the `localGguf` namespace on `window.teamx`
+// ---------------------------------------------------------------------------
+//
+// The high-level, renderer-facing shape of the `localGguf.*` IPC namespace.
+// Composed into `TeamXApi` (see ipc.ts) so renderer code calls
+// `window.teamx.localGguf.<area>.<method>(...)` and type-checks against the
+// same contract the main-process handler layer implements. Phase 1 ships the
+// full typed surface even though every handler is a not-implemented stub;
+// later phases swap the implementations in behind these stable signatures.
+
+export interface LocalGgufApi {
+  library: {
+    list(): Promise<LocalModel[]>;
+    get(id: string): Promise<LocalModel | null>;
+    addFile(path: string): Promise<LocalModel>;
+    addFolder(path: string, recursive: boolean): Promise<WatchFolder>;
+    removeModel(id: string): Promise<void>;
+    removeFolder(id: string): Promise<void>;
+    scanFolder(id: string): Promise<{ addedCount: number; removedCount: number }>;
+    setSystemPrompt(id: string, prompt: string | null): Promise<LocalModel>;
+    setChatTemplate(id: string, template: string | null): Promise<LocalModel>;
+    setAdvancedParams(id: string, params: Partial<AdvancedParams>): Promise<AdvancedParams>;
+    resetAdvanced(id: string): Promise<AdvancedParams>;
+    listBySourceType(sourceType: SourceType): Promise<LocalModel[]>;
+  };
+  runtime: {
+    gpuInventory(): Promise<GpuInventory>;
+    reprobeGpu(): Promise<GpuInventory>;
+    settings(): Promise<LocalGgufRuntimeSettings>;
+    setSettings(partial: Partial<LocalGgufRuntimeSettings>): Promise<LocalGgufRuntimeSettings>;
+    binariesVersion(): Promise<string>;
+  };
+  pool: {
+    status(): Promise<{
+      loaded: Array<{ modelId: string; baseUrl: string; pid: number }>;
+      maxConcurrent: number;
+    }>;
+    load(id: string): Promise<{ modelId: string; baseUrl: string; pid: number }>;
+    unload(id: string): Promise<void>;
+    setMaxConcurrent(n: number): Promise<void>;
+  };
+  endpoint: {
+    list(): Promise<RemoteEndpoint[]>;
+    add(config: {
+      name: string;
+      baseUrl: string;
+      authHeaderKeyRef: string | null;
+    }): Promise<RemoteEndpoint>;
+    remove(id: string): Promise<void>;
+    test(id: string): Promise<{ reachable: boolean; latencyMs?: number; error?: LocalGgufError }>;
+    update(
+      id: string,
+      partial: { name?: string; baseUrl?: string; authHeaderKeyRef?: string | null },
+    ): Promise<RemoteEndpoint>;
+  };
+  hf: {
+    search(query: string, filters: Record<string, unknown>): Promise<HfSearchResult[]>;
+    modelCard(repoId: string): Promise<HfModelCard>;
+    startDownload(
+      repoId: string,
+      filename: string,
+      targetFolder: string,
+    ): Promise<{ handleId: string }>;
+    pauseDownload(handleId: string): Promise<void>;
+    resumeDownload(handleId: string): Promise<void>;
+    cancelDownload(handleId: string): Promise<void>;
+    activeDownloads(): Promise<DownloadProgress[]>;
+  };
+  benchmark: {
+    run(modelId: string): Promise<BenchmarkResult>;
+    history(modelId: string): Promise<BenchmarkResult[]>;
+  };
 }
