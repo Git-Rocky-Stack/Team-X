@@ -719,3 +719,17 @@ Codex Stage 3 MANDATORY (provider-router behavior change).
 | § 8.4 adaptive routing | Task 6 |
 | § 8.5 cost tracking ($0 like Ollama) | Tasks 5, 8 |
 | § 15 errors `endpoint-unreachable`, `endpoint-auth-failed` | Task 3 |
+
+---
+
+## Spike amendment (S4, 2026-05-29)
+
+**Consume the grown runtime typed-error union.** The provider's chat path must
+surface the discriminated runtime errors that Phase 2 now produces
+(`server-ready-timeout`, `model-load-failed`, `port-bind-failed`,
+`context-exceeded`) rather than a single opaque `server-spawn-failed`. In
+particular, `context-exceeded` (HTTP 400, OpenAI-shape body with
+`exceed_context_size_error` + `n_prompt_tokens`/`n_ctx`) should map to a
+user-facing "message too long" affordance, not a hard provider error — the
+server stays alive after the rejection (S4 F3). See the phase-02 "Spike
+amendments" block and the [S4 writeup](../../../spikes/2026-05-27-S4-llama-server-lifecycle.md).

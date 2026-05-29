@@ -2255,3 +2255,56 @@ Stages 2 + 3 + 4 same as Phase 1.
 | § 15 LocalGgufError variants `binary-not-found`, `binary-unsupported`, `gpu-probe-failed`, `oom-runtime`, `server-spawn-failed`, `server-crashed`, `port-exhausted`, `pool-full` | Tasks 5, 6, 10, 11, 12 |
 
 Phases 1 and 2 together complete all runtime + storage infrastructure. Phase 3 (Library + Scanning) layers GGUF metadata parsing + library CRUD + folder watching + network resilience on top.
+
+---
+
+## Spike amendments (S2 + S4 hardware capture, 2026-05-29)
+
+These refine this phase from validated hardware findings on a dual GTX TITAN X
+(Maxwell sm_52) Windows rig running llama.cpp `b9371`. Sources:
+[S2 writeup](../../../spikes/2026-05-27-S2-gpu-probe-cross-platform.md),
+[S4 writeup](../../../spikes/2026-05-27-S4-llama-server-lifecycle.md).
+
+1. **`ServerLifecycle` ready-line detection — pin pattern #5 + #2.** b9371 emits
+   `srv  llama_server: model loaded` then `server is listening on http://…`.
+   The ready detector should match the **union of 5 patterns** (S4) with
+   `\bmodel loaded\b` primary and `server is listening on` as the strongest
+   fallback. Do **not** hard-code the old `"HTTP server listening"` string from
+   the architecture note above — it is not what b9371 emits.
+
+2. **`port-allocator` / lifecycle — `preflightBind` step.** Add a throwaway
+   `net.createServer().listen(port)` between allocation and `spawn` to close the
+   allocate→spawn race window. NOTE: b9371 binds the HTTP port *before* loading
+   the model and fast-fails on collision in ~58 ms (S4 F4) — so `preflightBind`
+   is about the race window, not avoiding model-load cost.
+
+3. **Typed-error union (spec § 14.1 / § 15) — grow + fix bind pattern.** Split
+   `server-spawn-failed` into discriminable variants: `server-spawn-failed`
+   (ENOENT/EACCES), `server-ready-timeout`, `model-load-failed`,
+   `port-bind-failed`, `context-exceeded`. The port-collision detector MUST
+   include `/couldn'?t bind/i` and `/HTTP server error/i` — b9371's real message
+   is `couldn't bind HTTP server socket`, which matched none of the originally
+   planned OS-level patterns (S4 F4). Context-overflow returns HTTP 400 with a
+   structured OpenAI-shape body carrying `type:"exceed_context_size_error"`,
+   `n_prompt_tokens`, `n_ctx` — surface those directly in the UI (S4 F3).
+
+4. **Backend ranking (§ 12.2) — compute-capability gates CUDA-build choice.**
+   Use the new `GpuDevice.computeCap` (S2). Maxwell (sm_52) runs the prebuilt
+   **CUDA 12.4** build via sm_50 PTX JIT (~23 s one-time cold start, then cached),
+   but **not** the CUDA 13.3 build (CUDA 13 dropped Maxwell). For cards that only
+   run CUDA via PTX JIT, **soft-demote CUDA below Vulkan** (Vulkan was instantly
+   ready and equally functional on the same cards), or pre-warm the JIT cache at
+   install. Ranking must read compute cap, not just vendor (S2 F16, S4 F13).
+
+5. **GPU-offload confirmation — do NOT parse for `offloaded N/N layers`.** b9371
+   dropped that log line in favor of `-fit` device-memory fitting (S4 F14).
+   Confirm offload via the `device_info` block (`CUDA0`/`Vulkan0` vs `CPU`) and,
+   for telemetry, the `llama-server` process's resident VRAM via `nvidia-smi`
+   (measured 1034 MiB for the Vulkan run — proof of real offload, not CPU fallback).
+
+6. **Cross-vendor device coalescing — key on UUID, not enumeration index.**
+   nvidia-smi and Vulkan enumerate multi-GPU rigs in *different* orders, but the
+   Vulkan `deviceUUID` equals the nvidia-smi `-L` UUID minus its `GPU-` prefix
+   (S2 F17). On identical-SKU multi-GPU rigs `name`+`deviceId` is NOT unique;
+   UUID is the only disambiguator. The GPU probe should surface Vulkan
+   `deviceUUID` (present in `vulkaninfo --summary`) and coalesce by normalized UUID.

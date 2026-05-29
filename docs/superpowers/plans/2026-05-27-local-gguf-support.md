@@ -1175,11 +1175,14 @@ git checkout main && git pull --ff-only && git checkout -b spike/v3.3.0-S4-serve
 
 - [ ] **Step 2: Download a small GGUF for testing.**
 
-Use TinyLlama or similar (≤ 1 GB) — keep the spike fast. Example: `bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF` Q4_K_M (~700 MB).
+Use TinyLlama or similar (≤ 1 GB) — keep the spike fast. Use `TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF` Q4_K_M (~638 MiB). (The `bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF` repo named in earlier drafts does not exist — HF returns 401; S5 standardized on TheBloke's anonymous-accessible fixture.)
 
 ```bash
 mkdir -p .spike-s4-cache
-curl -L -o .spike-s4-cache/tinyllama.gguf "https://huggingface.co/bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf"
+curl -L -o .spike-s4-cache/tinyllama.gguf "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
+# Verify the download: 668,788,096 bytes; SHA256 = HF's X-Linked-ETag header
+# (9fecc3b3cd76bba89d504f29b616eedf7da85b96540e490ca5824d3f7d2776a0), NOT the
+# plain ETag (015c9bb0…, which is HF's Xet/CAS hash). Confirmed on real hardware 2026-05-29 (S4).
 ```
 
 - [ ] **Step 3: Acquire the CPU build of llama.cpp-server for this machine.**
@@ -1382,17 +1385,20 @@ const tests = {
   },
   fileHead: async () => {
     // HEAD request for size, then range-byte download verification
-    const url = 'https://huggingface.co/bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf';
+    const url = 'https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf';
     const head = await fetch(url, { method: 'HEAD', redirect: 'follow' });
     return {
       url, status: head.status,
       contentLength: head.headers.get('content-length'),
       acceptsRanges: head.headers.get('accept-ranges'),
       etag: head.headers.get('etag'),
+      // NOTE (S4 hardware 2026-05-29): the FILE SHA256 is in `x-linked-etag`, not `etag`.
+      // On HF's Xet/CAS backend `etag` is the chunking hash; verify downloads against x-linked-etag.
+      sha256: head.headers.get('x-linked-etag'),
     };
   },
   rangeDownload: async () => {
-    const url = 'https://huggingface.co/bartowski/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf';
+    const url = 'https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf';
     const res = await fetch(url, { headers: { Range: 'bytes=0-1023' } });
     return {
       url, status: res.status,
