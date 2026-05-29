@@ -1,9 +1,9 @@
 # Spike S2 — GPU probe cross-platform
 
-**Date:** 2026-05-27
+**Date:** 2026-05-27 (autonomous scaffolding) · 2026-05-29 (hardware capture)
 **Time-box:** 1 day (autonomous scaffolding) + Rocky's hardware-capture pass
-**Decision:** **GO WITH CHANGES (awaiting hardware)**
-**Author:** Rocky Elsalaymeh (orchestrated via Claude Opus 4.7)
+**Decision:** **GO WITH CHANGES** — parsers validated against real dual-GPU NVIDIA hardware (2× GeForce GTX TITAN X). The "changes" are the Phase 1 `GpuInventory` shape extensions + the spec § 12.1 dual-Vulkan-command note; **zero parser fixes were required** on real captures.
+**Author:** Rocky Elsalaymeh (orchestrated via Claude Opus 4.7 scaffolding; Claude Opus 4.8 hardware capture)
 
 ## Context
 
@@ -44,10 +44,10 @@ This spike validates the four riskiest assumptions in that probe surface:
   `packages/local-gguf-runtime/src/gpu-probe/` will port these parsers
   verbatim and add `child_process.spawn` + timeout wrappers.
 - **`GpuInventory` shape is sufficient for v3.3.0 backend selection, with
-  6 strict shape extensions** — `computeCap`, `gfxTarget`, `vendorId`,
-  `deviceId`, `deviceType`, `driverInfo`, `apiVersion`, `coreCount`,
-  `metalSupport`, `uuid`. Every extension is optional. See
-  "Shape adjustments to GpuInventory" below.
+  10 optional shape extensions** (5 strict, 5 liberal) — `computeCap`,
+  `gfxTarget`, `uuid`, `coreCount`, `metalSupport` (strict) + `vendorId`,
+  `deviceId`, `deviceType`, `driverInfo`, `apiVersion` (liberal). Every
+  extension is optional. See "Shape adjustments to GpuInventory" below.
 - **7 synthetic fixtures committed** — 1 windows-nvidia (nvidia-smi CSV +
   -L + vulkaninfo), 1 linux-nvidia (CSV + vulkaninfo), 1 linux-amd
   (rocminfo), 1 macos-arm64 (text + XML/plist). All sourced from verified
@@ -55,6 +55,17 @@ This spike validates the four riskiest assumptions in that probe surface:
 - **Smoke test green.** `scripts/spike-S2/smoke-test.mjs` exercises every
   parser against every synthetic fixture and validates the partial
   `GpuInventory` shape against the spec contract. PASS on all 4 cases.
+- **Real hardware captured + validated (2026-05-29).** Rocky's primary rig —
+  **2× NVIDIA GeForce GTX TITAN X** (Maxwell, compute cap 5.2, 12288 MiB
+  each; driver 582.28 / CUDA 13.0; Vulkan 1.4.312) on **Windows 11 Pro for
+  Workstations (build 26200)** — captured to
+  `docs/spikes/S2-fixtures/windows-nvidia/`. The Windows parser produced a
+  correct inventory (CUDA 2 devices, Vulkan 2 devices, VRAM / compute cap /
+  driver / UUID all parsed) **with zero parser changes**. Two real-world
+  findings surfaced (Maxwell `compute_cap` confirmation + cross-vendor UUID
+  linkage) — see F16/F17 below. macOS + Linux + AMD captures deferred to a
+  follow-up session (no such rigs available now); synthetic fixtures cover
+  their parser shapes in the meantime.
 - **Hardware capture is Rocky's manual step** — `docs/spikes/S2-hardware-runbook.md`
   is the verbatim runbook. Windows is the highest-value capture (v3.3.0
   Phase 1 launch target); macOS + Linux are nice-to-have.
@@ -68,16 +79,18 @@ hardware. The work is split:
 | Step | Scope | Status |
 |---|---|---|
 | 1. Branch off main | Autonomous | Done (`spike/v3.3.0-S2-gpu-probe`) |
-| 2. Capture Windows raw outputs | **Hardware-blocked (Rocky)** | Awaiting; runbook authored |
-| 3. Capture macOS raw outputs | **Hardware-blocked (Rocky)** | Awaiting; runbook authored |
-| 4. Capture Linux raw outputs | **Hardware-blocked (Rocky)** | Awaiting; runbook authored |
+| 2. Capture Windows raw outputs | **Hardware (Rocky)** | ✅ Done 2026-05-29 — 2× GTX TITAN X, `windows-nvidia/` |
+| 3. Capture macOS raw outputs | **Hardware (Rocky)** | Deferred — no Mac in this session; synthetic covers parser shape |
+| 4. Capture Linux raw outputs | **Hardware (Rocky)** | Deferred — no Linux/AMD rig in this session; synthetic covers parser shape |
 | 5. Write minimal parser prototypes | Autonomous | Done — 3 parsers + 7 fixtures |
-| 6. Document GpuInventory shape gaps | Autonomous (provisional, against synthetic) | Done — 6 strict extensions proposed |
+| 6. Document GpuInventory shape gaps | Autonomous (validated against real Windows capture) | Done — 10 extensions (5 strict, 5 liberal) |
 | 7. Author writeup | Autonomous | This file |
-| 8–10. Commit, push, PR, decide GO/NO-GO | Autonomous (PR) + Rocky's final GO once hardware lands | In progress |
+| 8–10. Commit, push, PR, decide GO/NO-GO | Autonomous (PR) + Rocky's hardware GO | ✅ Windows captured; verdict GO WITH CHANGES |
 
-Cells marked `<!-- HARDWARE-AWAITING -->` below are the placeholders Rocky
-overwrites when his real captures land.
+Cells originally marked `<!-- HARDWARE-AWAITING -->` below were the
+placeholders Rocky overwrote when his real captures landed. As of 2026-05-29
+the Windows/NVIDIA cells hold real values; the macOS / Linux / AMD cells are
+marked deferred pending those rigs.
 
 ## Synthetic fixtures captured
 
@@ -105,11 +118,17 @@ default and Phase 2 unit tests consume Rocky's real captures.
 
 | Rig | GPU | OS | Driver | Captured? |
 |---|---|---|---|---|
-| Windows primary (Rocky) | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> |
-| Windows AMD (if available) | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> |
-| macOS (if available) | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> | n/a | <!-- HARDWARE-AWAITING --> |
-| Linux NVIDIA (if available) | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> |
-| Linux AMD ROCm (if available) | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> | <!-- HARDWARE-AWAITING --> |
+| Windows primary (Rocky) | 2× NVIDIA GeForce GTX TITAN X (Maxwell GM200, compute cap 5.2, 12288 MiB each) | Windows 11 Pro for Workstations 10.0.26200 (build 26200) | 582.28 — CUDA 13.0 (nvidia-smi banner); Vulkan 1.4.312 (`driverInfo` 582.28) | ✅ 2026-05-29 — `docs/spikes/S2-fixtures/windows-nvidia/` |
+| Windows AMD | n/a | n/a | n/a | Deferred — no AMD GPU on this rig |
+| macOS | n/a | n/a | n/a | Deferred — no Mac in this session |
+| Linux NVIDIA | n/a | n/a | n/a | Deferred — no native Linux rig in this session |
+| Linux AMD ROCm | n/a | n/a | n/a | Deferred — no AMD/ROCm rig in this session |
+
+> **Capture provenance.** The `windows-nvidia/` fixtures are verbatim output
+> of `nvidia-smi --query-gpu=name,memory.total,driver_version,compute_cap
+> --format=csv,noheader`, `nvidia-smi -L`, and `vulkaninfo --summary`, written
+> as UTF-8 (no BOM) to match genuine tool output. The `_synthetic/` fixtures
+> are untouched and remain the smoke-test regression set per the spike design.
 
 ## Parser confidence per command
 
@@ -129,10 +148,24 @@ real-world variability the parser must handle.
 
 Confidence summary: **all four targets are parseable from synthetic
 fixtures with the realistic shape we observe in published outputs.** The
-parsers handle the documented format-drift cases. Final confidence column
-flips from "synthetic-fixture-confirmed" to "real-hardware-confirmed" when
-Rocky's captures land — but no parser is at risk of needing a redesign
-based on what the synthetic exercise has revealed.
+parsers handle the documented format-drift cases.
+
+**Real-hardware confirmation (2026-05-29).** The `nvidia-smi --query-gpu CSV`,
+`nvidia-smi -L`, and `vulkaninfo --summary` parsers are now **real-hardware-confirmed**
+against Rocky's 2× GTX TITAN X rig. `node scripts/spike-S2/probe-windows.mjs
+docs/spikes/S2-fixtures/windows-nvidia` produced:
+
+- **CUDA:** 2 devices, `vramMb: 12288` each, `computeCap: "5.2"`,
+  `driverVersion: "582.28"`, both UUIDs cross-matched from `nvidia-smi -L`.
+- **Vulkan:** 2 devices, both `PHYSICAL_DEVICE_TYPE_DISCRETE_GPU`,
+  `vendorId: 0x10de`, `deviceId: 0x17c2`, `apiVersion: 1.4.312`,
+  `driverInfo: 582.28`, `vramMb: 0` (expected — `--summary` lacks heap sizes,
+  Finding F1).
+
+Zero parser edits were required. The `rocminfo` (Linux AMD) and
+`system_profiler` (macOS) parsers remain synthetic-fixture-confirmed pending
+hardware in a follow-up session. See F16/F17 for two real-world observations
+the live capture surfaced.
 
 ## Shape adjustments to GpuInventory
 
@@ -396,10 +429,70 @@ The probe code itself is JavaScript and doesn't need code-signing; the
 runtime BINARIES it selects (Phase 2 spawning of llama-server) do. That's
 external to this spike, gated on Mac signing Phases 1-3.
 
+### F16. Real-hardware: Maxwell `compute_cap 5.2` confirms the `computeCap` extension is load-bearing
+
+Rocky's primary rig is **2× GeForce GTX TITAN X** — Maxwell (GM200), which
+`nvidia-smi --query-gpu=compute_cap` reports as **`5.2`**. This is the exact
+scenario the `computeCap` strict shape extension was proposed for: the spike
+argued *"without this field we can't distinguish a CUDA-13-compatible card
+from a Maxwell relic that needs an older CUDA"* — and the hardware-capture
+pass produced a literal Maxwell card. The host's driver advertises CUDA 13.0
+(nvidia-smi banner), but **per-GPU compute capability 5.2 is what actually
+gates which `llama.cpp` CUDA build can run on it.**
+
+**Impact on backend ranking (spec § 12.2).** `compute_cap 5.2` means the
+prebuilt CUDA `llama.cpp` binaries (S1 tag `b9371`) must include SM 5.2 in
+their fat-binary architecture list or the CUDA path will fail to launch on
+this card, forcing a fall-back to the Vulkan backend (which the same rig
+exposes — both TITAN Xs enumerate as Vulkan DISCRETE_GPUs). **This makes the
+TITAN X rig an ideal S4 test case** for the CUDA-vs-Vulkan fallback decision:
+S4's CUDA leg should record whether the `b9371` CUDA build loads on SM 5.2 or
+whether Vulkan is the de-facto GPU path for Maxwell. (Cross-referenced in the
+S4 lifecycle writeup.)
+
+**Confidence:** the `computeCap` extension graduates from "recommended" to
+"validated against real hardware that exercises the exact decision it drives."
+
+### F17. Real-hardware: NVIDIA and Vulkan enumerate the two cards in opposite order, but `deviceUUID` cross-links them exactly
+
+On the dual-TITAN-X rig the two enumeration orders are **reversed**:
+
+| Enumerator | Index 0 | Index 1 |
+|---|---|---|
+| `nvidia-smi -L` | `GPU-90b5d104-…661f` | `GPU-4056aaf7-…ca8f` |
+| `vulkaninfo --summary` (`deviceUUID`) | `4056aaf7-…ca8f` | `90b5d104-…661f` |
+
+Two findings fall out of this:
+
+1. **Index-based coalescing is unsafe.** A Phase 2 backend ranker that tried
+   to merge the CUDA and Vulkan views of "the same physical card" by
+   enumeration index would mis-pair them on a multi-GPU host. Confirmed, not
+   theoretical.
+2. **UUID is the reliable cross-vendor key.** The Vulkan `deviceUUID`
+   (`4056aaf7-ba2a-a8f5-1bcb-5db6fd91ca8f`) is **byte-for-byte equal** to the
+   `nvidia-smi -L` UUID minus its `GPU-` prefix
+   (`GPU-4056aaf7-ba2a-a8f5-1bcb-5db6fd91ca8f`). This means cross-vendor
+   coalescing (F13) can key on UUID even when the two probes disagree on
+   ordering — and it must, because on identical-SKU multi-GPU rigs the
+   `name`+`deviceId` pair is *not* unique (both cards report
+   `NVIDIA GeForce GTX TITAN X` / `0x17c2`). UUID is the only disambiguator.
+
+**Impact.** Strengthens the `uuid` strict extension's rationale and refines
+the F13 coalescing note: Phase 2 should normalize the `GPU-` prefix when
+matching `nvidia-smi -L` UUIDs against Vulkan `deviceUUID`s, and must coalesce
+by UUID rather than index or name on multi-GPU hosts. The spike's parser
+already emits `uuid` for CUDA devices; Phase 2's `vulkan.ts` should additionally
+emit `deviceUUID` for Vulkan devices. The `deviceUUID` line **is already present
+in `vulkaninfo --summary`** output (visible in the captured fixture) and is
+already parsed into the per-GPU stanza dict — the spike just doesn't surface it
+in the emitted device object. Surfacing it is a one-line change, no `--json`
+needed. This is a small, concrete Phase 2 refinement, not a spec blocker.
+
 ## Decision rationale
 
-**GO WITH CHANGES (awaiting hardware).** The spike validates all four
-risks autonomously to the limit of what synthetic fixtures can prove:
+**GO WITH CHANGES.** The spike validated all four risks against synthetic
+fixtures and then confirmed the Windows/NVIDIA path against real dual-GPU
+hardware (2× GTX TITAN X) on 2026-05-29 with zero parser changes:
 
 1. **Parseability:** ✓ confirmed — pure-Node parsers, ~1100 LOC total
    including smoke test + fixtures. Phase 2 ports them as-is.
@@ -426,11 +519,15 @@ The two "changes" embedded in this GO:
    per Khronos's recommended use. Spec text should be updated to reflect
    both.
 
-The **awaiting hardware** caveat means: when Rocky runs the
-[hardware runbook](./S2-hardware-runbook.md), real captures may surface a
-format-drift case we didn't anticipate from synthetic. The PR can be
-reviewed and merged on this evidence; if Rocky's real captures break a
-parser, it's a follow-up fix not a re-spike.
+**Hardware-capture outcome (2026-05-29).** Rocky ran the
+[hardware runbook](./S2-hardware-runbook.md) on his Windows / dual-NVIDIA rig.
+No format-drift case broke the parser — the Windows/NVIDIA path is now
+real-hardware-confirmed and the captures surfaced two findings that *strengthen*
+the design (F16 Maxwell `compute_cap`, F17 UUID cross-linkage) rather than
+requiring fixes. The remaining platforms (macOS, native Linux, AMD/ROCm) stay
+synthetic-fixture-confirmed; their real captures are a non-blocking follow-up
+whenever those rigs are available. If a future real capture ever breaks a
+parser, it's a follow-up fix, not a re-spike.
 
 ## Phase 2 carry-over
 
@@ -541,21 +638,22 @@ read against installed system tools. Total wall-clock: ~5 minutes per
 rig (commands take milliseconds; the time is in running each one,
 inspecting output, committing).
 
-After captures land, the writeup updates from `GO WITH CHANGES (awaiting
-hardware)` to `GO`. The "Hardware tested" table fills in. Each
-`<!-- HARDWARE-AWAITING -->` cell gets a concrete value. If any real
-capture breaks a parser, the parser is patched as a follow-up commit on
-this branch.
+**Done for Windows/NVIDIA (2026-05-29):** the `windows-nvidia/` captures
+landed, the "Hardware tested" table's Windows row is filled, every
+`<!-- HARDWARE-AWAITING -->` cell is resolved (Windows with real values;
+macOS/Linux/AMD marked deferred), and the decision reads `GO WITH CHANGES`
+(real-hardware-confirmed, no parser fix needed). The macOS / Linux / AMD rows
+fill in whenever those rigs are available — a non-blocking follow-up.
 
 ---
 
 **Spike status:** parsers authored, synthetic fixtures captured + smoke-tested,
-GpuInventory shape extensions proposed, runbook authored, writeup complete.
-Awaiting Rocky's hardware-capture pass for the final flip from "GO WITH
-CHANGES (awaiting hardware)" to "GO".
+GpuInventory shape extensions proposed, runbook authored, writeup complete,
+**Windows/NVIDIA hardware captured + parser-validated (2026-05-29, 2× GTX
+TITAN X)**. macOS / Linux / AMD captures deferred to a follow-up session.
 
 **Recommendation:** **GO WITH CHANGES** — proceed to Phase 2 GPU probe
 implementation with the two amendments (Phase 1 shape extension + spec
-§ 12.1 dual-Vulkan-command note). Rocky's hardware pass is non-blocking
-for the PR review/merge; it's the validation that the parsers handle his
-specific GPU(s).
+§ 12.1 dual-Vulkan-command note), plus the F17 refinement (coalesce by UUID,
+surface Vulkan `deviceUUID`). The Windows/NVIDIA path is real-hardware-confirmed;
+the remaining platforms are synthetic-confirmed and non-blocking for Phase 1.

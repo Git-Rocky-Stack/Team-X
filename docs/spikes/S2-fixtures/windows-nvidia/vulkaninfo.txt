@@ -1,0 +1,62 @@
+==========
+VULKANINFO
+==========
+
+Vulkan Instance Version: 1.4.309
+
+
+Instance Extensions: count = 19
+-------------------------------
+VK_EXT_debug_report                    : extension revision 10
+VK_EXT_debug_utils                     : extension revision 2
+VK_EXT_direct_mode_display             : extension revision 1
+VK_EXT_surface_maintenance1            : extension revision 1
+VK_EXT_swapchain_colorspace            : extension revision 5
+VK_KHR_device_group_creation           : extension revision 1
+VK_KHR_display                         : extension revision 23
+VK_KHR_external_fence_capabilities     : extension revision 1
+VK_KHR_external_memory_capabilities    : extension revision 1
+VK_KHR_external_semaphore_capabilities : extension revision 1
+VK_KHR_get_display_properties2         : extension revision 1
+VK_KHR_get_physical_device_properties2 : extension revision 2
+VK_KHR_get_surface_capabilities2       : extension revision 1
+VK_KHR_portability_enumeration         : extension revision 1
+VK_KHR_surface                         : extension revision 25
+VK_KHR_surface_protected_capabilities  : extension revision 1
+VK_KHR_win32_surface                   : extension revision 6
+VK_LUNARG_direct_driver_loading        : extension revision 1
+VK_NV_external_memory_capabilities     : extension revision 1
+
+Instance Layers: count = 2
+--------------------------
+VK_LAYER_NV_optimus NVIDIA Optimus layer 1.4.312  version 1
+VK_LAYER_NV_present NVIDIA GR2608 layer  1.4.312  version 1
+
+Devices:
+========
+GPU0:
+	apiVersion         = 1.4.312
+	driverVersion      = 582.28.0.0
+	vendorID           = 0x10de
+	deviceID           = 0x17c2
+	deviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+	deviceName         = NVIDIA GeForce GTX TITAN X
+	driverID           = DRIVER_ID_NVIDIA_PROPRIETARY
+	driverName         = NVIDIA
+	driverInfo         = 582.28
+	conformanceVersion = 1.4.1.3
+	deviceUUID         = 4056aaf7-ba2a-a8f5-1bcb-5db6fd91ca8f
+	driverUUID         = a70d28c3-efe0-5567-9edc-ff605278cc82
+GPU1:
+	apiVersion         = 1.4.312
+	driverVersion      = 582.28.0.0
+	vendorID           = 0x10de
+	deviceID           = 0x17c2
+	deviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+	deviceName         = NVIDIA GeForce GTX TITAN X
+	driverID           = DRIVER_ID_NVIDIA_PROPRIETARY
+	driverName         = NVIDIA
+	driverInfo         = 582.28
+	conformanceVersion = 1.4.1.3
+	deviceUUID         = 90b5d104-c751-0f3d-a02c-71711408661f
+	driverUUID         = a70d28c3-efe0-5567-9edc-ff605278cc82
