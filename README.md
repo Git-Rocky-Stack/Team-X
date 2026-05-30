@@ -79,6 +79,8 @@ Grab the latest release for your platform from [GitHub Releases](https://github.
 | macOS | `Team-X-x.x.x.dmg` | x64 (Intel), arm64 (Apple Silicon) |
 | Linux | `Team-X-x.x.x.AppImage` / `.deb` | x64 |
 
+> **Linux AppImage note:** the AppImage runtime requires **FUSE 2** (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora). If the AppImage won't start, either install that package or run `./Team-X-x.x.x-x64.AppImage --appimage-extract-and-run`. The `.deb` needs no FUSE and resolves its own dependencies (`sudo apt install ./Team-X-x.x.x-x64.deb`).
+
 ### From Source
 
 ```bash
