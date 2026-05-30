@@ -154,4 +154,61 @@ describe('spawnServer', () => {
     expect(crashInfo.exitCode).toBe(139);
     expect(crashInfo.stderr).toContain('sigsegv');
   });
+
+  it('rejects immediately with server-spawn-failed on a spawn error (ENOENT)', async () => {
+    const fakeProc = makeFakeProc();
+    const fakeSpawn = vi.fn().mockReturnValue(fakeProc);
+
+    const promise = spawnServer({
+      binaryPath: '/does/not/exist/server',
+      modelPath: '/m.gguf',
+      port: 50000,
+      nCtx: 4096,
+      nGpuLayers: 35,
+      nBatch: 512,
+      nThreads: 8,
+      spawnFn: fakeSpawn as never,
+      // Long timeout: the test proves we reject on 'error' WITHOUT waiting it out.
+      readyTimeoutMs: 60_000,
+    });
+
+    setImmediate(() => {
+      fakeProc.emit('error', new Error('spawn /does/not/exist/server ENOENT'));
+    });
+
+    await expect(promise).rejects.toMatchObject({ error: { kind: 'server-spawn-failed' } });
+    await expect(promise).rejects.toThrowError(/ENOENT/);
+  });
+
+  it('onCrash delivers a buffered crash to a subscriber that registers after the exit', async () => {
+    const fakeProc = makeFakeProc();
+    const fakeSpawn = vi.fn().mockReturnValue(fakeProc);
+
+    const handle = await new Promise<Awaited<ReturnType<typeof spawnServer>>>((res) => {
+      const p = spawnServer({
+        binaryPath: '/x/server',
+        modelPath: '/m.gguf',
+        port: 50000,
+        nCtx: 4096,
+        nGpuLayers: 35,
+        nBatch: 512,
+        nThreads: 8,
+        spawnFn: fakeSpawn as never,
+        readyTimeoutMs: 5000,
+      });
+      setImmediate(() => fakeProc.stdout.emit('data', Buffer.from('HTTP server listening\n')));
+      p.then(res);
+    });
+
+    // Crash happens BEFORE any onCrash subscriber registers.
+    fakeProc.stderr.emit('data', Buffer.from('boom\n'));
+    fakeProc.emit('exit', 1, null);
+
+    // Late registration still receives the buffered crash info synchronously.
+    const crashInfo = await new Promise<{ exitCode: number | null; stderr: string }>((resolve) => {
+      handle.onCrash(resolve);
+    });
+    expect(crashInfo.exitCode).toBe(1);
+    expect(crashInfo.stderr).toContain('boom');
+  });
 });

@@ -48,11 +48,23 @@ export async function spawnServer(opts: SpawnServerOptions): Promise<ServerHandl
   let stdoutBuf = '';
   let ready = false;
 
+  // Persistent 'error' listener so a post-ready runtime error never surfaces as
+  // an unhandled 'error' event (which would crash the host process). Pre-ready
+  // spawn errors are handled — and rejected — by waitForReadyOrExit below.
+  proc.on('error', () => {
+    /* recorded via stderr/exit; presence prevents an unhandled throw */
+  });
+
   proc.stdout?.on('data', (d: Buffer) => {
     const s = d.toString();
-    stdoutBuf += s;
     if (opts.onLog) opts.onLog(s, 'stdout');
-    if (READY_LINE_REGEX.test(stdoutBuf)) ready = true;
+    // Only accumulate + scan until ready: llama-server is verbose, and
+    // re-testing an ever-growing buffer on every chunk is O(n²). Once the
+    // ready-line is seen we stop buffering (callers stream via onLog).
+    if (!ready) {
+      stdoutBuf += s;
+      if (READY_LINE_REGEX.test(stdoutBuf)) ready = true;
+    }
   });
   proc.stderr?.on('data', (d: Buffer) => {
     const s = d.toString();
@@ -77,10 +89,15 @@ export async function spawnServer(opts: SpawnServerOptions): Promise<ServerHandl
 
   const crashCallbacks: Array<(info: { exitCode: number | null; stderr: string }) => void> = [];
   let stopped = false;
+  // Buffer the crash so a consumer (e.g. the LRU pool) that registers onCrash
+  // after a fast post-ready crash still receives it, rather than the slot
+  // leaking silently.
+  let pendingCrash: { exitCode: number | null; stderr: string } | undefined;
 
   proc.on('exit', (code) => {
     if (!stopped) {
       const info = { exitCode: code, stderr: stderrBuf };
+      pendingCrash = info;
       for (const cb of crashCallbacks) cb(info);
     }
   });
@@ -112,6 +129,12 @@ export async function spawnServer(opts: SpawnServerOptions): Promise<ServerHandl
       });
     },
     onCrash(cb) {
+      // Deliver immediately if the process already crashed before this
+      // subscriber registered (race with a fast post-ready crash).
+      if (pendingCrash) {
+        cb(pendingCrash);
+        return;
+      }
       crashCallbacks.push(cb);
     },
   };
@@ -141,14 +164,16 @@ function buildArgs(opts: SpawnServerOptions): string[] {
 }
 
 /**
- * Polls until:
+ * Resolves/rejects on the first of:
  *   (a) isReady() returns true → resolves
- *   (b) proc emits 'exit' before ready → rejects with server-spawn-failed
- *   (c) timeoutMs elapses without ready → kills proc, rejects
+ *   (b) proc emits 'error' (e.g. ENOENT — bad binary path) → rejects immediately
+ *       with the spawn error, instead of waiting out the full timeout
+ *   (c) proc emits 'exit' before ready → rejects with server-spawn-failed
+ *       (unless the ready-line landed in the same tick — ready wins)
+ *   (d) timeoutMs elapses without ready → kills proc, rejects
  *
- * Timer-leak safety: every resolve/reject path clears BOTH the interval AND
- * the outer timeout. A single `settled` flag prevents double-rejection from
- * the interval and timeout racing each other.
+ * Timer/listener-leak safety: `settle()` runs once (guarded by `settled`),
+ * clears BOTH timers, and removes the 'exit'/'error' listeners it registered.
  */
 function waitForReadyOrExit(
   proc: ChildProcess,
@@ -158,36 +183,41 @@ function waitForReadyOrExit(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false;
-    let exitCode: number | null = null;
-    let exited = false;
+
+    const rejectSpawnFailed = (exitCode: number | null, extra = '') =>
+      reject(
+        new ServerLifecycleError({
+          kind: 'server-spawn-failed',
+          exitCode,
+          stderr: `${stderrSnap()}${extra}`,
+        }),
+      );
+
+    const onExit = (code: number | null) => {
+      // Ready-line may have landed in the same tick as exit — ready wins.
+      if (isReady()) settle(() => resolve());
+      else settle(() => rejectSpawnFailed(code));
+    };
+    const onError = (err: Error) => {
+      // Spawn-level failure (ENOENT, EACCES). Surface it now, don't time out.
+      settle(() => rejectSpawnFailed(null, err.message));
+    };
 
     const settle = (fn: () => void) => {
       if (settled) return;
       settled = true;
       clearInterval(interval);
       clearTimeout(timeoutHandle);
+      proc.removeListener('exit', onExit);
+      proc.removeListener('error', onError);
       fn();
     };
 
-    proc.on('exit', (code) => {
-      exitCode = code;
-      exited = true;
-    });
+    proc.on('exit', onExit);
+    proc.on('error', onError);
 
     const interval = setInterval(() => {
-      if (isReady()) {
-        settle(() => resolve());
-      } else if (exited) {
-        settle(() =>
-          reject(
-            new ServerLifecycleError({
-              kind: 'server-spawn-failed',
-              exitCode,
-              stderr: stderrSnap(),
-            }),
-          ),
-        );
-      }
+      if (isReady()) settle(() => resolve());
     }, 50);
 
     const timeoutHandle = setTimeout(() => {
@@ -197,13 +227,7 @@ function waitForReadyOrExit(
         } catch {
           /* already dead */
         }
-        reject(
-          new ServerLifecycleError({
-            kind: 'server-spawn-failed',
-            exitCode: null,
-            stderr: stderrSnap(),
-          }),
-        );
+        rejectSpawnFailed(null);
       });
     }, timeoutMs);
   });
