@@ -33,6 +33,12 @@ export function createLruPool(deps: LruPoolDeps, initialMax: number): LruPool {
   let maxConcurrent = initialMax;
   const entries = new Map<string, LoadedEntry>();
   const inFlight = new Map<string, Promise<ServerHandle>>();
+  // Serializes the capacity-check + load + commit critical section. Without it,
+  // two concurrent acquires for different models both observe spare capacity
+  // and both load, exceeding maxConcurrent (with the default max=1, that means
+  // two llama-server processes — an OOM risk). The gate never rejects (the load
+  // body swallows errors into the per-load promise), so the chain stays alive.
+  let loadGate: Promise<void> = Promise.resolve();
 
   async function evictOldest() {
     let oldest: LoadedEntry | null = null;
@@ -65,28 +71,52 @@ export function createLruPool(deps: LruPoolDeps, initialMax: number): LruPool {
       const pending = inFlight.get(modelId);
       if (pending) return pending;
 
-      const loadPromise = (async () => {
-        await ensureCapacity();
-        const handle = await deps.loadModel(modelId);
-        const entry: LoadedEntry = {
-          modelId,
-          handle,
-          loadedAt: Date.now(),
-          lastAccessedAt: Date.now(),
-        };
-        entries.set(modelId, entry);
-        inFlight.delete(modelId);
-        return handle;
-      })();
+      // Reserve the in-flight slot SYNCHRONOUSLY (before any await) via a
+      // deferred promise, so a concurrent acquire for this same id dedups, and
+      // the serialized gate below enforces capacity against committed entries.
+      let resolveLoad!: (h: ServerHandle) => void;
+      let rejectLoad!: (e: unknown) => void;
+      const loadPromise = new Promise<ServerHandle>((res, rej) => {
+        resolveLoad = res;
+        rejectLoad = rej;
+      });
       inFlight.set(modelId, loadPromise);
-      try {
-        return await loadPromise;
-      } catch (e) {
-        inFlight.delete(modelId);
-        throw e;
-      }
+
+      loadGate = loadGate.then(async () => {
+        try {
+          await ensureCapacity();
+          const handle = await deps.loadModel(modelId);
+          entries.set(modelId, {
+            modelId,
+            handle,
+            loadedAt: Date.now(),
+            lastAccessedAt: Date.now(),
+          });
+          inFlight.delete(modelId);
+          resolveLoad(handle);
+        } catch (e) {
+          inFlight.delete(modelId);
+          rejectLoad(e);
+        }
+      });
+
+      return loadPromise;
     },
     async release(modelId) {
+      // If a load is still in flight, wait for it before stopping so the
+      // release isn't silently dropped (which would leak the entry into the
+      // pool once the load commits).
+      const pending = inFlight.get(modelId);
+      if (pending) {
+        try {
+          const handle = await pending;
+          await handle.stop();
+        } catch {
+          /* best effort — load may have failed, nothing to stop */
+        }
+        entries.delete(modelId);
+        return;
+      }
       const entry = entries.get(modelId);
       if (!entry) return;
       entries.delete(modelId);

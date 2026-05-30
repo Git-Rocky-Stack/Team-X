@@ -167,8 +167,8 @@ describe('LruPool.acquire', () => {
     const p1 = pool.acquire('model-dedup');
     const p2 = pool.acquire('model-dedup');
 
-    // Wait a tick so the loadModel mock is invoked and resolveLoad is assigned
-    await Promise.resolve();
+    // Flush microtasks so the gated load reaches loadModel and assigns resolveLoad.
+    await new Promise((r) => setTimeout(r, 0));
 
     // Resolve the single in-flight load (only one loadModel call was made)
     expect(resolveLoad).toBeDefined();
@@ -361,5 +361,49 @@ describe('LruPool.shutdownAll', () => {
     await pool.acquire('model-crash');
     await expect(pool.shutdownAll()).resolves.toBeUndefined();
     expect(pool.getStatus().loaded).toHaveLength(0);
+  });
+});
+
+describe('LruPool concurrency', () => {
+  it('concurrent acquires for different models never exceed maxConcurrent (default 1)', async () => {
+    const handles: Record<string, ServerHandle> = {
+      A: makeFakeHandle(7001),
+      B: makeFakeHandle(7002),
+    };
+    const loadModel = vi.fn().mockImplementation((id: string) => Promise.resolve(handles[id]));
+    const pool = createLruPool({ loadModel }, 1);
+
+    // Fire both concurrently — same tick, no await between them. The serialized
+    // load gate must enforce max=1: A loads, then B evicts A before loading.
+    const [hA, hB] = await Promise.all([pool.acquire('A'), pool.acquire('B')]);
+
+    expect(hA).toBe(handles.A);
+    expect(hB).toBe(handles.B);
+    expect(handles.A?.stop).toHaveBeenCalledOnce(); // A evicted to make room for B
+    const status = pool.getStatus();
+    expect(status.loaded).toHaveLength(1); // never two at once
+    expect(status.loaded[0]?.modelId).toBe('B');
+  });
+
+  it('release during an in-flight load stops the handle and does not leak the entry', async () => {
+    const handle = makeFakeHandle(7100);
+    let resolveLoad!: (h: ServerHandle) => void;
+    const loadModel = vi.fn().mockImplementation(
+      () =>
+        new Promise<ServerHandle>((res) => {
+          resolveLoad = res;
+        }),
+    );
+    const pool = createLruPool({ loadModel }, 1);
+
+    const acquireP = pool.acquire('X'); // inFlight['X'] reserved synchronously
+    // Flush microtasks so the gated load reaches loadModel (resolveLoad assigned).
+    await new Promise((r) => setTimeout(r, 0));
+    const releaseP = pool.release('X'); // sees the in-flight load, waits for it
+    resolveLoad(handle); // load now completes
+    await Promise.all([acquireP, releaseP]);
+
+    expect(handle.stop).toHaveBeenCalledOnce(); // released handle was stopped
+    expect(pool.getStatus().loaded).toHaveLength(0); // entry did not leak back in
   });
 });
