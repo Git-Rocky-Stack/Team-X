@@ -82,3 +82,6 @@ docs/Old.Claude-md-to-4-19-26.txt
 CLAUDE.md
 .gstack/
 .claude/
+
+# code review artifacts (jez/codex review reports — can be large, e.g. .jez/reviews/*.md)
+.jez/
