@@ -107,13 +107,15 @@ git log --oneline -20 | grep -i "phase 1\|phase-01\|foundation"
 
 Expected: see the Phase 1 merge commit on `main`. If missing, STOP.
 
-- [ ] **Step 3: Verify migration `0014` is on disk.**
+- [ ] **Step 3: Verify migration `0036` is on disk.**
+
+> Authored as `0014`; shipped as `0036_local_gguf` (see the master plan's migration-number correction note).
 
 ```bash
-ls apps/desktop/src/main/db/migrations/ | grep 0014
+ls apps/desktop/src/main/db/migrations/ | grep 0036
 ```
 
-Expected: `0014_local_gguf.sql` present.
+Expected: `0036_local_gguf.sql` present.
 
 - [ ] **Step 4: Create phase branch.**
 

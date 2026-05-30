@@ -6,6 +6,8 @@
 >
 > **Codex Stage 3 review:** REQUIRED (this phase introduces IPC contracts + SQL migration — both security-sensitive boundaries).
 
+> **⚠️ Migration number:** Authored here as `0014_local_gguf`, this **shipped as `0036_local_gguf`** — `main` had advanced to `0035` by implementation time (see the master plan's migration-number correction note). Every `0014` reference in this file maps to `0036`: SQL `migrations/0036_local_gguf.sql`, test `db/0036-local-gguf-migration.test.ts`, journal `idx: 36`.
+
 **Goal:** Scaffold the foundation that every subsequent phase depends on — new `@team-x/local-gguf-runtime` package, shared-types contracts, Drizzle migration `0014_local_gguf` with 5 tables + indexes, IPC handler stubs (typed-but-not-implemented), preload bridge, 4 db repos, runtime-settings accessor.
 
 **Architecture:** Phase 1 introduces no business logic — only structural surfaces and type contracts. Every IPC handler stub throws a typed `not-implemented` error that subsequent phases replace with real implementations. The migration is forward-only; rollback is documented but not implemented. All public types are exported from `@team-x/shared-types`.
