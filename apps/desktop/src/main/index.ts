@@ -137,6 +137,11 @@ import { buildCommandHandlers } from './ipc/command-handlers.js';
 import { buildCopilotHandlers } from './ipc/copilot-handlers.js';
 import { buildEnhancedAiHandlers } from './ipc/enhanced-ai-handlers.js';
 import { HUMAN_USER_ID, createIpcHandlers } from './ipc/handlers.js';
+import { registerLocalGgufBenchmarkHandlers } from './ipc/local-gguf-benchmark-handlers.js';
+import { registerLocalGgufEndpointHandlers } from './ipc/local-gguf-endpoint-handlers.js';
+import { registerLocalGgufHfHandlers } from './ipc/local-gguf-hf-handlers.js';
+import { registerLocalGgufLibraryHandlers } from './ipc/local-gguf-library-handlers.js';
+import { registerLocalGgufRuntimeHandlers } from './ipc/local-gguf-runtime-handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
 import { setupApplicationMenu } from './menu.js';
@@ -2898,6 +2903,18 @@ app
       (_evt, req: import('@team-x/shared-types').CopilotConfigureArgs) =>
         copilotHandlers.configure(req),
     );
+
+    // Local & Networked GGUF Support (v3.3.0). Phase 1 registers the full
+    // `localGguf.*` channel surface so the preload bridge has live handlers
+    // to invoke; each handler throws a not-implemented error until its
+    // owning phase lands the real service (runtime/pool → P2, library → P3,
+    // endpoint → P5, hf → P7, benchmark → P10). The registration functions
+    // grow a `deps` argument at that point — this single call-site updates.
+    registerLocalGgufLibraryHandlers(ipcMain);
+    registerLocalGgufRuntimeHandlers(ipcMain);
+    registerLocalGgufHfHandlers(ipcMain);
+    registerLocalGgufBenchmarkHandlers(ipcMain);
+    registerLocalGgufEndpointHandlers(ipcMain);
 
     console.log('[main] orchestrator + IPC ready');
 

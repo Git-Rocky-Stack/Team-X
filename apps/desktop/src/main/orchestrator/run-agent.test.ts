@@ -651,10 +651,12 @@ describe('runAgent', () => {
     });
 
     it('non-Error throws are coerced to a string in the error field', async () => {
+      /* eslint-disable require-yield -- intentional: the generator throws before producing any chunk (same reason as the biome-ignore below) */
       // biome-ignore lint/correctness/useYield: intentional — generator throws before any chunk is produced (matches the runtime path where a provider rejects on first send)
       const provider: ProviderStreamFn = async function* () {
         throw 'string error';
       };
+      /* eslint-enable require-yield */
 
       await expect(
         runAgent(

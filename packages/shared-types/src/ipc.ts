@@ -119,6 +119,7 @@ import type {
   CopilotCategoryWeights,
   DashboardEvent,
 } from './events.js';
+import type { LocalGgufApi } from './local-gguf.js';
 import type { PrivacyTier, ProviderConfig, ProviderKind } from './providers.js';
 
 export type { CopilotCategoryWeights } from './events.js';
@@ -3641,6 +3642,15 @@ export interface TeamXApi {
     /** Query proactive state. */
     getState(req: ProactiveGetStateRequest): Promise<ProactiveGetStateResponse>;
   };
+
+  /**
+   * Local & Networked GGUF Support (v3.3.0). The full typed surface ships
+   * in Phase 1; every channel is a not-implemented stub until its owning
+   * phase lands the real handler (runtime/pool → P2, library → P3,
+   * endpoint → P5, hf → P7, benchmark → P10). See `LocalGgufApi` in
+   * `local-gguf.ts` for the per-area method contracts.
+   */
+  localGguf: LocalGgufApi;
 }
 
 /**

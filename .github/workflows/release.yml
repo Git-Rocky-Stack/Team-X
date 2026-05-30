@@ -117,6 +117,67 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm -F @team-x/desktop dist:${{ matrix.platform }}
 
+      # Smoke-test the Linux AppImage before it can ship. electron-builder's
+      # AppImage runtime requires FUSE 2 on the host to self-mount — a missing
+      # libfuse2 (libfuse2t64 on Ubuntu 24.04) makes the AppImage fail to start
+      # before any app code runs, while the .deb is unaffected (issue #4). This
+      # job previously built the AppImage but never launched it, so a
+      # non-starting build shipped undetected. We install FUSE 2, prove the
+      # image self-mounts (the exact issue #4 path), then boot it headlessly
+      # under Xvfb and assert it survives a short startup window.
+      - name: Smoke-test AppImage (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          set -uo pipefail
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          # Ubuntu 24.04 ships FUSE 2 as libfuse2t64; older runners use libfuse2.
+          sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2
+
+          APPIMAGE="$(ls release/*/Team-X-*-x64.AppImage 2>/dev/null | head -n1)"
+          if [ -z "${APPIMAGE}" ]; then
+            echo "::error::No AppImage found under release/*/ — packaging produced none."
+            ls -R release/ 2>/dev/null || true
+            exit 1
+          fi
+          chmod +x "${APPIMAGE}"
+          echo "Smoke-testing: ${APPIMAGE}"
+
+          # 1) Deterministic FUSE/runtime check: the image must self-mount.
+          #    A broken FUSE path or corrupt squashfs exits non-zero here.
+          "${APPIMAGE}" --appimage-mount >/tmp/aimount.log 2>&1 &
+          MNT_PID=$!
+          sleep 3
+          if ! kill -0 "${MNT_PID}" 2>/dev/null; then
+            wait "${MNT_PID}" || true
+            echo "::error::AppImage failed to self-mount (FUSE/runtime broken)."
+            cat /tmp/aimount.log 2>/dev/null || true
+            exit 1
+          fi
+          MNT="$(head -n1 /tmp/aimount.log 2>/dev/null || true)"
+          echo "Self-mounted OK at: ${MNT:-<unknown>}"
+          if [ -n "${MNT}" ] && [ -e "${MNT}/AppRun" ]; then echo "AppRun present in mount."; fi
+          kill "${MNT_PID}" 2>/dev/null || true
+          wait "${MNT_PID}" 2>/dev/null || true
+
+          # 2) Functional boot check: launch headless and require it to stay up.
+          #    --no-sandbox is needed on CI runners (no SUID sandbox / restricted
+          #    user namespaces); it affects only this boot check, not artifacts.
+          xvfb-run -a "${APPIMAGE}" --no-sandbox >/tmp/aiboot.log 2>&1 &
+          APP_PID=$!
+          for i in $(seq 1 25); do
+            if ! kill -0 "${APP_PID}" 2>/dev/null; then
+              wait "${APP_PID}"; code=$?
+              echo "::error::AppImage exited early (code ${code}) — failed to start."
+              echo "----- boot log -----"; cat /tmp/aiboot.log 2>/dev/null || true
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "AppImage booted and stayed alive 25s — smoke test passed."
+          kill "${APP_PID}" 2>/dev/null || true
+          wait "${APP_PID}" 2>/dev/null || true
+
       # Upload installers + electron-updater manifests + diff-update block
       # maps. Whitelist by artifact-name pattern so the win-unpacked binary
       # (`win-unpacked/Team-X.exe`, ~181 MB) does NOT get bundled — the v3.2.0

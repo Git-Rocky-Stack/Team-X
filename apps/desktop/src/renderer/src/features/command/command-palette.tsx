@@ -925,6 +925,16 @@ function StepLogView({
       </header>
 
       {/* Step scroll container */}
+      {/*
+        Roving-focus keyboard navigation: ArrowUp/ArrowDown on the list move
+        focus between the already-focusable step cards (see onListKeyDown).
+        jsx-a11y flags onKeyDown on a <ul> because lists are non-interactive,
+        but here the handler only delegates focus to child controls — it does
+        not make the list itself act as a button. Switching to role="listbox"
+        would change screen-reader semantics, so we keep the list role and
+        suppress this one heuristic.
+      */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <ul
         ref={listRef}
         aria-label="Agent step transcript"

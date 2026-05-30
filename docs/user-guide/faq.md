@@ -419,6 +419,37 @@ The defaults are produced by `membershipCapabilitiesForRole()` in `operator-acce
 - macOS: `~/Library/Application Support/Team-X/logs`
 - Linux: `~/.config/Team-X/logs`
 
+### My Linux AppImage won't start. What do I do?
+
+This is almost always **FUSE 2**. An AppImage is a self-mounting image, and its
+runtime needs the FUSE 2 library (`libfuse.so.2`) on your machine — Team-X's own
+libraries are bundled, but FUSE is not. Modern Ubuntu (22.04+) stopped installing
+it by default, and Ubuntu 24.04 renamed the package to `libfuse2t64`, so a stock
+desktop double-clicks the AppImage and nothing happens.
+
+**Two ways to fix it:**
+
+1. **Run without installing anything** (extracts and runs in place):
+   ```
+   ./Team-X-<version>-x64.AppImage --appimage-extract-and-run
+   ```
+2. **Install FUSE 2 once:**
+   - Ubuntu 24.04: `sudo apt install libfuse2t64`
+   - Ubuntu 22.04 / Debian: `sudo apt install libfuse2`
+   - Fedora: `sudo dnf install fuse-libs`
+
+**Prefer not to deal with FUSE at all?** Use the **`.deb`** instead — it installs
+like any system package and pulls its own dependencies:
+```
+sudo apt install ./Team-X-<version>-x64.deb
+```
+
+To see the exact error, run the AppImage from a terminal — the message will name
+the missing piece (e.g. `dlopen(): error loading libfuse.so.2`). If you instead
+see a *sandbox* error mentioning user namespaces (common on Ubuntu 24.04), that's
+a different issue — please open a ticket with the full terminal output and your
+`lsb_release -a`.
+
 ### Agent run stuck. What do I do?
 
 **Stuck run symptoms:**

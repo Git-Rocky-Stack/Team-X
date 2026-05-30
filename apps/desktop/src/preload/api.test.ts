@@ -426,6 +426,255 @@ describe('buildTeamXApi', () => {
     });
   });
 
+  describe('localGguf namespace', () => {
+    // Every localGguf method is a thin pass-through: it routes to a fixed
+    // channel with positional args forwarded verbatim. This table pins the
+    // channel + arg shape for all 35 methods so a typo (wrong channel, wrong
+    // arg order) is caught here rather than at runtime in a later phase.
+    const cases: Array<{
+      name: string;
+      call: (a: ReturnType<typeof buildTeamXApi>) => Promise<unknown>;
+      channel: string;
+      args: unknown[];
+    }> = [
+      // library.*
+      {
+        name: 'library.list',
+        call: (a) => a.localGguf.library.list(),
+        channel: 'localGguf.library.list',
+        args: [],
+      },
+      {
+        name: 'library.get',
+        call: (a) => a.localGguf.library.get('m1'),
+        channel: 'localGguf.library.get',
+        args: ['m1'],
+      },
+      {
+        name: 'library.addFile',
+        call: (a) => a.localGguf.library.addFile('/p/x.gguf'),
+        channel: 'localGguf.library.addFile',
+        args: ['/p/x.gguf'],
+      },
+      {
+        name: 'library.addFolder',
+        call: (a) => a.localGguf.library.addFolder('/models', true),
+        channel: 'localGguf.library.addFolder',
+        args: ['/models', true],
+      },
+      {
+        name: 'library.removeModel',
+        call: (a) => a.localGguf.library.removeModel('m1'),
+        channel: 'localGguf.library.removeModel',
+        args: ['m1'],
+      },
+      {
+        name: 'library.removeFolder',
+        call: (a) => a.localGguf.library.removeFolder('f1'),
+        channel: 'localGguf.library.removeFolder',
+        args: ['f1'],
+      },
+      {
+        name: 'library.scanFolder',
+        call: (a) => a.localGguf.library.scanFolder('f1'),
+        channel: 'localGguf.library.scanFolder',
+        args: ['f1'],
+      },
+      {
+        name: 'library.setSystemPrompt',
+        call: (a) => a.localGguf.library.setSystemPrompt('m1', 'hi'),
+        channel: 'localGguf.library.setSystemPrompt',
+        args: ['m1', 'hi'],
+      },
+      {
+        name: 'library.setChatTemplate',
+        call: (a) => a.localGguf.library.setChatTemplate('m1', null),
+        channel: 'localGguf.library.setChatTemplate',
+        args: ['m1', null],
+      },
+      {
+        name: 'library.setAdvancedParams',
+        call: (a) => a.localGguf.library.setAdvancedParams('m1', { temperature: 0.7 }),
+        channel: 'localGguf.library.setAdvancedParams',
+        args: ['m1', { temperature: 0.7 }],
+      },
+      {
+        name: 'library.resetAdvanced',
+        call: (a) => a.localGguf.library.resetAdvanced('m1'),
+        channel: 'localGguf.library.resetAdvanced',
+        args: ['m1'],
+      },
+      {
+        name: 'library.listBySourceType',
+        call: (a) => a.localGguf.library.listBySourceType('file'),
+        channel: 'localGguf.library.listBySourceType',
+        args: ['file'],
+      },
+      // runtime.* + pool.*
+      {
+        name: 'runtime.gpuInventory',
+        call: (a) => a.localGguf.runtime.gpuInventory(),
+        channel: 'localGguf.runtime.gpuInventory',
+        args: [],
+      },
+      {
+        name: 'runtime.reprobeGpu',
+        call: (a) => a.localGguf.runtime.reprobeGpu(),
+        channel: 'localGguf.runtime.reprobeGpu',
+        args: [],
+      },
+      {
+        name: 'runtime.settings',
+        call: (a) => a.localGguf.runtime.settings(),
+        channel: 'localGguf.runtime.settings',
+        args: [],
+      },
+      {
+        name: 'runtime.setSettings',
+        call: (a) => a.localGguf.runtime.setSettings({ maxConcurrentLocalModels: 2 }),
+        channel: 'localGguf.runtime.setSettings',
+        args: [{ maxConcurrentLocalModels: 2 }],
+      },
+      {
+        name: 'runtime.binariesVersion',
+        call: (a) => a.localGguf.runtime.binariesVersion(),
+        channel: 'localGguf.runtime.binariesVersion',
+        args: [],
+      },
+      {
+        name: 'pool.status',
+        call: (a) => a.localGguf.pool.status(),
+        channel: 'localGguf.pool.status',
+        args: [],
+      },
+      {
+        name: 'pool.load',
+        call: (a) => a.localGguf.pool.load('m1'),
+        channel: 'localGguf.pool.load',
+        args: ['m1'],
+      },
+      {
+        name: 'pool.unload',
+        call: (a) => a.localGguf.pool.unload('m1'),
+        channel: 'localGguf.pool.unload',
+        args: ['m1'],
+      },
+      {
+        name: 'pool.setMaxConcurrent',
+        call: (a) => a.localGguf.pool.setMaxConcurrent(3),
+        channel: 'localGguf.pool.setMaxConcurrent',
+        args: [3],
+      },
+      // endpoint.*
+      {
+        name: 'endpoint.list',
+        call: (a) => a.localGguf.endpoint.list(),
+        channel: 'localGguf.endpoint.list',
+        args: [],
+      },
+      {
+        name: 'endpoint.add',
+        call: (a) =>
+          a.localGguf.endpoint.add({
+            name: 'lan',
+            baseUrl: 'http://h:8080',
+            authHeaderKeyRef: null,
+          }),
+        channel: 'localGguf.endpoint.add',
+        args: [{ name: 'lan', baseUrl: 'http://h:8080', authHeaderKeyRef: null }],
+      },
+      {
+        name: 'endpoint.remove',
+        call: (a) => a.localGguf.endpoint.remove('e1'),
+        channel: 'localGguf.endpoint.remove',
+        args: ['e1'],
+      },
+      {
+        name: 'endpoint.test',
+        call: (a) => a.localGguf.endpoint.test('e1'),
+        channel: 'localGguf.endpoint.test',
+        args: ['e1'],
+      },
+      {
+        name: 'endpoint.update',
+        call: (a) => a.localGguf.endpoint.update('e1', { name: 'lan2' }),
+        channel: 'localGguf.endpoint.update',
+        args: ['e1', { name: 'lan2' }],
+      },
+      // hf.*
+      {
+        name: 'hf.search',
+        call: (a) => a.localGguf.hf.search('llama', { library: 'gguf' }),
+        channel: 'localGguf.hf.search',
+        args: ['llama', { library: 'gguf' }],
+      },
+      {
+        name: 'hf.modelCard',
+        call: (a) => a.localGguf.hf.modelCard('TheBloke/x'),
+        channel: 'localGguf.hf.modelCard',
+        args: ['TheBloke/x'],
+      },
+      {
+        name: 'hf.startDownload',
+        call: (a) => a.localGguf.hf.startDownload('TheBloke/x', 'x.gguf', '/models'),
+        channel: 'localGguf.hf.startDownload',
+        args: ['TheBloke/x', 'x.gguf', '/models'],
+      },
+      {
+        name: 'hf.pauseDownload',
+        call: (a) => a.localGguf.hf.pauseDownload('h1'),
+        channel: 'localGguf.hf.pauseDownload',
+        args: ['h1'],
+      },
+      {
+        name: 'hf.resumeDownload',
+        call: (a) => a.localGguf.hf.resumeDownload('h1'),
+        channel: 'localGguf.hf.resumeDownload',
+        args: ['h1'],
+      },
+      {
+        name: 'hf.cancelDownload',
+        call: (a) => a.localGguf.hf.cancelDownload('h1'),
+        channel: 'localGguf.hf.cancelDownload',
+        args: ['h1'],
+      },
+      {
+        name: 'hf.activeDownloads',
+        call: (a) => a.localGguf.hf.activeDownloads(),
+        channel: 'localGguf.hf.activeDownloads',
+        args: [],
+      },
+      // benchmark.*
+      {
+        name: 'benchmark.run',
+        call: (a) => a.localGguf.benchmark.run('m1'),
+        channel: 'localGguf.benchmark.run',
+        args: ['m1'],
+      },
+      {
+        name: 'benchmark.history',
+        call: (a) => a.localGguf.benchmark.history('m1'),
+        channel: 'localGguf.benchmark.history',
+        args: ['m1'],
+      },
+    ];
+
+    it.each(cases)(
+      '$name routes to its channel with verbatim args',
+      async ({ call, channel, args }) => {
+        await call(api);
+        expect(fake.invokeCalls).toEqual([{ channel, args }]);
+      },
+    );
+
+    it('passes the resolved value through untouched (no wrapping)', async () => {
+      const stub = [{ id: 'm1' }, { id: 'm2' }];
+      fake.setNextInvokeResult(stub);
+      const result = await api.localGguf.library.list();
+      expect(result).toBe(stub);
+    });
+  });
+
   describe('channel constants', () => {
     it('PRELOAD_CHANNELS matches the shared-types IpcContract channel names', () => {
       const channels = PRELOAD_CHANNELS as Record<string, string>;
@@ -442,6 +691,13 @@ describe('buildTeamXApi', () => {
       expect(channels.agentImprovementList).toBe('agentImprovement.list');
       expect(channels.agentImprovementRun).toBe('agentImprovement.run');
       expect(PRELOAD_CHANNELS.providersListModels).toBe('providers.listModels');
+      // localGguf.* (v3.3.0) — spot-check one channel per area.
+      expect(channels.localGgufLibraryList).toBe('localGguf.library.list');
+      expect(channels.localGgufRuntimeGpuInventory).toBe('localGguf.runtime.gpuInventory');
+      expect(channels.localGgufPoolStatus).toBe('localGguf.pool.status');
+      expect(channels.localGgufEndpointList).toBe('localGguf.endpoint.list');
+      expect(channels.localGgufHfSearch).toBe('localGguf.hf.search');
+      expect(channels.localGgufBenchmarkRun).toBe('localGguf.benchmark.run');
     });
   });
 });

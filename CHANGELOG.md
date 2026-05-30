@@ -10,10 +10,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Local & Networked GGUF Support (Phase 1 — Foundation)**: scaffolded the
+  `@team-x/local-gguf-runtime` package and the shared TypeScript contracts in
+  `@team-x/shared-types` (`LocalGgufError` union, `LocalModel`, `GpuInventory`,
+  `GgufMetadata`, `AdvancedParams`, `BenchmarkResult`, `RemoteEndpoint`,
+  `WatchFolder`, `LocalGgufRuntimeSettings`, plus the `LocalGgufApi` bridge
+  surface and Hugging Face result shapes). Added Drizzle migration
+  `0036_local_gguf` with five new tables (`local_models`,
+  `local_model_advanced_params`, `local_model_benchmarks`,
+  `local_model_endpoints`, `local_model_watch_folders`), CHECK constraints
+  disambiguating source-type/path/endpoint, and indexes covering hot queries
+  plus FK-cascade paths. Added four Drizzle-native db repos (local-models,
+  local-model-advanced-params, local-model-endpoints, local-model-watch-folders)
+  and the `localGguf.*` runtime-settings accessor. Registered all five IPC
+  handler modules — library, runtime + pool, hf, benchmark, endpoint — as
+  typed stubs (every channel throws a not-implemented error; later phases swap
+  in the real services). Exposed the typed `window.teamx.localGguf` surface
+  through the preload bridge, and pinned the llama.cpp release (`b9371`,
+  Spike S1) at the repo root. No user-visible feature in this phase — pure
+  foundation.
 
 ### Changed
+- **Release pipeline now smoke-tests the Linux AppImage before publishing.**
+  `release.yml` installs FUSE 2 on the runner, verifies the freshly-built
+  AppImage self-mounts, then boots it headlessly under Xvfb and fails the
+  release if it exits early — so a non-starting AppImage can no longer ship
+  unnoticed (#4).
 
 ### Fixed
+- **Documented the Linux AppImage FUSE 2 requirement (#4).** The AppImage
+  runtime needs `libfuse.so.2` on the host; modern Ubuntu (22.04+) no longer
+  ships it and 24.04 renamed it to `libfuse2t64`, which made the AppImage fail
+  to start while the `.deb` worked. README, the quick-start guide, the FAQ, and
+  the `electron-builder.yml` comment now state the requirement and the
+  `--appimage-extract-and-run` workaround (the comment previously claimed,
+  incorrectly, that the AppImage is "dep-free by design"). Also corrected the
+  download filenames in the quick-start guide (they referenced
+  `Team-X-Setup-linux-x64.AppImage`, which is never produced) and removed a
+  stale `.rpm` reference from the build guide.
 
 ### Deprecated
 

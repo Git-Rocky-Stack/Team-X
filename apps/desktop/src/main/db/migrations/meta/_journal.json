@@ -253,6 +253,13 @@
       "when": 1778995200000,
       "tag": "0035_runs_events_trace_id",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1779081600000,
+      "tag": "0036_local_gguf",
+      "breakpoints": true
     }
   ]
 }

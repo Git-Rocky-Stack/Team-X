@@ -67,6 +67,11 @@ jobs:
         run: pnpm exec tsc --build packages/shared-types packages/role-schema packages/provider-router packages/telemetry-core packages/intelligence
       - name: Lint
         run: pnpm lint
+      # Renderer/main ESLint (a11y, react-hooks, import/order, and the
+      # correctness rules Biome doesn't cover). Runs after the composite
+      # dist build above so any type-aware rules can resolve package types.
+      - name: Lint (ESLint)
+        run: pnpm lint:eslint
       - name: Typecheck
         run: pnpm typecheck
       - name: Test
