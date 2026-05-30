@@ -11,7 +11,7 @@ export class PortAllocatorError extends Error {
 
 export interface AllocatePortOptions {
   rangeStart?: number; // default 49152
-  rangeEnd?: number;   // default 65535
+  rangeEnd?: number; // default 65535
   maxAttempts?: number; // default 50
 }
 

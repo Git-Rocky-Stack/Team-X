@@ -1,6 +1,6 @@
 // packages/local-gguf-runtime/src/runtime/binary-resolver.test.ts
-import { describe, expect, it, vi } from 'vitest';
-import { resolveBinaryPath, BinaryResolverError } from './binary-resolver';
+import { describe, expect, it } from 'vitest';
+import { BinaryResolverError, resolveBinaryPath } from './binary-resolver';
 
 describe('resolveBinaryPath', () => {
   it('returns the correct path for win32-x64 CUDA', () => {

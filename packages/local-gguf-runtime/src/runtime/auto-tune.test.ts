@@ -85,15 +85,61 @@ describe('autoTune', () => {
   });
 
   it('threads = max(1, physicalCores - 2)', () => {
-    expect(autoTune({ ggufContextMax: 4096, ggufArch: 'l', ggufParamsB: 7, ggufQuant: 'Q4', ggufSizeBytes: 4_000_000_000, availableVramMb: 0, physicalCores: 1 }).nThreads).toBe(1);
-    expect(autoTune({ ggufContextMax: 4096, ggufArch: 'l', ggufParamsB: 7, ggufQuant: 'Q4', ggufSizeBytes: 4_000_000_000, availableVramMb: 0, physicalCores: 2 }).nThreads).toBe(1);
-    expect(autoTune({ ggufContextMax: 4096, ggufArch: 'l', ggufParamsB: 7, ggufQuant: 'Q4', ggufSizeBytes: 4_000_000_000, availableVramMb: 0, physicalCores: 8 }).nThreads).toBe(6);
-    expect(autoTune({ ggufContextMax: 4096, ggufArch: 'l', ggufParamsB: 7, ggufQuant: 'Q4', ggufSizeBytes: 4_000_000_000, availableVramMb: 0, physicalCores: 32 }).nThreads).toBe(30);
+    expect(
+      autoTune({
+        ggufContextMax: 4096,
+        ggufArch: 'l',
+        ggufParamsB: 7,
+        ggufQuant: 'Q4',
+        ggufSizeBytes: 4_000_000_000,
+        availableVramMb: 0,
+        physicalCores: 1,
+      }).nThreads,
+    ).toBe(1);
+    expect(
+      autoTune({
+        ggufContextMax: 4096,
+        ggufArch: 'l',
+        ggufParamsB: 7,
+        ggufQuant: 'Q4',
+        ggufSizeBytes: 4_000_000_000,
+        availableVramMb: 0,
+        physicalCores: 2,
+      }).nThreads,
+    ).toBe(1);
+    expect(
+      autoTune({
+        ggufContextMax: 4096,
+        ggufArch: 'l',
+        ggufParamsB: 7,
+        ggufQuant: 'Q4',
+        ggufSizeBytes: 4_000_000_000,
+        availableVramMb: 0,
+        physicalCores: 8,
+      }).nThreads,
+    ).toBe(6);
+    expect(
+      autoTune({
+        ggufContextMax: 4096,
+        ggufArch: 'l',
+        ggufParamsB: 7,
+        ggufQuant: 'Q4',
+        ggufSizeBytes: 4_000_000_000,
+        availableVramMb: 0,
+        physicalCores: 32,
+      }).nThreads,
+    ).toBe(30);
   });
 
   it('sampling defaults are stable', () => {
     const a = autoTune({
-      ggufContextMax: 4096, ggufArch: 'l', ggufParamsB: 7, ggufQuant: 'Q4', ggufSizeBytes: 4_000_000_000, availableVramMb: 0, physicalCores: 8,
+      ggufContextMax: 4096,
+      ggufArch: 'l',
+      ggufParamsB: 7,
+      ggufQuant: 'Q4',
+      ggufSizeBytes: 4_000_000_000,
+      availableVramMb: 0,
+      physicalCores: 8,
     });
     expect(a.temperature).toBe(0.7);
     expect(a.topP).toBe(0.95);

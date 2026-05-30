@@ -1,7 +1,7 @@
-// packages/local-gguf-runtime/src/runtime/port-allocator.test.ts
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { createServer } from 'node:net';
-import { allocatePort, PortAllocatorError } from './port-allocator';
+// packages/local-gguf-runtime/src/runtime/port-allocator.test.ts
+import { describe, expect, it } from 'vitest';
+import { PortAllocatorError, allocatePort } from './port-allocator';
 
 describe('allocatePort', () => {
   it('returns a port number in the ephemeral range', async () => {
@@ -22,7 +22,12 @@ describe('allocatePort', () => {
   });
 
   it('returns distinct ports on rapid successive calls', async () => {
-    const ports = await Promise.all([allocatePort(), allocatePort(), allocatePort(), allocatePort()]);
+    const ports = await Promise.all([
+      allocatePort(),
+      allocatePort(),
+      allocatePort(),
+      allocatePort(),
+    ]);
     const unique = new Set(ports);
     expect(unique.size).toBe(ports.length);
   });
