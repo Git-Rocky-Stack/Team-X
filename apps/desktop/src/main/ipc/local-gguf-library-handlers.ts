@@ -76,6 +76,9 @@ export function registerLocalGgufLibraryHandlers(ipc: IpcMain): void {
   );
   ipc.handle(
     'localGguf.library.resetAdvanced',
+    // Phase 3: "reset to auto" — clear the override, then resolve the recomputed
+    // auto-tuned params. The non-null return is intentional; see the
+    // `resetAdvanced` contract in @team-x/shared-types (LocalGgufApi.library).
     async (): Promise<AdvancedParams> => notImplemented('localGguf.library.resetAdvanced'),
   );
   ipc.handle(

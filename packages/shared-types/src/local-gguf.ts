@@ -247,6 +247,18 @@ export interface LocalGgufApi {
     setSystemPrompt(id: string, prompt: string | null): Promise<LocalModel>;
     setChatTemplate(id: string, template: string | null): Promise<LocalModel>;
     setAdvancedParams(id: string, params: Partial<AdvancedParams>): Promise<AdvancedParams>;
+    /**
+     * Clear the user's advanced-params override for `id`, then return the
+     * freshly auto-tuned defaults the runtime computes for that model.
+     *
+     * Phase 3 implementor contract: this is "reset to auto", NOT "delete and
+     * return nothing". The non-null `AdvancedParams` return is intentional —
+     * after clearing the override row, recompute the auto-tuned params (GPU
+     * layers, context, batch, threads — derived from the GPU probe + model
+     * metadata) and return those. Never return the just-deleted row, and never
+     * resolve to null / an empty object.
+     * Ref: master plan `2026-05-27-local-gguf-support.md` — `resetAdvanced (id) → AdvancedParams (auto-tuned)`.
+     */
     resetAdvanced(id: string): Promise<AdvancedParams>;
     listBySourceType(sourceType: SourceType): Promise<LocalModel[]>;
   };

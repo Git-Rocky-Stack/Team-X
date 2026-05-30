@@ -87,7 +87,8 @@ describe('localModelAdvancedParamsRepo', () => {
     expect(updated.nGpuLayers).toBe(35);
 
     const count = ctx.raw.exec(
-      `SELECT COUNT(*) FROM local_model_advanced_params WHERE model_id = '${modelId}'`,
+      'SELECT COUNT(*) FROM local_model_advanced_params WHERE model_id = ?',
+      [modelId],
     )[0]?.values[0]?.[0];
     expect(count).toBe(1);
   });
