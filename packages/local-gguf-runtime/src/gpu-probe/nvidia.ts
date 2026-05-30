@@ -32,10 +32,16 @@ export function parseNvidiaSmiCsv(raw: string): NvidiaCsvParseResult {
   for (const line of lines) {
     const parts = line.split(',').map((p) => p.trim());
     if (parts.length < 2) continue;
-    const [name, mem, driver] = parts;
-    const memMatch = /^(\d+)\s*MiB$/i.exec(mem);
+    // Explicit guards satisfy noUncheckedIndexedAccess without non-null assertions.
+    const namePart = parts[0];
+    const memPart = parts[1];
+    if (namePart === undefined || memPart === undefined) continue;
+    const driver = parts[2]; // string | undefined — intentional
+    const memMatch = /^(\d+)\s*MiB$/i.exec(memPart);
     if (!memMatch) continue;
-    devices.push({ name, vramMb: Number.parseInt(memMatch[1], 10), backend: 'cuda' });
+    const memStr = memMatch[1];
+    if (memStr === undefined) continue;
+    devices.push({ name: namePart, vramMb: Number.parseInt(memStr, 10), backend: 'cuda' });
     if (driver && !driverVersion) driverVersion = driver;
   }
   return { devices, driverVersion, cudaVersion: undefined };

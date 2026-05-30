@@ -43,11 +43,12 @@ export function parseRocminfo(raw: string): RocmParseResult {
     // Marketing Name (display string)
     const nameMatch = /^\s*Marketing Name:\s+(.+)$/m.exec(block);
     if (!nameMatch) continue;
-    const name = nameMatch[1].trim();
+    const name = nameMatch[1]?.trim();
+    if (!name) continue;
 
     // Name: gfxNNNN (ISA target)
     const gfxMatch = /^\s*Name:\s+(gfx\S+)/m.exec(block);
-    const gfxTarget = gfxMatch ? gfxMatch[1].trim() : undefined;
+    const gfxTarget = gfxMatch?.[1]?.trim();
 
     // VRAM: scan line-by-line for the COARSE GRAINED GLOBAL pool Size.
     // We look for a "Segment: GLOBAL; FLAGS: COARSE GRAINED" line, then take
@@ -63,7 +64,9 @@ export function parseRocminfo(raw: string): RocmParseResult {
       if (inCoarseGrained) {
         const sizeMatch = /^\s*Size:\s+(\d+)/.exec(line);
         if (sizeMatch) {
-          const kb = Number.parseInt(sizeMatch[1], 10);
+          const kbStr = sizeMatch[1];
+          if (kbStr === undefined) continue;
+          const kb = Number.parseInt(kbStr, 10);
           vramMb = Math.floor(kb / 1024);
           break;
         }

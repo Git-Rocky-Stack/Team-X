@@ -43,7 +43,7 @@ export function parseVulkaninfo(raw: string): VulkaninfoParseResult {
   for (const block of gpuBlocks) {
     const get = (key: string): string | undefined => {
       const match = new RegExp(`^\\s*${key}\\s*=\\s*(.+)$`, 'm').exec(block);
-      return match ? match[1].trim() : undefined;
+      return match?.[1]?.trim();
     };
 
     const deviceName = get('deviceName');

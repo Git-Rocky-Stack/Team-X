@@ -57,11 +57,11 @@ export function parseSystemProfiler(raw: string): SystemProfilerParseResult {
     // Within this chunk, find `Type:` and `Metal Support:` key-value lines
     const typeMatch = /^\s*Type:\s+(.+)$/m.exec(chunk);
     if (!typeMatch) continue;
-    const typeValue = typeMatch[1].trim();
+    const typeValue = typeMatch[1]?.trim();
     if (typeValue !== 'GPU') continue;
 
     const metalMatch = /^\s*Metal Support:\s+(.+)$/m.exec(chunk);
-    const metalSupport = metalMatch ? metalMatch[1].trim() : undefined;
+    const metalSupport = metalMatch?.[1]?.trim();
 
     const device: GpuDevice = {
       name: chipsetModel,
