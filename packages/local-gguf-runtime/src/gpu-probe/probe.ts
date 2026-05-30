@@ -33,7 +33,12 @@ async function defaultRunCommand(
     proc.stderr.on('data', (d: Buffer) => {
       stderr += d.toString();
     });
-    const timer = setTimeout(() => proc.kill('SIGKILL'), 3000);
+    // Only signal if the process is still running. On Windows, kill()ing an
+    // already-exited process can surface a spurious 'error' (EPERM); guarding
+    // on exitCode === null avoids that ambiguity.
+    const timer = setTimeout(() => {
+      if (proc.exitCode === null) proc.kill('SIGKILL');
+    }, 3000);
     proc.on('exit', (code) => {
       clearTimeout(timer);
       resolve({ stdout, stderr, exitCode: code ?? -1 });

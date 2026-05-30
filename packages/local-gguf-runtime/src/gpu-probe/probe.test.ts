@@ -160,6 +160,10 @@ describe('probeGpu', () => {
     expect(mockProbeMetal).toHaveBeenCalledOnce();
     expect(mockProbeCpu).toHaveBeenCalledOnce();
 
+    // probeMetal REQUIRES a platform dep (it's darwin-gated). Guard against a
+    // refactor silently dropping it — without platform, Metal never detects on Mac.
+    expect(mockProbeMetal.mock.calls[0]?.[0]).toHaveProperty('platform', process.platform);
+
     expect(inv.cuda.available).toBe(true);
     expect(inv.rocm.available).toBe(false);
     expect(inv.vulkan.available).toBe(true);
