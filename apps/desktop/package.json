@@ -27,7 +27,8 @@
     "dist:linux": "electron-vite build && electron-builder --linux --publish never",
     "dist:publish": "electron-vite build && electron-builder --publish always",
     "autonomy:benchmark": "tsx scripts/autonomy-benchmark.ts",
-    "postinstall": "electron-rebuild -f -w better-sqlite3,keytar"
+    "postinstall": "electron-rebuild -f -w better-sqlite3,keytar && node ../../scripts/fetch-llama-binaries.mjs --soft",
+    "prepack": "node ../../scripts/fetch-llama-binaries.mjs --all"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
