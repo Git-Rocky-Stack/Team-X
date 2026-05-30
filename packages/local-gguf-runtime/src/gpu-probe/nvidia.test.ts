@@ -46,6 +46,14 @@ describe('parseNvidiaSmiCsv', () => {
     expect(out.devices[0].backend).toBe('cuda');
     expect(out.driverVersion).toBe('582.28');
   });
+
+  it('handles CRLF line endings (nvidia-smi on Windows — the primary target)', () => {
+    const raw = ['NVIDIA GeForce GTX TITAN X, 12288 MiB, 582.28, 5.2', ''].join('\r\n');
+    const out = parseNvidiaSmiCsv(raw);
+    expect(out.devices).toHaveLength(1);
+    expect(out.devices[0].vramMb).toBe(12288);
+    expect(out.driverVersion).toBe('582.28');
+  });
 });
 
 describe('probeNvidia', () => {

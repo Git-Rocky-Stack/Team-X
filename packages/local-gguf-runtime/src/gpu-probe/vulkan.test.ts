@@ -112,6 +112,28 @@ describe('parseVulkaninfo', () => {
     expect(dev.apiVersion).toBe('1.4.312');
   });
 
+  it('handles CRLF line endings (vulkaninfo on Windows — the primary target)', () => {
+    const out = parseVulkaninfo(DUAL_TITAN_RAW.replace(/\n/g, '\r\n'));
+    expect(out.devices).toHaveLength(2);
+    expect(out.devices[0].name).toBe('NVIDIA GeForce GTX TITAN X');
+    expect(out.devices[1].uuid).toBe('90b5d104-c751-0f3d-a02c-71711408661f');
+  });
+
+  it('extracts deviceUUID and not driverUUID when both are present', () => {
+    const raw = [
+      'Devices:',
+      '========',
+      'GPU0:',
+      '\tdeviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU',
+      '\tdeviceName         = NVIDIA GeForce GTX TITAN X',
+      '\tdeviceUUID         = 4056aaf7-ba2a-a8f5-1bcb-5db6fd91ca8f',
+      '\tdriverUUID         = a70d28c3-efe0-5567-9edc-ff605278cc82',
+    ].join('\n');
+    const out = parseVulkaninfo(raw);
+    expect(out.devices).toHaveLength(1);
+    expect(out.devices[0].uuid).toBe('4056aaf7-ba2a-a8f5-1bcb-5db6fd91ca8f');
+  });
+
   it('filters out software renderers (llvmpipe)', () => {
     const out = parseVulkaninfo(SOFTWARE_RENDERER_RAW);
     expect(out.devices).toHaveLength(0);

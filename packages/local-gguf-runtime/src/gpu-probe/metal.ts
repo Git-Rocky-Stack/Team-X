@@ -63,6 +63,12 @@ export function parseSystemProfiler(raw: string): SystemProfilerParseResult {
     const metalMatch = /^\s*Metal Support:\s+(.+)$/m.exec(chunk);
     const metalSupport = metalMatch?.[1]?.trim();
 
+    // `Total Number of Cores:` is the GPU core count (not CPU cores — those
+    // live in the Hardware: block). It drives the Metal n_gpu_layers heuristic.
+    const coresMatch = /^\s*Total Number of Cores:\s+(\d+)/m.exec(chunk);
+    const coreCountStr = coresMatch?.[1];
+    const coreCount = coreCountStr !== undefined ? Number.parseInt(coreCountStr, 10) : undefined;
+
     const device: GpuDevice = {
       name: chipsetModel,
       // vramMb intentionally 0 — Apple Silicon unified memory is supplied
@@ -70,6 +76,7 @@ export function parseSystemProfiler(raw: string): SystemProfilerParseResult {
       vramMb: 0,
       backend: 'metal',
       ...(metalSupport !== undefined ? { metalSupport } : {}),
+      ...(coreCount !== undefined ? { coreCount } : {}),
     };
     devices.push(device);
   }

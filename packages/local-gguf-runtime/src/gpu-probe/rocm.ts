@@ -65,7 +65,10 @@ export function parseRocminfo(raw: string): RocmParseResult {
         const sizeMatch = /^\s*Size:\s+(\d+)/.exec(line);
         if (sizeMatch) {
           const kbStr = sizeMatch[1];
-          if (kbStr === undefined) continue;
+          // Compiler-required guard (noUncheckedIndexedAccess); a matched
+          // \d+ group is never undefined at runtime. If it ever were, the
+          // COARSE GRAINED pool boundary is found — stop scanning, don't continue.
+          if (kbStr === undefined) break;
           const kb = Number.parseInt(kbStr, 10);
           vramMb = Math.floor(kb / 1024);
           break;

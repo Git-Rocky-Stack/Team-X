@@ -64,6 +64,11 @@ describe('parseSystemProfiler', () => {
     expect(out.devices[0].vramMb).toBe(0);
   });
 
+  it('extracts the GPU core count (drives the Metal n_gpu_layers heuristic)', () => {
+    const out = parseSystemProfiler(M2_MAX_RAW);
+    expect(out.devices[0].coreCount).toBe(38);
+  });
+
   it('ignores entries with Type: Display (not Type: GPU)', () => {
     const out = parseSystemProfiler(DISPLAY_ONLY_RAW);
     expect(out.devices).toHaveLength(0);
