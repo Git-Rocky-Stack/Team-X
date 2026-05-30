@@ -263,6 +263,19 @@ importers:
         specifier: ^2
         version: 2.1.9(@types/node@20.19.39)
 
+  packages/local-gguf-runtime:
+    dependencies:
+      '@team-x/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+    devDependencies:
+      typescript:
+        specifier: 5.5.4
+        version: 5.5.4
+      vitest:
+        specifier: ^2
+        version: 2.1.9(@types/node@20.19.39)
+
   packages/provider-router:
     dependencies:
       '@ai-sdk/anthropic':

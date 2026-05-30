@@ -27,6 +27,7 @@ import { sql } from 'drizzle-orm';
 import {
   type AnySQLiteColumn,
   blob,
+  check,
   index,
   integer,
   real,
@@ -1664,5 +1665,201 @@ export const orgEdges = sqliteTable(
   },
   (table) => ({
     companyManagerIdx: index('idx_org_edges_company_manager').on(table.companyId, table.managerId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Local & Networked GGUF Support (v3.3.0 — Phase 1, spec § 7)
+//
+// Five tables backing the local GGUF library, per-model tuning, benchmark
+// history, remote LAN endpoints, and watched folders. Declared
+// endpoints-first so every FK target precedes its referrer. See
+// docs/superpowers/plans/2026-05-27-local-gguf-support/phase-01-foundation.md.
+// ---------------------------------------------------------------------------
+
+/**
+ * Remote LAN endpoints (LM Studio / Ollama / llama-server / KoboldCPP / vLLM).
+ * `privacy_tier` is constrained to 'Local' at the SQL layer — these endpoints
+ * are local-network, never cloud.
+ */
+export const localModelEndpoints = sqliteTable(
+  'local_model_endpoints',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    baseUrl: text('base_url').notNull(),
+    /** keytar reference for an optional auth header; never the secret itself. */
+    authHeaderKeyRef: text('auth_header_key_ref'),
+    privacyTier: text('privacy_tier').notNull().default('Local'),
+    status: text('status').notNull().default('unknown'),
+    lastCheckedAt: integer('last_checked_at'),
+    lastError: text('last_error'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    privacyTierCheck: check(
+      'local_model_endpoints_privacy_tier_check',
+      sql`${table.privacyTier} = 'Local'`,
+    ),
+    statusCheck: check(
+      'local_model_endpoints_status_check',
+      sql`${table.status} in ('unknown', 'reachable', 'unreachable', 'auth-failed')`,
+    ),
+  }),
+);
+
+/** Watched folders (local paths or UNC/SMB) scanned for GGUF files. */
+export const localModelWatchFolders = sqliteTable(
+  'local_model_watch_folders',
+  {
+    id: text('id').primaryKey(),
+    path: text('path').notNull(),
+    recursive: integer('recursive', { mode: 'boolean' }).notNull().default(true),
+    status: text('status').notNull().default('unknown'),
+    lastScanAt: integer('last_scan_at'),
+    lastScanError: text('last_scan_error'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    statusIdx: index('idx_local_model_watch_folders_status').on(table.status),
+    recursiveCheck: check(
+      'local_model_watch_folders_recursive_check',
+      sql`${table.recursive} in (0, 1)`,
+    ),
+    statusCheck: check(
+      'local_model_watch_folders_status_check',
+      sql`${table.status} in ('unknown', 'reachable', 'unreachable')`,
+    ),
+  }),
+);
+
+/**
+ * The library: every model the user has registered, of any source type.
+ * The source-shape CHECK disambiguates how a row points at its backing
+ * source — file/folder rows carry a source_path with no endpoint;
+ * remote-endpoint rows carry an endpoint_id with no source_path.
+ */
+export const localModels = sqliteTable(
+  'local_models',
+  {
+    id: text('id').primaryKey(),
+    displayName: text('display_name').notNull(),
+    sourceType: text('source_type').notNull(),
+    sourcePath: text('source_path'),
+    endpointId: text('endpoint_id').references(() => localModelEndpoints.id, {
+      onDelete: 'cascade',
+    }),
+    ggufArch: text('gguf_arch'),
+    ggufParamsB: real('gguf_params_b'),
+    ggufQuant: text('gguf_quant'),
+    ggufContextMax: integer('gguf_context_max'),
+    ggufSizeBytes: integer('gguf_size_bytes'),
+    ggufSha256: text('gguf_sha256'),
+    ggufChatTemplate: text('gguf_chat_template'),
+    isEmbeddingModel: integer('is_embedding_model', { mode: 'boolean' }).notNull().default(false),
+    isToolCapable: integer('is_tool_capable', { mode: 'boolean' }).notNull().default(false),
+    hfRepoId: text('hf_repo_id'),
+    hfFilename: text('hf_filename'),
+    license: text('license'),
+    chatTemplateOverride: text('chat_template_override'),
+    systemPromptOverride: text('system_prompt_override'),
+    status: text('status').notNull().default('cold'),
+    statusDetail: text('status_detail'),
+    lastUsedAt: integer('last_used_at'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    sourceTypeIdx: index('idx_local_models_source_type').on(table.sourceType),
+    statusIdx: index('idx_local_models_status').on(table.status),
+    lastUsedAtIdx: index('idx_local_models_last_used_at').on(table.lastUsedAt),
+    endpointIdIdx: index('idx_local_models_endpoint_id').on(table.endpointId),
+    sourceTypeCheck: check(
+      'local_models_source_type_check',
+      sql`${table.sourceType} in ('file', 'folder-entry', 'remote-endpoint')`,
+    ),
+    statusCheck: check(
+      'local_models_status_check',
+      sql`${table.status} in ('cold', 'loading', 'loaded', 'error', 'unreachable', 'missing')`,
+    ),
+    isEmbeddingModelCheck: check(
+      'local_models_is_embedding_model_check',
+      sql`${table.isEmbeddingModel} in (0, 1)`,
+    ),
+    isToolCapableCheck: check(
+      'local_models_is_tool_capable_check',
+      sql`${table.isToolCapable} in (0, 1)`,
+    ),
+    sourceShapeCheck: check(
+      'local_models_source_shape_check',
+      sql`(${table.sourceType} = 'file' AND ${table.sourcePath} IS NOT NULL AND ${table.endpointId} IS NULL) OR (${table.sourceType} = 'folder-entry' AND ${table.sourcePath} IS NOT NULL AND ${table.endpointId} IS NULL) OR (${table.sourceType} = 'remote-endpoint' AND ${table.endpointId} IS NOT NULL AND ${table.sourcePath} IS NULL)`,
+    ),
+  }),
+);
+
+/**
+ * Per-model Advanced-panel overrides. The PK is `model_id`, so the row
+ * exists at most once per model. NULL in any tuning column means
+ * "fall back to auto-tune."
+ */
+export const localModelAdvancedParams = sqliteTable(
+  'local_model_advanced_params',
+  {
+    modelId: text('model_id')
+      .primaryKey()
+      .references(() => localModels.id, { onDelete: 'cascade' }),
+    nCtx: integer('n_ctx'),
+    nGpuLayers: integer('n_gpu_layers'),
+    nBatch: integer('n_batch'),
+    nThreads: integer('n_threads'),
+    temperature: real('temperature'),
+    topP: real('top_p'),
+    topK: integer('top_k'),
+    repeatPenalty: real('repeat_penalty'),
+    mmap: integer('mmap', { mode: 'boolean' }),
+    mlock: integer('mlock', { mode: 'boolean' }),
+    flashAttention: integer('flash_attention', { mode: 'boolean' }),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    mmapCheck: check(
+      'local_model_advanced_params_mmap_check',
+      sql`${table.mmap} is null or ${table.mmap} in (0, 1)`,
+    ),
+    mlockCheck: check(
+      'local_model_advanced_params_mlock_check',
+      sql`${table.mlock} is null or ${table.mlock} in (0, 1)`,
+    ),
+    flashAttentionCheck: check(
+      'local_model_advanced_params_flash_attention_check',
+      sql`${table.flashAttention} is null or ${table.flashAttention} in (0, 1)`,
+    ),
+  }),
+);
+
+/** Benchmark history per model. Full CRUD lands in Phase 10. */
+export const localModelBenchmarks = sqliteTable(
+  'local_model_benchmarks',
+  {
+    id: text('id').primaryKey(),
+    modelId: text('model_id')
+      .notNull()
+      .references(() => localModels.id, { onDelete: 'cascade' }),
+    promptEvalTokS: real('prompt_eval_tok_s').notNull(),
+    genTokS: real('gen_tok_s').notNull(),
+    ttftMs: integer('ttft_ms').notNull(),
+    vramPeakMb: integer('vram_peak_mb'),
+    backend: text('backend').notNull(),
+    nCtxUsed: integer('n_ctx_used').notNull(),
+    nGpuLayersUsed: integer('n_gpu_layers_used').notNull(),
+    ranAt: integer('ran_at').notNull(),
+  },
+  (table) => ({
+    modelRanAtIdx: index('idx_local_model_benchmarks_model_id_ran_at').on(
+      table.modelId,
+      table.ranAt,
+    ),
   }),
 );
