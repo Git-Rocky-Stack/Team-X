@@ -76,7 +76,8 @@ pnpm run dist:linux
 ```
 
 **Output**:
-- AppImage, deb, and rpm packages for various Linux distributions
+- `.AppImage` and `.deb` packages (x64). No `.rpm` is produced.
+- The AppImage runtime requires **FUSE 2** on the host (`libfuse2`, or `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora). If it won't start, install that package or run it with `--appimage-extract-and-run`. The `.deb` needs no FUSE.
 
 ### Development Build (Faster, Not Installer)
 ```bash

@@ -145,8 +145,15 @@ linux:
 # Desktop and Fedora Workstation ship libsecret by default; declaring
 # it here guarantees apt resolves it everywhere else.
 #
-# AppImage users still need to install libsecret-1-0 manually — AppImage
-# is dep-free by design. Document this in the release notes / README.
+# AppImage users still need libsecret-1-0 for the OS keychain. Note that
+# AppImage bundles the app's own libraries but does NOT bundle FUSE: the
+# AppImage *runtime* requires FUSE 2 (`libfuse.so.2`) on the host to
+# self-mount. Modern Ubuntu (22.04+) no longer ships it by default, and
+# 24.04 renamed the package to `libfuse2t64` — without it the AppImage
+# fails to start before any app code runs (issue #4). Users either install
+# `libfuse2` / `libfuse2t64` (Fedora: `fuse-libs`) or run the image with
+# `--appimage-extract-and-run`. Documented in README / quick-start / FAQ,
+# and release.yml smoke-tests the AppImage boot before publishing.
 deb:
   depends:
     - libsecret-1-0

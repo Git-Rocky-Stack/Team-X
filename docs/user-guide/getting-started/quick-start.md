@@ -25,10 +25,10 @@ Team-X is your AI-powered workforce desktop application. Hire AI employees with 
 
 1. Visit [github.com/Git-Rocky-Stack/Team-X/releases](https://github.com/Git-Rocky-Stack/Team-X/releases)
 2. Select your operating system:
-   - **Windows 10/11:** Download `Team-X-Setup-windows-x64.exe`
-   - **macOS 11+ (Intel):** Download `Team-X-Setup-macos-x64.dmg`
-   - **macOS 11+ (Apple Silicon):** Download `Team-X-Setup-macos-arm64.dmg`
-   - **Linux:** Download `Team-X-Setup-linux-x64.AppImage`
+   - **Windows 10/11:** Download `Team-X-<version>-Setup-x64.exe`
+   - **macOS 11+ (Intel):** Download `Team-X-<version>-x64.dmg`
+   - **macOS 11+ (Apple Silicon):** Download `Team-X-<version>-arm64.dmg`
+   - **Linux:** Download `Team-X-<version>-x64.AppImage` (or `Team-X-<version>-x64.deb` — see the FUSE note below)
 
 ### Install
 
@@ -45,10 +45,20 @@ Double-click Team-X-Setup-macos-*.dmg
 → Open Launchpad → Click Team-X
 ```
 
-**Linux:**
+**Linux (AppImage):**
 ```
-chmod +x Team-X-Setup-linux-x64.AppImage
-./Team-X-Setup-linux-x64.AppImage
+chmod +x Team-X-<version>-x64.AppImage
+./Team-X-<version>-x64.AppImage
+```
+
+> **AppImage won't start?** The AppImage runtime needs **FUSE 2**, which modern Ubuntu no longer installs by default (24.04 renamed the package to `libfuse2t64`). Pick either path:
+>
+> - **No install (quickest):** `./Team-X-<version>-x64.AppImage --appimage-extract-and-run`
+> - **Install FUSE 2 once:** Ubuntu 24.04 → `sudo apt install libfuse2t64` · Ubuntu 22.04 / Debian → `sudo apt install libfuse2` · Fedora → `sudo dnf install fuse-libs`
+
+**Linux (.deb — no FUSE required):**
+```
+sudo apt install ./Team-X-<version>-x64.deb
 ```
 
 ### First Launch
