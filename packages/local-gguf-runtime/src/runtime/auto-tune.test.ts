@@ -147,4 +147,48 @@ describe('autoTune', () => {
     expect(a.repeatPenalty).toBe(1.1);
     expect(a.nBatch).toBe(512);
   });
+
+  it('clamps threads to a floor of 1 when physicalCores is 0', () => {
+    const a = autoTune({
+      ggufContextMax: 4096,
+      ggufArch: 'llama',
+      ggufParamsB: 7,
+      ggufQuant: 'Q4_K_M',
+      ggufSizeBytes: 4_000_000_000,
+      availableVramMb: 0,
+      physicalCores: 0,
+    });
+    expect(a.nThreads).toBe(1);
+  });
+
+  it('floors n_ctx at 512 even when the model reports a smaller context', () => {
+    // Some embedding models report a tiny context window; the tuner floors
+    // at 512 deliberately. This documents that intentional behavior.
+    const a = autoTune({
+      ggufContextMax: 256,
+      ggufArch: 'bert',
+      ggufParamsB: 0.1,
+      ggufQuant: 'Q4_K_M',
+      ggufSizeBytes: 80_000_000,
+      availableVramMb: 0,
+      physicalCores: 8,
+    });
+    expect(a.nCtx).toBe(512);
+  });
+
+  it('uses the 32-layer fallback for an unknown arch in the partial-offload band', () => {
+    // Unknown arch -> ARCH_LAYER_COUNTS fallback (32). VRAM sits between the
+    // 0.5x and 1.2x thresholds, so a partial offload is computed.
+    const a = autoTune({
+      ggufContextMax: 4096,
+      ggufArch: 'totally-unknown-arch',
+      ggufParamsB: 13.0,
+      ggufQuant: 'Q4_K_M',
+      ggufSizeBytes: 7_500_000_000,
+      availableVramMb: 8_192,
+      physicalCores: 8,
+    });
+    expect(a.nGpuLayers).toBeGreaterThan(0);
+    expect(a.nGpuLayers).toBeLessThan(999);
+  });
 });

@@ -33,23 +33,28 @@ describe('allocatePort', () => {
   });
 
   it('throws PortAllocatorError(port-exhausted) when no port is available', async () => {
-    // Mock by passing a tiny range with all ports busy
-    const blockers: ReturnType<typeof createServer>[] = [];
-    try {
-      // Allocate and HOLD a small range so the allocator's range is fully busy
-      for (let p = 50000; p <= 50005; p++) {
-        const srv = createServer();
-        await new Promise<void>((resolve, reject) => {
-          srv.listen(p, '127.0.0.1', () => resolve());
-          srv.on('error', reject);
-        });
-        blockers.push(srv);
-      }
-      await expect(
-        allocatePort({ rangeStart: 50000, rangeEnd: 50005, maxAttempts: 3 }),
-      ).rejects.toThrowError(PortAllocatorError);
-    } finally {
-      for (const s of blockers) await new Promise<void>((r) => s.close(() => r()));
-    }
+    // Deterministic and network-free: inject a probe that reports every
+    // candidate port busy, so all attempts fail and exhaustion is thrown.
+    // (Avoids hard-coded ports, which flake on shared CI runners.)
+    await expect(
+      allocatePort({
+        rangeStart: 50000,
+        rangeEnd: 50005,
+        maxAttempts: 3,
+        probe: async () => false,
+      }),
+    ).rejects.toThrowError(PortAllocatorError);
+  });
+
+  it('returns the first port the probe reports available', async () => {
+    // Deterministic: probe accepts only one specific port in the range.
+    const target = 50003;
+    const port = await allocatePort({
+      rangeStart: 50000,
+      rangeEnd: 50005,
+      maxAttempts: 500,
+      probe: async (p) => p === target,
+    });
+    expect(port).toBe(target);
   });
 });

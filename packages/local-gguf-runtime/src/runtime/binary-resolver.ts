@@ -35,7 +35,11 @@ export function resolveBinaryPath(opts: ResolveBinaryOptions): string {
     });
   }
   const binaryName = opts.platform === 'win32' ? 'server.exe' : 'server';
-  const path = `${opts.resourcesRoot}/llama-server/${platformKey}/${opts.backend}/${binaryName}`;
+  // Normalize backslashes so a Windows-native resourcesRoot (e.g.
+  // "C:\\app\\resources" from app.getAppPath()) yields a consistent
+  // forward-slash path rather than a mixed-separator one.
+  const root = opts.resourcesRoot.replace(/\\/g, '/');
+  const path = `${root}/llama-server/${platformKey}/${opts.backend}/${binaryName}`;
   if (!opts.fileExists(path)) {
     throw new BinaryResolverError({
       kind: 'binary-not-found',
