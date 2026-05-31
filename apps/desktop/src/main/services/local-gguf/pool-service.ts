@@ -157,6 +157,16 @@ export function createPoolService(deps: PoolServiceDeps): PoolService {
     if (!row.sourcePath) {
       throw new Error(`[pool-service] model ${modelId} has no local source path to serve`);
     }
+    // Defense-in-depth: `sourcePath` becomes the `-m <path>` value handed to
+    // llama-server. A value beginning with `-` would be parsed as another CLI
+    // flag (argument injection) rather than a model path. The spawn already uses
+    // an args array (no shell), so this only guards flag-smuggling, but a DB row
+    // should never produce one — refuse it loudly.
+    if (row.sourcePath.startsWith('-')) {
+      throw new Error(
+        `[pool-service] refusing model ${modelId}: sourcePath resembles a CLI flag (${row.sourcePath})`,
+      );
+    }
 
     // § 12.3: health-check + resolve the active backend's binary before loading.
     const { backend, binaryPath } = await deps.runtime.resolveActiveBinary();

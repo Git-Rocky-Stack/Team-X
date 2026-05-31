@@ -35,6 +35,10 @@ export interface ServerHandle {
 
 const DEFAULT_READY_TIMEOUT_MS = 60_000;
 const READY_LINE_REGEX = /HTTP server listening/i;
+// Cap the retained stderr to the most recent bytes (enough for crash
+// diagnostics). llama-server streams to stderr for its entire lifetime, so an
+// uncapped buffer is an unbounded heap-growth (OOM) vector in the host process.
+const STDERR_RETAIN_BYTES = 65_536;
 
 export async function spawnServer(opts: SpawnServerOptions): Promise<ServerHandle> {
   const spawnFn = opts.spawnFn ?? nodeSpawn;
@@ -68,8 +72,14 @@ export async function spawnServer(opts: SpawnServerOptions): Promise<ServerHandl
   });
   proc.stderr?.on('data', (d: Buffer) => {
     const s = d.toString();
-    stderrBuf += s;
     if (opts.onLog) opts.onLog(s, 'stderr');
+    // Retain only the most recent STDERR_RETAIN_BYTES (rolling tail) so a
+    // long-lived, chatty server can't grow this buffer without bound. The
+    // onLog callback above still receives the full, untruncated stream.
+    stderrBuf += s;
+    if (stderrBuf.length > STDERR_RETAIN_BYTES) {
+      stderrBuf = stderrBuf.slice(-STDERR_RETAIN_BYTES);
+    }
   });
 
   await waitForReadyOrExit(

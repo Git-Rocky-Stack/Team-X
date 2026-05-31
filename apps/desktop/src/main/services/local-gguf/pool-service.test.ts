@@ -327,6 +327,13 @@ describe('pool-service', () => {
       await expect(h.service.load('model-1')).rejects.toThrow();
     });
 
+    it('refuses a sourcePath that resembles a CLI flag (argument-injection guard)', async () => {
+      const h = makeHarness({ model: makeModel({ sourcePath: '--no-mmap' }) });
+      await expect(h.service.load('model-1')).rejects.toThrow(/resembles a CLI flag/i);
+      // The dangerous path must never reach the spawn.
+      expect(h.spawnServer).not.toHaveBeenCalled();
+    });
+
     it('runs resolveActiveBinary (the §12.3 health check) before each load', async () => {
       const h = makeHarness({ initialMax: 2 });
       await h.service.load('model-1');

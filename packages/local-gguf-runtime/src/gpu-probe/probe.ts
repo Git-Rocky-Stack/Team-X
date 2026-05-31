@@ -27,11 +27,15 @@ async function defaultRunCommand(
     const proc = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
+    // Cap accumulation: probe tools (nvidia-smi, vulkaninfo, …) emit far less,
+    // but the runCommand dep is injectable, so bound both buffers defensively
+    // against a misbehaving or hostile command flooding stdio.
+    const MAX_PROBE_OUTPUT = 1_048_576; // 1 MB
     proc.stdout.on('data', (d: Buffer) => {
-      stdout += d.toString();
+      if (stdout.length < MAX_PROBE_OUTPUT) stdout += d.toString();
     });
     proc.stderr.on('data', (d: Buffer) => {
-      stderr += d.toString();
+      if (stderr.length < MAX_PROBE_OUTPUT) stderr += d.toString();
     });
     // Only signal if the process is still running. On Windows, kill()ing an
     // already-exited process can surface a spurious 'error' (EPERM); guarding

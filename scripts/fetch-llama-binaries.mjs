@@ -167,13 +167,14 @@ async function extract(archivePath, archiveType, extractTo) {
 
   if (archiveType === 'zip') {
     if (process.platform === 'win32') {
-      log('INFO', `  Extracting zip (PowerShell Expand-Archive) → ${extractTo}`);
-      await execFileAsync('powershell', [
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        `Expand-Archive -LiteralPath '${archivePath}' -DestinationPath '${extractTo}' -Force`,
-      ]);
+      // Use the OS-bundled bsdtar (System32\tar.exe, Win10 1803+/Win11), which
+      // extracts zip natively via an args array. This deliberately avoids a
+      // PowerShell `-Command` string (e.g. Expand-Archive), whose only way to
+      // pass the paths is bare interpolation into a script literal — a shell
+      // injection surface if an archive/destination path ever contains a quote.
+      log('INFO', `  Extracting zip (bsdtar) → ${extractTo}`);
+      const tarBin = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe');
+      await execFileAsync(tarBin, ['-xf', archivePath, '-C', extractTo]);
     } else {
       log('INFO', `  Extracting zip (unzip) → ${extractTo}`);
       await execFileAsync('unzip', ['-o', archivePath, '-d', extractTo]);
