@@ -104,6 +104,8 @@ import {
   createSkillAssignmentsRepo,
 } from './db/repos/extensions.js';
 import { createGoalsRepo } from './db/repos/goals.js';
+import { createLocalModelAdvancedParamsRepo } from './db/repos/local-model-advanced-params.js';
+import { createLocalModelsRepo } from './db/repos/local-models.js';
 import {
   createMcpServersRepo,
   createToolCallsRepo,
@@ -199,6 +201,11 @@ import { type EnhancedAiService, createEnhancedAiService } from './services/enha
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
+import { type PoolService, createPoolService } from './services/local-gguf/pool-service.js';
+import {
+  type RuntimeService,
+  createRuntimeService,
+} from './services/local-gguf/runtime-service.js';
 import { type McpHost, createMcpHost } from './services/mcp-host.js';
 import {
   createFileAllowlist,
@@ -233,6 +240,10 @@ import { createRuntimeOperationsService } from './services/runtime-operations-se
 import { createRuntimeProfileProviderService } from './services/runtime-profile-provider-service.js';
 import { createRuntimeProfilesService } from './services/runtime-profiles-service.js';
 import { createRuntimeSessionService } from './services/runtime-session-service.js';
+import {
+  type LocalGgufSettingsStore,
+  createLocalGgufSettingsAccessor,
+} from './services/runtime-settings/local-gguf-settings.js';
 import { pickStrategy } from './services/runtime-strategy.js';
 import { SecretsStore } from './services/secrets.js';
 import { createSkillsService } from './services/skills-service.js';
@@ -419,6 +430,30 @@ function resolveRolePacksRoot(): string {
 }
 
 /**
+ * Pinned llama-server build tag. MUST stay in sync with the `fetchedFromTag`
+ * field of scripts/llama-binaries-manifest.json (the fetch pipeline's source
+ * of truth). Surfaced via localGguf.runtime.binariesVersion + Settings.
+ */
+const LLAMA_BINARIES_VERSION = 'b9371';
+
+/**
+ * Root containing `llama-server/<platform-arch>/<backend>/server[.exe]`.
+ *
+ * In packaged builds, electron-builder's `extraResources` copies
+ * `resources/llama-server` → `llama-server` directly under
+ * `process.resourcesPath` (see electron-builder.yml), so that is the root.
+ * In dev, the compiled main bundle runs at `apps/desktop/out/main`, so the
+ * source tree's `apps/desktop/resources` is four levels up then back down —
+ * mirroring the `resolveRolePacksRoot` dev-path idiom. The binary resolver
+ * appends `/llama-server/...` to this root.
+ */
+function resolveLlamaResourcesRoot(): string {
+  return app.isPackaged
+    ? process.resourcesPath
+    : join(__dirname, '../../../../apps/desktop/resources');
+}
+
+/**
  * Wrap `telemetry-core`'s `calcCostUsd` into the orchestrator's
  * `CostCalculator` shape. The orchestrator API uses
  * `(provider, model, tokens) -> string` so all storage stays decimal-safe;
@@ -561,6 +596,12 @@ let approvalInboxServiceInstance: ReturnType<typeof createApprovalInboxService> 
  * per Phase 5 §8.5. Separated from the window (T3) for test isolation.
  */
 let copilotEventTriggerInstance: CopilotEventTrigger | null = null;
+/**
+ * Local GGUF model pool (v3.3.0 Phase 2). Held at module scope so the
+ * will-quit handler can `shutdownAll()` its child llama-server processes
+ * before the SQLite handle closes.
+ */
+let poolServiceInstance: PoolService | null = null;
 
 configureStableUserDataPath(app, { logger: console });
 
@@ -632,6 +673,43 @@ app
     // upsertWithDedup/listStale (the last one is the T4 addition; see
     // copilot-insights.ts §listStale comment block for rationale).
     const copilotInsightsRepo = createCopilotInsightsRepo(db);
+
+    // ── Local & Networked GGUF runtime (v3.3.0 Phase 2) ───────────────────
+    const localModelsRepo = createLocalModelsRepo(db);
+    const localModelAdvancedParamsRepo = createLocalModelAdvancedParamsRepo(db);
+
+    // Adapter: the app settings repo (getRaw → string | null / set → JSON) →
+    // the get<T>() | undefined / set<T>() shape the local-gguf accessor expects.
+    const localGgufSettingsStore: LocalGgufSettingsStore = {
+      get<T>(key: string): T | undefined {
+        const raw = settingsRepo.getRaw(key);
+        if (raw === null) return undefined;
+        try {
+          return JSON.parse(raw) as T;
+        } catch {
+          return undefined;
+        }
+      },
+      set<T>(key: string, value: T): void {
+        settingsRepo.set(key, value);
+      },
+    };
+    const localGgufSettings = createLocalGgufSettingsAccessor(localGgufSettingsStore);
+
+    const runtimeService: RuntimeService = createRuntimeService({
+      settings: localGgufSettings,
+      resourcesRoot: resolveLlamaResourcesRoot(),
+      binariesVersion: LLAMA_BINARIES_VERSION,
+    });
+    const poolService: PoolService = createPoolService({
+      runtime: runtimeService,
+      models: localModelsRepo,
+      advancedParams: localModelAdvancedParamsRepo,
+      settings: localGgufSettings,
+      initialMaxConcurrent: localGgufSettings.get().maxConcurrentLocalModels,
+    });
+    poolServiceInstance = poolService;
+
     const cloudLinkService = createCloudLinkService({
       companiesRepo,
       settingsRepo,
@@ -2904,14 +2982,22 @@ app
         copilotHandlers.configure(req),
     );
 
-    // Local & Networked GGUF Support (v3.3.0). Phase 1 registers the full
-    // `localGguf.*` channel surface so the preload bridge has live handlers
-    // to invoke; each handler throws a not-implemented error until its
-    // owning phase lands the real service (runtime/pool → P2, library → P3,
-    // endpoint → P5, hf → P7, benchmark → P10). The registration functions
-    // grow a `deps` argument at that point — this single call-site updates.
+    // Local & Networked GGUF Support (v3.3.0). The remaining handlers register
+    // the `localGguf.*` channel surface so the preload bridge has live handlers
+    // to invoke; each still-stubbed handler throws a not-implemented error until
+    // its owning phase lands the real service (library → P3, endpoint → P5,
+    // hf → P7, benchmark → P10). Phase 2 (runtime/pool) is now LIVE: its handlers
+    // delegate to the RuntimeService + PoolService constructed above.
     registerLocalGgufLibraryHandlers(ipcMain);
-    registerLocalGgufRuntimeHandlers(ipcMain);
+    // GPU probe + binaries-version persist. Non-fatal: the app is usable on the
+    // CPU backend even if the probe fails, so log and continue (matches the
+    // boot convention for the rag indexer / embedding adapter), never abort.
+    try {
+      await runtimeService.init();
+    } catch (err) {
+      console.error('[main] local-gguf runtimeService.init failed (GPU probe):', err);
+    }
+    registerLocalGgufRuntimeHandlers(ipcMain, { runtime: runtimeService, pool: poolService });
     registerLocalGgufHfHandlers(ipcMain);
     registerLocalGgufBenchmarkHandlers(ipcMain);
     registerLocalGgufEndpointHandlers(ipcMain);
@@ -2964,7 +3050,8 @@ app.on('will-quit', (event) => {
     copilotEventTriggerInstance === null &&
     copilotAnalyzerServiceInstance === null &&
     commandServiceInstance === null &&
-    agenticLoopServiceInstance === null
+    agenticLoopServiceInstance === null &&
+    poolServiceInstance === null
   ) {
     closeDb();
     return;
@@ -3067,6 +3154,19 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] agentic loop service teardown failed:', err);
+    }
+    // Kill the pool's child llama-server processes BEFORE the orchestrator
+    // drain + DB close: they are spawned native subprocesses holding ports and
+    // model files, so they must not outlive the app. shutdownAll() awaits each
+    // SIGTERM→SIGKILL teardown; nulling the handle prevents shutdown re-entry
+    // from re-triggering it.
+    try {
+      if (poolServiceInstance !== null) {
+        await poolServiceInstance.shutdownAll();
+        poolServiceInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] local-gguf pool shutdown failed:', err);
     }
     try {
       if (orchestrator !== null) {
