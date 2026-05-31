@@ -2989,18 +2989,19 @@ app
     // hf → P7, benchmark → P10). Phase 2 (runtime/pool) is now LIVE: its handlers
     // delegate to the RuntimeService + PoolService constructed above.
     registerLocalGgufLibraryHandlers(ipcMain);
-    // GPU probe + binaries-version persist. Non-fatal: the app is usable on the
-    // CPU backend even if the probe fails, so log and continue (matches the
-    // boot convention for the rag indexer / embedding adapter), never abort.
-    try {
-      await runtimeService.init();
-    } catch (err) {
-      console.error('[main] local-gguf runtimeService.init failed (GPU probe):', err);
-    }
     registerLocalGgufRuntimeHandlers(ipcMain, { runtime: runtimeService, pool: poolService });
     registerLocalGgufHfHandlers(ipcMain);
     registerLocalGgufBenchmarkHandlers(ipcMain);
     registerLocalGgufEndpointHandlers(ipcMain);
+
+    // Pre-warm the GPU probe + persist the active backend / binaries version in
+    // the background. Fire-and-forget by design: the probe must never delay
+    // handler registration or window creation, and the services lazy-probe on
+    // first use anyway, so a slow or failed probe degrades gracefully (CPU
+    // backend) rather than blocking boot. Non-fatal — log and continue.
+    void runtimeService.init().catch((err: unknown) => {
+      console.error('[main] local-gguf runtimeService.init failed (GPU probe):', err);
+    });
 
     console.log('[main] orchestrator + IPC ready');
 
