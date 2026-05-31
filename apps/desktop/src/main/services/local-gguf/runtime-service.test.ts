@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LocalGgufSettingsAccessor } from '../runtime-settings/local-gguf-settings.js';
 import { DEFAULT_LOCAL_GGUF_SETTINGS } from '../runtime-settings/local-gguf-settings.js';
 
-import { createRuntimeService } from './runtime-service.js';
+import { RuntimeServiceError, createRuntimeService } from './runtime-service.js';
 
 /**
  * In-memory fake of LocalGgufSettingsAccessor. Mirrors the real accessor's
@@ -338,6 +338,30 @@ describe('runtime-service', () => {
       expect(settings.recordFallback).toHaveBeenCalledTimes(1);
     });
 
+    it('records an accurate reason when the active backend is not valid on this platform', async () => {
+      // A manual override set the active backend to 'metal' on a win32 box,
+      // where metal is never in the ranked list (startIndex === -1). The walk
+      // runs over the ranked list from the top and the first candidate is
+      // healthy, so failedBackends stays empty. The recorded reason must state
+      // metal is unavailable — NOT that it "failed its health check", because it
+      // was never attempted (that would mislead the Settings diagnosis).
+      const { svc } = svcWith({
+        inventory: cudaInventory(),
+        installed: new Set<GpuBackend>(['cuda', 'vulkan', 'cpu']),
+        healthy: new Set<GpuBackend>(['cuda', 'vulkan', 'cpu']),
+      });
+      await svc.init();
+      await svc.setSettings({ activeBackend: 'metal' }); // manual, not auto-detected
+
+      const res = await svc.resolveActiveBinary();
+
+      expect(res.backend).toBe('cuda');
+      expect(settings.recordFallback).toHaveBeenCalledWith(
+        'cuda',
+        expect.stringMatching(/metal is not available on this platform/i),
+      );
+    });
+
     it('throws when no candidate backend passes the health check', async () => {
       const { svc } = svcWith({
         inventory: cudaInventory(),
@@ -346,7 +370,11 @@ describe('runtime-service', () => {
       });
       await svc.init();
 
-      await expect(svc.resolveActiveBinary()).rejects.toThrow();
+      // Must be the structured, LocalGgufError-bearing RuntimeServiceError that
+      // the Task 13 IPC handlers route to the renderer — not a bare Error.
+      const err = await svc.resolveActiveBinary().catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(RuntimeServiceError);
+      expect((err as RuntimeServiceError).error).toMatchObject({ kind: 'gpu-probe-failed' });
     });
 
     it('does not record a fallback when the active backend itself passes', async () => {

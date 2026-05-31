@@ -23,9 +23,9 @@ import { existsSync } from 'node:fs';
 
 import {
   BinaryResolverError,
+  resolveBinaryPath as defaultResolveBinaryPath,
   probeGpu,
   rankBackends,
-  resolveBinaryPath as defaultResolveBinaryPath,
 } from '@team-x/local-gguf-runtime';
 import type {
   GpuBackend,
@@ -272,10 +272,16 @@ export function createRuntimeService(deps: RuntimeServiceDeps): RuntimeService {
 
       // Healthy. If we demoted past the active backend, persist the fallback.
       if (candidate !== activeBackend) {
+        // Two distinct demotion causes: (a) one or more higher-ranked backends
+        // failed their --version health check (the normal CUDA→Vulkan case), or
+        // (b) the active backend isn't valid on this platform at all, so it was
+        // never in the ranked list and never attempted (startIndex === -1). Name
+        // the cause accurately — claiming the active backend "failed its health
+        // check" when it was never run would mislead the Settings diagnosis.
         const reason =
           failedBackends.length > 0
             ? `${failedBackends.join(', ')} failed its --version health check`
-            : `${activeBackend} failed its --version health check`;
+            : `${activeBackend} is not available on this platform; using ${candidate}`;
         deps.settings.recordFallback(candidate, reason);
       }
       return { backend: candidate, binaryPath };
