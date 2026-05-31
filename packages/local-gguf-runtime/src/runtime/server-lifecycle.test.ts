@@ -211,4 +211,28 @@ describe('spawnServer', () => {
     expect(crashInfo.exitCode).toBe(1);
     expect(crashInfo.stderr).toContain('boom');
   });
+
+  it('returns a ServerHandle within 200 ms once the ready-line lands (perf assertion)', async () => {
+    const fakeProc = makeFakeProc();
+    const fakeSpawn = vi.fn().mockReturnValue(fakeProc);
+    const start = performance.now();
+    const promise = spawnServer({
+      binaryPath: '/x/server',
+      modelPath: '/m.gguf',
+      port: 50000,
+      nCtx: 4096,
+      nGpuLayers: 35,
+      nBatch: 512,
+      nThreads: 8,
+      spawnFn: fakeSpawn as never,
+      readyTimeoutMs: 5000,
+    });
+    setImmediate(() => {
+      fakeProc.stdout.emit('data', Buffer.from('HTTP server listening on 127.0.0.1:50000\n'));
+    });
+    await promise;
+    // Phase 2 perf budget: stub-mode spawn resolves < 200 ms (the readiness
+    // poll runs on a 50 ms interval, leaving ~4x headroom).
+    expect(performance.now() - start).toBeLessThan(200);
+  });
 });

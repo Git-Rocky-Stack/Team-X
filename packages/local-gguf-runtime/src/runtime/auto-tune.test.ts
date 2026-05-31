@@ -16,6 +16,25 @@ describe('autoTune', () => {
     expect(a.nCtx).toBe(4096);
   });
 
+  it('computes in well under 5 ms per call (perf assertion)', () => {
+    const input = {
+      ggufContextMax: 8192,
+      ggufArch: 'llama3',
+      ggufParamsB: 8.0,
+      ggufQuant: 'Q4_K_M',
+      ggufSizeBytes: 4_900_000_000,
+      availableVramMb: 24_576,
+      physicalCores: 16,
+    };
+    const iterations = 1000;
+    const start = performance.now();
+    for (let i = 0; i < iterations; i++) autoTune(input);
+    const avgMs = (performance.now() - start) / iterations;
+    // Phase 2 perf budget: auto-tune is pure math, < 5 ms/call. Averaged over
+    // 1000 runs so the assertion stays stable under CI jitter.
+    expect(avgMs).toBeLessThan(5);
+  });
+
   it('uses model context_max if it is smaller than 4096', () => {
     const a = autoTune({
       ggufContextMax: 2048,

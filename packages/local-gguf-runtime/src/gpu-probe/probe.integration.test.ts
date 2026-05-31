@@ -17,4 +17,13 @@ describe('probeGpu (integration)', () => {
     expect(Array.isArray(inv.vulkan.devices)).toBe(true);
     expect(Array.isArray(inv.metal.devices)).toBe(true);
   }, 15000);
+
+  it('completes within 5 s total (perf assertion)', async () => {
+    const start = performance.now();
+    await probeGpu();
+    // Phase 2 perf budget: the five probes run in parallel with a 3 s per-probe
+    // timeout, so the orchestrator finishes well under 5 s even when every
+    // backend tool is missing (each fast-fails or times out concurrently).
+    expect(performance.now() - start).toBeLessThan(5000);
+  }, 15000);
 });

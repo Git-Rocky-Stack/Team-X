@@ -57,4 +57,30 @@ describe('allocatePort', () => {
     });
     expect(port).toBe(target);
   });
+
+  it('succeeds for ≥95% of trials within 10 attempts under ~50% contention (perf assertion)', async () => {
+    // Deterministic Bernoulli probe via a seeded PRNG (mulberry32) — no
+    // Math.random, so the measured success rate is reproducible run to run.
+    // ~50% of candidate ports report busy; P(fail within 10 attempts) ≈ 0.5^10,
+    // so the expected rate is ~99.9% — comfortably above the 95% budget.
+    let seed = 0x9e3779b9;
+    const rand = () => {
+      seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const trials = 200;
+    let successes = 0;
+    for (let i = 0; i < trials; i++) {
+      try {
+        await allocatePort({ maxAttempts: 10, probe: async () => rand() > 0.5 });
+        successes++;
+      } catch {
+        /* port-exhausted — counts as a miss */
+      }
+    }
+    // Phase 2 perf budget: ≥ 95% allocation success within 10 attempts.
+    expect(successes / trials).toBeGreaterThanOrEqual(0.95);
+  });
 });

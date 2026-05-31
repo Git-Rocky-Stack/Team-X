@@ -87,6 +87,12 @@ test.describe('Team-X localGguf runtime + pool (Phase 2)', () => {
     });
 
     await window.waitForLoadState('domcontentloaded');
+    // Anchor on the app shell's stable [data-*] selector so the renderer is
+    // genuinely mounted before we exercise the preload bridge (and to satisfy
+    // the e2e stable-selector regression guard).
+    await expect(window.locator('[data-testid="app-brand-name"]')).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test.afterEach(async () => {
