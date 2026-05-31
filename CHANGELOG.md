@@ -29,6 +29,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through the preload bridge, and pinned the llama.cpp release (`b9371`,
   Spike S1) at the repo root. No user-visible feature in this phase — pure
   foundation.
+- **Local & Networked GGUF Support (Phase 2 — Runtime + Pool)**: landed the
+  full local-inference runtime in `@team-x/local-gguf-runtime` and wired it
+  into the Electron main process. New building blocks: **BinaryResolver**
+  (platform×backend → bundled `llama-server` path), **PortAllocator** (random
+  ephemeral-range allocation with a TCP bind-check), **AutoTune**
+  (`n_ctx`/`n_gpu_layers`/`n_batch`/`n_threads` + sampling defaults from GGUF
+  metadata and detected VRAM), a five-backend **GPU probe** run in parallel
+  with per-probe 3 s timeouts, **backend ranking** (CUDA > Vulkan > CPU on
+  NVIDIA, ROCm > Vulkan > CPU on AMD, Metal on macOS — spec §12.2),
+  **ServerLifecycle** (spawn → wait-for-ready → graceful stop with `onCrash`
+  subscribers), an **LRU pool** (default 1 concurrent model, VRAM-aware
+  eviction, in-flight dedup, shutdown-all) and an **AutoSwapPolicy** wrapper.
+  The new **RuntimeService** boots the probe, persists the active backend, and
+  runs the spec §12.3 pre-load health check — smoke-testing the chosen backend
+  with `<binary> --version` (5 s timeout) and demoting one rank on failure
+  (e.g. CUDA → Vulkan on Maxwell GPUs), recording an `autoFallbackReason` for
+  Settings. The new **PoolService** resolves a healthy binary, auto-tunes (or
+  applies saved advanced params), allocates a port, and spawns the server. All
+  `localGguf.runtime.*` and `localGguf.pool.*` IPC stubs from Phase 1 are now
+  live, backed by these services, with the GPU probe pre-warmed in the
+  background so it never delays boot. **Binary distribution** is runtime-fetch
+  (Option C): multi-backend `llama-server` binaries are downloaded and
+  SHA-256-verified at install/build time from a deterministic manifest pinned
+  to llama.cpp `b9371` — never committed (gitignored), +250–450 MB per OS at
+  install depending on the bundled backends.
 
 ### Changed
 - **Release pipeline now smoke-tests the Linux AppImage before publishing.**
