@@ -22,3 +22,4 @@ export * from './metadata/tool-capable-list.js';
 export * from './library/split-gguf.js';
 export * from './library/scanner.js';
 export * from './library/folder-watcher.js';
+export * from './library/resilience.js';
