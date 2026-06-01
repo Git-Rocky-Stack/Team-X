@@ -64,7 +64,7 @@ jobs:
       # we materialize them explicitly. tsc --build resolves the
       # reference graph and builds in dep order automatically.
       - name: Build workspace packages (composite refs)
-        run: pnpm exec tsc --build packages/shared-types packages/role-schema packages/provider-router packages/telemetry-core packages/intelligence
+        run: pnpm exec tsc --build packages/shared-types packages/role-schema packages/provider-router packages/telemetry-core packages/intelligence packages/local-gguf-runtime
       - name: Lint
         run: pnpm lint
       # Renderer/main ESLint (a11y, react-hooks, import/order, and the

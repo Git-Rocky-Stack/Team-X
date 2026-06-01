@@ -1,15 +1,18 @@
 /**
  * IPC handlers for the localGguf.runtime.* and localGguf.pool.* channels.
  *
- * Phase 1: typed not-implemented stubs. Phase 2 (runtime + pool) replaces
- * them with real implementations against the RuntimeService (GPU probe,
- * backend selection, binaries version) and PoolService (LRU load/unload).
+ * Phase 2 (runtime + pool) — LIVE. Each channel delegates to the injected
+ * {@link RuntimeService} (GPU probe, backend selection, persisted settings,
+ * binaries version) or {@link PoolService} (LRU load / unload, capacity).
+ * The Phase 1 not-implemented stubs these replaced are gone; the boot
+ * sequence constructs both services and passes them in via `deps`.
  */
 
 import type { GpuInventory, LocalGgufRuntimeSettings } from '@team-x/shared-types';
 import type { IpcMain } from 'electron';
 
-import { notImplemented } from './local-gguf-not-implemented.js';
+import type { PoolService } from '../services/local-gguf/pool-service.js';
+import type { RuntimeService } from '../services/local-gguf/runtime-service.js';
 
 /** A loaded model's runtime handle, surfaced by the pool channels. */
 export interface LoadedModelHandle {
@@ -30,42 +33,51 @@ export const LOCAL_GGUF_RUNTIME_CHANNELS = [
   'localGguf.pool.setMaxConcurrent',
 ] as const;
 
-export function registerLocalGgufRuntimeHandlers(ipc: IpcMain): void {
+/** Services the runtime + pool channels delegate to (constructed at boot). */
+export interface LocalGgufRuntimeHandlerDeps {
+  runtime: RuntimeService;
+  pool: PoolService;
+}
+
+export function registerLocalGgufRuntimeHandlers(
+  ipc: IpcMain,
+  deps: LocalGgufRuntimeHandlerDeps,
+): void {
+  // ── runtime: GPU inventory + backend selection + settings ───────────────
   ipc.handle(
     'localGguf.runtime.gpuInventory',
-    async (): Promise<GpuInventory> => notImplemented('localGguf.runtime.gpuInventory'),
+    (): Promise<GpuInventory> => deps.runtime.getInventory(),
   );
   ipc.handle(
     'localGguf.runtime.reprobeGpu',
-    async (): Promise<GpuInventory> => notImplemented('localGguf.runtime.reprobeGpu'),
+    (): Promise<GpuInventory> => deps.runtime.reprobeGpu(),
   );
   ipc.handle(
     'localGguf.runtime.settings',
-    async (): Promise<LocalGgufRuntimeSettings> => notImplemented('localGguf.runtime.settings'),
+    (): Promise<LocalGgufRuntimeSettings> => deps.runtime.getSettings(),
   );
   ipc.handle(
     'localGguf.runtime.setSettings',
-    async (): Promise<LocalGgufRuntimeSettings> => notImplemented('localGguf.runtime.setSettings'),
+    (_event, partial: Partial<LocalGgufRuntimeSettings>): Promise<LocalGgufRuntimeSettings> =>
+      deps.runtime.setSettings(partial),
   );
   ipc.handle(
     'localGguf.runtime.binariesVersion',
-    async (): Promise<string> => notImplemented('localGguf.runtime.binariesVersion'),
+    (): Promise<string> => deps.runtime.getBinariesVersion(),
   );
+
+  // ── pool: LRU load / unload + capacity ──────────────────────────────────
   ipc.handle(
     'localGguf.pool.status',
-    async (): Promise<{ loaded: LoadedModelHandle[]; maxConcurrent: number }> =>
-      notImplemented('localGguf.pool.status'),
+    (): Promise<{ loaded: LoadedModelHandle[]; maxConcurrent: number }> => deps.pool.status(),
   );
   ipc.handle(
     'localGguf.pool.load',
-    async (): Promise<LoadedModelHandle> => notImplemented('localGguf.pool.load'),
+    (_event, id: string): Promise<LoadedModelHandle> => deps.pool.load(id),
   );
-  ipc.handle(
-    'localGguf.pool.unload',
-    async (): Promise<void> => notImplemented('localGguf.pool.unload'),
-  );
+  ipc.handle('localGguf.pool.unload', (_event, id: string): Promise<void> => deps.pool.unload(id));
   ipc.handle(
     'localGguf.pool.setMaxConcurrent',
-    async (): Promise<void> => notImplemented('localGguf.pool.setMaxConcurrent'),
+    (_event, n: number): Promise<void> => deps.pool.setMaxConcurrent(n),
   );
 }

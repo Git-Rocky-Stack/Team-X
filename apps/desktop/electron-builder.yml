@@ -28,6 +28,10 @@ asar: true
 asarUnpack:
   - "node_modules/better-sqlite3/**"
   - "node_modules/keytar/**"
+  # llama-server binaries must run directly from disk (not from inside asar).
+  # electron-builder copies these via extraResources above; asarUnpack
+  # ensures they land in app.asar.unpacked/ where Node child_process can exec them.
+  - "resources/llama-server/**"
 
 # Role packs ship alongside the asar as extraResources so users can
 # edit/add packs without rebuilding. The files land in the app's
@@ -42,6 +46,14 @@ extraResources:
     filter:
       - "**/*"
       - "!**/.git"
+  # llama.cpp runtime binaries (Option C: runtime-fetch, never committed).
+  # Populated by scripts/fetch-llama-binaries.mjs during prepack.
+  # Must be asarUnpack-ed: native server binaries cannot execute from within
+  # an asar archive.
+  - from: resources/llama-server
+    to: llama-server
+    filter:
+      - "**/*"
 
 # Rebuild native modules for the target Electron ABI.
 npmRebuild: true

@@ -27,6 +27,7 @@ function jsToTsExtension(): Plugin {
         'role-schema',
         'provider-router',
         'telemetry-core',
+        'local-gguf-runtime',
       ];
       const isWorkspaceImport = workspacePackages.some(
         (pkg) => importer.includes(`@team-x/${pkg}`) || importer.includes(`/packages/${pkg}/`),
@@ -59,6 +60,7 @@ const workspaceDeps = [
   '@team-x/provider-router',
   '@team-x/telemetry-core',
   '@team-x/intelligence',
+  '@team-x/local-gguf-runtime',
   // sql.js must be bundled for autonomy benchmarks (uses in-memory SQLite via sql.js)
   'sql.js',
 ];

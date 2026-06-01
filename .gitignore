@@ -78,6 +78,12 @@ docs/Old.Claude-md-to-4-19-26.txt
 .spike-s4-bin/
 .spike-s5-cache/
 
+# llama.cpp runtime binaries (Option C: runtime-fetch, never committed)
+# Populated by scripts/fetch-llama-binaries.mjs at build/install time.
+apps/desktop/resources/llama-server/
+# Download cache used by the fetch script
+.llama-cache/
+
 # local agent context
 CLAUDE.md
 .gstack/

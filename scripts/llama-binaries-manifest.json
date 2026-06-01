@@ -1,0 +1,111 @@
+{
+  "$schema": "https://team-x.dev/schemas/llama-binaries-manifest.v1.json",
+  "schemaVersion": 1,
+  "llamaCppRelease": "b9371",
+  "fetchedFromTag": "b9371",
+  "repo": "ggml-org/llama.cpp",
+  "releaseUrl": "https://github.com/ggml-org/llama.cpp/releases/tag/b9371",
+  "publishedAt": "2026-05-27T23:45:52Z",
+  "verifiedAt": "2026-05-30T15:50:08.085Z",
+  "binaries": {
+    "win32-x64-cuda": {
+      "asset": "llama-b9371-bin-win-cuda-13.3-x64.zip",
+      "archiveType": "zip",
+      "sha256": "6476adcc63db75679a8d3f3daadb410cb24fced73b509886eec300e72d2bb12f",
+      "sizeBytes": 158404562,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-win-cuda-13.3-x64.zip",
+      "extractTo": "apps/desktop/resources/llama-server/win32-x64/cuda",
+      "cudart": {
+        "asset": "cudart-llama-bin-win-cuda-13.3-x64.zip",
+        "archiveType": "zip",
+        "sha256": "1462a050eb4c684921ba51dcc4cc488a036674c3e73e9945ee705b854808d03e",
+        "sizeBytes": 390970417,
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/cudart-llama-bin-win-cuda-13.3-x64.zip"
+      }
+    },
+    "win32-x64-rocm": {
+      "asset": "llama-b9371-bin-win-hip-radeon-x64.zip",
+      "archiveType": "zip",
+      "sha256": "841bfb9f78bc7b7fbd359a368923ca65bc8a17b133290f526541d8e823d687f9",
+      "sizeBytes": 319772908,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-win-hip-radeon-x64.zip",
+      "extractTo": "apps/desktop/resources/llama-server/win32-x64/rocm"
+    },
+    "win32-x64-vulkan": {
+      "asset": "llama-b9371-bin-win-vulkan-x64.zip",
+      "archiveType": "zip",
+      "sha256": "4aa0d7a29a990074f7791baecbfa090df1f0233ef3749346c58e607c9e7e142c",
+      "sizeBytes": 32997243,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-win-vulkan-x64.zip",
+      "extractTo": "apps/desktop/resources/llama-server/win32-x64/vulkan"
+    },
+    "win32-x64-cpu": {
+      "asset": "llama-b9371-bin-win-cpu-x64.zip",
+      "archiveType": "zip",
+      "sha256": "1aedcc71def9e0cdcccb98e431e0d25bc4641ffc89c9aba84f8362ecf50b7111",
+      "sizeBytes": 16067262,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-win-cpu-x64.zip",
+      "extractTo": "apps/desktop/resources/llama-server/win32-x64/cpu"
+    },
+    "win32-arm64-cpu": {
+      "asset": "llama-b9371-bin-win-cpu-arm64.zip",
+      "archiveType": "zip",
+      "sha256": "f65f47ee3087e4fc7a8dbe776737c0fc3d6f6830af18dae5257b0690bdf45fdf",
+      "sizeBytes": 9683520,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-win-cpu-arm64.zip",
+      "extractTo": "apps/desktop/resources/llama-server/win32-arm64/cpu"
+    },
+    "linux-x64-rocm": {
+      "asset": "llama-b9371-bin-ubuntu-rocm-7.2-x64.tar.gz",
+      "archiveType": "tar.gz",
+      "sha256": "ac28a1940adff7fad4448bc3064113f0c8f0869c3c3728dbcf7de3162ddd8033",
+      "sizeBytes": 130049833,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-ubuntu-rocm-7.2-x64.tar.gz",
+      "extractTo": "apps/desktop/resources/llama-server/linux-x64/rocm"
+    },
+    "linux-x64-vulkan": {
+      "asset": "llama-b9371-bin-ubuntu-vulkan-x64.tar.gz",
+      "archiveType": "tar.gz",
+      "sha256": "8a014a61280154276a45b19e1361461d32e716d7318d36013f55a20fdb222e0e",
+      "sizeBytes": 32156499,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-ubuntu-vulkan-x64.tar.gz",
+      "extractTo": "apps/desktop/resources/llama-server/linux-x64/vulkan"
+    },
+    "linux-x64-cpu": {
+      "asset": "llama-b9371-bin-ubuntu-x64.tar.gz",
+      "archiveType": "tar.gz",
+      "sha256": "7f53f92228a42c74129e58681ed299ed75df82dec2d9c9bbe895e945b2ed7d90",
+      "sizeBytes": 14479873,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-ubuntu-x64.tar.gz",
+      "extractTo": "apps/desktop/resources/llama-server/linux-x64/cpu"
+    },
+    "darwin-arm64-metal": {
+      "asset": "llama-b9371-bin-macos-arm64.tar.gz",
+      "archiveType": "tar.gz",
+      "sha256": "e101aecad434f5be63911c033f8bd3382d91a717fef9a6b34025b1755d348979",
+      "sizeBytes": 9806325,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-macos-arm64.tar.gz",
+      "extractTo": "apps/desktop/resources/llama-server/darwin-arm64/metal"
+    },
+    "darwin-x64-metal": {
+      "asset": "llama-b9371-bin-macos-x64.tar.gz",
+      "archiveType": "tar.gz",
+      "sha256": "7d3c25338091bdd8652123d630782fc034a618308b7af5390ffa73d42adcf311",
+      "sizeBytes": 9899694,
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9371/llama-b9371-bin-macos-x64.tar.gz",
+      "extractTo": "apps/desktop/resources/llama-server/darwin-x64/metal"
+    }
+  },
+  "gaps": {
+    "win32-arm64-vulkan": {
+      "reason": "No bin-win-vulkan-arm64.zip shipped in b9371; upstream never ships this because Win arm64 Vulkan is supplied by the system D3D12 translation layer, not llama.cpp.",
+      "fallback": "win32-arm64-cpu only; GPU acceleration on Win arm64 deferred to v3.3.1+",
+      "trackedIn": "phase-2"
+    },
+    "linux-x64-cuda": {
+      "reason": "No CUDA-bundled tarball shipped in b9371; Linux distribution model relies on system-installed NVIDIA driver/CUDA.",
+      "fallback": "Ship linux-x64-vulkan as the GPU build; system libcudart.so satisfies CUDA users via their distro packages.",
+      "trackedIn": "phase-2"
+    }
+  }
+}
