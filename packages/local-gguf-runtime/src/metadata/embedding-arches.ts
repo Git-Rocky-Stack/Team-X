@@ -15,6 +15,7 @@
 //   nomic-bert   — Nomic Embed Text family
 //   xlm-roberta  — multilingual RoBERTa encoders (e.g. BGE-M3)
 //   e5 / bge     — some exporters set arch to the model family directly
+//   gte          — Alibaba GTE embedding models (general.architecture = "gte")
 //   t5           — T5 encoder embeddings
 //   mpnet        — sentence-transformers all-mpnet family
 
@@ -24,6 +25,7 @@ const EMBEDDING_ARCHES: ReadonlySet<string> = new Set([
   'xlm-roberta',
   'e5',
   'bge',
+  'gte',
   't5',
   'mpnet',
 ]);

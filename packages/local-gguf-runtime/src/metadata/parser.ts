@@ -237,6 +237,14 @@ function asString(v: KvValue | undefined): string | undefined {
 function asNumber(v: KvValue | undefined): number | undefined {
   return typeof v === 'number' ? v : undefined;
 }
+/**
+ * Like `asNumber` but additionally rejects NaN and ±Infinity. A crafted GGUF
+ * can store a non-finite F32/F64 for numeric fields such as `context_length` or
+ * `block_count`; `typeof NaN === 'number'` so `??` alone will not catch it.
+ */
+function asFiniteNumber(v: KvValue | undefined): number | undefined {
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+}
 function asStringArray(v: KvValue | undefined): string[] | undefined {
   if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
   return undefined;
@@ -254,6 +262,13 @@ function asStringArray(v: KvValue | undefined): string[] | undefined {
  * @throws ParserError with `kind: 'gguf-corrupt'`     — missing magic / too small.
  * @throws ParserError with `kind: 'gguf-parse-failed'` — unsupported version or
  *         a malformed header / value (with a human-readable `reason`).
+ *
+ * @remarks
+ * `fileSizeBytes` in the returned `GgufMetadata` is set to `buf.length` — i.e.
+ * the length of the buffer passed in. When the caller supplies a truncated head
+ * buffer (e.g. a 256 KB read of a multi-GB model), `fileSizeBytes` will reflect
+ * only that head length. **Callers that parse a head buffer MUST overwrite
+ * `fileSizeBytes` from `fs.stat` before persisting** the metadata record.
  */
 export function parseGgufMetadata(buf: Buffer, sourcePath = ''): GgufMetadata {
   // 1. Magic + minimum size → corruption (not a recoverable parse error).
@@ -337,10 +352,10 @@ export function parseGgufMetadata(buf: Buffer, sourcePath = ''): GgufMetadata {
   const fileType = asNumber(kv['general.file_type']);
   const quant = fileType !== undefined ? (FILE_TYPE_TO_QUANT[fileType] ?? null) : null;
 
-  const contextMax = asNumber(kv[`${arch}.context_length`]) ?? null;
+  const contextMax = asFiniteNumber(kv[`${arch}.context_length`]) ?? null;
 
-  const blockCount = asNumber(kv[`${arch}.block_count`]);
-  const embeddingLength = asNumber(kv[`${arch}.embedding_length`]);
+  const blockCount = asFiniteNumber(kv[`${arch}.block_count`]);
+  const embeddingLength = asFiniteNumber(kv[`${arch}.embedding_length`]);
   const paramsBillions = estimateParamsBillions(blockCount, embeddingLength);
 
   const isEmbeddingModel = isEmbeddingArch(arch);

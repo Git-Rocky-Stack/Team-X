@@ -78,6 +78,15 @@ describe('isToolCapable — chat_template primary signal', () => {
   });
 });
 
+describe('isToolCapable — base model negative cases', () => {
+  it('Qwen2.5 BASE model (no instruct signal) → false', () => {
+    // The family heuristic requires both the version pattern AND the "instruct"
+    // signal. A base-model name like "Qwen2.5-7B" must not be classified as
+    // tool-capable just because the arch is qwen2.
+    expect(isToolCapable({ arch: 'qwen2', name: 'Qwen2.5-7B', tags: [] })).toBe(false);
+  });
+});
+
 describe('isToolCapable — curated tool-finetune name patterns', () => {
   it.each(['Hermes-2-Pro-Mistral-7B', 'NousResearch Functionary', 'firefunction-v2', 'xLAM-7b'])(
     'recognizes tool-finetune family in %s',

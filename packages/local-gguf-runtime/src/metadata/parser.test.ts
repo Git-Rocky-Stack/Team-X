@@ -33,7 +33,7 @@ function readFixture(file: string): Buffer {
 
 describe('parseGgufMetadata — S3 fixtures (data-driven from manifest.json)', () => {
   it('loads all 12 manifest fixtures', () => {
-    expect(manifest).toHaveLength(12);
+    expect(manifest).toHaveLength(12); // bump when adding/removing fixtures
   });
 
   for (const entry of manifest.filter((e) => e.expected.failure === null)) {
@@ -101,6 +101,73 @@ describe('parseGgufMetadata — contract invariants on a known-good fixture', ()
   it('defaults sourcePath to empty string when omitted', () => {
     // Smoke: parsing with no sourcePath argument must not throw on a good file.
     expect(() => parseGgufMetadata(readFixture('01-llama-3.1-8b-q4km.head.gguf'))).not.toThrow();
+  });
+});
+
+describe('parseGgufMetadata — NaN / non-finite numeric guard', () => {
+  /**
+   * Builds a minimal valid GGUF v3 buffer with two KV pairs:
+   *   general.architecture = "llama"  (STRING)
+   *   llama.context_length = F32 NaN  (type 6)
+   *
+   * A crafted model could embed a NaN float for numeric fields; the parser must
+   * yield contextMax === null rather than leaking NaN into the metadata shape.
+   */
+  function buildNaNContextBuffer(): Buffer {
+    const arch = 'llama';
+    const archKey = 'general.architecture';
+    const ctxKey = `${arch}.context_length`;
+
+    // Calculate total size:
+    //   header: 24
+    //   kv[0]: 8 (key len) + archKey.length + 4 (type) + 8 (val len) + arch.length
+    //   kv[1]: 8 (key len) + ctxKey.length  + 4 (type) + 4 (F32 value)
+    const kv0Size = 8 + archKey.length + 4 + 8 + arch.length;
+    const kv1Size = 8 + ctxKey.length + 4 + 4;
+    const buf = Buffer.alloc(24 + kv0Size + kv1Size, 0);
+
+    let off = 0;
+    // Header
+    buf.write('GGUF', off, 'ascii');
+    off += 4;
+    buf.writeUInt32LE(3, off);
+    off += 4; // version
+    buf.writeBigUInt64LE(0n, off);
+    off += 8; // tensorCount
+    buf.writeBigUInt64LE(2n, off);
+    off += 8; // kvCount = 2
+
+    // KV 0: general.architecture = "llama"
+    buf.writeBigUInt64LE(BigInt(archKey.length), off);
+    off += 8;
+    buf.write(archKey, off, 'utf8');
+    off += archKey.length;
+    buf.writeUInt32LE(8, off);
+    off += 4; // type STRING
+    buf.writeBigUInt64LE(BigInt(arch.length), off);
+    off += 8;
+    buf.write(arch, off, 'utf8');
+    off += arch.length;
+
+    // KV 1: llama.context_length = F32 NaN (type 6)
+    buf.writeBigUInt64LE(BigInt(ctxKey.length), off);
+    off += 8;
+    buf.write(ctxKey, off, 'utf8');
+    off += ctxKey.length;
+    buf.writeUInt32LE(6, off);
+    off += 4; // type F32
+    buf.writeFloatLE(Number.NaN, off);
+    off += 4; // NaN float
+
+    return buf;
+  }
+
+  it('contextMax === null when context_length is a F32 NaN (not NaN leaked into output)', () => {
+    const buf = buildNaNContextBuffer();
+    const meta = parseGgufMetadata(buf, 'nan-context-test');
+    expect(meta.contextMax).toBeNull();
+    // Explicit type guard: must not be the number NaN
+    expect(Number.isNaN(meta.contextMax)).toBe(false);
   });
 });
 

@@ -4,9 +4,14 @@ import { isEmbeddingArch } from './embedding-arches';
 
 describe('isEmbeddingArch', () => {
   it('returns true for the curated embedding architectures', () => {
-    for (const arch of ['bert', 'nomic-bert', 'xlm-roberta', 'e5', 'bge', 't5', 'mpnet']) {
+    for (const arch of ['bert', 'nomic-bert', 'xlm-roberta', 'e5', 'bge', 'gte', 't5', 'mpnet']) {
       expect(isEmbeddingArch(arch)).toBe(true);
     }
+  });
+
+  it('returns true for gte (Alibaba GTE embedding models)', () => {
+    expect(isEmbeddingArch('gte')).toBe(true);
+    expect(isEmbeddingArch('GTE')).toBe(true); // case-insensitive
   });
 
   it('returns true for the S3 embedding fixtures (nomic-bert, bert)', () => {
