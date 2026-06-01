@@ -271,6 +271,9 @@ importers:
       '@team-x/shared-types':
         specifier: workspace:*
         version: link:../shared-types
+      chokidar:
+        specifier: ^3
+        version: 3.6.0
     devDependencies:
       memfs:
         specifier: ^4

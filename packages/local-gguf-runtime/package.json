@@ -14,7 +14,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@team-x/shared-types": "workspace:*"
+    "@team-x/shared-types": "workspace:*",
+    "chokidar": "^3"
   },
   "devDependencies": {
     "memfs": "^4",
