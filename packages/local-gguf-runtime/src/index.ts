@@ -19,3 +19,4 @@ export * from './pool/auto-swap.js';
 export * from './metadata/parser.js';
 export * from './metadata/embedding-arches.js';
 export * from './metadata/tool-capable-list.js';
+export * from './library/split-gguf.js';
