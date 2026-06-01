@@ -171,6 +171,47 @@ describe('parseGgufMetadata — NaN / non-finite numeric guard', () => {
   });
 });
 
+describe('parseGgufMetadata — perf assertion (master plan Task 10 / CR-6)', () => {
+  /**
+   * Builds a valid GGUF v3 header with 0 tensors and 0 KV pairs, padded to
+   * exactly 1 MiB (1,048,576 bytes).  The parser reads head-only (bounds-checked
+   * stop at buffer end) — this asserts that a 1 MiB read never accidentally
+   * scans the full buffer byte-by-byte instead of halting after the header.
+   * Budget is generous (50 ms >> expected ~0.1 ms) to survive CI jitter.
+   */
+  function buildOneMibGgufHead(): Buffer {
+    const buf = Buffer.alloc(1_048_576, 0);
+    let off = 0;
+    buf.write('GGUF', off, 'ascii');
+    off += 4; // magic
+    buf.writeUInt32LE(3, off);
+    off += 4; // version 3
+    buf.writeBigUInt64LE(0n, off);
+    off += 8; // tensorCount = 0
+    buf.writeBigUInt64LE(0n, off);
+    // off += 8; // kvCount = 0 — remainder of buf is already zero
+    return buf;
+  }
+
+  it('parses a 1 MiB zero-KV GGUF v3 head in under 50 ms (perf assertion)', () => {
+    const buf = buildOneMibGgufHead();
+
+    const start = performance.now();
+    const meta = parseGgufMetadata(buf, 'perf-1mib-head');
+    const elapsed = performance.now() - start;
+
+    // Phase 3 perf budget: header + 0-KV parse over a 1 MiB buffer < 50 ms.
+    // Locks the no-accidental-full-scan guarantee: the parser must stop after
+    // reading the fixed header when kvCount is 0, not walk every byte.
+    expect(elapsed).toBeLessThan(50);
+    // Sanity: the buffer is well-formed, so no exception should be thrown,
+    // and the returned metadata should reflect the empty head.
+    // Parser defaults arch to 'unknown' when the general.architecture KV is absent.
+    expect(meta.arch).toBe('unknown'); // no general.architecture KV — defaults to 'unknown'
+    expect(meta.fileSizeBytes).toBe(1_048_576);
+  });
+});
+
 describe('parseGgufMetadata — error handling (focused unit tests)', () => {
   it('throws gguf-corrupt for a buffer that is too small (< 24 bytes)', () => {
     try {

@@ -298,6 +298,46 @@ describe('createFolderWatcher', () => {
   });
 
   // -----------------------------------------------------------------------
+  // Phase 3 perf assertion (master plan Task 10 / CR-6)
+  //
+  // Fake timers make wall-clock latency meaningless here; the meaningful
+  // budget is: the first change event must be emitted exactly AT the debounce
+  // boundary (i.e. after vi.advanceTimersByTime(debounceMs)), and NOT before
+  // it.  "No added latency" means no implementation drift (extra async hops,
+  // redundant timers, missed flush) stretches the window past debounceMs.
+  // The test also names an explicit tolerance (debounceMs + 50 ms) matching
+  // the CR-6 spec — the fake-timer model ensures the flush fires in the same
+  // synchronous tick, so the tolerance is met by construction.
+  // -----------------------------------------------------------------------
+
+  it('first change event arrives exactly at the debounce boundary — no added latency (perf assertion)', async () => {
+    const debounceMs = 100; // explicit and larger than DEBOUNCE to make the budget visible
+    const { factory, getWatcher } = makeFakeFactory();
+    const w = createFolderWatcher('/m', {
+      recursive: false,
+      chokidarFactory: factory,
+      debounceMs,
+    });
+    const events = collectChanges(w);
+
+    getWatcher().emit('add', '/m/model.gguf');
+
+    // Before the boundary: nothing.
+    vi.advanceTimersByTime(debounceMs - 1);
+    expect(events).toHaveLength(0);
+
+    // Exactly at the boundary: the flush fires and the event is present.
+    // Phase 3 perf budget: first event emitted ≤ debounceMs (+ 50 ms tolerance).
+    // With fake timers the flush is synchronous, so no real-time headroom is
+    // consumed — the tolerance exists to document the contract, not to absorb jitter.
+    vi.advanceTimersByTime(1); // total elapsed = debounceMs exactly
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual({ type: 'add', path: '/m/model.gguf' });
+
+    await w.close();
+  });
+
+  // -----------------------------------------------------------------------
   // Error forwarding
   // -----------------------------------------------------------------------
 

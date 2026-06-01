@@ -342,6 +342,32 @@ describe('scanFolderForGgufs', () => {
     expect(heads).toEqual(['/m/ok/fine.gguf', '/m/top.gguf']);
   });
 
+  // -------------------------------------------------------------------------
+  // Phase 3 perf assertion (master plan Task 10 / CR-6)
+  //
+  // scanFolderForGgufs over 100 plain .gguf files (memfs, flat, non-recursive)
+  // must complete in under 200 ms.  The budget is generous relative to the
+  // expected ~5–20 ms for an in-memory scan; it exists to catch accidentally
+  // introduced O(n²) loops or full-file reads at integration time.
+  // -------------------------------------------------------------------------
+  it('scans 100 .gguf files in a flat folder in under 200 ms (perf assertion)', async () => {
+    const files: Record<string, string> = {};
+    for (let i = 0; i < 100; i++) {
+      files[`/perf/model-${String(i).padStart(3, '0')}.gguf`] = STUB;
+    }
+    vol.fromJSON(files);
+
+    const start = performance.now();
+    const result = await scanFolderForGgufs('/perf', { recursive: false, fs });
+    const elapsed = performance.now() - start;
+
+    // Phase 3 perf budget: flat scan of 100 GGUFs (memfs) < 200 ms.
+    expect(elapsed).toBeLessThan(200);
+    // Sanity: all 100 plain (non-split) files must be found.
+    expect(result.candidates).toHaveLength(100);
+    expect(result.error).toBeNull();
+  });
+
   it('stat-throws-on-one-part: candidate still returned, sizeBytes sums OK parts only', async () => {
     vol.fromJSON({
       '/m/Big-00001-of-00002.gguf': 'A'.repeat(1000),
