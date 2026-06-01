@@ -245,27 +245,51 @@ test.describe('Team-X localGguf network-share disconnect/reconnect resilience (P
 
     // -----------------------------------------------------------------------
     // 4. Simulate disconnect: rename the watched dir so chokidar fires
-    //    'unlink'/'unlinkDir'/'error' events for all watched paths.
+    //    'unlink'/'unlinkDir'/'error' events for all watched paths. Then
+    //    DETERMINISTICALLY exercise the disconnect path via an explicit scan —
+    //    the folder is now missing, so the service must handle
+    //    `source-unreachable` without crashing. We tolerate either outcome of
+    //    the scan (resolve or reject); the guarantee under test is "the main
+    //    process survives", proven by the liveness probe immediately after.
+    //    (No fixed `waitForTimeout` — the IPC round-trips ARE the wait and
+    //    they fail fast if the main process died.)
     // -----------------------------------------------------------------------
     await rename(watchDir, watchDirOffline);
+    await window.evaluate(
+      ([id]: [string]) =>
+        (globalThis as unknown as TeamxGlobal).teamx.localGguf.library.scanFolder(id).then(
+          () => null,
+          () => null,
+        ),
+      [folder.id] as [string],
+    );
 
-    // Give the watcher event storm ~1.5 s to settle in the main process.
-    await window.waitForTimeout(1500);
+    // Liveness probe after disconnect: a dead main process makes evaluate reject.
+    const invAfterDisconnect = await window.evaluate(() =>
+      (globalThis as unknown as TeamxGlobal).teamx.localGguf.runtime.gpuInventory(),
+    );
+    expect(invAfterDisconnect.detectedAt).toBeGreaterThan(0);
 
     // -----------------------------------------------------------------------
-    // 5. Reconnect: rename the dir back to its original path.
+    // 5. Reconnect: rename the dir back, then exercise the reconnect path via
+    //    another explicit scan (the folder is reachable again).
     // -----------------------------------------------------------------------
     await rename(watchDirOffline, watchDir);
-
-    // Allow chokidar's re-add events to propagate.
-    await window.waitForTimeout(1500);
+    await window.evaluate(
+      ([id]: [string]) =>
+        (globalThis as unknown as TeamxGlobal).teamx.localGguf.library.scanFolder(id).then(
+          () => null,
+          () => null,
+        ),
+      [folder.id] as [string],
+    );
 
     // -----------------------------------------------------------------------
-    // 6. Core assertion: the main process did not crash and the IPC bridge
-    //    is still responsive.  We call a cheap round-trip on the runtime
-    //    namespace (gpuInventory was probed at boot — no I/O, cache hit).
-    //    A dead main process would cause page.evaluate to throw or time out.
-    //    App still alive — that is the assertion. No crash.
+    // 6. Core assertion: the main process survived the full disconnect/reconnect
+    //    rename storm and the IPC bridge is still responsive across BOTH the
+    //    runtime and library namespaces. A dead main process would make
+    //    page.evaluate throw or time out. App still alive — that is the
+    //    assertion. No crash.
     // -----------------------------------------------------------------------
     const inv = await window.evaluate(() =>
       (globalThis as unknown as TeamxGlobal).teamx.localGguf.runtime.gpuInventory(),
