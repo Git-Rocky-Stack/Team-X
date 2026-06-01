@@ -20,3 +20,4 @@ export * from './metadata/parser.js';
 export * from './metadata/embedding-arches.js';
 export * from './metadata/tool-capable-list.js';
 export * from './library/split-gguf.js';
+export * from './library/scanner.js';
