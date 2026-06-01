@@ -4,7 +4,8 @@
 // the surface with the binary resolver, port allocator, auto-tune, llama-server
 // lifecycle, GPU probe + ranking, and the LRU pool / auto-swap policy, so the
 // Electron-main RuntimeService / PoolService can compose them from a single
-// `@team-x/local-gguf-runtime` import.
+// `@team-x/local-gguf-runtime` import. Phase 3 adds the GGUF metadata parser
+// and its embedding / tool-capability detectors for the LibraryService.
 
 export * from './errors.js';
 export * from './runtime/binary-resolver.js';
@@ -15,3 +16,6 @@ export * from './gpu-probe/probe.js';
 export * from './gpu-probe/ranking.js';
 export * from './pool/lru-pool.js';
 export * from './pool/auto-swap.js';
+export * from './metadata/parser.js';
+export * from './metadata/embedding-arches.js';
+export * from './metadata/tool-capable-list.js';
