@@ -3084,6 +3084,17 @@ app
       console.error('[main] local-gguf runtimeService.init failed (GPU probe):', err);
     });
 
+    // Re-hydrate watch folders persisted from a prior session: bring each
+    // folder's chokidar watcher + resilience monitor back online and reconcile
+    // it against the current disk state. Fire-and-forget for the same reason as
+    // the GPU probe above — `start()` registers every watcher synchronously
+    // before it yields, so coverage is live immediately, while the per-folder
+    // reconciles run in the background and a slow/unreachable NAS never blocks
+    // window creation. Non-fatal — failures are logged inside the service.
+    void libraryService.start().catch((err: unknown) => {
+      console.error('[main] local-gguf libraryService.start failed (watch re-hydration):', err);
+    });
+
     console.log('[main] orchestrator + IPC ready');
 
     // ---- Application menu ---------------------------------------------------

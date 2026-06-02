@@ -73,7 +73,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   live disconnect/reconnect status, per-model system-prompt/chat-template/
   advanced-param overrides, and reset-to-auto — and tears every
   watcher/monitor down on quit. Models are read head-only (≤ 1 MiB) so
-  multi-GB files are never loaded to parse metadata.
+  multi-GB files are never loaded to parse metadata. On boot the service
+  **re-hydrates every persisted watch folder** — restarting its watcher +
+  resilience monitor and reconciling it against current disk state — so folders
+  registered in a prior session resume live tracking (and pick up files added
+  or removed while the app was closed) without the user re-adding them;
+  re-hydration is fire-and-forget so a slow or unreachable NAS never blocks
+  window creation.
 
 ### Changed
 - **Release pipeline now smoke-tests the Linux AppImage before publishing.**

@@ -748,6 +748,115 @@ describe('createLibraryService', () => {
   });
 
   // -------------------------------------------------------------------------
+  // start (boot re-hydration)
+  // -------------------------------------------------------------------------
+
+  describe('start (boot re-hydration)', () => {
+    it('starts a watcher + monitor for every persisted folder and runs an initial reconcile of each', async () => {
+      const h = makeHarness(ctx);
+      // Simulate folders persisted by a PRIOR session: insert rows directly via
+      // the repo, bypassing addFolder, so no lifecycle exists yet — exactly the
+      // state a freshly booted process is in.
+      h.watchFolders.insert({ path: '/nas/models', recursive: true });
+      h.watchFolders.insert({ path: '/local/models', recursive: false });
+
+      // Each folder's scan reports one candidate keyed by its own path.
+      h.scan.mockImplementation(async (folderPath: string) => ({
+        candidates: [candidate({ headPath: `${folderPath}/m.gguf` })],
+        error: null,
+      }));
+
+      await h.service.start();
+
+      // One watcher + monitor per persisted folder; every monitor started.
+      expect(h.watchers).toHaveLength(2);
+      expect(h.monitors).toHaveLength(2);
+      for (const m of h.monitors) expect(m.start).toHaveBeenCalledOnce();
+
+      // The initial reconcile ran once per folder and populated the library.
+      expect(h.scan).toHaveBeenCalledTimes(2);
+      const paths = h.models
+        .listBySourceType('folder-entry')
+        .map((m) => m.sourcePath)
+        .sort();
+      expect(paths).toEqual(['/local/models/m.gguf', '/nas/models/m.gguf']);
+    });
+
+    it('is idempotent — calling start twice does not double-watch a folder', async () => {
+      const h = makeHarness(ctx);
+      h.watchFolders.insert({ path: '/models', recursive: true });
+
+      await h.service.start();
+      expect(h.watchers).toHaveLength(1);
+
+      await h.service.start();
+      // The second start saw a live lifecycle and skipped it — still one each.
+      expect(h.watchers).toHaveLength(1);
+      expect(h.monitors).toHaveLength(1);
+    });
+
+    it('does not re-watch a folder already started via addFolder', async () => {
+      const h = makeHarness(ctx);
+      await h.service.addFolder('/models', true); // creates lifecycle + 1 watcher
+      expect(h.watchers).toHaveLength(1);
+
+      await h.service.start();
+      // addFolder's row is in the persisted list, but its lifecycle is already
+      // live, so start skips it rather than creating a second watcher.
+      expect(h.watchers).toHaveLength(1);
+      expect(h.monitors).toHaveLength(1);
+    });
+
+    it('isolates a per-folder reconcile failure so one bad folder does not abort the others', async () => {
+      const h = makeHarness(ctx);
+      h.watchFolders.insert({ path: '/bad', recursive: true });
+      h.watchFolders.insert({ path: '/good', recursive: true });
+
+      // /bad rejects on scan; /good resolves with a candidate.
+      h.scan.mockImplementation(async (folderPath: string) => {
+        if (folderPath === '/bad') throw new Error('ENOENT: scan blew up');
+        return { candidates: [candidate({ headPath: '/good/ok.gguf' })], error: null };
+      });
+
+      // start resolves (does not throw) despite the failing folder.
+      await expect(h.service.start()).resolves.toBeUndefined();
+
+      // Both folders still got a watcher + monitor — lifecycle start is
+      // independent of the scan outcome.
+      expect(h.watchers).toHaveLength(2);
+      expect(h.monitors).toHaveLength(2);
+      // The healthy folder's reconcile still populated the library.
+      const paths = h.models.listBySourceType('folder-entry').map((m) => m.sourcePath);
+      expect(paths).toEqual(['/good/ok.gguf']);
+      // The failure was logged, not silently swallowed.
+      expect(h.logger.error).toHaveBeenCalled();
+    });
+
+    it('registers every watcher synchronously before any reconcile awaits (fire-and-forget boot is safe)', async () => {
+      const h = makeHarness(ctx);
+      h.watchFolders.insert({ path: '/a', recursive: true });
+      h.watchFolders.insert({ path: '/b', recursive: true });
+
+      // Do NOT await: a fire-and-forget caller (index.ts boot) must have live
+      // watcher coverage the instant start() returns, before the background
+      // reconciles settle — otherwise there is a window where filesystem events
+      // are missed.
+      const pending = h.service.start();
+      expect(h.watchers).toHaveLength(2);
+      expect(h.monitors).toHaveLength(2);
+
+      await pending; // settle the background reconciles for a clean test exit
+    });
+
+    it('is a no-op when there are no persisted folders', async () => {
+      const h = makeHarness(ctx);
+      await expect(h.service.start()).resolves.toBeUndefined();
+      expect(h.watchers).toHaveLength(0);
+      expect(h.monitors).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // dispose
   // -------------------------------------------------------------------------
 

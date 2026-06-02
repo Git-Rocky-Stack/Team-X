@@ -144,6 +144,15 @@ export interface LibraryService {
   setChatTemplate(id: string, template: string | null): Promise<LocalModel>;
   setAdvancedParams(id: string, params: Partial<AdvancedParams>): Promise<AdvancedParams>;
   resetAdvanced(id: string): Promise<AdvancedParams>;
+  /**
+   * Re-hydrate persisted watch folders on boot: start a live watcher + monitor
+   * for every folder already in the DB and run an initial reconcile of each so
+   * changes made while the app was closed are picked up. Idempotent — folders
+   * that already have a live lifecycle are skipped. The watcher/monitor pair is
+   * created synchronously up front, so a fire-and-forget caller gets immediate
+   * coverage; the per-folder reconciles run in the background and never block.
+   */
+  start(): Promise<void>;
   /** Tear down every watcher + monitor (app shutdown). Idempotent. */
   dispose(): Promise<void>;
 }
@@ -505,6 +514,39 @@ export function createLibraryService(deps: LibraryServiceDeps): LibraryService {
       // auto-tuned defaults (never the just-deleted row).
       deps.advancedParams.clear(id);
       return deps.computeAutoParams(model);
+    },
+
+    async start(): Promise<void> {
+      // Re-hydration. A fresh process has a DB row for every folder the user
+      // registered in a prior session, but no live watcher/monitor yet — those
+      // are created by `addFolder`, which only runs for NEW folders. Walk the
+      // persisted rows and bring each one's lifecycle back online.
+      //
+      // Lifecycle creation is synchronous and done up front, BEFORE the first
+      // await below, so watcher coverage is live the instant `start()` is called
+      // even when the caller does not await it. (index.ts fires this
+      // fire-and-forget so a slow or unreachable NAS folder never blocks window
+      // creation.)
+      const toReconcile: string[] = [];
+      for (const folder of deps.watchFolders.list()) {
+        // Skip any folder that already has a live lifecycle — guards a double
+        // `start()` and a folder registered via `addFolder` before `start()` ran.
+        if (lifecycles.has(folder.id)) continue;
+        startLifecycle(folder);
+        toReconcile.push(folder.id);
+      }
+
+      // Initial reconcile per folder so files added/removed while the app was
+      // closed are reflected. Per-folder failures are isolated (logged, never
+      // rethrown) so one unreachable folder cannot abort hydration of the rest;
+      // `allSettled` lets a caller that DOES await know hydration finished.
+      await Promise.allSettled(
+        toReconcile.map((id) =>
+          reconcileFolder(id).catch((err) => {
+            logger.error('boot reconcile failed', id, err);
+          }),
+        ),
+      );
     },
 
     async dispose(): Promise<void> {
