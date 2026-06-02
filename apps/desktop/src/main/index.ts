@@ -41,6 +41,12 @@
  *   from exiting and stranding the user.
  */
 
+import {
+  access as fsAccess,
+  open as fsOpen,
+  readdir as fsReaddir,
+  stat as fsStat,
+} from 'node:fs/promises';
 import { join } from 'node:path';
 
 import {
@@ -67,8 +73,10 @@ import {
 } from '@team-x/provider-router';
 import { streamAgent } from '@team-x/provider-router';
 import type {
+  AdvancedParams,
   EmbeddingSourceType,
   Employee,
+  LocalModel,
   Meeting,
   RuntimeStrategy,
   Ticket,
@@ -105,6 +113,7 @@ import {
 } from './db/repos/extensions.js';
 import { createGoalsRepo } from './db/repos/goals.js';
 import { createLocalModelAdvancedParamsRepo } from './db/repos/local-model-advanced-params.js';
+import { createLocalModelWatchFoldersRepo } from './db/repos/local-model-watch-folders.js';
 import { createLocalModelsRepo } from './db/repos/local-models.js';
 import {
   createMcpServersRepo,
@@ -201,6 +210,11 @@ import { type EnhancedAiService, createEnhancedAiService } from './services/enha
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
+import {
+  type LibraryFs,
+  type LibraryService,
+  createLibraryService,
+} from './services/local-gguf/library-service.js';
 import { type PoolService, createPoolService } from './services/local-gguf/pool-service.js';
 import {
   type RuntimeService,
@@ -602,6 +616,12 @@ let copilotEventTriggerInstance: CopilotEventTrigger | null = null;
  * before the SQLite handle closes.
  */
 let poolServiceInstance: PoolService | null = null;
+/**
+ * Local GGUF library service (v3.3.0 Phase 3). Held at module scope so the
+ * will-quit handler can `dispose()` its live chokidar folder watchers and
+ * network-share resilience monitors before the SQLite handle closes.
+ */
+let libraryServiceInstance: LibraryService | null = null;
 
 configureStableUserDataPath(app, { logger: console });
 
@@ -677,6 +697,9 @@ app
     // ── Local & Networked GGUF runtime (v3.3.0 Phase 2) ───────────────────
     const localModelsRepo = createLocalModelsRepo(db);
     const localModelAdvancedParamsRepo = createLocalModelAdvancedParamsRepo(db);
+    // Phase 3 (library + scanning): folder sources scanned for GGUF files; the
+    // LibraryService owns the watcher/monitor lifecycle for each registered row.
+    const localModelWatchFoldersRepo = createLocalModelWatchFoldersRepo(db);
 
     // Adapter: the app settings repo (getRaw → string | null / set → JSON) →
     // the get<T>() | undefined / set<T>() shape the local-gguf accessor expects.
@@ -709,6 +732,64 @@ app
       initialMaxConcurrent: localGgufSettings.get().maxConcurrentLocalModels,
     });
     poolServiceInstance = poolService;
+
+    // ── Local & Networked GGUF library service (v3.3.0 Phase 3) ───────────
+    // Production filesystem adapter. readFile MUST honour `{ length }`: the
+    // service reads only the GGUF head (1 MiB) to parse metadata, and a plain
+    // fs.readFile ignores `length` - it would load a multi-GB model fully into
+    // memory. A bounded `length` is satisfied via a file handle partial read
+    // (a small head file simply returns fewer bytes, which is fine). Node `fs`
+    // accepts the scanner's forward-slash paths on Windows, incl. //host/share.
+    const libraryFs: LibraryFs = {
+      async readFile(path, opts) {
+        const fh = await fsOpen(path, 'r');
+        try {
+          if (opts?.length == null) {
+            return await fh.readFile();
+          }
+          const buf = Buffer.allocUnsafe(opts.length);
+          const { bytesRead } = await fh.read(buf, 0, opts.length, 0);
+          return buf.subarray(0, bytesRead);
+        } finally {
+          await fh.close();
+        }
+      },
+      stat: (p) => fsStat(p).then((s) => ({ size: s.size })),
+      access: (p) => fsAccess(p),
+      // The scanner always passes `{ withFileTypes: true }`; force that overload
+      // (Dirent[]) so the structural `{ name, isDirectory, isFile }` return holds.
+      readdir: (p) => fsReaddir(p, { withFileTypes: true }) as ReturnType<LibraryFs['readdir']>,
+    };
+
+    // resetAdvanced = "reset to auto": clear the stored override, then return
+    // an all-null AdvancedParams meaning "no overrides; auto-tune on next load".
+    // Real auto-tuning (GPU probe + autoTune) already runs at model-load time in
+    // pool-service.ts, so a settings-reset click must NOT trigger a GPU probe -
+    // returning the null/auto row is the correct, side-effect-free behaviour.
+    const computeAutoParams = async (model: LocalModel): Promise<AdvancedParams> => ({
+      modelId: model.id,
+      nCtx: null,
+      nGpuLayers: null,
+      nBatch: null,
+      nThreads: null,
+      temperature: null,
+      topP: null,
+      topK: null,
+      repeatPenalty: null,
+      mmap: null,
+      mlock: null,
+      flashAttention: null,
+      updatedAt: Date.now(),
+    });
+
+    const libraryService: LibraryService = createLibraryService({
+      models: localModelsRepo,
+      watchFolders: localModelWatchFoldersRepo,
+      advancedParams: localModelAdvancedParamsRepo,
+      fs: libraryFs,
+      computeAutoParams,
+    });
+    libraryServiceInstance = libraryService;
 
     const cloudLinkService = createCloudLinkService({
       companiesRepo,
@@ -2985,10 +3066,10 @@ app
     // Local & Networked GGUF Support (v3.3.0). The remaining handlers register
     // the `localGguf.*` channel surface so the preload bridge has live handlers
     // to invoke; each still-stubbed handler throws a not-implemented error until
-    // its owning phase lands the real service (library → P3, endpoint → P5,
-    // hf → P7, benchmark → P10). Phase 2 (runtime/pool) is now LIVE: its handlers
-    // delegate to the RuntimeService + PoolService constructed above.
-    registerLocalGgufLibraryHandlers(ipcMain);
+    // its owning phase lands the real service (endpoint -> P5, hf -> P7,
+    // benchmark -> P10). Phase 2 (runtime/pool) and Phase 3 (library) are now
+    // LIVE: their handlers delegate to the services constructed above.
+    registerLocalGgufLibraryHandlers(ipcMain, { library: libraryService });
     registerLocalGgufRuntimeHandlers(ipcMain, { runtime: runtimeService, pool: poolService });
     registerLocalGgufHfHandlers(ipcMain);
     registerLocalGgufBenchmarkHandlers(ipcMain);
@@ -3001,6 +3082,17 @@ app
     // backend) rather than blocking boot. Non-fatal — log and continue.
     void runtimeService.init().catch((err: unknown) => {
       console.error('[main] local-gguf runtimeService.init failed (GPU probe):', err);
+    });
+
+    // Re-hydrate watch folders persisted from a prior session: bring each
+    // folder's chokidar watcher + resilience monitor back online and reconcile
+    // it against the current disk state. Fire-and-forget for the same reason as
+    // the GPU probe above — `start()` registers every watcher synchronously
+    // before it yields, so coverage is live immediately, while the per-folder
+    // reconciles run in the background and a slow/unreachable NAS never blocks
+    // window creation. Non-fatal — failures are logged inside the service.
+    void libraryService.start().catch((err: unknown) => {
+      console.error('[main] local-gguf libraryService.start failed (watch re-hydration):', err);
     });
 
     console.log('[main] orchestrator + IPC ready');
@@ -3052,7 +3144,8 @@ app.on('will-quit', (event) => {
     copilotAnalyzerServiceInstance === null &&
     commandServiceInstance === null &&
     agenticLoopServiceInstance === null &&
-    poolServiceInstance === null
+    poolServiceInstance === null &&
+    libraryServiceInstance === null
   ) {
     closeDb();
     return;
@@ -3168,6 +3261,18 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] local-gguf pool shutdown failed:', err);
+    }
+    // Tear down the library service's live chokidar folder watchers and
+    // network-share resilience monitors BEFORE the DB close: they hold FS
+    // handles + polling timers that must not outlive the app. dispose() is
+    // idempotent; nulling the handle prevents shutdown re-entry re-triggering it.
+    try {
+      if (libraryServiceInstance !== null) {
+        await libraryServiceInstance.dispose();
+        libraryServiceInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] local-gguf library dispose failed:', err);
     }
     try {
       if (orchestrator !== null) {

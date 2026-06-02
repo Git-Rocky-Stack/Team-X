@@ -60,7 +60,7 @@ export interface GgufMetadata {
   chatTemplate: string | null;
   isEmbeddingModel: boolean;
   isToolCapable: boolean;
-  fileSizeBytes: number;
+  fileSizeBytes: number; // = buf.length passed to parseGgufMetadata; callers parsing a head buffer MUST overwrite this from fs.stat before persisting
   sha256: string | null;
 }
 

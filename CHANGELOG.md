@@ -54,6 +54,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   SHA-256-verified at install/build time from a deterministic manifest pinned
   to llama.cpp `b9371` — never committed (gitignored), +250–450 MB per OS at
   install depending on the bundled backends.
+- **Local & Networked GGUF Support (Phase 3 — Library + Scanning)**: replaced
+  the Phase-1 `localGguf.library.*` IPC stubs with a real library pipeline.
+  New in `@team-x/local-gguf-runtime`: a hand-rolled **GGUF metadata parser**
+  (bounds-checked header + KV-table walk per the ggml spec; extracts arch,
+  params, quant, context-max, chat-template, embedding flag, and a
+  tool-capable hint; NaN-guarded numeric projection) validated against 12 real
+  model-head fixtures; **split-GGUF helpers** (recognise/group/complete-check
+  multi-part `*-NNNNN-of-MMMMM.gguf` sets); a **folder scanner** that walks a
+  directory for `.gguf` files (recursive option, split grouping, size summing)
+  with deterministic forward-slash paths across Windows drive and UNC
+  `\\NAS\share` inputs; a **chokidar folder watcher** (250 ms debounce,
+  `.gguf` filter, error-forwarding); and a **network-share resilience monitor**
+  (30 s base poll, exponential backoff to a 5-min ceiling, transition-only
+  events, never gives up). The Electron-main **LibraryService** orchestrates
+  parser + scanner + watcher + resilience + the Phase-1 repos behind all
+  twelve `localGguf.library.*` channels — add file/folder, scan, watch with
+  live disconnect/reconnect status, per-model system-prompt/chat-template/
+  advanced-param overrides, and reset-to-auto — and tears every
+  watcher/monitor down on quit. Models are read head-only (≤ 1 MiB) so
+  multi-GB files are never loaded to parse metadata. On boot the service
+  **re-hydrates every persisted watch folder** — restarting its watcher +
+  resilience monitor and reconciling it against current disk state — so folders
+  registered in a prior session resume live tracking (and pick up files added
+  or removed while the app was closed) without the user re-adding them;
+  re-hydration is fire-and-forget so a slow or unreachable NAS never blocks
+  window creation.
 
 ### Changed
 - **Release pipeline now smoke-tests the Linux AppImage before publishing.**

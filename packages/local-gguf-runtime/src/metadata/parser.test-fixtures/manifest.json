@@ -1,0 +1,182 @@
+[
+  {
+    "id": "01-llama-3.1-8b-q4km",
+    "file": "01-llama-3.1-8b-q4km.head.gguf",
+    "label": "Llama 3.1 8B Instruct (Q4_K_M)",
+    "repo": "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+    "sourcePath": "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+    "expected": {
+      "arch": "llama",
+      "quant": "Q4_K_M",
+      "ctxMax": 131072,
+      "embedding": false,
+      "toolCapable": true,
+      "failure": null
+    }
+  },
+  {
+    "id": "02-mistral-7b-v0.3-q4km",
+    "file": "02-mistral-7b-v0.3-q4km.head.gguf",
+    "label": "Mistral 7B Instruct v0.3 (Q4_K_M)",
+    "repo": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+    "sourcePath": "Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
+    "expected": {
+      "arch": "llama",
+      "quant": "Q4_K_M",
+      "ctxMax": 32768,
+      "embedding": false,
+      "toolCapable": true,
+      "failure": null
+    }
+  },
+  {
+    "id": "03-qwen2.5-7b-q4km",
+    "file": "03-qwen2.5-7b-q4km.head.gguf",
+    "label": "Qwen 2.5 7B Instruct (Q4_K_M)",
+    "repo": "bartowski/Qwen2.5-7B-Instruct-GGUF",
+    "sourcePath": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+    "expected": {
+      "arch": "qwen2",
+      "quant": "Q4_K_M",
+      "ctxMax": 32768,
+      "embedding": false,
+      "toolCapable": true,
+      "failure": null
+    }
+  },
+  {
+    "id": "04-gemma-2-9b-q4km",
+    "file": "04-gemma-2-9b-q4km.head.gguf",
+    "label": "Gemma 2 9B Instruct (Q4_K_M)",
+    "repo": "bartowski/gemma-2-9b-it-GGUF",
+    "sourcePath": "gemma-2-9b-it-Q4_K_M.gguf",
+    "expected": {
+      "arch": "gemma2",
+      "quant": "Q4_K_M",
+      "ctxMax": 8192,
+      "embedding": false,
+      "toolCapable": false,
+      "failure": null
+    }
+  },
+  {
+    "id": "05-phi-3.5-mini-q4km",
+    "file": "05-phi-3.5-mini-q4km.head.gguf",
+    "label": "Phi 3.5 Mini Instruct (Q4_K_M)",
+    "repo": "bartowski/Phi-3.5-mini-instruct-GGUF",
+    "sourcePath": "Phi-3.5-mini-instruct-Q4_K_M.gguf",
+    "expected": {
+      "arch": "phi3",
+      "quant": "Q4_K_M",
+      "ctxMax": 131072,
+      "embedding": false,
+      "toolCapable": false,
+      "failure": null
+    }
+  },
+  {
+    "id": "06-deepseek-coder-v2-lite-q4km",
+    "file": "06-deepseek-coder-v2-lite-q4km.head.gguf",
+    "label": "DeepSeek Coder V2 Lite Instruct (Q4_K_M)",
+    "repo": "bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+    "sourcePath": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf",
+    "expected": {
+      "arch": "deepseek2",
+      "quant": "Q4_K_M",
+      "ctxMax": 163840,
+      "embedding": false,
+      "toolCapable": false,
+      "failure": null
+    }
+  },
+  {
+    "id": "07-hermes-3-llama-3.1-8b-q4km",
+    "file": "07-hermes-3-llama-3.1-8b-q4km.head.gguf",
+    "label": "Hermes 3 Llama 3.1 8B (Q4_K_M) — tool-capable",
+    "repo": "bartowski/Hermes-3-Llama-3.1-8B-GGUF",
+    "sourcePath": "Hermes-3-Llama-3.1-8B-Q4_K_M.gguf",
+    "expected": {
+      "arch": "llama",
+      "quant": "Q4_K_M",
+      "ctxMax": 131072,
+      "embedding": false,
+      "toolCapable": true,
+      "failure": null
+    }
+  },
+  {
+    "id": "08-nomic-embed-text-v1.5",
+    "file": "08-nomic-embed-text-v1.5.head.gguf",
+    "label": "Nomic Embed Text v1.5 (Q4_K_M)",
+    "repo": "nomic-ai/nomic-embed-text-v1.5-GGUF",
+    "sourcePath": "nomic-embed-text-v1.5.Q4_K_M.gguf",
+    "expected": {
+      "arch": "nomic-bert",
+      "quant": "Q4_K_M",
+      "ctxMax": 2048,
+      "embedding": true,
+      "toolCapable": false,
+      "failure": null
+    }
+  },
+  {
+    "id": "09-bge-large-en-v1.5-q4km",
+    "file": "09-bge-large-en-v1.5-q4km.head.gguf",
+    "label": "BGE Large EN v1.5 (Q4_K_M) — embedding",
+    "repo": "CompendiumLabs/bge-large-en-v1.5-gguf",
+    "sourcePath": "bge-large-en-v1.5-q4_k_m.gguf",
+    "expected": {
+      "arch": "bert",
+      "quant": "Q4_K_M",
+      "ctxMax": 512,
+      "embedding": true,
+      "toolCapable": false,
+      "failure": null
+    }
+  },
+  {
+    "id": "10-llama-3.2-3b-f16",
+    "file": "10-llama-3.2-3b-f16.head.gguf",
+    "label": "Llama 3.2 3B Instruct (F16 unquantized)",
+    "repo": "bartowski/Llama-3.2-3B-Instruct-GGUF",
+    "sourcePath": "Llama-3.2-3B-Instruct-f16.gguf",
+    "expected": {
+      "arch": "llama",
+      "quant": "F16",
+      "ctxMax": 131072,
+      "embedding": false,
+      "toolCapable": true,
+      "failure": null
+    }
+  },
+  {
+    "id": "11-llama-3.3-70b-q5km-split",
+    "file": "11-llama-3.3-70b-q5km-split.head.gguf",
+    "label": "Llama 3.3 70B Instruct (Q5_K_M) — split part 1 of 2",
+    "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+    "sourcePath": "Llama-3.3-70B-Instruct-Q5_K_M/Llama-3.3-70B-Instruct-Q5_K_M-00001-of-00002.gguf",
+    "expected": {
+      "arch": "llama",
+      "quant": "Q5_K_M",
+      "ctxMax": 131072,
+      "embedding": false,
+      "toolCapable": true,
+      "failure": null
+    }
+  },
+  {
+    "id": "12-corrupt-magic",
+    "file": "12-corrupt-magic.head.gguf",
+    "label": "Corrupt magic — fixture 01 with first 4 bytes zeroed",
+    "repo": null,
+    "sourcePath": null,
+    "expected": {
+      "arch": null,
+      "quant": null,
+      "ctxMax": null,
+      "embedding": null,
+      "toolCapable": null,
+      "failure": "gguf-corrupt:BAD_MAGIC"
+    }
+  }
+]
