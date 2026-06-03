@@ -6,6 +6,11 @@
 //
 // Design notes:
 //
+//   * The assertion is deliberately shallow: "app did not crash + IPC
+//     responds". We do NOT assert that the resilience monitor's status flips
+//     within the wait window; its production poll interval is 30 s and is not
+//     injectable from the renderer. No interval-injection machinery is added
+//     here — that is out of scope for this spec.
 //   * The assertion here is deliberately shallow: "app did not crash + IPC
 //     responds". This spec is the END-TO-END crash-survival smoke through the
 //     real Electron main process, real chokidar, and the real IPC bridge.

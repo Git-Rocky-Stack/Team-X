@@ -155,6 +155,7 @@ function makeHarness(ctx: TestDbHandle, config: HarnessConfig = {}): Harness {
     watchers.push(w);
     return w;
   });
+  const createMonitor = vi.fn(() => {
   const fakeCreateMonitor = vi.fn(() => {
     const m = new FakeMonitor();
     monitors.push(m);
