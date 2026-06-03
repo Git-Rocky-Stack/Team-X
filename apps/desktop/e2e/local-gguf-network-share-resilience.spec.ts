@@ -6,11 +6,17 @@
 //
 // Design notes:
 //
-//   * The assertion is deliberately shallow: "app did not crash + IPC
-//     responds". We do NOT assert that the resilience monitor's status flips
-//     within the wait window; its production poll interval is 30 s and is not
-//     injectable from the renderer. No interval-injection machinery is added
-//     here — that is out of scope for this spec.
+//   * The assertion here is deliberately shallow: "app did not crash + IPC
+//     responds". This spec is the END-TO-END crash-survival smoke through the
+//     real Electron main process, real chokidar, and the real IPC bridge.
+//     Deterministic assertion that a watch folder actually flips
+//     unreachable↔reachable now lives in the LibraryService integration test
+//     ("drives a real disconnect→reconnect through the LIVE monitor" in
+//     services/local-gguf/library-service.test.ts), which wires the real
+//     resilience monitor via the injectable `monitorBaseIntervalMs` seam and
+//     fake timers — no 30 s wait, no flaky timing. The production poll interval
+//     is still 30 s here (the renderer has no folder-status read channel), so
+//     this spec keeps the crash-survival scope rather than asserting the flip.
 //
 //   * The minimal GGUF fixture written into the temp dir is a hand-crafted
 //     valid GGUF v3 header. Layout (all little-endian):

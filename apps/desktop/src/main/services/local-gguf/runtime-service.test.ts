@@ -70,8 +70,34 @@ function makeInventory(overrides: Partial<GpuInventory> = {}): GpuInventory {
   };
 }
 
-/** Inventory where CUDA is present (ranks ['cuda','vulkan','cpu']). */
+/**
+ * Inventory where a MODERN CUDA GPU is present (compute capability 8.9 — the
+ * bundled CUDA 13.3 build runs it natively), so compute-cap-aware ranking keeps
+ * CUDA first: ['cuda','vulkan','cpu']. Used by the tests that exercise the
+ * §12.3 health-check + fallback MECHANICS, which need CUDA legitimately ranked
+ * on top. The Maxwell-class soft-demote is covered by {@link maxwellInventory}.
+ */
 function cudaInventory(): GpuInventory {
+  return makeInventory({
+    cuda: {
+      available: true,
+      devices: [{ name: 'RTX 4090', vramMb: 24_576, backend: 'cuda', computeCap: '8.9' }],
+    },
+    vulkan: {
+      available: true,
+      devices: [{ name: 'RTX 4090', vramMb: 24_576, backend: 'vulkan' }],
+    },
+  });
+}
+
+/**
+ * Inventory for a Maxwell-class NVIDIA rig (the dual GTX TITAN X / sm_52). The
+ * bundled CUDA 13.3 build cannot initialize sm_52, so compute-cap-aware ranking
+ * demotes CUDA below Vulkan UP FRONT (['vulkan','cuda','cpu']) rather than
+ * relying on a failing CUDA --version smoke-check + fallback. See ranking.ts and
+ * docs/spikes/2026-05-27-S4-llama-server-lifecycle.md F13 (Codex CR-7 F4).
+ */
+function maxwellInventory(): GpuInventory {
   return makeInventory({
     cuda: {
       available: true,
@@ -111,6 +137,26 @@ describe('runtime-service', () => {
       expect(settings.updateBackend).toHaveBeenCalledWith('cuda', true);
       expect(settings.setLlamaBinariesVersion).toHaveBeenCalledWith('b9371');
       expect(svc.getRankedBackends()).toEqual(['cuda', 'vulkan', 'cpu']);
+    });
+
+    it('demotes CUDA below Vulkan on a Maxwell-class rig and persists vulkan as the top backend (CR-7 F4)', async () => {
+      // The bundled CUDA 13.3 build can't initialize sm_52, so compute-cap-aware
+      // ranking puts Vulkan first UP FRONT — the auto-detected backend is vulkan,
+      // not cuda, with no failing-CUDA detour. See ranking.ts + S4 spike F13.
+      const probe = vi.fn().mockResolvedValue(maxwellInventory());
+      const svc = createRuntimeService({
+        settings,
+        platform: 'win32',
+        arch: 'x64',
+        resourcesRoot: 'C:/app/resources',
+        binariesVersion: 'b9371',
+        probe,
+      });
+
+      await svc.init();
+
+      expect(settings.updateBackend).toHaveBeenCalledWith('vulkan', true);
+      expect(svc.getRankedBackends()).toEqual(['vulkan', 'cuda', 'cpu']);
     });
 
     it('is safe to call twice (idempotent)', async () => {
@@ -293,9 +339,13 @@ describe('runtime-service', () => {
       expect(settings.recordFallback).not.toHaveBeenCalled();
     });
 
-    it('falls back cuda → vulkan when CUDA fails --version (the Maxwell case) and records the reason', async () => {
-      // The dual GTX TITAN X (sm_52 Maxwell) rig: cuda binary is installed but
-      // the bundled CUDA build fails --version. Must demote to vulkan.
+    it('falls back cuda → vulkan when CUDA fails --version (defense-in-depth: broken CUDA install) and records the reason', async () => {
+      // Even when ranking legitimately puts CUDA first (a modern card), the
+      // bundled CUDA binary can still fail its --version smoke-check (e.g. a
+      // missing cudart DLL / broken driver). The health-check is the runtime's
+      // defense-in-depth net that complements compute-cap ranking: it must demote
+      // to vulkan and record the reason. (Maxwell sm_52 is handled earlier, by
+      // ranking — see the Maxwell-class F4 tests below.)
       const { svc, healthCheck } = svcWith({
         inventory: cudaInventory(),
         installed: new Set<GpuBackend>(['cuda', 'vulkan', 'cpu']),
@@ -386,6 +436,31 @@ describe('runtime-service', () => {
       await svc.init();
       const res = await svc.resolveActiveBinary();
       expect(res.backend).toBe('cuda');
+      expect(settings.recordFallback).not.toHaveBeenCalled();
+    });
+
+    it('on a Maxwell rig, resolves vulkan WITHOUT a failing CUDA smoke-check or a recorded fallback (CR-7 F4)', async () => {
+      // The whole point of compute-cap ranking: because CUDA is already demoted
+      // below Vulkan for sm_52, resolveActiveBinary picks the legitimately
+      // top-ranked vulkan directly. It must NOT attempt (and fail) the CUDA
+      // --version check first, and must NOT record a fallback — vulkan is the
+      // auto-detected top, not a demotion. This is the behavioural win over the
+      // old "rank CUDA first, then health-check fallback" path.
+      const { svc, healthCheck } = svcWith({
+        inventory: maxwellInventory(),
+        installed: new Set<GpuBackend>(['cuda', 'vulkan', 'cpu']),
+        healthy: new Set<GpuBackend>(['vulkan', 'cpu']), // cuda would fail IF attempted
+      });
+      await svc.init();
+      expect(settings.get().activeBackend).toBe('vulkan');
+
+      const res = await svc.resolveActiveBinary();
+
+      expect(res.backend).toBe('vulkan');
+      expect(res.binaryPath).toContain('/vulkan/');
+      // Exactly one smoke-test ran — vulkan. CUDA was never spawned.
+      expect(healthCheck).toHaveBeenCalledTimes(1);
+      expect(healthCheck).toHaveBeenCalledWith(res.binaryPath);
       expect(settings.recordFallback).not.toHaveBeenCalled();
     });
   });

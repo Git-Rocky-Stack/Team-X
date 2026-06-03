@@ -119,6 +119,20 @@ export interface LibraryServiceDeps {
   /** Resilience-monitor constructor; defaults to {@link defaultCreateResilienceMonitor}. */
   createMonitor?: typeof defaultCreateResilienceMonitor;
   /**
+   * Base poll interval (ms) for each folder's resilience monitor. Left unset in
+   * production, where the monitor's own 30 s default applies. Injectable so tests
+   * (and, later, a user-facing setting) can drive reachability transitions
+   * deterministically without a 30 s wait — see the network-share resilience
+   * integration test.
+   */
+  monitorBaseIntervalMs?: number;
+  /**
+   * Exponential-backoff ceiling (ms) for the resilience monitor. Left unset in
+   * production (monitor default 5 min). Injectable alongside
+   * {@link monitorBaseIntervalMs}.
+   */
+  monitorMaxIntervalMs?: number;
+  /**
    * Compute auto-tuned advanced params for a model (GPU probe + metadata).
    * Required: `resetAdvanced` returns its result. Kept injectable so the service
    * stays decoupled from GPU probing (index.ts wires the real impl in a later task).
@@ -370,6 +384,11 @@ export function createLibraryService(deps: LibraryServiceDeps): LibraryService {
     const watcher = createWatcher(folder.path, { recursive: folder.recursive });
     const monitor = createMonitor([folder.path], {
       checkAccess: (p: string) => deps.fs.access(p),
+      // Injectable poll cadence — undefined in production, so the monitor falls
+      // back to its 30 s / 5 min defaults. Tests inject a short interval to drive
+      // disconnect/reconnect transitions deterministically.
+      baseIntervalMs: deps.monitorBaseIntervalMs,
+      maxIntervalMs: deps.monitorMaxIntervalMs,
     });
 
     // MANDATORY: an unhandled EventEmitter 'error' emit crashes the process.

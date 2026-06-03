@@ -81,7 +81,7 @@ jobs:
       # the reference graph and builds in dep order automatically. Mirrors
       # the ci.yml `check` job's pre-build step — keep both in sync.
       - name: Build workspace packages (composite refs)
-        run: pnpm exec tsc --build packages/shared-types packages/role-schema packages/provider-router packages/telemetry-core packages/intelligence
+        run: pnpm exec tsc --build packages/shared-types packages/role-schema packages/provider-router packages/telemetry-core packages/intelligence packages/local-gguf-runtime
 
       # Lint / Typecheck / Test as three separate steps so failures surface
       # individually. A previous attempt combined them into a single

@@ -57,4 +57,55 @@ describe('rankBackends', () => {
     const inv = makeInventory({});
     expect(rankBackends(inv)).toEqual(['cpu']);
   });
+
+  // --- Maxwell-class soft-demote (Codex CR-7 F4 / S4 spike F13) ---------------
+  // The bundled b9371 CUDA 13.3 build dropped Maxwell, so on sm_5x cards CUDA
+  // can't initialize. When Vulkan is available, prefer it and keep CUDA only as
+  // a fallback. Cards with unknown or >= 6.0 compute capability keep cuda-first.
+
+  it('case 6 — Maxwell NVIDIA (computeCap 5.2) + Vulkan: demotes CUDA → [vulkan, cuda, cpu]', () => {
+    const inv = makeInventory({
+      cuda: {
+        available: true,
+        devices: [{ name: 'GTX TITAN X', vramMb: 12288, backend: 'cuda', computeCap: '5.2' }],
+      },
+      vulkan: { available: true, devices: [{ name: 'GTX TITAN X', vramMb: 0, backend: 'vulkan' }] },
+    });
+    expect(rankBackends(inv)).toEqual(['vulkan', 'cuda', 'cpu']);
+  });
+
+  it('case 7 — Maxwell NVIDIA (computeCap 5.2) WITHOUT Vulkan: still attempts CUDA → [cuda, vulkan, cpu]', () => {
+    const inv = makeInventory({
+      cuda: {
+        available: true,
+        devices: [{ name: 'GTX TITAN X', vramMb: 12288, backend: 'cuda', computeCap: '5.2' }],
+      },
+    });
+    expect(rankBackends(inv)).toEqual(['cuda', 'vulkan', 'cpu']);
+  });
+
+  it('case 8 — modern NVIDIA (computeCap 8.9) + Vulkan: keeps CUDA first → [cuda, vulkan, cpu]', () => {
+    const inv = makeInventory({
+      cuda: {
+        available: true,
+        devices: [{ name: 'RTX 4090', vramMb: 24576, backend: 'cuda', computeCap: '8.9' }],
+      },
+      vulkan: { available: true, devices: [{ name: 'RTX 4090', vramMb: 0, backend: 'vulkan' }] },
+    });
+    expect(rankBackends(inv)).toEqual(['cuda', 'vulkan', 'cpu']);
+  });
+
+  it('case 9 — mixed Maxwell + modern NVIDIA + Vulkan: best device supported → keeps CUDA first', () => {
+    const inv = makeInventory({
+      cuda: {
+        available: true,
+        devices: [
+          { name: 'GTX TITAN X', vramMb: 12288, backend: 'cuda', computeCap: '5.2' },
+          { name: 'RTX 4090', vramMb: 24576, backend: 'cuda', computeCap: '8.9' },
+        ],
+      },
+      vulkan: { available: true, devices: [{ name: 'multi', vramMb: 0, backend: 'vulkan' }] },
+    });
+    expect(rankBackends(inv)).toEqual(['cuda', 'vulkan', 'cpu']);
+  });
 });
