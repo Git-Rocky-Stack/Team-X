@@ -50,6 +50,90 @@ describe('spawnServer', () => {
     );
   });
 
+  // --- b9371 readiness regression coverage (Codex CR-7 finding + S4 spike) ---
+  // Real llama.cpp b9371 emits its readiness lines to STDERR (not stdout) and
+  // uses `srv  llama_server: model loaded` / `server is listening on …` — NOT
+  // the obsolete `HTTP server listening` string. Two independent facts, so two
+  // independent regressions: (1) the ready-line union must include the b9371
+  // wordings, and (2) readiness must be scanned on stderr, not only stdout.
+  // Each test below fails against the pre-fix stdout-only + obsolete-regex
+  // implementation, and the short readyTimeoutMs makes a miss fail fast
+  // (reject) rather than hang.
+
+  it('resolves on the b9371 `model loaded` line emitted to stderr', async () => {
+    const fakeProc = makeFakeProc();
+    const fakeSpawn = vi.fn().mockReturnValue(fakeProc);
+
+    const promise = spawnServer({
+      binaryPath: '/x/server',
+      modelPath: '/m.gguf',
+      port: 50000,
+      nCtx: 4096,
+      nGpuLayers: 35,
+      nBatch: 512,
+      nThreads: 8,
+      spawnFn: fakeSpawn as never,
+      readyTimeoutMs: 500,
+    });
+
+    setImmediate(() => {
+      fakeProc.stderr.emit('data', Buffer.from('srv  llama_server: model loaded\n'));
+    });
+
+    const handle = await promise;
+    expect(handle.port).toBe(50000);
+    expect(handle.pid).toBe(12345);
+  });
+
+  it('resolves on the b9371 `server is listening on` line emitted to stderr', async () => {
+    const fakeProc = makeFakeProc();
+    const fakeSpawn = vi.fn().mockReturnValue(fakeProc);
+
+    const promise = spawnServer({
+      binaryPath: '/x/server',
+      modelPath: '/m.gguf',
+      port: 50000,
+      nCtx: 4096,
+      nGpuLayers: 35,
+      nBatch: 512,
+      nThreads: 8,
+      spawnFn: fakeSpawn as never,
+      readyTimeoutMs: 500,
+    });
+
+    setImmediate(() => {
+      fakeProc.stderr.emit(
+        'data',
+        Buffer.from('srv  llama_server: server is listening on http://127.0.0.1:50000\n'),
+      );
+    });
+
+    await expect(promise).resolves.toMatchObject({ port: 50000 });
+  });
+
+  it('still resolves on the legacy `HTTP server listening` line on stderr (stream-coverage compat)', async () => {
+    const fakeProc = makeFakeProc();
+    const fakeSpawn = vi.fn().mockReturnValue(fakeProc);
+
+    const promise = spawnServer({
+      binaryPath: '/x/server',
+      modelPath: '/m.gguf',
+      port: 50000,
+      nCtx: 4096,
+      nGpuLayers: 35,
+      nBatch: 512,
+      nThreads: 8,
+      spawnFn: fakeSpawn as never,
+      readyTimeoutMs: 500,
+    });
+
+    setImmediate(() => {
+      fakeProc.stderr.emit('data', Buffer.from('HTTP server listening on 127.0.0.1:50000\n'));
+    });
+
+    await expect(promise).resolves.toMatchObject({ port: 50000 });
+  });
+
   it('rejects with ServerLifecycleError(server-spawn-failed) when ready-line never arrives', async () => {
     const fakeProc = makeFakeProc();
     const fakeSpawn = vi.fn().mockReturnValue(fakeProc);

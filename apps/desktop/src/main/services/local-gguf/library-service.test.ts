@@ -9,6 +9,7 @@
 // / 'error' events can be driven deterministically from the test body.
 
 import { EventEmitter } from 'node:events';
+import { createResilienceMonitor } from '@team-x/local-gguf-runtime';
 import type { AdvancedParams, GgufMetadata, LocalModel, ModelStatus } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -122,6 +123,16 @@ interface HarnessConfig {
   defaultMetadata?: GgufMetadata;
   /** Default stat size returned by the fs.stat fake. */
   defaultStatSize?: number;
+  /**
+   * Override the resilience-monitor constructor. Defaults to a {@link FakeMonitor}
+   * whose events are driven by hand; integration tests pass the REAL
+   * `createResilienceMonitor` to exercise the live poll loop end to end.
+   */
+  createMonitor?: LibraryServiceDeps['createMonitor'];
+  /** Base poll interval (ms) forwarded to the monitor (real-monitor integration tests). */
+  monitorBaseIntervalMs?: number;
+  /** Backoff ceiling (ms) forwarded to the monitor. */
+  monitorMaxIntervalMs?: number;
 }
 
 function makeHarness(ctx: TestDbHandle, config: HarnessConfig = {}): Harness {
@@ -145,10 +156,14 @@ function makeHarness(ctx: TestDbHandle, config: HarnessConfig = {}): Harness {
     return w;
   });
   const createMonitor = vi.fn(() => {
+  const fakeCreateMonitor = vi.fn(() => {
     const m = new FakeMonitor();
     monitors.push(m);
     return m;
   });
+  // Default to the hand-driven FakeMonitor; integration tests override with the
+  // REAL createResilienceMonitor to exercise the live poll loop.
+  const createMonitor = config.createMonitor ?? fakeCreateMonitor;
 
   const computeAutoParams = vi.fn((model: LocalModel) => Promise.resolve(autoParams(model.id)));
 
@@ -168,6 +183,8 @@ function makeHarness(ctx: TestDbHandle, config: HarnessConfig = {}): Harness {
     scan: scan as unknown as LibraryServiceDeps['scan'],
     createWatcher: createWatcher as unknown as LibraryServiceDeps['createWatcher'],
     createMonitor: createMonitor as unknown as LibraryServiceDeps['createMonitor'],
+    monitorBaseIntervalMs: config.monitorBaseIntervalMs,
+    monitorMaxIntervalMs: config.monitorMaxIntervalMs,
     computeAutoParams,
     logger,
   };
@@ -500,6 +517,54 @@ describe('createLibraryService', () => {
       await vi.waitFor(() => {
         expect(h.watchFolders.getById(folder.id)?.status).toBe('reachable');
       });
+    });
+
+    it('drives a real disconnect→reconnect through the LIVE monitor → folder status flips (deterministic)', async () => {
+      // Codex CR-7 F6: the e2e network-share spec can only assert crash-survival,
+      // not that a watch folder actually flips unreachable↔reachable, because the
+      // production poll interval is 30 s and was not injectable. This closes that
+      // gap deterministically: wire the REAL resilience monitor (not the
+      // hand-driven FakeMonitor) via the new injectable short interval, then flip
+      // fs.access to simulate a NAS dropping and recovering. Fake timers make the
+      // real poll loop instant + 100% deterministic (same strategy as
+      // resilience.test.ts). This exercises the full chain end to end: monitor
+      // poll → checkAccess result → reachableChange → LibraryService →
+      // watchFolders.updateStatus, against the real SQLite-backed repo.
+      vi.useFakeTimers();
+      try {
+        const h = makeHarness(ctx, {
+          createMonitor: createResilienceMonitor,
+          monitorBaseIntervalMs: 100,
+          monitorMaxIntervalMs: 1_600,
+        });
+        // The monitor's checkAccess is wired to deps.fs.access. Drive it through
+        // reachable → unreachable → reachable across three poll ticks.
+        h.access
+          .mockReset()
+          .mockResolvedValueOnce(undefined) // tick 1: reachable   (null  → true)
+          .mockRejectedValueOnce(new Error('ENOENT: share offline')) // tick 2: unreachable (true  → false)
+          .mockResolvedValue(undefined); // tick 3+: reachable  (false → true)
+
+        const folder = await h.service.addFolder('/nas/models', true);
+
+        // Tick 1 (delay 0): reachable — the live monitor's first poll.
+        await vi.advanceTimersByTimeAsync(0);
+        expect(h.watchFolders.getById(folder.id)?.status).toBe('reachable');
+
+        // Tick 2 (+base 100 ms): the share drops → status flips to unreachable.
+        await vi.advanceTimersByTimeAsync(100);
+        expect(h.watchFolders.getById(folder.id)?.status).toBe('unreachable');
+
+        // Tick 3 (+backoff 100 ms after one failure): the share recovers →
+        // status flips back to reachable.
+        await vi.advanceTimersByTimeAsync(100);
+        expect(h.watchFolders.getById(folder.id)?.status).toBe('reachable');
+
+        // Tear down the live monitor's pending timer before restoring real timers.
+        await h.service.dispose();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('a monitor error does not crash the process', async () => {

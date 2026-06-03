@@ -34,7 +34,15 @@ export interface ServerHandle {
 }
 
 const DEFAULT_READY_TIMEOUT_MS = 60_000;
-const READY_LINE_REGEX = /HTTP server listening/i;
+// Readiness-line union, validated against llama.cpp b9371 on real hardware
+// (docs/spikes/2026-05-27-S4-llama-server-lifecycle.md). b9371 emits
+// `srv  llama_server: model loaded` immediately followed by
+// `srv  llama_server: server is listening on …` — it does NOT emit the
+// historical `HTTP server listening` line. We keep all five wordings
+// (first match wins) so an upstream log-line change doesn't silently break
+// readiness detection. These lines arrive on STDERR (see the stderr handler).
+const READY_LINE_REGEX =
+  /\bmodel loaded\b|server is listening on|main: server is listening|all slots are idle|HTTP server listening/i;
 // Cap the retained stderr to the most recent bytes (enough for crash
 // diagnostics). llama-server streams to stderr for its entire lifetime, so an
 // uncapped buffer is an unbounded heap-growth (OOM) vector in the host process.
@@ -77,6 +85,13 @@ export async function spawnServer(opts: SpawnServerOptions): Promise<ServerHandl
     // long-lived, chatty server can't grow this buffer without bound. The
     // onLog callback above still receives the full, untruncated stream.
     stderrBuf += s;
+    // llama.cpp b9371 logs its readiness lines (`model loaded`,
+    // `server is listening on …`) to STDERR, not stdout — so readiness MUST be
+    // scanned here too, not only on stdout. We test before the rolling-tail
+    // slice below: pre-ready output is small (ready fires in ~1-2 s, well under
+    // the cap), so testing the whole accumulated buffer safely tolerates a
+    // ready line split across chunks without any O(n²) regrowth concern.
+    if (!ready && READY_LINE_REGEX.test(stderrBuf)) ready = true;
     if (stderrBuf.length > STDERR_RETAIN_BYTES) {
       stderrBuf = stderrBuf.slice(-STDERR_RETAIN_BYTES);
     }
