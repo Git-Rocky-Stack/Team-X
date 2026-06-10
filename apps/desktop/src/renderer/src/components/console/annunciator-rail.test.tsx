@@ -82,4 +82,14 @@ describe('AnnunciatorRail', () => {
     await userEvent.click(secondBudg);
     expect(onNavigate).toHaveBeenCalledWith('budg');
   });
+
+  it('a11y: the rail is a non-live group; warnings announce via a narrow status region', () => {
+    render(<AnnunciatorRail tiles={tiles} />);
+    // The interactive strip itself must NOT be a live region (tone churn
+    // would spam screen readers) — it is a labelled group.
+    expect(screen.getByRole('group', { name: 'Annunciator rail' })).toBeInTheDocument();
+    // New warnings announce through the sr-only status region, which only
+    // changes when the unacknowledged count changes.
+    expect(screen.getByRole('status')).toHaveTextContent('1 unacknowledged warning');
+  });
 });
