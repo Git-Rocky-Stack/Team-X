@@ -166,7 +166,7 @@
    * a semantic token (text-h1, text-body-sm, text-caption, etc.).
    */
   body {
-    @apply bg-black text-foreground text-body;
+    @apply bg-background text-foreground text-body;
     font-family: "Public Sans Variable", ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
@@ -192,12 +192,12 @@
   }
 
   ::selection {
-    background-color: hsl(var(--mission-red) / 0.42);
+    background-color: var(--armed-glow);
     color: hsl(var(--foreground));
   }
 
   ::-moz-selection {
-    background-color: hsl(var(--mission-red) / 0.42);
+    background-color: var(--armed-glow);
     color: hsl(var(--foreground));
   }
 
@@ -208,23 +208,23 @@
   }
 
   select {
-    color-scheme: dark;
-    accent-color: hsl(var(--mission-red));
+    color-scheme: light dark;
+    accent-color: var(--armed);
   }
 
   select option,
   select optgroup {
-    background-color: #000000;
+    background-color: hsl(var(--popover));
     color: hsl(var(--foreground));
   }
 
   select option:checked {
-    background-color: #000000;
-    color: hsl(var(--mission-red));
+    background-color: hsl(var(--popover));
+    color: var(--armed-lit);
   }
 
   input[type="date"] {
-    color-scheme: dark;
+    color-scheme: light dark;
   }
 
   input[type="date"]::-webkit-calendar-picker-indicator {
@@ -234,7 +234,7 @@
   }
 
   * {
-    scrollbar-color: hsl(var(--mission-red) / 0.62) #000000;
+    scrollbar-color: hsl(var(--mission-red) / 0.62) hsl(var(--background));
     scrollbar-width: thin;
   }
 
@@ -244,12 +244,12 @@
   }
 
   *::-webkit-scrollbar-track {
-    background: #000000;
+    background: hsl(var(--background));
   }
 
   *::-webkit-scrollbar-thumb {
     min-height: 48px;
-    border: 2px solid #000000;
+    border: 2px solid hsl(var(--background));
     border-radius: 999px;
     background-color: hsl(var(--mission-red) / 0.58);
   }
@@ -259,7 +259,7 @@
   }
 
   *::-webkit-scrollbar-corner {
-    background: #000000;
+    background: hsl(var(--background));
   }
 
   /*
@@ -426,7 +426,8 @@
    * recipes that drifted across the renderer pre-spec.
    */
   .text-eyebrow {
-    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Archivo Variable", sans-serif;
+    font-variation-settings: "wdth" 110;
     font-size: 0.6875rem; /* 11px */
     line-height: 1.4;
     letter-spacing: 0.18em;
@@ -435,7 +436,8 @@
   }
 
   .text-eyebrow-sm {
-    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Archivo Variable", sans-serif;
+    font-variation-settings: "wdth" 110;
     font-size: 0.625rem; /* 10px */
     line-height: 1.4;
     letter-spacing: 0.18em;
@@ -444,7 +446,8 @@
   }
 
   .text-menu-label {
-    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Archivo Variable", sans-serif;
+    font-variation-settings: "wdth" 110;
     font-size: 0.6875rem; /* 11px */
     line-height: 1.4;
     letter-spacing: 0.08em;
@@ -453,7 +456,7 @@
   }
 
   .text-shortcut {
-    font-family: "JetBrains Mono Variable", ui-monospace, monospace;
+    font-family: "Departure Mono", ui-monospace, monospace;
     font-size: 0.6875rem; /* 11px */
     line-height: 1;
     letter-spacing: 0.1em;
@@ -461,7 +464,7 @@
   }
 
   .text-code {
-    font-family: "JetBrains Mono Variable", ui-monospace, monospace;
+    font-family: "Iosevka", ui-monospace, monospace;
     font-size: 0.8125rem; /* 13px */
     line-height: 1.5;
     letter-spacing: 0;
@@ -469,7 +472,7 @@
   }
 
   .text-code-sm {
-    font-family: "JetBrains Mono Variable", ui-monospace, monospace;
+    font-family: "Iosevka", ui-monospace, monospace;
     font-size: 0.75rem; /* 12px */
     line-height: 1.5;
     letter-spacing: 0;
@@ -477,7 +480,8 @@
   }
 
   .text-numeric {
-    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    /* Live numbers wear Departure Mono (DESIGN.md) */
+    font-family: "Departure Mono", ui-monospace, monospace;
     font-size: 1.5rem; /* 24px */
     line-height: 1.1;
     letter-spacing: -0.01em;
@@ -486,7 +490,7 @@
   }
 
   .text-numeric-lg {
-    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Departure Mono", ui-monospace, monospace;
     font-size: 2rem; /* 32px */
     line-height: 1.05;
     letter-spacing: -0.015em;
@@ -607,7 +611,7 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--mission-red) / 0.62) #000000;
+    scrollbar-color: hsl(var(--mission-red) / 0.62) hsl(var(--background));
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -616,12 +620,12 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: #000000;
+    background: hsl(var(--background));
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
     min-height: 48px;
-    border: 2px solid #000000;
+    border: 2px solid hsl(var(--background));
     border-radius: 999px;
     background-color: hsl(var(--mission-red) / 0.58);
   }
