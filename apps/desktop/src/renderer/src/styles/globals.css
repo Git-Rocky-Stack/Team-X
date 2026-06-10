@@ -25,6 +25,9 @@
    * theme-INDEPENDENT and live once in :root.
    */
   :root {
+    /* Native widgets follow the shift, never the OS (see .dark) */
+    color-scheme: light;
+
     /* shadcn semantic layer — Day Shift values */
     --background: 60 4% 78%; /* #C8C8C4 silver chassis */
     --foreground: 0 0% 10%; /* #1A1A1A engraved enamel */
@@ -115,6 +118,8 @@
   }
 
   .dark {
+    color-scheme: dark;
+
     /* shadcn semantic layer — Night Ops values */
     --background: 0 0% 2%; /* #050505 carbon chassis */
     --foreground: 0 0% 96%; /* #F5F5F5 platinum */
@@ -208,7 +213,6 @@
   }
 
   select {
-    color-scheme: light dark;
     accent-color: var(--armed);
   }
 
@@ -221,10 +225,6 @@
   select option:checked {
     background-color: hsl(var(--popover));
     color: var(--armed-lit);
-  }
-
-  input[type="date"] {
-    color-scheme: light dark;
   }
 
   input[type="date"]::-webkit-calendar-picker-indicator {
@@ -460,7 +460,7 @@
     font-size: 0.6875rem; /* 11px */
     line-height: 1;
     letter-spacing: 0.1em;
-    font-weight: 500;
+    font-weight: 400;
   }
 
   .text-code {
@@ -485,7 +485,7 @@
     font-size: 1.5rem; /* 24px */
     line-height: 1.1;
     letter-spacing: -0.01em;
-    font-weight: 600;
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
   }
 
@@ -494,7 +494,7 @@
     font-size: 2rem; /* 32px */
     line-height: 1.05;
     letter-spacing: -0.015em;
-    font-weight: 700;
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
   }
 
