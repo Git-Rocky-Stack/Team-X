@@ -361,8 +361,8 @@
     /* Default tone — Strategia red. Color variants below override the
      * three HSL channels to retint without re-declaring the shape. */
     --bs-h: 358;
-    --bs-s: 78%;
-    --bs-l: 48%;
+    --bs-s: 68%;
+    --bs-l: 40%;
 
     border-color: hsl(var(--bs-h) var(--bs-s) var(--bs-l));
     background-color: hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.15);
@@ -499,15 +499,12 @@
   }
 
   .mission-app-shell {
-    background-image: radial-gradient(
-        circle at top left,
-        hsl(var(--mission-red) / 0.2),
-        transparent 26%
-      ), linear-gradient(180deg, #000000 0%, #000000 100%);
+    background-image: radial-gradient(circle at top left, var(--armed-soft), transparent 26%),
+      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background)) 100%);
   }
 
   .mission-shell {
-    background-color: #000000;
+    background-color: hsl(var(--background));
   }
 
   .mission-grid {
@@ -517,27 +514,27 @@
   }
 
   .mission-hero {
-    background-color: #000000;
+    background-color: hsl(var(--card));
     box-shadow: 0 24px 80px -56px hsl(var(--foreground) / 0.78);
   }
 
   .mission-panel {
-    background-color: #000000 !important;
+    background-color: hsl(var(--card)) !important;
     box-shadow: 0 20px 48px -42px hsl(var(--foreground) / 0.85);
   }
 
   .mission-chrome-panel {
-    background-color: #000000 !important;
+    background-color: hsl(var(--card)) !important;
     box-shadow: 0 28px 80px -58px hsl(var(--foreground) / 0.9);
   }
 
   .mission-control-row {
-    background-color: #000000 !important;
+    background-color: hsl(var(--card)) !important;
     box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
   }
 
   .mission-metric-tile {
-    background-color: #000000;
+    background-color: hsl(var(--card));
     box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
   }
 
@@ -550,35 +547,35 @@
   }
 
   .mission-icon-button {
-    background-color: #000000;
+    background-color: hsl(var(--background));
   }
 
   .mission-inset-surface {
-    background-color: #000000;
+    background-color: hsl(var(--card));
     box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
   }
 
   .mission-sheet-header {
-    background-color: #000000;
+    background-color: hsl(var(--background));
   }
 
   .mission-state-block {
-    background-color: #000000;
+    background-color: hsl(var(--background));
   }
 
   .mission-workspace-trigger {
-    background-color: #000000 !important;
+    background-color: hsl(var(--card)) !important;
     box-shadow: 0 20px 50px -42px hsl(var(--foreground) / 0.85);
   }
 
   .mission-select {
-    @apply rounded-md border border-border bg-black text-foreground outline-none transition-colors;
+    @apply rounded-md border border-border bg-card text-foreground outline-none transition-colors;
     box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
   }
 
   .mission-select:hover {
     border-color: hsl(var(--foreground) / 0.22);
-    background-color: #000000;
+    background-color: hsl(var(--card));
   }
 
   .mission-select:focus {
@@ -589,7 +586,7 @@
 }
 
 .amoled-menu-surface {
-  background-color: #000000;
+  background-color: hsl(var(--popover));
 }
 
 .amoled-menu-surface
@@ -604,7 +601,7 @@
     [class*="bg-destructive"],
     [class*="bg-primary/"]
   ) {
-  background-color: #000000 !important;
+  background-color: hsl(var(--popover)) !important;
 }
 
 /* Scrollbar styling for dark theme */
