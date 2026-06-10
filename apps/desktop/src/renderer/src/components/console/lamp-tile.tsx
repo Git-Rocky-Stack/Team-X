@@ -37,6 +37,10 @@ export function LampTile({
   className,
 }: LampTileProps) {
   const blinking = alert && !acknowledged;
+  // Strike ignition fires exactly once per live transition: the element
+  // identity is preserved across the blink→steady class swap, so the CSS
+  // animation starts when `animate-ignite` newly applies and will NOT
+  // restart on later unrelated re-renders. Don't re-key this element.
   const classes = cn(
     'lamp',
     small && 'lamp-sm',

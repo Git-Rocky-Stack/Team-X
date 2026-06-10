@@ -36,6 +36,11 @@ describe('LampTile', () => {
     expect((container.firstElementChild as HTMLElement).className).toContain('lamp-hold');
   });
 
+  it('armed tone burns the steady-LIVE class', () => {
+    const { container } = render(<LampTile label="ON AIR" tone="armed" />);
+    expect((container.firstElementChild as HTMLElement).className).toContain('lamp-armed');
+  });
+
   it('unlit by default (off tone has no LED class)', () => {
     const { container } = render(<LampTile label="STBY" />);
     const el = container.firstElementChild as HTMLElement;
@@ -54,7 +59,8 @@ describe('LampTile', () => {
 
   it('dual-form rule: acknowledged alert burns steady (no blink)', () => {
     render(<LampTile label="BUDG" tone="warn" alert acknowledged />);
-    const lamp = screen.getByText('BUDG').closest('[class*="lamp"]') as HTMLElement;
+    // Still a button, with the aria state flipped to acknowledged.
+    const lamp = screen.getByRole('button', { name: /BUDG.*(?<!un)acknowledged/i });
     expect(lamp.className).not.toContain('animate-lamp-blink');
     expect(lamp.className).toContain('lamp-warn');
   });
