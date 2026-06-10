@@ -211,7 +211,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="mission-shell flex w-full flex-col overflow-hidden border-l border-white/10 bg-black p-0 sm:max-w-md"
+        className="mission-shell flex w-full flex-col overflow-hidden border-l border-white/10 bg-background/95 p-0 sm:max-w-md"
         data-company-settings-panel=""
       >
         <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
