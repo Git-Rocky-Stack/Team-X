@@ -589,6 +589,10 @@
    * Base rules = Day Shift (matches :root); `.dark` overrides = Night Ops.
    * DISPLAYS-STAY-DARK: .well, .lcd, .lamp, .vu carry literal dark values
    * and have NO .dark variant — they are identical in both shifts.
+   * Cap recipes declare NO transition: hardware caps snap mechanically
+   * per the DESIGN.md motion envelope (deliberate, not an oversight).
+   * TODO(post-sweep): extract @layer components into console-recipes.css
+   * + legacy.css once Phases 2-8 stop churning this file.
    * ================================================================ */
 
   /* Layer 1 — raised faceplate */
