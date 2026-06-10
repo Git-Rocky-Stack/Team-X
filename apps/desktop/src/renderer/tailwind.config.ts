@@ -97,8 +97,11 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['Inter Variable', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono Variable', 'monospace'],
+        sans: ['Public Sans Variable', 'system-ui', 'sans-serif'],
+        display: ['Archivo Variable', 'sans-serif'],
+        data: ['Departure Mono', 'ui-monospace', 'monospace'],
+        stream: ['Iosevka', 'ui-monospace', 'monospace'],
+        mono: ['Iosevka', 'ui-monospace', 'monospace'],
       },
       /*
        * Master typography scale — single source of truth for every text

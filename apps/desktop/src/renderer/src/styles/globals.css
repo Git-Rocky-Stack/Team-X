@@ -71,14 +71,14 @@
 
   /*
    * Body baseline — anchors the entire renderer at `text-body`
-   * (14px / 1.5 / Inter / 400). Every untagged element inherits this,
+   * (14px / 1.5 / Public Sans / 400). Every untagged element inherits this,
    * so a stray `<p>` looks identical to a `<p className="text-body">`.
    * Components that want a different role MUST opt in explicitly with
    * a semantic token (text-h1, text-body-sm, text-caption, etc.).
    */
   body {
     @apply bg-black text-foreground text-body;
-    font-family: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Public Sans Variable", ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -115,7 +115,7 @@
   code,
   pre,
   .font-mono {
-    font-family: "JetBrains Mono Variable", ui-monospace, monospace;
+    font-family: "Iosevka", ui-monospace, monospace;
   }
 
   select {

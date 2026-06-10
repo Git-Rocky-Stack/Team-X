@@ -1,0 +1,9 @@
+/* Departure Mono v1.500 — SIL OFL 1.1, vendored (no Fontsource package exists).
+   License: ../../assets/fonts/departure-mono/LICENSE.txt */
+@font-face {
+  font-family: "Departure Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../../assets/fonts/departure-mono/DepartureMono-Regular.woff2") format("woff2");
+}
