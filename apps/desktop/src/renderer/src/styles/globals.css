@@ -16,51 +16,140 @@
  */
 
 @layer base {
+  /*
+   * Dual-shift Carbon Pro tokens (DESIGN.md §Color).
+   *   :root  = Day Shift  (silver anodized — designed variant, never auto-invert)
+   *   .dark  = Night Ops  (brushed black on AMOLED carbon — default shift)
+   * Semantic tokens stay raw HSL tuples so Tailwind opacity modifiers compose.
+   * Console constants (armed, LEDs, displays, motion, spacing, radii) are
+   * theme-INDEPENDENT and live once in :root.
+   */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 358 70% 40%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 358 70% 40%;
-    --mission-red: 358 78% 44%;
-    --radius: 0.5rem;
+    /* shadcn semantic layer — Day Shift values */
+    --background: 60 4% 78%; /* #C8C8C4 silver chassis */
+    --foreground: 0 0% 10%; /* #1A1A1A engraved enamel */
+    --card: 60 4% 82%; /* #D2D2CE */
+    --card-foreground: 0 0% 10%;
+    --popover: 60 4% 86%; /* #DCDCD8 */
+    --popover-foreground: 0 0% 10%;
+    --primary: 358 68% 40%; /* #AA2024 ARMED — identical both shifts */
+    --primary-foreground: 12 100% 97%; /* #FFF3F0 */
+    --secondary: 60 4% 84%;
+    --secondary-foreground: 0 0% 18%; /* #2E2E2C */
+    --muted: 60 4% 84%;
+    --muted-foreground: 60 4% 26%; /* #44443F day silver text */
+    --accent: 60 4% 84%;
+    --accent-foreground: 0 0% 18%;
+    --destructive: 4 83% 43%; /* #C81E13 day-darkened warn */
+    --destructive-foreground: 12 100% 97%;
+    --border: 60 2% 68%; /* #B0B0AC */
+    --input: 60 2% 68%;
+    --ring: 0 0% 16%; /* #2A2A2A day focus */
+    --mission-red: 358 68% 40%; /* legacy alias → armed (purged Phase 8) */
+
+    /* Carbon ramp + text ramp (raw hex; flip per shift) */
+    --carbon-950: #c8c8c4;
+    --carbon-900: #d2d2ce;
+    --carbon-850: #ccccc8;
+    --carbon-800: #c4c4c0;
+    --carbon-750: #bcbcb8;
+    --carbon-700: #b0b0ac;
+    --platinum: #1a1a1a;
+    --silver-bright: #2e2e2c;
+    --silver: #44443f;
+    --silver-mute: #62625e;
+    --graphite: #96968f;
+    --hairline: rgba(0, 0, 0, 0.1);
+    --hairline-strong: rgba(0, 0, 0, 0.2);
+
+    /* ARMED RED — theme-independent identity */
+    --armed: #aa2024;
+    --armed-lit: #e0252b;
+    --armed-deep: #7f171a;
+    --armed-edge: rgba(224, 37, 43, 0.35);
+    --armed-glow: rgba(224, 37, 43, 0.22);
+    --armed-soft: rgba(170, 32, 36, 0.12);
+
+    /* Chrome — the polished bits, used sparingly */
+    --chrome: #e6e6e6;
+    --chrome-edge: rgba(230, 230, 230, 0.28);
+    --chrome-soft: rgba(230, 230, 230, 0.1);
+
+    /* LED semantics — identical both shifts (dots/wells keep night values) */
+    --led-go: #41e25e;
+    --led-hold: #ffb000;
+    --led-warn: #ff4438;
+    --led-scope: #58c4bc;
+    --go-soft: rgba(65, 226, 94, 0.1);
+    --hold-soft: rgba(255, 176, 0, 0.1);
+    --warn-soft: rgba(255, 68, 56, 0.12);
+    --scope-soft: rgba(88, 196, 188, 0.1);
+
+    /* Displays-stay-dark group — defined ONCE, never overridden by any shift */
+    --void: #000000;
+    --display-bg-top: #040404;
+    --display-bg-bottom: #070707;
+    --display-border: rgba(0, 0, 0, 0.8);
+    --phosphor: #41e25e;
+    --phosphor-dim: #2e5237;
+
+    /* Spacing — base-4 Fibonacci-flavored */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 20px;
+    --sp-5: 32px;
+    --sp-6: 52px;
+    --sp-7: 84px;
+
+    /* Machined radii */
+    --r-card: 2px;
+    --r-control: 4px;
+    --r-overlay: 8px;
+    --r-pill: 9999px;
+
+    /* Mechanical motion envelopes */
+    --ease-snap: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-led: cubic-bezier(0.2, 0.7, 0.3, 1);
+    --ease-vu: cubic-bezier(0.2, 0.85, 0.15, 1);
   }
 
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 0%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 0%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 358 70% 40%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 0%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 0%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 0%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 358 70% 40%;
-    --mission-red: 358 78% 48%;
+    /* shadcn semantic layer — Night Ops values */
+    --background: 0 0% 2%; /* #050505 carbon chassis */
+    --foreground: 0 0% 96%; /* #F5F5F5 platinum */
+    --card: 0 0% 5%; /* #0D0D0D */
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 358 68% 40%;
+    --primary-foreground: 12 100% 97%;
+    --secondary: 0 0% 8%; /* #141414 */
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 0 0% 70%; /* #B3B3B3 silver */
+    --accent: 0 0% 8%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 4 100% 61%; /* #FF4438 led-warn */
+    --destructive-foreground: 12 100% 97%;
+    --border: 0 0% 15%; /* #262626 */
+    --input: 0 0% 15%;
+    --ring: 0 0% 90%; /* #E6E6E6 chrome focus */
+    --mission-red: 358 75% 51%; /* legacy alias → armed-lit (purged Phase 8) */
+
+    --carbon-950: #050505;
+    --carbon-900: #0d0d0d;
+    --carbon-850: #101010;
+    --carbon-800: #141414;
+    --carbon-750: #1a1a1a;
+    --carbon-700: #262626;
+    --platinum: #f5f5f5;
+    --silver-bright: #d1d1d1;
+    --silver: #b3b3b3;
+    --silver-mute: #888888;
+    --graphite: #5a5a5a;
+    --hairline: rgba(255, 255, 255, 0.08);
+    --hairline-strong: rgba(255, 255, 255, 0.16);
   }
 }
 

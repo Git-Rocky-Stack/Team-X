@@ -90,11 +90,41 @@ export default {
           300: '#333333',
           400: '#444444',
         },
+
+        // Console tokens (Carbon Pro — DESIGN.md §Color). CSS vars flip per shift.
+        carbon: {
+          950: 'var(--carbon-950)',
+          900: 'var(--carbon-900)',
+          850: 'var(--carbon-850)',
+          800: 'var(--carbon-800)',
+          750: 'var(--carbon-750)',
+          700: 'var(--carbon-700)',
+        },
+        armed: { DEFAULT: 'var(--armed)', lit: 'var(--armed-lit)', deep: 'var(--armed-deep)' },
+        led: {
+          go: 'var(--led-go)',
+          hold: 'var(--led-hold)',
+          warn: 'var(--led-warn)',
+          scope: 'var(--led-scope)',
+        },
+        chrome: 'var(--chrome)',
+        platinum: 'var(--platinum)',
+        silver: {
+          DEFAULT: 'var(--silver)',
+          bright: 'var(--silver-bright)',
+          mute: 'var(--silver-mute)',
+        },
+        graphite: 'var(--graphite)',
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        // Machined radii (DESIGN.md). lg/md/sm remap legacy call sites onto the
+        // console scale; semantic names are for new code.
+        lg: 'var(--r-control)',
+        md: 'var(--r-control)',
+        sm: 'var(--r-card)',
+        card: 'var(--r-card)',
+        control: 'var(--r-control)',
+        overlay: 'var(--r-overlay)',
       },
       fontFamily: {
         sans: ['Public Sans Variable', 'system-ui', 'sans-serif'],
@@ -142,6 +172,11 @@ export default {
         88: '22rem',
         120: '30rem',
       },
+      transitionTimingFunction: {
+        snap: 'var(--ease-snap)',
+        led: 'var(--ease-led)',
+        vu: 'var(--ease-vu)',
+      },
       keyframes: {
         'accordion-down': {
           from: { height: '0' },
@@ -151,11 +186,24 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        ignite: {
+          '0%': { filter: 'brightness(0.35)', opacity: '0.4' },
+          '30%': { filter: 'brightness(1.5)' },
+          '100%': { filter: 'brightness(1)', opacity: '1' },
+        },
+        'lamp-blink': {
+          '0%, 49%': { filter: 'brightness(1.25)', opacity: '1' },
+          '50%, 100%': { opacity: '0.22', textShadow: 'none' },
+        },
+        'vu-tip': { '0%': { opacity: '1' }, '100%': { opacity: '0.25' } },
       },
       animation: {
         'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        ignite: 'ignite 0.32s var(--ease-led)',
+        'lamp-blink': 'lamp-blink 1s step-end infinite',
+        'vu-tip': 'vu-tip 0.45s var(--ease-vu) infinite alternate',
       },
     },
   },
