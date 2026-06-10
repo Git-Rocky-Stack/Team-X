@@ -583,6 +583,483 @@
     box-shadow: 0 0 0 2px hsl(var(--mission-red) / 0.24), inset 0 1px 0
       hsl(var(--foreground) / 0.04);
   }
+
+  /* ================================================================
+   * CONSOLE RECIPES — Carbon Pro four-layer depth system (DESIGN.md).
+   * Base rules = Day Shift (matches :root); `.dark` overrides = Night Ops.
+   * DISPLAYS-STAY-DARK: .well, .lcd, .lamp, .vu carry literal dark values
+   * and have NO .dark variant — they are identical in both shifts.
+   * ================================================================ */
+
+  /* Layer 1 — raised faceplate */
+  .faceplate {
+    position: relative;
+    border-radius: var(--r-card);
+    background: radial-gradient(
+        ellipse 80% 60% at 30% -10%,
+        rgba(255, 255, 255, 0.55) 0%,
+        transparent 60%
+      ), linear-gradient(180deg, #f5f5f3 0%, #eaeae7 35%, #e0e0dc 70%, #d8d8d4 100%);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.92), inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+      inset 1px 0 0 rgba(255, 255, 255, 0.5), inset -1px 0 0 rgba(0, 0, 0, 0.08),
+      0 1px 0 rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.16),
+      0 12px 28px rgba(0, 0, 0, 0.14), 0 40px 80px rgba(0, 0, 0, 0.1);
+  }
+  .faceplate::before {
+    /* edge-light strip */
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 24px;
+    right: 24px;
+    height: 1px;
+    z-index: 6;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.65) 20%,
+      rgba(255, 255, 255, 0.95) 50%,
+      rgba(255, 255, 255, 0.65) 80%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+  .faceplate::after {
+    /* top-right key light */
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 140px;
+    height: 60px;
+    background: radial-gradient(ellipse at 80% 0%, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: var(--r-card);
+  }
+  .dark .faceplate {
+    background: radial-gradient(
+        ellipse 80% 60% at 30% -10%,
+        rgba(255, 255, 255, 0.04) 0%,
+        transparent 60%
+      ), linear-gradient(180deg, #1c1c1c 0%, #151515 35%, #101010 70%, #0c0c0c 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.7),
+      inset 1px 0 0 rgba(255, 255, 255, 0.025), inset -1px 0 0 rgba(0, 0, 0, 0.4),
+      0 1px 0 rgba(0, 0, 0, 0.9), 0 2px 4px rgba(0, 0, 0, 0.7),
+      0 12px 28px rgba(0, 0, 0, 0.55), 0 40px 80px rgba(0, 0, 0, 0.4);
+  }
+  .dark .faceplate::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(230, 230, 230, 0.18) 20%,
+      rgba(230, 230, 230, 0.32) 50%,
+      rgba(230, 230, 230, 0.18) 80%,
+      transparent 100%
+    );
+  }
+  .dark .faceplate::after {
+    background: radial-gradient(ellipse at 80% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+  }
+
+  /* Faceplate-lite — Card/Dialog surfaces (no edge-light pseudo, lighter throw) */
+  .plate {
+    border-radius: var(--r-card);
+    background: radial-gradient(
+        ellipse 80% 60% at 30% -10%,
+        rgba(255, 255, 255, 0.55) 0%,
+        transparent 60%
+      ), linear-gradient(180deg, #f5f5f3 0%, #eaeae7 50%, #dcdcd8 100%);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.92), inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+      0 1px 0 rgba(0, 0, 0, 0.16), 0 2px 4px rgba(0, 0, 0, 0.12), 0 8px 20px rgba(0, 0, 0, 0.1);
+  }
+  .dark .plate {
+    background: radial-gradient(
+        ellipse 80% 60% at 30% -10%,
+        rgba(255, 255, 255, 0.04) 0%,
+        transparent 60%
+      ), linear-gradient(180deg, #161616 0%, #111111 50%, #0d0d0d 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+      0 1px 0 rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.5), 0 8px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Layer 2 — recessed well (DISPLAY SURFACE: identical both shifts) */
+  .well {
+    border-radius: var(--r-card);
+    background: linear-gradient(180deg, #080808 0%, #0a0a0a 100%);
+    border: 1px solid rgba(0, 0, 0, 0.7);
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+      inset 1px 0 2px rgba(0, 0, 0, 0.5), inset -1px 0 2px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Recessed input well — form fields (light text BOTH shifts per DESIGN.md) */
+  .well-input {
+    border-radius: var(--r-control);
+    background: linear-gradient(180deg, #060606, #0a0a0a);
+    border: 1px solid rgba(0, 0, 0, 0.8);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+    color: #f5f5f5;
+    transition: border-color 150ms var(--ease-snap), box-shadow 150ms var(--ease-snap);
+  }
+  .well-input::placeholder {
+    color: #888888;
+  }
+  .well-input:focus-visible {
+    outline: none;
+    border-color: hsl(var(--ring) / 0.5);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 0 1px hsl(var(--ring) / 0.5);
+  }
+
+  /* Layer 3 — machined cap (neutral raised control) */
+  .cap {
+    border-radius: var(--r-control);
+    background: radial-gradient(
+        ellipse 80% 50% at 50% 0%,
+        rgba(255, 255, 255, 0.7) 0%,
+        transparent 60%
+      ), linear-gradient(180deg, #f7f7f5 0%, #e7e7e4 60%, #dbdbd7 100%);
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    color: #2e2e2c;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px
+      2px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.14);
+  }
+  .dark .cap {
+    background: radial-gradient(
+        ellipse 80% 50% at 50% 0%,
+        rgba(255, 255, 255, 0.07) 0%,
+        transparent 60%
+      ), linear-gradient(180deg, #222222 0%, #181818 60%, #121212 100%);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    color: var(--silver-bright);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
+  .cap:hover {
+    filter: brightness(1.04);
+  }
+  .dark .cap:hover {
+    filter: brightness(1.18);
+  }
+  .cap:active {
+    transform: translateY(1px);
+  }
+
+  /* Armed cap — consequential commands only (identical both shifts) */
+  .cap-armed {
+    border-radius: var(--r-control);
+    background: radial-gradient(
+        ellipse 80% 50% at 50% 0%,
+        rgba(255, 255, 255, 0.2) 0%,
+        transparent 60%
+      ), linear-gradient(180deg, #c8333a 0%, #aa2024 55%, #7f171a 100%);
+    border: 1px solid var(--armed-deep);
+    color: #fff3f0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.35),
+      0 0 0 1px rgba(170, 32, 36, 0.4), 0 1px 2px rgba(0, 0, 0, 0.7),
+      0 4px 12px rgba(0, 0, 0, 0.5), 0 0 24px var(--armed-glow);
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+  }
+  .cap-armed:hover {
+    filter: brightness(1.1);
+  }
+  .cap-armed:active {
+    transform: translateY(1px);
+  }
+
+  /* Warn cap — destructive actions (LED-warn tinted; dark cap both shifts) */
+  .cap-warn {
+    border-radius: var(--r-control);
+    background: linear-gradient(180deg, rgba(255, 68, 56, 0.14), rgba(255, 68, 56, 0.04)),
+      linear-gradient(180deg, #241412, #140f0e);
+    border: 1px solid rgba(255, 68, 56, 0.4);
+    color: var(--led-warn);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 3px 6px rgba(0, 0, 0, 0.45);
+    text-shadow: 0 0 8px rgba(255, 68, 56, 0.4);
+  }
+  .cap-warn:hover {
+    filter: brightness(1.15);
+  }
+  .cap-warn:active {
+    transform: translateY(1px);
+  }
+
+  /* Chrome cap — THE single polished CTA (inverts to black-gloss on Day) */
+  .cap-chrome {
+    border-radius: var(--r-control);
+    background: linear-gradient(180deg, #3e3e3c 0%, #1e1e1c 50%, #0e0e0c 100%);
+    color: #f5f5f3;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+  .dark .cap-chrome {
+    background: linear-gradient(180deg, #ffffff 0%, #e6e6e6 50%, #c8c8c8 100%);
+    color: #000000;
+    border-color: rgba(230, 230, 230, 0.4);
+    text-shadow: none;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.6),
+      0 4px 12px rgba(0, 0, 0, 0.5), 0 0 24px rgba(230, 230, 230, 0.14);
+  }
+  .cap-chrome:hover {
+    filter: brightness(1.08);
+  }
+  .dark .cap-chrome:hover {
+    filter: brightness(1.05);
+  }
+  .cap-chrome:active {
+    transform: translateY(1px);
+  }
+
+  /* Brushed-aluminum stripe header (directional machine grain — NEVER noise) */
+  .stripe {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 36px;
+    padding: 0 44px; /* clears 20px corner bolts */
+    z-index: 5;
+    border-radius: var(--r-card) var(--r-card) 0 0;
+    background: repeating-linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.035) 0 1px,
+        rgba(0, 0, 0, 0.012) 1px 2px,
+        rgba(255, 255, 255, 0.45) 2px 3px
+      ), linear-gradient(180deg, #f0f0ed 0%, #e0e0dc 55%, #d5d5d1 100%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  .dark .stripe {
+    background: repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.035) 0 1px,
+        rgba(255, 255, 255, 0.012) 1px 2px,
+        rgba(0, 0, 0, 0.06) 2px 3px
+      ), linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 55%, #181818 100%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  /* Hex socket cap bolt — 3-layer machined (outer hex + Allen socket) */
+  .hex {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    z-index: 7;
+    background: radial-gradient(
+        circle at 50% 50%,
+        transparent 62%,
+        rgba(0, 0, 0, 0.06) 68%,
+        transparent 75%
+      ),
+      radial-gradient(
+        circle at 28% 22%,
+        #ffffff 0%,
+        #dcdcd8 12%,
+        #b4b4b0 30%,
+        #8e8e8a 55%,
+        #62625e 80%,
+        #44443f 100%
+      );
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+  }
+  .hex::after {
+    content: "";
+    position: absolute;
+    inset: 23%;
+    background: radial-gradient(circle at 72% 78%, #6a6a66 0%, #3e3e3a 35%, #222220 100%);
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  }
+  .dark .hex {
+    background: radial-gradient(
+        circle at 50% 50%,
+        transparent 62%,
+        rgba(255, 255, 255, 0.04) 68%,
+        transparent 75%
+      ),
+      radial-gradient(
+        circle at 28% 22%,
+        #a4a4a4 0%,
+        #7c7c7c 12%,
+        #525252 30%,
+        #323232 55%,
+        #181818 80%,
+        #0a0a0a 100%
+      );
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.95)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7));
+  }
+  .dark .hex::after {
+    background: radial-gradient(circle at 72% 78%, #1c1c1c 0%, #0a0a0a 35%, #000000 100%);
+  }
+  .hex-tl {
+    top: 8px;
+    left: 10px;
+  }
+  .hex-tr {
+    top: 8px;
+    right: 10px;
+  }
+  .hex-bl {
+    bottom: 10px;
+    left: 10px;
+  }
+  .hex-br {
+    bottom: 10px;
+    right: 10px;
+  }
+
+  /* Lamp tile — stencil word status (DISPLAY: dark cap both shifts) */
+  .lamp {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 54px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: var(--r-control);
+    font-family: "Archivo Variable", sans-serif;
+    font-variation-settings: "wdth" 110;
+    font-weight: 750;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, #1f1f1f 0%, #161616 60%, #111111 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #5a5a5a; /* unlit graphite — literal: lamp caps never invert */
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 3px 6px rgba(0, 0, 0, 0.45);
+    user-select: none;
+  }
+  .lamp-sm {
+    min-width: 40px;
+    height: 19px;
+    font-size: 8.5px;
+    padding: 0 7px;
+  }
+  .lamp-go {
+    color: var(--led-go);
+    background: linear-gradient(180deg, rgba(65, 226, 94, 0.14), rgba(65, 226, 94, 0.05)),
+      linear-gradient(180deg, #1c1f1c, #121412);
+    border-color: rgba(65, 226, 94, 0.35);
+    text-shadow: 0 0 8px rgba(65, 226, 94, 0.6);
+  }
+  .lamp-hold {
+    color: var(--led-hold);
+    background: linear-gradient(180deg, rgba(255, 176, 0, 0.13), rgba(255, 176, 0, 0.04)),
+      linear-gradient(180deg, #201d14, #141210);
+    border-color: rgba(255, 176, 0, 0.35);
+    text-shadow: 0 0 8px rgba(255, 176, 0, 0.55);
+  }
+  .lamp-exec {
+    color: var(--led-scope);
+    background: linear-gradient(180deg, rgba(88, 196, 188, 0.12), rgba(88, 196, 188, 0.04)),
+      linear-gradient(180deg, #161e1d, #101413);
+    border-color: rgba(88, 196, 188, 0.32);
+    text-shadow: 0 0 8px rgba(88, 196, 188, 0.5);
+  }
+  .lamp-armed {
+    color: #fff3f0;
+    background: linear-gradient(180deg, #c8333a 0%, #aa2024 55%, #7f171a 100%);
+    border-color: var(--armed-deep);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.5), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 0 18px var(--armed-glow);
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+  }
+  .lamp-warn {
+    color: var(--led-warn);
+    background: linear-gradient(180deg, rgba(255, 68, 56, 0.14), rgba(255, 68, 56, 0.04)),
+      linear-gradient(180deg, #241412, #140f0e);
+    border-color: rgba(255, 68, 56, 0.4);
+    text-shadow: 0 0 8px rgba(255, 68, 56, 0.6);
+  }
+
+  /* LCD — recessed phosphor window (DISPLAY: identical both shifts) */
+  .lcd {
+    font-family: "Departure Mono", ui-monospace, monospace;
+    background: linear-gradient(180deg, var(--display-bg-top), var(--display-bg-bottom));
+    border: 1px solid var(--display-border);
+    border-radius: var(--r-card);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.85), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+    padding: 8px 12px;
+    color: var(--phosphor);
+    text-shadow: 0 0 7px rgba(65, 226, 94, 0.5);
+  }
+  .lcd .lcd-dim {
+    color: var(--phosphor-dim);
+    text-shadow: none;
+  }
+  .lcd-amber {
+    color: var(--led-hold);
+    text-shadow: 0 0 7px rgba(255, 176, 0, 0.45);
+  }
+  .lcd-red {
+    color: var(--armed-lit);
+    text-shadow: 0 0 8px var(--armed-glow);
+  }
+
+  /* VU meter segments (DISPLAY: unlit segments dark both shifts) */
+  .vu-seg {
+    background: #151515;
+    border-radius: 1px;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.7);
+  }
+  .vu-seg-g {
+    background: var(--led-go);
+    box-shadow: 0 0 5px rgba(65, 226, 94, 0.55);
+  }
+  .vu-seg-a {
+    background: var(--led-hold);
+    box-shadow: 0 0 5px rgba(255, 176, 0, 0.5);
+  }
+  .vu-seg-r {
+    background: var(--led-warn);
+    box-shadow: 0 0 6px rgba(255, 68, 56, 0.55);
+  }
+
+  /* Bat-lever switch track/thumb (track is a dark recessed well both shifts) */
+  .switch-track {
+    background: linear-gradient(180deg, #060606, #0b0b0b);
+    border: 1px solid rgba(0, 0, 0, 0.8);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+    transition: box-shadow 150ms var(--ease-snap);
+  }
+  .switch-track[data-state="checked"] {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px var(--armed-soft);
+  }
+  .switch-thumb {
+    background: linear-gradient(180deg, #fafaf8, #d8d8d4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(0, 0, 0, 0.35);
+    transition: transform 150ms var(--ease-snap), background 150ms var(--ease-snap);
+  }
+  .dark .switch-thumb {
+    background: linear-gradient(180deg, #3a3a3a, #222222);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 1px 2px rgba(0, 0, 0, 0.8);
+  }
+  .switch-thumb[data-state="checked"] {
+    background: linear-gradient(180deg, #c8333a, #8f1b1f);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 8px
+      var(--armed-glow);
+  }
+
+  /* Annunciator alert module (dark module rows BOTH shifts per DESIGN.md) */
+  .annunciator-module {
+    background: linear-gradient(180deg, #101010, #0c0c0c);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.5);
+  }
 }
 
 .amoled-menu-surface {
@@ -632,10 +1109,15 @@
   }
 }
 
-/* Respect reduced-motion preferences — disable pulse/streaming animations */
+/* Respect reduced-motion preferences — all console animation collapses;
+   states stay legible by color + form (lamp components render a visible
+   UNACK affix under reduced motion — see LampTile). */
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse-slow,
-  .animate-pulse {
+  .animate-pulse,
+  .animate-ignite,
+  .animate-lamp-blink,
+  .animate-vu-tip {
     animation: none;
   }
 }
