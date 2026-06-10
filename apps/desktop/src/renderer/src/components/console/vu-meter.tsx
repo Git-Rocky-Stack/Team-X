@@ -15,11 +15,16 @@ const AMBER_CEIL = 0.85;
 /** Time constant ≈ 65ms ⇒ ~99% of a step change indicated within 300ms (IEC-style integration). */
 const TAU_MS = 65;
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+// Non-finite signals (NaN/±Infinity from a stalled source) clamp to 0:
+// a dark meter, a valid aria-valuenow, AND a terminating ballistics loop
+// (NaN !== NaN would otherwise keep the rAF loop alive forever).
+const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0);
 
 /** Pure segment computation — exported for tests and for static renders. */
 export function segmentStates(value: number, count: number): VuSegment[] {
   const litCount = Math.round(clamp01(value) * count);
+  // count <= 0 is safe by construction: Array.from({ length: 0 | negative })
+  // yields [] and the position division is never evaluated.
   return Array.from({ length: count }, (_, i) => {
     const position = (i + 1) / count;
     const zone: VuZone = position <= GREEN_CEIL ? 'g' : position <= AMBER_CEIL ? 'a' : 'r';
@@ -81,13 +86,18 @@ export function VuMeter({
 }: VuMeterProps) {
   const displayed = useVuBallistics(value);
   const segs = segmentStates(displayed, segments);
+  // Announce the REAL signal (never the animated needle) + its zone band,
+  // so AT users get the green/amber/red semantics sighted users see.
+  const pct = Math.round(clamp01(value) * 100);
+  const zoneWord = pct <= GREEN_CEIL * 100 ? 'green' : pct <= AMBER_CEIL * 100 ? 'amber' : 'red';
   return (
     <div
       role="meter"
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.round(clamp01(value) * 100)}
+      aria-valuenow={pct}
+      aria-valuetext={`${pct}% — ${zoneWord} zone`}
       className={cn(
         'flex gap-[2px]',
         orientation === 'horizontal'

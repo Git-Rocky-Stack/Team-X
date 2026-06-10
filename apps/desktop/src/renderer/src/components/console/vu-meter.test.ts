@@ -45,6 +45,11 @@ describe('segmentStates', () => {
     expect(segmentStates(1.7, 8).filter((s) => s.lit)).toHaveLength(8);
     expect(segmentStates(-1, 8).some((s) => s.lit)).toBe(false);
   });
+
+  it('treats non-finite signals as 0 (dark meter, no NaN escape)', () => {
+    expect(segmentStates(Number.NaN, 8).some((s) => s.lit)).toBe(false);
+    expect(segmentStates(Number.POSITIVE_INFINITY, 8).filter((s) => s.lit)).toHaveLength(0);
+  });
 });
 
 describe('ballisticsStep (IEC 60268-17: ~300ms attack / ~300ms release)', () => {
