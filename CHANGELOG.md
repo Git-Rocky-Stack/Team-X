@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Aesthetic sweep Phase 1 — Command Console foundation.** Dual-shift Carbon Pro
+  token layer (Night Ops + Day Shift silver, displays-stay-dark), font stack swap
+  (Archivo / Public Sans / Departure Mono / Iosevka — Inter and JetBrains Mono
+  removed), all 19 UI primitives restyled as machined hardware (APIs unchanged),
+  new console primitive library (Faceplate, LampTile, VuMeter, AnnunciatorRail,
+  LCD wells, ShiftToggle). Visual-only: no behavior changes. See `DESIGN.md`.
+
 ### Added
 - **Local & Networked GGUF Support (Phase 1 — Foundation)**: scaffolded the
   `@team-x/local-gguf-runtime` package and the shared TypeScript contracts in
