@@ -42,6 +42,10 @@ describe('VuMeter render', () => {
   });
 
   it('ballistics: the needle converges to a changed target and the loop stops', () => {
+    // Local alias for the DOM-lib rAF callback type — eslint's no-undef
+    // can't resolve TS lib globals, so referencing the global name directly
+    // is a lint error here.
+    type FrameRequestCallback = (time: number) => void;
     // Drive the rAF loop by hand: queued callbacks + a manual clock.
     const frames: FrameRequestCallback[] = [];
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
