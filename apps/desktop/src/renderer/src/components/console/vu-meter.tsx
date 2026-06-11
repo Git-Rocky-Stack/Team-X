@@ -20,18 +20,30 @@ const TAU_MS = 65;
 // (NaN !== NaN would otherwise keep the rAF loop alive forever).
 const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0);
 
+/**
+ * Hardware meters top out well below this (DESIGN.md meters run 10–20
+ * segments) — the cap exists so a bad `segments` prop (Infinity throws in
+ * Array.from; 1e9 allocation-bombs the renderer) degrades to a wide meter
+ * instead of freezing the console. Fractional counts floor to whole
+ * segments so the tip index stays reachable.
+ */
+const MAX_SEGMENTS = 64;
+const sanitizeCount = (count: number) =>
+  Number.isFinite(count) ? Math.min(MAX_SEGMENTS, Math.max(0, Math.floor(count))) : 0;
+
 /** Zone banding shared by the segments and the AT announcement. */
 const zoneAt = (position: number): VuZone =>
   position <= GREEN_CEIL ? 'g' : position <= AMBER_CEIL ? 'a' : 'r';
 
 /** Pure segment computation — exported for tests and for static renders. */
 export function segmentStates(value: number, count: number): VuSegment[] {
-  const litCount = Math.round(clamp01(value) * count);
-  // count <= 0 is safe by construction: Array.from({ length: 0 | negative })
-  // yields [] and the position division is never evaluated.
-  return Array.from({ length: count }, (_, i) => ({
+  const n = sanitizeCount(count);
+  const litCount = Math.round(clamp01(value) * n);
+  // n === 0 is safe by construction: Array.from({ length: 0 }) yields []
+  // and the position division is never evaluated.
+  return Array.from({ length: n }, (_, i) => ({
     lit: i < litCount,
-    zone: zoneAt((i + 1) / count),
+    zone: zoneAt((i + 1) / n),
     tip: litCount > 0 && i === litCount - 1,
   }));
 }
@@ -112,8 +124,9 @@ export function VuMeter({
   // (value 0.604 → pct 60 reads "green" while the tip at 10/16 lights amber).
   const real = clamp01(value);
   const pct = Math.round(real * 100);
-  const litCount = Math.round(real * segments);
-  const tipZone: VuZone = litCount > 0 ? zoneAt(litCount / segments) : 'g';
+  const segCount = segs.length; // sanitized by segmentStates — never raw `segments`
+  const litCount = Math.round(real * segCount);
+  const tipZone: VuZone = litCount > 0 ? zoneAt(litCount / segCount) : 'g';
   const zoneWord = { g: 'green', a: 'amber', r: 'red' }[tipZone];
   return (
     <div

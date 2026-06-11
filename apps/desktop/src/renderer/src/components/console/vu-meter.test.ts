@@ -59,6 +59,18 @@ describe('segmentStates', () => {
     expect(one[0]?.lit).toBe(true); // Math.round(0.5) === 1
     expect(one[0]?.tip).toBe(true);
   });
+
+  it('hostile counts degrade instead of freezing: Infinity/NaN dark, huge capped, fractions floored', () => {
+    // Array.from({ length: Infinity }) throws RangeError and 1e9 would
+    // allocation-bomb the renderer — the sanitizer caps both.
+    expect(segmentStates(0.5, Number.POSITIVE_INFINITY)).toEqual([]);
+    expect(segmentStates(0.5, Number.NaN)).toEqual([]);
+    expect(segmentStates(1, 1e9)).toHaveLength(64);
+    // Fractional counts floor so the tip index stays reachable.
+    const fractional = segmentStates(1, 16.5);
+    expect(fractional).toHaveLength(16);
+    expect(fractional.filter((s) => s.tip)).toHaveLength(1);
+  });
 });
 
 describe('ballisticsStep (IEC 60268-17: ~300ms attack / ~300ms release)', () => {
