@@ -50,6 +50,15 @@ describe('segmentStates', () => {
     expect(segmentStates(Number.NaN, 8).some((s) => s.lit)).toBe(false);
     expect(segmentStates(Number.POSITIVE_INFINITY, 8).filter((s) => s.lit)).toHaveLength(0);
   });
+
+  it('count boundaries: 0 and negative yield an empty meter, 1 quantizes via round', () => {
+    expect(segmentStates(0.5, 0)).toEqual([]);
+    expect(segmentStates(0.5, -3)).toEqual([]);
+    const one = segmentStates(0.5, 1);
+    expect(one).toHaveLength(1);
+    expect(one[0]?.lit).toBe(true); // Math.round(0.5) === 1
+    expect(one[0]?.tip).toBe(true);
+  });
 });
 
 describe('ballisticsStep (IEC 60268-17: ~300ms attack / ~300ms release)', () => {
@@ -73,5 +82,14 @@ describe('ballisticsStep (IEC 60268-17: ~300ms attack / ~300ms release)', () => 
 
   it('is stable at the target', () => {
     expect(ballisticsStep(0.5, 0.5, 16)).toBe(0.5);
+  });
+
+  it('non-positive dt never moves the needle away from the target', () => {
+    // rAF frame-start timestamps can precede the performance.now() captured
+    // at schedule time — without the dt clamp, a negative dt flips alpha's
+    // sign and the needle regresses for that frame.
+    expect(ballisticsStep(0.5, 1, 0)).toBe(0.5);
+    expect(ballisticsStep(0.5, 1, -16)).toBe(0.5);
+    expect(ballisticsStep(0.5, 0, -16)).toBe(0.5);
   });
 });

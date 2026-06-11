@@ -20,22 +20,29 @@ const TAU_MS = 65;
 // (NaN !== NaN would otherwise keep the rAF loop alive forever).
 const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0);
 
+/** Zone banding shared by the segments and the AT announcement. */
+const zoneAt = (position: number): VuZone =>
+  position <= GREEN_CEIL ? 'g' : position <= AMBER_CEIL ? 'a' : 'r';
+
 /** Pure segment computation — exported for tests and for static renders. */
 export function segmentStates(value: number, count: number): VuSegment[] {
   const litCount = Math.round(clamp01(value) * count);
   // count <= 0 is safe by construction: Array.from({ length: 0 | negative })
   // yields [] and the position division is never evaluated.
-  return Array.from({ length: count }, (_, i) => {
-    const position = (i + 1) / count;
-    const zone: VuZone = position <= GREEN_CEIL ? 'g' : position <= AMBER_CEIL ? 'a' : 'r';
-    return { lit: i < litCount, zone, tip: litCount > 0 && i === litCount - 1 };
-  });
+  return Array.from({ length: count }, (_, i) => ({
+    lit: i < litCount,
+    zone: zoneAt((i + 1) / count),
+    tip: litCount > 0 && i === litCount - 1,
+  }));
 }
 
 /** One integration step of the meter needle toward `target` over `dtMs`. */
 export function ballisticsStep(current: number, target: number, dtMs: number): number {
   if (current === target) return current;
-  const alpha = 1 - Math.exp(-dtMs / TAU_MS);
+  // rAF can hand a tick a frame-start timestamp that precedes the
+  // performance.now() captured at schedule time — a negative dt would flip
+  // alpha's sign and integrate AWAY from the target for that frame.
+  const alpha = 1 - Math.exp(-Math.max(0, dtMs) / TAU_MS);
   const next = current + (target - current) * alpha;
   return Math.abs(next - target) < 0.001 ? target : next;
 }
@@ -48,6 +55,18 @@ function useVuBallistics(target: number): number {
   useEffect(() => {
     const goal = clamp01(target);
     if (displayedRef.current === goal) return;
+    // Reduced motion: the meter stays functional but the needle snaps —
+    // the CSS reduced-motion block only kills keyframe animations, so the
+    // rAF sweep must opt out here too. Re-read per target change (no
+    // listener needed). jsdom's stock matchMedia reports matches:false,
+    // so tests stay on the animated path unless they stub it.
+    if (
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setDisplayed(goal);
+      return;
+    }
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
@@ -87,9 +106,15 @@ export function VuMeter({
   const displayed = useVuBallistics(value);
   const segs = segmentStates(displayed, segments);
   // Announce the REAL signal (never the animated needle) + its zone band,
-  // so AT users get the green/amber/red semantics sighted users see.
-  const pct = Math.round(clamp01(value) * 100);
-  const zoneWord = pct <= GREEN_CEIL * 100 ? 'green' : pct <= AMBER_CEIL * 100 ? 'amber' : 'red';
+  // so AT users get the green/amber/red semantics sighted users see. The
+  // zone derives from the same quantized tip position the segments use —
+  // a rounded-pct zone can contradict the rendered tip at band boundaries
+  // (value 0.604 → pct 60 reads "green" while the tip at 10/16 lights amber).
+  const real = clamp01(value);
+  const pct = Math.round(real * 100);
+  const litCount = Math.round(real * segments);
+  const tipZone: VuZone = litCount > 0 ? zoneAt(litCount / segments) : 'g';
+  const zoneWord = { g: 'green', a: 'amber', r: 'red' }[tipZone];
   return (
     <div
       role="meter"

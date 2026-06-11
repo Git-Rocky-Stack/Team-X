@@ -45,4 +45,11 @@ describe('ShiftToggle', () => {
     await userEvent.click(screen.getByRole('button'));
     expect(onToggle).toHaveBeenCalledWith('day');
   });
+
+  it('fires onToggle(night) when on day shift — both directions of `next`', async () => {
+    const onToggle = vi.fn();
+    render(<ShiftToggle shift="day" onToggle={onToggle} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onToggle).toHaveBeenCalledWith('night');
+  });
 });

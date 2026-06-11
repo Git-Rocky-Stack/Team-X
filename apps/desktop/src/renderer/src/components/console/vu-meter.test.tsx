@@ -41,6 +41,37 @@ describe('VuMeter render', () => {
     expect(getByRole('meter')).toHaveAttribute('aria-valuetext', '72% — amber zone');
   });
 
+  it('announced zone matches the rendered tip at band boundaries', () => {
+    // value 0.604 → pct 60, but the settled tip lights segment 10/16 = 0.625
+    // (amber). The announcement must agree with what sighted users see, not
+    // with the rounded percentage.
+    const { getByRole } = render(<VuMeter value={0.604} label="Load" />);
+    expect(getByRole('meter')).toHaveAttribute('aria-valuetext', '60% — amber zone');
+  });
+
+  it('prefers-reduced-motion snaps the needle — no rAF sweep', () => {
+    type FrameRequestCallback = (time: number) => void;
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      frames.push(cb);
+      return frames.length;
+    });
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({ matches: true, media: '(prefers-reduced-motion: reduce)' }),
+    );
+    try {
+      const { container, rerender } = render(<VuMeter value={0} segments={10} label="Load" />);
+      rerender(<VuMeter value={1} segments={10} label="Load" />);
+      // Snapped synchronously: every segment lit, and no frame was scheduled.
+      expect(container.querySelectorAll('[class*="vu-seg-"]')).toHaveLength(10);
+      expect(frames).toHaveLength(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('ballistics: the needle converges to a changed target and the loop stops', () => {
     // Local alias for the DOM-lib rAF callback type — eslint's no-undef
     // can't resolve TS lib globals, so referencing the global name directly

@@ -33,7 +33,6 @@
   "dependencies": {
     "@fontsource-variable/archivo": "^5.2.8",
     "@fontsource-variable/public-sans": "^5.2.7",
-    "@fontsource/iosevka": "^5.2.5",
     "@modelcontextprotocol/sdk": "^1.0.4",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-collapsible": "^1.1.1",
