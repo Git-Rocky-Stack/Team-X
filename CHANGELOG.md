@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Aesthetic sweep Phase 2 — Shell + Command Deck.** App chrome recomposed onto
+  the Command Console foundation: edge-to-edge command bar (stencil nav tiles,
+  placard brand, ⌘K well hint), team rail as console hardware (lamp busy signal,
+  LED status dots), workspace switcher/create-workspace/company-settings on
+  recessed wells + machined caps (legacy overrides removed), command palette on
+  carbon surfaces with LED gate vocabulary and a display-dark transcript well.
+  NEW: AnnunciatorRail mounted under the command bar with five real signals
+  (QUE/GGUF/BUDG/APPR/MTG — fingerprinted master-caution ack, tile teleport);
+  ShiftToggle wired to the per-company theme — Day Shift is now reachable from
+  chrome. Visual-only elsewhere: E2E suite passes unmodified.
 - **Aesthetic sweep Phase 1 — Command Console foundation.** Dual-shift Carbon Pro
   token layer (Night Ops + Day Shift silver, displays-stay-dark), font stack swap
   (Archivo / Public Sans / Departure Mono / Iosevka — Inter and JetBrains Mono
