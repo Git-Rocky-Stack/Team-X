@@ -40,11 +40,20 @@ describe('mission shell foundation source audit', () => {
     expect(topBarSrc).not.toContain('border-white/10');
   });
 
-  it('carries the mission chrome into the employee rail', () => {
-    expect(sidenavSrc).toContain('mission-chrome-panel flex w-64 shrink-0 flex-col rounded-[30px]');
+  it('sweeps the employee rail into the console chassis', () => {
     expect(sidenavSrc).toContain(
-      'mission-control-row flex items-center justify-between rounded-[22px]',
+      'flex w-64 shrink-0 flex-col rounded-card border border-[var(--hairline)] bg-card',
     );
+    expect(sidenavSrc).toContain(
+      'flex items-center justify-between rounded-control border border-[var(--hairline)] bg-[var(--carbon-850)]',
+    );
+    expect(sidenavSrc).toContain('lamp lamp-sm lamp-hold');
+    expect(sidenavSrc).toContain('nav-tile stencil');
     expect(sidenavSrc).toContain('Employee rail');
+    // Console composition only — the legacy mission chrome must not return.
+    expect(sidenavSrc).not.toContain('mission-');
+    expect(sidenavSrc).not.toContain('bg-black');
+    expect(sidenavSrc).not.toContain('border-white/10');
+    expect(sidenavSrc).not.toContain('border-brand');
   });
 });
