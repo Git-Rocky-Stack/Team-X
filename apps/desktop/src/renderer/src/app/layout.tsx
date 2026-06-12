@@ -12,12 +12,12 @@ interface AppLayoutProps {
 
 export function AppLayout({ employees, onHireClick, children }: AppLayoutProps) {
   return (
-    <div className="mission-app-shell relative flex h-screen flex-col overflow-hidden bg-black text-foreground">
-      <div className="mission-grid pointer-events-none absolute inset-0 opacity-[0.16]" />
+    <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
       <TopBar />
-      <div className="relative flex flex-1 gap-3 overflow-hidden px-3 pb-3">
+      {/* AnnunciatorRail mounts here (Phase 2 Task 13) */}
+      <div className="relative flex min-h-0 flex-1 gap-3 overflow-hidden px-3 pb-3">
         <Sidenav employees={employees} onHireClick={onHireClick} />
-        <main className="mission-chrome-panel flex-1 overflow-y-auto rounded-[30px] border border-white/10 bg-black scrollbar-thin">
+        <main className="min-w-0 flex-1 overflow-y-auto rounded-card border border-[var(--hairline)] bg-card scrollbar-thin">
           {children}
         </main>
       </div>

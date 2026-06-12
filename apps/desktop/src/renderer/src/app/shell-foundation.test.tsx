@@ -14,12 +14,15 @@ const layoutSrc = readFileSync(LAYOUT_PATH, 'utf8');
 const sidenavSrc = readFileSync(SIDENAV_PATH, 'utf8');
 
 describe('mission shell foundation source audit', () => {
-  it('mounts the app inside the mission shell chrome', () => {
+  it('mounts the app inside the console chassis', () => {
     expect(layoutSrc).toContain(
-      'mission-app-shell relative flex h-screen flex-col overflow-hidden',
+      'relative flex h-screen flex-col overflow-hidden bg-background text-foreground',
     );
-    expect(layoutSrc).toContain('mission-grid pointer-events-none absolute inset-0 opacity-[0.16]');
-    expect(layoutSrc).toContain('mission-chrome-panel flex-1 overflow-y-auto rounded-[30px]');
+    expect(layoutSrc).not.toContain('mission-app-shell');
+    expect(layoutSrc).not.toContain('mission-grid');
+    expect(layoutSrc).toContain(
+      'min-w-0 flex-1 overflow-y-auto rounded-card border border-[var(--hairline)] bg-card',
+    );
   });
 
   it('wires the top bar into the new mission control row layout', () => {
