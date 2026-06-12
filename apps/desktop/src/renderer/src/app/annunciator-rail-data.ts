@@ -3,6 +3,10 @@ import type { DashboardEvent, Thread, Ticket } from '@team-x/shared-types';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { AnnunciatorInputs } from './annunciator-signals.js';
+import {
+  BOARD_QUEUE_READ_STATE_EVENT,
+  type BoardQueueReadStateEventDetail,
+} from './board-queue-read-state-events.js';
 
 import { summarizeRuntimeOperationsForDashboard } from '@/features/dashboard/runtime-operations-projections.js';
 import { useApprovals } from '@/hooks/use-approvals.js';
@@ -196,8 +200,12 @@ function useBoardQueueUnread(companyId: string | null): number {
   }, [companyId, queryClient]);
 
   // The board-queue read marker also lives in localStorage and is mutated by
-  // BoardMessageQueue. Re-read it on a 'storage' event so the lamp settles
-  // when the user marks items checked in the open panel.
+  // BoardMessageQueue. Two listeners keep the lamp honest:
+  // - 'storage' covers OTHER windows/documents only — per the HTML spec it
+  //   never fires in the document that called localStorage.setItem.
+  // - The same-window path is the custom event below, dispatched by
+  //   notifyBoardQueueReadStateChanged after BoardMessageQueue writes, so the
+  //   lamp settles when the user marks items checked in the open panel.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     function onStorage(event: StorageEvent) {
@@ -205,8 +213,19 @@ function useBoardQueueUnread(companyId: string | null): number {
         setReadState(readQueueState(companyId));
       }
     }
+    function onReadStateChanged(event: Event) {
+      if (companyId === null) return;
+      const detail = (event as CustomEvent<BoardQueueReadStateEventDetail>).detail;
+      if (detail?.companyId === companyId) {
+        setReadState(readQueueState(companyId));
+      }
+    }
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    window.addEventListener(BOARD_QUEUE_READ_STATE_EVENT, onReadStateChanged);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(BOARD_QUEUE_READ_STATE_EVENT, onReadStateChanged);
+    };
   }, [companyId]);
 
   return useMemo(() => {

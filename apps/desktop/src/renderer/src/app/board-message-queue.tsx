@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { notifyBoardQueueReadStateChanged } from './board-queue-read-state-events.js';
+
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { useThreadList } from '@/hooks/use-chat.js';
@@ -114,6 +116,9 @@ function writeQueueState(companyId: string | null, state: BoardQueueReadState): 
 
   try {
     window.localStorage.setItem(queueStorageKey(companyId), JSON.stringify(state));
+    // Same-document `storage` events never fire (HTML spec), so broadcast the
+    // change explicitly for same-window subscribers like the annunciator rail.
+    notifyBoardQueueReadStateChanged(companyId);
   } catch {
     // Read state is convenience-only. A storage failure should never block the cockpit.
   }
