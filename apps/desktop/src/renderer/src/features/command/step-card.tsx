@@ -175,12 +175,13 @@ export function StepCard({
   className,
 }: StepCardProps) {
   const base = cn(
-    // Layout
-    'group relative rounded-md border border-border bg-surface-50 p-3 transition-all',
+    // Layout — cards sit INSIDE the display-dark transcript well, so
+    // carbon literals are correct here (part of the display, not the shift surface).
+    'group relative rounded-control border border-[var(--hairline)] bg-[var(--carbon-850)] p-3 transition-all',
     // Hover lift (six states: hover)
-    'hover:-translate-y-px hover:border-brand/40 hover:bg-surface-100 hover:shadow-md',
+    'hover:-translate-y-px hover:border-[var(--armed-edge)] hover:bg-[var(--carbon-800)] hover:shadow-md',
     // Focus ring (six states: focus)
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-0',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0',
     // Disabled / dimmed (six states: disabled)
     isDimmed && 'opacity-60',
     className,
@@ -220,13 +221,13 @@ export function StepCard({
             icon={<Wrench className="h-3.5 w-3.5" aria-hidden="true" />}
             label="Tool call"
             index={step.stepIndex}
-            detail={<code className="text-code-sm text-brand">{d.toolName}</code>}
+            detail={<code className="text-code-sm text-primary">{d.toolName}</code>}
           />
           <details className="mt-1.5" open={defaultOpen}>
-            <summary className="cursor-pointer select-none text-caption text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-0">
+            <summary className="cursor-pointer select-none text-caption text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0">
               Arguments
             </summary>
-            <pre className="mt-1 max-h-48 overflow-auto rounded bg-surface-200 p-2 text-code-sm leading-relaxed text-foreground">
+            <pre className="well mt-1 max-h-48 overflow-auto rounded-card p-2 text-code-sm leading-relaxed text-[var(--display-fg)]">
               {safeStringify(d.args)}
             </pre>
           </details>
@@ -247,13 +248,13 @@ export function StepCard({
             icon={<Check className="h-3.5 w-3.5" aria-hidden="true" />}
             label="Tool result"
             index={step.stepIndex}
-            detail={<code className="text-code-sm text-brand">{d.toolName}</code>}
+            detail={<code className="text-code-sm text-primary">{d.toolName}</code>}
           />
           <details className="mt-1.5" open={defaultOpen}>
-            <summary className="cursor-pointer select-none text-caption text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-0">
+            <summary className="cursor-pointer select-none text-caption text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0">
               Observation
             </summary>
-            <pre className="mt-1 max-h-48 overflow-auto rounded bg-surface-200 p-2 text-code-sm leading-relaxed text-foreground">
+            <pre className="well mt-1 max-h-48 overflow-auto rounded-card p-2 text-code-sm leading-relaxed text-[var(--display-fg)]">
               {safeStringify(d.result)}
             </pre>
           </details>
@@ -267,14 +268,14 @@ export function StepCard({
         <article
           tabIndex={-1}
           aria-label={`Step ${step.stepIndex + 1}: answer`}
-          className={cn(base, 'border-brand/40 bg-brand/5')}
+          className={cn(base, 'border-[var(--armed-edge)] bg-[var(--armed-soft)]')}
           data-step-kind="answer"
         >
           <StepHeader
-            icon={<Check className="h-3.5 w-3.5 text-brand" aria-hidden="true" />}
+            icon={<Check className="h-3.5 w-3.5 text-primary" aria-hidden="true" />}
             label="Answer"
             index={step.stepIndex}
-            labelClassName="text-brand"
+            labelClassName="text-primary"
           />
           <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">{d.text}</p>
         </article>
@@ -287,15 +288,18 @@ export function StepCard({
         <article
           tabIndex={-1}
           aria-label={`Step ${step.stepIndex + 1}: error`}
-          className={cn(base, 'border-red-500/60 bg-red-500/5 hover:border-red-500')}
+          className={cn(
+            base,
+            'border-[var(--led-warn-edge)] bg-[var(--warn-soft)] hover:border-[var(--led-warn)]',
+          )}
           data-step-kind="error"
         >
           <StepHeader
-            icon={<AlertTriangle className="h-3.5 w-3.5 text-red-400" aria-hidden="true" />}
+            icon={<AlertTriangle className="h-3.5 w-3.5 text-led-warn" aria-hidden="true" />}
             label="Error"
             index={step.stepIndex}
-            labelClassName="text-red-400"
-            detail={<code className="text-code-sm text-red-400">{d.reason}</code>}
+            labelClassName="text-led-warn"
+            detail={<code className="text-code-sm text-led-warn">{d.reason}</code>}
           />
           <p className="mt-1.5 whitespace-pre-wrap text-body text-foreground">{d.message}</p>
         </article>
@@ -308,26 +312,26 @@ export function StepCard({
         <article
           tabIndex={-1}
           aria-label={`Step ${step.stepIndex + 1}: ticket created — ${d.title || 'untitled'}`}
-          className={cn(base, 'border-emerald-500/60 bg-emerald-500/5 hover:border-emerald-500')}
+          className={cn(base, 'border-[var(--led-go-edge)] bg-led-go/5 hover:border-led-go')}
           data-step-kind="ticket_created"
         >
           <StepHeader
-            icon={<Ticket className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />}
+            icon={<Ticket className="h-3.5 w-3.5 text-led-go" aria-hidden="true" />}
             label="Ticket Created"
             index={step.stepIndex}
-            labelClassName="text-emerald-400"
+            labelClassName="text-led-go"
             detail={
               d.ticketId ? (
-                <code className="text-code-sm text-emerald-400/80">{d.ticketId.slice(0, 8)}</code>
+                <code className="text-code-sm text-led-go/80">{d.ticketId.slice(0, 8)}</code>
               ) : undefined
             }
           />
           {d.title && <p className="mt-1.5 text-body text-foreground">{d.title}</p>}
           {d.assigneeId && (
             <p className="mt-1 text-caption text-muted-foreground">
-              Assigned to <span className="text-emerald-400">{d.assigneeId.slice(0, 8)}</span>
+              Assigned to <span className="text-led-go">{d.assigneeId.slice(0, 8)}</span>
               {d.planId ? (
-                <span className="ml-2 text-zinc-500">Plan {d.planId.slice(0, 8)}</span>
+                <span className="ml-2 text-muted-foreground">Plan {d.planId.slice(0, 8)}</span>
               ) : null}
             </p>
           )}
@@ -341,24 +345,27 @@ export function StepCard({
         <article
           tabIndex={-1}
           aria-label={`Step ${step.stepIndex + 1}: delegated to ${d.assigneeName || 'unknown'}`}
-          className={cn(base, 'border-sky-500/60 bg-sky-500/5 hover:border-sky-500')}
+          className={cn(
+            base,
+            'border-[var(--led-scope-edge)] bg-led-scope/5 hover:border-led-scope',
+          )}
           data-step-kind="delegation_made"
         >
           <StepHeader
-            icon={<GitBranch className="h-3.5 w-3.5 text-sky-400" aria-hidden="true" />}
+            icon={<GitBranch className="h-3.5 w-3.5 text-led-scope" aria-hidden="true" />}
             label="Delegation"
             index={step.stepIndex}
-            labelClassName="text-sky-400"
+            labelClassName="text-led-scope"
             detail={
               d.ticketId ? (
-                <code className="text-code-sm text-sky-400/80">{d.ticketId.slice(0, 8)}</code>
+                <code className="text-code-sm text-led-scope/80">{d.ticketId.slice(0, 8)}</code>
               ) : undefined
             }
           />
           <p className="mt-1.5 text-body text-foreground">
             {d.assigneeName ? (
               <>
-                Delegated to <span className="font-medium text-sky-400">{d.assigneeName}</span>
+                Delegated to <span className="font-medium text-led-scope">{d.assigneeName}</span>
               </>
             ) : (
               'Subtask delegated'
@@ -366,7 +373,7 @@ export function StepCard({
           </p>
           {d.planId && (
             <p className="mt-1 text-caption text-muted-foreground">
-              Plan <span className="text-zinc-400">{d.planId.slice(0, 8)}</span>
+              Plan <span className="text-muted-foreground">{d.planId.slice(0, 8)}</span>
             </p>
           )}
         </article>
@@ -377,22 +384,22 @@ export function StepCard({
       const d = narrowReviewPending(step.data);
       const outcomeColor =
         d.outcome === 'approve'
-          ? 'text-emerald-400'
+          ? 'text-led-go'
           : d.outcome === 'reject'
-            ? 'text-red-400'
-            : 'text-amber-400';
+            ? 'text-led-warn'
+            : 'text-led-hold';
       return (
         <article
           tabIndex={-1}
           aria-label={`Step ${step.stepIndex + 1}: review ${d.outcome || 'pending'}`}
-          className={cn(base, 'border-amber-500/60 bg-amber-500/5 hover:border-amber-500')}
+          className={cn(base, 'border-[var(--led-hold-edge)] bg-led-hold/5 hover:border-led-hold')}
           data-step-kind="review_pending"
         >
           <StepHeader
-            icon={<ClipboardCheck className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />}
+            icon={<ClipboardCheck className="h-3.5 w-3.5 text-led-hold" aria-hidden="true" />}
             label="Review"
             index={step.stepIndex}
-            labelClassName="text-amber-400"
+            labelClassName="text-led-hold"
             detail={
               d.outcome ? (
                 <span className={`text-caption font-medium ${outcomeColor}`}>{d.outcome}</span>
@@ -403,7 +410,7 @@ export function StepCard({
             {d.ticketId ? (
               <>
                 Ticket{' '}
-                <code className="text-code-sm text-amber-400/80">{d.ticketId.slice(0, 8)}</code>{' '}
+                <code className="text-code-sm text-led-hold/80">{d.ticketId.slice(0, 8)}</code>{' '}
                 under review
               </>
             ) : (
@@ -414,13 +421,13 @@ export function StepCard({
             <p className="mt-1 text-caption text-muted-foreground">
               {d.reviewerId && (
                 <span>
-                  Reviewer <span className="text-zinc-400">{d.reviewerId.slice(0, 8)}</span>
+                  Reviewer <span className="text-muted-foreground">{d.reviewerId.slice(0, 8)}</span>
                 </span>
               )}
               {d.reviewerId && d.planId && <span className="mx-1">·</span>}
               {d.planId && (
                 <span>
-                  Plan <span className="text-zinc-400">{d.planId.slice(0, 8)}</span>
+                  Plan <span className="text-muted-foreground">{d.planId.slice(0, 8)}</span>
                 </span>
               )}
             </p>
@@ -454,7 +461,7 @@ function StepHeader({ icon, label, index, detail, labelClassName }: StepHeaderPr
     <header className="flex items-center gap-2 text-caption">
       <span
         aria-hidden="true"
-        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-200 text-muted-foreground"
+        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--carbon-800)] text-muted-foreground"
       >
         {icon}
       </span>
@@ -479,14 +486,17 @@ export function StepCardSkeleton({ className }: { className?: string }) {
     <output
       aria-live="polite"
       aria-label="Thinking"
-      className={cn('block rounded-md border border-border bg-surface-50 p-3', className)}
+      className={cn(
+        'block rounded-control border border-[var(--hairline)] bg-[var(--carbon-850)] p-3',
+        className,
+      )}
     >
       <div className="flex items-center gap-2">
-        <div className="h-5 w-5 animate-pulse rounded-full bg-surface-200" />
-        <div className="h-3 w-24 animate-pulse rounded bg-surface-200" />
+        <div className="h-5 w-5 animate-pulse rounded-full bg-[var(--carbon-800)]" />
+        <div className="h-3 w-24 animate-pulse rounded bg-[var(--carbon-800)]" />
       </div>
-      <div className="mt-2 h-3 w-4/5 animate-pulse rounded bg-surface-200" />
-      <div className="mt-1.5 h-3 w-3/5 animate-pulse rounded bg-surface-200" />
+      <div className="mt-2 h-3 w-4/5 animate-pulse rounded bg-[var(--carbon-800)]" />
+      <div className="mt-1.5 h-3 w-3/5 animate-pulse rounded bg-[var(--carbon-800)]" />
     </output>
   );
 }

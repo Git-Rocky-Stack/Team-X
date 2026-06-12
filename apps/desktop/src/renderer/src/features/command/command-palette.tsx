@@ -124,15 +124,15 @@ function Toast({ toast, onDismiss }: { toast: ToastPayload; onDismiss: () => voi
   return (
     <output
       aria-live="polite"
-      className="pointer-events-auto fixed bottom-6 right-6 z-[70] flex items-center gap-3 rounded-lg border border-border bg-surface-100 px-4 py-3 shadow-lg"
+      className="annunciator-module pointer-events-auto fixed bottom-6 right-6 z-[70] flex items-center gap-3 rounded-control px-4 py-3"
     >
-      <Sparkles className="h-4 w-4 text-brand" aria-hidden="true" />
+      <Sparkles className="h-4 w-4 text-led-scope" aria-hidden="true" />
       <span className="text-body text-foreground">{toast.message}</span>
       {toast.undoable && toast.onUndo && (
         <button
           type="button"
           onClick={toast.onUndo}
-          className="ml-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-button-sm text-brand hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
+          className="ml-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-button-sm text-primary hover:bg-[var(--armed-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
         >
           <Undo2 className="h-3 w-3" /> Undo
         </button>
@@ -141,7 +141,7 @@ function Toast({ toast, onDismiss }: { toast: ToastPayload; onDismiss: () => voi
         type="button"
         onClick={onDismiss}
         aria-label="Dismiss notification"
-        className="ml-1 rounded-md p-1 text-muted-foreground hover:bg-surface-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
+        className="ml-1 rounded-md p-1 text-muted-foreground hover:bg-[var(--carbon-800)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
       >
         <X className="h-3 w-3" />
       </button>
@@ -586,7 +586,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
             <>
               {/* Input row */}
               <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-                <Sparkles className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                <Sparkles className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                 <input
                   ref={inputRef}
                   type="text"
@@ -896,7 +896,7 @@ function StepLogView({
     <div className="flex max-h-[640px] flex-col">
       {/* Header */}
       <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Sparkles className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+        <Sparkles className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
         <div className="flex-1 min-w-0">
           <p className="truncate text-body-strong text-foreground">
             {isRunning
