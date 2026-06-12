@@ -821,6 +821,20 @@
     transform: translateY(1px);
   }
 
+  /* Keyboard focus on caps: outline-based so it can never lose to the
+     recipe box-shadow stacks (Tailwind ring-* is a box-shadow and ties or
+     loses to .dark .cap / .cap-select — outline sits outside that fight).
+     Applies to the whole machined-cap family via the shared .cap base.
+     cap-armed / cap-warn / cap-chrome are listed explicitly because the
+     Button primitive applies them standalone, without the .cap base. */
+  .cap:focus-visible,
+  .cap-armed:focus-visible,
+  .cap-warn:focus-visible,
+  .cap-chrome:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   /* Armed cap — consequential commands only (identical both shifts) */
   .cap-armed {
     border-radius: var(--r-control);

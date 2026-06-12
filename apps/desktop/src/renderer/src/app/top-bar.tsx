@@ -109,8 +109,7 @@ export function TopBar() {
               data-copilot-toolbar-toggle=""
               className={cn(
                 'cap stencil inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-[10.5px]',
-                'transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                copilotSidebarOpen ? 'cap-select' : 'text-foreground',
+                copilotSidebarOpen && 'cap-select',
               )}
             >
               <span className="hidden lg:inline">Copilot</span>
