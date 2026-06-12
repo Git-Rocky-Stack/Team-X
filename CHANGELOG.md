@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   removed), all 19 UI primitives restyled as machined hardware (APIs unchanged),
   new console primitive library (Faceplate, LampTile, VuMeter, AnnunciatorRail,
   LCD wells, ShiftToggle). Visual-only: no behavior changes. See `DESIGN.md`.
+- **Phase 1 review-wall hardening (PR #26 Stage 2).** AnnunciatorRail
+  master-caution ritual runs on one stable button per tile (keyboard focus
+  survives ack→teleport; off+alert coerces to visible warn; missing handler
+  renders aria-disabled). VuMeter: `segments` prop sanitized (cap 64, dark on
+  non-finite), non-positive rAF dt clamped, `prefers-reduced-motion` snaps the
+  needle, zone announcement matches the rendered tip. Badge LED text rides new
+  `--tag-*` tokens — Night pixels unchanged, Day Shift now WCAG AA on silver.
+  Iosevka vendored woff2-only (−1.9 MB dead `.woff` from the installer).
+  ShiftToggle LED is functional (lit on Day Shift). Recipe dedup: `.text-placard`,
+  `.stencil`, `--led-*-edge`, `--r-inset`, `--scrollbar-thumb`,
+  `.annunciator-strip`, shared console jsdom test-setup.
 
 ### Added
 - **Local & Networked GGUF Support (Phase 1 — Foundation)**: scaffolded the
