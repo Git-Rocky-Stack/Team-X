@@ -45,7 +45,11 @@ declare global {
      * preload script, which is a wiring bug we want to surface
      * loudly (as a `TypeError: Cannot read properties of undefined`)
      * rather than silently type-narrowing to `undefined` at every
-     * call site.
+     * call site. Note: `lib/ipc.ts` resolves this object lazily (a
+     * shallow Proxy, so node-env tests can import ipc consumers
+     * without a `window` global), so the TypeError fires on the
+     * first `ipc.*` property access during boot render instead of
+     * at module evaluation — same loud failure, microseconds later.
      */
     teamx: TeamXApi;
   }
