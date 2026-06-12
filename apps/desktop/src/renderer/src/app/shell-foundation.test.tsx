@@ -25,12 +25,19 @@ describe('mission shell foundation source audit', () => {
     );
   });
 
-  it('wires the top bar into the new mission control row layout', () => {
+  it('sweeps the top bar into the edge-to-edge command bar', () => {
     expect(topBarSrc).toContain('data-top-bar-shell=""');
     expect(topBarSrc).toContain('data-top-bar-nav=""');
-    expect(topBarSrc).toContain('MissionControlRow');
+    expect(topBarSrc).toContain('nav-tile stencil');
+    expect(topBarSrc).toContain('nav-tile-active');
+    expect(topBarSrc).toContain('text-placard');
     expect(topBarSrc).toContain('<WorkspaceSwitcher />');
     expect(topBarSrc).toContain('Operational command shell');
+    // Console composition only — the legacy mission chrome must not return.
+    expect(topBarSrc).not.toContain('MissionControlRow');
+    expect(topBarSrc).not.toContain('mission-');
+    expect(topBarSrc).not.toContain('bg-black');
+    expect(topBarSrc).not.toContain('border-white/10');
   });
 
   it('carries the mission chrome into the employee rail', () => {
