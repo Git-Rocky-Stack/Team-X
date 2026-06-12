@@ -891,6 +891,48 @@
     transform: translateY(1px);
   }
 
+  /* Chooser-selection caps — the swept replacement for `.brand-selected`.
+     Apply ON TOP of `.cap`: armed-red is the default (brand/command);
+     tint variants follow the LED semantic map. Selected chips stay
+     legible on both shifts because the cap face is dark hardware. */
+  .cap-select {
+    border-color: var(--armed-edge);
+    color: var(--armed-lit);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 0 14px var(--armed-glow);
+  }
+  .cap-select-go {
+    border-color: var(--led-go-edge);
+    color: var(--led-go);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 0 12px rgba(65, 226, 94, 0.18);
+  }
+  .cap-select-hold {
+    border-color: var(--led-hold-edge);
+    color: var(--led-hold);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 0 12px rgba(255, 176, 0, 0.16);
+  }
+
+  /* Nav tile — stencil nav items (sidenav sections, top-bar tabs).
+     A flat chassis tile, NOT a raised cap: nav is wayfinding, not a
+     command. Active = armed-red bordered tile (DESIGN.md §Layout). */
+  .nav-tile {
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
+    color: hsl(var(--muted-foreground));
+  }
+  .nav-tile:hover {
+    border-color: var(--hairline);
+    color: hsl(var(--foreground));
+  }
+  .nav-tile-active {
+    border-color: var(--armed-edge);
+    background: var(--armed-soft);
+    color: hsl(var(--foreground));
+    box-shadow: 0 0 10px var(--armed-glow);
+  }
+
   /* Brushed-aluminum stripe header (directional machine grain — NEVER noise) */
   .stripe {
     position: relative;
