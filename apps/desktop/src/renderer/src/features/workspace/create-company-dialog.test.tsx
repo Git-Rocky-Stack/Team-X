@@ -201,11 +201,24 @@ describe('CreateCompanyDialog (features/workspace/create-company-dialog.tsx)', (
     expect(dialogSrc).not.toMatch(/role="radio"/);
   });
 
-  it('focus-within + brand-ring accessibility on the theme labels', () => {
+  it('focus-within outline accessibility on the theme labels (cap cascade guard)', () => {
     // The label wraps a focusable input — focus styling lives on the
     // label via focus-within (the input is sr-only, so focus-visible
-    // on the input itself wouldn't surface the ring to sighted users).
-    expect(dialogSrc).toContain('focus-within:ring-brand');
+    // on the input itself wouldn't surface the indicator to sighted
+    // users). Sweep Phase 2 restyled these labels onto the .cap chooser
+    // vocabulary, where the cap recipe sets box-shadow via .dark .cap /
+    // .cap.cap-select (specificity 0,2,0 / 0,3,0). Tailwind ring-* is
+    // box-shadow-based at (0,1,0) and LOSES to the cap recipes in Night
+    // Ops, making a ring focus indicator invisible. The OUTLINE form is
+    // used instead — outline does not compete with box-shadow.
+    expect(dialogSrc).toContain('focus-within:outline');
+    expect(dialogSrc).toContain('focus-within:outline-2');
+    expect(dialogSrc).toContain('focus-within:outline-[hsl(var(--ring))]');
+    expect(dialogSrc).toContain('focus-within:outline-offset-2');
+    // Negative — the retired ring form is known-broken on caps (loses
+    // the box-shadow specificity fight in Night Ops); a refactor that
+    // brings it back would silently kill the focus indicator.
+    expect(dialogSrc).not.toContain('focus-within:ring-brand');
   });
 
   it('documents the step (a+b) collapse + iron-rule + 2026-04-19 audit in JSDoc', () => {
