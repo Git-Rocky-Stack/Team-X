@@ -113,9 +113,20 @@ describe('WorkspaceSwitcher (features/workspace/workspace-switcher.tsx)', () => 
     );
   });
 
-  it('applies hover + focus-visible brand ring on the trigger', () => {
-    expect(src).toContain('focus-visible:ring-brand');
-    expect(src).toContain('hover:bg-black');
+  it('applies the carbon trigger well: hairline border, hover-arm, focus-visible ring (sweep Phase 2)', () => {
+    // Sweep Phase 2 recomposed the trigger onto the Command Console /
+    // Carbon Pro foundation: the legacy AMOLED fill (`hover:bg-black`)
+    // + brand ring (`focus-visible:ring-brand`) are retired in favor
+    // of a carbon well whose hairline border brightens on hover and
+    // arms to the armed-red edge when the menu opens. Focus uses the
+    // Phase 2 non-cap interactive-chrome canon (`ring-ring`).
+    expect(src).toContain('bg-[var(--carbon-850)]');
+    expect(src).toContain('hover:border-[var(--hairline-strong)]');
+    expect(src).toContain('data-[state=open]:border-[var(--armed-edge)]');
+    expect(src).toContain('focus-visible:ring-2 focus-visible:ring-ring');
+    // Negative guards: the retired legacy tokens must not reappear.
+    expect(src).not.toContain('focus-visible:ring-brand');
+    expect(src).not.toContain('hover:bg-black');
   });
 
   // Accessibility contract.

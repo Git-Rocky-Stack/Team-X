@@ -63,8 +63,9 @@ import { useAppStore } from '@/store/app-store.js';
  *             workspace…" CTA so the user can recover (post step (b)
  *             collapse — no more dead-end empty state).
  * - disabled → pending mutation disables the trigger.
- * - hover   → AMOLED trigger fill + border-hover on
- *             trigger via button-style utility classes.
+ * - hover   → carbon trigger well brightens its hairline border
+ *             (hover:border-[var(--hairline-strong)]); open state
+ *             arms the border to the armed-red edge.
  */
 export function WorkspaceSwitcher() {
   useCompanyEventSync();
@@ -101,15 +102,14 @@ export function WorkspaceSwitcher() {
           aria-label={triggerAriaLabel}
           data-workspace-switcher-trigger=""
           className={cn(
-            'mission-workspace-trigger flex h-auto w-full items-center justify-between gap-3 rounded-[24px] border border-white/10 px-3 py-2.5 text-left transition-all',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-            'data-[state=open]:border-border data-[state=open]:bg-black',
-            isError ? 'text-destructive hover:bg-black' : 'text-foreground hover:bg-black',
+            'flex h-auto w-full items-center justify-between gap-3 rounded-control border border-[var(--hairline)] bg-[var(--carbon-850)] px-3 py-2 text-left transition-colors hover:border-[var(--hairline-strong)] data-[state=open]:border-[var(--armed-edge)]',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            isError ? 'text-destructive' : 'text-foreground',
             isLoading && 'cursor-wait opacity-70',
           )}
         >
           <span className="flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black text-brand">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-[var(--hairline)] bg-[var(--carbon-800)] text-primary">
               <Building2 className="h-4 w-4" />
             </span>
             <span className="min-w-0">
@@ -135,14 +135,14 @@ export function WorkspaceSwitcher() {
 
         <DropdownMenuContent
           align="start"
-          className="min-w-[280px] rounded-[24px] border-white/10 bg-black p-2 shadow-2xl"
+          className="min-w-[280px]"
           data-workspace-switcher-content=""
         >
           <DropdownMenuLabel className="px-3 py-2">
             <span className="block text-eyebrow-sm text-muted-foreground">Mission scope</span>
             <span className="mt-1 block text-body-strong text-foreground">Workspaces</span>
           </DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-white/10" />
+          <DropdownMenuSeparator />
 
           {isError ? (
             <DropdownMenuItem
@@ -150,7 +150,7 @@ export function WorkspaceSwitcher() {
                 e.preventDefault();
                 refetch();
               }}
-              className="rounded-[18px] px-3 py-2.5 text-destructive"
+              className="px-3 py-2.5 text-destructive"
               data-workspace-switcher-state="error"
             >
               <RefreshCw className="mr-2 h-3.5 w-3.5" />
@@ -159,7 +159,7 @@ export function WorkspaceSwitcher() {
           ) : companies.length === 0 ? (
             <DropdownMenuItem
               disabled
-              className="rounded-[18px] px-3 py-2.5 text-muted-foreground"
+              className="px-3 py-2.5 text-muted-foreground"
               data-workspace-switcher-state="empty"
             >
               No workspaces yet
@@ -173,20 +173,17 @@ export function WorkspaceSwitcher() {
                   onSelect={() => setCompanyId(company.id)}
                   aria-current={isActive ? 'true' : undefined}
                   data-workspace-switcher-item={company.id}
-                  className={cn(
-                    'rounded-[18px] px-3 py-2.5',
-                    isActive && 'border border-brand/25 bg-black font-semibold text-brand',
-                  )}
+                  className={cn('px-3 py-2.5', isActive && 'font-semibold text-primary')}
                 >
                   <Building2 className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                   <span className="flex-1 truncate">{company.name}</span>
-                  {isActive ? <Check className="ml-2 h-3.5 w-3.5 text-brand" /> : null}
+                  {isActive ? <Check className="ml-2 h-3.5 w-3.5 text-primary" /> : null}
                 </DropdownMenuItem>
               );
             })
           )}
 
-          <DropdownMenuSeparator className="bg-white/10" />
+          <DropdownMenuSeparator />
 
           {/*
            * Create-workspace CTA — LIVE as of the step (a+b) collapse.
@@ -195,7 +192,7 @@ export function WorkspaceSwitcher() {
            */}
           <DropdownMenuItem
             onSelect={() => setCreateOpen(true)}
-            className="rounded-[18px] px-3 py-2.5"
+            className="px-3 py-2.5"
             data-workspace-switcher-action="create-company"
           >
             <Plus className="mr-2 h-3.5 w-3.5" />
@@ -204,7 +201,7 @@ export function WorkspaceSwitcher() {
           <DropdownMenuItem
             onSelect={() => setSettingsOpen(true)}
             disabled={!activeCompany || isError}
-            className="rounded-[18px] px-3 py-2.5"
+            className="px-3 py-2.5"
             data-workspace-switcher-action="company-settings"
           >
             <Settings className="mr-2 h-3.5 w-3.5" />
