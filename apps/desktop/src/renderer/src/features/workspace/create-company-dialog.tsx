@@ -3,6 +3,8 @@ import type { Company, CompanyTemplateSummary } from '@team-x/shared-types';
 import { Building2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { chooserCapBase, chooserCapFocus } from './chooser-cap.js';
+
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -419,11 +421,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
                     <label
                       key={choice}
                       data-create-company-theme={choice}
-                      className={cn(
-                        'cap flex-1 cursor-pointer rounded-control px-3 py-2 text-center text-button-sm capitalize',
-                        'focus-within:outline focus-within:outline-2 focus-within:outline-[hsl(var(--ring))] focus-within:outline-offset-2',
-                        isSelected && 'cap-select',
-                      )}
+                      className={cn(chooserCapBase, chooserCapFocus, isSelected && 'cap-select')}
                     >
                       <input
                         type="radio"

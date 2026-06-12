@@ -3,15 +3,19 @@ import type { CompaniesUpdateRequest, Company } from '@team-x/shared-types';
 import { AlertTriangle, Archive, Building2, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { useProviders } from '@/hooks/use-providers.js';
+import { chooserCapBase, chooserCapFocus } from './chooser-cap.js';
 
+import { RecessedWell, StripeHeader } from '@/components/console';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet.js';
-import { MissionInsetSurface, MissionSheetHeader } from '@/features/mission/mission-shell.js';
+import { useProviders } from '@/hooks/use-providers.js';
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
+
+const selectClass =
+  'well-input flex h-10 w-full rounded-control px-3 py-2 text-body focus-visible:outline-none';
 
 interface CompanySettingsProps {
   open: boolean;
@@ -211,30 +215,31 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="mission-shell flex w-full flex-col overflow-hidden border-l border-white/10 bg-background/95 p-0 sm:max-w-md"
+        className="flex w-full flex-col overflow-hidden p-0 sm:max-w-md"
         data-company-settings-panel=""
       >
-        <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
-        <div className="relative flex h-full flex-col">
-          <MissionSheetHeader
-            eyebrow="Workspace control"
-            icon={Building2}
-            title={<SheetTitle className="text-h3">Company settings</SheetTitle>}
-            description={
-              <SheetDescription className="m-0 text-body">
+        <div className="flex h-full flex-col">
+          <StripeHeader kicker="MOD · WORKSPACE · 01" />
+          <div className="flex items-start gap-3 border-b border-[var(--hairline)] px-5 py-4 text-left">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-[var(--hairline)] bg-[var(--carbon-800)] text-brand">
+              <Building2 className="h-4 w-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <SheetTitle>Company settings</SheetTitle>
+              <SheetDescription className="m-0 mt-1 text-body-sm">
                 Keep workspace identity current, tune the visible theme, and manage lifecycle
                 actions from one control sheet.
               </SheetDescription>
-            }
-          />
+            </div>
+          </div>
 
           {!company ? (
             <div className="px-5 py-8 text-body text-muted-foreground">No workspace selected.</div>
           ) : (
             <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-thin">
-              <MissionInsetSurface className="p-4">
+              <RecessedWell className="p-4">
                 <div>
-                  <h3 className="text-h3 text-foreground">General</h3>
+                  <h3 className="text-placard text-foreground">General</h3>
                   <p className="mt-1 text-body text-muted-foreground">
                     Name, slug, icon, and theme apply to this workspace.
                   </p>
@@ -256,7 +261,6 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       aria-invalid={nameError !== null}
                       aria-describedby={nameError ? 'company-settings-name-error' : undefined}
                       data-company-settings-field="name"
-                      className="border-white/10 bg-black"
                     />
                     {nameError ? (
                       <p
@@ -284,7 +288,6 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       aria-invalid={slugError !== null}
                       aria-describedby={slugError ? 'company-settings-slug-error' : undefined}
                       data-company-settings-field="slug"
-                      className="border-white/10 bg-black"
                     />
                     {slugError ? (
                       <p
@@ -311,7 +314,6 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       placeholder="Optional"
                       maxLength={16}
                       data-company-settings-field="icon"
-                      className="border-white/10 bg-black"
                     />
                   </div>
 
@@ -325,11 +327,9 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                             key={choice}
                             data-company-settings-theme={choice}
                             className={cn(
-                              'flex-1 cursor-pointer rounded-[18px] border px-3 py-3 text-center text-button-sm capitalize transition-colors',
-                              'focus-within:outline-none focus-within:ring-2 focus-within:ring-brand',
-                              isSelected
-                                ? 'border-brand/30 bg-black text-brand'
-                                : 'border-white/10 bg-black text-muted-foreground hover:bg-black',
+                              chooserCapBase,
+                              chooserCapFocus,
+                              isSelected && 'cap-select',
                             )}
                           >
                             <input
@@ -359,7 +359,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                       value={defaultProviderId}
                       onChange={(e) => setDefaultProviderId(e.target.value)}
                       data-company-settings-field="defaultProviderId"
-                      className="h-10 w-full rounded-md border border-white/10 bg-black px-3 text-body text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30"
+                      className={selectClass}
                     >
                       <option value="">Use system defaults</option>
                       {providers?.map((provider) => (
@@ -379,22 +379,20 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                     onClick={() => void handleSave()}
                     disabled={isBusy || name.trim().length === 0 || slug.length === 0}
                     data-company-settings-save=""
-                    className="w-full rounded-[18px] border border-brand/40 bg-black text-brand hover:bg-black"
+                    variant="default"
+                    className="w-full"
                   >
                     <Save className="h-4 w-4" />
                     {updateMutation.isPending ? 'Saving...' : 'Save changes'}
                   </Button>
                 </div>
-              </MissionInsetSurface>
+              </RecessedWell>
 
-              <MissionInsetSurface
-                tone="danger"
-                className="mt-4 border-destructive/25 bg-black p-4"
-              >
+              <RecessedWell className="mt-4 p-4">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 text-destructive" aria-hidden="true" />
                   <div>
-                    <h3 className="text-h3 text-foreground">Danger zone</h3>
+                    <h3 className="text-placard text-foreground">Danger zone</h3>
                     <p className="mt-1 text-body text-muted-foreground">
                       Archive removes this workspace from active use. Delete is permanent.
                     </p>
@@ -408,13 +406,13 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                     onClick={() => void handleArchive()}
                     disabled={isBusy}
                     data-company-settings-archive=""
-                    className="w-full justify-start rounded-[18px] border-white/10 bg-black text-foreground hover:bg-black"
+                    className="w-full justify-start"
                   >
                     <Archive className="h-4 w-4" />
                     {archiveMutation.isPending ? 'Archiving...' : 'Archive workspace'}
                   </Button>
 
-                  <details className="rounded-[20px] border border-destructive/25 bg-black p-3">
+                  <details className="rounded-control border border-[var(--led-warn-edge)] bg-[var(--warn-soft)] p-3">
                     <summary className="cursor-pointer text-label text-destructive">
                       Permanently delete this workspace
                     </summary>
@@ -428,7 +426,6 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                         onChange={(e) => setDeleteConfirm(e.target.value)}
                         placeholder={company.name}
                         data-company-settings-delete-confirm=""
-                        className="border-white/10 bg-black"
                       />
                       <Button
                         type="button"
@@ -436,7 +433,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                         onClick={() => void handleDelete()}
                         disabled={!deleteEnabled}
                         data-company-settings-delete=""
-                        className="w-full justify-start rounded-[18px]"
+                        className="w-full justify-start"
                       >
                         <Trash2 className="h-4 w-4" />
                         {deleteMutation.isPending ? 'Deleting...' : 'Delete workspace'}
@@ -444,7 +441,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
                     </div>
                   </details>
                 </div>
-              </MissionInsetSurface>
+              </RecessedWell>
 
               {submitError ? (
                 <p

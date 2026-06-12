@@ -20,9 +20,14 @@ import { describe, expect, it } from 'vitest';
 const currentDirname = dirname(fileURLToPath(import.meta.url));
 const DIALOG_PATH = join(currentDirname, 'create-company-dialog.tsx');
 const HOOK_PATH = join(currentDirname, '..', '..', 'hooks', 'use-create-company.ts');
+// Sweep Phase 2 (Task 8) extracted the cap-chooser class literals to a shared
+// module consumed by both create-company-dialog and company-settings (DRY).
+// The focus-form pin below now reads that module's source.
+const CHOOSER_CAP_PATH = join(currentDirname, 'chooser-cap.ts');
 
 const dialogSrc = readFileSync(DIALOG_PATH, 'utf8');
 const hookSrc = readFileSync(HOOK_PATH, 'utf8');
+const chooserCapSrc = readFileSync(CHOOSER_CAP_PATH, 'utf8');
 
 describe('CreateCompanyDialog (features/workspace/create-company-dialog.tsx)', () => {
   it('exports the CreateCompanyDialog component with the controlled-open props contract', () => {
@@ -210,15 +215,20 @@ describe('CreateCompanyDialog (features/workspace/create-company-dialog.tsx)', (
     // .cap.cap-select (specificity 0,2,0 / 0,3,0). Tailwind ring-* is
     // box-shadow-based at (0,1,0) and LOSES to the cap recipes in Night
     // Ops, making a ring focus indicator invisible. The OUTLINE form is
-    // used instead — outline does not compete with box-shadow.
-    expect(dialogSrc).toContain('focus-within:outline');
-    expect(dialogSrc).toContain('focus-within:outline-2');
-    expect(dialogSrc).toContain('focus-within:outline-[hsl(var(--ring))]');
-    expect(dialogSrc).toContain('focus-within:outline-offset-2');
+    // used instead — outline does not compete with box-shadow. The literals
+    // were extracted to the shared chooser-cap module in Task 8 (DRY), so
+    // the positive pin reads that module's source.
+    expect(chooserCapSrc).toContain('focus-within:outline');
+    expect(chooserCapSrc).toContain('focus-within:outline-2');
+    expect(chooserCapSrc).toContain('focus-within:outline-[hsl(var(--ring))]');
+    expect(chooserCapSrc).toContain('focus-within:outline-offset-2');
+    // The dialog still composes the shared focus token onto its labels.
+    expect(dialogSrc).toContain('chooserCapFocus');
     // Negative — the retired ring form is known-broken on caps (loses
     // the box-shadow specificity fight in Night Ops); a refactor that
     // brings it back would silently kill the focus indicator.
     expect(dialogSrc).not.toContain('focus-within:ring-brand');
+    expect(chooserCapSrc).not.toContain('focus-within:ring-brand');
   });
 
   it('documents the step (a+b) collapse + iron-rule + 2026-04-19 audit in JSDoc', () => {
