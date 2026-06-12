@@ -15,7 +15,8 @@
  *                   by default; the user opens it only when they want
  *                   to see the raw envelope the loop saw.
  *   - `answer`      prose — the model's final grounded answer. Styled
- *                   with a brand-tinted border so it visually
+ *                   with an armed-red edge + soft fill
+ *                   (`--armed-edge` / `--armed-soft`) so it visually
  *                   terminates the log.
  *   - `error`       red-bordered panel with reason + message. The
  *                   loop writes this when a tool blew up or the loop
@@ -24,8 +25,9 @@
  * Global UI standards (six states per CLAUDE.md):
  *
  *   - hover:    card lifts 1px + shadow deepens.
- *   - focus:    visible 2px brand ring (keyboard nav through the
- *               step list uses ArrowUp/Down — see `command-palette`).
+ *   - focus:    visible 2px chrome focus ring (`ring-ring`) — keyboard
+ *               nav through the step list uses ArrowUp/Down — see
+ *               `command-palette`).
  *   - loading:  when `isLoading` is true (only the placeholder "next
  *               step" card; real steps never render loading).
  *   - error:    red border on `kind: 'error'` cards and a red dot
@@ -312,7 +314,10 @@ export function StepCard({
         <article
           tabIndex={-1}
           aria-label={`Step ${step.stepIndex + 1}: ticket created — ${d.title || 'untitled'}`}
-          className={cn(base, 'border-[var(--led-go-edge)] bg-led-go/5 hover:border-led-go')}
+          className={cn(
+            base,
+            'border-[var(--led-go-edge)] bg-[var(--go-fill)] hover:border-led-go',
+          )}
           data-step-kind="ticket_created"
         >
           <StepHeader
@@ -322,7 +327,9 @@ export function StepCard({
             labelClassName="text-led-go"
             detail={
               d.ticketId ? (
-                <code className="text-code-sm text-led-go/80">{d.ticketId.slice(0, 8)}</code>
+                <code className="text-code-sm text-[var(--led-go-dim)]">
+                  {d.ticketId.slice(0, 8)}
+                </code>
               ) : undefined
             }
           />
@@ -347,7 +354,7 @@ export function StepCard({
           aria-label={`Step ${step.stepIndex + 1}: delegated to ${d.assigneeName || 'unknown'}`}
           className={cn(
             base,
-            'border-[var(--led-scope-edge)] bg-led-scope/5 hover:border-led-scope',
+            'border-[var(--led-scope-edge)] bg-[var(--scope-fill)] hover:border-led-scope',
           )}
           data-step-kind="delegation_made"
         >
@@ -358,7 +365,9 @@ export function StepCard({
             labelClassName="text-led-scope"
             detail={
               d.ticketId ? (
-                <code className="text-code-sm text-led-scope/80">{d.ticketId.slice(0, 8)}</code>
+                <code className="text-code-sm text-[var(--led-scope-dim)]">
+                  {d.ticketId.slice(0, 8)}
+                </code>
               ) : undefined
             }
           />
@@ -392,7 +401,10 @@ export function StepCard({
         <article
           tabIndex={-1}
           aria-label={`Step ${step.stepIndex + 1}: review ${d.outcome || 'pending'}`}
-          className={cn(base, 'border-[var(--led-hold-edge)] bg-led-hold/5 hover:border-led-hold')}
+          className={cn(
+            base,
+            'border-[var(--led-hold-edge)] bg-[var(--hold-fill)] hover:border-led-hold',
+          )}
           data-step-kind="review_pending"
         >
           <StepHeader
@@ -410,7 +422,9 @@ export function StepCard({
             {d.ticketId ? (
               <>
                 Ticket{' '}
-                <code className="text-code-sm text-led-hold/80">{d.ticketId.slice(0, 8)}</code>{' '}
+                <code className="text-code-sm text-[var(--led-hold-dim)]">
+                  {d.ticketId.slice(0, 8)}
+                </code>{' '}
                 under review
               </>
             ) : (

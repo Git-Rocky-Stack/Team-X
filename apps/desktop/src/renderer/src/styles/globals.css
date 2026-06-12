@@ -87,6 +87,21 @@
     --hold-soft: rgba(255, 176, 0, 0.1);
     --warn-soft: rgba(255, 68, 56, 0.12);
     --scope-soft: rgba(88, 196, 188, 0.1);
+    /* LED card-fill tints — the faintest tier, for the LED-coded step
+       cards stacked in the transcript well. Lighter than --*-soft (which
+       backs single, attention-drawing fills like the answer/error cards)
+       so a column of these reads as a quiet log, not a wall of color.
+       Theme-independent — these cards sit on always-dark surfaces. */
+    --go-fill: rgba(65, 226, 94, 0.05);
+    --hold-fill: rgba(255, 176, 0, 0.05);
+    --scope-fill: rgba(88, 196, 188, 0.05);
+    /* LED dimmed text — 80% LED for de-emphasized inline slugs (e.g. the
+       truncated ticket/ID codes in step-card detail rows). Tailwind v3
+       cannot inject alpha into bare var() colors, so the dim is baked in
+       here rather than via a `/80` opacity modifier. Theme-independent. */
+    --led-go-dim: rgba(65, 226, 94, 0.8);
+    --led-hold-dim: rgba(255, 176, 0, 0.8);
+    --led-scope-dim: rgba(88, 196, 188, 0.8);
     /* LED edge tints — borders on lamp caps / warn caps (theme-independent,
        these surfaces stay dark both shifts) */
     --led-go-edge: rgba(65, 226, 94, 0.35);
