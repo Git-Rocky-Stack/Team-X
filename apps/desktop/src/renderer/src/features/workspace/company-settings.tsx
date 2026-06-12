@@ -221,7 +221,7 @@ export function CompanySettings({ open, onOpenChange, company }: CompanySettings
         <div className="flex h-full flex-col">
           <StripeHeader kicker="MOD · WORKSPACE · 01" />
           <div className="flex items-start gap-3 border-b border-[var(--hairline)] px-5 py-4 text-left">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-[var(--hairline)] bg-[var(--carbon-800)] text-brand">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-[var(--hairline)] bg-[var(--carbon-800)] text-primary">
               <Building2 className="h-4 w-4" aria-hidden="true" />
             </div>
             <div className="min-w-0 flex-1">
