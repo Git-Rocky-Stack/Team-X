@@ -155,7 +155,8 @@ function Toast({ toast, onDismiss }: { toast: ToastPayload; onDismiss: () => voi
 
 function ConfidenceBar({ confidence, loading }: { confidence: number; loading: boolean }) {
   const pct = Math.max(0, Math.min(1, confidence));
-  const color = pct < 0.5 ? 'bg-red-500' : pct < 0.8 ? 'bg-amber-500' : 'bg-emerald-500';
+  const color =
+    pct < 0.5 ? 'bg-[var(--led-warn)]' : pct < 0.8 ? 'bg-[var(--led-hold)]' : 'bg-[var(--led-go)]';
   const label = pct < 0.5 ? 'low' : pct < 0.8 ? 'medium' : 'high';
 
   return (
@@ -167,7 +168,7 @@ function ConfidenceBar({ confidence, loading }: { confidence: number; loading: b
         aria-valuenow={Math.round(pct * 100)}
         aria-valuemin={0}
         aria-valuemax={100}
-        className="h-1.5 w-24 overflow-hidden rounded-full bg-surface-200"
+        className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--carbon-800)]"
       >
         <div
           className={cn('h-full transition-all duration-200', color)}
@@ -200,10 +201,7 @@ function MetaRow({ parseResult, parsing, confidence }: MetaRowProps) {
       {meta && (
         <Badge
           variant={meta.destructive ? 'destructive' : 'secondary'}
-          className={cn(
-            'text-caption font-medium',
-            meta.destructive && 'bg-red-500/15 text-red-400 hover:bg-red-500/20',
-          )}
+          className="text-caption font-medium"
           aria-label={`Intent: ${meta.label}`}
         >
           {meta.label}
@@ -260,7 +258,6 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
   const [parseError, setParseError] = useState<string | null>(null);
   const [clarificationIdx, setClarificationIdx] = useState(0);
   const [historyIdx, setHistoryIdx] = useState<number | null>(null);
-  const [confirmFocused, setConfirmFocused] = useState(false);
   const [toast, setToast] = useState<ToastPayload | null>(null);
   /**
    * Active agentic-loop run (Phase 5 — M31 T6). Populated when
@@ -296,7 +293,6 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
       setParseError(null);
       setClarificationIdx(0);
       setHistoryIdx(null);
-      setConfirmFocused(false);
       setAgenticRun(null);
       setStopPending(false);
     }
@@ -346,14 +342,14 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
   useEffect(() => {
     if (parseResult?.kind === 'needs_confirmation') {
       // Move focus to Confirm so Enter dispatches execute(confirmed: true).
-      // Delay a tick so Radix finishes its own focus shuffling.
+      // Delay a tick so Radix finishes its own focus shuffling. The cap's
+      // own `.cap:focus-visible` recipe rule supplies the focus ring — no
+      // ring utility on the cap element (Night Ops box-shadow beats it).
       const t = window.setTimeout(() => {
         confirmRef.current?.focus();
-        setConfirmFocused(true);
       }, 30);
       return () => window.clearTimeout(t);
     }
-    setConfirmFocused(false);
     return;
   }, [parseResult?.kind]);
 
@@ -565,7 +561,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           className={cn(
-            'gap-0 border-border bg-surface-100 p-0',
+            'gap-0 border-border bg-card p-0',
             agenticRun ? 'w-[640px] max-w-[96vw]' : 'w-[560px] max-w-[92vw]',
           )}
           onOpenAutoFocus={(e) => {
@@ -614,7 +610,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
 
               {/* Meta row */}
               {(parseResult || parseMutation.isPending) && (
-                <div className="border-b border-border/60 bg-surface-50 px-4 py-2.5">
+                <div className="border-b border-border/60 bg-[var(--carbon-850)] px-4 py-2.5">
                   <MetaRow
                     parseResult={parseResult}
                     parsing={parseMutation.isPending}
@@ -626,7 +622,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
               {/* State-dispatch body */}
               <div className="px-4 py-3">
                 {parseError && (
-                  <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-body text-red-400">
+                  <div className="flex items-start gap-2 rounded-md border border-[var(--led-warn-edge)] bg-[var(--warn-soft)] p-3 text-body text-led-warn">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                     <div className="flex-1">
                       <p className="font-medium">Couldn&apos;t parse that.</p>
@@ -649,7 +645,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                           },
                         );
                       }}
-                      className="rounded-md border border-red-500/40 px-2 py-1 text-button-sm text-red-400 hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
+                      className="rounded-md border border-[var(--led-warn-edge)] px-2 py-1 text-button-sm text-led-warn hover:bg-[var(--warn-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--led-warn)]"
                     >
                       Retry
                     </button>
@@ -681,10 +677,10 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                               aria-pressed={i === clarificationIdx}
                               onClick={() => pickClarification(opt)}
                               className={cn(
-                                'flex min-h-[44px] w-full items-center rounded-md px-3 py-2 text-left text-body transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60',
+                                'flex min-h-[44px] w-full items-center rounded-md px-3 py-2 text-left text-body transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--armed-edge)]',
                                 i === clarificationIdx
-                                  ? 'bg-brand/10 text-foreground ring-1 ring-brand/40'
-                                  : 'text-foreground/90 hover:bg-surface-200',
+                                  ? 'bg-[var(--armed-soft)] text-foreground ring-1 ring-[var(--armed-edge)]'
+                                  : 'text-foreground/90 hover:bg-[var(--carbon-800)]',
                               )}
                             >
                               {opt}
@@ -701,12 +697,10 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                   !parseError &&
                   (() => {
                     const isWriteSide = parseResult.gateKind === 'write-side';
-                    const borderColor = isWriteSide ? 'border-amber-500/30' : 'border-red-500/30';
-                    const bgColor = isWriteSide ? 'bg-amber-500/10' : 'bg-red-500/10';
-                    const btnBg = isWriteSide
-                      ? 'bg-amber-600 text-white hover:bg-amber-600/90'
-                      : 'bg-red-600 text-white hover:bg-red-600/90';
-                    const ringColor = isWriteSide ? 'ring-amber-500/60' : 'ring-red-500/60';
+                    const borderColor = isWriteSide
+                      ? 'border-[var(--led-hold-edge)]'
+                      : 'border-[var(--led-warn-edge)]';
+                    const bgColor = isWriteSide ? 'bg-[var(--hold-soft)]' : 'bg-[var(--warn-soft)]';
                     const title = isWriteSide
                       ? 'Confirm write-side agentic run'
                       : 'Confirm destructive action';
@@ -732,7 +726,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                           </Button>
                           <Button
                             ref={confirmRef}
-                            variant={isWriteSide ? 'default' : 'destructive'}
+                            variant={isWriteSide ? 'outline' : 'destructive'}
                             disabled={executeMutation.isPending}
                             onClick={() =>
                               handleExecute(parseResult.intent, parseResult.entities, true)
@@ -745,8 +739,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                             }}
                             className={cn(
                               'min-h-[44px]',
-                              btnBg,
-                              confirmFocused && `ring-2 ${ringColor} ring-offset-2`,
+                              isWriteSide && 'cap text-led-hold border-[var(--led-hold-edge)]',
                             )}
                           >
                             {executeMutation.isPending ? (
@@ -913,7 +906,7 @@ function StepLogView({
                 : 'Run ended'}
           </p>
           <p className="truncate text-caption text-muted-foreground">
-            <code className="font-mono">{runId}</code>
+            <code className="font-data">{runId}</code>
           </p>
         </div>
         {isRunning && (
@@ -939,7 +932,7 @@ function StepLogView({
         ref={listRef}
         aria-label="Agent step transcript"
         onKeyDown={onListKeyDown}
-        className="flex min-h-[160px] flex-1 flex-col gap-2 overflow-y-auto bg-surface-50 px-4 py-3"
+        className="well rounded-control flex min-h-[160px] flex-1 flex-col gap-2 overflow-y-auto px-4 py-3"
       >
         {steps.length === 0 && isRunning && (
           <li>
@@ -961,15 +954,18 @@ function StepLogView({
             not accompanied by an in-stream `error` step (e.g. a
             budget-exhausted abort with no partial answer). */}
         {result?.kind === 'failed' && (
-          <li role="alert" className="mt-1 rounded-md border border-red-500/60 bg-red-500/5 p-3">
-            <p className="text-eyebrow text-red-400">Run failed — {result.payload.reason}</p>
+          <li
+            role="alert"
+            className="mt-1 rounded-md border border-[var(--led-warn-edge)] bg-[var(--warn-soft)] p-3"
+          >
+            <p className="text-eyebrow text-led-warn">Run failed — {result.payload.reason}</p>
             <p className="mt-1 text-body text-foreground">{result.payload.message}</p>
           </li>
         )}
       </ul>
 
       {/* Footer — cumulative cost + action buttons */}
-      <footer className="flex items-center justify-between gap-3 border-t border-border bg-surface-100 px-4 py-3">
+      <footer className="flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3">
         <div className="flex items-center gap-3 text-caption text-muted-foreground tabular-nums">
           <span>
             <span className="text-foreground/70">{steps.length}</span> step
@@ -995,7 +991,7 @@ function StepLogView({
               onClick={onStop}
               disabled={stopPending}
               aria-label="Stop agentic run"
-              className="min-h-[36px] gap-1.5 text-button-sm text-red-400 hover:bg-red-500/10 hover:text-red-400"
+              className="min-h-[36px] gap-1.5 text-button-sm text-led-warn hover:bg-[var(--warn-soft)] hover:text-led-warn"
             >
               {stopPending ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -1013,7 +1009,7 @@ function StepLogView({
                 variant="default"
                 onClick={onOpenThread}
                 aria-label="Open thread in chat drawer"
-                className="min-h-[36px] gap-1.5 bg-brand text-button-sm text-white hover:bg-brand/90"
+                className="min-h-[36px] gap-1.5 text-button-sm"
               >
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 Open Thread
@@ -1032,7 +1028,7 @@ function StepLogView({
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded border border-border bg-surface-50 px-1.5 py-0.5 text-shortcut text-foreground/80">
+    <kbd className="well rounded-inset px-1.5 py-0.5 text-shortcut text-[var(--display-fg)]">
       {children}
     </kbd>
   );
