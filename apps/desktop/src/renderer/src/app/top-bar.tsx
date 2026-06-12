@@ -15,8 +15,10 @@ import type { ComponentType } from 'react';
 
 import { BoardMessageQueue } from './board-message-queue.js';
 
+import { ShiftToggle } from '@/components/console';
 import { Badge } from '@/components/ui/badge.js';
 import { WorkspaceSwitcher } from '@/features/workspace/workspace-switcher.js';
+import { useShift } from '@/hooks/use-shift.js';
 import { cn } from '@/lib/utils.js';
 import { type ActiveView, useAppStore } from '@/store/app-store.js';
 
@@ -48,6 +50,7 @@ export function TopBar() {
   const setActiveView = useAppStore((s) => s.setActiveView);
   const copilotSidebarOpen = useAppStore((s) => s.copilotSidebarOpen);
   const setCopilotSidebarOpen = useAppStore((s) => s.setCopilotSidebarOpen);
+  const { shift, setShift } = useShift();
 
   return (
     <header
@@ -125,6 +128,7 @@ export function TopBar() {
         </span>
 
         <div className="flex shrink-0 items-center gap-3 ml-auto">
+          <ShiftToggle shift={shift} onToggle={setShift} />
           <BoardMessageQueue />
           <img
             src={brandLogo}
