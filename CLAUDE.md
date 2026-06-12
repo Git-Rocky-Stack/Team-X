@@ -10,7 +10,13 @@ This project lives under `Strategia-Enhanced-App/` and inherits rules from:
 
 **Zero-tolerance-no-cutting-corners applies here.** Every feature built to full spec, every role spec hand-written to F10 quality, every dashboard state (loading/empty/error/disabled) implemented, every platform tested. Full fidelity. Full effort. Every time.
 
-## Design system reminders
+## Design System
+
+**Always read `DESIGN.md` before making any visual or UI decisions.** It is the canonical source of truth (created 2026-06-10 via `/design-consultation`, Rocky-approved): the Command Console direction — Carbon Pro chassis (brushed black aluminum, four-layer raised-hardware depth, hex bolts, phosphor LCD wells, functional VU meters), armed-red `#AA2024` as LIVE/command authority (dual-form rule: steady = live, blinking = unacknowledged), stencil word-lamps + annunciator rail, Archivo / Public Sans / Departure Mono / Iosevka, dual-shift theming (Night Ops + Day Shift silver, displays stay dark in both). All font choices, colors, spacing, depth recipes, and motion envelopes are defined there. Do not deviate without explicit user approval. In QA mode, flag any code that doesn't match DESIGN.md.
+
+**Transition state (amended 2026-06-10, sweep Q3):** the aesthetic sweep is staged (see `docs/superpowers/specs/2026-06-10-renderer-aesthetic-sweep-design.md`). The **foundation is global**: once sweep Phase 1 lands, Carbon Pro tokens, fonts, and the restyled shadcn primitives apply app-wide — including unswept screens. The no-mixing rule applies to **composition, not tokens**: a swept screen uses the DESIGN.md console vocabulary (faceplates, wells, lamps, stripes) exclusively; an unswept screen keeps its legacy composition (`.mission-*`, `.brand-selected`, status-badge family — retinted to Carbon tokens) until its phase sweeps it. Never mix the two composition families on one screen.
+
+## Design system reminders (LEGACY — shipped code, superseded by DESIGN.md per-screen at sweep time)
 
 - **Accent color:** `#FFAA2024` (Strategia red)
 - **Theme:** dark by default, light mode available

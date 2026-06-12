@@ -1,0 +1,12 @@
+/* Iosevka v5.2.5 latin 400 — SIL OFL 1.1, vendored woff2-only.
+   License: ../../assets/fonts/iosevka/LICENSE.txt
+   Why vendored: @fontsource/iosevka's index.css lists a legacy 1.9MB .woff
+   fallback beside the woff2; Vite emits every url() asset, so importing the
+   package ships ~1.9MB of dead font weight Chromium never selects. */
+@font-face {
+  font-family: "Iosevka";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../assets/fonts/iosevka/Iosevka-Regular-latin.woff2") format("woff2");
+}
