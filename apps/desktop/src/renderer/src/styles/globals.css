@@ -892,26 +892,48 @@
   }
 
   /* Chooser-selection caps — the swept replacement for `.brand-selected`.
-     Apply ON TOP of `.cap`: armed-red is the default (brand/command);
-     tint variants follow the LED semantic map. Selected chips stay
-     legible on both shifts because the cap face is dark hardware. */
-  .cap-select {
+     Apply ON TOP of `.cap` (compound selectors so they out-rank `.dark .cap`).
+     Armed-red is the default (brand/command); tint variants follow the LED
+     semantic map via the shift-varying --tag-* tokens (AA on the silver Day
+     face, literal LEDs on the dark Night face). This recipe OWNS color,
+     border-color and box-shadow — do not also compose text-* or border-*
+     color utilities on the selected element. */
+  .cap.cap-select {
     border-color: var(--armed-edge);
+    color: var(--armed); /* deep armed on the silver Day face */
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px
+      2px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 14px var(--armed-glow);
+  }
+  .dark .cap.cap-select {
     color: var(--armed-lit);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
-      2px rgba(0, 0, 0, 0.8), 0 0 14px var(--armed-glow);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 14px var(--armed-glow);
   }
-  .cap-select-go {
-    border-color: var(--led-go-edge);
-    color: var(--led-go);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
-      2px rgba(0, 0, 0, 0.8), 0 0 12px rgba(65, 226, 94, 0.18);
+  .cap.cap-select-go {
+    border-color: var(--tag-go-edge);
+    color: var(--tag-go);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px
+      2px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 12px rgba(65, 226, 94, 0.18);
   }
-  .cap-select-hold {
-    border-color: var(--led-hold-edge);
-    color: var(--led-hold);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
-      2px rgba(0, 0, 0, 0.8), 0 0 12px rgba(255, 176, 0, 0.16);
+  .dark .cap.cap-select-go {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 12px rgba(65, 226, 94, 0.18);
+  }
+  .cap.cap-select-hold {
+    border-color: var(--tag-hold-edge);
+    color: var(--tag-hold);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px
+      2px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 12px rgba(255, 176, 0, 0.16);
+  }
+  .dark .cap.cap-select-hold {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 176, 0, 0.16);
   }
 
   /* Nav tile — stencil nav items (sidenav sections, top-bar tabs).
