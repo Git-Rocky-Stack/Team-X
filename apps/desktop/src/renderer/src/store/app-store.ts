@@ -139,6 +139,12 @@ export interface AppState {
   settingsFocusSection: SettingsSectionFocus | null;
   /** Incremented when another surface needs the Hire dialog to open. */
   hireDialogRequestNonce: number;
+  /**
+   * Annunciator master-caution acks: tile id → acked alert fingerprint.
+   * Session-scoped on purpose — a fresh boot re-presents unresolved
+   * warnings so a real condition is never silently dismissed across runs.
+   */
+  ackedAnnunciators: Record<string, string>;
 
   setActiveView: (view: ActiveView) => void;
   setCopilotSidebarOpen: (open: boolean) => void;
@@ -162,6 +168,7 @@ export interface AppState {
   setSettingsFocusSection: (section: SettingsSectionFocus | null) => void;
   openSettingsSection: (section: SettingsSectionFocus) => void;
   requestHireDialog: () => void;
+  ackAnnunciator: (id: string, fingerprint: string) => void;
   enqueueQueuedDirectChatMessage: (employeeId: string, content: string) => void;
   dequeueQueuedDirectChatMessage: (employeeId: string) => string | null;
   setDirectChatStopping: (employeeId: string, isStopping: boolean) => void;
@@ -213,6 +220,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   pendingDirectChats: {},
   settingsFocusSection: null,
   hireDialogRequestNonce: 0,
+  ackedAnnunciators: {},
 
   setCopilotSidebarOpen: (open) => set({ copilotSidebarOpen: open }),
 
@@ -307,6 +315,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   requestHireDialog: () =>
     set((state) => ({
       hireDialogRequestNonce: state.hireDialogRequestNonce + 1,
+    })),
+
+  ackAnnunciator: (id, fingerprint) =>
+    set((state) => ({
+      ackedAnnunciators: { ...state.ackedAnnunciators, [id]: fingerprint },
     })),
 
   enqueueQueuedDirectChatMessage: (employeeId, content) =>
