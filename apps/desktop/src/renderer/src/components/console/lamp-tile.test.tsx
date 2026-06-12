@@ -76,6 +76,13 @@ describe('LampTile', () => {
     expect(lamp.className).toContain('animate-lamp-blink');
   });
 
+  it('an alert lamp with no onAcknowledge wired is aria-disabled, not an enabled no-op', () => {
+    render(<LampTile label="ORPHAN" tone="warn" alert />);
+    const lamp = screen.getByRole('button', { name: /ORPHAN.*unacknowledged/i });
+    expect(lamp).toHaveAttribute('aria-disabled', 'true');
+    expect(lamp.className).not.toContain('lamp-interactive');
+  });
+
   it('interactive={false} renders a pure visual span even for alert lamps', () => {
     const { container } = render(<LampTile label="BUDG" tone="warn" alert interactive={false} />);
     expect(screen.queryByRole('button')).toBeNull();

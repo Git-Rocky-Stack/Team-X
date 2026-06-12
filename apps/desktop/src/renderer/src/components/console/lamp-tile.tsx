@@ -70,19 +70,22 @@ export function LampTile({
   if (alert && interactive) {
     // Acknowledged lamps stay a focusable button (aria-disabled, click
     // no-ops) — swapping to a <span> mid-ritual would drop keyboard focus
-    // to <body> the instant the user acknowledges (WCAG 2.4.3).
+    // to <body> the instant the user acknowledges (WCAG 2.4.3). An alert
+    // lamp whose host forgot to wire onAcknowledge is likewise
+    // aria-disabled, never an enabled no-op control.
+    const canAck = !acknowledged && Boolean(onAcknowledge);
     return (
       <button
         type="button"
         aria-label={`${label} — ${acknowledged ? 'acknowledged' : 'unacknowledged'} warning`}
-        aria-disabled={acknowledged || undefined}
+        aria-disabled={!canAck || undefined}
         className={cn(
           classes,
-          !acknowledged && 'lamp-interactive cursor-pointer',
+          canAck && 'lamp-interactive cursor-pointer',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         )}
         onClick={() => {
-          if (!acknowledged) onAcknowledge?.();
+          if (canAck) onAcknowledge?.();
         }}
       >
         {label}
