@@ -10,10 +10,13 @@ const badgeVariants = cva(
       variant: {
         default: 'border-transparent bg-primary text-primary-foreground',
         secondary: 'border-border bg-secondary text-secondary-foreground',
-        destructive: 'border-[rgba(255,68,56,0.4)] bg-[var(--warn-soft)] text-led-warn',
-        warning: 'border-[rgba(255,176,0,0.35)] bg-[var(--hold-soft)] text-led-hold',
+        // Tag tokens, not raw LEDs: badges ride shift surfaces (cards/plates),
+        // so the text day-darkens for WCAG AA on silver. On Night Ops the
+        // tokens resolve to the literal LED hexes — pixels unchanged.
+        destructive: 'border-[var(--tag-warn-edge)] bg-[var(--warn-soft)] text-[var(--tag-warn)]',
+        warning: 'border-[var(--tag-hold-edge)] bg-[var(--hold-soft)] text-[var(--tag-hold)]',
         outline: 'text-foreground',
-        go: 'border-[rgba(65,226,94,0.35)] bg-[var(--go-soft)] text-led-go',
+        go: 'border-[var(--tag-go-edge)] bg-[var(--go-soft)] text-[var(--tag-go)]',
       },
     },
     defaultVariants: {

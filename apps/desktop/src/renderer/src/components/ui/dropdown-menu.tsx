@@ -25,7 +25,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      'flex cursor-default select-none items-center rounded-[3px] px-2 py-1.5 text-menu-item outline-none focus:bg-[var(--armed-soft)] data-[state=open]:bg-[var(--armed-soft)]',
+      'flex cursor-default select-none items-center rounded-inset px-2 py-1.5 text-menu-item outline-none focus:bg-[var(--armed-soft)] data-[state=open]:bg-[var(--armed-soft)]',
       inset && 'pl-8',
       className,
     )}
@@ -79,7 +79,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex cursor-default select-none items-center rounded-[3px] px-2 py-1.5 text-menu-item outline-none transition-colors focus:bg-[var(--armed-soft)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'relative flex cursor-default select-none items-center rounded-inset px-2 py-1.5 text-menu-item outline-none transition-colors focus:bg-[var(--armed-soft)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       inset && 'pl-8',
       className,
     )}
@@ -95,7 +95,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      'relative flex cursor-default select-none items-center rounded-[3px] py-1.5 pl-8 pr-2 text-menu-item outline-none transition-colors focus:bg-[var(--armed-soft)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'relative flex cursor-default select-none items-center rounded-inset py-1.5 pl-8 pr-2 text-menu-item outline-none transition-colors focus:bg-[var(--armed-soft)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className,
     )}
     checked={checked}
@@ -118,7 +118,7 @@ const DropdownMenuRadioItem = React.forwardRef<
   <DropdownMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      'relative flex cursor-default select-none items-center rounded-[3px] py-1.5 pl-8 pr-2 text-menu-item outline-none transition-colors focus:bg-[var(--armed-soft)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'relative flex cursor-default select-none items-center rounded-inset py-1.5 pl-8 pr-2 text-menu-item outline-none transition-colors focus:bg-[var(--armed-soft)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className,
     )}
     {...props}

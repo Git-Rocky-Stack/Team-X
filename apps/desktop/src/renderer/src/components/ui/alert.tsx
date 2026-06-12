@@ -3,14 +3,17 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+// Alerts are annunciator modules — dark display surfaces in BOTH shifts —
+// so body text uses --display-fg (not --silver, which flips on Day) and
+// the LED text/edge colors stay literal LED-family tokens.
 const alertVariants = cva(
-  'annunciator-module relative w-full rounded-control p-4 text-[#B3B3B3] [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-[#B3B3B3]',
+  'annunciator-module relative w-full rounded-control p-4 text-[var(--display-fg)] [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-[var(--display-fg)]',
   {
     variants: {
       variant: {
         default: '[&>svg]:text-led-scope [&_h5]:text-led-scope',
-        destructive: 'border-[rgba(255,68,56,0.4)] [&>svg]:text-led-warn [&_h5]:text-led-warn',
-        warning: 'border-[rgba(255,176,0,0.35)] [&>svg]:text-led-hold [&_h5]:text-led-hold',
+        destructive: 'border-[var(--led-warn-edge)] [&>svg]:text-led-warn [&_h5]:text-led-warn',
+        warning: 'border-[var(--led-hold-edge)] [&>svg]:text-led-hold [&_h5]:text-led-hold',
       },
     },
     defaultVariants: {
@@ -30,14 +33,7 @@ Alert.displayName = 'Alert';
 const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
     // eslint-disable-next-line jsx-a11y/heading-has-content -- content is passed via props.children
-    <h5
-      ref={ref}
-      className={cn(
-        'mb-1 font-display text-[11px] font-[750] uppercase tracking-[0.1em] leading-none',
-        className,
-      )}
-      {...props}
-    />
+    <h5 ref={ref} className={cn('stencil mb-1 text-[11px] leading-none', className)} {...props} />
   ),
 );
 AlertTitle.displayName = 'AlertTitle';

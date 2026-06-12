@@ -21,13 +21,20 @@ export function ShiftToggle({ shift, onToggle, className }: ShiftToggleProps) {
       aria-pressed={shift === 'day'}
       onClick={() => onToggle(next)}
       className={cn(
-        'cap inline-flex items-center gap-2 px-3.5 py-[7px] font-display text-[10.5px] font-[750] uppercase tracking-[0.1em] [font-variation-settings:"wdth"_110] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'cap stencil inline-flex items-center gap-2 px-3.5 py-[7px] text-[10.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         className,
       )}
     >
+      {/* Functional LED, not decoration (DESIGN.md): lit amber while Day
+          Shift is active, dark socket on Night Ops. */}
       <span
         aria-hidden="true"
-        className="h-[7px] w-[7px] rounded-full bg-led-hold shadow-[0_0_7px_var(--led-hold)]"
+        className={cn(
+          'h-[7px] w-[7px] rounded-pill',
+          shift === 'day'
+            ? 'bg-led-hold shadow-[0_0_7px_var(--led-hold)]'
+            : 'bg-[#1a1a1a] shadow-[inset_0_1px_1px_rgba(0,0,0,0.8)]',
+        )}
       />
       {shift === 'night' ? 'NIGHT OPS — SWITCH TO DAY SHIFT' : 'DAY SHIFT — SWITCH TO NIGHT OPS'}
     </button>

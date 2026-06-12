@@ -19,7 +19,7 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        'switch-thumb pointer-events-none block h-3.5 w-3.5 rounded-[3px] ring-0 data-[state=checked]:translate-x-[22px] data-[state=unchecked]:translate-x-[3px]',
+        'switch-thumb pointer-events-none block h-3.5 w-3.5 rounded-inset ring-0 data-[state=checked]:translate-x-[22px] data-[state=unchecked]:translate-x-[3px]',
       )}
     />
   </SwitchPrimitives.Root>

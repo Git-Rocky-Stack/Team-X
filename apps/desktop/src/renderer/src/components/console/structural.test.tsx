@@ -11,21 +11,16 @@
  *
  * @vitest-environment jsdom
  */
-import '@testing-library/jest-dom/vitest';
+import './test-setup';
 
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { Faceplate } from './faceplate';
 import { HexBolt } from './hex-bolt';
 import { LcdWell } from './lcd-well';
 import { RecessedWell } from './recessed-well';
 import { StripeHeader } from './stripe-header';
-
-// The workspace vitest config runs with `globals: false`, so Testing
-// Library's automatic cleanup (which hooks a global `afterEach`) never
-// registers — explicit cleanup keeps renders from leaking across tests.
-afterEach(cleanup);
 
 describe('HexBolt', () => {
   it('renders a decorative bolt hidden from the a11y tree', () => {

@@ -9,17 +9,12 @@
  *
  * @vitest-environment jsdom
  */
-import '@testing-library/jest-dom/vitest';
+import './test-setup';
 
-import { act, cleanup, render } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 import { VuMeter } from './vu-meter';
-
-// The workspace vitest config runs with `globals: false`, so Testing
-// Library's automatic cleanup (which hooks a global `afterEach`) never
-// registers — without this, each render leaks into the next test's DOM.
-afterEach(cleanup);
 
 describe('VuMeter render', () => {
   it('renders an accessible meter with the requested segment count', () => {

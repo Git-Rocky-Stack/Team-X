@@ -125,6 +125,8 @@ export default {
         card: 'var(--r-card)',
         control: 'var(--r-control)',
         overlay: 'var(--r-overlay)',
+        inset: 'var(--r-inset)',
+        pill: 'var(--r-pill)',
       },
       fontFamily: {
         sans: ['Public Sans Variable', 'system-ui', 'sans-serif'],

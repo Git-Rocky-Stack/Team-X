@@ -22,14 +22,7 @@ CardHeader.displayName = 'CardHeader';
 
 const CardTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        'font-display text-h4 uppercase tracking-[0.05em] [font-variation-settings:"wdth"_118]',
-        className,
-      )}
-      {...props}
-    />
+    <div ref={ref} className={cn('text-placard', className)} {...props} />
   ),
 );
 CardTitle.displayName = 'CardTitle';

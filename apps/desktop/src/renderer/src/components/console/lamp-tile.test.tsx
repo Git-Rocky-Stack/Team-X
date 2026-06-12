@@ -11,19 +11,13 @@
  *
  * @vitest-environment jsdom
  */
-import '@testing-library/jest-dom/vitest';
+import './test-setup';
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { LampTile } from './lamp-tile';
-
-// The workspace vitest config runs with `globals: false`, so Testing
-// Library's automatic cleanup (which hooks a global `afterEach`) never
-// registers — without this, each render leaks into the next test's DOM
-// and the BUDG/UNACK queries collide across tests.
-afterEach(cleanup);
 
 describe('LampTile', () => {
   it('renders the stencil word', () => {
@@ -59,10 +53,34 @@ describe('LampTile', () => {
 
   it('dual-form rule: acknowledged alert burns steady (no blink)', () => {
     render(<LampTile label="BUDG" tone="warn" alert acknowledged />);
-    // Still a button, with the aria state flipped to acknowledged.
+    // Still a button (element identity preserved so focus survives the
+    // ack), but inert: aria-disabled with the aria state acknowledged.
     const lamp = screen.getByRole('button', { name: /BUDG.*(?<!un)acknowledged/i });
     expect(lamp.className).not.toContain('animate-lamp-blink');
     expect(lamp.className).toContain('lamp-warn');
+    expect(lamp).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('acknowledged alert does NOT re-fire onAcknowledge on click', async () => {
+    const onAcknowledge = vi.fn();
+    render(<LampTile label="BUDG" tone="warn" alert acknowledged onAcknowledge={onAcknowledge} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onAcknowledge).not.toHaveBeenCalled();
+  });
+
+  it('an unlit lamp cannot warn: alert coerces tone off to warn visuals', () => {
+    // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op: this test asserts coercion, not the ack
+    render(<LampTile label="GHOST" tone="off" alert onAcknowledge={() => {}} />);
+    const lamp = screen.getByRole('button', { name: /GHOST.*unacknowledged/i });
+    expect(lamp.className).toContain('lamp-warn');
+    expect(lamp.className).toContain('animate-lamp-blink');
+  });
+
+  it('interactive={false} renders a pure visual span even for alert lamps', () => {
+    const { container } = render(<LampTile label="BUDG" tone="warn" alert interactive={false} />);
+    expect(screen.queryByRole('button')).toBeNull();
+    expect((container.firstElementChild as HTMLElement).tagName).toBe('SPAN');
+    expect((container.firstElementChild as HTMLElement).className).toContain('animate-lamp-blink');
   });
 
   it('non-alert lamps are not buttons', () => {

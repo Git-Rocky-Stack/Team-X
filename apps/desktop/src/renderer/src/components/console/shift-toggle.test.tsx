@@ -10,19 +10,13 @@
  *
  * @vitest-environment jsdom
  */
-import '@testing-library/jest-dom/vitest';
+import './test-setup';
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ShiftToggle } from './shift-toggle';
-
-// The workspace vitest config runs with `globals: false`, so Testing
-// Library's automatic cleanup (which hooks a global `afterEach`) never
-// registers — without this, each render leaks into the next test's DOM
-// and the single-button queries collide across tests.
-afterEach(cleanup);
 
 describe('ShiftToggle', () => {
   it('shows the current shift and the switch target', () => {
@@ -51,5 +45,15 @@ describe('ShiftToggle', () => {
     render(<ShiftToggle shift="day" onToggle={onToggle} />);
     await userEvent.click(screen.getByRole('button'));
     expect(onToggle).toHaveBeenCalledWith('night');
+  });
+
+  it('the LED is functional: lit amber on Day Shift, dark socket on Night Ops', () => {
+    // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op: this test asserts the LED, not the toggle
+    const { container, rerender } = render(<ShiftToggle shift="day" onToggle={() => {}} />);
+    const led = () => container.querySelector('[aria-hidden="true"]') as HTMLElement;
+    expect(led().className).toContain('bg-led-hold');
+    // eslint-disable-next-line @typescript-eslint/no-empty-function -- intentional no-op: this test asserts the LED, not the toggle
+    rerender(<ShiftToggle shift="night" onToggle={() => {}} />);
+    expect(led().className).not.toContain('bg-led-hold');
   });
 });

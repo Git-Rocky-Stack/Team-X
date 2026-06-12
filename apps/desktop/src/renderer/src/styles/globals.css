@@ -87,12 +87,31 @@
     --hold-soft: rgba(255, 176, 0, 0.1);
     --warn-soft: rgba(255, 68, 56, 0.12);
     --scope-soft: rgba(88, 196, 188, 0.1);
+    /* LED edge tints — borders on lamp caps / warn caps (theme-independent,
+       these surfaces stay dark both shifts) */
+    --led-go-edge: rgba(65, 226, 94, 0.35);
+    --led-hold-edge: rgba(255, 176, 0, 0.35);
+    --led-warn-edge: rgba(255, 68, 56, 0.4);
+    --led-scope-edge: rgba(88, 196, 188, 0.32);
+
+    /* Tag text — the ONE LED-family role that sits on SHIFT surfaces
+       (Badge stencil tags ride cards/plates, not dark modules), so it
+       day-darkens for WCAG AA on silver (#D2D2CE ≈ 4.6–5:1). Dots, wells,
+       lamps and caps keep the literal LED values above. .dark restores
+       the LED hexes — Night Ops pixels are untouched. */
+    --tag-go: #135724;
+    --tag-hold: #6f4700;
+    --tag-warn: #9e120a;
+    --tag-go-edge: rgba(19, 87, 36, 0.45);
+    --tag-hold-edge: rgba(111, 71, 0, 0.45);
+    --tag-warn-edge: rgba(158, 18, 10, 0.45);
 
     /* Displays-stay-dark group — defined ONCE, never overridden by any shift */
     --void: #000000;
     --display-bg-top: #040404;
     --display-bg-bottom: #070707;
     --display-border: rgba(0, 0, 0, 0.8);
+    --display-fg: #b3b3b3; /* text on always-dark surfaces — NOT --silver (which flips on Day) */
     --phosphor: #41e25e;
     --phosphor-dim: #2e5237;
 
@@ -109,12 +128,17 @@
     --r-card: 2px;
     --r-control: 4px;
     --r-overlay: 8px;
+    --r-inset: 3px; /* inner surfaces nested inside controls (menu items, tab triggers, switch thumbs) */
     --r-pill: 9999px;
 
     /* Mechanical motion envelopes */
     --ease-snap: cubic-bezier(0.32, 0.72, 0, 1);
     --ease-led: cubic-bezier(0.2, 0.7, 0.3, 1);
     --ease-vu: cubic-bezier(0.2, 0.85, 0.15, 1);
+
+    /* Scrollbar thumb family — composes with the per-shift --mission-red */
+    --scrollbar-thumb: hsl(var(--mission-red) / 0.58);
+    --scrollbar-thumb-hover: hsl(var(--mission-red) / 0.82);
   }
 
   .dark {
@@ -155,6 +179,15 @@
     --graphite: #5a5a5a;
     --hairline: rgba(255, 255, 255, 0.08);
     --hairline-strong: rgba(255, 255, 255, 0.16);
+
+    /* Tag text on Night carbon = the literal LEDs (see :root for the
+       day-darkened AA values) */
+    --tag-go: var(--led-go);
+    --tag-hold: var(--led-hold);
+    --tag-warn: var(--led-warn);
+    --tag-go-edge: var(--led-go-edge);
+    --tag-hold-edge: var(--led-hold-edge);
+    --tag-warn-edge: var(--led-warn-edge);
   }
 }
 
@@ -234,7 +267,7 @@
   }
 
   * {
-    scrollbar-color: hsl(var(--mission-red) / 0.62) hsl(var(--background));
+    scrollbar-color: var(--scrollbar-thumb) hsl(var(--background));
     scrollbar-width: thin;
   }
 
@@ -251,11 +284,11 @@
     min-height: 48px;
     border: 2px solid hsl(var(--background));
     border-radius: 999px;
-    background-color: hsl(var(--mission-red) / 0.58);
+    background-color: var(--scrollbar-thumb);
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--mission-red) / 0.82);
+    background-color: var(--scrollbar-thumb-hover);
   }
 
   *::-webkit-scrollbar-corner {
@@ -480,11 +513,12 @@
   }
 
   .text-numeric {
-    /* Live numbers wear Departure Mono (DESIGN.md) */
+    /* Live numbers wear Departure Mono (DESIGN.md). Tracking is 0:
+       negative letter-spacing shifts a pixel font off its pixel grid. */
     font-family: "Departure Mono", ui-monospace, monospace;
     font-size: 1.5rem; /* 24px */
     line-height: 1.1;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
   }
@@ -493,9 +527,40 @@
     font-family: "Departure Mono", ui-monospace, monospace;
     font-size: 2rem; /* 32px */
     line-height: 1.05;
-    letter-spacing: -0.015em;
+    letter-spacing: 0;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Placard title — engraved panel nameplate (Cards, Dialogs, Sheets).
+   * Single source for the recipe that was previously pasted into
+   * CardTitle / DialogTitle / SheetTitle. Self-contained like every
+   * master-scale role (text-h4's letterSpacing:0 tuple would override a
+   * partial class from the utilities layer).
+   */
+  .text-placard {
+    font-family: "Archivo Variable", sans-serif;
+    font-variation-settings: "wdth" 118;
+    font-size: 1rem; /* 16px — matches text-h4 */
+    line-height: 1.375;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  /*
+   * Stencil voice — the word-lamp lettering (mirror of the .lamp recipe's
+   * typography; keep the two in sync). For TSX surfaces that speak the
+   * stencil vocabulary outside an actual lamp cap (ShiftToggle, future
+   * console controls).
+   */
+  .stencil {
+    font-family: "Archivo Variable", sans-serif;
+    font-variation-settings: "wdth" 110;
+    font-weight: 750;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 
   .mission-app-shell {
@@ -784,7 +849,7 @@
     border-radius: var(--r-control);
     background: linear-gradient(180deg, rgba(255, 68, 56, 0.14), rgba(255, 68, 56, 0.04)),
       linear-gradient(180deg, #241412, #140f0e);
-    border: 1px solid rgba(255, 68, 56, 0.4);
+    border: 1px solid var(--led-warn-edge);
     color: var(--led-warn);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
       2px rgba(0, 0, 0, 0.8), 0 3px 6px rgba(0, 0, 0, 0.45);
@@ -957,21 +1022,21 @@
     color: var(--led-go);
     background: linear-gradient(180deg, rgba(65, 226, 94, 0.14), rgba(65, 226, 94, 0.05)),
       linear-gradient(180deg, #1c1f1c, #121412);
-    border-color: rgba(65, 226, 94, 0.35);
+    border-color: var(--led-go-edge);
     text-shadow: 0 0 8px rgba(65, 226, 94, 0.6);
   }
   .lamp-hold {
     color: var(--led-hold);
     background: linear-gradient(180deg, rgba(255, 176, 0, 0.13), rgba(255, 176, 0, 0.04)),
       linear-gradient(180deg, #201d14, #141210);
-    border-color: rgba(255, 176, 0, 0.35);
+    border-color: var(--led-hold-edge);
     text-shadow: 0 0 8px rgba(255, 176, 0, 0.55);
   }
   .lamp-exec {
     color: var(--led-scope);
     background: linear-gradient(180deg, rgba(88, 196, 188, 0.12), rgba(88, 196, 188, 0.04)),
       linear-gradient(180deg, #161e1d, #101413);
-    border-color: rgba(88, 196, 188, 0.32);
+    border-color: var(--led-scope-edge);
     text-shadow: 0 0 8px rgba(88, 196, 188, 0.5);
   }
   .lamp-armed {
@@ -986,8 +1051,20 @@
     color: var(--led-warn);
     background: linear-gradient(180deg, rgba(255, 68, 56, 0.14), rgba(255, 68, 56, 0.04)),
       linear-gradient(180deg, #241412, #140f0e);
-    border-color: rgba(255, 68, 56, 0.4);
+    border-color: var(--led-warn-edge);
     text-shadow: 0 0 8px rgba(255, 68, 56, 0.6);
+  }
+
+  /*
+   * Interactive lamp affordance — ONLY for lamps wrapped in (or rendered
+   * as) a real button: ack ritual + rail teleports. Brightness lift
+   * mirrors the cap hover voice; snap (no transition), like all caps.
+   */
+  .lamp-interactive:hover {
+    filter: brightness(1.12);
+  }
+  .lamp-interactive:active {
+    transform: translateY(1px);
   }
 
   /* LCD — recessed phosphor window (DISPLAY: identical both shifts) */
@@ -1064,6 +1141,14 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.5);
   }
+
+  /* Annunciator rail strip — the persistent lamp shelf (DISPLAY: dark
+     recessed surface BOTH shifts; rides the display token group) */
+  .annunciator-strip {
+    background: #0c0c0c;
+    border-bottom: 1px solid var(--display-border);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  }
 }
 
 .amoled-menu-surface {
@@ -1089,7 +1174,7 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--mission-red) / 0.62) hsl(var(--background));
+    scrollbar-color: var(--scrollbar-thumb) hsl(var(--background));
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -1105,11 +1190,11 @@
     min-height: 48px;
     border: 2px solid hsl(var(--background));
     border-radius: 999px;
-    background-color: hsl(var(--mission-red) / 0.58);
+    background-color: var(--scrollbar-thumb);
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--mission-red) / 0.82);
+    background-color: var(--scrollbar-thumb-hover);
   }
 }
 
