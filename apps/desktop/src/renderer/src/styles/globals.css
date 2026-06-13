@@ -983,6 +983,13 @@
     color: hsl(var(--foreground));
     box-shadow: 0 0 10px var(--armed-glow);
   }
+  /* Outline (not ring) so the focus indicator survives the active tile's
+     armed-glow box-shadow — same doctrine as `.cap:focus-visible`. Nav-tile
+     usages must NOT carry `focus-visible:outline-none` or this is defeated. */
+  .nav-tile:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
 
   /* Brushed-aluminum stripe header (directional machine grain — NEVER noise) */
   .stripe {

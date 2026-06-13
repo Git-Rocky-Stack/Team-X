@@ -80,6 +80,13 @@ export function useShift(): { shift: Shift; setShift: (next: Shift) => void } {
 
       const theme = themeFromShift(next);
 
+      // Snapshot for rollback before the optimistic write. If the IPC update
+      // rejects, restoring this is the user-visible feedback — the toggle
+      // (and the documentElement class via the effect) snaps back instead of
+      // silently persisting an unsaved shift. There is no company-level toast
+      // surface, so the snap-back IS the error signal.
+      const previousCompanies = queryClient.getQueryData<Company[]>(['companies']);
+
       // Optimistic cache update mirrors company-settings.tsx so the toggle
       // (and the documentElement class via the effect) flips instantly,
       // then reconciles against the IPC write.
@@ -92,6 +99,11 @@ export function useShift(): { shift: Shift; setShift: (next: Shift) => void } {
       );
 
       updateMutation.mutate(theme, {
+        onError: () => {
+          if (previousCompanies) {
+            queryClient.setQueryData<Company[]>(['companies'], previousCompanies);
+          }
+        },
         onSettled: () => {
           void queryClient.invalidateQueries({ queryKey: ['companies'] });
         },

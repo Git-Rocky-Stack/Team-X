@@ -1,6 +1,15 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import { applyShiftClass, shiftFromTheme, themeFromShift } from './use-shift';
+
+const useShiftSource = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), 'use-shift.ts'),
+  'utf8',
+);
 
 describe('shift mapping', () => {
   it('maps company theme to shift', () => {
@@ -21,5 +30,26 @@ describe('shift mapping', () => {
       ['dark', true],
       ['dark', false],
     ]);
+  });
+});
+
+describe('setShift optimistic-write safety (source contract)', () => {
+  it('snapshots the companies cache before the optimistic write', () => {
+    expect(useShiftSource).toContain(
+      "const previousCompanies = queryClient.getQueryData<Company[]>(['companies'])",
+    );
+  });
+
+  it('rolls the snapshot back on mutation error', () => {
+    expect(useShiftSource).toMatch(/onError:\s*\(\)\s*=>\s*\{/);
+    expect(useShiftSource).toContain(
+      "queryClient.setQueryData<Company[]>(['companies'], previousCompanies)",
+    );
+  });
+
+  it('still reconciles against the server on settle', () => {
+    expect(useShiftSource).toMatch(
+      /onSettled:[\s\S]*invalidateQueries\(\{ queryKey: \['companies'\] \}\)/,
+    );
   });
 });

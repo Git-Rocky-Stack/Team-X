@@ -74,4 +74,13 @@ describe('notifyBoardQueueReadStateChanged', () => {
     notifyBoardQueueReadStateChanged(activeCompanyId);
     expect(reReads).toHaveBeenCalledTimes(1);
   });
+
+  it('no-ops without throwing when window is undefined (SSR/Node guard)', () => {
+    vi.stubGlobal('window', undefined);
+    try {
+      expect(() => notifyBoardQueueReadStateChanged('company-x')).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

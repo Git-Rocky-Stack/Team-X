@@ -92,7 +92,7 @@ export function TopBar() {
                   onClick={() => setActiveView(tab.view)}
                   className={cn(
                     'nav-tile stencil inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-[10.5px]',
-                    'transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    'transition-all',
                     isActive && 'nav-tile-active',
                     tab.disabled && 'cursor-not-allowed opacity-40',
                   )}

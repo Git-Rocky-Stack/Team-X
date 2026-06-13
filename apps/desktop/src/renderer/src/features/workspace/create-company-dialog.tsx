@@ -285,7 +285,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
       <DialogContent className="max-w-lg" data-create-company-dialog="">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-brand" />
+            <Building2 className="h-5 w-5 text-primary" />
             Create workspace
           </DialogTitle>
           <DialogDescription>

@@ -1,5 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
-import type { DashboardEvent, Employee, Thread, Ticket } from '@team-x/shared-types';
+import type { Employee, Thread, Ticket } from '@team-x/shared-types';
 import {
   BellRing,
   CheckCheck,
@@ -11,55 +10,25 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { notifyBoardQueueReadStateChanged } from './board-queue-read-state-events.js';
+import {
+  type BoardQueueReadState,
+  MAX_VISIBLE_ITEMS,
+  isItemUnread,
+  parseLabels,
+  readQueueState,
+  threadHasBoardAudience,
+  ticketNeedsBoardAttention,
+  writeQueueState,
+} from './board-queue-unread.js';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
+import { useBoardQueueEventSync } from '@/hooks/use-board-queue-events.js';
 import { useThreadList } from '@/hooks/use-chat.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useTickets } from '@/hooks/use-tickets.js';
-import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
-
-const QUEUE_STORAGE_PREFIX = 'teamx.boardQueue.v1';
-const MAX_VISIBLE_ITEMS = 12;
-const BOARD_QUEUE_EVENT_TYPES = [
-  'message.persisted',
-  'message.agent_to_agent',
-  'work.completed',
-  'work.failed',
-  'ticket.created',
-  'ticket.updated',
-  'ticket.assigned',
-  'ticket.reopened',
-  'ticket.commentAdded',
-  'task.delegated',
-  'task.escalated',
-  'review.requested',
-  'proactive.work_queued',
-] as const;
-
-const ATTENTION_LABELS = new Set([
-  '@rocky',
-  'rocky',
-  'operator',
-  'owner',
-  'board',
-  'review',
-  'needs-review',
-  'attention',
-  'blocked',
-  'approval',
-  'human',
-  'escalated',
-]);
-
-interface BoardQueueReadState {
-  checkedAllBefore: number;
-  threads: Record<string, number>;
-  tickets: Record<string, number>;
-}
 
 type BoardQueueItem =
   | {
@@ -79,80 +48,6 @@ type BoardQueueItem =
       timestamp: number;
       ticket: Ticket;
     };
-
-function emptyQueueState(): BoardQueueReadState {
-  return { checkedAllBefore: 0, threads: {}, tickets: {} };
-}
-
-function queueStorageKey(companyId: string): string {
-  return `${QUEUE_STORAGE_PREFIX}.${companyId}`;
-}
-
-function readQueueState(companyId: string | null): BoardQueueReadState {
-  if (!companyId || typeof window === 'undefined') return emptyQueueState();
-
-  try {
-    const raw = window.localStorage.getItem(queueStorageKey(companyId));
-    if (!raw) return emptyQueueState();
-    const parsed = JSON.parse(raw) as Partial<BoardQueueReadState>;
-    return {
-      checkedAllBefore: typeof parsed.checkedAllBefore === 'number' ? parsed.checkedAllBefore : 0,
-      threads:
-        parsed.threads && typeof parsed.threads === 'object' && !Array.isArray(parsed.threads)
-          ? parsed.threads
-          : {},
-      tickets:
-        parsed.tickets && typeof parsed.tickets === 'object' && !Array.isArray(parsed.tickets)
-          ? parsed.tickets
-          : {},
-    };
-  } catch {
-    return emptyQueueState();
-  }
-}
-
-function writeQueueState(companyId: string | null, state: BoardQueueReadState): void {
-  if (!companyId || typeof window === 'undefined') return;
-
-  try {
-    window.localStorage.setItem(queueStorageKey(companyId), JSON.stringify(state));
-    // Same-document `storage` events never fire (HTML spec), so broadcast the
-    // change explicitly for same-window subscribers like the annunciator rail.
-    notifyBoardQueueReadStateChanged(companyId);
-  } catch {
-    // Read state is convenience-only. A storage failure should never block the cockpit.
-  }
-}
-
-function isBoardQueueEvent(type: DashboardEvent['type']): boolean {
-  return (BOARD_QUEUE_EVENT_TYPES as readonly string[]).includes(type);
-}
-
-function parseLabels(labelsJson: string): string[] {
-  try {
-    const parsed = JSON.parse(labelsJson) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((label): label is string => typeof label === 'string');
-  } catch {
-    return [];
-  }
-}
-
-function ticketNeedsBoardAttention(ticket: Ticket): boolean {
-  if (ticket.status === 'done') return false;
-  if (ticket.status === 'blocked' || ticket.priority === 'critical') return true;
-  if (ticket.reporterKind !== 'user') return true;
-
-  return parseLabels(ticket.labelsJson).some((label) =>
-    ATTENTION_LABELS.has(label.trim().toLowerCase()),
-  );
-}
-
-function threadHasBoardAudience(thread: Thread): boolean {
-  const hasUser = thread.members.some((member) => member.memberKind === 'user');
-  const hasEmployee = thread.members.some((member) => member.memberKind === 'employee');
-  return hasUser && hasEmployee && thread.lastMessageAt !== null;
-}
 
 function employeeNameMap(employees: Employee[]): Map<string, string> {
   return new Map(employees.map((employee) => [employee.id, employee.name]));
@@ -178,12 +73,6 @@ function ticketDescription(ticket: Ticket): string {
   const labels = parseLabels(ticket.labelsJson);
   const labelText = labels.length > 0 ? ` . ${labels.slice(0, 2).join(', ')}` : '';
   return `${ticket.status.replace('-', ' ')} . ${ticket.priority}${labelText}`;
-}
-
-function isItemUnread(item: BoardQueueItem, state: BoardQueueReadState): boolean {
-  const byKind = item.kind === 'message' ? state.threads[item.id] : state.tickets[item.id];
-  const checkedAt = Math.max(state.checkedAllBefore, byKind ?? 0);
-  return item.timestamp > checkedAt;
 }
 
 function itemRelativeTime(timestamp: number): string {
@@ -239,7 +128,6 @@ export function BoardMessageQueue() {
   const { data: threads = [], refetch: refetchThreads } = useThreadList(companyId);
   const { data: tickets = [], refetch: refetchTickets } = useTickets(companyId);
   const { data: employees = [] } = useEmployees(companyId);
-  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [readState, setReadState] = useState<BoardQueueReadState>(() => readQueueState(companyId));
   const rootRef = useRef<HTMLDivElement>(null);
@@ -248,18 +136,7 @@ export function BoardMessageQueue() {
     setReadState(readQueueState(companyId));
   }, [companyId]);
 
-  useEffect(() => {
-    if (!companyId) return;
-
-    const unsubscribe = ipc.events.onDashboard((event: DashboardEvent) => {
-      if (event.companyId !== companyId || !isBoardQueueEvent(event.type)) return;
-      queryClient.invalidateQueries({ queryKey: ['threads', companyId] });
-      queryClient.invalidateQueries({ queryKey: ['tickets', companyId] });
-      queryClient.invalidateQueries({ queryKey: ['ticket-detail'] });
-    });
-
-    return unsubscribe;
-  }, [companyId, queryClient]);
+  useBoardQueueEventSync(companyId);
 
   useEffect(() => {
     if (!open) return;

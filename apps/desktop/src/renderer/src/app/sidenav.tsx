@@ -72,7 +72,6 @@ function EmployeeItem({ employee }: { employee: Employee }) {
       onClick={() => setSelected(isSelected ? null : employee.id)}
       className={cn(
         'nav-tile flex w-full items-center gap-3 rounded-control px-3 py-2.5 text-left transition-all',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         isSelected && 'nav-tile-active',
       )}
     >
@@ -181,7 +180,6 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
           onClick={() => useAppStore.getState().openThreadList()}
           className={cn(
             'nav-tile stencil flex w-full items-center gap-2 px-3 py-2 text-[10.5px] transition-all',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           )}
         >
           <MessageSquare className="h-4 w-4" />
@@ -197,7 +195,6 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
           onClick={() => setActiveView('autonomy')}
           className={cn(
             'nav-tile stencil mb-2 flex w-full items-start gap-2 px-3 py-2 text-left text-[10.5px] transition-all',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             activeView === 'autonomy' && 'nav-tile-active',
           )}
           data-autonomy-nav=""
@@ -218,7 +215,6 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
           onClick={() => setActiveView('user-guide')}
           className={cn(
             'nav-tile stencil flex w-full items-start gap-2 px-3 py-2 text-left text-[10.5px] transition-all',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             activeView === 'user-guide' && 'nav-tile-active',
           )}
           data-user-guide-nav=""

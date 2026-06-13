@@ -26,6 +26,37 @@ describe('deriveAnnunciatorTiles', () => {
     expect(tiles.find((t) => t.id === 'mtg')?.tone).toBe('exec');
   });
 
+  it('runtime warning tone → hold, no alert', () => {
+    const tile = deriveAnnunciatorTiles({
+      ...base,
+      runtime: { stateTone: 'warning', sessionCount: 0 },
+    }).find((t) => t.id === 'gguf');
+    expect(tile?.tone).toBe('hold');
+    expect(tile?.alert).toBeUndefined();
+  });
+
+  it('runtime accent tone → exec, no alert', () => {
+    const tile = deriveAnnunciatorTiles({
+      ...base,
+      runtime: { stateTone: 'accent', sessionCount: 1 },
+    }).find((t) => t.id === 'gguf');
+    expect(tile?.tone).toBe('exec');
+    expect(tile?.alert).toBeUndefined();
+  });
+
+  it('runtime default + active sessions → go (the steady "model running" path)', () => {
+    const running = deriveAnnunciatorTiles({
+      ...base,
+      runtime: { stateTone: 'default', sessionCount: 2 },
+    }).find((t) => t.id === 'gguf');
+    expect(running?.tone).toBe('go');
+    const idle = deriveAnnunciatorTiles({
+      ...base,
+      runtime: { stateTone: 'default', sessionCount: 0 },
+    }).find((t) => t.id === 'gguf');
+    expect(idle?.tone).toBe('off');
+  });
+
   it('runtime danger blinks until acked, then burns steady', () => {
     const hot = { ...base, runtime: { stateTone: 'danger' as const, sessionCount: 2 } };
     const blinking = deriveAnnunciatorTiles(hot).find((t) => t.id === 'gguf');
