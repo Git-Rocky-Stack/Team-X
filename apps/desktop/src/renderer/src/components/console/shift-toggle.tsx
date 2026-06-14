@@ -21,7 +21,11 @@ export function ShiftToggle({ shift, onToggle, className }: ShiftToggleProps) {
       aria-pressed={shift === 'day'}
       onClick={() => onToggle(next)}
       className={cn(
-        'cap stencil inline-flex items-center gap-2 px-3.5 py-[7px] text-[10.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        // Focus indicator comes from the global `.cap:focus-visible` outline
+        // rule (globals.css). A `ring-*` here is a box-shadow that loses the
+        // cascade to `.dark .cap` and renders invisible in Night Ops — the
+        // exact hazard documented in workspace/chooser-cap.ts.
+        'cap stencil inline-flex items-center gap-2 px-3.5 py-[7px] text-[10.5px]',
         className,
       )}
     >

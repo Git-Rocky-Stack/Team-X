@@ -87,6 +87,21 @@
     --hold-soft: rgba(255, 176, 0, 0.1);
     --warn-soft: rgba(255, 68, 56, 0.12);
     --scope-soft: rgba(88, 196, 188, 0.1);
+    /* LED card-fill tints — the faintest tier, for the LED-coded step
+       cards stacked in the transcript well. Lighter than --*-soft (which
+       backs single, attention-drawing fills like the answer/error cards)
+       so a column of these reads as a quiet log, not a wall of color.
+       Theme-independent — these cards sit on always-dark surfaces. */
+    --go-fill: rgba(65, 226, 94, 0.05);
+    --hold-fill: rgba(255, 176, 0, 0.05);
+    --scope-fill: rgba(88, 196, 188, 0.05);
+    /* LED dimmed text — 80% LED for de-emphasized inline slugs (e.g. the
+       truncated ticket/ID codes in step-card detail rows). Tailwind v3
+       cannot inject alpha into bare var() colors, so the dim is baked in
+       here rather than via a `/80` opacity modifier. Theme-independent. */
+    --led-go-dim: rgba(65, 226, 94, 0.8);
+    --led-hold-dim: rgba(255, 176, 0, 0.8);
+    --led-scope-dim: rgba(88, 196, 188, 0.8);
     /* LED edge tints — borders on lamp caps / warn caps (theme-independent,
        these surfaces stay dark both shifts) */
     --led-go-edge: rgba(65, 226, 94, 0.35);
@@ -821,6 +836,20 @@
     transform: translateY(1px);
   }
 
+  /* Keyboard focus on caps: outline-based so it can never lose to the
+     recipe box-shadow stacks (Tailwind ring-* is a box-shadow and ties or
+     loses to .dark .cap / .cap-select — outline sits outside that fight).
+     Applies to the whole machined-cap family via the shared .cap base.
+     cap-armed / cap-warn / cap-chrome are listed explicitly because the
+     Button primitive applies them standalone, without the .cap base. */
+  .cap:focus-visible,
+  .cap-armed:focus-visible,
+  .cap-warn:focus-visible,
+  .cap-chrome:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   /* Armed cap — consequential commands only (identical both shifts) */
   .cap-armed {
     border-radius: var(--r-control);
@@ -889,6 +918,77 @@
   }
   .cap-chrome:active {
     transform: translateY(1px);
+  }
+
+  /* Chooser-selection caps — the swept replacement for `.brand-selected`.
+     Apply ON TOP of `.cap` (compound selectors so they out-rank `.dark .cap`).
+     Armed-red is the default (brand/command); tint variants follow the LED
+     semantic map via the shift-varying --tag-* tokens (AA on the silver Day
+     face, literal LEDs on the dark Night face). This recipe OWNS color,
+     border-color and box-shadow — do not also compose text-* or border-*
+     color utilities on the selected element. */
+  .cap.cap-select {
+    border-color: var(--armed-edge);
+    color: var(--armed); /* deep armed on the silver Day face */
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px
+      2px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 14px var(--armed-glow);
+  }
+  .dark .cap.cap-select {
+    color: var(--armed-lit);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 14px var(--armed-glow);
+  }
+  .cap.cap-select-go {
+    border-color: var(--tag-go-edge);
+    color: var(--tag-go);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px
+      2px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 12px rgba(65, 226, 94, 0.18);
+  }
+  .dark .cap.cap-select-go {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 12px rgba(65, 226, 94, 0.18);
+  }
+  .cap.cap-select-hold {
+    border-color: var(--tag-hold-edge);
+    color: var(--tag-hold);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px
+      2px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 12px rgba(255, 176, 0, 0.16);
+  }
+  .dark .cap.cap-select-hold {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 176, 0, 0.16);
+  }
+
+  /* Nav tile — stencil nav items (sidenav sections, top-bar tabs).
+     A flat chassis tile, NOT a raised cap: nav is wayfinding, not a
+     command. Active = armed-red bordered tile (DESIGN.md §Layout). */
+  .nav-tile {
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
+    color: hsl(var(--muted-foreground));
+  }
+  .nav-tile:hover {
+    border-color: var(--hairline);
+    color: hsl(var(--foreground));
+  }
+  .nav-tile-active {
+    border-color: var(--armed-edge);
+    background: var(--armed-soft);
+    color: hsl(var(--foreground));
+    box-shadow: 0 0 10px var(--armed-glow);
+  }
+  /* Outline (not ring) so the focus indicator survives the active tile's
+     armed-glow box-shadow — same doctrine as `.cap:focus-visible`. Nav-tile
+     usages must NOT carry `focus-visible:outline-none` or this is defeated. */
+  .nav-tile:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 
   /* Brushed-aluminum stripe header (directional machine grain — NEVER noise) */

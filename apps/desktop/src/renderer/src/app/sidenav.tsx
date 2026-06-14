@@ -20,13 +20,13 @@ import { useAppStore } from '@/store/app-store.js';
 function statusColor(status: string): string {
   switch (status) {
     case 'thinking':
-      return 'bg-brand animate-pulse-slow';
+      return 'bg-[var(--armed-lit)] animate-pulse-slow';
     case 'blocked':
-      return 'bg-amber-500';
+      return 'bg-[var(--led-hold)]';
     case 'error':
-      return 'bg-red-500';
+      return 'bg-[var(--led-warn)]';
     default:
-      return 'bg-zinc-500';
+      return 'bg-[var(--graphite)]';
   }
 }
 
@@ -71,13 +71,11 @@ function EmployeeItem({ employee }: { employee: Employee }) {
       aria-label={ariaLabel}
       onClick={() => setSelected(isSelected ? null : employee.id)}
       className={cn(
-        'flex w-full items-center gap-3 rounded-[18px] border border-transparent px-3 py-2.5 text-left transition-all',
-        isSelected
-          ? 'border-brand/30 bg-black text-foreground'
-          : 'text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground',
+        'nav-tile flex w-full items-center gap-3 rounded-control px-3 py-2.5 text-left transition-all',
+        isSelected && 'nav-tile-active',
       )}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] border border-white/10 bg-black text-caption font-semibold">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-[var(--hairline)] bg-[var(--carbon-800)] text-caption font-semibold">
         {employee.name
           .split(' ')
           .map((w) => w[0])
@@ -125,48 +123,41 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
   const showGuideSummary = activeCompany !== null;
 
   return (
-    <aside className="mission-chrome-panel flex w-64 shrink-0 flex-col rounded-[30px] border border-white/10 bg-black">
+    <aside className="flex w-64 shrink-0 flex-col rounded-card border border-[var(--hairline)] bg-card">
       <div className="flex items-center justify-between px-4 py-4">
         <div>
-          <div className="flex items-center gap-2 text-h4 text-foreground">
-            <Users className="h-4 w-4 text-brand" />
+          <div className="flex items-center gap-2 text-placard">
+            <Users className="h-4 w-4 text-primary" />
             Team
           </div>
           <p className="mt-1 text-eyebrow text-muted-foreground">Employee rail</p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1 rounded-full border border-brand/30 bg-black px-3 text-button-sm text-brand hover:bg-black hover:text-brand"
-          onClick={onHireClick}
-        >
+        <Button variant="default" size="sm" className="h-8 gap-1 px-3" onClick={onHireClick}>
           <Plus className="h-3.5 w-3.5" />
           Hire
         </Button>
       </div>
 
       <div className="px-4 pb-4">
-        <div className="mission-control-row flex items-center justify-between rounded-[22px] border border-white/10 px-3 py-3">
+        <div className="flex items-center justify-between rounded-control border border-[var(--hairline)] bg-[var(--carbon-850)] px-3 py-3">
           <div className="min-w-0">
             <p className="text-eyebrow text-muted-foreground">Status</p>
             {employees.length === 0 ? (
               <p className="mt-1 text-body-strong text-foreground">Awaiting first hire</p>
             ) : (
               <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className="text-body-strong text-foreground">{employees.length}</span>
+                <span className="font-data tabular-nums text-foreground">{employees.length}</span>
                 <span className="text-eyebrow text-muted-foreground">Employees Online</span>
               </div>
             )}
           </div>
           {thinkingCount > 0 ? (
-            <div className="rounded-full border border-white/10 bg-black px-3 py-1 text-right">
-              <span className="text-caption font-semibold text-brand">{thinkingCount} busy</span>
-            </div>
+            <span className="lamp lamp-sm lamp-hold">{thinkingCount} BUSY</span>
           ) : null}
         </div>
       </div>
 
-      <Separator className="bg-white/10" />
+      <Separator />
 
       <div className="flex-1 space-y-1 overflow-y-auto px-2 py-2 scrollbar-thin">
         {employees.map((emp) => (
@@ -181,37 +172,39 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
         )}
       </div>
 
-      <Separator className="bg-white/10" />
+      <Separator />
 
       <div className="px-2 py-2">
         <button
           type="button"
           onClick={() => useAppStore.getState().openThreadList()}
-          className="flex w-full items-center gap-2 rounded-[18px] border border-transparent px-3 py-2.5 text-body text-muted-foreground transition-colors hover:border-white/10 hover:bg-black hover:text-foreground"
+          className={cn(
+            'nav-tile stencil flex w-full items-center gap-2 px-3 py-2 text-[10.5px] transition-all',
+          )}
         >
-          <MessageSquare className="h-4 w-4 text-brand" />
+          <MessageSquare className="h-4 w-4" />
           Threads
         </button>
       </div>
 
-      <Separator className="bg-white/10" />
+      <Separator />
 
       <div className="px-2 py-2">
         <button
           type="button"
           onClick={() => setActiveView('autonomy')}
           className={cn(
-            'mb-2 flex w-full items-start gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors',
-            activeView === 'autonomy'
-              ? 'border-brand/30 bg-black text-foreground'
-              : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground',
+            'nav-tile stencil mb-2 flex w-full items-start gap-2 px-3 py-2 text-left text-[10.5px] transition-all',
+            activeView === 'autonomy' && 'nav-tile-active',
           )}
           data-autonomy-nav=""
         >
-          <Workflow className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+          <Workflow
+            className={cn('mt-0.5 h-4 w-4 shrink-0', activeView === 'autonomy' && 'text-primary')}
+          />
           <div className="min-w-0 flex-1">
             <span className="text-body-strong">Autonomy</span>
-            <span className="mt-1 block text-caption text-muted-foreground">
+            <span className="mt-1 block font-sans text-caption normal-case tracking-normal text-muted-foreground">
               Runtimes, routines, budgets, approvals, artifacts, and operator access.
             </span>
           </div>
@@ -221,41 +214,41 @@ export function Sidenav({ employees, onHireClick }: SidenavProps) {
           type="button"
           onClick={() => setActiveView('user-guide')}
           className={cn(
-            'flex w-full items-start gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors',
-            activeView === 'user-guide'
-              ? 'border-brand/30 bg-black text-foreground'
-              : 'border-transparent text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground',
+            'nav-tile stencil flex w-full items-start gap-2 px-3 py-2 text-left text-[10.5px] transition-all',
+            activeView === 'user-guide' && 'nav-tile-active',
           )}
           data-user-guide-nav=""
         >
-          <BookOpenText className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+          <BookOpenText
+            className={cn('mt-0.5 h-4 w-4 shrink-0', activeView === 'user-guide' && 'text-primary')}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-3">
               <span className="text-body-strong">User Guide</span>
               {showGuideSummary ? (
-                <span className="rounded-full border border-white/10 bg-black px-2 py-0.5 text-eyebrow-sm text-muted-foreground">
+                <span className="rounded-pill border border-[var(--hairline)] bg-[var(--carbon-850)] px-2 py-0.5 font-sans text-eyebrow-sm normal-case tracking-normal text-muted-foreground">
                   {guideSummary.coreRemaining > 0 ? `${guideSummary.coreRemaining} left` : 'ready'}
                 </span>
               ) : null}
             </div>
-            <span className="mt-1 block text-caption text-muted-foreground">
+            <span className="mt-1 block font-sans text-caption normal-case tracking-normal text-muted-foreground">
               Role-based onboarding, setup checklists, and deep links into the live shell.
             </span>
           </div>
         </button>
       </div>
 
-      <Separator className="bg-white/10" />
+      <Separator />
 
       <output
         className="flex items-center gap-3 px-4 py-3 text-caption text-muted-foreground"
         aria-live="polite"
         aria-atomic="true"
       >
-        <span className="rounded-full border border-white/10 bg-black px-3 py-1">
+        <span className="rounded-pill border border-[var(--hairline)] bg-[var(--carbon-850)] px-3 py-1">
           {thinkingCount > 0 && (
             <>
-              <span className="font-medium text-brand">{thinkingCount} busy</span>
+              <span className="font-medium text-[var(--armed-lit)]">{thinkingCount} busy</span>
               {' / '}
             </>
           )}

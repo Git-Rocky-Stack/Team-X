@@ -17,12 +17,17 @@ const currentFilename = fileURLToPath(import.meta.url);
 const currentDirname = dirname(currentFilename);
 const BOARD_QUEUE_PATH = join(currentDirname, 'board-message-queue.tsx');
 const TOP_BAR_PATH = join(currentDirname, 'top-bar.tsx');
+// Sweep Phase 2 review: the count-bearing rules + subscription were extracted
+// to a shared module + hook so the annunciator QUE lamp can never disagree
+// with the panel. The contract below now spans those files.
+const UNREAD_LOGIC_PATH = join(currentDirname, 'board-queue-unread.ts');
+const SYNC_HOOK_PATH = join(currentDirname, '..', 'hooks', 'use-board-queue-events.ts');
 
 describe('BoardMessageQueue', () => {
   it('ships a persistent flashing toolbar indicator for unread board messages', () => {
     const src = readFileSync(BOARD_QUEUE_PATH, 'utf8');
 
-    expect(src).toContain("const QUEUE_STORAGE_PREFIX = 'teamx.boardQueue.v1'");
+    expect(src).toContain("from './board-queue-unread.js'");
     expect(src).toContain('data-board-message-queue-button');
     expect(src).toContain('data-board-queue-led');
     expect(src).toContain('animate-pulse');
@@ -30,17 +35,28 @@ describe('BoardMessageQueue', () => {
     expect(src).toContain('Mark checked');
   });
 
-  it('subscribes to message, ticket, review, and proactive work events', () => {
-    const src = readFileSync(BOARD_QUEUE_PATH, 'utf8');
+  it('derives unread state from the shared board-queue module (single source of truth)', () => {
+    const shared = readFileSync(UNREAD_LOGIC_PATH, 'utf8');
 
-    expect(src).toContain('ipc.events.onDashboard');
-    expect(src).toContain("'message.persisted'");
-    expect(src).toContain("'work.completed'");
-    expect(src).toContain("'ticket.created'");
-    expect(src).toContain("'ticket.updated'");
-    expect(src).toContain("'ticket.commentAdded'");
-    expect(src).toContain("'review.requested'");
-    expect(src).toContain("'proactive.work_queued'");
+    expect(shared).toContain("export const QUEUE_STORAGE_PREFIX = 'teamx.boardQueue.v1'");
+    expect(shared).toContain('export function isItemUnread(');
+    expect(shared).toContain('export function makeBoardUnreadItems(');
+  });
+
+  it('subscribes to message, ticket, review, and proactive work events via the shared sync hook', () => {
+    const board = readFileSync(BOARD_QUEUE_PATH, 'utf8');
+    const hook = readFileSync(SYNC_HOOK_PATH, 'utf8');
+    const shared = readFileSync(UNREAD_LOGIC_PATH, 'utf8');
+
+    expect(board).toContain('useBoardQueueEventSync(companyId)');
+    expect(hook).toContain('ipc.events.onDashboard');
+    expect(shared).toContain("'message.persisted'");
+    expect(shared).toContain("'work.completed'");
+    expect(shared).toContain("'ticket.created'");
+    expect(shared).toContain("'ticket.updated'");
+    expect(shared).toContain("'ticket.commentAdded'");
+    expect(shared).toContain("'review.requested'");
+    expect(shared).toContain("'proactive.work_queued'");
   });
 
   it('opens queued messages in Chat and attention tickets in Tickets', () => {
@@ -54,14 +70,14 @@ describe('BoardMessageQueue', () => {
   });
 
   it('detects operator-addressed thread and ticket attention sources', () => {
-    const src = readFileSync(BOARD_QUEUE_PATH, 'utf8');
+    const shared = readFileSync(UNREAD_LOGIC_PATH, 'utf8');
 
-    expect(src).toContain('function threadHasBoardAudience(thread: Thread): boolean');
-    expect(src).toContain('const hasUser = thread.members.some');
-    expect(src).toContain('function ticketNeedsBoardAttention(ticket: Ticket): boolean');
-    expect(src).toContain("'@rocky'");
-    expect(src).toContain("'operator'");
-    expect(src).toContain("'approval'");
+    expect(shared).toContain('export function threadHasBoardAudience(thread: Thread): boolean');
+    expect(shared).toContain('const hasUser = thread.members.some');
+    expect(shared).toContain('export function ticketNeedsBoardAttention(ticket: Ticket): boolean');
+    expect(shared).toContain("'@rocky'");
+    expect(shared).toContain("'operator'");
+    expect(shared).toContain("'approval'");
   });
 });
 

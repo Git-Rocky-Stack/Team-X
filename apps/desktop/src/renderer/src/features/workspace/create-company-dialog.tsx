@@ -3,6 +3,8 @@ import type { Company, CompanyTemplateSummary } from '@team-x/shared-types';
 import { Building2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { chooserCapBase, chooserCapFocus } from './chooser-cap.js';
+
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -13,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
+import { Label } from '@/components/ui/label.js';
 import {
   useCompanyTemplatePreview,
   useCompanyTemplates,
@@ -81,7 +84,7 @@ type ThemeChoice = 'dark' | 'light';
 type CreateCompanyMode = 'blank' | 'template';
 
 const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-body ring-offset-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+  'well-input flex h-10 w-full rounded-control px-3 py-2 text-body focus-visible:outline-none';
 
 function suggestSlug(name: string): string {
   return name
@@ -282,7 +285,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
       <DialogContent className="max-w-lg" data-create-company-dialog="">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-brand" />
+            <Building2 className="h-5 w-5 text-primary" />
             Create workspace
           </DialogTitle>
           <DialogDescription>
@@ -293,9 +296,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
 
         <div className="grid gap-4 py-2">
           <div className="space-y-1.5">
-            <label htmlFor="create-company-mode" className="text-label text-muted-foreground">
-              Workspace source
-            </label>
+            <Label htmlFor="create-company-mode">Workspace source</Label>
             <select
               id="create-company-mode"
               value={mode}
@@ -312,14 +313,9 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
           </div>
 
           {mode === 'template' ? (
-            <div className="space-y-3 rounded-lg border border-border bg-black p-3">
+            <div className="well space-y-3 rounded-control p-3">
               <div className="space-y-1.5">
-                <label
-                  htmlFor="create-company-template"
-                  className="text-label text-muted-foreground"
-                >
-                  Template
-                </label>
+                <Label htmlFor="create-company-template">Template</Label>
                 <select
                   id="create-company-template"
                   value={selectedTemplate?.packagePath ?? ''}
@@ -359,9 +355,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
           ) : null}
 
           <div className="space-y-1.5">
-            <label htmlFor="create-company-name" className="text-label text-muted-foreground">
-              Workspace name
-            </label>
+            <Label htmlFor="create-company-name">Workspace name</Label>
             <Input
               id="create-company-name"
               value={name}
@@ -387,12 +381,12 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="create-company-slug" className="text-label text-muted-foreground">
+            <Label htmlFor="create-company-slug">
               Slug
               <span className="ml-1 font-normal text-muted-foreground/70">
                 (URL-safe identifier — auto-suggested from name)
               </span>
-            </label>
+            </Label>
             <Input
               id="create-company-slug"
               value={slug}
@@ -427,13 +421,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
                     <label
                       key={choice}
                       data-create-company-theme={choice}
-                      className={cn(
-                        'flex-1 cursor-pointer rounded-md border px-3 py-2 text-center text-button-sm capitalize transition-colors',
-                        'focus-within:outline-none focus-within:ring-2 focus-within:ring-brand',
-                        isSelected
-                          ? 'border-brand/40 bg-black text-brand'
-                          : 'border-border bg-black text-muted-foreground hover:bg-black',
-                      )}
+                      className={cn(chooserCapBase, chooserCapFocus, isSelected && 'cap-select')}
                     >
                       <input
                         type="radio"
@@ -450,7 +438,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
               </div>
             </fieldset>
           ) : (
-            <div className="rounded-lg border border-white/10 bg-black px-3 py-2 text-caption text-muted-foreground">
+            <div className="well rounded-control px-3 py-2 text-caption text-[var(--display-fg)]">
               Theme and baseline settings come from the selected template. You can adjust them in
               Company Settings after creation.
             </div>
@@ -471,7 +459,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
             onClick={handleSubmit}
             disabled={submitDisabled}
             data-create-company-submit=""
-            className="border border-brand/40 bg-black text-brand hover:bg-black"
+            variant="default"
           >
             {createMutation.isPending || importMutation.isPending
               ? mode === 'template'
@@ -495,7 +483,7 @@ function TemplatePreviewCard({
   warnings: string[];
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black px-3 py-3">
+    <div className="well rounded-control px-3 py-3">
       <div>
         <div className="text-body-strong text-foreground">{template.company.name}</div>
         <div className="text-caption text-muted-foreground">

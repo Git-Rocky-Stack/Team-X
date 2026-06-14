@@ -1,5 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
-import type { DashboardEvent, Employee, Thread, Ticket } from '@team-x/shared-types';
+import type { Employee, Thread, Ticket } from '@team-x/shared-types';
 import {
   BellRing,
   CheckCheck,
@@ -11,53 +10,25 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  type BoardQueueReadState,
+  MAX_VISIBLE_ITEMS,
+  isItemUnread,
+  parseLabels,
+  readQueueState,
+  threadHasBoardAudience,
+  ticketNeedsBoardAttention,
+  writeQueueState,
+} from './board-queue-unread.js';
+
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
+import { useBoardQueueEventSync } from '@/hooks/use-board-queue-events.js';
 import { useThreadList } from '@/hooks/use-chat.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useTickets } from '@/hooks/use-tickets.js';
-import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
-
-const QUEUE_STORAGE_PREFIX = 'teamx.boardQueue.v1';
-const MAX_VISIBLE_ITEMS = 12;
-const BOARD_QUEUE_EVENT_TYPES = [
-  'message.persisted',
-  'message.agent_to_agent',
-  'work.completed',
-  'work.failed',
-  'ticket.created',
-  'ticket.updated',
-  'ticket.assigned',
-  'ticket.reopened',
-  'ticket.commentAdded',
-  'task.delegated',
-  'task.escalated',
-  'review.requested',
-  'proactive.work_queued',
-] as const;
-
-const ATTENTION_LABELS = new Set([
-  '@rocky',
-  'rocky',
-  'operator',
-  'owner',
-  'board',
-  'review',
-  'needs-review',
-  'attention',
-  'blocked',
-  'approval',
-  'human',
-  'escalated',
-]);
-
-interface BoardQueueReadState {
-  checkedAllBefore: number;
-  threads: Record<string, number>;
-  tickets: Record<string, number>;
-}
 
 type BoardQueueItem =
   | {
@@ -77,77 +48,6 @@ type BoardQueueItem =
       timestamp: number;
       ticket: Ticket;
     };
-
-function emptyQueueState(): BoardQueueReadState {
-  return { checkedAllBefore: 0, threads: {}, tickets: {} };
-}
-
-function queueStorageKey(companyId: string): string {
-  return `${QUEUE_STORAGE_PREFIX}.${companyId}`;
-}
-
-function readQueueState(companyId: string | null): BoardQueueReadState {
-  if (!companyId || typeof window === 'undefined') return emptyQueueState();
-
-  try {
-    const raw = window.localStorage.getItem(queueStorageKey(companyId));
-    if (!raw) return emptyQueueState();
-    const parsed = JSON.parse(raw) as Partial<BoardQueueReadState>;
-    return {
-      checkedAllBefore: typeof parsed.checkedAllBefore === 'number' ? parsed.checkedAllBefore : 0,
-      threads:
-        parsed.threads && typeof parsed.threads === 'object' && !Array.isArray(parsed.threads)
-          ? parsed.threads
-          : {},
-      tickets:
-        parsed.tickets && typeof parsed.tickets === 'object' && !Array.isArray(parsed.tickets)
-          ? parsed.tickets
-          : {},
-    };
-  } catch {
-    return emptyQueueState();
-  }
-}
-
-function writeQueueState(companyId: string | null, state: BoardQueueReadState): void {
-  if (!companyId || typeof window === 'undefined') return;
-
-  try {
-    window.localStorage.setItem(queueStorageKey(companyId), JSON.stringify(state));
-  } catch {
-    // Read state is convenience-only. A storage failure should never block the cockpit.
-  }
-}
-
-function isBoardQueueEvent(type: DashboardEvent['type']): boolean {
-  return (BOARD_QUEUE_EVENT_TYPES as readonly string[]).includes(type);
-}
-
-function parseLabels(labelsJson: string): string[] {
-  try {
-    const parsed = JSON.parse(labelsJson) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((label): label is string => typeof label === 'string');
-  } catch {
-    return [];
-  }
-}
-
-function ticketNeedsBoardAttention(ticket: Ticket): boolean {
-  if (ticket.status === 'done') return false;
-  if (ticket.status === 'blocked' || ticket.priority === 'critical') return true;
-  if (ticket.reporterKind !== 'user') return true;
-
-  return parseLabels(ticket.labelsJson).some((label) =>
-    ATTENTION_LABELS.has(label.trim().toLowerCase()),
-  );
-}
-
-function threadHasBoardAudience(thread: Thread): boolean {
-  const hasUser = thread.members.some((member) => member.memberKind === 'user');
-  const hasEmployee = thread.members.some((member) => member.memberKind === 'employee');
-  return hasUser && hasEmployee && thread.lastMessageAt !== null;
-}
 
 function employeeNameMap(employees: Employee[]): Map<string, string> {
   return new Map(employees.map((employee) => [employee.id, employee.name]));
@@ -173,12 +73,6 @@ function ticketDescription(ticket: Ticket): string {
   const labels = parseLabels(ticket.labelsJson);
   const labelText = labels.length > 0 ? ` . ${labels.slice(0, 2).join(', ')}` : '';
   return `${ticket.status.replace('-', ' ')} . ${ticket.priority}${labelText}`;
-}
-
-function isItemUnread(item: BoardQueueItem, state: BoardQueueReadState): boolean {
-  const byKind = item.kind === 'message' ? state.threads[item.id] : state.tickets[item.id];
-  const checkedAt = Math.max(state.checkedAllBefore, byKind ?? 0);
-  return item.timestamp > checkedAt;
 }
 
 function itemRelativeTime(timestamp: number): string {
@@ -234,7 +128,6 @@ export function BoardMessageQueue() {
   const { data: threads = [], refetch: refetchThreads } = useThreadList(companyId);
   const { data: tickets = [], refetch: refetchTickets } = useTickets(companyId);
   const { data: employees = [] } = useEmployees(companyId);
-  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [readState, setReadState] = useState<BoardQueueReadState>(() => readQueueState(companyId));
   const rootRef = useRef<HTMLDivElement>(null);
@@ -243,18 +136,7 @@ export function BoardMessageQueue() {
     setReadState(readQueueState(companyId));
   }, [companyId]);
 
-  useEffect(() => {
-    if (!companyId) return;
-
-    const unsubscribe = ipc.events.onDashboard((event: DashboardEvent) => {
-      if (event.companyId !== companyId || !isBoardQueueEvent(event.type)) return;
-      queryClient.invalidateQueries({ queryKey: ['threads', companyId] });
-      queryClient.invalidateQueries({ queryKey: ['tickets', companyId] });
-      queryClient.invalidateQueries({ queryKey: ['ticket-detail'] });
-    });
-
-    return unsubscribe;
-  }, [companyId, queryClient]);
+  useBoardQueueEventSync(companyId);
 
   useEffect(() => {
     if (!open) return;
@@ -354,11 +236,8 @@ export function BoardMessageQueue() {
         aria-expanded={open}
         data-board-message-queue-button=""
         className={cn(
-          'group flex h-11 shrink-0 items-center gap-2 rounded-[18px] border px-3 text-button-sm',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-          hasUnread
-            ? 'brand-selected'
-            : 'border-white/10 bg-black text-muted-foreground transition-colors hover:border-brand/25 hover:text-foreground',
+          'cap flex h-11 shrink-0 items-center gap-2 px-3 text-button-sm',
+          hasUnread && 'cap-select',
         )}
       >
         <span className="relative flex h-5 w-5 items-center justify-center">
@@ -367,12 +246,15 @@ export function BoardMessageQueue() {
             className={cn(
               'absolute h-2.5 w-2.5 rounded-full transition-all',
               hasUnread
-                ? 'animate-pulse bg-brand shadow-[0_0_12px_hsl(var(--brand))]'
-                : 'bg-white/20',
+                ? 'animate-pulse bg-[var(--led-warn)] shadow-[0_0_12px_var(--led-warn)]'
+                : 'bg-[var(--graphite)]',
             )}
           />
           <BellRing
-            className={cn('h-4 w-4 transition-colors', hasUnread ? 'text-brand' : 'text-white/60')}
+            className={cn(
+              'h-4 w-4 transition-colors',
+              hasUnread ? 'text-primary' : 'text-muted-foreground',
+            )}
           />
         </span>
         <span className="hidden 2xl:inline">Board Queue</span>
@@ -382,8 +264,8 @@ export function BoardMessageQueue() {
           className={cn(
             'min-w-7 justify-center border px-2 py-0 text-eyebrow-sm tabular-nums',
             hasUnread
-              ? 'border-brand/55 bg-brand/15 text-red-50'
-              : 'border-white/10 bg-black text-muted-foreground',
+              ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-primary'
+              : 'border-[var(--hairline)] bg-[var(--carbon-850)] text-muted-foreground',
           )}
           aria-live="polite"
         >
@@ -393,14 +275,14 @@ export function BoardMessageQueue() {
 
       {open ? (
         <div
-          className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-[22px] border border-white/10 bg-black shadow-2xl shadow-black/70"
+          className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-overlay border border-[var(--hairline)] bg-card shadow-lg"
           data-board-message-queue-panel=""
         >
-          <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-4">
+          <div className="flex items-start justify-between gap-3 border-b border-[var(--hairline)] px-4 py-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <Inbox className="h-4 w-4 text-brand" />
-                <h3 className="text-h3 text-foreground">Board Message Queue</h3>
+                <Inbox className="h-4 w-4 text-primary" />
+                <h3 className="text-placard text-foreground">Board Message Queue</h3>
               </div>
               <p className="mt-1 text-body-sm text-muted-foreground">
                 Messages and tickets that need your attention.
@@ -410,20 +292,20 @@ export function BoardMessageQueue() {
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close Board Message Queue"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black text-muted-foreground transition-colors hover:border-white/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-[var(--hairline)] bg-[var(--carbon-850)] text-muted-foreground transition-colors hover:border-[var(--hairline-strong)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--hairline)] px-4 py-3">
             <Badge
               variant="outline"
               className={cn(
                 'border px-2.5 py-1 text-eyebrow-sm',
                 hasUnread
-                  ? 'border-brand/45 bg-brand/10 text-red-50'
-                  : 'border-white/10 bg-black text-muted-foreground',
+                  ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-primary'
+                  : 'border-[var(--hairline)] bg-[var(--carbon-850)] text-muted-foreground',
               )}
             >
               {unreadCount} unread
@@ -434,17 +316,17 @@ export function BoardMessageQueue() {
                 variant="outline"
                 size="sm"
                 onClick={handleRefresh}
-                className="h-8 border-white/10 bg-black px-2.5 text-button-sm text-muted-foreground hover:border-white/20 hover:bg-black hover:text-foreground"
+                className="h-8 px-2.5"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Refresh
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="default"
                 size="sm"
                 onClick={markAllChecked}
-                className="h-8 border-brand/25 bg-black px-2.5 text-button-sm text-red-50 hover:border-brand/45 hover:bg-black"
+                className="h-8 px-2.5"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 Mark checked
@@ -455,7 +337,7 @@ export function BoardMessageQueue() {
           <div className="max-h-[34rem] overflow-y-auto p-2 scrollbar-thin">
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
-                <Inbox className="h-8 w-8 text-white/25" />
+                <Inbox className="h-8 w-8 text-[var(--graphite)]" />
                 <p className="mt-3 text-body-strong text-foreground">No board messages waiting.</p>
                 <p className="mt-1 text-body-sm text-muted-foreground">
                   New employee messages, escalated tickets, and review requests will show here.
@@ -472,19 +354,19 @@ export function BoardMessageQueue() {
                       type="button"
                       onClick={() => handleOpenItem(item)}
                       className={cn(
-                        'flex w-full items-start gap-3 rounded-[16px] border p-3 text-left transition-all',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                        'flex w-full items-start gap-3 rounded-control border p-3 text-left transition-all',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         unread
-                          ? 'border-brand/35 bg-brand/10 shadow-[inset_2px_0_0_hsl(var(--brand))]'
-                          : 'border-white/10 bg-black hover:border-white/20',
+                          ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] shadow-[inset_2px_0_0_var(--armed)]'
+                          : 'border-[var(--hairline)] bg-[var(--carbon-850)] hover:border-[var(--hairline-strong)]',
                       )}
                     >
                       <span
                         className={cn(
-                          'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] border',
+                          'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-control border',
                           unread
-                            ? 'border-brand/35 bg-brand/15 text-brand'
-                            : 'border-white/10 bg-black text-muted-foreground',
+                            ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-primary'
+                            : 'border-[var(--hairline)] bg-[var(--carbon-800)] text-muted-foreground',
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -495,7 +377,7 @@ export function BoardMessageQueue() {
                             {item.title}
                           </span>
                           {unread ? (
-                            <span className="h-2 w-2 shrink-0 rounded-full bg-brand shadow-[0_0_10px_hsl(var(--brand))]" />
+                            <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--led-warn)] shadow-[0_0_10px_var(--led-warn)]" />
                           ) : null}
                         </span>
                         <span className="mt-1 block text-caption text-muted-foreground">
