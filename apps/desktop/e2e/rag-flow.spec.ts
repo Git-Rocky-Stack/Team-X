@@ -126,13 +126,25 @@ test.describe('Team-X rag-flow', () => {
           const proc = app.process();
           if (proc && proc.exitCode === null && !proc.killed) {
             proc.kill('SIGKILL');
+            // Wait for the OS to actually reap the process before deleting its
+            // user-data dir. On Windows the Chromium/LevelDB file handles are
+            // released only after exit, so an immediate rmSync races into EBUSY.
+            await new Promise<void>((resolve) => {
+              const settle = setTimeout(resolve, 5000);
+              proc.once('exit', () => {
+                clearTimeout(settle);
+                resolve();
+              });
+            });
           }
         } catch {
           /* process already disposed */
         }
       }
     }
-    rmSync(userDataDir, { recursive: true, force: true });
+    // maxRetries/retryDelay give Windows time to drop lingering LevelDB locks
+    // (EBUSY/EPERM) rather than failing teardown on the first attempt.
+    rmSync(userDataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   });
 
   test('indexes assistant reply then injects <message id="..."> on next turn', async () => {
