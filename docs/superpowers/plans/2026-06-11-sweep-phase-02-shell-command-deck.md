@@ -954,7 +954,7 @@ git commit -m "feat(sweep): mount AnnunciatorRail under the command bar - live l
 **Files:**
 - Modify: `CHANGELOG.md` (`## [Unreleased]` → `### Changed`)
 
-- [ ] **Step 1: Full local gates**
+- [x] **Step 1: Full local gates**
 
 ```bash
 pnpm typecheck && pnpm lint && pnpm lint:eslint && pnpm test
@@ -964,11 +964,13 @@ pnpm audit:claims 2>/dev/null || true
 ```
 Expected: ESLint 0 errors; full Vitest green; **E2E 26+ passed UNMODIFIED**; build clean. If any E2E fails, the sweep broke a contract — fix the sweep, never the spec.
 
-- [ ] **Step 2: Dual-shift screenshot pack**
+  **Verified 2026-06-13/14:** typecheck ✓, Biome ✓, ESLint ✓ (0 errors; 2 pre-existing hook-dep warnings, older than this sprint by blame), full Vitest ✓ (3254 passed / 1 skipped), build ✓, E2E ✓ (26 passed — CI "E2E smoke" + a local full run this session). The Stage 3 Codex audit (2026-06-13) saw `e2e/rag-flow.spec.ts` fail once locally (25/26) on the 2nd `Control+Enter` submit, under process contention + a Windows `EBUSY` teardown race on the Chromium user-data dir. **Non-reproducible here:** a targeted rebuild + `--repeat-each=2` re-run passed 2/2, clearing the exact flagged second-submit step; the spec is outside the Phase 2 diff (`git diff --name-only main...HEAD` shows no chat/composer/rag files); CI E2E is green. Classified as a pre-existing teardown flake, **not a Phase 2 regression** — harden `rag-flow.spec.ts` cleanup (retry/backoff + await process exit before `rmSync`) as a follow-up (Codex Finding 2). The CHANGELOG "E2E suite passes unmodified" claim stands: the specs are unmodified and the suite passes on CI and on clean local runs.
+
+- [x] **Step 2: Dual-shift screenshot pack** — 10 shots generated 2026-06-12 at `C:/Users/User/.gstack/projects/Git-Rocky-Stack-Team-X/designs/sweep-phase-02/` (night/day × dashboard/autonomy/tickets/settings/palette).
 
 Recreate the throwaway capture script (delete after): `apps/desktop/screenshot-pack.mjs` launching the BUILT app via Playwright `_electron` with `executablePath` resolved through `createRequire(import.meta.url).resolve('electron')` + `dist/electron.exe`, `NODE_ENV=test`, fresh `--user-data-dir`; viewport 1600×1000; wait for `[data-top-bar-nav]`; for each shift (`night`: add `dark` class, `day`: remove) click top-bar tabs by label (Dashboard / Autonomy / Tickets / Settings) and screenshot to `C:/Users/User/.gstack/projects/Git-Rocky-Stack-Team-X/designs/sweep-phase-02/{shift}-{slug}.png`. ALSO capture: the command palette open (`{shift}-palette.png`, trigger via keyboard Ctrl/Cmd+K through `win.keyboard`) and a rail close-up is covered by the dashboard shots. 10 shots total. Verify the rail renders, Day Shift chrome is genuinely silver, and tabs/sidenav read as console hardware.
 
-- [ ] **Step 3: CHANGELOG entry**
+- [x] **Step 3: CHANGELOG entry** — committed `a4b615d` (`chore(release): Phase 2 CHANGELOG entry - Shell + Command Deck`).
 
 Append under `## [Unreleased]` → `### Changed`:
 
@@ -985,7 +987,7 @@ Append under `## [Unreleased]` → `### Changed`:
   chrome. Visual-only elsewhere: E2E suite passes unmodified.
 ```
 
-- [ ] **Step 4: Push + PR**
+- [x] **Step 4: Push + PR** — pushed; PR #27 open. CR-7 wall: Stage 1 CI green, Stage 2 `/review` applied (`15e577f`), Stage 3 Codex run 2026-06-13 (findings reconciled — see below), Stage 4 sign-off pending.
 
 ```bash
 git add CHANGELOG.md && git commit -m "chore(release): Phase 2 CHANGELOG entry - Shell + Command Deck"
