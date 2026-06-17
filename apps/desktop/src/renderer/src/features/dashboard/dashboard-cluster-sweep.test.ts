@@ -83,4 +83,21 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     expect(floorSrc).not.toContain('text-[9px]');
     expect(floorSrc).not.toContain('text-[10px]');
   });
+
+  it('commands view swept while preserving every E2E selector and button rows', () => {
+    expect(commandsSrc).toContain('data-testid="commands-view"');
+    expect(commandsSrc).toContain('data-testid="commands-list"');
+    expect(commandsSrc).toContain('data-testid="commands-loading"');
+    expect(commandsSrc).toContain('aria-busy="true"');
+    expect(commandsSrc).toContain('data-testid="commands-empty-state"');
+    expect(commandsSrc).toContain('data-testid="commands-error-state"');
+    expect(commandsSrc).toContain('<CommandRow key={entry.id} entry={entry} />');
+    expect(commandsSrc).toContain('type="button"');
+    expect(commandsSrc).toContain('{truncated}');
+    expect(commandsSrc).toContain('{label}');
+    expect(commandsSrc).toContain('<Faceplate');
+    expect(commandsSrc).toContain('<LampTile');
+    expect(commandsSrc).not.toMatch(/\bbg-black\b/);
+    expect(commandsSrc).not.toMatch(/(?:text|border)-(?:emerald|red)-\d/);
+  });
 });

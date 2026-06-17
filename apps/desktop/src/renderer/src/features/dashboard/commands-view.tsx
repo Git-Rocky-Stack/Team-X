@@ -27,9 +27,8 @@ import { useCallback, useState } from 'react';
 
 import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Faceplate, LampTile } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
 import { useCommandHistory } from '@/hooks/use-command.js';
@@ -57,10 +56,10 @@ function SkeletonRow() {
       aria-hidden="true"
       className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5 last:border-0"
     >
-      <span className="h-3 w-16 animate-pulse rounded bg-black" />
-      <span className="h-5 w-24 animate-pulse rounded bg-black" />
-      <span className="h-3 flex-1 animate-pulse rounded bg-black" />
-      <span className="h-4 w-12 animate-pulse rounded bg-black" />
+      <span className="h-3 w-16 animate-pulse rounded bg-carbon-900" />
+      <span className="h-5 w-24 animate-pulse rounded bg-carbon-900" />
+      <span className="h-3 flex-1 animate-pulse rounded bg-carbon-900" />
+      <span className="h-4 w-12 animate-pulse rounded bg-carbon-900" />
     </div>
   );
 }
@@ -75,7 +74,7 @@ function EmptyState() {
       <p className="text-body-strong">No commands yet</p>
       <p className="text-caption text-muted-foreground/70">
         Press{' '}
-        <kbd className="rounded border border-border bg-black px-1.5 py-0.5 text-code-sm">
+        <kbd className="rounded border border-[hsl(var(--hairline))] bg-carbon-900 px-1.5 py-0.5 text-shortcut">
           Ctrl+K
         </kbd>{' '}
         to get started.
@@ -90,7 +89,8 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
       data-testid="commands-error-state"
       className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 p-6 text-center"
     >
-      <p className="text-body-strong text-red-400">Failed to load command history</p>
+      <LampTile label="FAULT" tone="warn" small interactive={false} />
+      <p className="text-body-strong text-led-warn">Failed to load command history</p>
       <p className="max-w-sm text-caption text-muted-foreground">{message}</p>
       <Button type="button" size="sm" variant="outline" onClick={onRetry}>
         Retry
@@ -125,7 +125,7 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
       type="button"
       onClick={onCopy}
       title={`Click to copy: ${previewText}`}
-      className="group flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-black focus-visible:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
+      className="group flex w-full items-center gap-3 border-b border-border/50 px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-carbon-900 focus-visible:bg-carbon-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60"
     >
       <span className="w-20 shrink-0 text-caption text-muted-foreground">
         {formatTimeAgo(entry.executedAt)}
@@ -135,32 +135,22 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
         {actorLabel}
       </span>
 
-      <Badge variant="outline" className="shrink-0 border-brand/35 bg-black text-brand">
-        {label}
-      </Badge>
+      <LampTile label={label} tone="exec" small interactive={false} />
 
       <span className="ml-1 min-w-0 flex-1 truncate text-body text-foreground/80">{truncated}</span>
 
-      <Badge
-        variant="outline"
-        className={
-          outcomeOk
-            ? 'shrink-0 border-emerald-500/30 bg-black text-emerald-400'
-            : 'shrink-0 border-red-500/30 bg-black text-red-400'
-        }
-      >
-        {outcomeOk ? 'ok' : 'error'}
-      </Badge>
+      <LampTile
+        label={outcomeOk ? 'OK' : 'ERR'}
+        tone={outcomeOk ? 'go' : 'warn'}
+        small
+        interactive={false}
+      />
 
       <span
         aria-hidden="true"
         className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
       >
-        {copied ? (
-          <Check className="h-3.5 w-3.5 text-emerald-400" />
-        ) : (
-          <Copy className="h-3.5 w-3.5" />
-        )}
+        {copied ? <Check className="h-3.5 w-3.5 text-led-go" /> : <Copy className="h-3.5 w-3.5" />}
       </span>
     </button>
   );
@@ -189,46 +179,40 @@ export function CommandsView({ companyId }: CommandsViewProps) {
 
   return (
     <div className="flex h-full flex-col p-4" data-testid="commands-view">
-      <Card className="flex flex-1 flex-col border-border bg-black">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="flex items-center gap-2">
-            <Terminal className="h-4 w-4 text-brand" />
-            <CardTitle>Recent Commands</CardTitle>
-          </div>
-          <span className="text-caption text-muted-foreground">
-            {rows.length > 0 ? `${rows.length} shown` : 'Cmd+K / Ctrl+K'}
-          </span>
-        </CardHeader>
-        <CardContent className="flex-1 p-0">
-          <ScrollArea className="h-full">
-            {isLoading ? (
-              <div data-testid="commands-loading" aria-busy="true">
-                {Array.from({ length: SKELETON_COUNT }, (_, i) => (
-                  // Indexes are the only available stable key here —
-                  // skeletons have no domain-meaningful id.
-                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton rows
-                  <SkeletonRow key={i} />
-                ))}
-              </div>
-            ) : isError ? (
-              <ErrorState
-                message={error instanceof Error ? error.message : 'Unknown error'}
-                onRetry={() => {
-                  void refetch();
-                }}
-              />
-            ) : rows.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <div data-testid="commands-list">
-                {rows.map((entry) => (
-                  <CommandRow key={entry.id} entry={entry} />
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+      <Faceplate
+        kicker="RECENT COMMANDS"
+        serial={rows.length > 0 ? `${rows.length} SHOWN` : 'CMD+K'}
+        className="flex flex-1 flex-col"
+        bodyClassName="flex flex-1 flex-col p-0"
+      >
+        <ScrollArea className="h-full">
+          {isLoading ? (
+            <div data-testid="commands-loading" aria-busy="true">
+              {Array.from({ length: SKELETON_COUNT }, (_, i) => (
+                // Indexes are the only available stable key here —
+                // skeletons have no domain-meaningful id.
+                // biome-ignore lint/suspicious/noArrayIndexKey: skeleton rows
+                <SkeletonRow key={i} />
+              ))}
+            </div>
+          ) : isError ? (
+            <ErrorState
+              message={error instanceof Error ? error.message : 'Unknown error'}
+              onRetry={() => {
+                void refetch();
+              }}
+            />
+          ) : rows.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div data-testid="commands-list">
+              {rows.map((entry) => (
+                <CommandRow key={entry.id} entry={entry} />
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </Faceplate>
     </div>
   );
 }
