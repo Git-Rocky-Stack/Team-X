@@ -13,7 +13,7 @@ function lampTone(status: string): LampTone {
     case 'blocked':
       return 'hold';
     case 'error':
-      return 'warn';
+      return 'nogo';
     default:
       return 'off';
   }
@@ -22,13 +22,13 @@ function lampTone(status: string): LampTone {
 function statusLampLabel(status: string): string {
   switch (status) {
     case 'thinking':
-      return 'LIVE';
+      return 'EXEC';
     case 'blocked':
       return 'HOLD';
     case 'error':
-      return 'ERR';
+      return 'NO-GO';
     default:
-      return 'IDLE';
+      return 'STBY';
   }
 }
 

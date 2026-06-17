@@ -89,8 +89,8 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
       data-testid="commands-error-state"
       className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 p-6 text-center"
     >
-      <LampTile label="FAULT" tone="warn" small interactive={false} />
-      <p className="text-body-strong text-led-warn">Failed to load command history</p>
+      <LampTile label="NO-GO" tone="nogo" small interactive={false} />
+      <p className="text-body-strong text-led-nogo">Failed to load command history</p>
       <p className="max-w-sm text-caption text-muted-foreground">{message}</p>
       <Button type="button" size="sm" variant="outline" onClick={onRetry}>
         Retry
@@ -140,8 +140,8 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
       <span className="ml-1 min-w-0 flex-1 truncate text-body text-foreground/80">{truncated}</span>
 
       <LampTile
-        label={outcomeOk ? 'OK' : 'ERR'}
-        tone={outcomeOk ? 'go' : 'warn'}
+        label={outcomeOk ? 'GO' : 'NO-GO'}
+        tone={outcomeOk ? 'go' : 'nogo'}
         small
         interactive={false}
       />

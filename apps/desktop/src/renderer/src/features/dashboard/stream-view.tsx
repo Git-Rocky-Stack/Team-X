@@ -33,7 +33,7 @@ function StreamPane({ employee, live }: StreamPaneProps) {
           <p className="truncate text-caption text-silver-mute">{employee.title}</p>
         </div>
         <LampTile
-          label={isThinking ? 'LIVE' : 'IDLE'}
+          label={isThinking ? 'EXEC' : 'STBY'}
           tone={isThinking ? 'exec' : 'off'}
           small
           interactive={false}

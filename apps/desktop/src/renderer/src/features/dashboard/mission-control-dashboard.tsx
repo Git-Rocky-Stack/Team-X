@@ -100,13 +100,13 @@ function formatQueryErrorMessage(error: unknown, fallback: string): string {
 function liveStatusLabel(status: DashboardQueueRow['liveStatus']): string {
   switch (status) {
     case 'thinking':
-      return 'Live';
+      return 'EXEC';
     case 'blocked':
-      return 'Blocked';
+      return 'HOLD';
     case 'error':
-      return 'Error';
+      return 'NO-GO';
     default:
-      return 'Idle';
+      return 'STBY';
   }
 }
 
@@ -117,10 +117,23 @@ function lampToneForLiveStatus(status: DashboardQueueRow['liveStatus']): LampTon
     case 'blocked':
       return 'hold';
     case 'error':
-      return 'warn';
+      return 'nogo';
     default:
       return 'off';
   }
+}
+
+/** Agent-run status → canonical lamp word + tone (failed = steady NO-GO). */
+function agentRunLampLabel(status: string): string {
+  if (status === 'completed') return 'GO';
+  if (status === 'failed') return 'NO-GO';
+  return 'EXEC';
+}
+
+function agentRunLampTone(status: string): LampTone {
+  if (status === 'completed') return 'go';
+  if (status === 'failed') return 'nogo';
+  return 'exec';
 }
 
 function panelGridClass(agentRuns: boolean, employeeQueues: boolean): string {
@@ -253,12 +266,12 @@ function PanelMessageState({
       data-dashboard-panel-state={dataState}
     >
       <LampTile
-        label={tone === 'danger' ? 'FAULT' : 'STBY'}
-        tone={tone === 'danger' ? 'warn' : 'off'}
+        label={tone === 'danger' ? 'NO-GO' : 'STBY'}
+        tone={tone === 'danger' ? 'nogo' : 'off'}
         small
         interactive={false}
       />
-      <Icon className={cn('h-8 w-8', tone === 'danger' ? 'text-led-warn' : 'text-armed')} />
+      <Icon className={cn('h-8 w-8', tone === 'danger' ? 'text-led-nogo' : 'text-armed')} />
       <div className="space-y-1">
         <p className="text-body-strong text-[hsl(var(--display-fg))]">{title}</p>
         <p className="max-w-md text-body text-silver-mute">{description}</p>
@@ -275,7 +288,7 @@ function lampToneForRuntimeState(tone: DashboardRuntimeOperationsSummary['stateT
     case 'warning':
       return 'hold';
     case 'danger':
-      return 'warn';
+      return 'nogo';
     default:
       return 'off';
   }
@@ -284,7 +297,7 @@ function lampToneForRuntimeState(tone: DashboardRuntimeOperationsSummary['stateT
 function lampToneForRuntimeStatus(status: string): LampTone {
   if (status === 'working') return 'exec';
   if (status === 'blocked' || status === 'stale') return 'hold';
-  if (status === 'failed' || status === 'offline') return 'warn';
+  if (status === 'failed' || status === 'offline') return 'nogo';
   return 'off';
 }
 
@@ -867,7 +880,7 @@ export function MissionControlDashboard({
               </div>
               {dashboardLayout.error && (
                 <p
-                  className="text-caption text-led-warn"
+                  className="text-caption text-led-nogo"
                   data-dashboard-layout-error=""
                   role="alert"
                 >
@@ -1016,7 +1029,7 @@ export function MissionControlDashboard({
             />
             <HeroMetric
               label="Blocked work"
-              tone={queueSummary.blocked > 0 ? 'red' : 'go'}
+              tone={queueSummary.blocked > 0 ? 'amber' : 'go'}
               value={queueDataReady ? `${queueSummary.blocked}` : '--'}
               hint={
                 !hasWorkspace
@@ -1058,8 +1071,8 @@ export function MissionControlDashboard({
             kicker="DASHBOARD FAULT"
             bodyClassName="flex min-h-[18rem] flex-col items-center justify-center gap-4 text-center"
           >
-            <LampTile label="FAULT" tone="warn" small interactive={false} />
-            <AlertTriangle className="h-10 w-10 text-led-warn" />
+            <LampTile label="NO-GO" tone="nogo" small interactive={false} />
+            <AlertTriangle className="h-10 w-10 text-led-nogo" />
             <div className="space-y-1">
               <h2 className="text-h3 text-[hsl(var(--display-fg))]">
                 Dashboard data could not load
@@ -1204,14 +1217,8 @@ export function MissionControlDashboard({
                                   {truncateText(run.label, 72)}
                                 </p>
                                 <LampTile
-                                  label={run.status}
-                                  tone={
-                                    run.status === 'completed'
-                                      ? 'go'
-                                      : run.status === 'failed'
-                                        ? 'warn'
-                                        : 'exec'
-                                  }
+                                  label={agentRunLampLabel(run.status)}
+                                  tone={agentRunLampTone(run.status)}
                                   small
                                   interactive={false}
                                 />
@@ -1232,7 +1239,7 @@ export function MissionControlDashboard({
                                 <span>{formatUsd(run.costUsd)}</span>
                               </div>
                               {run.failureReason && (
-                                <p className="text-caption text-led-warn">
+                                <p className="text-caption text-led-nogo">
                                   {truncateText(run.failureReason, 120)}
                                 </p>
                               )}
