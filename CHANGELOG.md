@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Aesthetic sweep Phase 3 — Mission Control.** The flagship dashboard
+  (`mission-control-dashboard.tsx`, 1,760 LOC) and its eight sub-views recomposed
+  onto the Command Console foundation: hero and every panel on brushed-aluminum
+  Faceplates with stripe placards and hex bolts; marquee metrics, telemetry, and
+  runtime tiles as Departure-Mono LCD wells; all status badges retired for stencil
+  word-lamps (live/running=exec, blocked=hold, fault/error=warn, done/ok=go);
+  live boards, rows, and session cards on machined cap tiles; the queue pressure
+  bar on LED tokens; panel toggles as armed cap-select; dashboard subtabs as a
+  nav-tile rail; live output streams on void-black display wells (Iosevka);
+  timeline on stripe date bands + LED event tones; the office floor on
+  level-edge bezels. Two functional VU meters on real 0–1 signals — hero workforce
+  utilization and live stream concurrency. `mission-shell.tsx` (the shared legacy
+  primitive used by 22 unswept screens) is intentionally deferred to its consumers'
+  phases. Visual-only: zero behavior change, every E2E/a11y selector preserved,
+  E2E suite passes unmodified.
 - **Aesthetic sweep Phase 2 — Shell + Command Deck.** App chrome recomposed onto
   the Command Console foundation: edge-to-edge command bar (stencil nav tiles,
   placard brand, ⌘K well hint), team rail as console hardware (lamp busy signal,
