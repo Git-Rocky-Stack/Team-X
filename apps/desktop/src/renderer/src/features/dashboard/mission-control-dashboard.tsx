@@ -34,8 +34,8 @@ import {
 import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
 import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
 
-import { Faceplate, RecessedWell } from '@/components/console/index.js';
-import { Badge, badgeVariants } from '@/components/ui/badge.js';
+import { Faceplate, LampTile, RecessedWell } from '@/components/console/index.js';
+import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
@@ -54,10 +54,10 @@ import { useAppStore } from '@/store/app-store.js';
 
 const DAY_MS = 86_400_000;
 const DASHBOARD_TOUCH_BUTTON_CLASS = 'min-h-11';
-const DASHBOARD_GLASS_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border-white/10 bg-black hover:bg-black`;
-const DASHBOARD_GHOST_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border border-white/10 bg-black hover:bg-black`;
-const DASHBOARD_PILL_TOGGLE_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full px-4`;
-const DASHBOARD_PILL_GHOST_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full border border-white/10 bg-black hover:bg-black`;
+const DASHBOARD_GLASS_BUTTON_CLASS = DASHBOARD_TOUCH_BUTTON_CLASS;
+const DASHBOARD_GHOST_BUTTON_CLASS = DASHBOARD_TOUCH_BUTTON_CLASS;
+const DASHBOARD_PILL_TOGGLE_CLASS = DASHBOARD_TOUCH_BUTTON_CLASS;
+const DASHBOARD_PILL_GHOST_CLASS = DASHBOARD_TOUCH_BUTTON_CLASS;
 const DASHBOARD_INTERACTIVE_FOCUS_CLASS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
@@ -746,330 +746,325 @@ export function MissionControlDashboard({
       data-dashboard-mission-control=""
     >
       <div className="flex min-h-full flex-col gap-6">
-        <header className="mission-hero overflow-hidden rounded-[28px] border border-white/10 p-6 lg:p-7">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div className="max-w-3xl space-y-3">
-                <div className="flex flex-wrap items-center gap-2 text-eyebrow text-muted-foreground">
-                  <LayoutPanelTop className="h-4 w-4 text-brand" />
-                  Mission Control
-                  {company?.slug && (
-                    <Badge
-                      variant="outline"
-                      className="border-white/10 bg-black font-mono text-[10px] text-foreground/80"
-                    >
-                      {company.slug}
-                    </Badge>
-                  )}
-                  {company?.status && (
-                    <Badge
-                      variant="outline"
-                      className="border-brand/30 bg-black font-mono text-[10px] text-brand"
-                    >
-                      {company.status}
-                    </Badge>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <h1 className="text-display text-foreground">
-                    {company?.name ?? 'Select a workspace to open the control surface'}
-                  </h1>
-                  <p className="max-w-2xl text-body text-muted-foreground">
-                    {company?.settings?.mission ??
-                      'Track live execution, queue pressure, and operational telemetry from one surface without leaving the dashboard.'}
-                  </p>
-                </div>
+        <Faceplate
+          kicker="MISSION CONTROL"
+          serial={company?.slug ?? undefined}
+          stripeSlot={
+            company?.status ? (
+              <LampTile label={company.status} tone="exec" small interactive={false} />
+            ) : undefined
+          }
+          bodyClassName="flex flex-col gap-6"
+        >
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-eyebrow text-silver-mute">
+                <LayoutPanelTop className="h-4 w-4 text-armed" />
+                Mission Control
               </div>
-
-              <div className="flex flex-col gap-3 xl:min-w-[21rem]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePanelToggle('agentRuns')}
-                    className={cn(
-                      DASHBOARD_PILL_TOGGLE_CLASS,
-                      layout.agentRuns
-                        ? 'border-brand/40 bg-black text-brand hover:bg-black'
-                        : 'border-white/10 bg-black text-muted-foreground hover:bg-black',
-                    )}
-                    data-dashboard-hero-toggle="agent-runs"
-                    aria-pressed={layout.agentRuns}
-                    aria-label={`${layout.agentRuns ? 'Hide' : 'Show'} Agent Runs panel`}
-                    disabled={!companyId}
-                  >
-                    <Bot className="h-4 w-4" />
-                    Agent Runs
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePanelToggle('employeeQueues')}
-                    className={cn(
-                      DASHBOARD_PILL_TOGGLE_CLASS,
-                      layout.employeeQueues
-                        ? 'border-brand/40 bg-black text-brand hover:bg-black'
-                        : 'border-white/10 bg-black text-muted-foreground hover:bg-black',
-                    )}
-                    data-dashboard-hero-toggle="employee-queues"
-                    aria-pressed={layout.employeeQueues}
-                    aria-label={`${layout.employeeQueues ? 'Hide' : 'Show'} Employee Queues panel`}
-                    disabled={!companyId}
-                  >
-                    <Ticket className="h-4 w-4" />
-                    Employee Queues
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetLayout}
-                    disabled={!companyId || !dashboardLayout.layoutDirty}
-                    className={DASHBOARD_PILL_GHOST_CLASS}
-                    data-dashboard-reset-layout=""
-                    aria-label="Reset dashboard layout to the default hybrid view"
-                  >
-                    <TimerReset className="h-4 w-4" />
-                    Reset layout
-                  </Button>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
-                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
-                    {visiblePrimaryPanelCount(layout)} / 2 live panels
-                  </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
-                    {commandRows.length} recent commands
-                  </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
-                    {tickets.length} tracked tickets
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="border-white/10 bg-black text-foreground/80"
-                    data-dashboard-autonomy-badge="routines"
-                  >
-                    {enabledRoutineCount} active routines
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'border-white/10 bg-black text-foreground/80',
-                      runtimeOperationsSummary.attentionCount > 0 &&
-                        'border-amber-500/30 bg-black text-amber-200',
-                    )}
-                    data-dashboard-runtime-badge=""
-                  >
-                    {runtimeOperationsReady
-                      ? `${runtimeOperationsSummary.sessionCount} runtime sessions`
-                      : 'runtime sessions'}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'border-white/10 bg-black text-foreground/80',
-                      pendingApprovalCount > 0 && 'border-amber-500/30 bg-black text-amber-200',
-                    )}
-                    data-dashboard-autonomy-badge="approvals"
-                  >
-                    {pendingApprovalCount} pending approvals
-                  </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
-                    {operatorPosture} posture
-                  </Badge>
-                  {dashboardLayout.isSaving && (
-                    <output
-                      className={cn(
-                        badgeVariants({ variant: 'outline' }),
-                        'border-brand/30 bg-black text-brand',
-                      )}
-                      aria-live="polite"
-                    >
-                      Saving layout
-                    </output>
-                  )}
-                </div>
-                {dashboardLayout.error && (
-                  <p
-                    className="text-caption text-red-200"
-                    data-dashboard-layout-error=""
-                    role="alert"
-                  >
-                    {dashboardLayout.error}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setActiveView('tickets')}
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <Ticket className="h-4 w-4" />
-                    Open tickets
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDashboardSubview('commands')}
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <Radar className="h-4 w-4" />
-                    Command log
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setActiveView('telemetry')}
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <Gauge className="h-4 w-4" />
-                    Telemetry
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'access')
-                    }
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Autonomy
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenAutonomy('runtimes')}
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <HardDrive className="h-4 w-4" />
-                    Runtimes
-                  </Button>
-                </div>
+              <div className="space-y-2">
+                <h1 className="text-display text-foreground">
+                  {company?.name ?? 'Select a workspace to open the control surface'}
+                </h1>
+                <p className="max-w-2xl text-body text-muted-foreground">
+                  {company?.settings?.mission ??
+                    'Track live execution, queue pressure, and operational telemetry from one surface without leaving the dashboard.'}
+                </p>
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-              <HeroMetric
-                label="Live runs"
-                value={
-                  !hasWorkspace || agentRunsQuery.isLoading || agentRunsQuery.isError
-                    ? '--'
-                    : `${activeRunCount}`
-                }
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load persisted runs and live execution state.'
-                    : activeRunCount > 0
-                      ? 'Agentic loops currently progressing with live step updates.'
-                      : agentRunsQuery.isLoading
-                        ? 'Loading recent agentic loops from the persisted run log.'
-                        : agentRunsQuery.isError
-                          ? 'Run history is temporarily unavailable for this workspace.'
-                          : 'No agentic loops are currently active.'
-                }
-                icon={Bot}
-                onClick={() => setDashboardSubview('commands')}
-              />
-              <HeroMetric
-                label="External runtimes"
-                value={runtimeOperationsReady ? `${runtimeOperationsSummary.sessionCount}` : '--'}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load runtime sessions and checkouts.'
-                    : runtimeOperationsQuery.isLoading
-                      ? 'Loading live runtime heartbeat and checkout state.'
-                      : runtimeOperationsQuery.isError
-                        ? 'Runtime operations are temporarily unavailable.'
-                        : runtimeOperationsSummary.attentionCount > 0
-                          ? `${runtimeOperationsSummary.attentionCount} runtime items need review.`
-                          : runtimeOperationsSummary.sessionCount > 0
-                            ? `${runtimeOperationsSummary.workingSessionCount} working with ${runtimeOperationsSummary.activeCheckoutCount} active checkout leases.`
-                            : 'No external runtime sessions are active.'
-                }
-                icon={HardDrive}
-                onClick={() => handleOpenAutonomy('runtimes')}
-              />
-              <HeroMetric
-                label="Workforce active"
-                value={!hasWorkspace ? '--' : `${queueSummary.activeEmployees}/${employees.length}`}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load employee activity.'
-                    : employees.length > 0
-                      ? 'Employees streaming or actively processing work right now.'
-                      : 'No employees hired in this workspace yet.'
-                }
-                icon={Activity}
-                onClick={() =>
-                  setSelectedEmployee(
-                    queueRows.find((row) => row.liveStatus === 'thinking')?.employeeId ?? null,
-                  )
-                }
-              />
-              <HeroMetric
-                label="Queue pressure"
-                value={queueDataReady ? `${queueSummary.totalPressure}` : '--'}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load ticket backlog.'
-                    : ticketsQuery.isLoading
-                      ? 'Loading durable backlog and live queue overlays.'
-                      : ticketsQuery.isError
-                        ? 'Ticket backlog is temporarily unavailable for this workspace.'
-                        : queueSummary.totalPressure > 0
-                          ? `${queueSummary.employeesWithWork} employees carrying open or blocked work.`
-                          : 'No durable queue pressure detected.'
-                }
-                icon={Ticket}
-                onClick={() => setActiveView('tickets')}
-              />
-              <HeroMetric
-                label="Blocked work"
-                value={queueDataReady ? `${queueSummary.blocked}` : '--'}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load blocked backlog state.'
-                    : ticketsQuery.isLoading
-                      ? 'Loading blocked tickets and live employee state.'
-                      : ticketsQuery.isError
-                        ? 'Blocked backlog is temporarily unavailable for this workspace.'
-                        : blockedEmployeeCount > 0
-                          ? `${blockedEmployeeCount} employees show blocked or error state.`
-                          : 'No blocked tickets or blocked employees right now.'
-                }
-                icon={AlertTriangle}
-                onClick={() => setActiveView('tickets')}
-              />
-              <HeroMetric
-                label="Today cost"
-                value={telemetryReady ? formatUsd(todayUsage?.costUsd) : '--'}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load telemetry.'
-                    : telemetryStatsQuery.isLoading || telemetryDailyQuery.isLoading
-                      ? 'Loading telemetry for the current window.'
-                      : telemetryStatsQuery.isError || telemetryDailyQuery.isError
-                        ? 'Telemetry is temporarily unavailable for this workspace.'
-                        : todayUsage
-                          ? `${formatCompactNumber(todayUsage.totalTokens)} tokens recorded in the current telemetry window.`
-                          : 'Telemetry is waiting for completed runs.'
-                }
-                icon={Gauge}
-                onClick={() => setActiveView('telemetry')}
-              />
+            <div className="flex flex-col gap-3 xl:min-w-[21rem]">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePanelToggle('agentRuns')}
+                  className={cn(DASHBOARD_PILL_TOGGLE_CLASS, layout.agentRuns && 'cap cap-select')}
+                  data-dashboard-hero-toggle="agent-runs"
+                  aria-pressed={layout.agentRuns}
+                  aria-label={`${layout.agentRuns ? 'Hide' : 'Show'} Agent Runs panel`}
+                  disabled={!companyId}
+                >
+                  <Bot className="h-4 w-4" />
+                  Agent Runs
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePanelToggle('employeeQueues')}
+                  className={cn(
+                    DASHBOARD_PILL_TOGGLE_CLASS,
+                    layout.employeeQueues && 'cap cap-select',
+                  )}
+                  data-dashboard-hero-toggle="employee-queues"
+                  aria-pressed={layout.employeeQueues}
+                  aria-label={`${layout.employeeQueues ? 'Hide' : 'Show'} Employee Queues panel`}
+                  disabled={!companyId}
+                >
+                  <Ticket className="h-4 w-4" />
+                  Employee Queues
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetLayout}
+                  disabled={!companyId || !dashboardLayout.layoutDirty}
+                  className={DASHBOARD_PILL_GHOST_CLASS}
+                  data-dashboard-reset-layout=""
+                  aria-label="Reset dashboard layout to the default hybrid view"
+                >
+                  <TimerReset className="h-4 w-4" />
+                  Reset layout
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {visiblePrimaryPanelCount(layout)} / 2
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">live panels</span>
+                </RecessedWell>
+                <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {commandRows.length}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">recent commands</span>
+                </RecessedWell>
+                <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {tickets.length}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">tracked tickets</span>
+                </RecessedWell>
+                <RecessedWell
+                  className="flex items-center gap-2 px-3 py-1.5"
+                  data-dashboard-autonomy-badge="routines"
+                >
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {enabledRoutineCount}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">active routines</span>
+                </RecessedWell>
+                <RecessedWell
+                  className="flex items-center gap-2 px-3 py-1.5"
+                  data-dashboard-runtime-badge=""
+                >
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {runtimeOperationsReady ? runtimeOperationsSummary.sessionCount : '--'}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">runtime sessions</span>
+                  {runtimeOperationsSummary.attentionCount > 0 && (
+                    <LampTile label="ATTN" tone="hold" small interactive={false} />
+                  )}
+                </RecessedWell>
+                <RecessedWell
+                  className="flex items-center gap-2 px-3 py-1.5"
+                  data-dashboard-autonomy-badge="approvals"
+                >
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {pendingApprovalCount}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">pending approvals</span>
+                  {pendingApprovalCount > 0 && (
+                    <LampTile label="ATTN" tone="hold" small interactive={false} />
+                  )}
+                </RecessedWell>
+                <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="text-eyebrow-sm text-silver-mute">
+                    {operatorPosture} posture
+                  </span>
+                </RecessedWell>
+                {dashboardLayout.isSaving && (
+                  <output
+                    className="flex items-center gap-2 rounded-control border border-[hsl(var(--armed-edge))] bg-[hsl(var(--armed-soft))] px-3 py-1.5 text-eyebrow-sm text-armed"
+                    aria-live="polite"
+                  >
+                    Saving layout
+                  </output>
+                )}
+              </div>
+              {dashboardLayout.error && (
+                <p
+                  className="text-caption text-red-200"
+                  data-dashboard-layout-error=""
+                  role="alert"
+                >
+                  {dashboardLayout.error}
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveView('tickets')}
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
+                >
+                  <Ticket className="h-4 w-4" />
+                  Open tickets
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDashboardSubview('commands')}
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
+                >
+                  <Radar className="h-4 w-4" />
+                  Command log
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveView('telemetry')}
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
+                >
+                  <Gauge className="h-4 w-4" />
+                  Telemetry
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'access')
+                  }
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Autonomy
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenAutonomy('runtimes')}
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
+                >
+                  <HardDrive className="h-4 w-4" />
+                  Runtimes
+                </Button>
+              </div>
             </div>
           </div>
-        </header>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+            <HeroMetric
+              label="Live runs"
+              value={
+                !hasWorkspace || agentRunsQuery.isLoading || agentRunsQuery.isError
+                  ? '--'
+                  : `${activeRunCount}`
+              }
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load persisted runs and live execution state.'
+                  : activeRunCount > 0
+                    ? 'Agentic loops currently progressing with live step updates.'
+                    : agentRunsQuery.isLoading
+                      ? 'Loading recent agentic loops from the persisted run log.'
+                      : agentRunsQuery.isError
+                        ? 'Run history is temporarily unavailable for this workspace.'
+                        : 'No agentic loops are currently active.'
+              }
+              icon={Bot}
+              onClick={() => setDashboardSubview('commands')}
+            />
+            <HeroMetric
+              label="External runtimes"
+              value={runtimeOperationsReady ? `${runtimeOperationsSummary.sessionCount}` : '--'}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load runtime sessions and checkouts.'
+                  : runtimeOperationsQuery.isLoading
+                    ? 'Loading live runtime heartbeat and checkout state.'
+                    : runtimeOperationsQuery.isError
+                      ? 'Runtime operations are temporarily unavailable.'
+                      : runtimeOperationsSummary.attentionCount > 0
+                        ? `${runtimeOperationsSummary.attentionCount} runtime items need review.`
+                        : runtimeOperationsSummary.sessionCount > 0
+                          ? `${runtimeOperationsSummary.workingSessionCount} working with ${runtimeOperationsSummary.activeCheckoutCount} active checkout leases.`
+                          : 'No external runtime sessions are active.'
+              }
+              icon={HardDrive}
+              onClick={() => handleOpenAutonomy('runtimes')}
+            />
+            <HeroMetric
+              label="Workforce active"
+              value={!hasWorkspace ? '--' : `${queueSummary.activeEmployees}/${employees.length}`}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load employee activity.'
+                  : employees.length > 0
+                    ? 'Employees streaming or actively processing work right now.'
+                    : 'No employees hired in this workspace yet.'
+              }
+              icon={Activity}
+              onClick={() =>
+                setSelectedEmployee(
+                  queueRows.find((row) => row.liveStatus === 'thinking')?.employeeId ?? null,
+                )
+              }
+            />
+            <HeroMetric
+              label="Queue pressure"
+              value={queueDataReady ? `${queueSummary.totalPressure}` : '--'}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load ticket backlog.'
+                  : ticketsQuery.isLoading
+                    ? 'Loading durable backlog and live queue overlays.'
+                    : ticketsQuery.isError
+                      ? 'Ticket backlog is temporarily unavailable for this workspace.'
+                      : queueSummary.totalPressure > 0
+                        ? `${queueSummary.employeesWithWork} employees carrying open or blocked work.`
+                        : 'No durable queue pressure detected.'
+              }
+              icon={Ticket}
+              onClick={() => setActiveView('tickets')}
+            />
+            <HeroMetric
+              label="Blocked work"
+              value={queueDataReady ? `${queueSummary.blocked}` : '--'}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load blocked backlog state.'
+                  : ticketsQuery.isLoading
+                    ? 'Loading blocked tickets and live employee state.'
+                    : ticketsQuery.isError
+                      ? 'Blocked backlog is temporarily unavailable for this workspace.'
+                      : blockedEmployeeCount > 0
+                        ? `${blockedEmployeeCount} employees show blocked or error state.`
+                        : 'No blocked tickets or blocked employees right now.'
+              }
+              icon={AlertTriangle}
+              onClick={() => setActiveView('tickets')}
+            />
+            <HeroMetric
+              label="Today cost"
+              value={telemetryReady ? formatUsd(todayUsage?.costUsd) : '--'}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load telemetry.'
+                  : telemetryStatsQuery.isLoading || telemetryDailyQuery.isLoading
+                    ? 'Loading telemetry for the current window.'
+                    : telemetryStatsQuery.isError || telemetryDailyQuery.isError
+                      ? 'Telemetry is temporarily unavailable for this workspace.'
+                      : todayUsage
+                        ? `${formatCompactNumber(todayUsage.totalTokens)} tokens recorded in the current telemetry window.`
+                        : 'Telemetry is waiting for completed runs.'
+              }
+              icon={Gauge}
+              onClick={() => setActiveView('telemetry')}
+            />
+          </div>
+        </Faceplate>
 
         {isError ? (
           <Card className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none">

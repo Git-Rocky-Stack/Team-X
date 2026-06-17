@@ -144,6 +144,16 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).not.toContain('mission-grid');
     expect(missionControlSrc).toContain('<RecessedWell');
   });
+
+  it('renders the hero on a Faceplate with console controls', () => {
+    expect(missionControlSrc).not.toContain('mission-hero');
+    expect(missionControlSrc).toContain('kicker="MISSION CONTROL"');
+    expect(missionControlSrc).toContain("'cap cap-select'");
+    expect(missionControlSrc).toContain('data-dashboard-hero-toggle="agent-runs"');
+    expect(missionControlSrc).toContain('data-dashboard-hero-toggle="employee-queues"');
+    expect(missionControlSrc).toContain('aria-pressed={layout.agentRuns}');
+    expect(missionControlSrc).toContain('data-dashboard-reset-layout=""');
+  });
 });
 
 describe('Dashboard integration wiring', () => {
