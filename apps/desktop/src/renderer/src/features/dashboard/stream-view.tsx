@@ -23,7 +23,7 @@ function StreamPane({ employee, live }: StreamPaneProps) {
       className="cap flex h-full min-w-[280px] flex-col p-0 text-left"
     >
       <div className="flex items-center gap-2 border-b border-[hsl(var(--hairline))] px-4 py-2.5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-carbon-900 text-xs font-semibold">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-carbon-900 text-label font-semibold">
           {employee.name
             .split(' ')
             .map((w) => w[0])

@@ -93,7 +93,7 @@ export function EmployeeCard({ employee, live }: EmployeeCardProps) {
     >
       {/* Header: avatar + name + status */}
       <div className="flex w-full items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-carbon-900 text-sm font-semibold text-foreground/80">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-carbon-900 text-label font-semibold text-foreground/80">
           {initials(employee.name)}
         </div>
         <div className="min-w-0 flex-1">

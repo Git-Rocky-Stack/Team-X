@@ -271,7 +271,7 @@ function PanelMessageState({
         small
         interactive={false}
       />
-      <Icon className={cn('h-8 w-8', tone === 'danger' ? 'text-led-nogo' : 'text-armed')} />
+      <Icon className="h-8 w-8 text-silver-mute" />
       <div className="space-y-1">
         <p className="text-body-strong text-[hsl(var(--display-fg))]">{title}</p>
         <p className="max-w-md text-body text-silver-mute">{description}</p>
@@ -754,7 +754,7 @@ export function MissionControlDashboard({
                 Mission Control
               </div>
               <div className="space-y-2">
-                <h1 className="text-display text-foreground">
+                <h1 className="text-display font-display text-foreground">
                   {company?.name ?? 'Select a workspace to open the control surface'}
                 </h1>
                 <p className="max-w-2xl text-body text-muted-foreground">
@@ -1072,7 +1072,7 @@ export function MissionControlDashboard({
             bodyClassName="flex min-h-[18rem] flex-col items-center justify-center gap-4 text-center"
           >
             <LampTile label="NO-GO" tone="nogo" small interactive={false} />
-            <AlertTriangle className="h-10 w-10 text-led-nogo" />
+            <AlertTriangle className="h-10 w-10 text-silver-mute" />
             <div className="space-y-1">
               <h2 className="text-h3 text-[hsl(var(--display-fg))]">
                 Dashboard data could not load
@@ -1407,7 +1407,7 @@ export function MissionControlDashboard({
                                       )}
                                       {row.counts.inProgress > 0 && (
                                         <div
-                                          className="h-full bg-armed"
+                                          className="h-full bg-led-scope"
                                           style={{
                                             width: `${(row.counts.inProgress / totalTickets) * 100}%`,
                                           }}
@@ -1433,10 +1433,30 @@ export function MissionControlDashboard({
                                   )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2 text-eyebrow text-muted-foreground">
-                                  <span>Open {row.counts.open}</span>
-                                  <span>In progress {row.counts.inProgress}</span>
-                                  <span>Blocked {row.counts.blocked}</span>
-                                  <span>Done {row.counts.done}</span>
+                                  <span>
+                                    Open{' '}
+                                    <span className="font-data tabular-nums text-silver">
+                                      {row.counts.open}
+                                    </span>
+                                  </span>
+                                  <span>
+                                    In progress{' '}
+                                    <span className="font-data tabular-nums text-silver">
+                                      {row.counts.inProgress}
+                                    </span>
+                                  </span>
+                                  <span>
+                                    Blocked{' '}
+                                    <span className="font-data tabular-nums text-silver">
+                                      {row.counts.blocked}
+                                    </span>
+                                  </span>
+                                  <span>
+                                    Done{' '}
+                                    <span className="font-data tabular-nums text-silver">
+                                      {row.counts.done}
+                                    </span>
+                                  </span>
                                 </div>
                               </div>
                             </div>

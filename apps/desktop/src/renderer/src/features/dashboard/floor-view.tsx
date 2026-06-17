@@ -7,19 +7,23 @@ import { useAppStore } from '@/store/app-store.js';
 import { SubviewState } from './dashboard-subview-state.js';
 
 function levelColor(level: string): string {
+  // Level bezel = seniority category, NOT a live signal: officer uses the
+  // chrome (polished-bits) edge — never armed-red, which is reserved for LIVE.
+  // Values are rgba tokens, so they go straight into the arbitrary value with
+  // no hsl() wrapper (hsl(rgba(...)) is invalid CSS and silently renders nothing).
   switch (level.toLowerCase()) {
     case 'officer':
-      return 'border-[hsl(var(--armed-edge))]';
+      return 'border-[var(--chrome-edge)]';
     case 'senior-management':
-      return 'border-[hsl(var(--led-hold-edge))]';
+      return 'border-[var(--led-hold-edge)]';
     case 'management':
-      return 'border-[hsl(var(--led-scope-edge))]';
+      return 'border-[var(--led-scope-edge)]';
     case 'supervisor':
-      return 'border-[hsl(var(--led-scope-edge))]';
+      return 'border-[var(--led-scope-edge)]';
     case 'lead':
-      return 'border-[hsl(var(--led-go-edge))]';
+      return 'border-[var(--led-go-edge)]';
     default:
-      return 'border-[hsl(var(--hairline))]';
+      return 'border-[var(--hairline)]';
   }
 }
 
