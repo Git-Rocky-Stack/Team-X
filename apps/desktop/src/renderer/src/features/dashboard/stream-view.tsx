@@ -2,6 +2,7 @@ import type { Employee } from '@team-x/shared-types';
 import { Radio } from 'lucide-react';
 
 import { SubviewState } from './dashboard-subview-state.js';
+import { countThinking } from './live-state-counts.js';
 
 import { LampTile, VuMeter } from '@/components/console/index.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -73,7 +74,10 @@ export function StreamView({ employees }: StreamViewProps) {
     return aThinking - bThinking;
   });
 
-  const thinkingCount = Object.values(employeeLive).filter((e) => e.status === 'thinking').length;
+  // Scoped to the active roster (employees prop), NOT the global employeeLive
+  // map — otherwise a thinking employee from another workspace inflates the
+  // count and pushes the concurrency VU meter past 1. See live-state-counts.ts.
+  const thinkingCount = countThinking(employees, employeeLive);
 
   if (employees.length === 0) {
     return (

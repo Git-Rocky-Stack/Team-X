@@ -32,6 +32,7 @@ export function DashboardSubtabs() {
             type="button"
             key={tab.subview}
             onClick={() => setSubview(tab.subview)}
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
               'nav-tile flex items-center gap-1.5 px-3.5 py-1.5 text-button-sm',
               isActive && 'nav-tile-active',

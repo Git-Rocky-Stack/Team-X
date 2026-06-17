@@ -113,6 +113,13 @@ const MAX_CONCURRENT_PROCESSING = 5;
 export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatService {
   const { agentWakeupRequestsRepo, employeesRepo, bus } = deps;
   let processingInterval: NodeJS.Timeout | null = null;
+  // Initial-processing kick scheduled by start(); tracked so stop() can clear
+  // it. Without this handle a quit within the first second still fires a repo
+  // read after the DB has closed (post-shutdown unhandled rejection).
+  let initialProcessingTimeout: NodeJS.Timeout | null = null;
+  // Hard guard for both timer bodies: even if a tick is already queued on the
+  // macrotask queue when stop() runs, it must not touch the (closing) DB.
+  let stopped = false;
   let isProcessing = false;
 
   async function scheduleWakeup(input: {
@@ -331,12 +338,15 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
       return;
     }
 
+    stopped = false;
     console.log(`[heartbeat] Starting heartbeat processing loop (${intervalMs}ms interval)`);
 
     processingInterval = setInterval(async () => {
+      if (stopped) return;
       const companies = agentWakeupRequestsRepo.listCompaniesWithDueWork();
 
       for (const companyId of companies) {
+        if (stopped) return;
         try {
           await processWakeupQueue(companyId);
         } catch (error) {
@@ -345,10 +355,13 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
       }
     }, intervalMs);
 
-    // Initial processing on start
-    setTimeout(async () => {
+    // Initial processing on start — tracked so stop() can cancel it.
+    initialProcessingTimeout = setTimeout(async () => {
+      initialProcessingTimeout = null;
+      if (stopped) return;
       const companies = agentWakeupRequestsRepo.listCompaniesWithDueWork();
       for (const companyId of companies) {
+        if (stopped) return;
         try {
           await processWakeupQueue(companyId);
         } catch (error) {
@@ -359,6 +372,15 @@ export function createHeartbeatService(deps: HeartbeatServiceDeps): HeartbeatSer
   }
 
   function stop(): void {
+    stopped = true;
+
+    // Cancel the pending initial-processing kick first — it is the timer most
+    // likely to still be armed during an immediate quit.
+    if (initialProcessingTimeout !== null) {
+      clearTimeout(initialProcessingTimeout);
+      initialProcessingTimeout = null;
+    }
+
     if (processingInterval === null) {
       console.log('[heartbeat] Heartbeat not running');
       return;

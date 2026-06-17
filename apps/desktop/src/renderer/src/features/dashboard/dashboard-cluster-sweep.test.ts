@@ -37,6 +37,9 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     );
     expect(subtabsSrc).toContain('nav-tile');
     expect(subtabsSrc).toContain('nav-tile-active');
+    // Active subview must be announced to assistive tech, not signalled by
+    // class alone (gate review P2).
+    expect(subtabsSrc).toContain("aria-current={isActive ? 'page' : undefined}");
     expect(subtabsSrc).not.toMatch(/\bbg-black\b/);
     expect(subtabsSrc).not.toContain('border-white/10');
     expect(subtabsSrc).not.toContain('rounded-full');
@@ -99,5 +102,16 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     expect(commandsSrc).toContain('<LampTile');
     expect(commandsSrc).not.toMatch(/\bbg-black\b/);
     expect(commandsSrc).not.toMatch(/(?:text|border)-(?:emerald|red)-\d/);
+  });
+
+  it('scopes stream + floor live-state counts to the active roster (no global aggregation)', () => {
+    // Counts must derive from the employees prop via the shared helper, never
+    // from the global employeeLive map — otherwise cross-workspace live state
+    // leaks into the active dashboard (idle count negative, concurrency VU > 1).
+    expect(streamSrc).toContain('countThinking(employees, employeeLive)');
+    expect(streamSrc).not.toContain('Object.values(employeeLive)');
+    expect(floorSrc).toContain('countThinking(employees, employeeLive)');
+    expect(floorSrc).toContain('countIdle(employees, employeeLive)');
+    expect(floorSrc).not.toContain('Object.values(employeeLive)');
   });
 });

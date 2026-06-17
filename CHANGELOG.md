@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Phase 3 gate-review remediation (Codex Stage 3).** Cleared two P1 runtime
+  findings and two P2s before Phase 4:
+  - **Heartbeat shutdown ownership (P1).** The proactive-execution heartbeat
+    loop was a boot-local handle with no shutdown owner, so its `setInterval`
+    and an untracked initial `setTimeout` kept querying the database during
+    quit — emitting post-teardown `database connection is not open` rejections.
+    Promoted it to a module-level instance stopped first in the `will-quit`
+    chain; `stop()` now clears both timers and a `stopped` guard short-circuits
+    any already-queued tick.
+  - **Dashboard live-state scoping (P1).** Stream and Floor derived their
+    "thinking" counts from the global `employeeLive` map, so live state from
+    another workspace polluted the active dashboard — inflating counts, driving
+    the Floor idle count negative, and pushing the concurrency VU meter past 1.
+    Counts now derive from the active roster via a shared, unit-tested
+    `live-state-counts` helper; idle stays in `[0, n]` and the VU ratio in
+    `[0, 1]`.
+  - **Dashboard subtab active state (P2, a11y).** The active subview was
+    signalled by class alone; added `aria-current="page"` so assistive
+    technology announces it.
+  - **`lint:eslint` reproducibility (P2).** The cold `eslint .` pass takes
+    ~5 min — 92% of it `import/no-cycle`'s graph analysis (`TIMING=1`
+    profiled). Added `--cache` so warm re-runs only re-check changed files
+    (seconds); the cache is gitignored. The gate itself never failed (0
+    errors) and CI's 25-min job budget already absorbs the cold pass.
+
 ### Changed
 - **Aesthetic sweep Phase 3 — Mission Control.** The flagship dashboard
   (`mission-control-dashboard.tsx`, 1,760 LOC) and its eight sub-views recomposed

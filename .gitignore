@@ -38,6 +38,11 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+# eslint incremental cache (--cache) — makes warm lint re-runs near-instant
+# so the ~5-min cold `eslint .` pass is paid once per environment, not every
+# invocation. Per-environment + content/config-hashed, so never committed.
+.eslintcache
+
 # playwright
 test-results/
 playwright-report/

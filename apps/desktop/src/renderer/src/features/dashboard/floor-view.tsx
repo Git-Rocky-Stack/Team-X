@@ -1,6 +1,7 @@
 import type { Employee } from '@team-x/shared-types';
 
 import { SubviewState } from './dashboard-subview-state.js';
+import { countIdle, countThinking } from './live-state-counts.js';
 
 import {
   Faceplate,
@@ -127,8 +128,11 @@ interface FloorViewProps {
 export function FloorView({ employees }: FloorViewProps) {
   const employeeLive = useAppStore((s) => s.employeeLive);
 
-  const thinkingCount = Object.values(employeeLive).filter((e) => e.status === 'thinking').length;
-  const idleCount = employees.length - thinkingCount;
+  // Scoped to the active roster (employees prop), NOT the global employeeLive
+  // map: counting globally let cross-workspace live state inflate thinkingCount
+  // and drive idleCount negative. See live-state-counts.ts.
+  const thinkingCount = countThinking(employees, employeeLive);
+  const idleCount = countIdle(employees, employeeLive);
 
   if (employees.length === 0) {
     return (
