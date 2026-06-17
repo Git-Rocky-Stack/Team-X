@@ -4,6 +4,8 @@ import { Faceplate, LampTile, type LampTone, LcdWell, StripeHeader } from '@/com
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
+import { SubviewState } from './dashboard-subview-state.js';
+
 function levelColor(level: string): string {
   switch (level.toLowerCase()) {
     case 'officer':
@@ -120,11 +122,13 @@ export function FloorView({ employees }: FloorViewProps) {
 
   if (employees.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-h3 text-muted-foreground">No employees yet</p>
-        <p className="mt-1 text-body text-muted-foreground/70">
-          Hire employees to see the office floor.
-        </p>
+      <div className="flex h-full flex-col p-6">
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
+          title="No employees yet"
+          description="Hire employees to see the office floor."
+        />
       </div>
     );
   }

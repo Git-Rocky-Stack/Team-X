@@ -22,7 +22,7 @@
  */
 
 import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
-import { Check, Copy, Terminal } from 'lucide-react';
+import { Check, Copy } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
 import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
@@ -70,7 +70,7 @@ function EmptyState() {
       data-testid="commands-empty-state"
       className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground"
     >
-      <Terminal className="h-8 w-8" aria-hidden="true" />
+      <LampTile label="STBY" tone="off" small interactive={false} />
       <p className="text-body-strong">No commands yet</p>
       <p className="text-caption text-muted-foreground/70">
         Press{' '}

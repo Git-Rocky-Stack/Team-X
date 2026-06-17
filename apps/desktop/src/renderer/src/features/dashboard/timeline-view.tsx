@@ -1,11 +1,13 @@
 import type { DashboardEvent, Employee } from '@team-x/shared-types';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 
 import { LampTile, type LampTone, StripeHeader } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { cn } from '@/lib/utils.js';
 import { flattenEvents, useTimelineEvents } from '@/hooks/use-events.js';
+
+import { SubviewState } from './dashboard-subview-state.js';
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -151,20 +153,21 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-        <AlertCircle className="h-8 w-8 text-led-warn" />
-        <p className="text-body-strong text-silver-mute">Failed to load timeline</p>
+      <div className="flex h-full flex-col p-6">
+        <SubviewState lampLabel="NO-GO" lampTone="nogo" title="Failed to load timeline" />
       </div>
     );
   }
 
   if (filteredEvents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-h3 text-muted-foreground">No activity yet</p>
-        <p className="mt-1 text-body text-muted-foreground/70">
-          Events will appear here as your team works.
-        </p>
+      <div className="flex h-full flex-col p-6">
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
+          title="No activity yet"
+          description="Events will appear here as your team works."
+        />
       </div>
     );
   }

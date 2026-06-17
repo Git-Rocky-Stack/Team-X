@@ -5,6 +5,8 @@ import { LampTile, VuMeter } from '@/components/console/index.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { type EmployeeLiveState, useAppStore } from '@/store/app-store.js';
 
+import { SubviewState } from './dashboard-subview-state.js';
+
 interface StreamPaneProps {
   employee: Employee;
   live: EmployeeLiveState;
@@ -75,11 +77,13 @@ export function StreamView({ employees }: StreamViewProps) {
 
   if (employees.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-h3 text-muted-foreground">No employees yet</p>
-        <p className="mt-1 text-body text-muted-foreground/70">
-          Hire employees to see their live output streams here.
-        </p>
+      <div className="flex h-full flex-col p-6">
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
+          title="No employees yet"
+          description="Hire employees to see their live output streams here."
+        />
       </div>
     );
   }
