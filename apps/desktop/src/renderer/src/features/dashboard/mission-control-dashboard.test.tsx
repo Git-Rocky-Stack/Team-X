@@ -160,6 +160,12 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('label="Workforce utilization"');
     expect(missionControlSrc).toContain('<VuMeter');
   });
+
+  it('builds shared panel chrome from console hardware + tone helpers', () => {
+    expect(missionControlSrc).toContain('lcdToneForRuntimeMetric');
+    expect(missionControlSrc).toContain('data-dashboard-primary-panel={dataPanel}');
+    expect(missionControlSrc).not.toContain('mission-panel flex min-h-[24rem]');
+  });
 });
 
 describe('Dashboard integration wiring', () => {

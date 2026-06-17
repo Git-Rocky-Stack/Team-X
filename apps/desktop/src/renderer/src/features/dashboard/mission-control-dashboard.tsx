@@ -191,26 +191,17 @@ function PrimaryPanel({
   dataPanel: string;
 }) {
   return (
-    <Card
-      className="mission-panel flex min-h-[24rem] flex-col rounded-[24px] border-white/10 bg-transparent shadow-none"
-      data-dashboard-primary-panel={dataPanel}
-    >
-      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-foreground">{title}</CardTitle>
-            {countLabel && (
-              <Badge variant="outline" className="border-border/80 bg-black text-[10px] font-mono">
-                {countLabel}
-              </Badge>
-            )}
-          </div>
-          <p className="text-body text-muted-foreground">{description}</p>
-        </div>
-        {actions}
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col">{children}</CardContent>
-    </Card>
+    <div className="flex flex-col" data-dashboard-primary-panel={dataPanel}>
+      <Faceplate
+        kicker={title}
+        serial={countLabel}
+        stripeSlot={actions}
+        bodyClassName="flex min-h-[24rem] flex-col gap-4"
+      >
+        <p className="text-body text-silver-mute">{description}</p>
+        <div className="flex flex-1 flex-col">{children}</div>
+      </Faceplate>
+    </div>
   );
 }
 
@@ -230,7 +221,7 @@ function PanelSkeletonRows({
   return (
     <div className={cn('grid gap-3', className)} data-dashboard-panel-state="loading">
       {skeletonKeys.map((key) => (
-        <div key={key} className={cn(heightClassName, 'animate-pulse rounded-2xl bg-black')} />
+        <RecessedWell key={key} className={cn(heightClassName, 'animate-pulse')} />
       ))}
     </div>
   );
@@ -252,33 +243,23 @@ function PanelMessageState({
   dataState: string;
 }) {
   return (
-    <div
-      className={cn(
-        'flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border p-8 text-center',
-        tone === 'danger'
-          ? 'border-red-500/25 bg-black text-red-200'
-          : 'border-dashed border-white/10 bg-black text-muted-foreground',
-      )}
+    <RecessedWell
+      className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center"
       data-dashboard-panel-state={dataState}
     >
-      <Icon className={cn('h-8 w-8', tone === 'danger' ? 'text-red-300' : 'text-brand')} />
+      <LampTile
+        label={tone === 'danger' ? 'FAULT' : 'STBY'}
+        tone={tone === 'danger' ? 'warn' : 'off'}
+        small
+        interactive={false}
+      />
+      <Icon className={cn('h-8 w-8', tone === 'danger' ? 'text-led-warn' : 'text-armed')} />
       <div className="space-y-1">
-        <p
-          className={cn('text-body-strong', tone === 'danger' ? 'text-red-100' : 'text-foreground')}
-        >
-          {title}
-        </p>
-        <p
-          className={cn(
-            'max-w-md text-body',
-            tone === 'danger' ? 'text-red-200/85' : 'text-muted-foreground',
-          )}
-        >
-          {description}
-        </p>
+        <p className="text-body-strong text-[hsl(var(--display-fg))]">{title}</p>
+        <p className="max-w-md text-body text-silver-mute">{description}</p>
       </div>
       {action}
-    </div>
+    </RecessedWell>
   );
 }
 
@@ -299,6 +280,19 @@ function formatRuntimeHeartbeat(value: number | null): string {
   return value === null ? 'No heartbeat yet' : formatTimeAgo(new Date(value).toISOString());
 }
 
+function lcdToneForRuntimeMetric(
+  tone: DashboardRuntimeOperationsSummary['stateTone'],
+): 'go' | 'amber' | 'red' {
+  switch (tone) {
+    case 'warning':
+      return 'amber';
+    case 'danger':
+      return 'red';
+    default:
+      return 'go';
+  }
+}
+
 function RuntimeMetricCell({
   label,
   value,
@@ -313,29 +307,15 @@ function RuntimeMetricCell({
   tone?: DashboardRuntimeOperationsSummary['stateTone'];
 }) {
   return (
-    <div
-      className={cn(
-        'rounded-2xl border bg-black p-4',
-        tone === 'warning' && 'border-amber-500/25 bg-black',
-        tone === 'danger' && 'border-red-500/25 bg-black',
-        tone === 'accent' && 'border-brand/30 bg-black',
-        tone === 'default' && 'border-white/10',
-      )}
-    >
-      <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-        <Icon
-          className={cn(
-            'h-4 w-4',
-            tone === 'warning' && 'text-amber-300',
-            tone === 'danger' && 'text-red-300',
-            tone === 'accent' && 'text-brand',
-            tone === 'default' && 'text-brand',
-          )}
-        />
+    <div className="cap flex flex-col gap-2 p-4">
+      <div className="flex items-center gap-2 text-eyebrow text-silver-mute">
+        <Icon className="h-4 w-4 text-armed" />
         {label}
       </div>
-      <p className="mt-2 text-numeric text-foreground">{value}</p>
-      <p className="mt-1 text-caption text-muted-foreground">{hint}</p>
+      <LcdWell tone={lcdToneForRuntimeMetric(tone)} className="px-3 py-2">
+        <span className="text-numeric">{value}</span>
+      </LcdWell>
+      <p className="text-caption text-silver-mute">{hint}</p>
     </div>
   );
 }
@@ -1081,28 +1061,32 @@ export function MissionControlDashboard({
         </Faceplate>
 
         {isError ? (
-          <Card className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none">
-            <CardContent className="flex min-h-[18rem] flex-col items-center justify-center gap-4 text-center">
-              <AlertTriangle className="h-10 w-10 text-red-300" />
-              <div className="space-y-1">
-                <h2 className="text-h3 text-foreground">Dashboard data could not load</h2>
-                <p className="text-body text-muted-foreground">
-                  The mission-control shell is ready, but the employee roster query failed.
-                </p>
-              </div>
-              {onRetry && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onRetry}
-                  className={DASHBOARD_GLASS_BUTTON_CLASS}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Retry
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          <Faceplate
+            kicker="DASHBOARD FAULT"
+            bodyClassName="flex min-h-[18rem] flex-col items-center justify-center gap-4 text-center"
+          >
+            <LampTile label="FAULT" tone="warn" small interactive={false} />
+            <AlertTriangle className="h-10 w-10 text-led-warn" />
+            <div className="space-y-1">
+              <h2 className="text-h3 text-[hsl(var(--display-fg))]">
+                Dashboard data could not load
+              </h2>
+              <p className="text-body text-silver-mute">
+                The mission-control shell is ready, but the employee roster query failed.
+              </p>
+            </div>
+            {onRetry && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onRetry}
+                className={DASHBOARD_GLASS_BUTTON_CLASS}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            )}
+          </Faceplate>
         ) : (
           <>
             <RuntimeOperationsBand
