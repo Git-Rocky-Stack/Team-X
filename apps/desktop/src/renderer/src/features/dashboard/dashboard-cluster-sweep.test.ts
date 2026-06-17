@@ -66,4 +66,10 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     expect(employeeCardSrc).not.toContain('font-mono');
     expect(employeeCardSrc).not.toContain('text-[11px]');
   });
+
+  it('timeline view uses stripe bands + lamp event tones', () => {
+    expect(timelineSrc).not.toMatch(/\bbg-black\b/);
+    expect(timelineSrc).not.toMatch(/text-(?:blue|green|red|purple|amber|cyan)-\d/);
+    expect(timelineSrc).toContain('<StripeHeader');
+  });
 });

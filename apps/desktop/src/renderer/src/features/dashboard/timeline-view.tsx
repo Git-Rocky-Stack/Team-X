@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 
+import { StripeHeader } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { flattenEvents, useTimelineEvents } from '@/hooks/use-events.js';
 
@@ -32,21 +33,21 @@ function formatDate(ts: number): string {
 function eventIcon(type: string) {
   switch (type) {
     case 'work.started':
-      return <Play className="h-3.5 w-3.5 text-blue-400" />;
+      return <Play className="h-3.5 w-3.5 text-led-scope" />;
     case 'work.completed':
-      return <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />;
+      return <CheckCircle2 className="h-3.5 w-3.5 text-led-go" />;
     case 'work.failed':
-      return <XCircle className="h-3.5 w-3.5 text-red-400" />;
+      return <XCircle className="h-3.5 w-3.5 text-led-warn" />;
     case 'work.queued':
       return <Loader2 className="h-3.5 w-3.5 text-muted-foreground" />;
     case 'message.persisted':
     case 'message.agent_to_agent':
-      return <MessageSquare className="h-3.5 w-3.5 text-purple-400" />;
+      return <MessageSquare className="h-3.5 w-3.5 text-led-scope" />;
     case 'tool.called':
     case 'tool.result':
-      return <Wrench className="h-3.5 w-3.5 text-amber-400" />;
+      return <Wrench className="h-3.5 w-3.5 text-led-hold" />;
     case 'employee.status_changed':
-      return <Send className="h-3.5 w-3.5 text-cyan-400" />;
+      return <Send className="h-3.5 w-3.5 text-led-scope" />;
     default:
       return <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />;
   }
@@ -142,8 +143,8 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-        <AlertCircle className="h-8 w-8 text-red-500" />
-        <p className="text-body-strong text-muted-foreground">Failed to load timeline</p>
+        <AlertCircle className="h-8 w-8 text-led-warn" />
+        <p className="text-body-strong text-silver-mute">Failed to load timeline</p>
       </div>
     );
   }
@@ -163,16 +164,14 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
     <div className="space-y-6 p-6">
       {[...groups.entries()].map(([dateLabel, dateEvents]) => (
         <div key={dateLabel}>
-          <div className="sticky top-0 z-10 mb-3 bg-black">
-            <span className="text-eyebrow text-muted-foreground">{dateLabel}</span>
-          </div>
-          <div className="relative ml-4 border-l border-border pl-6">
+          <StripeHeader kicker={dateLabel} className="sticky top-0 z-10 mb-3" />
+          <div className="relative ml-4 border-l border-[hsl(var(--hairline))] pl-6">
             {dateEvents.map((event) => (
               <div key={event.id} className="group relative mb-4 last:mb-0">
-                <div className="absolute -left-[31px] flex h-5 w-5 items-center justify-center rounded-full border border-border bg-black">
+                <div className="absolute -left-[31px] flex h-5 w-5 items-center justify-center rounded-pill border border-[hsl(var(--hairline))] bg-carbon-950">
                   {eventIcon(event.type)}
                 </div>
-                <div className="flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-black">
+                <div className="flex items-start gap-3 rounded-control px-3 py-2 transition-colors hover:bg-carbon-900">
                   <div className="min-w-0 flex-1">
                     <p className="text-body text-foreground">
                       {eventDescription(event, employeeMap)}
