@@ -20,19 +20,6 @@ import {
 } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 
-import {
-  MissionControlRow,
-  MissionHero,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPageShell,
-  MissionPill,
-  MissionRailCard,
-  MissionSectionCard,
-  MissionSegmentedButton,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
-
 import { AgentImprovementPanel } from './agent-improvement-panel.js';
 import { ApprovalsPanel } from './approvals-panel.js';
 import { ArtifactsPanel } from './artifacts-panel.js';
@@ -44,6 +31,15 @@ import { RoutinesPanel } from './routines-panel.js';
 import { RuntimeOperationsPanel } from './runtime-operations-panel.js';
 import { RuntimeProfilesPanel } from './runtime-profiles-panel.js';
 
+import {
+  Faceplate,
+  LampTile,
+  type LampTone,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+} from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import {
@@ -60,6 +56,7 @@ import {
   useRevokeOperatorInvite,
   useSharingReadiness,
 } from '@/hooks/use-operators.js';
+import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
 type AutonomySubview =
@@ -92,9 +89,9 @@ const AUTONOMY_SUBVIEWS: Array<{
 ];
 
 const ACCESS_FIELD_CLASSNAME =
-  'h-10 w-full rounded-md border border-white/10 bg-black/20 px-3 text-body text-foreground outline-none transition placeholder:text-muted-foreground focus:border-white/20';
+  'well-input flex h-10 w-full rounded-control px-3 text-body text-foreground focus-visible:outline-none placeholder:text-muted-foreground';
 const ACCESS_TEXTAREA_CLASSNAME =
-  'min-h-[96px] w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 text-body text-foreground outline-none transition placeholder:text-muted-foreground focus:border-white/20';
+  'well-input flex min-h-[96px] w-full rounded-control px-3 py-2 text-body text-foreground focus-visible:outline-none placeholder:text-muted-foreground';
 const ACCESS_LABEL_CLASSNAME = 'text-eyebrow text-muted-foreground';
 const OPERATOR_INVITE_AUTH_MODE_OPTIONS: SharedOperatorAuthMode[] = ['invited', 'cloud'];
 const OPERATOR_INVITE_ROLE_OPTIONS: OperatorMembershipRole[] = ['operator', 'reviewer', 'admin'];
@@ -244,46 +241,40 @@ function sharingModeLabel(mode: 'local' | 'invited' | 'cloud'): string {
   }
 }
 
-function sharingReadinessTone(
-  readiness: 'ready' | 'warning' | 'blocked',
-): 'default' | 'accent' | 'danger' {
+function sharingReadinessTone(readiness: 'ready' | 'warning' | 'blocked'): LampTone {
   switch (readiness) {
     case 'ready':
-      return 'accent';
+      return 'go';
     case 'warning':
-      return 'default';
+      return 'hold';
     default:
-      return 'danger';
+      return 'nogo';
   }
 }
 
-function inviteStatusTone(
-  status: OperatorInvite['status'],
-): 'default' | 'accent' | 'warning' | 'danger' {
+function inviteStatusTone(status: OperatorInvite['status']): LampTone {
   switch (status) {
     case 'accepted':
-      return 'accent';
+      return 'go';
     case 'expired':
-      return 'danger';
+      return 'nogo';
     case 'pending':
-      return 'warning';
+      return 'hold';
     default:
-      return 'default';
+      return 'off';
   }
 }
 
-function cloudLinkTone(
-  state: CompanyCloudLinkStatus['state'],
-): 'default' | 'accent' | 'warning' | 'danger' {
+function cloudLinkTone(state: CompanyCloudLinkStatus['state']): LampTone {
   switch (state) {
     case 'linked':
-      return 'accent';
+      return 'go';
     case 'sync-paused':
-      return 'warning';
+      return 'hold';
     case 'sync-degraded':
-      return 'danger';
+      return 'nogo';
     default:
-      return 'default';
+      return 'off';
   }
 }
 
@@ -366,17 +357,17 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
         const sourceDescription = membershipSourceDescription(entry);
 
         return (
-          <MissionInsetSurface key={entry.membership.id} className="p-4">
+          <RecessedWell key={entry.membership.id} className="p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-body-strong text-foreground">
                     {entry.operator.displayName}
                   </span>
-                  <MissionPill tone="accent">{entry.membership.role}</MissionPill>
-                  <MissionPill>{entry.operator.authMode}</MissionPill>
-                  <MissionPill>{membershipSourceLabel(entry)}</MissionPill>
-                  {entry.operator.id === 'rocky' ? <MissionPill>local owner</MissionPill> : null}
+                  <Tag>{entry.membership.role}</Tag>
+                  <Tag>{entry.operator.authMode}</Tag>
+                  <Tag>{membershipSourceLabel(entry)}</Tag>
+                  {entry.operator.id === 'rocky' ? <Tag>local owner</Tag> : null}
                 </div>
                 <p className="text-caption text-muted-foreground">
                   {entry.operator.email?.trim() ? entry.operator.email : authModeDescription(entry)}
@@ -387,9 +378,7 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
               </div>
               <div className="flex max-w-xl flex-wrap items-center justify-end gap-2">
                 {privileges.length > 0 ? (
-                  privileges.map((privilege) => (
-                    <MissionPill key={privilege}>{privilege}</MissionPill>
-                  ))
+                  privileges.map((privilege) => <Tag key={privilege}>{privilege}</Tag>)
                 ) : (
                   <span className="text-caption text-muted-foreground">
                     No elevated governance capabilities are assigned to this membership.
@@ -397,7 +386,7 @@ function AccessList({ entries }: { entries: readonly OperatorAccessEntry[] }) {
                 )}
               </div>
             </div>
-          </MissionInsetSurface>
+          </RecessedWell>
         );
       })}
     </div>
@@ -458,61 +447,63 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
 
   if (!companyId || !company) {
     return (
-      <MissionPageShell data-autonomy-view="">
-        <MissionHero
-          title="Autonomy"
-          eyebrow="Operator Control Plane"
-          description="Autonomy becomes interactive once a workspace is active. Select or create a workspace first so Team-X can resolve operators, policies, and execution posture."
-          icon={Workflow}
-          meta={
-            <>
-              <MissionPill tone="accent">local-first</MissionPill>
-              <MissionPill>multi-user ready</MissionPill>
-              <MissionPill>cloud-ready seams</MissionPill>
-            </>
-          }
-        />
-        <MissionSectionCard>
-          <MissionStateBlock
+      <div className="flex flex-col gap-6 p-4 lg:p-6" data-autonomy-view="">
+        <Faceplate kicker="Operator Control Plane" serial="AUTONOMY" bodyClassName="space-y-6">
+          <div className="space-y-2">
+            <h1 className="text-display font-display text-foreground">Autonomy</h1>
+            <p className="max-w-3xl text-body text-silver-mute">
+              Autonomy becomes interactive once a workspace is active. Select or create a workspace
+              first so Team-X can resolve operators, policies, and execution posture.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Tag>local-first</Tag>
+            <Tag>multi-user ready</Tag>
+            <Tag>cloud-ready seams</Tag>
+          </div>
+        </Faceplate>
+        <Faceplate kicker="Autonomy Scope" bodyClassName="space-y-3">
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
             title="Autonomy needs an active workspace"
             description="Pick a workspace from the switcher or create a new one to inspect operator access, future runtime bindings, and governance controls."
-            icon={ShieldCheck}
           />
-        </MissionSectionCard>
-      </MissionPageShell>
+        </Faceplate>
+      </div>
     );
   }
 
   return (
-    <MissionPageShell data-autonomy-view="">
-      <MissionHero
-        title="Autonomy"
-        eyebrow="Operator Control Plane"
-        description="Supervise runtime posture, recurring operations, budgets, approvals, artifacts, and access from one mission-language surface."
-        icon={Workflow}
-        meta={
-          <>
-            <MissionPill tone="accent">{company.name}</MissionPill>
-            <MissionPill>{company.slug}</MissionPill>
-            <MissionPill>local-first</MissionPill>
-            <MissionPill>cloud-ready seams</MissionPill>
-          </>
-        }
-      >
+    <div className="flex flex-col gap-6 p-4 lg:p-6" data-autonomy-view="">
+      <Faceplate kicker="Operator Control Plane" serial="AUTONOMY" bodyClassName="space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-display font-display text-foreground">Autonomy</h1>
+          <p className="max-w-3xl text-body text-silver-mute">
+            Supervise runtime posture, recurring operations, budgets, approvals, artifacts, and
+            access from one mission-language surface.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Tag>{company.name}</Tag>
+          <Tag>{company.slug}</Tag>
+          <Tag>local-first</Tag>
+          <Tag>cloud-ready seams</Tag>
+        </div>
         <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
-          <MissionMetricTile
+          <MetricTile
             label="Operators"
             value={operatorsQuery.isLoading ? '...' : String(entries.length)}
             hint="Company-scoped human supervisors"
             icon={ShieldCheck}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Owners"
             value={operatorsQuery.isLoading ? '...' : String(accessSummary.owners)}
             hint="Auto-bootstrapped local control"
             icon={Workflow}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Sharing mode"
             value={
               sharingReadinessQuery.isLoading
@@ -524,68 +515,76 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
             hint="Configured workspace sharing posture"
             icon={Bot}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Governance-ready"
             value={operatorsQuery.isLoading ? '...' : String(accessSummary.privilegeCount)}
             hint="Memberships with elevated authority"
             icon={CheckSquare2}
           />
         </div>
-      </MissionHero>
+      </Faceplate>
 
-      <MissionSectionCard
-        title="Autonomy Scope"
-        description="This first slice ships the operator and access foundation plus the visible control-plane shell."
-      >
-        <MissionControlRow className="gap-2">
+      <Faceplate kicker="Autonomy Scope" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          This first slice ships the operator and access foundation plus the visible control-plane
+          shell.
+        </p>
+        <div className="flex flex-wrap items-center gap-1">
           {AUTONOMY_SUBVIEWS.map((subview) => {
             const Icon = subview.icon;
+            const isActive = subview.value === activeSubview;
             return (
-              <MissionSegmentedButton
+              <button
+                type="button"
                 key={subview.value}
-                active={subview.value === activeSubview}
                 onClick={() => setActiveSubview(subview.value)}
-                className="flex items-center gap-2"
+                aria-current={subview.value === activeSubview ? 'page' : undefined}
                 data-autonomy-subview={subview.value}
+                className={cn(
+                  'nav-tile flex items-center gap-1.5 px-3.5 py-1.5 text-button-sm',
+                  isActive && 'nav-tile-active',
+                )}
               >
                 <Icon className="h-3.5 w-3.5" />
                 {subview.label}
-              </MissionSegmentedButton>
+              </button>
             );
           })}
-        </MissionControlRow>
-      </MissionSectionCard>
+        </div>
+      </Faceplate>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_360px]">
-        <MissionSectionCard title={activeCopy.title} description={activeCopy.description}>
+        <Faceplate kicker={activeCopy.title} bodyClassName="space-y-4">
+          <p className="text-caption text-silver-mute">{activeCopy.description}</p>
           {activeSubview === 'doctor' ? (
             <AutonomyDoctorPanel companyId={companyId} />
           ) : activeSubview === 'benchmarks' ? (
             <AutonomyBenchmarkPanel companyId={companyId} />
           ) : activeSubview === 'access' ? (
             operatorsQuery.isLoading ? (
-              <MissionStateBlock
+              <SubviewState
+                lampLabel="STBY"
+                lampTone="off"
                 title="Resolving operator access"
                 description="Team-X is loading the operator memberships for this workspace."
-                icon={ShieldCheck}
               />
             ) : operatorsQuery.isError ? (
-              <MissionStateBlock
+              <SubviewState
+                lampLabel="NO-GO"
+                lampTone="nogo"
                 title="Operator access could not load"
                 description="The operator foundation exists in the main process, but this workspace access read failed. Retry from the view or inspect the main-process logs."
-                icon={ShieldCheck}
-                tone="danger"
               />
             ) : entries.length === 0 ? (
-              <MissionStateBlock
+              <SubviewState
+                lampLabel="NO-GO"
+                lampTone="nogo"
                 title={activeCopy.emptyTitle}
                 description={activeCopy.emptyDescription}
-                icon={ShieldCheck}
-                tone="danger"
               />
             ) : (
               <div className="space-y-4">
-                <MissionInsetSurface className="space-y-4 p-4" data-cloud-link-card="">
+                <RecessedWell className="space-y-4 p-4" data-cloud-link-card="">
                   <div className="space-y-1">
                     <div className="text-body-strong text-foreground">Linked Workspace</div>
                     <p className="text-caption text-muted-foreground">
@@ -599,56 +598,59 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       Resolving linked-workspace posture...
                     </p>
                   ) : cloudLinkQuery.isError || !cloudLink ? (
-                    <p className="text-caption text-red-200">
+                    <p className="text-caption text-led-nogo">
                       Linked-workspace posture could not be loaded for this workspace.
                     </p>
                   ) : (
                     <>
                       <div className="flex flex-wrap items-center gap-2">
-                        <MissionPill tone={cloudLinkTone(cloudLink.state)}>
-                          {cloudLinkStateLabel(cloudLink.state)}
-                        </MissionPill>
-                        <MissionPill>{cloudLink.isLinked ? 'linked' : 'unlinked'}</MissionPill>
-                        <MissionPill>{cloudLink.deviceId}</MissionPill>
+                        <LampTile
+                          label={cloudLinkStateLabel(cloudLink.state)}
+                          tone={cloudLinkTone(cloudLink.state)}
+                          small
+                          interactive={false}
+                        />
+                        <Tag>{cloudLink.isLinked ? 'linked' : 'unlinked'}</Tag>
+                        <Tag mono>{cloudLink.deviceId}</Tag>
                       </div>
                       <p className="text-caption text-muted-foreground">
                         {cloudLinkDescription(cloudLink)}
                       </p>
                       <div className="grid gap-3 md:grid-cols-2">
-                        <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-3">
+                        <RecessedWell className="px-3 py-3">
                           <div className={ACCESS_LABEL_CLASSNAME}>Cloud Workspace Id</div>
                           <div className="mt-2 break-all text-caption text-foreground">
                             {cloudLink.cloudWorkspaceId ?? 'Not reserved yet'}
                           </div>
-                        </div>
-                        <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-3">
+                        </RecessedWell>
+                        <RecessedWell className="px-3 py-3">
                           <div className={ACCESS_LABEL_CLASSNAME}>Last Sync</div>
                           <div className="mt-2 text-caption text-foreground">
                             {cloudLink.lastSyncAt
                               ? new Date(cloudLink.lastSyncAt).toLocaleString()
                               : 'No successful sync recorded yet'}
                           </div>
-                        </div>
+                        </RecessedWell>
                       </div>
                       {cloudLink.lastSyncError ? (
-                        <p className="text-caption text-red-200">{cloudLink.lastSyncError}</p>
+                        <p className="text-caption text-led-nogo">{cloudLink.lastSyncError}</p>
                       ) : null}
                       {linkWorkspaceMutation.isError ? (
-                        <p className="text-caption text-red-200">
+                        <p className="text-caption text-led-nogo">
                           {linkWorkspaceMutation.error instanceof Error
                             ? linkWorkspaceMutation.error.message
                             : 'Workspace link failed.'}
                         </p>
                       ) : null}
                       {unlinkWorkspaceMutation.isError ? (
-                        <p className="text-caption text-red-200">
+                        <p className="text-caption text-led-nogo">
                           {unlinkWorkspaceMutation.error instanceof Error
                             ? unlinkWorkspaceMutation.error.message
                             : 'Workspace unlink failed.'}
                         </p>
                       ) : null}
                       {reconnectWorkspaceMutation.isError ? (
-                        <p className="text-caption text-red-200">
+                        <p className="text-caption text-led-nogo">
                           {reconnectWorkspaceMutation.error instanceof Error
                             ? reconnectWorkspaceMutation.error.message
                             : 'Workspace reconnect failed.'}
@@ -673,7 +675,6 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="border-white/10 bg-black/10 hover:bg-black/20"
                             onClick={() => {
                               void reconnectWorkspaceMutation.mutateAsync();
                             }}
@@ -685,7 +686,6 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="border-white/10 bg-black/10 hover:bg-black/20"
                             onClick={() => {
                               void unlinkWorkspaceMutation.mutateAsync();
                             }}
@@ -699,8 +699,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       </div>
                     </>
                   )}
-                </MissionInsetSurface>
-                <MissionInsetSurface className="space-y-4 p-4" data-operator-invites="">
+                </RecessedWell>
+                <RecessedWell className="space-y-4 p-4" data-operator-invites="">
                   <div className="space-y-1">
                     <div className="text-body-strong text-foreground">Queue Operator Invite</div>
                     <p className="text-caption text-muted-foreground">
@@ -786,7 +786,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       />
                     </label>
                     {createInviteMutation.isError ? (
-                      <p className="text-caption text-red-200">
+                      <p className="text-caption text-led-nogo">
                         {createInviteMutation.error instanceof Error
                           ? createInviteMutation.error.message
                           : 'The operator invite could not be created.'}
@@ -807,16 +807,19 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       <div className="text-body-strong text-foreground">
                         Invite Queue ({invites.length})
                       </div>
-                      <MissionPill tone={pendingInvites.length > 0 ? 'warning' : 'accent'}>
-                        {pendingInvites.length} pending
-                      </MissionPill>
+                      <LampTile
+                        label={`${pendingInvites.length} pending`}
+                        tone={pendingInvites.length > 0 ? 'hold' : 'go'}
+                        small
+                        interactive={false}
+                      />
                     </div>
                     {invitesQuery.isLoading ? (
                       <p className="text-caption text-muted-foreground">
                         Loading operator invites...
                       </p>
                     ) : invitesQuery.isError ? (
-                      <p className="text-caption text-red-200">
+                      <p className="text-caption text-led-nogo">
                         Operator invites could not be loaded for this workspace.
                       </p>
                     ) : invites.length === 0 ? (
@@ -833,7 +836,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                             revokeInviteMutation.isPending &&
                             revokeInviteMutation.variables?.inviteId === invite.id;
                           return (
-                            <MissionInsetSurface
+                            <RecessedWell
                               key={invite.id}
                               className="space-y-3 p-4"
                               data-operator-invite={invite.id}
@@ -846,12 +849,15 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                         ? invite.displayName
                                         : invite.email}
                                     </span>
-                                    <MissionPill>{invite.authMode}</MissionPill>
-                                    <MissionPill>{invite.role}</MissionPill>
-                                    <MissionPill>{inviteSourceLabel(invite)}</MissionPill>
-                                    <MissionPill tone={inviteStatusTone(invite.status)}>
-                                      {invite.status}
-                                    </MissionPill>
+                                    <Tag>{invite.authMode}</Tag>
+                                    <Tag>{invite.role}</Tag>
+                                    <Tag>{inviteSourceLabel(invite)}</Tag>
+                                    <LampTile
+                                      label={invite.status}
+                                      tone={inviteStatusTone(invite.status)}
+                                      small
+                                      interactive={false}
+                                    />
                                   </div>
                                   <p className="text-caption text-muted-foreground">
                                     {invite.email}
@@ -891,7 +897,6 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        className="border-white/10 bg-black/10 hover:bg-black/20"
                                         disabled={isAccepting || isRevoking}
                                         onClick={() => {
                                           void revokeInviteMutation.mutateAsync({
@@ -905,13 +910,13 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                                   ) : null}
                                 </div>
                               </div>
-                            </MissionInsetSurface>
+                            </RecessedWell>
                           );
                         })}
                       </div>
                     )}
                   </div>
-                </MissionInsetSurface>
+                </RecessedWell>
                 <AccessList entries={entries} />
               </div>
             )
@@ -933,26 +938,23 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
           ) : activeSubview === 'memory' ? (
             <MemoryPanel companyId={companyId} />
           ) : (
-            <MissionStateBlock
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
               title={activeCopy.emptyTitle}
               description={activeCopy.emptyDescription}
-              icon={
-                AUTONOMY_SUBVIEWS.find((item) => item.value === activeSubview)?.icon ?? Workflow
-              }
             />
           )}
-        </MissionSectionCard>
+        </Faceplate>
 
         <div className="space-y-4">
-          <MissionRailCard
-            title="Access Posture"
-            description="Current workspace supervision footing"
-          >
-            <MissionInsetSurface className="p-4">
+          <Faceplate kicker="Access Posture" bodyClassName="space-y-4">
+            <p className="text-caption text-silver-mute">Current workspace supervision footing</p>
+            <RecessedWell className="p-4">
               <div className="space-y-3 text-body text-muted-foreground">
                 <div className="flex items-center justify-between gap-3">
                   <span>Posture</span>
-                  <span className="font-semibold uppercase tracking-[0.16em] text-foreground">
+                  <span className="text-eyebrow text-foreground">
                     {postureLabel(accessSummary)}
                   </span>
                 </div>
@@ -979,40 +981,42 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                   <span className="font-semibold text-foreground">{pendingInvites.length}</span>
                 </div>
               </div>
-            </MissionInsetSurface>
-            <MissionInsetSurface className="space-y-3 p-4">
+            </RecessedWell>
+            <RecessedWell className="space-y-3 p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <MissionPill tone={cloudLinkTone(cloudLink?.state ?? 'unlinked')}>
-                  {cloudLink ? cloudLinkStateLabel(cloudLink.state) : 'link unknown'}
-                </MissionPill>
-                <MissionPill>{cloudLink?.cloudWorkspaceId ?? 'no workspace id'}</MissionPill>
+                <LampTile
+                  label={cloudLink ? cloudLinkStateLabel(cloudLink.state) : 'link unknown'}
+                  tone={cloudLinkTone(cloudLink?.state ?? 'unlinked')}
+                  small
+                  interactive={false}
+                />
+                <Tag mono>{cloudLink?.cloudWorkspaceId ?? 'no workspace id'}</Tag>
               </div>
               <p className="text-caption text-muted-foreground">
                 {cloudLinkDescription(cloudLink)}
               </p>
-            </MissionInsetSurface>
+            </RecessedWell>
             <p className="text-caption text-muted-foreground">
               {postureDescription(accessSummary)}
             </p>
-            <MissionInsetSurface className="p-4">
+            <RecessedWell className="p-4">
               {sharingReadinessQuery.isLoading ? (
                 <p className="text-caption text-muted-foreground">Resolving sharing readiness...</p>
               ) : sharingReadinessQuery.isError || !sharingReadiness ? (
-                <p className="text-caption text-red-200">
+                <p className="text-caption text-led-nogo">
                   Sharing readiness is unavailable for this workspace.
                 </p>
               ) : (
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <MissionPill tone="accent">
-                      configured {sharingModeLabel(sharingReadiness.configuredMode)}
-                    </MissionPill>
-                    <MissionPill>
-                      effective {sharingModeLabel(sharingReadiness.effectiveMode)}
-                    </MissionPill>
-                    <MissionPill tone={sharingReadinessTone(sharingReadiness.readiness)}>
-                      {sharingReadiness.readiness}
-                    </MissionPill>
+                    <Tag>configured {sharingModeLabel(sharingReadiness.configuredMode)}</Tag>
+                    <Tag>effective {sharingModeLabel(sharingReadiness.effectiveMode)}</Tag>
+                    <LampTile
+                      label={sharingReadiness.readiness}
+                      tone={sharingReadinessTone(sharingReadiness.readiness)}
+                      small
+                      interactive={false}
+                    />
                   </div>
                   <p className="text-caption text-muted-foreground">
                     {sharingReadiness.lastExportedAt
@@ -1026,7 +1030,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-caption text-emerald-300">
+                    <p className="text-caption text-led-go">
                       The configured sharing posture is ready on this workspace.
                     </p>
                   )}
@@ -1034,20 +1038,18 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="border-white/10 bg-black/10 hover:bg-black/20"
                     onClick={() => openSettingsSection('portability')}
                   >
                     Open portability
                   </Button>
                 </div>
               )}
-            </MissionInsetSurface>
+            </RecessedWell>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="border-white/10 bg-black/10 hover:bg-black/20"
                 onClick={() => setActiveSubview('approvals')}
               >
                 Open approvals
@@ -1056,19 +1058,18 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="border-white/10 bg-black/10 hover:bg-black/20"
                 onClick={() => setActiveSubview('budgets')}
               >
                 Open budgets
               </Button>
             </div>
-          </MissionRailCard>
+          </Faceplate>
 
-          <MissionRailCard
-            title="What Lands Next"
-            description="The next autonomy slices build on this shell"
-          >
-            <MissionInsetSurface className="space-y-3 p-4 text-body text-muted-foreground">
+          <Faceplate kicker="What Lands Next" bodyClassName="space-y-4">
+            <p className="text-caption text-silver-mute">
+              The next autonomy slices build on this shell
+            </p>
+            <RecessedWell className="space-y-3 p-4 text-body text-muted-foreground">
               <p>
                 Runtime profiles, routines, budgets, approvals, and artifacts are now active slices
                 of the control plane.
@@ -1082,10 +1083,10 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                 Use the User Guide and Mission Control links to keep autonomy visible instead of
                 burying governance behind one isolated tab.
               </p>
-            </MissionInsetSurface>
-          </MissionRailCard>
+            </RecessedWell>
+          </Faceplate>
         </div>
       </div>
-    </MissionPageShell>
+    </div>
   );
 }

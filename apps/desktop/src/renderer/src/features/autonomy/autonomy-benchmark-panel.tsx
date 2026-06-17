@@ -13,18 +13,18 @@ import {
   Gauge,
   Play,
   RotateCcw,
-  XCircle,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
-  MissionControlRow,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
-
+  LampTile,
+  type LampTone,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+  VuMeter,
+} from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { useAutonomyBenchmark } from '@/hooks/use-autonomy-benchmark.js';
 
@@ -63,8 +63,8 @@ function formatCost(value: string): string {
   return `$${Number(value).toFixed(4)}`;
 }
 
-function resultTone(status: AutonomyBenchmarkScenarioResult['status']): 'accent' | 'danger' {
-  return status === 'passed' ? 'accent' : 'danger';
+function resultTone(status: AutonomyBenchmarkScenarioResult['status']): LampTone {
+  return status === 'passed' ? 'go' : 'nogo';
 }
 
 function toggleValue<T extends string>(values: readonly T[], value: T): T[] {
@@ -85,37 +85,36 @@ function EvidencePills({ result }: { result: AutonomyBenchmarkScenarioResult }) 
   const evidence = result.evidence;
   return (
     <div className="flex flex-wrap gap-2">
-      <MissionPill mono>{evidence.eventTypes.length} events</MissionPill>
-      <MissionPill mono>{evidence.toolCallCount} tool calls</MissionPill>
-      <MissionPill mono>{evidence.artifactCount} artifacts</MissionPill>
+      <Tag mono>{evidence.eventTypes.length} events</Tag>
+      <Tag mono>{evidence.toolCallCount} tool calls</Tag>
+      <Tag mono>{evidence.artifactCount} artifacts</Tag>
       {evidence.checkoutStatuses.slice(0, 3).map((status) => (
-        <MissionPill key={status}>{status}</MissionPill>
+        <Tag key={status}>{status}</Tag>
       ))}
     </div>
   );
 }
 
 function ScenarioResultRow({ result }: { result: AutonomyBenchmarkScenarioResult }) {
-  const StatusIcon = result.status === 'passed' ? CheckCircle2 : XCircle;
-
   return (
-    <MissionInsetSurface
-      className="space-y-3 p-4"
-      data-autonomy-benchmark-result={result.scenarioId}
-    >
+    <RecessedWell className="space-y-3 p-4" data-autonomy-benchmark-result={result.scenarioId}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusIcon className="h-4 w-4 text-muted-foreground" />
             <span className="text-body-strong text-foreground">{result.label}</span>
-            <MissionPill tone={resultTone(result.status)}>{result.status}</MissionPill>
+            <LampTile
+              label={result.status}
+              tone={resultTone(result.status)}
+              small
+              interactive={false}
+            />
           </div>
           <p className="text-caption text-muted-foreground">
             {formatMs(result.metrics.latencyMs)} latency, {result.metrics.tokenCount} tokens,{' '}
             {formatCost(result.metrics.costUsd)} simulated spend.
           </p>
         </div>
-        <MissionPill mono>{result.runtimeKind}</MissionPill>
+        <Tag mono>{result.runtimeKind}</Tag>
       </div>
 
       <EvidencePills result={result} />
@@ -129,11 +128,9 @@ function ScenarioResultRow({ result }: { result: AutonomyBenchmarkScenarioResult
       ) : null}
 
       {result.error ? (
-        <div className="rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-caption text-red-100">
-          {result.error}
-        </div>
+        <RecessedWell className="px-3 py-2 text-caption text-led-nogo">{result.error}</RecessedWell>
       ) : null}
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }
 
@@ -154,12 +151,12 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-4" data-autonomy-benchmark-panel="">
-      <MissionControlRow className="justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <Gauge className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-h2 text-foreground">Autonomy Benchmarks</h2>
-            <MissionPill>control-plane-simulated</MissionPill>
+            <Tag>control-plane-simulated</Tag>
           </div>
           <p className="text-caption text-muted-foreground">
             Repeatable scenario replay for checkout conflicts, stale recovery, budget stops, missing
@@ -171,7 +168,6 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
             type="button"
             variant="outline"
             size="sm"
-            className="border-white/10 bg-black/10 hover:bg-black/20"
             onClick={benchmark.reset}
             disabled={benchmark.isRunning || benchmark.report === null}
           >
@@ -190,17 +186,17 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
             {benchmark.isRunning ? 'Running...' : 'Run Benchmark'}
           </Button>
         </div>
-      </MissionControlRow>
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <MissionInsetSurface className="space-y-4 p-4">
+        <RecessedWell className="space-y-4 p-4">
           <div className="space-y-2">
             <div className="text-eyebrow text-muted-foreground">Runtime Targets</div>
             <div className="grid gap-2 sm:grid-cols-2">
               {RUNTIME_PROFILE_KINDS.map((kind) => (
                 <label
                   key={kind}
-                  className="flex min-h-11 items-center gap-3 rounded-md border border-white/10 bg-black/10 px-3 py-2 text-body text-foreground"
+                  className="cap flex min-h-11 items-center gap-3 px-3 py-2 text-body text-foreground"
                   data-autonomy-benchmark-runtime={kind}
                 >
                   <input
@@ -220,7 +216,7 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
               {AUTONOMY_BENCHMARK_SCENARIO_IDS.map((scenarioId) => (
                 <label
                   key={scenarioId}
-                  className="flex min-h-11 items-center gap-3 rounded-md border border-white/10 bg-black/10 px-3 py-2 text-body text-foreground"
+                  className="cap flex min-h-11 items-center gap-3 px-3 py-2 text-body text-foreground"
                   data-autonomy-benchmark-scenario={scenarioId}
                 >
                   <input
@@ -233,42 +229,43 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
               ))}
             </div>
           </div>
-        </MissionInsetSurface>
+        </RecessedWell>
 
         {benchmark.report ? (
           <div className="space-y-4" data-autonomy-benchmark-summary="">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <MissionMetricTile
+              <MetricTile
                 label="Pass Rate"
                 value={formatPercent(benchmark.report.summary.successRate)}
                 hint={`${benchmark.report.summary.passedCount}/${benchmark.report.summary.scenarioCount} scenario runs`}
                 icon={CheckCircle2}
+                tone={benchmark.report.summary.successRate < 1 ? 'amber' : undefined}
               />
-              <MissionMetricTile
+              <MetricTile
                 label="Duplicate Work"
                 value={formatPercent(benchmark.report.summary.duplicateWorkRate)}
                 hint="Race and checkout contention"
                 icon={AlertTriangle}
               />
-              <MissionMetricTile
+              <MetricTile
                 label="Recovery"
                 value={formatMs(benchmark.report.summary.meanStaleRecoveryMs)}
                 hint="Mean stale recovery"
                 icon={Activity}
               />
-              <MissionMetricTile
+              <MetricTile
                 label="Latency"
                 value={formatMs(benchmark.report.summary.meanLatencyMs)}
                 hint="Mean simulated run latency"
                 icon={Gauge}
               />
-              <MissionMetricTile
+              <MetricTile
                 label="Spend"
                 value={formatCost(benchmark.report.summary.totalCostUsd)}
                 hint={`${benchmark.report.summary.totalTokenCount.toLocaleString()} tokens`}
                 icon={BarChart3}
               />
-              <MissionMetricTile
+              <MetricTile
                 label="Artifacts"
                 value={formatPercent(benchmark.report.summary.artifactCompleteness)}
                 hint={`${benchmark.report.summary.operatorInterventions} operator interventions`}
@@ -276,23 +273,27 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
               />
             </div>
 
+            <VuMeter
+              className="w-40"
+              value={benchmark.report.summary.successRate}
+              label="Benchmark pass rate"
+            />
+
             <div className="space-y-4" data-autonomy-benchmark-results="">
               {reportGroups.map(([runtimeKind, results]) => (
-                <MissionInsetSurface
+                <RecessedWell
                   key={runtimeKind}
                   className="space-y-3 p-4"
                   data-autonomy-benchmark-runtime-group={runtimeKind}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="text-body-strong text-foreground">{runtimeKind}</div>
-                    <MissionPill
-                      tone={
-                        results.every((result) => result.status === 'passed') ? 'accent' : 'danger'
-                      }
-                    >
-                      {results.filter((result) => result.status === 'passed').length}/
-                      {results.length} passed
-                    </MissionPill>
+                    <LampTile
+                      label={`${results.filter((result) => result.status === 'passed').length}/${results.length} passed`}
+                      tone={results.every((result) => result.status === 'passed') ? 'go' : 'nogo'}
+                      small
+                      interactive={false}
+                    />
                   </div>
                   <div className="grid gap-3">
                     {results.map((result) => (
@@ -302,26 +303,27 @@ export function AutonomyBenchmarkPanel({ companyId }: { companyId: string }) {
                       />
                     ))}
                   </div>
-                </MissionInsetSurface>
+                </RecessedWell>
               ))}
             </div>
           </div>
         ) : benchmark.isError ? (
-          <MissionStateBlock
+          <SubviewState
+            lampLabel="NO-GO"
+            lampTone="nogo"
             title="Benchmark run failed"
             description={
               benchmark.error instanceof Error
                 ? benchmark.error.message
                 : 'The benchmark harness could not generate a report.'
             }
-            icon={XCircle}
-            tone="danger"
           />
         ) : (
-          <MissionStateBlock
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
             title="No benchmark report yet"
             description="Run the selected scenario set to produce an operator-readable report from the deterministic autonomy harness."
-            icon={Gauge}
           />
         )}
       </div>
