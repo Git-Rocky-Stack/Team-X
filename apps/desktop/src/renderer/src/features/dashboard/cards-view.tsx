@@ -1,10 +1,9 @@
 import type { Employee } from '@team-x/shared-types';
 import { RefreshCw } from 'lucide-react';
 
-import { SubviewState } from './dashboard-subview-state.js';
 import { EmployeeCard } from './employee-card.js';
 
-import { RecessedWell } from '@/components/console/index.js';
+import { RecessedWell, SubviewState } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useAppStore } from '@/store/app-store.js';

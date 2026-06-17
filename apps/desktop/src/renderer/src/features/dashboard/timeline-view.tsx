@@ -2,9 +2,7 @@ import type { DashboardEvent, Employee } from '@team-x/shared-types';
 import { Loader2 } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 
-import { SubviewState } from './dashboard-subview-state.js';
-
-import { LampTile, type LampTone, StripeHeader } from '@/components/console/index.js';
+import { LampTile, type LampTone, StripeHeader, SubviewState } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { flattenEvents, useTimelineEvents } from '@/hooks/use-events.js';
 import { cn } from '@/lib/utils.js';

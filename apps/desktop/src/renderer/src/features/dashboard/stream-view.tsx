@@ -1,10 +1,9 @@
 import type { Employee } from '@team-x/shared-types';
 import { Radio } from 'lucide-react';
 
-import { SubviewState } from './dashboard-subview-state.js';
 import { countThinking } from './live-state-counts.js';
 
-import { LampTile, VuMeter } from '@/components/console/index.js';
+import { LampTile, SubviewState, VuMeter } from '@/components/console/index.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { type EmployeeLiveState, useAppStore } from '@/store/app-store.js';
 

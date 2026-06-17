@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { LampTile, type LampTone, RecessedWell } from '@/components/console/index.js';
+import { LampTile, type LampTone } from './lamp-tile';
+import { RecessedWell } from './recessed-well';
 
 interface SubviewStateProps {
   /** Stencil word-lamp carrying the state: STBY (empty/idle) / NO-GO (fault). */
@@ -17,11 +18,11 @@ interface SubviewStateProps {
 }
 
 /**
- * Shared empty/error state for the dashboard sub-views — the console-vocabulary
- * counterpart of the flagship's PanelMessageState. A recessed display well with
- * a stencil word-lamp as the sole status carrier (DESIGN.md: status is a word,
- * not an icon), so every sub-view reads as one family instead of ad-hoc raw
- * text + Lucide glyphs.
+ * Shared empty/error/loading state — a recessed display well with a stencil
+ * word-lamp as the sole status carrier (DESIGN.md: status is a word, not an
+ * icon). Promoted from features/dashboard into the console library so the
+ * dashboard sub-views AND the autonomy cluster read as one family instead of
+ * ad-hoc raw text + Lucide glyphs.
  */
 export function SubviewState({
   lampLabel,

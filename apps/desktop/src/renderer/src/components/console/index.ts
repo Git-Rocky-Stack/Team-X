@@ -6,4 +6,5 @@ export { LcdWell } from './lcd-well';
 export { RecessedWell } from './recessed-well';
 export { ShiftToggle, type Shift } from './shift-toggle';
 export { StripeHeader } from './stripe-header';
+export { SubviewState } from './subview-state';
 export { ballisticsStep, segmentStates, VuMeter, type VuSegment, type VuZone } from './vu-meter';

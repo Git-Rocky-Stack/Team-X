@@ -1,6 +1,5 @@
 import type { Employee } from '@team-x/shared-types';
 
-import { SubviewState } from './dashboard-subview-state.js';
 import { countIdle, countThinking } from './live-state-counts.js';
 
 import {
@@ -9,6 +8,7 @@ import {
   type LampTone,
   LcdWell,
   StripeHeader,
+  SubviewState,
 } from '@/components/console/index.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
