@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   onto the Command Console foundation: hero and every panel on brushed-aluminum
   Faceplates with stripe placards and hex bolts; marquee metrics, telemetry, and
   runtime tiles as Departure-Mono LCD wells; all status badges retired for stencil
-  word-lamps (live/running=exec, blocked=hold, fault/error=warn, done/ok=go);
+  word-lamps (working=EXEC, idle=STBY, blocked=HOLD, fault/error/failed=NO-GO steady,
+  done/ok=GO; unacknowledged warnings keep the blinking WARN);
   live boards, rows, and session cards on machined cap tiles; the queue pressure
   bar on LED tokens; panel toggles as armed cap-select; dashboard subtabs as a
   nav-tile rail; live output streams on void-black display wells (Iosevka);
@@ -25,6 +26,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   primitive used by 22 unswept screens) is intentionally deferred to its consumers'
   phases. Visual-only: zero behavior change, every E2E/a11y selector preserved,
   E2E suite passes unmodified.
+- **Aesthetic sweep Phase 3 — design-review refinements.** Post-sweep
+  `/design-review` pass against DESIGN.md: added a steady **NO-GO** lamp tone
+  (`--led-nogo`) so terminal faults no longer use the blink-only `--led-warn`
+  (dual-form red rule — blinking WARN stays reserved for the AnnunciatorRail's
+  unacknowledged alerts); canonicalized the lamp vocabulary across every sub-view
+  (EXEC / STBY / HOLD / GO / NO-GO); replaced the floor status dots and timeline
+  event icons with stencil word-lamps; routed sub-view empty/error states through
+  a shared console `SubviewState` (recessed well + word-lamp, no status icon) and
+  added the missing cards empty state; the hero company name now renders in Archivo
+  (`font-display`); fixed the floor level-edge bezels (invalid `hsl(rgba())` →
+  valid `var()` — they were rendering nothing) and moved the C-Suite bezel off
+  armed-red onto the chrome edge; queue distribution "in progress" fill off
+  armed-red onto scope-cyan (red reserved for LIVE). Verified: full typecheck,
+  Biome + ESLint, 2,491 unit tests, and a real-renderer screenshot pass.
 - **Aesthetic sweep Phase 2 — Shell + Command Deck.** App chrome recomposed onto
   the Command Console foundation: edge-to-edge command bar (stencil nav tiles,
   placard brand, ⌘K well hint), team rail as console hardware (lamp busy signal,
