@@ -1,6 +1,6 @@
 import type { Employee } from '@team-x/shared-types';
 
-import { Faceplate, LcdWell, StripeHeader } from '@/components/console/index.js';
+import { Faceplate, LampTile, type LampTone, LcdWell, StripeHeader } from '@/components/console/index.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -40,18 +40,35 @@ function levelLabel(level: string): string {
   }
 }
 
-function statusIndicator(status: string): { color: string; label: string } {
+/** Live status → stencil word-lamp (DESIGN.md: status is a word, not a bare dot). */
+function statusLamp(status: string): { label: string; tone: LampTone } {
   switch (status) {
     case 'thinking':
-      return { color: 'bg-led-scope', label: 'Thinking' };
+      return { label: 'EXEC', tone: 'exec' };
     case 'meeting':
-      return { color: 'bg-led-go', label: 'In meeting' };
+      return { label: 'MTG', tone: 'go' };
     case 'blocked':
-      return { color: 'bg-led-hold', label: 'Blocked' };
+      return { label: 'HOLD', tone: 'hold' };
     case 'error':
-      return { color: 'bg-led-warn', label: 'Error' };
+      return { label: 'NO-GO', tone: 'nogo' };
     default:
-      return { color: 'bg-graphite', label: 'Idle' };
+      return { label: 'STBY', tone: 'off' };
+  }
+}
+
+/** Human-readable status for the cell's accessible name. */
+function statusHuman(status: string): string {
+  switch (status) {
+    case 'thinking':
+      return 'Thinking';
+    case 'meeting':
+      return 'In meeting';
+    case 'blocked':
+      return 'Blocked';
+    case 'error':
+      return 'Error';
+    default:
+      return 'Idle';
   }
 }
 
@@ -63,34 +80,27 @@ function FloorCell({ employee }: FloorCellProps) {
   const setSelected = useAppStore((s) => s.setSelectedEmployee);
   const liveState = useAppStore((s) => s.employeeLive[employee.id]);
   const displayStatus = liveState?.status ?? employee.status;
-  const { color, label } = statusIndicator(displayStatus);
+  const lamp = statusLamp(displayStatus);
 
   return (
     <button
       type="button"
       onClick={() => setSelected(employee.id)}
+      aria-label={`${employee.name}, ${employee.title} — ${statusHuman(displayStatus)}`}
       className={cn('cap flex flex-col items-center gap-2 p-3', levelColor(employee.level))}
     >
-      <div className="relative">
-        <div className="flex h-10 w-10 items-center justify-center rounded-pill bg-carbon-900 text-xs font-bold">
-          {employee.name
-            .split(' ')
-            .map((w) => w[0])
-            .join('')
-            .slice(0, 2)}
-        </div>
-        <span
-          className={cn(
-            'absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-pill border-2 border-background',
-            color,
-          )}
-          title={label}
-        />
+      <div className="flex h-10 w-10 items-center justify-center rounded-pill bg-carbon-900 text-label font-semibold">
+        {employee.name
+          .split(' ')
+          .map((w) => w[0])
+          .join('')
+          .slice(0, 2)}
       </div>
       <div className="w-full text-center">
         <p className="truncate text-body-strong text-foreground">{employee.name}</p>
         <p className="truncate text-caption text-silver-mute">{employee.title}</p>
       </div>
+      <LampTile label={lamp.label} tone={lamp.tone} small interactive={false} />
       <span className="rounded-control bg-carbon-900 px-2 py-0.5 text-eyebrow-sm font-medium text-silver-mute">
         {levelLabel(employee.level)}
       </span>
