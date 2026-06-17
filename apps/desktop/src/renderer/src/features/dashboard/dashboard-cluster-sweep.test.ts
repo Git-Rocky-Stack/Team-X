@@ -42,4 +42,14 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     expect(subtabsSrc).not.toContain('rounded-full');
     expect(subtabsSrc).not.toContain('border-brand/30');
   });
+
+  it('stream view uses console panes, a display well, and the concurrency VU meter', () => {
+    expect(streamSrc).toContain('<VuMeter');
+    expect(streamSrc).toContain('label="Live stream concurrency"');
+    expect(streamSrc).toContain('thinkingCount / employees.length');
+    expect(streamSrc).toContain('<LampTile');
+    expect(streamSrc).not.toMatch(/\bbg-black\b/);
+    expect(streamSrc).not.toContain('bg-zinc-500');
+    expect(streamSrc).not.toContain('text-code-sm leading-relaxed text-foreground/80');
+  });
 });

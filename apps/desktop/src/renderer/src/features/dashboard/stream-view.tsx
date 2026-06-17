@@ -1,8 +1,8 @@
 import type { Employee } from '@team-x/shared-types';
 import { Radio } from 'lucide-react';
 
+import { LampTile, VuMeter } from '@/components/console/index.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
-import { cn } from '@/lib/utils.js';
 import { type EmployeeLiveState, useAppStore } from '@/store/app-store.js';
 
 interface StreamPaneProps {
@@ -18,10 +18,10 @@ function StreamPane({ employee, live }: StreamPaneProps) {
     <button
       type="button"
       onClick={() => setSelected(employee.id)}
-      className="flex h-full min-w-[280px] flex-col rounded-xl border border-border bg-black transition-colors hover:border-brand/30"
+      className="cap flex h-full min-w-[280px] flex-col p-0 text-left"
     >
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black text-xs font-semibold">
+      <div className="flex items-center gap-2 border-b border-[hsl(var(--hairline))] px-4 py-2.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-carbon-900 text-xs font-semibold">
           {employee.name
             .split(' ')
             .map((w) => w[0])
@@ -30,27 +30,27 @@ function StreamPane({ employee, live }: StreamPaneProps) {
         </div>
         <div className="min-w-0 flex-1 text-left">
           <p className="truncate text-body-strong text-foreground">{employee.name}</p>
-          <p className="truncate text-caption text-muted-foreground">{employee.title}</p>
+          <p className="truncate text-caption text-silver-mute">{employee.title}</p>
         </div>
-        <span
-          className={cn(
-            'h-2 w-2 shrink-0 rounded-full',
-            isThinking ? 'bg-brand animate-pulse-slow' : 'bg-zinc-500',
-          )}
+        <LampTile
+          label={isThinking ? 'LIVE' : 'IDLE'}
+          tone={isThinking ? 'exec' : 'off'}
+          small
+          interactive={false}
         />
       </div>
       <ScrollArea className="flex-1 px-4 py-3">
         {isThinking && live.currentStream.length > 0 ? (
-          <pre className="whitespace-pre-wrap text-code-sm leading-relaxed text-foreground/80">
+          <pre className="whitespace-pre-wrap rounded-inset bg-[hsl(var(--void))] px-3 py-2 text-code-sm leading-relaxed text-[hsl(var(--display-fg))]">
             {live.currentStream.slice(-800)}
           </pre>
         ) : isThinking ? (
-          <div className="flex items-center gap-2 text-caption text-muted-foreground">
-            <Radio className="h-3.5 w-3.5 animate-pulse text-brand" />
+          <div className="flex items-center gap-2 text-caption text-silver-mute">
+            <Radio className="h-3.5 w-3.5 animate-pulse text-armed" />
             Thinking...
           </div>
         ) : (
-          <p className="text-caption text-muted-foreground/60 italic">Idle</p>
+          <p className="text-caption italic text-silver-mute/60">Idle</p>
         )}
       </ScrollArea>
     </button>
@@ -86,12 +86,12 @@ export function StreamView({ employees }: StreamViewProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border px-6 py-2">
-        <Radio className="h-4 w-4 text-brand" />
-        <span className="text-caption font-medium text-muted-foreground">
+      <div className="flex items-center gap-3 border-b border-[hsl(var(--hairline))] px-6 py-2">
+        <Radio className="h-4 w-4 text-armed" />
+        <span className="text-caption font-medium text-silver-mute">
           {thinkingCount > 0 ? (
             <>
-              <span className="text-brand">{thinkingCount} active</span>
+              <span className="text-armed">{thinkingCount} active</span>
               {' / '}
               {employees.length} total
             </>
@@ -99,6 +99,11 @@ export function StreamView({ employees }: StreamViewProps) {
             `${employees.length} employees — all idle`
           )}
         </span>
+        <VuMeter
+          className="ml-auto w-40"
+          value={employees.length > 0 ? thinkingCount / employees.length : 0}
+          label="Live stream concurrency"
+        />
       </div>
       <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 scrollbar-thin">
         <div className="flex h-full gap-4" style={{ minWidth: `${sorted.length * 296}px` }}>
