@@ -36,6 +36,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     errors) and CI's 25-min job budget already absorbs the cold pass.
 
 ### Changed
+- **Aesthetic sweep Phase 4a — Autonomy shell + light panels.** The Autonomy
+  view (`autonomy-view.tsx`) + six light panels (doctor, benchmark, agent
+  improvement, approvals, artifacts, memory) recomposed off the legacy `Mission*`
+  shell onto the Command Console foundation: Faceplates + stripe placards, a
+  nav-tile subview rail (`aria-current`), Departure-Mono `MetricTile` readouts,
+  machined `cap`/`cap-select` filter chips, `RecessedWell` panels, stencil
+  word-lamps for status, `Tag` chips for labels/refs, the shared console
+  `SubviewState` for every empty/error state, and three functional VU meters
+  (doctor checks-health, benchmark pass-rate, memory pack-usage). New shared
+  console primitives: `MetricTile`, `Tag`, and `SubviewState` (promoted from the
+  dashboard). `mission-shell.tsx` is left for its remaining consumers (the 4b
+  heavy panels + telemetry/chat/tickets/etc.), purged in Phase 8. Visual-only:
+  zero behavior change, every E2E/a11y selector preserved.
 - **Aesthetic sweep Phase 3 — Mission Control.** The flagship dashboard
   (`mission-control-dashboard.tsx`, 1,760 LOC) and its eight sub-views recomposed
   onto the Command Console foundation: hero and every panel on brushed-aluminum

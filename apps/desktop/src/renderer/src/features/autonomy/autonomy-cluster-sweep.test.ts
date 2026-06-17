@@ -14,7 +14,9 @@ describe('autonomy cluster aesthetic sweep (Phase 4a)', () => {
     expect(viewSrc).toContain("from '@/components/console/index.js'");
     expect(viewSrc).toContain('<MetricTile');
     expect(viewSrc).toContain('nav-tile');
-    expect(viewSrc).toContain("aria-current={subview.value === activeSubview ? 'page' : undefined}");
+    expect(viewSrc).toContain(
+      "aria-current={subview.value === activeSubview ? 'page' : undefined}",
+    );
     expect(viewSrc).toContain('<SubviewState');
     // selectors preserved
     expect(viewSrc).toContain('data-autonomy-view');
