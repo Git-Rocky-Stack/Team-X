@@ -72,4 +72,15 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     expect(timelineSrc).not.toMatch(/text-(?:blue|green|red|purple|amber|cyan)-\d/);
     expect(timelineSrc).toContain('<StripeHeader');
   });
+
+  it('floor view uses Faceplate, stripe level bands, LED status + LCD counts, no replace hack', () => {
+    expect(floorSrc).toContain('<Faceplate');
+    expect(floorSrc).toContain('<StripeHeader');
+    expect(floorSrc).toContain('<LcdWell');
+    expect(floorSrc).not.toMatch(/\bbg-black\b/);
+    expect(floorSrc).not.toMatch(/(?:border|bg)-(?:amber|purple|blue|cyan|green|zinc|red)-\d/);
+    expect(floorSrc).not.toContain(".replace('bg-', 'bg-')");
+    expect(floorSrc).not.toContain('text-[9px]');
+    expect(floorSrc).not.toContain('text-[10px]');
+  });
 });
