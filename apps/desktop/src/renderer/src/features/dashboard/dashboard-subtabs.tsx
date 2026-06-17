@@ -1,6 +1,7 @@
 import { Grid3X3, LayoutGrid, Radio, ScrollText, Terminal } from 'lucide-react';
 import type { ComponentType } from 'react';
 
+import { cn } from '@/lib/utils.js';
 import { type DashboardSubview, useAppStore } from '@/store/app-store.js';
 
 interface SubtabDef {
@@ -22,7 +23,7 @@ export function DashboardSubtabs() {
   const setSubview = useAppStore((s) => s.setDashboardSubview);
 
   return (
-    <div className="flex items-center gap-1 border-b border-border/70 bg-black px-4 py-2">
+    <div className="flex items-center gap-1 border-b border-[hsl(var(--hairline))] px-4 py-2">
       {SUBTABS.map((tab) => {
         const isActive = tab.subview === activeSubview;
         const Icon = tab.icon;
@@ -31,14 +32,11 @@ export function DashboardSubtabs() {
             type="button"
             key={tab.subview}
             onClick={() => setSubview(tab.subview)}
-            className={`
-              flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-button-sm transition-colors
-              ${
-                isActive
-                  ? 'border border-brand/30 bg-black text-brand'
-                  : 'border border-transparent text-muted-foreground hover:border-white/10 hover:bg-black hover:text-foreground'
-              }
-            `}
+            aria-current={isActive ? 'page' : undefined}
+            className={cn(
+              'nav-tile flex items-center gap-1.5 px-3.5 py-1.5 text-button-sm',
+              isActive && 'nav-tile-active',
+            )}
           >
             <Icon className="h-3.5 w-3.5" />
             {tab.label}

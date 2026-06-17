@@ -197,6 +197,8 @@ All fonts SIL OFL — **bundle locally via `@fontsource/*` packages in the Elect
 | `--armed-deep` | `#7F171A` | Cap borders, pressed states |
 | `--armed-glow / -soft` | `rgba(224,37,43,.22) / rgba(170,32,36,.12)` | Glow rings, selection tints |
 
+**Focus rings — armed-red (the default focus voice).** The keyboard-focus indicator is the armed-red glow ring (`ring-2 ring-brand/60`, the `--armed-glow` family) — the brand asserting itself on interaction, on flat and raised interactive surfaces alike. **One deliberate exception:** the machined-cap family (`.cap`, `.nav-tile`, lamp/annunciator buttons) carries a 2px **outline** in `--ring` (the shift's neutral focus color — chrome at Night, dark graphite in Day) rather than a ring, because (a) an outline sits *outside* the cap's own box-shadow recipe stack so it can never be lost to it, and (b) a neutral outline contrasts every cap fill — including the armed-red and warn caps, where a red focus ring would vanish into the fill. Armed-red ring = default; the neutral `--ring` outline = the caps' contrast-safe variant.
+
 ### LED semantics (lamp vocabulary — identical both themes)
 
 | Token | Hex | Meaning | Form |
@@ -204,12 +206,13 @@ All fonts SIL OFL — **bundle locally via `@fontsource/*` packages in the Elect
 | `--led-go` | `#41E25E` | GO / running / healthy / LCD phosphor | Steady |
 | `--led-hold` | `#FFB000` | HOLD / caution / pending | Steady |
 | `--led-warn` | `#FF4438` | Unacknowledged warning | **Blinking 1Hz only** — never steady |
+| `--led-nogo` | `#C8453E` | NO-GO / fault / failed — the settled-fault counterpart to the blinking warn | **Steady** (ignite once, then hold) |
 | `--led-scope` | `#58C4BC` | Informational / EXEC — the rarest color | Steady |
-| `--chrome` | `#E6E6E6` | The polished bits: focus rings (night), rare chrome cap (e.g. Download) — family accent, used sparingly | — |
+| `--chrome` | `#E6E6E6` | The polished bits: rare chrome CTA cap (e.g. Download) + the Night-shift machined-cap focus outline (`--ring`) — family accent, used sparingly. (Default focus rings are armed-red — see above.) | — |
 
 Render LEDs with glow (`box-shadow`/`text-shadow: 0 0 8px currentColor`-class). Day Shift darkens LED *text* colors where they sit on silver surfaces (`#177A3D` green, `#996300` amber, `#C81E13` red, `#256F69` cyan) — LED dots and anything inside dark wells keep night values.
 
-**The dual-form red rule (non-negotiable):** steady red = LIVE/armed/command; blinking red = a question that demands an answer (click to acknowledge → steady until resolved). Never use blink for anything else; never use steady `--led-warn` for errors — errors blink, then hold.
+**The dual-form red rule (non-negotiable):** steady red = LIVE/armed/command; blinking red = a question that demands an answer (click to acknowledge → steady until resolved). Never use blink for anything else; never use steady `--led-warn` for errors. The two red signals are distinct tones: an **unacknowledged warning** blinks on `--led-warn` (1Hz, AnnunciatorRail / `alert` lamps); an **already-failed / terminal fault** (failed run, error outcome in a log, panel that could not load) holds steady on the dedicated **NO-GO** tone `--led-nogo` — a deeper, desaturated red that ignites once then sustains. A failed thing that is not awaiting acknowledgment is NO-GO (steady), never a steady `--led-warn`.
 
 ### Hairlines
 
@@ -342,6 +345,8 @@ Inherited family rules + Team-X specifics. On every UI change, re-validate:
 | 2026-06-10 | Functional VU discipline | Rocky: "VU meter LEDs that actually serve and operate as appropriate for their placement." Every meter is data-bound (tok/min, VRAM, per-agent activity); decorative meters are banned. |
 | 2026-06-10 | Dual-shift theme policy with displays-stay-dark rule | Rocky chose to keep light mode as a first-class citizen (D8: "Keep light mode"). Day Shift designed as silver anodized hardware — like a silver DJM/Apollo, displays and buttons stay black. Approved at D9 with both shifts rendered. |
 | 2026-06-10 | Website mirror mandate | Rocky: the app design translates directly to the Team-X website so the two mirror exactly — same model as Vision Studio ↔ Vision-Studio-X-website. |
+| 2026-06-16 | Steady **NO-GO** tone added (`--led-nogo` `#C8453E`) | Phase 3 design review found steady `--led-warn` used for terminal faults app-wide, violating the blink-only rule, while the system had no steady fault tone. Resolution: a dedicated steady NO-GO red (deeper/desaturated than the hot blinking warn, distinct from the armed crimson) for already-failed/terminal faults; blinking `--led-warn` stays reserved for the AnnunciatorRail's unacknowledged alerts. Hex is provisional and tunable. |
+| 2026-06-16 | Focus ring = armed-red (was documented chrome) | Phase 3 design review surfaced a doc-vs-impl gap: the shipped (and tested) renderer uses an armed-red focus ring (`ring-brand/60`) on flat interactive surfaces, while DESIGN.md said chrome. Rocky's call: reconcile the doc to brand-red. Armed-red is now the default focus voice; machined caps keep a neutral `--ring` outline (Night chrome / Day graphite) for box-shadow-stack survival and contrast against red/warn cap fills. Documentation-only; no code change. |
 
 ---
 

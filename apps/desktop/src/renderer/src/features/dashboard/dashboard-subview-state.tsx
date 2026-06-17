@@ -1,0 +1,49 @@
+import type { ReactNode } from 'react';
+
+import { LampTile, type LampTone, RecessedWell } from '@/components/console/index.js';
+
+interface SubviewStateProps {
+  /** Stencil word-lamp carrying the state: STBY (empty/idle) / NO-GO (fault). */
+  lampLabel: string;
+  lampTone: LampTone;
+  title: string;
+  description?: string;
+  /** Optional trailing control (e.g. a Retry button). */
+  action?: ReactNode;
+  /** Optional leading slot rendered above the title (e.g. a kbd hint). */
+  children?: ReactNode;
+  /** E2E selector passthrough. */
+  testId?: string;
+}
+
+/**
+ * Shared empty/error state for the dashboard sub-views — the console-vocabulary
+ * counterpart of the flagship's PanelMessageState. A recessed display well with
+ * a stencil word-lamp as the sole status carrier (DESIGN.md: status is a word,
+ * not an icon), so every sub-view reads as one family instead of ad-hoc raw
+ * text + Lucide glyphs.
+ */
+export function SubviewState({
+  lampLabel,
+  lampTone,
+  title,
+  description,
+  action,
+  children,
+  testId,
+}: SubviewStateProps) {
+  return (
+    <RecessedWell
+      data-testid={testId}
+      className="flex h-full min-h-[12rem] flex-1 flex-col items-center justify-center gap-3 p-8 text-center"
+    >
+      <LampTile label={lampLabel} tone={lampTone} small interactive={false} />
+      <div className="space-y-1">
+        <p className="text-body-strong text-[hsl(var(--display-fg))]">{title}</p>
+        {description ? <p className="max-w-md text-body text-silver-mute">{description}</p> : null}
+      </div>
+      {children}
+      {action}
+    </RecessedWell>
+  );
+}

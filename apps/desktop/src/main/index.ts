@@ -158,7 +158,7 @@ import { registerIpcHandlers } from './ipc/register.js';
 import { setupApplicationMenu } from './menu.js';
 import { createAgentWakeupQueue } from './orchestrator/agent-wakeup-queue.js';
 import { createEventBus } from './orchestrator/event-bus.js';
-import { createHeartbeatService } from './orchestrator/heartbeat-service.js';
+import { type HeartbeatService, createHeartbeatService } from './orchestrator/heartbeat-service.js';
 import {
   type Orchestrator,
   type ResolveProvider,
@@ -583,6 +583,14 @@ let ragIndexerInstance: { stop: () => void } | null = null;
 let copilotEventWindowInstance: CopilotEventWindow | null = null;
 let commandServiceInstance: CommandService | null = null;
 /**
+ * Heartbeat loop (proactive execution engine) — a self-scheduling timer that
+ * polls the DB for due wakeup work and emits `agent.wakeup` events. Held at
+ * module scope so the shutdown path can stop it before the DB closes;
+ * otherwise its interval/initial-timeout fire repo reads against a closed
+ * connection during quit.
+ */
+let heartbeatServiceInstance: HeartbeatService | null = null;
+/**
  * Agentic-loop front-door for the command palette's `complex_request`
  * intent (M31 T4). Lives alongside the orchestrator because its
  * pause-gate observer reads `orchestrator.isCompanyPaused` on every
@@ -928,7 +936,7 @@ app
     // Proactive execution bridge: wake agents when routines complete or
     // tickets are assigned, then let the heartbeat loop process due work.
     const agentWakeupRequestsRepo = createAgentWakeupRequestsRepo(db);
-    const heartbeatServiceInstance = createHeartbeatService({
+    heartbeatServiceInstance = createHeartbeatService({
       agentWakeupRequestsRepo,
       employeesRepo,
       bus,
@@ -3163,6 +3171,20 @@ app.on('will-quit', (event) => {
   // closed by the time will-quit fires, so there is no UI to lose.
   event.preventDefault();
   void (async () => {
+    // Stop the heartbeat loop FIRST: it is a self-scheduling timer that
+    // queries the DB (listCompaniesWithDueWork) and emits agent.wakeup events
+    // into the orchestrator. Stopping it before anything else guarantees no
+    // new proactive work is queued during teardown and no interval/initial
+    // timeout fires a repo read after closeDb() — previously surfaced as
+    // post-shutdown "database connection is not open" unhandled rejections.
+    try {
+      if (heartbeatServiceInstance !== null) {
+        heartbeatServiceInstance.stop();
+        heartbeatServiceInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] heartbeat service stop failed:', err);
+    }
     // Stop the RAG indexer BEFORE draining the orchestrator: the indexer
     // subscribes to the event bus, and the orchestrator writes events
     // during its drain. Stopping the subscriber first means any final

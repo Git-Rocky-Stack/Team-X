@@ -137,6 +137,73 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(runtimeOperationsProjectionsSrc).toContain('checkoutBlockedCount');
     expect(runtimeOperationsProjectionsSrc).toContain('managedWorkspaceCount');
   });
+
+  it('mounts the swept console chassis without legacy shell/grid classes', () => {
+    expect(missionControlSrc).toContain('data-dashboard-mission-control=""');
+    expect(missionControlSrc).not.toContain('mission-shell');
+    expect(missionControlSrc).not.toContain('mission-grid');
+    expect(missionControlSrc).toContain('<RecessedWell');
+  });
+
+  it('renders the hero on a Faceplate with console controls', () => {
+    expect(missionControlSrc).not.toContain('mission-hero');
+    expect(missionControlSrc).toContain('kicker="MISSION CONTROL"');
+    expect(missionControlSrc).toContain("'cap cap-select'");
+    expect(missionControlSrc).toContain('data-dashboard-hero-toggle="agent-runs"');
+    expect(missionControlSrc).toContain('data-dashboard-hero-toggle="employee-queues"');
+    expect(missionControlSrc).toContain('aria-pressed={layout.agentRuns}');
+    expect(missionControlSrc).toContain('data-dashboard-reset-layout=""');
+  });
+
+  it('renders hero metrics as LCD wells with one workforce VU meter', () => {
+    expect(missionControlSrc).toContain('<LcdWell');
+    expect(missionControlSrc).toContain('label="Workforce utilization"');
+    expect(missionControlSrc).toContain('<VuMeter');
+  });
+
+  it('builds shared panel chrome from console hardware + tone helpers', () => {
+    expect(missionControlSrc).toContain('lcdToneForRuntimeMetric');
+    expect(missionControlSrc).toContain('data-dashboard-primary-panel={dataPanel}');
+    expect(missionControlSrc).not.toContain('mission-panel flex min-h-[24rem]');
+  });
+
+  it('recomposes the runtime operations band onto console hardware', () => {
+    expect(missionControlSrc).toContain('data-dashboard-runtime-operations=""');
+    expect(missionControlSrc).toContain('data-dashboard-runtime-state={summary.stateLabel}');
+    expect(missionControlSrc).toContain('data-dashboard-runtime-session-list=""');
+    expect(missionControlSrc).toContain('data-dashboard-runtime-budget-blocks=""');
+    expect(missionControlSrc).toContain('data-dashboard-runtime-empty=""');
+    expect(missionControlSrc).toContain('lampToneForRuntimeState(summary.stateTone)');
+    expect(missionControlSrc).toContain('lampToneForRuntimeStatus(session.status)');
+    expect(missionControlSrc).not.toContain('runtimeStateClassName');
+  });
+
+  it('recomposes the live board rows onto cap tiles with lamp status', () => {
+    expect(missionControlSrc).toContain('data-dashboard-panel-state="agent-runs-ready"');
+    expect(missionControlSrc).toContain('data-dashboard-panel-state="employee-queues-ready"');
+    expect(missionControlSrc).toContain('data-dashboard-queue-row={row.employeeId}');
+    expect(missionControlSrc).toContain('aria-label={`Open Copilot thread for ${run.label}`}');
+    expect(missionControlSrc).toContain('aria-label={`Open chat with ${row.name}`}');
+    expect(missionControlSrc).toContain('lampToneForLiveStatus(row.liveStatus)');
+    expect(missionControlSrc).not.toContain('liveStatusClassName');
+  });
+
+  it('contains zero legacy composition after the full flagship sweep', () => {
+    expect(missionControlSrc).not.toMatch(/\bbg-black\b/);
+    expect(missionControlSrc).not.toMatch(/border-white\/\d/);
+    expect(missionControlSrc).not.toContain('mission-panel');
+    expect(missionControlSrc).not.toContain('mission-hero');
+    expect(missionControlSrc).not.toContain('mission-shell');
+    expect(missionControlSrc).not.toContain('rounded-2xl');
+    expect(missionControlSrc).not.toContain('rounded-[24px]');
+    expect(missionControlSrc).not.toContain('rounded-[28px]');
+    expect(missionControlSrc).not.toContain('font-mono');
+    expect(missionControlSrc).not.toMatch(/(?:text|bg|border)-(?:red|amber|emerald|slate|zinc)-\d/);
+    expect(missionControlSrc).toContain('data-dashboard-secondary-panel="copilot"');
+    expect(missionControlSrc).toContain('data-dashboard-recent-commands=""');
+    expect(missionControlSrc).toContain('data-dashboard-telemetry-snapshot=""');
+    expect(missionControlSrc).toContain('data-dashboard-autonomy-snapshot=""');
+  });
 });
 
 describe('Dashboard integration wiring', () => {

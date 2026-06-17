@@ -1,18 +1,13 @@
 import type { DashboardEvent, Employee } from '@team-x/shared-types';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  MessageSquare,
-  Play,
-  Send,
-  Wrench,
-  XCircle,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 
+import { SubviewState } from './dashboard-subview-state.js';
+
+import { LampTile, type LampTone, StripeHeader } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { flattenEvents, useTimelineEvents } from '@/hooks/use-events.js';
+import { cn } from '@/lib/utils.js';
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -29,26 +24,43 @@ function formatDate(ts: number): string {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function eventIcon(type: string) {
+/** Event type → stencil word-lamp + tone (DESIGN.md: status is a word, not an icon). */
+function eventLamp(type: string): { label: string; tone: LampTone } {
   switch (type) {
     case 'work.started':
-      return <Play className="h-3.5 w-3.5 text-blue-400" />;
+      return { label: 'EXEC', tone: 'exec' };
     case 'work.completed':
-      return <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />;
+      return { label: 'GO', tone: 'go' };
     case 'work.failed':
-      return <XCircle className="h-3.5 w-3.5 text-red-400" />;
+      return { label: 'NO-GO', tone: 'nogo' };
     case 'work.queued':
-      return <Loader2 className="h-3.5 w-3.5 text-muted-foreground" />;
+      return { label: 'QUE', tone: 'off' };
     case 'message.persisted':
     case 'message.agent_to_agent':
-      return <MessageSquare className="h-3.5 w-3.5 text-purple-400" />;
+      return { label: 'MSG', tone: 'exec' };
     case 'tool.called':
     case 'tool.result':
-      return <Wrench className="h-3.5 w-3.5 text-amber-400" />;
+      return { label: 'TOOL', tone: 'hold' };
     case 'employee.status_changed':
-      return <Send className="h-3.5 w-3.5 text-cyan-400" />;
+      return { label: 'STAT', tone: 'exec' };
     default:
-      return <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />;
+      return { label: 'EVT', tone: 'off' };
+  }
+}
+
+/** Timeline rail bead — an LED node colored to the event tone (the word-lamp carries status). */
+function nodeDotClass(tone: LampTone): string {
+  switch (tone) {
+    case 'go':
+      return 'bg-led-go';
+    case 'hold':
+      return 'bg-led-hold';
+    case 'nogo':
+      return 'bg-led-nogo';
+    case 'exec':
+      return 'bg-led-scope';
+    default:
+      return 'bg-graphite';
   }
 }
 
@@ -141,20 +153,21 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-        <AlertCircle className="h-8 w-8 text-red-500" />
-        <p className="text-body-strong text-muted-foreground">Failed to load timeline</p>
+      <div className="flex h-full flex-col p-6">
+        <SubviewState lampLabel="NO-GO" lampTone="nogo" title="Failed to load timeline" />
       </div>
     );
   }
 
   if (filteredEvents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-h3 text-muted-foreground">No activity yet</p>
-        <p className="mt-1 text-body text-muted-foreground/70">
-          Events will appear here as your team works.
-        </p>
+      <div className="flex h-full flex-col p-6">
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
+          title="No activity yet"
+          description="Events will appear here as your team works."
+        />
       </div>
     );
   }
@@ -163,27 +176,35 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
     <div className="space-y-6 p-6">
       {[...groups.entries()].map(([dateLabel, dateEvents]) => (
         <div key={dateLabel}>
-          <div className="sticky top-0 z-10 mb-3 bg-black">
-            <span className="text-eyebrow text-muted-foreground">{dateLabel}</span>
-          </div>
-          <div className="relative ml-4 border-l border-border pl-6">
-            {dateEvents.map((event) => (
-              <div key={event.id} className="group relative mb-4 last:mb-0">
-                <div className="absolute -left-[31px] flex h-5 w-5 items-center justify-center rounded-full border border-border bg-black">
-                  {eventIcon(event.type)}
-                </div>
-                <div className="flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-black">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-body text-foreground">
-                      {eventDescription(event, employeeMap)}
-                    </p>
-                    <p className="mt-0.5 text-caption text-muted-foreground">
-                      {formatTime(event.createdAt)}
-                    </p>
+          <StripeHeader kicker={dateLabel} className="sticky top-0 z-10 mb-3" />
+          <div className="relative ml-4 border-l border-[hsl(var(--hairline))] pl-6">
+            {dateEvents.map((event) => {
+              const lamp = eventLamp(event.type);
+              return (
+                <div key={event.id} className="group relative mb-4 last:mb-0">
+                  <div className="absolute -left-[30px] flex h-5 w-5 items-center justify-center">
+                    <span className={cn('h-2.5 w-2.5 rounded-pill', nodeDotClass(lamp.tone))} />
+                  </div>
+                  <div className="flex items-start gap-3 rounded-control px-3 py-2 transition-colors hover:bg-carbon-900">
+                    <LampTile
+                      label={lamp.label}
+                      tone={lamp.tone}
+                      small
+                      interactive={false}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-body text-foreground">
+                        {eventDescription(event, employeeMap)}
+                      </p>
+                      <p className="mt-0.5 text-caption text-muted-foreground">
+                        {formatTime(event.createdAt)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}

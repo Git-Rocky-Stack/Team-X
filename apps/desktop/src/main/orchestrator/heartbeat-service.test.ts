@@ -421,4 +421,48 @@ describe('HeartbeatService', () => {
       });
     });
   });
+
+  describe('start/stop lifecycle', () => {
+    it('stop() clears the pending initial-processing timeout so no repo read fires after teardown', () => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(mockAgentWakeupRequestsRepo.listCompaniesWithDueWork).mockReturnValue([]);
+
+        heartbeatService.start(60_000);
+        // Quit immediately — before the 1s initial-processing timeout elapses.
+        // This is the app-shutdown race: start() schedules a setTimeout(…, 1000)
+        // that queries the DB, and a quit within that window must not fire it.
+        heartbeatService.stop();
+
+        // Advance well past both the initial timeout and a full interval.
+        vi.advanceTimersByTime(120_000);
+
+        expect(mockAgentWakeupRequestsRepo.listCompaniesWithDueWork).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('stop() halts the recurring interval', () => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(mockAgentWakeupRequestsRepo.listCompaniesWithDueWork).mockReturnValue([]);
+
+        heartbeatService.start(60_000);
+        // Let the initial 1s processing tick fire once, then stop.
+        vi.advanceTimersByTime(1_000);
+        const callsAfterInitial = vi.mocked(mockAgentWakeupRequestsRepo.listCompaniesWithDueWork)
+          .mock.calls.length;
+
+        heartbeatService.stop();
+        vi.advanceTimersByTime(300_000); // five 60s intervals
+
+        expect(
+          vi.mocked(mockAgentWakeupRequestsRepo.listCompaniesWithDueWork).mock.calls.length,
+        ).toBe(callsAfterInitial);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

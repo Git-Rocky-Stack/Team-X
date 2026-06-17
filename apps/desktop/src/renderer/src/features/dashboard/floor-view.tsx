@@ -1,24 +1,36 @@
 import type { Employee } from '@team-x/shared-types';
 
+import { SubviewState } from './dashboard-subview-state.js';
+import { countIdle, countThinking } from './live-state-counts.js';
+
+import {
+  Faceplate,
+  LampTile,
+  type LampTone,
+  LcdWell,
+  StripeHeader,
+} from '@/components/console/index.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
 function levelColor(level: string): string {
+  // Level bezel = seniority category, NOT a live signal: officer uses the
+  // chrome (polished-bits) edge — never armed-red, which is reserved for LIVE.
+  // Values are rgba tokens, so they go straight into the arbitrary value with
+  // no hsl() wrapper (hsl(rgba(...)) is invalid CSS and silently renders nothing).
   switch (level.toLowerCase()) {
     case 'officer':
-      return 'border-amber-500/50 bg-black';
+      return 'border-[var(--chrome-edge)]';
     case 'senior-management':
-      return 'border-purple-500/50 bg-black';
+      return 'border-[var(--led-hold-edge)]';
     case 'management':
-      return 'border-blue-500/50 bg-black';
+      return 'border-[var(--led-scope-edge)]';
     case 'supervisor':
-      return 'border-cyan-500/50 bg-black';
+      return 'border-[var(--led-scope-edge)]';
     case 'lead':
-      return 'border-green-500/50 bg-black';
-    case 'ic':
-      return 'border-zinc-500/50 bg-black';
+      return 'border-[var(--led-go-edge)]';
     default:
-      return 'border-border bg-black';
+      return 'border-[var(--hairline)]';
   }
 }
 
@@ -41,18 +53,35 @@ function levelLabel(level: string): string {
   }
 }
 
-function statusIndicator(status: string): { color: string; label: string } {
+/** Live status → stencil word-lamp (DESIGN.md: status is a word, not a bare dot). */
+function statusLamp(status: string): { label: string; tone: LampTone } {
   switch (status) {
     case 'thinking':
-      return { color: 'bg-brand animate-pulse-slow', label: 'Thinking' };
+      return { label: 'EXEC', tone: 'exec' };
     case 'meeting':
-      return { color: 'bg-purple-500', label: 'In meeting' };
+      return { label: 'MTG', tone: 'go' };
     case 'blocked':
-      return { color: 'bg-amber-500', label: 'Blocked' };
+      return { label: 'HOLD', tone: 'hold' };
     case 'error':
-      return { color: 'bg-red-500', label: 'Error' };
+      return { label: 'NO-GO', tone: 'nogo' };
     default:
-      return { color: 'bg-zinc-500', label: 'Idle' };
+      return { label: 'STBY', tone: 'off' };
+  }
+}
+
+/** Human-readable status for the cell's accessible name. */
+function statusHuman(status: string): string {
+  switch (status) {
+    case 'thinking':
+      return 'Thinking';
+    case 'meeting':
+      return 'In meeting';
+    case 'blocked':
+      return 'Blocked';
+    case 'error':
+      return 'Error';
+    default:
+      return 'Idle';
   }
 }
 
@@ -64,38 +93,28 @@ function FloorCell({ employee }: FloorCellProps) {
   const setSelected = useAppStore((s) => s.setSelectedEmployee);
   const liveState = useAppStore((s) => s.employeeLive[employee.id]);
   const displayStatus = liveState?.status ?? employee.status;
-  const { color, label } = statusIndicator(displayStatus);
+  const lamp = statusLamp(displayStatus);
 
   return (
     <button
       type="button"
       onClick={() => setSelected(employee.id)}
-      className={cn(
-        'flex flex-col items-center gap-2 rounded-xl border p-3 transition-all hover:scale-[1.02] hover:shadow-md',
-        levelColor(employee.level),
-      )}
+      aria-label={`${employee.name}, ${employee.title} — ${statusHuman(displayStatus)}`}
+      className={cn('cap flex flex-col items-center gap-2 p-3', levelColor(employee.level))}
     >
-      <div className="relative">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-xs font-bold">
-          {employee.name
-            .split(' ')
-            .map((w) => w[0])
-            .join('')
-            .slice(0, 2)}
-        </div>
-        <span
-          className={cn(
-            'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background',
-            color,
-          )}
-          title={label}
-        />
+      <div className="flex h-10 w-10 items-center justify-center rounded-pill bg-carbon-900 text-label font-semibold">
+        {employee.name
+          .split(' ')
+          .map((w) => w[0])
+          .join('')
+          .slice(0, 2)}
       </div>
       <div className="w-full text-center">
         <p className="truncate text-body-strong text-foreground">{employee.name}</p>
-        <p className="truncate text-[10px] text-muted-foreground">{employee.title}</p>
+        <p className="truncate text-caption text-silver-mute">{employee.title}</p>
       </div>
-      <span className="rounded-full bg-black px-2 py-0.5 text-[9px] font-medium text-muted-foreground">
+      <LampTile label={lamp.label} tone={lamp.tone} small interactive={false} />
+      <span className="rounded-control bg-carbon-900 px-2 py-0.5 text-eyebrow-sm font-medium text-silver-mute">
         {levelLabel(employee.level)}
       </span>
     </button>
@@ -109,16 +128,21 @@ interface FloorViewProps {
 export function FloorView({ employees }: FloorViewProps) {
   const employeeLive = useAppStore((s) => s.employeeLive);
 
-  const thinkingCount = Object.values(employeeLive).filter((e) => e.status === 'thinking').length;
-  const idleCount = employees.length - thinkingCount;
+  // Scoped to the active roster (employees prop), NOT the global employeeLive
+  // map: counting globally let cross-workspace live state inflate thinkingCount
+  // and drive idleCount negative. See live-state-counts.ts.
+  const thinkingCount = countThinking(employees, employeeLive);
+  const idleCount = countIdle(employees, employeeLive);
 
   if (employees.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-h3 text-muted-foreground">No employees yet</p>
-        <p className="mt-1 text-body text-muted-foreground/70">
-          Hire employees to see the office floor.
-        </p>
+      <div className="flex h-full flex-col p-6">
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
+          title="No employees yet"
+          description="Hire employees to see the office floor."
+        />
       </div>
     );
   }
@@ -136,29 +160,24 @@ export function FloorView({ employees }: FloorViewProps) {
   if (other.length > 0) grouped.set('other', other);
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center gap-4 text-caption text-muted-foreground">
-        <span>
-          {employees.length} employee{employees.length !== 1 ? 's' : ''}
-        </span>
+    <Faceplate kicker="OFFICE FLOOR" serial="LIVE" bodyClassName="space-y-6">
+      <div className="flex items-center gap-4 text-caption text-silver-mute">
+        <LcdWell className="px-3 py-1.5">
+          <span className="text-label tabular-nums">{employees.length} EMP</span>
+        </LcdWell>
         {thinkingCount > 0 && (
-          <span>
-            <span className="font-medium text-brand">{thinkingCount} busy</span>
-            {' / '}
-            {idleCount} idle
-          </span>
+          <LcdWell tone="amber" className="px-3 py-1.5">
+            <span className="text-label tabular-nums">
+              {thinkingCount} BUSY / {idleCount} IDLE
+            </span>
+          </LcdWell>
         )}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="ml-auto flex items-center gap-3">
           {levels
             .filter((l) => grouped.has(l))
             .map((l) => (
               <span key={l} className="flex items-center gap-1">
-                <span
-                  className={cn(
-                    'h-2 w-2 rounded-full border',
-                    levelColor(l).replace('bg-', 'bg-').split(' ')[0],
-                  )}
-                />
+                <span className={cn('h-2 w-2 rounded-pill border', levelColor(l))} />
                 {levelLabel(l)}
               </span>
             ))}
@@ -167,9 +186,7 @@ export function FloorView({ employees }: FloorViewProps) {
 
       {[...grouped.entries()].map(([level, group]) => (
         <div key={level}>
-          <h3 className="mb-3 text-eyebrow text-muted-foreground">
-            {levelLabel(level)} ({group.length})
-          </h3>
+          <StripeHeader kicker={`${levelLabel(level)} (${group.length})`} className="mb-3" />
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
             {group.map((emp) => (
               <FloorCell key={emp.id} employee={emp} />
@@ -177,6 +194,6 @@ export function FloorView({ employees }: FloorViewProps) {
           </div>
         </div>
       ))}
-    </div>
+    </Faceplate>
   );
 }

@@ -82,6 +82,7 @@
     --led-go: #41e25e;
     --led-hold: #ffb000;
     --led-warn: #ff4438;
+    --led-nogo: #c8453e; /* steady NO-GO / fault — never blinks (vs blink-only --led-warn) */
     --led-scope: #58c4bc;
     --go-soft: rgba(65, 226, 94, 0.1);
     --hold-soft: rgba(255, 176, 0, 0.1);
@@ -107,6 +108,7 @@
     --led-go-edge: rgba(65, 226, 94, 0.35);
     --led-hold-edge: rgba(255, 176, 0, 0.35);
     --led-warn-edge: rgba(255, 68, 56, 0.4);
+    --led-nogo-edge: rgba(200, 69, 62, 0.4);
     --led-scope-edge: rgba(88, 196, 188, 0.32);
 
     /* Tag text — the ONE LED-family role that sits on SHIFT surfaces
@@ -1153,6 +1155,18 @@
       linear-gradient(180deg, #241412, #140f0e);
     border-color: var(--led-warn-edge);
     text-shadow: 0 0 8px rgba(255, 68, 56, 0.6);
+  }
+  /* NO-GO — steady fault/fail (terminal error, failed run). The settled-fault
+     counterpart to the blink-only .lamp-warn: deeper, desaturated red, softer
+     glow, and it NEVER blinks. Reserve .lamp-warn (1Hz blink) for the
+     AnnunciatorRail's unacknowledged alerts; everything that is "already
+     failed / stopped" wears NO-GO. (DESIGN.md dual-form red rule.) */
+  .lamp-nogo {
+    color: var(--led-nogo);
+    background: linear-gradient(180deg, rgba(200, 69, 62, 0.13), rgba(200, 69, 62, 0.04)),
+      linear-gradient(180deg, #20120f, #130d0c);
+    border-color: var(--led-nogo-edge);
+    text-shadow: 0 0 7px rgba(200, 69, 62, 0.5);
   }
 
   /*

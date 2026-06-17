@@ -34,9 +34,15 @@ import {
 import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
 import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
 
-import { Badge, badgeVariants } from '@/components/ui/badge.js';
+import {
+  Faceplate,
+  LampTile,
+  type LampTone,
+  LcdWell,
+  RecessedWell,
+  VuMeter,
+} from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
 import { CopilotDashboardWidget } from '@/features/copilot/copilot-dashboard-widget.js';
 import { useApprovals } from '@/hooks/use-approvals.js';
@@ -53,10 +59,10 @@ import { useAppStore } from '@/store/app-store.js';
 
 const DAY_MS = 86_400_000;
 const DASHBOARD_TOUCH_BUTTON_CLASS = 'min-h-11';
-const DASHBOARD_GLASS_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border-white/10 bg-black hover:bg-black`;
-const DASHBOARD_GHOST_BUTTON_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} border border-white/10 bg-black hover:bg-black`;
-const DASHBOARD_PILL_TOGGLE_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full px-4`;
-const DASHBOARD_PILL_GHOST_CLASS = `${DASHBOARD_TOUCH_BUTTON_CLASS} rounded-full border border-white/10 bg-black hover:bg-black`;
+const DASHBOARD_GLASS_BUTTON_CLASS = DASHBOARD_TOUCH_BUTTON_CLASS;
+const DASHBOARD_GHOST_BUTTON_CLASS = DASHBOARD_TOUCH_BUTTON_CLASS;
+const DASHBOARD_PILL_TOGGLE_CLASS = DASHBOARD_TOUCH_BUTTON_CLASS;
+const DASHBOARD_PILL_GHOST_CLASS = DASHBOARD_TOUCH_BUTTON_CLASS;
 const DASHBOARD_INTERACTIVE_FOCUS_CLASS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
@@ -94,27 +100,40 @@ function formatQueryErrorMessage(error: unknown, fallback: string): string {
 function liveStatusLabel(status: DashboardQueueRow['liveStatus']): string {
   switch (status) {
     case 'thinking':
-      return 'Live';
+      return 'EXEC';
     case 'blocked':
-      return 'Blocked';
+      return 'HOLD';
     case 'error':
-      return 'Error';
+      return 'NO-GO';
     default:
-      return 'Idle';
+      return 'STBY';
   }
 }
 
-function liveStatusClassName(status: DashboardQueueRow['liveStatus']): string {
+function lampToneForLiveStatus(status: DashboardQueueRow['liveStatus']): LampTone {
   switch (status) {
     case 'thinking':
-      return 'border-brand/35 bg-black text-brand';
+      return 'exec';
     case 'blocked':
-      return 'border-amber-500/30 bg-black text-amber-300';
+      return 'hold';
     case 'error':
-      return 'border-red-500/30 bg-black text-red-300';
+      return 'nogo';
     default:
-      return 'border-border/80 bg-black text-muted-foreground';
+      return 'off';
   }
+}
+
+/** Agent-run status → canonical lamp word + tone (failed = steady NO-GO). */
+function agentRunLampLabel(status: string): string {
+  if (status === 'completed') return 'GO';
+  if (status === 'failed') return 'NO-GO';
+  return 'EXEC';
+}
+
+function agentRunLampTone(status: string): LampTone {
+  if (status === 'completed') return 'go';
+  if (status === 'failed') return 'nogo';
+  return 'exec';
 }
 
 function panelGridClass(agentRuns: boolean, employeeQueues: boolean): string {
@@ -130,32 +149,37 @@ function HeroMetric({
   hint,
   icon: Icon,
   onClick,
+  tone = 'go',
+  meter,
 }: {
   label: string;
   value: string;
   hint: string;
   icon: typeof Activity;
   onClick?: () => void;
+  tone?: 'go' | 'amber' | 'red';
+  meter?: ReactNode;
 }) {
-  const className = cn(
-    'group flex flex-col gap-3 rounded-2xl border border-white/10 bg-black p-4 text-left transition-all',
-    onClick && `${DASHBOARD_INTERACTIVE_FOCUS_CLASS} hover:border-brand/30 hover:bg-black`,
-  );
-
   const content = (
     <>
-      <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-        <Icon className="h-4 w-4 text-brand" />
+      <div className="flex items-center gap-2 text-eyebrow text-silver-mute">
+        <Icon className="h-4 w-4 text-armed" />
         {label}
       </div>
-      <div className="flex items-end justify-between gap-3">
-        <span className="text-numeric text-foreground">{value}</span>
+      <LcdWell tone={tone} className="flex items-end justify-between gap-3 px-3 py-2">
+        <span className="text-numeric">{value}</span>
         {onClick && (
-          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          <ArrowRight className="h-4 w-4 text-[hsl(var(--display-fg))] transition-transform group-hover:translate-x-0.5" />
         )}
-      </div>
-      <p className="text-caption text-muted-foreground">{hint}</p>
+      </LcdWell>
+      {meter}
+      <p className="text-caption text-silver-mute">{hint}</p>
     </>
+  );
+
+  const className = cn(
+    'cap group flex flex-col gap-3 p-4 text-left',
+    onClick && DASHBOARD_INTERACTIVE_FOCUS_CLASS,
   );
 
   if (onClick) {
@@ -185,26 +209,17 @@ function PrimaryPanel({
   dataPanel: string;
 }) {
   return (
-    <Card
-      className="mission-panel flex min-h-[24rem] flex-col rounded-[24px] border-white/10 bg-transparent shadow-none"
-      data-dashboard-primary-panel={dataPanel}
-    >
-      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-foreground">{title}</CardTitle>
-            {countLabel && (
-              <Badge variant="outline" className="border-border/80 bg-black text-[10px] font-mono">
-                {countLabel}
-              </Badge>
-            )}
-          </div>
-          <p className="text-body text-muted-foreground">{description}</p>
-        </div>
-        {actions}
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col">{children}</CardContent>
-    </Card>
+    <div className="flex flex-col" data-dashboard-primary-panel={dataPanel}>
+      <Faceplate
+        kicker={title}
+        serial={countLabel}
+        stripeSlot={actions}
+        bodyClassName="flex min-h-[24rem] flex-col gap-4"
+      >
+        <p className="text-body text-silver-mute">{description}</p>
+        <div className="flex flex-1 flex-col">{children}</div>
+      </Faceplate>
+    </div>
   );
 }
 
@@ -224,7 +239,7 @@ function PanelSkeletonRows({
   return (
     <div className={cn('grid gap-3', className)} data-dashboard-panel-state="loading">
       {skeletonKeys.map((key) => (
-        <div key={key} className={cn(heightClassName, 'animate-pulse rounded-2xl bg-black')} />
+        <RecessedWell key={key} className={cn(heightClassName, 'animate-pulse')} />
       ))}
     </div>
   );
@@ -246,51 +261,61 @@ function PanelMessageState({
   dataState: string;
 }) {
   return (
-    <div
-      className={cn(
-        'flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border p-8 text-center',
-        tone === 'danger'
-          ? 'border-red-500/25 bg-black text-red-200'
-          : 'border-dashed border-white/10 bg-black text-muted-foreground',
-      )}
+    <RecessedWell
+      className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center"
       data-dashboard-panel-state={dataState}
     >
-      <Icon className={cn('h-8 w-8', tone === 'danger' ? 'text-red-300' : 'text-brand')} />
+      <LampTile
+        label={tone === 'danger' ? 'NO-GO' : 'STBY'}
+        tone={tone === 'danger' ? 'nogo' : 'off'}
+        small
+        interactive={false}
+      />
+      <Icon className="h-8 w-8 text-silver-mute" />
       <div className="space-y-1">
-        <p
-          className={cn('text-body-strong', tone === 'danger' ? 'text-red-100' : 'text-foreground')}
-        >
-          {title}
-        </p>
-        <p
-          className={cn(
-            'max-w-md text-body',
-            tone === 'danger' ? 'text-red-200/85' : 'text-muted-foreground',
-          )}
-        >
-          {description}
-        </p>
+        <p className="text-body-strong text-[hsl(var(--display-fg))]">{title}</p>
+        <p className="max-w-md text-body text-silver-mute">{description}</p>
       </div>
       {action}
-    </div>
+    </RecessedWell>
   );
 }
 
-function runtimeStateClassName(tone: DashboardRuntimeOperationsSummary['stateTone']): string {
+function lampToneForRuntimeState(tone: DashboardRuntimeOperationsSummary['stateTone']): LampTone {
   switch (tone) {
     case 'accent':
-      return 'border-brand/35 bg-black text-brand';
+      return 'exec';
     case 'warning':
-      return 'border-amber-500/30 bg-black text-amber-200';
+      return 'hold';
     case 'danger':
-      return 'border-red-500/30 bg-black text-red-200';
+      return 'nogo';
     default:
-      return 'border-white/10 bg-black text-foreground/80';
+      return 'off';
   }
+}
+
+function lampToneForRuntimeStatus(status: string): LampTone {
+  if (status === 'working') return 'exec';
+  if (status === 'blocked' || status === 'stale') return 'hold';
+  if (status === 'failed' || status === 'offline') return 'nogo';
+  return 'off';
 }
 
 function formatRuntimeHeartbeat(value: number | null): string {
   return value === null ? 'No heartbeat yet' : formatTimeAgo(new Date(value).toISOString());
+}
+
+function lcdToneForRuntimeMetric(
+  tone: DashboardRuntimeOperationsSummary['stateTone'],
+): 'go' | 'amber' | 'red' {
+  switch (tone) {
+    case 'warning':
+      return 'amber';
+    case 'danger':
+      return 'red';
+    default:
+      return 'go';
+  }
 }
 
 function RuntimeMetricCell({
@@ -307,29 +332,15 @@ function RuntimeMetricCell({
   tone?: DashboardRuntimeOperationsSummary['stateTone'];
 }) {
   return (
-    <div
-      className={cn(
-        'rounded-2xl border bg-black p-4',
-        tone === 'warning' && 'border-amber-500/25 bg-black',
-        tone === 'danger' && 'border-red-500/25 bg-black',
-        tone === 'accent' && 'border-brand/30 bg-black',
-        tone === 'default' && 'border-white/10',
-      )}
-    >
-      <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-        <Icon
-          className={cn(
-            'h-4 w-4',
-            tone === 'warning' && 'text-amber-300',
-            tone === 'danger' && 'text-red-300',
-            tone === 'accent' && 'text-brand',
-            tone === 'default' && 'text-brand',
-          )}
-        />
+    <div className="cap flex flex-col gap-2 p-4">
+      <div className="flex items-center gap-2 text-eyebrow text-silver-mute">
+        <Icon className="h-4 w-4 text-armed" />
         {label}
       </div>
-      <p className="mt-2 text-numeric text-foreground">{value}</p>
-      <p className="mt-1 text-caption text-muted-foreground">{hint}</p>
+      <LcdWell tone={lcdToneForRuntimeMetric(tone)} className="px-3 py-2">
+        <span className="text-numeric">{value}</span>
+      </LcdWell>
+      <p className="text-caption text-silver-mute">{hint}</p>
     </div>
   );
 }
@@ -363,66 +374,67 @@ function RuntimeOperationsBand({
       : 'No blocked, stale, offline, or heartbeat-missing sessions.';
 
   return (
-    <Card
-      className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none"
-      data-dashboard-runtime-operations=""
-    >
-      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2 text-eyebrow text-muted-foreground">
-            <HardDrive className="h-4 w-4 text-brand" />
-            External Runtime Operations
-            <Badge
-              variant="outline"
-              className={cn('font-mono text-[10px]', runtimeStateClassName(summary.stateTone))}
-              data-dashboard-runtime-state={summary.stateLabel}
-            >
-              {summary.stateLabel}
-            </Badge>
+    <div data-dashboard-runtime-operations="">
+      <Faceplate
+        kicker="EXTERNAL RUNTIME OPS"
+        serial="HEARTBEAT · CHECKOUT"
+        stripeSlot={
+          <div className="flex items-center gap-2">
+            <LampTile
+              label={summary.stateLabel}
+              tone={lampToneForRuntimeState(summary.stateTone)}
+              small
+              interactive={false}
+            />
             {summary.budgetBlockedCount > 0 && (
-              <Badge
-                variant="outline"
-                className="border-amber-500/30 bg-black font-mono text-[10px] text-amber-200"
-                data-dashboard-runtime-budget-blocks=""
-              >
-                {summary.budgetBlockedCount} budget hard-stops
-              </Badge>
+              <span data-dashboard-runtime-budget-blocks="">
+                <LampTile label="BUDG" tone="hold" small interactive={false} />
+              </span>
             )}
           </div>
-          <CardTitle className="text-foreground">Heartbeat and checkout pulse</CardTitle>
-          <p className="max-w-3xl text-body text-muted-foreground">
-            External agents, active leases, heartbeat freshness, managed workspaces, and budget stop
-            posture.
-          </p>
+        }
+        bodyClassName="space-y-4"
+      >
+        <div data-dashboard-runtime-state={summary.stateLabel} className="sr-only">
+          {summary.stateLabel}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onRetry}
-            disabled={!hasWorkspace || isFetching}
-            className={DASHBOARD_GHOST_BUTTON_CLASS}
-            aria-label="Refresh runtime operations snapshot"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onOpenRuntimes}
-            disabled={!hasWorkspace}
-            className={DASHBOARD_GLASS_BUTTON_CLASS}
-            aria-label="Open Autonomy runtimes"
-          >
-            <Bot className="h-4 w-4" />
-            Runtimes
-          </Button>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-placard text-[hsl(var(--display-fg))]">
+              Heartbeat and checkout pulse
+            </p>
+            <p className="max-w-3xl text-body text-silver-mute">
+              External agents, active leases, heartbeat freshness, managed workspaces, and budget
+              stop posture.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onRetry}
+              disabled={!hasWorkspace || isFetching}
+              className={DASHBOARD_GHOST_BUTTON_CLASS}
+              aria-label="Refresh runtime operations snapshot"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenRuntimes}
+              disabled={!hasWorkspace}
+              className={DASHBOARD_GLASS_BUTTON_CLASS}
+              aria-label="Open Autonomy runtimes"
+            >
+              <Bot className="h-4 w-4" />
+              Runtimes
+            </Button>
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
         {!hasWorkspace ? (
           <PanelMessageState
             icon={HardDrive}
@@ -488,60 +500,40 @@ function RuntimeOperationsBand({
             </div>
 
             {summary.recentSessions.length === 0 ? (
-              <div
-                className="rounded-2xl border border-dashed border-white/10 bg-black p-5 text-body text-muted-foreground"
+              <RecessedWell
+                className="p-5 text-body text-silver-mute"
                 data-dashboard-runtime-empty=""
               >
                 No external runtime session is active for this workspace.
-              </div>
+              </RecessedWell>
             ) : (
               <div className="grid gap-3 lg:grid-cols-3" data-dashboard-runtime-session-list="">
                 {summary.recentSessions.map((session) => (
                   <div
                     key={session.id}
-                    className="rounded-2xl border border-white/10 bg-black p-4"
+                    className="cap p-4"
                     data-dashboard-runtime-session={session.id}
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className="border-brand/35 bg-black text-[10px] text-brand"
-                      >
-                        {session.adapterKind}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] font-mono',
-                          session.status === 'working' && 'border-brand/35 bg-black text-brand',
-                          (session.status === 'blocked' || session.status === 'stale') &&
-                            'border-amber-500/30 bg-black text-amber-200',
-                          (session.status === 'failed' || session.status === 'offline') &&
-                            'border-red-500/30 bg-black text-red-200',
-                          !['working', 'blocked', 'stale', 'failed', 'offline'].includes(
-                            session.status,
-                          ) && 'border-white/10 bg-black text-foreground/80',
-                        )}
-                      >
-                        {session.status}
-                      </Badge>
+                      <LampTile label={session.adapterKind} tone="exec" small interactive={false} />
+                      <LampTile
+                        label={session.status}
+                        tone={lampToneForRuntimeStatus(session.status)}
+                        small
+                        interactive={false}
+                      />
                       {session.workspaceManaged && (
-                        <Badge
-                          variant="outline"
-                          className="border-emerald-500/30 bg-black text-[10px] text-emerald-200"
-                        >
-                          isolated
-                        </Badge>
+                        <LampTile label="ISO" tone="go" small interactive={false} />
                       )}
                     </div>
                     <p className="mt-3 break-all text-body-strong text-foreground">
                       {session.currentTicketId ?? session.currentRunId ?? session.employeeId}
                     </p>
-                    <p className="mt-1 text-caption text-muted-foreground">
+                    <p className="mt-1 text-caption text-silver-mute">
                       Last heartbeat {formatRuntimeHeartbeat(session.lastHeartbeatAt)}
                     </p>
                     {session.failureReason && (
-                      <p className="mt-2 text-caption text-amber-200">
+                      <p className="mt-2 text-caption text-led-hold">
                         {truncateText(session.failureReason, 120)}
                       </p>
                     )}
@@ -551,8 +543,8 @@ function RuntimeOperationsBand({
             )}
           </>
         )}
-      </CardContent>
-    </Card>
+      </Faceplate>
+    </div>
   );
 }
 
@@ -567,22 +559,19 @@ function MissionControlSkeleton() {
   ];
   return (
     <section
-      className="mission-shell relative min-h-full overflow-hidden"
+      className="relative flex min-h-full flex-col gap-[var(--sp-4)] overflow-hidden p-4 sm:p-6 xl:p-8"
       data-dashboard-mission-control=""
     >
-      <div className="mission-grid pointer-events-none absolute inset-0 opacity-35" />
-      <div className="relative flex flex-col gap-6 p-4 sm:p-6 xl:p-8">
-        <div className="mission-hero rounded-[28px] border border-white/10 p-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-            {heroSkeletonKeys.map((key) => (
-              <div key={key} className="h-28 animate-pulse rounded-2xl bg-black" />
-            ))}
-          </div>
+      <Faceplate kicker="MISSION CONTROL" serial="BOOT">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+          {heroSkeletonKeys.map((key) => (
+            <RecessedWell key={key} className="h-28 animate-pulse" />
+          ))}
         </div>
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.95fr)]">
-          <div className="h-[26rem] animate-pulse rounded-[24px] border border-white/10 bg-black" />
-          <div className="h-[26rem] animate-pulse rounded-[24px] border border-white/10 bg-black" />
-        </div>
+      </Faceplate>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.95fr)]">
+        <RecessedWell className="h-[26rem] animate-pulse" />
+        <RecessedWell className="h-[26rem] animate-pulse" />
       </div>
     </section>
   );
@@ -744,359 +733,366 @@ export function MissionControlDashboard({
 
   return (
     <section
-      className="mission-shell relative min-h-full overflow-hidden"
+      className="relative flex min-h-full flex-col gap-6 overflow-hidden p-4 sm:p-6 xl:p-8"
       data-dashboard-mission-control=""
     >
-      <div className="mission-grid pointer-events-none absolute inset-0 opacity-35" />
-      <div className="relative flex flex-col gap-6 p-4 sm:p-6 xl:p-8">
-        <header className="mission-hero overflow-hidden rounded-[28px] border border-white/10 p-6 lg:p-7">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div className="max-w-3xl space-y-3">
-                <div className="flex flex-wrap items-center gap-2 text-eyebrow text-muted-foreground">
-                  <LayoutPanelTop className="h-4 w-4 text-brand" />
-                  Mission Control
-                  {company?.slug && (
-                    <Badge
-                      variant="outline"
-                      className="border-white/10 bg-black font-mono text-[10px] text-foreground/80"
-                    >
-                      {company.slug}
-                    </Badge>
-                  )}
-                  {company?.status && (
-                    <Badge
-                      variant="outline"
-                      className="border-brand/30 bg-black font-mono text-[10px] text-brand"
-                    >
-                      {company.status}
-                    </Badge>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <h1 className="text-display text-foreground">
-                    {company?.name ?? 'Select a workspace to open the control surface'}
-                  </h1>
-                  <p className="max-w-2xl text-body text-muted-foreground">
-                    {company?.settings?.mission ??
-                      'Track live execution, queue pressure, and operational telemetry from one surface without leaving the dashboard.'}
-                  </p>
-                </div>
+      <div className="flex min-h-full flex-col gap-6">
+        <Faceplate
+          kicker="MISSION CONTROL"
+          serial={company?.slug ?? undefined}
+          stripeSlot={
+            company?.status ? (
+              <LampTile label={company.status} tone="exec" small interactive={false} />
+            ) : undefined
+          }
+          bodyClassName="flex flex-col gap-6"
+        >
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-eyebrow text-silver-mute">
+                <LayoutPanelTop className="h-4 w-4 text-armed" />
+                Mission Control
               </div>
-
-              <div className="flex flex-col gap-3 xl:min-w-[21rem]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePanelToggle('agentRuns')}
-                    className={cn(
-                      DASHBOARD_PILL_TOGGLE_CLASS,
-                      layout.agentRuns
-                        ? 'border-brand/40 bg-black text-brand hover:bg-black'
-                        : 'border-white/10 bg-black text-muted-foreground hover:bg-black',
-                    )}
-                    data-dashboard-hero-toggle="agent-runs"
-                    aria-pressed={layout.agentRuns}
-                    aria-label={`${layout.agentRuns ? 'Hide' : 'Show'} Agent Runs panel`}
-                    disabled={!companyId}
-                  >
-                    <Bot className="h-4 w-4" />
-                    Agent Runs
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePanelToggle('employeeQueues')}
-                    className={cn(
-                      DASHBOARD_PILL_TOGGLE_CLASS,
-                      layout.employeeQueues
-                        ? 'border-brand/40 bg-black text-brand hover:bg-black'
-                        : 'border-white/10 bg-black text-muted-foreground hover:bg-black',
-                    )}
-                    data-dashboard-hero-toggle="employee-queues"
-                    aria-pressed={layout.employeeQueues}
-                    aria-label={`${layout.employeeQueues ? 'Hide' : 'Show'} Employee Queues panel`}
-                    disabled={!companyId}
-                  >
-                    <Ticket className="h-4 w-4" />
-                    Employee Queues
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetLayout}
-                    disabled={!companyId || !dashboardLayout.layoutDirty}
-                    className={DASHBOARD_PILL_GHOST_CLASS}
-                    data-dashboard-reset-layout=""
-                    aria-label="Reset dashboard layout to the default hybrid view"
-                  >
-                    <TimerReset className="h-4 w-4" />
-                    Reset layout
-                  </Button>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
-                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
-                    {visiblePrimaryPanelCount(layout)} / 2 live panels
-                  </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
-                    {commandRows.length} recent commands
-                  </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
-                    {tickets.length} tracked tickets
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="border-white/10 bg-black text-foreground/80"
-                    data-dashboard-autonomy-badge="routines"
-                  >
-                    {enabledRoutineCount} active routines
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'border-white/10 bg-black text-foreground/80',
-                      runtimeOperationsSummary.attentionCount > 0 &&
-                        'border-amber-500/30 bg-black text-amber-200',
-                    )}
-                    data-dashboard-runtime-badge=""
-                  >
-                    {runtimeOperationsReady
-                      ? `${runtimeOperationsSummary.sessionCount} runtime sessions`
-                      : 'runtime sessions'}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'border-white/10 bg-black text-foreground/80',
-                      pendingApprovalCount > 0 && 'border-amber-500/30 bg-black text-amber-200',
-                    )}
-                    data-dashboard-autonomy-badge="approvals"
-                  >
-                    {pendingApprovalCount} pending approvals
-                  </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-black text-foreground/80">
-                    {operatorPosture} posture
-                  </Badge>
-                  {dashboardLayout.isSaving && (
-                    <output
-                      className={cn(
-                        badgeVariants({ variant: 'outline' }),
-                        'border-brand/30 bg-black text-brand',
-                      )}
-                      aria-live="polite"
-                    >
-                      Saving layout
-                    </output>
-                  )}
-                </div>
-                {dashboardLayout.error && (
-                  <p
-                    className="text-caption text-red-200"
-                    data-dashboard-layout-error=""
-                    role="alert"
-                  >
-                    {dashboardLayout.error}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setActiveView('tickets')}
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <Ticket className="h-4 w-4" />
-                    Open tickets
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDashboardSubview('commands')}
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <Radar className="h-4 w-4" />
-                    Command log
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setActiveView('telemetry')}
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <Gauge className="h-4 w-4" />
-                    Telemetry
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'access')
-                    }
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    Autonomy
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenAutonomy('runtimes')}
-                    className={DASHBOARD_GLASS_BUTTON_CLASS}
-                  >
-                    <HardDrive className="h-4 w-4" />
-                    Runtimes
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-              <HeroMetric
-                label="Live runs"
-                value={
-                  !hasWorkspace || agentRunsQuery.isLoading || agentRunsQuery.isError
-                    ? '--'
-                    : `${activeRunCount}`
-                }
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load persisted runs and live execution state.'
-                    : activeRunCount > 0
-                      ? 'Agentic loops currently progressing with live step updates.'
-                      : agentRunsQuery.isLoading
-                        ? 'Loading recent agentic loops from the persisted run log.'
-                        : agentRunsQuery.isError
-                          ? 'Run history is temporarily unavailable for this workspace.'
-                          : 'No agentic loops are currently active.'
-                }
-                icon={Bot}
-                onClick={() => setDashboardSubview('commands')}
-              />
-              <HeroMetric
-                label="External runtimes"
-                value={runtimeOperationsReady ? `${runtimeOperationsSummary.sessionCount}` : '--'}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load runtime sessions and checkouts.'
-                    : runtimeOperationsQuery.isLoading
-                      ? 'Loading live runtime heartbeat and checkout state.'
-                      : runtimeOperationsQuery.isError
-                        ? 'Runtime operations are temporarily unavailable.'
-                        : runtimeOperationsSummary.attentionCount > 0
-                          ? `${runtimeOperationsSummary.attentionCount} runtime items need review.`
-                          : runtimeOperationsSummary.sessionCount > 0
-                            ? `${runtimeOperationsSummary.workingSessionCount} working with ${runtimeOperationsSummary.activeCheckoutCount} active checkout leases.`
-                            : 'No external runtime sessions are active.'
-                }
-                icon={HardDrive}
-                onClick={() => handleOpenAutonomy('runtimes')}
-              />
-              <HeroMetric
-                label="Workforce active"
-                value={!hasWorkspace ? '--' : `${queueSummary.activeEmployees}/${employees.length}`}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load employee activity.'
-                    : employees.length > 0
-                      ? 'Employees streaming or actively processing work right now.'
-                      : 'No employees hired in this workspace yet.'
-                }
-                icon={Activity}
-                onClick={() =>
-                  setSelectedEmployee(
-                    queueRows.find((row) => row.liveStatus === 'thinking')?.employeeId ?? null,
-                  )
-                }
-              />
-              <HeroMetric
-                label="Queue pressure"
-                value={queueDataReady ? `${queueSummary.totalPressure}` : '--'}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load ticket backlog.'
-                    : ticketsQuery.isLoading
-                      ? 'Loading durable backlog and live queue overlays.'
-                      : ticketsQuery.isError
-                        ? 'Ticket backlog is temporarily unavailable for this workspace.'
-                        : queueSummary.totalPressure > 0
-                          ? `${queueSummary.employeesWithWork} employees carrying open or blocked work.`
-                          : 'No durable queue pressure detected.'
-                }
-                icon={Ticket}
-                onClick={() => setActiveView('tickets')}
-              />
-              <HeroMetric
-                label="Blocked work"
-                value={queueDataReady ? `${queueSummary.blocked}` : '--'}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load blocked backlog state.'
-                    : ticketsQuery.isLoading
-                      ? 'Loading blocked tickets and live employee state.'
-                      : ticketsQuery.isError
-                        ? 'Blocked backlog is temporarily unavailable for this workspace.'
-                        : blockedEmployeeCount > 0
-                          ? `${blockedEmployeeCount} employees show blocked or error state.`
-                          : 'No blocked tickets or blocked employees right now.'
-                }
-                icon={AlertTriangle}
-                onClick={() => setActiveView('tickets')}
-              />
-              <HeroMetric
-                label="Today cost"
-                value={telemetryReady ? formatUsd(todayUsage?.costUsd) : '--'}
-                hint={
-                  !hasWorkspace
-                    ? 'Select a workspace to load telemetry.'
-                    : telemetryStatsQuery.isLoading || telemetryDailyQuery.isLoading
-                      ? 'Loading telemetry for the current window.'
-                      : telemetryStatsQuery.isError || telemetryDailyQuery.isError
-                        ? 'Telemetry is temporarily unavailable for this workspace.'
-                        : todayUsage
-                          ? `${formatCompactNumber(todayUsage.totalTokens)} tokens recorded in the current telemetry window.`
-                          : 'Telemetry is waiting for completed runs.'
-                }
-                icon={Gauge}
-                onClick={() => setActiveView('telemetry')}
-              />
-            </div>
-          </div>
-        </header>
-
-        {isError ? (
-          <Card className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none">
-            <CardContent className="flex min-h-[18rem] flex-col items-center justify-center gap-4 text-center">
-              <AlertTriangle className="h-10 w-10 text-red-300" />
-              <div className="space-y-1">
-                <h2 className="text-h3 text-foreground">Dashboard data could not load</h2>
-                <p className="text-body text-muted-foreground">
-                  The mission-control shell is ready, but the employee roster query failed.
+              <div className="space-y-2">
+                <h1 className="text-display font-display text-foreground">
+                  {company?.name ?? 'Select a workspace to open the control surface'}
+                </h1>
+                <p className="max-w-2xl text-body text-muted-foreground">
+                  {company?.settings?.mission ??
+                    'Track live execution, queue pressure, and operational telemetry from one surface without leaving the dashboard.'}
                 </p>
               </div>
-              {onRetry && (
+            </div>
+
+            <div className="flex flex-col gap-3 xl:min-w-[21rem]">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onRetry}
+                  size="sm"
+                  onClick={() => handlePanelToggle('agentRuns')}
+                  className={cn(DASHBOARD_PILL_TOGGLE_CLASS, layout.agentRuns && 'cap cap-select')}
+                  data-dashboard-hero-toggle="agent-runs"
+                  aria-pressed={layout.agentRuns}
+                  aria-label={`${layout.agentRuns ? 'Hide' : 'Show'} Agent Runs panel`}
+                  disabled={!companyId}
+                >
+                  <Bot className="h-4 w-4" />
+                  Agent Runs
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePanelToggle('employeeQueues')}
+                  className={cn(
+                    DASHBOARD_PILL_TOGGLE_CLASS,
+                    layout.employeeQueues && 'cap cap-select',
+                  )}
+                  data-dashboard-hero-toggle="employee-queues"
+                  aria-pressed={layout.employeeQueues}
+                  aria-label={`${layout.employeeQueues ? 'Hide' : 'Show'} Employee Queues panel`}
+                  disabled={!companyId}
+                >
+                  <Ticket className="h-4 w-4" />
+                  Employee Queues
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetLayout}
+                  disabled={!companyId || !dashboardLayout.layoutDirty}
+                  className={DASHBOARD_PILL_GHOST_CLASS}
+                  data-dashboard-reset-layout=""
+                  aria-label="Reset dashboard layout to the default hybrid view"
+                >
+                  <TimerReset className="h-4 w-4" />
+                  Reset layout
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {visiblePrimaryPanelCount(layout)} / 2
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">live panels</span>
+                </RecessedWell>
+                <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {commandRows.length}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">recent commands</span>
+                </RecessedWell>
+                <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {tickets.length}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">tracked tickets</span>
+                </RecessedWell>
+                <RecessedWell
+                  className="flex items-center gap-2 px-3 py-1.5"
+                  data-dashboard-autonomy-badge="routines"
+                >
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {enabledRoutineCount}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">active routines</span>
+                </RecessedWell>
+                <RecessedWell
+                  className="flex items-center gap-2 px-3 py-1.5"
+                  data-dashboard-runtime-badge=""
+                >
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {runtimeOperationsReady ? runtimeOperationsSummary.sessionCount : '--'}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">runtime sessions</span>
+                  {runtimeOperationsSummary.attentionCount > 0 && (
+                    <LampTile label="ATTN" tone="hold" small interactive={false} />
+                  )}
+                </RecessedWell>
+                <RecessedWell
+                  className="flex items-center gap-2 px-3 py-1.5"
+                  data-dashboard-autonomy-badge="approvals"
+                >
+                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                    {pendingApprovalCount}
+                  </span>
+                  <span className="text-eyebrow-sm text-silver-mute">pending approvals</span>
+                  {pendingApprovalCount > 0 && (
+                    <LampTile label="ATTN" tone="hold" small interactive={false} />
+                  )}
+                </RecessedWell>
+                <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="text-eyebrow-sm text-silver-mute">
+                    {operatorPosture} posture
+                  </span>
+                </RecessedWell>
+                {dashboardLayout.isSaving && (
+                  <output
+                    className="flex items-center gap-2 rounded-control border border-[hsl(var(--armed-edge))] bg-[hsl(var(--armed-soft))] px-3 py-1.5 text-eyebrow-sm text-armed"
+                    aria-live="polite"
+                  >
+                    Saving layout
+                  </output>
+                )}
+              </div>
+              {dashboardLayout.error && (
+                <p
+                  className="text-caption text-led-nogo"
+                  data-dashboard-layout-error=""
+                  role="alert"
+                >
+                  {dashboardLayout.error}
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveView('tickets')}
                   className={DASHBOARD_GLASS_BUTTON_CLASS}
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  Retry
+                  <Ticket className="h-4 w-4" />
+                  Open tickets
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDashboardSubview('commands')}
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
+                >
+                  <Radar className="h-4 w-4" />
+                  Command log
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveView('telemetry')}
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
+                >
+                  <Gauge className="h-4 w-4" />
+                  Telemetry
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleOpenAutonomy(pendingApprovalCount > 0 ? 'approvals' : 'access')
+                  }
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Autonomy
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenAutonomy('runtimes')}
+                  className={DASHBOARD_GLASS_BUTTON_CLASS}
+                >
+                  <HardDrive className="h-4 w-4" />
+                  Runtimes
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+            <HeroMetric
+              label="Live runs"
+              value={
+                !hasWorkspace || agentRunsQuery.isLoading || agentRunsQuery.isError
+                  ? '--'
+                  : `${activeRunCount}`
+              }
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load persisted runs and live execution state.'
+                  : activeRunCount > 0
+                    ? 'Agentic loops currently progressing with live step updates.'
+                    : agentRunsQuery.isLoading
+                      ? 'Loading recent agentic loops from the persisted run log.'
+                      : agentRunsQuery.isError
+                        ? 'Run history is temporarily unavailable for this workspace.'
+                        : 'No agentic loops are currently active.'
+              }
+              icon={Bot}
+              onClick={() => setDashboardSubview('commands')}
+            />
+            <HeroMetric
+              label="External runtimes"
+              value={runtimeOperationsReady ? `${runtimeOperationsSummary.sessionCount}` : '--'}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load runtime sessions and checkouts.'
+                  : runtimeOperationsQuery.isLoading
+                    ? 'Loading live runtime heartbeat and checkout state.'
+                    : runtimeOperationsQuery.isError
+                      ? 'Runtime operations are temporarily unavailable.'
+                      : runtimeOperationsSummary.attentionCount > 0
+                        ? `${runtimeOperationsSummary.attentionCount} runtime items need review.`
+                        : runtimeOperationsSummary.sessionCount > 0
+                          ? `${runtimeOperationsSummary.workingSessionCount} working with ${runtimeOperationsSummary.activeCheckoutCount} active checkout leases.`
+                          : 'No external runtime sessions are active.'
+              }
+              icon={HardDrive}
+              onClick={() => handleOpenAutonomy('runtimes')}
+            />
+            <HeroMetric
+              label="Workforce active"
+              meter={
+                <VuMeter
+                  value={employees.length > 0 ? queueSummary.activeEmployees / employees.length : 0}
+                  label="Workforce utilization"
+                />
+              }
+              value={!hasWorkspace ? '--' : `${queueSummary.activeEmployees}/${employees.length}`}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load employee activity.'
+                  : employees.length > 0
+                    ? 'Employees streaming or actively processing work right now.'
+                    : 'No employees hired in this workspace yet.'
+              }
+              icon={Activity}
+              onClick={() =>
+                setSelectedEmployee(
+                  queueRows.find((row) => row.liveStatus === 'thinking')?.employeeId ?? null,
+                )
+              }
+            />
+            <HeroMetric
+              label="Queue pressure"
+              tone={queueSummary.totalPressure > 0 ? 'amber' : 'go'}
+              value={queueDataReady ? `${queueSummary.totalPressure}` : '--'}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load ticket backlog.'
+                  : ticketsQuery.isLoading
+                    ? 'Loading durable backlog and live queue overlays.'
+                    : ticketsQuery.isError
+                      ? 'Ticket backlog is temporarily unavailable for this workspace.'
+                      : queueSummary.totalPressure > 0
+                        ? `${queueSummary.employeesWithWork} employees carrying open or blocked work.`
+                        : 'No durable queue pressure detected.'
+              }
+              icon={Ticket}
+              onClick={() => setActiveView('tickets')}
+            />
+            <HeroMetric
+              label="Blocked work"
+              tone={queueSummary.blocked > 0 ? 'amber' : 'go'}
+              value={queueDataReady ? `${queueSummary.blocked}` : '--'}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load blocked backlog state.'
+                  : ticketsQuery.isLoading
+                    ? 'Loading blocked tickets and live employee state.'
+                    : ticketsQuery.isError
+                      ? 'Blocked backlog is temporarily unavailable for this workspace.'
+                      : blockedEmployeeCount > 0
+                        ? `${blockedEmployeeCount} employees show blocked or error state.`
+                        : 'No blocked tickets or blocked employees right now.'
+              }
+              icon={AlertTriangle}
+              onClick={() => setActiveView('tickets')}
+            />
+            <HeroMetric
+              label="Today cost"
+              tone="amber"
+              value={telemetryReady ? formatUsd(todayUsage?.costUsd) : '--'}
+              hint={
+                !hasWorkspace
+                  ? 'Select a workspace to load telemetry.'
+                  : telemetryStatsQuery.isLoading || telemetryDailyQuery.isLoading
+                    ? 'Loading telemetry for the current window.'
+                    : telemetryStatsQuery.isError || telemetryDailyQuery.isError
+                      ? 'Telemetry is temporarily unavailable for this workspace.'
+                      : todayUsage
+                        ? `${formatCompactNumber(todayUsage.totalTokens)} tokens recorded in the current telemetry window.`
+                        : 'Telemetry is waiting for completed runs.'
+              }
+              icon={Gauge}
+              onClick={() => setActiveView('telemetry')}
+            />
+          </div>
+        </Faceplate>
+
+        {isError ? (
+          <Faceplate
+            kicker="DASHBOARD FAULT"
+            bodyClassName="flex min-h-[18rem] flex-col items-center justify-center gap-4 text-center"
+          >
+            <LampTile label="NO-GO" tone="nogo" small interactive={false} />
+            <AlertTriangle className="h-10 w-10 text-silver-mute" />
+            <div className="space-y-1">
+              <h2 className="text-h3 text-[hsl(var(--display-fg))]">
+                Dashboard data could not load
+              </h2>
+              <p className="text-body text-silver-mute">
+                The mission-control shell is ready, but the employee roster query failed.
+              </p>
+            </div>
+            {onRetry && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onRetry}
+                className={DASHBOARD_GLASS_BUTTON_CLASS}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            )}
+          </Faceplate>
         ) : (
           <>
             <RuntimeOperationsBand
@@ -1179,10 +1175,10 @@ export function MissionControlDashboard({
                   ) : (
                     <div className="grid gap-3" data-dashboard-panel-state="agent-runs-ready">
                       {agentRunsQuery.hasHistoryWarning && (
-                        <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-black p-4 text-body text-amber-100">
+                        <RecessedWell className="flex flex-col gap-3 p-4 text-body text-led-hold">
                           <div className="space-y-1">
                             <p className="font-medium">Run history refresh failed</p>
-                            <p className="text-amber-100/80">
+                            <p className="text-silver-mute">
                               {agentRunsQuery.errorMessage ??
                                 'Live dashboard events are still rendering, but the persisted run log did not refresh.'}
                             </p>
@@ -1201,7 +1197,7 @@ export function MissionControlDashboard({
                               Retry history
                             </Button>
                           </div>
-                        </div>
+                        </RecessedWell>
                       )}
                       {agentRuns.map((run) => (
                         <button
@@ -1210,7 +1206,7 @@ export function MissionControlDashboard({
                           onClick={() => handleOpenRunThread(run.threadId)}
                           aria-label={`Open Copilot thread for ${run.label}`}
                           className={cn(
-                            'group rounded-2xl border border-white/10 bg-black p-4 text-left transition-all hover:border-brand/30 hover:bg-black',
+                            'cap group p-4 text-left',
                             DASHBOARD_INTERACTIVE_FOCUS_CLASS,
                           )}
                         >
@@ -1220,20 +1216,12 @@ export function MissionControlDashboard({
                                 <p className="text-body-strong text-foreground">
                                   {truncateText(run.label, 72)}
                                 </p>
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    'text-[10px] font-mono',
-                                    run.status === 'completed' &&
-                                      'border-emerald-500/30 bg-black text-emerald-300',
-                                    run.status === 'failed' &&
-                                      'border-red-500/30 bg-black text-red-300',
-                                    run.status === 'running' &&
-                                      'border-brand/35 bg-black text-brand',
-                                  )}
-                                >
-                                  {run.status}
-                                </Badge>
+                                <LampTile
+                                  label={agentRunLampLabel(run.status)}
+                                  tone={agentRunLampTone(run.status)}
+                                  small
+                                  interactive={false}
+                                />
                               </div>
                               <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
                                 <span>{formatAgentRunPhase(run.latestPhase)}</span>
@@ -1251,7 +1239,7 @@ export function MissionControlDashboard({
                                 <span>{formatUsd(run.costUsd)}</span>
                               </div>
                               {run.failureReason && (
-                                <p className="text-caption text-red-300">
+                                <p className="text-caption text-led-nogo">
                                   {truncateText(run.failureReason, 120)}
                                 </p>
                               )}
@@ -1357,7 +1345,7 @@ export function MissionControlDashboard({
                         return (
                           <div
                             key={row.employeeId}
-                            className="rounded-2xl border border-white/10 bg-black p-4"
+                            className="cap p-4"
                             data-dashboard-queue-row={row.employeeId}
                           >
                             <div className="flex flex-col gap-3">
@@ -1365,15 +1353,12 @@ export function MissionControlDashboard({
                                 <div className="space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <p className="text-body-strong text-foreground">{row.name}</p>
-                                    <Badge
-                                      variant="outline"
-                                      className={cn(
-                                        'text-[10px] font-mono',
-                                        liveStatusClassName(row.liveStatus),
-                                      )}
-                                    >
-                                      {liveStatusLabel(row.liveStatus)}
-                                    </Badge>
+                                    <LampTile
+                                      label={liveStatusLabel(row.liveStatus)}
+                                      tone={lampToneForLiveStatus(row.liveStatus)}
+                                      small
+                                      interactive={false}
+                                    />
                                   </div>
                                   <p className="text-caption text-muted-foreground">{row.title}</p>
                                   {row.liveActivity && (
@@ -1409,12 +1394,12 @@ export function MissionControlDashboard({
                               </div>
 
                               <div className="space-y-2">
-                                <div className="h-2 overflow-hidden rounded-full bg-black">
+                                <div className="h-2 overflow-hidden rounded-pill bg-carbon-950">
                                   {totalTickets > 0 && (
                                     <div className="flex h-full">
                                       {row.counts.open > 0 && (
                                         <div
-                                          className="h-full bg-slate-400/70"
+                                          className="h-full bg-graphite"
                                           style={{
                                             width: `${(row.counts.open / totalTickets) * 100}%`,
                                           }}
@@ -1422,7 +1407,7 @@ export function MissionControlDashboard({
                                       )}
                                       {row.counts.inProgress > 0 && (
                                         <div
-                                          className="h-full bg-brand/70"
+                                          className="h-full bg-led-scope"
                                           style={{
                                             width: `${(row.counts.inProgress / totalTickets) * 100}%`,
                                           }}
@@ -1430,7 +1415,7 @@ export function MissionControlDashboard({
                                       )}
                                       {row.counts.blocked > 0 && (
                                         <div
-                                          className="h-full bg-amber-400/80"
+                                          className="h-full bg-led-hold"
                                           style={{
                                             width: `${(row.counts.blocked / totalTickets) * 100}%`,
                                           }}
@@ -1438,7 +1423,7 @@ export function MissionControlDashboard({
                                       )}
                                       {row.counts.done > 0 && (
                                         <div
-                                          className="h-full bg-emerald-400/80"
+                                          className="h-full bg-led-go"
                                           style={{
                                             width: `${(row.counts.done / totalTickets) * 100}%`,
                                           }}
@@ -1448,10 +1433,30 @@ export function MissionControlDashboard({
                                   )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2 text-eyebrow text-muted-foreground">
-                                  <span>Open {row.counts.open}</span>
-                                  <span>In progress {row.counts.inProgress}</span>
-                                  <span>Blocked {row.counts.blocked}</span>
-                                  <span>Done {row.counts.done}</span>
+                                  <span>
+                                    Open{' '}
+                                    <span className="font-data tabular-nums text-silver">
+                                      {row.counts.open}
+                                    </span>
+                                  </span>
+                                  <span>
+                                    In progress{' '}
+                                    <span className="font-data tabular-nums text-silver">
+                                      {row.counts.inProgress}
+                                    </span>
+                                  </span>
+                                  <span>
+                                    Blocked{' '}
+                                    <span className="font-data tabular-nums text-silver">
+                                      {row.counts.blocked}
+                                    </span>
+                                  </span>
+                                  <span>
+                                    Done{' '}
+                                    <span className="font-data tabular-nums text-silver">
+                                      {row.counts.done}
+                                    </span>
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -1469,8 +1474,8 @@ export function MissionControlDashboard({
                   description="Both live boards are collapsed. Reset the layout to restore the default hybrid dashboard."
                   dataPanel="all-hidden"
                 >
-                  <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-black p-8 text-center">
-                    <LayoutPanelTop className="h-8 w-8 text-brand" />
+                  <RecessedWell className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+                    <LayoutPanelTop className="h-8 w-8 text-armed" />
                     <p className="max-w-lg text-body text-muted-foreground">
                       The mission-control shell is still active below, but the live board row is
                       hidden for this workspace.
@@ -1483,62 +1488,42 @@ export function MissionControlDashboard({
                       <TimerReset className="h-4 w-4" />
                       Restore default hybrid layout
                     </Button>
-                  </div>
+                  </RecessedWell>
                 </PrimaryPanel>
               )}
             </div>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)_minmax(320px,0.9fr)]">
-              <div className="h-full">
-                <Card className="mission-panel h-full rounded-[24px] border-white/10 bg-transparent shadow-none">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-                      <Sparkles className="h-4 w-4 text-brand" />
-                      Copilot Insights
-                    </div>
-                    <CardTitle className="text-foreground">Secondary rail</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div
-                      className="rounded-2xl border border-white/10 bg-black p-4"
-                      data-dashboard-secondary-panel="copilot"
-                    >
-                      <p className="mb-3 text-caption text-muted-foreground">
-                        Keep live findings visible without letting them outrank the work boards.
-                      </p>
-                      <div className="[&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0 [&_[data-copilot-widget-count]]:border-white/10 [&_[data-copilot-widget-count]]:bg-black [&_[data-copilot-widget-view-all]]:border-white/10 [&_[data-copilot-widget-view-all]]:bg-black [&_[data-copilot-widget-view-all]]:hover:bg-black">
-                        <CopilotDashboardWidget />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card
-                className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none"
-                data-dashboard-recent-commands=""
-              >
-                <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-                      <Radar className="h-4 w-4 text-brand" />
-                      Recent Commands
-                    </div>
-                    <CardTitle className="text-foreground">Command stream</CardTitle>
+              <Faceplate kicker="COPILOT INSIGHTS" serial="SECONDARY RAIL" className="h-full">
+                <RecessedWell className="p-4" data-dashboard-secondary-panel="copilot">
+                  <p className="mb-3 text-caption text-silver-mute">
+                    Keep live findings visible without letting them outrank the work boards.
+                  </p>
+                  <div className="[&_[data-copilot-widget-count]]:border-[hsl(var(--hairline))] [&_[data-copilot-widget-count]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:border-[hsl(var(--hairline))] [&_[data-copilot-widget-view-all]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:hover:bg-carbon-850 [&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0">
+                    <CopilotDashboardWidget />
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDashboardSubview('commands')}
-                    className={DASHBOARD_GHOST_BUTTON_CLASS}
-                    aria-label="Open full dashboard command log"
-                  >
-                    <Radar className="h-4 w-4" />
-                    Full log
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-3">
+                </RecessedWell>
+              </Faceplate>
+
+              <div data-dashboard-recent-commands="">
+                <Faceplate
+                  kicker="RECENT COMMANDS"
+                  serial="COMMAND STREAM"
+                  stripeSlot={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDashboardSubview('commands')}
+                      className={DASHBOARD_GHOST_BUTTON_CLASS}
+                      aria-label="Open full dashboard command log"
+                    >
+                      <Radar className="h-4 w-4" />
+                      Full log
+                    </Button>
+                  }
+                  bodyClassName="space-y-3"
+                >
                   {!hasWorkspace ? (
                     <PanelMessageState
                       icon={Radar}
@@ -1586,18 +1571,18 @@ export function MissionControlDashboard({
                         onClick={() => setDashboardSubview('commands')}
                         aria-label={`Open command log entry ${intentLabel(entry.intent)}`}
                         className={cn(
-                          'group flex w-full items-start justify-between gap-4 rounded-2xl border border-white/10 bg-black p-4 text-left transition-all hover:border-brand/30 hover:bg-black',
+                          'cap group flex w-full items-start justify-between gap-4 p-4 text-left',
                           DASHBOARD_INTERACTIVE_FOCUS_CLASS,
                         )}
                       >
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className="border-brand/35 bg-black text-[10px] text-brand"
-                            >
-                              {intentLabel(entry.intent)}
-                            </Badge>
+                            <LampTile
+                              label={intentLabel(entry.intent)}
+                              tone="exec"
+                              small
+                              interactive={false}
+                            />
                             <span className="text-caption text-muted-foreground">
                               {formatTimeAgo(entry.executedAt)}
                             </span>
@@ -1610,34 +1595,28 @@ export function MissionControlDashboard({
                       </button>
                     ))
                   )}
-                </CardContent>
-              </Card>
+                </Faceplate>
+              </div>
 
-              <Card
-                className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none"
-                data-dashboard-telemetry-snapshot=""
-              >
-                <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-                      <Gauge className="h-4 w-4 text-brand" />
-                      Telemetry Snapshot
-                    </div>
-                    <CardTitle className="text-foreground">Execution pulse</CardTitle>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setActiveView('telemetry')}
-                    className={DASHBOARD_GHOST_BUTTON_CLASS}
-                    aria-label="Open full telemetry dashboard"
-                  >
-                    <Gauge className="h-4 w-4" />
-                    Open telemetry
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div data-dashboard-telemetry-snapshot="">
+                <Faceplate
+                  kicker="TELEMETRY SNAPSHOT"
+                  serial="EXECUTION PULSE"
+                  stripeSlot={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveView('telemetry')}
+                      className={DASHBOARD_GHOST_BUTTON_CLASS}
+                      aria-label="Open full telemetry dashboard"
+                    >
+                      <Gauge className="h-4 w-4" />
+                      Open telemetry
+                    </Button>
+                  }
+                  bodyClassName="space-y-4"
+                >
                   {!hasWorkspace ? (
                     <PanelMessageState
                       icon={Gauge}
@@ -1680,37 +1659,45 @@ export function MissionControlDashboard({
                   ) : (
                     <>
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">Total runs</p>
-                          <p className="mt-2 text-numeric text-foreground">
-                            {formatCompactNumber(telemetryStatsQuery.data?.totalRuns)}
-                          </p>
+                        <div className="cap p-4">
+                          <p className="text-eyebrow text-silver-mute">Total runs</p>
+                          <LcdWell className="mt-2 px-3 py-2">
+                            <span className="text-numeric">
+                              {formatCompactNumber(telemetryStatsQuery.data?.totalRuns)}
+                            </span>
+                          </LcdWell>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">Total tokens</p>
-                          <p className="mt-2 text-numeric text-foreground">
-                            {formatCompactNumber(telemetryStatsQuery.data?.totalTokens)}
-                          </p>
+                        <div className="cap p-4">
+                          <p className="text-eyebrow text-silver-mute">Total tokens</p>
+                          <LcdWell className="mt-2 px-3 py-2">
+                            <span className="text-numeric">
+                              {formatCompactNumber(telemetryStatsQuery.data?.totalTokens)}
+                            </span>
+                          </LcdWell>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">Avg latency</p>
-                          <p className="mt-2 text-numeric text-foreground">
-                            {formatCompactNumber(telemetryStatsQuery.data?.avgLatencyMs)}ms
-                          </p>
+                        <div className="cap p-4">
+                          <p className="text-eyebrow text-silver-mute">Avg latency</p>
+                          <LcdWell className="mt-2 px-3 py-2">
+                            <span className="text-numeric">
+                              {formatCompactNumber(telemetryStatsQuery.data?.avgLatencyMs)}ms
+                            </span>
+                          </LcdWell>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">Total cost</p>
-                          <p className="mt-2 text-numeric text-foreground">
-                            {formatUsd(telemetryStatsQuery.data?.totalCostUsd)}
-                          </p>
+                        <div className="cap p-4">
+                          <p className="text-eyebrow text-silver-mute">Total cost</p>
+                          <LcdWell className="mt-2 px-3 py-2">
+                            <span className="text-numeric">
+                              {formatUsd(telemetryStatsQuery.data?.totalCostUsd)}
+                            </span>
+                          </LcdWell>
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-white/10 bg-black p-4 text-body text-muted-foreground">
+                      <RecessedWell className="p-4 text-body text-silver-mute">
                         Current window: {formatCompactNumber(todayUsage?.totalRuns ?? 0)} runs,{' '}
                         {formatCompactNumber(todayUsage?.totalTokens ?? 0)} tokens,{' '}
                         {formatUsd(todayUsage?.costUsd)} cost.
-                      </div>
+                      </RecessedWell>
 
                       <button
                         type="button"
@@ -1719,23 +1706,24 @@ export function MissionControlDashboard({
                         }
                         aria-label="Open autonomy snapshot detail"
                         className={cn(
-                          'w-full rounded-2xl border border-white/10 bg-black p-4 text-left transition hover:border-brand/30 hover:bg-black',
+                          'cap w-full p-4 text-left',
                           DASHBOARD_INTERACTIVE_FOCUS_CLASS,
                         )}
                         data-dashboard-autonomy-snapshot=""
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-eyebrow text-muted-foreground">Autonomy snapshot</p>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              'border-white/10 bg-black text-[10px] text-foreground/80',
-                              pendingApprovalCount > 0 &&
-                                'border-amber-500/30 bg-black text-amber-200',
-                            )}
-                          >
-                            {pendingApprovalCount} pending
-                          </Badge>
+                          <p className="text-eyebrow text-silver-mute">Autonomy snapshot</p>
+                          <div className="flex items-center gap-2">
+                            <span className="font-data text-label tabular-nums text-foreground">
+                              {pendingApprovalCount}
+                            </span>
+                            <LampTile
+                              label="PEND"
+                              tone={pendingApprovalCount > 0 ? 'hold' : 'off'}
+                              small
+                              interactive={false}
+                            />
+                          </div>
                         </div>
                         <p className="mt-2 text-body text-foreground">
                           {budgetOverview
@@ -1749,8 +1737,8 @@ export function MissionControlDashboard({
                       </button>
                     </>
                   )}
-                </CardContent>
-              </Card>
+                </Faceplate>
+              </div>
             </div>
           </>
         )}
