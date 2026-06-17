@@ -3,6 +3,7 @@ export { Faceplate } from './faceplate';
 export { HexBolt } from './hex-bolt';
 export { LampTile, type LampTone } from './lamp-tile';
 export { LcdWell } from './lcd-well';
+export { MetricTile } from './metric-tile';
 export { RecessedWell } from './recessed-well';
 export { ShiftToggle, type Shift } from './shift-toggle';
 export { StripeHeader } from './stripe-header';
