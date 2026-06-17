@@ -105,6 +105,7 @@ export default {
           go: 'var(--led-go)',
           hold: 'var(--led-hold)',
           warn: 'var(--led-warn)',
+          nogo: 'var(--led-nogo)',
           scope: 'var(--led-scope)',
         },
         chrome: 'var(--chrome)',

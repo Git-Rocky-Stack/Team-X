@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-export type LampTone = 'off' | 'go' | 'hold' | 'warn' | 'exec' | 'armed';
+export type LampTone = 'off' | 'go' | 'hold' | 'warn' | 'nogo' | 'exec' | 'armed';
 
 interface LampTileProps {
   /** Stencil word, 2–6 chars: GO / HOLD / NO-GO / STBY / EXEC / ON AIR / SYS … */
@@ -13,7 +13,9 @@ interface LampTileProps {
    * acknowledged, then burns steady until resolved. Acknowledgment is a
    * click ritual — alert lamps render as buttons. An unlit lamp cannot
    * warn, so `alert` coerces `tone: 'off'` to warn visuals (a blink must
-   * never be invisible).
+   * never be invisible). For an ALREADY-failed / terminal fault that is
+   * not an unacknowledged alert (a failed run, an error outcome in a log),
+   * use `tone="nogo"` (steady) instead of `alert` — never a steady `warn`.
    */
   alert?: boolean;
   acknowledged?: boolean;
@@ -32,6 +34,7 @@ const toneClass: Record<Exclude<LampTone, 'off'>, string> = {
   go: 'lamp-go',
   hold: 'lamp-hold',
   warn: 'lamp-warn',
+  nogo: 'lamp-nogo',
   exec: 'lamp-exec',
   armed: 'lamp-armed',
 };
