@@ -3,13 +3,14 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 
 import { EmployeeCard } from './employee-card.js';
 
+import { LampTile, RecessedWell } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
 import { useAppStore } from '@/store/app-store.js';
 
 function SkeletonCard() {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-black p-4">
+    <RecessedWell className="flex flex-col gap-3 p-4">
       <div className="flex items-center gap-3">
         <Skeleton className="h-10 w-10 rounded-full" />
         <div className="flex-1 space-y-1.5">
@@ -19,7 +20,7 @@ function SkeletonCard() {
         <Skeleton className="h-5 w-12 rounded-md" />
       </div>
       <Skeleton className="h-3 w-24" />
-    </div>
+    </RecessedWell>
   );
 }
 
@@ -45,8 +46,9 @@ export function CardsView({ employees, isLoading, isError, onRetry }: CardsViewP
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-        <AlertCircle className="h-8 w-8 text-red-500" />
-        <p className="text-body-strong text-muted-foreground">Failed to load employees</p>
+        <LampTile label="FAULT" tone="warn" small interactive={false} />
+        <AlertCircle className="h-8 w-8 text-led-warn" />
+        <p className="text-body-strong text-silver-mute">Failed to load employees</p>
         {onRetry && (
           <Button variant="outline" size="sm" onClick={onRetry} className="gap-1.5">
             <RefreshCw className="h-3.5 w-3.5" />

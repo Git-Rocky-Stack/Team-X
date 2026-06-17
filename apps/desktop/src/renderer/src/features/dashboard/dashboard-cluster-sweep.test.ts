@@ -52,4 +52,18 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     expect(streamSrc).not.toContain('bg-zinc-500');
     expect(streamSrc).not.toContain('text-code-sm leading-relaxed text-foreground/80');
   });
+
+  it('cards view + employee card use console hardware and keep the a11y label', () => {
+    expect(cardsSrc).not.toMatch(/\bbg-black\b/);
+    expect(cardsSrc).not.toContain('text-red-500');
+    expect(cardsSrc).toContain('<RecessedWell');
+    expect(employeeCardSrc).toContain('${employee.title} — ${statusLabel(displayStatus)}');
+    expect(employeeCardSrc).toContain(". Click to ${isSelected ? 'close' : 'open'} chat.");
+    expect(employeeCardSrc).toContain('title={statusLabel(displayStatus)}');
+    expect(employeeCardSrc).toContain("'cap-select'");
+    expect(employeeCardSrc).toContain('<LampTile');
+    expect(employeeCardSrc).not.toMatch(/\bbg-black\b/);
+    expect(employeeCardSrc).not.toContain('font-mono');
+    expect(employeeCardSrc).not.toContain('text-[11px]');
+  });
 });
