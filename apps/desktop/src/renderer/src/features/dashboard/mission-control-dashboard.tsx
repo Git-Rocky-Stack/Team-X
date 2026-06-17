@@ -169,7 +169,7 @@ function HeroMetric({
       <LcdWell tone={tone} className="flex items-end justify-between gap-3 px-3 py-2">
         <span className="text-numeric">{value}</span>
         {onClick && (
-          <ArrowRight className="h-4 w-4 text-[hsl(var(--display-fg))] transition-transform group-hover:translate-x-0.5" />
+          <ArrowRight className="h-4 w-4 text-[var(--display-fg)] transition-transform group-hover:translate-x-0.5" />
         )}
       </LcdWell>
       {meter}
@@ -273,7 +273,7 @@ function PanelMessageState({
       />
       <Icon className="h-8 w-8 text-silver-mute" />
       <div className="space-y-1">
-        <p className="text-body-strong text-[hsl(var(--display-fg))]">{title}</p>
+        <p className="text-body-strong text-[var(--display-fg)]">{title}</p>
         <p className="max-w-md text-body text-silver-mute">{description}</p>
       </div>
       {action}
@@ -400,9 +400,7 @@ function RuntimeOperationsBand({
         </div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-placard text-[hsl(var(--display-fg))]">
-              Heartbeat and checkout pulse
-            </p>
+            <p className="text-placard text-[var(--display-fg)]">Heartbeat and checkout pulse</p>
             <p className="max-w-3xl text-body text-silver-mute">
               External agents, active leases, heartbeat freshness, managed workspaces, and budget
               stop posture.
@@ -814,19 +812,19 @@ export function MissionControlDashboard({
 
               <div className="flex flex-wrap items-center gap-2">
                 <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
-                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                  <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {visiblePrimaryPanelCount(layout)} / 2
                   </span>
                   <span className="text-eyebrow-sm text-silver-mute">live panels</span>
                 </RecessedWell>
                 <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
-                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                  <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {commandRows.length}
                   </span>
                   <span className="text-eyebrow-sm text-silver-mute">recent commands</span>
                 </RecessedWell>
                 <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
-                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                  <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {tickets.length}
                   </span>
                   <span className="text-eyebrow-sm text-silver-mute">tracked tickets</span>
@@ -835,7 +833,7 @@ export function MissionControlDashboard({
                   className="flex items-center gap-2 px-3 py-1.5"
                   data-dashboard-autonomy-badge="routines"
                 >
-                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                  <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {enabledRoutineCount}
                   </span>
                   <span className="text-eyebrow-sm text-silver-mute">active routines</span>
@@ -844,7 +842,7 @@ export function MissionControlDashboard({
                   className="flex items-center gap-2 px-3 py-1.5"
                   data-dashboard-runtime-badge=""
                 >
-                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                  <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {runtimeOperationsReady ? runtimeOperationsSummary.sessionCount : '--'}
                   </span>
                   <span className="text-eyebrow-sm text-silver-mute">runtime sessions</span>
@@ -856,7 +854,7 @@ export function MissionControlDashboard({
                   className="flex items-center gap-2 px-3 py-1.5"
                   data-dashboard-autonomy-badge="approvals"
                 >
-                  <span className="font-data text-label tabular-nums text-[hsl(var(--display-fg))]">
+                  <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {pendingApprovalCount}
                   </span>
                   <span className="text-eyebrow-sm text-silver-mute">pending approvals</span>
@@ -871,7 +869,7 @@ export function MissionControlDashboard({
                 </RecessedWell>
                 {dashboardLayout.isSaving && (
                   <output
-                    className="flex items-center gap-2 rounded-control border border-[hsl(var(--armed-edge))] bg-[hsl(var(--armed-soft))] px-3 py-1.5 text-eyebrow-sm text-armed"
+                    className="flex items-center gap-2 rounded-control border border-[var(--armed-edge)] bg-[var(--armed-soft)] px-3 py-1.5 text-eyebrow-sm text-armed"
                     aria-live="polite"
                   >
                     Saving layout
@@ -1074,9 +1072,7 @@ export function MissionControlDashboard({
             <LampTile label="NO-GO" tone="nogo" small interactive={false} />
             <AlertTriangle className="h-10 w-10 text-silver-mute" />
             <div className="space-y-1">
-              <h2 className="text-h3 text-[hsl(var(--display-fg))]">
-                Dashboard data could not load
-              </h2>
+              <h2 className="text-h3 text-[var(--display-fg)]">Dashboard data could not load</h2>
               <p className="text-body text-silver-mute">
                 The mission-control shell is ready, but the employee roster query failed.
               </p>
@@ -1499,7 +1495,7 @@ export function MissionControlDashboard({
                   <p className="mb-3 text-caption text-silver-mute">
                     Keep live findings visible without letting them outrank the work boards.
                   </p>
-                  <div className="[&_[data-copilot-widget-count]]:border-[hsl(var(--hairline))] [&_[data-copilot-widget-count]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:border-[hsl(var(--hairline))] [&_[data-copilot-widget-view-all]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:hover:bg-carbon-850 [&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0">
+                  <div className="[&_[data-copilot-widget-count]]:border-[var(--hairline)] [&_[data-copilot-widget-count]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:border-[var(--hairline)] [&_[data-copilot-widget-view-all]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:hover:bg-carbon-850 [&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0">
                     <CopilotDashboardWidget />
                   </div>
                 </RecessedWell>

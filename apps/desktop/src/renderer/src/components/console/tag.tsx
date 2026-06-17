@@ -16,7 +16,7 @@ export function Tag({ mono = false, className, children, ...props }: TagProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-pill border border-[hsl(var(--hairline))] px-2.5 py-0.5 text-eyebrow-sm text-silver-mute',
+        'inline-flex items-center gap-1.5 rounded-pill border border-[var(--hairline)] px-2.5 py-0.5 text-eyebrow-sm text-silver-mute',
         mono && 'font-mono tabular-nums',
         className,
       )}

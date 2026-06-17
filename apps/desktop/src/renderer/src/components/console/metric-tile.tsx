@@ -64,7 +64,7 @@ export function MetricTile({
   return (
     <div
       className={cn(
-        'flex flex-col gap-2 rounded-card border border-[hsl(var(--hairline))] p-4',
+        'flex flex-col gap-2 rounded-card border border-[var(--hairline)] p-4',
         className,
       )}
       {...props}

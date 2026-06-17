@@ -175,7 +175,7 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
       {[...groups.entries()].map(([dateLabel, dateEvents]) => (
         <div key={dateLabel}>
           <StripeHeader kicker={dateLabel} className="sticky top-0 z-10 mb-3" />
-          <div className="relative ml-4 border-l border-[hsl(var(--hairline))] pl-6">
+          <div className="relative ml-4 border-l border-[var(--hairline)] pl-6">
             {dateEvents.map((event) => {
               const lamp = eventLamp(event.type);
               return (

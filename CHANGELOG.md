@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Invalid `hsl(var(--token))` wrapping on full-color tokens.** Five
+  design-system tokens defined as complete color values — `--hairline`,
+  `--display-fg`, `--void`, `--armed-edge`, `--armed-soft` (`#hex` / `rgba()`) —
+  were wrapped in `hsl()` at 26 call-sites across nine Phase-3/4a renderer files,
+  compiling to `hsl(rgba(...))` / `hsl(#hex)`. That is invalid CSS: the browser
+  drops the declaration, so intended hairline borders silently fell back to
+  `border-border` and dim phosphor display text rendered at full platinum.
+  Realigned every site to the bare `[var(--token)]` form already shipped and
+  unit-tested across the Phase-1/2 shell. A new `css-color-token-invariant` test
+  parses `globals.css` for full-color tokens and fails if any is ever wrapped in
+  `hsl()` again, locking the convention in for future sweeps. HSL-channel tokens
+  (`--border`, `--ring`, `--card`, `--background`, …) are unaffected — their
+  `hsl()` wrapping is correct.
 - **Phase 3 gate-review remediation (Codex Stage 3).** Cleared two P1 runtime
   findings and two P2s before Phase 4:
   - **Heartbeat shutdown ownership (P1).** The proactive-execution heartbeat
