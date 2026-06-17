@@ -34,6 +34,7 @@ import {
 import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
 import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
 
+import { Faceplate, RecessedWell } from '@/components/console/index.js';
 import { Badge, badgeVariants } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
@@ -567,22 +568,19 @@ function MissionControlSkeleton() {
   ];
   return (
     <section
-      className="mission-shell relative min-h-full overflow-hidden"
+      className="relative flex min-h-full flex-col gap-[var(--sp-4)] overflow-hidden p-4 sm:p-6 xl:p-8"
       data-dashboard-mission-control=""
     >
-      <div className="mission-grid pointer-events-none absolute inset-0 opacity-35" />
-      <div className="relative flex flex-col gap-6 p-4 sm:p-6 xl:p-8">
-        <div className="mission-hero rounded-[28px] border border-white/10 p-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-            {heroSkeletonKeys.map((key) => (
-              <div key={key} className="h-28 animate-pulse rounded-2xl bg-black" />
-            ))}
-          </div>
+      <Faceplate kicker="MISSION CONTROL" serial="BOOT">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+          {heroSkeletonKeys.map((key) => (
+            <RecessedWell key={key} className="h-28 animate-pulse" />
+          ))}
         </div>
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.95fr)]">
-          <div className="h-[26rem] animate-pulse rounded-[24px] border border-white/10 bg-black" />
-          <div className="h-[26rem] animate-pulse rounded-[24px] border border-white/10 bg-black" />
-        </div>
+      </Faceplate>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.95fr)]">
+        <RecessedWell className="h-[26rem] animate-pulse" />
+        <RecessedWell className="h-[26rem] animate-pulse" />
       </div>
     </section>
   );
@@ -744,11 +742,10 @@ export function MissionControlDashboard({
 
   return (
     <section
-      className="mission-shell relative min-h-full overflow-hidden"
+      className="relative flex min-h-full flex-col gap-6 overflow-hidden p-4 sm:p-6 xl:p-8"
       data-dashboard-mission-control=""
     >
-      <div className="mission-grid pointer-events-none absolute inset-0 opacity-35" />
-      <div className="relative flex flex-col gap-6 p-4 sm:p-6 xl:p-8">
+      <div className="flex min-h-full flex-col gap-6">
         <header className="mission-hero overflow-hidden rounded-[28px] border border-white/10 p-6 lg:p-7">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">

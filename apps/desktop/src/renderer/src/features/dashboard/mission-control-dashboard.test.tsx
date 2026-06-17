@@ -137,6 +137,13 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(runtimeOperationsProjectionsSrc).toContain('checkoutBlockedCount');
     expect(runtimeOperationsProjectionsSrc).toContain('managedWorkspaceCount');
   });
+
+  it('mounts the swept console chassis without legacy shell/grid classes', () => {
+    expect(missionControlSrc).toContain('data-dashboard-mission-control=""');
+    expect(missionControlSrc).not.toContain('mission-shell');
+    expect(missionControlSrc).not.toContain('mission-grid');
+    expect(missionControlSrc).toContain('<RecessedWell');
+  });
 });
 
 describe('Dashboard integration wiring', () => {
