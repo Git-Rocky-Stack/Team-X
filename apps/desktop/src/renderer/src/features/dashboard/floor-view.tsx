@@ -1,10 +1,16 @@
 import type { Employee } from '@team-x/shared-types';
 
-import { Faceplate, LampTile, type LampTone, LcdWell, StripeHeader } from '@/components/console/index.js';
+import { SubviewState } from './dashboard-subview-state.js';
+
+import {
+  Faceplate,
+  LampTile,
+  type LampTone,
+  LcdWell,
+  StripeHeader,
+} from '@/components/console/index.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
-
-import { SubviewState } from './dashboard-subview-state.js';
 
 function levelColor(level: string): string {
   // Level bezel = seniority category, NOT a live signal: officer uses the
