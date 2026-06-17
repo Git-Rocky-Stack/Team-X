@@ -187,6 +187,23 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('lampToneForLiveStatus(row.liveStatus)');
     expect(missionControlSrc).not.toContain('liveStatusClassName');
   });
+
+  it('contains zero legacy composition after the full flagship sweep', () => {
+    expect(missionControlSrc).not.toMatch(/\bbg-black\b/);
+    expect(missionControlSrc).not.toMatch(/border-white\/\d/);
+    expect(missionControlSrc).not.toContain('mission-panel');
+    expect(missionControlSrc).not.toContain('mission-hero');
+    expect(missionControlSrc).not.toContain('mission-shell');
+    expect(missionControlSrc).not.toContain('rounded-2xl');
+    expect(missionControlSrc).not.toContain('rounded-[24px]');
+    expect(missionControlSrc).not.toContain('rounded-[28px]');
+    expect(missionControlSrc).not.toContain('font-mono');
+    expect(missionControlSrc).not.toMatch(/(?:text|bg|border)-(?:red|amber|emerald|slate|zinc)-\d/);
+    expect(missionControlSrc).toContain('data-dashboard-secondary-panel="copilot"');
+    expect(missionControlSrc).toContain('data-dashboard-recent-commands=""');
+    expect(missionControlSrc).toContain('data-dashboard-telemetry-snapshot=""');
+    expect(missionControlSrc).toContain('data-dashboard-autonomy-snapshot=""');
+  });
 });
 
 describe('Dashboard integration wiring', () => {

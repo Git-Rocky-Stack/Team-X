@@ -42,9 +42,7 @@ import {
   RecessedWell,
   VuMeter,
 } from '@/components/console/index.js';
-import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
 import { CopilotDashboardWidget } from '@/features/copilot/copilot-dashboard-widget.js';
 import { useApprovals } from '@/hooks/use-approvals.js';
@@ -869,7 +867,7 @@ export function MissionControlDashboard({
               </div>
               {dashboardLayout.error && (
                 <p
-                  className="text-caption text-red-200"
+                  className="text-caption text-led-warn"
                   data-dashboard-layout-error=""
                   role="alert"
                 >
@@ -1469,56 +1467,36 @@ export function MissionControlDashboard({
             </div>
 
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)_minmax(320px,0.9fr)]">
-              <div className="h-full">
-                <Card className="mission-panel h-full rounded-[24px] border-white/10 bg-transparent shadow-none">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-                      <Sparkles className="h-4 w-4 text-brand" />
-                      Copilot Insights
-                    </div>
-                    <CardTitle className="text-foreground">Secondary rail</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div
-                      className="rounded-2xl border border-white/10 bg-black p-4"
-                      data-dashboard-secondary-panel="copilot"
-                    >
-                      <p className="mb-3 text-caption text-muted-foreground">
-                        Keep live findings visible without letting them outrank the work boards.
-                      </p>
-                      <div className="[&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0 [&_[data-copilot-widget-count]]:border-white/10 [&_[data-copilot-widget-count]]:bg-black [&_[data-copilot-widget-view-all]]:border-white/10 [&_[data-copilot-widget-view-all]]:bg-black [&_[data-copilot-widget-view-all]]:hover:bg-black">
-                        <CopilotDashboardWidget />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card
-                className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none"
-                data-dashboard-recent-commands=""
-              >
-                <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-                      <Radar className="h-4 w-4 text-brand" />
-                      Recent Commands
-                    </div>
-                    <CardTitle className="text-foreground">Command stream</CardTitle>
+              <Faceplate kicker="COPILOT INSIGHTS" serial="SECONDARY RAIL" className="h-full">
+                <RecessedWell className="p-4" data-dashboard-secondary-panel="copilot">
+                  <p className="mb-3 text-caption text-silver-mute">
+                    Keep live findings visible without letting them outrank the work boards.
+                  </p>
+                  <div className="[&_[data-copilot-widget-count]]:border-[hsl(var(--hairline))] [&_[data-copilot-widget-count]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:border-[hsl(var(--hairline))] [&_[data-copilot-widget-view-all]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:hover:bg-carbon-850 [&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0">
+                    <CopilotDashboardWidget />
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDashboardSubview('commands')}
-                    className={DASHBOARD_GHOST_BUTTON_CLASS}
-                    aria-label="Open full dashboard command log"
-                  >
-                    <Radar className="h-4 w-4" />
-                    Full log
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-3">
+                </RecessedWell>
+              </Faceplate>
+
+              <div data-dashboard-recent-commands="">
+                <Faceplate
+                  kicker="RECENT COMMANDS"
+                  serial="COMMAND STREAM"
+                  stripeSlot={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDashboardSubview('commands')}
+                      className={DASHBOARD_GHOST_BUTTON_CLASS}
+                      aria-label="Open full dashboard command log"
+                    >
+                      <Radar className="h-4 w-4" />
+                      Full log
+                    </Button>
+                  }
+                  bodyClassName="space-y-3"
+                >
                   {!hasWorkspace ? (
                     <PanelMessageState
                       icon={Radar}
@@ -1566,18 +1544,18 @@ export function MissionControlDashboard({
                         onClick={() => setDashboardSubview('commands')}
                         aria-label={`Open command log entry ${intentLabel(entry.intent)}`}
                         className={cn(
-                          'group flex w-full items-start justify-between gap-4 rounded-2xl border border-white/10 bg-black p-4 text-left transition-all hover:border-brand/30 hover:bg-black',
+                          'cap group flex w-full items-start justify-between gap-4 p-4 text-left',
                           DASHBOARD_INTERACTIVE_FOCUS_CLASS,
                         )}
                       >
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className="border-brand/35 bg-black text-[10px] text-brand"
-                            >
-                              {intentLabel(entry.intent)}
-                            </Badge>
+                            <LampTile
+                              label={intentLabel(entry.intent)}
+                              tone="exec"
+                              small
+                              interactive={false}
+                            />
                             <span className="text-caption text-muted-foreground">
                               {formatTimeAgo(entry.executedAt)}
                             </span>
@@ -1590,34 +1568,28 @@ export function MissionControlDashboard({
                       </button>
                     ))
                   )}
-                </CardContent>
-              </Card>
+                </Faceplate>
+              </div>
 
-              <Card
-                className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none"
-                data-dashboard-telemetry-snapshot=""
-              >
-                <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-                      <Gauge className="h-4 w-4 text-brand" />
-                      Telemetry Snapshot
-                    </div>
-                    <CardTitle className="text-foreground">Execution pulse</CardTitle>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setActiveView('telemetry')}
-                    className={DASHBOARD_GHOST_BUTTON_CLASS}
-                    aria-label="Open full telemetry dashboard"
-                  >
-                    <Gauge className="h-4 w-4" />
-                    Open telemetry
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div data-dashboard-telemetry-snapshot="">
+                <Faceplate
+                  kicker="TELEMETRY SNAPSHOT"
+                  serial="EXECUTION PULSE"
+                  stripeSlot={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveView('telemetry')}
+                      className={DASHBOARD_GHOST_BUTTON_CLASS}
+                      aria-label="Open full telemetry dashboard"
+                    >
+                      <Gauge className="h-4 w-4" />
+                      Open telemetry
+                    </Button>
+                  }
+                  bodyClassName="space-y-4"
+                >
                   {!hasWorkspace ? (
                     <PanelMessageState
                       icon={Gauge}
@@ -1660,37 +1632,45 @@ export function MissionControlDashboard({
                   ) : (
                     <>
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">Total runs</p>
-                          <p className="mt-2 text-numeric text-foreground">
-                            {formatCompactNumber(telemetryStatsQuery.data?.totalRuns)}
-                          </p>
+                        <div className="cap p-4">
+                          <p className="text-eyebrow text-silver-mute">Total runs</p>
+                          <LcdWell className="mt-2 px-3 py-2">
+                            <span className="text-numeric">
+                              {formatCompactNumber(telemetryStatsQuery.data?.totalRuns)}
+                            </span>
+                          </LcdWell>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">Total tokens</p>
-                          <p className="mt-2 text-numeric text-foreground">
-                            {formatCompactNumber(telemetryStatsQuery.data?.totalTokens)}
-                          </p>
+                        <div className="cap p-4">
+                          <p className="text-eyebrow text-silver-mute">Total tokens</p>
+                          <LcdWell className="mt-2 px-3 py-2">
+                            <span className="text-numeric">
+                              {formatCompactNumber(telemetryStatsQuery.data?.totalTokens)}
+                            </span>
+                          </LcdWell>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">Avg latency</p>
-                          <p className="mt-2 text-numeric text-foreground">
-                            {formatCompactNumber(telemetryStatsQuery.data?.avgLatencyMs)}ms
-                          </p>
+                        <div className="cap p-4">
+                          <p className="text-eyebrow text-silver-mute">Avg latency</p>
+                          <LcdWell className="mt-2 px-3 py-2">
+                            <span className="text-numeric">
+                              {formatCompactNumber(telemetryStatsQuery.data?.avgLatencyMs)}ms
+                            </span>
+                          </LcdWell>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black p-4">
-                          <p className="text-eyebrow text-muted-foreground">Total cost</p>
-                          <p className="mt-2 text-numeric text-foreground">
-                            {formatUsd(telemetryStatsQuery.data?.totalCostUsd)}
-                          </p>
+                        <div className="cap p-4">
+                          <p className="text-eyebrow text-silver-mute">Total cost</p>
+                          <LcdWell className="mt-2 px-3 py-2">
+                            <span className="text-numeric">
+                              {formatUsd(telemetryStatsQuery.data?.totalCostUsd)}
+                            </span>
+                          </LcdWell>
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-white/10 bg-black p-4 text-body text-muted-foreground">
+                      <RecessedWell className="p-4 text-body text-silver-mute">
                         Current window: {formatCompactNumber(todayUsage?.totalRuns ?? 0)} runs,{' '}
                         {formatCompactNumber(todayUsage?.totalTokens ?? 0)} tokens,{' '}
                         {formatUsd(todayUsage?.costUsd)} cost.
-                      </div>
+                      </RecessedWell>
 
                       <button
                         type="button"
@@ -1699,23 +1679,24 @@ export function MissionControlDashboard({
                         }
                         aria-label="Open autonomy snapshot detail"
                         className={cn(
-                          'w-full rounded-2xl border border-white/10 bg-black p-4 text-left transition hover:border-brand/30 hover:bg-black',
+                          'cap w-full p-4 text-left',
                           DASHBOARD_INTERACTIVE_FOCUS_CLASS,
                         )}
                         data-dashboard-autonomy-snapshot=""
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-eyebrow text-muted-foreground">Autonomy snapshot</p>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              'border-white/10 bg-black text-[10px] text-foreground/80',
-                              pendingApprovalCount > 0 &&
-                                'border-amber-500/30 bg-black text-amber-200',
-                            )}
-                          >
-                            {pendingApprovalCount} pending
-                          </Badge>
+                          <p className="text-eyebrow text-silver-mute">Autonomy snapshot</p>
+                          <div className="flex items-center gap-2">
+                            <span className="font-data text-label tabular-nums text-foreground">
+                              {pendingApprovalCount}
+                            </span>
+                            <LampTile
+                              label="PEND"
+                              tone={pendingApprovalCount > 0 ? 'hold' : 'off'}
+                              small
+                              interactive={false}
+                            />
+                          </div>
                         </div>
                         <p className="mt-2 text-body text-foreground">
                           {budgetOverview
@@ -1729,8 +1710,8 @@ export function MissionControlDashboard({
                       </button>
                     </>
                   )}
-                </CardContent>
-              </Card>
+                </Faceplate>
+              </div>
             </div>
           </>
         )}
