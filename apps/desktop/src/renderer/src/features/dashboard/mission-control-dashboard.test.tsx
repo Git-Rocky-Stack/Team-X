@@ -177,6 +177,16 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('lampToneForRuntimeStatus(session.status)');
     expect(missionControlSrc).not.toContain('runtimeStateClassName');
   });
+
+  it('recomposes the live board rows onto cap tiles with lamp status', () => {
+    expect(missionControlSrc).toContain('data-dashboard-panel-state="agent-runs-ready"');
+    expect(missionControlSrc).toContain('data-dashboard-panel-state="employee-queues-ready"');
+    expect(missionControlSrc).toContain('data-dashboard-queue-row={row.employeeId}');
+    expect(missionControlSrc).toContain('aria-label={`Open Copilot thread for ${run.label}`}');
+    expect(missionControlSrc).toContain('aria-label={`Open chat with ${row.name}`}');
+    expect(missionControlSrc).toContain('lampToneForLiveStatus(row.liveStatus)');
+    expect(missionControlSrc).not.toContain('liveStatusClassName');
+  });
 });
 
 describe('Dashboard integration wiring', () => {

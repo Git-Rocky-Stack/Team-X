@@ -112,16 +112,16 @@ function liveStatusLabel(status: DashboardQueueRow['liveStatus']): string {
   }
 }
 
-function liveStatusClassName(status: DashboardQueueRow['liveStatus']): string {
+function lampToneForLiveStatus(status: DashboardQueueRow['liveStatus']): LampTone {
   switch (status) {
     case 'thinking':
-      return 'border-brand/35 bg-black text-brand';
+      return 'exec';
     case 'blocked':
-      return 'border-amber-500/30 bg-black text-amber-300';
+      return 'hold';
     case 'error':
-      return 'border-red-500/30 bg-black text-red-300';
+      return 'warn';
     default:
-      return 'border-border/80 bg-black text-muted-foreground';
+      return 'off';
   }
 }
 
@@ -1164,10 +1164,10 @@ export function MissionControlDashboard({
                   ) : (
                     <div className="grid gap-3" data-dashboard-panel-state="agent-runs-ready">
                       {agentRunsQuery.hasHistoryWarning && (
-                        <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-black p-4 text-body text-amber-100">
+                        <RecessedWell className="flex flex-col gap-3 p-4 text-body text-led-hold">
                           <div className="space-y-1">
                             <p className="font-medium">Run history refresh failed</p>
-                            <p className="text-amber-100/80">
+                            <p className="text-silver-mute">
                               {agentRunsQuery.errorMessage ??
                                 'Live dashboard events are still rendering, but the persisted run log did not refresh.'}
                             </p>
@@ -1186,7 +1186,7 @@ export function MissionControlDashboard({
                               Retry history
                             </Button>
                           </div>
-                        </div>
+                        </RecessedWell>
                       )}
                       {agentRuns.map((run) => (
                         <button
@@ -1195,7 +1195,7 @@ export function MissionControlDashboard({
                           onClick={() => handleOpenRunThread(run.threadId)}
                           aria-label={`Open Copilot thread for ${run.label}`}
                           className={cn(
-                            'group rounded-2xl border border-white/10 bg-black p-4 text-left transition-all hover:border-brand/30 hover:bg-black',
+                            'cap group p-4 text-left',
                             DASHBOARD_INTERACTIVE_FOCUS_CLASS,
                           )}
                         >
@@ -1205,20 +1205,18 @@ export function MissionControlDashboard({
                                 <p className="text-body-strong text-foreground">
                                   {truncateText(run.label, 72)}
                                 </p>
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    'text-[10px] font-mono',
-                                    run.status === 'completed' &&
-                                      'border-emerald-500/30 bg-black text-emerald-300',
-                                    run.status === 'failed' &&
-                                      'border-red-500/30 bg-black text-red-300',
-                                    run.status === 'running' &&
-                                      'border-brand/35 bg-black text-brand',
-                                  )}
-                                >
-                                  {run.status}
-                                </Badge>
+                                <LampTile
+                                  label={run.status}
+                                  tone={
+                                    run.status === 'completed'
+                                      ? 'go'
+                                      : run.status === 'failed'
+                                        ? 'warn'
+                                        : 'exec'
+                                  }
+                                  small
+                                  interactive={false}
+                                />
                               </div>
                               <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
                                 <span>{formatAgentRunPhase(run.latestPhase)}</span>
@@ -1236,7 +1234,7 @@ export function MissionControlDashboard({
                                 <span>{formatUsd(run.costUsd)}</span>
                               </div>
                               {run.failureReason && (
-                                <p className="text-caption text-red-300">
+                                <p className="text-caption text-led-warn">
                                   {truncateText(run.failureReason, 120)}
                                 </p>
                               )}
@@ -1342,7 +1340,7 @@ export function MissionControlDashboard({
                         return (
                           <div
                             key={row.employeeId}
-                            className="rounded-2xl border border-white/10 bg-black p-4"
+                            className="cap p-4"
                             data-dashboard-queue-row={row.employeeId}
                           >
                             <div className="flex flex-col gap-3">
@@ -1350,15 +1348,12 @@ export function MissionControlDashboard({
                                 <div className="space-y-2">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <p className="text-body-strong text-foreground">{row.name}</p>
-                                    <Badge
-                                      variant="outline"
-                                      className={cn(
-                                        'text-[10px] font-mono',
-                                        liveStatusClassName(row.liveStatus),
-                                      )}
-                                    >
-                                      {liveStatusLabel(row.liveStatus)}
-                                    </Badge>
+                                    <LampTile
+                                      label={liveStatusLabel(row.liveStatus)}
+                                      tone={lampToneForLiveStatus(row.liveStatus)}
+                                      small
+                                      interactive={false}
+                                    />
                                   </div>
                                   <p className="text-caption text-muted-foreground">{row.title}</p>
                                   {row.liveActivity && (
@@ -1394,12 +1389,12 @@ export function MissionControlDashboard({
                               </div>
 
                               <div className="space-y-2">
-                                <div className="h-2 overflow-hidden rounded-full bg-black">
+                                <div className="h-2 overflow-hidden rounded-pill bg-carbon-950">
                                   {totalTickets > 0 && (
                                     <div className="flex h-full">
                                       {row.counts.open > 0 && (
                                         <div
-                                          className="h-full bg-slate-400/70"
+                                          className="h-full bg-graphite"
                                           style={{
                                             width: `${(row.counts.open / totalTickets) * 100}%`,
                                           }}
@@ -1407,7 +1402,7 @@ export function MissionControlDashboard({
                                       )}
                                       {row.counts.inProgress > 0 && (
                                         <div
-                                          className="h-full bg-brand/70"
+                                          className="h-full bg-armed"
                                           style={{
                                             width: `${(row.counts.inProgress / totalTickets) * 100}%`,
                                           }}
@@ -1415,7 +1410,7 @@ export function MissionControlDashboard({
                                       )}
                                       {row.counts.blocked > 0 && (
                                         <div
-                                          className="h-full bg-amber-400/80"
+                                          className="h-full bg-led-hold"
                                           style={{
                                             width: `${(row.counts.blocked / totalTickets) * 100}%`,
                                           }}
@@ -1423,7 +1418,7 @@ export function MissionControlDashboard({
                                       )}
                                       {row.counts.done > 0 && (
                                         <div
-                                          className="h-full bg-emerald-400/80"
+                                          className="h-full bg-led-go"
                                           style={{
                                             width: `${(row.counts.done / totalTickets) * 100}%`,
                                           }}
@@ -1454,8 +1449,8 @@ export function MissionControlDashboard({
                   description="Both live boards are collapsed. Reset the layout to restore the default hybrid dashboard."
                   dataPanel="all-hidden"
                 >
-                  <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/10 bg-black p-8 text-center">
-                    <LayoutPanelTop className="h-8 w-8 text-brand" />
+                  <RecessedWell className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+                    <LayoutPanelTop className="h-8 w-8 text-armed" />
                     <p className="max-w-lg text-body text-muted-foreground">
                       The mission-control shell is still active below, but the live board row is
                       hidden for this workspace.
@@ -1468,7 +1463,7 @@ export function MissionControlDashboard({
                       <TimerReset className="h-4 w-4" />
                       Restore default hybrid layout
                     </Button>
-                  </div>
+                  </RecessedWell>
                 </PrimaryPanel>
               )}
             </div>
