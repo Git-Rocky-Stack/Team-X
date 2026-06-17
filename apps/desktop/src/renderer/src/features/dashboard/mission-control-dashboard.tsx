@@ -34,7 +34,7 @@ import {
 import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
 import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
 
-import { Faceplate, LampTile, RecessedWell } from '@/components/console/index.js';
+import { Faceplate, LampTile, LcdWell, RecessedWell, VuMeter } from '@/components/console/index.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
@@ -131,32 +131,37 @@ function HeroMetric({
   hint,
   icon: Icon,
   onClick,
+  tone = 'go',
+  meter,
 }: {
   label: string;
   value: string;
   hint: string;
   icon: typeof Activity;
   onClick?: () => void;
+  tone?: 'go' | 'amber' | 'red';
+  meter?: ReactNode;
 }) {
-  const className = cn(
-    'group flex flex-col gap-3 rounded-2xl border border-white/10 bg-black p-4 text-left transition-all',
-    onClick && `${DASHBOARD_INTERACTIVE_FOCUS_CLASS} hover:border-brand/30 hover:bg-black`,
-  );
-
   const content = (
     <>
-      <div className="flex items-center gap-2 text-eyebrow text-muted-foreground">
-        <Icon className="h-4 w-4 text-brand" />
+      <div className="flex items-center gap-2 text-eyebrow text-silver-mute">
+        <Icon className="h-4 w-4 text-armed" />
         {label}
       </div>
-      <div className="flex items-end justify-between gap-3">
-        <span className="text-numeric text-foreground">{value}</span>
+      <LcdWell tone={tone} className="flex items-end justify-between gap-3 px-3 py-2">
+        <span className="text-numeric">{value}</span>
         {onClick && (
-          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          <ArrowRight className="h-4 w-4 text-[hsl(var(--display-fg))] transition-transform group-hover:translate-x-0.5" />
         )}
-      </div>
-      <p className="text-caption text-muted-foreground">{hint}</p>
+      </LcdWell>
+      {meter}
+      <p className="text-caption text-silver-mute">{hint}</p>
     </>
+  );
+
+  const className = cn(
+    'cap group flex flex-col gap-3 p-4 text-left',
+    onClick && DASHBOARD_INTERACTIVE_FOCUS_CLASS,
   );
 
   if (onClick) {
@@ -997,6 +1002,12 @@ export function MissionControlDashboard({
             />
             <HeroMetric
               label="Workforce active"
+              meter={
+                <VuMeter
+                  value={employees.length > 0 ? queueSummary.activeEmployees / employees.length : 0}
+                  label="Workforce utilization"
+                />
+              }
               value={!hasWorkspace ? '--' : `${queueSummary.activeEmployees}/${employees.length}`}
               hint={
                 !hasWorkspace
@@ -1014,6 +1025,7 @@ export function MissionControlDashboard({
             />
             <HeroMetric
               label="Queue pressure"
+              tone={queueSummary.totalPressure > 0 ? 'amber' : 'go'}
               value={queueDataReady ? `${queueSummary.totalPressure}` : '--'}
               hint={
                 !hasWorkspace
@@ -1031,6 +1043,7 @@ export function MissionControlDashboard({
             />
             <HeroMetric
               label="Blocked work"
+              tone={queueSummary.blocked > 0 ? 'red' : 'go'}
               value={queueDataReady ? `${queueSummary.blocked}` : '--'}
               hint={
                 !hasWorkspace
@@ -1048,6 +1061,7 @@ export function MissionControlDashboard({
             />
             <HeroMetric
               label="Today cost"
+              tone="amber"
               value={telemetryReady ? formatUsd(todayUsage?.costUsd) : '--'}
               hint={
                 !hasWorkspace

@@ -154,6 +154,12 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('aria-pressed={layout.agentRuns}');
     expect(missionControlSrc).toContain('data-dashboard-reset-layout=""');
   });
+
+  it('renders hero metrics as LCD wells with one workforce VU meter', () => {
+    expect(missionControlSrc).toContain('<LcdWell');
+    expect(missionControlSrc).toContain('label="Workforce utilization"');
+    expect(missionControlSrc).toContain('<VuMeter');
+  });
 });
 
 describe('Dashboard integration wiring', () => {
