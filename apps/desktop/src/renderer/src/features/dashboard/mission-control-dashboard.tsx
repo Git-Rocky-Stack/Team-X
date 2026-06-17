@@ -34,7 +34,14 @@ import {
 import { useDashboardAgentRuns } from './use-dashboard-agent-runs.js';
 import { useDashboardLayoutPreferences } from './use-dashboard-layout-preferences.js';
 
-import { Faceplate, LampTile, LcdWell, RecessedWell, VuMeter } from '@/components/console/index.js';
+import {
+  Faceplate,
+  LampTile,
+  type LampTone,
+  LcdWell,
+  RecessedWell,
+  VuMeter,
+} from '@/components/console/index.js';
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.js';
@@ -263,17 +270,24 @@ function PanelMessageState({
   );
 }
 
-function runtimeStateClassName(tone: DashboardRuntimeOperationsSummary['stateTone']): string {
+function lampToneForRuntimeState(tone: DashboardRuntimeOperationsSummary['stateTone']): LampTone {
   switch (tone) {
     case 'accent':
-      return 'border-brand/35 bg-black text-brand';
+      return 'exec';
     case 'warning':
-      return 'border-amber-500/30 bg-black text-amber-200';
+      return 'hold';
     case 'danger':
-      return 'border-red-500/30 bg-black text-red-200';
+      return 'warn';
     default:
-      return 'border-white/10 bg-black text-foreground/80';
+      return 'off';
   }
+}
+
+function lampToneForRuntimeStatus(status: string): LampTone {
+  if (status === 'working') return 'exec';
+  if (status === 'blocked' || status === 'stale') return 'hold';
+  if (status === 'failed' || status === 'offline') return 'warn';
+  return 'off';
 }
 
 function formatRuntimeHeartbeat(value: number | null): string {
@@ -349,66 +363,67 @@ function RuntimeOperationsBand({
       : 'No blocked, stale, offline, or heartbeat-missing sessions.';
 
   return (
-    <Card
-      className="mission-panel rounded-[24px] border-white/10 bg-transparent shadow-none"
-      data-dashboard-runtime-operations=""
-    >
-      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2 text-eyebrow text-muted-foreground">
-            <HardDrive className="h-4 w-4 text-brand" />
-            External Runtime Operations
-            <Badge
-              variant="outline"
-              className={cn('font-mono text-[10px]', runtimeStateClassName(summary.stateTone))}
-              data-dashboard-runtime-state={summary.stateLabel}
-            >
-              {summary.stateLabel}
-            </Badge>
+    <div data-dashboard-runtime-operations="">
+      <Faceplate
+        kicker="EXTERNAL RUNTIME OPS"
+        serial="HEARTBEAT · CHECKOUT"
+        stripeSlot={
+          <div className="flex items-center gap-2">
+            <LampTile
+              label={summary.stateLabel}
+              tone={lampToneForRuntimeState(summary.stateTone)}
+              small
+              interactive={false}
+            />
             {summary.budgetBlockedCount > 0 && (
-              <Badge
-                variant="outline"
-                className="border-amber-500/30 bg-black font-mono text-[10px] text-amber-200"
-                data-dashboard-runtime-budget-blocks=""
-              >
-                {summary.budgetBlockedCount} budget hard-stops
-              </Badge>
+              <span data-dashboard-runtime-budget-blocks="">
+                <LampTile label="BUDG" tone="hold" small interactive={false} />
+              </span>
             )}
           </div>
-          <CardTitle className="text-foreground">Heartbeat and checkout pulse</CardTitle>
-          <p className="max-w-3xl text-body text-muted-foreground">
-            External agents, active leases, heartbeat freshness, managed workspaces, and budget stop
-            posture.
-          </p>
+        }
+        bodyClassName="space-y-4"
+      >
+        <div data-dashboard-runtime-state={summary.stateLabel} className="sr-only">
+          {summary.stateLabel}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onRetry}
-            disabled={!hasWorkspace || isFetching}
-            className={DASHBOARD_GHOST_BUTTON_CLASS}
-            aria-label="Refresh runtime operations snapshot"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onOpenRuntimes}
-            disabled={!hasWorkspace}
-            className={DASHBOARD_GLASS_BUTTON_CLASS}
-            aria-label="Open Autonomy runtimes"
-          >
-            <Bot className="h-4 w-4" />
-            Runtimes
-          </Button>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-placard text-[hsl(var(--display-fg))]">
+              Heartbeat and checkout pulse
+            </p>
+            <p className="max-w-3xl text-body text-silver-mute">
+              External agents, active leases, heartbeat freshness, managed workspaces, and budget
+              stop posture.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onRetry}
+              disabled={!hasWorkspace || isFetching}
+              className={DASHBOARD_GHOST_BUTTON_CLASS}
+              aria-label="Refresh runtime operations snapshot"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenRuntimes}
+              disabled={!hasWorkspace}
+              className={DASHBOARD_GLASS_BUTTON_CLASS}
+              aria-label="Open Autonomy runtimes"
+            >
+              <Bot className="h-4 w-4" />
+              Runtimes
+            </Button>
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
         {!hasWorkspace ? (
           <PanelMessageState
             icon={HardDrive}
@@ -474,60 +489,40 @@ function RuntimeOperationsBand({
             </div>
 
             {summary.recentSessions.length === 0 ? (
-              <div
-                className="rounded-2xl border border-dashed border-white/10 bg-black p-5 text-body text-muted-foreground"
+              <RecessedWell
+                className="p-5 text-body text-silver-mute"
                 data-dashboard-runtime-empty=""
               >
                 No external runtime session is active for this workspace.
-              </div>
+              </RecessedWell>
             ) : (
               <div className="grid gap-3 lg:grid-cols-3" data-dashboard-runtime-session-list="">
                 {summary.recentSessions.map((session) => (
                   <div
                     key={session.id}
-                    className="rounded-2xl border border-white/10 bg-black p-4"
+                    className="cap p-4"
                     data-dashboard-runtime-session={session.id}
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className="border-brand/35 bg-black text-[10px] text-brand"
-                      >
-                        {session.adapterKind}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] font-mono',
-                          session.status === 'working' && 'border-brand/35 bg-black text-brand',
-                          (session.status === 'blocked' || session.status === 'stale') &&
-                            'border-amber-500/30 bg-black text-amber-200',
-                          (session.status === 'failed' || session.status === 'offline') &&
-                            'border-red-500/30 bg-black text-red-200',
-                          !['working', 'blocked', 'stale', 'failed', 'offline'].includes(
-                            session.status,
-                          ) && 'border-white/10 bg-black text-foreground/80',
-                        )}
-                      >
-                        {session.status}
-                      </Badge>
+                      <LampTile label={session.adapterKind} tone="exec" small interactive={false} />
+                      <LampTile
+                        label={session.status}
+                        tone={lampToneForRuntimeStatus(session.status)}
+                        small
+                        interactive={false}
+                      />
                       {session.workspaceManaged && (
-                        <Badge
-                          variant="outline"
-                          className="border-emerald-500/30 bg-black text-[10px] text-emerald-200"
-                        >
-                          isolated
-                        </Badge>
+                        <LampTile label="ISO" tone="go" small interactive={false} />
                       )}
                     </div>
                     <p className="mt-3 break-all text-body-strong text-foreground">
                       {session.currentTicketId ?? session.currentRunId ?? session.employeeId}
                     </p>
-                    <p className="mt-1 text-caption text-muted-foreground">
+                    <p className="mt-1 text-caption text-silver-mute">
                       Last heartbeat {formatRuntimeHeartbeat(session.lastHeartbeatAt)}
                     </p>
                     {session.failureReason && (
-                      <p className="mt-2 text-caption text-amber-200">
+                      <p className="mt-2 text-caption text-led-hold">
                         {truncateText(session.failureReason, 120)}
                       </p>
                     )}
@@ -537,8 +532,8 @@ function RuntimeOperationsBand({
             )}
           </>
         )}
-      </CardContent>
-    </Card>
+      </Faceplate>
+    </div>
   );
 }
 

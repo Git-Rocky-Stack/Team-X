@@ -166,6 +166,17 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('data-dashboard-primary-panel={dataPanel}');
     expect(missionControlSrc).not.toContain('mission-panel flex min-h-[24rem]');
   });
+
+  it('recomposes the runtime operations band onto console hardware', () => {
+    expect(missionControlSrc).toContain('data-dashboard-runtime-operations=""');
+    expect(missionControlSrc).toContain('data-dashboard-runtime-state={summary.stateLabel}');
+    expect(missionControlSrc).toContain('data-dashboard-runtime-session-list=""');
+    expect(missionControlSrc).toContain('data-dashboard-runtime-budget-blocks=""');
+    expect(missionControlSrc).toContain('data-dashboard-runtime-empty=""');
+    expect(missionControlSrc).toContain('lampToneForRuntimeState(summary.stateTone)');
+    expect(missionControlSrc).toContain('lampToneForRuntimeStatus(session.status)');
+    expect(missionControlSrc).not.toContain('runtimeStateClassName');
+  });
 });
 
 describe('Dashboard integration wiring', () => {
