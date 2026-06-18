@@ -377,6 +377,7 @@ import type { createMeetingService } from '../orchestrator/meeting-service.js';
 import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
 import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
 import type { McpHost } from '../services/mcp-host.js';
+import { listOllamaModels } from '../services/ollama-models.js';
 import { pickStrategy } from '../services/runtime-strategy.js';
 
 /**
@@ -6869,30 +6870,12 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         return { models: [] };
       }
 
+      // Unreachable Ollama (server not running) is an expected, benign
+      // state — `listOllamaModels` degrades to the configured default
+      // instead of throwing, so the auto-fired renderer query never
+      // spams the main log with ECONNREFUSED. Mirrors testConnection.
       const baseUrl = config.baseUrl ?? 'http://localhost:11434/api';
-      const tagsUrl = `${baseUrl.replace(/\/api$/, '')}/api/tags`;
-      const response = await fetch(tagsUrl, { method: 'GET' });
-      if (!response.ok) {
-        throw new Error(`[ipc] providers.listModels: Ollama returned HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as {
-        models?: Array<{ name?: string; model?: string }>;
-      };
-
-      const models = new Set<string>();
-      for (const row of data.models ?? []) {
-        const model =
-          typeof row.model === 'string' && row.model.trim().length > 0 ? row.model : row.name;
-        if (typeof model === 'string' && model.trim().length > 0) {
-          models.add(model.trim());
-        }
-      }
-      if (typeof config.defaultModel === 'string' && config.defaultModel.trim().length > 0) {
-        models.add(config.defaultModel.trim());
-      }
-
-      return { models: [...models].sort((a, b) => a.localeCompare(b)) };
+      return { models: await listOllamaModels(baseUrl, config.defaultModel) };
     },
 
     // -----------------------------------------------------------------------

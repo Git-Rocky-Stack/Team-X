@@ -51,7 +51,7 @@ import { StepCard, StepCardSkeleton } from './step-card.js';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog.js';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog.js';
 import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
 import { useCommandExecute, useCommandHistory, useCommandParse } from '@/hooks/use-command.js';
 import { ipc } from '@/lib/ipc.js';
@@ -574,6 +574,10 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
           }}
         >
           <DialogTitle className="sr-only">Command Palette</DialogTitle>
+          <DialogDescription className="sr-only">
+            Search and run commands — switch views, hire or manage employees, or route a request to
+            an agent.
+          </DialogDescription>
 
           {/* Agentic-loop step-log mode (Phase 5 — M31 T6) */}
           {agenticRun ? (

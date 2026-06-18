@@ -413,6 +413,37 @@ function recoverUnansweredDirectMessages(args: {
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+// ---------------------------------------------------------------------------
+// Test-mode (E2E) noise suppression — scoped strictly to `NODE_ENV=test`.
+//
+// The Playwright harness launches this entry with `NODE_ENV=test`. Two
+// classes of Chromium/Electron dev-diagnostics carry zero signal for an
+// automated smoke test yet drown the useful `[main]` app logs in the
+// captured stderr. Both are already silent in a packaged production
+// build, and `pnpm dev` (NODE_ENV unset) is untouched by this branch, so
+// they still surface during real local development:
+//
+//   1. "Electron Security Warning (Insecure Content-Security-Policy)" —
+//      our dev/unpackaged CSP intentionally keeps `'unsafe-eval'` for
+//      Vite HMR (see renderer/index.html). The advisory itself ends with
+//      "This warning will not show up once the app is packaged"; in a
+//      headless test it is pure noise. `ELECTRON_DISABLE_SECURITY_WARNINGS`
+//      is the documented off-switch and is read by the (sandboxed)
+//      renderer, which inherits this env var at spawn time.
+//
+//   2. GPU command-buffer teardown errors ("GPU state invalid after
+//      WaitForGetOffsetInRange") that Chromium logs when the compositor
+//      is torn down abruptly at app close on a real-GPU host. Disabling
+//      hardware acceleration drops the GPU process entirely — matching
+//      what CI already does on Linux via `--disable-gpu` launch args
+//      (see e2e/_launch-helpers.ts) — so DOM-asserting smoke tests run
+//      identically, just without the teardown spam. Must run before the
+//      `ready` event, hence here at module scope.
+if (process.env.NODE_ENV === 'test') {
+  process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+  app.disableHardwareAcceleration();
+}
+
 /**
  * Resolve the absolute path to the drizzle migrations directory.
  *

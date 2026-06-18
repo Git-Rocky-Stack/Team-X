@@ -10,6 +10,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Silenced four classes of E2E dev-environment stderr noise (Codex Stage-3
+  non-blockers) — verified 0 occurrences across the full 26-spec suite, down
+  from 26 emissions.** Each resolved at its root, scoped so `pnpm dev` and
+  packaged production builds are untouched:
+  - **Missing Radix dialog descriptions (5 → 0).** `command-palette.tsx`
+    (`DialogContent`) and `chat-drawer.tsx` (`SheetContent`) mounted without a
+    Radix `Description`, so `@radix-ui/react-dialog` warned
+    ``Missing `Description` or `aria-describedby={undefined}` for {DialogContent}``
+    — an accessibility defect (screen readers got no dialog summary) as well as
+    log noise. Added an `sr-only` `DialogDescription` / `SheetDescription` to
+    each (the chat drawer's single description covers all four of its views).
+    A new `dialog-a11y-guards` test scans every renderer
+    `<DialogContent>` / `<SheetContent>` usage and fails if any lacks a
+    description, locking the fix in for future dialogs.
+  - **Provider model-fetch refusal (2 → 0).** `providers.listModels` `fetch`ed
+    Ollama and threw on a connection failure, so the renderer's auto-fired
+    `useProviderModels` query logged
+    `Error occurred in handler for 'providers.listModels': … ECONNREFUSED` to
+    the main-process stderr on every settings visit when Ollama wasn't running
+    — an expected, benign state its sibling `providers.testConnection` already
+    handled gracefully. Extracted a `listOllamaModels` helper that degrades to
+    the configured default model (or an empty list) instead of throwing; 7 unit
+    tests pin the graceful posture.
+  - **Electron "Insecure Content-Security-Policy" advisory (7 → 0)** and **GPU
+    command-buffer teardown errors (12 → 0).** Both are Chromium/Electron
+    dev-diagnostics with no signal in a headless smoke test — the CSP advisory
+    fires because the dev/unpackaged CSP intentionally keeps `'unsafe-eval'` for
+    Vite HMR (it self-documents "will not show up once the app is packaged"),
+    and the `GPU state invalid after WaitForGetOffsetInRange` errors are
+    abrupt-teardown noise on a real-GPU host. `main/index.ts` now sets
+    `ELECTRON_DISABLE_SECURITY_WARNINGS` and calls
+    `app.disableHardwareAcceleration()` strictly under `NODE_ENV=test` (matching
+    the `--disable-gpu` posture CI already uses on Linux); a source-pin test
+    keeps both gated to test mode.
 - **Cleared all 124 baseline ESLint warnings → 0 errors / 0 warnings.** The
   renderer/main lint baseline carried 124 warnings; every one resolved at the
   root rather than suppressed, with no ESLint rule disabled or relaxed:

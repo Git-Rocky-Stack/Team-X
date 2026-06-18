@@ -33,7 +33,7 @@ import {
   isCopilotThread as checkCopilotThread,
 } from './thread-list.js';
 
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet.js';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet.js';
 import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';
 import {
   MissionIconButton,
@@ -427,6 +427,19 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
           threadTicketPreviewThreadId ? 'overflow-visible' : 'overflow-hidden',
         )}
       >
+        {/*
+          Single stable accessible description for the drawer. The four
+          views below (thread list, copilot, agent transcript, direct
+          message) each render their own visible MissionSheetHeader
+          subtitle, but those are plain text — not a Radix
+          `Description` — so Radix would warn "Missing `Description` …
+          for {DialogContent}". This sr-only element supplies the
+          `aria-describedby` target for every view without altering the
+          visual composition of this (unswept) legacy screen.
+        */}
+        <SheetDescription className="sr-only">
+          Conversation threads, agent transcripts, and direct messages for the active workspace.
+        </SheetDescription>
         <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
         <div className="relative flex h-full flex-col">
           {threadListView ? (
