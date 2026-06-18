@@ -2,6 +2,7 @@ import type { VaultFile, VaultSearchResult } from '@team-x/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { IpcVaultService } from './handlers.js';
+import { createIpcHandlers } from './handlers.js';
 
 /**
  * Unit tests for the vault IPC handler logic. Uses a stubbed vault
@@ -47,11 +48,9 @@ function makeMockVaultService(): IpcVaultService {
   };
 }
 
-// Import the handler factory — we build handlers with a minimal deps
-// object that only fills the vault-related slots. The non-vault handlers
-// are never invoked in these tests so we can safely use `as any` stubs.
-import { createIpcHandlers } from './handlers.js';
-
+// We build handlers with a minimal deps object that only fills the
+// vault-related slots. The non-vault handlers are never invoked in these
+// tests so we can safely use `as any` stubs.
 function buildTestHandlers(vaultService: IpcVaultService) {
   const noop = {} as Record<string, unknown>;
   return createIpcHandlers({

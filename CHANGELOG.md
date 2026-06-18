@@ -10,6 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Cleared all 124 baseline ESLint warnings → 0 errors / 0 warnings.** The
+  renderer/main lint baseline carried 124 warnings; every one resolved at the
+  root rather than suppressed, with no ESLint rule disabled or relaxed:
+  - **`import/order` + `import/no-duplicates` (27).** Auto-fixed grouping/order,
+    then consolidated import blocks that had been stranded below doc comments or
+    `vi.mock()` calls back to the top of their files, and merged the duplicate
+    `@team-x/shared-types` type imports in `handlers.ts`. ESLint's `import/order`
+    and Biome's `organizeImports` converge on the result (verified — no ping-pong).
+  - **`@typescript-eslint/no-non-null-assertion` (25).** The 22 React Query hooks
+    guarded by `enabled` now use the v5 `skipToken` sentinel, so TypeScript
+    narrows the parameter and the `companyId!` / `req!` assertions — plus their
+    paired `biome-ignore` comments — are gone entirely. The 3 main-process
+    assertions became explicit guards that throw on the documented invariant
+    violation rather than asserting (e.g. `index.ts` now throws if
+    `agenticLoopService.start` runs before initialization, matching its own
+    comment's stated intent).
+  - **`@typescript-eslint/no-empty-function` (59).** Intentional no-ops (test
+    stubs, console-suppression spies, Promise-executor placeholders, the
+    `role="presentation"` dialog-backdrop key handler) now carry a documenting
+    comment body — the rule's sanctioned signal of deliberate intent.
+  - **`react-hooks/exhaustive-deps` (13).** Wrapped each `query.data ?? []`
+    derivation in its own `useMemo` (the fix the rule itself prescribes) so the
+    dependent `useMemo`/`useEffect` hooks receive a stable reference; the
+    command-palette debounce effect now depends on the stable extracted `mutate`.
+  Updated one source-pin test (`org-chart-view.test.tsx`) to assert the new
+  `skipToken` guard instead of the retired assertion + `enabled` pattern.
 - **Invalid `hsl(var(--token))` wrapping on full-color tokens.** Five
   design-system tokens defined as complete color values — `--hairline`,
   `--display-fg`, `--void`, `--armed-edge`, `--armed-soft` (`#hex` / `rgba()`) —

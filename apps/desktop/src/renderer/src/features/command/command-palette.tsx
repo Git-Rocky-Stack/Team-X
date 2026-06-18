@@ -279,6 +279,9 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
   const openThread = useAppStore((s) => s.openThread);
 
   const parseMutation = useCommandParse();
+  // `mutate` is referentially stable across renders (React Query), so the
+  // debounced parse effect can depend on it directly without re-subscribing.
+  const parseMutate = parseMutation.mutate;
   const executeMutation = useCommandExecute();
   const historyQuery = useCommandHistory(companyId);
 
@@ -317,7 +320,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
 
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
-      parseMutation.mutate(
+      parseMutate(
         { text: trimmed, companyId, currentView: activeView },
         {
           onSuccess: (result) => {
@@ -335,7 +338,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [text, open, companyId, activeView, parseMutation.mutate]);
+  }, [text, open, companyId, activeView, parseMutate]);
 
   // --- Focus management ----------------------------------------------------
 
@@ -632,7 +635,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                       type="button"
                       onClick={() => {
                         if (!companyId || text.trim().length === 0) return;
-                        parseMutation.mutate(
+                        parseMutate(
                           { text: text.trim(), companyId, currentView: activeView },
                           {
                             onSuccess: (r) => {

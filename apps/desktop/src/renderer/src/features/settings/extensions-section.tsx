@@ -7,6 +7,9 @@ import {
 import { Loader2, Plug, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { ImportMcpDialog } from './import-mcp-dialog.js';
+import { InstallSkillDialog } from './install-skill-dialog.js';
+
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
@@ -25,9 +28,6 @@ import { useExtensionsSettings, useSetExtensionsSettings } from '@/hooks/use-set
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
-
-import { ImportMcpDialog } from './import-mcp-dialog.js';
-import { InstallSkillDialog } from './install-skill-dialog.js';
 
 const AUTONOMY_COPY: Record<(typeof EXTENSIONS_AUTONOMY_MODES)[number], string> = {
   conservative: 'New installs stay inert until explicitly reviewed and approved.',

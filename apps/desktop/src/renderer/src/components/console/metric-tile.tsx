@@ -1,7 +1,8 @@
 import type { ComponentType, HTMLAttributes } from 'react';
 
-import { cn } from '@/lib/utils';
 import { LcdWell } from './lcd-well';
+
+import { cn } from '@/lib/utils';
 
 type MetricIcon = ComponentType<{ className?: string }>;
 

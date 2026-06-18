@@ -317,7 +317,9 @@ describe('createRoleLoader (synthetic fixtures)', () => {
 
   it('uses console.warn for parse errors when no onParseError is provided', () => {
     writeFileSync(join(tmpRoot, 'broken.md'), 'no frontmatter\n', 'utf8');
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* swallow console output in test */
+    });
     const loader = createRoleLoader({ rolePacksRoot: tmpRoot });
     loader.preload();
     expect(warnSpy).toHaveBeenCalled();
@@ -339,7 +341,9 @@ describe('createRoleLoader (synthetic fixtures)', () => {
     writeRole('roles/legacy-role.md', minimalFrontmatter('legacy-role'), '# legacy');
 
     const errors: Array<{ filePath: string; error: Error }> = [];
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* swallow console output in test */
+    });
     const loader = createRoleLoader({
       rolePacksRoot: rolesRoot,
       verifyMode: 'warn',

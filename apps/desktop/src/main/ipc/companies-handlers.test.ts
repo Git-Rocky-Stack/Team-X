@@ -256,8 +256,12 @@ describe('companies.create handler — Phase 5.6 M-C step b', () => {
     // Silence the bus-emit-failure error logs + missing-bus dev warnings
     // so they don't bleed into vitest output. Tests assert via direct
     // mock counts, not console capture.
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* swallow console output in test */
+    });
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* swallow console output in test */
+    });
   });
 
   describe('happy path', () => {

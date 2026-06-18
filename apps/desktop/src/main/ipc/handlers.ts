@@ -258,6 +258,7 @@ import type {
   SettingsGetCopilotResponse,
   SettingsGetCopilotWeightsRequest,
   SettingsGetCopilotWeightsResponse,
+  SettingsGetEnhancedAiConfigResponse,
   SettingsGetExtensionsResponse,
   SettingsGetMemoryResponse,
   SettingsGetPlannerResponse,
@@ -270,6 +271,7 @@ import type {
   SettingsSetCopilotRequest,
   SettingsSetCopilotWeightsRequest,
   SettingsSetCopilotWeightsResponse,
+  SettingsSetEnhancedAiConfigRequest,
   SettingsSetExtensionsRequest,
   SettingsSetMemoryRequest,
   SettingsSetPlannerRequest,
@@ -325,13 +327,6 @@ import type {
   VaultVerifyResponse,
 } from '@team-x/shared-types';
 
-// Enhanced AI settings types (Phase 5 — M32)
-// These are added to the shared-types package but may not be in the main export yet
-import type {
-  SettingsGetEnhancedAiConfigResponse,
-  SettingsSetEnhancedAiConfigRequest,
-} from '@team-x/shared-types';
-
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 import type { CopilotExportFilter, CopilotExportResult } from '../db/repos/copilot-insights.js';
 import {
@@ -379,6 +374,10 @@ import type {
 } from '../db/repos/threads.js';
 import type { CreateTicketInput, TicketRow, UpdateTicketInput } from '../db/repos/tickets.js';
 import type { createMeetingService } from '../orchestrator/meeting-service.js';
+import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
+import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
+import type { McpHost } from '../services/mcp-host.js';
+import { pickStrategy } from '../services/runtime-strategy.js';
 
 /**
  * Hardcoded id of the (single) human user in Phase 1. Replaced by a
@@ -642,11 +641,6 @@ export interface IpcRoleLookup {
 // ---------------------------------------------------------------------------
 // Public surface
 // ---------------------------------------------------------------------------
-
-import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
-import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
-import type { McpHost } from '../services/mcp-host.js';
-import { pickStrategy } from '../services/runtime-strategy.js';
 
 export interface IpcEventsRepo {
   listByCompany(companyId: string, cursor: number | undefined, limit: number): EventRow[];

@@ -2554,8 +2554,14 @@ app
          * instead of throwing, which violates the ResolveProvider contract
          * on `start`.
          */
-        // biome-ignore lint/style/noNonNullAssertion: see comment above — non-null is a composition-order invariant
-        start: (args) => agenticLoopServiceInstance!.start(args),
+        start: (args) => {
+          if (!agenticLoopServiceInstance) {
+            throw new Error(
+              'agenticLoopService.start called before agenticLoopServiceInstance was initialized — composition-order invariant violated',
+            );
+          }
+          return agenticLoopServiceInstance.start(args);
+        },
       },
       authorityResolver: {
         resolveEmployee: (cid, eid) => authorityResolver.resolveEmployee(cid, eid),

@@ -412,8 +412,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
   const [inviteAuthMode, setInviteAuthMode] = useState<SharedOperatorAuthMode>('invited');
   const [inviteRole, setInviteRole] = useState<OperatorMembershipRole>('operator');
   const [inviteNote, setInviteNote] = useState('');
-  const entries = operatorsQuery.data ?? [];
-  const invites = invitesQuery.data ?? [];
+  const entries = useMemo(() => operatorsQuery.data ?? [], [operatorsQuery.data]);
+  const invites = useMemo(() => invitesQuery.data ?? [], [invitesQuery.data]);
   const accessSummary = useMemo(() => summarizeAccess(entries), [entries]);
   const pendingInvites = useMemo(
     () => invites.filter((invite) => invite.status === 'pending'),

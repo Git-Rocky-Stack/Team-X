@@ -204,9 +204,12 @@ export function BudgetsPanel({
   const updatePolicy = useUpdateBudgetPolicy(companyId);
   const deletePolicy = useDeleteBudgetPolicy(companyId);
 
-  const employees = employeesQuery.data ?? [];
-  const runtimeProfiles = runtimeProfilesQuery.data ?? [];
-  const routines = routinesQuery.data ?? [];
+  const employees = useMemo(() => employeesQuery.data ?? [], [employeesQuery.data]);
+  const runtimeProfiles = useMemo(
+    () => runtimeProfilesQuery.data ?? [],
+    [runtimeProfilesQuery.data],
+  );
+  const routines = useMemo(() => routinesQuery.data ?? [], [routinesQuery.data]);
   const overview = overviewQuery.data;
   const ledger = ledgerQuery.data ?? [];
   const approvals = approvalsQuery.data ?? [];

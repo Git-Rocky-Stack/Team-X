@@ -97,7 +97,9 @@ function makeDeps(): {
       payload: {},
       createdAt: Date.now(),
     }),
-    subscribe: vi.fn().mockReturnValue(() => {}),
+    subscribe: vi.fn().mockReturnValue(() => {
+      /* no-op unsubscribe */
+    }),
     replaySince: vi.fn().mockReturnValue([]),
   } as unknown as EventBus;
 

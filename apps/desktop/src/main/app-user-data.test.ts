@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { type ElectronUserDataApp, configureStableUserDataPath } from './app-user-data.js';
@@ -34,8 +35,12 @@ class FakeElectronApp implements ElectronUserDataApp {
 
 const tempRoots: string[] = [];
 const silentLogger = {
-  log: () => {},
-  warn: () => {},
+  log: () => {
+    /* silent test logger */
+  },
+  warn: () => {
+    /* silent test logger */
+  },
 };
 
 function makeTempRoot(): string {

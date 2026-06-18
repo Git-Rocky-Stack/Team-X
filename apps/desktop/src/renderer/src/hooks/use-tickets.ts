@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';
@@ -6,18 +6,15 @@ import { ipc } from '@/lib/ipc.js';
 export function useTickets(companyId: string | null) {
   return useQuery({
     queryKey: ['tickets', companyId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.tickets.list(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0 ? () => ipc.tickets.list(companyId) : skipToken,
   });
 }
 
 export function useTicketDetail(ticketId: string | null) {
   return useQuery({
     queryKey: ['ticket-detail', ticketId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.tickets.get(ticketId!),
-    enabled: ticketId !== null && ticketId.length > 0,
+    queryFn: ticketId !== null && ticketId.length > 0 ? () => ipc.tickets.get(ticketId) : skipToken,
     refetchInterval: 3000,
   });
 }

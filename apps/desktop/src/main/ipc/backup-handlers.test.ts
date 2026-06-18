@@ -180,7 +180,9 @@ describe('backup IPC handlers', () => {
     });
 
     it('swallows a bootstrap throw and returns manifest-only (restore must not fail)', async () => {
-      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+        /* swallow console output in test */
+      });
       const handlersWithBootstrap = createIpcHandlers({
         companiesRepo: {} as never,
         employeesRepo: {} as never,

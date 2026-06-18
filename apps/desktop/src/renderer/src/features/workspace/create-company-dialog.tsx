@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { Company, CompanyTemplateSummary } from '@team-x/shared-types';
 import { Building2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { chooserCapBase, chooserCapFocus } from './chooser-cap.js';
 
@@ -111,7 +111,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
   const createMutation = useCreateCompany();
   const importMutation = useImportCompanyPackage();
   const templatesQuery = useCompanyTemplates();
-  const templates = templatesQuery.data ?? [];
+  const templates = useMemo(() => templatesQuery.data ?? [], [templatesQuery.data]);
   const selectedTemplate =
     templates.find((template) => template.packagePath === selectedTemplatePath) ??
     templates[0] ??

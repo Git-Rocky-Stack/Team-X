@@ -120,7 +120,7 @@ export function ArtifactsPanel({ companyId }: { companyId: string }) {
   const setActiveView = useAppStore((state) => state.setActiveView);
   const setActiveTicketId = useAppStore((state) => state.setActiveTicketId);
 
-  const artifacts = artifactsQuery.data ?? [];
+  const artifacts = useMemo(() => artifactsQuery.data ?? [], [artifactsQuery.data]);
   const filtered = useMemo(
     () =>
       activeFilter === 'all'

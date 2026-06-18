@@ -13,10 +13,8 @@
  * built and the desktop app has LLM provider integration.
  */
 
-import type { EmbeddingSourceType } from '@team-x/shared-types';
-
-// Import from @team-x/intelligence (with minimal surface for now)
 import type { RagRepo, RagService } from '@team-x/intelligence';
+import type { EmbeddingSourceType } from '@team-x/shared-types';
 
 /**
  * Multi-turn execution plan returned by `createPlan` / surfaced in

@@ -67,7 +67,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
 
   const threadsQuery = useThreadList(companyId);
   const memorySettingsQuery = useMemorySettings();
-  const threads = threadsQuery.data ?? [];
+  const threads = useMemo(() => threadsQuery.data ?? [], [threadsQuery.data]);
   const selectedThreadId = useAppStore((state) => state.autonomyMemoryThreadId);
   const setSelectedThreadId = useAppStore((state) => state.setAutonomyMemoryThreadId);
   const selectedThread = useMemo(

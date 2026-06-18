@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';
@@ -6,18 +6,15 @@ import { ipc } from '@/lib/ipc.js';
 export function useGoals(companyId: string | null) {
   return useQuery({
     queryKey: ['goals', companyId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.goals.list(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0 ? () => ipc.goals.list(companyId) : skipToken,
   });
 }
 
 export function useGoalDetail(goalId: string | null) {
   return useQuery({
     queryKey: ['goal-detail', goalId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.goals.get(goalId!),
-    enabled: goalId !== null && goalId.length > 0,
+    queryFn: goalId !== null && goalId.length > 0 ? () => ipc.goals.get(goalId) : skipToken,
   });
 }
 

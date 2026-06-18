@@ -404,7 +404,7 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
   const runRoutineNow = useRunRoutineNow(companyId);
   const [draft, setDraft] = useState<RoutineDraft>(() => emptyDraft());
 
-  const routines = routinesQuery.data ?? [];
+  const routines = useMemo(() => routinesQuery.data ?? [], [routinesQuery.data]);
   const employees = employeesQuery.data ?? [];
   const runs = runsQuery.data ?? [];
   const dueCount = useMemo(

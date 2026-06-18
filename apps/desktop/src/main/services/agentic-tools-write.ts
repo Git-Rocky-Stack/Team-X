@@ -6,6 +6,12 @@ import {
   type RoleSpec,
   isCapability,
 } from '@team-x/shared-types';
+import { z } from 'zod';
+
+import type { createEmployeesRepo } from '../db/repos/employees.js';
+import type { PendingDelegationsRepo } from '../db/repos/pending-delegations.js';
+import type { createProjectsRepo } from '../db/repos/projects.js';
+import type { createTicketsRepo } from '../db/repos/tickets.js';
 
 /**
  * Agentic write-side tools — main-process closures the agentic loop
@@ -80,13 +86,6 @@ import {
  *     `planner_escalation_threshold`) and replaces `PLANNER_DEFAULTS`
  *     with a settings-repo-backed accessor passed in via `deps.getPlanner`.
  */
-
-import { z } from 'zod';
-
-import type { createEmployeesRepo } from '../db/repos/employees.js';
-import type { PendingDelegationsRepo } from '../db/repos/pending-delegations.js';
-import type { createProjectsRepo } from '../db/repos/projects.js';
-import type { createTicketsRepo } from '../db/repos/tickets.js';
 
 // ---------------------------------------------------------------------------
 // Public constants — workload scoring weights, planner defaults, levels.
@@ -1126,8 +1125,15 @@ export function buildDelegateSubtaskTool(
       // scorer. The breakdown is captured into both the
       // `pending_delegations` row and the `task.delegation_pending`
       // event payload.
-      // biome-ignore lint/style/noNonNullAssertion: chosenId was just selected from the scored candidate list which the scorer enforces is non-empty and lookup-by-id consistent — null here would be a scorer invariant violation
-      const chosenEmployee = deps.employeesRepo.getById(chosenId)!;
+      // chosenId was selected from the scored candidate list, which the scorer
+      // enforces is non-empty and lookup-by-id consistent — a null lookup here
+      // is a scorer invariant violation, not a normal control path, so fail loud.
+      const chosenEmployee = deps.employeesRepo.getById(chosenId);
+      if (!chosenEmployee) {
+        throw new Error(
+          `delegate_subtask: scored candidate "${chosenId}" not found in employees repo (scorer invariant violation)`,
+        );
+      }
       const chosenHint: SubtaskHint = {
         title: args.subtaskTitle,
         type: args.subtaskType ?? deriveSubtaskType(args.subtaskTitle),

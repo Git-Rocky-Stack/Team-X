@@ -15,11 +15,10 @@
  * source_path and no endpoint, and remote-endpoint rows the other way around.
  */
 
+import type { LocalModel, ModelStatus, SourceType } from '@team-x/shared-types';
 import { desc, eq, sql } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
-
-import type { LocalModel, ModelStatus, SourceType } from '@team-x/shared-types';
 
 import type { Schema } from '../client.js';
 import { localModels } from '../schema.js';

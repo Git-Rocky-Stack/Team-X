@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';
@@ -6,18 +6,16 @@ import { ipc } from '@/lib/ipc.js';
 export function useProjects(companyId: string | null) {
   return useQuery({
     queryKey: ['projects', companyId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.projects.list(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0 ? () => ipc.projects.list(companyId) : skipToken,
   });
 }
 
 export function useProjectDetail(projectId: string | null) {
   return useQuery({
     queryKey: ['project-detail', projectId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.projects.get(projectId!),
-    enabled: projectId !== null && projectId.length > 0,
+    queryFn:
+      projectId !== null && projectId.length > 0 ? () => ipc.projects.get(projectId) : skipToken,
   });
 }
 

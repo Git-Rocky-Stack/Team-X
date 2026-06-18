@@ -758,7 +758,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
 
   const [draft, setDraft] = useState<RuntimeProfileDraft>(() => emptyDraft());
 
-  const profiles = runtimeProfilesQuery.data ?? [];
+  const profiles = useMemo(() => runtimeProfilesQuery.data ?? [], [runtimeProfilesQuery.data]);
   const employees = employeesQuery.data ?? [];
   const providers = providersQuery.data ?? [];
   const currentProfileByEmployee = useMemo(() => {
