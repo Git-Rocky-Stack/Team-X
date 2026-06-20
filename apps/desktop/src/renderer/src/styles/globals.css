@@ -262,7 +262,9 @@
     font-family: "Iosevka", ui-monospace, monospace;
   }
 
-  select {
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
     accent-color: var(--armed);
   }
 
