@@ -36,7 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `ENOTFOUND`) stay silent, but a reachable-but-rejecting server (auth
     `401`/`403`, wrong-port, upstream `5xx`) or any other unexpected failure
     shape is `console.warn`-logged before the fallback so a genuine
-    misconfiguration stays discoverable; 9 unit tests pin the posture.
+    misconfiguration stays discoverable. The silent set covers the whole
+    "can't reach the server" errno family (`ECONNREFUSED`/`ENOTFOUND`/
+    `ECONNRESET`/`ECONNABORTED`/`EHOSTUNREACH`/`ENETUNREACH`/`ETIMEDOUT`/
+    `EAI_AGAIN`) so the Windows mid-request reset variants don't re-spam the
+    log; 10 unit tests pin the posture.
   - **Electron "Insecure Content-Security-Policy" advisory (7 → 0)** and **GPU
     command-buffer teardown errors (12 → 0).** Both are Chromium/Electron
     dev-diagnostics with no signal in a headless smoke test — the CSP advisory

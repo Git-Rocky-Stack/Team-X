@@ -31,6 +31,32 @@
  */
 
 /**
+ * Transport-layer error codes that mean "the Ollama endpoint can't be
+ * reached / didn't stay connected" — the benign "not running / not
+ * reachable" family. These degrade SILENTLY (no log) because they're an
+ * expected state for a user who simply hasn't started Ollama (or whose
+ * remote endpoint is momentarily down). On Windows (the primary target) a
+ * gone or mid-restart server surfaces `ECONNRESET` / `ECONNABORTED` rather
+ * than `ECONNREFUSED`, so the set must cover the whole family or the spam
+ * this helper exists to kill creeps back in. `ETIMEDOUT` is treated as
+ * benign here: for a non-critical suggestion list it reads the same as
+ * "can't reach it right now," and warning on every settings visit to a
+ * slow/remote server is exactly the noise we're avoiding. Anything OUTSIDE
+ * this set (a reachable-but-rejecting HTTP status, a TLS error, malformed
+ * JSON, or an unrecognised failure) is surfaced via `console.warn`.
+ */
+const UNREACHABLE_CODES = new Set([
+  'ECONNREFUSED', // nothing listening on the port (Ollama not started)
+  'ENOTFOUND', // DNS: host not found
+  'ECONNRESET', // peer reset the connection (Ollama crashed/restarted mid-request)
+  'ECONNABORTED', // connection aborted (common Windows variant)
+  'EHOSTUNREACH', // host unreachable
+  'ENETUNREACH', // network unreachable
+  'ETIMEDOUT', // connection timed out
+  'EAI_AGAIN', // DNS temporary failure
+]);
+
+/**
  * List the models advertised by an Ollama server.
  *
  * @param baseUrl       The provider base URL. A trailing `/api` is
@@ -81,13 +107,13 @@ export async function listOllamaModels(
 
     return [...models].sort((a, b) => a.localeCompare(b));
   } catch (err) {
-    // "Server not running" (ECONNREFUSED / ENOTFOUND) is an expected,
-    // benign state — degrade silently so the main-process log stays clean.
-    // Any OTHER failure shape (TLS error, DNS oddity, malformed JSON from a
-    // non-Ollama server answering 200) is unexpected and worth surfacing so
-    // a genuine misconfiguration is discoverable instead of vanishing.
+    // Degrade silently only for the "can't reach the server" family
+    // (UNREACHABLE_CODES). Every other failure — a TLS error, malformed JSON
+    // from a non-Ollama server answering 200 (a SyntaxError with no
+    // `cause.code`), or any unrecognised shape — is surfaced so a genuine
+    // misconfiguration is discoverable instead of vanishing.
     const code = (err as { cause?: { code?: string } } | null)?.cause?.code;
-    if (code !== 'ECONNREFUSED' && code !== 'ENOTFOUND') {
+    if (!code || !UNREACHABLE_CODES.has(code)) {
       console.warn(`[ollama-models] ${tagsUrl} request failed; using fallback model list:`, err);
     }
     return fallback;

@@ -127,7 +127,7 @@ describe('listOllamaModels', () => {
     expect(String(warnSpy.mock.calls[0]?.[0])).toContain('500');
   });
 
-  it('warns (but still degrades) on an unexpected failure shape — TLS / DNS-oddity / malformed JSON', async () => {
+  it('warns (but still degrades) on a reachable-but-broken transport error (TLS / EPROTO)', async () => {
     stubFetch(async () => {
       throw Object.assign(new Error('certificate has expired'), { cause: { code: 'EPROTO' } });
     });
@@ -139,15 +139,41 @@ describe('listOllamaModels', () => {
     expect(String(warnSpy.mock.calls[0]?.[0])).toContain('/api/tags');
   });
 
-  it('stays silent for the benign not-running codes (ECONNREFUSED, ENOTFOUND)', async () => {
-    for (const code of ['ECONNREFUSED', 'ENOTFOUND']) {
+  it('warns (but still degrades) on malformed JSON from a 200 response (SyntaxError, no errno)', async () => {
+    // A non-Ollama service answering 200 with a non-JSON body: response.ok is
+    // true, so the helper reaches response.json(), which throws a SyntaxError
+    // that carries no `cause.code` — the warn-on-unknown-failure path.
+    stubFetch(async () => new Response('<html>not ollama</html>', { status: 200 }));
+
+    const models = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+
+    expect(models).toEqual(['qwen2.5:3b']);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(String(warnSpy.mock.calls[0]?.[0])).toContain('/api/tags');
+  });
+
+  it('stays silent for the full "unreachable" code family, not just ECONNREFUSED', async () => {
+    // The benign "can't reach the server" family — including the Windows
+    // mid-request variants (ECONNRESET / ECONNABORTED) the review flagged.
+    const silentCodes = [
+      'ECONNREFUSED',
+      'ENOTFOUND',
+      'ECONNRESET',
+      'ECONNABORTED',
+      'EHOSTUNREACH',
+      'ENETUNREACH',
+      'ETIMEDOUT',
+      'EAI_AGAIN',
+    ];
+    for (const code of silentCodes) {
       warnSpy.mockClear();
       stubFetch(async () => {
         throw Object.assign(new Error('fetch failed'), { cause: { code } });
       });
 
-      await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+      const models = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
 
+      expect(models, `${code} must still degrade to the fallback`).toEqual(['qwen2.5:3b']);
       expect(warnSpy, `${code} must not warn`).not.toHaveBeenCalled();
     }
   });
