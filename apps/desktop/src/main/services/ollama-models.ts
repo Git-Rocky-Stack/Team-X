@@ -18,6 +18,16 @@
  * unreachable server (or any fetch/parse failure) yields the configured
  * default model — so the user still sees their own pick as a suggestion
  * — or an empty list, and never throws.
+ *
+ * Silent vs. surfaced: only the benign "not running" codes
+ * (`ECONNREFUSED` / `ENOTFOUND`) degrade silently. A reachable server that
+ * rejects the request (auth `401`/`403`, a wrong-port service answering, an
+ * upstream `5xx`) or any other unexpected failure shape (TLS error,
+ * malformed JSON from a non-Ollama server answering `200`) is `console.warn`
+ * -logged before the fallback so a genuine misconfiguration stays
+ * discoverable in the main-process log instead of vanishing — unlike the
+ * user-initiated `testConnection`, this query auto-fires in the background
+ * and is the user's only signal here.
  */
 
 /**
@@ -43,6 +53,13 @@ export async function listOllamaModels(
   try {
     const response = await fetch(tagsUrl, { method: 'GET' });
     if (!response.ok) {
+      // Server reachable but rejecting the request (auth 401/403, a
+      // wrong-port service answering, an upstream 5xx) is a real
+      // misconfiguration — not the benign "not running" case — so surface
+      // it before degrading to the fallback rather than failing silently.
+      console.warn(
+        `[ollama-models] ${tagsUrl} returned HTTP ${response.status}; using fallback model list`,
+      );
       return fallback;
     }
 
@@ -63,11 +80,16 @@ export async function listOllamaModels(
     }
 
     return [...models].sort((a, b) => a.localeCompare(b));
-  } catch {
-    // Unreachable Ollama (e.g. ECONNREFUSED — server not running) is an
-    // expected, benign state, not an error. Degrade to the configured
-    // default model instead of throwing so the main-process log stays
-    // clean and the renderer surfaces a usable suggestion.
+  } catch (err) {
+    // "Server not running" (ECONNREFUSED / ENOTFOUND) is an expected,
+    // benign state — degrade silently so the main-process log stays clean.
+    // Any OTHER failure shape (TLS error, DNS oddity, malformed JSON from a
+    // non-Ollama server answering 200) is unexpected and worth surfacing so
+    // a genuine misconfiguration is discoverable instead of vanishing.
+    const code = (err as { cause?: { code?: string } } | null)?.cause?.code;
+    if (code !== 'ECONNREFUSED' && code !== 'ENOTFOUND') {
+      console.warn(`[ollama-models] ${tagsUrl} request failed; using fallback model list:`, err);
+    }
     return fallback;
   }
 }

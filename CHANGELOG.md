@@ -31,8 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the main-process stderr on every settings visit when Ollama wasn't running
     — an expected, benign state its sibling `providers.testConnection` already
     handled gracefully. Extracted a `listOllamaModels` helper that degrades to
-    the configured default model (or an empty list) instead of throwing; 7 unit
-    tests pin the graceful posture.
+    the configured default model (or an empty list) instead of throwing. The
+    degradation is two-tier: the benign not-running codes (`ECONNREFUSED` /
+    `ENOTFOUND`) stay silent, but a reachable-but-rejecting server (auth
+    `401`/`403`, wrong-port, upstream `5xx`) or any other unexpected failure
+    shape is `console.warn`-logged before the fallback so a genuine
+    misconfiguration stays discoverable; 9 unit tests pin the posture.
   - **Electron "Insecure Content-Security-Policy" advisory (7 → 0)** and **GPU
     command-buffer teardown errors (12 → 0).** Both are Chromium/Electron
     dev-diagnostics with no signal in a headless smoke test — the CSP advisory

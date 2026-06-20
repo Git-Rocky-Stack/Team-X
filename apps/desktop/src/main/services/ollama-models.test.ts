@@ -13,12 +13,21 @@
  * never throws.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { listOllamaModels } from './ollama-models.js';
 
+let warnSpy: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+  // Suppress (and capture) the helper's warn-on-real-failure output so the
+  // suite stays quiet and each test can assert warn / no-warn precisely.
+  warnSpy = vi.spyOn(console, 'warn').mockReturnValue(undefined);
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 function stubFetch(impl: (url: string) => Promise<Response>): void {
@@ -93,21 +102,53 @@ describe('listOllamaModels', () => {
     const models = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
 
     expect(models).toEqual(['qwen2.5:3b']);
+    // "Server not running" is benign — it must NOT spam the main-process log.
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('returns an empty list (never throws) when unreachable and no default is configured', async () => {
+  it('returns an empty list (never throws) when unreachable (ENOTFOUND) and no default is configured', async () => {
     stubFetch(async () => {
-      throw new Error('fetch failed');
+      throw Object.assign(new Error('fetch failed'), { cause: { code: 'ENOTFOUND' } });
     });
 
     await expect(listOllamaModels('http://localhost:11434/api')).resolves.toEqual([]);
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('degrades gracefully when Ollama answers with a non-OK HTTP status', async () => {
+  it('warns with the status (but still degrades) when Ollama answers a non-OK HTTP status', async () => {
     stubFetch(async () => new Response('upstream boom', { status: 500 }));
 
     await expect(listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b')).resolves.toEqual([
       'qwen2.5:3b',
     ]);
+    // A reachable-but-rejecting server (auth/wrong-port/5xx) is a real
+    // misconfiguration the user must be able to discover — surface it.
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(String(warnSpy.mock.calls[0]?.[0])).toContain('500');
+  });
+
+  it('warns (but still degrades) on an unexpected failure shape — TLS / DNS-oddity / malformed JSON', async () => {
+    stubFetch(async () => {
+      throw Object.assign(new Error('certificate has expired'), { cause: { code: 'EPROTO' } });
+    });
+
+    const models = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+
+    expect(models).toEqual(['qwen2.5:3b']);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(String(warnSpy.mock.calls[0]?.[0])).toContain('/api/tags');
+  });
+
+  it('stays silent for the benign not-running codes (ECONNREFUSED, ENOTFOUND)', async () => {
+    for (const code of ['ECONNREFUSED', 'ENOTFOUND']) {
+      warnSpy.mockClear();
+      stubFetch(async () => {
+        throw Object.assign(new Error('fetch failed'), { cause: { code } });
+      });
+
+      await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+
+      expect(warnSpy, `${code} must not warn`).not.toHaveBeenCalled();
+    }
   });
 });
