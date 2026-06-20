@@ -960,25 +960,27 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Local operators</span>
-                  <span className="font-semibold text-foreground">
+                  <span className="text-body-strong tabular-nums text-foreground">
                     {accessSummary.localOperators}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Invited operators</span>
-                  <span className="font-semibold text-foreground">
+                  <span className="text-body-strong tabular-nums text-foreground">
                     {accessSummary.invitedOperators}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Cloud operators</span>
-                  <span className="font-semibold text-foreground">
+                  <span className="text-body-strong tabular-nums text-foreground">
                     {accessSummary.cloudOperators}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span>Pending invites</span>
-                  <span className="font-semibold text-foreground">{pendingInvites.length}</span>
+                  <span className="text-body-strong tabular-nums text-foreground">
+                    {pendingInvites.length}
+                  </span>
                 </div>
               </div>
             </RecessedWell>
