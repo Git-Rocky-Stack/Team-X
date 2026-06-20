@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 type MetricIcon = ComponentType<{ className?: string }>;
 
-interface MetricTileProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onClick'> {
+interface MetricTileProps extends Omit<HTMLAttributes<HTMLElement>, 'onClick'> {
   /** Eyebrow label above the readout. */
   label: string;
   /** The figure shown in the phosphor well. */
@@ -56,6 +56,7 @@ export function MetricTile({
         type="button"
         onClick={onClick}
         className={cn('cap flex flex-col gap-2 p-4 text-left', className)}
+        {...props}
       >
         {body}
       </button>
