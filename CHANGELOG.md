@@ -47,11 +47,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     fires because the dev/unpackaged CSP intentionally keeps `'unsafe-eval'` for
     Vite HMR (it self-documents "will not show up once the app is packaged"),
     and the `GPU state invalid after WaitForGetOffsetInRange` errors are
-    abrupt-teardown noise on a real-GPU host. `main/index.ts` now sets
-    `ELECTRON_DISABLE_SECURITY_WARNINGS` and calls
-    `app.disableHardwareAcceleration()` strictly under `NODE_ENV=test` (matching
-    the `--disable-gpu` posture CI already uses on Linux); a source-pin test
-    keeps both gated to test mode.
+    abrupt-teardown noise on a real-GPU host. `main/index.ts` sets
+    `ELECTRON_DISABLE_SECURITY_WARNINGS` strictly under `NODE_ENV=test`. GPU is
+    disabled on the Playwright launch argv (`--disable-gpu` +
+    `--disable-software-rasterizer` in `e2e/_launch-helpers.ts`, now applied on
+    every OS rather than only Linux CI) instead of via an in-JS
+    `app.disableHardwareAcceleration()` — a Stage-3 re-review showed the in-JS
+    call runs too late to stop a GPU-process crash on a GPU-less host (Chromium
+    decides the GPU spawn during argv bootstrap, before the main script loads).
+    A source-pin test keeps the security suppression gated to test mode and the
+    GPU switches unconditional.
 - **Cleared all 124 baseline ESLint warnings → 0 errors / 0 warnings.** The
   renderer/main lint baseline carried 124 warnings; every one resolved at the
   root rather than suppressed, with no ESLint rule disabled or relaxed:
