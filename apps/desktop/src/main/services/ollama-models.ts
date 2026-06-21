@@ -66,14 +66,27 @@ const UNREACHABLE_CODES = new Set([
  * @param defaultModel  The provider's configured default model, if any.
  *                      Always folded into the result on success, and
  *                      returned as the sole suggestion when the server
- *                      is unreachable.
+ *                      is unreachable. A non-string value (possible from a
+ *                      malformed persisted config) is ignored — the helper
+ *                      never rejects.
  * @returns             Sorted, de-duplicated model names. Never rejects.
  */
 export async function listOllamaModels(
   baseUrl: string,
   defaultModel?: string | null,
 ): Promise<string[]> {
-  const fallback = defaultModel && defaultModel.trim().length > 0 ? [defaultModel.trim()] : [];
+  // Normalise the configured default ONCE, behind a runtime `typeof` guard.
+  // `defaultModel` is typed `string | null`, but it originates from a parsed
+  // `configJson` blob, so a malformed persisted config can hand us a non-string
+  // at runtime. Calling `.trim()` on that would throw a TypeError here — before
+  // the try block — and reject `providers.listModels`, breaking this helper's
+  // "never rejects" contract. Guarding the type keeps the contract whole and
+  // folds the trimming de-dup into one place.
+  const trimmedDefault =
+    typeof defaultModel === 'string' && defaultModel.trim().length > 0
+      ? defaultModel.trim()
+      : undefined;
+  const fallback = trimmedDefault ? [trimmedDefault] : [];
   const tagsUrl = `${baseUrl.replace(/\/api$/, '')}/api/tags`;
 
   try {
@@ -101,8 +114,8 @@ export async function listOllamaModels(
         models.add(model.trim());
       }
     }
-    if (defaultModel && defaultModel.trim().length > 0) {
-      models.add(defaultModel.trim());
+    if (trimmedDefault) {
+      models.add(trimmedDefault);
     }
 
     return [...models].sort((a, b) => a.localeCompare(b));

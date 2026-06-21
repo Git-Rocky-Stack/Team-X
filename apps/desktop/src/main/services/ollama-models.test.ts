@@ -177,4 +177,35 @@ describe('listOllamaModels', () => {
       expect(warnSpy, `${code} must not warn`).not.toHaveBeenCalled();
     }
   });
+
+  it('ignores a non-string defaultModel (malformed config) without rejecting — fallback path', async () => {
+    // `defaultModel` is typed `string | null`, but it originates from a parsed
+    // `configJson` blob — a malformed/hand-edited persisted config can hand the
+    // helper a non-string at runtime. Calling `.trim()` on that would throw a
+    // TypeError before the try block and reject `providers.listModels`,
+    // breaking the "never rejects" contract. A number must be ignored, not
+    // crash, even when the server is also unreachable.
+    stubFetch(async () => {
+      throw Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNREFUSED' } });
+    });
+
+    await expect(
+      listOllamaModels('http://localhost:11434/api', 123 as unknown as string),
+    ).resolves.toEqual([]);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('drops a non-string defaultModel on the success path (never folds it into results)', async () => {
+    stubFetch(
+      async () =>
+        new Response(JSON.stringify({ models: [{ model: 'llama3.1:8b' }] }), { status: 200 }),
+    );
+
+    const models = await listOllamaModels('http://localhost:11434/api', {
+      not: 'a string',
+    } as unknown as string);
+
+    expect(models).toEqual(['llama3.1:8b']);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
 });
