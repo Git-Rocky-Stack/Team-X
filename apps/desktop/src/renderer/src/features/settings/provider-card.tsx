@@ -267,10 +267,6 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                     } — check the server URL and credentials.`
                   : 'Could not load Ollama tags right now.'}
               </p>
-            ) : detectedModels.length === 0 && suggestedCloudModels.length === 0 ? (
-              <p className="text-caption text-muted-foreground">
-                No Ollama tags detected from the local daemon.
-              </p>
             ) : (
               <select
                 id={`provider-model-select-${provider.id}`}
