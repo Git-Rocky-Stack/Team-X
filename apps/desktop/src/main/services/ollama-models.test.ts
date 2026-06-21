@@ -171,7 +171,8 @@ describe('listOllamaModels', () => {
 
   it('stays silent (status unreachable) for the full "unreachable" code family, not just ECONNREFUSED', async () => {
     // The benign "can't reach the server" family — including the Windows
-    // mid-request variants (ECONNRESET / ECONNABORTED) the review flagged.
+    // mid-request variants (ECONNRESET / ECONNABORTED) and the Undici
+    // connect-timeout variant (UND_ERR_CONNECT_TIMEOUT) the review flagged.
     const silentCodes = [
       'ECONNREFUSED',
       'ENOTFOUND',
@@ -181,6 +182,7 @@ describe('listOllamaModels', () => {
       'ENETUNREACH',
       'ETIMEDOUT',
       'EAI_AGAIN',
+      'UND_ERR_CONNECT_TIMEOUT',
     ];
     for (const code of silentCodes) {
       warnSpy.mockClear();
@@ -226,6 +228,84 @@ describe('listOllamaModels', () => {
 
     expect(result.models).toEqual(['llama3.1:8b']);
     expect(result.status).toBe('ok');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('reports status error on a 200 response whose body lacks a models array (non-Ollama service)', async () => {
+    // A wrong-port service answering 200 with valid JSON that is NOT Ollama's
+    // /api/tags shape (no `models` array). Folding the configured default in
+    // and reporting 'ok' would present the default as a "detected" model and
+    // hide the misconfiguration — the same concealment the status contract
+    // exists to prevent. A reachable-but-wrong server must surface as 'error'.
+    stubFetch(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+
+    expect(result.models).toEqual(['qwen2.5:3b']);
+    expect(result.status).toBe('error');
+    expect(typeof result.detail).toBe('string');
+    expect((result.detail ?? '').length).toBeGreaterThan(0);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(String(warnSpy.mock.calls[0]?.[0])).toContain('/api/tags');
+  });
+
+  it('treats a 200 response with an empty models array as ok (Ollama running, nothing pulled yet)', async () => {
+    // Regression guard for the shape check above: an EMPTY array is a genuine
+    // Ollama server with no models pulled — it must stay 'ok' (default folded
+    // in), NOT be over-rejected as a wrong-shape error.
+    stubFetch(async () => new Response(JSON.stringify({ models: [] }), { status: 200 }));
+
+    const result = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+
+    expect(result.models).toEqual(['qwen2.5:3b']);
+    expect(result.status).toBe('ok');
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('reports status error (never rejects, never fetches) when baseUrl is a non-string (malformed config)', async () => {
+    // `baseUrl` originates from a parsed configJson blob; a hand-edited or
+    // corrupted config can hand a non-string at runtime. Building the
+    // /api/tags URL via String.prototype.replace would throw a TypeError
+    // BEFORE the try block and reject providers.listModels, breaking the
+    // never-reject contract. fetch must not even be reached.
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const result = await listOllamaModels(123 as unknown as string, 'qwen2.5:3b');
+
+    expect(result.models).toEqual(['qwen2.5:3b']);
+    expect(result.status).toBe('error');
+    expect(typeof result.detail).toBe('string');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports status error (never fetches) when baseUrl is empty / whitespace-only', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const result = await listOllamaModels('   ', 'qwen2.5:3b');
+
+    expect(result.models).toEqual(['qwen2.5:3b']);
+    expect(result.status).toBe('error');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('degrades silently (status unreachable) on an Undici connect timeout (UND_ERR_CONNECT_TIMEOUT)', async () => {
+    // Node/Electron global fetch (Undici) reports an unreachable-host connect
+    // timeout as cause.code UND_ERR_CONNECT_TIMEOUT, not the libuv ETIMEDOUT.
+    // A remote Ollama that is simply down must degrade silently, not warn on
+    // every fresh listing.
+    stubFetch(async () => {
+      throw Object.assign(new Error('fetch failed'), {
+        cause: { code: 'UND_ERR_CONNECT_TIMEOUT' },
+      });
+    });
+
+    const result = await listOllamaModels('http://10.0.0.5:11434/api', 'qwen2.5:3b');
+
+    expect(result.models).toEqual(['qwen2.5:3b']);
+    expect(result.status).toBe('unreachable');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });

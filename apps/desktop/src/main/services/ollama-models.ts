@@ -43,9 +43,12 @@ import type { ListProviderModelsResponse } from '@team-x/shared-types';
  * this helper exists to kill creeps back in. `ETIMEDOUT` is treated as
  * benign here: for a non-critical suggestion list it reads the same as
  * "can't reach it right now," and warning on every settings visit to a
- * slow/remote server is exactly the noise we're avoiding. Anything OUTSIDE
- * this set (a reachable-but-rejecting HTTP status, a TLS error, malformed
- * JSON, or an unrecognised failure) is surfaced via `console.warn`.
+ * slow/remote server is exactly the noise we're avoiding. Node/Electron's
+ * global `fetch` (Undici) reports an unreachable-host connect timeout as
+ * `UND_ERR_CONNECT_TIMEOUT` rather than the libuv `ETIMEDOUT`, so that code is
+ * included too. Anything OUTSIDE this set (a reachable-but-rejecting HTTP
+ * status, a TLS error, malformed JSON, or an unrecognised failure) is surfaced
+ * via `console.warn`.
  */
 const UNREACHABLE_CODES = new Set([
   'ECONNREFUSED', // nothing listening on the port (Ollama not started)
@@ -54,8 +57,9 @@ const UNREACHABLE_CODES = new Set([
   'ECONNABORTED', // connection aborted (common Windows variant)
   'EHOSTUNREACH', // host unreachable
   'ENETUNREACH', // network unreachable
-  'ETIMEDOUT', // connection timed out
+  'ETIMEDOUT', // connection timed out (libuv)
   'EAI_AGAIN', // DNS temporary failure
+  'UND_ERR_CONNECT_TIMEOUT', // Undici (Node/Electron fetch) connect timeout — host unreachable
 ]);
 
 /**
@@ -64,7 +68,10 @@ const UNREACHABLE_CODES = new Set([
  * @param baseUrl       The provider base URL. A trailing `/api` is
  *                      stripped before `/api/tags` is appended, so both
  *                      `http://host:11434` and `http://host:11434/api`
- *                      resolve to `http://host:11434/api/tags`.
+ *                      resolve to `http://host:11434/api/tags`. A non-string
+ *                      or empty value (possible from a malformed persisted
+ *                      config) yields a `status:'error'` response without any
+ *                      network call — the helper never rejects.
  * @param defaultModel  The provider's configured default model, if any.
  *                      Always folded into the result on success, and
  *                      returned as the sole suggestion when the server
@@ -94,7 +101,20 @@ export async function listOllamaModels(
       ? defaultModel.trim()
       : undefined;
   const fallback = trimmedDefault ? [trimmedDefault] : [];
-  const tagsUrl = `${baseUrl.replace(/\/api$/, '')}/api/tags`;
+
+  // Validate `baseUrl` behind the same runtime guard as `defaultModel` above:
+  // it also originates from a parsed `configJson` blob, so a malformed/
+  // hand-edited config can hand us a non-string (or empty) value at runtime.
+  // Building the /api/tags URL via String.prototype.replace on that throws a
+  // TypeError HERE — before the try block — and rejects `providers.listModels`,
+  // breaking the "never rejects" contract. A bad base URL is a real, surfaced
+  // misconfiguration, so warn + report 'error' without ever reaching fetch.
+  const trimmedBaseUrl = typeof baseUrl === 'string' ? baseUrl.trim() : '';
+  if (trimmedBaseUrl.length === 0) {
+    console.warn('[ollama-models] invalid/empty provider base URL; using fallback model list');
+    return { models: fallback, status: 'error', detail: 'Invalid Ollama base URL' };
+  }
+  const tagsUrl = `${trimmedBaseUrl.replace(/\/api$/, '')}/api/tags`;
 
   try {
     const response = await fetch(tagsUrl, { method: 'GET' });
@@ -113,8 +133,26 @@ export async function listOllamaModels(
       models?: Array<{ name?: string; model?: string }>;
     };
 
+    // A genuine Ollama /api/tags response always carries a `models` ARRAY
+    // (empty when nothing has been pulled yet). A 200 whose JSON parses but
+    // lacks that array is not Ollama — e.g. a wrong-port service answering 200.
+    // Coercing the missing field to [] and folding the configured default in
+    // would report 'ok' and present that default as a "detected" model, hiding
+    // the misconfiguration the status contract exists to surface — so treat an
+    // absent/non-array `models` as a reachable-but-wrong server (status error).
+    if (!Array.isArray(data.models)) {
+      console.warn(
+        `[ollama-models] ${tagsUrl} returned 200 without a models array; using fallback model list`,
+      );
+      return {
+        models: fallback,
+        status: 'error',
+        detail: 'Unexpected response shape from /api/tags',
+      };
+    }
+
     const models = new Set<string>();
-    for (const row of data.models ?? []) {
+    for (const row of data.models) {
       const model =
         typeof row.model === 'string' && row.model.trim().length > 0 ? row.model : row.name;
       if (typeof model === 'string' && model.trim().length > 0) {
