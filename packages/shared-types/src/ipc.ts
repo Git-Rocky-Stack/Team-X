@@ -1459,6 +1459,20 @@ export interface ListProviderModelsRequest {
 
 export interface ListProviderModelsResponse {
   models: string[];
+  /**
+   * Reachability of the model source, so the settings UI can tell a benign
+   * "Ollama not running" state apart from a genuine server-side failure:
+   * - 'ok'          — the server answered; `models` are real detections.
+   * - 'unreachable' — benign connectivity failure (server not started);
+   *                   `models` is the configured-default fallback, not a
+   *                   detection.
+   * - 'error'       — the server was reachable but rejected the request (auth
+   *                   401/403, wrong-port, upstream 5xx, TLS, malformed body);
+   *                   a real misconfiguration the user must be able to see.
+   */
+  status: 'ok' | 'unreachable' | 'error';
+  /** Human-readable detail for the 'error' status (e.g. "HTTP 401"). */
+  detail?: string;
 }
 
 // ---------------------------------------------------------------------------

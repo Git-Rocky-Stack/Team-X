@@ -30,6 +30,8 @@
  * and is the user's only signal here.
  */
 
+import type { ListProviderModelsResponse } from '@team-x/shared-types';
+
 /**
  * Transport-layer error codes that mean "the Ollama endpoint can't be
  * reached / didn't stay connected" — the benign "not running / not
@@ -69,12 +71,17 @@ const UNREACHABLE_CODES = new Set([
  *                      is unreachable. A non-string value (possible from a
  *                      malformed persisted config) is ignored — the helper
  *                      never rejects.
- * @returns             Sorted, de-duplicated model names. Never rejects.
+ * @returns             A listing: `models` (sorted + de-duplicated on
+ *                      success, the configured-default fallback otherwise)
+ *                      plus `status` ('ok' | 'unreachable' | 'error') and, for
+ *                      'error', a `detail` — so the renderer can surface a
+ *                      genuine server failure rather than silently presenting
+ *                      the default as detected. Never rejects.
  */
 export async function listOllamaModels(
   baseUrl: string,
   defaultModel?: string | null,
-): Promise<string[]> {
+): Promise<ListProviderModelsResponse> {
   // Normalise the configured default ONCE, behind a runtime `typeof` guard.
   // `defaultModel` is typed `string | null`, but it originates from a parsed
   // `configJson` blob, so a malformed persisted config can hand us a non-string
@@ -99,7 +106,7 @@ export async function listOllamaModels(
       console.warn(
         `[ollama-models] ${tagsUrl} returned HTTP ${response.status}; using fallback model list`,
       );
-      return fallback;
+      return { models: fallback, status: 'error', detail: `HTTP ${response.status}` };
     }
 
     const data = (await response.json()) as {
@@ -118,17 +125,24 @@ export async function listOllamaModels(
       models.add(trimmedDefault);
     }
 
-    return [...models].sort((a, b) => a.localeCompare(b));
+    return { models: [...models].sort((a, b) => a.localeCompare(b)), status: 'ok' };
   } catch (err) {
     // Degrade silently only for the "can't reach the server" family
-    // (UNREACHABLE_CODES). Every other failure — a TLS error, malformed JSON
-    // from a non-Ollama server answering 200 (a SyntaxError with no
-    // `cause.code`), or any unrecognised shape — is surfaced so a genuine
-    // misconfiguration is discoverable instead of vanishing.
+    // (UNREACHABLE_CODES) — a benign not-running/connectivity state. Every
+    // other failure — a TLS error, malformed JSON from a non-Ollama server
+    // answering 200 (a SyntaxError with no `cause.code`), or any unrecognised
+    // shape — is a reachable-but-broken server: surfaced via `console.warn`
+    // AND reported as status 'error' so the renderer can show it instead of
+    // silently presenting the default as a detected model.
     const code = (err as { cause?: { code?: string } } | null)?.cause?.code;
-    if (!code || !UNREACHABLE_CODES.has(code)) {
-      console.warn(`[ollama-models] ${tagsUrl} request failed; using fallback model list:`, err);
+    if (code && UNREACHABLE_CODES.has(code)) {
+      return { models: fallback, status: 'unreachable' };
     }
-    return fallback;
+    console.warn(`[ollama-models] ${tagsUrl} request failed; using fallback model list:`, err);
+    return {
+      models: fallback,
+      status: 'error',
+      detail: err instanceof Error ? err.message : String(err),
+    };
   }
 }

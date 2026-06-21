@@ -6867,15 +6867,19 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       }
 
       if (config.kind !== 'ollama') {
-        return { models: [] };
+        return { models: [], status: 'ok' };
       }
 
-      // Unreachable Ollama (server not running) is an expected, benign
-      // state — `listOllamaModels` degrades to the configured default
-      // instead of throwing, so the auto-fired renderer query never
-      // spams the main log with ECONNREFUSED. Mirrors testConnection.
+      // Unreachable Ollama (server not running) is an expected, benign state —
+      // `listOllamaModels` degrades to the configured default instead of
+      // throwing, so the auto-fired renderer query never spams the main log
+      // with ECONNREFUSED. It returns a `status` ('ok' | 'unreachable' |
+      // 'error') so the settings UI can surface a genuine server-side failure
+      // (auth/5xx) instead of silently presenting the default as detected.
+      // Mirrors testConnection.
       const baseUrl = config.baseUrl ?? 'http://localhost:11434/api';
-      return { models: await listOllamaModels(baseUrl, config.defaultModel) };
+      const listing = await listOllamaModels(baseUrl, config.defaultModel);
+      return listing;
     },
 
     // -----------------------------------------------------------------------

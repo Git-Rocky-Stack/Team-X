@@ -40,10 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     "can't reach the server" errno family (`ECONNREFUSED`/`ENOTFOUND`/
     `ECONNRESET`/`ECONNABORTED`/`EHOSTUNREACH`/`ENETUNREACH`/`ETIMEDOUT`/
     `EAI_AGAIN`) so the Windows mid-request reset variants don't re-spam the
-    log. A non-string `defaultModel` from a malformed persisted config is also
-    ignored rather than throwing on `.trim()`, so the helper's never-rejects
-    contract holds end-to-end (a Stage-3 re-review catch); 12 unit tests pin the
-    posture.
+    log. Two Stage-3 re-review catches hardened it further: a non-string
+    `defaultModel` from a malformed persisted config is ignored rather than
+    throwing on `.trim()` (the never-rejects contract holds end-to-end), and the
+    listing now carries a `status` (`ok` / `unreachable` / `error`) so a
+    reachable-but-rejecting server (auth/5xx/TLS/malformed) surfaces as an
+    explicit error in `ProviderCard` — with the server detail, and no longer
+    counting the degraded fallback as a detected model — instead of silently
+    presenting the configured default as detected. 12 helper unit tests plus a
+    `ProviderCard` source guard pin the posture.
   - **Electron "Insecure Content-Security-Policy" advisory (7 → 0)** and **GPU
     command-buffer teardown errors (12 → 0).** Both are Chromium/Electron
     dev-diagnostics with no signal in a headless smoke test — the CSP advisory

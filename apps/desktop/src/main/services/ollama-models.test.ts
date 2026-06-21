@@ -8,9 +8,12 @@
  * query (auto-fired on provider-card mount) rejected and Electron logged
  * `Error occurred in handler for 'providers.listModels': ... ECONNREFUSED`
  * to the main-process stderr on every settings visit. These tests pin
- * the graceful posture: success returns sorted/deduped models; an
- * unreachable server returns the configured default (or empty) and
- * never throws.
+ * the graceful posture: success returns sorted/deduped models with
+ * `status: 'ok'`; an unreachable server returns the configured default
+ * (or empty) with `status: 'unreachable'` and never throws; a reachable
+ * server that rejects (auth/5xx/TLS/malformed) returns the fallback with
+ * `status: 'error'` + a `detail` so the renderer can surface it instead of
+ * silently presenting the default as a detected model.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -62,7 +65,7 @@ describe('listOllamaModels', () => {
     expect(seen).toEqual(['http://10.0.0.5:11434/api/tags']);
   });
 
-  it('returns sorted, de-duplicated model names with the default folded in', async () => {
+  it('returns sorted, de-duplicated model names with the default folded in (status ok)', async () => {
     stubFetch(
       async () =>
         new Response(
@@ -73,12 +76,13 @@ describe('listOllamaModels', () => {
         ),
     );
 
-    const models = await listOllamaModels('http://localhost:11434/api', 'phi3:mini');
+    const result = await listOllamaModels('http://localhost:11434/api', 'phi3:mini');
 
-    expect(models).toEqual(['llama3.1:8b', 'phi3:mini', 'qwen2.5:3b']);
+    expect(result.models).toEqual(['llama3.1:8b', 'phi3:mini', 'qwen2.5:3b']);
+    expect(result.status).toBe('ok');
   });
 
-  it('prefers row.model over row.name and trims whitespace', async () => {
+  it('prefers row.model over row.name and trims whitespace (status ok)', async () => {
     stubFetch(
       async () =>
         new Response(
@@ -89,9 +93,10 @@ describe('listOllamaModels', () => {
         ),
     );
 
-    const models = await listOllamaModels('http://localhost:11434/api');
+    const result = await listOllamaModels('http://localhost:11434/api');
 
-    expect(models).toEqual(['bare:2b', 'spaced:1b']);
+    expect(result.models).toEqual(['bare:2b', 'spaced:1b']);
+    expect(result.status).toBe('ok');
   });
 
   it('degrades to the configured default model when Ollama is unreachable (ECONNREFUSED)', async () => {
@@ -99,9 +104,10 @@ describe('listOllamaModels', () => {
       throw Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNREFUSED' } });
     });
 
-    const models = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+    const result = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
 
-    expect(models).toEqual(['qwen2.5:3b']);
+    expect(result.models).toEqual(['qwen2.5:3b']);
+    expect(result.status).toBe('unreachable');
     // "Server not running" is benign — it must NOT spam the main-process log.
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -111,48 +117,59 @@ describe('listOllamaModels', () => {
       throw Object.assign(new Error('fetch failed'), { cause: { code: 'ENOTFOUND' } });
     });
 
-    await expect(listOllamaModels('http://localhost:11434/api')).resolves.toEqual([]);
+    const result = await listOllamaModels('http://localhost:11434/api');
+
+    expect(result.models).toEqual([]);
+    expect(result.status).toBe('unreachable');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('warns with the status (but still degrades) when Ollama answers a non-OK HTTP status', async () => {
+  it('reports status error + detail (but still degrades) when Ollama answers a non-OK HTTP status', async () => {
     stubFetch(async () => new Response('upstream boom', { status: 500 }));
 
-    await expect(listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b')).resolves.toEqual([
-      'qwen2.5:3b',
-    ]);
+    const result = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+
+    expect(result.models).toEqual(['qwen2.5:3b']);
     // A reachable-but-rejecting server (auth/wrong-port/5xx) is a real
     // misconfiguration the user must be able to discover — surface it.
+    expect(result.status).toBe('error');
+    expect(result.detail).toBe('HTTP 500');
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(String(warnSpy.mock.calls[0]?.[0])).toContain('500');
   });
 
-  it('warns (but still degrades) on a reachable-but-broken transport error (TLS / EPROTO)', async () => {
+  it('reports status error (but still degrades) on a reachable-but-broken transport error (TLS / EPROTO)', async () => {
     stubFetch(async () => {
       throw Object.assign(new Error('certificate has expired'), { cause: { code: 'EPROTO' } });
     });
 
-    const models = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+    const result = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
 
-    expect(models).toEqual(['qwen2.5:3b']);
+    expect(result.models).toEqual(['qwen2.5:3b']);
+    expect(result.status).toBe('error');
+    expect(result.detail).toBe('certificate has expired');
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(String(warnSpy.mock.calls[0]?.[0])).toContain('/api/tags');
   });
 
-  it('warns (but still degrades) on malformed JSON from a 200 response (SyntaxError, no errno)', async () => {
+  it('reports status error on malformed JSON from a 200 response (SyntaxError, no errno)', async () => {
     // A non-Ollama service answering 200 with a non-JSON body: response.ok is
     // true, so the helper reaches response.json(), which throws a SyntaxError
     // that carries no `cause.code` — the warn-on-unknown-failure path.
     stubFetch(async () => new Response('<html>not ollama</html>', { status: 200 }));
 
-    const models = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+    const result = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
 
-    expect(models).toEqual(['qwen2.5:3b']);
+    expect(result.models).toEqual(['qwen2.5:3b']);
+    expect(result.status).toBe('error');
+    // The SyntaxError text varies by V8 version, so only assert it is present.
+    expect(typeof result.detail).toBe('string');
+    expect((result.detail ?? '').length).toBeGreaterThan(0);
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(String(warnSpy.mock.calls[0]?.[0])).toContain('/api/tags');
   });
 
-  it('stays silent for the full "unreachable" code family, not just ECONNREFUSED', async () => {
+  it('stays silent (status unreachable) for the full "unreachable" code family, not just ECONNREFUSED', async () => {
     // The benign "can't reach the server" family — including the Windows
     // mid-request variants (ECONNRESET / ECONNABORTED) the review flagged.
     const silentCodes = [
@@ -171,9 +188,10 @@ describe('listOllamaModels', () => {
         throw Object.assign(new Error('fetch failed'), { cause: { code } });
       });
 
-      const models = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
+      const result = await listOllamaModels('http://localhost:11434/api', 'qwen2.5:3b');
 
-      expect(models, `${code} must still degrade to the fallback`).toEqual(['qwen2.5:3b']);
+      expect(result.models, `${code} must still degrade to the fallback`).toEqual(['qwen2.5:3b']);
+      expect(result.status, `${code} must report status unreachable`).toBe('unreachable');
       expect(warnSpy, `${code} must not warn`).not.toHaveBeenCalled();
     }
   });
@@ -189,9 +207,10 @@ describe('listOllamaModels', () => {
       throw Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNREFUSED' } });
     });
 
-    await expect(
-      listOllamaModels('http://localhost:11434/api', 123 as unknown as string),
-    ).resolves.toEqual([]);
+    const result = await listOllamaModels('http://localhost:11434/api', 123 as unknown as string);
+
+    expect(result.models).toEqual([]);
+    expect(result.status).toBe('unreachable');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
@@ -201,11 +220,12 @@ describe('listOllamaModels', () => {
         new Response(JSON.stringify({ models: [{ model: 'llama3.1:8b' }] }), { status: 200 }),
     );
 
-    const models = await listOllamaModels('http://localhost:11434/api', {
+    const result = await listOllamaModels('http://localhost:11434/api', {
       not: 'a string',
     } as unknown as string);
 
-    expect(models).toEqual(['llama3.1:8b']);
+    expect(result.models).toEqual(['llama3.1:8b']);
+    expect(result.status).toBe('ok');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });
