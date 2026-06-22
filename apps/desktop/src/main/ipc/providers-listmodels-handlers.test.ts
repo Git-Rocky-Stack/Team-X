@@ -106,4 +106,22 @@ describe('IPC providers.listModels — never-reject contract', () => {
     // A genuinely unexpected failure IS surfaced (warned) before degrading.
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('resolves with a typed error (never rejects, never looks up) on a null or undefined request', async () => {
+    // IPC delivers arbitrary payloads at runtime; a null/undefined request must
+    // not throw on `req.providerId` before the guard and reject the call.
+    const handlers = buildHandlers(() => {
+      throw new Error('providersService.get must not be called for a null request');
+    });
+
+    const fromNull = await handlers.providersListModels(null as never);
+    const fromUndefined = await handlers.providersListModels(undefined as never);
+
+    for (const result of [fromNull, fromUndefined]) {
+      expect(result.models).toEqual([]);
+      expect(result.status).toBe('error');
+      expect(result.detail).toContain('providerId');
+    }
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
 });

@@ -65,9 +65,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     unexpected lookup failure all return a typed `{ models: [], status: 'error',
     detail }` instead of throwing and re-spamming the main-process stderr); and
     `UND_ERR_SOCKET` (an Undici mid-request socket close on an Ollama restart,
-    the sibling of `ECONNRESET`) joined the silent unreachable set. 19
-    `listOllamaModels` unit tests + 3 `providers.listModels` handler
-    never-reject tests + a `ProviderCard` source guard pin the posture.
+    the sibling of `ECONNRESET`) joined the silent unreachable set; and (5) a
+    last pass closed the residual vectors of those same two themes — a failed
+    `fetch` can echo the full URL it was given (Node rejects a credential-bearing
+    URL with a message that repeats `http://user:pass@host/…` verbatim), so the
+    catch path now scrubs any secret-bearing URL from BOTH the log line and the
+    surfaced `detail` (not just the endpoint interpolation), proven by a
+    real-`fetch` regression test; and the handler now extracts `providerId` via
+    optional chaining so a `null`/`undefined` request returns the typed error
+    instead of throwing before the guard. 20 `listOllamaModels` unit tests + 4
+    `providers.listModels` handler never-reject tests + a `ProviderCard` source
+    guard pin the posture.
   - **Electron "Insecure Content-Security-Policy" advisory (7 → 0)** and **GPU
     command-buffer teardown errors (12 → 0).** Both are Chromium/Electron
     dev-diagnostics with no signal in a headless smoke test — the CSP advisory

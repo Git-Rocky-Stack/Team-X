@@ -349,4 +349,25 @@ describe('listOllamaModels', () => {
     expect(logged).not.toContain('admin:');
     expect(logged).toContain('10.0.0.5:11434');
   });
+
+  it('redacts URL credentials echoed by a REAL fetch rejection (no stub)', async () => {
+    // Do NOT stub fetch: Node/Electron's real fetch rejects a credential-bearing
+    // URL with a message that repeats the full URL (incl. user:pass) verbatim
+    // ("Request cannot be constructed from a URL that includes credentials: …").
+    // Sanitizing only the endpoint interpolation is not enough — the raw
+    // err.message must be scrubbed too, in BOTH the log line and the surfaced
+    // detail. Port 1 + the credentials guard means this never touches the wire.
+    const result = await listOllamaModels('http://admin:s3cr3tT0ken@127.0.0.1:1/api', 'qwen2.5:3b');
+
+    expect(result.models).toEqual(['qwen2.5:3b']);
+    expect(result.status).toBe('error');
+    expect(result.detail ?? '').not.toContain('s3cr3tT0ken');
+    expect(result.detail ?? '').not.toContain('admin:');
+
+    const loggedAll = warnSpy.mock.calls
+      .map((call) => call.map((arg) => String(arg)).join(' '))
+      .join(' | ');
+    expect(loggedAll).not.toContain('s3cr3tT0ken');
+    expect(loggedAll).not.toContain('admin:');
+  });
 });

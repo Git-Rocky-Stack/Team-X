@@ -6866,19 +6866,23 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       // already never rejects; this guard extends the same never-reject posture
       // to the handler boundary, so EVERY path returns a typed
       // { models, status, detail } response instead of throwing.
-      if (typeof req.providerId !== 'string' || req.providerId.length === 0) {
+      // `req` itself can be null/undefined at runtime (IPC delivers arbitrary
+      // payloads), so extract via optional chaining on a widened type — reading
+      // `req.providerId` directly would throw HERE, before the try, and reject.
+      const providerId = (req as { providerId?: unknown } | null | undefined)?.providerId;
+      if (typeof providerId !== 'string' || providerId.length === 0) {
         return { models: [], status: 'error', detail: 'providerId is required' };
       }
 
       try {
-        const config = providersService.get(req.providerId);
+        const config = providersService.get(providerId);
         if (!config) {
           // Removed before this refetch resolved — a benign race, not a reason
           // to reject the IPC call (and not worth a log line).
           return {
             models: [],
             status: 'error',
-            detail: `provider not found: ${req.providerId}`,
+            detail: `provider not found: ${providerId}`,
           };
         }
 

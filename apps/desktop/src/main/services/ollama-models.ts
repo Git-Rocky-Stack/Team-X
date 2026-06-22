@@ -82,6 +82,22 @@ function sanitizeEndpointForLog(rawUrl: string): string {
 }
 
 /**
+ * Scrub any secret-bearing URL out of free text bound for a log or a surfaced
+ * `detail`. A failed `fetch` can echo the exact URL it was given — Node rejects
+ * a credential-bearing URL with a message that repeats
+ * `http://user:pass@host/…` verbatim — so the configured endpoint's credentials
+ * would leak through the error message even after the endpoint itself is
+ * sanitized. Replaces the known raw endpoint with its sanitized form, then
+ * strips `user:pass@` userinfo from any other URL the text may still carry.
+ */
+function redactUrlSecrets(text: string, rawUrl: string, safeUrl: string): string {
+  return text
+    .split(rawUrl)
+    .join(safeUrl)
+    .replace(/([a-z][\w+.-]*:\/\/)[^/@\s]+@/gi, '$1');
+}
+
+/**
  * List the models advertised by an Ollama server.
  *
  * @param baseUrl       The provider base URL. A trailing `/api` is
@@ -198,15 +214,14 @@ export async function listOllamaModels(
     if (code && UNREACHABLE_CODES.has(code)) {
       return { models: fallback, status: 'unreachable' };
     }
+    // A failed fetch can echo the full URL it was given — Node rejects a
+    // credential-bearing URL with a message that repeats it verbatim — so scrub
+    // any secret-bearing URL from BOTH the log line and the surfaced detail.
+    const rawMessage = err instanceof Error ? err.message : String(err);
+    const safeMessage = redactUrlSecrets(rawMessage, tagsUrl, safeEndpoint);
     console.warn(
-      `[ollama-models] ${safeEndpoint} request failed; using fallback model list: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
+      `[ollama-models] ${safeEndpoint} request failed; using fallback model list: ${safeMessage}`,
     );
-    return {
-      models: fallback,
-      status: 'error',
-      detail: err instanceof Error ? err.message : String(err),
-    };
+    return { models: fallback, status: 'error', detail: safeMessage };
   }
 }
