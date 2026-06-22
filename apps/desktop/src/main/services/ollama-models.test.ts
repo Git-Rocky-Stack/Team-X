@@ -172,7 +172,8 @@ describe('listOllamaModels', () => {
   it('stays silent (status unreachable) for the full "unreachable" code family, not just ECONNREFUSED', async () => {
     // The benign "can't reach the server" family — including the Windows
     // mid-request variants (ECONNRESET / ECONNABORTED) and the Undici
-    // connect-timeout variant (UND_ERR_CONNECT_TIMEOUT) the review flagged.
+    // variants (UND_ERR_CONNECT_TIMEOUT connect timeout, UND_ERR_SOCKET
+    // mid-request socket closure on an Ollama restart) the review flagged.
     const silentCodes = [
       'ECONNREFUSED',
       'ENOTFOUND',
@@ -183,6 +184,7 @@ describe('listOllamaModels', () => {
       'ETIMEDOUT',
       'EAI_AGAIN',
       'UND_ERR_CONNECT_TIMEOUT',
+      'UND_ERR_SOCKET',
     ];
     for (const code of silentCodes) {
       warnSpy.mockClear();
@@ -307,5 +309,44 @@ describe('listOllamaModels', () => {
     expect(result.models).toEqual(['qwen2.5:3b']);
     expect(result.status).toBe('unreachable');
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('never writes Ollama URL credentials to the log on the HTTP-error path', async () => {
+    // A remote Ollama behind auth may be configured as
+    // http://user:secret@host/api — the warning must log only a sanitized
+    // origin+path so credentials never leak into application logs.
+    stubFetch(async () => new Response('unauthorized', { status: 401 }));
+
+    const result = await listOllamaModels(
+      'http://admin:s3cr3tT0ken@10.0.0.5:11434/api',
+      'qwen2.5:3b',
+    );
+
+    expect(result.status).toBe('error');
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const logged = String(warnSpy.mock.calls[0]?.[0]);
+    expect(logged).not.toContain('s3cr3tT0ken');
+    expect(logged).not.toContain('admin:');
+    // The sanitized origin + path is still present for diagnosis.
+    expect(logged).toContain('10.0.0.5:11434');
+    expect(logged).toContain('/api/tags');
+  });
+
+  it('never writes Ollama URL credentials to the log on the catch (transport-error) path', async () => {
+    stubFetch(async () => {
+      throw Object.assign(new Error('certificate has expired'), { cause: { code: 'EPROTO' } });
+    });
+
+    const result = await listOllamaModels(
+      'http://admin:s3cr3tT0ken@10.0.0.5:11434/api',
+      'qwen2.5:3b',
+    );
+
+    expect(result.status).toBe('error');
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const logged = warnSpy.mock.calls[0]?.map((arg) => String(arg)).join(' ') ?? '';
+    expect(logged).not.toContain('s3cr3tT0ken');
+    expect(logged).not.toContain('admin:');
+    expect(logged).toContain('10.0.0.5:11434');
   });
 });

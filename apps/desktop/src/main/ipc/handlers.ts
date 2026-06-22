@@ -6857,29 +6857,54 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     },
 
     async providersListModels(req) {
+      // providers.listModels auto-fires from the renderer when a provider card
+      // mounts and re-fires on cache invalidation. A malformed request, a
+      // provider removed between the invalidation and its refetch (a benign
+      // race), or an unexpected lookup failure must NOT reject — a rejection
+      // resurfaces the `Error occurred in handler for 'providers.listModels'`
+      // main-process stderr spam this contract exists to kill. listOllamaModels
+      // already never rejects; this guard extends the same never-reject posture
+      // to the handler boundary, so EVERY path returns a typed
+      // { models, status, detail } response instead of throwing.
       if (typeof req.providerId !== 'string' || req.providerId.length === 0) {
-        throw new Error('[ipc] providers.listModels: providerId is required');
+        return { models: [], status: 'error', detail: 'providerId is required' };
       }
 
-      const config = providersService.get(req.providerId);
-      if (!config) {
-        throw new Error(`[ipc] providers.listModels: provider not found: ${req.providerId}`);
-      }
+      try {
+        const config = providersService.get(req.providerId);
+        if (!config) {
+          // Removed before this refetch resolved — a benign race, not a reason
+          // to reject the IPC call (and not worth a log line).
+          return {
+            models: [],
+            status: 'error',
+            detail: `provider not found: ${req.providerId}`,
+          };
+        }
 
-      if (config.kind !== 'ollama') {
-        return { models: [], status: 'ok' };
-      }
+        if (config.kind !== 'ollama') {
+          return { models: [], status: 'ok' };
+        }
 
-      // Unreachable Ollama (server not running) is an expected, benign state —
-      // `listOllamaModels` degrades to the configured default instead of
-      // throwing, so the auto-fired renderer query never spams the main log
-      // with ECONNREFUSED. It returns a `status` ('ok' | 'unreachable' |
-      // 'error') so the settings UI can surface a genuine server-side failure
-      // (auth/5xx) instead of silently presenting the default as detected.
-      // Mirrors testConnection.
-      const baseUrl = config.baseUrl ?? 'http://localhost:11434/api';
-      const listing = await listOllamaModels(baseUrl, config.defaultModel);
-      return listing;
+        // Unreachable Ollama (server not running) is an expected, benign state —
+        // `listOllamaModels` degrades to the configured default instead of
+        // throwing, so the auto-fired renderer query never spams the main log
+        // with ECONNREFUSED. It returns a `status` ('ok' | 'unreachable' |
+        // 'error') so the settings UI can surface a genuine server-side failure
+        // (auth/5xx) instead of silently presenting the default as detected.
+        // Mirrors testConnection.
+        const baseUrl = config.baseUrl ?? 'http://localhost:11434/api';
+        return await listOllamaModels(baseUrl, config.defaultModel);
+      } catch (err) {
+        // An unexpected lookup/runtime failure (e.g. a config-store read error)
+        // still honors the never-reject contract at the IPC boundary.
+        console.warn('[ipc] providers.listModels: unexpected failure; returning typed error', err);
+        return {
+          models: [],
+          status: 'error',
+          detail: err instanceof Error ? err.message : String(err),
+        };
+      }
     },
 
     // -----------------------------------------------------------------------

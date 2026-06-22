@@ -44,11 +44,13 @@ import type { ListProviderModelsResponse } from '@team-x/shared-types';
  * benign here: for a non-critical suggestion list it reads the same as
  * "can't reach it right now," and warning on every settings visit to a
  * slow/remote server is exactly the noise we're avoiding. Node/Electron's
- * global `fetch` (Undici) reports an unreachable-host connect timeout as
- * `UND_ERR_CONNECT_TIMEOUT` rather than the libuv `ETIMEDOUT`, so that code is
- * included too. Anything OUTSIDE this set (a reachable-but-rejecting HTTP
- * status, a TLS error, malformed JSON, or an unrecognised failure) is surfaced
- * via `console.warn`.
+ * global `fetch` (Undici) reports unreachable/transport-loss conditions with
+ * its own codes rather than the libuv ones — an unreachable-host connect
+ * timeout as `UND_ERR_CONNECT_TIMEOUT` (not `ETIMEDOUT`) and a socket closed
+ * mid-request when Ollama restarts as `UND_ERR_SOCKET` (the sibling of
+ * `ECONNRESET`) — so both are included too. Anything OUTSIDE this set (a
+ * reachable-but-rejecting HTTP status, a TLS error, malformed JSON, or an
+ * unrecognised failure) is surfaced via `console.warn`.
  */
 const UNREACHABLE_CODES = new Set([
   'ECONNREFUSED', // nothing listening on the port (Ollama not started)
@@ -60,7 +62,24 @@ const UNREACHABLE_CODES = new Set([
   'ETIMEDOUT', // connection timed out (libuv)
   'EAI_AGAIN', // DNS temporary failure
   'UND_ERR_CONNECT_TIMEOUT', // Undici (Node/Electron fetch) connect timeout — host unreachable
+  'UND_ERR_SOCKET', // Undici socket closed mid-request (Ollama restarted) — benign, like ECONNRESET
 ]);
+
+/**
+ * Reduce a URL to a log-safe form — origin + pathname only. Strips any
+ * userinfo (`user:pass@`), query string, and hash so an authenticated remote
+ * endpoint (`http://user:token@host/api?key=…`) never writes its credentials
+ * or token into the application log. Falls back to a generic label when the
+ * value can't be parsed as a URL.
+ */
+function sanitizeEndpointForLog(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return '<unparseable-url>';
+  }
+}
 
 /**
  * List the models advertised by an Ollama server.
@@ -115,6 +134,9 @@ export async function listOllamaModels(
     return { models: fallback, status: 'error', detail: 'Invalid Ollama base URL' };
   }
   const tagsUrl = `${trimmedBaseUrl.replace(/\/api$/, '')}/api/tags`;
+  // Every log line below uses the sanitized endpoint so configured
+  // credentials / tokens in the URL never reach the application log.
+  const safeEndpoint = sanitizeEndpointForLog(tagsUrl);
 
   try {
     const response = await fetch(tagsUrl, { method: 'GET' });
@@ -124,7 +146,7 @@ export async function listOllamaModels(
       // misconfiguration — not the benign "not running" case — so surface
       // it before degrading to the fallback rather than failing silently.
       console.warn(
-        `[ollama-models] ${tagsUrl} returned HTTP ${response.status}; using fallback model list`,
+        `[ollama-models] ${safeEndpoint} returned HTTP ${response.status}; using fallback model list`,
       );
       return { models: fallback, status: 'error', detail: `HTTP ${response.status}` };
     }
@@ -142,7 +164,7 @@ export async function listOllamaModels(
     // absent/non-array `models` as a reachable-but-wrong server (status error).
     if (!Array.isArray(data.models)) {
       console.warn(
-        `[ollama-models] ${tagsUrl} returned 200 without a models array; using fallback model list`,
+        `[ollama-models] ${safeEndpoint} returned 200 without a models array; using fallback model list`,
       );
       return {
         models: fallback,
@@ -176,7 +198,11 @@ export async function listOllamaModels(
     if (code && UNREACHABLE_CODES.has(code)) {
       return { models: fallback, status: 'unreachable' };
     }
-    console.warn(`[ollama-models] ${tagsUrl} request failed; using fallback model list:`, err);
+    console.warn(
+      `[ollama-models] ${safeEndpoint} request failed; using fallback model list: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
     return {
       models: fallback,
       status: 'error',

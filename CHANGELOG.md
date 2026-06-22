@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (auth/5xx/TLS/malformed) surfaces as an explicit error in `ProviderCard` —
     with the server detail, and no longer counting the degraded fallback as a
     detected model — instead of silently presenting the configured default as
-    detected; and (3) the never-rejects + status contracts were closed
+    detected; (3) the never-rejects + status contracts were closed
     end-to-end — a non-string/empty `baseUrl` is now guarded the same way as
     `defaultModel` (returns `status:'error'` without a network call rather than
     throwing on `.replace`), a `200` whose body lacks a `models` array (a
@@ -55,8 +55,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     folding the default in as a phantom "detected" model, and the silent
     unreachable set gained the Undici connect-timeout code
     (`UND_ERR_CONNECT_TIMEOUT`) that Node/Electron `fetch` emits instead of
-    `ETIMEDOUT`. 17 helper unit tests plus a `ProviderCard` source guard pin the
-    posture.
+    `ETIMEDOUT`; and (4) a final hardening pass closed three more edge cases —
+    every failure log now writes a **sanitized** endpoint (origin + path only,
+    via `new URL`), so an authenticated remote URL
+    (`http://user:token@host/api?key=…`) never leaks its credentials/token into
+    the application log; the `providers.listModels` **handler** now honors the
+    never-reject contract at the IPC boundary too (a malformed request, a
+    provider removed between a cache invalidation and its refetch, or an
+    unexpected lookup failure all return a typed `{ models: [], status: 'error',
+    detail }` instead of throwing and re-spamming the main-process stderr); and
+    `UND_ERR_SOCKET` (an Undici mid-request socket close on an Ollama restart,
+    the sibling of `ECONNRESET`) joined the silent unreachable set. 19
+    `listOllamaModels` unit tests + 3 `providers.listModels` handler
+    never-reject tests + a `ProviderCard` source guard pin the posture.
   - **Electron "Insecure Content-Security-Policy" advisory (7 → 0)** and **GPU
     command-buffer teardown errors (12 → 0).** Both are Chromium/Electron
     dev-diagnostics with no signal in a headless smoke test — the CSP advisory
