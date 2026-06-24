@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';
@@ -6,18 +6,16 @@ import { ipc } from '@/lib/ipc.js';
 export function useMeetings(companyId: string | null) {
   return useQuery({
     queryKey: ['meetings', companyId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.meetings.list(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0 ? () => ipc.meetings.list(companyId) : skipToken,
   });
 }
 
 export function useMeetingDetail(meetingId: string | null) {
   return useQuery({
     queryKey: ['meeting-detail', meetingId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.meetings.get(meetingId!),
-    enabled: meetingId !== null && meetingId.length > 0,
+    queryFn:
+      meetingId !== null && meetingId.length > 0 ? () => ipc.meetings.get(meetingId) : skipToken,
     refetchInterval: 2000,
   });
 }

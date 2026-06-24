@@ -591,8 +591,12 @@ describe('IPC: employees.setManager — bus emit tolerance (invariant #11)', () 
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* swallow console output in test */
+    });
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* swallow console output in test */
+    });
   });
 
   afterEach(() => {
@@ -694,7 +698,9 @@ describe('IPC: employees.setManager — level-inversion guard (BUG-001)', () => 
     // introduced a new tier the rank table doesn't recognize.
     const prev = process.env.NODE_ENV;
     process.env.NODE_ENV = 'development';
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* swallow console output in test */
+    });
     try {
       const fx = buildFixture();
       fx.employees.put(makeEmployeeRow({ id: 'rpt', level: 'mystery-tier' }));
@@ -840,7 +846,9 @@ describe('IPC: employees.setManager — invariant #11 contract pin (BUG-007)', (
     fx.employees.put(makeEmployeeRow({ id: 'rpt' }));
     fx.employees.put(makeEmployeeRow({ id: 'mgr' }));
     fx.bus.setNextEmitThrow(new Error('bus crashed'));
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* swallow console output in test */
+    });
     try {
       await expect(
         fx.handlers.employeesSetManager({ employeeId: 'rpt', managerId: 'mgr' }),

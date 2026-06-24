@@ -35,7 +35,9 @@ describe('BackupService.ensurePostRestoreSystemEmployees', () => {
       companiesBasePath: '/tmp/does-not-matter/companies',
       backupsDir: '/tmp/does-not-matter/backups',
       appVersion: '0.0.0-test',
-      checkpointWal: () => {},
+      checkpointWal: () => {
+        /* no-op stub */
+      },
     });
   });
 
@@ -111,7 +113,9 @@ describe('BackupService.ensurePostRestoreSystemEmployees', () => {
   });
 
   it('records per-company throws in skipped[] without aborting the sweep', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* swallow console output in test */
+    });
     const result = service.ensurePostRestoreSystemEmployees({
       listCompanyIds: () => ['c-1', 'c-broken', 'c-3'],
       ensureSystemForCompany: (cid) => {
@@ -138,7 +142,9 @@ describe('BackupService.ensurePostRestoreSystemEmployees', () => {
   });
 
   it('coerces non-Error throws into a string reason (reason is never empty)', () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* swallow console output in test */
+    });
     const result = service.ensurePostRestoreSystemEmployees({
       listCompanyIds: () => ['c-odd'],
       ensureSystemForCompany: () => {
@@ -199,7 +205,9 @@ describe('BackupService.delete', () => {
       companiesBasePath: path.join(tempRoot, 'companies'),
       backupsDir,
       appVersion: '0.0.0-test',
-      checkpointWal: () => {},
+      checkpointWal: () => {
+        /* no-op stub */
+      },
     });
   });
 

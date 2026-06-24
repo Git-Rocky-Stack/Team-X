@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
-
 import { HexBolt } from './hex-bolt';
 import { StripeHeader } from './stripe-header';
+
+import { cn } from '@/lib/utils';
 
 interface FaceplateProps {
   /** Stripe kicker; stripe renders only when provided */

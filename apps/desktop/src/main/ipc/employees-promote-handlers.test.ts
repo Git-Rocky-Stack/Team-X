@@ -517,8 +517,12 @@ describe('IPC: employees.promote — bus emit tolerance (invariant #11)', () => 
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* swallow console output in test */
+    });
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* swallow console output in test */
+    });
   });
 
   afterEach(() => {

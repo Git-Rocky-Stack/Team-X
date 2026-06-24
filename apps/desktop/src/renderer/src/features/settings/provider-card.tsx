@@ -81,8 +81,16 @@ export function ProviderCard({ provider }: ProviderCardProps) {
   const persistedOllamaModel = provider.defaultModel ?? '';
   const hasUnsavedOllamaModel = ollamaModel.trim() !== persistedOllamaModel.trim();
   const allOllamaModels = modelQuery.data?.models ?? [];
-  const detectedLocalModels = allOllamaModels.filter((model) => !model.includes('cloud'));
-  const detectedCloudModels = allOllamaModels.filter((model) => model.includes('cloud'));
+  const modelStatus = modelQuery.data?.status;
+  // A reachable-but-rejecting server (auth/5xx/TLS/malformed) reports status
+  // 'error' — a real misconfiguration the user must see, not a silent fallback.
+  // Treat a query-level rejection and an 'error' listing the same.
+  const modelError = modelQuery.isError || modelStatus === 'error';
+  // Only a successful listing yields genuine detections; a degraded fallback
+  // (unreachable/error) carries the configured default, which is NOT detected.
+  const detectedModels = modelStatus === 'ok' ? allOllamaModels : [];
+  const detectedLocalModels = detectedModels.filter((model) => !model.includes('cloud'));
+  const detectedCloudModels = detectedModels.filter((model) => model.includes('cloud'));
   const suggestedCloudModels = CURATED_OLLAMA_CLOUD_MODELS.filter(
     (model) => !allOllamaModels.includes(model),
   );
@@ -239,9 +247,9 @@ export function ProviderCard({ provider }: ProviderCardProps) {
               >
                 Model Picker
               </label>
-              {!modelQuery.isFetching && !modelQuery.isError && allOllamaModels.length > 0 && (
+              {!modelQuery.isFetching && modelStatus === 'ok' && detectedModels.length > 0 && (
                 <span className="text-code-sm text-muted-foreground">
-                  {allOllamaModels.length} detected
+                  {detectedModels.length} detected
                   {suggestedCloudModels.length > 0 ? ` + ${suggestedCloudModels.length} cloud` : ''}
                 </span>
               )}
@@ -251,13 +259,13 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Loading Ollama tags...
               </div>
-            ) : modelQuery.isError ? (
-              <p className="text-caption text-muted-foreground">
-                Could not load Ollama tags right now.
-              </p>
-            ) : allOllamaModels.length === 0 ? (
-              <p className="text-caption text-muted-foreground">
-                No Ollama tags detected from the local daemon.
+            ) : modelError ? (
+              <p className="text-caption text-destructive">
+                {modelStatus === 'error'
+                  ? `Ollama server error${
+                      modelQuery.data?.detail ? ` (${modelQuery.data.detail})` : ''
+                    } — check the server URL and credentials.`
+                  : 'Could not load Ollama tags right now.'}
               </p>
             ) : (
               <select
@@ -311,10 +319,10 @@ export function ProviderCard({ provider }: ProviderCardProps) {
             </p>
           )}
           <p className="mt-2 text-caption text-muted-foreground/70">
-            {modelQuery.isError
+            {modelError
               ? 'Could not load local Ollama tags. Cloud models can also be entered manually.'
-              : modelQuery.data && modelQuery.data.models.length > 0
-                ? `${modelQuery.data.models.length} detected model(s). Suggested Ollama Cloud tags are also included below, and any valid model can still be entered manually.`
+              : detectedModels.length > 0
+                ? `${detectedModels.length} detected model(s). Suggested Ollama Cloud tags are also included below, and any valid model can still be entered manually.`
                 : 'Cloud models can also be entered manually, even when they do not appear in the local tag list.'}
           </p>
         </div>

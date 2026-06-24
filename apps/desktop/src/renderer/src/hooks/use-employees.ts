@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';
@@ -6,9 +6,8 @@ import { ipc } from '@/lib/ipc.js';
 export function useEmployees(companyId: string | null) {
   return useQuery({
     queryKey: ['employees', companyId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled` — queryFn only runs when companyId is non-null
-    queryFn: () => ipc.employees.list(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0 ? () => ipc.employees.list(companyId) : skipToken,
   });
 }
 

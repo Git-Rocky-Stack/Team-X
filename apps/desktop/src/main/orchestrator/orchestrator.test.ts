@@ -559,7 +559,9 @@ describe('buildOrchestrator', () => {
         name: 'Chase Manville',
         title: 'Chief Technology Officer',
       });
-      let recipientRanResolve: () => void = () => {};
+      let recipientRanResolve: () => void = () => {
+        /* replaced synchronously by the Promise executor below */
+      };
       const recipientRan = new Promise<void>((resolve) => {
         recipientRanResolve = resolve;
       });
@@ -1469,7 +1471,9 @@ describe('buildOrchestrator', () => {
       });
 
       const order: string[] = [];
-      let firstStartedResolve: () => void = () => {};
+      let firstStartedResolve: () => void = () => {
+        /* replaced synchronously by the Promise executor below */
+      };
       const firstStarted = new Promise<void>((resolve) => {
         firstStartedResolve = resolve;
       });
@@ -1681,7 +1685,9 @@ describe('buildOrchestrator', () => {
             reason: 'Budget cap reached for company scope company-1.',
             approvalItem: null,
           }),
-          recordRunSpend: async () => {},
+          recordRunSpend: async () => {
+            /* no-op stub */
+          },
         },
         resolveProvider: async () => {
           throw new Error('provider should not run');
@@ -1740,7 +1746,9 @@ describe('buildOrchestrator', () => {
               status: 'pending',
             },
           }),
-          recordRunSpend: async () => {},
+          recordRunSpend: async () => {
+            /* no-op stub */
+          },
         },
         resolveProvider: async () => {
           throw new Error('provider should not run');
@@ -1789,7 +1797,9 @@ describe('buildOrchestrator', () => {
         runCheckpointsRepo: f.runCheckpointsRepo,
       });
       const seeded = seedResumeCheckpoint(runCheckpointService, f, 'approval-blocked', 9);
-      let startedResolve: () => void = () => {};
+      let startedResolve: () => void = () => {
+        /* replaced synchronously by the Promise executor below */
+      };
       const started = new Promise<void>((resolve) => {
         startedResolve = resolve;
       });

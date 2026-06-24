@@ -11,14 +11,13 @@ import {
 } from 'lucide-react';
 
 import {
-  MissionControlRow,
-  MissionIconButton,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
-
+  LampTile,
+  type LampTone,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+} from '@/components/console/index.js';
 import { useAgentImprovement, useRunAgentImprovement } from '@/hooks/use-agent-improvement.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -26,10 +25,10 @@ function formatTimestamp(value: number): string {
   return new Date(value).toLocaleString();
 }
 
-function priorityTone(priority: TicketPriority): 'default' | 'warning' | 'danger' {
-  if (priority === 'critical') return 'danger';
-  if (priority === 'high') return 'warning';
-  return 'default';
+function priorityTone(priority: TicketPriority): LampTone {
+  if (priority === 'critical') return 'nogo';
+  if (priority === 'high') return 'hold';
+  return 'off';
 }
 
 function TicketRow({ ticket, onOpen }: { ticket: Ticket; onOpen: (ticketId: string) => void }) {
@@ -43,33 +42,40 @@ function TicketRow({ ticket, onOpen }: { ticket: Ticket; onOpen: (ticketId: stri
   })();
 
   return (
-    <MissionInsetSurface className="space-y-3 p-4" data-agent-improvement-ticket={ticket.id}>
+    <RecessedWell className="space-y-3 p-4" data-agent-improvement-ticket={ticket.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <TicketCheck className="h-4 w-4 text-muted-foreground" />
+            <TicketCheck className="h-4 w-4 text-silver-mute" />
             <span className="text-body-strong text-foreground">{ticket.title}</span>
-            <MissionPill tone={priorityTone(ticket.priority)}>{ticket.priority}</MissionPill>
-            <MissionPill>{ticket.status}</MissionPill>
+            <LampTile
+              label={ticket.priority}
+              tone={priorityTone(ticket.priority)}
+              small
+              interactive={false}
+            />
+            <Tag>{ticket.status}</Tag>
           </div>
-          <p className="line-clamp-2 text-caption text-muted-foreground">{ticket.description}</p>
+          <p className="line-clamp-2 text-caption text-silver-mute">{ticket.description}</p>
         </div>
-        <MissionIconButton
+        <button
+          type="button"
           title="Open ticket"
-          onClick={() => onOpen(ticket.id)}
           aria-label={`Open ${ticket.title}`}
+          onClick={() => onOpen(ticket.id)}
+          className="cap flex h-10 w-10 items-center justify-center"
         >
           <ExternalLink className="h-4 w-4" />
-        </MissionIconButton>
+        </button>
       </div>
       <div className="flex flex-wrap gap-2">
         {labels.slice(0, 5).map((label) => (
-          <MissionPill key={label} mono>
+          <Tag key={label} mono>
             {label}
-          </MissionPill>
+          </Tag>
         ))}
       </div>
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }
 
@@ -79,40 +85,43 @@ function RecommendationRow({
   recommendation: AgentImprovementRecommendation;
 }) {
   return (
-    <MissionInsetSurface
+    <RecessedWell
       className="space-y-3 p-4"
       data-agent-improvement-recommendation={recommendation.id}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+            <BrainCircuit className="h-4 w-4 text-silver-mute" />
             <span className="text-body-strong text-foreground">{recommendation.title}</span>
-            <MissionPill tone={priorityTone(recommendation.priority)}>
-              {recommendation.priority}
-            </MissionPill>
+            <LampTile
+              label={recommendation.priority}
+              tone={priorityTone(recommendation.priority)}
+              small
+              interactive={false}
+            />
           </div>
-          <p className="text-caption text-muted-foreground">
+          <p className="text-caption text-silver-mute">
             {recommendation.sourceCount} source
             {recommendation.sourceCount === 1 ? '' : 's'} inspected.
           </p>
         </div>
         {recommendation.createdTicketId ? (
-          <MissionPill tone="accent">ticket opened</MissionPill>
+          <LampTile label="ticket opened" tone="go" small interactive={false} />
         ) : recommendation.existingTicketId ? (
-          <MissionPill>already queued</MissionPill>
+          <Tag>already queued</Tag>
         ) : (
-          <MissionPill>ready</MissionPill>
+          <Tag>ready</Tag>
         )}
       </div>
       <div className="flex flex-wrap gap-2">
         {recommendation.sourceRefs.slice(0, 4).map((ref) => (
-          <MissionPill key={ref} mono>
+          <Tag key={ref} mono>
             {ref}
-          </MissionPill>
+          </Tag>
         ))}
       </div>
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }
 
@@ -131,21 +140,22 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
 
   if (improvementQuery.isLoading) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="STBY"
+        lampTone="off"
         title="Loading agent improvement loop"
         description="Team-X is reading the current self-improvement queue and recent loop runs."
-        icon={BrainCircuit}
       />
     );
   }
 
   if (improvementQuery.isError || !snapshot) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="NO-GO"
+        lampTone="nogo"
         title="Agent improvement loop could not load"
         description="The self-improvement surface is wired, but the current queue could not be read from the main process."
-        icon={AlertTriangle}
-        tone="danger"
       />
     );
   }
@@ -154,32 +164,37 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
 
   return (
     <div className="space-y-4" data-agent-improvement-panel="">
-      <MissionControlRow className="justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+            <BrainCircuit className="h-4 w-4 text-silver-mute" />
             <h2 className="text-h2 text-foreground">Agent Improvement Loop</h2>
-            <MissionPill tone={snapshot.openTicketCount > 0 ? 'warning' : 'accent'}>
-              {snapshot.openTicketCount > 0 ? 'active' : 'clear'}
-            </MissionPill>
+            <LampTile
+              label={snapshot.openTicketCount > 0 ? 'active' : 'clear'}
+              tone={snapshot.openTicketCount > 0 ? 'hold' : 'go'}
+              small
+              interactive={false}
+            />
           </div>
-          <p className="text-caption text-muted-foreground">
+          <p className="text-caption text-silver-mute">
             Last checked {formatTimestamp(snapshot.generatedAt)}.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <MissionIconButton
+          <button
+            type="button"
             title="Refresh"
             onClick={() => {
               void improvementQuery.refetch();
             }}
             disabled={improvementQuery.isFetching || runLoop.isPending}
+            className="cap flex h-10 w-10 items-center justify-center disabled:opacity-50"
           >
             <RefreshCw className="h-4 w-4" />
-          </MissionIconButton>
+          </button>
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-[16px] border border-brand/25 bg-black px-4 text-button-sm text-brand transition hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+            className="cap cap-select inline-flex h-10 items-center gap-2 px-4 text-button-sm disabled:opacity-50"
             onClick={() => runLoop.mutate()}
             disabled={runLoop.isPending}
           >
@@ -187,22 +202,22 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
             {runLoop.isPending ? 'Running...' : 'Run Improvement Loop'}
           </button>
         </div>
-      </MissionControlRow>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <MissionMetricTile
+        <MetricTile
           label="Open Tickets"
           value={String(snapshot.openTicketCount)}
           hint="Queued improvements"
           icon={TicketCheck}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Recent Runs"
           value={String(snapshot.recentRuns.length)}
           hint="Loop history"
           icon={History}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Last Created"
           value={String(lastRun?.createdTicketCount ?? 0)}
           hint={lastRun ? formatTimestamp(lastRun.ranAt) : 'No runs yet'}
@@ -211,29 +226,29 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
       </div>
 
       {runLoop.isError ? (
-        <MissionInsetSurface className="p-4" tone="danger">
-          <div className="flex items-center gap-2 text-body-strong text-red-200">
+        <RecessedWell className="p-4">
+          <div className="flex items-center gap-2 text-body-strong text-led-nogo">
             <AlertTriangle className="h-4 w-4" />
             Improvement loop failed
           </div>
-        </MissionInsetSurface>
+        </RecessedWell>
       ) : null}
 
       {latestRun ? (
-        <MissionInsetSurface className="space-y-3 p-4" data-agent-improvement-run-result="">
+        <RecessedWell className="space-y-3 p-4" data-agent-improvement-run-result="">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-body-strong text-foreground">Latest loop run</div>
-            <MissionPill mono>{formatTimestamp(latestRun.ranAt)}</MissionPill>
+            <Tag mono>{formatTimestamp(latestRun.ranAt)}</Tag>
           </div>
-          <div className="grid gap-2 text-caption text-muted-foreground md:grid-cols-3">
+          <div className="grid gap-2 text-caption text-silver-mute md:grid-cols-3">
             <span>{latestRun.inspectedEventCount} events inspected</span>
             <span>{latestRun.inspectedTicketCount} tickets inspected</span>
             <span>{latestRun.createdTicketIds.length} tickets opened</span>
           </div>
           {latestRun.recommendations.length === 0 ? (
-            <div className="rounded-md border border-white/10 bg-black/10 px-3 py-2 text-caption text-muted-foreground">
+            <RecessedWell className="px-3 py-2 text-caption text-silver-mute">
               No new improvement signals.
-            </div>
+            </RecessedWell>
           ) : (
             <div className="grid gap-3">
               {latestRun.recommendations.map((recommendation) => (
@@ -241,19 +256,19 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
               ))}
             </div>
           )}
-        </MissionInsetSurface>
+        </RecessedWell>
       ) : null}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
-        <MissionInsetSurface className="space-y-3 p-4">
+        <RecessedWell className="space-y-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-h3 text-foreground">Self-improvement tickets</h3>
-            <MissionPill>{snapshot.openTicketCount}</MissionPill>
+            <Tag>{snapshot.openTicketCount}</Tag>
           </div>
           {snapshot.openTickets.length === 0 ? (
-            <div className="rounded-md border border-white/10 bg-black/10 px-3 py-3 text-caption text-muted-foreground">
+            <RecessedWell className="px-3 py-3 text-caption text-silver-mute">
               No open self-improvement tickets.
-            </div>
+            </RecessedWell>
           ) : (
             <div className="grid gap-3">
               {snapshot.openTickets.map((ticket) => (
@@ -261,42 +276,49 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
               ))}
             </div>
           )}
-        </MissionInsetSurface>
+        </RecessedWell>
 
-        <MissionInsetSurface className="space-y-3 p-4">
+        <RecessedWell className="space-y-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-h3 text-foreground">Loop history</h3>
-            <MissionPill>{snapshot.recentRuns.length}</MissionPill>
+            <Tag>{snapshot.recentRuns.length}</Tag>
           </div>
           {snapshot.recentRuns.length === 0 ? (
-            <div className="rounded-md border border-white/10 bg-black/10 px-3 py-3 text-caption text-muted-foreground">
+            <RecessedWell className="px-3 py-3 text-caption text-silver-mute">
               No loop runs recorded.
-            </div>
+            </RecessedWell>
           ) : (
             <div className="space-y-2">
               {snapshot.recentRuns.map((run) => (
-                <div
+                <RecessedWell
                   key={run.eventId}
-                  className="rounded-md border border-white/10 bg-black/10 px-3 py-3"
+                  className="px-3 py-3"
                   data-agent-improvement-run={run.eventId}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-caption font-semibold text-foreground">
                       {formatTimestamp(run.ranAt)}
                     </span>
-                    <MissionPill tone={run.createdTicketCount > 0 ? 'accent' : 'default'}>
-                      {run.createdTicketCount} opened
-                    </MissionPill>
+                    {run.createdTicketCount > 0 ? (
+                      <LampTile
+                        label={`${run.createdTicketCount} opened`}
+                        tone="go"
+                        small
+                        interactive={false}
+                      />
+                    ) : (
+                      <Tag>{run.createdTicketCount} opened</Tag>
+                    )}
                   </div>
-                  <p className="mt-2 text-caption text-muted-foreground">
+                  <p className="mt-2 text-caption text-silver-mute">
                     {run.recommendationCount} recommendations from {run.inspectedEventCount} events
                     and {run.inspectedTicketCount} tickets.
                   </p>
-                </div>
+                </RecessedWell>
               ))}
             </div>
           )}
-        </MissionInsetSurface>
+        </RecessedWell>
       </div>
     </div>
   );

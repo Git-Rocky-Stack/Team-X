@@ -61,7 +61,9 @@ describe('budget governance service', () => {
     const ticketsRepo = createTicketsRepo(ctx.db);
     const routinesRepo = createRoutinesRepo(ctx.db);
     const threadsRepo = createThreadsRepo(ctx.db);
-    const pauseCompany = vi.fn(async () => {});
+    const pauseCompany = vi.fn(async () => {
+      /* no-op async stub */
+    });
     const emit = vi.fn();
     const service = createBudgetGovernanceService({
       budgetsRepo,
@@ -283,7 +285,9 @@ describe('budget governance service', () => {
       authorityRepo: {
         getRequestById: () => null,
         listRequestsByCompany: () => [],
-        reviewRequest: () => {},
+        reviewRequest: () => {
+          /* no-op stub */
+        },
         createGrant: () => '',
       } as never,
     });
@@ -333,7 +337,9 @@ describe('budget governance service — H8 audit (2026-05-07): cancelled & error
   function buildService() {
     const budgetsRepo = createBudgetsRepo(ctx.db);
     const runsRepo = createRunsRepo(ctx.db);
-    const pauseCompany = vi.fn(async () => {});
+    const pauseCompany = vi.fn(async () => {
+      /* no-op async stub */
+    });
     const emit = vi.fn();
     const service = createBudgetGovernanceService({
       budgetsRepo,

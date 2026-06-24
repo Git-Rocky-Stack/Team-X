@@ -119,10 +119,10 @@ export function EmployeeCard({ employee, live }: EmployeeCardProps) {
 
       {/* Stream preview — only visible when the employee is actively thinking */}
       {displayStatus === 'thinking' && streamTail.length > 0 && (
-        <div className="relative w-full overflow-hidden rounded-inset bg-[hsl(var(--void))]">
+        <div className="relative w-full overflow-hidden rounded-inset bg-[var(--void)]">
           <pre
             ref={streamRef}
-            className="max-h-[12rem] overflow-y-auto px-3 py-2 text-code-sm leading-relaxed text-[hsl(var(--display-fg))] scrollbar-thin"
+            className="max-h-[12rem] overflow-y-auto px-3 py-2 text-code-sm leading-relaxed text-[var(--display-fg)] scrollbar-thin"
           >
             {streamTail}
           </pre>

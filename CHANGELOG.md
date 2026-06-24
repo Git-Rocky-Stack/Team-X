@@ -10,6 +10,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Silenced four classes of E2E dev-environment stderr noise (Codex Stage-3
+  non-blockers) — verified 0 occurrences across the full 26-spec suite, down
+  from 26 emissions.** Each resolved at its root, scoped so `pnpm dev` and
+  packaged production builds are untouched:
+  - **Missing Radix dialog descriptions (5 → 0).** `command-palette.tsx`
+    (`DialogContent`) and `chat-drawer.tsx` (`SheetContent`) mounted without a
+    Radix `Description`, so `@radix-ui/react-dialog` warned
+    ``Missing `Description` or `aria-describedby={undefined}` for {DialogContent}``
+    — an accessibility defect (screen readers got no dialog summary) as well as
+    log noise. Added an `sr-only` `DialogDescription` / `SheetDescription` to
+    each (the chat drawer's single description covers all four of its views).
+    A new `dialog-a11y-guards` test scans every renderer
+    `<DialogContent>` / `<SheetContent>` usage and fails if any lacks a
+    description, locking the fix in for future dialogs.
+  - **Provider model-fetch refusal (2 → 0).** `providers.listModels` `fetch`ed
+    Ollama and threw on a connection failure, so the renderer's auto-fired
+    `useProviderModels` query logged
+    `Error occurred in handler for 'providers.listModels': … ECONNREFUSED` to
+    the main-process stderr on every settings visit when Ollama wasn't running
+    — an expected, benign state its sibling `providers.testConnection` already
+    handled gracefully. Extracted a `listOllamaModels` helper that degrades to
+    the configured default model (or an empty list) instead of throwing. The
+    degradation is two-tier: the benign not-running codes (`ECONNREFUSED` /
+    `ENOTFOUND`) stay silent, but a reachable-but-rejecting server (auth
+    `401`/`403`, wrong-port, upstream `5xx`) or any other unexpected failure
+    shape is `console.warn`-logged before the fallback so a genuine
+    misconfiguration stays discoverable. The silent set covers the whole
+    "can't reach the server" errno family (`ECONNREFUSED`/`ENOTFOUND`/
+    `ECONNRESET`/`ECONNABORTED`/`EHOSTUNREACH`/`ENETUNREACH`/`ETIMEDOUT`/
+    `EAI_AGAIN`) so the Windows mid-request reset variants don't re-spam the
+    log. Three Stage-3 re-review catches hardened it further: (1) a non-string
+    `defaultModel` from a malformed persisted config is ignored rather than
+    throwing on `.trim()`; (2) the listing now carries a `status`
+    (`ok` / `unreachable` / `error`) so a reachable-but-rejecting server
+    (auth/5xx/TLS/malformed) surfaces as an explicit error in `ProviderCard` —
+    with the server detail, and no longer counting the degraded fallback as a
+    detected model — instead of silently presenting the configured default as
+    detected; (3) the never-rejects + status contracts were closed
+    end-to-end — a non-string/empty `baseUrl` is now guarded the same way as
+    `defaultModel` (returns `status:'error'` without a network call rather than
+    throwing on `.replace`), a `200` whose body lacks a `models` array (a
+    wrong-port non-Ollama service answering) is classified `error` rather than
+    folding the default in as a phantom "detected" model, and the silent
+    unreachable set gained the Undici connect-timeout code
+    (`UND_ERR_CONNECT_TIMEOUT`) that Node/Electron `fetch` emits instead of
+    `ETIMEDOUT`; and (4) a final hardening pass closed three more edge cases —
+    every failure log now writes a **sanitized** endpoint (origin + path only,
+    via `new URL`), so an authenticated remote URL
+    (`http://user:token@host/api?key=…`) never leaks its credentials/token into
+    the application log; the `providers.listModels` **handler** now honors the
+    never-reject contract at the IPC boundary too (a malformed request, a
+    provider removed between a cache invalidation and its refetch, or an
+    unexpected lookup failure all return a typed `{ models: [], status: 'error',
+    detail }` instead of throwing and re-spamming the main-process stderr); and
+    `UND_ERR_SOCKET` (an Undici mid-request socket close on an Ollama restart,
+    the sibling of `ECONNRESET`) joined the silent unreachable set; and (5) a
+    last pass closed the residual vectors of those same two themes — a failed
+    `fetch` can echo the full URL it was given (Node rejects a credential-bearing
+    URL with a message that repeats `http://user:pass@host/…` verbatim), so the
+    catch path now scrubs any secret-bearing URL from BOTH the log line and the
+    surfaced `detail` (not just the endpoint interpolation), proven by a
+    real-`fetch` regression test; and the handler now extracts `providerId` via
+    optional chaining so a `null`/`undefined` request returns the typed error
+    instead of throwing before the guard. 20 `listOllamaModels` unit tests + 4
+    `providers.listModels` handler never-reject tests + a `ProviderCard` source
+    guard pin the posture.
+  - **Electron "Insecure Content-Security-Policy" advisory (7 → 0)** and **GPU
+    command-buffer teardown errors (12 → 0).** Both are Chromium/Electron
+    dev-diagnostics with no signal in a headless smoke test — the CSP advisory
+    fires because the dev/unpackaged CSP intentionally keeps `'unsafe-eval'` for
+    Vite HMR (it self-documents "will not show up once the app is packaged"),
+    and the `GPU state invalid after WaitForGetOffsetInRange` errors are
+    abrupt-teardown noise on a real-GPU host. `main/index.ts` sets
+    `ELECTRON_DISABLE_SECURITY_WARNINGS` strictly under `NODE_ENV=test`. GPU is
+    disabled on the Playwright launch argv (`--disable-gpu` +
+    `--disable-software-rasterizer` in `e2e/_launch-helpers.ts`, now applied on
+    every OS rather than only Linux CI) instead of via an in-JS
+    `app.disableHardwareAcceleration()` — a Stage-3 re-review showed the in-JS
+    call runs too late to stop a GPU-process crash on a GPU-less host (Chromium
+    decides the GPU spawn during argv bootstrap, before the main script loads).
+    A source-pin test keeps the security suppression gated to test mode and the
+    GPU switches unconditional.
+- **Cleared all 124 baseline ESLint warnings → 0 errors / 0 warnings.** The
+  renderer/main lint baseline carried 124 warnings; every one resolved at the
+  root rather than suppressed, with no ESLint rule disabled or relaxed:
+  - **`import/order` + `import/no-duplicates` (27).** Auto-fixed grouping/order,
+    then consolidated import blocks that had been stranded below doc comments or
+    `vi.mock()` calls back to the top of their files, and merged the duplicate
+    `@team-x/shared-types` type imports in `handlers.ts`. ESLint's `import/order`
+    and Biome's `organizeImports` converge on the result (verified — no ping-pong).
+  - **`@typescript-eslint/no-non-null-assertion` (25).** The 22 React Query hooks
+    guarded by `enabled` now use the v5 `skipToken` sentinel, so TypeScript
+    narrows the parameter and the `companyId!` / `req!` assertions — plus their
+    paired `biome-ignore` comments — are gone entirely. The 3 main-process
+    assertions became explicit guards that throw on the documented invariant
+    violation rather than asserting (e.g. `index.ts` now throws if
+    `agenticLoopService.start` runs before initialization, matching its own
+    comment's stated intent).
+  - **`@typescript-eslint/no-empty-function` (59).** Intentional no-ops (test
+    stubs, console-suppression spies, Promise-executor placeholders, the
+    `role="presentation"` dialog-backdrop key handler) now carry a documenting
+    comment body — the rule's sanctioned signal of deliberate intent.
+  - **`react-hooks/exhaustive-deps` (13).** Wrapped each `query.data ?? []`
+    derivation in its own `useMemo` (the fix the rule itself prescribes) so the
+    dependent `useMemo`/`useEffect` hooks receive a stable reference; the
+    command-palette debounce effect now depends on the stable extracted `mutate`.
+  Updated one source-pin test (`org-chart-view.test.tsx`) to assert the new
+  `skipToken` guard instead of the retired assertion + `enabled` pattern.
+- **Invalid `hsl(var(--token))` wrapping on full-color tokens.** Five
+  design-system tokens defined as complete color values — `--hairline`,
+  `--display-fg`, `--void`, `--armed-edge`, `--armed-soft` (`#hex` / `rgba()`) —
+  were wrapped in `hsl()` at 26 call-sites across nine Phase-3/4a renderer files,
+  compiling to `hsl(rgba(...))` / `hsl(#hex)`. That is invalid CSS: the browser
+  drops the declaration, so intended hairline borders silently fell back to
+  `border-border` and dim phosphor display text rendered at full platinum.
+  Realigned every site to the bare `[var(--token)]` form already shipped and
+  unit-tested across the Phase-1/2 shell. A new `css-color-token-invariant` test
+  parses `globals.css` for full-color tokens and fails if any is ever wrapped in
+  `hsl()` again, locking the convention in for future sweeps. HSL-channel tokens
+  (`--border`, `--ring`, `--card`, `--background`, …) are unaffected — their
+  `hsl()` wrapping is correct.
 - **Phase 3 gate-review remediation (Codex Stage 3).** Cleared two P1 runtime
   findings and two P2s before Phase 4:
   - **Heartbeat shutdown ownership (P1).** The proactive-execution heartbeat
@@ -36,6 +157,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     errors) and CI's 25-min job budget already absorbs the cold pass.
 
 ### Changed
+- **Aesthetic sweep Phase 4a — Autonomy shell + light panels.** The Autonomy
+  view (`autonomy-view.tsx`) + six light panels (doctor, benchmark, agent
+  improvement, approvals, artifacts, memory) recomposed off the legacy `Mission*`
+  shell onto the Command Console foundation: Faceplates + stripe placards, a
+  nav-tile subview rail (`aria-current`), Departure-Mono `MetricTile` readouts,
+  machined `cap`/`cap-select` filter chips, `RecessedWell` panels, stencil
+  word-lamps for status, `Tag` chips for labels/refs, the shared console
+  `SubviewState` for every empty/error state, and three functional VU meters
+  (doctor checks-health, benchmark pass-rate, memory pack-usage). New shared
+  console primitives: `MetricTile`, `Tag`, and `SubviewState` (promoted from the
+  dashboard). `mission-shell.tsx` is left for its remaining consumers (the 4b
+  heavy panels + telemetry/chat/tickets/etc.), purged in Phase 8. Visual-only:
+  zero behavior change, every E2E/a11y selector preserved.
 - **Aesthetic sweep Phase 3 — Mission Control.** The flagship dashboard
   (`mission-control-dashboard.tsx`, 1,760 LOC) and its eight sub-views recomposed
   onto the Command Console foundation: hero and every panel on brushed-aluminum

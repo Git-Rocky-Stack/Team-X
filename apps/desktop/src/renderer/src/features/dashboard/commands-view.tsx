@@ -74,7 +74,7 @@ function EmptyState() {
       <p className="text-body-strong">No commands yet</p>
       <p className="text-caption text-muted-foreground/70">
         Press{' '}
-        <kbd className="rounded border border-[hsl(var(--hairline))] bg-carbon-900 px-1.5 py-0.5 text-shortcut">
+        <kbd className="rounded border border-[var(--hairline)] bg-carbon-900 px-1.5 py-0.5 text-shortcut">
           Ctrl+K
         </kbd>{' '}
         to get started.

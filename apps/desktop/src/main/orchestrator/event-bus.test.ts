@@ -481,7 +481,9 @@ describe('event bus (behavioral with fake repo)', () => {
     const bus = createEventBus({ repo });
 
     const a = vi.fn();
-    let unsubB: () => void = () => {};
+    let unsubB: () => void = () => {
+      /* no-op placeholder; reassigned once subscribed */
+    };
     const b = vi.fn(() => unsubB());
     const c = vi.fn();
     bus.subscribe(a);

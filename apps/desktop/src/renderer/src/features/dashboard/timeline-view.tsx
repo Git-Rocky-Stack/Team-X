@@ -2,9 +2,7 @@ import type { DashboardEvent, Employee } from '@team-x/shared-types';
 import { Loader2 } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 
-import { SubviewState } from './dashboard-subview-state.js';
-
-import { LampTile, type LampTone, StripeHeader } from '@/components/console/index.js';
+import { LampTile, type LampTone, StripeHeader, SubviewState } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { flattenEvents, useTimelineEvents } from '@/hooks/use-events.js';
 import { cn } from '@/lib/utils.js';
@@ -177,7 +175,7 @@ export function TimelineView({ companyId, employees }: TimelineViewProps) {
       {[...groups.entries()].map(([dateLabel, dateEvents]) => (
         <div key={dateLabel}>
           <StripeHeader kicker={dateLabel} className="sticky top-0 z-10 mb-3" />
-          <div className="relative ml-4 border-l border-[hsl(var(--hairline))] pl-6">
+          <div className="relative ml-4 border-l border-[var(--hairline)] pl-6">
             {dateEvents.map((event) => {
               const lamp = eventLamp(event.type);
               return (

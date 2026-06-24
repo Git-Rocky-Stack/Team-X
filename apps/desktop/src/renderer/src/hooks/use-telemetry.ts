@@ -8,7 +8,7 @@
  * - useCostBreakdown — by provider/model with date range filter
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { skipToken, useQuery } from '@tanstack/react-query';
 import type {
   TelemetryCompanyStatsRequest,
   TelemetryCostBreakdownRequest,
@@ -28,9 +28,8 @@ export function telemetryRequestKind(filter: TelemetryKindFilter): TelemetryRunK
 export function useCompanyStats(req: TelemetryCompanyStatsRequest | null) {
   return useQuery({
     queryKey: ['telemetry', 'companyStats', req?.companyId, req?.kind ?? 'all'],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.telemetry.companyStats(req!),
-    enabled: req !== null && req.companyId.length > 0,
+    queryFn:
+      req !== null && req.companyId.length > 0 ? () => ipc.telemetry.companyStats(req) : skipToken,
     // The Mission Control dashboard subscribes to the same companyStats
     // cache key (no kind filter) on app boot. Without 'always' here, the
     // global staleTime (5s) keeps that initial value fresh, so when the
@@ -52,27 +51,24 @@ export function useDailyUsage(req: TelemetryDailyUsageRequest | null) {
       req?.toMs,
       req?.kind ?? 'all',
     ],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.telemetry.dailyUsage(req!),
-    enabled: req !== null && req.companyId.length > 0,
+    queryFn:
+      req !== null && req.companyId.length > 0 ? () => ipc.telemetry.dailyUsage(req) : skipToken,
   });
 }
 
 export function useEmployeeStats(req: TelemetryEmployeeStatsRequest | null) {
   return useQuery({
     queryKey: ['telemetry', 'employeeStats', req?.companyId, req?.kind ?? 'all'],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.telemetry.employeeStats(req!),
-    enabled: req !== null && req.companyId.length > 0,
+    queryFn:
+      req !== null && req.companyId.length > 0 ? () => ipc.telemetry.employeeStats(req) : skipToken,
   });
 }
 
 export function useRecentRuns(req: TelemetryRecentRunsRequest | null) {
   return useQuery({
     queryKey: ['telemetry', 'recentRuns', req?.companyId, req?.limit ?? 6, req?.kind ?? 'all'],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.telemetry.recentRuns(req!),
-    enabled: req !== null && req.companyId.length > 0,
+    queryFn:
+      req !== null && req.companyId.length > 0 ? () => ipc.telemetry.recentRuns(req) : skipToken,
     staleTime: 15_000,
   });
 }
@@ -87,8 +83,7 @@ export function useCostBreakdown(req: TelemetryCostBreakdownRequest | null) {
       req?.toMs,
       req?.kind ?? 'all',
     ],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.telemetry.costBreakdown(req!),
-    enabled: req !== null && req.companyId.length > 0,
+    queryFn:
+      req !== null && req.companyId.length > 0 ? () => ipc.telemetry.costBreakdown(req) : skipToken,
   });
 }

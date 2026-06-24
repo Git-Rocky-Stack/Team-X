@@ -51,7 +51,7 @@ import { StepCard, StepCardSkeleton } from './step-card.js';
 
 import { Badge } from '@/components/ui/badge.js';
 import { Button } from '@/components/ui/button.js';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog.js';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog.js';
 import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
 import { useCommandExecute, useCommandHistory, useCommandParse } from '@/hooks/use-command.js';
 import { ipc } from '@/lib/ipc.js';
@@ -279,6 +279,9 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
   const openThread = useAppStore((s) => s.openThread);
 
   const parseMutation = useCommandParse();
+  // `mutate` is referentially stable across renders (React Query), so the
+  // debounced parse effect can depend on it directly without re-subscribing.
+  const parseMutate = parseMutation.mutate;
   const executeMutation = useCommandExecute();
   const historyQuery = useCommandHistory(companyId);
 
@@ -317,7 +320,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
 
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
-      parseMutation.mutate(
+      parseMutate(
         { text: trimmed, companyId, currentView: activeView },
         {
           onSuccess: (result) => {
@@ -335,7 +338,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [text, open, companyId, activeView, parseMutation.mutate]);
+  }, [text, open, companyId, activeView, parseMutate]);
 
   // --- Focus management ----------------------------------------------------
 
@@ -571,6 +574,10 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
           }}
         >
           <DialogTitle className="sr-only">Command Palette</DialogTitle>
+          <DialogDescription className="sr-only">
+            Search and run commands — switch views, hire or manage employees, or route a request to
+            an agent.
+          </DialogDescription>
 
           {/* Agentic-loop step-log mode (Phase 5 — M31 T6) */}
           {agenticRun ? (
@@ -632,7 +639,7 @@ export function CommandPalette({ open, onOpenChange, companyId }: CommandPalette
                       type="button"
                       onClick={() => {
                         if (!companyId || text.trim().length === 0) return;
-                        parseMutation.mutate(
+                        parseMutate(
                           { text: text.trim(), companyId, currentView: activeView },
                           {
                             onSuccess: (r) => {

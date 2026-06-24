@@ -1,17 +1,10 @@
 import type { ArtifactRecord, ArtifactSourceKind } from '@team-x/shared-types';
-import { CheckSquare2, FileStack, FolderKanban, Ticket, UploadCloud, Workflow } from 'lucide-react';
+import { CheckSquare2, FolderKanban, Ticket, UploadCloud, Workflow } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import {
-  MissionControlRow,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionSegmentedButton,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
-
+import { MetricTile, RecessedWell, SubviewState, Tag } from '@/components/console/index.js';
 import { useArtifactEventSync, useArtifacts } from '@/hooks/use-artifacts.js';
+import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
 type ArtifactFilter = 'all' | ArtifactSourceKind;
@@ -57,14 +50,14 @@ function ArtifactCard({
   const canOpen = artifact.ticketId !== null || artifact.fileId !== null;
 
   return (
-    <MissionInsetSurface className="space-y-4 p-4" data-artifact-card={artifact.id}>
+    <RecessedWell className="space-y-4 p-4" data-artifact-card={artifact.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-body-strong text-foreground">{artifact.title}</span>
-            <MissionPill tone="accent">{kindLabel(artifact)}</MissionPill>
-            <MissionPill>{artifact.outcomeKind}</MissionPill>
-            <MissionPill>{sourceLabel(artifact.sourceKind)}</MissionPill>
+            <Tag>{kindLabel(artifact)}</Tag>
+            <Tag>{artifact.outcomeKind}</Tag>
+            <Tag>{sourceLabel(artifact.sourceKind)}</Tag>
           </div>
           <p className="text-caption text-muted-foreground">
             {artifact.summary?.trim().length
@@ -78,39 +71,29 @@ function ArtifactCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
-        {artifact.ticketId ? <MissionPill mono>{artifact.ticketId}</MissionPill> : null}
-        {artifact.fileId ? <MissionPill mono>{artifact.fileId}</MissionPill> : null}
-        {artifact.approvalItemId ? <MissionPill mono>{artifact.approvalItemId}</MissionPill> : null}
-        {artifact.uri ? <MissionPill mono>{artifact.uri}</MissionPill> : null}
+        {artifact.ticketId ? <Tag mono>{artifact.ticketId}</Tag> : null}
+        {artifact.fileId ? <Tag mono>{artifact.fileId}</Tag> : null}
+        {artifact.approvalItemId ? <Tag mono>{artifact.approvalItemId}</Tag> : null}
+        {artifact.uri ? <Tag mono>{artifact.uri}</Tag> : null}
       </div>
 
-      <MissionControlRow density="compact" className="gap-2">
-        <button
-          type="button"
-          className="rounded-full border border-white/10 px-3 py-2 text-button-sm uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand"
-          onClick={onTogglePreview}
-        >
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className="cap px-3 py-2 text-button-sm" onClick={onTogglePreview}>
           {previewOpen ? 'Hide preview' : 'Preview'}
         </button>
         {canOpen ? (
-          <button
-            type="button"
-            className="rounded-full border border-white/10 px-3 py-2 text-button-sm uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand"
-            onClick={onOpen}
-          >
+          <button type="button" className="cap px-3 py-2 text-button-sm" onClick={onOpen}>
             {artifact.ticketId ? 'Open ticket' : 'Open files'}
           </button>
         ) : null}
-      </MissionControlRow>
+      </div>
 
       {previewOpen ? (
-        <div className="grid gap-2 rounded-[18px] border border-white/8 bg-black/20 p-3 text-caption text-muted-foreground">
+        <RecessedWell className="grid gap-2 p-3 text-caption text-muted-foreground">
           {previewEntries.length > 0 ? (
             previewEntries.map(([key, value]) => (
               <div key={key} className="flex items-start justify-between gap-3">
-                <span className="font-semibold uppercase tracking-[0.14em] text-foreground/80">
-                  {key}
-                </span>
+                <span className="text-eyebrow text-foreground/80">{key}</span>
                 <span className="text-right">
                   {typeof value === 'string' ||
                   typeof value === 'number' ||
@@ -123,9 +106,9 @@ function ArtifactCard({
           ) : (
             <span>No preview details were stored for this artifact.</span>
           )}
-        </div>
+        </RecessedWell>
       ) : null}
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }
 
@@ -137,7 +120,7 @@ export function ArtifactsPanel({ companyId }: { companyId: string }) {
   const setActiveView = useAppStore((state) => state.setActiveView);
   const setActiveTicketId = useAppStore((state) => state.setActiveTicketId);
 
-  const artifacts = artifactsQuery.data ?? [];
+  const artifacts = useMemo(() => artifactsQuery.data ?? [], [artifactsQuery.data]);
   const filtered = useMemo(
     () =>
       activeFilter === 'all'
@@ -169,31 +152,33 @@ export function ArtifactsPanel({ companyId }: { companyId: string }) {
 
   if (artifactsQuery.isLoading) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="STBY"
+        lampTone="off"
         title="Loading artifacts and outcomes"
         description="Team-X is resolving explicit outputs and review results for the current workspace."
-        icon={FolderKanban}
       />
     );
   }
 
   if (artifactsQuery.isError) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="NO-GO"
+        lampTone="nogo"
         title="Artifacts could not load"
         description="Retry the artifact query to restore routine outputs, approval outcomes, and vault uploads."
-        icon={FolderKanban}
-        tone="danger"
       />
     );
   }
 
   if (artifacts.length === 0) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="STBY"
+        lampTone="off"
         title="Artifacts are waiting on real work"
         description="Routine-created tickets, approval completions, and vault uploads will start accumulating here as explicit outcomes."
-        icon={FolderKanban}
       />
     );
   }
@@ -201,25 +186,25 @@ export function ArtifactsPanel({ companyId }: { companyId: string }) {
   return (
     <div className="space-y-4" data-artifacts-panel="">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MissionMetricTile
+        <MetricTile
           label="Recorded"
           value={String(stats.total)}
           hint="Explicit outcomes captured"
           icon={FolderKanban}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Routine outputs"
           value={String(stats.routine)}
           hint="Work materialized from cadence"
           icon={Workflow}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Approval results"
           value={String(stats.approval)}
           hint="Reviewed governance outcomes"
           icon={CheckSquare2}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Vault uploads"
           value={String(stats.vault)}
           hint="File artifacts with provenance"
@@ -227,24 +212,29 @@ export function ArtifactsPanel({ companyId }: { companyId: string }) {
         />
       </div>
 
-      <MissionControlRow className="gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {FILTERS.map((filter) => (
-          <MissionSegmentedButton
+          <button
+            type="button"
             key={filter.value}
-            active={activeFilter === filter.value}
             onClick={() => setActiveFilter(filter.value)}
+            className={cn(
+              'cap px-3 py-1.5 text-button-sm',
+              activeFilter === filter.value && 'cap-select',
+            )}
           >
             {filter.label}
-          </MissionSegmentedButton>
+          </button>
         ))}
-      </MissionControlRow>
+      </div>
 
       <div className="space-y-3">
         {filtered.length === 0 ? (
-          <MissionStateBlock
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
             title="No artifacts match this filter"
             description="Switch the source filter to inspect a different outcome stream."
-            icon={FileStack}
           />
         ) : (
           filtered.map((artifact) => (
@@ -261,7 +251,7 @@ export function ArtifactsPanel({ companyId }: { companyId: string }) {
         )}
       </div>
 
-      <MissionInsetSurface className="grid gap-3 p-4 text-body text-muted-foreground md:grid-cols-3">
+      <RecessedWell className="grid gap-3 p-4 text-body text-muted-foreground md:grid-cols-3">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-foreground">
             <Workflow className="h-4 w-4" />
@@ -291,7 +281,7 @@ export function ArtifactsPanel({ companyId }: { companyId: string }) {
             deeper follow-up.
           </p>
         </div>
-      </MissionInsetSurface>
+      </RecessedWell>
     </div>
   );
 }

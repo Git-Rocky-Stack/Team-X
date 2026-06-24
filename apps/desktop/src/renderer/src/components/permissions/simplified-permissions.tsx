@@ -361,7 +361,15 @@ export function SimplifiedPermissions({
                   : 'Show detailed permission matrix for fine-grained control'}
               </p>
             </div>
-            <Switch checked={showAdvanced} onCheckedChange={onShowAdvancedChange || (() => {})} />
+            <Switch
+              checked={showAdvanced}
+              onCheckedChange={
+                onShowAdvancedChange ||
+                (() => {
+                  /* no-op fallback when rendered without a controlled handler */
+                })
+              }
+            />
           </div>
 
           {showAdvanced && (

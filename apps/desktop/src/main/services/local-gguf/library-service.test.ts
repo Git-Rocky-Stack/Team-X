@@ -9,6 +9,7 @@
 // / 'error' events can be driven deterministically from the test body.
 
 import { EventEmitter } from 'node:events';
+
 import { createResilienceMonitor } from '@team-x/local-gguf-runtime';
 import type { AdvancedParams, GgufMetadata, LocalModel, ModelStatus } from '@team-x/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

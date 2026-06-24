@@ -317,7 +317,9 @@ describe('createProvidersService', () => {
     it('still deletes the provider row when keychain cleanup throws', async () => {
       const throwingSecrets = {
         getApiKey: async () => null,
-        setApiKey: async () => {},
+        setApiKey: async () => {
+          /* no-op stub */
+        },
         deleteApiKey: async () => {
           throw new Error('keychain unavailable');
         },

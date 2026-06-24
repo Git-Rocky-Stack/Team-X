@@ -23,7 +23,7 @@ export function DashboardSubtabs() {
   const setSubview = useAppStore((s) => s.setDashboardSubview);
 
   return (
-    <div className="flex items-center gap-1 border-b border-[hsl(var(--hairline))] px-4 py-2">
+    <div className="flex items-center gap-1 border-b border-[var(--hairline)] px-4 py-2">
       {SUBTABS.map((tab) => {
         const isActive = tab.subview === activeSubview;
         const Icon = tab.icon;

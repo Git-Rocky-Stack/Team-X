@@ -416,7 +416,9 @@ describe('runAgent', () => {
       const firstDeltaSeen = new Promise<void>((res) => {
         firstDeltaResolve = res;
       });
-      let proceedAfterCheck: () => void = () => {};
+      let proceedAfterCheck: () => void = () => {
+        /* replaced synchronously by the Promise executor below */
+      };
       const continueStream = new Promise<void>((res) => {
         proceedAfterCheck = res;
       });
@@ -684,7 +686,9 @@ describe('runAgent', () => {
     });
 
     it('an aborted run is marked cancelled and emits work.failed without work.completed', async () => {
-      let startedResolve: () => void = () => {};
+      let startedResolve: () => void = () => {
+        /* replaced synchronously by the Promise executor below */
+      };
       const started = new Promise<void>((resolve) => {
         startedResolve = resolve;
       });
@@ -737,7 +741,9 @@ describe('runAgent', () => {
     });
 
     it('a stalled provider stream is aborted, closes the run, and preserves partial text with a retry note', async () => {
-      let startedResolve: () => void = () => {};
+      let startedResolve: () => void = () => {
+        /* replaced synchronously by the Promise executor below */
+      };
       const started = new Promise<void>((resolve) => {
         startedResolve = resolve;
       });
@@ -1594,7 +1600,11 @@ describe('runAgent', () => {
       // External abort signal fires after the first delta. The
       // `finally` block's force-flush guarantees the pre-cancel
       // content lands so the renderer's optimistic state survives.
-      const started = { resolve: () => {} };
+      const started = {
+        resolve: () => {
+          /* replaced synchronously by the Promise executor below */
+        },
+      };
       const startedP = new Promise<void>((res) => {
         started.resolve = res;
       });
@@ -1738,7 +1748,9 @@ describe('runAgent', () => {
 
     // -- Service-level integration (the audit's named regression) --------
     it('caps an oversized tool-result message before it lands in messages.content', async () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+        /* swallow console output in test */
+      });
       try {
         // 12_000 chars — well past the 8000 cap. Pre-H15 this would
         // have been written verbatim to the SQLite messages row and
@@ -1800,7 +1812,9 @@ describe('runAgent', () => {
     });
 
     it('caps an oversized recipientName on send_message_to_colleague before templating', async () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+        /* swallow console output in test */
+      });
       try {
         // 12_000-char "recipientName" — a misbehaving tool implementation
         // could return this. Without the cap, the templated reply
@@ -1872,7 +1886,9 @@ describe('runAgent', () => {
       // The audit-fix MUST NOT change behavior for the common case.
       // Mirrors the existing happy path at line ~838 — exact string
       // match is the regression contract.
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+        /* swallow console output in test */
+      });
       try {
         const provider: ProviderStreamFn = async function* () {
           yield {
@@ -1928,7 +1944,9 @@ describe('runAgent', () => {
       // Realistic worst-case scenario: an MCP filesystem tool returns a
       // 1-MB file body in `result.message`. Pre-H15 the entire 1 MB
       // would be persisted; post-H15 it is bounded.
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {
+        /* swallow console output in test */
+      });
       try {
         const oneMb = 'x'.repeat(1_000_000);
         const provider: ProviderStreamFn = async function* () {

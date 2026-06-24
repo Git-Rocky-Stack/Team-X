@@ -216,8 +216,12 @@ describe('companies.delete handler — Phase 5.6 M-C step e', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* swallow console output in test */
+    });
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+      /* swallow console output in test */
+    });
   });
 
   describe('happy path', () => {
@@ -261,11 +265,15 @@ describe('companies.delete handler — Phase 5.6 M-C step e', () => {
     it('calls analyzer.stop BEFORE eventWindow.clear BEFORE repo.delete', async () => {
       const order: string[] = [];
       const analyzer = {
-        start: (_: string) => {},
+        start: (_: string) => {
+          /* no-op stub */
+        },
         stop: (_: string) => {
           order.push('analyzer.stop');
         },
-        restart: (_: string) => {},
+        restart: (_: string) => {
+          /* no-op stub */
+        },
         startCalls: [] as string[],
         stopCalls: [] as string[],
         restartCalls: [] as string[],

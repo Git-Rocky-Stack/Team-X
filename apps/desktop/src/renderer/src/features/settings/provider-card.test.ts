@@ -43,4 +43,16 @@ describe('Provider remove feedback', () => {
     expect(providerCardSrc).not.toContain('datalist');
     expect(providerCardSrc).toContain('Cloud models can also be entered manually');
   });
+
+  it('surfaces a reachable-but-rejecting Ollama server as an error, not a silent detected model', () => {
+    // A 401/403/5xx returns status 'error' from listOllamaModels. The card must
+    // read that status (not just the query-level isError), show an explicit
+    // error with the server detail, and NOT present the configured default as a
+    // detected model (degraded fallbacks are excluded from detections).
+    expect(providerCardSrc).toContain("modelStatus === 'error'");
+    expect(providerCardSrc).toContain('modelError');
+    expect(providerCardSrc).toContain('detectedModels');
+    expect(providerCardSrc).toContain('Ollama server error');
+    expect(providerCardSrc).toContain('detail');
+  });
 });

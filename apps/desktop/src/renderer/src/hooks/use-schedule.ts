@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';
@@ -18,9 +18,10 @@ export function useScheduleItems(companyId: string | null, options: UseScheduleI
       options.to ?? null,
       options.includeDerived ?? true,
     ],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.schedule.list({ companyId: companyId!, ...options }),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0
+        ? () => ipc.schedule.list({ companyId, ...options })
+        : skipToken,
   });
 }
 

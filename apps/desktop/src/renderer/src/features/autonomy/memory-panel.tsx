@@ -21,22 +21,37 @@ import {
   resumeOriginHint,
   resumeOriginLabel,
 } from '../memory/memory-formatters.js';
-import {
-  MissionControlRow,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionSegmentedButton,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
 
+import {
+  LampTile,
+  type LampTone,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+  VuMeter,
+} from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { useThreadList } from '@/hooks/use-chat.js';
 import { usePackedThreadContext, useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
 import { useMemorySettings } from '@/hooks/use-settings.js';
+import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
 const TOKEN_BUDGETS = MEMORY_TARGET_TOKEN_BUDGET_OPTIONS;
+
+/**
+ * Bridge the legacy memory-formatters tone vocabulary (`accent`/`warning`/
+ * `danger`) onto the console LampTone scale without editing the shared
+ * formatters (still consumed by `features/memory`): accent = positive (go),
+ * warning = caution (steady hold), danger = terminal fault (nogo).
+ */
+function toLampTone(tone: 'default' | 'accent' | 'warning' | 'danger'): LampTone {
+  if (tone === 'danger') return 'nogo';
+  if (tone === 'warning') return 'hold';
+  if (tone === 'accent') return 'go';
+  return 'off';
+}
 
 function threadLabel(thread: Thread): string {
   if (thread.subject?.trim()) return thread.subject.trim();
@@ -52,7 +67,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
 
   const threadsQuery = useThreadList(companyId);
   const memorySettingsQuery = useMemorySettings();
-  const threads = threadsQuery.data ?? [];
+  const threads = useMemo(() => threadsQuery.data ?? [], [threadsQuery.data]);
   const selectedThreadId = useAppStore((state) => state.autonomyMemoryThreadId);
   const setSelectedThreadId = useAppStore((state) => state.setAutonomyMemoryThreadId);
   const selectedThread = useMemo(
@@ -119,71 +134,61 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
 
   if (threadsQuery.isLoading) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="STBY"
+        lampTone="off"
         title="Loading memory coverage"
         description="Team-X is resolving workspace threads before it can show digests, checkpoints, and packed context posture."
-        icon={BrainCircuit}
       />
     );
   }
 
   if (threadsQuery.isError) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="NO-GO"
+        lampTone="nogo"
         title="Memory surface could not load threads"
         description="Retry the autonomy memory read after the thread list is available again."
-        icon={BrainCircuit}
-        tone="danger"
       />
     );
   }
 
   if (threads.length === 0 || !selectedThreadId || !selectedThread) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="STBY"
+        lampTone="off"
         title="No threads exist for memory inspection yet"
         description="Run a conversation, routine, or autonomous pass first so Team-X can condense that work into a digest and checkpoint trail."
-        icon={BrainCircuit}
       />
     );
   }
 
   return (
     <div className="space-y-4" data-memory-panel="">
-      <MissionInsetSurface className="space-y-4 p-4">
+      <RecessedWell className="space-y-4 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-h2 text-foreground">Thread Memory</h2>
-              <MissionPill tone="accent">{selectedThread.kind}</MissionPill>
-              {selectedThread.isSystemAgent ? <MissionPill>system agent</MissionPill> : null}
+              <Tag>{selectedThread.kind}</Tag>
+              {selectedThread.isSystemAgent ? <Tag>system agent</Tag> : null}
             </div>
             <p className="text-caption text-muted-foreground">
               Inspect the latest digest, resumable checkpoints, and packed-context composition for
               one live thread at a time.
             </p>
           </div>
-          <MissionControlRow density="compact" className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="border-white/10 bg-black/10 hover:bg-black/20"
-              onClick={refreshMemory}
-            >
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={refreshMemory}>
               <RefreshCw className="mr-2 h-3.5 w-3.5" />
               Refresh memory
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="border-white/10 bg-black/10 hover:bg-black/20"
-              onClick={openChatThread}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={openChatThread}>
               Open chat
             </Button>
-          </MissionControlRow>
+          </div>
         </div>
 
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
@@ -192,7 +197,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
             <select
               value={selectedThreadId}
               onChange={(event) => setSelectedThreadId(event.target.value)}
-              className="w-full rounded-[16px] border border-white/10 bg-black/20 px-4 py-3 text-body text-foreground outline-none transition focus:border-brand/40 focus:ring-2 focus:ring-brand/20"
+              className="well-input w-full px-4 py-3 text-body outline-none"
               data-memory-thread-select=""
             >
               {threads.map((thread) => (
@@ -205,29 +210,33 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
 
           <div className="space-y-2">
             <span className="text-eyebrow text-muted-foreground">Pack budget</span>
-            <MissionControlRow className="gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {TOKEN_BUDGETS.map((budget) => (
-                <MissionSegmentedButton
+                <button
+                  type="button"
                   key={budget}
-                  active={effectiveTargetTokenBudget === budget}
                   onClick={() => setTargetTokenBudget(budget)}
+                  className={cn(
+                    'cap px-3 py-1.5 text-button-sm',
+                    effectiveTargetTokenBudget === budget && 'cap-select',
+                  )}
                 >
                   {budget.toLocaleString()}
-                </MissionSegmentedButton>
+                </button>
               ))}
-            </MissionControlRow>
+            </div>
           </div>
         </div>
-      </MissionInsetSurface>
+      </RecessedWell>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MissionMetricTile
+        <MetricTile
           label="Digest freshness"
           value={digestQuery.isLoading ? '...' : (digest?.freshness ?? 'none')}
           hint={digest ? `${digest.estimatedTokens} est. tokens` : 'No digest captured yet'}
           icon={BrainCircuit}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Checkpoints"
           value={checkpointsQuery.isLoading ? '...' : String(checkpoints.length)}
           hint={
@@ -237,7 +246,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
           }
           icon={ShieldCheck}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Pack usage"
           value={
             packedContextQuery.isLoading
@@ -247,7 +256,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
           hint="Used tokens vs target budget"
           icon={Waypoints}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Dropped blocks"
           value={
             packedContextQuery.isLoading ? '...' : String(packedContext?.droppedBlocks.length ?? 0)
@@ -259,7 +268,7 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <div className="space-y-4">
-          <MissionInsetSurface className="space-y-4 p-4">
+          <RecessedWell className="space-y-4 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-h3 text-foreground">Latest Digest</h3>
@@ -267,34 +276,36 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                   Updated {formatMemoryTimestamp(digest?.updatedAt ?? null)}
                 </div>
               </div>
-              <MissionPill tone={freshnessTone(digest?.freshness)}>
-                {digest?.freshness ?? 'none'}
-              </MissionPill>
+              <LampTile
+                label={digest?.freshness ?? 'none'}
+                tone={toLampTone(freshnessTone(digest?.freshness))}
+                small
+                interactive={false}
+              />
             </div>
 
             {digestQuery.isLoading ? (
-              <MissionStateBlock
+              <SubviewState
+                lampLabel="STBY"
+                lampTone="off"
                 title="Digest is loading"
                 description="Team-X is reading the latest durable summary for this thread."
-                icon={BrainCircuit}
               />
             ) : digestQuery.isError ? (
-              <MissionStateBlock
+              <SubviewState
+                lampLabel="NO-GO"
+                lampTone="nogo"
                 title="Digest could not load"
                 description="Retry the digest read to restore this thread summary."
-                icon={BrainCircuit}
-                tone="danger"
               />
             ) : digest ? (
               <div className="space-y-4">
-                <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 text-body text-foreground/90">
+                <RecessedWell className="p-4 text-body text-foreground/90">
                   {digest.summary}
-                </div>
+                </RecessedWell>
                 <div className="flex flex-wrap items-center gap-2">
                   {digest.pinnedFacts.length > 0 ? (
-                    digest.pinnedFacts.map((fact) => (
-                      <MissionPill key={fact.id}>{fact.fact}</MissionPill>
-                    ))
+                    digest.pinnedFacts.map((fact) => <Tag key={fact.id}>{fact.fact}</Tag>)
                   ) : (
                     <span className="text-caption text-muted-foreground">
                       No pinned facts were captured for this digest yet.
@@ -303,15 +314,16 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                 </div>
               </div>
             ) : (
-              <MissionStateBlock
+              <SubviewState
+                lampLabel="STBY"
+                lampTone="off"
                 title="No digest has been condensed yet"
                 description="A digest is written after successful internal runs. Use the thread, then refresh this panel."
-                icon={BrainCircuit}
               />
             )}
-          </MissionInsetSurface>
+          </RecessedWell>
 
-          <MissionInsetSurface className="space-y-4 p-4">
+          <RecessedWell className="space-y-4 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-h3 text-foreground">Packed Context</h3>
@@ -320,45 +332,60 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                   turns
                 </div>
               </div>
-              <MissionPill tone="accent">
-                {packedContext?.includedBlocks.length ?? 0} included blocks
-              </MissionPill>
+              <div className="flex flex-wrap items-center gap-3">
+                <VuMeter
+                  className="w-40"
+                  value={
+                    packedContext && effectiveTargetTokenBudget > 0
+                      ? Math.min(1, packedContext.usedTokens / effectiveTargetTokenBudget)
+                      : 0
+                  }
+                  label="Pack budget usage"
+                />
+                <LampTile
+                  label={`${packedContext?.includedBlocks.length ?? 0} included blocks`}
+                  tone="go"
+                  small
+                  interactive={false}
+                />
+              </div>
             </div>
 
             {packedContextQuery.isLoading ? (
-              <MissionStateBlock
+              <SubviewState
+                lampLabel="STBY"
+                lampTone="off"
                 title="Packed context is loading"
                 description="Team-X is assembling a bounded context pack for this thread."
-                icon={Waypoints}
               />
             ) : packedContextQuery.isError ? (
-              <MissionStateBlock
+              <SubviewState
+                lampLabel="NO-GO"
+                lampTone="nogo"
                 title="Packed context could not load"
                 description="Retry the pack read to inspect current token allocation and dropped blocks."
-                icon={Waypoints}
-                tone="danger"
               />
             ) : packedContext ? (
               <div className="space-y-4">
                 {packedResumeHint ? (
-                  <div className="rounded-[16px] border border-white/8 bg-black/15 px-4 py-2.5 text-eyebrow text-muted-foreground">
+                  <RecessedWell className="px-4 py-2.5 text-eyebrow text-muted-foreground">
                     {packedResumeHint}
-                  </div>
+                  </RecessedWell>
                 ) : null}
                 <div className="grid gap-3 md:grid-cols-3">
-                  <MissionMetricTile
+                  <MetricTile
                     label="Recent turns"
                     value={String(packedContext.recentTurnTokens)}
                     hint={`${packedContext.packedTurns.length} packed turns`}
                     icon={MessageSquareText}
                   />
-                  <MissionMetricTile
+                  <MetricTile
                     label="Blocks"
                     value={String(packedContext.blockTokens)}
                     hint={packedResumeLabel ?? `${packedContext.includedBlocks.length} included`}
                     icon={ShieldCheck}
                   />
-                  <MissionMetricTile
+                  <MetricTile
                     label="Retrieval"
                     value={String(packedContext.retrievalTokens)}
                     hint={`${packedContext.retrievalQueries.length} queries`}
@@ -366,15 +393,15 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                   />
                 </div>
 
-                <div className="rounded-[18px] border border-white/8 bg-black/20 p-4 text-body text-foreground/90">
+                <RecessedWell className="p-4 text-body text-foreground/90">
                   {packedContext.systemAddendum.trim().length > 0
                     ? packedContext.systemAddendum
                     : 'No system addendum was needed for this pack.'}
-                </div>
+                </RecessedWell>
 
                 <div className="flex flex-wrap items-center gap-2">
                   {packedContext.includedBlocks.map((block) => (
-                    <MissionPill key={block.id}>{block.kind}</MissionPill>
+                    <Tag key={block.id}>{block.kind}</Tag>
                   ))}
                 </div>
 
@@ -384,12 +411,10 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                     packedContext.droppedBlocks.slice(0, 6).map((drop) => (
                       <div
                         key={`${drop.blockId}-${drop.reason}`}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-white/8 bg-black/15 px-3 py-2 text-caption text-muted-foreground"
+                        className="cap flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-caption text-muted-foreground"
                         data-memory-dropped-block={drop.blockId}
                       >
-                        <span className="font-semibold uppercase tracking-[0.14em] text-foreground/80">
-                          {drop.kind}
-                        </span>
+                        <span className="text-eyebrow text-foreground/80">{drop.kind}</span>
                         <span>{drop.reason}</span>
                       </div>
                     ))
@@ -401,10 +426,10 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                 </div>
               </div>
             ) : null}
-          </MissionInsetSurface>
+          </RecessedWell>
         </div>
 
-        <MissionInsetSurface className="space-y-4 p-4">
+        <RecessedWell className="space-y-4 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-h3 text-foreground">Run Checkpoints</h3>
@@ -414,51 +439,62 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
               </div>
             </div>
             {latestCheckpoint ? (
-              <MissionPill tone={checkpointTone(latestCheckpoint.checkpointKind)}>
-                {checkpointLabel(latestCheckpoint.checkpointKind)}
-              </MissionPill>
+              <LampTile
+                label={checkpointLabel(latestCheckpoint.checkpointKind)}
+                tone={toLampTone(checkpointTone(latestCheckpoint.checkpointKind))}
+                small
+                interactive={false}
+              />
             ) : null}
           </div>
 
           {checkpointsQuery.isLoading ? (
-            <MissionStateBlock
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
               title="Checkpoint history is loading"
               description="Team-X is reading the latest resumable state for this thread."
-              icon={ShieldCheck}
             />
           ) : checkpointsQuery.isError ? (
-            <MissionStateBlock
+            <SubviewState
+              lampLabel="NO-GO"
+              lampTone="nogo"
               title="Checkpoint history could not load"
               description="Retry the checkpoint read to restore interruption and completion coverage."
-              icon={ShieldCheck}
-              tone="danger"
             />
           ) : checkpoints.length === 0 ? (
-            <MissionStateBlock
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
               title="No checkpoints exist for this thread yet"
               description="Completion, stop, timeout, and blocked-state checkpoints will appear here after the next internal run."
-              icon={ShieldCheck}
             />
           ) : (
             <div className="space-y-3">
               {checkpoints.map((checkpoint) => (
-                <div
+                <RecessedWell
                   key={checkpoint.id}
-                  className="space-y-3 rounded-[18px] border border-white/8 bg-black/20 p-4"
+                  className="space-y-3 p-4"
                   data-memory-checkpoint={checkpoint.id}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <MissionPill tone={checkpointTone(checkpoint.checkpointKind)}>
-                        {checkpointLabel(checkpoint.checkpointKind)}
-                      </MissionPill>
+                      <LampTile
+                        label={checkpointLabel(checkpoint.checkpointKind)}
+                        tone={toLampTone(checkpointTone(checkpoint.checkpointKind))}
+                        small
+                        interactive={false}
+                      />
                       {checkpoint.resumeOrigin ? (
-                        <MissionPill>{resumeOriginLabel(checkpoint.resumeOrigin)}</MissionPill>
+                        <Tag>{resumeOriginLabel(checkpoint.resumeOrigin)}</Tag>
                       ) : null}
                       {checkpoint.unresolvedApprovalRefs.length > 0 ? (
-                        <MissionPill tone="warning">
-                          {checkpoint.unresolvedApprovalRefs.length} approval refs
-                        </MissionPill>
+                        <LampTile
+                          label={`${checkpoint.unresolvedApprovalRefs.length} approval refs`}
+                          tone="hold"
+                          small
+                          interactive={false}
+                        />
                       ) : null}
                     </div>
                     <span className="text-eyebrow text-muted-foreground">
@@ -474,31 +510,27 @@ export function MemoryPanel({ companyId }: { companyId: string }) {
                   {checkpoint.blockers.length > 0 ? (
                     <div className="space-y-2 text-caption text-muted-foreground">
                       {checkpoint.blockers.map((blocker, index) => (
-                        <div
+                        <RecessedWell
                           key={`${checkpoint.id}-${blocker.kind}-${index}`}
-                          className="rounded-[14px] border border-white/8 bg-black/15 px-3 py-2"
+                          className="px-3 py-2"
                         >
-                          <span className="font-semibold uppercase tracking-[0.14em] text-foreground/80">
-                            {blocker.kind}
-                          </span>
+                          <span className="text-eyebrow text-foreground/80">{blocker.kind}</span>
                           <div className="mt-1">{blocker.summary}</div>
-                        </div>
+                        </RecessedWell>
                       ))}
                     </div>
                   ) : null}
                   {checkpoint.nextAction ? (
                     <div className="text-caption text-muted-foreground">
-                      <span className="font-semibold uppercase tracking-[0.14em] text-foreground/80">
-                        Next:
-                      </span>{' '}
+                      <span className="text-eyebrow text-foreground/80">Next:</span>{' '}
                       {checkpoint.nextAction}
                     </div>
                   ) : null}
-                </div>
+                </RecessedWell>
               ))}
             </div>
           )}
-        </MissionInsetSurface>
+        </RecessedWell>
       </div>
     </div>
   );

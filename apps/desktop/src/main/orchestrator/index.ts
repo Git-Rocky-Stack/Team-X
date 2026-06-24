@@ -1921,7 +1921,9 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       pausedCompanies.add(companyId);
       companiesRepo.setStatus(companyId, 'meeting');
 
-      let gateResolve: () => void = () => {};
+      let gateResolve: () => void = () => {
+        /* replaced synchronously by the Promise executor below */
+      };
       const gatePromise = new Promise<void>((resolve) => {
         gateResolve = resolve;
       });

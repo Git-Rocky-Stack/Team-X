@@ -413,6 +413,31 @@ function recoverUnansweredDirectMessages(args: {
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+// ---------------------------------------------------------------------------
+// Test-mode (E2E) noise suppression — scoped strictly to `NODE_ENV=test`.
+//
+// The Playwright harness launches this entry with `NODE_ENV=test`. The
+// "Electron Security Warning (Insecure Content-Security-Policy)" advisory
+// carries zero signal for an automated smoke test yet drowns the useful
+// `[main]` app logs in the captured stderr. It is already silent in a
+// packaged production build, and `pnpm dev` (NODE_ENV unset) is untouched,
+// so it still surfaces during real local development: our dev/unpackaged CSP
+// intentionally keeps `'unsafe-eval'` for Vite HMR (see renderer/index.html),
+// and the advisory itself ends with "This warning will not show up once the
+// app is packaged". `ELECTRON_DISABLE_SECURITY_WARNINGS` is the documented
+// off-switch and is read by the (sandboxed) renderer, which inherits this env
+// var at spawn time.
+//
+// GPU hardware acceleration is deliberately NOT disabled here. Doing it in
+// main-process JS runs too late: Chromium commits to spawning the GPU process
+// during argv bootstrap, before this script loads, so on a GPU-less host the
+// spawn still crashes (see the prior-art writeup in e2e/_launch-helpers.ts).
+// The GPU-disable switches are passed on the Playwright launch argv instead.
+// ---------------------------------------------------------------------------
+if (process.env.NODE_ENV === 'test') {
+  process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+}
+
 /**
  * Resolve the absolute path to the drizzle migrations directory.
  *
@@ -2554,8 +2579,14 @@ app
          * instead of throwing, which violates the ResolveProvider contract
          * on `start`.
          */
-        // biome-ignore lint/style/noNonNullAssertion: see comment above — non-null is a composition-order invariant
-        start: (args) => agenticLoopServiceInstance!.start(args),
+        start: (args) => {
+          if (!agenticLoopServiceInstance) {
+            throw new Error(
+              'agenticLoopService.start called before agenticLoopServiceInstance was initialized — composition-order invariant violated',
+            );
+          }
+          return agenticLoopServiceInstance.start(args);
+        },
       },
       authorityResolver: {
         resolveEmployee: (cid, eid) => authorityResolver.resolveEmployee(cid, eid),

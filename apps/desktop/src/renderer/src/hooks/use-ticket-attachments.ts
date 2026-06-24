@@ -1,13 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { ipc } from '@/lib/ipc.js';
 
 export function useTicketAttachments(ticketId: string | null) {
   return useQuery({
     queryKey: ['ticket-attachments', ticketId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.tickets.listAttachments(ticketId!),
-    enabled: ticketId !== null && ticketId.length > 0,
+    queryFn:
+      ticketId !== null && ticketId.length > 0
+        ? () => ipc.tickets.listAttachments(ticketId)
+        : skipToken,
   });
 }
 

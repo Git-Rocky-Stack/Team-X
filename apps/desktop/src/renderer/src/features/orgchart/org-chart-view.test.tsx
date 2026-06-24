@@ -36,8 +36,11 @@ describe('useOrgChart hook', () => {
     expect(useOrgChartExists).toBe(true);
     expect(useOrgChartSrc).toContain('export function useOrgChart(companyId: string | null)');
     expect(useOrgChartSrc).toContain("queryKey: ['orgchart', companyId]");
-    expect(useOrgChartSrc).toContain('ipc.orgchart.get(companyId!)');
-    expect(useOrgChartSrc).toContain('enabled: companyId !== null && companyId.length > 0');
+    expect(useOrgChartSrc).toContain('ipc.orgchart.get(companyId)');
+    // Guarded via `skipToken` (replaces the prior non-null-assertion + `enabled`
+    // pattern): the query only runs when companyId is a non-empty string.
+    expect(useOrgChartSrc).toContain('companyId !== null && companyId.length > 0');
+    expect(useOrgChartSrc).toContain('skipToken');
   });
 
   it('subscribes to employee lifecycle events that mutate the org tree', () => {

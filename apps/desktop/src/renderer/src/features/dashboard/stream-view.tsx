@@ -1,10 +1,9 @@
 import type { Employee } from '@team-x/shared-types';
 import { Radio } from 'lucide-react';
 
-import { SubviewState } from './dashboard-subview-state.js';
 import { countThinking } from './live-state-counts.js';
 
-import { LampTile, VuMeter } from '@/components/console/index.js';
+import { LampTile, SubviewState, VuMeter } from '@/components/console/index.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { type EmployeeLiveState, useAppStore } from '@/store/app-store.js';
 
@@ -23,7 +22,7 @@ function StreamPane({ employee, live }: StreamPaneProps) {
       onClick={() => setSelected(employee.id)}
       className="cap flex h-full min-w-[280px] flex-col p-0 text-left"
     >
-      <div className="flex items-center gap-2 border-b border-[hsl(var(--hairline))] px-4 py-2.5">
+      <div className="flex items-center gap-2 border-b border-[var(--hairline)] px-4 py-2.5">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-carbon-900 text-label font-semibold">
           {employee.name
             .split(' ')
@@ -44,7 +43,7 @@ function StreamPane({ employee, live }: StreamPaneProps) {
       </div>
       <ScrollArea className="flex-1 px-4 py-3">
         {isThinking && live.currentStream.length > 0 ? (
-          <pre className="whitespace-pre-wrap rounded-inset bg-[hsl(var(--void))] px-3 py-2 text-code-sm leading-relaxed text-[hsl(var(--display-fg))]">
+          <pre className="whitespace-pre-wrap rounded-inset bg-[var(--void)] px-3 py-2 text-code-sm leading-relaxed text-[var(--display-fg)]">
             {live.currentStream.slice(-800)}
           </pre>
         ) : isThinking ? (
@@ -94,7 +93,7 @@ export function StreamView({ employees }: StreamViewProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-[hsl(var(--hairline))] px-6 py-2">
+      <div className="flex items-center gap-3 border-b border-[var(--hairline)] px-6 py-2">
         <Radio className="h-4 w-4 text-armed" />
         <span className="text-caption font-medium text-silver-mute">
           {thinkingCount > 0 ? (

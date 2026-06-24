@@ -258,6 +258,7 @@ import type {
   SettingsGetCopilotResponse,
   SettingsGetCopilotWeightsRequest,
   SettingsGetCopilotWeightsResponse,
+  SettingsGetEnhancedAiConfigResponse,
   SettingsGetExtensionsResponse,
   SettingsGetMemoryResponse,
   SettingsGetPlannerResponse,
@@ -270,6 +271,7 @@ import type {
   SettingsSetCopilotRequest,
   SettingsSetCopilotWeightsRequest,
   SettingsSetCopilotWeightsResponse,
+  SettingsSetEnhancedAiConfigRequest,
   SettingsSetExtensionsRequest,
   SettingsSetMemoryRequest,
   SettingsSetPlannerRequest,
@@ -325,13 +327,6 @@ import type {
   VaultVerifyResponse,
 } from '@team-x/shared-types';
 
-// Enhanced AI settings types (Phase 5 — M32)
-// These are added to the shared-types package but may not be in the main export yet
-import type {
-  SettingsGetEnhancedAiConfigResponse,
-  SettingsSetEnhancedAiConfigRequest,
-} from '@team-x/shared-types';
-
 import type { CompanyRow, UpdateCompanyInput } from '../db/repos/companies.js';
 import type { CopilotExportFilter, CopilotExportResult } from '../db/repos/copilot-insights.js';
 import {
@@ -379,6 +374,11 @@ import type {
 } from '../db/repos/threads.js';
 import type { CreateTicketInput, TicketRow, UpdateTicketInput } from '../db/repos/tickets.js';
 import type { createMeetingService } from '../orchestrator/meeting-service.js';
+import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
+import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
+import type { McpHost } from '../services/mcp-host.js';
+import { listOllamaModels } from '../services/ollama-models.js';
+import { pickStrategy } from '../services/runtime-strategy.js';
 
 /**
  * Hardcoded id of the (single) human user in Phase 1. Replaced by a
@@ -642,11 +642,6 @@ export interface IpcRoleLookup {
 // ---------------------------------------------------------------------------
 // Public surface
 // ---------------------------------------------------------------------------
-
-import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
-import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
-import type { McpHost } from '../services/mcp-host.js';
-import { pickStrategy } from '../services/runtime-strategy.js';
 
 export interface IpcEventsRepo {
   listByCompany(companyId: string, cursor: number | undefined, limit: number): EventRow[];
@@ -6862,43 +6857,58 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     },
 
     async providersListModels(req) {
-      if (typeof req.providerId !== 'string' || req.providerId.length === 0) {
-        throw new Error('[ipc] providers.listModels: providerId is required');
+      // providers.listModels auto-fires from the renderer when a provider card
+      // mounts and re-fires on cache invalidation. A malformed request, a
+      // provider removed between the invalidation and its refetch (a benign
+      // race), or an unexpected lookup failure must NOT reject — a rejection
+      // resurfaces the `Error occurred in handler for 'providers.listModels'`
+      // main-process stderr spam this contract exists to kill. listOllamaModels
+      // already never rejects; this guard extends the same never-reject posture
+      // to the handler boundary, so EVERY path returns a typed
+      // { models, status, detail } response instead of throwing.
+      // `req` itself can be null/undefined at runtime (IPC delivers arbitrary
+      // payloads), so extract via optional chaining on a widened type — reading
+      // `req.providerId` directly would throw HERE, before the try, and reject.
+      const providerId = (req as { providerId?: unknown } | null | undefined)?.providerId;
+      if (typeof providerId !== 'string' || providerId.length === 0) {
+        return { models: [], status: 'error', detail: 'providerId is required' };
       }
 
-      const config = providersService.get(req.providerId);
-      if (!config) {
-        throw new Error(`[ipc] providers.listModels: provider not found: ${req.providerId}`);
-      }
-
-      if (config.kind !== 'ollama') {
-        return { models: [] };
-      }
-
-      const baseUrl = config.baseUrl ?? 'http://localhost:11434/api';
-      const tagsUrl = `${baseUrl.replace(/\/api$/, '')}/api/tags`;
-      const response = await fetch(tagsUrl, { method: 'GET' });
-      if (!response.ok) {
-        throw new Error(`[ipc] providers.listModels: Ollama returned HTTP ${response.status}`);
-      }
-
-      const data = (await response.json()) as {
-        models?: Array<{ name?: string; model?: string }>;
-      };
-
-      const models = new Set<string>();
-      for (const row of data.models ?? []) {
-        const model =
-          typeof row.model === 'string' && row.model.trim().length > 0 ? row.model : row.name;
-        if (typeof model === 'string' && model.trim().length > 0) {
-          models.add(model.trim());
+      try {
+        const config = providersService.get(providerId);
+        if (!config) {
+          // Removed before this refetch resolved — a benign race, not a reason
+          // to reject the IPC call (and not worth a log line).
+          return {
+            models: [],
+            status: 'error',
+            detail: `provider not found: ${providerId}`,
+          };
         }
-      }
-      if (typeof config.defaultModel === 'string' && config.defaultModel.trim().length > 0) {
-        models.add(config.defaultModel.trim());
-      }
 
-      return { models: [...models].sort((a, b) => a.localeCompare(b)) };
+        if (config.kind !== 'ollama') {
+          return { models: [], status: 'ok' };
+        }
+
+        // Unreachable Ollama (server not running) is an expected, benign state —
+        // `listOllamaModels` degrades to the configured default instead of
+        // throwing, so the auto-fired renderer query never spams the main log
+        // with ECONNREFUSED. It returns a `status` ('ok' | 'unreachable' |
+        // 'error') so the settings UI can surface a genuine server-side failure
+        // (auth/5xx) instead of silently presenting the default as detected.
+        // Mirrors testConnection.
+        const baseUrl = config.baseUrl ?? 'http://localhost:11434/api';
+        return await listOllamaModels(baseUrl, config.defaultModel);
+      } catch (err) {
+        // An unexpected lookup/runtime failure (e.g. a config-store read error)
+        // still honors the never-reject contract at the IPC boundary.
+        console.warn('[ipc] providers.listModels: unexpected failure; returning typed error', err);
+        return {
+          models: [],
+          status: 'error',
+          detail: err instanceof Error ? err.message : String(err),
+        };
+      }
     },
 
     // -----------------------------------------------------------------------

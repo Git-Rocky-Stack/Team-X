@@ -1,6 +1,6 @@
-import { cn } from '@/lib/utils';
-
 import { LampTile, type LampTone } from './lamp-tile';
+
+import { cn } from '@/lib/utils';
 
 export interface AnnunciatorTileSpec {
   /** Source view / system id — passed to onNavigate (teleport target) */

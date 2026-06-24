@@ -855,7 +855,9 @@ describe('IPC: chat.send orchestrator failure handling', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* swallow console output in test */
+    });
   });
 
   afterEach(() => {

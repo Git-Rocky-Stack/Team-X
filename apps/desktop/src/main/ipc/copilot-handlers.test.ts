@@ -647,7 +647,9 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
     it('falls back to advisory suggestion when setCopilotWeights dep is missing (graceful degradation)', async () => {
       // Composition-root wiring gap. The handler must NOT crash; it
       // surfaces the gap via console + returns the advisory path.
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        /* swallow console output in test */
+      });
       const deps = makeDeps({
         now: () => 1_000_000_000,
         copilotInsightsRepo: {
@@ -681,7 +683,9 @@ describe('copilot-handlers — H14 audit (2026-05-07): feedback loop closure', (
     });
 
     it('falls back to advisory suggestion when setCopilotWeights throws', async () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        /* swallow console output in test */
+      });
       const setCopilotWeights = vi.fn(() => {
         throw new Error('disk full');
       });

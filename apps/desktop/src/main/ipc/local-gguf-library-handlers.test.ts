@@ -3,6 +3,7 @@ import type { IpcMain } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { LibraryService } from '../services/local-gguf/library-service.js';
+
 import {
   LOCAL_GGUF_LIBRARY_CHANNELS,
   registerLocalGgufLibraryHandlers,

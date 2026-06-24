@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DashboardEvent, SendChatRequest } from '@team-x/shared-types';
 import { useEffect } from 'react';
 
@@ -16,9 +16,7 @@ interface StopChatResponse {
 export function useChatMessages(threadId: string | null) {
   return useQuery({
     queryKey: ['chat', threadId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled` — queryFn only runs when threadId is non-null
-    queryFn: () => ipc.chat.list(threadId!),
-    enabled: threadId !== null && threadId.length > 0,
+    queryFn: threadId !== null && threadId.length > 0 ? () => ipc.chat.list(threadId) : skipToken,
     refetchInterval: false,
   });
 }
@@ -84,9 +82,10 @@ export function useThreadList(companyId: string | null) {
 
   return useQuery({
     queryKey: ['threads', companyId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled` — queryFn only runs when companyId is non-null
-    queryFn: () => ipc.chat.listThreads(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0
+        ? () => ipc.chat.listThreads(companyId)
+        : skipToken,
     refetchInterval: false,
   });
 }

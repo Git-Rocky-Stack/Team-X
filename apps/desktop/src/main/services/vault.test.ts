@@ -111,7 +111,9 @@ function makeFakeRepo(options: { throwOnCreate?: boolean; throwOnDelete?: boolea
     listByCompany(): FileVaultRow[] {
       return [];
     },
-    update(_id: string, _input: UpdateFileVaultInput): void {},
+    update(_id: string, _input: UpdateFileVaultInput): void {
+      /* no-op stub: this test exercises read/delete paths only */
+    },
     delete(id: string): void {
       if (options.throwOnDelete) throw new Error('db delete failed');
       rows.delete(id);
@@ -220,7 +222,9 @@ describe('vault service — bus emit on store()', () => {
     const bus = makeFakeBus({ throwOnEmit: true });
     const { service } = makeService({ bus });
     // Silence the expected console.error noise.
-    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      /* swallow console output in test */
+    });
 
     await expect(service.store('co_1', sourceFile, 'rocky')).resolves.toBeTruthy();
 

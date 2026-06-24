@@ -1,4 +1,14 @@
+import type { ProviderConfig } from '@team-x/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { EmployeeRow } from '../db/repos/employees.js';
+
+import {
+  type ProviderFactoryCompaniesRepo,
+  type SecretsReader,
+  createProviderFactory,
+} from './provider-factory.js';
+import type { ProvidersService } from './providers.js';
 
 /**
  * Tests for the desktop `provider-factory` service.
@@ -57,17 +67,6 @@ vi.mock('@team-x/provider-router', () => ({
     return fakeOllamaStream;
   },
 }));
-
-import type { ProviderConfig } from '@team-x/shared-types';
-
-import type { EmployeeRow } from '../db/repos/employees.js';
-
-import {
-  type ProviderFactoryCompaniesRepo,
-  type SecretsReader,
-  createProviderFactory,
-} from './provider-factory.js';
-import type { ProvidersService } from './providers.js';
 
 // ---------------------------------------------------------------------------
 // Fakes

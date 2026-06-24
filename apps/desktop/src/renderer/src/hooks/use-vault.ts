@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { ipc } from '@/lib/ipc.js';
@@ -6,27 +6,26 @@ import { ipc } from '@/lib/ipc.js';
 export function useVaultFiles(companyId: string | null) {
   return useQuery({
     queryKey: ['vault', 'files', companyId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.vault.list(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0 ? () => ipc.vault.list(companyId) : skipToken,
   });
 }
 
 export function useVaultSearch(companyId: string | null, query: string) {
   return useQuery({
     queryKey: ['vault', 'search', companyId, query],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.vault.search(companyId!, query),
-    enabled: companyId !== null && companyId.length > 0 && query.trim().length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0 && query.trim().length > 0
+        ? () => ipc.vault.search(companyId, query)
+        : skipToken,
   });
 }
 
 export function useVaultStats(companyId: string | null) {
   return useQuery({
     queryKey: ['vault', 'stats', companyId],
-    // biome-ignore lint/style/noNonNullAssertion: guarded by `enabled`
-    queryFn: () => ipc.vault.stats(companyId!),
-    enabled: companyId !== null && companyId.length > 0,
+    queryFn:
+      companyId !== null && companyId.length > 0 ? () => ipc.vault.stats(companyId) : skipToken,
   });
 }
 

@@ -323,8 +323,17 @@ function baseDeps(overrides: Partial<CopilotAnalyzerServiceDeps> = {}): {
     })(),
     pauseGatePollMs: 1,
     setInterval: (() => 0) as unknown as typeof setInterval,
-    clearInterval: (() => {}) as unknown as typeof clearInterval,
-    logger: { warn: () => {}, error: () => {} },
+    clearInterval: (() => {
+      /* no-op clearInterval stub */
+    }) as unknown as typeof clearInterval,
+    logger: {
+      warn: () => {
+        /* no-op */
+      },
+      error: () => {
+        /* no-op */
+      },
+    },
     ...overrides,
   };
   return { deps, bus, runsRepo, insightsRepo };
@@ -684,7 +693,9 @@ describe('copilot-analyzer-service — restart picks up new settings', () => {
         // the `schedules.has()` guard.
         return { ref: scheduled.length } as unknown as ReturnType<typeof setInterval>;
       }) as unknown as typeof setInterval,
-      clearInterval: (() => {}) as unknown as typeof clearInterval,
+      clearInterval: (() => {
+        /* no-op clearInterval stub */
+      }) as unknown as typeof clearInterval,
     });
     const svc = createCopilotAnalyzerService(deps);
 
