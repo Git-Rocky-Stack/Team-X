@@ -17,6 +17,10 @@ describe('autonomy heavy panels aesthetic sweep (Phase 4b)', () => {
     expect(src).toContain('<RecessedWell');
     expect(src).toContain('<VuMeter');
     expect(src).toContain('well-input');
+    // Diagnostic tone is applied on an INNER <span>, never Tag's className —
+    // guards the c4caf3e fix (cn()/tailwind-merge collapses Tag's text-* tokens,
+    // dropping the chip's font-size, when a tone color is passed through className).
+    expect(src).toContain('<span className={diagnosticToneClass(row.tone)}>');
     // selectors preserved
     expect(src).toContain('data-runtime-profiles-panel');
     expect(src).toContain('data-runtime-profile-card={profile.id}');
