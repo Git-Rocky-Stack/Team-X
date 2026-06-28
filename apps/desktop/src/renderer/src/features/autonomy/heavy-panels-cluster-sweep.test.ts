@@ -51,4 +51,25 @@ describe('autonomy heavy panels aesthetic sweep (Phase 4b)', () => {
     expect(src).not.toMatch(/text-(?:red|emerald|amber)-\d{2,3}/);
     expect(src).not.toContain('rounded-full');
   });
+
+  it('budgets: console hardware + burn VU + selectors preserved, no legacy', () => {
+    const src = read('budgets-panel.tsx');
+    expect(src).toContain("from '@/components/console/index.js'");
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('<VuMeter');
+    expect(src).toContain('well-input');
+    expect(src).toContain('data-budgets-panel');
+    expect(src).toContain('data-budget-policy={policy.id}');
+    expect(src).toContain('data-budget-ledger={entry.id}');
+    expect(src).toContain('data-budget-approval={approval.id}');
+    expect(src).not.toContain('mission-shell.js');
+    expect(src).not.toMatch(/\bMission[A-Z]\w+/);
+    expect(src).not.toMatch(/\bbg-black\b/);
+    expect(src).not.toMatch(/border-white\/\d/);
+    expect(src).not.toContain('font-mono');
+    expect(src).not.toMatch(/text-(?:red|emerald|amber)-\d{2,3}/);
+    expect(src).not.toContain('rounded-full');
+  });
 });
