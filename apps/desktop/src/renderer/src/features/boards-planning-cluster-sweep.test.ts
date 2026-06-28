@@ -69,4 +69,27 @@ describe('boards & planning cluster sweep (Phase 5a)', () => {
       expectNoLegacy(src, 'create-ticket-dialog.tsx');
     });
   });
+
+  describe('ticket-detail', () => {
+    it('console hardware + lamps + selectors preserved, no legacy', () => {
+      const src = read('tickets/ticket-detail.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<LampTile');
+      expect(src).toContain('<Tag');
+      expect(src).toContain('<SubviewState');
+      expect(src).toContain('data-ticket-detail=""');
+      expect(src).toContain('data-ticket-detail-state="loading"');
+      expect(src).toContain('data-ticket-participants=""');
+      for (const a of [
+        'Close detail',
+        'Add ticket participant',
+        'Add selected employee to ticket',
+        'Remove attachment',
+      ]) {
+        expect(src, `missing aria ${a}`).toContain(a);
+      }
+      expect(src).toContain('from ticket'); // the `Remove ${name} from ticket` template
+      expectNoLegacy(src, 'ticket-detail.tsx');
+    });
+  });
 });
