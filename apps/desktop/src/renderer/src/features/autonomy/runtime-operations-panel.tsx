@@ -1,28 +1,26 @@
 import type { RuntimeSession, TicketCheckout } from '@team-x/shared-types';
-import { Activity, Clock3, HardDrive, RefreshCw, ShieldAlert, TicketCheck } from 'lucide-react';
+import { Activity, HardDrive, RefreshCw, ShieldAlert, TicketCheck } from 'lucide-react';
 
 import {
-  MissionControlRow,
-  MissionIconButton,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
-
+  LampTile,
+  type LampTone,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+  VuMeter,
+} from '@/components/console/index.js';
 import { useRuntimeOperations } from '@/hooks/use-runtime-operations.js';
 
 function formatTimestamp(value: number | null): string {
   return value === null ? 'never' : new Date(value).toLocaleTimeString();
 }
 
-function statusTone(
-  status: RuntimeSession['status'] | TicketCheckout['status'],
-): 'default' | 'accent' | 'warning' | 'danger' {
-  if (status === 'working' || status === 'active') return 'accent';
-  if (status === 'blocked' || status === 'stale') return 'warning';
-  if (status === 'failed' || status === 'offline') return 'danger';
-  return 'default';
+function sessionLampTone(status: RuntimeSession['status'] | TicketCheckout['status']): LampTone {
+  if (status === 'working' || status === 'active') return 'go';
+  if (status === 'blocked' || status === 'stale') return 'hold';
+  if (status === 'failed' || status === 'offline') return 'nogo';
+  return 'off';
 }
 
 function RuntimeSessionCard({ session }: { session: RuntimeSession }) {
@@ -32,66 +30,76 @@ function RuntimeSessionCard({ session }: { session: RuntimeSession }) {
       : 'runtime-heartbeat/v1';
 
   return (
-    <MissionInsetSurface className="space-y-3 p-4" data-runtime-session={session.id}>
+    <RecessedWell className="space-y-3 p-4" data-runtime-session={session.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="truncate text-body-strong text-foreground">{session.employeeId}</span>
-            <MissionPill tone={statusTone(session.status)}>{session.status}</MissionPill>
-            <MissionPill>{session.adapterKind}</MissionPill>
+            <LampTile
+              label={session.status}
+              tone={sessionLampTone(session.status)}
+              small
+              interactive={false}
+            />
+            <Tag>{session.adapterKind}</Tag>
           </div>
           <p className="break-all text-caption text-muted-foreground">
             {session.workspacePath ?? session.endpointUrl ?? 'No external workspace path exposed'}
           </p>
         </div>
-        <MissionPill mono>{heartbeatContract}</MissionPill>
+        <Tag mono>{heartbeatContract}</Tag>
       </div>
 
       <div className="grid gap-2 text-caption text-muted-foreground sm:grid-cols-2">
         <div>
-          <span className="font-semibold text-foreground">Last heartbeat:</span>{' '}
+          <span className="text-body-strong text-foreground">Last heartbeat:</span>{' '}
           {formatTimestamp(session.lastHeartbeatAt)}
         </div>
         <div>
-          <span className="font-semibold text-foreground">Lease:</span>{' '}
+          <span className="text-body-strong text-foreground">Lease:</span>{' '}
           {formatTimestamp(session.leaseExpiresAt)}
         </div>
         <div className="break-all">
-          <span className="font-semibold text-foreground">Run:</span>{' '}
+          <span className="text-body-strong text-foreground">Run:</span>{' '}
           {session.currentRunId ?? 'none'}
         </div>
         <div className="break-all">
-          <span className="font-semibold text-foreground">Ticket:</span>{' '}
+          <span className="text-body-strong text-foreground">Ticket:</span>{' '}
           {session.currentTicketId ?? 'none'}
         </div>
       </div>
 
       {session.failureReason ? (
-        <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-caption text-amber-200">
+        <RecessedWell className="px-3 py-2 text-caption text-led-hold">
           {session.failureReason}
-        </div>
+        </RecessedWell>
       ) : null}
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }
 
 function TicketCheckoutRow({ checkout }: { checkout: TicketCheckout }) {
   return (
-    <MissionInsetSurface className="p-4" data-runtime-checkout={checkout.id}>
+    <RecessedWell className="p-4" data-runtime-checkout={checkout.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="break-all text-body-strong text-foreground">{checkout.ticketId}</span>
-            <MissionPill tone={statusTone(checkout.status)}>{checkout.status}</MissionPill>
+            <LampTile
+              label={checkout.status}
+              tone={sessionLampTone(checkout.status)}
+              small
+              interactive={false}
+            />
           </div>
           <p className="break-all text-caption text-muted-foreground">
             Claimed by {checkout.employeeId}
             {checkout.runtimeSessionId ? ` through ${checkout.runtimeSessionId}` : ''}
           </p>
         </div>
-        <MissionPill mono>expires {formatTimestamp(checkout.expiresAt)}</MissionPill>
+        <Tag mono>expires {formatTimestamp(checkout.expiresAt)}</Tag>
       </div>
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }
 
@@ -105,28 +113,29 @@ export function RuntimeOperationsPanel({ companyId }: { companyId: string }) {
 
   if (operationsQuery.isLoading) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="STBY"
+        lampTone="off"
         title="Loading runtime operations"
         description="Team-X is resolving live runtime sessions, heartbeat leases, and active ticket checkouts."
-        icon={Activity}
       />
     );
   }
 
   if (operationsQuery.isError) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="NO-GO"
+        lampTone="nogo"
         title="Runtime operations could not load"
         description="The runtime lifecycle service is wired, but this workspace operations snapshot failed. Inspect the main-process logs before launching more external work."
-        icon={ShieldAlert}
-        tone="danger"
       />
     );
   }
 
   return (
     <div className="space-y-4" data-runtime-operations-panel="">
-      <MissionControlRow className="justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-h2 text-foreground">Runtime Operations</h2>
           <p className="text-caption text-muted-foreground">
@@ -134,37 +143,47 @@ export function RuntimeOperationsPanel({ companyId }: { companyId: string }) {
             workspace control plane.
           </p>
         </div>
-        <MissionIconButton
-          title="Refresh runtime operations"
-          onClick={() => {
-            void operationsQuery.refetch();
-          }}
-          disabled={operationsQuery.isFetching}
-        >
-          <RefreshCw className="h-4 w-4" />
-        </MissionIconButton>
-      </MissionControlRow>
+        <div className="flex items-center gap-3">
+          <VuMeter
+            className="w-40"
+            label="Runtime utilization"
+            value={sessions.length > 0 ? workingSessions / sessions.length : 0}
+          />
+          <button
+            type="button"
+            title="Refresh runtime operations"
+            onClick={() => {
+              void operationsQuery.refetch();
+            }}
+            disabled={operationsQuery.isFetching}
+            className="cap flex h-10 w-10 items-center justify-center disabled:opacity-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <MissionMetricTile
+        <MetricTile
           label="Live Sessions"
           value={String(sessions.length)}
           hint="Starting, idle, working, or blocked"
           icon={Activity}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Working"
           value={String(workingSessions)}
           hint="Currently executing external work"
           icon={HardDrive}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Blocked"
           value={String(blockedSessions)}
           hint="Budget or checkout gates stopped execution"
           icon={ShieldAlert}
+          tone={blockedSessions > 0 ? 'amber' : undefined}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Checkouts"
           value={String(activeCheckouts.length)}
           hint="Active ticket ownership leases"
@@ -173,10 +192,11 @@ export function RuntimeOperationsPanel({ companyId }: { companyId: string }) {
       </div>
 
       {sessions.length === 0 && activeCheckouts.length === 0 ? (
-        <MissionStateBlock
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
           title="No external runtimes are active"
           description="Launch an execution-backed runtime profile from a ticket or routine and its heartbeat, workspace, and checkout lease will appear here."
-          icon={Clock3}
         />
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
@@ -189,9 +209,9 @@ export function RuntimeOperationsPanel({ companyId }: { companyId: string }) {
           <div className="space-y-3">
             <div className="text-eyebrow text-muted-foreground">Active Ticket Checkouts</div>
             {activeCheckouts.length === 0 ? (
-              <MissionInsetSurface className="p-4 text-body text-muted-foreground">
+              <RecessedWell className="p-4 text-body text-muted-foreground">
                 No ticket checkout lease is currently active.
-              </MissionInsetSurface>
+              </RecessedWell>
             ) : (
               activeCheckouts.map((checkout) => (
                 <TicketCheckoutRow key={checkout.id} checkout={checkout} />
