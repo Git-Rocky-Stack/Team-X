@@ -413,13 +413,16 @@ function RuntimeDiagnosticsGrid({
             <div className="text-eyebrow-sm text-muted-foreground">{row.label}</div>
             {row.mono ? (
               <div className="mt-1">
-                <Tag
-                  mono
-                  className={
-                    row.tone && row.tone !== 'default' ? diagnosticToneClass(row.tone) : undefined
-                  }
-                >
-                  {row.value}
+                {/* Tone color goes on an INNER span, never Tag's className: tailwind-merge
+                    collapses Tag's `text-eyebrow-sm text-silver-mute` against a `text-led-*`
+                    color, dropping the chip's font-size too. The inner span recolors via the
+                    cascade while Tag keeps its typography intact. */}
+                <Tag mono>
+                  {row.tone && row.tone !== 'default' ? (
+                    <span className={diagnosticToneClass(row.tone)}>{row.value}</span>
+                  ) : (
+                    row.value
+                  )}
                 </Tag>
               </div>
             ) : (
