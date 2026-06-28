@@ -31,4 +31,24 @@ describe('autonomy heavy panels aesthetic sweep (Phase 4b)', () => {
     expect(src).not.toContain('font-mono');
     expect(src).not.toMatch(/text-(?:red|emerald|amber)-\d{2,3}/);
   });
+
+  it('routines: console hardware + VU + selectors preserved, no legacy', () => {
+    const src = read('routines-panel.tsx');
+    expect(src).toContain("from '@/components/console/index.js'");
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('<VuMeter');
+    expect(src).toContain('well-input');
+    expect(src).toContain('data-routines-panel');
+    expect(src).toContain('data-routine-card={routine.id}');
+    expect(src).toContain('data-routine-run={run.id}');
+    expect(src).not.toContain('mission-shell.js');
+    expect(src).not.toMatch(/\bMission[A-Z]\w+/);
+    expect(src).not.toMatch(/\bbg-black\b/);
+    expect(src).not.toMatch(/border-white\/\d/);
+    expect(src).not.toContain('font-mono');
+    expect(src).not.toMatch(/text-(?:red|emerald|amber)-\d{2,3}/);
+    expect(src).not.toContain('rounded-full');
+  });
 });

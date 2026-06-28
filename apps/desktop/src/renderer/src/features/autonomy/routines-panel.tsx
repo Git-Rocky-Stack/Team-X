@@ -9,13 +9,14 @@ import { Activity, CalendarDays, Clock3, Play, RefreshCw, Trash2 } from 'lucide-
 import { useMemo, useState } from 'react';
 
 import {
-  MissionIconButton,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
-
+  LampTile,
+  type LampTone,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+  VuMeter,
+} from '@/components/console/index.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import {
   useCreateRoutine,
@@ -26,11 +27,16 @@ import {
   useUpdateRoutine,
 } from '@/hooks/use-routines.js';
 
-const FIELD_CLASSNAME =
-  'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-body text-foreground outline-none transition focus:border-brand/30';
-const LABEL_CLASSNAME = 'text-eyebrow text-muted-foreground';
-const TEXTAREA_CLASSNAME =
-  'min-h-[120px] w-full rounded-[18px] border border-white/10 bg-black/20 px-3 py-3 text-body text-foreground outline-none transition focus:border-brand/30';
+const FIELD_CLASSNAME = 'well-input h-11 w-full px-3 text-body';
+const LABEL_CLASSNAME = 'text-eyebrow text-silver-mute';
+const TEXTAREA_CLASSNAME = 'well-input min-h-[120px] w-full px-3 py-3 text-body';
+
+function runStatusLampTone(status: Routine['lastRunStatus']): LampTone {
+  if (status === 'success') return 'go';
+  if (status === 'error') return 'nogo';
+  if (status === 'running') return 'hold';
+  return 'off';
+}
 
 type RoutineTriggerValue = Routine['triggerKind'];
 
@@ -288,49 +294,57 @@ function RoutineCard({
   const [draft, setDraft] = useState<RoutineDraft>(() => draftFromRoutine(routine));
 
   return (
-    <MissionInsetSurface className="space-y-4 p-4" data-routine-card={routine.id}>
+    <RecessedWell className="space-y-4 p-4" data-routine-card={routine.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="text-body-strong text-foreground">{routine.name}</div>
           <div className="flex flex-wrap gap-2">
-            <MissionPill tone="accent">{routine.triggerKind}</MissionPill>
-            <MissionPill>{routine.enabled ? 'enabled' : 'paused'}</MissionPill>
-            <MissionPill>{routine.lastRunStatus}</MissionPill>
+            <Tag>{routine.triggerKind}</Tag>
+            <Tag>{routine.enabled ? 'enabled' : 'paused'}</Tag>
+            <LampTile
+              label={routine.lastRunStatus}
+              tone={runStatusLampTone(routine.lastRunStatus)}
+              small
+              interactive={false}
+            />
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <MissionIconButton
+          <button
+            type="button"
             title="Run Now"
             disabled={running}
             onClick={() => onRunNow(routine.id)}
+            className="cap flex h-10 w-10 items-center justify-center disabled:opacity-50"
           >
             <Play className="h-4 w-4" />
-          </MissionIconButton>
-          <MissionIconButton
-            tone="danger"
+          </button>
+          <button
+            type="button"
             title="Delete routine"
             disabled={deleting}
             onClick={() => onDelete(routine.id)}
+            className="cap flex h-10 w-10 items-center justify-center disabled:opacity-50"
           >
-            <Trash2 className="h-4 w-4" />
-          </MissionIconButton>
+            <Trash2 className="h-4 w-4 text-led-nogo" />
+          </button>
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <MissionMetricTile
+        <MetricTile
           label="Schedule"
           value={formatSchedule(routine.schedule)}
           hint="Cadence definition"
           icon={Clock3}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Next Run"
           value={formatTimestamp(routine.nextRunAt)}
           hint="Local workstation time"
           icon={CalendarDays}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Last Run"
           value={formatTimestamp(routine.lastRunAt)}
           hint={routine.lastRunMessage ?? 'No run recorded yet'}
@@ -383,14 +397,14 @@ function RoutineCard({
         </p>
         <button
           type="button"
-          className="rounded-full border border-brand/35 bg-brand/15 px-4 py-2 text-button-sm tracking-[0.18em] text-brand transition hover:border-brand/60 hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="cap cap-select px-4 py-2 text-button-sm tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={saving}
           onClick={() => onSave(routine, draft)}
         >
           Save Routine
         </button>
       </div>
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }
 
@@ -418,47 +432,60 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
 
   if (routinesQuery.isLoading || employeesQuery.isLoading || runsQuery.isLoading) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="STBY"
+        lampTone="off"
         title="Loading recurring routines"
         description="Team-X is resolving cadence definitions, recent materializations, and employee assignment options."
-        icon={Clock3}
       />
     );
   }
 
   if (routinesQuery.isError || employeesQuery.isError || runsQuery.isError) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="NO-GO"
+        lampTone="nogo"
         title="Recurring routines could not load"
         description="The control plane is live, but either routine definitions, employees, or recent run history failed to resolve."
-        icon={Clock3}
-        tone="danger"
       />
     );
   }
 
   return (
     <div className="space-y-4" data-routines-panel="">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-eyebrow text-silver-mute">Routines enabled</span>
+        <VuMeter
+          className="w-40"
+          label="Routines enabled"
+          value={
+            routines.length > 0
+              ? routines.filter((routine) => routine.enabled).length / routines.length
+              : 0
+          }
+        />
+      </div>
       <div className="grid gap-3 md:grid-cols-4">
-        <MissionMetricTile
+        <MetricTile
           label="Defined"
           value={String(routines.length)}
           hint="Workspace routine definitions"
           icon={Clock3}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Enabled"
           value={String(routines.filter((routine) => routine.enabled).length)}
           hint="Scheduled and eligible to tick"
           icon={Activity}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Due Now"
           value={String(dueCount)}
           hint="Cadences that should materialize work on the next tick"
           icon={RefreshCw}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Recent Runs"
           value={String(runs.length)}
           hint="Latest visible routine materializations"
@@ -466,7 +493,7 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
         />
       </div>
 
-      <MissionInsetSurface className="space-y-4 p-4">
+      <RecessedWell className="space-y-4 p-4">
         <div className="space-y-1">
           <h3 className="text-h3 text-foreground">Create Routine</h3>
           <p className="text-caption text-muted-foreground">
@@ -516,7 +543,7 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
         <div className="flex justify-end">
           <button
             type="button"
-            className="rounded-full border border-brand/35 bg-brand/15 px-4 py-2 text-button-sm tracking-[0.18em] text-brand transition hover:border-brand/60 hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="cap cap-select px-4 py-2 text-button-sm tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-50"
             disabled={createRoutine.isPending}
             onClick={() =>
               createRoutine.mutate(
@@ -538,13 +565,14 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
             {createRoutine.isPending ? 'Creating...' : 'Create Routine'}
           </button>
         </div>
-      </MissionInsetSurface>
+      </RecessedWell>
 
       {routines.length === 0 ? (
-        <MissionStateBlock
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
           title="No routines defined yet"
           description="The first pass wires cadence, visible ticket materialization, and recent run history. Create a routine to start testing it."
-          icon={Clock3}
         />
       ) : (
         <div className="space-y-4">
@@ -572,7 +600,7 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
         </div>
       )}
 
-      <MissionInsetSurface className="space-y-4 p-4">
+      <RecessedWell className="space-y-4 p-4">
         <div className="space-y-1">
           <h3 className="text-h3 text-foreground">Recent Routine Runs</h3>
           <p className="text-caption text-muted-foreground">
@@ -581,31 +609,27 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
           </p>
         </div>
         {runs.length === 0 ? (
-          <MissionStateBlock
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
             title="No routine runs recorded yet"
             description="Use Run Now on a routine card or wait for the scheduler to reach the next due cadence."
-            icon={Play}
           />
         ) : (
           <div className="space-y-3">
             {runs.map((run) => (
-              <MissionInsetSurface key={run.id} className="p-3" data-routine-run={run.id}>
+              <RecessedWell key={run.id} className="p-3" data-routine-run={run.id}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-body-strong text-foreground">{run.routineId}</span>
-                      <MissionPill
-                        tone={
-                          run.status === 'success'
-                            ? 'accent'
-                            : run.status === 'error'
-                              ? 'danger'
-                              : 'warning'
-                        }
-                      >
-                        {run.status}
-                      </MissionPill>
-                      <MissionPill>{run.reason}</MissionPill>
+                      <LampTile
+                        label={run.status}
+                        tone={runStatusLampTone(run.status)}
+                        small
+                        interactive={false}
+                      />
+                      <Tag>{run.reason}</Tag>
                     </div>
                     <p className="text-caption text-muted-foreground">
                       Started {new Date(run.startedAt).toLocaleString()}
@@ -618,11 +642,11 @@ export function RoutinesPanel({ companyId }: { companyId: string }) {
                       'Routine run recorded with no additional message.'}
                   </div>
                 </div>
-              </MissionInsetSurface>
+              </RecessedWell>
             ))}
           </div>
         )}
-      </MissionInsetSurface>
+      </RecessedWell>
     </div>
   );
 }
