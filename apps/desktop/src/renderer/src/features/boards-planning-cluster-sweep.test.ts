@@ -108,4 +108,44 @@ describe('boards & planning cluster sweep (Phase 5a)', () => {
       expectNoLegacy(src, 'tickets-view.tsx');
     });
   });
+
+  describe('project-card', () => {
+    it('console card + lamp priority + Tag, no legacy', () => {
+      const src = read('projects/project-card.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<RecessedWell');
+      expect(src).toContain('<LampTile');
+      expect(src).toContain('<Tag');
+      expectNoLegacy(src, 'project-card.tsx');
+    });
+  });
+
+  describe('projects-kanban', () => {
+    it('console lanes + lamp status + selector preserved, no legacy', () => {
+      const src = read('projects/projects-kanban.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<RecessedWell');
+      expect(src).toContain('<LampTile');
+      expect(src).toContain('aria-label="Create project"');
+      expectNoLegacy(src, 'projects-kanban.tsx');
+    });
+  });
+
+  describe('projects-subtabs', () => {
+    it('nav-tile recipe + aria-current added, no legacy', () => {
+      const src = read('projects/projects-subtabs.tsx');
+      expect(src).toContain('nav-tile');
+      expect(src).toContain('aria-current');
+      expectNoLegacy(src, 'projects-subtabs.tsx');
+    });
+  });
+
+  describe('projects-view', () => {
+    it('SubviewState for loading/error, no legacy', () => {
+      const src = read('projects/projects-view.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<SubviewState');
+      expectNoLegacy(src, 'projects-view.tsx');
+    });
+  });
 });

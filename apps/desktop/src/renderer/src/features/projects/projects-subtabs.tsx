@@ -29,14 +29,10 @@ export function ProjectsSubtabs() {
             type="button"
             key={tab.subview}
             onClick={() => setSubview(tab.subview)}
-            className={`
-              flex items-center gap-1.5 rounded-md px-3 py-1.5 text-button-sm transition-colors
-              ${
-                isActive
-                  ? 'bg-brand/10 text-brand'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-surface-100'
-              }
-            `}
+            aria-current={isActive ? 'page' : undefined}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-button-sm ${
+              isActive ? 'nav-tile nav-tile-active' : 'nav-tile'
+            }`}
           >
             <Icon className="h-3.5 w-3.5" />
             {tab.label}
