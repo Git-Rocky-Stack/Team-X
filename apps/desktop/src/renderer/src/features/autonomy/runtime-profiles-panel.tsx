@@ -20,13 +20,14 @@ import {
 import { useMemo, useState } from 'react';
 
 import {
-  MissionIconButton,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
-
+  LampTile,
+  type LampTone,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+  VuMeter,
+} from '@/components/console/index.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useProviders } from '@/hooks/use-providers.js';
 import {
@@ -38,9 +39,8 @@ import {
   useValidateRuntimeProfile,
 } from '@/hooks/use-runtime-profiles.js';
 
-const FIELD_CLASSNAME =
-  'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-body text-foreground outline-none transition focus:border-brand/30';
-const LABEL_CLASSNAME = 'text-eyebrow text-muted-foreground';
+const FIELD_CLASSNAME = 'well-input h-11 w-full px-3 text-body';
+const LABEL_CLASSNAME = 'text-eyebrow text-silver-mute';
 
 const KIND_OPTIONS: Array<{ value: RuntimeProfileKind; label: string; description: string }> = [
   {
@@ -152,19 +152,11 @@ function buildConfig(draft: RuntimeProfileDraft): Record<string, unknown> {
   }
 }
 
-function healthTone(
-  status: RuntimeProfileSummary['lastHealthStatus'],
-): 'default' | 'accent' | 'warning' | 'danger' {
-  switch (status) {
-    case 'healthy':
-      return 'accent';
-    case 'warning':
-      return 'warning';
-    case 'error':
-      return 'danger';
-    default:
-      return 'default';
-  }
+function healthLampTone(status: RuntimeProfileSummary['lastHealthStatus']): LampTone {
+  if (status === 'error') return 'nogo';
+  if (status === 'warning') return 'hold';
+  if (status === 'healthy') return 'go';
+  return 'off';
 }
 
 function profileIcon(kind: RuntimeProfileKind) {
@@ -187,6 +179,13 @@ interface RuntimeDiagnostic {
   value: string;
   tone?: 'default' | 'accent' | 'warning' | 'danger';
   mono?: boolean;
+}
+
+function diagnosticToneClass(tone: RuntimeDiagnostic['tone']): string {
+  if (tone === 'accent') return 'text-led-go';
+  if (tone === 'warning') return 'text-led-hold';
+  if (tone === 'danger') return 'text-led-nogo';
+  return 'text-foreground';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -391,7 +390,7 @@ function RuntimeDiagnosticsGrid({
   const validationRows = validationDiagnostics(validation);
 
   return (
-    <MissionInsetSurface className="space-y-3 p-3" data-runtime-adapter-diagnostics={profile.id}>
+    <RecessedWell className="space-y-3 p-3" data-runtime-adapter-diagnostics={profile.id}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-body-strong text-foreground">Adapter Diagnostics</div>
@@ -400,60 +399,62 @@ function RuntimeDiagnosticsGrid({
             runtime adapter.
           </p>
         </div>
-        <MissionPill tone={profile.executionMode === 'native' ? 'accent' : 'warning'}>
-          {profile.executionMode}
-        </MissionPill>
+        <LampTile
+          label={profile.executionMode}
+          tone={profile.executionMode === 'native' ? 'go' : 'hold'}
+          small
+          interactive={false}
+        />
       </div>
 
       <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
         {rows.map((row) => (
-          <div
-            key={`${row.label}-${row.value}`}
-            className="rounded-[14px] border border-white/10 bg-black/10 px-3 py-2"
-          >
+          <RecessedWell key={`${row.label}-${row.value}`} className="px-3 py-2">
             <div className="text-eyebrow-sm text-muted-foreground">{row.label}</div>
-            <div
-              className={`mt-1 break-words text-caption ${
-                row.tone === 'accent'
-                  ? 'text-brand'
-                  : row.tone === 'warning'
-                    ? 'text-amber-300'
-                    : row.tone === 'danger'
-                      ? 'text-red-200'
-                      : 'text-foreground'
-              } ${row.mono ? 'font-mono' : ''}`}
-            >
-              {row.value}
-            </div>
-          </div>
+            {row.mono ? (
+              <div className="mt-1">
+                <Tag
+                  mono
+                  className={
+                    row.tone && row.tone !== 'default' ? diagnosticToneClass(row.tone) : undefined
+                  }
+                >
+                  {row.value}
+                </Tag>
+              </div>
+            ) : (
+              <div className={`mt-1 break-words text-caption ${diagnosticToneClass(row.tone)}`}>
+                {row.value}
+              </div>
+            )}
+          </RecessedWell>
         ))}
       </div>
 
       {validation ? (
-        <div
-          className="rounded-[14px] border border-brand/15 bg-brand/8 px-3 py-3"
-          data-runtime-validation-result={profile.id}
-        >
+        <RecessedWell className="px-3 py-3" data-runtime-validation-result={profile.id}>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-body-strong text-foreground">Latest validate response</span>
-            <MissionPill tone={healthTone(validation.status)}>{validation.status}</MissionPill>
+            <LampTile
+              label={validation.status}
+              tone={healthLampTone(validation.status)}
+              small
+              interactive={false}
+            />
           </div>
           <p className="mt-2 text-caption text-muted-foreground">{validation.message}</p>
           {validationRows.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
+            <div className="mt-3 flex flex-wrap gap-2">
               {validationRows.map((row) => (
-                <span
-                  key={`${row.label}-${row.value}`}
-                  className={`rounded-full border border-white/10 bg-black/10 px-2 py-1 ${row.mono ? 'font-mono' : ''}`}
-                >
+                <Tag key={`${row.label}-${row.value}`} mono={row.mono}>
                   {row.label}: {row.value}
-                </span>
+                </Tag>
               ))}
             </div>
           ) : null}
-        </div>
+        </RecessedWell>
       ) : null}
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }
 
@@ -605,11 +606,11 @@ function RuntimeProfileCard({
   const Icon = profileIcon(profile.kind);
 
   return (
-    <MissionInsetSurface className="space-y-4 p-4" data-runtime-profile-card={profile.id}>
+    <RecessedWell className="space-y-4 p-4" data-runtime-profile-card={profile.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-white/10 bg-black/20 text-brand">
+            <div className="cap flex h-10 w-10 items-center justify-center">
               <Icon className="h-4 w-4" />
             </div>
             <div>
@@ -618,41 +619,47 @@ function RuntimeProfileCard({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <MissionPill tone="accent">{profile.kind}</MissionPill>
-            <MissionPill tone={healthTone(profile.lastHealthStatus)}>
-              {profile.lastHealthStatus}
-            </MissionPill>
-            <MissionPill>{profile.executionMode}</MissionPill>
-            <MissionPill>{profile.enabled ? 'enabled' : 'disabled'}</MissionPill>
+            <Tag>{profile.kind}</Tag>
+            <LampTile
+              label={profile.lastHealthStatus}
+              tone={healthLampTone(profile.lastHealthStatus)}
+              small
+              interactive={false}
+            />
+            <Tag>{profile.executionMode}</Tag>
+            <Tag>{profile.enabled ? 'enabled' : 'disabled'}</Tag>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <MissionIconButton
+          <button
+            type="button"
             title="Validate runtime profile"
             disabled={validating}
             onClick={() => onValidate(profile.id)}
+            className="cap flex h-10 w-10 items-center justify-center disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${validating ? 'animate-spin' : ''}`} />
-          </MissionIconButton>
-          <MissionIconButton
-            tone="danger"
+          </button>
+          <button
+            type="button"
             title="Delete runtime profile"
             disabled={deleting}
             onClick={() => onDelete(profile.id)}
+            className="cap flex h-10 w-10 items-center justify-center disabled:opacity-50"
           >
-            <Trash2 className="h-4 w-4" />
-          </MissionIconButton>
+            <Trash2 className="h-4 w-4 text-led-nogo" />
+          </button>
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <MissionMetricTile
+        <MetricTile
           label="Bound Employees"
           value={String(profile.boundEmployeeCount)}
           hint="Current assignment count"
           icon={Bot}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Execution"
           value={profile.executionMode}
           hint={
@@ -662,7 +669,7 @@ function RuntimeProfileCard({
           }
           icon={Link2}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Validation"
           value={
             profile.lastValidatedAt
@@ -735,14 +742,14 @@ function RuntimeProfileCard({
         </p>
         <button
           type="button"
-          className="rounded-[16px] border border-brand/20 bg-brand/10 px-4 py-2 text-button-sm text-brand transition hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60"
+          className="cap cap-select px-4 py-2 text-button-sm disabled:cursor-not-allowed disabled:opacity-60"
           disabled={saving}
           onClick={() => onSave(profile, draft)}
         >
           Save profile
         </button>
       </div>
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }
 
@@ -784,47 +791,56 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
 
   if (runtimeProfilesQuery.isLoading || employeesQuery.isLoading) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="STBY"
+        lampTone="off"
         title="Resolving runtime posture"
         description="Team-X is loading runtime profiles, provider posture, and employee bindings for this workspace."
-        icon={Cpu}
       />
     );
   }
 
   if (runtimeProfilesQuery.isError || employeesQuery.isError) {
     return (
-      <MissionStateBlock
+      <SubviewState
+        lampLabel="NO-GO"
+        lampTone="nogo"
         title="Runtime posture could not load"
         description="The runtime profile foundation is present, but this workspace read failed. Retry the view or inspect the main-process logs."
-        icon={Cpu}
-        tone="danger"
       />
     );
   }
 
   return (
     <div className="space-y-4" data-runtime-profiles-panel="">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-eyebrow text-silver-mute">Native execution coverage</span>
+        <VuMeter
+          className="w-40"
+          label="Native execution coverage"
+          value={profiles.length > 0 ? nativeCount / profiles.length : 0}
+        />
+      </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MissionMetricTile
+        <MetricTile
           label="Profiles"
           value={String(profiles.length)}
           hint="Named runtime postures in this workspace"
           icon={Cpu}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Native"
           value={String(nativeCount)}
           hint="Execution-backed today"
           icon={CheckCircle2}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Planned"
           value={String(plannedCount)}
           hint="Still missing a launcher or endpoint"
           icon={GitBranch}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Bound Employees"
           value={String(boundEmployeeCount)}
           hint="Employees with explicit runtime posture"
@@ -832,7 +848,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
         />
       </div>
 
-      <MissionInsetSurface className="space-y-4 p-4">
+      <RecessedWell className="space-y-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-h3 text-foreground">Create Runtime Profile</h3>
@@ -842,7 +858,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
               command or endpoint URL.
             </p>
           </div>
-          <MissionPill tone="accent">BYO agent posture</MissionPill>
+          <Tag>BYO agent posture</Tag>
         </div>
 
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_180px]">
@@ -904,7 +920,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
           </div>
           <button
             type="button"
-            className="rounded-[16px] border border-brand/20 bg-brand/10 px-4 py-2 text-button-sm text-brand transition hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60"
+            className="cap cap-select px-4 py-2 text-button-sm disabled:cursor-not-allowed disabled:opacity-60"
             disabled={createMutation.isPending}
             onClick={() => {
               createMutation.mutate(
@@ -925,14 +941,15 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
           </button>
         </div>
 
-        {createError ? <div className="text-caption text-red-200">{createError}</div> : null}
-      </MissionInsetSurface>
+        {createError ? <div className="text-caption text-led-nogo">{createError}</div> : null}
+      </RecessedWell>
 
       {profiles.length === 0 ? (
-        <MissionStateBlock
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
           title="No runtime profiles are stored yet"
           description="Create a runtime profile above, then bind employees to it from the assignment board below."
-          icon={Cpu}
         />
       ) : (
         <div className="space-y-4">
@@ -970,7 +987,7 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
         </div>
       )}
 
-      <MissionInsetSurface className="space-y-4 p-4">
+      <RecessedWell className="space-y-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-h3 text-foreground">Employee Bindings</h3>
@@ -979,21 +996,22 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
               workspace-scoped and intentionally obvious.
             </p>
           </div>
-          <MissionPill>{employees.length} employees</MissionPill>
+          <Tag>{employees.length} employees</Tag>
         </div>
 
         {employees.length === 0 ? (
-          <MissionStateBlock
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
             title="No employees are available to bind"
             description="Hire at least one employee in this workspace to start assigning runtime posture."
-            icon={Bot}
           />
         ) : (
           <div className="space-y-3">
             {employees.map((employee: Employee) => (
-              <div
+              <RecessedWell
                 key={employee.id}
-                className="grid gap-3 rounded-[18px] border border-white/10 bg-black/10 p-3 md:grid-cols-[minmax(0,1fr)_280px]"
+                className="grid gap-3 p-3 md:grid-cols-[minmax(0,1fr)_280px]"
                 data-runtime-employee-binding={employee.id}
               >
                 <div className="space-y-1">
@@ -1020,16 +1038,16 @@ export function RuntimeProfilesPanel({ companyId }: { companyId: string }) {
                     </option>
                   ))}
                 </select>
-              </div>
+              </RecessedWell>
             ))}
           </div>
         )}
 
-        {bindError ? <div className="text-caption text-red-200">{bindError}</div> : null}
-        {updateError ? <div className="text-caption text-red-200">{updateError}</div> : null}
-        {deleteError ? <div className="text-caption text-red-200">{deleteError}</div> : null}
-        {validateError ? <div className="text-caption text-red-200">{validateError}</div> : null}
-      </MissionInsetSurface>
+        {bindError ? <div className="text-caption text-led-nogo">{bindError}</div> : null}
+        {updateError ? <div className="text-caption text-led-nogo">{updateError}</div> : null}
+        {deleteError ? <div className="text-caption text-led-nogo">{deleteError}</div> : null}
+        {validateError ? <div className="text-caption text-led-nogo">{validateError}</div> : null}
+      </RecessedWell>
     </div>
   );
 }
