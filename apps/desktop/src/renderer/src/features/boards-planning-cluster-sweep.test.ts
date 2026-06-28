@@ -50,4 +50,23 @@ describe('boards & planning cluster sweep (Phase 5a)', () => {
       expectNoLegacy(src, 'kanban-board.tsx');
     });
   });
+
+  describe('create-ticket-dialog', () => {
+    it('well-input fields + dialog selectors preserved, no legacy', () => {
+      const src = read('tickets/create-ticket-dialog.tsx');
+      expect(src).toContain('well-input');
+      expect(src).toContain('aria-hidden={!open}');
+      expect(src).toContain('role="presentation"');
+      for (const id of [
+        'ticket-title',
+        'ticket-desc',
+        'ticket-priority',
+        'ticket-assignee',
+        'ticket-due-date',
+      ]) {
+        expect(src, `missing id ${id}`).toContain(id);
+      }
+      expectNoLegacy(src, 'create-ticket-dialog.tsx');
+    });
+  });
 });
