@@ -148,4 +148,29 @@ describe('boards & planning cluster sweep (Phase 5a)', () => {
       expectNoLegacy(src, 'projects-view.tsx');
     });
   });
+
+  describe('project-detail', () => {
+    it('VU progress + lamps + well-input + selectors preserved, no legacy', () => {
+      const src = read('projects/project-detail.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<VuMeter');
+      expect(src).toContain('<LampTile');
+      expect(src).toContain('well-input');
+      for (const a of ['Close detail panel', 'Delete project']) {
+        expect(src, `missing aria ${a}`).toContain(a);
+      }
+      for (const id of [
+        'project-edit-title',
+        'project-edit-description',
+        'project-edit-status',
+        'project-edit-priority',
+        'project-edit-lead',
+        'project-edit-goal',
+        'project-edit-target-date',
+      ]) {
+        expect(src, `missing id ${id}`).toContain(id);
+      }
+      expectNoLegacy(src, 'project-detail.tsx');
+    });
+  });
 });
