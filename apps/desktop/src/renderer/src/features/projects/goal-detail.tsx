@@ -1,22 +1,29 @@
-import type { Employee } from '@team-x/shared-types';
-import { ArrowLeft, FolderKanban, Trash2 } from 'lucide-react';
+import type { Employee, ProjectStatus } from '@team-x/shared-types';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge.js';
+import {
+  LampTile,
+  type LampTone,
+  RecessedWell,
+  SubviewState,
+  Tag,
+  VuMeter,
+} from '@/components/console/index.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { useDeleteGoal, useGoalDetail } from '@/hooks/use-goals.js';
 import { useAppStore } from '@/store/app-store.js';
 
-const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-brand/10 text-brand',
-  achieved: 'bg-green-500/10 text-green-400',
-  abandoned: 'bg-zinc-500/10 text-zinc-400',
+const STATUS_TONE: Record<string, LampTone> = {
+  active: 'exec',
+  achieved: 'go',
+  abandoned: 'off',
 };
 
-const PROJECT_STATUS_COLORS: Record<string, string> = {
-  planning: 'text-brand',
-  active: 'text-yellow-400',
-  completed: 'text-green-400',
-  archived: 'text-zinc-400',
+const PROJECT_STATUS_TONE: Record<ProjectStatus, LampTone> = {
+  planning: 'hold',
+  active: 'exec',
+  completed: 'go',
+  archived: 'off',
 };
 
 interface GoalDetailPanelProps {
@@ -31,19 +38,11 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
 
   if (isLoading || !detail) {
     return (
-      <div className="flex h-full items-center justify-center border-l border-border bg-background">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      <div className="flex h-full items-center justify-center border-l border-border p-6">
+        <SubviewState lampLabel="STBY" lampTone="hold" title="Loading goal…" />
       </div>
     );
   }
-
-  const statusColor = STATUS_COLORS[detail.status] ?? STATUS_COLORS.active;
-  const progressColor =
-    detail.progressPct > 66
-      ? 'bg-green-500'
-      : detail.progressPct > 33
-        ? 'bg-amber-500'
-        : 'bg-red-500';
 
   return (
     <div className="flex h-full flex-col border-l border-border bg-background">
@@ -51,7 +50,7 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
         <button
           type="button"
           onClick={() => setActiveGoalId(null)}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+          className="cap flex h-8 w-8 shrink-0 items-center justify-center"
           aria-label="Close detail panel"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -64,30 +63,28 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
               onSuccess: () => setActiveGoalId(null),
             });
           }}
-          className="rounded p-1 text-muted-foreground/50 transition-colors hover:bg-red-500/10 hover:text-red-400"
+          className="cap flex h-8 w-8 shrink-0 items-center justify-center"
           aria-label="Delete goal"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4 text-led-nogo" />
         </button>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-4 p-4">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className={`border-0 text-[10px] ${statusColor}`}>
-              {detail.status}
-            </Badge>
+            <LampTile
+              label={detail.status}
+              tone={STATUS_TONE[detail.status] ?? 'off'}
+              small
+              interactive={false}
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-eyebrow-sm text-muted-foreground/70">Progress</span>
+            <span className="text-eyebrow text-silver-mute">Progress</span>
             <div className="flex items-center gap-2">
-              <div className="h-2 flex-1 rounded-full bg-muted">
-                <div
-                  className={`h-2 rounded-full transition-all ${progressColor}`}
-                  style={{ width: `${detail.progressPct}%` }}
-                />
-              </div>
+              <VuMeter className="flex-1" label="Goal progress" value={detail.progressPct / 100} />
               <span className="text-caption font-semibold text-foreground">
                 {detail.progressPct}%
               </span>
@@ -96,14 +93,14 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
 
           {detail.description && (
             <div className="flex flex-col gap-1">
-              <span className="text-eyebrow-sm text-muted-foreground/70">Description</span>
-              <p className="text-caption text-muted-foreground">{detail.description}</p>
+              <span className="text-eyebrow text-silver-mute">Description</span>
+              <p className="text-caption text-silver-mute">{detail.description}</p>
             </div>
           )}
 
           {detail.targetDate && (
             <div className="flex flex-col gap-1">
-              <span className="text-eyebrow-sm text-muted-foreground/70">Target Date</span>
+              <span className="text-eyebrow text-silver-mute">Target Date</span>
               <p className="text-caption text-foreground">
                 {new Date(detail.targetDate).toLocaleDateString()}
               </p>
@@ -111,44 +108,42 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
           )}
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-eyebrow-sm text-muted-foreground/70">
+            <span className="text-eyebrow text-silver-mute">
               Projects ({detail.projects.length})
             </span>
             {detail.projects.length === 0 ? (
-              <p className="text-caption text-muted-foreground/50">
-                No projects linked to this goal.
-              </p>
+              <p className="text-caption text-silver-mute">No projects linked to this goal.</p>
             ) : (
               <div className="flex flex-col gap-1.5">
                 {detail.projects.map((project) => {
                   const lead = project.leadId
                     ? employees.find((e) => e.id === project.leadId)
                     : null;
-                  const projectStatusColor =
-                    PROJECT_STATUS_COLORS[project.status] ?? PROJECT_STATUS_COLORS.planning;
                   return (
-                    <div
-                      key={project.id}
-                      className="flex items-center gap-2 rounded-md bg-surface-50 px-3 py-2"
-                    >
-                      <FolderKanban className={`h-3.5 w-3.5 ${projectStatusColor}`} />
+                    <RecessedWell key={project.id} className="flex items-center gap-2 px-3 py-2">
+                      <LampTile
+                        label={project.status}
+                        tone={PROJECT_STATUS_TONE[project.status] ?? 'off'}
+                        small
+                        interactive={false}
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-caption font-medium text-foreground">
                           {project.title}
                         </p>
-                        <p className="text-caption text-muted-foreground">
-                          {project.status}
-                          {lead ? ` \u00B7 ${lead.name}` : ''}
-                        </p>
+                        {lead ? (
+                          <p className="truncate text-caption text-silver-mute">{lead.name}</p>
+                        ) : null}
                       </div>
-                    </div>
+                      <Tag mono>{project.id.slice(0, 6)}</Tag>
+                    </RecessedWell>
                   );
                 })}
               </div>
             )}
           </div>
 
-          <div className="text-caption text-muted-foreground/50">
+          <div className="text-caption text-silver-mute">
             Created {new Date(detail.createdAt).toLocaleDateString()}
           </div>
         </div>

@@ -173,4 +173,69 @@ describe('boards & planning cluster sweep (Phase 5a)', () => {
       expectNoLegacy(src, 'project-detail.tsx');
     });
   });
+
+  describe('goal-row', () => {
+    it('VU progress + lamp status, no legacy', () => {
+      const src = read('projects/goal-row.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<VuMeter');
+      expect(src).toContain('<LampTile');
+      expectNoLegacy(src, 'goal-row.tsx');
+    });
+  });
+
+  describe('goals-view', () => {
+    it('console header + SubviewState states, no legacy', () => {
+      const src = read('projects/goals-view.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toMatch(/<SubviewState|<StripeHeader/);
+      expectNoLegacy(src, 'goals-view.tsx');
+    });
+  });
+
+  describe('goal-detail', () => {
+    it('VU progress + lamps + selectors preserved, no legacy', () => {
+      const src = read('projects/goal-detail.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<VuMeter');
+      expect(src).toContain('<LampTile');
+      for (const a of ['Close detail panel', 'Delete goal']) {
+        expect(src, `missing aria ${a}`).toContain(a);
+      }
+      expectNoLegacy(src, 'goal-detail.tsx');
+    });
+  });
+
+  describe('create-goal-dialog', () => {
+    it('well-input fields + dialog selectors preserved, no legacy', () => {
+      const src = read('projects/create-goal-dialog.tsx');
+      expect(src).toContain('well-input');
+      expect(src).toContain('aria-hidden={!open}');
+      expect(src).toContain('role="presentation"');
+      for (const id of ['goal-title', 'goal-desc', 'goal-date']) {
+        expect(src, `missing id ${id}`).toContain(id);
+      }
+      expectNoLegacy(src, 'create-goal-dialog.tsx');
+    });
+  });
+
+  describe('create-project-dialog', () => {
+    it('well-input fields + dialog selectors preserved, no legacy', () => {
+      const src = read('projects/create-project-dialog.tsx');
+      expect(src).toContain('well-input');
+      expect(src).toContain('aria-hidden={!open}');
+      expect(src).toContain('role="presentation"');
+      for (const id of [
+        'project-title',
+        'project-desc',
+        'project-priority',
+        'project-lead',
+        'project-goal',
+        'project-target-date',
+      ]) {
+        expect(src, `missing id ${id}`).toContain(id);
+      }
+      expectNoLegacy(src, 'create-project-dialog.tsx');
+    });
+  });
 });

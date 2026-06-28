@@ -6,6 +6,8 @@ import { CreateGoalDialog } from './create-goal-dialog.js';
 import { GoalDetailPanel } from './goal-detail.js';
 import { GoalRow } from './goal-row.js';
 
+import { SubviewState } from '@/components/console/index.js';
+import { Button } from '@/components/ui/button.js';
 import { useGoalEventSync, useGoals } from '@/hooks/use-goals.js';
 import { useProjects } from '@/hooks/use-projects.js';
 import { useAppStore } from '@/store/app-store.js';
@@ -25,11 +27,8 @@ export function GoalsView({ companyId, employees }: GoalsViewProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-          <p className="text-caption text-muted-foreground">Loading goals...</p>
-        </div>
+      <div className="flex h-full items-center justify-center p-6">
+        <SubviewState lampLabel="STBY" lampTone="hold" title="Loading goals…" />
       </div>
     );
   }
@@ -40,23 +39,19 @@ export function GoalsView({ companyId, employees }: GoalsViewProps) {
         <div className="p-4">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-h2 text-foreground">Company Goals ({goals.length})</h2>
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-button-sm text-white transition-colors hover:bg-brand/90"
-            >
+            <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
               <Plus className="h-3.5 w-3.5" />
               New Goal
-            </button>
+            </Button>
           </div>
 
           {goals.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-body-strong text-muted-foreground">No goals yet</p>
-              <p className="mt-1 text-caption text-muted-foreground/70">
-                Create a goal to start tracking progress across projects.
-              </p>
-            </div>
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
+              title="No goals yet"
+              description="Create a goal to start tracking progress across projects."
+            />
           ) : (
             <div className="flex flex-col gap-2">
               {goals.map((goal) => {
