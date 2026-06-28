@@ -238,4 +238,41 @@ describe('boards & planning cluster sweep (Phase 5a)', () => {
       expectNoLegacy(src, 'create-project-dialog.tsx');
     });
   });
+
+  describe('schedule-view', () => {
+    it('console hardware + well-input + all form/aria selectors preserved, no legacy', () => {
+      const src = read('projects/schedule-view.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<MetricTile');
+      expect(src).toContain('<RecessedWell');
+      expect(src).toContain('well-input');
+      for (const id of [
+        'schedule-title',
+        'schedule-kind',
+        'schedule-priority',
+        'schedule-start-date',
+        'schedule-start-time',
+        'schedule-end-date',
+        'schedule-end-time',
+        'schedule-reminder-date',
+        'schedule-reminder-time',
+        'schedule-assignee',
+        'schedule-link-kind',
+        'schedule-link-id',
+        'schedule-description',
+      ]) {
+        expect(src, `missing id ${id}`).toContain(id);
+      }
+      for (const a of [
+        'Previous week',
+        'Next week',
+        'Complete scheduled item',
+        'Delete scheduled item',
+        'Close scheduler form',
+      ]) {
+        expect(src, `missing aria ${a}`).toContain(a);
+      }
+      expectNoLegacy(src, 'schedule-view.tsx');
+    });
+  });
 });
