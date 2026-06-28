@@ -275,4 +275,30 @@ describe('boards & planning cluster sweep (Phase 5a)', () => {
       expectNoLegacy(src, 'schedule-view.tsx');
     });
   });
+
+  describe('whole 5a boards-planning cluster is legacy-free', () => {
+    const FILES = [
+      'tickets/ticket-card.tsx',
+      'tickets/kanban-board.tsx',
+      'tickets/create-ticket-dialog.tsx',
+      'tickets/ticket-detail.tsx',
+      'tickets/tickets-view.tsx',
+      'projects/project-card.tsx',
+      'projects/projects-kanban.tsx',
+      'projects/projects-subtabs.tsx',
+      'projects/projects-view.tsx',
+      'projects/project-detail.tsx',
+      'projects/goal-row.tsx',
+      'projects/goals-view.tsx',
+      'projects/goal-detail.tsx',
+      'projects/create-goal-dialog.tsx',
+      'projects/create-project-dialog.tsx',
+      'projects/schedule-view.tsx',
+    ];
+    for (const file of FILES) {
+      it(`${file} has no legacy composition`, () => {
+        expectNoLegacy(read(file), file);
+      });
+    }
+  });
 });
