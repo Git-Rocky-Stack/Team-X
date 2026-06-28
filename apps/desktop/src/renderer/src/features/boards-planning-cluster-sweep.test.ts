@@ -92,4 +92,20 @@ describe('boards & planning cluster sweep (Phase 5a)', () => {
       expectNoLegacy(src, 'ticket-detail.tsx');
     });
   });
+
+  describe('tickets-view', () => {
+    it('console hardware replaces all Mission*, selectors preserved, no legacy', () => {
+      const src = read('tickets/tickets-view.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<MetricTile');
+      expect(src).toContain('<SubviewState');
+      expect(src).toMatch(/<Faceplate|<StripeHeader/);
+      expect(src).toContain('data-tickets-view=""');
+      expect(src).toContain('data-tickets-board-shell=""');
+      for (const s of ['no-company', 'loading', 'error', 'empty', 'detail-idle']) {
+        expect(src, `missing state ${s}`).toContain(`data-tickets-view-state="${s}"`);
+      }
+      expectNoLegacy(src, 'tickets-view.tsx');
+    });
+  });
 });
