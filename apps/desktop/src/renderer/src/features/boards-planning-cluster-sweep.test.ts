@@ -37,4 +37,17 @@ describe('boards & planning cluster sweep (Phase 5a)', () => {
       expectNoLegacy(src, 'ticket-card.tsx');
     });
   });
+
+  describe('kanban-board', () => {
+    it('console lanes + lamp status + selectors preserved, no legacy', () => {
+      const src = read('tickets/kanban-board.tsx');
+      expect(src).toContain("from '@/components/console");
+      expect(src).toContain('<RecessedWell');
+      expect(src).toContain('<LampTile');
+      expect(src).toContain('data-tickets-board=""');
+      expect(src).toContain('data-tickets-column={column.status}');
+      expect(src).toContain('aria-label="Create ticket"');
+      expectNoLegacy(src, 'kanban-board.tsx');
+    });
+  });
 });
