@@ -157,6 +157,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     errors) and CI's 25-min job budget already absorbs the cold pass.
 
 ### Changed
+- **Aesthetic sweep Phase 4b — heavy autonomy panels.** The four heavy
+  instrumentation panels (`runtime-profiles`, `routines`, `budgets`,
+  `runtime-operations`) recomposed off the legacy `Mission*` shell onto the
+  Command Console foundation: `RecessedWell` cards, Departure-Mono `MetricTile`
+  readouts, `.well-input` forms, stencil word-lamps for status, `Tag` chips for
+  categories, and functional VU meters bound to real ratios already in each
+  panel's data (native-execution coverage, routines-enabled, per-policy spend/cap
+  burn, runtime utilization — every denominator guarded). Completes the Autonomy
+  cluster (Phase 4). `mission-shell.tsx` remains for its non-autonomy consumers,
+  purged in Phase 8. Visual-only: zero behavior/IPC/data change, every E2E/a11y
+  selector preserved.
 - **Aesthetic sweep Phase 4a — Autonomy shell + light panels.** The Autonomy
   view (`autonomy-view.tsx`) + six light panels (doctor, benchmark, agent
   improvement, approvals, artifacts, memory) recomposed off the legacy `Mission*`

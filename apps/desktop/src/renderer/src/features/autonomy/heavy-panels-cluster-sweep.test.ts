@@ -90,4 +90,23 @@ describe('autonomy heavy panels aesthetic sweep (Phase 4b)', () => {
     expect(src).not.toContain('font-mono');
     expect(src).not.toMatch(/text-(?:red|emerald|amber)-\d{2,3}/);
   });
+
+  it('the whole 4b heavy-panel cluster is free of Mission* and legacy composition', () => {
+    const files = [
+      'runtime-profiles-panel.tsx',
+      'routines-panel.tsx',
+      'budgets-panel.tsx',
+      'runtime-operations-panel.tsx',
+    ];
+    for (const file of files) {
+      const src = read(file);
+      expect(src, `${file} imports mission-shell`).not.toContain('mission-shell.js');
+      expect(src, `${file} uses a Mission* primitive`).not.toMatch(/\bMission[A-Z]\w+/);
+      expect(src, `${file} has bg-black`).not.toMatch(/\bbg-black\b/);
+      expect(src, `${file} has border-white/N`).not.toMatch(/border-white\/\d/);
+      expect(src, `${file} has font-mono`).not.toContain('font-mono');
+      expect(src, `${file} has raw status color`).not.toMatch(/text-(?:red|emerald|amber)-\d{2,3}/);
+      expect(src, `${file} has rounded-[Npx]`).not.toMatch(/rounded-\[\d+px\]/);
+    }
+  });
 });
