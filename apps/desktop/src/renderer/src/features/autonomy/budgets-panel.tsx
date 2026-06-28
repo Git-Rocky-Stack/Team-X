@@ -11,13 +11,14 @@ import { AlertTriangle, BadgeDollarSign, Ban, Clock3, ShieldAlert, Trash2 } from
 import { type FormEvent, useMemo, useState } from 'react';
 
 import {
-  MissionIconButton,
-  MissionInsetSurface,
-  MissionMetricTile,
-  MissionPill,
-  MissionStateBlock,
-} from '../mission/mission-shell.js';
-
+  LampTile,
+  type LampTone,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+  VuMeter,
+} from '@/components/console/index.js';
 import {
   useBudgetApprovals,
   useBudgetLedger,
@@ -30,9 +31,8 @@ import { useEmployees } from '@/hooks/use-employees.js';
 import { useRoutines } from '@/hooks/use-routines.js';
 import { useRuntimeProfiles } from '@/hooks/use-runtime-profiles.js';
 
-const FIELD_CLASSNAME =
-  'h-11 w-full rounded-[16px] border border-white/10 bg-black/20 px-3 text-body text-foreground outline-none transition focus:border-brand/30';
-const LABEL_CLASSNAME = 'text-eyebrow text-muted-foreground';
+const FIELD_CLASSNAME = 'well-input h-11 w-full px-3 text-body';
+const LABEL_CLASSNAME = 'text-eyebrow text-silver-mute';
 
 interface BudgetPolicyDraft {
   scopeKind: BudgetScopeKind;
@@ -63,10 +63,10 @@ function formatTimestamp(value: number): string {
   return new Date(value).toLocaleString();
 }
 
-function alertTone(level: BudgetAlertLevel): 'default' | 'warning' | 'danger' | 'accent' {
-  if (level === 'exceeded') return 'danger';
-  if (level === 'warning' || level === 'approval-required') return 'warning';
-  return 'accent';
+function alertLampTone(level: BudgetAlertLevel): LampTone {
+  if (level === 'exceeded') return 'nogo';
+  if (level === 'warning' || level === 'approval-required') return 'hold';
+  return 'go';
 }
 
 function buildScopeLabel(
@@ -117,16 +117,27 @@ function PolicyCard({
     routines,
   );
 
+  const burnCap = Number(policy.hardCapUsd);
+  const burnSpend = Number(policy.currentSpendUsd);
+  const burnRatio = Number.isFinite(burnCap) && burnCap > 0 ? Math.min(1, burnSpend / burnCap) : 0;
+
   return (
-    <MissionInsetSurface className="space-y-4 p-4" data-budget-policy={policy.id}>
+    <RecessedWell className="space-y-4 p-4" data-budget-policy={policy.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-body-strong text-foreground">{scopeLabel}</span>
-            <MissionPill tone="accent">{policy.scopeKind}</MissionPill>
-            <MissionPill tone={alertTone(policy.alertLevel)}>{policy.alertLevel}</MissionPill>
-            <MissionPill>{policy.enabled ? 'enabled' : 'disabled'}</MissionPill>
-            {policy.autoPause ? <MissionPill tone="warning">auto-pause</MissionPill> : null}
+            <Tag>{policy.scopeKind}</Tag>
+            <LampTile
+              label={policy.alertLevel}
+              tone={alertLampTone(policy.alertLevel)}
+              small
+              interactive={false}
+            />
+            <Tag>{policy.enabled ? 'enabled' : 'disabled'}</Tag>
+            {policy.autoPause ? (
+              <LampTile label="auto-pause" tone="hold" small interactive={false} />
+            ) : null}
           </div>
           <p className="text-caption text-muted-foreground">
             Hard cap {formatUsd(policy.hardCapUsd)}. Current spend{' '}
@@ -137,50 +148,56 @@ function PolicyCard({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-full border border-white/10 px-3 py-2 text-button-sm uppercase tracking-[0.14em] text-foreground transition hover:border-brand/30 hover:text-brand disabled:opacity-50"
+            className="cap px-3 py-2 text-button-sm uppercase tracking-[0.14em] disabled:opacity-50"
             onClick={() => onToggleEnabled(policy)}
             disabled={updating}
           >
             {policy.enabled ? 'Disable' : 'Enable'}
           </button>
-          <MissionIconButton
-            tone="danger"
+          <button
+            type="button"
             title="Delete policy"
             disabled={deleting}
             onClick={() => onDelete(policy.id)}
+            className="cap flex h-10 w-10 items-center justify-center disabled:opacity-50"
           >
-            <Trash2 className="h-4 w-4" />
-          </MissionIconButton>
+            <Trash2 className="h-4 w-4 text-led-nogo" />
+          </button>
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <MissionMetricTile
+        <MetricTile
           label="Current Spend"
           value={formatUsd(policy.currentSpendUsd)}
           hint="Current monthly usage"
           icon={BadgeDollarSign}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Remaining"
           value={formatUsd(policy.remainingUsd)}
           hint="Budget left before hard cap"
           icon={Clock3}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Warning At"
           value={formatUsd(policy.warningSpendUsd)}
           hint={`${policy.warningThresholdPct}% threshold`}
           icon={AlertTriangle}
         />
-        <MissionMetricTile
+        <MetricTile
           label="Approval Gate"
           value={policy.approvalSpendUsd ? formatUsd(policy.approvalSpendUsd) : 'Off'}
           hint="Blocks autonomy until reviewed"
           icon={ShieldAlert}
         />
       </div>
-    </MissionInsetSurface>
+
+      <div className="space-y-1">
+        <div className="text-eyebrow text-silver-mute">Budget burn vs hard cap</div>
+        <VuMeter className="w-full" label="Budget burn vs hard cap" value={burnRatio} />
+      </div>
+    </RecessedWell>
   );
 }
 
@@ -267,7 +284,7 @@ export function BudgetsPanel({
 
   return (
     <div className="space-y-4" data-budgets-panel="">
-      <MissionInsetSurface className="space-y-4 p-4">
+      <RecessedWell className="space-y-4 p-4">
         <div className="space-y-1">
           <h3 className="text-h3 text-foreground">Create Budget Policy</h3>
           <p className="text-caption text-muted-foreground">
@@ -347,7 +364,7 @@ export function BudgetsPanel({
               placeholder="18"
             />
           </label>
-          <label className="flex items-center gap-3 rounded-[18px] border border-white/10 bg-black/20 px-4 py-3 text-body text-foreground">
+          <label className="well flex items-center gap-3 px-4 py-3 text-body text-foreground">
             <input
               type="checkbox"
               checked={draft.autoPause}
@@ -359,7 +376,7 @@ export function BudgetsPanel({
           </label>
           <div className="md:col-span-2 xl:col-span-3 flex flex-wrap items-center justify-between gap-3">
             {errorMessage ? (
-              <MissionPill tone="danger">{errorMessage}</MissionPill>
+              <span className="text-caption text-led-nogo">{errorMessage}</span>
             ) : (
               <span className="text-caption text-muted-foreground">
                 Company scope uses the active workspace id automatically.
@@ -367,63 +384,73 @@ export function BudgetsPanel({
             )}
             <button
               type="submit"
-              className="rounded-full border border-brand/30 bg-brand/10 px-4 py-2 text-button-sm uppercase tracking-[0.16em] text-brand transition hover:border-brand/60 disabled:opacity-50"
+              className="cap cap-select px-4 py-2 text-button-sm uppercase tracking-[0.16em] disabled:opacity-50"
               disabled={createPolicy.isPending}
             >
               {createPolicy.isPending ? 'Saving...' : 'Save Policy'}
             </button>
           </div>
         </form>
-      </MissionInsetSurface>
+      </RecessedWell>
 
       {overviewQuery.isLoading ? (
-        <MissionStateBlock
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
           title="Loading budget governance"
           description="Team-X is assembling the monthly spend ledger and policy summaries for this workspace."
-          icon={BadgeDollarSign}
         />
       ) : overviewQuery.isError ? (
-        <MissionStateBlock
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
           title="Budget governance could not load"
           description="The budget service is wired, but the current workspace overview request failed."
-          icon={BadgeDollarSign}
-          tone="danger"
         />
       ) : (
         <>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <MissionMetricTile
+            <MetricTile
               label="Company Burn"
               value={overview ? formatUsd(overview.companySpendUsd) : '$0.00'}
               hint="Current monthly company spend"
               icon={BadgeDollarSign}
             />
-            <MissionMetricTile
+            <MetricTile
               label="Active Policies"
               value={overview ? String(overview.activePolicyCount) : '0'}
               hint="Enabled budget governance scopes"
               icon={Clock3}
             />
-            <MissionMetricTile
+            <MetricTile
               label="Warnings / Exceeded"
               value={overview ? `${overview.warningCount} / ${overview.exceededCount}` : '0 / 0'}
               hint="Threshold pressure right now"
               icon={AlertTriangle}
+              tone={
+                overview && overview.exceededCount > 0
+                  ? 'red'
+                  : overview && overview.warningCount > 0
+                    ? 'amber'
+                    : undefined
+              }
             />
-            <MissionMetricTile
+            <MetricTile
               label="Pending Approvals"
               value={overview ? String(overview.pendingApprovalCount) : '0'}
               hint="Budget exceptions awaiting operator attention"
               icon={ShieldAlert}
+              tone={overview && overview.pendingApprovalCount > 0 ? 'amber' : undefined}
             />
           </div>
 
           <div className="space-y-3">
             {policySummaries.length === 0 ? (
-              <MissionStateBlock
+              <SubviewState
+                lampLabel="STBY"
+                lampTone="off"
                 title="No budget policies configured yet"
                 description="Create the first policy above to turn telemetry and run cost into enforceable governance."
-                icon={BadgeDollarSign}
               />
             ) : (
               policySummaries.map((policy) => (
@@ -449,7 +476,7 @@ export function BudgetsPanel({
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
-            <MissionInsetSurface className="space-y-3 p-4">
+            <RecessedWell className="space-y-3 p-4">
               <div className="space-y-1">
                 <h3 className="text-h3 text-foreground">Recent Spend Ledger</h3>
                 <p className="text-caption text-muted-foreground">
@@ -458,19 +485,16 @@ export function BudgetsPanel({
                 </p>
               </div>
               {ledger.length === 0 ? (
-                <MissionStateBlock
+                <SubviewState
+                  lampLabel="STBY"
+                  lampTone="off"
                   title="No budget ledger entries yet"
                   description="Spend appears here after completed runs land in the monthly ledger."
-                  icon={Clock3}
                 />
               ) : (
                 <div className="space-y-2">
                   {ledger.map((entry) => (
-                    <MissionInsetSurface
-                      key={entry.id}
-                      className="p-3"
-                      data-budget-ledger={entry.id}
-                    >
+                    <RecessedWell key={entry.id} className="p-3" data-budget-ledger={entry.id}>
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -484,8 +508,8 @@ export function BudgetsPanel({
                                 routines,
                               )}
                             </span>
-                            <MissionPill>{entry.scopeKind}</MissionPill>
-                            <MissionPill>{entry.runKind}</MissionPill>
+                            <Tag>{entry.scopeKind}</Tag>
+                            <Tag>{entry.runKind}</Tag>
                           </div>
                           <p className="text-caption text-muted-foreground">
                             {entry.provider} / {entry.model} • {formatTimestamp(entry.occurredAt)}
@@ -495,14 +519,14 @@ export function BudgetsPanel({
                           {formatUsd(entry.amountUsd)}
                         </div>
                       </div>
-                    </MissionInsetSurface>
+                    </RecessedWell>
                   ))}
                 </div>
               )}
-            </MissionInsetSurface>
+            </RecessedWell>
 
             <div className="space-y-4">
-              <MissionInsetSurface className="space-y-3 p-4">
+              <RecessedWell className="space-y-3 p-4">
                 <div className="space-y-1">
                   <h3 className="text-h3 text-foreground">Pending Budget Approvals</h3>
                   <p className="text-caption text-muted-foreground">
@@ -512,15 +536,16 @@ export function BudgetsPanel({
                   </p>
                 </div>
                 {approvals.length === 0 ? (
-                  <MissionStateBlock
+                  <SubviewState
+                    lampLabel="STBY"
+                    lampTone="off"
                     title="No budget approvals are pending"
                     description="Once a policy crosses its approval threshold, the request lands here."
-                    icon={ShieldAlert}
                   />
                 ) : (
                   <div className="space-y-2">
                     {approvals.map((approval) => (
-                      <MissionInsetSurface
+                      <RecessedWell
                         key={approval.id}
                         className="p-3"
                         data-budget-approval={approval.id}
@@ -531,21 +556,26 @@ export function BudgetsPanel({
                               <span className="text-body-strong text-foreground">
                                 {approval.summary}
                               </span>
-                              <MissionPill tone="warning">{approval.priority}</MissionPill>
+                              <LampTile
+                                label={approval.priority}
+                                tone="hold"
+                                small
+                                interactive={false}
+                              />
                             </div>
                             <p className="text-caption text-muted-foreground">
                               Created {formatTimestamp(approval.createdAt)}
                             </p>
                           </div>
-                          <Ban className="h-4 w-4 text-amber-300" />
+                          <Ban className="h-4 w-4 text-led-hold" />
                         </div>
-                      </MissionInsetSurface>
+                      </RecessedWell>
                     ))}
                   </div>
                 )}
-              </MissionInsetSurface>
+              </RecessedWell>
 
-              <MissionInsetSurface className="space-y-3 p-4">
+              <RecessedWell className="space-y-3 p-4">
                 <div className="space-y-1">
                   <h3 className="text-h3 text-foreground">Provider Mix</h3>
                   <p className="text-caption text-muted-foreground">
@@ -560,19 +590,20 @@ export function BudgetsPanel({
                       className="flex items-center justify-between gap-3 text-body"
                     >
                       <span className="text-muted-foreground">{row.provider}</span>
-                      <span className="font-semibold text-foreground">
+                      <span className="text-body-strong text-foreground tabular-nums">
                         {formatUsd(row.amountUsd)}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <MissionStateBlock
+                  <SubviewState
+                    lampLabel="STBY"
+                    lampTone="off"
                     title="No provider mix yet"
                     description="Provider distribution appears once completed runs have non-zero cost."
-                    icon={BadgeDollarSign}
                   />
                 )}
-              </MissionInsetSurface>
+              </RecessedWell>
             </div>
           </div>
         </>
