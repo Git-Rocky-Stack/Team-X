@@ -430,7 +430,12 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             <div className="flex flex-col gap-1.5">
               <span className="text-eyebrow text-silver-mute">Ticket Progress</span>
               <div className="flex items-center gap-2">
-                <VuMeter className="flex-1" label="Ticket progress" value={progressRatio} />
+                <VuMeter
+                  className="flex-1"
+                  variant="progress"
+                  label="Ticket progress"
+                  value={progressRatio}
+                />
                 <span className="text-caption font-medium text-silver-mute">
                   {project.ticketCounts.done}/{project.ticketCounts.total}
                 </span>

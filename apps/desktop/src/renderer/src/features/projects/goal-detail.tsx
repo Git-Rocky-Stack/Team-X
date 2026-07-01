@@ -84,7 +84,12 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
           <div className="flex flex-col gap-1.5">
             <span className="text-eyebrow text-silver-mute">Progress</span>
             <div className="flex items-center gap-2">
-              <VuMeter className="flex-1" label="Goal progress" value={detail.progressPct / 100} />
+              <VuMeter
+                className="flex-1"
+                variant="progress"
+                label="Goal progress"
+                value={detail.progressPct / 100}
+              />
               <span className="text-caption font-semibold text-foreground">
                 {detail.progressPct}%
               </span>

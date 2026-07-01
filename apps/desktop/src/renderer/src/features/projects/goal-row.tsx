@@ -56,6 +56,7 @@ export function GoalRow({ goal, projectCount, onClick, isActive }: GoalRowProps)
           <div className="flex flex-1 items-center gap-2">
             <VuMeter
               className="max-w-[200px] flex-1"
+              variant="progress"
               label="Goal progress"
               value={goal.progressPct / 100}
             />
