@@ -24,7 +24,13 @@ import {
 } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 
-import { MetricTile, RecessedWell, SubviewState, Tag } from '@/components/console/index.js';
+import {
+  LampTile,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+} from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Textarea } from '@/components/ui/textarea.js';
@@ -208,7 +214,14 @@ function ScheduleCard({
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <Icon className="h-3.5 w-3.5 shrink-0 text-silver-mute" />
             <Tag>{sourceLabel(item)}</Tag>
-            {item.status !== 'scheduled' && <Tag>{item.status}</Tag>}
+            {item.status !== 'scheduled' && (
+              <LampTile
+                label={item.status}
+                tone={item.status === 'completed' ? 'go' : 'off'}
+                small
+                interactive={false}
+              />
+            )}
           </div>
           <p className={`mt-1 min-w-0 break-words text-caption font-semibold ${statusClass(item)}`}>
             {item.title}
