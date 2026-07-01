@@ -249,7 +249,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
                     onClick={() =>
                       removeParticipant.mutate({ ticketId, employeeId: participant.id })
                     }
-                    className="ml-auto rounded p-1 text-silver-mute transition-colors hover:text-led-nogo focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="ml-auto rounded p-1 text-silver-mute transition-colors hover:text-led-nogo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={`Remove ${participant.name} from ticket`}
                     disabled={removeParticipant.isPending}
                   >
@@ -290,7 +290,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
                 <button
                   type="button"
                   key={vaultFile.id}
-                  className="flex w-full items-center gap-2 rounded-card px-2 py-1.5 text-caption transition-colors hover:bg-surface-100"
+                  className="flex w-full items-center gap-2 rounded-card px-2 py-1.5 text-caption transition-colors hover:bg-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => {
                     attachFile.mutate({ ticketId, fileId: vaultFile.id });
                     setShowAttachPicker(false);
@@ -324,7 +324,7 @@ export function TicketDetailPanel({ ticketId, employees, onClose }: TicketDetail
                 <button
                   type="button"
                   onClick={() => detachFile.mutate({ ticketId, fileId: attachment.fileId })}
-                  className="rounded p-0.5 text-silver-mute transition-colors hover:text-led-nogo"
+                  className="rounded p-0.5 text-silver-mute transition-colors hover:text-led-nogo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Remove attachment"
                 >
                   <X className="h-2.5 w-2.5" />
