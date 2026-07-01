@@ -30,7 +30,7 @@ export function GoalRow({ goal, projectCount, onClick, isActive }: GoalRowProps)
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-4 rounded-card border px-4 py-3 text-left transition-all hover:shadow-md ${
+      className={`flex w-full items-center gap-4 rounded-card border px-4 py-3 text-left transition-all hover:-translate-y-0.5 ${
         isActive
           ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
           : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]'
