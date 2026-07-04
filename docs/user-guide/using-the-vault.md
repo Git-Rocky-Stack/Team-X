@@ -4,11 +4,11 @@ The File Vault is Team-X's built-in file storage system. Files are stored on you
 
 ## Overview
 
-- **Local storage** — files are copied to a vault directory inside your app data folder
-- **SHA256 integrity** — every file is checksummed on upload and can be verified at any time
-- **FTS5 search** — file names, extracted text content, and tags are searchable via SQLite full-text search
-- **Ticket attachments** — vault files can be linked to tickets for agent-accessible workflows
-- **Agent-created deliverables** — employee-generated files can land in the vault and artifact feed with provenance
+- **Local storage**: files are copied to a vault directory inside your app data folder
+- **SHA256 integrity**: every file is checksummed on upload and can be verified at any time
+- **FTS5 search**: file names, extracted text content, and tags are searchable via SQLite full-text search
+- **Ticket attachments**: vault files can be linked to tickets for agent-accessible workflows
+- **Agent-created deliverables**: employee-generated files can land in the vault and artifact feed with provenance
 
 ## Uploading Files
 
@@ -48,18 +48,18 @@ The agent should report the created workspace path and, when vault storage succe
 
 The vault browser shows all files for the current company:
 
-- **Grid/list view** — file icons with names, sizes, and upload dates
-- **Mime type indicators** — different icons for images, documents, code, and other types
-- **Metadata** — file size, upload date, SHA256 hash
-- **Provenance** — agent-created files appear with employee attribution through the artifact feed
+- **Grid/list view**: file icons with names, sizes, and upload dates
+- **Mime type indicators**: different icons for images, documents, code, and other types
+- **Metadata**: file size, upload date, SHA256 hash
+- **Provenance**: agent-created files appear with employee attribution through the artifact feed
 
 ## Searching
 
 Use the search bar at the top of the Files tab to find files:
 
-- **Filename search** — matches against the original filename
-- **Content search** — matches against extracted text from text-based files
-- **Tag search** — matches against any tags associated with files
+- **Filename search**: matches against the original filename
+- **Content search**: matches against extracted text from text-based files
+- **Tag search**: matches against any tags associated with files
 
 The search uses SQLite FTS5 for fast, ranked results.
 
@@ -69,9 +69,9 @@ Click on a file to open the detail panel showing:
 
 - **Original name** and mime type
 - **File size** and upload timestamp
-- **SHA256 hash** — the integrity checksum
+- **SHA256 hash**: the integrity checksum
 - **Extracted text** preview (for text-based files)
-- **Actions** — download, verify integrity, attach to ticket, delete
+- **Actions**: download, verify integrity, attach to ticket, delete
 
 ## Integrity Verification
 
@@ -100,7 +100,7 @@ To remove an attachment:
 2. Find the attachment chip
 3. Click the remove button
 
-Detaching only removes the link — the file stays in the vault.
+Detaching only removes the link; the file stays in the vault.
 
 ## Storage Location
 

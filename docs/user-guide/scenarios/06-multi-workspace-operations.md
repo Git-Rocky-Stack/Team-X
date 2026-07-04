@@ -102,7 +102,7 @@ Security Policy:
 Employee Policy:
 - Right-size each workspace: hire the smallest team that can do the work (Team-X has no employee quota, so it's purely an operator-discipline question)
 - Roles must be approved by the workspace owner before hiring
-- Token-spend logging is automatic per ticket and per employee — review weekly for client work
+- Token-spend logging is automatic per ticket and per employee; review weekly for client work
 
 Documentation Policy:
 - All client workspaces must have:
@@ -200,7 +200,7 @@ Cost Allocation:
 - Client A: 10% of token spend
 - Client B: 5% of token spend
 
-Note: Team-X charges nothing — these percentages are how the operator allocates the *LLM provider's* monthly bill across the workspaces the same employee worked in. Telemetry per workspace makes the split straightforward.
+Note: Team-X charges nothing; these percentages are how the operator allocates the *LLM provider's* monthly bill across the workspaces the same employee worked in. Telemetry per workspace makes the split straightforward.
 ```
 
 ---
@@ -442,11 +442,11 @@ Creating workspaces for new clients, archiving when projects end, and deleting a
 
 ## Related Documentation
 
-- [Workspaces & Companies](../comprehensive-user-guide.md#3-workspaces--companies) — Workspace management
-- [Settings & Configuration](../comprehensive-user-guide.md#15-settings--configuration) — Policy management
-- [Autonomy → Access](../comprehensive-user-guide.md#13-autonomy-control-plane) — Multi-workspace access
-- [Files & Deliverables](../comprehensive-user-guide.md#11-files--deliverables) — Shared vault
+- [Workspaces & Companies](../comprehensive-user-guide.md#3-workspaces--companies): Workspace management
+- [Settings & Configuration](../comprehensive-user-guide.md#15-settings--configuration): Policy management
+- [Autonomy → Access](../comprehensive-user-guide.md#13-autonomy-control-plane): Multi-workspace access
+- [Files & Deliverables](../comprehensive-user-guide.md#11-files--deliverables): Shared vault
 
 ---
 
-*Scenario: Multi-Workspace Operations — Draft v1.0*
+*Scenario: Multi-Workspace Operations, Draft v1.0*

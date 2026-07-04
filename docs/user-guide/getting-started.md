@@ -29,10 +29,10 @@ Requires Node.js 20+ and pnpm 9+.
 
 When Team-X launches for the first time, it:
 
-1. **Creates the local database** — a SQLite file in your app data directory
-2. **Runs migrations** — sets up all tables (employees, tickets, meetings, vault, etc.)
-3. **Seeds a starter company** — "Strategia-X" with a CEO and a Senior Fullstack Engineer
-4. **Seeds provider templates** — Ollama (local) and Anthropic, both disabled by default
+1. **Creates the local database**: a SQLite file in your app data directory
+2. **Runs migrations**: sets up all tables (employees, tickets, meetings, vault, etc.)
+3. **Seeds a starter company**: "Strategia-X" with a CEO and a Senior Fullstack Engineer
+4. **Seeds provider templates**: Ollama (local) and Anthropic, both disabled by default
 
 You'll see the Dashboard with two employee cards. The app is ready.
 
@@ -58,13 +58,13 @@ Team-X auto-detects Ollama at `http://127.0.0.1:11434`.
 1. Click on any employee card in the Dashboard (e.g., the CEO)
 2. The **Chat Drawer** opens on the right
 3. Type a message in the composer and press **Ctrl/Cmd+Enter**, or click the send button
-4. Watch the agent think and respond in real-time — you'll see the token stream as it generates
+4. Watch the agent think and respond in real-time; you'll see the token stream as it generates
 
 The agent's response is informed by its role specification. The CEO thinks strategically; the engineer thinks technically.
 
 ## The Interface
 
-Team-X wears a Command Console aesthetic — a brushed-black hardware chassis modeled on mission-control panels. A shift toggle in the top bar flips the chrome between **Night Ops** (dark) and **Day Shift** (silver); the LCD-style displays and readouts stay dark in both shifts, the way instrument screens do. Status throughout the app reads as stencil word-lamps — GO, HOLD, NO-GO, STBY, EXEC — rather than plain text labels, so operational posture is legible at a glance.
+Team-X wears a Command Console aesthetic: a brushed-black hardware chassis modeled on mission-control panels. A shift toggle in the top bar flips the chrome between **Night Ops** (dark) and **Day Shift** (silver); the LCD-style displays and readouts stay dark in both shifts, the way instrument screens do. Status throughout the app reads as stencil word-lamps (GO, HOLD, NO-GO, STBY, EXEC) rather than plain text labels, so operational posture is legible at a glance.
 
 ### Top Bar
 
@@ -87,21 +87,21 @@ The top bar contains navigation tabs:
 ### Sidenav
 
 The left sidenav shows:
-- **Company switcher** — switch between multiple AI organizations
-- **Employee list** — quick access to chat with any employee
-- **Threads** — open the communication roster without leaving your current work context
-- **Autonomy** — jump to the operator control plane
-- **User Guide** — role-based onboarding and deep links into live setup surfaces
-- **Status indicators** — agent activity at a glance
+- **Company switcher**: switch between multiple AI organizations
+- **Employee list**: quick access to chat with any employee
+- **Threads**: open the communication roster without leaving your current work context
+- **Autonomy**: jump to the operator control plane
+- **User Guide**: role-based onboarding and deep links into live setup surfaces
+- **Status indicators**: agent activity at a glance
 
 ### Dashboard Subviews
 
 The Dashboard has 5 views accessible via subtabs:
-- **Mission Control** — operations-first view of runs, queues, commands, autonomy posture, and telemetry
-- **Timeline** — chronological event feed
-- **Stream** — raw LLM output from all agents
-- **Floor** — grid layout of employee activity
-- **Commands** — recent command-palette operations
+- **Mission Control**: operations-first view of runs, queues, commands, autonomy posture, and telemetry
+- **Timeline**: chronological event feed
+- **Stream**: raw LLM output from all agents
+- **Floor**: grid layout of employee activity
+- **Commands**: recent command-palette operations
 
 ## Your First Generated File
 

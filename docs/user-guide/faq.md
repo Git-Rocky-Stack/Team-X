@@ -38,15 +38,15 @@ Team-X is a desktop application that provides an AI-powered workforce. You hire 
 
 ### Is Team-X free?
 
-**Yes.** Team-X itself is free and open-source under the MIT license — there is no paid tier, no employee quota, no workspace quota, no routine quota, no MCP-server quota, and no priority support gate. Every feature is available to every user from day one.
+**Yes.** Team-X itself is free and open-source under the MIT license; there is no paid tier, no employee quota, no workspace quota, no routine quota, no MCP-server quota, and no priority support gate. Every feature is available to every user from day one.
 
-The cost you'll see comes from the **LLM providers your agents call** (Anthropic, OpenAI, Google, Groq, etc.) — those bills go to you, from the provider, at the provider's standard rates. Team-X tracks each call's token use and computed cost in the Telemetry tab so you can see exactly what each ticket and each employee is costing your provider account. Run agents on local **Ollama** models if you'd rather pay nothing at all.
+The cost you'll see comes from the **LLM providers your agents call** (Anthropic, OpenAI, Google, Groq, etc.); those bills go to you, from the provider, at the provider's standard rates. Team-X tracks each call's token use and computed cost in the Telemetry tab so you can see exactly what each ticket and each employee is costing your provider account. Run agents on local **Ollama** models if you'd rather pay nothing at all.
 
 ### How do I install Team-X?
 
 1. Download the installer from [github.com/Git-Rocky-Stack/Team-X/releases](https://github.com/Git-Rocky-Stack/Team-X/releases)
 2. Run the installer for your operating system
-3. Launch Team-X (no account or signup — Team-X is local-first)
+3. Launch Team-X (no account or signup, Team-X is local-first)
 4. Complete the Workspace Setup Wizard
 
 See the [Quick Start Guide](./getting-started/quick-start.md) for detailed instructions.
@@ -66,9 +66,9 @@ Employees explain their work in plain language, making it accessible to everyone
 
 ### Where does the cost come from?
 
-Team-X is free. The cost you'll see is the bill from the **LLM provider your agents call** — Anthropic, OpenAI, Google, Groq, OpenRouter, Together, Fireworks, or any OpenAI-compatible endpoint you've configured. You pay the provider directly, at the provider's standard rates. Team-X just routes the request and tracks the tokens.
+Team-X is free. The cost you'll see is the bill from the **LLM provider your agents call**: Anthropic, OpenAI, Google, Groq, OpenRouter, Together, Fireworks, or any OpenAI-compatible endpoint you've configured. You pay the provider directly, at the provider's standard rates. Team-X just routes the request and tracks the tokens.
 
-If you run agents on local **Ollama** models, there is no provider bill at all — everything stays on-device.
+If you run agents on local **Ollama** models, there is no provider bill at all; everything stays on-device.
 
 ### What does a typical run actually cost?
 
@@ -84,28 +84,28 @@ Rough order-of-magnitude (check your provider's pricing page for current rates):
 | OpenAI | Mini/efficient | ¢ |
 | Ollama | Anything local | $0.00 |
 
-Token counts dominate cost more than the choice of model — a 200-message thread on a cheap model can outspend a one-shot call on an expensive model. Watch the Telemetry tab.
+Token counts dominate cost more than the choice of model: a 200-message thread on a cheap model can outspend a one-shot call on an expensive model. Watch the Telemetry tab.
 
 ### How do I control spend?
 
 Team-X has **budget governance** built in (and as of v3.1.0, per-employee monthly token caps via H7 in the audit campaign):
 
-1. **Monthly workspace budget cap** — Settings → Runtime → Budget. Work pauses when exceeded.
-2. **Per-employee token caps** — Set a monthly token ceiling on any employee (officer/management/IC alike).
-3. **Approval gates on write-side runs** — Task Planner decompositions, role promotions, and ticket creates pass through an amber confirmation gate in the Command Palette.
-4. **Provider/model selection** — Filter agents by privacy tier (Local / Open-Source Cloud / Proprietary Cloud) to keep cost classes consistent.
-5. **Routine scheduling** — Slow down automated work that doesn't need to run every 5 minutes.
+1. **Monthly workspace budget cap**: Settings → Runtime → Budget. Work pauses when exceeded.
+2. **Per-employee token caps**: Set a monthly token ceiling on any employee (officer/management/IC alike).
+3. **Approval gates on write-side runs**: Task Planner decompositions, role promotions, and ticket creates pass through an amber confirmation gate in the Command Palette.
+4. **Provider/model selection**: Filter agents by privacy tier (Local / Open-Source Cloud / Proprietary Cloud) to keep cost classes consistent.
+5. **Routine scheduling**: Slow down automated work that doesn't need to run every 5 minutes.
 
 **Cost-optimization tips:**
 
 - Use a mid-tier model (Sonnet-class, GPT-4o-mini-class) for routine tasks; reserve the high tier for complex tickets.
-- Run a local Ollama model for anything that doesn't need a frontier model — RAG indexing, classification, summarization all work well locally.
-- Pause unused employees — they cost nothing when idle, but a runaway routine on a forgotten employee can quietly burn budget.
+- Run a local Ollama model for anything that doesn't need a frontier model: RAG indexing, classification, summarization all work well locally.
+- Pause unused employees; they cost nothing when idle, but a runaway routine on a forgotten employee can quietly burn budget.
 - Set aggressive caps on experimental routines and review the Copilot's cost-insight category weekly.
 
 ### Can I get a refund from Team-X?
 
-Team-X charges nothing — there is nothing to refund on the Team-X side. Refund questions about your LLM provider bill go to your provider (Anthropic, OpenAI, etc.) under their terms.
+Team-X charges nothing; there is nothing to refund on the Team-X side. Refund questions about your LLM provider bill go to your provider (Anthropic, OpenAI, etc.) under their terms.
 
 ---
 
@@ -159,7 +159,7 @@ SOC 2 Type II compliance is **in progress** (expected Q2 2026). Current security
 
 ### What are employees?
 
-Employees are AI agents with **curated roles** — specialized personas with skills, personality traits, and work styles. Examples:
+Employees are AI agents with **curated roles**: specialized personas with skills, personality traits, and work styles. Examples:
 
 - **Full Stack Engineer:** React, TypeScript, Node.js, Python
 - **UI/UX Designer:** Figma, design systems, user research
@@ -176,7 +176,7 @@ Employees are AI agents with **curated roles** — specialized personas with ski
 | Pro | 25 employees |
 | Enterprise | 50+ employees |
 
-**Idle employees cost nothing** — you only pay when they work on tickets.
+**Idle employees cost nothing**; you only pay when they work on tickets.
 
 ### Can I customize employee roles?
 
@@ -347,7 +347,7 @@ Team-X implements **automatic failover** (if configured):
 
 ### What is a workspace?
 
-A workspace is a **company container** — where employees work, tickets are tracked, and budgets are managed.
+A workspace is a **company container**, where employees work, tickets are tracked, and budgets are managed.
 
 **Workspace contains:**
 - Employees
@@ -360,7 +360,7 @@ A workspace is a **company container** — where employees work, tickets are tra
 
 ### Can I have multiple workspaces?
 
-**Yes — unlimited.** Team-X is free and open-source; there are no per-workspace tiers or quotas. Create as many workspaces as you need.
+**Yes, unlimited.** Team-X is free and open-source; there are no per-workspace tiers or quotas. Create as many workspaces as you need.
 
 **Use cases for multiple workspaces:**
 - **Agency:** One workspace per client
@@ -371,9 +371,9 @@ Switch between workspaces from the **Workspace Switcher** in the top bar; create
 
 ### Can employees work across workspaces?
 
-Each employee is scoped to a single workspace by design — the org chart, ticket queue, and budget controls live at the workspace level. If you need parallel work across multiple workspaces, hire equivalent employees in each one (role packs make this fast).
+Each employee is scoped to a single workspace by design: the org chart, ticket queue, and budget controls live at the workspace level. If you need parallel work across multiple workspaces, hire equivalent employees in each one (role packs make this fast).
 
-Cost reporting (token spend per employee, per ticket, per workspace) is per-workspace; there is no shared salary or cross-workspace billing because Team-X charges nothing — your actual bill is the provider's, against the API key you've configured.
+Cost reporting (token spend per employee, per ticket, per workspace) is per-workspace; there is no shared salary or cross-workspace billing because Team-X charges nothing; your actual bill is the provider's, against the API key you've configured.
 
 ### Can I share a workspace with another operator?
 
@@ -383,9 +383,9 @@ Yes. Workspace portability + shared-operator support shipped in v3.0.0. The UI l
 |---|---|---|
 | **Local** | Zero-login local-first; one workstation owns the workspace. Default. | Shipped |
 | **Invited** | Local-first multi-operator: invite other humans by email with a token-based invite, redeem on their own machine, memberships persist locally on both sides. | Shipped |
-| **Cloud** | Hosted/shared supervision seam — workspace metadata is prepared so a hosted Team-X back-end could sync identities and state later. | **Prepared, not yet operational** — the workspace-side wiring exists, the hosted backend does not |
+| **Cloud** | Hosted/shared supervision seam: workspace metadata is prepared so a hosted Team-X back-end could sync identities and state later. | **Prepared, not yet operational**: the workspace-side wiring exists, the hosted backend does not |
 
-Invites are **email-addressed and token-based** — you enter the operator's email and Team-X generates a one-time `inviteToken`. The invitee redeems the token on their own Team-X install to mint a local operator + membership row. Nothing leaves your machine unless you choose Cloud posture and a hosted backend exists to talk to.
+Invites are **email-addressed and token-based**: you enter the operator's email and Team-X generates a one-time `inviteToken`. The invitee redeems the token on their own Team-X install to mint a local operator + membership row. Nothing leaves your machine unless you choose Cloud posture and a hosted backend exists to talk to.
 
 ### What roles can a shared operator have?
 
@@ -395,10 +395,10 @@ Every membership has one of four **operator-membership roles**:
 |---|---|
 | **owner** | All four flags on: `canApproveBudget`, `canApproveAuthority`, `canManageRoutines`, `canManageRuntimes` |
 | **admin** | All four flags on (same defaults as owner) |
-| **operator** | All four flags off by default — grant explicitly per capability |
-| **reviewer** | All four flags off by default — read/comment-oriented; grant explicitly per capability |
+| **operator** | All four flags off by default: grant explicitly per capability |
+| **reviewer** | All four flags off by default: read/comment-oriented; grant explicitly per capability |
 
-The defaults are produced by `membershipCapabilitiesForRole()` in `operator-access-service.ts`; the per-capability flags are granular grants the workspace owner can flip individually in the Portability UI. None of this gates AI-employee work itself — the AI employees in a workspace work for whoever holds the workspace, and the role flags just control which **human** operators can approve budgets, approve authority changes (hire/fire/promote), manage routines, and manage runtimes.
+The defaults are produced by `membershipCapabilitiesForRole()` in `operator-access-service.ts`; the per-capability flags are granular grants the workspace owner can flip individually in the Portability UI. None of this gates AI-employee work itself; the AI employees in a workspace work for whoever holds the workspace, and the role flags just control which **human** operators can approve budgets, approve authority changes (hire/fire/promote), manage routines, and manage runtimes.
 
 ---
 
@@ -422,7 +422,7 @@ The defaults are produced by `membershipCapabilitiesForRole()` in `operator-acce
 ### My Linux AppImage won't start. What do I do?
 
 This is almost always **FUSE 2**. An AppImage is a self-mounting image, and its
-runtime needs the FUSE 2 library (`libfuse.so.2`) on your machine — Team-X's own
+runtime needs the FUSE 2 library (`libfuse.so.2`) on your machine; Team-X's own
 libraries are bundled, but FUSE is not. Modern Ubuntu (22.04+) stopped installing
 it by default, and Ubuntu 24.04 renamed the package to `libfuse2t64`, so a stock
 desktop double-clicks the AppImage and nothing happens.
@@ -438,16 +438,16 @@ desktop double-clicks the AppImage and nothing happens.
    - Ubuntu 22.04 / Debian: `sudo apt install libfuse2`
    - Fedora: `sudo dnf install fuse-libs`
 
-**Prefer not to deal with FUSE at all?** Use the **`.deb`** instead — it installs
+**Prefer not to deal with FUSE at all?** Use the **`.deb`** instead; it installs
 like any system package and pulls its own dependencies:
 ```
 sudo apt install ./Team-X-<version>-x64.deb
 ```
 
-To see the exact error, run the AppImage from a terminal — the message will name
+To see the exact error, run the AppImage from a terminal; the message will name
 the missing piece (e.g. `dlopen(): error loading libfuse.so.2`). If you instead
 see a *sandbox* error mentioning user namespaces (common on Ubuntu 24.04), that's
-a different issue — please open a ticket with the full terminal output and your
+a different issue; please open a ticket with the full terminal output and your
 `lsb_release -a`.
 
 ### Agent run stuck. What do I do?
@@ -563,7 +563,7 @@ a different issue — please open a ticket with the full terminal output and you
 
 ## Uninstalling & Data Export
 
-Team-X is local-first — there is no account, no login, no email, and no remote service to cancel. Everything lives on your machine: workspace data (SQLite), file vault (filesystem blobs), and provider API keys (OS keychain via keytar).
+Team-X is local-first: there is no account, no login, no email, and no remote service to cancel. Everything lives on your machine: workspace data (SQLite), file vault (filesystem blobs), and provider API keys (OS keychain via keytar).
 
 ### How do I back up my workspace?
 
@@ -571,7 +571,7 @@ Use the built-in backup tool:
 
 1. Open **Settings → Data → Create Backup**
 2. Team-X writes a signed archive (SQLite DB + vault files + manifest) to disk
-3. Save the archive anywhere — external drive, cloud sync folder, encrypted bundle
+3. Save the archive anywhere: external drive, cloud sync folder, encrypted bundle
 
 To restore on a new machine: install Team-X, then **Settings → Data → Restore from Backup** and point at the archive. Manifest validation catches tampering or corruption.
 
@@ -579,11 +579,11 @@ Backups can also be deleted from the same panel (v3.0.0 added a per-row delete b
 
 ### Can I export my data without using a backup?
 
-Yes — backups are the primary path because they round-trip cleanly, but you can also:
+Yes, backups are the primary path because they round-trip cleanly, but you can also:
 
 - **Files → Export All Artifacts** for everything employees have produced (original file formats preserved)
 - Manually copy the workspace database from your OS-specific Team-X data directory
-- Use the file vault directly — vault files are stored as plain SHA256-verified blobs on disk
+- Use the file vault directly: vault files are stored as plain SHA256-verified blobs on disk
 
 ### How do I uninstall Team-X?
 
@@ -598,11 +598,11 @@ Yes — backups are the primary path because they round-trip cleanly, but you ca
    - **Linux:** `~/.config/Team-X` and `~/.local/share/Team-X`
 4. Provider API keys persist in your OS keychain (keytar). To remove them: Windows Credential Manager → search "Team-X"; macOS Keychain Access → search "Team-X"; Linux Secret Service / `secret-tool`.
 
-There is no remote data to delete — Team-X never had any.
+There is no remote data to delete; Team-X never had any.
 
 ### Can I run multiple Team-X workspaces side-by-side?
 
-Yes. The **Workspace Switcher** in the top bar lets you run multiple companies side-by-side with isolated employees, tickets, budgets, and data. Use **Workspace switcher → Create workspace…** to add another, or the same switcher to flip between existing ones. Nothing to merge or migrate — each workspace is a separate company row in the same local database.
+Yes. The **Workspace Switcher** in the top bar lets you run multiple companies side-by-side with isolated employees, tickets, budgets, and data. Use **Workspace switcher → Create workspace…** to add another, or the same switcher to flip between existing ones. Nothing to merge or migrate: each workspace is a separate company row in the same local database.
 
 ---
 
@@ -613,14 +613,14 @@ Yes. The **Workspace Switcher** in the top bar lets you run multiple companies s
 - **Documentation:** [Comprehensive User Guide](./comprehensive-user-guide.md)
 - **Scenarios:** [Real-world examples](./scenarios/)
 - **Troubleshooting:** [Common issues](./troubleshooting.md)
-- **Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — Q&A, ideas, show-and-tell
-- **Issues:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues) — Bug reports
+- **Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions): Q&A, ideas, show-and-tell
+- **Issues:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues): Bug reports
 
 ### Feature Requests
 
 Have an idea for improving Team-X? We'd love to hear it:
 
-- **GitHub Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — open a discussion in the "Ideas" category
+- **GitHub Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions): open a discussion in the "Ideas" category
 
 ---
 

@@ -4,7 +4,7 @@
 
 ---
 
-# Operational Handoff — [Operator Name] to [Backup Operator Name]
+# Operational Handoff: [Operator Name] to [Backup Operator Name]
 **Dates:** [Start Date] - [End Date] ([Duration])
 **Prepared by:** [Operator Name]
 **Prepared for:** [Backup Operator Name]

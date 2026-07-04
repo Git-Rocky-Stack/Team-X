@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-This scenario demonstrates using Team-X to manage a complete product development lifecycle from initial concept through launch. It shows how an operator leverages AI employees for planning, decomposition, execution, coordination, and delivery — all within a governed, auditable framework.
+This scenario demonstrates using Team-X to manage a complete product development lifecycle from initial concept through launch. It shows how an operator leverages AI employees for planning, decomposition, execution, coordination, and delivery, all within a governed, auditable framework.
 
 **Scenario Duration:** 6 weeks (compressed for documentation)
 **Team Size:** 7 AI employees across 3 functions (Product, Engineering, Design)
@@ -41,7 +41,7 @@ This scenario demonstrates using Team-X to manage a complete product development
 
 ### The Scenario Context
 
-**Product:** "TeamFlow Analytics" — A dashboard for engineering leaders to track team productivity, sprint health, and blocker patterns.
+**Product:** "TeamFlow Analytics", a dashboard for engineering leaders to track team productivity, sprint health, and blocker patterns.
 
 **Business Problem:** Engineering leaders lack visibility into team velocity, blocked work patterns, and emerging risks. Data exists in tools (Jira, GitHub, Slack) but is fragmented and requires manual synthesis.
 
@@ -77,7 +77,7 @@ Elena (Tech Lead)
 ├── Sarah (QA Engineer)
 └── James (DevOps Engineer)
 
-Alex (Product Manager) — reports to workspace owner
+Alex (Product Manager): reports to workspace owner
 ```
 
 ---
@@ -148,25 +148,25 @@ query_projects({ name: "TeamFlow Analytics MVP" })
 > Created 9 tickets for TeamFlow Analytics MVP:
 >
 > **Planning (2):**
-> 1. Requirements specification — Alex (Product Manager)
-> 2. UX mockups & design system — Lin (Designer)
+> 1. Requirements specification: Alex (Product Manager)
+> 2. UX mockups & design system: Lin (Designer)
 >
 > **Backend (2):**
-> 3. Data pipeline architecture — Mike (Backend Engineer)
-> 4. Insight aggregation service — Mike (Backend Engineer)
+> 3. Data pipeline architecture: Mike (Backend Engineer)
+> 4. Insight aggregation service: Mike (Backend Engineer)
 >
 > **Frontend (2):**
-> 5. Dashboard component library — Priya (Frontend Engineer)
-> 6. Real-time analytics dashboard — Priya (Frontend Engineer)
+> 5. Dashboard component library: Priya (Frontend Engineer)
+> 6. Real-time analytics dashboard: Priya (Frontend Engineer)
 >
 > **Infrastructure (1):**
-> 7. CI/CD pipeline & deployment — James (DevOps Engineer)
+> 7. CI/CD pipeline & deployment: James (DevOps Engineer)
 >
 > **QA (1):**
-> 8. Test plan & automated testing — Sarah (QA Engineer)
+> 8. Test plan & automated testing: Sarah (QA Engineer)
 >
 > **Integration (1):**
-> 9. API integration & end-to-end — Elena (Tech Lead)
+> 9. API integration & end-to-end: Elena (Tech Lead)
 >
 > All tickets linked to TeamFlow Analytics MVP project.
 > Estimated completion: 6 weeks based on team capacity.
@@ -258,7 +258,7 @@ Creating design system for TeamFlow Analytics:
 
 Design principles:
 - Data-first: Charts and metrics take prominence
-- Scanability: 5-second rule — can user understand team health in 5 seconds?
+- Scanability: 5-second rule (can user understand team health in 5 seconds?)
 - Action-oriented: Every insight has a "what to do" recommendation
 
 Deliverables:
@@ -268,19 +268,19 @@ Deliverables:
 
 Brand: Strategia-X color palette with data-viz friendly variations.
 
-Working on mockups now — will share for feedback.
+Working on mockups now. Will share for feedback.
 ```
 
 **Alex (comment):**
 ```
-Lin — can you prioritize the Overview dashboard? We want to validate the 
+Lin, can you prioritize the Overview dashboard? We want to validate the 
 core concept before detailed views. Also, make sure to show the "blocked 
-work" pattern prominently — that's our key differentiator.
+work" pattern prominently. That's our key differentiator.
 ```
 
 **Priya (added as participant):**
 ```
-Lin — once you have mockups, I can start building the component library. 
+Lin, once you have mockups, I can start building the component library. 
 Would be helpful to have:
 - Responsive breakpoints (desktop primary, tablet secondary)
 - Chart component specs (libraries: Recharts vs. D3 vs. Chart.js)
@@ -300,7 +300,7 @@ Key decisions:
 - 4-column grid for metrics
 - Color coding: red (critical), amber (warning), green (healthy), blue (info)
 
-Feedback welcome — especially on the insight cards layout.
+Feedback welcome, especially on the insight cards layout.
 ```
 
 **Resolution:** Lin finalizes design system, attaches Figma link. Ticket marked Done.
@@ -312,7 +312,7 @@ Feedback welcome — especially on the insight cards layout.
 **Mission Control View:**
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ TeamFlow Analytics MVP — Project Progress                           │
+│ TeamFlow Analytics MVP: Project Progress                            │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ Completion: 22% (2/9 tickets done)                                  │
@@ -322,15 +322,15 @@ Feedback welcome — especially on the insight cards layout.
 │ ✅ UX mockups & design system                                       │
 │                                                                   │
 │ IN PROGRESS (1):                                                   │
-│ 🔄 Dashboard component library — Priya (Frontend Engineer)           │
+│ 🔄 Dashboard component library: Priya (Frontend Engineer)            │
 │                                                                   │
 │ OPEN (6):                                                          │
-│ ⬜ Data pipeline architecture — Mike (Backend)                       │
-│ ⬜ Insight aggregation service — Mike (Backend)                      │
-│ ⬜ Real-time analytics dashboard — Priya (Frontend)                  │
-│ ⬜ CI/CD pipeline & deployment — James (DevOps)                       │
-│ ⬜ Test plan & automated testing — Sarah (QA)                        │
-│ ⬜ API integration & end-to-end — Elena (Tech Lead)                  │
+│ ⬜ Data pipeline architecture: Mike (Backend)                        │
+│ ⬜ Insight aggregation service: Mike (Backend)                       │
+│ ⬜ Real-time analytics dashboard: Priya (Frontend)                   │
+│ ⬜ CI/CD pipeline & deployment: James (DevOps)                        │
+│ ⬜ Test plan & automated testing: Sarah (QA)                         │
+│ ⬜ API integration & end-to-end: Elena (Tech Lead)                   │
 │                                                                   │
 │ Blockers: 0                                                        │
 │ Velocity: On track (2 tickets in Week 1, target: 2)                 │
@@ -374,7 +374,7 @@ Working on detailed architecture document.
 
 **Elena (Tech Lead):**
 ```
-Mike — a few questions:
+Mike, a few questions:
 
 1. Webhook reliability: What if Jira/GitHub webhooks fail? Do we have 
    retry logic or fall back to polling?
@@ -420,7 +420,7 @@ Updating architecture doc with these decisions.
 
 **James (DevOps, added as participant):**
 ```
-Mike — once architecture is finalized, I'll need:
+Mike, once architecture is finalized, I'll need:
 1. Docker Compose for local development
 2. Kubernetes manifests for production (eventually)
 3. Environment variable config guide
@@ -470,12 +470,12 @@ Arch looks solid. Proceed to implementation phase.
 Building the component library based on Lin's design system:
 
 Component list:
-1. MetricCard — displays single KPI with trend indicator
-2. ChartContainer — responsive wrapper for all charts
-3. InsightCard — Copilot-style insight with severity stripe
-4. DataTable — sortable, filterable data table
-5. StatusBadge — Open/In Progress/Blocked/Done badges
-6. Avatar — user avatar with online status
+1. MetricCard: displays single KPI with trend indicator
+2. ChartContainer: responsive wrapper for all charts
+3. InsightCard: Copilot-style insight with severity stripe
+4. DataTable: sortable, filterable data table
+5. StatusBadge: Open/In Progress/Blocked/Done badges
+6. Avatar: user avatar with online status
 
 Tech stack:
 - React 19 (with new compiler optimizations)
@@ -488,7 +488,7 @@ Starting with MetricCard and ChartContainer.
 
 **Lin (Designer):**
 ```
-Priya — quick question on MetricCard:
+Priya, quick question on MetricCard:
 
 In the mockups, the metric card has a "trend" indicator (arrow up/down 
 with percentage). Should this be:
@@ -520,7 +520,7 @@ interface MetricCardProps {
 This gives us flexibility. For MVP, we can start with manual trends 
 (hardcoded in API) and move to auto-calculation in iteration.
 
-Lin — does this approach work for you?
+Lin, does this approach work for you?
 ```
 
 **Lin:**
@@ -539,7 +539,7 @@ Absolutely. I'll add:
 2. Loading prop on MetricCard
 3. Error state with retry button
 
-Also implementing "optimistic UI" — cards show cached data immediately 
+Also implementing "optimistic UI": cards show cached data immediately 
 then refresh in background.
 
 Attaching component preview for review.
@@ -549,7 +549,7 @@ Attaching component preview for review.
 
 **Elena (Tech Lead):**
 ```
-Priya — component looks great. A few code review notes:
+Priya, component looks great. A few code review notes:
 
 1. Consider using React.memo() for MetricCard to prevent unnecessary 
    re-renders when parent updates.
@@ -596,19 +596,19 @@ Component library is ready for integration. Marking ticket Done.
 
 **Priya:**
 ```
-Mike — I'm ready to integrate the dashboard, but I need the API contract.
+Mike, I'm ready to integrate the dashboard, but I need the API contract.
 
 Can you provide:
 1. OpenAPI spec for all endpoints
 2. Sample response payloads
 3. Authentication method (if any)
 
-Even stub endpoints would work — I can mock responses for frontend development.
+Even stub endpoints would work; I can mock responses for frontend development.
 ```
 
 **Mike:**
 ```
-Priya — good timing. I just finished the ingestion service architecture.
+Priya, good timing. I just finished the ingestion service architecture.
 
 Let me create the API spec now.
 
@@ -640,7 +640,7 @@ For now, I'll use MSW (Mock Service Worker) to intercept API calls and
 return sample responses. This lets me develop the dashboard UI without 
 waiting for real backend.
 
-Mike — let me know when the staging API is ready. I'll switch from 
+Mike, let me know when the staging API is ready. I'll switch from 
 mocks to real integration at that point.
 ```
 
@@ -692,12 +692,12 @@ Testing scope:
 
 Target coverage: 80% for critical paths, 60% overall.
 
-Writing test cases now — will share for review.
+Writing test cases now. Will share for review.
 ```
 
 **Elena (Tech Lead):**
 ```
-Sarah — looks comprehensive. A few additions:
+Sarah, looks comprehensive. A few additions:
 
 1. Load testing: Can we simulate 10 concurrent users? This was in the PRD.
 2. Data freshness: Verify that dashboard updates within 1 hour of data change.
@@ -755,7 +755,7 @@ Ready to begin execution. Any blockers?
 
 **Mike (Backend Engineer):**
 ```
-Sarah — one thing to watch for in the ingestion pipeline test:
+Sarah, one thing to watch for in the ingestion pipeline test:
 
 The "no data loss" requirement is tricky with webhooks. If a webhook 
 fails mid-batch, we retry the batch, but we might process some events 
@@ -777,7 +777,7 @@ Good catch, Mike. I'll add:
 3. Dead letter queue test (trigger failure, verify DQL population, 
    verify manual recovery)
 
-Also adding test for the "reconciliation job" you mentioned — the 
+Also adding test for the "reconciliation job" you mentioned, the 
 hourly job that catches gaps. That's our safety net.
 
 Test plan updated. Starting execution now.
@@ -809,7 +809,7 @@ Coordinating end-to-end integration for MVP launch:
 
 Integration checklist:
 1. Frontend ↔ Backend API (Priya + Mike)
-2. Backend ↔ Data Sources (Mike — Jira/GitHub/Slack webhooks)
+2. Backend ↔ Data Sources (Mike: Jira/GitHub/Slack webhooks)
 3. DevOps deployment pipeline (James)
 4. QA sign-off (Sarah)
 5. Documentation (Alex)
@@ -830,7 +830,7 @@ Scheduling daily standup in Meetings tab to track blockers.
 
 **Meeting Minutes (generated automatically):**
 ```
-TeamFlow Analytics MVP — Daily Standup (2026-05-15)
+TeamFlow Analytics MVP: Daily Standup (2026-05-15)
 
 AGENDA:
 1. Integration status
@@ -912,7 +912,7 @@ Pipeline is live. First staging deployment successful.
 
 **Elena (Tech Lead):**
 ```
-James — quick review of the production deployment:
+James, quick review of the production deployment:
 
 1. Rollback plan: If production deploy fails, what's our rollback 
    procedure? Do we have blue-green deployment or canary?
@@ -975,7 +975,7 @@ This is comprehensive, James. A few small suggestions:
    with post-incident analysis.
 
 2. For monitoring, I'd like a "dashboard health" metric in Mission 
-   Control — a single score that combines API health, ingestion lag, 
+   Control, a single score that combines API health, ingestion lag, 
    and error rate. This would be helpful for operators.
 
 3. For backups, can we test the restore process? I'd like us to do a 
@@ -997,7 +997,7 @@ Otherwise: Approved. Proceed to production readiness.
 **Doctor Report:**
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Doctor Report — Launch Day Pre-Flight                               │
+│ Doctor Report: Launch Day Pre-Flight                                │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ ✅ Database integrity           PASS                                │
@@ -1053,7 +1053,7 @@ Next: Monitor CloudWatch alarms for 1 hour.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Launch Monitor — TeamFlow Analytics MVP                            │
+│ Launch Monitor: TeamFlow Analytics MVP                             │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ Hero Metrics (Live):                                                │
@@ -1101,7 +1101,7 @@ Recommendation: Review AWS cost breakdown, consider:
 Noted. Expected spike from launch. Let's monitor for 24 hours before 
 adjusting. The 18-day projection is within our buffer.
 
-James — can you check CloudFront cache hit ratio tomorrow? If it's 
+James, can you check CloudFront cache hit ratio tomorrow? If it's 
 < 80%, we should increase TTL for static assets.
 ```
 
@@ -1152,7 +1152,7 @@ Ctrl+K → "Call a meeting: TeamFlow Analytics MVP Retro"
 
 **Meeting Minutes:**
 ```
-TeamFlow Analytics MVP — Retrospective (2026-05-22)
+TeamFlow Analytics MVP: Retrospective (2026-05-22)
 
 WHAT WENT WELL:
 - ✅ Launched on time (6 weeks)
@@ -1221,15 +1221,15 @@ The post-launch retro identified wins, losses, and action items. Team-X employee
 
 ## Related Documentation
 
-- [Task Planner Documentation](../task-planner.md) — Write-side decomposition
-- [Mission Control Dashboard](../comprehensive-user-guide.md#5-mission-control-dashboard) — Monitoring project progress
-- [Copilot: Proactive Intelligence](../comprehensive-user-guide.md#12-copilot-proactive-intelligence) — Cost monitoring
-- [Autonomy Control Plane](../comprehensive-user-guide.md#13-autonomy-control-plane) — Governance and approvals
-- [Tickets & Work Management](../comprehensive-user-guide.md#7-tickets--work-management) — Ticket lifecycle
+- [Task Planner Documentation](../task-planner.md): Write-side decomposition
+- [Mission Control Dashboard](../comprehensive-user-guide.md#5-mission-control-dashboard): Monitoring project progress
+- [Copilot: Proactive Intelligence](../comprehensive-user-guide.md#12-copilot-proactive-intelligence): Cost monitoring
+- [Autonomy Control Plane](../comprehensive-user-guide.md#13-autonomy-control-plane): Governance and approvals
+- [Tickets & Work Management](../comprehensive-user-guide.md#7-tickets--work-management): Ticket lifecycle
 
 ---
 
-*Scenario: Product Development Lifecycle — Draft v1.0*
+*Scenario: Product Development Lifecycle, Draft v1.0*
 
 **Next Scenarios:**
 - [Cost Optimization Playbook](./02-cost-optimization-playbook.md)

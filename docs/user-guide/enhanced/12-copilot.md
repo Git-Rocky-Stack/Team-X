@@ -256,7 +256,7 @@ Access via **Settings → Runtime → Copilot**:
 | Setting | Default | Range | Purpose |
 |---------|---------|-------|---------|
 | **Enabled** | `true` | true/false | Master switch for all Copilot activity |
-| **Interval Minutes** | `5` | 1–60 | How often the analyzer runs (cadence) |
+| **Interval Minutes** | `5` | 1-60 | How often the analyzer runs (cadence) |
 | **Categories** | All 5 enabled | Any subset | Which categories to surface (uncheck to disable) |
 
 ### Category Weights
@@ -366,8 +366,8 @@ The **Ask Copilot** input at the bottom of the Copilot sidebar allows direct que
 
 **Start of day:**
 1. Open Copilot (`Cmd/Ctrl+Shift+K`)
-2. Scan Critical insights (red stripe) — these need action
-3. Review Warning insights (amber stripe) — prioritize by relevance
+2. Scan Critical insights (red stripe): these need action
+3. Review Warning insights (amber stripe): prioritize by relevance
 4. Dismiss Info insights if not relevant, or note positive signals
 5. Use "Ask Copilot" to synthesize: "What changed since yesterday?"
 
@@ -593,12 +593,12 @@ Use both for complete awareness:
 
 ## Related Sections
 
-- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard) — Real-time operations view
-- [Autonomy Control Plane](13-autonomy-control-plane.md#13-autonomy-control-plane) — Agent improvement loop
-- [Telemetry & Costs](../comprehensive-user-guide.md#16-telemetry--costs) — Detailed cost analysis
-- [Copilot Service](../copilot-service.md) — Technical deep-dive on analyzer
-- [Copilot UI](../copilot-ui.md) — User interface details
+- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard): Real-time operations view
+- [Autonomy Control Plane](13-autonomy-control-plane.md#13-autonomy-control-plane): Agent improvement loop
+- [Telemetry & Costs](../comprehensive-user-guide.md#16-telemetry--costs): Detailed cost analysis
+- [Copilot Service](../copilot-service.md): Technical deep-dive on analyzer
+- [Copilot UI](../copilot-ui.md): User interface details
 
 ---
 
-*Enhanced Copilot documentation — 320+ lines vs. original ~80 lines*
+*Enhanced Copilot documentation: 320+ lines vs. original ~80 lines*

@@ -241,18 +241,18 @@ When using templates:
 ## Need More Help?
 
 **Documentation:**
-- [Quick Start Guide](../getting-started/quick-start.md) — Get started in 15 minutes
-- [Comprehensive User Guide](../comprehensive-user-guide.md) — Full documentation
-- [Scenarios](../scenarios/) — Real-world examples
+- [Quick Start Guide](../getting-started/quick-start.md): Get started in 15 minutes
+- [Comprehensive User Guide](../comprehensive-user-guide.md): Full documentation
+- [Scenarios](../scenarios/): Real-world examples
 
 **Support:**
-- [FAQ](../faq.md) — Frequently asked questions
-- [Troubleshooting](../troubleshooting.md) — Common issues and solutions
-- [Glossary](../glossary.md) — Terminology reference
+- [FAQ](../faq.md): Frequently asked questions
+- [Troubleshooting](../troubleshooting.md): Common issues and solutions
+- [Glossary](../glossary.md): Terminology reference
 
 **Community:**
-- [GitHub Discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — Community Q&A and feature requests
-- [GitHub Issues](https://github.com/Git-Rocky-Stack/Team-X/issues) — Bug reports and tracked work
+- [GitHub Discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions): Community Q&A and feature requests
+- [GitHub Issues](https://github.com/Git-Rocky-Stack/Team-X/issues): Bug reports and tracked work
 
 ---
 

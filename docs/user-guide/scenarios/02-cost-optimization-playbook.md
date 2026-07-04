@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-This scenario demonstrates how to identify and reduce Team-X spend while maintaining productivity. Cost management is critical for sustainable AI workforce operations — small optimizations compound into significant savings over time.
+This scenario demonstrates how to identify and reduce Team-X spend while maintaining productivity. Cost management is critical for sustainable AI workforce operations; small optimizations compound into significant savings over time.
 
 **Scenario Context:** A workspace has grown to 15 employees running 24/7 operations with routines and agentic workflows. Monthly spend has crept to $450, exceeding the $300 budget by 50%.
 
@@ -129,7 +129,7 @@ cheaper models.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Cost Analysis — Last 30 Days                                      │
+│ Cost Analysis: Last 30 Days                                       │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ Provider Breakdown:                                                 │
@@ -155,7 +155,7 @@ cheaper models.
 **Problem Identified:**
 - 23% month-over-month increase
 - Premium model (Sonnet) overused for simple tasks
-- Elena (Tech Lead) is top spender — likely doing complex reviews that could be optimized
+- Elena (Tech Lead) is top spender, likely doing complex reviews that could be optimized
 
 ---
 
@@ -408,7 +408,7 @@ Deploying to staging for validation.
 [Tool call: deploy_staging]
 Deployed successfully.
 
-Elena — can you test a few code reviews with the new logic?
+Elena, can you test a few code reviews with the new logic?
 ```
 
 **Elena (Tech Lead):**
@@ -484,7 +484,7 @@ One consideration: With fewer runs, there's more time between
 reviews. Should we add a threshold trigger? Like: Run MWF OR if 
 change count > 15?
 
-Elena — what's your preference?
+Elena, what's your preference?
 ```
 
 **Elena (Tech Lead):**
@@ -621,13 +621,13 @@ thresholds.
 │                                                                     │
 │ Status: ✅ Healthy (currently at $280/month, 93% of limit)        │
 │                                                                     │
-│ EMPLOYEE BUDGETS (optional — for granular control)                 │
+│ EMPLOYEE BUDGETS (optional, for granular control)                  │
 │ [+ Add Employee Budget]                                             │
 │                                                                     │
-│ RUNTIME BUDGETS (optional — for expensive runtimes)                 │
+│ RUNTIME BUDGETS (optional, for expensive runtimes)                  │
 │ [+ Add Runtime Budget]                                              │
 │                                                                     │
-│ ROUTINE BUDGETS (optional — for recurring automation)                │
+│ ROUTINE BUDGETS (optional, for recurring automation)                 │
 │ [+ Add Routine Budget]                                              │
 │                                                                     │
 │ [Save Configuration]                     [View Ledger]               │
@@ -652,12 +652,12 @@ thresholds.
 ```
 Category Weights:
 - Operational: 7 (default)
-- Cost: 9 (increased from 7 — more cost insights)
+- Cost: 9 (increased from 7: more cost insights)
 - Org: 5 (default)
 - Workflow: 5 (default)
 - Anomaly: 8 (default)
 
-Interval: 10 minutes (increased from 5 — less frequent, still fresh)
+Interval: 10 minutes (increased from 5: less frequent, still fresh)
 
 Reasoning: Increased Cost weight ensures cost anomalies surface 
 quickly. Longer interval reduces Copilot's own token cost.
@@ -691,14 +691,14 @@ Cost optimization shouldn't sacrifice productivity. Measuring ticket completion 
 
 ## Related Documentation
 
-- [Copilot: Proactive Intelligence](../comprehensive-user-guide.md#12-copilot-proactive-intelligence) — Cost insights and monitoring
-- [Autonomy → Budgets](../comprehensive-user-guide.md#13-autonomy-control-plane) — Budget governance
-- [Telemetry & Costs](../comprehensive-user-guide.md#16-telemetry--costs) — Cost analysis
-- [Routines](../comprehensive-user-guide.md#13-autonomy-control-plane) — Recurring automation
+- [Copilot: Proactive Intelligence](../comprehensive-user-guide.md#12-copilot-proactive-intelligence): Cost insights and monitoring
+- [Autonomy → Budgets](../comprehensive-user-guide.md#13-autonomy-control-plane): Budget governance
+- [Telemetry & Costs](../comprehensive-user-guide.md#16-telemetry--costs): Cost analysis
+- [Routines](../comprehensive-user-guide.md#13-autonomy-control-plane): Recurring automation
 
 ---
 
-*Scenario: Cost Optimization Playbook — Draft v1.0*
+*Scenario: Cost Optimization Playbook, Draft v1.0*
 
 **Next Scenarios:**
 - [Failure Recovery Workflows](./03-failure-recovery-workflows.md)

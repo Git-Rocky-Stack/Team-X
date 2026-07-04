@@ -1,21 +1,21 @@
 ## 5. Mission Control Dashboard
 
-**Purpose:** Mission Control is the operational heart of Team-X — your real-time view into everything happening across your AI workforce. It answers "What's happening right now?" and "What needs my attention?" in a single glance.
+**Purpose:** Mission Control is the operational heart of Team-X, your real-time view into everything happening across your AI workforce. It answers "What's happening right now?" and "What needs my attention?" in a single glance.
 
 ### When to Use Mission Control
 
 Mission Control is designed for **daily operations**, not configuration or governance. Use it to:
 
-- **Start your day** — See what completed overnight, what's blocked, and where cost is accumulating
-- **Monitor active work** — Watch agentic loops progress, observe runtime health, spot queue pressure
-- **Diagnose issues** — Identify which employee is stuck, which run failed, which routine didn't materialize
-- **End your day** — Verify work settled, no unexpected spend, no silent failures
+- **Start your day**: See what completed overnight, what's blocked, and where cost is accumulating
+- **Monitor active work**: Watch agentic loops progress, observe runtime health, spot queue pressure
+- **Diagnose issues**: Identify which employee is stuck, which run failed, which routine didn't materialize
+- **End your day**: Verify work settled, no unexpected spend, no silent failures
 
 **Contrast with other views:**
-- **Tickets** — Deep dive into specific work items
-- **Autonomy** — Governance, budgets, approvals, runtime posture
-- **Telemetry** — Historical cost and usage analysis
-- **Mission Control** — Live operational pulse
+- **Tickets**: Deep dive into specific work items
+- **Autonomy**: Governance, budgets, approvals, runtime posture
+- **Telemetry**: Historical cost and usage analysis
+- **Mission Control**: Live operational pulse
 
 ---
 
@@ -122,7 +122,7 @@ Shows recent agentic loop executions with live status updates.
 - Abnormal: Stuck on same step for >60 seconds → possible provider hang or malformed tool call
 
 **Completed (GO lamp)**
-- Review cost and token count — if unusually high, check the thread for what happened
+- Review cost and token count; if unusually high, check the thread for what happened
 - Failed runs light a steady NO-GO lamp with the error reason
 
 **Failed (NO-GO lamp)**
@@ -137,7 +137,7 @@ Shows recent agentic loop executions with live status updates.
 
 Click any run card to:
 1. **Open the full thread transcript** in Copilot Conversations ( Threads drawer)
-2. **Inspect each step** — plan cards, tool calls, tool results, final answer
+2. **Inspect each step**: plan cards, tool calls, tool results, final answer
 3. **Copy the grounded answer** for reuse in tickets, docs, or chat
 4. **Review cost attribution** for spend analysis
 
@@ -149,7 +149,7 @@ Shows durable backlog per employee layered with live activity status.
 
 | Element | Meaning | Lamp / Indicator |
 |---------|---------|------------------|
-| **Name + Title** | Employee identity | — |
+| **Name + Title** | Employee identity | None |
 | **Status Lamp** | Current activity state | EXEC lamp (thinking) / HOLD lamp (blocked) / NO-GO lamp (error) / STBY lamp (idle) |
 | **Queue Bar** | Visual breakdown of ticket counts | Graphite (Open) / Scope teal (In-Progress) / Amber (Blocked) / Green (Done) |
 | **Quick Actions** | Chat bubble, ticket icon | Jump to conversation or ticket list |
@@ -176,11 +176,11 @@ Open: ████████ (8)     In-Progress: ███ (3)     Blocked: �
 
 #### Status Lamp Meanings
 
-Each employee row carries a stencil word-lamp for live activity — the same lamp vocabulary used across the console. Read the lamp word, not a color dot:
+Each employee row carries a stencil word-lamp for live activity, the same lamp vocabulary used across the console. Read the lamp word, not a color dot:
 
 | Lamp | State | Typical Cause | Action |
 |------|-------|---------------|--------|
-| **EXEC** (teal) | Live/Active | Employee is thinking, streaming, or calling a tool | None — work in progress |
+| **EXEC** (teal) | Live/Active | Employee is thinking, streaming, or calling a tool | None (work in progress) |
 | **HOLD** (amber) | Blocked | Ticket assigned to employee is blocked, or employee has no viable provider | Check ticket detail for block reason; verify provider configuration |
 | **NO-GO** (red) | Error | Run failed, provider disconnected, or runtime error | Click employee → review recent runs; check provider connection |
 | **STBY** (unlit) | Idle | No active work, provider available, queue may be empty or employee unassigned | Normal if queue empty; assign tickets if employee should be working |
@@ -306,7 +306,7 @@ Raw LLM output from all employees and runtimes. Shows:
 Grid layout showing employee activity as cards. Each employee card displays:
 
 - Avatar, name, title
-- Live status lamp (stencil word — EXEC / HOLD / NO-GO / STBY)
+- Live status lamp (stencil word: EXEC / HOLD / NO-GO / STBY)
 - Current activity (what they're working on)
 - Quick actions (chat, assign ticket)
 
@@ -499,12 +499,12 @@ When troubleshooting, use multiple subviews together:
 
 ## Related Sections
 
-- [Command Palette](06-command-palette.md#6-command-palette) — Creating work via natural language
-- [Tickets & Work](07-tickets-and-work.md#7-tickets--work-management) — Managing durable work items
-- [Copilot: Proactive Intelligence](12-copilot.md#12-copilot-proactive-intelligence) — Understanding insights
-- [Autonomy Control Plane](13-autonomy-control-plane.md#13-autonomy-control-plane) — Governance and runtime health
-- [Troubleshooting](../comprehensive-user-guide.md#18-troubleshooting) — Symptom-based debugging
+- [Command Palette](06-command-palette.md#6-command-palette): Creating work via natural language
+- [Tickets & Work](07-tickets-and-work.md#7-tickets--work-management): Managing durable work items
+- [Copilot: Proactive Intelligence](12-copilot.md#12-copilot-proactive-intelligence): Understanding insights
+- [Autonomy Control Plane](13-autonomy-control-plane.md#13-autonomy-control-plane): Governance and runtime health
+- [Troubleshooting](../comprehensive-user-guide.md#18-troubleshooting): Symptom-based debugging
 
 ---
 
-*Enhanced Mission Control documentation — 350+ lines vs. original ~85 lines*
+*Enhanced Mission Control documentation: 350+ lines vs. original ~85 lines*

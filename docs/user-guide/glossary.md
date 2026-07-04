@@ -85,7 +85,7 @@ NLU-driven command interface (Ctrl+K / Cmd+K) for natural language interaction w
 - "Show me all open tickets assigned to Alex"
 - "What's our spend this month?"
 
-**See also:** [Natural Language Understanding](#natural-language-understanding), [Ticket](#ticket)
+**See also:** [Natural Language Understanding](#natural-language-understanding-nlu), [Ticket](#ticket)
 
 ### Company
 See [Workspace](#workspace).

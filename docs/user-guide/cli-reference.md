@@ -8,8 +8,8 @@
 
 Team-X provides two CLI interfaces:
 
-1. **Command Palette** — Natural language commands (primary interface)
-2. **CLI Tool** — Traditional command-line tool for automation and scripting
+1. **Command Palette**: Natural language commands (primary interface)
+2. **CLI Tool**: Traditional command-line tool for automation and scripting
 
 This guide covers both interfaces.
 
@@ -18,10 +18,7 @@ This guide covers both interfaces.
 ## Table of Contents
 
 1. [Command Palette Reference](#command-palette-reference)
-2. [CLI Tool](#cli-tool)
-3. [Automation Examples](#automation-examples)
-4. [Scripting with Team-X](#scripting-with-team-x)
-5. [Advanced Usage](#advanced-usage)
+2. [Developer CLI (`ai-cli`)](#developer-cli-ai-cli)
 
 ---
 
@@ -44,7 +41,7 @@ Examples:
 
 ### Command Categories
 
-> **How these commands resolve.** The phrasings below are natural-language examples, not a fixed command grammar. Only the **14 structured intents** (hire, fire, promote, assign, create ticket / project / goal, close, reopen, call / end meeting, check status, show view, and search vault) plus the `/show` slash commands are the deterministic surface — they classify to a known intent and execute directly. Everything else here — `cancel agent run`, `start agent for ticket`, `list runtimes`, `approve all`, and similar operational phrasings — has no dedicated intent; it routes through the `complex_request` agentic fallback, which reasons over your org state and may ask a clarifying question instead of firing a fixed action.
+> **How these commands resolve.** The phrasings below are natural-language examples, not a fixed command grammar. Only the **14 structured intents** (hire, fire, promote, assign, create ticket / project / goal, close, reopen, call / end meeting, check status, show view, and search vault) plus the `/show` slash commands are the deterministic surface; they classify to a known intent and execute directly. Everything else here (`cancel agent run`, `start agent for ticket`, `list runtimes`, `approve all`, and similar operational phrasings) has no dedicated intent; it routes through the `complex_request` agentic fallback, which reasons over your org state and may ask a clarifying question instead of firing a fixed action.
 
 #### Workspace Commands
 
@@ -189,7 +186,7 @@ Time scopes:
 
 ## Developer CLI (`ai-cli`)
 
-Team-X ships a small developer/inspection CLI called `ai-cli` (bin: `team-x-ai`) in the `@team-x/intelligence` package. It is **not an end-user automation CLI** — ticket, employee, budget, and agent-run management all happen inside the desktop app via the Command Palette (above) or the UI directly. There is no installed `teamx` binary, no hosted REST API, and no `TEAMX_API_KEY` to configure.
+Team-X ships a small developer/inspection CLI called `ai-cli` (bin: `team-x-ai`) in the `@team-x/intelligence` package. It is **not an end-user automation CLI**; ticket, employee, budget, and agent-run management all happen inside the desktop app via the Command Palette (above) or the UI directly. There is no installed `teamx` binary, no hosted REST API, and no `TEAMX_API_KEY` to configure.
 
 ### What `ai-cli` supports today
 
@@ -205,7 +202,7 @@ Run `ai-cli <command> --help` for command-specific flags. Output defaults to a h
 
 ### Running `ai-cli` from source
 
-There is no published binary yet — run the CLI directly from a checked-out copy of the repo:
+There is no published binary yet. Run the CLI directly from a checked-out copy of the repo:
 
 ```bash
 git clone https://github.com/Git-Rocky-Stack/Team-X.git
@@ -221,7 +218,7 @@ npx tsx packages/intelligence/src/cli/ai-cli.ts memory --company acme --type epi
 ### What `ai-cli` does NOT support
 
 - No login, no API key, no `TEAMX_API_KEY` / `TEAMX_WORKSPACE` / `TEAMX_OUTPUT_FORMAT` / `TEAMX_TIMEOUT` environment variables.
-- No `teamx ticket`, `teamx employee`, `teamx budget`, `teamx run`, `teamx workspace` subcommands — those were aspirational and never built.
+- No `teamx ticket`, `teamx employee`, `teamx budget`, `teamx run`, `teamx workspace` subcommands: those were aspirational and never built.
 - No Python SDK, no PowerShell module, no `Connect-TeamX` / `Get-TeamXWorkspace` / `Get-TeamXBudgetSpend` cmdlets.
 - No `curl https://teamflow-x.com/install-cli.sh | bash` installer. Team-X is local-first and free-and-open-source; there is no hosted service to install against.
 

@@ -1,6 +1,6 @@
 ## 6. Command Palette
 
-**Purpose:** The Command Palette is your keyboard-first control surface for Team-X. Type what you want in plain English, and the palette classifies your intent, fills in entities, confirms destructive actions, and executes — all without touching the mouse.
+**Purpose:** The Command Palette is your keyboard-first control surface for Team-X. Type what you want in plain English, and the palette classifies your intent, fills in entities, confirms destructive actions, and executes, all without touching the mouse.
 
 ### When to Use the Command Palette
 
@@ -101,14 +101,14 @@
 - "Let go of Sarah Chen"
 - "Terminate Mike's employment"
 
-**Confirmation:** **RED GATE** — destructive action, cannot be undone
+**Confirmation:** **RED GATE**: destructive action, cannot be undone
 
 **Flow:**
 1. Intent classified as `fire_employee`
 2. Employee name resolved (ambiguous = prompt to pick)
 3. Show red confirmation card:
    ```
-   ⚠️ Confirm destructive action — this cannot be undone
+   ⚠️ Confirm destructive action: this cannot be undone
    Fire: Mike Reyes (Senior Fullstack Engineer)
    Active tickets: 3
    Projects: Q2 Launch (lead)
@@ -125,7 +125,7 @@
 - "Move Sarah to tech lead"
 - "Promote Priya from IC to supervisor"
 
-**Confirmation:** **RED GATE** — destructive action (role change is significant)
+**Confirmation:** **RED GATE**: destructive action (role change is significant)
 
 **Flow:**
 1. Intent classified as `promote_employee`
@@ -190,7 +190,7 @@
 - "Mark the auth bug as done"
 - "Complete the login fix"
 
-**Confirmation:** **RED GATE** — destructive action (changes workflow state)
+**Confirmation:** **RED GATE**: destructive action (changes workflow state)
 
 **Flow:**
 1. Intent classified as `close_ticket`
@@ -289,7 +289,7 @@
 - "Wrap up the all-hands"
 - "Close the design review meeting"
 
-**Confirmation:** **RED GATE** — destructive action (ends collaboration session)
+**Confirmation:** **RED GATE**: destructive action (ends collaboration session)
 
 **Flow:**
 1. Intent classified as `end_meeting`
@@ -393,7 +393,7 @@
 
 ## Confirmation Gates
 
-### Red Gate — Destructive Actions
+### Red Gate: Destructive Actions
 
 **Triggered by:** `fire_employee`, `close_ticket`, `end_meeting`, `promote_employee`
 
@@ -420,7 +420,7 @@
 - Project leadership that needs reassignment
 - Meeting participants who will be disconnected
 
-### Amber Gate — Write-Side Agentic Runs
+### Amber Gate: Write-Side Agentic Runs
 
 **Triggered by:** `complex_request` with write-side keywords (decompose, delegate, create tickets, assign owners, review, approve)
 
@@ -556,8 +556,8 @@ Slash commands bypass NLU classification for direct, predictable navigation.
 | Speed matters (0.5s vs 2s) | Accuracy matters more than speed |
 
 **Example:**
-- `/show telemetry` — jumps directly to Telemetry (0.5s)
-- "Take me to cost analytics" — classifies as `show_view` → Telemetry (2s)
+- `/show telemetry`: jumps directly to Telemetry (0.5s)
+- "Take me to cost analytics": classifies as `show_view` → Telemetry (2s)
 
 Both work. Slash is faster when you know it.
 
@@ -736,7 +736,7 @@ All of these work the same:
 - Entity extraction error (wrong ticket, wrong priority)
 
 **Fix:**
-1. Don't confirm — press `Esc` to cancel
+1. Don't confirm; press `Esc` to cancel
 2. Rephrase with more detail: "Close ticket #47 (Login crash)" not "Close the ticket"
 
 ### "History is gone / Empty"
@@ -752,11 +752,11 @@ All of these work the same:
 
 ## Related Sections
 
-- [Agentic Loop](../agentic-loop.md) — Complex request technical details
-- [Task Planner](../task-planner.md) — Write-side agentic decomposition
-- [Tickets & Work](07-tickets-and-work.md#7-tickets--work-management) — Managing created tickets
-- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard) — Viewing command history
+- [Agentic Loop](../agentic-loop.md): Complex request technical details
+- [Task Planner](../task-planner.md): Write-side agentic decomposition
+- [Tickets & Work](07-tickets-and-work.md#7-tickets--work-management): Managing created tickets
+- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard): Viewing command history
 
 ---
 
-*Enhanced Command Palette documentation — 320+ lines vs. original ~80 lines*
+*Enhanced Command Palette documentation: 320+ lines vs. original ~80 lines*

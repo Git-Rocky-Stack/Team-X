@@ -1,11 +1,11 @@
-# Demo Walkthrough — A Guided Tour of Team-X
+# Demo Walkthrough: A Guided Tour of Team-X
 
 Team-X is an AI-agent company that runs on your laptop. This guide
-walks you through a 10–15 minute self-guided tour that starts with
+walks you through a 10-15 minute self-guided tour that starts with
 an empty Strategia-X company and ends with the copilot surfacing a
 proactive insight about the workload you just created.
 
-Every scenario below is something you can do in your own install —
+Every scenario below is something you can do in your own install:
 no scripting, no recordings, no mock data. The arc is the same one
 the Team-X demo video follows, promoted here as a user-facing
 onboarding path.
@@ -29,12 +29,12 @@ on screen before it is named.
 
 | # | Scenario | What you learn | Duration |
 |---|---|---|---:|
-| 1 | Hire a CEO, chat with it, watch it think | The app is real — streaming replies, token-by-token rendering, local models | 3 min |
-| 2 | File a ticket → agent closes it with an MCP tool | Agents *do* things, not just chat — MCP tool calls, ticket lifecycle | 3 min |
+| 1 | Hire a CEO, chat with it, watch it think | The app is real: streaming replies, token-by-token rendering, local models | 3 min |
+| 2 | File a ticket → agent closes it with an MCP tool | Agents *do* things, not just chat: MCP tool calls, ticket lifecycle | 3 min |
 | 3 | One-click all-hands → minutes → action items | The meeting primitive + orchestrator pause semantics | 2 min |
-| 4 | Ask `Cmd+K` why the frontend team is behind | Intelligence Layer read-side — grounded answers over your org state | 3 min |
-| 5 | Decompose the Q1 roadmap → copilot surfaces the new workload | Intelligence Layer write-side — task planner + proactive copilot | 4 min |
-| — | Buffer | — | ~1 min |
+| 4 | Ask `Cmd+K` why the frontend team is behind | Intelligence Layer read-side: grounded answers over your org state | 3 min |
+| 5 | Decompose the Q1 roadmap → copilot surfaces the new workload | Intelligence Layer write-side: task planner + proactive copilot | 4 min |
+| - | Buffer | - | ~1 min |
 | **Total** | | | **~15 min** |
 
 Each row links to a dedicated scenario page with step-by-step
@@ -49,16 +49,16 @@ The tour deliberately front-loads the familiar (hiring, tickets,
 meetings) and back-loads the headline Phase 5 capabilities
 (grounded answers, write-side planning, proactive insights).
 
-1. **Phase 1 — Skeleton.** A hire dialog, a streaming reply,
+1. **Phase 1: Skeleton.** A hire dialog, a streaming reply,
    token-by-token rendering. The app is not a mockup.
-2. **Phase 2 — The Org.** Employees, tickets, MCP tool calls. The
+2. **Phase 2: The Org.** Employees, tickets, MCP tool calls. The
    agents can execute work, not just converse.
-3. **Phase 3 — The Live Cockpit.** Meetings pause the orchestrator;
+3. **Phase 3: The Live Cockpit.** Meetings pause the orchestrator;
    minutes and action items close the loop.
-4. **Phase 5 headline #1 — Read-side.** `Cmd+K` asks a question that
+4. **Phase 5 headline #1: Read-side.** `Cmd+K` asks a question that
    requires reasoning across the org. The step log shows the loop
    planning, calling tools, and grounding the answer in real data.
-5. **Phase 5 headline #2 — Write-side + proactive.** You ask the
+5. **Phase 5 headline #2: Write-side + proactive.** You ask the
    loop to decompose a roadmap into tickets. The amber write-side
    gate fires. On confirm, tickets land on the kanban. Seconds
    later the copilot sidebar surfaces an insight about the
@@ -93,8 +93,8 @@ page updates in lockstep.
 
 Each scenario doc is independently versioned via the Phase and
 milestone it exercises. If a target disappears in a future build,
-check the scenario doc's data-attribute list — those are the
-stable contracts — or open an issue.
+check the scenario doc's data-attribute list (those are the
+stable contracts) or open an issue.
 
 ---
 

@@ -8,8 +8,8 @@
 >
 > The two extension points that **do** ship are documented here:
 >
-> 1. **MCP servers** — give agents new tools, resources, and prompts via the [Model Context Protocol](https://modelcontextprotocol.io).
-> 2. **Role packs** — extend the curated catalog with your own role specifications.
+> 1. **MCP servers**: give agents new tools, resources, and prompts via the [Model Context Protocol](https://modelcontextprotocol.io).
+> 2. **Role packs**: extend the curated catalog with your own role specifications.
 >
 > If you need the in-app command surface (Cmd+K, agentic loop, copilot), see the user-guide. If you need the developer CLI, see `docs/user-guide/cli-reference.md`.
 
@@ -67,7 +67,7 @@ Team-X is an Electron app with three processes and four packages.
 | Styling | Tailwind + shadcn/ui + Strategia-X design system |
 | Local storage | SQLite (WAL mode, FTS5 search, sqlite-vec embeddings) |
 | Provider layer | Vercel AI SDK adapters wrapped in privacy-tier filtering |
-| Local model runtime | `@team-x/local-gguf-runtime` — GPU probing (CUDA/ROCm/Vulkan/Metal/CPU), llama.cpp server lifecycle, LRU model pool, GGUF metadata parser, Hugging Face hub client, network-share-resilient folder watching, and benchmark runner (v3.3.0 backend foundation; renderer UI ships in a future release) |
+| Local model runtime | `@team-x/local-gguf-runtime`: GPU probing (CUDA/ROCm/Vulkan/Metal/CPU), llama.cpp server lifecycle, LRU model pool, GGUF metadata parser, Hugging Face hub client, network-share-resilient folder watching, and benchmark runner (v3.3.0 backend foundation; renderer UI ships in a future release) |
 | Agent runtime | In-house orchestrator with slot semaphore + pause/drain + append-only event bus |
 | Extension surface | MCP (tools/resources/prompts) and role packs (markdown + YAML frontmatter) |
 
@@ -131,7 +131,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error('my-mcp-server up'); // stderr only — stdout is the JSON-RPC channel
+console.error('my-mcp-server up'); // stderr only: stdout is the JSON-RPC channel
 ```
 
 ### Registering with Team-X
@@ -140,7 +140,7 @@ console.error('my-mcp-server up'); // stderr only — stdout is the JSON-RPC cha
 
 ### MCP best practices
 
-1. **Stdio only on the default path.** Stdout is the JSON-RPC channel — log to stderr.
+1. **Stdio only on the default path.** Stdout is the JSON-RPC channel: log to stderr.
 2. **Tools must be idempotent.** Multiple agents can call the same tool simultaneously through the pool.
 3. **Validate input.** Trust nothing from the agent side; tool calls are LLM-generated.
 4. **Return small payloads.** Team-X clamps tool results on the default chat path (audit H11). If you need to return a large blob, write it to the vault and return a reference.
@@ -150,7 +150,7 @@ console.error('my-mcp-server up'); // stderr only — stdout is the JSON-RPC cha
 
 ## Role Packs
 
-A role pack is a directory of markdown files — one per role — with YAML frontmatter for the structured fields and a markdown body for the system prompt. The `strategia-official` pack ships with 57 roles across 6 levels.
+A role pack is a directory of markdown files, one per role, with YAML frontmatter for the structured fields and a markdown body for the system prompt. The `strategia-official` pack ships with 57 roles across 6 levels.
 
 ### Pack layout
 
@@ -252,7 +252,7 @@ The role markdown body is run through a tiny substitution pass before the system
 validates the YAML against `@team-x/role-schema`, hashes each file (SHA256) for
 integrity, and records the pack in the role catalog.
 
-Signed packs use Ed25519 — see `scripts/sign-pack.mjs` and
+Signed packs use Ed25519. See `scripts/sign-pack.mjs` and
 `scripts/generate-pack-key.mjs` for the toolchain.
 
 ---
@@ -261,7 +261,7 @@ Signed packs use Ed25519 — see `scripts/sign-pack.mjs` and
 
 Team-X's main and renderer processes communicate over Electron `contextBridge`
 with strongly-typed channels declared in `@team-x/shared-types/ipc`. This
-surface is **internal to the app** — it is not exposed over the network and
+surface is **internal to the app**; it is not exposed over the network and
 should not be treated as a public API.
 
 Channel families (~290 channels across the four `tsconfig` projects):
@@ -278,7 +278,7 @@ Channel families (~290 channels across the four `tsconfig` projects):
 | `settings.*` / `providers.*` | runtime configuration |
 | `mcp.*` / `extensions.*` | MCP host and pack/skill management |
 | `telemetry.*` | usage analytics |
-| `localGguf.*` | local & networked GGUF backend — 35 channels across `runtime` / `pool` / `library` / `hf` / `endpoint` / `benchmark`; contracts in `packages/shared-types/src/local-gguf.ts`; v3.3.0 backend foundation (renderer UI ships in a future release) |
+| `localGguf.*` | local & networked GGUF backend: 35 channels across `runtime` / `pool` / `library` / `hf` / `endpoint` / `benchmark`; contracts in `packages/shared-types/src/local-gguf.ts`; v3.3.0 backend foundation (renderer UI ships in a future release) |
 
 If you are forking Team-X and need to add an IPC channel, see
 `apps/desktop/src/main/ipc/register.ts` for the registration pattern and
@@ -334,5 +334,5 @@ validation; use it in your pack's CI to catch schema drift before publish.
 - **MCP SDK:** [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk)
 
 For questions about the Team-X internals or contribution flow, open a GitHub
-discussion or issue. There is no support email — Team-X is open-source and
+discussion or issue. There is no support email; Team-X is open-source and
 community-supported.
