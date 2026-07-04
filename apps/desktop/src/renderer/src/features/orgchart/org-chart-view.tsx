@@ -220,7 +220,7 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
 
       {toast ? (
         <output
-          className="fixed bottom-4 right-4 z-50 max-w-md rounded-card border border-[var(--hairline)] bg-background px-4 py-3 text-body text-foreground shadow-lg"
+          className="plate fixed bottom-4 right-4 z-50 max-w-md border border-[var(--hairline)] px-4 py-3 text-body text-foreground"
           data-org-chart-toast=""
         >
           {toast}

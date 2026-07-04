@@ -5,6 +5,10 @@ import { useEffect, useRef } from 'react';
 import { SubviewState, Tag } from '@/components/console/index.js';
 import { cn } from '@/lib/utils.js';
 
+/** DESIGN.md stream recipe — shared by code-fence pres and the live-stream well. */
+const STREAM_WELL_CLASS =
+  'whitespace-pre-wrap rounded-inset bg-[var(--void)] px-3 py-2 text-code-sm leading-relaxed text-[var(--display-fg)]';
+
 /** Naive code-fence detector: lines wrapped in triple backticks. */
 function renderContent(content: string) {
   const parts: { type: 'text' | 'code'; value: string }[] = [];
@@ -42,7 +46,7 @@ function renderContent(content: string) {
       <pre
         // biome-ignore lint/suspicious/noArrayIndexKey: stable content list
         key={i}
-        className="my-1 overflow-x-auto whitespace-pre-wrap rounded-inset bg-[var(--void)] px-3 py-2 text-code-sm leading-relaxed text-[var(--display-fg)]"
+        className={cn('my-1 overflow-x-auto', STREAM_WELL_CLASS)}
       >
         {part.value}
       </pre>
@@ -108,7 +112,7 @@ function StreamingBubble({ text, employeeName }: StreamingBubbleProps) {
               <span className="h-2 w-2 rounded-sm bg-[var(--armed-lit)]" />
               Live stream
             </div>
-            <div className="whitespace-pre-wrap rounded-inset bg-[var(--void)] px-3 py-2 text-code-sm leading-relaxed text-[var(--display-fg)]">
+            <div className={STREAM_WELL_CLASS}>
               {renderContent(text)}
               <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-[var(--armed-lit)] align-text-bottom" />
             </div>

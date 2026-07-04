@@ -8,18 +8,29 @@ const here = dirname(fileURLToPath(import.meta.url));
 const read = (rel: string) => readFileSync(join(here, rel), 'utf8');
 
 // Raw Tailwind palette colors the recompose must replace with console tones.
+// Full default-palette alternation — a partial list left rose/pink/purple/
+// lime/cyan as silent bypasses.
 const RAW_PALETTE =
-  /-(?:red|orange|amber|yellow|green|emerald|teal|sky|blue|indigo|violet|fuchsia|zinc|slate|stone|gray|neutral)-\d{2,3}\b/;
+  /-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|zinc|slate|stone|gray|neutral)-\d{2,3}\b/;
 
 function expectNoLegacy(src: string, file: string) {
   expect(src, `${file}: mission-shell import`).not.toContain('mission-shell');
   expect(src, `${file}: Mission* primitive`).not.toMatch(/\bMission[A-Z]\w+/);
-  expect(src, `${file}: mission-select`).not.toContain('mission-select');
-  expect(src, `${file}: mission-chrome-panel`).not.toContain('mission-chrome-panel');
-  expect(src, `${file}: mission-grid`).not.toContain('mission-grid');
-  expect(src, `${file}: mission-state-block`).not.toContain('mission-state-block');
+  // Family guard: globals.css defines 16 .mission-* recipes — enumerate none,
+  // forbid all (raw-class usage was the proven legacy pattern pre-sweep).
+  // Legit non-class tokens (the open-mission-control action id and the
+  // mission-control-dashboard module name) are stripped before matching;
+  // mission-control-row still trips because neither strip consumes it.
+  const declassed = src
+    .replaceAll('mission-control-dashboard', '')
+    .replaceAll('open-mission-control', '');
+  expect(declassed, `${file}: mission-* legacy class`).not.toMatch(/\bmission-[a-z]/);
   expect(src, `${file}: bg-black`).not.toMatch(/\bbg-black\b/);
-  expect(src, `${file}: border-white/N`).not.toMatch(/border-white\/\d/);
+  // Utility-agnostic white-alpha guard: border-white/N was only half the
+  // legacy idiom (bg-white/N, text-white/N, ring-white/N shipped alongside).
+  expect(src, `${file}: white-alpha utility`).not.toMatch(
+    /\b(?:border|bg|text|ring|divide|outline)-white(?:\/\d|\b)/,
+  );
   expect(src, `${file}: font-mono`).not.toContain('font-mono');
   expect(src, `${file}: rounded-[Npx]`).not.toMatch(/rounded-\[\d+px\]/);
   expect(src, `${file}: rounded-full`).not.toMatch(/\brounded-full\b/);
@@ -69,7 +80,7 @@ describe('org-chart-node', () => {
   it('console rank ramp + well-input select + selectors preserved, no legacy', () => {
     const src = read('orgchart/org-chart-node.tsx');
     expect(src).toContain('well-input');
-    expect(src).toContain('var(--led-nogo)');
+    expect(src).toContain('var(--led-nogo-edge)');
     expect(src).toContain('data-org-chart-node={employee.id}');
     expect(src).toContain('data-org-chart-manager-select=""');
     for (const key of [
@@ -132,7 +143,8 @@ describe('promote-dialog', () => {
     const src = read('orgchart/promote-dialog.tsx');
     expect(src).toContain('well-input');
     expect(src).toContain('data-promote-dialog=""');
-    expect(src).toContain('promote-role');
+    expect(src).toContain('id="promote-role"');
+    expect(src).toContain('htmlFor="promote-role"');
     expect(src).toContain('data-promote-role-select=""');
     expectNoLegacy(src, 'promote-dialog.tsx');
   });
@@ -157,6 +169,11 @@ describe('meetings-view', () => {
     expect(src).toContain('<SubviewState');
     expect(src).toMatch(/<Faceplate|<StripeHeader/);
     expect(src).toContain("tone={liveStatus ? 'armed' : 'off'}");
+    // Pin each SubviewState branch independently — a single <SubviewState
+    // assertion is satisfied by the loading branch alone.
+    expect(src).toContain('Failed to load meetings');
+    expect(src).toContain('No meetings yet');
+    expect(src).toContain('Retry');
     expectNoLegacy(src, 'meetings-view.tsx');
   });
 });
@@ -300,10 +317,10 @@ describe('copilot-insight-card', () => {
 });
 
 describe('copilot-dashboard-widget', () => {
-  it('faceplate section + SubviewState states + selectors preserved, no legacy', () => {
+  it('surface-neutral section + SubviewState states + selectors preserved, no legacy', () => {
     const src = read('copilot/copilot-dashboard-widget.tsx');
     expect(src).toContain("from '@/components/console");
-    expect(src).toContain('faceplate');
+    expect(src).toContain('data-copilot-widget="" className="p-4"');
     expect(src).toContain('<SubviewState');
     expect(src).toContain('data-copilot-widget=""');
     expect(src).toContain('data-copilot-widget-count={total}');

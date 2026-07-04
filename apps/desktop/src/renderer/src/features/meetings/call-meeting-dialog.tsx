@@ -102,7 +102,7 @@ export function CallMeetingDialog({
             {employees.map((emp) => (
               <label
                 key={emp.id}
-                className="flex items-center gap-2 rounded px-2 py-1 text-body hover:bg-muted/30"
+                className="flex items-center gap-2 rounded px-2 py-1 text-body hover:bg-[hsl(0_0%_100%/0.06)]"
               >
                 <input
                   type="checkbox"

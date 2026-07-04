@@ -159,7 +159,7 @@ export function ThreadMemoryCard({
           Loading condensed memory for this thread...
         </RecessedWell>
       ) : digestQuery.isError || checkpointsQuery.isError ? (
-        <RecessedWell className="border-[var(--led-nogo)] px-4 py-3 text-caption text-led-nogo">
+        <RecessedWell className="border-[var(--led-nogo-edge)] px-4 py-3 text-caption text-led-nogo">
           Team-X could not read the latest digest or checkpoint trail for this thread.
         </RecessedWell>
       ) : (

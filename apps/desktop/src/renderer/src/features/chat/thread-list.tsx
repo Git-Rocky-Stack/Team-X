@@ -80,7 +80,7 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
       : kind === 'ticket'
         ? 'bg-[var(--armed-soft)] text-[var(--armed-lit)]'
         : kind === 'agent'
-          ? 'text-led-hold'
+          ? 'text-[var(--tag-hold)]'
           : 'text-silver-mute';
 
   const Icon =

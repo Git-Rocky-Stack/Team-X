@@ -36,8 +36,12 @@ export function CopilotDashboardWidget() {
 
   const { topN: topThree, hasMore, total } = pickDashboardTopN(sorted);
 
+  // Surface-neutral root: the only render site (mission-control-dashboard
+  // secondary rail) hosts this inside its own Faceplate → RecessedWell and
+  // neutralizes borders/padding via [&_[data-copilot-widget]] selectors — a
+  // recipe root here would nest depth layers the host can't fully clear.
   return (
-    <section aria-label="Copilot insights" data-copilot-widget="" className="faceplate p-4">
+    <section aria-label="Copilot insights" data-copilot-widget="" className="p-4">
       <header className="mb-3 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-brand" aria-hidden="true" />
         <h2 className="text-h4 text-foreground">Copilot insights</h2>
@@ -82,7 +86,7 @@ export function CopilotDashboardWidget() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="nav-tile mt-3 w-full justify-center border-dashed"
+            className="nav-tile mt-3 w-full border-dashed border-[var(--hairline)] px-3 py-1.5 text-center text-button-sm"
             data-copilot-widget-view-all=""
           >
             {hasMore ? `View all (${total})` : 'Open sidebar'}

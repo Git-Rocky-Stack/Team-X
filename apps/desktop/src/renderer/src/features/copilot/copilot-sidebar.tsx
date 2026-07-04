@@ -238,7 +238,7 @@ export function CopilotSidebar() {
                             aria-pressed={categoryFilter === category}
                             data-copilot-category-filter={category}
                             className={cn(
-                              'nav-tile',
+                              'nav-tile px-3 py-1.5 text-button-sm',
                               categoryFilter === category && 'nav-tile-active',
                             )}
                           >
@@ -259,7 +259,7 @@ export function CopilotSidebar() {
                             aria-pressed={severityFilter === severity}
                             data-copilot-severity-filter={severity}
                             className={cn(
-                              'nav-tile',
+                              'nav-tile px-3 py-1.5 text-button-sm',
                               severityFilter === severity && 'nav-tile-active',
                             )}
                           >
@@ -279,7 +279,10 @@ export function CopilotSidebar() {
                             onClick={() => setExportScope(scope)}
                             aria-pressed={exportScope === scope}
                             data-copilot-export-scope={scope}
-                            className={cn('nav-tile', exportScope === scope && 'nav-tile-active')}
+                            className={cn(
+                              'nav-tile px-3 py-1.5 text-button-sm',
+                              exportScope === scope && 'nav-tile-active',
+                            )}
                           >
                             {formatScopeLabel(scope)}
                           </button>
@@ -365,7 +368,7 @@ export function CopilotSidebar() {
                     title="Could not load insights"
                     description="The main-process IPC returned an error."
                     action={
-                      <button type="button" className="nav-tile" onClick={() => refetch()}>
+                      <button type="button" className="cap" onClick={() => refetch()}>
                         Retry
                       </button>
                     }
@@ -436,7 +439,7 @@ export function CopilotSidebar() {
               </div>
               {askErrorMessage && (
                 <p
-                  className="mt-2 text-caption text-destructive"
+                  className="mt-2 text-caption text-led-nogo"
                   role="alert"
                   data-copilot-ask-error=""
                 >

@@ -1,5 +1,5 @@
 /**
- * Chat drawer — right-side sheet that houses three views:
+ * Chat drawer — right-side sheet that houses four views:
  *
  *   1. **Employee DM** (existing) — opened by clicking an employee card.
  *      Shows the user↔employee conversation with a composer.
@@ -12,8 +12,12 @@
  *      thread in the list. Read-only: the composer is replaced with an
  *      "observing" banner. Messages show sender names and AI badges.
  *
+ *   4. **Copilot transcript** (M34) — opened from the copilot sidebar's
+ *      ask flow. Read-only view of the system-copilot step stream.
+ *
  * The view mode is driven by Zustand state:
  *   - `threadListView` → thread list
+ *   - `viewingCopilotThread && activeThreadId` → copilot transcript (read-only)
  *   - `viewingAgentThread && activeThreadId` → agent thread (read-only)
  *   - `selectedEmployeeId && !threadListView` → employee DM
  */
@@ -51,7 +55,7 @@ function statusColor(status: string): string {
     case 'blocked':
       return 'bg-[var(--led-hold)]';
     case 'error':
-      return 'bg-[var(--led-warn)]';
+      return 'bg-[var(--led-nogo)]';
     default:
       return 'bg-[var(--graphite)]';
   }
@@ -79,7 +83,7 @@ function TicketThreadPreviewPanel({ ticketId, employees, onClose }: TicketThread
   return (
     <div
       className={cn(
-        'absolute inset-0 z-20 flex flex-col overflow-hidden border-l border-[var(--hairline)] bg-background shadow-2xl',
+        'plate absolute inset-0 z-20 flex flex-col overflow-hidden border-l border-[var(--hairline)]',
         'xl:fixed xl:inset-y-4 xl:left-auto xl:right-[calc(820px+1rem)] xl:w-[48rem] xl:max-w-[calc(100vw-860px)] xl:rounded-overlay xl:border',
         '2xl:right-[calc(900px+1rem)] 2xl:w-[54rem] 2xl:max-w-[calc(100vw-920px)]',
       )}
@@ -554,7 +558,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </button>
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)] text-led-hold">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)] text-[var(--tag-hold)]">
                     <Bot className="h-4 w-4" />
                   </div>
                   <SheetTitle className="min-w-0 truncate text-h3">{agentThreadNames}</SheetTitle>
@@ -607,7 +611,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                           : displayStatus === 'blocked'
                             ? 'hold'
                             : displayStatus === 'error'
-                              ? 'warn'
+                              ? 'nogo'
                               : 'off'
                       }
                     />

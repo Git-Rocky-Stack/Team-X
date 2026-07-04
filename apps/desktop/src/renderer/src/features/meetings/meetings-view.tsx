@@ -95,7 +95,7 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
           lampTone="nogo"
           title="Failed to load meetings"
           action={
-            <Button size="sm" onClick={() => refetch()}>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>
               Retry
             </Button>
           }

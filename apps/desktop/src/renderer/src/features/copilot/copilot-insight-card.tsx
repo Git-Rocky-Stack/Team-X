@@ -189,12 +189,7 @@ export function CopilotInsightCard({
             <Tag>{categoryMeta.label}</Tag>
           </div>
 
-          <h3
-            className={cn(
-              'mt-1.5 leading-snug text-[var(--display-fg)]',
-              isDashboard ? 'text-body-strong' : 'text-body-strong',
-            )}
-          >
+          <h3 className="mt-1.5 text-body-strong leading-snug text-[var(--display-fg)]">
             {insight.title}
           </h3>
 

@@ -92,7 +92,7 @@ export function OrgChartNode({
     >
       <div
         className={cn(
-          'group flex min-h-14 items-center gap-3 border-b border-border/60 px-4 py-3 outline-none transition-colors hover:bg-surface-100 focus-visible:bg-surface-100 focus-visible:ring-2 focus-visible:ring-brand',
+          'group flex min-h-14 items-center gap-3 border-b border-border/60 px-4 py-3 outline-none transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring',
         )}
         style={{ paddingLeft: `${1 + depth * 1.75}rem` }}
         data-org-chart-drag-handle={employee.id}
@@ -142,7 +142,7 @@ export function OrgChartNode({
         >
           <button
             type="button"
-            className="rounded-md border border-border px-2 py-1 text-muted-foreground/70 transition-colors hover:bg-surface-200 hover:text-foreground"
+            className="rounded-md border border-border px-2 py-1 text-muted-foreground/70 transition-colors hover:bg-muted/30 hover:text-foreground"
             onClick={() => onChat(employee.id)}
           >
             <MessageSquare className="inline h-3 w-3" aria-hidden="true" />
@@ -150,7 +150,7 @@ export function OrgChartNode({
           </button>
           <button
             type="button"
-            className="rounded-md border border-brand/30 px-2 py-1 text-brand transition-colors hover:bg-brand/10"
+            className="rounded-md border border-border px-2 py-1 text-muted-foreground/70 transition-colors hover:bg-muted/30 hover:text-foreground"
             data-org-chart-profile=""
             onClick={() => onProfile(employee)}
           >
@@ -158,7 +158,7 @@ export function OrgChartNode({
           </button>
           <button
             type="button"
-            className="rounded-md border border-border px-2 py-1 text-muted-foreground/70 transition-colors hover:bg-surface-200 hover:text-foreground"
+            className="rounded-md border border-border px-2 py-1 text-muted-foreground/70 transition-colors hover:bg-muted/30 hover:text-foreground"
             data-org-chart-promote=""
             onClick={() => onPromote(employee)}
           >
@@ -166,7 +166,7 @@ export function OrgChartNode({
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--led-nogo)] px-2 py-1 text-led-nogo transition-colors hover:bg-[var(--armed-soft)]"
+            className="rounded-md border border-[var(--led-nogo-edge)] px-2 py-1 text-led-nogo transition-colors hover:bg-muted/30"
             data-org-chart-fire=""
             onClick={() => onFire(employee)}
           >

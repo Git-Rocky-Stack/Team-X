@@ -233,7 +233,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
       ) : null}
 
       {saveError ? (
-        <RecessedWell className="border-[var(--led-nogo)] px-4 py-4">
+        <RecessedWell className="border-[var(--led-nogo-edge)] px-4 py-4">
           <div className="flex items-center gap-3 text-body text-led-nogo">
             <ShieldCheck className="h-4 w-4" />
             {saveError}
@@ -247,7 +247,10 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
             <button
               key={role}
               type="button"
-              className={cn('nav-tile', preferences.selectedRole === role && 'nav-tile-active')}
+              className={cn(
+                'nav-tile px-3 py-1.5 text-button-sm',
+                preferences.selectedRole === role && 'nav-tile-active',
+              )}
               onClick={() => setSelectedRole(role)}
               data-user-guide-role={role}
             >
@@ -288,17 +291,15 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                     type="button"
                     onClick={() => setSelectedSection(section.id)}
                     className={cn(
-                      'well flex w-full flex-col gap-1 px-4 py-3 text-left transition-all hover:-translate-y-0.5',
+                      'flex w-full flex-col gap-1 rounded-card border px-4 py-3 text-left transition-all hover:-translate-y-0.5',
                       isActive
                         ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
-                        : 'hover:border-[var(--hairline-strong)]',
+                        : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]',
                     )}
                     data-user-guide-section-nav={section.id}
                   >
                     <span className="text-eyebrow text-silver-mute">{section.category}</span>
-                    <span className="text-body-strong text-[var(--display-fg)]">
-                      {section.title}
-                    </span>
+                    <span className="text-body-strong text-foreground">{section.title}</span>
                     <span className="text-caption text-silver-mute">{section.summary}</span>
                   </button>
                 );
@@ -349,7 +350,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                     className={cn(
                       'px-4 py-4',
                       block.tone === 'accent' && 'border-[var(--armed-edge)]',
-                      block.tone === 'warning' && 'border-[var(--led-hold)]',
+                      block.tone === 'warning' && 'border-[var(--led-hold-edge)]',
                     )}
                   >
                     <p className="text-body-strong text-[var(--display-fg)]">{block.title}</p>
@@ -392,10 +393,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                   return (
                     <RecessedWell
                       key={task.id}
-                      className={cn(
-                        'px-4 py-4',
-                        completed && 'border-[var(--armed-edge)] bg-[var(--armed-soft)]',
-                      )}
+                      className={cn('px-4 py-4', completed && 'border-[var(--armed-edge)]')}
                       data-user-guide-task={task.id}
                     >
                       <div className="flex items-start gap-3">
@@ -456,37 +454,23 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
               Jump directly into the live product surfaces connected to this section.
             </p>
             <div className="space-y-2">
-              {quickActions.map((action) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  onClick={() => runAction(action.id)}
-                  className="well flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--hairline-strong)]"
-                  data-user-guide-action={action.id}
-                >
-                  <div className="min-w-0">
-                    <p className="text-body-strong text-[var(--display-fg)]">{action.label}</p>
-                    <p className="mt-1 text-caption text-silver-mute">{action.description}</p>
-                  </div>
-                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--armed-lit)]" />
-                </button>
-              ))}
-              {quickActions.length === 0 &&
-                GUIDE_ACTIONS.slice(0, 3).map((action) => (
+              {(quickActions.length > 0 ? quickActions : GUIDE_ACTIONS.slice(0, 3)).map(
+                (action) => (
                   <button
                     key={action.id}
                     type="button"
                     onClick={() => runAction(action.id)}
-                    className="well flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--hairline-strong)]"
+                    className="flex w-full items-start justify-between gap-3 rounded-card border border-[var(--hairline)] px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--hairline-strong)]"
                     data-user-guide-action={action.id}
                   >
                     <div className="min-w-0">
-                      <p className="text-body-strong text-[var(--display-fg)]">{action.label}</p>
+                      <p className="text-body-strong text-foreground">{action.label}</p>
                       <p className="mt-1 text-caption text-silver-mute">{action.description}</p>
                     </div>
                     <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--armed-lit)]" />
                   </button>
-                ))}
+                ),
+              )}
             </div>
           </Faceplate>
 
