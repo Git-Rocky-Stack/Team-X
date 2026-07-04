@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils.js';
 
 const levelPalette: Record<string, string> = {
-  officer: 'border-brand/40 bg-brand/10 text-brand',
-  'senior-management': 'border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-300',
-  management: 'border-blue-500/40 bg-blue-500/10 text-blue-300',
-  supervisor: 'border-teal-500/40 bg-teal-500/10 text-teal-300',
-  lead: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
-  ic: 'border-slate-500/40 bg-slate-500/10 text-slate-300',
+  officer: 'border-[var(--armed-edge)] text-[var(--armed-lit)]',
+  'senior-management': 'border-[var(--hairline)] text-[var(--silver)]',
+  management: 'border-[var(--hairline)] text-[var(--silver)]',
+  supervisor: 'border-[var(--hairline)] text-silver-mute',
+  lead: 'border-[var(--hairline)] text-silver-mute',
+  ic: 'border-[var(--hairline)] text-silver-mute',
 };
 
 function initials(name: string): string {
@@ -166,7 +166,7 @@ export function OrgChartNode({
           </button>
           <button
             type="button"
-            className="rounded-md border border-red-500/50 px-2 py-1 text-red-300 transition-colors hover:bg-red-500/10"
+            className="rounded-md border border-[var(--led-nogo)] px-2 py-1 text-led-nogo transition-colors hover:bg-[var(--armed-soft)]"
             data-org-chart-fire=""
             onClick={() => onFire(employee)}
           >
@@ -174,7 +174,7 @@ export function OrgChartNode({
           </button>
           <select
             aria-label={`Reassign manager for ${employee.name}`}
-            className="max-w-40 rounded-md border border-border bg-surface-100 px-2 py-1 text-caption text-foreground outline-none"
+            className="well-input max-w-40 px-2 py-1 text-caption"
             data-org-chart-manager-select=""
             defaultValue=""
             onChange={(event) => {

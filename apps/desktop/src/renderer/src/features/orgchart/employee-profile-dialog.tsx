@@ -35,8 +35,7 @@ interface EmployeeProfileDialogProps {
   error?: string | null;
 }
 
-const fieldClass =
-  'h-10 w-full rounded-md border border-border bg-surface-100 px-3 text-body text-foreground outline-none transition focus:border-brand/60 focus:ring-2 focus:ring-brand/30';
+const fieldClass = 'well-input h-10 w-full';
 
 export function EmployeeProfileDialog({
   companyId,
@@ -265,7 +264,7 @@ export function EmployeeProfileDialog({
             </p>
           ) : null}
 
-          {error ? <p className="text-body text-red-300">{error}</p> : null}
+          {error ? <p className="text-body text-led-nogo">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
