@@ -26,6 +26,14 @@
 
 ## Shared decisions (apply everywhere — DRY)
 
+### S0. Canon corrections (verified against shipped swept code at execution start — these OVERRIDE any conflicting class string in the per-task maps below)
+
+- **The info/teal LED token is `--led-scope`** (`led-scope` utility) — there is no `--led-info`. Copilot `info` severity uses it.
+- **Selection state (rows, chooser cards, active nav):** `border-[var(--armed-edge)] bg-[var(--armed-soft)]`; unselected `border-[var(--hairline)] hover:border-[var(--hairline-strong)]`; list rows add `hover:-translate-y-0.5` (the shipped `goal-row.tsx:33-37` idiom, verbatim).
+- **Never use `/N` opacity modifiers on `var()` colors** (`border-[var(--armed)]/40` does not compose — zero occurrences in shipped code). Full-strength LED text/icons → the `text-led-go|hold|warn|nogo|scope` utilities; armed tints → the rgba tokens `--armed-edge` (borders) / `--armed-soft` (fills); LED left-edge stripes/borders → `border-l-[var(--led-nogo)]`-style arbitrary values (the `schedule-view.tsx:143-149` idiom). Where a per-task map below says e.g. `border-[var(--armed)]/45 bg-[var(--armed)]/5` read `border-[var(--armed-edge)] bg-[var(--armed-soft)]`; where it says `bg-[var(--led-hold)]/12 text-[var(--led-hold)]` read a hairline-bordered chip with `text-led-hold`.
+- **Icon chips:** `rounded-card border border-[var(--hairline)]` + `text-silver-mute` (or a `text-led-*`/`text-[var(--armed-lit)]` accent) — the shipped `goal-row.tsx:39-41` chip.
+- **Kicker style:** `Faceplate kicker="Ticket Operations" serial="MISSION QUEUE"` is the shipped register — Title Case module words, optional stencil serial.
+
 ### S1. Status → `LampTile` tone maps
 
 Status renders as a stencil word-lamp; the lamp `label` is the existing status word (CSS uppercases — never change DOM text). Use `<LampTile small … interactive={false} />` inside rows/cards; full size only in detail headers.
