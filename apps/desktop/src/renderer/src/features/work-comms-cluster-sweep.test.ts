@@ -272,7 +272,7 @@ describe('chat-view', () => {
     expect(src).toContain("from '@/components/console");
     expect(src).toContain('<MetricTile');
     expect(src).toContain('<SubviewState');
-    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('data-chat-view-roster=""');
     expect(src).toMatch(/<Faceplate|<StripeHeader/);
     expect(src).toContain('data-chat-view=""');
     for (const s of ['no-company', 'loading', 'error', 'empty']) {

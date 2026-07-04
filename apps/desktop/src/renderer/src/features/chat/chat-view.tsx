@@ -3,13 +3,7 @@ import { Bot, MessageSquare, Sparkles, Users2 } from 'lucide-react';
 
 import { ThreadList, isAgentThread, isCopilotThread } from './thread-list.js';
 
-import {
-  Faceplate,
-  MetricTile,
-  RecessedWell,
-  SubviewState,
-  Tag,
-} from '@/components/console/index.js';
+import { Faceplate, MetricTile, SubviewState, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { useThreadList } from '@/hooks/use-chat.js';
 import { useAppStore } from '@/store/app-store.js';
@@ -207,14 +201,14 @@ export function ChatView({ companyId, employees }: ChatViewProps) {
             />
           </div>
         ) : (
-          <RecessedWell className="overflow-hidden p-0">
+          <div className="overflow-hidden" data-chat-view-roster="">
             <ThreadList
               threads={threads}
               employees={employees}
               activeThreadId={activeThreadId}
               onSelectThread={handleSelectThread}
             />
-          </RecessedWell>
+          </div>
         )}
       </Faceplate>
     </div>
