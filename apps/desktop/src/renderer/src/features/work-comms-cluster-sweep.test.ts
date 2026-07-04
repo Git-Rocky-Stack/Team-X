@@ -27,13 +27,42 @@ function expectNoLegacy(src: string, file: string) {
 }
 
 describe('work & comms cluster sweep (Phase 5b/6)', () => {
-  it.todo('per-file describe blocks added in Tasks 2–21');
-
-  // org-chart-tree carries zero legacy markers today (pure memoized tree
-  // builder) — its guard is live from the scaffold onward.
+  // org-chart-tree carries zero legacy markers (pure memoized tree
+  // builder) — its guard has been live since the scaffold.
   it('org-chart-tree has no legacy composition', () => {
     expectNoLegacy(read('orgchart/org-chart-tree.tsx'), 'org-chart-tree.tsx');
   });
+});
+
+describe('whole 5b/6 work-comms cluster is legacy-free', () => {
+  const FILES = [
+    'orgchart/org-chart-view.tsx',
+    'orgchart/org-chart-node.tsx',
+    'orgchart/org-chart-tree.tsx',
+    'orgchart/employee-profile-dialog.tsx',
+    'orgchart/promote-dialog.tsx',
+    'orgchart/fire-dialog.tsx',
+    'meetings/meetings-view.tsx',
+    'meetings/meeting-detail.tsx',
+    'meetings/call-meeting-dialog.tsx',
+    'hire/hire-dialog.tsx',
+    'chat/system-agent-badge.tsx',
+    'chat/composer.tsx',
+    'chat/message-list.tsx',
+    'chat/thread-list.tsx',
+    'chat/chat-view.tsx',
+    'chat/chat-drawer.tsx',
+    'memory/thread-memory-card.tsx',
+    'copilot/copilot-insight-card.tsx',
+    'copilot/copilot-dashboard-widget.tsx',
+    'copilot/copilot-sidebar.tsx',
+    'user-guide/user-guide-view.tsx',
+  ];
+  for (const file of FILES) {
+    it(`${file} has no legacy composition`, () => {
+      expectNoLegacy(read(file), file);
+    });
+  }
 });
 
 describe('org-chart-node', () => {
