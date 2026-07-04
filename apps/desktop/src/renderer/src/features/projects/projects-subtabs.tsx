@@ -19,8 +19,11 @@ export function ProjectsSubtabs() {
   const activeSubview = useAppStore((s) => s.projectsSubview);
   const setSubview = useAppStore((s) => s.setProjectsSubview);
 
+  // Chassis strip, not a display: bg-background flips with the shift so the
+  // nav-tile recipe reads in Day Shift (legacy surface-50 is a static
+  // near-black that left the active tile illegible on Day).
   return (
-    <div className="flex items-center gap-1 border-b border-border bg-surface-50 px-6 py-1.5">
+    <div className="flex items-center gap-1 border-b border-border bg-background px-6 py-1.5">
       {SUBTABS.map((tab) => {
         const isActive = tab.subview === activeSubview;
         const Icon = tab.icon;
