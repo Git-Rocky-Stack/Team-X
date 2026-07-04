@@ -88,7 +88,7 @@ export function Composer({
           </button>
         </div>
         <div className="mt-3 flex items-center justify-between gap-2">
-          <p className="text-caption text-muted-foreground">
+          <p className="text-caption text-silver-mute">
             {queueMode
               ? 'Queue mode active while the current reply completes.'
               : 'Send with Ctrl/Cmd+Enter.'}

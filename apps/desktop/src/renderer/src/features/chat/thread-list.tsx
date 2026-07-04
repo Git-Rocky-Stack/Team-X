@@ -81,7 +81,7 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
         ? 'bg-[var(--armed-soft)] text-[var(--armed-lit)]'
         : kind === 'agent'
           ? 'text-led-hold'
-          : 'text-[var(--display-fg)]';
+          : 'text-silver-mute';
 
   const Icon =
     kind === 'copilot'
@@ -98,7 +98,7 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
       type="button"
       onClick={() => onSelect(thread.id)}
       className={cn(
-        'well flex w-full items-start gap-3 px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--hairline-strong)]',
+        'flex w-full items-start gap-3 rounded-card border border-[var(--hairline)] px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--hairline-strong)]',
         active && 'border-[var(--armed-edge)] bg-[var(--armed-soft)]',
       )}
     >

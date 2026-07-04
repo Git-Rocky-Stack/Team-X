@@ -253,7 +253,7 @@ describe('thread-memory-card', () => {
 });
 
 describe('thread-list', () => {
-  it('well rows + Tag chips + pinned kinds preserved, no legacy', () => {
+  it('chassis rows + Tag chips + pinned kinds preserved, no legacy', () => {
     const src = read('chat/thread-list.tsx');
     expect(src).toContain("from '@/components/console");
     expect(src).toContain('<Tag');

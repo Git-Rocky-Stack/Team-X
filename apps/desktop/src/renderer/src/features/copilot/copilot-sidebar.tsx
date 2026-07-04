@@ -321,7 +321,7 @@ export function CopilotSidebar() {
 
                 {feedbackSuggestion && !isLoading && !isError && (
                   <RecessedWell className="p-4" data-copilot-feedback-suggestion="">
-                    <p className="text-caption text-foreground">
+                    <p className="text-caption text-[var(--display-fg)]">
                       {formatFeedbackSuggestionPrompt(feedbackSuggestion)}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">

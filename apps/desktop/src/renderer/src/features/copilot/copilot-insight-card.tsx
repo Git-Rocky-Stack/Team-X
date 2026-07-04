@@ -191,16 +191,14 @@ export function CopilotInsightCard({
 
           <h3
             className={cn(
-              'mt-1.5 leading-snug text-foreground',
+              'mt-1.5 leading-snug text-[var(--display-fg)]',
               isDashboard ? 'text-body-strong' : 'text-body-strong',
             )}
           >
             {insight.title}
           </h3>
 
-          <p
-            className={cn('mt-1 text-caption text-muted-foreground', isDashboard && 'line-clamp-2')}
-          >
+          <p className={cn('mt-1 text-caption text-silver-mute', isDashboard && 'line-clamp-2')}>
             {insight.detail}
           </p>
 

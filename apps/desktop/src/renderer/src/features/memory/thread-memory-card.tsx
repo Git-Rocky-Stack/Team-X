@@ -70,7 +70,7 @@ export function ThreadMemoryCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-body-strong text-foreground">{title}</span>
+              <span className="text-body-strong text-[var(--display-fg)]">{title}</span>
               <LampTile
                 small
                 interactive={false}
@@ -86,7 +86,7 @@ export function ThreadMemoryCard({
                 />
               ) : null}
             </div>
-            <p className="line-clamp-2 text-caption text-muted-foreground">
+            <p className="line-clamp-2 text-caption text-silver-mute">
               {digestQuery.isLoading || checkpointsQuery.isLoading
                 ? 'Loading condensed memory for this thread...'
                 : digestQuery.isError || checkpointsQuery.isError
@@ -123,7 +123,7 @@ export function ThreadMemoryCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-body-strong text-foreground">{title}</span>
+            <span className="text-body-strong text-[var(--display-fg)]">{title}</span>
             <LampTile
               small
               interactive={false}
@@ -140,7 +140,7 @@ export function ThreadMemoryCard({
             ) : null}
             {latestResumeLabel ? <Tag>{latestResumeLabel}</Tag> : null}
           </div>
-          <p className="text-caption text-muted-foreground">{description}</p>
+          <p className="text-caption text-silver-mute">{description}</p>
         </div>
 
         <Button

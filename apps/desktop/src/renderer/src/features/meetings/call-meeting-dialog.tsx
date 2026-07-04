@@ -110,8 +110,8 @@ export function CallMeetingDialog({
                   onChange={() => toggleAttendee(emp.id)}
                   className="h-3.5 w-3.5 rounded border-border accent-brand"
                 />
-                <span className="text-foreground">{emp.name}</span>
-                <span className="text-caption text-muted-foreground">({emp.title})</span>
+                <span className="text-[var(--display-fg)]">{emp.name}</span>
+                <span className="text-caption text-silver-mute">({emp.title})</span>
               </label>
             ))}
           </RecessedWell>

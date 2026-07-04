@@ -615,7 +615,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                   </div>
                 </StripeHeader>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)] bg-surface-200 text-caption font-semibold text-foreground/80">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)] bg-[var(--carbon-800)] text-caption font-semibold">
                     {initials(employee.name)}
                   </div>
                   <SheetTitle className="flex min-w-0 flex-1 items-center gap-2 text-h3">
