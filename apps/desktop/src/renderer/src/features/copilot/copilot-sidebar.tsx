@@ -222,7 +222,10 @@ export function CopilotSidebar() {
           <div className="min-h-0 flex-1">
             <ScrollArea className="h-full">
               <div className="space-y-4 px-4 py-4">
-                <RecessedWell className="p-4" data-copilot-export-controls="">
+                <div
+                  className="rounded-card border border-[var(--hairline)] p-4"
+                  data-copilot-export-controls=""
+                >
                   <div className="space-y-4">
                     <div>
                       <p className="mb-2 text-eyebrow-sm text-silver-mute">Category</p>
@@ -317,7 +320,7 @@ export function CopilotSidebar() {
                       )}
                     </div>
                   </div>
-                </RecessedWell>
+                </div>
 
                 {feedbackSuggestion && !isLoading && !isError && (
                   <RecessedWell className="p-4" data-copilot-feedback-suggestion="">
@@ -330,7 +333,7 @@ export function CopilotSidebar() {
                         onClick={applyFeedbackSuggestion}
                         disabled={!companyId || setCopilotWeights.isPending}
                         data-copilot-feedback-apply=""
-                        className="nav-tile nav-tile-active"
+                        className="cap"
                       >
                         Apply
                       </button>
@@ -338,7 +341,7 @@ export function CopilotSidebar() {
                         type="button"
                         onClick={keepCurrentWeight}
                         disabled={setCopilotWeights.isPending}
-                        className="nav-tile"
+                        className="cap"
                       >
                         Keep current
                       </button>
