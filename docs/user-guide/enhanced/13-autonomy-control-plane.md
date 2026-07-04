@@ -1093,11 +1093,11 @@ Approval queue backlog causes frustration:
 
 ## Related Sections
 
-- [Mission Control Dashboard](#5-mission-control-dashboard) — Real-time operations
-- [Copilot: Proactive Intelligence](#12-copilot-proactive-intelligence) — Insights and improvement
-- [Telemetry & Costs](#16-telemetry--costs) — Detailed cost analysis
-- [Extensions: Skills & MCPs](#14-extensions--skills--mcps) — Runtime configuration
-- [Settings & Configuration](#15-settings--configuration) — Runtime and memory settings
+- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard) — Real-time operations
+- [Copilot: Proactive Intelligence](12-copilot.md#12-copilot-proactive-intelligence) — Insights and improvement
+- [Telemetry & Costs](../comprehensive-user-guide.md#16-telemetry--costs) — Detailed cost analysis
+- [Extensions: Skills & MCPs](../comprehensive-user-guide.md#14-extensions--skills--mcps) — Runtime configuration
+- [Settings & Configuration](../comprehensive-user-guide.md#15-settings--configuration) — Runtime and memory settings
 
 ---
 

@@ -19,7 +19,7 @@ The Command Palette is Team-X's natural-language command surface. Instead of cli
 | Submit / confirm | `Enter` |
 | Cycle history (from empty input) | `ArrowUp` / `ArrowDown` |
 
-The keybinding is platform-aware and resolves at runtime in `app-shell.tsx`. There is no per-view variation — the palette is global.
+The keybinding is platform-aware and resolves at runtime in `App.tsx`. There is no per-view variation — the palette is global.
 
 ## What You Can Say
 

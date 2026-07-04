@@ -23,7 +23,7 @@ Mission Control is designed for **daily operations**, not configuration or gover
 
 Click **Dashboard** in the top navigation. Mission Control is the default view.
 
-**Keyboard shortcut:** Press `Ctrl+1` / `Cmd+1` to jump directly to Dashboard.
+**Keyboard shortcut:** Press `Cmd/Ctrl+K` to open the command palette, then run `/show dashboard` to jump directly to Mission Control.
 
 ---
 
@@ -117,15 +117,15 @@ Shows recent agentic loop executions with live status updates.
 
 #### Interpreting Run States
 
-**Running (Brand Pulse)**
+**Running (EXEC lamp)**
 - Normal: Steps incrementing, duration increasing gradually
 - Abnormal: Stuck on same step for >60 seconds → possible provider hang or malformed tool call
 
-**Completed (Green Check)**
+**Completed (GO lamp)**
 - Review cost and token count — if unusually high, check the thread for what happened
-- Failed runs show red badge with error reason
+- Failed runs light a steady NO-GO lamp with the error reason
 
-**Failed (Red X)**
+**Failed (NO-GO lamp)**
 - Common reasons:
   - `budget_exhausted`: Hit step/token/timeout ceiling → increase in Settings → Runtime → Agentic Loop
   - `timeout`: Wall-clock deadline exceeded → check provider latency or increase timeout
@@ -147,11 +147,11 @@ Shows durable backlog per employee layered with live activity status.
 
 #### What You See Per Employee
 
-| Element | Meaning | Color Code |
-|---------|---------|------------|
+| Element | Meaning | Lamp / Indicator |
+|---------|---------|------------------|
 | **Name + Title** | Employee identity | — |
-| **Status Badge** | Current activity state | Brand (Live) / Amber (Blocked) / Red (Error) / Gray (Idle) |
-| **Queue Bar** | Visual breakdown of ticket counts | Gray (Open) / Brand (In-Progress) / Amber (Blocked) / Green (Done) |
+| **Status Lamp** | Current activity state | EXEC lamp (thinking) / HOLD lamp (blocked) / NO-GO lamp (error) / STBY lamp (idle) |
+| **Queue Bar** | Visual breakdown of ticket counts | Graphite (Open) / Scope teal (In-Progress) / Amber (Blocked) / Green (Done) |
 | **Quick Actions** | Chat bubble, ticket icon | Jump to conversation or ticket list |
 
 #### Reading the Queue Bar
@@ -160,7 +160,7 @@ The horizontal bar shows four segments, left-to-right:
 
 ```
 Open: ████████ (8)     In-Progress: ███ (3)     Blocked: █ (1)     Done: ██████ (6)
-   Gray                  Blue                   Amber              Green
+   Graphite             Scope teal             Amber              Green
 ```
 
 **Healthy queue distribution:**
@@ -170,18 +170,20 @@ Open: ████████ (8)     In-Progress: ███ (3)     Blocked: �
 - Done: 10-30% (completion flowing)
 
 **Warning signs:**
-- All gray (Open only) → Employee not picking up work → Check provider, status, or availability
+- All graphite (Open only) → Employee not picking up work → Check provider, status, or availability
 - All amber (Blocked only) → Employee or workspace stalled → Investigate blockage root cause
 - Long Done segment → Work completing but not being archived/reviewed → May need attention
 
-#### Status Badge Meanings
+#### Status Lamp Meanings
 
-| Badge | State | Typical Cause | Action |
-|-------|-------|---------------|--------|
-| **Brand pulse** | Live/Active | Employee is thinking, streaming, or calling a tool | None — work in progress |
-| **Amber** | Blocked | Ticket assigned to employee is blocked, or employee has no viable provider | Check ticket detail for block reason; verify provider configuration |
-| **Red** | Error | Run failed, provider disconnected, or runtime error | Click employee → review recent runs; check provider connection |
-| **Gray** | Idle | No active work, provider available, queue may be empty or employee unassigned | Normal if queue empty; assign tickets if employee should be working |
+Each employee row carries a stencil word-lamp for live activity — the same lamp vocabulary used across the console. Read the lamp word, not a color dot:
+
+| Lamp | State | Typical Cause | Action |
+|------|-------|---------------|--------|
+| **EXEC** (teal) | Live/Active | Employee is thinking, streaming, or calling a tool | None — work in progress |
+| **HOLD** (amber) | Blocked | Ticket assigned to employee is blocked, or employee has no viable provider | Check ticket detail for block reason; verify provider configuration |
+| **NO-GO** (red) | Error | Run failed, provider disconnected, or runtime error | Click employee → review recent runs; check provider connection |
+| **STBY** (unlit) | Idle | No active work, provider available, queue may be empty or employee unassigned | Normal if queue empty; assign tickets if employee should be working |
 
 #### Quick Actions
 
@@ -304,7 +306,7 @@ Raw LLM output from all employees and runtimes. Shows:
 Grid layout showing employee activity as cards. Each employee card displays:
 
 - Avatar, name, title
-- Live status badge
+- Live status lamp (stencil word — EXEC / HOLD / NO-GO / STBY)
 - Current activity (what they're working on)
 - Quick actions (chat, assign ticket)
 
@@ -396,7 +398,7 @@ Symptom: Queue Pressure: 67, Live Runs: 0, Workforce Active: 0
 Diagnosis:
   1. Check provider enabled (Settings → Providers)
   2. Test connection (click Test button on provider card)
-  3. Check employee status badges (any red errors?)
+  3. Check employee status lamps (any NO-GO lamps?)
   4. Check for blocked tickets preventing flow
 Resolution:
   - Fix provider config OR reassign blocked work OR hire more employees
@@ -449,9 +451,8 @@ Resolution:
 
 ### 1. Use Keyboard Navigation
 
-- `Ctrl+1` / `Cmd+1`: Jump to Dashboard (Mission Control)
-- `Ctrl+2` / `Cmd+2`: Jump to Tickets
-- `Ctrl+3` / `Cmd+3`: Jump to Chat
+- `Cmd/Ctrl+K`: Open the command palette, then run `/show dashboard`, `/show tickets`, or `/show chat` to switch views
+- `Cmd/Ctrl+Shift+K`: Open Copilot
 - `Tab`: Navigate between panels
 - `Enter`: Open selected item (run card, employee row)
 - `Esc`: Close detail panels
@@ -469,10 +470,10 @@ Keep Mission Control open in a separate window for continuous monitoring:
 
 Train your eye to scan for **anomalies**, not details:
 
-- **Red anywhere** → needs immediate attention (error, critical insight, blocked)
-- **Amber** → investigate soon (blocked, warning, stagnation)
-- **Brand pulse** → normal activity
-- **Gray** → idle or no data (verify if expected)
+- **Red anywhere** (NO-GO lamp) → needs immediate attention (error, critical insight, blocked)
+- **Amber** (HOLD lamp) → investigate soon (blocked, warning, stagnation)
+- **Teal** (EXEC lamp) → normal activity
+- **Unlit / STBY lamp** → idle or no data (verify if expected)
 
 ### 4. Set Monitoring Intervals
 
@@ -498,11 +499,11 @@ When troubleshooting, use multiple subviews together:
 
 ## Related Sections
 
-- [Command Palette](#6-command-palette) — Creating work via natural language
-- [Tickets & Work](#7-tickets--work-management) — Managing durable work items
-- [Copilot: Proactive Intelligence](#12-copilot-proactive-intelligence) — Understanding insights
-- [Autonomy Control Plane](#13-autonomy-control-plane) — Governance and runtime health
-- [Troubleshooting](#18-troubleshooting) — Symptom-based debugging
+- [Command Palette](06-command-palette.md#6-command-palette) — Creating work via natural language
+- [Tickets & Work](07-tickets-and-work.md#7-tickets--work-management) — Managing durable work items
+- [Copilot: Proactive Intelligence](12-copilot.md#12-copilot-proactive-intelligence) — Understanding insights
+- [Autonomy Control Plane](13-autonomy-control-plane.md#13-autonomy-control-plane) — Governance and runtime health
+- [Troubleshooting](../comprehensive-user-guide.md#18-troubleshooting) — Symptom-based debugging
 
 ---
 

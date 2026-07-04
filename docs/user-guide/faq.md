@@ -237,9 +237,9 @@ A ticket is a **work unit** assigned to one or more employees. Each ticket has:
 - **Description:** Detailed requirements and context
 - **Assignee:** Primary employee responsible
 - **Participants:** Additional employees collaborating
-- **Priority:** Low, Normal, High, Critical
+- **Priority:** Low, Medium, High, Critical
 - **Dependencies:** Other tickets that must complete first
-- **Status:** Open, In Progress, Done, Cancelled
+- **Status:** Open, In Progress, Blocked, Done
 
 ### How do I create a ticket?
 
@@ -367,7 +367,7 @@ A workspace is a **company container** — where employees work, tickets are tra
 - **Portfolio:** One workspace per product
 - **Environments:** Dev, staging, production workspaces
 
-Switch between workspaces from the **Workspace Switcher** in the top bar; create a new one from **Settings → Workspaces → Create Workspace**.
+Switch between workspaces from the **Workspace Switcher** in the top bar; create a new one from the same switcher (**Workspace switcher → Create workspace…**).
 
 ### Can employees work across workspaces?
 
@@ -602,7 +602,7 @@ There is no remote data to delete — Team-X never had any.
 
 ### Can I run multiple Team-X workspaces side-by-side?
 
-Yes. The **Workspace Switcher** (added in v1.1.0) lets you run multiple companies side-by-side with isolated employees, tickets, budgets, and data. Open **Settings → Workspaces → Create Workspace** to add another, or use the workspace switcher in the top bar to flip between them. Nothing to merge or migrate — each workspace is a separate company row in the same local database.
+Yes. The **Workspace Switcher** in the top bar lets you run multiple companies side-by-side with isolated employees, tickets, budgets, and data. Use **Workspace switcher → Create workspace…** to add another, or the same switcher to flip between existing ones. Nothing to merge or migrate — each workspace is a separate company row in the same local database.
 
 ---
 

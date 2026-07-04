@@ -38,14 +38,14 @@
 ```
 ┌─────────┐     ┌──────────────┐     ┌──────────┐     ┌──────────┐
 │  Open   │────▶│ In Progress  │────▶│ Blocked  │────▶│   Done   │
-│ (Gray)  │     │   (Brand)    │     │ (Amber)  │     │ (Green)  │
+│ [HOLD]  │     │   [EXEC]     │     │ [NO-GO]  │     │  [GO]    │
 └─────────┘     └──────────────┘     └──────────┘     └──────────┘
      ▲                                   │                 │
      │                                   │                 │
      └───────────────────────────────────┘                 │
-                   Reopen from Done                       │
+                   Drag to any lane                       │
                                                           │
-                                                   Reopen (creates new entry)
+                                                   Drag out of Done to reopen
 ```
 
 | Status | Meaning | When to Use |
@@ -55,7 +55,7 @@
 | **Blocked** | Waiting on dependency or decision | External blockage, needs input, cannot proceed |
 | **Done** | Work completed | Verified deliverable, resolved issue, finished task |
 
-**Reopening:** Click "Reopen" on a Done ticket to return it to Open. The audit trail preserves the original completion; reopening creates a new work cycle.
+**Reopening:** Drag a Done card back to Open or In Progress on the Kanban board to resume work — there is no "Reopen" button. The audit trail preserves the original completion.
 
 ### Priority Levels
 
@@ -125,7 +125,7 @@ The Task Planner:
 4. Shows amber confirmation gate before creating tickets
 5. Writes all tickets to the queue with proper assignees
 
-See [Task Planner documentation](../../task-planner.md) for full details.
+See [Task Planner documentation](../task-planner.md) for full details.
 
 ---
 
@@ -154,15 +154,15 @@ See [Task Planner documentation](../../task-planner.md) for full details.
 ### Reading the Board
 
 **Column counts** tell you queue health:
-- **Open (gray)**: Backlog → High count = need capacity or prioritization
-- **In Progress (brand)**: Active work → Low count = good flow, High count = WIP scattering
-- **Blocked (amber)**: Stalled work → Any count > 0 needs attention
-- **Done (green)**: Completed work → Review before archival to verify quality
+- **Open (HOLD lamp)**: Backlog → High count = need capacity or prioritization
+- **In Progress (EXEC lamp)**: Active work → Low count = good flow, High count = WIP scattering
+- **Blocked (NO-GO lamp)**: Stalled work → Any count > 0 needs attention
+- **Done (GO lamp)**: Completed work → Review before archival to verify quality
 
 **Card information at a glance:**
 - **Title**: What the work is
 - **Assignee**: Who owns it (blank = unassigned)
-- **Priority badge**: Urgency level
+- **Priority lamp**: Urgency level (Critical / High light a lamp; Medium / Low stay unlit)
 - **Project tag** (if linked): Which initiative
 
 **Drag-and-drop:** Move cards between columns to update status. The audit log records every status change.
@@ -171,65 +171,54 @@ See [Task Planner documentation](../../task-planner.md) for full details.
 
 ## Ticket Detail Panel
 
-Click any ticket card to open the detail panel. The panel has three sections.
+Click any ticket card to open the **detail rail** on the right. It stacks the ticket's identity, live status, collaboration, and full discussion in one scrollable column. Everything in the rail is read-and-collaborate — **status is not editable here**; you change it by dragging the card between Kanban columns.
 
-### Header Section
+### Identity & Status
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│ Auth Implementation                          [High] [In Progress]   │
-│ Assignee: Sarah Chen   Project: Q2 Launch    Due: Mar 15           │
-│                                                        [Close][⋮]  │
-└─────────────────────────────────────────────────────────────────────┘
-```
+The top of the rail carries the ticket's identity and two **non-interactive** stencil word-lamps:
 
-**Header actions:**
-- **Close/Reopen**: Change status to Done or Open
-- **⋮ (More)**: Delete ticket, copy link, view in audit log
+- **Ticket ID** — the short 8-character identifier, shown as a mono tag beside the "Detail rail" label.
+- **Title** — the ticket's headline.
+- **Status lamp** — reflects the current column and **cannot be changed from the rail**; drag the card between columns to change status (see [Updating Status](#updating-status)). Lamp words: **HOLD** (amber) = Open, **EXEC** (teal) = In Progress, **NO-GO** (red) = Blocked, **GO** (green) = Done.
+- **Priority lamp** — **NO-GO** (red) = Critical, **HOLD** (amber) = High, unlit = Medium / Low.
+- **Assignee** — the owner's avatar and name, or "Unassigned".
+- **Close (×)** — dismisses the rail. There is no `⋮` overflow menu, no status dropdown, and no "Reopen" button anywhere in the rail.
 
-### Thread Section
+### Description & Ticket Memory
 
-The heart of the ticket. Shows full conversation history.
+- **Description** — the full requirements text, shown when the ticket has one.
+- **Ticket memory** — a memory card exposing the latest digest and the resumable checkpoint trail behind this ticket's thread (see [Ticket Memory](#ticket-memory)).
+
+### Participants
+
+- Lists every employee on the ticket thread; the assignee is tagged **Owner**.
+- Add a participant with the employee picker, or remove one with the ✕ control on their chip.
+- New participants inherit the full thread history.
+
+### Attachments
+
+- Vault files linked to this ticket — source material, requirements docs, reference designs.
+- Click **Attach** to pick a file from the company vault; agent-created deliverables can be attached the same way.
+
+### Discussion Thread
+
+The heart of the ticket — the full conversation history, newest at the bottom.
 
 **What you see:**
-- **Human messages**: Your comments and instructions (left-aligned, white background)
-- **Employee responses**: Agent replies (right-aligned, brand-tinted background)
-- **Tool calls**: Blue chips showing function name and arguments
-- **Tool results**: Gray chips with return values
-- **Deliverables**: File attachments created by agents
+- **Your messages** — highlighted with the armed-red tint and labeled "You".
+- **Employee replies** — plain cards labeled with the agent's name.
+- **System notes** — centered, italic status lines for automated events.
 
 **Thread behavior:**
-- **Streaming**: Employee responses appear token-by-token in real-time
-- **History**: Full conversation preserved from creation to close
-- **Searchable**: Use browser find (Ctrl+F) to locate specific messages
-- **Exportable**: Copy thread content for external documentation
+- **Streaming** — employee responses appear token-by-token in real time.
+- **History** — the full conversation is preserved from creation to close.
+- **Composer** — type a comment and press **Enter** (or **Send**) to post; **Shift+Enter** inserts a newline.
+- **Empty state** — a "No discussion yet." standby lamp shows until the first message lands.
 
-### Activity Section
+### Closing
 
-**Participants**
-- Lists all employees with access to this ticket thread
-- Assignee is automatically a participant
-- Add/remove participants anytime
-
-**Attachments**
-- Vault files linked to this ticket
-- Source material, requirements docs, reference designs
-- Agent-created deliverables appear here automatically
-
-**Related Tickets**
-- Parent/child relationships
-- Duplicate or blocking relationships
-- Click to navigate between related work
-
-**Timeline**
-- Chronological list of ticket events:
-  - Created
-  - Status changes
-  - Assignee changes
-  - Participant additions
-  - Attachments
-  - Comments
-  - Closure
+- The composer footer carries a single **Close Ticket** button (alongside the comment **Send** button).
+- Once the ticket is Done, the composer is replaced by a "Ticket closed on <date>" line. Reopening is not a rail action — drag the card out of **Done** on the board to resume work.
 
 ---
 
@@ -282,7 +271,7 @@ All three receive the comment and can respond.
 |----------|---------------|
 | Only two participants: you and the employee | Multiple participants: assignee + added collaborators |
 | Comment wakes only the employee | Comment wakes all participants + historical authors |
-| No status tracking | Status workflow (Open → In Progress → Done) |
+| No status tracking | Status workflow (Open → In Progress → Blocked → Done) |
 | No audit trail | Full audit of changes and comments |
 | Temporary coordination | Durable work record |
 
@@ -431,15 +420,12 @@ Configure default memory behavior in **Settings → Memory**:
 
 ### Updating Status
 
-**Method 1: Drag and drop**
-- Drag ticket card between columns on Kanban board
-- Status updates automatically
+**Method 1: Drag and drop (primary)**
+- Drag the ticket card between columns on the Kanban board (Open / In Progress / Blocked / Done)
+- Status updates automatically, and the audit log records the change
+- The status lamp in the detail rail is display-only — there is no status dropdown
 
-**Method 2: Status badge**
-- Click status badge in ticket detail header
-- Select new status from dropdown
-
-**Method 3: Command Palette**
+**Method 2: Command Palette**
 ```
 Press Ctrl+K → "Close ticket #47"
 Press Ctrl+K → "Mark ticket #42 as blocked"
@@ -487,17 +473,16 @@ When an employee creates a deliverable (code, doc, design):
 ### Closing and Reopening
 
 **Closing:**
-1. Click **Close Ticket** in detail header
-2. Card animates to Done column
+1. Click **Close Ticket** at the bottom of the detail rail
+2. Card moves to the Done column
 3. Assignee and participants notified
 4. Audit log records closure
 
 **Reopening:**
-1. Click **Reopen** on Done ticket
-2. Card returns to Open column
-3. Assignee retained (or change if needed)
-4. New comment prompts: "Why reopening?"
-5. Audit log shows original completion + reopening
+1. Drag the card out of **Done** (back to Open or In Progress) on the Kanban board — there is no "Reopen" button
+2. Work resumes and the comment composer becomes available again
+3. The assignee is retained (reassign if needed)
+4. The audit log preserves the original completion alongside the reopen
 
 ---
 
@@ -623,7 +608,7 @@ See attached API spec for endpoint details.
 
 **Fix:**
 1. Refresh Tickets view (F5 or Cmd+R)
-2. If still wrong, click status badge in detail to reset
+2. If still wrong, drag the card to the correct column to re-sync its status
 3. Check Audit log to confirm status change was recorded
 
 ### "Can't find a ticket I created"
@@ -642,12 +627,12 @@ See attached API spec for endpoint details.
 
 ## Related Sections
 
-- [Command Palette](#6-command-palette) — Creating tickets via natural language
-- [Task Planner](../../task-planner.md) — AI-powered ticket decomposition and delegation
-- [Projects, Goals & Schedule](#8-projects--goals--schedule) — Linking tickets to initiatives
-- [Chat & Conversations](#9-chat--conversations) — Contrast with ticket threads
-- [Files & Deliverables](#11-files--deliverables) — Ticket attachments
-- [Mission Control Dashboard](#5-mission-control-dashboard) — Monitoring ticket queues
+- [Command Palette](06-command-palette.md#6-command-palette) — Creating tickets via natural language
+- [Task Planner](../task-planner.md) — AI-powered ticket decomposition and delegation
+- [Projects, Goals & Schedule](../comprehensive-user-guide.md#8-projects--goals--schedule) — Linking tickets to initiatives
+- [Chat & Conversations](../comprehensive-user-guide.md#9-chat--conversations) — Contrast with ticket threads
+- [Files & Deliverables](../comprehensive-user-guide.md#11-files--deliverables) — Ticket attachments
+- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard) — Monitoring ticket queues
 
 ---
 

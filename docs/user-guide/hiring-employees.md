@@ -42,7 +42,7 @@ The new employee appears on the Dashboard, in the org chart, and is immediately 
 
 ## The Org Chart
 
-Navigate to the **Org** subtab in the Dashboard to see the full hierarchy.
+Navigate to the top-level **Org** tab in the top bar to see the full hierarchy.
 
 ### Reading the Chart
 
