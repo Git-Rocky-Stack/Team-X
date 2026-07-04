@@ -538,6 +538,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'Use Hire to add the first visible employee if the workspace is empty. The Phase 1 fast-start dialog seeds Chief Executive Officer and Senior Fullstack Engineer; the broader Phase 2 role library covers roughly 55 bundled non-system roles for promotions and org expansion.',
           'Treat Mission Control as the default daily home. It shows runs, queues, live employee state, recent commands, telemetry, and operational pressure without making you hunt across tabs.',
           'Use Tickets for accountable work, Projects and Goals for larger initiatives, Schedule for date-driven coordination, and Files for deliverables or source material.',
+          'Learn the console vocabulary once and every surface reads the same way: status is a stencil word in a lamp tile (GO, HOLD, NO-GO, STBY, EXEC), live numbers sit in dark LCD readouts, and meters are bound to real data. The top-bar shift toggle switches the chassis between Night Ops (dark) and Day Shift (silver); displays stay dark in both shifts by design.',
           'Use the Search the guide input to jump straight to a section by keyword without leaving the page; clearing it restores the full role-filtered track.',
           'Watch the Live signals rail. Four pills (Enabled provider / Employees / Extensions / Authority activity) feed the auto-detected checklist tasks and should all read ready or installed before the workspace is treated as production.',
           'Keep this guide open during setup. Its checklist progress is saved per workspace, so each company you operate keeps its own onboarding state and the dismissed-welcome flag.',
@@ -677,7 +678,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         kind: 'paragraph',
-        text: 'Runtime readiness is more than enabling a provider. The runtime strategy chooses Auto (profile hardware and pick the best path), Hybrid (mix local and cloud, four orchestrator slots), Always-On (max cloud throughput, eight slots), or Lean (conservative, two slots). Privacy tier caps which provider classes are eligible: Local Only restricts to Ollama, Open-Source Cloud adds Groq, Together, Fireworks, OpenRouter, and All Providers permits proprietary APIs (Anthropic, OpenAI, Google).',
+        text: 'Runtime readiness is more than enabling a provider. The runtime strategy chooses Auto (profile hardware and pick the best path), Hybrid (mix local and cloud, four orchestrator slots), Always-On (max cloud throughput, eight slots), or Lean (conservative, two slots). Privacy tier caps which provider classes are eligible: Local Only restricts to Ollama, Open-Source Cloud adds Groq, Together, and Fireworks, and All Providers permits proprietary APIs (Anthropic, OpenAI, Google, OpenRouter).',
       },
       {
         kind: 'paragraph',
@@ -941,7 +942,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         kind: 'paragraph',
-        text: 'The Tickets view exposes a kanban board with drag-and-drop status lanes (Open, In Progress, Blocked, Done) and a list view for batch scanning. Each ticket card surfaces priority, due date, assignee, and participant count. Ticket detail opens in a side panel so the queue stays visible while you read or edit.',
+        text: 'The Tickets view pairs a kanban board with a detail rail. The board has drag-and-drop status lanes (Open, In Progress, Blocked, Done) with backlog, active, blocked, and resolved counters above it; each ticket card surfaces priority, due date, and assignee as stencil lamps and tags. Selecting a card opens the detail rail beside the board so the queue stays visible while you read or edit.',
       },
       {
         kind: 'paragraph',
