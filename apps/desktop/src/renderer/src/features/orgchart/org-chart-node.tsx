@@ -101,9 +101,9 @@ export function OrgChartNode({
           type="button"
           onClick={() => setActionsOpen((open) => !open)}
           onKeyDown={handleKeyDown}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-200 text-caption font-semibold text-foreground/80">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-[var(--hairline)] bg-[var(--carbon-800)] text-caption font-semibold">
             {initials(employee.name)}
           </div>
 
