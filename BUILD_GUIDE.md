@@ -1,193 +1,108 @@
-# Team-X Desktop App - Build Guide
+# Team-X — Build Guide
 
-## 🚧 Build Status: Node Version Compatibility Issue
+How to build the Team-X desktop app from source and produce platform installers.
 
-**Current Issue**: The build requires **Node.js >= 22.12.0**, but your system has **Node.js v20.20.2**.
+## Prerequisites
 
-## Quick Fix Options
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Node.js** | 22.13.0+ | Repo pins **22.22.2** via `.nvmrc` (`nvm use` / `fnm use`) |
+| **pnpm** | 9.0.0+ | Repo pins 9.15.9 via `packageManager` (use `corepack enable`) |
+| **Git** | any recent | |
+| **OS** | Windows 11, macOS 13+, or Ubuntu 22.04+ | Native module compilation (better-sqlite3, keytar) |
 
-### Option 1: Upgrade Node.js (Recommended) ✅
-
-**Step 1**: Download and install Node.js 22.x or later
-- Download from: https://nodejs.org/
-- Or use nvm (Node Version Manager): `nvm install 22`
-
-**Step 2**: Verify the upgrade
 ```bash
-node --version  # Should show v22.x.x or higher
+node --version   # must be >= 22.13.0
+pnpm --version   # must be >= 9
 ```
 
-**Step 3**: Rebuild dependencies
+## Setup
+
 ```bash
-cd "C:\Users\User\Desktop\Development Projects\Strategia-Enhanced-App\Team-X"
-pnpm install
+git clone https://github.com/Git-Rocky-Stack/Team-X.git
+cd Team-X
+pnpm install     # runs electron-rebuild for native modules + fetches llama.cpp binaries (soft)
 ```
 
-**Step 4**: Build the installer
+## Development build (hot reload, no installer)
+
 ```bash
-pnpm run dist:win
+pnpm dev
 ```
 
-### Option 2: Use nvm (Node Version Manager)
+## Production installers
 
-**If you have nvm installed:**
 ```bash
-# Install Node 22
-nvm install 22
-
-# Use Node 22
-nvm use 22
-
-# Verify
-node --version
-
-# Then build
-cd "C:\Users\User\Desktop\Development Projects\Strategia-Enhanced-App\Team-X"
-pnpm install
-pnpm run dist:win
+pnpm dist          # current platform
+pnpm dist:win      # Windows NSIS installer (x64 + arm64)
+pnpm dist:mac      # macOS DMG (x64 Intel + arm64 Apple Silicon)
+pnpm dist:linux    # Linux AppImage + .deb (x64)
 ```
 
-## Build Commands
+Output lands in `dist/` as `Team-X Setup <version>.exe`, `Team-X-<version>.dmg` /
+`Team-X-<version>-arm64.dmg`, and `Team-X-<version>-x64.AppImage` / `.deb`.
 
-Once Node.js version is compatible, use these commands:
+> **Linux AppImage note:** the AppImage runtime requires **FUSE 2** on the host
+> (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora). If it won't
+> start, install that package or run it with `--appimage-extract-and-run`. The
+> `.deb` needs no FUSE and resolves its own dependencies. No `.rpm` is produced.
 
-### Windows Installer (Recommended for Rocky)
+## Verification before distributing
+
 ```bash
-cd "C:\Users\User\Desktop\Development Projects\Strategia-Enhanced-App\Team-X"
-pnpm run dist:win
+pnpm typecheck                      # all workspaces
+pnpm lint                           # Biome + ESLint
+pnpm test                           # full unit suite
+pnpm -F @team-x/desktop test:e2e    # builds, then runs the Playwright E2E suite
 ```
 
-**Output**: 
-- `dist/Team-X Setup 2.0.1.exe` (Windows installer)
-- One-click installer for your users
+## Installation locations
 
-### macOS Installer
-```bash
-pnpm run dist:mac
-```
+**Windows**
+- Installs to `C:\Users\<username>\AppData\Local\Programs\team-x-desktop`
+- Desktop shortcut and Start Menu entry created automatically
 
-**Output**:
-- `dist/Team-X-2.0.1.dmg` (macOS disk image)
-- `dist/Team-X-2.0.1-arm64.dmg` (Apple Silicon)
-
-### Linux Installer
-```bash
-pnpm run dist:linux
-```
-
-**Output**:
-- `.AppImage` and `.deb` packages (x64). No `.rpm` is produced.
-- The AppImage runtime requires **FUSE 2** on the host (`libfuse2`, or `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora). If it won't start, install that package or run it with `--appimage-extract-and-run`. The `.deb` needs no FUSE.
-
-### Development Build (Faster, Not Installer)
-```bash
-pnpm run dev
-```
-
-**Output**: Runs the app in development mode with hot reload
-
-## What Gets Built
-
-The installer includes:
-- ✅ **Team-X Desktop App v2.0.1** with all new Skills & MCP features
-- ✅ **32 Built-in Capabilities** (20 skills + 12 MCP templates)
-- ✅ **Skills Marketplace** with 20 pre-loaded skills
-- ✅ **MCP Marketplace** with 12 pre-configured templates
-- ✅ **Simplified Permissions** with 3 safety presets
-- ✅ **Proactive Execution Foundation** (from earlier work)
-- ✅ **Auto-update support** for future versions
-
-## Installation Locations
-
-**Windows**:
-- Installs to: `C:\Users\<username>\AppData\Local\Programs\team-x-desktop`
-- Desktop shortcut created automatically
-- Start Menu entry added
-
-**User Data Location**:
+**User data**
 - Windows: `C:\Users\<username>\AppData\Roaming\team-x-desktop`
 - macOS: `~/Library/Application Support/team-x-desktop`
 - Linux: `~/.config/team-x-desktop`
 
-## Build Troubleshooting
+## Build pipeline
 
-### Common Build Issues
+- **electron-vite** — builds and bundles main / preload / renderer
+- **electron-builder** — creates platform-specific installers
+- **electron-rebuild** — rebuilds native modules (better-sqlite3, keytar) on install
+- **`scripts/fetch-llama-binaries.mjs`** — fetches SHA-verified llama.cpp binaries
+  (pinned release in root `package.json` → `llamaCppRelease`); soft-fails during
+  `pnpm install`, fetches all targets during `prepack`
 
-**Issue 1: "Cannot find module 'electron-vite'"**
+## Troubleshooting
+
+**"Cannot find module 'electron-vite'"** — run `pnpm install`.
+
+**"Node version incompatible"** — upgrade to Node 22.13+ (`nvm install 22` /
+`fnm install 22`), then reinstall dependencies.
+
+**Electron rebuild failed** — clean install:
 ```bash
-# Solution: Install dependencies
+rm -rf node_modules pnpm-lock.yaml
 pnpm install
 ```
 
-**Issue 2: "Node version incompatible"**
-```bash
-# Solution: Upgrade Node.js to 22.x or later
-node --version  # Must be >= 22.12.0
-```
+**Build succeeds but the app won't start** — check logs under the user-data
+`logs/` directory for your platform (see Installation locations), or run
+`pnpm dev` for live output.
 
-**Issue 3: "Electron rebuild failed"**
-```bash
-# Solution: Clean install
-rm -rf node_modules
-rm pnpm-lock.yaml
-pnpm install
-```
+**Typecheck fails on a fresh clone** — some workspace packages need their
+`dist/` built first; `pnpm install` + `pnpm build` resolves the reference chain.
 
-**Issue 4: Build succeeds but app won't start**
-```bash
-# Check logs in:
-# Windows: %APPDATA%\team-x-desktop\logs
-# Or run with: npm run dev
-```
+## Releases
 
-## Build Configuration
-
-The build process uses:
-- **electron-vite**: Builds and bundles the Electron app
-- **electron-builder**: Creates platform-specific installers
-- **electron-rebuild**: Rebuilds native modules (better-sqlite3, keytar)
-
-## Version Information
-
-- **App Version**: 2.0.1
-- **Electron Version**: (defined in package.json)
-- **Node.js Requirement**: >= 22.12.0
-- **Platform**: Windows 11 (Primary), macOS, Linux (Phase 4)
-
-## Post-Build Verification
-
-After building, verify the installer:
-
-1. **File Size**: Installer should be 150-250 MB
-2. **Installation**: Test install on clean Windows machine
-3. **New Features**: Verify Skills Marketplace, MCP Marketplace, and Simplified Permissions are visible
-4. **Capabilities**: Test that built-in skills and MCPs are available
-5. **Permissions**: Verify Standard permission mode is selected by default
-
-## Publishing
-
-To publish installers (not included in `--publish never`):
-```bash
-# For GitHub Releases or distribution
-pnpm run dist:publish
-```
-
-## Support
-
-For build issues:
-1. Check Node.js version: `node --version`
-2. Check pnpm version: `pnpm --version`
-3. Check available disk space: `dir`
-4. Review build logs in terminal output
-
-## Summary
-
-**Current Blocker**: Node.js v20.20.2 < Required v22.12.0
-
-**Solution**: Upgrade Node.js to 22.x or later, then run build commands.
-
-**Expected Result**: Team-X Desktop v2.0.1 installer with all new Skills & MCP features ready for distribution.
+Official releases ship from CI: pushing a `v*` tag runs `release.yml`, which
+builds all platform installers, generates `SHA256SUMS.txt` and electron-updater
+manifests, and publishes a draft GitHub Release. Local publishing
+(`pnpm dist:publish`) exists but the CI path is canonical.
 
 ---
 
-*Once Node.js is upgraded, the build process should complete successfully and you'll have a working installer to deploy!*
+*Last updated: 2026-07-03*
