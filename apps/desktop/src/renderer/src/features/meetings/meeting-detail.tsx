@@ -1,6 +1,8 @@
 import { ArrowLeft, Clock, FileText, Send, Square, Users2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { LampTile, RecessedWell, SubviewState } from '@/components/console/index.js';
+import { Button } from '@/components/ui/button.js';
 import { useEndMeeting, useInterjectMeeting, useMeetingDetail } from '@/hooks/use-meetings.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -17,8 +19,8 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
 
   if (isLoading || !detail) {
     return (
-      <div className="flex h-full items-center justify-center border-l border-border bg-card">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      <div className="flex h-full items-center justify-center border-l border-[var(--hairline)] bg-card">
+        <SubviewState lampLabel="STBY" lampTone="hold" title="Loading meeting..." />
       </div>
     );
   }
@@ -49,7 +51,7 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
         <button
           type="button"
           onClick={() => setActiveMeetingId(null)}
-          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground lg:hidden"
+          className="cap p-1 lg:hidden"
           aria-label="Back to meetings"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -62,28 +64,24 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
               {detail.attendees.length} attendees
             </span>
             {detail.chair && <span>Chair: {detail.chair.name}</span>}
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-muted text-muted-foreground'
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground'}`}
-              />
-              {isActive ? 'Active' : 'Ended'}
-            </span>
+            <LampTile
+              small
+              interactive={false}
+              label={isActive ? 'Active' : 'Ended'}
+              tone={isActive ? 'armed' : 'off'}
+            />
           </div>
         </div>
         {isActive && (
-          <button
-            type="button"
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={handleEnd}
             disabled={endMeeting.isPending}
-            className="flex items-center gap-1.5 rounded-lg bg-red-600/80 px-3 py-1.5 text-button-sm text-white transition-colors hover:bg-red-600 disabled:opacity-50"
           >
             <Square className="h-3 w-3" />
             {endMeeting.isPending ? 'Ending...' : 'End Meeting'}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -94,9 +92,9 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
             <FileText className="h-3 w-3" />
             Minutes
           </div>
-          <div className="mt-2 max-h-32 overflow-y-auto text-caption text-foreground/80 whitespace-pre-wrap">
+          <RecessedWell className="mt-2 max-h-32 overflow-y-auto px-3 py-2 text-caption text-[var(--display-fg)] whitespace-pre-wrap">
             {detail.minutesMd}
-          </div>
+          </RecessedWell>
         </div>
       )}
 
@@ -114,17 +112,13 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
                   {isSystem ? (
                     <p className="text-caption italic text-muted-foreground/60">{msg.content}</p>
                   ) : (
-                    <div
-                      className={`rounded-lg px-3 py-2 ${
-                        isUser
-                          ? 'bg-brand/10 border border-brand/20'
-                          : 'bg-muted/30 border border-border'
-                      }`}
-                    >
-                      <p className="text-eyebrow-sm text-muted-foreground mb-0.5">
+                    <div className={`well px-3 py-2 ${isUser ? 'border-[var(--armed-edge)]' : ''}`}>
+                      <p className="text-eyebrow-sm text-silver-mute mb-0.5">
                         {isUser ? 'Rocky' : msg.authorId.slice(0, 8)}
                       </p>
-                      <p className="text-body text-foreground whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-body text-[var(--display-fg)] whitespace-pre-wrap">
+                        {msg.content}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -139,7 +133,7 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
         <div className="border-t border-border px-4 py-3">
           <div className="flex items-end gap-2">
             <textarea
-              className="flex-1 resize-none rounded-lg border border-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-brand"
+              className="well-input flex-1 resize-none px-3 py-2"
               rows={2}
               placeholder="Interject in the meeting..."
               value={message}
@@ -150,7 +144,8 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
               type="button"
               onClick={handleInterject}
               disabled={!message.trim() || interject.isPending}
-              className="rounded-lg bg-brand p-2 text-white transition-colors hover:bg-brand/90 disabled:opacity-40"
+              className="cap-armed p-2"
+              aria-label="Send interjection"
             >
               <Send className="h-4 w-4" />
             </button>

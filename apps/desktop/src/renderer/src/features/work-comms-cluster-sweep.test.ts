@@ -119,3 +119,54 @@ describe('fire-dialog', () => {
     expectNoLegacy(src, 'fire-dialog.tsx');
   });
 });
+
+describe('meetings-view', () => {
+  it('lamp status + SubviewState + console header, no legacy', () => {
+    const src = read('meetings/meetings-view.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('<SubviewState');
+    expect(src).toMatch(/<Faceplate|<StripeHeader/);
+    expect(src).toContain("tone={liveStatus ? 'armed' : 'off'}");
+    expectNoLegacy(src, 'meetings-view.tsx');
+  });
+});
+
+describe('meeting-detail', () => {
+  it('lamp + display wells + well-input composer + aria preserved, no legacy', () => {
+    const src = read('meetings/meeting-detail.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('well-input');
+    expect(src).toContain('var(--display-fg)');
+    expect(src).toContain('aria-label="Back to meetings"');
+    expect(src).toContain('aria-label="Send interjection"');
+    expectNoLegacy(src, 'meeting-detail.tsx');
+  });
+});
+
+describe('call-meeting-dialog', () => {
+  it('console scrim + Faceplate + well-input fields, ids preserved, no legacy', () => {
+    const src = read('meetings/call-meeting-dialog.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('bg-[hsl(0_0%_0%/0.55)]');
+    expect(src).toContain('well-input');
+    expect(src).toContain('meeting-agenda');
+    expect(src).toContain('meeting-chair');
+    expect(src).toContain('<fieldset');
+    expectNoLegacy(src, 'call-meeting-dialog.tsx');
+  });
+});
+
+describe('hire-dialog', () => {
+  it('armed chooser selection + Tag + well-input + pinned select preserved, no legacy', () => {
+    const src = read('hire/hire-dialog.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<Tag');
+    expect(src).toContain('well-input');
+    expect(src).toContain('var(--armed-edge)');
+    expect(src).toContain('data-hire-manager-select=""');
+    expect(src).toContain('hire-name');
+    expectNoLegacy(src, 'hire-dialog.tsx');
+  });
+});
