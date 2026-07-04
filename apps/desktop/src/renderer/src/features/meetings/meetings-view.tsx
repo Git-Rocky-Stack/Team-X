@@ -34,7 +34,7 @@ function MeetingRow({ meeting }: { meeting: Meeting }) {
     <button
       type="button"
       onClick={() => setActiveMeetingId(meeting.id)}
-      className={`well w-full px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 ${
+      className={`w-full rounded-card border px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 ${
         selected
           ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
           : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]'

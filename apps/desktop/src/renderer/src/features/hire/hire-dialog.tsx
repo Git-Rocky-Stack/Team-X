@@ -139,7 +139,7 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
                   'flex flex-col gap-2 rounded-card border p-4 text-left transition-all',
                   isSelected
                     ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
-                    : 'well hover:border-[var(--hairline-strong)]',
+                    : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]',
                 )}
               >
                 <div className="flex items-center justify-between">
