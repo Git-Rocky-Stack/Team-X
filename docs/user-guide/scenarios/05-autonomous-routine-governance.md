@@ -396,11 +396,11 @@ Routines that outlive their usefulness should be deprecated gracefully, not dele
 
 ## Related Documentation
 
-- [Autonomy → Routines](../comprehensive-user-guide.md#13-autonomy-control-plane) — Routine configuration
-- [Autonomy → Budgets](../comprehensive-user-guide.md#13-autonomy-control-plane) — Budget governance
-- [Autonomy → Approvals](../comprehensive-user-guide.md#13-autonomy-control-plane) — Approval workflows
-- [Autonomy → Artifacts](../comprehensive-user-guide.md#13-autonomy-control-plane) — Artifact tracking
+- [Autonomy → Routines](../comprehensive-user-guide.md#13-autonomy-control-plane): Routine configuration
+- [Autonomy → Budgets](../comprehensive-user-guide.md#13-autonomy-control-plane): Budget governance
+- [Autonomy → Approvals](../comprehensive-user-guide.md#13-autonomy-control-plane): Approval workflows
+- [Autonomy → Artifacts](../comprehensive-user-guide.md#13-autonomy-control-plane): Artifact tracking
 
 ---
 
-*Scenario: Autonomous Routine Governance — Draft v1.0*
+*Scenario: Autonomous Routine Governance, Draft v1.0*

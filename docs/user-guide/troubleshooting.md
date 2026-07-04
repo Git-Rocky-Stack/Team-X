@@ -711,7 +711,7 @@
 
 ### Open a GitHub issue
 
-Team-X is open-source and community-supported — there is no support email or hosted help desk. Bugs and reproducible issues go in the issue tracker:
+Team-X is open-source and community-supported; there is no support email or hosted help desk. Bugs and reproducible issues go in the issue tracker:
 
 **Issues:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues)
 
@@ -725,7 +725,7 @@ Team-X is open-source and community-supported — there is no support email or h
 
 ### Community Support
 
-- **Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — Q&A, ideas, show-and-tell
+- **Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions): Q&A, ideas, show-and-tell
 
 ### Documentation
 

@@ -33,7 +33,7 @@
 **Visual:** Download page, installer
 
 **Audio:**
-"First, download Team-X from github.com/Git-Rocky-Stack/Team-X/releases. Pick the build for your operating system — Windows, macOS, or Linux. The download is about 100 megabytes.
+"First, download Team-X from github.com/Git-Rocky-Stack/Team-X/releases. Pick the build for your operating system: Windows, macOS, or Linux. The download is about 100 megabytes.
 
 Once downloaded, open the installer. On Windows, double-click the EXE file. On macOS, open the DMG file and drag Team-X to Applications. Follow the installation prompts.
 
@@ -46,15 +46,15 @@ Installation takes about a minute. When complete, launch Team-X."
 **Visual:** Workspace Setup Wizard, provider keys settings
 
 **Audio:**
-"When you first launch Team-X, it opens directly to the Workspace Setup Wizard — no sign-in, no account, nothing leaves your machine. Team-X is a local-first app: your tickets, employees, and conversations all live on this device in a local SQLite database.
+"When you first launch Team-X, it opens directly to the Workspace Setup Wizard: no sign-in, no account, nothing leaves your machine. Team-X is a local-first app: your tickets, employees, and conversations all live on this device in a local SQLite database.
 
-Enter your workspace name — this could be your company name or project name. For this demo, I'll use 'My Startup.'
+Enter your workspace name. This could be your company name or project name. For this demo, I'll use 'My Startup.'
 
-Set a monthly budget cap. For new users, I recommend $100. This isn't a charge to Team-X — it's a ceiling on what your LLM provider can bill you for, and Team-X will pause work when the workspace hits the cap.
+Set a monthly budget cap. For new users, I recommend $100. This isn't a charge to Team-X; it's a ceiling on what your LLM provider can bill you for, and Team-X will pause work when the workspace hits the cap.
 
 Finally, choose your purpose: Product Development, Agency Work, Personal Projects, or Other. Click Create Workspace.
 
-Then head to Settings → Providers and drop in your Anthropic, OpenAI, Google, Groq, or any other supported LLM provider's API key. Or point at a local Ollama daemon for runs that cost nothing at all. Team-X stores keys in your OS keychain via keytar — never in plain text."
+Then head to Settings → Providers and drop in your Anthropic, OpenAI, Google, Groq, or any other supported LLM provider's API key. Or point at a local Ollama daemon for runs that cost nothing at all. Team-X stores keys in your OS keychain via keytar, never in plain text."
 
 ---
 
@@ -63,17 +63,17 @@ Then head to Settings → Providers and drop in your Anthropic, OpenAI, Google, 
 **Visual:** Mission Control dashboard, highlighting each panel
 
 **Audio:**
-"Welcome to Mission Control — your command center. Let's take a quick tour.
+"Welcome to Mission Control, your command center. Let's take a quick tour.
 
 On the left, you'll see the sidebar with navigation: Mission Control, Tickets, Employees, Autonomy, Files, Chat, and Settings.
 
 The main dashboard shows three panels:
 
-Active Runs — shows which employees are working right now. Yours is empty since we haven't hired anyone yet.
+Active Runs: shows which employees are working right now. Yours is empty since we haven't hired anyone yet.
 
-Recent Tickets — shows your latest work. Also empty for now.
+Recent Tickets: shows your latest work. Also empty for now.
 
-Copilot Insights — proactive recommendations from Team-X AI. Right now, it's suggesting we hire our first employee."
+Copilot Insights: proactive recommendations from Team-X AI. Right now, it's suggesting we hire our first employee."
 
 ---
 
@@ -84,11 +84,11 @@ Copilot Insights — proactive recommendations from Team-X AI. Right now, it's s
 **Audio:**
 "Let's hire our first employee. Click 'Employees' in the sidebar, then click the blue 'Hire Employee' button.
 
-You'll see the role browser with 57 curated roles. For your first hire, I recommend the Full Stack Engineer — they're versatile and can handle most development tasks.
+You'll see the role browser with 57 curated roles. For your first hire, I recommend the Full Stack Engineer; they're versatile and can handle most development tasks.
 
 Select 'Full Stack Engineer.' You'll see the role details: expertise in React, TypeScript, Node.js, and Python. Personality: detail-oriented and collaborative.
 
-Name your employee. The default is 'Alex' — let's keep that. Click 'Hire Employee.'
+Name your employee. The default is 'Alex'; let's keep that. Click 'Hire Employee.'
 
 Alex joins your workspace instantly. You can see them in the Employees panel, ready to work."
 
@@ -122,7 +122,7 @@ Click 'Create Ticket.' Your ticket appears in the Tickets panel."
 **Audio:**
 "Now let's have Alex work on this ticket. From the ticket detail, click the blue 'Start Agent' button.
 
-Team-X switches to the Agent Runs panel. Watch as Alex begins working. You'll see the agent stream — Alex is thinking, reading files, writing code, running tests.
+Team-X switches to the Agent Runs panel. Watch as Alex begins working. You'll see the agent stream: Alex is thinking, reading files, writing code, running tests.
 
 This happens autonomously. Alex creates the button component, writes the tests, and verifies everything works.
 
@@ -182,7 +182,7 @@ Type 'show my budget' to instantly see spend vs budget across all workspaces.
 
 Type 'hire a designer' to quickly hire a UI/UX designer.
 
-The Command Palette understands natural language. You don't need to memorize exact syntax — just say what you want."
+The Command Palette understands natural language. You don't need to memorize exact syntax; just say what you want."
 
 ---
 
@@ -191,11 +191,11 @@ The Command Palette understands natural language. You don't need to memorize exa
 **Visual:** Complex commands with parameters
 
 **Audio:**
-"Advanced commands include parameters. For example: 'Create a ticket for Alex to fix the login bug' — this creates a ticket AND assigns it to Alex in one step.
+"Advanced commands include parameters. For example: 'Create a ticket for Alex to fix the login bug' (this creates a ticket AND assigns it to Alex in one step).
 
 You can also filter: 'Show me all high priority tickets assigned to Alex.'
 
-Or take actions: 'Cancel all running agents' — useful if something goes wrong.
+Or take actions: 'Cancel all running agents' (useful if something goes wrong).
 
 The key is to be specific. The more context you provide, the better the Command Palette can help."
 
@@ -258,7 +258,7 @@ Four: Explore. Type keywords like 'routine,' 'budget,' 'runtime' to discover rel
 **Audio:**
 "Click the workspace switcher in the top navigation, then 'Create Workspace.'
 
-Each workspace is isolated — separate employees, tickets, budgets, and data. This is perfect for agencies: one workspace per client.
+Each workspace is isolated: separate employees, tickets, budgets, and data. This is perfect for agencies: one workspace per client.
 
 Configure the workspace with name, purpose, budget, and employee quota. Workspaces inherit shared policies, which we'll cover next."
 
@@ -284,7 +284,7 @@ When you update the master policy, all workspaces get the update. This is powerf
 **Audio:**
 "Employees can work across multiple workspaces. In Settings → Employees, select an employee and enable workspace access.
 
-Set allocation percentages — 50% on one workspace, 30% on another, 20% on a third. Costs are charged proportionally to each workspace."
+Set allocation percentages: 50% on one workspace, 30% on another, 20% on a third. Costs are charged proportionally to each workspace."
 
 ---
 
@@ -295,7 +295,7 @@ Set allocation percentages — 50% on one workspace, 30% on another, 20% on a th
 **Audio:**
 "As the operator, you can run cross-workspace queries. 'Show total spend across all workspaces' gives you an aggregated budget view.
 
-Workspaces remain isolated to employees — they can only see the workspaces they're assigned to. This maintains data security while giving you oversight."
+Workspaces remain isolated to employees; they can only see the workspaces they're assigned to. This maintains data security while giving you oversight."
 
 ---
 
@@ -304,7 +304,7 @@ Workspaces remain isolated to employees — they can only see the workspaces the
 **Visual:** Workspace archival, deletion
 
 **Audio:**
-"When a project ends, archive the workspace. Archiving freezes the workspace — no new work can be created, but existing data remains accessible.
+"When a project ends, archive the workspace. Archiving freezes the workspace: no new work can be created, but existing data remains accessible.
 
 After a retention period, delete the workspace permanently. This keeps your workspace ecosystem clean and costs predictable."
 

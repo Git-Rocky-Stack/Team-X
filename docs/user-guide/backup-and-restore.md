@@ -1,6 +1,6 @@
 # Backup and Restore
 
-Team-X stores all data locally — your database and vault files. The backup system lets you create portable archives and restore from them.
+Team-X stores all data locally: your database and vault files. The backup system lets you create portable archives and restore from them.
 
 ## Creating a Backup
 
@@ -70,7 +70,7 @@ By default, backups are saved wherever you choose in the save dialog. A common p
 
 ## Best Practices
 
-- **Back up before major changes** — before firing employees, restoring a previous backup, or deleting companies
-- **Back up before updates** — create a backup before installing a new version of Team-X
-- **Store backups externally** — copy backups to an external drive or cloud storage for disaster recovery
-- **Test your backups** — periodically restore a backup to verify it works (use a separate machine or user profile to avoid overwriting your live data)
+- **Back up before major changes**: before firing employees, restoring a previous backup, or deleting companies
+- **Back up before updates**: create a backup before installing a new version of Team-X
+- **Store backups externally**: copy backups to an external drive or cloud storage for disaster recovery
+- **Test your backups**: periodically restore a backup to verify it works (use a separate machine or user profile to avoid overwriting your live data)

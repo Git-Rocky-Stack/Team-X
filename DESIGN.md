@@ -63,7 +63,7 @@ Inherited structurally from Vision-X (`Vision-Studio-X-website\DESIGN.md §Raise
 ### Night Ops recipes (canonical)
 
 ```css
-/* Layer 1 — raised faceplate (brushed black aluminum) */
+/* Layer 1 - raised faceplate (brushed black aluminum) */
 .faceplate{
   border-radius:2px;
   background:
@@ -77,9 +77,9 @@ Inherited structurally from Vision-X (`Vision-Studio-X-website\DESIGN.md §Raise
     0 12px 28px rgba(0,0,0,0.55), 0 40px 80px rgba(0,0,0,0.4);
 }
 /* + ::before edge-light strip (top, inset 24px) and ::after top-right key light
-   — copy from the approved preview or Vision-X DESIGN.md; identical recipe. */
+   - copy from the approved preview or Vision-X DESIGN.md; identical recipe. */
 
-/* Layer 2 — recessed well (always dark, both themes) */
+/* Layer 2 - recessed well (always dark, both themes) */
 .well{
   border-radius:2px;
   background:linear-gradient(180deg,#080808 0%,#0a0a0a 100%);
@@ -89,7 +89,7 @@ Inherited structurally from Vision-X (`Vision-Studio-X-website\DESIGN.md §Raise
     inset 1px 0 2px rgba(0,0,0,0.5), inset -1px 0 2px rgba(0,0,0,0.5);
 }
 
-/* Layer 3 — raised control */
+/* Layer 3 - raised control */
 .control{
   border-radius:4px;
   background:
@@ -112,7 +112,7 @@ Inherited structurally from Vision-X (`Vision-Studio-X-website\DESIGN.md §Raise
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.10);
 }
 
-/* Hex socket cap bolts — full 3-layer recipe (outer hex + Allen socket +
+/* Hex socket cap bolts - full 3-layer recipe (outer hex + Allen socket +
    countersunk halo) inherited verbatim from Vision-X DESIGN.md.
    20px standard, 4 per faceplate, inset ~10px from corners. */
 ```

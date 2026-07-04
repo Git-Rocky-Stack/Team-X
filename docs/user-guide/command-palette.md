@@ -1,14 +1,14 @@
 # Command Palette
 
-The Command Palette is Team-X's natural-language command surface. Instead of clicking through menus to hire an employee, assign a ticket, or call a meeting, type what you want and Team-X classifies the intent, resolves the entities, and executes — with a confirmation gate for destructive actions.
+The Command Palette is Team-X's natural-language command surface. Instead of clicking through menus to hire an employee, assign a ticket, or call a meeting, type what you want and Team-X classifies the intent, resolves the entities, and executes, with a confirmation gate for destructive actions.
 
 ## Overview
 
-- **One keystroke** — `Ctrl+K` (Windows / Linux) or `Cmd+K` (macOS) opens the palette from any view
-- **15 intents** — covers the full spectrum of org operations: hire, fire, promote, assign, create, close, reopen, project, goal, meeting, status, navigation, vault search, and a fallback to the conversational agent
-- **Local-first** — classification runs through your configured LLM provider; with Ollama on the local privacy tier, nothing leaves your machine
-- **Destructive-action gate** — fire, close, end-meeting, and promote require an explicit confirm click before the IPC fires
-- **History + audit** — every executed command is written to history (recallable with `ArrowUp`) and appended to the audit log as a `command.executed` event
+- **One keystroke**: `Ctrl+K` (Windows / Linux) or `Cmd+K` (macOS) opens the palette from any view
+- **15 intents**: covers the full spectrum of org operations: hire, fire, promote, assign, create, close, reopen, project, goal, meeting, status, navigation, vault search, and a fallback to the conversational agent
+- **Local-first**: classification runs through your configured LLM provider; with Ollama on the local privacy tier, nothing leaves your machine
+- **Destructive-action gate**: fire, close, end-meeting, and promote require an explicit confirm click before the IPC fires
+- **History + audit**: every executed command is written to history (recallable with `ArrowUp`) and appended to the audit log as a `command.executed` event
 
 ## Opening the Palette
 
@@ -19,7 +19,7 @@ The Command Palette is Team-X's natural-language command surface. Instead of cli
 | Submit / confirm | `Enter` |
 | Cycle history (from empty input) | `ArrowUp` / `ArrowDown` |
 
-The keybinding is platform-aware and resolves at runtime in `App.tsx`. There is no per-view variation — the palette is global.
+The keybinding is platform-aware and resolves at runtime in `App.tsx`. There is no per-view variation; the palette is global.
 
 ## What You Can Say
 
@@ -33,7 +33,7 @@ Team-X classifies your input into one of 15 intents. Each intent has required an
 | `assign_ticket` | "Assign the auth bug to Sarah", "Give ticket #42 to James" |
 | `create_ticket` | "File a ticket for the login crash", "New ticket: optimize the dashboard query" |
 | `close_ticket` | "Close ticket #17", "Mark the auth bug as done" |
-| `reopen_ticket` | "Reopen ticket #17", "The login bug is back — reopen it" |
+| `reopen_ticket` | "Reopen ticket #17", "The login bug is back. Reopen it" |
 | `create_project` | "Start a project called Onboarding Redesign", "New project for Q2 launch" |
 | `create_goal` | "Add a goal: ship MVP by end of quarter", "Set a goal for 99.9% uptime" |
 | `call_meeting` | "All-hands with the engineering team", "Call a meeting with Sarah and Mike about the launch" |
@@ -43,7 +43,7 @@ Team-X classifies your input into one of 15 intents. Each intent has required an
 | `search_vault` | "Find the API spec", "Search vault for onboarding docs" |
 | `complex_request` | "Why is the frontend team behind schedule?", "Plan the next sprint based on open tickets" |
 
-`complex_request` is the catch-all: anything ambiguous, multi-step, or below the confidence threshold gets routed to the conversational agent (M31's agentic loop). You will never get a hard "I don't understand" response — you will get a thoughtful one.
+`complex_request` is the catch-all: anything ambiguous, multi-step, or below the confidence threshold gets routed to the conversational agent (M31's agentic loop). You will never get a hard "I don't understand" response; you will get a thoughtful one.
 
 File creation is handled by employee execution tools, not by a dedicated palette intent. Ask an employee in chat or on a ticket for deliverables such as Markdown briefs, XLSX trackers, DOCX reports, or PPTX updates. Created files appear in the employee workspace and, when vault storage is available, in **Files** and **Autonomy > Artifacts**.
 
@@ -96,13 +96,13 @@ For navigation without going through the classifier, use the structured `/show` 
 | `/show audit` | Switch to Audit tab |
 | `/show settings` | Switch to Settings tab |
 
-Slash commands bypass NLU entirely — no LLM call, instant navigation. Use them when you know exactly where you want to go.
+Slash commands bypass NLU entirely: no LLM call, instant navigation. Use them when you know exactly where you want to go.
 
 ## Troubleshooting
 
 **"It didn't understand me."** Below the 0.5 confidence threshold, the classifier falls back to `complex_request` and routes the input to the conversational agent. The agent will either complete the multi-step request or ask a clarifying question. If you want a deterministic intent resolution, rephrase using a verb the classifier recognizes ("hire", "fire", "assign", "create", "close", "call", "end", "show", "find").
 
-**"I want more intents."** The 15-intent set is intentionally tight — it covers the deterministic operations Team-X exposes today. New intents land alongside new IPC handlers (M31 adds the agentic loop, M32 adds RAG-on-vault). For org-specific commands, contribute to the role pack or wait for the M31 plugin surface.
+**"I want more intents."** The 15-intent set is intentionally tight; it covers the deterministic operations Team-X exposes today. New intents land alongside new IPC handlers (M31 adds the agentic loop, M32 adds RAG-on-vault). For org-specific commands, contribute to the role pack or wait for the M31 plugin surface.
 
 **"The classifier is slow."** Classification cost depends on the configured provider. Local Ollama on a modest CPU can take 1-3 seconds for the first call, faster on subsequent calls (model stays warm). Cloud providers (Anthropic, OpenAI) typically respond in 200-500ms. If latency matters, configure a fast model in the `'balanced'` tier in Settings > Providers.
 
@@ -110,6 +110,6 @@ Slash commands bypass NLU entirely — no LLM call, instant navigation. Use them
 
 ## Privacy
 
-The classifier runs through your configured LLM provider via the provider router — same path as every other LLM call in Team-X. Privacy tier filtering applies: if your max tier is `local`, only Ollama is used. If you allow `proprietary-cloud`, the classifier may use Anthropic / OpenAI / Google. Your text never leaves your machine unless you have explicitly enabled a cloud provider.
+The classifier runs through your configured LLM provider via the provider router, same path as every other LLM call in Team-X. Privacy tier filtering applies: if your max tier is `local`, only Ollama is used. If you allow `proprietary-cloud`, the classifier may use Anthropic / OpenAI / Google. Your text never leaves your machine unless you have explicitly enabled a cloud provider.
 
-No phone-home. No analytics. No third-party telemetry. The command palette honors invariant #7 — same as the rest of the app.
+No phone-home. No analytics. No third-party telemetry. The command palette honors invariant #7, same as the rest of the app.

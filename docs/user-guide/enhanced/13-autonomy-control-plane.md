@@ -61,7 +61,7 @@ Run Doctor to verify workspace health BEFORE launching unattended or long-runnin
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Doctor Report — Generated 2026-05-03 14:32:15                      │
+│ Doctor Report: Generated 2026-05-03 14:32:15                        │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ ✅ Database integrity           PASS                                │
@@ -160,7 +160,7 @@ Benchmarks replay deterministic autonomy scenarios to verify that governance mec
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Benchmark Results — 6 scenarios, 4 passed, 2 failed                │
+│ Benchmark Results: 6 scenarios, 4 passed, 2 failed                  │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ ✅ Ticket Assignment           PASS (850ms)                         │
@@ -875,7 +875,7 @@ Every artifact tracks:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Thread Memory — Ticket #47: Authentication Bug Fix                 │
+│ Thread Memory, Ticket #47: Authentication Bug Fix                   │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ CURRENT DIGEST                                                      │
@@ -978,7 +978,7 @@ Access via **Settings → Memory**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Operator Access — Workspace: Strategia-X                          │
+│ Operator Access, Workspace: Strategia-X                             │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ LOCAL OWNERS                                                        │
@@ -1093,12 +1093,12 @@ Approval queue backlog causes frustration:
 
 ## Related Sections
 
-- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard) — Real-time operations
-- [Copilot: Proactive Intelligence](12-copilot.md#12-copilot-proactive-intelligence) — Insights and improvement
-- [Telemetry & Costs](../comprehensive-user-guide.md#16-telemetry--costs) — Detailed cost analysis
-- [Extensions: Skills & MCPs](../comprehensive-user-guide.md#14-extensions--skills--mcps) — Runtime configuration
-- [Settings & Configuration](../comprehensive-user-guide.md#15-settings--configuration) — Runtime and memory settings
+- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard): Real-time operations
+- [Copilot: Proactive Intelligence](12-copilot.md#12-copilot-proactive-intelligence): Insights and improvement
+- [Telemetry & Costs](../comprehensive-user-guide.md#16-telemetry--costs): Detailed cost analysis
+- [Extensions: Skills & MCPs](../comprehensive-user-guide.md#14-extensions-skills--mcps): Runtime configuration
+- [Settings & Configuration](../comprehensive-user-guide.md#15-settings--configuration): Runtime and memory settings
 
 ---
 
-*Enhanced Autonomy Control Plane documentation — 580+ lines vs. original ~150 lines*
+*Enhanced Autonomy Control Plane documentation: 580+ lines vs. original ~150 lines*

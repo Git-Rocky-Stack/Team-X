@@ -39,9 +39,9 @@ As a [user type], I want [action] so that [benefit].
 - Integration points: [What this connects to]
 
 ## Acceptance Criteria
-- [ ] [Criterion 1 — verifiable condition]
-- [ ] [Criterion 2 — verifiable condition]
-- [ ] [Criterion 3 — verifiable condition]
+- [ ] [Criterion 1: verifiable condition]
+- [ ] [Criterion 2: verifiable condition]
+- [ ] [Criterion 3: verifiable condition]
 
 ## Edge Cases to Handle
 - [Edge case 1]
@@ -91,7 +91,7 @@ As a [user type], I want [action] so that [benefit].
 - Workspace: [Workspace name]
 - Employee: [Who encountered it]
 
-**Impact:** [Severity — Critical/High/Medium/Low]
+**Impact:** [Severity: Critical/High/Medium/Low]
 - [Who is affected]
 - [What functionality is broken]
 - [Business impact]
@@ -197,8 +197,8 @@ As a [user type], I want [action] so that [benefit].
 Create comprehensive documentation for [subject].
 
 ## Target Audience
-- [Primary audience — e.g., API users, end users, developers]
-- [Secondary audience — e.g., maintainers, integrators]
+- [Primary audience, e.g., API users, end users, developers]
+- [Secondary audience, e.g., maintainers, integrators]
 
 ## Required Sections
 
@@ -231,7 +231,7 @@ Create comprehensive documentation for [subject].
 - [ ] Markdown (.md)
 - [ ] Inline code examples
 - [ ] Syntax highlighting
-- [ ] Diagrams (if helpful — Mermaid, ASCII)
+- [ ] Diagrams (if helpful: Mermaid, ASCII)
 
 ## Deliverables
 - Documentation file(s)
@@ -275,21 +275,21 @@ Create comprehensive tests for [subject].
 ## Test Cases to Cover
 
 ### Happy Path
-- [ ] [Scenario 1 — normal usage]
-- [ ] [Scenario 2 — typical workflow]
+- [ ] [Scenario 1: normal usage]
+- [ ] [Scenario 2: typical workflow]
 
 ### Edge Cases
-- [ ] [Edge case 1 — empty input]
-- [ ] [Edge case 2 — boundary conditions]
-- [ ] [Edge case 3 — null/undefined]
+- [ ] [Edge case 1: empty input]
+- [ ] [Edge case 2: boundary conditions]
+- [ ] [Edge case 3: null/undefined]
 
 ### Error Handling
 - [ ] [Error scenario 1]
 - [ ] [Error scenario 2]
 
 ### Performance
-- [ ] [Performance scenario 1 — large dataset]
-- [ ] [Performance scenario 2 — concurrent load]
+- [ ] [Performance scenario 1: large dataset]
+- [ ] [Performance scenario 2: concurrent load]
 
 ## Test Framework
 - [ ] Specify framework (Jest, pytest, etc.)
@@ -330,10 +330,10 @@ Create comprehensive tests for [subject].
 3. [Question 3]
 
 ## Research Areas
-- [Technology comparison — e.g., React vs Vue]
-- [Architecture options — e.g., SQL vs NoSQL]
-- [Best practices — e.g., authentication patterns]
-- [Tool evaluation — e.g., testing frameworks]
+- [Technology comparison, e.g., React vs Vue]
+- [Architecture options, e.g., SQL vs NoSQL]
+- [Best practices, e.g., authentication patterns]
+- [Tool evaluation, e.g., testing frameworks]
 
 ## Required Output
 - [ ] Executive summary (1-2 paragraphs)
@@ -459,9 +459,9 @@ Create comprehensive tests for [subject].
 - [ ] Memory leaks
 
 ## Optimization Strategies
-1. [Strategy 1 — e.g., Add database index]
-2. [Strategy 2 — e.g., Implement caching]
-3. [Strategy 3 — e.g., Lazy loading]
+1. [Strategy 1, e.g., Add database index]
+2. [Strategy 2, e.g., Implement caching]
+3. [Strategy 3, e.g., Lazy loading]
 
 ## Testing Approach
 - [ ] Benchmark before optimization
@@ -510,10 +510,10 @@ Create comprehensive tests for [subject].
 - [ ] Maintenance window scheduled (if needed)
 
 ## Deployment Steps
-1. [Step 1 — e.g., Run database migrations]
-2. [Step 2 — e.g., Deploy application]
-3. [Step 3 — e.g., Run smoke tests]
-4. [Step 4 — e.g., Verify monitoring]
+1. [Step 1, e.g., Run database migrations]
+2. [Step 2, e.g., Deploy application]
+3. [Step 3, e.g., Run smoke tests]
+4. [Step 4, e.g., Verify monitoring]
 
 ## Verification
 - [ ] Smoke tests pass
@@ -572,9 +572,9 @@ Create comprehensive tests for [subject].
 - [File/Module 3]
 
 ## Refactoring Approach
-1. [Step 1 — e.g., Extract common logic]
-2. [Step 2 — e.g., Introduce design pattern]
-3. [Step 3 — e.g., Update tests]
+1. [Step 1, e.g., Extract common logic]
+2. [Step 2, e.g., Introduce design pattern]
+3. [Step 3, e.g., Update tests]
 
 ## Constraints
 - [ ] Must maintain existing functionality
@@ -609,7 +609,7 @@ Create comprehensive tests for [subject].
 2. **Be specific:** Replace placeholders with concrete details
 3. **Set clear acceptance criteria:** Define what "done" looks like
 4. **Include relevant context:** Link to related tickets, docs, or discussions
-5. **Adjust budgets:** Estimated costs are guidelines — adjust based on complexity
+5. **Adjust budgets:** Estimated costs are guidelines; adjust based on complexity
 
 ---
 

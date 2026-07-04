@@ -34,11 +34,11 @@ Projects are scoped initiatives linked to a goal, with a project lead and connec
 
 1. In the **Projects** tab, click **Create Project**
 2. Fill in:
-   - **Name** — a descriptive project title
-   - **Description** — scope and context
-   - **Goal** — link to a parent goal (optional)
-   - **Lead** — assign a project lead from your employees
-   - **Target Date** — optional deadline that appears on the schedule calendar
+   - **Name**: a descriptive project title
+   - **Description**: scope and context
+   - **Goal**: link to a parent goal (optional)
+   - **Lead**: assign a project lead from your employees
+   - **Target Date**: optional deadline that appears on the schedule calendar
 3. Click **Create**
 
 ### The Projects Kanban
@@ -69,11 +69,11 @@ Tickets are the atomic unit of work in Team-X. Agents pick up tickets, work on t
 1. Navigate to the **Tickets** tab
 2. Click **Create Ticket**
 3. Fill in:
-   - **Title** — concise description of the task
-   - **Description** — detailed requirements and context
-   - **Priority** — Low, Medium, High, or Critical
-   - **Assignee** — optionally assign to an employee immediately
-   - **Due Date** — optional deadline that appears on the schedule calendar
+   - **Title**: concise description of the task
+   - **Description**: detailed requirements and context
+   - **Priority**: Low, Medium, High, or Critical
+   - **Assignee**: optionally assign to an employee immediately
+   - **Due Date**: optional deadline that appears on the schedule calendar
 4. Click **Create**
 
 ### Due Dates and Schedule Visibility

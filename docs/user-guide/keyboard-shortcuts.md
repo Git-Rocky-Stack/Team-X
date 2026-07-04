@@ -2,7 +2,7 @@
 
 Team-X is deliberately keyboard-light: two global shortcuts open the two
 command surfaces, and everything else is reachable from the command palette
-itself. This page documents the **complete** real shortcut surface — if a
+itself. This page documents the **complete** real shortcut surface: if a
 shortcut isn't listed here, it doesn't exist.
 
 > On macOS use `Cmd`; on Windows and Linux use `Ctrl`.
@@ -11,8 +11,8 @@ shortcut isn't listed here, it doesn't exist.
 
 | Shortcut | Action |
 |----------|--------|
-| `Cmd/Ctrl + K` | Open the **command palette** — natural-language commands, slash commands, navigation |
-| `Cmd/Ctrl + Shift + K` | Toggle the **Copilot sidebar** — proactive insights and Ask Copilot |
+| `Cmd/Ctrl + K` | Open the **command palette**: natural-language commands, slash commands, navigation |
+| `Cmd/Ctrl + Shift + K` | Toggle the **Copilot sidebar**: proactive insights and Ask Copilot |
 
 ## Inside the command palette
 
@@ -59,9 +59,9 @@ The **View** and **Edit** menus carry the platform-standard accelerators:
 ## A note on what's *not* here
 
 Earlier drafts of this guide described view-navigation chords
-(`Ctrl+D`, `Ctrl+T`, `Ctrl+1–8`), filter shortcuts, and a
+(`Ctrl+D`, `Ctrl+T`, `Ctrl+1-8`), filter shortcuts, and a
 "Customize Shortcuts" settings page. Those were never shipped. Use the
-command palette's `/show …` commands for fast navigation — they're
+command palette's `/show …` commands for fast navigation; they're
 deterministic, discoverable, and logged to command history.
 
 ---

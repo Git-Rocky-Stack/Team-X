@@ -45,10 +45,10 @@ and from the model picker. Team-X tracks **three** tiers:
 
 - **`local`**: traffic never leaves the host. Ollama and a custom
   OpenAI-compatible provider pointed at a localhost endpoint both qualify.
-- **`open-source-cloud`**: hosted inference over open-weights models —
-  Groq, Together AI, Fireworks AI.
-- **`proprietary-cloud`**: hosted proprietary APIs — Anthropic, OpenAI,
-  Google Gemini, OpenRouter.
+- **`open-source-cloud`**: hosted inference over open-weights models
+  (Groq, Together AI, Fireworks AI).
+- **`proprietary-cloud`**: hosted proprietary APIs
+  (Anthropic, OpenAI, Google Gemini, OpenRouter).
 
 Set the ceiling via `settings.setPrivacy`:
 

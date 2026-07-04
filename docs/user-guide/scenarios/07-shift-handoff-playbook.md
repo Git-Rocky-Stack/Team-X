@@ -47,7 +47,7 @@ Ctrl+K → "Run Doctor and create handoff validation report"
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Handoff Validation Report — Pre-Departure Check                         │
+│ Handoff Validation Report: Pre-Departure Check                          │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ ✅ System Health              PASS                                │
@@ -67,9 +67,9 @@ Ctrl+K → "Run Doctor and create handoff validation report"
 │                                                                     │
 │ ⚠️  Action Items Pending          WARNING                             │
 │    3 tickets in progress require attention during absence:          │
-│    • #87 (Client C urgent fix) — assign to Backup_Op               │
-│    • #88 (Routine optimization) — pause until return              │
-│    • #89 (Documentation update) — optional, can defer            │
+│    • #87 (Client C urgent fix): assign to Backup_Op                │
+│    • #88 (Routine optimization): pause until return               │
+│    • #89 (Documentation update): optional, can defer             │
 │                                                                     │
 │─────────────────────────────────────────────────────────────────────│
 │                                                                     │
@@ -104,7 +104,7 @@ Ctrl+K → "Assign ticket #87 urgent fix to Backup_Op"
 **Handoff Document Contents:**
 
 ```markdown
-# Operational Handoff — Rocky to Backup_Op
+# Operational Handoff: Rocky to Backup_Op
 **Dates:** May 3 - May 17, 2026 (2 weeks)
 **Prepared by:** Rocky
 **Prepared for:** Backup_Op
@@ -211,14 +211,14 @@ Warning Insights: 1
 Info Insights: 3
 
 Warning Details:
-- ⚠️  WORKFLOW — Routine optimization ticket paused for 2 weeks
+- ⚠️  WORKFLOW: Routine optimization ticket paused for 2 weeks
   Impact: Minor (routine continues running with old settings)
   Action: Monitor for stall
 
 Info Details:
-- ℹ️  COST — Monthly spend trending down 5% (good!)
-- ℹ️  INFO — Client B expressed satisfaction with deliverables
-- ℹ️  INFO — New employee (Sarah) onboarding smoothly
+- ℹ️  COST: Monthly spend trending down 5% (good!)
+- ℹ️  INFO: Client B expressed satisfaction with deliverables
+- ℹ️  INFO: New employee (Sarah) onboarding smoothly
 ```
 
 **Action:** No immediate actions required. Continue monitoring.
@@ -443,7 +443,7 @@ Now you try...
 
 ```
 [Backup_Op runs Doctor]
-✅ Success — All systems healthy
+✅ Success: All systems healthy
 
 [Backup_Op checks Copilot]
 ℹ️  1 warning noted (routine optimization paused)
@@ -471,7 +471,7 @@ Good question. For routine optimization:
 If it's critical (security issue, data loss risk), consult me.
 If it's can wait, wait for my return.
 
-The pause is intentional to prevent changes during my absence — we 
+The pause is intentional to prevent changes during my absence. We 
 don't want to introduce instability when you're still learning.
 
 You're doing great. Any other questions?
@@ -553,11 +553,11 @@ See you in 2 weeks!
 
 **Backup_Op in ticket #87:**
 ```
-I've diagnosed the pipeline issue — it's a race condition in data 
+I've diagnosed the pipeline issue: it's a race condition in data 
 ingestion. I can attempt a fix but it requires modifying core pipeline 
 logic, which feels risky without your guidance.
 
-Rocky — guidance needed. This is beyond my comfort level for changes 
+Rocky, guidance needed. This is beyond my comfort level for changes 
 without approval.
 
 Expected impact if not fixed: Client C data delayed by 4-8 hours.
@@ -618,12 +618,12 @@ Proceed with workaround. Great job!
 **Rocky updates handoff document for next time:**
 
 ```markdown
-## Lessons Learned — May 2026 Handoff
+## Lessons Learned: May 2026 Handoff
 
 What Went Well:
 - ✅ Pre-handoff validation caught all critical items
 - ✅ Backup_Op quickly operational with guided practice
-- ✅ Escalation threshold appropriate — Backup_Op escalated correctly
+- ✅ Escalation threshold appropriate: Backup_Op escalated correctly
 
 What Could Improve:
 - ⚠️ Add more context to #88 pause (why it's paused, what changed)
@@ -664,11 +664,11 @@ Guided practice during the live handoff session gave Rocky confidence in Backup_
 
 ## Related Documentation
 
-- [Autonomy → Doctor](../comprehensive-user-guide.md#13-autonomy-control-plane) — Pre-handoff validation
-- [Copilot: Proactive Intelligence](../comprehensive-user-guide.md#12-copilot-proactive-intelligence) — Monitoring during absence
-- [Tickets & Work Management](../comprehensive-user-guide.md#7-tickets--work-management) — Issue tracking
-- [Audit Trail](../comprehensive-user-guide.md#17-audit-trail) — Event history
+- [Autonomy → Doctor](../comprehensive-user-guide.md#13-autonomy-control-plane): Pre-handoff validation
+- [Copilot: Proactive Intelligence](../comprehensive-user-guide.md#12-copilot-proactive-intelligence): Monitoring during absence
+- [Tickets & Work Management](../comprehensive-user-guide.md#7-tickets--work-management): Issue tracking
+- [Audit Trail](../comprehensive-user-guide.md#17-audit-trail): Event history
 
 ---
 
-*Scenario: Shift Handoff Playbook — Draft v1.0*
+*Scenario: Shift Handoff Playbook, Draft v1.0*

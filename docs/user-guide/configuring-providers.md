@@ -55,15 +55,15 @@ Privacy tiers control which providers your agents are allowed to use. There are 
 
 In **Settings > Privacy**, set the maximum allowed tier:
 
-- **Local only** — agents can only use Ollama. No data leaves your machine.
-- **Open-Source Cloud** — agents can use local or open-source cloud providers.
-- **Proprietary Cloud** — agents can use any provider (default).
+- **Local only**: agents can only use Ollama. No data leaves your machine.
+- **Open-Source Cloud**: agents can use local or open-source cloud providers.
+- **Proprietary Cloud**: agents can use any provider (default).
 
 The provider router enforces this filter at call time. If a role requests a proprietary provider but your privacy max is "local only," the router falls back per the role's `fallback_providers` list.
 
 ## Native GGUF models (in development)
 
-The local-GGUF runtime foundation — GPU probing and placement, the `llama.cpp` process lifecycle, and the model-library backend — already ships in the Team-X codebase. The in-app model-library UI (browsing, importing, watch-folder discovery, and GPU placement controls) arrives in a future release. Until it lands, **Ollama is the supported path for running models locally today**: point Team-X at your Ollama daemon and it appears as the Local-tier provider above.
+The local-GGUF runtime foundation (GPU probing and placement, the `llama.cpp` process lifecycle, and the model-library backend) already ships in the Team-X codebase. The in-app model-library UI (browsing, importing, watch-folder discovery, and GPU placement controls) arrives in a future release. Until it lands, **Ollama is the supported path for running models locally today**: point Team-X at your Ollama daemon and it appears as the Local-tier provider above.
 
 ## Runtime Strategy
 
@@ -88,8 +88,8 @@ In **Settings > Runtime**:
 ### Concurrency Caps
 
 In **Settings > Concurrency**, you can set:
-- **Global orchestrator slots** — maximum total concurrent agent runs
-- **Per-provider caps** — limit how many concurrent calls go to each provider
+- **Global orchestrator slots**: maximum total concurrent agent runs
+- **Per-provider caps**: limit how many concurrent calls go to each provider
 
 Default caps:
 

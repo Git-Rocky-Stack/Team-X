@@ -8,7 +8,7 @@
 
 This scenario demonstrates how design, frontend, and backend teams coordinate on a complex feature requiring tight collaboration across functional boundaries. Cross-functional work in Team-X relies on proper participant management, ticket dependencies, and clear handoffs.
 
-**Scenario Context:** The team is building a "Real-Time Collaboration Panel" for Team-X itself — a feature that requires simultaneous work across design, frontend, and backend with multiple dependencies.
+**Scenario Context:** The team is building a "Real-Time Collaboration Panel" for Team-X itself, a feature that requires simultaneous work across design, frontend, and backend with multiple dependencies.
 
 **Collaboration Challenge:** 6 employees, 12 tickets, 15 cross-ticket dependencies, 3-week timeline.
 
@@ -36,7 +36,7 @@ This scenario demonstrates how design, frontend, and backend teams coordinate on
 
 ## The Feature
 
-**Real-Time Collaboration Panel** — A sidebar showing who's working on what, with presence indicators, thread summaries, and quick join functionality.
+**Real-Time Collaboration Panel**: a sidebar showing who's working on what, with presence indicators, thread summaries, and quick join functionality.
 
 **Requirements:**
 - Shows active runs, idle employees, and blocked work
@@ -158,7 +158,7 @@ Non-functional requirements:
 - Supports 50 concurrent users
 - Works across all panels (Dashboard, Tickets, Chat)
 
-Elena — should we include mobile support?
+Elena, should we include mobile support?
 ```
 
 **Elena (Tech Lead):**
@@ -174,7 +174,7 @@ Good requirements. A few questions:
 3. Join functionality: Should joining require permission, or can 
    anyone join any ticket? This has privacy implications.
 
-Also, adding Priya and Mike as participants — they'll have questions 
+Also, adding Priya and Mike as participants. They'll have questions 
 about feasibility.
 ```
 
@@ -204,7 +204,7 @@ WebSocket server questions:
 3. State storage: In-memory (Postgres NOTIFY for updates)? Or 
    Redis for pub/sub? Redis is better for this scale.
 
-Alex — these decisions affect implementation complexity. Any preferences?
+Alex, these decisions affect implementation complexity. Any preferences?
 ```
 
 **Alex:**
@@ -219,7 +219,7 @@ Great questions. Here are my decisions:
 5. Active/idle: 5 min threshold sounds right
 6. State storage: Use Redis (Mike's recommendation)
 
-Elena — does this architecture work for you?
+Elena, does this architecture work for you?
 ```
 
 **Elena:**
@@ -264,16 +264,16 @@ Events to broadcast:
 - Presence changed (active/idle)
 
 API endpoints:
-- WS /ws/collaboration — WebSocket endpoint
-- GET /api/presence — Get current presence state
-- POST /api/presence/heartbeat — Manual presence update
+- WS /ws/collaboration: WebSocket endpoint
+- GET /api/presence: Get current presence state
+- POST /api/presence/heartbeat: Manual presence update
 
 Implementing now...
 ```
 
 **Priya (Frontend Engineer, participant):**
 ```
-Mike — quick question for frontend integration:
+Mike, quick question for frontend integration:
 
 For the WebSocket message format, can we standardize on:
 
@@ -302,7 +302,7 @@ Reconnection strategy:
 2. Server maintains connection state across reconnects (session token)
 3. If server restarts, client receives "full state sync" message
 
-Elena — should we add a "connection ID" to track individual 
+Elena, should we add a "connection ID" to track individual 
 WebSocket connections? This helps with debugging.
 ```
 
@@ -316,7 +316,7 @@ Yes, add connection ID. Also:
 
 These are production-readiness items.
 
-Mike — include these in the implementation. I'll review your PR.
+Mike, include these in the implementation. I'll review your PR.
 ```
 
 **Resolution:** WebSocket server implemented with cross-functional input. Standardized message format enables clean frontend integration. Ticket marked Done.
@@ -344,12 +344,12 @@ Components:
 
 Waiting on Mike's WebSocket server for integration testing.
 
-Lin — I have the mockups from #65. Implementing the layout now.
+Lin, I have the mockups from #65. Implementing the layout now.
 ```
 
 **Lin (Designer, participant):**
 ```
-Priya — a few design clarifications from the mockups:
+Priya, a few design clarifications from the mockups:
 
 1. EmployeeCard layout:
    - Avatar: 40px circular, left-aligned
@@ -386,7 +386,7 @@ Yes, this matches. A few implementation questions:
    - In ticket: blue?
    - Blocked: red?
 
-Lin — what's your preference?
+Lin, what's your preference?
 ```
 
 **Lin:**
@@ -402,7 +402,7 @@ Lin — what's your preference?
    - In ticket: #3B82F6 (blue-600)
    - Blocked: #EF4444 (red-600)
 
-Priya — these are design tokens. Let me know if you need the raw hex 
+Priya, these are design tokens. Let me know if you need the raw hex 
 values in a design-tokens.ts file.
 ```
 
@@ -410,7 +410,7 @@ values in a design-tokens.ts file.
 ```
 Perfect, thanks Lin. I have the tokens from the design system.
 
-Mike — how's the WebSocket server coming? I'm ready to test 
+Mike, how's the WebSocket server coming? I'm ready to test 
 integration but need a stable endpoint.
 
 Also: For the "Join Thread" action, what API should I call? Is it 
@@ -452,10 +452,10 @@ Presence API: ✅
 Event broadcasting: ✅
 Real-time updates: ✅
 
-Mike — this works perfectly. The real-time updates are < 200ms, which 
+Mike, this works perfectly. The real-time updates are < 200ms, which 
 exceeds our 500ms target.
 
-Lin — the components look great with the design tokens. I'll attach 
+Lin, the components look great with the design tokens. I'll attach 
 a screenshot for review.
 
 [Attachment: collaboration-panel-screenshot.png]
@@ -489,7 +489,7 @@ Integration checklist:
 
 Current status: Core integration complete. Ready for QA handoff.
 
-Sarah — what do you need from me for testing?
+Sarah, what do you need from me for testing?
 ```
 
 **Sarah (QA Engineer, participant):**
@@ -509,7 +509,7 @@ I'm ready to test. A few questions:
 3. Performance: I'll measure load time and WebSocket latency. What 
    targets should I validate?
 
-Elena — let me know if I should add scenarios.
+Elena, let me know if I should add scenarios.
 ```
 
 **Elena:**
@@ -527,7 +527,7 @@ Good questions, Sarah:
    - WebSocket latency: < 500ms (event to UI update)
    - Reconnection time: < 5 seconds (disconnect to reconnect)
 
-Priya, Mike — be available during testing. Sarah will find bugs.
+Priya, Mike, be available during testing. Sarah will find bugs.
 
 Proceeding with testing...
 ```
@@ -552,7 +552,7 @@ FAIL (1 scenario):
 
 Recommendation: Optimize before launch or adjust target.
 
-Elena — what's your call on the performance issue?
+Elena, what's your call on the performance issue?
 ```
 
 **Elena:**
@@ -561,7 +561,7 @@ Good work, Sarah. The performance issue is acceptable for MVP:
 
 1. 1.3 seconds is close to target
 2. Only affects initial load, not real-time updates
-3. Employee roster is large (50+) — this is expected
+3. Employee roster is large (50+); this is expected
 
 Decision: Launch with current performance, optimize in Phase 5.
 
@@ -599,10 +599,10 @@ Elena participated in every major ticket, ensuring architectural consistency and
 
 ## Related Documentation
 
-- [Tickets & Work Management](../comprehensive-user-guide.md#7-tickets--work-management) — Participant wake semantics
-- [Command Palette](../comprehensive-user-guide.md#6-command-palette) — Creating tickets with dependencies
-- [Mission Control Dashboard](../comprehensive-user-guide.md#5-mission-control-dashboard) — Monitoring cross-team work
+- [Tickets & Work Management](../comprehensive-user-guide.md#7-tickets--work-management): Participant wake semantics
+- [Command Palette](../comprehensive-user-guide.md#6-command-palette): Creating tickets with dependencies
+- [Mission Control Dashboard](../comprehensive-user-guide.md#5-mission-control-dashboard): Monitoring cross-team work
 
 ---
 
-*Scenario: Cross-Functional Collaboration — Draft v1.0*
+*Scenario: Cross-Functional Collaboration, Draft v1.0*

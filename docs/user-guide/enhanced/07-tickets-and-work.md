@@ -55,7 +55,7 @@
 | **Blocked** | Waiting on dependency or decision | External blockage, needs input, cannot proceed |
 | **Done** | Work completed | Verified deliverable, resolved issue, finished task |
 
-**Reopening:** Drag a Done card back to Open or In Progress on the Kanban board to resume work — there is no "Reopen" button. The audit trail preserves the original completion.
+**Reopening:** Drag a Done card back to Open or In Progress on the Kanban board to resume work; there is no "Reopen" button. The audit trail preserves the original completion.
 
 ### Priority Levels
 
@@ -171,23 +171,23 @@ See [Task Planner documentation](../task-planner.md) for full details.
 
 ## Ticket Detail Panel
 
-Click any ticket card to open the **detail rail** on the right. It stacks the ticket's identity, live status, collaboration, and full discussion in one scrollable column. Everything in the rail is read-and-collaborate — **status is not editable here**; you change it by dragging the card between Kanban columns.
+Click any ticket card to open the **detail rail** on the right. It stacks the ticket's identity, live status, collaboration, and full discussion in one scrollable column. Everything in the rail is read-and-collaborate: **status is not editable here**; you change it by dragging the card between Kanban columns.
 
 ### Identity & Status
 
 The top of the rail carries the ticket's identity and two **non-interactive** stencil word-lamps:
 
-- **Ticket ID** — the short 8-character identifier, shown as a mono tag beside the "Detail rail" label.
-- **Title** — the ticket's headline.
-- **Status lamp** — reflects the current column and **cannot be changed from the rail**; drag the card between columns to change status (see [Updating Status](#updating-status)). Lamp words: **HOLD** (amber) = Open, **EXEC** (teal) = In Progress, **NO-GO** (red) = Blocked, **GO** (green) = Done.
-- **Priority lamp** — **NO-GO** (red) = Critical, **HOLD** (amber) = High, unlit = Medium / Low.
-- **Assignee** — the owner's avatar and name, or "Unassigned".
-- **Close (×)** — dismisses the rail. There is no `⋮` overflow menu, no status dropdown, and no "Reopen" button anywhere in the rail.
+- **Ticket ID**: the short 8-character identifier, shown as a mono tag beside the "Detail rail" label.
+- **Title**: the ticket's headline.
+- **Status lamp**: reflects the current column and **cannot be changed from the rail**; drag the card between columns to change status (see [Updating Status](#updating-status)). Lamp words: **HOLD** (amber) = Open, **EXEC** (teal) = In Progress, **NO-GO** (red) = Blocked, **GO** (green) = Done.
+- **Priority lamp**: **NO-GO** (red) = Critical, **HOLD** (amber) = High, unlit = Medium / Low.
+- **Assignee**: the owner's avatar and name, or "Unassigned".
+- **Close (×)**: dismisses the rail. There is no `⋮` overflow menu, no status dropdown, and no "Reopen" button anywhere in the rail.
 
 ### Description & Ticket Memory
 
-- **Description** — the full requirements text, shown when the ticket has one.
-- **Ticket memory** — a memory card exposing the latest digest and the resumable checkpoint trail behind this ticket's thread (see [Ticket Memory](#ticket-memory)).
+- **Description**: the full requirements text, shown when the ticket has one.
+- **Ticket memory**: a memory card exposing the latest digest and the resumable checkpoint trail behind this ticket's thread (see [Ticket Memory](#ticket-memory)).
 
 ### Participants
 
@@ -197,28 +197,28 @@ The top of the rail carries the ticket's identity and two **non-interactive** st
 
 ### Attachments
 
-- Vault files linked to this ticket — source material, requirements docs, reference designs.
+- Vault files linked to this ticket: source material, requirements docs, reference designs.
 - Click **Attach** to pick a file from the company vault; agent-created deliverables can be attached the same way.
 
 ### Discussion Thread
 
-The heart of the ticket — the full conversation history, newest at the bottom.
+The heart of the ticket: the full conversation history, newest at the bottom.
 
 **What you see:**
-- **Your messages** — highlighted with the armed-red tint and labeled "You".
-- **Employee replies** — plain cards labeled with the agent's name.
-- **System notes** — centered, italic status lines for automated events.
+- **Your messages**: highlighted with the armed-red tint and labeled "You".
+- **Employee replies**: plain cards labeled with the agent's name.
+- **System notes**: centered, italic status lines for automated events.
 
 **Thread behavior:**
-- **Streaming** — employee responses appear token-by-token in real time.
-- **History** — the full conversation is preserved from creation to close.
-- **Composer** — type a comment and press **Enter** (or **Send**) to post; **Shift+Enter** inserts a newline.
-- **Empty state** — a "No discussion yet." standby lamp shows until the first message lands.
+- **Streaming**: employee responses appear token-by-token in real time.
+- **History**: the full conversation is preserved from creation to close.
+- **Composer**: type a comment and press **Enter** (or **Send**) to post; **Shift+Enter** inserts a newline.
+- **Empty state**: a "No discussion yet." standby lamp shows until the first message lands.
 
 ### Closing
 
 - The composer footer carries a single **Close Ticket** button (alongside the comment **Send** button).
-- Once the ticket is Done, the composer is replaced by a "Ticket closed on <date>" line. Reopening is not a rail action — drag the card out of **Done** on the board to resume work.
+- Once the ticket is Done, the composer is replaced by a "Ticket closed on <date>" line. Reopening is not a rail action; drag the card out of **Done** on the board to resume work.
 
 ---
 
@@ -250,7 +250,7 @@ Current state: Ticket is In Progress, assigned to Mike
 You add comment: "Any update on the Safari crash?"
 
 Who wakes:
-✅ You (commenter) — active participant
+✅ You (commenter): active participant
 ✅ Mike (current participant + assignee)
 ✅ Sarah (current participant + historical author)
 
@@ -342,7 +342,7 @@ Configure default memory behavior in **Settings → Memory**:
    - Mike sees ticket in his queue, status changes to In Progress
    - Mike: "I'll investigate the Safari crash. Reproducing now."
    - Tool call: Mike reads error logs
-   - Mike: "Found it — race condition in auth state. Fixing now."
+   - Mike: "Found it: race condition in auth state. Fixing now."
 
 3. BLOCK & UNBLOCK
    - Mike: "Need design decision: should we show error modal or silent redirect?"
@@ -423,7 +423,7 @@ Configure default memory behavior in **Settings → Memory**:
 **Method 1: Drag and drop (primary)**
 - Drag the ticket card between columns on the Kanban board (Open / In Progress / Blocked / Done)
 - Status updates automatically, and the audit log records the change
-- The status lamp in the detail rail is display-only — there is no status dropdown
+- The status lamp in the detail rail is display-only: there is no status dropdown
 
 **Method 2: Command Palette**
 ```
@@ -479,7 +479,7 @@ When an employee creates a deliverable (code, doc, design):
 4. Audit log records closure
 
 **Reopening:**
-1. Drag the card out of **Done** (back to Open or In Progress) on the Kanban board — there is no "Reopen" button
+1. Drag the card out of **Done** (back to Open or In Progress) on the Kanban board; there is no "Reopen" button
 2. Work resumes and the comment composer becomes available again
 3. The assignee is retained (reassign if needed)
 4. The audit log preserves the original completion alongside the reopen
@@ -627,13 +627,13 @@ See attached API spec for endpoint details.
 
 ## Related Sections
 
-- [Command Palette](06-command-palette.md#6-command-palette) — Creating tickets via natural language
-- [Task Planner](../task-planner.md) — AI-powered ticket decomposition and delegation
-- [Projects, Goals & Schedule](../comprehensive-user-guide.md#8-projects--goals--schedule) — Linking tickets to initiatives
-- [Chat & Conversations](../comprehensive-user-guide.md#9-chat--conversations) — Contrast with ticket threads
-- [Files & Deliverables](../comprehensive-user-guide.md#11-files--deliverables) — Ticket attachments
-- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard) — Monitoring ticket queues
+- [Command Palette](06-command-palette.md#6-command-palette): Creating tickets via natural language
+- [Task Planner](../task-planner.md): AI-powered ticket decomposition and delegation
+- [Projects, Goals & Schedule](../comprehensive-user-guide.md#8-projects-goals--schedule): Linking tickets to initiatives
+- [Chat & Conversations](../comprehensive-user-guide.md#9-chat--conversations): Contrast with ticket threads
+- [Files & Deliverables](../comprehensive-user-guide.md#11-files--deliverables): Ticket attachments
+- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard): Monitoring ticket queues
 
 ---
 
-*Enhanced Tickets & Work documentation — 480+ lines vs. original ~100 lines*
+*Enhanced Tickets & Work documentation: 480+ lines vs. original ~100 lines*

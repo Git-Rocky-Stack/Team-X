@@ -94,7 +94,7 @@ Routine paused pending resolution.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Doctor Report — Incident Detection                                │
+│ Doctor Report: Incident Detection                                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ ✅ Database integrity           PASS                                │
@@ -259,7 +259,7 @@ Changes applied:
 
 Status: HEARTBEAT_DETECTED ✅
 
-Mike — your runtime is back online. You should receive work again.
+Mike, your runtime is back online. You should receive work again.
 ```
 
 **[Tool call: restart_runtime "bash-runtime-priya"]**
@@ -277,7 +277,7 @@ Changes applied:
 
 Status: HEARTBEAT_DETECTED ✅
 
-Priya — your runtime is back online.
+Priya, your runtime is back online.
 ```
 
 **Result:** Both external runtimes restored. Mike and Priya can receive work again.
@@ -293,7 +293,7 @@ Priya — your runtime is back online.
 **Observation:**
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Agent Runs — Active Runs                                            │
+│ Agent Runs: Active Runs                                             │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ Active Runs: 3 (down from 7)                                      │
@@ -322,7 +322,7 @@ Priya — your runtime is back online.
 
 **Operator Decision:** 
 - 2 loops auto-recovered (OpenAI responding again)
-- 1 loop still stuck (Ticket #55) — cancel and retry
+- 1 loop still stuck (Ticket #55): cancel and retry
 
 **Action:** Cancel stuck loop, allow Elena to retry manually.
 
@@ -385,7 +385,7 @@ Ctrl+K → "Call a meeting: Incident post-mortem for cascading failures"
 
 **Meeting Minutes (generated):**
 ```
-Incident Post-Mortem — 2026-05-03 15:47
+Incident Post-Mortem: 2026-05-03 15:47
 
 INCIDENT SUMMARY:
 - Duration: 47 minutes (14:32 - 15:19)
@@ -611,15 +611,15 @@ Post-mortem meetings, ticket threads, and Copilot insights create a rich audit t
 
 ## Related Documentation
 
-- [Copilot: Proactive Intelligence](../comprehensive-user-guide.md#12-copilot-proactive-intelligence) — Critical insights
-- [Autonomy → Doctor](../comprehensive-user-guide.md#13-autonomy-control-plane) — Health checks
-- [Autonomy → Improve](../comprehensive-user-guide.md#13-autonomy-control-plane) — Self-improvement loop
-- [Autonomy → Runtimes](../comprehensive-user-guide.md#13-autonomy-control-plane) — Runtime profiles
-- [Autonomy → Approvals](../comprehensive-user-guide.md#13-autonomy-control-plane) — Budget overrides
+- [Copilot: Proactive Intelligence](../comprehensive-user-guide.md#12-copilot-proactive-intelligence): Critical insights
+- [Autonomy → Doctor](../comprehensive-user-guide.md#13-autonomy-control-plane): Health checks
+- [Autonomy → Improve](../comprehensive-user-guide.md#13-autonomy-control-plane): Self-improvement loop
+- [Autonomy → Runtimes](../comprehensive-user-guide.md#13-autonomy-control-plane): Runtime profiles
+- [Autonomy → Approvals](../comprehensive-user-guide.md#13-autonomy-control-plane): Budget overrides
 
 ---
 
-*Scenario: Failure Recovery Workflows — Draft v1.0*
+*Scenario: Failure Recovery Workflows, Draft v1.0*
 
 **Next Scenarios:**
 - [Cross-Functional Collaboration](./04-cross-functional-collaboration.md)

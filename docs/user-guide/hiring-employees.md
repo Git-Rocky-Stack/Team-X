@@ -19,8 +19,8 @@ Open the **Hire Dialog** by clicking the "Hire" button in the Dashboard or siden
 
 ### Filtering
 
-- **Search** — type a role name or keyword to filter
-- **Level chips** — click a level chip to show only roles at that level
+- **Search**: type a role name or keyword to filter
+- **Level chips**: click a level chip to show only roles at that level
 - Filters combine: searching "engineer" with the "IC" chip active shows only IC-level engineering roles
 
 ## Hiring an Employee
@@ -28,7 +28,7 @@ Open the **Hire Dialog** by clicking the "Hire" button in the Dashboard or siden
 1. Open the Hire Dialog
 2. Browse or search the role catalog
 3. Click on a role to select it
-4. **Set a manager** — choose who this employee reports to in the "Reports to" dropdown
+4. **Set a manager**: choose who this employee reports to in the "Reports to" dropdown
 5. Click **Hire**
 
 The new employee appears on the Dashboard, in the org chart, and is immediately available for chat and ticket assignment.
@@ -53,7 +53,7 @@ Navigate to the top-level **Org** tab in the top bar to see the full hierarchy.
 ### Rearranging
 
 - **Drag an employee** to a new position in the tree to change their reporting line
-- The org chart prevents cycles — you cannot make someone report to their own subordinate
+- The org chart prevents cycles: you cannot make someone report to their own subordinate
 
 ## Managing Employees
 
@@ -74,12 +74,12 @@ Navigate to the top-level **Org** tab in the top bar to see the full hierarchy.
 
 1. Select an employee
 2. Click **Fire**
-3. The employee is soft-deleted (archived) — their data remains in the database for audit purposes
+3. The employee is soft-deleted (archived); their data remains in the database for audit purposes
 4. Active tickets assigned to them can be reassigned
 
 ## Best Practices
 
 - **Start with a CEO.** Give your organization a strategic leader who can delegate to others.
 - **Build depth, not just breadth.** A VP of Engineering managing 3 Tech Leads who each manage 5 engineers creates natural delegation patterns.
-- **Match roles to goals.** If your company goal is "Ship the MVP," hire engineers, a product manager, and a QA lead — not 5 VPs.
+- **Match roles to goals.** If your company goal is "Ship the MVP," hire engineers, a product manager, and a QA lead, not 5 VPs.
 - **Use the right model tier per level.** Officers benefit from planning-tier models (Claude Opus, GPT-4); ICs work well with development-tier models (Sonnet, GPT-4o).

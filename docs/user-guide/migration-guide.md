@@ -380,10 +380,10 @@ After:
 
 **Adaptation Tips:**
 
-1. **Write comprehensive tickets** — Include all context upfront
-2. **Use participants** — Add relevant employees to ticket
-3. **Set clear acceptance criteria** — Define what "done" looks like
-4. **Review early** — Check agent progress before completion
+1. **Write comprehensive tickets**: Include all context upfront
+2. **Use participants**: Add relevant employees to ticket
+3. **Set clear acceptance criteria**: Define what "done" looks like
+4. **Review early**: Check agent progress before completion
 
 ### Quality Assurance
 
@@ -598,11 +598,11 @@ Action items for next month:
 
 **During Migration:**
 
-- **Issues / bugs:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues) — apply the `migration` label
+- **Issues / bugs:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues): apply the `migration` label
 - **Questions / discussion:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions)
 - **Documentation:** [github.com/Git-Rocky-Stack/Team-X/tree/main/docs](https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs)
 
-Team-X is open-source and community-supported — there is no paid migration service, training program, or sales channel. Migration tooling lives in the repo; contributions and improvements are welcome via pull request.
+Team-X is open-source and community-supported; there is no paid migration service, training program, or sales channel. Migration tooling lives in the repo; contributions and improvements are welcome via pull request.
 
 ---
 

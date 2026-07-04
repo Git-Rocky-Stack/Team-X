@@ -28,7 +28,7 @@ Team-X is your AI-powered workforce desktop application. Hire AI employees with 
    - **Windows 10/11:** Download `Team-X-<version>-Setup-x64.exe`
    - **macOS 11+ (Intel):** Download `Team-X-<version>-x64.dmg`
    - **macOS 11+ (Apple Silicon):** Download `Team-X-<version>-arm64.dmg`
-   - **Linux:** Download `Team-X-<version>-x64.AppImage` (or `Team-X-<version>-x64.deb` — see the FUSE note below)
+   - **Linux:** Download `Team-X-<version>-x64.AppImage` (or `Team-X-<version>-x64.deb`, see the FUSE note below)
 
 ### Install
 
@@ -56,7 +56,7 @@ chmod +x Team-X-<version>-x64.AppImage
 > - **No install (quickest):** `./Team-X-<version>-x64.AppImage --appimage-extract-and-run`
 > - **Install FUSE 2 once:** Ubuntu 24.04 → `sudo apt install libfuse2t64` · Ubuntu 22.04 / Debian → `sudo apt install libfuse2` · Fedora → `sudo dnf install fuse-libs`
 
-**Linux (.deb — no FUSE required):**
+**Linux (.deb, no FUSE required):**
 ```
 sudo apt install ./Team-X-<version>-x64.deb
 ```
@@ -71,7 +71,7 @@ sudo apt install ./Team-X-<version>-x64.deb
 
 ## Step 2: Create Your First Workspace (2 minutes)
 
-Your workspace is your company — where employees work, tickets are tracked, and budgets are managed.
+Your workspace is your company, where employees work, tickets are tracked, and budgets are managed.
 
 ### Workspace Configuration
 
@@ -131,7 +131,7 @@ Click "Employees" in the left sidebar
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Hire Employee — Role Selection                                     │
+│  Hire Employee - Role Selection                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  Categories:                                                        │
@@ -159,7 +159,7 @@ Click "Employees" in the left sidebar
 
 ```
 Employee Name: [Alex_____________________]
-(Default name based on role — customize if you want)
+(Default name based on role; customize if you want)
 ```
 
 4. **Confirm Hire:**
@@ -172,13 +172,13 @@ From the Employees panel, you should see:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Employees — My Company                                              │
+│  Employees - My Company                                              │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  Active Employees: 1                                                │
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  Alex — Full Stack Engineer                                   │   │
+│  │  Alex - Full Stack Engineer                                   │   │
 │  │                                                             │   │
 │  │  Status: 🟢 Idle (available for work)                        │   │
 │  │  Tickets Completed: 0                                        │   │
@@ -255,7 +255,7 @@ Your ticket appears in the Tickets panel:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Tickets — My Company                                                │
+│  Tickets - My Company                                                │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  Filters: [All] [Open] [In Progress] [Done]                          │
@@ -289,7 +289,7 @@ Now watch as Alex works on your ticket autonomously.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Agent Run — #1: Create a simple React component                      │
+│  Agent Run - #1: Create a simple React component                      │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  Employee: Alex (Full Stack Engineer)                                │
@@ -340,8 +340,8 @@ Now watch as Alex works on your ticket autonomously.
 When Alex completes the ticket, the status changes to **"Done"**:
 
 1. Click **"View Artifacts"** to see what Alex created:
-   - `src/components/Button.tsx` — The React component
-   - `src/components/Button.test.tsx` — Unit tests
+   - `src/components/Button.tsx`: The React component
+   - `src/components/Button.test.tsx`: Unit tests
 
 2. **Review the code** in the artifact viewer
 
@@ -360,7 +360,7 @@ Now that you've completed your first ticket, explore the dashboard.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  Mission Control — My Company                                                      │
+│  Mission Control - My Company                                                      │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                   │
 │  ┌───────────────────────┐  ┌───────────────────────┐  ┌──────────────────────┐ │
@@ -377,7 +377,7 @@ Now that you've completed your first ticket, explore the dashboard.
 │  ┌─────────────────────────────────────────────────────────────────────────────┐ │
 │  │  Recent Tickets                                                              │ │
 │  ├─────────────────────────────────────────────────────────────────────────────┤ │
-│  │  ✅ #1: Create a simple React component — Done — Alex — 2m 34s              │ │
+│  │  ✅ #1: Create a simple React component - Done - Alex - 2m 34s              │ │
 │  └─────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                   │
 │  ┌─────────────────────────────────────────────────────────────────────────────┐ │
@@ -398,7 +398,7 @@ Now that you've completed your first ticket, explore the dashboard.
 
 ### Navigation
 
-Use the left sidebar to navigate. You can also jump to most areas from the Command Palette — press `Ctrl+K` / `Cmd+K` and type a `/show` command, or simply say where you want to go:
+Use the left sidebar to navigate. You can also jump to most areas from the Command Palette. Press `Ctrl+K` / `Cmd+K` and type a `/show` command, or simply say where you want to go:
 
 | Panel | Command Palette | Purpose |
 |-------|-----------------|---------|
@@ -481,10 +481,10 @@ Automate recurring work:
 
 ### Support
 
-- **GitHub Issues:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues) — Bug reports
-- **GitHub Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions) — Q&A and ideas
+- **GitHub Issues:** [github.com/Git-Rocky-Stack/Team-X/issues](https://github.com/Git-Rocky-Stack/Team-X/issues): Bug reports
+- **GitHub Discussions:** [github.com/Git-Rocky-Stack/Team-X/discussions](https://github.com/Git-Rocky-Stack/Team-X/discussions): Q&A and ideas
 
-Team-X is open-source and community-supported — there is no hosted support email or chat server.
+Team-X is open-source and community-supported; there is no hosted support email or chat server.
 
 ### Keyboard Shortcuts
 

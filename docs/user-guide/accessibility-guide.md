@@ -33,7 +33,7 @@ Team-X is committed to accessibility. This guide covers the accessibility featur
 | **Keyboard Navigation** | Full keyboard control | Default (always on) |
 | **Screen Reader Support** | NVDA, JAWS, VoiceOver | Default (always on) |
 | **Dual-shift themes** | Night Ops (dark) / Day Shift (silver), both WCAG AA | Top-bar shift toggle |
-| **UI Zoom** | Scale the whole interface | View menu — `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, `Ctrl/Cmd + 0` reset |
+| **UI Zoom** | Scale the whole interface | View menu: `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, `Ctrl/Cmd + 0` reset |
 | **Focus Indicators** | Visible focus on controls | Default (always on) |
 | **Word-lamp status** | Status is a stencil word, never color alone | Default (always on) |
 | **ARIA Labels** | Contextual labels | Default (always on) |
@@ -92,7 +92,7 @@ All interactive elements show visible focus:
 
 ### Keyboard Shortcuts Reference
 
-See [keyboard-shortcuts.md](./keyboard-shortcuts.md) for the complete, authoritative list. The global surface is intentionally minimal — the Command Palette (`Ctrl+K` / `Cmd+K`) is the primary keyboard entry point, so most actions are reached by typing a command or by tabbing to a control and pressing `Enter`.
+See [keyboard-shortcuts.md](./keyboard-shortcuts.md) for the complete, authoritative list. The global surface is intentionally minimal; the Command Palette (`Ctrl+K` / `Cmd+K`) is the primary keyboard entry point, so most actions are reached by typing a command or by tabbing to a control and pressing `Enter`.
 
 ---
 
@@ -179,7 +179,7 @@ Controls frequency of updates during agent runs:
 
 ### Contrast and themes
 
-There is no separate high-contrast toggle — the design system is built to WCAG
+There is no separate high-contrast toggle; the design system is built to WCAG
 AA contrast in **both** of its themes, switchable from the top bar:
 
 - **Night Ops** (default): platinum text on carbon black; status lamps carry
@@ -223,8 +223,8 @@ relationships are preserved at every scale.
 ### Reduced Motion
 
 Team-X honors the operating-system **reduce motion** preference
-(`prefers-reduced-motion`). When it is enabled, every console animation —
-LED ignition ramps, VU meter ballistics, warning blinks, view transitions —
+(`prefers-reduced-motion`). When it is enabled, every console animation
+(LED ignition ramps, VU meter ballistics, warning blinks, view transitions)
 collapses to 0ms, and all states remain fully legible by color and form alone.
 There is no separate in-app setting to manage; set it once at the OS level:
 
@@ -305,7 +305,7 @@ Each panel has consistent layout:
 
 Because the whole app is drivable from two shortcuts and the command palette,
 voice workflows reduce to pressing `Ctrl+K` (say "press control K") and then
-dictating the command itself — "create a ticket for the login bug",
+dictating the command itself: "create a ticket for the login bug",
 "show settings", "hire an engineer". Dialogs close with "press escape".
 
 ### Click Targets
@@ -367,7 +367,7 @@ User should be logged in and redirected to dashboard
 Error message appears, user not logged in
 
 **Impact**
-Critical — blocks all SAML users
+Critical: blocks all SAML users
 
 **Acceptance Criteria**
 - [ ] SAML login works
@@ -410,7 +410,7 @@ Attendees: Alex, Jamie, Sam
 - Attend design review at 2pm
 
 **Blockers**
-- None — ✅ Unblocked
+- None, ✅ Unblocked
 
 **Announcements**
 - Team lunch tomorrow at noon
@@ -564,9 +564,9 @@ Common accommodations:
 
 **Accessibility communities:**
 
-- [WebAIM](https://webaim.org) — Web accessibility resources
-- [A11Y Project](https://www.a11yproject.com) — Accessibility checklist
-- [NVDA Community](https://www.nvaccess.org) — NVDA screen reader
+- [WebAIM](https://webaim.org): Web accessibility resources
+- [A11Y Project](https://www.a11yproject.com): Accessibility checklist
+- [NVDA Community](https://www.nvaccess.org): NVDA screen reader
 
 ---
 

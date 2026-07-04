@@ -6,7 +6,7 @@
 
 ## Welcome to Team-X
 
-Team-X is a revolutionary approach to work: an AI-powered workforce that lives entirely on your machine. Hire synthetic employees with hand-crafted F10 role specifications, assign them work through tickets and projects, and watch them execute tasks using your chosen LLM providers—all with complete privacy, auditability, and control.
+Team-X is a revolutionary approach to work: an AI-powered workforce that lives entirely on your machine. Hire synthetic employees with hand-crafted F10 role specifications, assign them work through tickets and projects, and watch them execute tasks using your chosen LLM providers, all with complete privacy, auditability, and control.
 
 This guide will take you from first launch to a fully operational AI workforce.
 
@@ -21,13 +21,13 @@ This guide will take you from first launch to a fully operational AI workforce.
 5. [Mission Control Dashboard](#5-mission-control-dashboard)
 6. [Command Palette](#6-command-palette)
 7. [Tickets & Work Management](#7-tickets--work-management)
-8. [Projects, Goals & Schedule](#8-projects--goals--schedule)
+8. [Projects, Goals & Schedule](#8-projects-goals--schedule)
 9. [Chat & Conversations](#9-chat--conversations)
 10. [Meetings & Collaboration](#10-meetings--collaboration)
 11. [Files & Deliverables](#11-files--deliverables)
 12. [Copilot: Proactive Intelligence](#12-copilot-proactive-intelligence)
 13. [Autonomy Control Plane](#13-autonomy-control-plane)
-14. [Extensions: Skills & MCPs](#14-extensions--skills--mcps)
+14. [Extensions: Skills & MCPs](#14-extensions-skills--mcps)
 15. [Settings & Configuration](#15-settings--configuration)
 16. [Telemetry & Costs](#16-telemetry--costs)
 17. [Audit Trail](#17-audit-trail)
@@ -278,22 +278,22 @@ Each employee has:
 
 ## 5. Mission Control Dashboard
 
-**Purpose:** Mission Control is the operational heart of Team-X — your real-time view into everything happening across your AI workforce. It answers "What's happening right now?" and "What needs my attention?" in a single glance.
+**Purpose:** Mission Control is the operational heart of Team-X, your real-time view into everything happening across your AI workforce. It answers "What's happening right now?" and "What needs my attention?" in a single glance.
 
 ### When to Use Mission Control
 
 Mission Control is designed for **daily operations**, not configuration or governance. Use it to:
 
-- **Start your day** — See what completed overnight, what's blocked, and where cost is accumulating
-- **Monitor active work** — Watch agentic loops progress, observe runtime health, spot queue pressure
-- **Diagnose issues** — Identify which employee is stuck, which run failed, which routine didn't materialize
-- **End your day** — Verify work settled, no unexpected spend, no silent failures
+- **Start your day**: See what completed overnight, what's blocked, and where cost is accumulating
+- **Monitor active work**: Watch agentic loops progress, observe runtime health, spot queue pressure
+- **Diagnose issues**: Identify which employee is stuck, which run failed, which routine didn't materialize
+- **End your day**: Verify work settled, no unexpected spend, no silent failures
 
 **Contrast with other views:**
-- **Tickets** — Deep dive into specific work items
-- **Autonomy** — Governance, budgets, approvals, runtime posture
-- **Telemetry** — Historical cost and usage analysis
-- **Mission Control** — Live operational pulse
+- **Tickets**: Deep dive into specific work items
+- **Autonomy**: Governance, budgets, approvals, runtime posture
+- **Telemetry**: Historical cost and usage analysis
+- **Mission Control**: Live operational pulse
 
 ---
 
@@ -400,7 +400,7 @@ Shows recent agentic loop executions with live status updates.
 - Abnormal: Stuck on same step for >60 seconds → possible provider hang or malformed tool call
 
 **Completed (GO lamp)**
-- Review cost and token count — if unusually high, check the thread for what happened
+- Review cost and token count; if unusually high, check the thread for what happened
 - Failed runs light a steady NO-GO lamp with the error reason
 
 **Failed (NO-GO lamp)**
@@ -415,7 +415,7 @@ Shows recent agentic loop executions with live status updates.
 
 Click any run card to:
 1. **Open the full thread transcript** in Copilot Conversations ( Threads drawer)
-2. **Inspect each step** — plan cards, tool calls, tool results, final answer
+2. **Inspect each step**: plan cards, tool calls, tool results, final answer
 3. **Copy the grounded answer** for reuse in tickets, docs, or chat
 4. **Review cost attribution** for spend analysis
 
@@ -427,7 +427,7 @@ Shows durable backlog per employee layered with live activity status.
 
 | Element | Meaning | Lamp / Indicator |
 |---------|---------|------------------|
-| **Name + Title** | Employee identity | — |
+| **Name + Title** | Employee identity | None |
 | **Status Lamp** | Current activity state | EXEC lamp (thinking) / HOLD lamp (blocked) / NO-GO lamp (error) / STBY lamp (idle) |
 | **Queue Bar** | Visual breakdown of ticket counts | Graphite (Open) / Scope teal (In-Progress) / Amber (Blocked) / Green (Done) |
 | **Quick Actions** | Chat bubble, ticket icon | Jump to conversation or ticket list |
@@ -454,11 +454,11 @@ Open: ████████ (8)     InProgress: ███ (3)     Blocked: �
 
 #### Status Lamp Meanings
 
-Each employee row carries a stencil word-lamp for live activity — the same lamp vocabulary used across the console. Read the lamp word, not a color dot:
+Each employee row carries a stencil word-lamp for live activity, the same lamp vocabulary used across the console. Read the lamp word, not a color dot:
 
 | Lamp | State | Typical Cause | Action |
 |------|-------|---------------|--------|
-| **EXEC** (teal) | Live/Active | Employee is thinking, streaming, or calling a tool | None — work in progress |
+| **EXEC** (teal) | Live/Active | Employee is thinking, streaming, or calling a tool | None (work in progress) |
 | **HOLD** (amber) | Blocked | Ticket assigned to employee is blocked, or employee has no viable provider | Check ticket detail for block reason; verify provider configuration |
 | **NO-GO** (red) | Error | Run failed, provider disconnected, or runtime error | Click employee → review recent runs; check provider connection |
 | **STBY** (unlit) | Idle | No active work, provider available, queue may be empty or employee unassigned | Normal if queue empty; assign tickets if employee should be working |
@@ -584,7 +584,7 @@ Raw LLM output from all employees and runtimes. Shows:
 Grid layout showing employee activity as cards. Each employee card displays:
 
 - Avatar, name, title
-- Live status lamp (stencil word — EXEC / HOLD / NO-GO / STBY)
+- Live status lamp (stencil word: EXEC / HOLD / NO-GO / STBY)
 - Current activity (what they're working on)
 - Quick actions (chat, assign ticket)
 
@@ -777,21 +777,21 @@ When troubleshooting, use multiple subviews together:
 
 ## Related Sections
 
-- [Command Palette](#6-command-palette) — Creating work via natural language
-- [Tickets & Work](#7-tickets--work-management) — Managing durable work items
-- [Copilot: Proactive Intelligence](#12-copilot-proactive-intelligence) — Understanding insights
-- [Autonomy Control Plane](#13-autonomy-control-plane) — Governance and runtime health
-- [Troubleshooting](#18-troubleshooting) — Symptom-based debugging
+- [Command Palette](#6-command-palette): Creating work via natural language
+- [Tickets & Work](#7-tickets--work-management): Managing durable work items
+- [Copilot: Proactive Intelligence](#12-copilot-proactive-intelligence): Understanding insights
+- [Autonomy Control Plane](#13-autonomy-control-plane): Governance and runtime health
+- [Troubleshooting](#18-troubleshooting): Symptom-based debugging
 
 ---
 
-*Enhanced Mission Control documentation — 350+ lines vs. original ~85 lines*
+*Enhanced Mission Control documentation: 350+ lines vs. original ~85 lines*
 
 ---
 
 ## 6. Command Palette
 
-**Purpose:** The Command Palette is your keyboard-first control surface for Team-X. Type what you want in plain English, and the palette classifies your intent, fills in entities, confirms destructive actions, and executes — all without touching the mouse.
+**Purpose:** The Command Palette is your keyboard-first control surface for Team-X. Type what you want in plain English, and the palette classifies your intent, fills in entities, confirms destructive actions, and executes, all without touching the mouse.
 
 ### When to Use the Command Palette
 
@@ -892,14 +892,14 @@ When troubleshooting, use multiple subviews together:
 - "Let go of Sarah Chen"
 - "Terminate Mike's employment"
 
-**Confirmation:** **RED GATE** — destructive action, cannot be undone
+**Confirmation:** **RED GATE**: destructive action, cannot be undone
 
 **Flow:**
 1. Intent classified as `fire_employee`
 2. Employee name resolved (ambiguous = prompt to pick)
 3. Show red confirmation card:
    ```
-   ⚠️ Confirm destructive action — this cannot be undone
+   ⚠️ Confirm destructive action: this cannot be undone
    Fire: Mike Reyes (Senior Fullstack Engineer)
    Active tickets: 3
    Projects: Q2 Launch (lead)
@@ -916,7 +916,7 @@ When troubleshooting, use multiple subviews together:
 - "Move Sarah to tech lead"
 - "Promote Priya from IC to supervisor"
 
-**Confirmation:** **RED GATE** — destructive action (role change is significant)
+**Confirmation:** **RED GATE**: destructive action (role change is significant)
 
 **Flow:**
 1. Intent classified as `promote_employee`
@@ -981,7 +981,7 @@ When troubleshooting, use multiple subviews together:
 - "Mark the auth bug as done"
 - "Complete the login fix"
 
-**Confirmation:** **RED GATE** — destructive action (changes workflow state)
+**Confirmation:** **RED GATE**: destructive action (changes workflow state)
 
 **Flow:**
 1. Intent classified as `close_ticket`
@@ -1080,7 +1080,7 @@ When troubleshooting, use multiple subviews together:
 - "Wrap up the all-hands"
 - "Close the design review meeting"
 
-**Confirmation:** **RED GATE** — destructive action (ends collaboration session)
+**Confirmation:** **RED GATE**: destructive action (ends collaboration session)
 
 **Flow:**
 1. Intent classified as `end_meeting`
@@ -1184,7 +1184,7 @@ When troubleshooting, use multiple subviews together:
 
 ## Confirmation Gates
 
-### Red Gate — Destructive Actions
+### Red Gate: Destructive Actions
 
 **Triggered by:** `fire_employee`, `close_ticket`, `end_meeting`, `promote_employee`
 
@@ -1211,7 +1211,7 @@ When troubleshooting, use multiple subviews together:
 - Project leadership that needs reassignment
 - Meeting participants who will be disconnected
 
-### Amber Gate — Write-Side Agentic Runs
+### Amber Gate: Write-Side Agentic Runs
 
 **Triggered by:** `complex_request` with write-side keywords (decompose, delegate, create tickets, assign owners, review, approve)
 
@@ -1347,8 +1347,8 @@ Slash commands bypass NLU classification for direct, predictable navigation.
 | Speed matters (0.5s vs 2s) | Accuracy matters more than speed |
 
 **Example:**
-- `/show telemetry` — jumps directly to Telemetry (0.5s)
-- "Take me to cost analytics" — classifies as `show_view` → Telemetry (2s)
+- `/show telemetry`: jumps directly to Telemetry (0.5s)
+- "Take me to cost analytics": classifies as `show_view` → Telemetry (2s)
 
 Both work. Slash is faster when you know it.
 
@@ -1527,7 +1527,7 @@ All of these work the same:
 - Entity extraction error (wrong ticket, wrong priority)
 
 **Fix:**
-1. Don't confirm — press `Esc` to cancel
+1. Don't confirm; press `Esc` to cancel
 2. Rephrase with more detail: "Close ticket #47 (Login crash)" not "Close the ticket"
 
 ### "History is gone / Empty"
@@ -1543,14 +1543,14 @@ All of these work the same:
 
 ## Related Sections
 
-- [Agentic Loop](agentic-loop.md) — Complex request technical details
-- [Task Planner](task-planner.md) — Write-side agentic decomposition
-- [Tickets & Work](#7-tickets--work-management) — Managing created tickets
-- [Mission Control Dashboard](#5-mission-control-dashboard) — Viewing command history
+- [Agentic Loop](agentic-loop.md): Complex request technical details
+- [Task Planner](task-planner.md): Write-side agentic decomposition
+- [Tickets & Work](#7-tickets--work-management): Managing created tickets
+- [Mission Control Dashboard](#5-mission-control-dashboard): Viewing command history
 
 ---
 
-*Enhanced Command Palette documentation — 320+ lines vs. original ~80 lines*
+*Enhanced Command Palette documentation: 320+ lines vs. original ~80 lines*
 
 ## 7. Tickets & Work Management
 
@@ -1733,15 +1733,15 @@ stays visible). The rail reads top to bottom.
 The header shows the ticket title with its short id, plus the **status** and
 **priority** as non-interactive stencil word-lamps (status: HOLD for open,
 EXEC for in-progress, NO-GO for blocked, GO for done; priority lights NO-GO
-for critical and HOLD for high — medium and low stay unlit). Status changes
-happen by dragging the card between board lanes or via the command palette —
+for critical and HOLD for high; medium and low stay unlit). Status changes
+happen by dragging the card between board lanes or via the command palette;
 there is no status dropdown, no "⋮ More" menu, and no Reopen button in the
 rail. The only header action is the **×** that closes the rail.
 
 ### Description & Ticket Memory
 
-The description sits under the header, followed by the **ticket memory card**
-— the digest and checkpoint trail behind long ticket threads, linking into
+The description sits under the header, followed by the **ticket memory card**,
+the digest and checkpoint trail behind long ticket threads, linking into
 Autonomy → Memory for the deep view.
 
 ### Participants
@@ -1752,7 +1752,7 @@ Participants are who Team-X wakes when a human comments.
 
 ### Attachments
 
-Vault files linked to this ticket — source material in, agent-created
+Vault files linked to this ticket: source material in, agent-created
 deliverables out. Use **Attach from vault** to link files; every attachment
 is SHA256-integrity-checked and searchable.
 
@@ -1765,7 +1765,7 @@ responses stream in as they generate.
 
 ### Closing
 
-One button — **Close Ticket** — moves the ticket to Done. To reopen, drag
+One button, **Close Ticket**, moves the ticket to Done. To reopen, drag
 the card out of the Done lane or use the palette's reopen intent
 ("reopen ticket #17"). Every status change, participant change, comment, and
 attachment lands in the append-only audit log.
@@ -1800,7 +1800,7 @@ Current state: Ticket is In Progress, assigned to Mike
 You add comment: "Any update on the Safari crash?"
 
 Who wakes:
-✅ You (commenter) — active participant
+✅ You (commenter): active participant
 ✅ Mike (current participant + assignee)
 ✅ Sarah (current participant + historical author)
 
@@ -1892,7 +1892,7 @@ Configure default memory behavior in **Settings → Memory**:
    - Mike sees ticket in his queue, status changes to In Progress
    - Mike: "I'll investigate the Safari crash. Reproducing now."
    - Tool call: Mike reads error logs
-   - Mike: "Found it — race condition in auth state. Fixing now."
+   - Mike: "Found it: race condition in auth state. Fixing now."
 
 3. BLOCK & UNBLOCK
    - Mike: "Need design decision: should we show error modal or silent redirect?"
@@ -1973,7 +1973,7 @@ Configure default memory behavior in **Settings → Memory**:
 **Method 1: Drag and drop (primary)**
 - Drag the ticket card between columns on the Kanban board (Open / In Progress / Blocked / Done)
 - Status updates automatically, and the audit log records the change
-- The status lamp in the detail rail is display-only — there is no status dropdown
+- The status lamp in the detail rail is display-only; there is no status dropdown
 
 **Method 2: Command Palette**
 ```
@@ -2031,7 +2031,7 @@ When an employee creates a deliverable (code, doc, design):
 **Reopening:**
 1. Drag the Done card back into an active lane, or use the palette ("reopen ticket #17")
 2. Assignee is retained (change it if needed)
-3. Add a comment explaining why it reopened — participants wake on your comment
+3. Add a comment explaining why it reopened; participants wake on your comment
 4. Audit log shows the original completion plus the reopening
 
 ---
@@ -2176,16 +2176,16 @@ See attached API spec for endpoint details.
 
 ## Related Sections
 
-- [Command Palette](#6-command-palette) — Creating tickets via natural language
-- [Task Planner](task-planner.md) — AI-powered ticket decomposition and delegation
-- [Projects, Goals & Schedule](#8-projects--goals--schedule) — Linking tickets to initiatives
-- [Chat & Conversations](#9-chat--conversations) — Contrast with ticket threads
-- [Files & Deliverables](#11-files--deliverables) — Ticket attachments
-- [Mission Control Dashboard](#5-mission-control-dashboard) — Monitoring ticket queues
+- [Command Palette](#6-command-palette): Creating tickets via natural language
+- [Task Planner](task-planner.md): AI-powered ticket decomposition and delegation
+- [Projects, Goals & Schedule](#8-projects-goals--schedule): Linking tickets to initiatives
+- [Chat & Conversations](#9-chat--conversations): Contrast with ticket threads
+- [Files & Deliverables](#11-files--deliverables): Ticket attachments
+- [Mission Control Dashboard](#5-mission-control-dashboard): Monitoring ticket queues
 
 ---
 
-*Enhanced Tickets & Work documentation — 480+ lines vs. original ~100 lines*
+*Enhanced Tickets & Work documentation: 480+ lines vs. original ~100 lines*
 
 ## 8. Projects, Goals & Schedule
 
@@ -2759,7 +2759,7 @@ Access via **Settings → Runtime → Copilot**:
 | Setting | Default | Range | Purpose |
 |---------|---------|-------|---------|
 | **Enabled** | `true` | true/false | Master switch for all Copilot activity |
-| **Interval Minutes** | `5` | 1–60 | How often the analyzer runs (cadence) |
+| **Interval Minutes** | `5` | 1-60 | How often the analyzer runs (cadence) |
 | **Categories** | All 5 enabled | Any subset | Which categories to surface (uncheck to disable) |
 
 ### Category Weights
@@ -2869,8 +2869,8 @@ The **Ask Copilot** input at the bottom of the Copilot sidebar allows direct que
 
 **Start of day:**
 1. Open Copilot (`Cmd/Ctrl+Shift+K`)
-2. Scan Critical insights (red stripe) — these need action
-3. Review Warning insights (amber stripe) — prioritize by relevance
+2. Scan Critical insights (red stripe); these need action
+3. Review Warning insights (amber stripe); prioritize by relevance
 4. Dismiss Info insights if not relevant, or note positive signals
 5. Use "Ask Copilot" to synthesize: "What changed since yesterday?"
 
@@ -3096,15 +3096,15 @@ Use both for complete awareness:
 
 ## Related Sections
 
-- [Mission Control Dashboard](#5-mission-control-dashboard) — Real-time operations view
-- [Autonomy Control Plane](#13-autonomy-control-plane) — Agent improvement loop
-- [Telemetry & Costs](#16-telemetry--costs) — Detailed cost analysis
-- [Copilot Service](copilot-service.md) — Technical deep-dive on analyzer
-- [Copilot UI](copilot-ui.md) — User interface details
+- [Mission Control Dashboard](#5-mission-control-dashboard): Real-time operations view
+- [Autonomy Control Plane](#13-autonomy-control-plane): Agent improvement loop
+- [Telemetry & Costs](#16-telemetry--costs): Detailed cost analysis
+- [Copilot Service](copilot-service.md): Technical deep-dive on analyzer
+- [Copilot UI](copilot-ui.md): User interface details
 
 ---
 
-*Enhanced Copilot documentation — 320+ lines vs. original ~80 lines*
+*Enhanced Copilot documentation: 320+ lines vs. original ~80 lines*
 
 ## 13. Autonomy Control Plane
 
@@ -3169,7 +3169,7 @@ Run Doctor to verify workspace health BEFORE launching unattended or long-runnin
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Doctor Report — Generated 2026-05-03 14:32:15                      │
+│ Doctor Report - Generated 2026-05-03 14:32:15                      │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ ✅ Database integrity           PASS                                │
@@ -3268,7 +3268,7 @@ Benchmarks replay deterministic autonomy scenarios to verify that governance mec
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Benchmark Results — 6 scenarios, 4 passed, 2 failed                │
+│ Benchmark Results - 6 scenarios, 4 passed, 2 failed                │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ ✅ Ticket Assignment           PASS (850ms)                         │
@@ -3983,7 +3983,7 @@ Every artifact tracks:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Thread Memory — Ticket #47: Authentication Bug Fix                 │
+│ Thread Memory - Ticket #47: Authentication Bug Fix                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ CURRENT DIGEST                                                      │
@@ -4086,7 +4086,7 @@ Access via **Settings → Memory**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ Operator Access — Workspace: Strategia-X                          │
+│ Operator Access - Workspace: Strategia-X                          │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │ LOCAL OWNERS                                                        │
@@ -4201,15 +4201,15 @@ Approval queue backlog causes frustration:
 
 ## Related Sections
 
-- [Mission Control Dashboard](#5-mission-control-dashboard) — Real-time operations
-- [Copilot: Proactive Intelligence](#12-copilot-proactive-intelligence) — Insights and improvement
-- [Telemetry & Costs](#16-telemetry--costs) — Detailed cost analysis
-- [Extensions: Skills & MCPs](#14-extensions--skills--mcps) — Runtime configuration
-- [Settings & Configuration](#15-settings--configuration) — Runtime and memory settings
+- [Mission Control Dashboard](#5-mission-control-dashboard): Real-time operations
+- [Copilot: Proactive Intelligence](#12-copilot-proactive-intelligence): Insights and improvement
+- [Telemetry & Costs](#16-telemetry--costs): Detailed cost analysis
+- [Extensions: Skills & MCPs](#14-extensions-skills--mcps): Runtime configuration
+- [Settings & Configuration](#15-settings--configuration): Runtime and memory settings
 
 ---
 
-*Enhanced Autonomy Control Plane documentation — 580+ lines vs. original ~150 lines*
+*Enhanced Autonomy Control Plane documentation: 580+ lines vs. original ~150 lines*
 
 ## 14. Extensions: Skills & MCPs
 
@@ -4409,9 +4409,9 @@ Access **Settings** via top navigation.
 
 | Setting | Default | Range | Purpose |
 |---------|---------|-------|---------|
-| **Max Steps** | 8 | 1–32 | Limit loop iterations |
-| **Max Tokens** | 8000 | 500–50000 | Cumulative token budget |
-| **Timeout** | 120s | 10–600s | Wall-clock deadline |
+| **Max Steps** | 8 | 1-32 | Limit loop iterations |
+| **Max Tokens** | 8000 | 500-50000 | Cumulative token budget |
+| **Timeout** | 120s | 10-600s | Wall-clock deadline |
 
 **Choosing Budgets:**
 - **Local Ollama 7-8B**: Bump Max Steps to 12-16
@@ -4907,7 +4907,7 @@ If issues persist:
 
 ### Navigation Shortcuts
 
-There are no per-view navigation chords — view switching goes through the
+There are no per-view navigation chords; view switching goes through the
 command palette (`Ctrl/Cmd+K`), either in plain language ("show telemetry")
 or with the deterministic slash commands:
 

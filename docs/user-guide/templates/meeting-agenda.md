@@ -17,22 +17,22 @@
 ## Attendees
 
 **Required:**
-- [Name] — [Role]
-- [Name] — [Role]
-- [Name] — [Role]
+- [Name]: [Role]
+- [Name]: [Role]
+- [Name]: [Role]
 
 **Optional:**
-- [Name] — [Role]
-- [Name] — [Role]
+- [Name]: [Role]
+- [Name]: [Role]
 
 **Apologies:**
-- [Name] — [Reason]
+- [Name]: [Reason]
 
 ---
 
 ## Meeting Objectives
 
-1. [Primary objective — what will be accomplished]
+1. [Primary objective: what will be accomplished]
 2. [Secondary objective]
 3. [Tertiary objective]
 
@@ -154,12 +154,12 @@ Review all action items from meeting:
 ## During Meeting
 
 **Ground Rules:**
-- [Ground rule 1 — e.g., One conversation at a time]
-- [Ground rule 2 — e.g., Be concise]
-- [Ground rule 3 — e.g., No laptops unless needed]
+- [Ground rule 1, e.g., One conversation at a time]
+- [Ground rule 2, e.g., Be concise]
+- [Ground rule 3, e.g., No laptops unless needed]
 
 **Decision-Making Framework:**
-- [How decisions will be made — consensus, majority vote, facilitator decides]
+- [How decisions will be made: consensus, majority vote, facilitator decides]
 
 **Note-Taking:**
 - [Link to shared doc or note-taking approach]
