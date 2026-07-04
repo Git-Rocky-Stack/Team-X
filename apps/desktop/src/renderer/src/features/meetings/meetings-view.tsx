@@ -117,7 +117,7 @@ export function MeetingsView({ companyId, employees }: MeetingsViewProps) {
             <Faceplate
               kicker="Meetings"
               serial="ALL HANDS"
-              bodyClassName="flex items-center justify-between px-5 py-4"
+              bodyClassName="flex items-center justify-between"
             >
               <div>
                 <h1 className="text-h1 text-foreground">Meetings</h1>

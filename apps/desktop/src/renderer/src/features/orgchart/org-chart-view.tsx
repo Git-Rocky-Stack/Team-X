@@ -190,7 +190,7 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
   return (
     <section className="flex h-full flex-col" data-org-chart-view="">
       <div className="p-4 pb-0 lg:p-6 lg:pb-0">
-        <Faceplate kicker="Org Chart" serial="REPORTING LINES" bodyClassName="px-5 py-4">
+        <Faceplate kicker="Org Chart" serial="REPORTING LINES">
           <h1 className="text-h1 text-foreground">Org chart</h1>
           <p className="text-caption text-silver-mute">
             Reporting lines are shown from company roots down.
