@@ -290,7 +290,7 @@ export function CopilotSidebar() {
                               exportMutation.isPending || (exportScope === 'company' && !companyId)
                             }
                             data-copilot-export-format={format}
-                            className="nav-tile nav-tile-active border-[var(--armed-edge)]"
+                            className="cap"
                           >
                             {format === 'csv' ? 'CSV' : 'JSON'}
                           </button>
