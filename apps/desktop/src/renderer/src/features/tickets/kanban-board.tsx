@@ -3,40 +3,23 @@ import { Plus } from 'lucide-react';
 
 import { TicketCard } from './ticket-card.js';
 
+import { LampTile, type LampTone, RecessedWell, Tag } from '@/components/console/index.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { useUpdateTicketStatus } from '@/hooks/use-tickets.js';
 import { useAppStore } from '@/store/app-store.js';
 
-const COLUMNS: {
-  status: TicketStatus;
-  label: string;
-  accentClassName: string;
-  badgeClassName: string;
-}[] = [
-  {
-    status: 'open',
-    label: 'Open',
-    accentClassName: 'border-sky-500/30',
-    badgeClassName: 'border-sky-500/20 bg-sky-500/10 text-sky-200',
-  },
-  {
-    status: 'in-progress',
-    label: 'In Progress',
-    accentClassName: 'border-amber-500/30',
-    badgeClassName: 'border-amber-500/20 bg-amber-500/10 text-amber-200',
-  },
-  {
-    status: 'blocked',
-    label: 'Blocked',
-    accentClassName: 'border-red-500/30',
-    badgeClassName: 'border-red-500/20 bg-red-500/10 text-red-200',
-  },
-  {
-    status: 'done',
-    label: 'Done',
-    accentClassName: 'border-emerald-500/30',
-    badgeClassName: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
-  },
+const STATUS_TONE: Record<TicketStatus, LampTone> = {
+  open: 'hold',
+  'in-progress': 'exec',
+  blocked: 'nogo',
+  done: 'go',
+};
+
+const COLUMNS: { status: TicketStatus; label: string }[] = [
+  { status: 'open', label: 'Open' },
+  { status: 'in-progress', label: 'In Progress' },
+  { status: 'blocked', label: 'Blocked' },
+  { status: 'done', label: 'Done' },
 ];
 
 interface KanbanBoardProps {
@@ -73,24 +56,25 @@ export function KanbanBoard({ tickets, employees, onCreateClick }: KanbanBoardPr
       {COLUMNS.map((column) => {
         const columnTickets = tickets.filter((ticket) => ticket.status === column.status);
         return (
-          <div
+          <RecessedWell
             key={column.status}
-            className={`mission-chrome-panel flex w-[18rem] shrink-0 flex-col rounded-[24px] border bg-black/15 ${column.accentClassName}`}
             data-tickets-column={column.status}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, column.status)}
+            className="flex w-[18rem] shrink-0 flex-col overflow-hidden p-0"
           >
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-              <div className="min-w-0">
+            <div className="flex items-start justify-between gap-3 border-b border-[var(--hairline)] px-4 py-3">
+              <div className="min-w-0 space-y-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-eyebrow text-muted-foreground">{column.label}</h3>
-                  <span
-                    className={`flex h-6 min-w-6 items-center justify-center rounded-full border px-1.5 text-[10px] font-semibold ${column.badgeClassName}`}
-                  >
-                    {columnTickets.length}
-                  </span>
+                  <LampTile
+                    label={column.label}
+                    tone={STATUS_TONE[column.status]}
+                    small
+                    interactive={false}
+                  />
+                  <Tag mono>{columnTickets.length}</Tag>
                 </div>
-                <p className="mt-1 text-caption text-muted-foreground">
+                <p className="text-caption text-silver-mute">
                   {column.status === 'done'
                     ? 'Delivered work and closed follow-through.'
                     : 'Drag work here to update operational status.'}
@@ -101,7 +85,7 @@ export function KanbanBoard({ tickets, employees, onCreateClick }: KanbanBoardPr
                 <button
                   type="button"
                   onClick={onCreateClick}
-                  className="rounded-[14px] border border-white/10 bg-black/20 p-2 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+                  className="cap flex h-9 w-9 shrink-0 items-center justify-center"
                   aria-label="Create ticket"
                 >
                   <Plus className="h-4 w-4" />
@@ -112,7 +96,7 @@ export function KanbanBoard({ tickets, employees, onCreateClick }: KanbanBoardPr
             <ScrollArea className="flex-1 px-3 py-3">
               <div className="flex flex-col gap-3">
                 {columnTickets.length === 0 ? (
-                  <div className="flex h-24 items-center justify-center rounded-[18px] border border-dashed border-white/10 bg-black/10 text-center text-caption text-muted-foreground/70">
+                  <div className="flex h-24 items-center justify-center rounded-card border border-dashed border-[var(--hairline)] text-center text-caption text-silver-mute">
                     {column.status === 'open'
                       ? 'No backlog yet. File the first ticket to seed this queue.'
                       : 'No tickets in this lane right now.'}
@@ -135,7 +119,7 @@ export function KanbanBoard({ tickets, employees, onCreateClick }: KanbanBoardPr
                 ))}
               </div>
             </ScrollArea>
-          </div>
+          </RecessedWell>
         );
       })}
     </div>

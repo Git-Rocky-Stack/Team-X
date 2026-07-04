@@ -13,6 +13,10 @@
  */
 import './test-setup';
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
@@ -22,6 +26,8 @@ import { LcdWell } from './lcd-well';
 import { RecessedWell } from './recessed-well';
 import { StripeHeader } from './stripe-header';
 
+const here = dirname(fileURLToPath(import.meta.url));
+
 describe('HexBolt', () => {
   it('renders a decorative bolt hidden from the a11y tree', () => {
     const { container } = render(<HexBolt corner="tl" />);
@@ -29,6 +35,26 @@ describe('HexBolt', () => {
     expect(bolt).toHaveAttribute('aria-hidden', 'true');
     expect(bolt.className).toContain('hex');
     expect(bolt.className).toContain('hex-tl');
+  });
+
+  it.each(['tl', 'tr', 'bl', 'br'] as const)('renders the %s corner class', (corner) => {
+    const { container } = render(<HexBolt corner={corner} />);
+    expect((container.firstElementChild as HTMLElement).className).toContain(`hex-${corner}`);
+  });
+
+  it('spells every corner class as a static literal (Tailwind purge guard)', () => {
+    // `@layer components` recipes are only emitted into the built CSS when
+    // their literal class names appear in scanned source. A template literal
+    // (`hex-${corner}`) purged .hex-tr/.hex-bl/.hex-br from the bundle —
+    // hex-tl alone survived via this file's assertion string — so the three
+    // unpositioned bolts stacked on every faceplate's top-left corner.
+    const src = readFileSync(join(here, 'hex-bolt.tsx'), 'utf8');
+    for (const corner of ['hex-tl', 'hex-tr', 'hex-bl', 'hex-br']) {
+      expect(src, `hex-bolt.tsx must contain the literal '${corner}'`).toContain(`'${corner}'`);
+    }
+    expect(src, 'dynamic corner-class construction defeats the Tailwind scanner').not.toContain(
+      'hex-${',
+    );
   });
 });
 

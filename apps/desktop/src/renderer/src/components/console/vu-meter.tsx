@@ -103,6 +103,14 @@ interface VuMeterProps {
   value: number;
   segments?: number;
   orientation?: 'horizontal' | 'vertical';
+  /**
+   * `meter` (default) zones green→amber→red by segment position — for
+   * level/rate signals where a hot reading is notable. `progress` lights
+   * every filled segment the healthy green tone (fuller = more complete),
+   * so a near-done ratio never wears the fault-red LED (DESIGN.md:
+   * green=healthy, red=fault). Use it for completion ratios (done/total).
+   */
+  variant?: 'meter' | 'progress';
   /** Accessible name for the meter, e.g. "Token throughput" */
   label: string;
   className?: string;
@@ -112,6 +120,7 @@ export function VuMeter({
   value,
   segments = 16,
   orientation = 'horizontal',
+  variant = 'meter',
   label,
   className,
 }: VuMeterProps) {
@@ -135,7 +144,7 @@ export function VuMeter({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={pct}
-      aria-valuetext={`${pct}% — ${zoneWord} zone`}
+      aria-valuetext={variant === 'progress' ? `${pct}% complete` : `${pct}% — ${zoneWord} zone`}
       className={cn(
         'flex gap-[2px]',
         orientation === 'horizontal'
@@ -150,9 +159,9 @@ export function VuMeter({
           key={i}
           className={cn(
             'vu-seg min-h-[3px] min-w-[4px] flex-1',
-            seg.lit && seg.zone === 'g' && 'vu-seg-g',
-            seg.lit && seg.zone === 'a' && 'vu-seg-a',
-            seg.lit && seg.zone === 'r' && 'vu-seg-r',
+            seg.lit && (variant === 'progress' || seg.zone === 'g') && 'vu-seg-g',
+            seg.lit && variant !== 'progress' && seg.zone === 'a' && 'vu-seg-a',
+            seg.lit && variant !== 'progress' && seg.zone === 'r' && 'vu-seg-r',
             seg.tip && 'animate-vu-tip',
           )}
         />

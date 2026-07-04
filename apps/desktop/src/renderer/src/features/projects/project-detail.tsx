@@ -8,7 +8,14 @@ import type {
 import { ArrowLeft, CalendarDays, Pencil, Save, Target, Trash2, User, X } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
+import {
+  LampTile,
+  type LampTone,
+  RecessedWell,
+  SubviewState,
+  Tag,
+  VuMeter,
+} from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
@@ -16,18 +23,18 @@ import { Textarea } from '@/components/ui/textarea.js';
 import { useDeleteProject, useProjectDetail, useUpdateProject } from '@/hooks/use-projects.js';
 import { useAppStore } from '@/store/app-store.js';
 
-const STATUS_COLORS: Record<ProjectStatus, string> = {
-  planning: 'bg-brand/10 text-brand',
-  active: 'bg-yellow-500/10 text-yellow-400',
-  completed: 'bg-green-500/10 text-green-400',
-  archived: 'bg-zinc-500/10 text-zinc-400',
+const STATUS_TONE: Record<ProjectStatus, LampTone> = {
+  planning: 'hold',
+  active: 'exec',
+  completed: 'go',
+  archived: 'off',
 };
 
-const PRIORITY_COLORS: Record<ProjectPriority, string> = {
-  critical: 'bg-red-500/10 text-red-400',
-  high: 'bg-orange-500/10 text-orange-400',
-  medium: 'bg-yellow-500/10 text-yellow-400',
-  low: 'bg-muted/50 text-muted-foreground',
+const PRIORITY_TONE: Record<ProjectPriority, LampTone> = {
+  critical: 'nogo',
+  high: 'hold',
+  medium: 'off',
+  low: 'off',
 };
 
 const STATUS_OPTIONS: Array<{ value: ProjectStatus; label: string }> = [
@@ -100,15 +107,15 @@ function DetailField({
   muted?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border/45 bg-surface-50 px-3 py-2.5">
-      <span className="flex items-center gap-1.5 text-eyebrow-sm text-muted-foreground/70">
+    <RecessedWell className="flex flex-col gap-1.5 px-3 py-2.5">
+      <span className="flex items-center gap-1.5 text-eyebrow-sm text-silver-mute">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </span>
-      <span className={`text-caption ${muted ? 'text-muted-foreground/60' : 'text-foreground'}`}>
+      <span className={`text-caption ${muted ? 'text-silver-mute' : 'text-[var(--display-fg)]'}`}>
         {value}
       </span>
-    </div>
+    </RecessedWell>
   );
 }
 
@@ -132,8 +139,8 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
 
   if (isLoading || !detail) {
     return (
-      <div className="flex h-full items-center justify-center border-l border-border bg-background">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+      <div className="flex h-full items-center justify-center border-l border-border p-6">
+        <SubviewState lampLabel="STBY" lampTone="hold" title="Loading project…" />
       </div>
     );
   }
@@ -141,17 +148,9 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
   const project = detail;
   const activeDraft = draft ?? toDraft(project);
   const lead = project.lead;
-  const statusColor = STATUS_COLORS[project.status] ?? STATUS_COLORS.planning;
-  const priorityColor = PRIORITY_COLORS[project.priority] ?? PRIORITY_COLORS.medium;
   const targetDate = project.targetDate ? new Date(project.targetDate).toLocaleDateString() : null;
-
-  const progressPct =
-    project.ticketCounts.total > 0
-      ? Math.round((project.ticketCounts.done / project.ticketCounts.total) * 100)
-      : 0;
-
-  const progressColor =
-    progressPct > 66 ? 'bg-green-500' : progressPct > 33 ? 'bg-amber-500' : 'bg-red-500';
+  const progressRatio =
+    project.ticketCounts.total > 0 ? project.ticketCounts.done / project.ticketCounts.total : 0;
 
   function beginEdit() {
     setDraft(toDraft(project));
@@ -193,7 +192,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
         <button
           type="button"
           onClick={() => setActiveProjectId(null)}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+          className="cap flex h-8 w-8 shrink-0 items-center justify-center"
           aria-label="Close detail panel"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -230,10 +229,10 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             });
           }}
           disabled={deleteProject.isPending}
-          className="rounded p-1 text-muted-foreground/50 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-50"
+          className="cap flex h-8 w-8 shrink-0 items-center justify-center disabled:pointer-events-none disabled:opacity-50"
           aria-label="Delete project"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4 text-led-nogo" />
         </button>
       </div>
 
@@ -241,7 +240,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
         {isEditing ? (
           <form onSubmit={handleSave} className="flex flex-col gap-4 p-4">
             <div>
-              <label htmlFor="project-edit-title" className="text-label text-muted-foreground">
+              <label htmlFor="project-edit-title" className="text-label text-silver-mute">
                 Title
               </label>
               <Input
@@ -253,10 +252,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div>
-              <label
-                htmlFor="project-edit-description"
-                className="text-label text-muted-foreground"
-              >
+              <label htmlFor="project-edit-description" className="text-label text-silver-mute">
                 Description
               </label>
               <Textarea
@@ -269,14 +265,14 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="project-edit-status" className="text-label text-muted-foreground">
+                <label htmlFor="project-edit-status" className="text-label text-silver-mute">
                   Status
                 </label>
                 <select
                   id="project-edit-status"
                   value={activeDraft.status}
                   onChange={(event) => updateDraft({ status: event.target.value as ProjectStatus })}
-                  className="mission-select mt-1 w-full px-3 py-2 text-body"
+                  className="well-input mt-1 w-full px-3 py-2 text-body"
                 >
                   {STATUS_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -287,7 +283,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
               </div>
 
               <div>
-                <label htmlFor="project-edit-priority" className="text-label text-muted-foreground">
+                <label htmlFor="project-edit-priority" className="text-label text-silver-mute">
                   Priority
                 </label>
                 <select
@@ -296,7 +292,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
                   onChange={(event) =>
                     updateDraft({ priority: event.target.value as ProjectPriority })
                   }
-                  className="mission-select mt-1 w-full px-3 py-2 text-body"
+                  className="well-input mt-1 w-full px-3 py-2 text-body"
                 >
                   {PRIORITY_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -308,14 +304,14 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div>
-              <label htmlFor="project-edit-lead" className="text-label text-muted-foreground">
+              <label htmlFor="project-edit-lead" className="text-label text-silver-mute">
                 Lead
               </label>
               <select
                 id="project-edit-lead"
                 value={activeDraft.leadId}
                 onChange={(event) => updateDraft({ leadId: event.target.value })}
-                className="mission-select mt-1 w-full px-3 py-2 text-body"
+                className="well-input mt-1 w-full px-3 py-2 text-body"
               >
                 <option value="">No lead assigned</option>
                 {employees.map((employee) => (
@@ -327,14 +323,14 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div>
-              <label htmlFor="project-edit-goal" className="text-label text-muted-foreground">
+              <label htmlFor="project-edit-goal" className="text-label text-silver-mute">
                 Goal
               </label>
               <select
                 id="project-edit-goal"
                 value={activeDraft.goalId}
                 onChange={(event) => updateDraft({ goalId: event.target.value })}
-                className="mission-select mt-1 w-full px-3 py-2 text-body"
+                className="well-input mt-1 w-full px-3 py-2 text-body"
               >
                 <option value="">Standalone project</option>
                 {goals.map((goal) => (
@@ -346,10 +342,7 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div>
-              <label
-                htmlFor="project-edit-target-date"
-                className="text-label text-muted-foreground"
-              >
+              <label htmlFor="project-edit-target-date" className="text-label text-silver-mute">
                 Target Date
               </label>
               <Input
@@ -379,18 +372,24 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
         ) : (
           <div className="flex flex-col gap-4 p-4">
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={`border-0 text-[10px] ${statusColor}`}>
-                {project.status}
-              </Badge>
-              <Badge variant="outline" className={`border-0 text-[10px] ${priorityColor}`}>
-                {project.priority}
-              </Badge>
+              <LampTile
+                label={project.status}
+                tone={STATUS_TONE[project.status] ?? 'off'}
+                small
+                interactive={false}
+              />
+              <LampTile
+                label={project.priority}
+                tone={PRIORITY_TONE[project.priority] ?? 'off'}
+                small
+                interactive={false}
+              />
             </div>
 
             {project.description ? (
-              <p className="text-caption text-muted-foreground">{project.description}</p>
+              <p className="text-caption text-silver-mute">{project.description}</p>
             ) : (
-              <p className="text-caption text-muted-foreground/50">No description added.</p>
+              <p className="text-caption text-silver-mute">No description added.</p>
             )}
 
             <div className="grid grid-cols-1 gap-2">
@@ -409,19 +408,19 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-eyebrow-sm text-muted-foreground/70">Lead</span>
+              <span className="text-eyebrow text-silver-mute">Lead</span>
               {lead ? (
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/20 text-caption font-bold text-brand">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-card border border-[var(--hairline)] text-caption font-bold text-foreground">
                     {lead.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="text-caption font-medium text-foreground">{lead.name}</p>
-                    <p className="text-caption text-muted-foreground">{lead.title}</p>
+                    <p className="text-caption text-silver-mute">{lead.title}</p>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-muted-foreground/50">
+                <div className="flex items-center gap-1.5 text-silver-mute">
                   <User className="h-3.5 w-3.5" />
                   <span className="text-caption">No lead assigned</span>
                 </div>
@@ -429,15 +428,15 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-eyebrow-sm text-muted-foreground/70">Ticket Progress</span>
+              <span className="text-eyebrow text-silver-mute">Ticket Progress</span>
               <div className="flex items-center gap-2">
-                <div className="h-1.5 flex-1 rounded-full bg-muted">
-                  <div
-                    className={`h-1.5 rounded-full transition-all ${progressColor}`}
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-                <span className="text-caption font-medium text-muted-foreground">
+                <VuMeter
+                  className="flex-1"
+                  variant="progress"
+                  label="Ticket progress"
+                  value={progressRatio}
+                />
+                <span className="text-caption font-medium text-silver-mute">
                   {project.ticketCounts.done}/{project.ticketCounts.total}
                 </span>
               </div>
@@ -445,23 +444,20 @@ export function ProjectDetailPanel({ projectId, employees, goals }: ProjectDetai
 
             {project.ticketIds.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-eyebrow-sm text-muted-foreground/70">
+                <span className="text-eyebrow text-silver-mute">
                   Linked Tickets ({project.ticketIds.length})
                 </span>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-wrap gap-1">
                   {project.ticketIds.map((ticketId) => (
-                    <div
-                      key={ticketId}
-                      className="rounded-md bg-surface-50 px-2.5 py-1.5 text-caption text-muted-foreground"
-                    >
-                      {ticketId.slice(0, 8)}...
-                    </div>
+                    <Tag mono key={ticketId}>
+                      {ticketId.slice(0, 8)}…
+                    </Tag>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="text-caption text-muted-foreground/50">
+            <div className="text-caption text-silver-mute">
               Created {new Date(project.createdAt).toLocaleDateString()} | Updated{' '}
               {new Date(project.updatedAt).toLocaleDateString()}
             </div>

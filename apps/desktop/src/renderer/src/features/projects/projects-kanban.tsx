@@ -3,15 +3,23 @@ import { Plus } from 'lucide-react';
 
 import { ProjectCard } from './project-card.js';
 
+import { LampTile, type LampTone, RecessedWell, Tag } from '@/components/console/index.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { useUpdateProject } from '@/hooks/use-projects.js';
 import { useAppStore } from '@/store/app-store.js';
 
-const COLUMNS: { status: ProjectStatus; label: string; accent: string }[] = [
-  { status: 'planning', label: 'Planning', accent: 'border-t-brand' },
-  { status: 'active', label: 'Active', accent: 'border-t-yellow-500' },
-  { status: 'completed', label: 'Completed', accent: 'border-t-green-500' },
-  { status: 'archived', label: 'Archived', accent: 'border-t-zinc-500' },
+const STATUS_TONE: Record<ProjectStatus, LampTone> = {
+  planning: 'hold',
+  active: 'exec',
+  completed: 'go',
+  archived: 'off',
+};
+
+const COLUMNS: { status: ProjectStatus; label: string }[] = [
+  { status: 'planning', label: 'Planning' },
+  { status: 'active', label: 'Active' },
+  { status: 'completed', label: 'Completed' },
+  { status: 'archived', label: 'Archived' },
 ];
 
 interface ProjectsKanbanProps {
@@ -44,28 +52,31 @@ export function ProjectsKanban({ projects, employees, onCreateClick }: ProjectsK
   }
 
   return (
-    <div className="flex h-full gap-4 p-4 overflow-x-auto">
+    <div className="flex h-full gap-4 overflow-x-auto p-4">
       {COLUMNS.map((col) => {
         const colProjects = projects.filter((p) => p.status === col.status);
         return (
-          <div
+          <RecessedWell
             key={col.status}
-            className={`flex w-72 shrink-0 flex-col rounded-lg border border-border/50 border-t-2 ${col.accent} bg-background`}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, col.status)}
+            className="flex w-72 shrink-0 flex-col overflow-hidden p-0"
           >
-            <div className="flex items-center justify-between px-3 py-2.5">
+            <div className="flex items-center justify-between border-b border-[var(--hairline)] px-3 py-2.5">
               <div className="flex items-center gap-2">
-                <h3 className="text-eyebrow text-muted-foreground">{col.label}</h3>
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-eyebrow-sm text-muted-foreground">
-                  {colProjects.length}
-                </span>
+                <LampTile
+                  label={col.label}
+                  tone={STATUS_TONE[col.status]}
+                  small
+                  interactive={false}
+                />
+                <Tag mono>{colProjects.length}</Tag>
               </div>
               {col.status === 'planning' && (
                 <button
                   type="button"
                   onClick={onCreateClick}
-                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+                  className="cap flex h-8 w-8 shrink-0 items-center justify-center"
                   aria-label="Create project"
                 >
                   <Plus className="h-4 w-4" />
@@ -73,10 +84,10 @@ export function ProjectsKanban({ projects, employees, onCreateClick }: ProjectsK
               )}
             </div>
 
-            <ScrollArea className="flex-1 px-2 pb-2">
+            <ScrollArea className="flex-1 px-2 pb-2 pt-2">
               <div className="flex flex-col gap-2">
                 {colProjects.length === 0 && (
-                  <div className="flex h-20 items-center justify-center rounded-md border border-dashed border-border/40 text-caption text-muted-foreground/50">
+                  <div className="flex h-20 items-center justify-center rounded-card border border-dashed border-[var(--hairline)] text-caption text-silver-mute">
                     {col.status === 'planning' ? 'No projects yet' : 'None'}
                   </div>
                 )}
@@ -96,7 +107,7 @@ export function ProjectsKanban({ projects, employees, onCreateClick }: ProjectsK
                 ))}
               </div>
             </ScrollArea>
-          </div>
+          </RecessedWell>
         );
       })}
     </div>

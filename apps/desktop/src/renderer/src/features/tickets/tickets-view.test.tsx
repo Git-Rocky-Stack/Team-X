@@ -9,13 +9,15 @@ const ticketsViewSrc = readFileSync(join(currentDirname, 'tickets-view.tsx'), 'u
 const boardSrc = readFileSync(join(currentDirname, 'kanban-board.tsx'), 'utf8');
 const detailSrc = readFileSync(join(currentDirname, 'ticket-detail.tsx'), 'utf8');
 
-describe('Tickets mission-language carry-forward', () => {
-  it('wraps the page in the shared mission shell primitives', () => {
-    expect(ticketsViewSrc).toContain('<MissionPageShell data-tickets-view="">');
-    expect(ticketsViewSrc).toContain('<MissionHero');
-    expect(ticketsViewSrc).toContain('<MissionSectionCard');
-    expect(ticketsViewSrc).toContain('<MissionRailCard');
-    expect(ticketsViewSrc).toContain('<MissionStateBlock');
+describe('Tickets view composition + behavior carry-forward', () => {
+  it('wraps the page in console primitives (Command Console sweep, Phase 5a)', () => {
+    expect(ticketsViewSrc).toContain('data-tickets-view=""');
+    expect(ticketsViewSrc).toContain('<Faceplate');
+    expect(ticketsViewSrc).toContain('<MetricTile');
+    expect(ticketsViewSrc).toContain('<SubviewState');
+    // Legacy mission-shell composition is fully retired here.
+    expect(ticketsViewSrc).not.toContain('mission-shell');
+    expect(ticketsViewSrc).not.toMatch(/\bMission[A-Z]\w+/);
   });
 
   it('pins the localized loading, error, empty, and no-company states', () => {

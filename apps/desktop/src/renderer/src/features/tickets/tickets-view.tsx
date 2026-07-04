@@ -6,18 +6,8 @@ import { CreateTicketDialog } from './create-ticket-dialog.js';
 import { KanbanBoard } from './kanban-board.js';
 import { TicketDetailPanel } from './ticket-detail.js';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Faceplate, LampTile, MetricTile, SubviewState, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
-import {
-  MissionControlRow,
-  MissionHero,
-  MissionMetricTile,
-  MissionPageShell,
-  MissionPill,
-  MissionRailCard,
-  MissionSectionCard,
-  MissionStateBlock,
-} from '@/features/mission/mission-shell.js';
 import { useTicketEventSync, useTickets } from '@/hooks/use-tickets.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -56,199 +46,169 @@ export function TicketsView({ companyId, employees }: TicketsViewProps) {
   const boardVisibleClassName = activeTicketId ? 'hidden xl:flex' : 'flex';
 
   return (
-    <MissionPageShell data-tickets-view="">
-      <MissionHero
-        eyebrow="Mission queue"
-        title="Ticket Operations"
-        description="Drive backlog, active delivery, and blocker recovery from one operational board without breaking the existing ticket workflow."
-        icon={KanbanSquare}
-        actions={
+    <div className="flex flex-col gap-6 p-4 lg:p-6" data-tickets-view="">
+      <Faceplate kicker="Ticket Operations" serial="MISSION QUEUE" bodyClassName="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <p className="max-w-2xl text-body text-silver-mute">
+            Drive backlog, active delivery, and blocker recovery from one operational board without
+            breaking the existing ticket workflow.
+          </p>
           <div className="flex flex-wrap items-center gap-2">
             {activeTicketId ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/10 bg-black/10 text-foreground hover:bg-black/20"
-                onClick={() => setActiveTicketId(null)}
-              >
+              <Button type="button" variant="outline" onClick={() => setActiveTicketId(null)}>
                 Clear detail rail
               </Button>
             ) : null}
-            <Button
-              type="button"
-              className="bg-brand text-white hover:bg-brand/90"
-              onClick={() => setCreateOpen(true)}
-            >
+            <Button type="button" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" />
               Create Ticket
             </Button>
           </div>
-        }
-        meta={
-          <MissionControlRow density="compact" className="gap-2 px-3 py-2">
-            <MissionPill uppercase>{tickets.length} total tickets</MissionPill>
-            <MissionPill mono>{summary.critical} critical</MissionPill>
-            <MissionPill mono>{summary.unassigned} unassigned</MissionPill>
-            <MissionPill mono>{employees.length} collaborators available</MissionPill>
-          </MissionControlRow>
-        }
-      >
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Tag>{tickets.length} total tickets</Tag>
+          <LampTile
+            label={`${summary.critical} critical`}
+            tone={summary.critical > 0 ? 'nogo' : 'off'}
+            small
+            interactive={false}
+          />
+          <Tag mono>{summary.unassigned} unassigned</Tag>
+          <Tag>{employees.length} collaborators available</Tag>
+        </div>
+
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <MissionMetricTile
+          <MetricTile
             label="Backlog"
             value={`${summary.open}`}
             hint="Fresh work waiting for assignment or kickoff."
             icon={Rows3}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Active Delivery"
             value={`${summary.inProgress}`}
             hint="Tickets currently moving through execution."
             icon={Radar}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Blocked"
             value={`${summary.blocked}`}
             hint="Items that need intervention to move again."
             icon={AlertTriangle}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Resolved"
             value={`${summary.done}`}
             hint="Closed work already delivered back to the queue."
             icon={KanbanSquare}
           />
         </div>
-      </MissionHero>
+      </Faceplate>
 
       {companyId === null ? (
-        <MissionSectionCard
-          title="Ticket board"
-          description="A workspace is required before the queue can load."
-        >
-          <MissionStateBlock
-            title="No workspace selected"
-            description="Choose or create a workspace to open the ticket board and detail rail."
-            icon={KanbanSquare}
-            data-tickets-view-state="no-company"
-          />
-        </MissionSectionCard>
+        <Faceplate kicker="Ticket Board" bodyClassName="space-y-3">
+          <div data-tickets-view-state="no-company">
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
+              title="No workspace selected"
+              description="Choose or create a workspace to open the ticket board and detail rail."
+            />
+          </div>
+        </Faceplate>
       ) : isLoading ? (
-        <MissionSectionCard
-          title="Ticket board"
-          description="Loading ticket flow and recent detail state."
-        >
-          <MissionStateBlock
-            title="Loading ticket operations"
-            description="Ticket lanes and detail history are syncing for the active workspace."
-            icon={Radar}
-            data-tickets-view-state="loading"
-          />
-        </MissionSectionCard>
+        <Faceplate kicker="Ticket Board" bodyClassName="space-y-3">
+          <div data-tickets-view-state="loading">
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="hold"
+              title="Loading ticket operations"
+              description="Ticket lanes and detail history are syncing for the active workspace."
+            />
+          </div>
+        </Faceplate>
       ) : isError ? (
-        <MissionSectionCard
-          title="Ticket board"
-          description="The queue shell is ready, but the ticket query failed."
-          actions={
-            <Button
-              type="button"
-              variant="outline"
-              className="border-white/10 bg-black/10 text-foreground hover:bg-black/20"
-              onClick={() => refetch()}
-            >
-              Retry
-            </Button>
-          }
-        >
-          <MissionStateBlock
-            title="Tickets could not load"
-            description="Retry the workspace queue query to restore the board and detail rail."
-            icon={AlertTriangle}
-            tone="danger"
-            data-tickets-view-state="error"
-          />
-        </MissionSectionCard>
+        <Faceplate kicker="Ticket Board" bodyClassName="space-y-3">
+          <div data-tickets-view-state="error">
+            <SubviewState
+              lampLabel="NO-GO"
+              lampTone="nogo"
+              title="Tickets could not load"
+              description="Retry the workspace queue query to restore the board and detail rail."
+              action={
+                <Button type="button" variant="outline" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              }
+            />
+          </div>
+        </Faceplate>
       ) : tickets.length === 0 ? (
-        <MissionSectionCard
-          title="Ticket board"
-          description="No operational tickets are open for this workspace yet."
-          actions={
-            <Button
-              type="button"
-              className="bg-brand text-white hover:bg-brand/90"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="h-4 w-4" />
-              File the first ticket
-            </Button>
-          }
-        >
-          <MissionStateBlock
-            title="Queue is clear"
-            description="Create a ticket to seed the board, assign work, and open the detail rail."
-            icon={KanbanSquare}
-            data-tickets-view-state="empty"
-          />
-        </MissionSectionCard>
+        <Faceplate kicker="Ticket Board" bodyClassName="space-y-3">
+          <div data-tickets-view-state="empty">
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
+              title="Queue is clear"
+              description="Create a ticket to seed the board, assign work, and open the detail rail."
+              action={
+                <Button type="button" onClick={() => setCreateOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  File the first ticket
+                </Button>
+              }
+            />
+          </div>
+        </Faceplate>
       ) : (
         <div
           className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.95fr)]"
           data-tickets-board-shell=""
         >
-          <MissionSectionCard
-            title="Operational board"
-            description="Drag tickets across status lanes and keep the detail rail nearby for context."
-            badge={
-              <Badge
-                variant="outline"
-                className="border-white/10 bg-black/20 font-mono text-eyebrow-sm text-muted-foreground"
-              >
-                {tickets.length} tickets
-              </Badge>
-            }
-            actions={
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/10 bg-black/10 text-foreground hover:bg-black/20"
-                onClick={() => setCreateOpen(true)}
-              >
-                <Plus className="h-4 w-4" />
-                New ticket
-              </Button>
+          <Faceplate
+            kicker="Operational Board"
+            stripeSlot={
+              <div className="flex items-center gap-2">
+                <Tag mono>{tickets.length} tickets</Tag>
+                <button
+                  type="button"
+                  className="cap px-2.5 py-1 text-button-sm"
+                  onClick={() => setCreateOpen(true)}
+                >
+                  <Plus className="mr-1 inline h-3.5 w-3.5" />
+                  New ticket
+                </button>
+              </div>
             }
             className={`${boardVisibleClassName} min-h-[34rem] flex-col overflow-hidden`}
-            contentClassName="p-0"
+            bodyClassName="p-0"
           >
             <KanbanBoard
               tickets={tickets}
               employees={employees}
               onCreateClick={() => setCreateOpen(true)}
             />
-          </MissionSectionCard>
+          </Faceplate>
 
-          <MissionRailCard
-            title={activeTicket ? activeTicket.title : 'Detail rail'}
-            description={
-              activeTicket
-                ? 'Comment, attach context, and close work without leaving the board.'
-                : 'Select any ticket to open the operational detail rail.'
-            }
+          <Faceplate
+            kicker={activeTicket ? activeTicket.title : 'Detail Rail'}
             className={`${detailVisibleClassName} min-h-[34rem] flex-col overflow-hidden`}
-            contentClassName="p-0"
+            bodyClassName="p-0"
           >
             {activeTicketId ? (
               <TicketDetailPanel ticketId={activeTicketId} employees={employees} />
             ) : (
-              <MissionStateBlock
-                className="m-4 min-h-[28rem]"
-                title="Detail rail standing by"
-                description="Choose a ticket from the board to inspect attachments, comments, and ownership without leaving the queue."
-                icon={Radar}
-                data-tickets-view-state="detail-idle"
-              />
+              <div className="m-4" data-tickets-view-state="detail-idle">
+                <SubviewState
+                  lampLabel="STBY"
+                  lampTone="off"
+                  title="Detail rail standing by"
+                  description="Choose a ticket from the board to inspect attachments, comments, and ownership without leaving the queue."
+                />
+              </div>
             )}
-          </MissionRailCard>
+          </Faceplate>
         </div>
       )}
 
@@ -258,6 +218,6 @@ export function TicketsView({ companyId, employees }: TicketsViewProps) {
         companyId={companyId}
         employees={employees}
       />
-    </MissionPageShell>
+    </div>
   );
 }

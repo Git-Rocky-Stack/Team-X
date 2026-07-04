@@ -8,6 +8,8 @@ import { ProjectsKanban } from './projects-kanban.js';
 import { ProjectsSubtabs } from './projects-subtabs.js';
 import { ScheduleView } from './schedule-view.js';
 
+import { SubviewState } from '@/components/console/index.js';
+import { Button } from '@/components/ui/button.js';
 import { useGoals } from '@/hooks/use-goals.js';
 import { useProjectEventSync, useProjects } from '@/hooks/use-projects.js';
 import { useScheduleEventSync } from '@/hooks/use-schedule.js';
@@ -33,11 +35,8 @@ export function ProjectsView({ companyId, employees }: ProjectsViewProps) {
     return (
       <div className="flex h-full flex-col">
         <ProjectsSubtabs />
-        <div className="flex flex-1 items-center justify-center">
-          <div className="flex flex-col items-center gap-2">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-            <p className="text-caption text-muted-foreground">Loading projects...</p>
-          </div>
+        <div className="flex flex-1 items-center justify-center p-6">
+          <SubviewState lampLabel="STBY" lampTone="hold" title="Loading projects…" />
         </div>
       </div>
     );
@@ -47,17 +46,17 @@ export function ProjectsView({ companyId, employees }: ProjectsViewProps) {
     return (
       <div className="flex h-full flex-col">
         <ProjectsSubtabs />
-        <div className="flex flex-1 items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <p className="text-body-strong text-muted-foreground">Failed to load projects</p>
-            <button
-              type="button"
-              onClick={() => refetch()}
-              className="rounded-md bg-brand px-4 py-1.5 text-button-sm text-white transition-colors hover:bg-brand/90"
-            >
-              Retry
-            </button>
-          </div>
+        <div className="flex flex-1 items-center justify-center p-6">
+          <SubviewState
+            lampLabel="NO-GO"
+            lampTone="nogo"
+            title="Failed to load projects"
+            action={
+              <Button type="button" variant="outline" onClick={() => refetch()}>
+                Retry
+              </Button>
+            }
+          />
         </div>
       </div>
     );

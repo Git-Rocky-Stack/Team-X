@@ -24,6 +24,13 @@ import {
 } from 'lucide-react';
 import { type FormEvent, useMemo, useState } from 'react';
 
+import {
+  LampTile,
+  MetricTile,
+  RecessedWell,
+  SubviewState,
+  Tag,
+} from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Textarea } from '@/components/ui/textarea.js';
@@ -130,24 +137,26 @@ function sourceIcon(item: ScheduleItem) {
   return CalendarClock;
 }
 
-function priorityClass(priority: TicketPriority): string {
+function priorityBorderClass(priority: TicketPriority): string {
   switch (priority) {
     case 'critical':
-      return 'border-l-red-500 bg-red-500/10';
+      return 'border-l-[var(--led-nogo)]';
     case 'high':
-      return 'border-l-amber-500 bg-amber-500/10';
+      return 'border-l-[var(--led-hold)]';
     case 'medium':
-      return 'border-l-sky-500 bg-sky-500/10';
+      return 'border-l-[var(--led-scope)]';
     case 'low':
-      return 'border-l-emerald-500 bg-emerald-500/10';
+      return 'border-l-[var(--led-go)]';
   }
 }
 
 function statusClass(item: ScheduleItem): string {
-  if (item.status === 'completed') return 'text-emerald-500';
-  if (item.status === 'cancelled') return 'text-muted-foreground line-through';
-  if (item.startsAt < Date.now()) return 'text-red-500';
-  return 'text-foreground';
+  if (item.status === 'completed') return 'text-led-go';
+  if (item.status === 'cancelled') return 'text-silver-mute line-through';
+  if (item.startsAt < Date.now()) return 'text-led-nogo';
+  // Card rides a RecessedWell (display surface, dark both shifts) — the
+  // title must use the display-locked ink, not shift-flipping foreground.
+  return 'text-[var(--display-fg)]';
 }
 
 function linkedLabel(
@@ -172,24 +181,6 @@ function isActiveScheduled(item: ScheduleItem): boolean {
 
 function isManualItem(item: ScheduleItem): boolean {
   return item.sourceKind === 'manual';
-}
-
-interface SummaryTileProps {
-  label: string;
-  value: number;
-  icon: typeof CalendarDays;
-}
-
-function SummaryTile({ label, value, icon: Icon }: SummaryTileProps) {
-  return (
-    <div className="flex min-h-20 items-center justify-between rounded-md border border-border/60 bg-background px-4 py-3">
-      <div className="min-w-0">
-        <p className="text-eyebrow text-muted-foreground">{label}</p>
-        <p className="mt-1 text-numeric text-foreground">{value}</p>
-      </div>
-      <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
-    </div>
-  );
 }
 
 interface ScheduleCardProps {
@@ -219,22 +210,22 @@ function ScheduleCard({
   const assignee = item.assigneeId ? employeesById.get(item.assigneeId) : null;
   const linked = linkedLabel(item, ticketsById, projectsById, goalsById);
   return (
-    <div
-      className={`min-w-0 rounded-md border border-border/60 border-l-4 p-3 shadow-sm ${priorityClass(
-        item.priority,
-      )}`}
-    >
-      <div className="flex min-w-0 items-start justify-between gap-2">
-        <div className="min-w-0">
+    <RecessedWell className={`min-w-0 border-l-4 p-3 ${priorityBorderClass(item.priority)}`}>
+      {/* Compact (week-grid) cells are ~90px of content width: stacking the
+          action caps under the title keeps the title from being squeezed to
+          one character per line by the shrink-0 cap cluster. */}
+      <div className={`flex min-w-0 gap-2 ${compact ? 'flex-col' : 'items-start justify-between'}`}>
+        <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <span className="rounded-sm bg-background/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-              {sourceLabel(item)}
-            </span>
+            <Icon className="h-3.5 w-3.5 shrink-0 text-silver-mute" />
+            <Tag>{sourceLabel(item)}</Tag>
             {item.status !== 'scheduled' && (
-              <span className="rounded-sm bg-background/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                {item.status}
-              </span>
+              <LampTile
+                label={item.status}
+                tone={item.status === 'completed' ? 'go' : 'off'}
+                small
+                interactive={false}
+              />
             )}
           </div>
           <p className={`mt-1 min-w-0 break-words text-caption font-semibold ${statusClass(item)}`}>
@@ -242,13 +233,13 @@ function ScheduleCard({
           </p>
         </div>
         {isManualItem(item) && (
-          <div className="flex shrink-0 items-center gap-1">
+          <div className={`flex shrink-0 items-center gap-1 ${compact ? 'self-end' : ''}`}>
             {item.status === 'scheduled' && (
               <button
                 type="button"
                 onClick={() => onComplete(item.id)}
                 disabled={disabled}
-                className="rounded p-1 text-muted-foreground transition-colors hover:bg-background hover:text-emerald-500 disabled:opacity-50"
+                className="cap flex h-7 w-7 items-center justify-center disabled:opacity-50"
                 aria-label="Complete scheduled item"
                 title="Complete"
               >
@@ -259,16 +250,16 @@ function ScheduleCard({
               type="button"
               onClick={() => onDelete(item.id)}
               disabled={disabled}
-              className="rounded p-1 text-muted-foreground transition-colors hover:bg-background hover:text-red-500 disabled:opacity-50"
+              className="cap flex h-7 w-7 items-center justify-center disabled:opacity-50"
               aria-label="Delete scheduled item"
               title="Delete"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3.5 w-3.5 text-led-nogo" />
             </button>
           </div>
         )}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-silver-mute">
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {compact ? formatTime(item.startsAt) : formatDateTime(item.startsAt)}
@@ -281,14 +272,14 @@ function ScheduleCard({
         )}
       </div>
       {!compact && linked && (
-        <p className="mt-2 truncate text-caption text-muted-foreground">{linked}</p>
+        <p className="mt-2 truncate text-caption text-silver-mute">{linked}</p>
       )}
       {!compact && item.description && (
-        <p className="mt-2 line-clamp-2 break-words text-caption text-muted-foreground">
+        <p className="mt-2 line-clamp-2 break-words text-caption text-silver-mute">
           {item.description}
         </p>
       )}
-    </div>
+    </RecessedWell>
   );
 }
 
@@ -417,24 +408,25 @@ export function ScheduleView({
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-          <p className="text-caption text-muted-foreground">Loading schedule...</p>
-        </div>
+      <div className="flex h-full items-center justify-center p-6">
+        <SubviewState lampLabel="STBY" lampTone="hold" title="Loading schedule…" />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-body-strong text-muted-foreground">Failed to load schedule</p>
-          <Button type="button" size="sm" onClick={() => refetch()}>
-            Retry
-          </Button>
-        </div>
+      <div className="flex h-full items-center justify-center p-6">
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load schedule"
+          action={
+            <Button type="button" size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -445,16 +437,16 @@ export function ScheduleView({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-h2 text-foreground">Team Schedule</h2>
-            <p className="mt-0.5 text-caption text-muted-foreground">
+            <p className="mt-0.5 text-caption text-silver-mute">
               {formatDay(weekStart)} - {formatDay(addDays(weekStart, 6))}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center rounded-md border border-border/70 bg-surface-50">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setWeekStart((current) => addDays(current, -7))}
-                className="rounded-l-md p-2 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+                className="cap flex h-9 w-9 items-center justify-center"
                 aria-label="Previous week"
                 title="Previous week"
               >
@@ -463,14 +455,14 @@ export function ScheduleView({
               <button
                 type="button"
                 onClick={() => setWeekStart(startOfWeek(Date.now()))}
-                className="border-x border-border/70 px-3 py-2 text-button-sm text-foreground transition-colors hover:bg-surface-100"
+                className="cap px-3 py-2 text-button-sm"
               >
                 Today
               </button>
               <button
                 type="button"
                 onClick={() => setWeekStart((current) => addDays(current, 7))}
-                className="rounded-r-md p-2 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+                className="cap flex h-9 w-9 items-center justify-center"
                 aria-label="Next week"
                 title="Next week"
               >
@@ -484,10 +476,10 @@ export function ScheduleView({
           </div>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryTile label="Today" value={todayCount} icon={CalendarDays} />
-          <SummaryTile label="Overdue" value={overdueCount} icon={Clock} />
-          <SummaryTile label="Next 14 days" value={upcomingCount} icon={CalendarClock} />
-          <SummaryTile label="Agent wakes" value={assignedManualCount} icon={UserRound} />
+          <MetricTile label="Today" value={String(todayCount)} icon={CalendarDays} />
+          <MetricTile label="Overdue" value={String(overdueCount)} icon={Clock} />
+          <MetricTile label="Next 14 days" value={String(upcomingCount)} icon={CalendarClock} />
+          <MetricTile label="Agent wakes" value={String(assignedManualCount)} icon={UserRound} />
         </div>
       </div>
 
@@ -500,24 +492,24 @@ export function ScheduleView({
               return (
                 <section
                   key={day}
-                  className={`flex min-h-[520px] flex-col rounded-md border bg-background ${
-                    isToday ? 'border-brand/60' : 'border-border/60'
+                  className={`flex min-h-[520px] flex-col rounded-card border bg-background ${
+                    isToday ? 'border-[var(--armed-edge)]' : 'border-[var(--hairline)]'
                   }`}
                 >
-                  <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
+                  <div className="flex items-center justify-between border-b border-[var(--hairline)] px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-caption font-semibold text-foreground">
                         {formatDay(day)}
                       </p>
-                      {isToday && <p className="mt-0.5 text-eyebrow-sm text-brand">Today</p>}
+                      {isToday && (
+                        <p className="mt-0.5 text-eyebrow-sm text-[var(--armed)]">Today</p>
+                      )}
                     </div>
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-eyebrow-sm text-muted-foreground">
-                      {dayItems.length}
-                    </span>
+                    <Tag mono>{dayItems.length}</Tag>
                   </div>
                   <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
                     {dayItems.length === 0 ? (
-                      <div className="flex min-h-24 flex-1 items-center justify-center rounded-md border border-dashed border-border/50 px-3 text-center text-caption text-muted-foreground/70">
+                      <div className="flex min-h-24 flex-1 items-center justify-center rounded-card border border-dashed border-[var(--hairline)] px-3 text-center text-caption text-silver-mute">
                         Clear
                       </div>
                     ) : (
@@ -543,7 +535,7 @@ export function ScheduleView({
           </div>
         </div>
 
-        <aside className="min-h-0 rounded-md border border-border/70 bg-background">
+        <aside className="min-h-0 rounded-card border border-border/70 bg-background">
           {formOpen && (
             <form onSubmit={handleSubmit} className="border-b border-border/70 p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
@@ -554,7 +546,7 @@ export function ScheduleView({
                     resetForm();
                     setFormOpen(false);
                   }}
-                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface-100 hover:text-foreground"
+                  className="cap flex h-8 w-8 items-center justify-center"
                   aria-label="Close scheduler form"
                   title="Close"
                 >
@@ -564,7 +556,7 @@ export function ScheduleView({
 
               <div className="grid gap-3">
                 <div>
-                  <label htmlFor="schedule-title" className="text-label text-muted-foreground">
+                  <label htmlFor="schedule-title" className="text-label text-silver-mute">
                     Title *
                   </label>
                   <Input
@@ -578,14 +570,14 @@ export function ScheduleView({
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   <div>
-                    <label htmlFor="schedule-kind" className="text-label text-muted-foreground">
+                    <label htmlFor="schedule-kind" className="text-label text-silver-mute">
                       Type
                     </label>
                     <select
                       id="schedule-kind"
                       value={kind}
                       onChange={(e) => setKind(e.target.value as ScheduleItemKind)}
-                      className="mission-select mt-1 w-full px-3 py-2 text-body"
+                      className="well-input mt-1 w-full px-3 py-2 text-body"
                     >
                       {KINDS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -595,14 +587,14 @@ export function ScheduleView({
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="schedule-priority" className="text-label text-muted-foreground">
+                    <label htmlFor="schedule-priority" className="text-label text-silver-mute">
                       Priority
                     </label>
                     <select
                       id="schedule-priority"
                       value={priority}
                       onChange={(e) => setPriority(e.target.value as TicketPriority)}
-                      className="mission-select mt-1 w-full px-3 py-2 text-body"
+                      className="well-input mt-1 w-full px-3 py-2 text-body"
                     >
                       {PRIORITIES.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -615,10 +607,7 @@ export function ScheduleView({
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   <div>
-                    <label
-                      htmlFor="schedule-start-date"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-start-date" className="text-label text-silver-mute">
                       Start date *
                     </label>
                     <Input
@@ -630,10 +619,7 @@ export function ScheduleView({
                     />
                   </div>
                   <div>
-                    <label
-                      htmlFor="schedule-start-time"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-start-time" className="text-label text-silver-mute">
                       Start time
                     </label>
                     <Input
@@ -648,7 +634,7 @@ export function ScheduleView({
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   <div>
-                    <label htmlFor="schedule-end-date" className="text-label text-muted-foreground">
+                    <label htmlFor="schedule-end-date" className="text-label text-silver-mute">
                       End date
                     </label>
                     <Input
@@ -660,7 +646,7 @@ export function ScheduleView({
                     />
                   </div>
                   <div>
-                    <label htmlFor="schedule-end-time" className="text-label text-muted-foreground">
+                    <label htmlFor="schedule-end-time" className="text-label text-silver-mute">
                       End time
                     </label>
                     <Input
@@ -675,10 +661,7 @@ export function ScheduleView({
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   <div>
-                    <label
-                      htmlFor="schedule-reminder-date"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-reminder-date" className="text-label text-silver-mute">
                       Reminder date
                     </label>
                     <Input
@@ -690,10 +673,7 @@ export function ScheduleView({
                     />
                   </div>
                   <div>
-                    <label
-                      htmlFor="schedule-reminder-time"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-reminder-time" className="text-label text-silver-mute">
                       Reminder time
                     </label>
                     <Input
@@ -707,14 +687,14 @@ export function ScheduleView({
                 </div>
 
                 <div>
-                  <label htmlFor="schedule-assignee" className="text-label text-muted-foreground">
+                  <label htmlFor="schedule-assignee" className="text-label text-silver-mute">
                     Assign wakeup
                   </label>
                   <select
                     id="schedule-assignee"
                     value={assigneeId}
                     onChange={(e) => setAssigneeId(e.target.value)}
-                    className="mission-select mt-1 w-full px-3 py-2 text-body"
+                    className="well-input mt-1 w-full px-3 py-2 text-body"
                   >
                     <option value="">No assignee</option>
                     {employees.map((employee) => (
@@ -727,10 +707,7 @@ export function ScheduleView({
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   <div>
-                    <label
-                      htmlFor="schedule-link-kind"
-                      className="text-label text-muted-foreground"
-                    >
+                    <label htmlFor="schedule-link-kind" className="text-label text-silver-mute">
                       Link to
                     </label>
                     <select
@@ -740,7 +717,7 @@ export function ScheduleView({
                         setLinkKind(e.target.value as LinkKind);
                         setLinkId('');
                       }}
-                      className="mission-select mt-1 w-full px-3 py-2 text-body"
+                      className="well-input mt-1 w-full px-3 py-2 text-body"
                     >
                       <option value="none">Nothing</option>
                       <option value="ticket">Ticket</option>
@@ -749,7 +726,7 @@ export function ScheduleView({
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="schedule-link-id" className="text-label text-muted-foreground">
+                    <label htmlFor="schedule-link-id" className="text-label text-silver-mute">
                       Item
                     </label>
                     <select
@@ -757,7 +734,7 @@ export function ScheduleView({
                       value={linkId}
                       onChange={(e) => setLinkId(e.target.value)}
                       disabled={linkKind === 'none' || linkOptions.length === 0}
-                      className="mission-select mt-1 w-full px-3 py-2 text-body disabled:cursor-not-allowed disabled:opacity-50"
+                      className="well-input mt-1 w-full px-3 py-2 text-body disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Select item</option>
                       {linkOptions.map((option) => (
@@ -770,10 +747,7 @@ export function ScheduleView({
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="schedule-description"
-                    className="text-label text-muted-foreground"
-                  >
+                  <label htmlFor="schedule-description" className="text-label text-silver-mute">
                     Notes
                   </label>
                   <Textarea
@@ -812,11 +786,11 @@ export function ScheduleView({
           <div className="flex min-h-0 flex-col">
             <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
               <h4 className="text-h4 text-foreground">Agenda</h4>
-              <span className="text-caption text-muted-foreground">{agendaItems.length}</span>
+              <span className="text-caption text-silver-mute">{agendaItems.length}</span>
             </div>
             <div className="flex max-h-[720px] min-h-0 flex-col gap-2 overflow-y-auto p-3">
               {agendaItems.length === 0 ? (
-                <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed border-border/60 px-4 text-center text-caption text-muted-foreground">
+                <div className="flex min-h-32 items-center justify-center rounded-card border border-dashed border-[var(--hairline)] px-4 text-center text-caption text-silver-mute">
                   Nothing scheduled
                 </div>
               ) : (

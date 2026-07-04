@@ -71,7 +71,7 @@ export function CreateTicketDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <div className={`fixed inset-0 z-50 ${open ? 'block' : 'hidden'}`} aria-hidden={!open}>
         <div
-          className="fixed inset-0 bg-black/50"
+          className="fixed inset-0 bg-[hsl(0_0%_0%/0.55)]"
           onClick={() => onOpenChange(false)}
           onKeyDown={() => {
             /* no-op: backdrop dismiss is pointer-only; keyboard dismiss is handled by the dialog */
@@ -86,7 +86,7 @@ export function CreateTicketDialog({
 
           <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
             <div>
-              <label htmlFor="ticket-title" className="text-label text-muted-foreground">
+              <label htmlFor="ticket-title" className="text-label text-silver-mute">
                 Title *
               </label>
               <Input
@@ -99,7 +99,7 @@ export function CreateTicketDialog({
             </div>
 
             <div>
-              <label htmlFor="ticket-desc" className="text-label text-muted-foreground">
+              <label htmlFor="ticket-desc" className="text-label text-silver-mute">
                 Description
               </label>
               <Textarea
@@ -113,14 +113,14 @@ export function CreateTicketDialog({
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label htmlFor="ticket-priority" className="text-label text-muted-foreground">
+                <label htmlFor="ticket-priority" className="text-label text-silver-mute">
                   Priority
                 </label>
                 <select
                   id="ticket-priority"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-body text-foreground"
+                  className="well-input mt-1 w-full px-3 py-1.5 text-body"
                 >
                   {PRIORITIES.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -131,14 +131,14 @@ export function CreateTicketDialog({
               </div>
 
               <div className="flex-1">
-                <label htmlFor="ticket-assignee" className="text-label text-muted-foreground">
+                <label htmlFor="ticket-assignee" className="text-label text-silver-mute">
                   Assign to
                 </label>
                 <select
                   id="ticket-assignee"
                   value={assigneeId}
                   onChange={(e) => setAssigneeId(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-1.5 text-body text-foreground"
+                  className="well-input mt-1 w-full px-3 py-1.5 text-body"
                 >
                   <option value="">Unassigned</option>
                   {employees.map((emp) => (
@@ -151,7 +151,7 @@ export function CreateTicketDialog({
             </div>
 
             <div>
-              <label htmlFor="ticket-due-date" className="text-label text-muted-foreground">
+              <label htmlFor="ticket-due-date" className="text-label text-silver-mute">
                 Due Date
               </label>
               <Input

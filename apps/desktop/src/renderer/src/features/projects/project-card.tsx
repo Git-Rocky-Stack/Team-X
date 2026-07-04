@@ -1,17 +1,20 @@
 import type { Employee, Project, ProjectPriority } from '@team-x/shared-types';
-import { AlertTriangle, ArrowUpCircle, CalendarDays, Minus, User } from 'lucide-react';
+import { CalendarDays, User } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge.js';
-import { Card } from '@/components/ui/card.js';
+import { LampTile, type LampTone, RecessedWell, Tag } from '@/components/console/index.js';
 
-const PRIORITY_CONFIG: Record<
-  ProjectPriority,
-  { icon: typeof Minus; color: string; bg: string; label: string }
-> = {
-  critical: { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Critical' },
-  high: { icon: ArrowUpCircle, color: 'text-orange-400', bg: 'bg-orange-500/10', label: 'High' },
-  medium: { icon: Minus, color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'Medium' },
-  low: { icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted/50', label: 'Low' },
+const PRIORITY_TONE: Record<ProjectPriority, LampTone> = {
+  critical: 'nogo',
+  high: 'hold',
+  medium: 'off',
+  low: 'off',
+};
+
+const PRIORITY_LABEL: Record<ProjectPriority, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
 };
 
 interface ProjectCardProps {
@@ -21,8 +24,6 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
-  const priority = PRIORITY_CONFIG[project.priority] ?? PRIORITY_CONFIG.medium;
-  const PriorityIcon = priority.icon;
   const lead = project.leadId ? employees.find((e) => e.id === project.leadId) : null;
   const targetDate = project.targetDate ? new Date(project.targetDate) : null;
   const isOverdue =
@@ -32,36 +33,34 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
 
   return (
     <button type="button" onClick={onClick} className="w-full text-left">
-      <Card className="group cursor-pointer border-border/50 bg-surface-50 p-3 transition-all hover:border-border hover:shadow-md">
+      <RecessedWell className="group cursor-pointer space-y-3 p-3 transition-transform hover:-translate-y-0.5">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="text-body-strong leading-snug text-foreground line-clamp-2">
+          <h4 className="line-clamp-2 text-body-strong leading-snug text-[var(--display-fg)]">
             {project.title}
           </h4>
-          <Badge
-            variant="outline"
-            className={`shrink-0 gap-1 text-[10px] ${priority.bg} ${priority.color} border-0`}
-          >
-            <PriorityIcon className="h-3 w-3" />
-            {priority.label}
-          </Badge>
+          <LampTile
+            label={PRIORITY_LABEL[project.priority] ?? 'Medium'}
+            tone={PRIORITY_TONE[project.priority] ?? 'off'}
+            small
+            interactive={false}
+            className="shrink-0"
+          />
         </div>
 
         {project.description && (
-          <p className="mt-1.5 text-caption text-muted-foreground line-clamp-2">
-            {project.description}
-          </p>
+          <p className="line-clamp-2 text-caption text-silver-mute">{project.description}</p>
         )}
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {lead ? (
             <div className="flex items-center gap-1.5">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand/20 text-[10px] font-bold text-brand">
+              <div className="flex h-5 w-5 items-center justify-center rounded-card border border-[var(--hairline)] text-[10px] font-bold text-[var(--display-fg)]">
                 {lead.name.charAt(0).toUpperCase()}
               </div>
-              <span className="text-caption text-muted-foreground">{lead.name}</span>
+              <Tag>{lead.name}</Tag>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-muted-foreground/50">
+            <div className="flex items-center gap-1.5 text-silver-mute">
               <User className="h-3.5 w-3.5" />
               <span className="text-caption">No lead</span>
             </div>
@@ -69,7 +68,7 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
           {targetDate && (
             <div
               className={`flex items-center gap-1.5 text-caption ${
-                isOverdue ? 'text-red-400' : 'text-muted-foreground'
+                isOverdue ? 'text-led-nogo' : 'text-silver-mute'
               }`}
             >
               <CalendarDays className="h-3.5 w-3.5" />
@@ -77,7 +76,7 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
             </div>
           )}
         </div>
-      </Card>
+      </RecessedWell>
     </button>
   );
 }

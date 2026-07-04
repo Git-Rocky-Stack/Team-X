@@ -75,7 +75,7 @@ export function CreateProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <div className={`fixed inset-0 z-50 ${open ? 'block' : 'hidden'}`} aria-hidden={!open}>
         <div
-          className="fixed inset-0 bg-black/50"
+          className="fixed inset-0 bg-[hsl(0_0%_0%/0.55)]"
           onClick={() => onOpenChange(false)}
           onKeyDown={() => {
             /* no-op: backdrop dismiss is pointer-only; keyboard dismiss is handled by the dialog */
@@ -90,7 +90,7 @@ export function CreateProjectDialog({
 
           <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
             <div>
-              <label htmlFor="project-title" className="text-label text-muted-foreground">
+              <label htmlFor="project-title" className="text-label text-silver-mute">
                 Title *
               </label>
               <Input
@@ -103,7 +103,7 @@ export function CreateProjectDialog({
             </div>
 
             <div>
-              <label htmlFor="project-desc" className="text-label text-muted-foreground">
+              <label htmlFor="project-desc" className="text-label text-silver-mute">
                 Description
               </label>
               <Textarea
@@ -117,14 +117,14 @@ export function CreateProjectDialog({
 
             <div className="flex gap-3">
               <div className="flex-1">
-                <label htmlFor="project-priority" className="text-label text-muted-foreground">
+                <label htmlFor="project-priority" className="text-label text-silver-mute">
                   Priority
                 </label>
                 <select
                   id="project-priority"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="mission-select mt-1 w-full px-3 py-1.5 text-body"
+                  className="well-input mt-1 w-full px-3 py-1.5 text-body"
                 >
                   {PRIORITIES.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -135,14 +135,14 @@ export function CreateProjectDialog({
               </div>
 
               <div className="flex-1">
-                <label htmlFor="project-lead" className="text-label text-muted-foreground">
+                <label htmlFor="project-lead" className="text-label text-silver-mute">
                   Lead
                 </label>
                 <select
                   id="project-lead"
                   value={leadId}
                   onChange={(e) => setLeadId(e.target.value)}
-                  className="mission-select mt-1 w-full px-3 py-1.5 text-body"
+                  className="well-input mt-1 w-full px-3 py-1.5 text-body"
                 >
                   <option value="">No lead</option>
                   {employees.map((emp) => (
@@ -155,14 +155,14 @@ export function CreateProjectDialog({
             </div>
 
             <div>
-              <label htmlFor="project-goal" className="text-label text-muted-foreground">
+              <label htmlFor="project-goal" className="text-label text-silver-mute">
                 Link to Goal
               </label>
               <select
                 id="project-goal"
                 value={goalId}
                 onChange={(e) => setGoalId(e.target.value)}
-                className="mission-select mt-1 w-full px-3 py-1.5 text-body"
+                className="well-input mt-1 w-full px-3 py-1.5 text-body"
               >
                 <option value="">Standalone project</option>
                 {goals.map((g) => (
@@ -174,7 +174,7 @@ export function CreateProjectDialog({
             </div>
 
             <div>
-              <label htmlFor="project-target-date" className="text-label text-muted-foreground">
+              <label htmlFor="project-target-date" className="text-label text-silver-mute">
                 Target Date
               </label>
               <Input

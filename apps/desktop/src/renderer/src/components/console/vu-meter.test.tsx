@@ -106,4 +106,24 @@ describe('VuMeter render', () => {
       nowSpy.mockRestore();
     }
   });
+
+  it('progress variant lights every filled segment green — no amber/red zones', () => {
+    // A near-complete ratio lights amber/red at the tip in meter mode; the
+    // progress variant keeps fuller = greener (DESIGN.md green=healthy), so a
+    // healthy 95%-done state never wears the fault-red LED.
+    const { container, getByRole } = render(
+      <VuMeter value={0.95} segments={16} variant="progress" label="Goal progress" />,
+    );
+    expect(container.querySelectorAll('.vu-seg-a')).toHaveLength(0);
+    expect(container.querySelectorAll('.vu-seg-r')).toHaveLength(0);
+    expect(container.querySelectorAll('.vu-seg-g').length).toBeGreaterThan(0);
+    expect(getByRole('meter')).toHaveAttribute('aria-valuetext', '95% complete');
+  });
+
+  it('default meter variant still zones amber/red by position (regression guard)', () => {
+    // The progress override must not leak into the level-meter path: the same
+    // high value in the default variant DOES light the hot zone.
+    const { container } = render(<VuMeter value={0.95} segments={16} label="VRAM" />);
+    expect(container.querySelectorAll('.vu-seg-r').length).toBeGreaterThan(0);
+  });
 });

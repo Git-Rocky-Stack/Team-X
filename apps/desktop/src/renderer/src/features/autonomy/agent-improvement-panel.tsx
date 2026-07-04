@@ -47,7 +47,7 @@ function TicketRow({ ticket, onOpen }: { ticket: Ticket; onOpen: (ticketId: stri
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <TicketCheck className="h-4 w-4 text-silver-mute" />
-            <span className="text-body-strong text-foreground">{ticket.title}</span>
+            <span className="text-body-strong text-[var(--display-fg)]">{ticket.title}</span>
             <LampTile
               label={ticket.priority}
               tone={priorityTone(ticket.priority)}
